@@ -38,7 +38,7 @@ export default function SignInPage({
             action={async (data: FormData) => {
               'use server';
               const { callbackUrl } = await searchParams;
-              await signIn('nodemailer', {
+              await signIn('resend', {
                 email: data.get('email'),
                 redirectTo: callbackUrl ?? '/',
               });

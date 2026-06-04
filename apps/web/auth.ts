@@ -1,6 +1,6 @@
 import NextAuth, { type DefaultSession } from 'next-auth';
 import Yandex from 'next-auth/providers/yandex';
-import Nodemailer from 'next-auth/providers/nodemailer';
+import Resend from 'next-auth/providers/resend';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db } from '@vire/db';
 import { accounts, sessions, verificationTokens, users } from '@vire/db/schema';
@@ -25,16 +25,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   }),
   providers: [
     Yandex,
-    Nodemailer({
-      server: {
-        host: process.env.EMAIL_SERVER_HOST,
-        port: Number(process.env.EMAIL_SERVER_PORT ?? 587),
-        auth: {
-          user: process.env.EMAIL_SERVER_USER,
-          pass: process.env.EMAIL_SERVER_PASSWORD,
-        },
-      },
-      from: process.env.EMAIL_FROM,
+    Resend({
+      apiKey: process.env.AUTH_RESEND_KEY,
+      from: process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
     }),
   ],
   session: { strategy: 'jwt' },
