@@ -1,5 +1,4 @@
 import NextAuth, { type DefaultSession } from 'next-auth';
-import VK from 'next-auth/providers/vk';
 import Yandex from 'next-auth/providers/yandex';
 import Nodemailer from 'next-auth/providers/nodemailer';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
@@ -25,7 +24,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     verificationTokensTable: verificationTokens,
   }),
   providers: [
-    VK,
     Yandex,
     Nodemailer({
       server: {

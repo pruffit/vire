@@ -13,20 +13,6 @@ export default function SignInPage({
           <CardTitle>Войти в Vire</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          {/* VK */}
-          <form
-            action={async () => {
-              'use server';
-              const { callbackUrl } = await searchParams;
-              await signIn('vk', { redirectTo: callbackUrl ?? '/' });
-            }}
-          >
-            <Button type="submit" variant="outline" className="w-full">
-              VK
-            </Button>
-          </form>
-
-          {/* Яндекс */}
           <form
             action={async () => {
               'use server';
@@ -48,7 +34,6 @@ export default function SignInPage({
             </div>
           </div>
 
-          {/* Email magic link */}
           <form
             action={async (data: FormData) => {
               'use server';
