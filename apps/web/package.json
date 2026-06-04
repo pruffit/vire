@@ -10,18 +10,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "^1.11.2",
     "@vire/db": "workspace:*",
     "@vire/ui": "workspace:*",
     "next": "16.2.7",
+    "next-auth": "5.0.0-beta.31",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@vire/config": "workspace:*",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vire/config": "workspace:*",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",

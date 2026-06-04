@@ -139,10 +139,11 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 - [x] `apps/web` — Next.js, подключён @vire/db, Route Handler `/api/v1/health`
 - [x] `packages/ui` — UI-кит: дизайн-токены (OKLCH, тёмная тема), Button, Card, cn
 - [x] `apps/web` — layout с темизацией, базовая страница использует @vire/ui
+- [x] Auth.js v5 — Google OAuth, JWT-сессии, proxy (middleware), `/sign-in`
 - [ ] `packages/core` — сервисный слой
 - [ ] `apps/worker` — транскодинг-воркер
 
 ## Что делать дальше (следующий шаг)
 
-Auth.js: подключить email + OAuth (VK/Google), сессии в Postgres,
-защищённые роуты через middleware.
+`packages/core` — сервисный слой: первые use-cases (получить профиль артиста,
+получить треки релиза). Подключить к Route Handlers в web.
