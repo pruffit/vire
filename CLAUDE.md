@@ -131,14 +131,18 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 - [x] Монорепо скелет (Turborepo + pnpm)
 - [x] Документация (`docs/`)
 - [x] Локальная инфраструктура (docker-compose)
+- [x] Монорепо скелет (Turborepo + pnpm)
+- [x] Документация (`docs/`)
+- [x] Локальная инфраструктура (docker-compose)
 - [x] `packages/db` — Drizzle схема, 16 таблиц, миграция применена
-- [ ] `apps/web` — Next.js (в процессе)
-- [ ] `packages/config` — общие tsconfig/eslint
+- [x] `packages/config` — tsconfig/base, nextjs, library + eslint/base
+- [x] `apps/web` — Next.js, подключён @vire/db, Route Handler `/api/v1/health`
+- [ ] `apps/web` — базовый layout с темизацией
 - [ ] `packages/core` — сервисный слой
 - [ ] `packages/ui` — UI-кит
 - [ ] `apps/worker` — транскодинг-воркер
 
 ## Что делать дальше (следующий шаг)
 
-Поднять `apps/web`: подключить `@vire/db`, настроить базовый layout с темизацией,
-создать первый Route Handler `/api/v1/health`.
+Настроить базовый layout `apps/web` с темизацией (CSS-переменные + Tailwind токены)
+и наладить Auth.js для первого flow аутентификации.
