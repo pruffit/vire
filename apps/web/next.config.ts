@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@vire/db"],
+  transpilePackages: ['@vire/db', '@vire/ui'],
 };
 
 export default nextConfig;

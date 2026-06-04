@@ -137,12 +137,12 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 - [x] `packages/db` — Drizzle схема, 16 таблиц, миграция применена
 - [x] `packages/config` — tsconfig/base, nextjs, library + eslint/base
 - [x] `apps/web` — Next.js, подключён @vire/db, Route Handler `/api/v1/health`
-- [ ] `apps/web` — базовый layout с темизацией
+- [x] `packages/ui` — UI-кит: дизайн-токены (OKLCH, тёмная тема), Button, Card, cn
+- [x] `apps/web` — layout с темизацией, базовая страница использует @vire/ui
 - [ ] `packages/core` — сервисный слой
-- [ ] `packages/ui` — UI-кит
 - [ ] `apps/worker` — транскодинг-воркер
 
 ## Что делать дальше (следующий шаг)
 
-Настроить базовый layout `apps/web` с темизацией (CSS-переменные + Tailwind токены)
-и наладить Auth.js для первого flow аутентификации.
+Auth.js: подключить email + OAuth (VK/Google), сессии в Postgres,
+защищённые роуты через middleware.

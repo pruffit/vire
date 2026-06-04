@@ -1,0 +1,9 @@
+{
+  "extends": "@vire/config/tsconfig/library.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["src"]
+}
