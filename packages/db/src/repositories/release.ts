@@ -1,0 +1,75 @@
+import { eq, asc, and } from 'drizzle-orm';
+import { releases, tracks } from '../schema';
+import type { DB } from '../client';
+import type { IReleaseRepository, Release, ReleaseWithTracks, Track } from '@vire/core';
+
+export class DrizzleReleaseRepository implements IReleaseRepository {
+  constructor(private readonly db: DB) {}
+
+  async findWithTracks(releaseId: string): Promise<ReleaseWithTracks | null> {
+    const [releaseRow] = await this.db
+      .select()
+      .from(releases)
+      .where(eq(releases.id, releaseId))
+      .limit(1);
+
+    if (!releaseRow) return null;
+
+    const trackRows = await this.db
+      .select()
+      .from(tracks)
+      .where(eq(tracks.releaseId, releaseId))
+      .orderBy(asc(tracks.trackNumber));
+
+    return {
+      release: mapToRelease(releaseRow),
+      tracks: trackRows.map(mapToTrack),
+    };
+  }
+
+  async findPublishedByArtist(artistProfileId: string): Promise<Release[]> {
+    const rows = await this.db
+      .select()
+      .from(releases)
+      .where(
+        and(
+          eq(releases.artistProfileId, artistProfileId),
+          eq(releases.status, 'PUBLISHED'),
+        ),
+      )
+      .orderBy(asc(releases.releaseDate));
+
+    return rows.map(mapToRelease);
+  }
+}
+
+function mapToRelease(row: typeof releases.$inferSelect): Release {
+  return {
+    id: row.id,
+    artistProfileId: row.artistProfileId,
+    title: row.title,
+    type: row.type,
+    coverUrl: row.coverUrl,
+    releaseDate: row.releaseDate,
+    status: row.status,
+    description: row.description,
+    linerNotes: row.linerNotes,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapToTrack(row: typeof tracks.$inferSelect): Track {
+  return {
+    id: row.id,
+    releaseId: row.releaseId,
+    title: row.title,
+    trackNumber: row.trackNumber,
+    durationSec: row.durationSec,
+    status: row.status,
+    isExclusive: row.isExclusive,
+    isWip: row.isWip,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
