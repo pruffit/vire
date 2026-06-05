@@ -10,7 +10,8 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/seed.ts"
   },
   "dependencies": {
     "@vire/core": "workspace:*",
@@ -20,7 +21,9 @@
   "devDependencies": {
     "@types/node": "^20",
     "@vire/config": "workspace:*",
+    "dotenv": "^17.4.2",
     "drizzle-kit": "^0.30.0",
+    "tsx": "^4.22.4",
     "typescript": "^5.8.3"
   }
 }

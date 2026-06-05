@@ -1,11 +1,7 @@
 import type { Metadata } from 'next';
-import dynamic from 'next/dynamic';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { PlayerWrapper } from '@/components/player/player-wrapper';
 import './globals.css';
-
-const Player = dynamic(() => import('@/components/player').then((m) => ({ default: m.Player })), {
-  ssr: false,
-});
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -32,7 +28,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans pb-16">
         {children}
-        <Player />
+        <PlayerWrapper />
       </body>
     </html>
   );

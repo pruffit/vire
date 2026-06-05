@@ -35,7 +35,7 @@ export default async function HomePage() {
             </div>
           ) : (
             <div className="flex gap-2">
-              <Button size="sm" asChild>
+              <Button size="sm" variant="link" asChild>
                 <a href="/sign-in">Войти</a>
               </Button>
               <Button size="sm" variant="ghost">
