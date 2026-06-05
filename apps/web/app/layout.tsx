@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
+import dynamic from 'next/dynamic';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+
+const Player = dynamic(() => import('@/components/player').then((m) => ({ default: m.Player })), {
+  ssr: false,
+});
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -25,8 +30,9 @@ export default function RootLayout({
       lang="ru"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans pb-16">
         {children}
+        <Player />
       </body>
     </html>
   );
