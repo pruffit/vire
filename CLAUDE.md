@@ -140,10 +140,12 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 - [x] `packages/ui` — UI-кит: дизайн-токены (OKLCH, тёмная тема), Button, Card, cn
 - [x] `apps/web` — layout с темизацией, базовая страница использует @vire/ui
 - [x] Auth.js v5 — Google OAuth, JWT-сессии, proxy (middleware), `/sign-in`
-- [ ] `packages/core` — сервисный слой
+- [x] `packages/core` — сервисный слой: Result<T,E>, domain types, repositories, services
+- [x] Route Handlers: `GET /api/v1/artists/[slug]`, `GET /api/v1/releases/[releaseId]`
+- [x] `/artists/[slug]` — страница артиста с темизацией, grain, сетка релизов
+- [x] `/artists/[slug]/releases/[releaseId]` — страница релиза, трек-лист, liner notes
 - [ ] `apps/worker` — транскодинг-воркер
 
 ## Что делать дальше (следующий шаг)
 
-`packages/core` — сервисный слой: первые use-cases (получить профиль артиста,
-получить треки релиза). Подключить к Route Handlers в web.
+Аудиоплеер — глобальная панель (Zustand), HLS через hls.js, очередь треков.

@@ -20,6 +20,9 @@ importers:
       '@auth/drizzle-adapter':
         specifier: ^1.11.2
         version: 1.11.2(nodemailer@7.0.13)
+      '@vire/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@vire/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -85,8 +88,23 @@ importers:
         specifier: ^8.0.0
         version: 8.60.1(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
 
+  packages/core:
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      '@vire/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   packages/db:
     dependencies:
+      '@vire/core':
+        specifier: workspace:*
+        version: link:../core
       drizzle-orm:
         specifier: ^0.41.0
         version: 0.41.0(gel@2.2.0)(postgres@3.4.9)

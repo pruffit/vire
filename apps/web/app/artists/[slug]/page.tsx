@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
@@ -57,7 +58,7 @@ export default async function ArtistPage({ params }: Props) {
 
       <div className="mx-auto max-w-4xl px-6 py-16 space-y-16">
         <ArtistHeader artist={artist} />
-        <ReleasesSection releases={releases} />
+        <ReleasesSection releases={releases} artistSlug={artist.slug} />
       </div>
     </div>
   );
@@ -114,7 +115,7 @@ function ArtistHeader({ artist }: { artist: ArtistProfile }) {
   );
 }
 
-function ReleasesSection({ releases }: { releases: Release[] }) {
+function ReleasesSection({ releases, artistSlug }: { releases: Release[]; artistSlug: string }) {
   if (releases.length === 0) return null;
 
   return (
@@ -122,41 +123,43 @@ function ReleasesSection({ releases }: { releases: Release[] }) {
       <h2 className="text-xs uppercase tracking-widest opacity-40 font-mono">Релизы</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
         {releases.map((release) => (
-          <ReleaseCard key={release.id} release={release} />
+          <ReleaseCard key={release.id} release={release} artistSlug={artistSlug} />
         ))}
       </div>
     </section>
   );
 }
 
-function ReleaseCard({ release }: { release: Release }) {
+function ReleaseCard({ release, artistSlug }: { release: Release; artistSlug: string }) {
   const year = release.releaseDate ? new Date(release.releaseDate).getFullYear() : null;
 
   return (
-    <article className="group space-y-3">
-      <div className="aspect-square rounded-sm overflow-hidden bg-white/5">
-        {release.coverUrl ? (
-          <img
-            src={release.coverUrl}
-            alt={release.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center opacity-20">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-            </svg>
-          </div>
-        )}
-      </div>
+    <Link href={`/artists/${artistSlug}/releases/${release.id}`}>
+      <article className="group space-y-3">
+        <div className="aspect-square rounded-sm overflow-hidden bg-white/5">
+          {release.coverUrl ? (
+            <img
+              src={release.coverUrl}
+              alt={release.title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center opacity-20">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+              </svg>
+            </div>
+          )}
+        </div>
 
-      <div className="space-y-1">
-        <p className="text-sm font-medium leading-snug">{release.title}</p>
-        <p className="text-xs opacity-40 font-mono">
-          {year && `${year} · `}
-          {release.type}
-        </p>
-      </div>
-    </article>
+        <div className="space-y-1">
+          <p className="text-sm font-medium leading-snug">{release.title}</p>
+          <p className="text-xs opacity-40 font-mono">
+            {year && `${year} · `}
+            {release.type}
+          </p>
+        </div>
+      </article>
+    </Link>
   );
 }
