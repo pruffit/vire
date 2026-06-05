@@ -17,6 +17,17 @@ export class DrizzleArtistRepository implements IArtistRepository {
     if (!row) return null;
     return mapToArtistProfile(row);
   }
+
+  async findByUserId(userId: string): Promise<ArtistProfile | null> {
+    const [row] = await this.db
+      .select()
+      .from(artistProfiles)
+      .where(eq(artistProfiles.userId, userId))
+      .limit(1);
+
+    if (!row) return null;
+    return mapToArtistProfile(row);
+  }
 }
 
 function mapToArtistProfile(row: typeof artistProfiles.$inferSelect): ArtistProfile {

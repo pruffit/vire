@@ -1,0 +1,128 @@
+import { redirect } from 'next/navigation';
+import { auth } from '@/auth';
+import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
+import type { ReleaseWithTracks, TrackStatus } from '@vire/core';
+import { UploadTrackForm } from './upload-form';
+
+export const dynamic = 'force-dynamic';
+
+const STATUS_LABEL: Record<TrackStatus, string> = {
+  PROCESSING: 'обрабатывается',
+  READY: 'готов',
+  BLOCKED: 'заблокирован',
+};
+
+const STATUS_COLOR: Record<TrackStatus, string> = {
+  PROCESSING: 'text-yellow-400',
+  READY: 'text-green-400',
+  BLOCKED: 'text-red-400',
+};
+
+function TrackRow({ track }: { track: ReleaseWithTracks['tracks'][number] }) {
+  const mins = track.durationSec ? Math.floor(track.durationSec / 60) : null;
+  const secs = track.durationSec ? String(track.durationSec % 60).padStart(2, '0') : null;
+
+  return (
+    <div className="flex items-center gap-3 py-2 text-sm border-b border-white/5 last:border-0">
+      <span className="w-6 text-right text-white/30 shrink-0">{track.trackNumber}</span>
+      <span className="flex-1 truncate">{track.title}</span>
+      {mins !== null && (
+        <span className="text-white/40 shrink-0">{mins}:{secs}</span>
+      )}
+      <span className={`shrink-0 text-xs ${STATUS_COLOR[track.status]}`}>
+        {STATUS_LABEL[track.status]}
+      </span>
+    </div>
+  );
+}
+
+function ReleaseCard({ data }: { data: ReleaseWithTracks }) {
+  const { release, tracks } = data;
+  return (
+    <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-medium">{release.title}</p>
+          <p className="text-sm text-white/40 mt-0.5">
+            {release.type} · {release.status} · {tracks.length} тр.
+          </p>
+        </div>
+        {release.coverUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={release.coverUrl}
+            alt={release.title}
+            className="w-12 h-12 rounded-md object-cover shrink-0"
+          />
+        )}
+      </div>
+      {tracks.length === 0 ? (
+        <p className="text-sm text-white/30">Треков пока нет</p>
+      ) : (
+        <div>
+          {tracks.map((t) => (
+            <TrackRow key={t.id} track={t} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default async function DashboardPage() {
+  const session = await auth();
+  if (!session?.user?.id) redirect('/sign-in?callbackUrl=/dashboard');
+
+  const artistRepo = new DrizzleArtistRepository(db);
+  const artist = await artistRepo.findByUserId(session.user.id);
+
+  const releases: ReleaseWithTracks[] = artist
+    ? await new DrizzleReleaseRepository(db).findAllByArtist(artist.id)
+    : [];
+
+  return (
+    <div className="min-h-screen bg-[#0d0d0d] text-white">
+      <div className="max-w-3xl mx-auto px-4 py-12 flex flex-col gap-10">
+
+        <div>
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          {artist && (
+            <p className="text-white/50 mt-1">@{artist.slug} · {artist.name}</p>
+          )}
+        </div>
+
+        {!artist ? (
+          <p className="text-white/50">
+            У тебя нет профиля артиста. Обратись к администратору для создания.
+          </p>
+        ) : (
+          <>
+            <section className="flex flex-col gap-4">
+              <h2 className="text-lg font-medium">Загрузить трек</h2>
+              <div className="rounded-xl bg-white/5 border border-white/10 p-5">
+                <UploadTrackForm releases={releases} />
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h2 className="text-lg font-medium">
+                Релизы
+                <span className="ml-2 text-sm text-white/30 font-normal">{releases.length}</span>
+              </h2>
+              {releases.length === 0 ? (
+                <p className="text-white/40 text-sm">Нет релизов</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {releases.map((r) => (
+                    <ReleaseCard key={r.release.id} data={r} />
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
+
+      </div>
+    </div>
+  );
+}

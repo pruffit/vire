@@ -1,10 +1,44 @@
-import { eq, asc, and } from 'drizzle-orm';
+import { eq, asc, and, desc } from 'drizzle-orm';
 import { releases, tracks } from '../schema';
 import type { DB } from '../client';
 import type { IReleaseRepository, Release, ReleaseWithTracks, Track } from '@vire/core';
 
 export class DrizzleReleaseRepository implements IReleaseRepository {
   constructor(private readonly db: DB) {}
+
+  async findById(releaseId: string): Promise<Release | null> {
+    const [row] = await this.db
+      .select()
+      .from(releases)
+      .where(eq(releases.id, releaseId))
+      .limit(1);
+
+    if (!row) return null;
+    return mapToRelease(row);
+  }
+
+  async findAllByArtist(artistProfileId: string): Promise<ReleaseWithTracks[]> {
+    const releaseRows = await this.db
+      .select()
+      .from(releases)
+      .where(eq(releases.artistProfileId, artistProfileId))
+      .orderBy(desc(releases.createdAt));
+
+    const result: ReleaseWithTracks[] = [];
+    for (const releaseRow of releaseRows) {
+      const trackRows = await this.db
+        .select()
+        .from(tracks)
+        .where(eq(tracks.releaseId, releaseRow.id))
+        .orderBy(asc(tracks.trackNumber));
+
+      result.push({
+        release: mapToRelease(releaseRow),
+        tracks: trackRows.map(mapToTrack),
+      });
+    }
+    return result;
+  }
 
   async findWithTracks(releaseId: string): Promise<ReleaseWithTracks | null> {
     const [releaseRow] = await this.db

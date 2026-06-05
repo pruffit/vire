@@ -35,6 +35,22 @@
     volumes:
       - vire-minio-data:/data
 
+  # Создаёт бакеты vire-vault и vire-stream при первом запуске
+  minio-init:
+    image: minio/mc:latest
+    container_name: vire-minio-init
+    depends_on:
+      - minio
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+        sleep 3;
+        mc alias set local http://minio:9000 minioadmin minioadmin;
+        mc mb --ignore-existing local/vire-vault;
+        mc mb --ignore-existing local/vire-stream;
+        exit 0;
+      "
+
 volumes:
   vire-pg-data:
   vire-redis-data:
