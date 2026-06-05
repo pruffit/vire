@@ -20,7 +20,7 @@ export default function SignInPage({
               await signIn('yandex', { redirectTo: callbackUrl ?? '/' });
             }}
           >
-            <Button type="submit" variant="outline" className="w-full">
+            <Button type="submit" variant="secondary" className="w-full">
               Яндекс
             </Button>
           </form>
