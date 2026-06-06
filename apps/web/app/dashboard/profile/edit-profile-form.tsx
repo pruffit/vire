@@ -4,8 +4,21 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArtistLink, ArtistVideo, ThemeTokens } from '@vire/core';
 
-const FONT_SANS = ['Inter', 'Montserrat', 'Unbounded', 'Manrope', 'Geologica'];
-const FONT_MONO = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono'];
+// Font name → CSS variable (the fonts are loaded globally in app/layout via lib/fonts).
+const SANS_VAR: Record<string, string> = {
+  Inter: 'var(--font-inter)',
+  Montserrat: 'var(--font-montserrat)',
+  Unbounded: 'var(--font-unbounded)',
+  Manrope: 'var(--font-manrope)',
+  Geologica: 'var(--font-geologica)',
+};
+const MONO_VAR: Record<string, string> = {
+  'JetBrains Mono': 'var(--font-jetbrains-mono)',
+  'Fira Code': 'var(--font-fira-code)',
+  'IBM Plex Mono': 'var(--font-ibm-plex-mono)',
+};
+const FONT_SANS = Object.keys(SANS_VAR);
+const FONT_MONO = Object.keys(MONO_VAR);
 
 // Date-free subset of ArtistProfile — RSC can't serialize Date props to a client component
 export interface EditableProfile {
@@ -35,6 +48,8 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
   const [textColor, setTextColor] = useState(t.text);
   const [accent, setAccent] = useState(t.accent);
   const [grain, setGrain] = useState(t.grain);
+  const [fontSans, setFontSans] = useState(t.fontSans);
+  const [fontMono, setFontMono] = useState(t.fontMono);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -236,11 +251,11 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
         {/* Live preview strip */}
         <div
           className="rounded-lg px-4 py-3 flex items-center gap-3 text-sm transition-colors"
-          style={{ background: bg, color: textColor }}
+          style={{ background: bg, color: textColor, fontFamily: SANS_VAR[fontSans] }}
         >
           <div className="w-3 h-3 rounded-full shrink-0" style={{ background: accent }} />
           <span className="font-medium">{artist.name}</span>
-          <span className="opacity-40 text-xs ml-auto">предпросмотр</span>
+          <span className="opacity-40 ml-auto" style={{ fontFamily: MONO_VAR[fontMono] }}>123 · предпросмотр</span>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -249,21 +264,28 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
           <ColorField label="Акцент" name="accent" value={accent} onChange={setAccent} disabled={busy} />
 
           <Field label="Зерно">
-            <button type="button" onClick={() => setGrain((g) => !g)}
-              className={`w-10 h-5 rounded-full transition-colors relative ${grain ? 'bg-white/60' : 'bg-white/15'}`}>
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${grain ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            <button
+              type="button"
+              role="switch"
+              aria-checked={grain}
+              onClick={() => setGrain((g) => !g)}
+              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${grain ? 'bg-white/60' : 'bg-white/15'}`}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${grain ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
+              />
             </button>
           </Field>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Шрифт текста">
-            <select name="fontSans" defaultValue={t.fontSans} disabled={busy} className={inp}>
+            <select name="fontSans" value={fontSans} onChange={(e) => setFontSans(e.target.value)} disabled={busy} className={inp}>
               {FONT_SANS.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
           </Field>
           <Field label="Шрифт моно">
-            <select name="fontMono" defaultValue={t.fontMono} disabled={busy} className={inp}>
+            <select name="fontMono" value={fontMono} onChange={(e) => setFontMono(e.target.value)} disabled={busy} className={inp}>
               {FONT_MONO.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
           </Field>
@@ -298,8 +320,19 @@ function ColorField({ label, name, value, onChange, disabled }: {
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0 disabled:opacity-50" />
-        <input type="text" value={value} readOnly
-          className="w-24 rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono focus:outline-none" />
+        <input
+          type="text"
+          value={value}
+          disabled={disabled}
+          spellCheck={false}
+          maxLength={7}
+          onChange={(e) => {
+            let v = e.target.value.trim();
+            if (v && !v.startsWith('#')) v = `#${v}`;
+            onChange(v);
+          }}
+          placeholder="#000000"
+          className="w-24 rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50" />
       </div>
     </div>
   );

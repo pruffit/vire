@@ -9,6 +9,7 @@ import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
 import { getEmbedUrl } from '@/lib/embed';
 import { formatCount } from '@/lib/format';
+import { artistFontStyle } from '@/lib/fonts';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -61,9 +62,10 @@ export default async function ArtistPage({ params }: Props) {
           '--artist-bg': bg,
           '--artist-text': text,
           '--artist-accent': accent,
+          ...artistFontStyle(artist.themeTokens),
         } as React.CSSProperties
       }
-      className="min-h-screen bg-[var(--artist-bg)] text-[var(--artist-text)]"
+      className="min-h-screen bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
     >
       {grain && <GrainOverlay />}
 

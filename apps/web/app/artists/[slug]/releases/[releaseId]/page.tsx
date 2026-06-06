@@ -5,6 +5,7 @@ import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db'
 import { ArtistService, ReleaseService } from '@vire/core';
 import { TrackList, type ClientTrack } from './track-list';
 import { formatDuration, pluralTracks } from '@/lib/format';
+import { artistFontStyle } from '@/lib/fonts';
 
 type Props = { params: Promise<{ slug: string; releaseId: string }> };
 
@@ -56,8 +57,8 @@ export default async function ReleasePage({ params }: Props) {
 
   return (
     <div
-      style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent } as React.CSSProperties}
-      className="min-h-screen bg-[var(--artist-bg)] text-[var(--artist-text)]"
+      style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
+      className="min-h-screen bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
     >
       {grain && <GrainOverlay />}
 

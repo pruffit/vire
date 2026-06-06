@@ -8,6 +8,7 @@ import { LikeButton } from './like-button';
 import { TrackWaveformPlayer } from './waveform-player';
 import { DownloadButton } from './download-button';
 import { formatDuration } from '@/lib/format';
+import { artistFontStyle } from '@/lib/fonts';
 
 type Props = { params: Promise<{ slug: string; releaseId: string; trackId: string }> };
 
@@ -78,8 +79,8 @@ export default async function TrackPage({ params }: Props) {
 
   return (
     <div
-      style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent } as React.CSSProperties}
-      className="min-h-screen bg-[var(--artist-bg)] text-[var(--artist-text)]"
+      style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
+      className="min-h-screen bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
     >
       {grain && <GrainOverlay />}
 

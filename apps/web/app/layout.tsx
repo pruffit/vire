@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
 import { Nav } from '@/components/nav';
+import { fontVariables } from '@/lib/fonts';
 import './globals.css';
 
 const geistSans = Geist({
@@ -25,7 +26,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fontVariables} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans pb-16">
         <Nav />

@@ -6,3 +6,12 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+/* Native select dropdowns: the app shell is dark, so force readable option
+   colors — otherwise the OS renders white text on a white list. */
+@layer base {
+  option {
+    background-color: #1a1a1a;
+    color: #f5f2eb;
+  }
+}
