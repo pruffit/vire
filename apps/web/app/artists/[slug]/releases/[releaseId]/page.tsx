@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
-import { TrackList } from './track-list';
+import { TrackList, type ClientTrack } from './track-list';
 
 type Props = { params: Promise<{ slug: string; releaseId: string }> };
 
@@ -47,6 +47,10 @@ export default async function ReleasePage({ params }: Props) {
 
   const { artist, release, tracks } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
+
+  const clientTracks: ClientTrack[] = tracks.map(({ id, title, trackNumber, durationSec, status, isExclusive, isWip, credits }) => ({
+    id, title, trackNumber, durationSec, status, isExclusive, isWip, credits,
+  }));
   const year = release.releaseDate ? new Date(release.releaseDate).getFullYear() : null;
 
   return (
@@ -115,7 +119,7 @@ export default async function ReleasePage({ params }: Props) {
       {/* Tracks + liner notes */}
       <div className="mx-auto max-w-4xl px-6 pb-32 space-y-12">
         <TrackList
-          tracks={tracks}
+          tracks={clientTracks}
           artistName={artist.name}
           artistSlug={slug}
           releaseId={releaseId}

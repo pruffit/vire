@@ -3,10 +3,21 @@
 import Link from 'next/link';
 import { controls } from '@/components/player/audio-engine';
 import { type PlayerTrack } from '@/store/player';
-import type { Track } from '@vire/core';
+import type { TrackStatus, TrackCredit } from '@vire/core';
+
+export interface ClientTrack {
+  id: string;
+  title: string;
+  trackNumber: number;
+  durationSec: number | null;
+  status: TrackStatus;
+  isExclusive: boolean;
+  isWip: boolean;
+  credits: TrackCredit[];
+}
 
 interface Props {
-  tracks: Track[];
+  tracks: ClientTrack[];
   artistName: string;
   artistSlug: string;
   releaseId: string;
@@ -20,7 +31,7 @@ export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl 
     .filter((t) => t.status === 'READY')
     .map((t) => ({ id: t.id, title: t.title, artistName, coverUrl }));
 
-  function handlePlay(track: Track) {
+  function handlePlay(track: ClientTrack) {
     if (track.status !== 'READY') return;
     const idx = queue.findIndex((q) => q.id === track.id);
     controls.play(queue[idx] ?? { id: track.id, title: track.title, artistName, coverUrl }, queue, idx);
@@ -47,7 +58,7 @@ function TrackRow({
   releaseId,
   onPlay,
 }: {
-  track: Track;
+  track: ClientTrack;
   artistSlug: string;
   releaseId: string;
   onPlay: () => void;
