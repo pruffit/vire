@@ -12,4 +12,6 @@ export { getLikeState, getLikeCount, likeTrack, unlikeTrack } from './queries/li
 export { getFollowState, getFollowerCount, followArtist, unfollowArtist } from './queries/follows';
 export { getFeed } from './queries/feed';
 export type { FeedRelease } from './queries/feed';
+export { insertPlayEvent } from './queries/play-events';
+export type { InsertPlayEventData } from './queries/play-events';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

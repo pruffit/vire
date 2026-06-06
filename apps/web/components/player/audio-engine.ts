@@ -5,6 +5,37 @@ let audio: HTMLAudioElement | null = null;
 let hls: Hls | null = null;
 let loadedTrackId: string | null = null;
 
+// Per-session ID, persists across track changes within one browser session
+function getSessionId(): string {
+  const key = 'vire_sid';
+  let sid = sessionStorage.getItem(key);
+  if (!sid) {
+    sid = crypto.randomUUID();
+    sessionStorage.setItem(key, sid);
+  }
+  return sid;
+}
+
+let playStartedAt: number | null = null;
+let playStartedTrackId: string | null = null;
+
+function flushPlayEvent(source: string = 'direct'): void {
+  if (!playStartedTrackId || playStartedAt === null) return;
+
+  const durationPlayedSec = Math.round((Date.now() - playStartedAt) / 1000);
+  const trackId = playStartedTrackId;
+  const startedAt = new Date(playStartedAt).toISOString();
+
+  playStartedAt = null;
+  playStartedTrackId = null;
+
+  fetch(`/api/v1/tracks/${trackId}/play`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: getSessionId(), source, durationPlayedSec, startedAt }),
+  }).catch(() => {});
+}
+
 export function initAudioEngine(): void {
   if (audio) return;
 
@@ -21,10 +52,18 @@ export function initAudioEngine(): void {
     }
   });
 
-  audio.addEventListener('ended', () => controls.next());
-  audio.addEventListener('playing', () =>
-    usePlayerStore.getState()._setState({ isPlaying: true, isLoading: false }),
-  );
+  audio.addEventListener('ended', () => {
+    flushPlayEvent('direct');
+    controls.next();
+  });
+  audio.addEventListener('playing', () => {
+    usePlayerStore.getState()._setState({ isPlaying: true, isLoading: false });
+    const { track } = usePlayerStore.getState();
+    if (track && track.id !== playStartedTrackId) {
+      playStartedAt = Date.now();
+      playStartedTrackId = track.id;
+    }
+  });
   audio.addEventListener('pause', () =>
     usePlayerStore.getState()._setState({ isPlaying: false }),
   );
@@ -38,6 +77,9 @@ export function initAudioEngine(): void {
 
 async function loadAndPlay(track: PlayerTrack): Promise<void> {
   if (!audio) return;
+
+  // Flush event for the previous track before loading a new one
+  flushPlayEvent('direct');
 
   usePlayerStore.getState()._setState({ isLoading: true, hasAudio: false, currentTime: 0, duration: 0, waveformPeaks: null });
 
