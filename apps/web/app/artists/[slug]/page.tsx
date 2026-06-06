@@ -71,9 +71,7 @@ export default async function ArtistPage({ params }: Props) {
           followButton={
             session?.user
               ? <FollowButton slug={artist.slug} initialFollowing={following} initialCount={followerCount} />
-              : followerCount > 0
-                ? <span className="text-xs opacity-40">{followerCount} слушателей</span>
-                : null
+              : <GuestFollowButton slug={artist.slug} followerCount={followerCount} />
           }
         />
         <ReleasesSection releases={releases} artistSlug={artist.slug} />
@@ -95,6 +93,25 @@ function GrainOverlay() {
         backgroundSize: '256px 256px',
       }}
     />
+  );
+}
+
+function GuestFollowButton({ slug, followerCount }: { slug: string; followerCount: number }) {
+  return (
+    <div className="flex items-center gap-3">
+      <a
+        href={`/sign-in?callbackUrl=/artists/${slug}`}
+        className="px-4 py-1.5 rounded-full text-sm font-medium transition-opacity hover:opacity-80"
+        style={{ background: 'var(--artist-accent)', color: 'var(--artist-bg, #0d0d0d)' }}
+      >
+        Подписаться
+      </a>
+      {followerCount > 0 && (
+        <span className="text-xs opacity-40 tabular-nums">
+          {followerCount >= 1000 ? `${(followerCount / 1000).toFixed(1)}k` : followerCount} слушателей
+        </span>
+      )}
+    </div>
   );
 }
 
