@@ -28,9 +28,7 @@ export async function Nav() {
           {user ? (
             <>
               {isArtist && <NavLink href="/dashboard">Дашборд</NavLink>}
-              <span className="text-xs text-muted-foreground px-2 hidden sm:block truncate max-w-[120px]">
-                {user.name ?? user.email}
-              </span>
+              <NavLink href="/profile">{user.name ?? user.email ?? 'Профиль'}</NavLink>
             </>
           ) : (
             <NavLink href="/sign-in">Войти</NavLink>
