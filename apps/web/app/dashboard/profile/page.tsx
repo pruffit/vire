@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository } from '@vire/db';
-import { EditProfileForm } from './edit-profile-form';
+import { EditProfileForm, type EditableProfile } from './edit-profile-form';
 
 export const metadata = { title: 'Профиль артиста — Vire' };
 export const dynamic = 'force-dynamic';
@@ -12,6 +12,16 @@ export default async function DashboardProfilePage() {
 
   const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
   if (!artist) redirect('/dashboard');
+
+  // Strip Date fields (createdAt/updatedAt) before passing to the client form
+  const profile: EditableProfile = {
+    name: artist.name,
+    bio: artist.bio,
+    avatarUrl: artist.avatarUrl,
+    themeTokens: artist.themeTokens,
+    links: artist.links,
+    videos: artist.videos,
+  };
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-white">
@@ -25,7 +35,7 @@ export default async function DashboardProfilePage() {
         </div>
 
         <div className="rounded-xl bg-white/5 border border-white/10 p-6">
-          <EditProfileForm artist={artist} />
+          <EditProfileForm artist={profile} />
         </div>
       </div>
     </div>

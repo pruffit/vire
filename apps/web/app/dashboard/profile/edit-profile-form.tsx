@@ -2,12 +2,22 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ArtistProfile, ArtistLink, ArtistVideo } from '@vire/core';
+import type { ArtistLink, ArtistVideo, ThemeTokens } from '@vire/core';
 
 const FONT_SANS = ['Inter', 'Montserrat', 'Unbounded', 'Manrope', 'Geologica'];
 const FONT_MONO = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono'];
 
-export function EditProfileForm({ artist }: { artist: ArtistProfile }) {
+// Date-free subset of ArtistProfile — RSC can't serialize Date props to a client component
+export interface EditableProfile {
+  name: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  themeTokens: ThemeTokens;
+  links: ArtistLink[];
+  videos: ArtistVideo[];
+}
+
+export function EditProfileForm({ artist }: { artist: EditableProfile }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [busy, setBusy] = useState(false);
