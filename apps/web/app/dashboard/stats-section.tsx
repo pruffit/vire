@@ -1,10 +1,5 @@
 import type { ArtistPlayStats } from '@vire/db';
-
-function fmtTime(sec: number): string {
-  if (sec < 60) return `${sec}с`;
-  if (sec < 3600) return `${Math.floor(sec / 60)}м`;
-  return `${Math.floor(sec / 3600)}ч ${Math.floor((sec % 3600) / 60)}м`;
-}
+import { formatListenTime } from '@/lib/format';
 
 function MiniBar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
@@ -65,7 +60,7 @@ export function StatsSection({ stats }: { stats: ArtistPlayStats }) {
                     <span className="text-xs text-white/30 truncate hidden sm:block">{t.releaseTitle}</span>
                   </div>
                   <div className="flex items-baseline gap-3 shrink-0">
-                    <span className="text-xs text-white/30 tabular-nums">{fmtTime(t.totalListenedSec)}</span>
+                    <span className="text-xs text-white/30 tabular-nums">{formatListenTime(t.totalListenedSec)}</span>
                     <span className="text-sm font-medium tabular-nums w-12 text-right">
                       {t.totalPlays.toLocaleString('ru-RU')}
                     </span>

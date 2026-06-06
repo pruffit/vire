@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from '@/components/player/audio-engine';
+import { formatDuration } from '@/lib/format';
 
 interface Props {
   track: PlayerTrack;
@@ -74,7 +75,7 @@ export function PurchasedTrackRow({
       {/* Duration */}
       {durationSec != null && (
         <span className="text-xs font-mono text-muted-foreground tabular-nums shrink-0">
-          {fmt(durationSec)}
+          {formatDuration(durationSec)}
         </span>
       )}
 
@@ -90,10 +91,6 @@ export function PurchasedTrackRow({
       </a>
     </div>
   );
-}
-
-function fmt(sec: number): string {
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 }
 
 function PlayIcon() {

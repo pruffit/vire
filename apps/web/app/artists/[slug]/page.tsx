@@ -8,6 +8,7 @@ import type { ArtistProfile, ArtistLink, ArtistVideo, Release } from '@vire/core
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
 import { getEmbedUrl } from '@/lib/embed';
+import { formatCount } from '@/lib/format';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -111,7 +112,7 @@ function GuestFollowButton({ slug, followerCount }: { slug: string; followerCoun
       </a>
       {followerCount > 0 && (
         <span className="text-xs opacity-40 tabular-nums">
-          {followerCount >= 1000 ? `${(followerCount / 1000).toFixed(1)}k` : followerCount} слушателей
+          {formatCount(followerCount)} слушателей
         </span>
       )}
     </div>

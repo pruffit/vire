@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { formatCount } from '@/lib/format';
 
 interface Props {
   slug: string;
@@ -46,14 +47,9 @@ export function FollowButton({ slug, initialFollowing, initialCount }: Props) {
       </button>
       {count > 0 && (
         <span className="text-xs opacity-40 tabular-nums">
-          {fmtCount(count)}
+          {formatCount(count)}
         </span>
       )}
     </div>
   );
-}
-
-function fmtCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return String(n);
 }

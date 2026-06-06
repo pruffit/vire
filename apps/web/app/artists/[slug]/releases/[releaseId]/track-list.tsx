@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { controls } from '@/components/player/audio-engine';
 import { type PlayerTrack } from '@/store/player';
 import type { TrackStatus, TrackCredit } from '@vire/core';
+import { formatDuration } from '@/lib/format';
 
 export interface ClientTrack {
   id: string;
@@ -111,7 +112,7 @@ function TrackRow({
         )}
         {track.durationSec != null && ready && (
           <span className="text-xs font-mono opacity-30 w-10 text-right">
-            {fmt(track.durationSec)}
+            {formatDuration(track.durationSec)}
           </span>
         )}
         <Link
@@ -125,10 +126,4 @@ function TrackRow({
       </div>
     </div>
   );
-}
-
-function fmt(sec: number): string {
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
 }

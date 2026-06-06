@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import { TrackList, type ClientTrack } from './track-list';
+import { formatDuration, pluralTracks } from '@/lib/format';
 
 type Props = { params: Promise<{ slug: string; releaseId: string }> };
 
@@ -163,21 +164,9 @@ function MusicIcon() {
   );
 }
 
-function fmt(sec: number): string {
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
 function totalDuration(tracks: { status: string; durationSec: number | null }[]): string | null {
   const total = tracks
     .filter((t) => t.status === 'READY' && t.durationSec != null)
     .reduce((s, t) => s + (t.durationSec ?? 0), 0);
-  return total > 0 ? fmt(total) : null;
-}
-
-function pluralTracks(n: number): string {
-  if (n % 10 === 1 && n % 100 !== 11) return 'трек';
-  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'трека';
-  return 'треков';
+  return total > 0 ? formatDuration(total) : null;
 }

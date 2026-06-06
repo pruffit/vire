@@ -3,6 +3,7 @@
 import { useEffect, type MouseEvent } from 'react';
 import { usePlayerStore } from '@/store/player';
 import { controls, initAudioEngine } from './audio-engine';
+import { formatDuration } from '@/lib/format';
 
 export function Player() {
   useEffect(() => {
@@ -93,13 +94,13 @@ function ProgressSection() {
   return (
     <div className="hidden sm:flex items-center gap-2 w-1/3 justify-end">
       <span className="text-xs font-mono text-muted-foreground tabular-nums w-8 text-right">
-        {fmt(currentTime)}
+        {formatDuration(currentTime)}
       </span>
 
       <Waveform />
 
       <span className="text-xs font-mono text-muted-foreground tabular-nums w-8">
-        {fmt(duration)}
+        {formatDuration(duration)}
       </span>
 
       <input
@@ -188,11 +189,6 @@ function Waveform() {
       })}
     </svg>
   );
-}
-
-function fmt(sec: number): string {
-  const s = Math.floor(sec);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 function PlayIcon() {

@@ -7,6 +7,7 @@ import { auth } from '@/auth';
 import { LikeButton } from './like-button';
 import { TrackWaveformPlayer } from './waveform-player';
 import { DownloadButton } from './download-button';
+import { formatDuration } from '@/lib/format';
 
 type Props = { params: Promise<{ slug: string; releaseId: string; trackId: string }> };
 
@@ -114,7 +115,7 @@ export default async function TrackPage({ params }: Props) {
             </h1>
             <div className="flex items-center gap-4 flex-wrap">
               {track.durationSec && (
-                <span className="text-xs font-mono opacity-40">{fmt(track.durationSec)}</span>
+                <span className="text-xs font-mono opacity-40">{formatDuration(track.durationSec)}</span>
               )}
               {session?.user
                 ? <LikeButton trackId={trackId} initialLiked={liked} initialCount={likeCount} />
@@ -198,8 +199,4 @@ function GrainOverlay() {
       }}
     />
   );
-}
-
-function fmt(sec: number): string {
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 }

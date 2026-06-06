@@ -3,6 +3,7 @@
 import { useEffect, type MouseEvent } from 'react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from '@/components/player/audio-engine';
+import { formatDuration } from '@/lib/format';
 
 const BAR_COUNT = 120;
 const SVG_H = 80;
@@ -106,7 +107,7 @@ export function TrackWaveformPlayer({ track, queue, queueIndex, peaks }: Props) 
 
         {isThisTrack && (
           <span className="text-xs font-mono opacity-40 tabular-nums">
-            {fmtTime(currentTime)} / {fmtTime(duration)}
+            {formatDuration(currentTime)} / {formatDuration(duration)}
           </span>
         )}
       </div>
@@ -127,11 +128,6 @@ function buildBars(peaks: number[] | null): number[] {
     const slice = peaks.slice(from, to);
     return slice.length > 0 ? slice.reduce((a, b) => a + b, 0) / slice.length : 0;
   });
-}
-
-function fmtTime(sec: number): string {
-  const s = Math.floor(sec);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 function PlayIcon() {
