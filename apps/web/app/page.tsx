@@ -38,8 +38,8 @@ export default async function HomePage() {
               <Button size="sm" variant="link" asChild>
                 <a href="/sign-in">Войти</a>
               </Button>
-              <Button size="sm" variant="ghost">
-                Обзор
+              <Button size="sm" variant="ghost" asChild>
+                <a href="/artists">Обзор</a>
               </Button>
             </div>
           )}

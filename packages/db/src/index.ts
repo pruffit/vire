@@ -6,5 +6,7 @@ export * from './repositories/release';
 export * from './repositories/track';
 export { getTrackAudio } from './queries/track-audio';
 export type { TrackAudioData } from './queries/track-audio';
+export { listActiveArtists } from './queries/artists';
+export type { ArtistListItem } from './queries/artists';
 export { getFollowState, getFollowerCount, followArtist, unfollowArtist } from './queries/follows';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
