@@ -1,7 +1,7 @@
 import { eq, asc, and, desc } from 'drizzle-orm';
 import { releases, tracks } from '../schema';
 import type { DB } from '../client';
-import type { IReleaseRepository, Release, ReleaseWithTracks, Track } from '@vire/core';
+import type { CreateReleaseInput, IReleaseRepository, Release, ReleaseWithTracks, Track } from '@vire/core';
 
 export class DrizzleReleaseRepository implements IReleaseRepository {
   constructor(private readonly db: DB) {}
@@ -59,6 +59,23 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
       release: mapToRelease(releaseRow),
       tracks: trackRows.map(mapToTrack),
     };
+  }
+
+  async create(input: CreateReleaseInput): Promise<Release> {
+    const [row] = await this.db
+      .insert(releases)
+      .values({
+        id: input.id,
+        artistProfileId: input.artistProfileId,
+        title: input.title,
+        type: input.type,
+        releaseDate: input.releaseDate ?? null,
+        coverUrl: input.coverUrl ?? null,
+        description: input.description ?? null,
+        status: 'DRAFT',
+      })
+      .returning();
+    return mapToRelease(row!);
   }
 
   async findPublishedByArtist(artistProfileId: string): Promise<Release[]> {

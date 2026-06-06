@@ -105,10 +105,18 @@ export default async function DashboardPage() {
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-lg font-medium">
-                Релизы
-                <span className="ml-2 text-sm text-white/30 font-normal">{releases.length}</span>
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-medium">
+                  Релизы
+                  <span className="ml-2 text-sm text-white/30 font-normal">{releases.length}</span>
+                </h2>
+                <a
+                  href="/dashboard/releases/new"
+                  className="text-sm px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/15 transition-colors"
+                >
+                  + Создать
+                </a>
+              </div>
               {releases.length === 0 ? (
                 <p className="text-white/40 text-sm">Нет релизов</p>
               ) : (
