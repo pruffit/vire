@@ -10,4 +10,6 @@ export { listActiveArtists } from './queries/artists';
 export type { ArtistListItem } from './queries/artists';
 export { getLikeState, getLikeCount, likeTrack, unlikeTrack } from './queries/likes';
 export { getFollowState, getFollowerCount, followArtist, unfollowArtist } from './queries/follows';
+export { getFeed } from './queries/feed';
+export type { FeedRelease } from './queries/feed';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

@@ -22,6 +22,14 @@ export default async function HomePage() {
                   {session.user.role}
                 </span>
               </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="ghost" asChild>
+                  <a href="/feed">Лента</a>
+                </Button>
+                <Button size="sm" variant="ghost" asChild>
+                  <a href="/artists">Артисты</a>
+                </Button>
+              </div>
               <form
                 action={async () => {
                   'use server';
