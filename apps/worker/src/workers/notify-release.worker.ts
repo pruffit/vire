@@ -4,7 +4,11 @@ import { getFollowerEmails } from '@vire/db';
 import { QUEUE_NOTIFY_RELEASE, type NotifyReleaseJobData } from '@vire/core';
 import { connection } from '../queues/connection.js';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+function getResend(): Resend {
+  if (!resend) resend = new Resend(process.env.RESEND_API_KEY);
+  return resend;
+}
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 const FROM = process.env.RESEND_FROM ?? 'Vire <noreply@vire.music>';
 
@@ -65,7 +69,7 @@ async function handle(job: Job<NotifyReleaseJobData>): Promise<void> {
   for (let i = 0; i < followers.length; i += BATCH) {
     const chunk = followers.slice(i, i + BATCH);
 
-    await resend.batch.send(
+    await getResend().batch.send(
       chunk.map((f) => ({
         from: FROM,
         to: f.email,

@@ -2,10 +2,14 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ReleaseWithTracks } from '@vire/core';
+interface ReleaseOption {
+  id: string;
+  title: string;
+  status: string;
+}
 
 interface Props {
-  releases: ReleaseWithTracks[];
+  releases: ReleaseOption[];
 }
 
 type UploadState = 'idle' | 'uploading' | 'done' | 'error';
@@ -64,9 +68,9 @@ export function UploadTrackForm({ releases }: Props) {
           className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent,#6366f1)] disabled:opacity-50"
         >
           <option value="">— выбери релиз —</option>
-          {releases.map(({ release }) => (
-            <option key={release.id} value={release.id}>
-              {release.title} ({release.status})
+          {releases.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.title} ({r.status})
             </option>
           ))}
         </select>

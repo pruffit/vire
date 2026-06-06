@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 
 interface Props {
   releaseId: string;
-  releaseDate: Date | null;
+  releaseDate: string | null;
 }
 
 export function PublishButton({ releaseId, releaseDate }: Props) {
@@ -51,7 +51,7 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
   );
 }
 
-function formatDate(date: Date): string {
+function formatDate(date: string): string {
   return new Date(date).toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'short',

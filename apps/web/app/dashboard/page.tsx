@@ -67,7 +67,7 @@ function ReleaseCard({ data }: { data: ReleaseWithTracks }) {
             {' '}· {tracks.length} тр.
           </p>
           {release.status === 'DRAFT' && (
-            <PublishButton releaseId={release.id} releaseDate={release.releaseDate} />
+            <PublishButton releaseId={release.id} releaseDate={release.releaseDate?.toISOString() ?? null} />
           )}
         </div>
         {release.coverUrl && (
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-lg font-medium">Загрузить трек</h2>
               <div className="rounded-xl bg-white/5 border border-white/10 p-5">
-                <UploadTrackForm releases={releases} />
+                <UploadTrackForm releases={releases.map(({ release }) => ({ id: release.id, title: release.title, status: release.status }))} />
               </div>
             </section>
 
