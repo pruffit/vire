@@ -1,12 +1,31 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getArtistPlayStats } from '@vire/db';
-import type { ReleaseWithTracks, TrackStatus, ReleaseStatus } from '@vire/core';
+import type { TrackStatus, ReleaseStatus, ReleaseType } from '@vire/core';
 import { UploadTrackForm } from './upload-form';
 import { PublishButton } from './publish-button';
 import { StatsSection } from './stats-section';
 
 export const dynamic = 'force-dynamic';
+
+// Date-free types for safe RSC prop serialization
+interface DashboardTrack {
+  id: string;
+  title: string;
+  trackNumber: number;
+  durationSec: number | null;
+  status: TrackStatus;
+}
+
+interface DashboardRelease {
+  id: string;
+  title: string;
+  type: ReleaseType;
+  status: ReleaseStatus;
+  coverUrl: string | null;
+  releaseDate: string | null;
+  tracks: DashboardTrack[];
+}
 
 const STATUS_LABEL: Record<TrackStatus, string> = {
   PROCESSING: 'обрабатывается',
@@ -34,7 +53,7 @@ const STATUS_COLOR: Record<TrackStatus, string> = {
   BLOCKED: 'text-red-400',
 };
 
-function TrackRow({ track }: { track: ReleaseWithTracks['tracks'][number] }) {
+function TrackRow({ track }: { track: DashboardTrack }) {
   const mins = track.durationSec ? Math.floor(track.durationSec / 60) : null;
   const secs = track.durationSec ? String(track.durationSec % 60).padStart(2, '0') : null;
 
@@ -52,34 +71,34 @@ function TrackRow({ track }: { track: ReleaseWithTracks['tracks'][number] }) {
   );
 }
 
-function ReleaseCard({ data }: { data: ReleaseWithTracks }) {
-  const { release, tracks } = data;
+function ReleaseCard({ data }: { data: DashboardRelease }) {
+  const { tracks } = data;
   return (
     <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1.5">
           <a
-            href={`/dashboard/releases/${release.id}`}
+            href={`/dashboard/releases/${data.id}`}
             className="font-medium hover:text-white/70 transition-colors"
           >
-            {release.title}
+            {data.title}
           </a>
-          <p className={`text-sm ${RELEASE_STATUS_COLOR[release.status]}`}>
-            {release.type} · {RELEASE_STATUS_LABEL[release.status]}
-            {release.status === 'SCHEDULED' && release.releaseDate && (
-              <> · {new Date(release.releaseDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+          <p className={`text-sm ${RELEASE_STATUS_COLOR[data.status]}`}>
+            {data.type} · {RELEASE_STATUS_LABEL[data.status]}
+            {data.status === 'SCHEDULED' && data.releaseDate && (
+              <> · {new Date(data.releaseDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</>
             )}
             {' '}· {tracks.length} тр.
           </p>
-          {release.status === 'DRAFT' && (
-            <PublishButton releaseId={release.id} releaseDate={release.releaseDate?.toISOString() ?? null} />
+          {data.status === 'DRAFT' && (
+            <PublishButton releaseId={data.id} releaseDate={data.releaseDate} />
           )}
         </div>
-        {release.coverUrl && (
+        {data.coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={release.coverUrl}
-            alt={release.title}
+            src={data.coverUrl}
+            alt={data.title}
             className="w-12 h-12 rounded-md object-cover shrink-0"
           />
         )}
@@ -104,10 +123,26 @@ export default async function DashboardPage() {
   const artistRepo = new DrizzleArtistRepository(db);
   const artist = await artistRepo.findByUserId(session.user.id);
 
-  const [releases, playStats] = await Promise.all([
-    artist ? new DrizzleReleaseRepository(db).findAllByArtist(artist.id) : Promise.resolve<ReleaseWithTracks[]>([]),
+  const [rawReleases, playStats] = await Promise.all([
+    artist ? new DrizzleReleaseRepository(db).findAllByArtist(artist.id) : Promise.resolve([]),
     artist ? getArtistPlayStats(artist.id) : Promise.resolve(null),
   ]);
+
+  const releases: DashboardRelease[] = rawReleases.map(({ release, tracks }) => ({
+    id: release.id,
+    title: release.title,
+    type: release.type,
+    status: release.status,
+    coverUrl: release.coverUrl,
+    releaseDate: release.releaseDate ? release.releaseDate.toISOString() : null,
+    tracks: tracks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      trackNumber: t.trackNumber,
+      durationSec: t.durationSec,
+      status: t.status,
+    })),
+  }));
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-white">
@@ -137,7 +172,7 @@ export default async function DashboardPage() {
             <section className="flex flex-col gap-4">
               <h2 className="text-lg font-medium">Загрузить трек</h2>
               <div className="rounded-xl bg-white/5 border border-white/10 p-5">
-                <UploadTrackForm releases={releases.map(({ release }) => ({ id: release.id, title: release.title, status: release.status }))} />
+                <UploadTrackForm releases={releases.map((r) => ({ id: r.id, title: r.title, status: r.status }))} />
               </div>
             </section>
 
@@ -159,7 +194,7 @@ export default async function DashboardPage() {
               ) : (
                 <div className="flex flex-col gap-3">
                   {releases.map((r) => (
-                    <ReleaseCard key={r.release.id} data={r} />
+                    <ReleaseCard key={r.id} data={r} />
                   ))}
                 </div>
               )}
