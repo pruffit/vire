@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ArtistProfile, ArtistLink } from '@vire/core';
+import type { ArtistProfile, ArtistLink, ArtistVideo } from '@vire/core';
 
 const FONT_SANS = ['Inter', 'Montserrat', 'Unbounded', 'Manrope', 'Geologica'];
 const FONT_MONO = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono'];
@@ -16,6 +16,7 @@ export function EditProfileForm({ artist }: { artist: ArtistProfile }) {
 
   const [avatarPreview, setAvatarPreview] = useState<string | null>(artist.avatarUrl);
   const [links, setLinks] = useState<ArtistLink[]>(artist.links);
+  const [videos, setVideos] = useState<ArtistVideo[]>(artist.videos);
   const [removeAvatar, setRemoveAvatar] = useState(false);
 
   // Theme live preview
@@ -36,6 +37,7 @@ export function EditProfileForm({ artist }: { artist: ArtistProfile }) {
       const fd = new FormData(e.currentTarget);
       fd.set('grain', grain ? '1' : '0');
       fd.set('links', JSON.stringify(links));
+      fd.set('videos', JSON.stringify(videos));
       if (removeAvatar) fd.set('removeAvatar', '1');
 
       const res = await fetch('/api/v1/dashboard/profile', { method: 'POST', body: fd });
@@ -132,6 +134,63 @@ export function EditProfileForm({ artist }: { artist: ArtistProfile }) {
             className="self-start text-sm text-white/40 hover:text-white/70 transition-colors"
           >
             + добавить ссылку
+          </button>
+        )}
+      </div>
+
+      {/* Videos */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between">
+          <span className="text-sm font-medium">Видео</span>
+          <span className="text-xs text-white/30">YouTube или VK · до 20</span>
+        </div>
+
+        {videos.map((video, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Название"
+              value={video.title}
+              disabled={busy}
+              onChange={(e) =>
+                setVideos((prev) =>
+                  prev.map((v, j) => j === i ? { ...v, title: e.target.value } : v),
+                )
+              }
+              className={`${inp} w-36 shrink-0`}
+            />
+            <input
+              type="url"
+              placeholder="https://youtube.com/watch?v=…"
+              value={video.url}
+              disabled={busy}
+              onChange={(e) =>
+                setVideos((prev) =>
+                  prev.map((v, j) => j === i ? { ...v, url: e.target.value } : v),
+                )
+              }
+              className={inp}
+            />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setVideos((prev) => prev.filter((_, j) => j !== i))}
+              className="shrink-0 text-white/30 hover:text-red-400 transition-colors text-lg leading-none"
+              aria-label="Удалить видео"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+
+        {videos.length < 20 && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setVideos((prev) => [...prev, { title: '', url: '' }])}
+            className="self-start text-sm text-white/40 hover:text-white/70 transition-colors"
+          >
+            + добавить видео
           </button>
         )}
       </div>

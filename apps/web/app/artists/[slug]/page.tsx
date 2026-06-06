@@ -4,9 +4,10 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getFollowState, getFollowerCount } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
-import type { ArtistProfile, ArtistLink, Release } from '@vire/core';
+import type { ArtistProfile, ArtistLink, ArtistVideo, Release } from '@vire/core';
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
+import { getEmbedUrl } from '@/lib/embed';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -76,6 +77,7 @@ export default async function ArtistPage({ params }: Props) {
         />
         {artist.links.length > 0 && <LinksSection links={artist.links} />}
         <ReleasesSection releases={releases} artistSlug={artist.slug} />
+        {artist.videos.length > 0 && <VideosSection videos={artist.videos} />}
       </div>
     </div>
   );
@@ -180,6 +182,38 @@ function ReleasesSection({ releases, artistSlug }: { releases: Release[]; artist
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
         {releases.map((release) => (
           <ReleaseCard key={release.id} release={release} artistSlug={artistSlug} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function VideosSection({ videos }: { videos: ArtistVideo[] }) {
+  const embeds = videos
+    .map((v) => ({ ...v, embedUrl: getEmbedUrl(v.url) }))
+    .filter((v): v is typeof v & { embedUrl: string } => v.embedUrl !== null);
+
+  if (embeds.length === 0) return null;
+
+  return (
+    <section className="space-y-6">
+      <h2 className="text-xs uppercase tracking-widest opacity-40 font-mono">Видео</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {embeds.map((v, i) => (
+          <div key={i} className="space-y-2">
+            <div className="relative w-full aspect-video rounded-sm overflow-hidden bg-white/5">
+              <iframe
+                src={v.embedUrl}
+                title={v.title || 'Видео'}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full"
+              />
+            </div>
+            {v.title && (
+              <p className="text-sm opacity-70 leading-snug">{v.title}</p>
+            )}
+          </div>
         ))}
       </div>
     </section>

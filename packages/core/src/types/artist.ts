@@ -21,6 +21,11 @@ export interface ArtistLink {
   url: string;
 }
 
+export interface ArtistVideo {
+  url: string;
+  title: string;
+}
+
 export interface ArtistProfile {
   id: string;
   userId: string;
@@ -30,6 +35,7 @@ export interface ArtistProfile {
   avatarUrl: string | null;
   themeTokens: ThemeTokens;
   links: ArtistLink[];
+  videos: ArtistVideo[];
   verified: boolean;
   isActive: boolean;
   createdAt: Date;

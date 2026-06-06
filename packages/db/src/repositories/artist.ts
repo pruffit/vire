@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { artistProfiles } from '../schema';
 import type { DB } from '../client';
-import type { IArtistRepository, ArtistProfile, ThemeTokens, ArtistLink, UpdateArtistProfileData } from '@vire/core';
+import type { IArtistRepository, ArtistProfile, ThemeTokens, ArtistLink, ArtistVideo, UpdateArtistProfileData } from '@vire/core';
 import { defaultThemeTokens } from '@vire/core';
 
 export class DrizzleArtistRepository implements IArtistRepository {
@@ -47,6 +47,7 @@ function mapToArtistProfile(row: typeof artistProfiles.$inferSelect): ArtistProf
     avatarUrl: row.avatarUrl,
     themeTokens: (row.themeTokens as ThemeTokens) ?? defaultThemeTokens,
     links: Array.isArray(row.links) ? (row.links as ArtistLink[]) : [],
+    videos: Array.isArray(row.videos) ? (row.videos as ArtistVideo[]) : [],
     verified: row.verified,
     isActive: row.isActive,
     createdAt: row.createdAt,

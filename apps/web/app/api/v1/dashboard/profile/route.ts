@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
-import type { ThemeTokens, ArtistLink } from '@vire/core';
+import type { ThemeTokens, ArtistLink, ArtistVideo } from '@vire/core';
 
 const AVATAR_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -55,6 +55,24 @@ export async function POST(req: Request) {
     } catch { /* keep existing links */ }
   }
 
+  const videosRaw = formData.get('videos');
+  let videos: ArtistVideo[] = artist.videos;
+  if (typeof videosRaw === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(videosRaw);
+      if (Array.isArray(parsed)) {
+        videos = parsed
+          .filter((v): v is ArtistVideo =>
+            v !== null &&
+            typeof v === 'object' &&
+            typeof (v as ArtistVideo).url === 'string' &&
+            typeof (v as ArtistVideo).title === 'string',
+          )
+          .slice(0, 20);
+      }
+    } catch { /* keep existing */ }
+  }
+
   const bg = formData.get('bg');
   const text = formData.get('text');
   const accent = formData.get('accent');
@@ -94,6 +112,7 @@ export async function POST(req: Request) {
     avatarUrl,
     themeTokens,
     links,
+    videos,
   });
 
   return NextResponse.json({ ok: true });
