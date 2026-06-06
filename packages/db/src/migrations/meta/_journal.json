@@ -29,6 +29,27 @@
       "when": 1780736122407,
       "tag": "0003_normal_midnight",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780752212888,
+      "tag": "0004_secret_raza",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780752443946,
+      "tag": "0005_black_the_call",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780753608315,
+      "tag": "0006_glossy_robbie_robertson",
+      "breakpoints": true
     }
   ]
 }

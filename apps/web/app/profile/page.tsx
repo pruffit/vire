@@ -2,11 +2,10 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
-import { getLikedTracks, getFollowedArtists, getPurchasedTracks } from '@vire/db';
-import type { LikedTrack, FollowedArtist, PurchasedTrack } from '@vire/db';
+import { getLikedTracks, getFollowedArtists } from '@vire/db';
+import type { LikedTrack, FollowedArtist } from '@vire/db';
 import type { PlayerTrack } from '@/store/player';
 import { LikedTrackRow } from './liked-track-row';
-import { PurchasedTrackRow } from './purchased-track-row';
 import { UnfollowButton } from './unfollow-button';
 
 export const metadata: Metadata = {
@@ -19,20 +18,12 @@ export default async function ProfilePage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/profile');
 
-  const [likedTracks, followedArtists, purchasedTracks] = await Promise.all([
+  const [likedTracks, followedArtists] = await Promise.all([
     getLikedTracks(session.user.id),
     getFollowedArtists(session.user.id),
-    getPurchasedTracks(session.user.id),
   ]);
 
   const likedQueue: PlayerTrack[] = likedTracks.map((t) => ({
-    id: t.id,
-    title: t.title,
-    artistName: t.artistName,
-    coverUrl: t.releaseCoverUrl,
-  }));
-
-  const purchasedQueue: PlayerTrack[] = purchasedTracks.map((t) => ({
     id: t.id,
     title: t.title,
     artistName: t.artistName,
@@ -48,45 +39,6 @@ export default async function ProfilePage() {
         </h1>
         <p className="text-sm text-muted-foreground">{session.user.email}</p>
       </header>
-
-      {/* Purchased tracks */}
-      <section className="space-y-4">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-base font-semibold">Куплено</h2>
-          {purchasedTracks.length > 0 && (
-            <span className="text-xs font-mono text-muted-foreground tabular-nums">
-              {purchasedTracks.length}
-            </span>
-          )}
-        </div>
-
-        {purchasedTracks.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">
-            Ты ещё ничего не покупал.
-          </p>
-        ) : (
-          <div className="flex flex-col">
-            {purchasedTracks.map((track, i) => (
-              <PurchasedTrackRow
-                key={track.id}
-                track={{
-                  id: track.id,
-                  title: track.title,
-                  artistName: track.artistName,
-                  coverUrl: track.releaseCoverUrl,
-                }}
-                queue={purchasedQueue}
-                queueIndex={i}
-                durationSec={track.durationSec}
-                releaseCoverUrl={track.releaseCoverUrl}
-                artistSlug={track.artistSlug}
-                releaseId={track.releaseId}
-                trackId={track.id}
-              />
-            ))}
-          </div>
-        )}
-      </section>
 
       {/* Liked tracks */}
       <section className="space-y-4">
