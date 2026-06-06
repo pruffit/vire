@@ -28,6 +28,17 @@ export {
   failPurchaseByExternalId,
 } from './queries/purchases';
 export type { PendingPurchase } from './queries/purchases';
+export {
+  getAdminStats,
+  listUsersAdmin,
+  setUserRole,
+  verifyArtist,
+  listTracksAdmin,
+  setTrackStatus,
+  listReleasesAdmin,
+} from './queries/admin';
+export type { AdminStats, AdminUser, AdminTrack, AdminRelease } from './queries/admin';
+export type { UserRole } from './queries/admin-types';
 export { getFollowerEmails } from './queries/notifications';
 export type { FollowerEmail } from './queries/notifications';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

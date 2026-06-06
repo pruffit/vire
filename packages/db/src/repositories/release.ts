@@ -1,7 +1,7 @@
 import { eq, asc, and, or, lte, isNotNull, desc, sql } from 'drizzle-orm';
 import { releases, tracks } from '../schema';
 import type { DB } from '../client';
-import type { CreateReleaseInput, IReleaseRepository, Release, ReleaseStatus, ReleaseWithTracks, Track } from '@vire/core';
+import type { CreateReleaseInput, UpdateReleaseInput, IReleaseRepository, Release, ReleaseStatus, ReleaseWithTracks, Track } from '@vire/core';
 
 export class DrizzleReleaseRepository implements IReleaseRepository {
   constructor(private readonly db: DB) {}
@@ -59,6 +59,23 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
       release: mapToRelease(releaseRow),
       tracks: trackRows.map(mapToTrack),
     };
+  }
+
+  async update(releaseId: string, input: UpdateReleaseInput): Promise<Release> {
+    const [row] = await this.db
+      .update(releases)
+      .set({
+        ...(input.title !== undefined && { title: input.title }),
+        ...(input.type !== undefined && { type: input.type }),
+        ...(input.releaseDate !== undefined && { releaseDate: input.releaseDate }),
+        ...(input.coverUrl !== undefined && { coverUrl: input.coverUrl }),
+        ...(input.description !== undefined && { description: input.description }),
+        ...(input.linerNotes !== undefined && { linerNotes: input.linerNotes }),
+        updatedAt: new Date(),
+      })
+      .where(eq(releases.id, releaseId))
+      .returning();
+    return mapToRelease(row!);
   }
 
   async updateStatus(releaseId: string, status: ReleaseStatus): Promise<void> {

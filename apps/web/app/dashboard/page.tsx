@@ -58,7 +58,12 @@ function ReleaseCard({ data }: { data: ReleaseWithTracks }) {
     <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1.5">
-          <p className="font-medium">{release.title}</p>
+          <a
+            href={`/dashboard/releases/${release.id}`}
+            className="font-medium hover:text-white/70 transition-colors"
+          >
+            {release.title}
+          </a>
           <p className={`text-sm ${RELEASE_STATUS_COLOR[release.status]}`}>
             {release.type} · {RELEASE_STATUS_LABEL[release.status]}
             {release.status === 'SCHEDULED' && release.releaseDate && (
