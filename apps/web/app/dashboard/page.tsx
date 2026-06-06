@@ -111,7 +111,13 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
           {artist && (
-            <p className="text-white/50 mt-1">@{artist.slug} · {artist.name}</p>
+            <p className="text-white/50 mt-1">
+              @{artist.slug} · {artist.name}
+              {' · '}
+              <a href="/dashboard/profile" className="hover:text-white/80 underline underline-offset-2 transition-colors">
+                редактировать профиль
+              </a>
+            </p>
           )}
         </div>
 

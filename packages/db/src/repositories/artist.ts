@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { artistProfiles } from '../schema';
 import type { DB } from '../client';
-import type { IArtistRepository, ArtistProfile, ThemeTokens } from '@vire/core';
+import type { IArtistRepository, ArtistProfile, ThemeTokens, UpdateArtistProfileData } from '@vire/core';
 import { defaultThemeTokens } from '@vire/core';
 
 export class DrizzleArtistRepository implements IArtistRepository {
@@ -27,6 +27,13 @@ export class DrizzleArtistRepository implements IArtistRepository {
 
     if (!row) return null;
     return mapToArtistProfile(row);
+  }
+
+  async update(id: string, data: UpdateArtistProfileData): Promise<void> {
+    await this.db
+      .update(artistProfiles)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(artistProfiles.id, id));
   }
 }
 
