@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getTrackAudio, getLikeState, getLikeCount, hasPurchasedTrack } from '@vire/db';
+import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getTrackAudio, getLikeState, getLikeCount, hasPurchasedTrack, getPendingPurchase } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import { auth } from '@/auth';
 import { LikeButton } from './like-button';
@@ -60,10 +60,12 @@ export default async function TrackPage({ params }: Props) {
   ]);
 
   const userId = session?.user?.id;
-  const [liked, owned] = await Promise.all([
+  const [liked, owned, pendingPurchase] = await Promise.all([
     userId ? getLikeState(userId, trackId) : Promise.resolve(false),
     userId && track.status === 'READY' ? hasPurchasedTrack(userId, trackId) : Promise.resolve(false),
+    userId && track.status === 'READY' ? getPendingPurchase(userId, trackId) : Promise.resolve(null),
   ]);
+  const pending = !owned && pendingPurchase !== null;
 
   const queue = tracks
     .filter((t) => t.status === 'READY')
@@ -127,6 +129,7 @@ export default async function TrackPage({ params }: Props) {
                   trackId={trackId}
                   trackTitle={`${track.title} - ${artist.name}`}
                   initialOwned={owned}
+                  initialPending={pending}
                 />
               )}
             </div>

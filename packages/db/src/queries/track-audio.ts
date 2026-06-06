@@ -38,3 +38,12 @@ export async function trackExists(trackId: string): Promise<boolean> {
     .limit(1);
   return !!row;
 }
+
+export async function getTrackTitle(trackId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ title: tracks.title })
+    .from(tracks)
+    .where(eq(tracks.id, trackId))
+    .limit(1);
+  return row?.title ?? null;
+}

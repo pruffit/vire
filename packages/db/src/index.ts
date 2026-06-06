@@ -4,7 +4,7 @@ export * from './schema';
 export * from './repositories/artist';
 export * from './repositories/release';
 export * from './repositories/track';
-export { getTrackAudio, trackExists } from './queries/track-audio';
+export { getTrackAudio, trackExists, getTrackTitle } from './queries/track-audio';
 export type { TrackAudioData } from './queries/track-audio';
 export { listActiveArtists } from './queries/artists';
 export type { ArtistListItem } from './queries/artists';
@@ -20,7 +20,14 @@ export { searchAll } from './queries/search';
 export type { SearchResults, SearchArtist, SearchRelease, SearchTrack } from './queries/search';
 export { getArtistPlayStats } from './queries/artist-analytics';
 export type { ArtistPlayStats, TrackPlayStat } from './queries/artist-analytics';
-export { hasPurchasedTrack, createTrackPurchase } from './queries/purchases';
+export {
+  hasPurchasedTrack,
+  getPendingPurchase,
+  createPendingPurchase,
+  confirmPurchaseByExternalId,
+  failPurchaseByExternalId,
+} from './queries/purchases';
+export type { PendingPurchase } from './queries/purchases';
 export { getFollowerEmails } from './queries/notifications';
 export type { FollowerEmail } from './queries/notifications';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

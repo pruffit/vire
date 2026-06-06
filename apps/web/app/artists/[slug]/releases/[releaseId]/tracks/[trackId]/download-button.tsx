@@ -1,25 +1,53 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface Props {
   trackId: string;
   trackTitle: string;
   initialOwned: boolean;
+  initialPending: boolean;
 }
 
-export function DownloadButton({ trackId, trackTitle, initialOwned }: Props) {
+export function DownloadButton({ trackId, trackTitle, initialOwned, initialPending }: Props) {
+  const router = useRouter();
   const [owned, setOwned] = useState(initialOwned);
-  const [buying, setBuying] = useState(false);
+  const [pending, setPending] = useState(initialPending);
+  const [busy, setBusy] = useState(false);
 
   async function handleBuy() {
-    setBuying(true);
+    setBusy(true);
     try {
-      const res = await fetch(`/api/v1/tracks/${trackId}/purchase`, { method: 'POST' });
-      if (res.ok) setOwned(true);
+      const res = await fetch(`/api/v1/tracks/${trackId}/purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnUrl: window.location.href }),
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json() as { ok?: boolean; alreadyOwned?: boolean; confirmationUrl?: string };
+
+      if (data.alreadyOwned) {
+        setOwned(true);
+        return;
+      }
+
+      if (data.confirmationUrl) {
+        window.location.href = data.confirmationUrl;
+        return;
+      }
     } finally {
-      setBuying(false);
+      setBusy(false);
     }
+  }
+
+  async function handleCheckPayment() {
+    setBusy(true);
+    router.refresh();
+    // After refresh, server re-checks hasPurchasedTrack; page re-renders with updated initialOwned
+    setBusy(false);
   }
 
   if (owned) {
@@ -34,18 +62,33 @@ export function DownloadButton({ trackId, trackTitle, initialOwned }: Props) {
     );
   }
 
+  if (pending) {
+    return (
+      <div className="inline-flex items-center gap-2">
+        <span className="text-xs opacity-50">Оплата обрабатывается</span>
+        <button
+          onClick={handleCheckPayment}
+          disabled={busy}
+          className="text-xs underline underline-offset-2 opacity-50 hover:opacity-80 transition-opacity disabled:opacity-30"
+        >
+          Проверить
+        </button>
+      </div>
+    );
+  }
+
   return (
     <button
       onClick={handleBuy}
-      disabled={buying}
+      disabled={busy}
       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-white/10 hover:bg-white/15 transition-colors border border-white/10 disabled:opacity-40"
     >
-      {buying ? (
+      {busy ? (
         <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
       ) : (
         <DownloadIcon />
       )}
-      {buying ? 'Оформление…' : 'Купить FLAC · 99 ₽'}
+      {busy ? 'Перехожу к оплате…' : 'Купить FLAC · 99 ₽'}
     </button>
   );
 }

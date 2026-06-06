@@ -18,23 +18,75 @@ export async function hasPurchasedTrack(userId: string, trackId: string): Promis
   return !!row;
 }
 
-export async function createTrackPurchase(
+export interface PendingPurchase {
+  id: string;
+  externalPaymentId: string;
+}
+
+export async function getPendingPurchase(
   userId: string,
   trackId: string,
-  price: string,
-): Promise<string> {
+): Promise<PendingPurchase | null> {
   const [row] = await db
-    .insert(purchases)
-    .values({
-      userId,
-      itemType: 'TRACK',
-      itemId: trackId,
-      price,
-      currency: 'RUB',
-      // Placeholder: immediately PAID until real payment provider is wired
-      status: 'PAID',
-      purchasedAt: new Date(),
-    })
+    .select({ id: purchases.id, externalPaymentId: purchases.externalPaymentId })
+    .from(purchases)
+    .where(
+      and(
+        eq(purchases.userId, userId),
+        eq(purchases.itemType, 'TRACK'),
+        eq(purchases.itemId, trackId),
+        eq(purchases.status, 'PENDING'),
+      ),
+    )
+    .limit(1);
+
+  if (!row?.externalPaymentId) return null;
+  return { id: row.id, externalPaymentId: row.externalPaymentId };
+}
+
+export async function createPendingPurchase(params: {
+  id: string;
+  userId: string;
+  trackId: string;
+  price: string;
+  externalPaymentId: string;
+  paymentProvider: string;
+}): Promise<void> {
+  await db.insert(purchases).values({
+    id: params.id,
+    userId: params.userId,
+    itemType: 'TRACK',
+    itemId: params.trackId,
+    price: params.price,
+    currency: 'RUB',
+    status: 'PENDING',
+    paymentProvider: params.paymentProvider,
+    externalPaymentId: params.externalPaymentId,
+  });
+}
+
+export async function confirmPurchaseByExternalId(externalPaymentId: string): Promise<boolean> {
+  const rows = await db
+    .update(purchases)
+    .set({ status: 'PAID', purchasedAt: new Date() })
+    .where(
+      and(
+        eq(purchases.externalPaymentId, externalPaymentId),
+        eq(purchases.status, 'PENDING'),
+      ),
+    )
     .returning({ id: purchases.id });
-  return row!.id;
+  return rows.length > 0;
+}
+
+export async function failPurchaseByExternalId(externalPaymentId: string): Promise<void> {
+  await db
+    .update(purchases)
+    .set({ status: 'FAILED' })
+    .where(
+      and(
+        eq(purchases.externalPaymentId, externalPaymentId),
+        eq(purchases.status, 'PENDING'),
+      ),
+    );
 }
