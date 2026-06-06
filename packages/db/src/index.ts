@@ -18,4 +18,6 @@ export { getLikedTracks, getFollowedArtists } from './queries/profile';
 export type { LikedTrack, FollowedArtist } from './queries/profile';
 export { searchAll } from './queries/search';
 export type { SearchResults, SearchArtist, SearchRelease, SearchTrack } from './queries/search';
+export { getArtistPlayStats } from './queries/artist-analytics';
+export type { ArtistPlayStats, TrackPlayStat } from './queries/artist-analytics';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

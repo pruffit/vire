@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
+import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getArtistPlayStats } from '@vire/db';
 import type { ReleaseWithTracks, TrackStatus, ReleaseStatus } from '@vire/core';
 import { UploadTrackForm } from './upload-form';
 import { PublishButton } from './publish-button';
+import { StatsSection } from './stats-section';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,9 +99,10 @@ export default async function DashboardPage() {
   const artistRepo = new DrizzleArtistRepository(db);
   const artist = await artistRepo.findByUserId(session.user.id);
 
-  const releases: ReleaseWithTracks[] = artist
-    ? await new DrizzleReleaseRepository(db).findAllByArtist(artist.id)
-    : [];
+  const [releases, playStats] = await Promise.all([
+    artist ? new DrizzleReleaseRepository(db).findAllByArtist(artist.id) : Promise.resolve<ReleaseWithTracks[]>([]),
+    artist ? getArtistPlayStats(artist.id) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-white">
@@ -119,6 +121,8 @@ export default async function DashboardPage() {
           </p>
         ) : (
           <>
+            {playStats && <StatsSection stats={playStats} />}
+
             <section className="flex flex-col gap-4">
               <h2 className="text-lg font-medium">Загрузить трек</h2>
               <div className="rounded-xl bg-white/5 border border-white/10 p-5">
