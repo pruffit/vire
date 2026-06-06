@@ -1,4 +1,4 @@
-import type { Release, ReleaseType, ReleaseWithTracks } from '../types/release';
+import type { Release, ReleaseStatus, ReleaseType, ReleaseWithTracks } from '../types/release';
 
 export interface CreateReleaseInput {
   id: string;
@@ -16,4 +16,5 @@ export interface IReleaseRepository {
   findPublishedByArtist(artistProfileId: string): Promise<Release[]>;
   findAllByArtist(artistProfileId: string): Promise<ReleaseWithTracks[]>;
   create(input: CreateReleaseInput): Promise<Release>;
+  updateStatus(releaseId: string, status: ReleaseStatus): Promise<void>;
 }

@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import type { ReleaseWithTracks, TrackStatus } from '@vire/core';
 import { UploadTrackForm } from './upload-form';
+import { PublishButton } from './publish-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,11 +42,12 @@ function ReleaseCard({ data }: { data: ReleaseWithTracks }) {
   return (
     <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="flex flex-col gap-1.5">
           <p className="font-medium">{release.title}</p>
-          <p className="text-sm text-white/40 mt-0.5">
+          <p className="text-sm text-white/40">
             {release.type} · {release.status} · {tracks.length} тр.
           </p>
+          {release.status === 'DRAFT' && <PublishButton releaseId={release.id} />}
         </div>
         {release.coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element

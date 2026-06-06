@@ -1,7 +1,7 @@
 import { eq, asc, and, desc } from 'drizzle-orm';
 import { releases, tracks } from '../schema';
 import type { DB } from '../client';
-import type { CreateReleaseInput, IReleaseRepository, Release, ReleaseWithTracks, Track } from '@vire/core';
+import type { CreateReleaseInput, IReleaseRepository, Release, ReleaseStatus, ReleaseWithTracks, Track } from '@vire/core';
 
 export class DrizzleReleaseRepository implements IReleaseRepository {
   constructor(private readonly db: DB) {}
@@ -59,6 +59,13 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
       release: mapToRelease(releaseRow),
       tracks: trackRows.map(mapToTrack),
     };
+  }
+
+  async updateStatus(releaseId: string, status: ReleaseStatus): Promise<void> {
+    await this.db
+      .update(releases)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(releases.id, releaseId));
   }
 
   async create(input: CreateReleaseInput): Promise<Release> {
