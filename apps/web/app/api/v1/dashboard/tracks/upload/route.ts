@@ -68,12 +68,20 @@ export async function POST(req: Request) {
     } catch { /* keep empty */ }
   }
 
-  const trackId = crypto.randomUUID();
-  const sourceKey = `tracks/${trackId}/source.flac`;
+  // Артисты заливают мастер либо в WAV, либо в FLAC — определяем по расширению.
+  const name = file.name.toLowerCase();
+  const ext = name.endsWith('.wav') ? 'wav' : name.endsWith('.flac') ? 'flac' : null;
+  if (!ext) {
+    return NextResponse.json({ error: 'Файл должен быть WAV или FLAC' }, { status: 400 });
+  }
 
-  // Загружаем FLAC в vault перед созданием записи в БД
+  const trackId = crypto.randomUUID();
+  const sourceKey = `tracks/${trackId}/source.${ext}`;
+  const contentType = ext === 'wav' ? 'audio/wav' : 'audio/flac';
+
+  // Загружаем мастер в vault перед созданием записи в БД
   const buffer = Buffer.from(await file.arrayBuffer());
-  await uploadBuffer(sourceKey, buffer, 'audio/flac');
+  await uploadBuffer(sourceKey, buffer, contentType);
 
   const service = new TrackService(
     new DrizzleTrackRepository(db),

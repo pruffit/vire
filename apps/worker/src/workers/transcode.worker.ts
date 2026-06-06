@@ -26,32 +26,35 @@ async function process(job: Job<TranscodeJobData>): Promise<void> {
     return;
   }
 
+  // Исходник лежит в vault под реальным расширением (wav | flac)
+  const sourceExt = sourceKey.split('.').pop() || 'flac';
+
   const tmpDir = mkdtempSync(path.join(tmpdir(), `vire-${trackId}-`));
   try {
-    // 1. Скачиваем FLAC из vault
-    const flacPath = path.join(tmpDir, 'source.flac');
-    await downloadToFile(VAULT, sourceKey, flacPath);
+    // 1. Скачиваем мастер из vault
+    const sourcePath = path.join(tmpDir, `source.${sourceExt}`);
+    await downloadToFile(VAULT, sourceKey, sourcePath);
     await job.updateProgress(20);
 
     // 2. Читаем метаданные из тегов файла
-    const metadata = await readAudioMetadata(flacPath);
+    const metadata = await readAudioMetadata(sourcePath);
     // Если теги не содержат duration — берём из ffprobe
-    const durationSec = metadata.durationSec || (await probeDuration(flacPath));
+    const durationSec = metadata.durationSec || (await probeDuration(sourcePath));
     await job.updateProgress(30);
 
     // 3. HLS-транскодинг
     const hlsDir = path.join(tmpDir, 'hls');
     mkdirSync(hlsDir);
-    const { manifestPath, segmentPaths } = await transcodeToHls(flacPath, hlsDir);
+    const { manifestPath, segmentPaths } = await transcodeToHls(sourcePath, hlsDir);
     await job.updateProgress(65);
 
     // 4. Waveform peaks
-    const waveformPeaks = await computeWaveformPeaks(flacPath);
+    const waveformPeaks = await computeWaveformPeaks(sourcePath);
     await job.updateProgress(80);
 
-    // 5. S3-ключи
+    // 5. S3-ключи. Исходник уже на постоянном ключе (sourceKey) — отдаём его как есть.
     const hlsManifestKey = `tracks/${trackId}/hls/index.m3u8`;
-    const permanentFlacKey = `tracks/${trackId}/source.flac`;
+    const sourceVaultKey = sourceKey;
 
     // 6. Загружаем HLS-файлы в stream-бакет
     await uploadFile(STREAM, hlsManifestKey, manifestPath, 'application/vnd.apple.mpegurl');
@@ -63,14 +66,9 @@ async function process(job: Job<TranscodeJobData>): Promise<void> {
         'video/mp2t',
       );
     }
-
-    // 7. Перекладываем FLAC на постоянный ключ (если загружен во временный)
-    if (sourceKey !== permanentFlacKey) {
-      await uploadFile(VAULT, permanentFlacKey, flacPath, 'audio/flac');
-    }
     await job.updateProgress(90);
 
-    // 8. Атомарно обновляем БД
+    // 7. Атомарно обновляем БД (flacKey хранит ключ исходного мастера — wav или flac)
     await db.transaction(async (tx) => {
       await tx
         .update(tracks)
@@ -83,7 +81,7 @@ async function process(job: Job<TranscodeJobData>): Promise<void> {
           trackId,
           hlsManifestKey,
           waveformPeaks,
-          flacKey: permanentFlacKey,
+          flacKey: sourceVaultKey,
           bpm: metadata.bpm,
           musicalKey: metadata.musicalKey,
         })
@@ -92,7 +90,7 @@ async function process(job: Job<TranscodeJobData>): Promise<void> {
           set: {
             hlsManifestKey,
             waveformPeaks,
-            flacKey: permanentFlacKey,
+            flacKey: sourceVaultKey,
             bpm: metadata.bpm,
             musicalKey: metadata.musicalKey,
             updatedAt: new Date(),

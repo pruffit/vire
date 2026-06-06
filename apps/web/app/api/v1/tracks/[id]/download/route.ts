@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { hasPurchasedTrack, getTrackAudio, trackExists } from '@vire/db';
-import { getFlacDownloadUrl } from '@/lib/s3';
+import { getSourceDownloadUrl } from '@/lib/s3';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -23,7 +23,7 @@ export async function GET(req: Request, { params }: Params) {
   }
 
   const audio = await getTrackAudio(trackId);
-  if (!audio) {
+  if (!audio?.flacKey) {
     return NextResponse.json({ error: 'Audio not ready' }, { status: 404 });
   }
 
@@ -31,6 +31,6 @@ export async function GET(req: Request, { params }: Params) {
   const url = new URL(req.url);
   const filename = url.searchParams.get('filename') || trackId;
 
-  const signedUrl = await getFlacDownloadUrl(trackId, filename);
+  const signedUrl = await getSourceDownloadUrl(audio.flacKey, filename);
   redirect(signedUrl);
 }

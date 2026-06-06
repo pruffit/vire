@@ -25,12 +25,14 @@ export function CreateReleaseForm() {
         body: new FormData(e.currentTarget),
       });
 
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
         throw new Error((json as { error?: string }).error ?? `HTTP ${res.status}`);
       }
 
-      router.push('/dashboard');
+      // На страницу релиза — там добавляют треки
+      const releaseId = (json as { releaseId?: string }).releaseId;
+      router.push(releaseId ? `/dashboard/releases/${releaseId}` : '/dashboard');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка');

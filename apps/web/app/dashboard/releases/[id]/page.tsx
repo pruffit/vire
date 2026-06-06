@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { EditReleaseForm } from './edit-release-form';
+import { AddTrackForm } from './add-track-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,9 +52,13 @@ export default async function EditReleasePage({ params }: Props) {
           />
         </div>
 
-        {tracks.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-medium">Треки</h2>
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-medium">
+            Треки
+            <span className="ml-2 text-sm text-white/30 font-normal">{tracks.length}</span>
+          </h2>
+
+          {tracks.length > 0 && (
             <div className="rounded-xl bg-white/5 border border-white/10 divide-y divide-white/5">
               {tracks.map((track) => (
                 <div key={track.id} className="flex items-center gap-3 px-4 py-3 text-sm">
@@ -73,8 +78,13 @@ export default async function EditReleasePage({ params }: Props) {
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          )}
+
+          <div className="rounded-xl bg-white/5 border border-white/10 p-5">
+            <p className="text-sm font-medium mb-4">Добавить трек</p>
+            <AddTrackForm releaseId={release.id} nextTrackNumber={tracks.length + 1} />
+          </div>
+        </section>
       </div>
     </div>
   );

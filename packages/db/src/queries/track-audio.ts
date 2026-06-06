@@ -7,6 +7,7 @@ export interface TrackAudioData {
   waveformPeaks: number[] | null;
   bpm: number | null;
   musicalKey: string | null;
+  flacKey: string | null;
 }
 
 export async function getTrackAudio(trackId: string): Promise<TrackAudioData | null> {
@@ -16,6 +17,7 @@ export async function getTrackAudio(trackId: string): Promise<TrackAudioData | n
       waveformPeaks: trackAudio.waveformPeaks,
       bpm: trackAudio.bpm,
       musicalKey: trackAudio.musicalKey,
+      flacKey: trackAudio.flacKey,
     })
     .from(trackAudio)
     .where(eq(trackAudio.trackId, trackId))
@@ -27,6 +29,7 @@ export async function getTrackAudio(trackId: string): Promise<TrackAudioData | n
     waveformPeaks: Array.isArray(row.waveformPeaks) ? (row.waveformPeaks as number[]) : null,
     bpm: row.bpm ?? null,
     musicalKey: row.musicalKey ?? null,
+    flacKey: row.flacKey ?? null,
   };
 }
 

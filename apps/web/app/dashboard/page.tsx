@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getArtistPlayStats } from '@vire/db';
 import type { TrackStatus, ReleaseStatus, ReleaseType } from '@vire/core';
-import { UploadTrackForm } from './upload-form';
 import { PublishButton } from './publish-button';
 import { StatsSection } from './stats-section';
 
@@ -168,13 +167,6 @@ export default async function DashboardPage() {
         ) : (
           <>
             {playStats && <StatsSection stats={playStats} />}
-
-            <section className="flex flex-col gap-4">
-              <h2 className="text-lg font-medium">Загрузить трек</h2>
-              <div className="rounded-xl bg-white/5 border border-white/10 p-5">
-                <UploadTrackForm releases={releases.map((r) => ({ id: r.id, title: r.title, status: r.status }))} />
-              </div>
-            </section>
 
             <section className="flex flex-col gap-4">
               <div className="flex items-center justify-between">

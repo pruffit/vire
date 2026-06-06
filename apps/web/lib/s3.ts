@@ -30,13 +30,15 @@ export async function uploadBuffer(
   );
 }
 
-export async function getFlacDownloadUrl(trackId: string, filename: string): Promise<string> {
-  const key = `tracks/${trackId}/source.flac`;
+export async function getSourceDownloadUrl(key: string, filename: string): Promise<string> {
+  // key points at the master in vault, e.g. tracks/{id}/source.wav | source.flac
+  const ext = key.split('.').pop() || 'flac';
+  const contentType = ext === 'wav' ? 'audio/wav' : 'audio/flac';
   const command = new GetObjectCommand({
     Bucket: VAULT,
     Key: key,
-    ResponseContentDisposition: `attachment; filename="${encodeURIComponent(filename)}.flac"`,
-    ResponseContentType: 'audio/flac',
+    ResponseContentDisposition: `attachment; filename="${encodeURIComponent(filename)}.${ext}"`,
+    ResponseContentType: contentType,
   });
   // 15 minutes — enough to start the download
   return getSignedUrl(s3, command, { expiresIn: 900 });
