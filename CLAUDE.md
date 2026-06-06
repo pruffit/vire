@@ -174,5 +174,8 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 2. **Вынести дублирующиеся хелперы** (`fmt`, `pluralTracks`, `totalDuration`) в `shared` + тесты
 3. **YooKassa боевая настройка** (Этап 2) — по отдельной команде
 
-> ⚠️ Date из Drizzle нельзя передавать в Client Component (RSC не сериализует Date) —
-> конвертировать в ISO string и принимать `string`. Тип-проп клиента не должен содержать `Date`.
+> ⚠️ Не интерполируй JS-`Date` в raw-`sql`-шаблон Drizzle — postgres.js получает её как
+> нетипизированный bind-параметр и падает с `ERR_INVALID_ARG_TYPE: Received an instance of Date`.
+> Считай дату на стороне SQL (`now() - interval '7 days'`). Через `.set({ updatedAt: new Date() })`
+> на типизированной timestamp-колонке `Date` передавать можно — Drizzle знает тип.
+> (Передавать `Date` в пропсах Client Component, наоборот, можно — React 19 Flight это сериализует.)

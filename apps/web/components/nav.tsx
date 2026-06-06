@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { auth } from '@/auth';
+import { auth, signOut } from '@/auth';
 
 export async function Nav() {
   const session = await auth();
@@ -30,6 +30,19 @@ export async function Nav() {
             <>
               {isArtist && <NavLink href="/dashboard">Дашборд</NavLink>}
               <NavLink href="/profile">{user.name ?? user.email ?? 'Профиль'}</NavLink>
+              <form
+                action={async () => {
+                  'use server';
+                  await signOut({ redirectTo: '/' });
+                }}
+              >
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                >
+                  Выйти
+                </button>
+              </form>
             </>
           ) : (
             <NavLink href="/sign-in">Войти</NavLink>
