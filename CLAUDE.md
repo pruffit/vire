@@ -89,6 +89,7 @@ app/ → pages/ → widgets/ → features/ → entities/ → shared/
 pnpm --filter @vire/db db:generate   # сгенерировать миграцию
 pnpm --filter @vire/db db:migrate    # применить миграции
 pnpm --filter @vire/db db:studio     # открыть Drizzle Studio
+pnpm --filter @vire/db db:make-admin <email> [role]  # выдать роль (default SUPERADMIN); юзер должен перелогиниться
 ```
 
 ## Медиа и аудио
