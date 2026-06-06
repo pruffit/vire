@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { QUEUE_TRANSCODE, QUEUE_PLAY_EVENTS, type TranscodeJobData, type PlayEventJobData } from '@vire/core';
+import { QUEUE_TRANSCODE, QUEUE_PLAY_EVENTS, QUEUE_NOTIFY_RELEASE, type TranscodeJobData, type PlayEventJobData, type NotifyReleaseJobData } from '@vire/core';
 
 // Синглтон — переиспользуется между запросами в рамках процесса Next.js
 const globalForQueue = globalThis as unknown as { _transcodeQueue?: TranscodeQueue };
@@ -56,4 +56,32 @@ export const playEventQueue: PlayEventQueue =
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPlayQueue._playEventQueue = playEventQueue;
+}
+
+const globalForNotify = globalThis as unknown as { _notifyReleaseQueue?: NotifyReleaseQueue };
+
+class NotifyReleaseQueue {
+  private q = new Queue<NotifyReleaseJobData>(QUEUE_NOTIFY_RELEASE, {
+    connection: {
+      url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+      maxRetriesPerRequest: null as unknown as number,
+    },
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 10_000 },
+      removeOnComplete: { count: 100 },
+      removeOnFail: { count: 50 },
+    },
+  });
+
+  async add(data: NotifyReleaseJobData): Promise<void> {
+    await this.q.add('notify-release', data);
+  }
+}
+
+export const notifyReleaseQueue: NotifyReleaseQueue =
+  globalForNotify._notifyReleaseQueue ?? new NotifyReleaseQueue();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForNotify._notifyReleaseQueue = notifyReleaseQueue;
 }

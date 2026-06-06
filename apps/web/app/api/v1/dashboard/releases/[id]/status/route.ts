@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import type { ReleaseStatus } from '@vire/core';
+import { notifyReleaseQueue } from '@/lib/queue';
 
 const ALLOWED: ReleaseStatus[] = ['PUBLISHED', 'SCHEDULED', 'ARCHIVED', 'DRAFT'];
 
@@ -39,6 +40,20 @@ export async function PATCH(
     );
   }
 
+  const wasPublished = release.status !== 'PUBLISHED' && body.status === 'PUBLISHED';
   await releaseRepo.updateStatus(id, body.status as ReleaseStatus);
+
+  if (wasPublished) {
+    await notifyReleaseQueue.add({
+      releaseId: release.id,
+      releaseTitle: release.title,
+      releaseType: release.type,
+      coverUrl: release.coverUrl ?? null,
+      artistProfileId: artist.id,
+      artistName: artist.name,
+      artistSlug: artist.slug,
+    });
+  }
+
   return NextResponse.json({ status: body.status });
 }

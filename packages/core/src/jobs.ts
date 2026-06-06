@@ -1,6 +1,7 @@
 // BullMQ queue names — импортируются и apps/worker, и apps/web
 export const QUEUE_TRANSCODE = 'transcode' as const;
 export const QUEUE_PLAY_EVENTS = 'play-events' as const;
+export const QUEUE_NOTIFY_RELEASE = 'notify-release' as const;
 
 export interface TranscodeJobData {
   trackId: string;
@@ -11,6 +12,16 @@ export interface TranscodeJobData {
 export interface TranscodeJobResult {
   hlsManifestKey: string;
   durationSec: number;
+}
+
+export interface NotifyReleaseJobData {
+  releaseId: string;
+  releaseTitle: string;
+  releaseType: string;
+  coverUrl: string | null;
+  artistProfileId: string;
+  artistName: string;
+  artistSlug: string;
 }
 
 export interface PlayEventJobData {

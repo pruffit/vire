@@ -21,4 +21,6 @@ export type { SearchResults, SearchArtist, SearchRelease, SearchTrack } from './
 export { getArtistPlayStats } from './queries/artist-analytics';
 export type { ArtistPlayStats, TrackPlayStat } from './queries/artist-analytics';
 export { hasPurchasedTrack, createTrackPurchase } from './queries/purchases';
+export { getFollowerEmails } from './queries/notifications';
+export type { FollowerEmail } from './queries/notifications';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
