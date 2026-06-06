@@ -2,7 +2,7 @@ import { err, ok, NotFoundError, type Result } from '../errors';
 import type { ITrackRepository } from '../repositories/track';
 import type { IReleaseRepository } from '../repositories/release';
 import type { TranscodeJobData } from '../jobs';
-import type { Track } from '../types/release';
+import type { Track, TrackCredit } from '../types/release';
 
 export interface ITranscodeQueue {
   add(data: TranscodeJobData): Promise<void>;
@@ -22,6 +22,7 @@ export class TrackService {
     title: string;
     trackNumber: number;
     sourceKey: string;
+    credits?: TrackCredit[];
   }): Promise<Result<Track, NotFoundError | Error>> {
     const release = await this.releaseRepo.findById(params.releaseId);
     if (!release) return err(new NotFoundError('Release', params.releaseId));
@@ -35,6 +36,7 @@ export class TrackService {
       releaseId: params.releaseId,
       title: params.title,
       trackNumber: params.trackNumber,
+      credits: params.credits,
     });
 
     await this.queue.add({ trackId: params.trackId, sourceKey: params.sourceKey });

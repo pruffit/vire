@@ -71,7 +71,14 @@ function TrackRow({
         {track.trackNumber}
       </span>
 
-      <span className="flex-1 text-sm truncate">{track.title}</span>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm truncate block">{track.title}</span>
+        {track.credits.length > 0 && (
+          <span className="text-[10px] font-mono opacity-30 truncate block">
+            {track.credits.map((c) => c.name).join(', ')}
+          </span>
+        )}
+      </div>
 
       <div className="flex items-center gap-2 shrink-0">
         {track.isExclusive && (

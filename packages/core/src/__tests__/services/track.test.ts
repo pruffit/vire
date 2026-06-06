@@ -127,6 +127,33 @@ describe('TrackService.createUpload', () => {
     expect(queue.add).not.toHaveBeenCalled();
   });
 
+  it('passes credits to trackRepo.create', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
+    const queue = makeQueue();
+    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const credits = [{ name: 'Danila', role: 'PERFORMER' as const }];
+
+    await service.createUpload({ ...uploadParams, credits });
+
+    expect(trackRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ credits }),
+    );
+  });
+
+  it('uses empty credits by default', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
+    const queue = makeQueue();
+    const service = new TrackService(trackRepo, releaseRepo, queue);
+
+    await service.createUpload(uploadParams);
+
+    expect(trackRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ credits: undefined }),
+    );
+  });
+
   it('does not create track when artist is unauthorized', async () => {
     const differentArtistRelease: Release = { ...mockRelease, artistProfileId: 'other-artist' };
     const trackRepo = makeTrackRepo();

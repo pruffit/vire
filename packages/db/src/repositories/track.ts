@@ -1,6 +1,6 @@
 import { tracks } from '../schema';
 import type { DB } from '../client';
-import type { ITrackRepository, CreateTrackParams, Track } from '@vire/core';
+import type { ITrackRepository, CreateTrackParams, Track, TrackCredit } from '@vire/core';
 
 export class DrizzleTrackRepository implements ITrackRepository {
   constructor(private readonly db: DB) {}
@@ -13,6 +13,7 @@ export class DrizzleTrackRepository implements ITrackRepository {
         releaseId: params.releaseId,
         title: params.title,
         trackNumber: params.trackNumber,
+        credits: params.credits ?? [],
         status: 'PROCESSING',
       })
       .returning();
@@ -26,6 +27,7 @@ export class DrizzleTrackRepository implements ITrackRepository {
       status: row.status,
       isExclusive: row.isExclusive,
       isWip: row.isWip,
+      credits: Array.isArray(row.credits) ? (row.credits as TrackCredit[]) : [],
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };

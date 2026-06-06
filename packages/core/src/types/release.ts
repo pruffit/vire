@@ -1,4 +1,10 @@
 export type ReleaseType = 'ALBUM' | 'EP' | 'SINGLE';
+export type ContributorRole = 'PERFORMER' | 'LYRICIST' | 'COMPOSER' | 'PRODUCER';
+
+export interface TrackCredit {
+  name: string;
+  role: ContributorRole;
+}
 export type ReleaseStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
 export type TrackStatus = 'PROCESSING' | 'READY' | 'BLOCKED';
 
@@ -25,6 +31,7 @@ export interface Track {
   status: TrackStatus;
   isExclusive: boolean;
   isWip: boolean;
+  credits: TrackCredit[];
   createdAt: Date;
   updatedAt: Date;
 }

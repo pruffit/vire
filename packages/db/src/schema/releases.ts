@@ -30,6 +30,8 @@ export const tracks = pgTable('tracks', {
   // /vault/tracks/{id}/source.flac — политика ухода артиста работает автоматически
   isExclusive: boolean('is_exclusive').notNull().default(false),
   isWip: boolean('is_wip').notNull().default(false),
+  // Отображаемые кредиты — для витрины. Финансовые доли — в track_contributors (этап 4)
+  credits: jsonb('credits').default([]),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

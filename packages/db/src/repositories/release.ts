@@ -1,7 +1,7 @@
 import { eq, asc, and, or, lte, isNotNull, desc, sql } from 'drizzle-orm';
 import { releases, tracks } from '../schema';
 import type { DB } from '../client';
-import type { CreateReleaseInput, UpdateReleaseInput, IReleaseRepository, Release, ReleaseStatus, ReleaseWithTracks, Track } from '@vire/core';
+import type { CreateReleaseInput, UpdateReleaseInput, IReleaseRepository, Release, ReleaseStatus, ReleaseWithTracks, Track, TrackCredit } from '@vire/core';
 
 export class DrizzleReleaseRepository implements IReleaseRepository {
   constructor(private readonly db: DB) {}
@@ -151,6 +151,7 @@ function mapToTrack(row: typeof tracks.$inferSelect): Track {
     status: row.status,
     isExclusive: row.isExclusive,
     isWip: row.isWip,
+    credits: Array.isArray(row.credits) ? (row.credits as TrackCredit[]) : [],
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

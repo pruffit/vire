@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
-import { TrackService, NotFoundError } from '@vire/core';
+import { TrackService, NotFoundError, type TrackCredit, type ContributorRole } from '@vire/core';
 import { uploadBuffer } from '@/lib/s3';
 import { transcodeQueue } from '@/lib/queue';
 
@@ -48,6 +48,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'trackNumber must be a positive integer' }, { status: 400 });
   }
 
+  const VALID_ROLES: ContributorRole[] = ['PERFORMER', 'LYRICIST', 'COMPOSER', 'PRODUCER'];
+  const creditsRaw = formData.get('credits');
+  let credits: TrackCredit[] = [];
+  if (typeof creditsRaw === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(creditsRaw);
+      if (Array.isArray(parsed)) {
+        credits = parsed
+          .filter((c): c is TrackCredit =>
+            c !== null &&
+            typeof c === 'object' &&
+            typeof (c as TrackCredit).name === 'string' &&
+            (c as TrackCredit).name.trim().length > 0 &&
+            VALID_ROLES.includes((c as TrackCredit).role),
+          )
+          .slice(0, 20);
+      }
+    } catch { /* keep empty */ }
+  }
+
   const trackId = crypto.randomUUID();
   const sourceKey = `tracks/${trackId}/source.flac`;
 
@@ -68,6 +88,7 @@ export async function POST(req: Request) {
     title,
     trackNumber: trackNum,
     sourceKey,
+    credits,
   });
 
   if (!result.ok) {
