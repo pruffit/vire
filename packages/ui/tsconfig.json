@@ -3,7 +3,8 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "rootDir": "./src"
   },
   "include": ["src"]
 }
