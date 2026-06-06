@@ -16,4 +16,6 @@ export { insertPlayEvent } from './queries/play-events';
 export type { InsertPlayEventData } from './queries/play-events';
 export { getLikedTracks, getFollowedArtists } from './queries/profile';
 export type { LikedTrack, FollowedArtist } from './queries/profile';
+export { searchAll } from './queries/search';
+export type { SearchResults, SearchArtist, SearchRelease, SearchTrack } from './queries/search';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
