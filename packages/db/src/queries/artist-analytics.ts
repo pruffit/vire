@@ -19,8 +19,6 @@ export interface ArtistPlayStats {
 }
 
 export async function getArtistPlayStats(artistProfileId: string): Promise<ArtistPlayStats> {
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
   const rows = await db
     .select({
       trackId: tracks.id,
@@ -28,7 +26,9 @@ export async function getArtistPlayStats(artistProfileId: string): Promise<Artis
       releaseId: releases.id,
       releaseTitle: releases.title,
       totalPlays: count(playEvents.id),
-      plays7d: sql<number>`count(case when ${playEvents.startedAt} >= ${sevenDaysAgo} then 1 end)::int`,
+      // Compute the 7-day cutoff in SQL — interpolating a JS Date as a bound
+      // parameter crashes the postgres.js driver (ERR_INVALID_ARG_TYPE).
+      plays7d: sql<number>`count(case when ${playEvents.startedAt} >= now() - interval '7 days' then 1 end)::int`,
       totalListenedSec: sql<number>`coalesce(sum(${playEvents.durationPlayedSec}), 0)::int`,
     })
     .from(tracks)
