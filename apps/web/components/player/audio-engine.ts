@@ -39,7 +39,7 @@ export function initAudioEngine(): void {
 async function loadAndPlay(track: PlayerTrack): Promise<void> {
   if (!audio) return;
 
-  usePlayerStore.getState()._setState({ isLoading: true, hasAudio: false, currentTime: 0, duration: 0 });
+  usePlayerStore.getState()._setState({ isLoading: true, hasAudio: false, currentTime: 0, duration: 0, waveformPeaks: null });
 
   const res = await fetch(`/api/v1/tracks/${track.id}/manifest`).catch(() => null);
 
@@ -48,7 +48,8 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
     return;
   }
 
-  const { hlsUrl } = (await res.json()) as { hlsUrl: string };
+  const { hlsUrl, waveformPeaks } = (await res.json()) as { hlsUrl: string; waveformPeaks: number[] | null };
+  usePlayerStore.getState()._setState({ waveformPeaks: waveformPeaks ?? null });
 
   if (hls) { hls.destroy(); hls = null; }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, type MouseEvent } from 'react';
 import { usePlayerStore } from '@/store/player';
 import { controls, initAudioEngine } from './audio-engine';
 
@@ -96,16 +96,7 @@ function ProgressSection() {
         {fmt(currentTime)}
       </span>
 
-      <input
-        type="range"
-        min={0}
-        max={duration || 100}
-        value={currentTime}
-        step={0.5}
-        onChange={(e) => controls.seek(Number(e.target.value))}
-        aria-label="Прогресс"
-        className="flex-1 h-1 accent-primary cursor-pointer"
-      />
+      <Waveform />
 
       <span className="text-xs font-mono text-muted-foreground tabular-nums w-8">
         {fmt(duration)}
@@ -122,6 +113,80 @@ function ProgressSection() {
         className="w-16 h-1 accent-primary cursor-pointer hidden lg:block"
       />
     </div>
+  );
+}
+
+function Waveform() {
+  const peaks = usePlayerStore((s) => s.waveformPeaks);
+  const currentTime = usePlayerStore((s) => s.currentTime);
+  const duration = usePlayerStore((s) => s.duration);
+
+  const progress = duration > 0 ? currentTime / duration : 0;
+
+  function handleClick(e: MouseEvent<SVGSVGElement>) {
+    if (!duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    controls.seek(((e.clientX - rect.left) / rect.width) * duration);
+  }
+
+  if (!peaks || peaks.length === 0) {
+    return (
+      <input
+        type="range"
+        min={0}
+        max={duration || 100}
+        value={currentTime}
+        step={0.5}
+        onChange={(e) => controls.seek(Number(e.target.value))}
+        aria-label="Прогресс"
+        className="flex-1 h-1 accent-primary cursor-pointer"
+      />
+    );
+  }
+
+  const BAR_COUNT = 80;
+  const step = peaks.length / BAR_COUNT;
+  const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
+    const from = Math.floor(i * step);
+    const to = Math.min(Math.ceil((i + 1) * step), peaks.length);
+    const slice = peaks.slice(from, to);
+    return slice.length > 0 ? slice.reduce((a, b) => a + b, 0) / slice.length : 0;
+  });
+
+  const SVG_H = 24;
+  const BAR_W = 2;
+  const BAR_GAP = 1;
+  const SVG_W = BAR_COUNT * (BAR_W + BAR_GAP);
+
+  return (
+    <svg
+      viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+      preserveAspectRatio="none"
+      onClick={handleClick}
+      aria-label="Прогресс"
+      role="slider"
+      aria-valuenow={Math.round(currentTime)}
+      aria-valuemin={0}
+      aria-valuemax={Math.round(duration)}
+      className="flex-1 h-6 cursor-pointer"
+    >
+      {bars.map((peak, i) => {
+        const h = Math.max(2, peak * (SVG_H - 4));
+        const x = i * (BAR_W + BAR_GAP);
+        const played = i / BAR_COUNT < progress;
+        return (
+          <rect
+            key={i}
+            x={x}
+            y={(SVG_H - h) / 2}
+            width={BAR_W}
+            height={h}
+            rx={0.5}
+            fill={played ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.18)'}
+          />
+        );
+      })}
+    </svg>
   );
 }
 

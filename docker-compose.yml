@@ -48,6 +48,7 @@
         mc alias set local http://minio:9000 minioadmin minioadmin;
         mc mb --ignore-existing local/vire-vault;
         mc mb --ignore-existing local/vire-stream;
+        mc anonymous set download local/vire-stream;
         exit 0;
       "
 

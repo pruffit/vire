@@ -2,12 +2,21 @@ import { eq } from 'drizzle-orm';
 import { db } from '../client';
 import { trackAudio } from '../schema';
 
-export async function getHlsManifestKey(trackId: string): Promise<string | null> {
+export interface TrackAudioData {
+  hlsManifestKey: string;
+  waveformPeaks: number[] | null;
+}
+
+export async function getTrackAudio(trackId: string): Promise<TrackAudioData | null> {
   const [row] = await db
-    .select({ hlsManifestKey: trackAudio.hlsManifestKey })
+    .select({ hlsManifestKey: trackAudio.hlsManifestKey, waveformPeaks: trackAudio.waveformPeaks })
     .from(trackAudio)
     .where(eq(trackAudio.trackId, trackId))
     .limit(1);
 
-  return row?.hlsManifestKey ?? null;
+  if (!row?.hlsManifestKey) return null;
+  return {
+    hlsManifestKey: row.hlsManifestKey,
+    waveformPeaks: Array.isArray(row.waveformPeaks) ? (row.waveformPeaks as number[]) : null,
+  };
 }

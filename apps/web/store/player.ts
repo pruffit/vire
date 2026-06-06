@@ -17,6 +17,7 @@ interface State {
   currentTime: number;
   duration: number;
   volume: number;
+  waveformPeaks: number[] | null;
 }
 
 interface Store extends State {
@@ -33,5 +34,6 @@ export const usePlayerStore = create<Store>((set) => ({
   currentTime: 0,
   duration: 0,
   volume: 0.8,
+  waveformPeaks: null,
   _setState: (patch) => set(patch),
 }));

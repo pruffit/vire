@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getHlsManifestKey } from '@vire/db';
+import { getTrackAudio } from '@vire/db';
 
 export async function GET(
   _req: Request,
@@ -7,12 +7,15 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const key = await getHlsManifestKey(id);
+  const audio = await getTrackAudio(id);
 
-  if (!key) {
+  if (!audio) {
     return NextResponse.json({ error: 'No audio available' }, { status: 404 });
   }
 
-  const base = process.env.STORAGE_PUBLIC_URL ?? '';
-  return NextResponse.json({ hlsUrl: `${base}/${key}` });
+  const base = `${process.env.S3_PUBLIC_ENDPOINT}/${process.env.S3_BUCKET_STREAM}`;
+  return NextResponse.json({
+    hlsUrl: `${base}/${audio.hlsManifestKey}`,
+    waveformPeaks: audio.waveformPeaks,
+  });
 }

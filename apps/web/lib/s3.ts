@@ -11,6 +11,7 @@ export const s3 = new S3Client({
 });
 
 export const VAULT = process.env.S3_BUCKET_VAULT ?? 'vire-vault';
+export const STREAM = process.env.S3_BUCKET_STREAM ?? 'vire-stream';
 
 export async function uploadBuffer(
   key: string,
@@ -26,4 +27,21 @@ export async function uploadBuffer(
       ContentLength: buffer.length,
     }),
   );
+}
+
+export async function uploadToStream(
+  key: string,
+  buffer: Buffer,
+  contentType: string,
+): Promise<string> {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: STREAM,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      ContentLength: buffer.length,
+    }),
+  );
+  return `${process.env.S3_PUBLIC_ENDPOINT}/${STREAM}/${key}`;
 }
