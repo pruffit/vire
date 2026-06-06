@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
-import type { ReleaseWithTracks, TrackStatus } from '@vire/core';
+import type { ReleaseWithTracks, TrackStatus, ReleaseStatus } from '@vire/core';
 import { UploadTrackForm } from './upload-form';
 import { PublishButton } from './publish-button';
 
@@ -11,6 +11,20 @@ const STATUS_LABEL: Record<TrackStatus, string> = {
   PROCESSING: 'обрабатывается',
   READY: 'готов',
   BLOCKED: 'заблокирован',
+};
+
+const RELEASE_STATUS_LABEL: Record<ReleaseStatus, string> = {
+  DRAFT: 'черновик',
+  SCHEDULED: 'запланирован',
+  PUBLISHED: 'опубликован',
+  ARCHIVED: 'архив',
+};
+
+const RELEASE_STATUS_COLOR: Record<ReleaseStatus, string> = {
+  DRAFT: 'text-white/40',
+  SCHEDULED: 'text-blue-400',
+  PUBLISHED: 'text-green-400',
+  ARCHIVED: 'text-white/20',
 };
 
 const STATUS_COLOR: Record<TrackStatus, string> = {
@@ -44,10 +58,16 @@ function ReleaseCard({ data }: { data: ReleaseWithTracks }) {
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1.5">
           <p className="font-medium">{release.title}</p>
-          <p className="text-sm text-white/40">
-            {release.type} · {release.status} · {tracks.length} тр.
+          <p className={`text-sm ${RELEASE_STATUS_COLOR[release.status]}`}>
+            {release.type} · {RELEASE_STATUS_LABEL[release.status]}
+            {release.status === 'SCHEDULED' && release.releaseDate && (
+              <> · {new Date(release.releaseDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+            )}
+            {' '}· {tracks.length} тр.
           </p>
-          {release.status === 'DRAFT' && <PublishButton releaseId={release.id} />}
+          {release.status === 'DRAFT' && (
+            <PublishButton releaseId={release.id} releaseDate={release.releaseDate} />
+          )}
         </div>
         {release.coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element

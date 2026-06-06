@@ -1,4 +1,4 @@
-import { eq, asc, and, desc } from 'drizzle-orm';
+import { eq, asc, and, or, lte, isNotNull, desc, sql } from 'drizzle-orm';
 import { releases, tracks } from '../schema';
 import type { DB } from '../client';
 import type { CreateReleaseInput, IReleaseRepository, Release, ReleaseStatus, ReleaseWithTracks, Track } from '@vire/core';
@@ -92,7 +92,14 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
       .where(
         and(
           eq(releases.artistProfileId, artistProfileId),
-          eq(releases.status, 'PUBLISHED'),
+          or(
+            eq(releases.status, 'PUBLISHED'),
+            and(
+              eq(releases.status, 'SCHEDULED'),
+              isNotNull(releases.releaseDate),
+              lte(releases.releaseDate, sql`now()`),
+            ),
+          ),
         ),
       )
       .orderBy(asc(releases.releaseDate));

@@ -3,7 +3,7 @@ import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import type { ReleaseStatus } from '@vire/core';
 
-const ALLOWED: ReleaseStatus[] = ['PUBLISHED', 'ARCHIVED', 'DRAFT'];
+const ALLOWED: ReleaseStatus[] = ['PUBLISHED', 'SCHEDULED', 'ARCHIVED', 'DRAFT'];
 
 export async function PATCH(
   req: Request,
