@@ -1,0 +1,1 @@
+ALTER TABLE "artist_profiles" ADD COLUMN "links" jsonb DEFAULT '[]'::jsonb;

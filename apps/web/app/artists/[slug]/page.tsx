@@ -4,7 +4,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getFollowState, getFollowerCount } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
-import type { ArtistProfile, Release } from '@vire/core';
+import type { ArtistProfile, ArtistLink, Release } from '@vire/core';
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
 
@@ -74,6 +74,7 @@ export default async function ArtistPage({ params }: Props) {
               : <GuestFollowButton slug={artist.slug} followerCount={followerCount} />
           }
         />
+        {artist.links.length > 0 && <LinksSection links={artist.links} />}
         <ReleasesSection releases={releases} artistSlug={artist.slug} />
       </div>
     </div>
@@ -148,6 +149,25 @@ function ArtistHeader({ artist, followButton }: { artist: ArtistProfile; followB
         {followButton}
       </div>
     </header>
+  );
+}
+
+function LinksSection({ links }: { links: ArtistLink[] }) {
+  return (
+    <section className="flex flex-wrap gap-3">
+      {links.map((link, i) => (
+        <a
+          key={i}
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-2 rounded-full text-sm font-medium border transition-opacity hover:opacity-70"
+          style={{ borderColor: 'var(--artist-accent)', color: 'var(--artist-accent)' }}
+        >
+          {link.label}
+        </a>
+      ))}
+    </section>
   );
 }
 

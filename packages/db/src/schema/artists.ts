@@ -9,6 +9,7 @@ export const artistProfiles = pgTable('artist_profiles', {
   bio: text('bio'),
   avatarUrl: text('avatar_url'),
   // Тема профиля — CSS-токены: фон, текст, акцент, зерно, шрифты
+  links: jsonb('links').default([]),
   themeTokens: jsonb('theme_tokens').default({
     bg: '#121110',
     text: '#f5f2eb',

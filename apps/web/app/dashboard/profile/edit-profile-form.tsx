@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ArtistProfile } from '@vire/core';
+import type { ArtistProfile, ArtistLink } from '@vire/core';
 
 const FONT_SANS = ['Inter', 'Montserrat', 'Unbounded', 'Manrope', 'Geologica'];
 const FONT_MONO = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono'];
@@ -15,6 +15,7 @@ export function EditProfileForm({ artist }: { artist: ArtistProfile }) {
   const [saved, setSaved] = useState(false);
 
   const [avatarPreview, setAvatarPreview] = useState<string | null>(artist.avatarUrl);
+  const [links, setLinks] = useState<ArtistLink[]>(artist.links);
   const [removeAvatar, setRemoveAvatar] = useState(false);
 
   // Theme live preview
@@ -34,6 +35,7 @@ export function EditProfileForm({ artist }: { artist: ArtistProfile }) {
     try {
       const fd = new FormData(e.currentTarget);
       fd.set('grain', grain ? '1' : '0');
+      fd.set('links', JSON.stringify(links));
       if (removeAvatar) fd.set('removeAvatar', '1');
 
       const res = await fetch('/api/v1/dashboard/profile', { method: 'POST', body: fd });
@@ -76,6 +78,63 @@ export function EditProfileForm({ artist }: { artist: ArtistProfile }) {
           placeholder="Расскажи о себе…"
           className={`${inp} resize-none`} />
       </Field>
+
+      {/* Links */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between">
+          <span className="text-sm font-medium">Ссылки</span>
+          <span className="text-xs text-white/30">до 10 ссылок</span>
+        </div>
+
+        {links.map((link, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Название"
+              value={link.label}
+              disabled={busy}
+              onChange={(e) =>
+                setLinks((prev) =>
+                  prev.map((l, j) => j === i ? { ...l, label: e.target.value } : l),
+                )
+              }
+              className={`${inp} w-32 shrink-0`}
+            />
+            <input
+              type="url"
+              placeholder="https://…"
+              value={link.url}
+              disabled={busy}
+              onChange={(e) =>
+                setLinks((prev) =>
+                  prev.map((l, j) => j === i ? { ...l, url: e.target.value } : l),
+                )
+              }
+              className={inp}
+            />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setLinks((prev) => prev.filter((_, j) => j !== i))}
+              className="shrink-0 text-white/30 hover:text-red-400 transition-colors text-lg leading-none"
+              aria-label="Удалить ссылку"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+
+        {links.length < 10 && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setLinks((prev) => [...prev, { label: '', url: '' }])}
+            className="self-start text-sm text-white/40 hover:text-white/70 transition-colors"
+          >
+            + добавить ссылку
+          </button>
+        )}
+      </div>
 
       {/* Avatar */}
       <Field label="Аватар" hint="JPEG, PNG или WebP · необязательно">

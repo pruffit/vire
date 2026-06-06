@@ -1,10 +1,11 @@
-import type { ArtistProfile, ThemeTokens } from '../types/artist';
+import type { ArtistProfile, ThemeTokens, ArtistLink } from '../types/artist';
 
 export interface UpdateArtistProfileData {
   name?: string;
   bio?: string | null;
   avatarUrl?: string | null;
   themeTokens?: ThemeTokens;
+  links?: ArtistLink[];
 }
 
 export interface IArtistRepository {

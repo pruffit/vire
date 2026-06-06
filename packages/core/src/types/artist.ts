@@ -16,6 +16,11 @@ export const defaultThemeTokens: ThemeTokens = {
   fontMono: 'JetBrains Mono',
 };
 
+export interface ArtistLink {
+  label: string;
+  url: string;
+}
+
 export interface ArtistProfile {
   id: string;
   userId: string;
@@ -24,6 +29,7 @@ export interface ArtistProfile {
   bio: string | null;
   avatarUrl: string | null;
   themeTokens: ThemeTokens;
+  links: ArtistLink[];
   verified: boolean;
   isActive: boolean;
   createdAt: Date;

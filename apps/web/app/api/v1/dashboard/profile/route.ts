@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
-import type { ThemeTokens } from '@vire/core';
+import type { ThemeTokens, ArtistLink } from '@vire/core';
 
 const AVATAR_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -36,6 +36,24 @@ export async function POST(req: Request) {
   const bio = formData.get('bio');
   const avatar = formData.get('avatar');
   const removeAvatar = formData.get('removeAvatar') === '1';
+
+  const linksRaw = formData.get('links');
+  let links: ArtistLink[] = artist.links;
+  if (typeof linksRaw === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(linksRaw);
+      if (Array.isArray(parsed)) {
+        links = parsed
+          .filter((l): l is ArtistLink =>
+            l !== null &&
+            typeof l === 'object' &&
+            typeof (l as ArtistLink).label === 'string' &&
+            typeof (l as ArtistLink).url === 'string',
+          )
+          .slice(0, 10);
+      }
+    } catch { /* keep existing links */ }
+  }
 
   const bg = formData.get('bg');
   const text = formData.get('text');
@@ -75,6 +93,7 @@ export async function POST(req: Request) {
     bio: typeof bio === 'string' && bio.trim() ? bio.trim() : null,
     avatarUrl,
     themeTokens,
+    links,
   });
 
   return NextResponse.json({ ok: true });
