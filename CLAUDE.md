@@ -128,28 +128,51 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 
 ## Текущий статус
 
-- [x] Монорепо скелет (Turborepo + pnpm)
-- [x] Документация (`docs/`)
-- [x] Локальная инфраструктура (docker-compose + minio-init для бакетов)
-- [x] `packages/db` — Drizzle схема, 16 таблиц, миграция применена
-- [x] `packages/config` — tsconfig/base, nextjs, library + eslint/base
-- [x] `apps/web` — Next.js, подключён @vire/db, Route Handler `/api/v1/health`
-- [x] `packages/ui` — UI-кит: дизайн-токены (OKLCH, тёмная тема), Button, Card, cn
-- [x] `apps/web` — layout с темизацией, базовая страница использует @vire/ui
-- [x] Auth.js v5 — Yandex OAuth, JWT-сессии, proxy (middleware), `/sign-in`
-- [x] `packages/core` — сервисный слой: Result<T,E>, domain types, repositories, services
-- [x] Route Handlers: `GET /api/v1/artists/[slug]`, `GET /api/v1/releases/[releaseId]`
-- [x] `/artists/[slug]` — страница артиста с темизацией, grain, сетка релизов
-- [x] `/artists/[slug]/releases/[releaseId]` — страница релиза, трек-лист, liner notes
-- [x] Глобальный аудиоплеер — Zustand + HLS.js, очередь треков
-- [x] `apps/worker` — BullMQ-воркер: скачивает FLAC из S3, транскодирует в HLS, пишет waveform peaks, обновляет БД
-- [x] `apps/web/lib/s3.ts` + `lib/queue.ts` — загрузка в S3, постановка в очередь
-- [x] `/dashboard` — артист-дашборд: форма загрузки трека (FLAC → S3 → BullMQ), список релизов и треков со статусами
+**Этап 1 (Friends & Family) — завершён.** Этап 2 (прямые продажи) — частично.
+
+### Фундамент
+- [x] Монорепо (Turborepo + pnpm), docker-compose (postgres/redis/minio)
+- [x] `packages/db` — Drizzle схема 16 таблиц + миграции 0000–0003
+- [x] `packages/core` — Result<T,E>, domain types, сервисы, репозитории
+- [x] `packages/ui` — OKLCH-токены, Button, Card, Input
+- [x] `packages/config` — tsconfig/eslint/tailwind пресеты
+- [x] Auth.js v5 — Yandex OAuth + Resend magic link, JWT, `proxy.ts`
+- [x] `apps/worker` — BullMQ + ffmpeg → HLS + waveform peaks → S3 → DB; play-events; notify-release
+
+### Публичные страницы
+- [x] `/` — главная (hero-поиск), `/artists` — каталог + поиск, `/search` — поиск SSR
+- [x] `/artists/[slug]` — профиль: темизация, grain, ссылки, видео-эмбеды, follow-кнопка
+- [x] `/artists/[slug]/releases/[releaseId]` — релиз, трек-лист, liner notes, credits
+- [x] `.../tracks/[trackId]` — waveform-плеер, BPM/key, like, покупка/скачивание
+- [x] `/feed` — лента подписок, `/profile` — лайки, подписки, покупки
+- [x] Глобальный плеер — Zustand + HLS.js + SVG waveform scrubber
+
+### Dashboard артиста (`/dashboard`)
+- [x] Список релизов со статусами + статистика прослушиваний
+- [x] `/dashboard/releases/new` — создание релиза; `/dashboard/releases/[id]` — редактирование
+- [x] `/dashboard/profile` — имя, bio, аватар, тема (live color picker), grain, шрифты
+- [x] Загрузка треков (FLAC → S3 → BullMQ), PublishButton (DRAFT→PUBLISHED/SCHEDULED)
+
+### Backoffice (`/admin`, только MODERATOR/ADMIN/SUPERADMIN)
+- [x] Статистика, `/admin/users`, `/admin/tracks`, `/admin/releases` со сменой роли/статуса
+
+### Этап 2 (прямые продажи) — частично
+- [x] Покупка трека: `POST /api/v1/tracks/[id]/purchase` → YooKassa redirect → webhook → PAID
+- [x] Скачивание FLAC по presigned S3 URL; список покупок в `/profile`
+- [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
+
+### Тесты
+- [x] `packages/core` — сервисы artist/release/track, Result/errors (Vitest)
+- [x] `apps/web/lib/embed` — парсинг YouTube/VK
+- [ ] Route handlers (права + zod-валидация) — не покрыты
+- [ ] `apps/worker` — не покрыт
 
 ## Что делать дальше (следующий шаг)
 
-Установить ffmpeg локально (или запустить `apps/worker` в Docker) чтобы пайплайн транскодинга заработал конца до конца, а потом:
+Этап 1 закрыт. В рамках доводки:
+1. **Тесты на route handlers** — проверки прав (`release.artistProfileId !== artist.id`) и zod-валидация
+2. **Вынести дублирующиеся хелперы** (`fmt`, `pluralTracks`, `totalDuration`) в `shared` + тесты
+3. **YooKassa боевая настройка** (Этап 2) — по отдельной команде
 
-1. **Страница создания релиза** — форма на `/dashboard/releases/new` (название, тип, дата, обложка)
-2. **Плеер** — подключить реальные HLS-манифесты из S3 к плееру на страницах артиста/релиза
-3. **Follow-кнопка** на странице артиста
+> ⚠️ Date из Drizzle нельзя передавать в Client Component (RSC не сериализует Date) —
+> конвертировать в ISO string и принимать `string`. Тип-проп клиента не должен содержать `Date`.
