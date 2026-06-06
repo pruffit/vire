@@ -1,11 +1,12 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getTrackAudio, getLikeState, getLikeCount } from '@vire/db';
+import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getTrackAudio, getLikeState, getLikeCount, hasPurchasedTrack } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import { auth } from '@/auth';
 import { LikeButton } from './like-button';
 import { TrackWaveformPlayer } from './waveform-player';
+import { DownloadButton } from './download-button';
 
 type Props = { params: Promise<{ slug: string; releaseId: string; trackId: string }> };
 
@@ -58,9 +59,11 @@ export default async function TrackPage({ params }: Props) {
     getLikeCount(trackId),
   ]);
 
-  const liked = session?.user?.id
-    ? await getLikeState(session.user.id, trackId)
-    : false;
+  const userId = session?.user?.id;
+  const [liked, owned] = await Promise.all([
+    userId ? getLikeState(userId, trackId) : Promise.resolve(false),
+    userId && track.status === 'READY' ? hasPurchasedTrack(userId, trackId) : Promise.resolve(false),
+  ]);
 
   const queue = tracks
     .filter((t) => t.status === 'READY')
@@ -107,7 +110,7 @@ export default async function TrackPage({ params }: Props) {
             <h1 className="text-2xl font-semibold tracking-tight leading-tight">
               {track.title}
             </h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               {track.durationSec && (
                 <span className="text-xs font-mono opacity-40">{fmt(track.durationSec)}</span>
               )}
@@ -119,6 +122,13 @@ export default async function TrackPage({ params }: Props) {
                     </span>
                   )
               }
+              {session?.user && track.status === 'READY' && (
+                <DownloadButton
+                  trackId={trackId}
+                  trackTitle={`${track.title} - ${artist.name}`}
+                  initialOwned={owned}
+                />
+              )}
             </div>
           </div>
         </header>

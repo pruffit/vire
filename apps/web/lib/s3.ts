@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export const s3 = new S3Client({
   endpoint: process.env.S3_ENDPOINT ?? 'http://localhost:9000',
@@ -27,6 +28,18 @@ export async function uploadBuffer(
       ContentLength: buffer.length,
     }),
   );
+}
+
+export async function getFlacDownloadUrl(trackId: string, filename: string): Promise<string> {
+  const key = `tracks/${trackId}/source.flac`;
+  const command = new GetObjectCommand({
+    Bucket: VAULT,
+    Key: key,
+    ResponseContentDisposition: `attachment; filename="${encodeURIComponent(filename)}.flac"`,
+    ResponseContentType: 'audio/flac',
+  });
+  // 15 minutes — enough to start the download
+  return getSignedUrl(s3, command, { expiresIn: 900 });
 }
 
 export async function uploadToStream(
