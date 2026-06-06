@@ -1,6 +1,6 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../client';
-import { purchases } from '../schema';
+import { purchases, tracks, releases, artistProfiles } from '../schema';
 
 export async function hasPurchasedTrack(userId: string, trackId: string): Promise<boolean> {
   const [row] = await db
@@ -89,4 +89,41 @@ export async function failPurchaseByExternalId(externalPaymentId: string): Promi
         eq(purchases.status, 'PENDING'),
       ),
     );
+}
+
+export interface PurchasedTrack {
+  id: string;
+  title: string;
+  durationSec: number | null;
+  releaseId: string;
+  releaseCoverUrl: string | null;
+  artistName: string;
+  artistSlug: string;
+  purchasedAt: Date | null;
+}
+
+export async function getPurchasedTracks(userId: string): Promise<PurchasedTrack[]> {
+  return db
+    .select({
+      id: tracks.id,
+      title: tracks.title,
+      durationSec: tracks.durationSec,
+      releaseId: releases.id,
+      releaseCoverUrl: releases.coverUrl,
+      artistName: artistProfiles.name,
+      artistSlug: artistProfiles.slug,
+      purchasedAt: purchases.purchasedAt,
+    })
+    .from(purchases)
+    .innerJoin(tracks, eq(tracks.id, purchases.itemId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(
+      and(
+        eq(purchases.userId, userId),
+        eq(purchases.itemType, 'TRACK'),
+        eq(purchases.status, 'PAID'),
+      ),
+    )
+    .orderBy(desc(purchases.purchasedAt));
 }

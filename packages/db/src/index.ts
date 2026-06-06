@@ -26,8 +26,9 @@ export {
   createPendingPurchase,
   confirmPurchaseByExternalId,
   failPurchaseByExternalId,
+  getPurchasedTracks,
 } from './queries/purchases';
-export type { PendingPurchase } from './queries/purchases';
+export type { PendingPurchase, PurchasedTrack } from './queries/purchases';
 export {
   getAdminStats,
   listUsersAdmin,

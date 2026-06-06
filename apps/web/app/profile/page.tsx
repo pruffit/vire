@@ -2,10 +2,12 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
-import { getLikedTracks, getFollowedArtists } from '@vire/db';
-import type { LikedTrack, FollowedArtist } from '@vire/db';
+import { getLikedTracks, getFollowedArtists, getPurchasedTracks } from '@vire/db';
+import type { LikedTrack, FollowedArtist, PurchasedTrack } from '@vire/db';
 import type { PlayerTrack } from '@/store/player';
 import { LikedTrackRow } from './liked-track-row';
+import { PurchasedTrackRow } from './purchased-track-row';
+import { UnfollowButton } from './unfollow-button';
 
 export const metadata: Metadata = {
   title: 'Профиль — Vire',
@@ -17,12 +19,20 @@ export default async function ProfilePage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/profile');
 
-  const [likedTracks, followedArtists] = await Promise.all([
+  const [likedTracks, followedArtists, purchasedTracks] = await Promise.all([
     getLikedTracks(session.user.id),
     getFollowedArtists(session.user.id),
+    getPurchasedTracks(session.user.id),
   ]);
 
-  const queue: PlayerTrack[] = likedTracks.map((t) => ({
+  const likedQueue: PlayerTrack[] = likedTracks.map((t) => ({
+    id: t.id,
+    title: t.title,
+    artistName: t.artistName,
+    coverUrl: t.releaseCoverUrl,
+  }));
+
+  const purchasedQueue: PlayerTrack[] = purchasedTracks.map((t) => ({
     id: t.id,
     title: t.title,
     artistName: t.artistName,
@@ -38,6 +48,45 @@ export default async function ProfilePage() {
         </h1>
         <p className="text-sm text-muted-foreground">{session.user.email}</p>
       </header>
+
+      {/* Purchased tracks */}
+      <section className="space-y-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-base font-semibold">Куплено</h2>
+          {purchasedTracks.length > 0 && (
+            <span className="text-xs font-mono text-muted-foreground tabular-nums">
+              {purchasedTracks.length}
+            </span>
+          )}
+        </div>
+
+        {purchasedTracks.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">
+            Ты ещё ничего не покупал.
+          </p>
+        ) : (
+          <div className="flex flex-col">
+            {purchasedTracks.map((track, i) => (
+              <PurchasedTrackRow
+                key={track.id}
+                track={{
+                  id: track.id,
+                  title: track.title,
+                  artistName: track.artistName,
+                  coverUrl: track.releaseCoverUrl,
+                }}
+                queue={purchasedQueue}
+                queueIndex={i}
+                durationSec={track.durationSec}
+                releaseCoverUrl={track.releaseCoverUrl}
+                artistSlug={track.artistSlug}
+                releaseId={track.releaseId}
+                trackId={track.id}
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Liked tracks */}
       <section className="space-y-4">
@@ -60,7 +109,7 @@ export default async function ProfilePage() {
               <LikedTrackRow
                 key={track.id}
                 track={{ id: track.id, title: track.title, artistName: track.artistName, coverUrl: track.releaseCoverUrl }}
-                queue={queue}
+                queue={likedQueue}
                 queueIndex={i}
                 durationSec={track.durationSec}
                 releaseCoverUrl={track.releaseCoverUrl}
@@ -104,10 +153,7 @@ export default async function ProfilePage() {
 
 function ArtistCard({ artist }: { artist: FollowedArtist }) {
   return (
-    <Link
-      href={`/artists/${artist.slug}`}
-      className="group flex items-center gap-3 p-3 rounded-md bg-card hover:bg-accent/5 transition-colors border border-border/40"
-    >
+    <div className="group flex items-center gap-3 p-3 rounded-md bg-card hover:bg-accent/5 transition-colors border border-border/40">
       {artist.avatarUrl ? (
         <img
           src={artist.avatarUrl}
@@ -119,14 +165,15 @@ function ArtistCard({ artist }: { artist: FollowedArtist }) {
           {artist.name[0]?.toUpperCase()}
         </div>
       )}
-      <div className="min-w-0">
+      <Link href={`/artists/${artist.slug}`} className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate group-hover:text-foreground transition-colors">
           {artist.name}
         </p>
         {artist.verified && (
           <p className="text-xs text-muted-foreground">верифицирован</p>
         )}
-      </div>
-    </Link>
+      </Link>
+      <UnfollowButton artistSlug={artist.slug} />
+    </div>
   );
 }
