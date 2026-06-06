@@ -1,9 +1,12 @@
+import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
+import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getFollowState, getFollowerCount } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import type { ArtistProfile, Release } from '@vire/core';
+import { auth } from '@/auth';
+import { FollowButton } from './follow-button';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -43,6 +46,12 @@ export default async function ArtistPage({ params }: Props) {
   const { artist, releases } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
+  const session = await auth();
+  const [following, followerCount] = await Promise.all([
+    session?.user?.id ? getFollowState(session.user.id, artist.id) : Promise.resolve(false),
+    getFollowerCount(artist.id),
+  ]);
+
   return (
     <div
       style={
@@ -57,7 +66,16 @@ export default async function ArtistPage({ params }: Props) {
       {grain && <GrainOverlay />}
 
       <div className="mx-auto max-w-4xl px-6 py-16 space-y-16">
-        <ArtistHeader artist={artist} />
+        <ArtistHeader
+          artist={artist}
+          followButton={
+            session?.user
+              ? <FollowButton slug={artist.slug} initialFollowing={following} initialCount={followerCount} />
+              : followerCount > 0
+                ? <span className="text-xs opacity-40">{followerCount} слушателей</span>
+                : null
+          }
+        />
         <ReleasesSection releases={releases} artistSlug={artist.slug} />
       </div>
     </div>
@@ -80,7 +98,7 @@ function GrainOverlay() {
   );
 }
 
-function ArtistHeader({ artist }: { artist: ArtistProfile }) {
+function ArtistHeader({ artist, followButton }: { artist: ArtistProfile; followButton: ReactNode }) {
   return (
     <header className="flex flex-col sm:flex-row items-start gap-8">
       {artist.avatarUrl ? (
@@ -110,6 +128,7 @@ function ArtistHeader({ artist }: { artist: ArtistProfile }) {
         {artist.bio && (
           <p className="text-sm leading-relaxed opacity-70 max-w-prose">{artist.bio}</p>
         )}
+        {followButton}
       </div>
     </header>
   );

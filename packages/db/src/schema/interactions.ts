@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, timestamp, integer, boolean, pgEnum, numeric
+  pgTable, uuid, text, timestamp, integer, boolean, pgEnum, numeric, unique
 } from 'drizzle-orm/pg-core';
 import { users } from './users';
 import { tracks, releases } from './releases';
@@ -60,7 +60,7 @@ export const follows = pgTable('follows', {
   userId: uuid('user_id').notNull().references(() => users.id),
   artistProfileId: uuid('artist_profile_id').notNull().references(() => artistProfiles.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (t) => [unique('follows_user_artist_unique').on(t.userId, t.artistProfileId)]);
 
 // Анонимные маркеры на волне — не комментарии, просто точка
 // Агрегируется: артист видит пики вовлечённости
