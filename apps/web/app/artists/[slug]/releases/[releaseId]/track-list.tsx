@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { controls } from '@/components/player/audio-engine';
 import { type PlayerTrack } from '@/store/player';
 import type { Track } from '@vire/core';
@@ -7,10 +8,12 @@ import type { Track } from '@vire/core';
 interface Props {
   tracks: Track[];
   artistName: string;
+  artistSlug: string;
+  releaseId: string;
   coverUrl: string | null;
 }
 
-export function TrackList({ tracks, artistName, coverUrl }: Props) {
+export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl }: Props) {
   if (tracks.length === 0) return null;
 
   const queue: PlayerTrack[] = tracks
@@ -26,13 +29,29 @@ export function TrackList({ tracks, artistName, coverUrl }: Props) {
   return (
     <section className="space-y-0.5">
       {tracks.map((track) => (
-        <TrackRow key={track.id} track={track} onPlay={() => handlePlay(track)} />
+        <TrackRow
+          key={track.id}
+          track={track}
+          artistSlug={artistSlug}
+          releaseId={releaseId}
+          onPlay={() => handlePlay(track)}
+        />
       ))}
     </section>
   );
 }
 
-function TrackRow({ track, onPlay }: { track: Track; onPlay: () => void }) {
+function TrackRow({
+  track,
+  artistSlug,
+  releaseId,
+  onPlay,
+}: {
+  track: Track;
+  artistSlug: string;
+  releaseId: string;
+  onPlay: () => void;
+}) {
   const ready = track.status === 'READY';
   const processing = track.status === 'PROCESSING';
 
@@ -77,6 +96,14 @@ function TrackRow({ track, onPlay }: { track: Track; onPlay: () => void }) {
             {fmt(track.durationSec)}
           </span>
         )}
+        <Link
+          href={`/artists/${artistSlug}/releases/${releaseId}/tracks/${track.id}`}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Страница трека"
+          className="opacity-0 group-hover:opacity-30 hover:!opacity-70 transition-opacity text-[10px] font-mono"
+        >
+          →
+        </Link>
       </div>
     </div>
   );

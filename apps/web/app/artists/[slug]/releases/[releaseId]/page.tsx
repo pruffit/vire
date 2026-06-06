@@ -114,7 +114,13 @@ export default async function ReleasePage({ params }: Props) {
 
       {/* Tracks + liner notes */}
       <div className="mx-auto max-w-4xl px-6 pb-32 space-y-12">
-        <TrackList tracks={tracks} artistName={artist.name} coverUrl={release.coverUrl} />
+        <TrackList
+          tracks={tracks}
+          artistName={artist.name}
+          artistSlug={slug}
+          releaseId={releaseId}
+          coverUrl={release.coverUrl}
+        />
 
         {release.linerNotes && (
           <section className="space-y-3">

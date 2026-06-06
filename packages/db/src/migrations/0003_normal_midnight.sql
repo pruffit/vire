@@ -1,0 +1,1 @@
+ALTER TABLE "likes" ADD CONSTRAINT "likes_user_track_unique" UNIQUE("user_id","track_id");

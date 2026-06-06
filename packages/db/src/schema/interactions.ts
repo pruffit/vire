@@ -53,7 +53,7 @@ export const likes = pgTable('likes', {
   userId: uuid('user_id').notNull().references(() => users.id),
   trackId: uuid('track_id').notNull().references(() => tracks.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (t) => [unique('likes_user_track_unique').on(t.userId, t.trackId)]);
 
 export const follows = pgTable('follows', {
   id: uuid('id').primaryKey().defaultRandom(),
