@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getTrackAudio, getLikeState, getLikeCount, hasPurchasedTrack, getPendingPurchase } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
@@ -99,10 +100,12 @@ export default async function TrackPage({ params }: Props) {
         {/* Track header */}
         <header className="flex items-start gap-6">
           {release.coverUrl ? (
-            <img
+            <Image
               src={release.coverUrl}
               alt={release.title}
-              className="w-24 h-24 shrink-0 shadow-lg"
+              width={96}
+              height={96}
+              className="w-24 h-24 shrink-0 object-cover shadow-lg"
             />
           ) : (
             <div className="w-24 h-24 shrink-0 bg-white/5" />

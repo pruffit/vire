@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Image from 'next/image';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from '@/components/player/audio-engine';
 import { formatDuration } from '@/lib/format';
@@ -37,7 +38,7 @@ export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCo
       {/* Cover */}
       <div className="w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted relative">
         {releaseCoverUrl ? (
-          <img src={releaseCoverUrl} alt={track.title} className="w-full h-full object-cover" />
+          <Image src={releaseCoverUrl} alt={track.title} fill sizes="36px" className="object-cover" />
         ) : (
           <div className="w-full h-full bg-white/5" />
         )}

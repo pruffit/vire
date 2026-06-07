@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { listActiveArtists } from '@vire/db';
 import type { ArtistListItem } from '@vire/db';
 
@@ -101,12 +102,14 @@ function ArtistCard({ artist }: { artist: ArtistListItem }) {
   return (
     <Link href={`/artists/${artist.slug}`}>
       <article className="group space-y-3 text-center">
-        <div className="mx-auto w-full aspect-square rounded-full overflow-hidden bg-muted ring-1 ring-white/5 transition-shadow group-hover:ring-white/20">
+        <div className="relative mx-auto w-full aspect-square rounded-full overflow-hidden bg-muted ring-1 ring-white/5 transition-shadow group-hover:ring-white/20">
           {artist.avatarUrl ? (
-            <img
+            <Image
               src={artist.avatarUrl}
               alt={artist.name}
-              className="w-full h-full object-cover"
+              fill
+              sizes="(max-width: 640px) 50vw, 200px"
+              className="object-cover"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-2xl font-mono text-muted-foreground">

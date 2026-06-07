@@ -199,12 +199,16 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 
 ## Что делать дальше (следующий шаг)
 
-Этап 1 закрыт. В рамках доводки:
-1. **`<img>` → `next/image`** (21 шт.) + домен S3/MinIO в `next.config` — производительность
-2. **Тесты Этап-2 роутов** (purchase/webhook) и **YooKassa боевая настройка** — по команде (Этап 2)
+Этап 1 закрыт. Доводка завершена. Дальше — только Этап 2:
+1. **Тесты Этап-2 роутов** (purchase/webhook) и **YooKassa боевая настройка** — по команде
 
-Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)
-централизованы в `apps/web/lib/format.ts` и покрыты тестами.
+Сделано в доводке:
+- Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)
+  централизованы в `apps/web/lib/format.ts` и покрыты тестами.
+- Все удалённые изображения (обложки/аватары из S3) — на `next/image`; хост S3/MinIO задаётся
+  через `images.remotePatterns` в `next.config.ts` из `S3_PUBLIC_ENDPOINT`. Локальные blob-превью
+  в формах остаются `<img>` (next/image не оптимизирует blob:). После правки `next.config.ts`
+  dev-сервер нужно перезапустить.
 
 > ⚠️ Не интерполируй JS-`Date` в raw-`sql`-шаблон Drizzle — postgres.js получает её как
 > нетипизированный bind-параметр и падает с `ERR_INVALID_ARG_TYPE: Received an instance of Date`.

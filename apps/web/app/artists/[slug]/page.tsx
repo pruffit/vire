@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getFollowState, getFollowerCount } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
@@ -125,9 +126,11 @@ function ArtistHeader({ artist, followButton }: { artist: ArtistProfile; followB
   return (
     <header className="flex flex-col sm:flex-row items-start gap-8">
       {artist.avatarUrl ? (
-        <img
+        <Image
           src={artist.avatarUrl}
           alt={artist.name}
+          width={128}
+          height={128}
           className="w-32 h-32 rounded-full object-cover shrink-0 ring-1 ring-white/10"
         />
       ) : (
@@ -229,12 +232,14 @@ function ReleaseCard({ release, artistSlug }: { release: Release; artistSlug: st
   return (
     <Link href={`/artists/${artistSlug}/releases/${release.id}`}>
       <article className="group space-y-3">
-        <div className="aspect-square rounded-sm overflow-hidden bg-white/5">
+        <div className="relative aspect-square rounded-sm overflow-hidden bg-white/5">
           {release.coverUrl ? (
-            <img
+            <Image
               src={release.coverUrl}
               alt={release.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              fill
+              sizes="(max-width: 640px) 50vw, 300px"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center opacity-20">

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { getFeed } from '@vire/db';
@@ -51,12 +52,14 @@ function FeedCard({ release }: { release: FeedRelease }) {
       className="group flex items-center gap-4 py-4 hover:bg-accent/5 -mx-3 px-3 rounded-sm transition-colors"
     >
       {/* Cover */}
-      <div className="w-14 h-14 shrink-0 rounded-sm overflow-hidden bg-muted">
+      <div className="relative w-14 h-14 shrink-0 rounded-sm overflow-hidden bg-muted">
         {release.coverUrl ? (
-          <img
+          <Image
             src={release.coverUrl}
             alt={release.title}
-            className="w-full h-full object-cover"
+            fill
+            sizes="56px"
+            className="object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center opacity-20">
@@ -72,9 +75,11 @@ function FeedCard({ release }: { release: FeedRelease }) {
         </p>
         <div className="flex items-center gap-2">
           {release.artistAvatarUrl ? (
-            <img
+            <Image
               src={release.artistAvatarUrl}
               alt={release.artistName}
+              width={16}
+              height={16}
               className="w-4 h-4 rounded-full object-cover"
             />
           ) : (

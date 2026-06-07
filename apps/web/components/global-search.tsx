@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import type { SearchResults } from '@vire/db';
 
 interface Props {
@@ -224,11 +225,11 @@ function DropdownSections({ results, flat, activeIdx, onSelect }: SectionsProps)
                   isActive ? 'bg-accent/20' : 'hover:bg-accent/10',
                 ].join(' ')}
               >
-                <div className="w-7 h-7 shrink-0 rounded overflow-hidden bg-muted flex items-center justify-center text-xs font-mono text-muted-foreground">
+                <div className="relative w-7 h-7 shrink-0 rounded overflow-hidden bg-muted flex items-center justify-center text-xs font-mono text-muted-foreground">
                   {item.avatarUrl ? (
-                    <img src={item.avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                    <Image src={item.avatarUrl} alt="" fill sizes="28px" className="object-cover rounded-full" />
                   ) : item.coverUrl ? (
-                    <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
+                    <Image src={item.coverUrl} alt="" fill sizes="28px" className="object-cover" />
                   ) : (
                     item.initial
                   )}

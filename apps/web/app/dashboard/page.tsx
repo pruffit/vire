@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getArtistPlayStats } from '@vire/db';
 import type { TrackStatus, ReleaseStatus, ReleaseType } from '@vire/core';
@@ -95,10 +96,11 @@ function ReleaseCard({ data }: { data: DashboardRelease }) {
           )}
         </div>
         {data.coverUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={data.coverUrl}
             alt={data.title}
+            width={48}
+            height={48}
             className="w-12 h-12 rounded-md object-cover shrink-0"
           />
         )}

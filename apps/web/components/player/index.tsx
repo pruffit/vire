@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from './audio-engine';
 import { formatDuration } from '@/lib/format';
@@ -63,7 +64,7 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
         className="w-10 h-10 rounded-sm shrink-0 overflow-hidden relative group"
       >
         {track.coverUrl ? (
-          <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover" />
+          <Image src={track.coverUrl} alt={track.title} fill sizes="40px" className="object-cover" />
         ) : (
           <div className="w-full h-full bg-white/5" />
         )}
@@ -106,9 +107,11 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
       <div className="w-full max-w-md flex flex-col items-center gap-8">
         {/* Большая обложка */}
         {track.coverUrl ? (
-          <img
+          <Image
             src={track.coverUrl}
             alt={track.title}
+            width={320}
+            height={320}
             className="w-64 h-64 sm:w-80 sm:h-80 rounded-lg object-cover shadow-2xl"
           />
         ) : (

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { getLikedTracks, getFollowedArtists } from '@vire/db';
@@ -109,9 +110,11 @@ function ArtistCard({ artist }: { artist: FollowedArtist }) {
   return (
     <div className="group flex items-center gap-3 p-3 rounded-md bg-card hover:bg-accent/5 transition-colors border border-border/40">
       {artist.avatarUrl ? (
-        <img
+        <Image
           src={artist.avatarUrl}
           alt={artist.name}
+          width={40}
+          height={40}
           className="w-10 h-10 rounded-full object-cover shrink-0"
         />
       ) : (

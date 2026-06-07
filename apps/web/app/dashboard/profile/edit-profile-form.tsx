@@ -224,6 +224,8 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       <Field label="Аватар" hint="JPEG, PNG или WebP · необязательно">
         <div className="flex items-center gap-4">
           {avatarPreview && !removeAvatar ? (
+            // Локальное превью выбранного файла (blob:) — next/image его не оптимизирует
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={avatarPreview} alt="avatar" className="w-16 h-16 rounded-full object-cover shrink-0" />
           ) : (
             <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center text-xl font-medium shrink-0">

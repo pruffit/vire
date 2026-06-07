@@ -94,6 +94,8 @@ export function CreateReleaseForm() {
             className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-sm file:cursor-pointer hover:file:bg-white/20 disabled:opacity-50"
           />
           {coverPreview && (
+            // Локальное превью выбранного файла (blob:) — next/image его не оптимизирует
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={coverPreview}
               alt="Preview"

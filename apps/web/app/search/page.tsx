@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { searchAll } from '@vire/db';
 import type { SearchArtist, SearchRelease, SearchTrack } from '@vire/db';
@@ -95,7 +96,7 @@ function ArtistCard({ artist }: { artist: SearchArtist }) {
       className="group flex items-center gap-3 p-3 rounded-md bg-card border border-border/40 hover:bg-accent/5 transition-colors"
     >
       {artist.avatarUrl ? (
-        <img src={artist.avatarUrl} alt={artist.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+        <Image src={artist.avatarUrl} alt={artist.name} width={36} height={36} className="w-9 h-9 rounded-full object-cover shrink-0" />
       ) : (
         <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground shrink-0">
           {artist.name[0]?.toUpperCase()}
@@ -117,9 +118,9 @@ function ReleaseRow({ release }: { release: SearchRelease }) {
       href={`/artists/${release.artistSlug}/releases/${release.id}`}
       className="group flex items-center gap-3 py-3 hover:bg-accent/5 -mx-2 px-2 rounded-sm transition-colors"
     >
-      <div className="w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
+      <div className="relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
         {release.coverUrl
-          ? <img src={release.coverUrl} alt={release.title} className="w-full h-full object-cover" />
+          ? <Image src={release.coverUrl} alt={release.title} fill sizes="36px" className="object-cover" />
           : <div className="w-full h-full bg-white/5" />
         }
       </div>
@@ -138,9 +139,9 @@ function TrackRow({ track }: { track: SearchTrack }) {
       href={`/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`}
       className="group flex items-center gap-3 py-3 hover:bg-accent/5 -mx-2 px-2 rounded-sm transition-colors"
     >
-      <div className="w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
+      <div className="relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
         {track.coverUrl
-          ? <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover" />
+          ? <Image src={track.coverUrl} alt={track.title} fill sizes="36px" className="object-cover" />
           : <div className="w-full h-full bg-white/5" />
         }
       </div>

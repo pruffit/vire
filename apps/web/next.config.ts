@@ -1,7 +1,27 @@
 import type { NextConfig } from 'next';
 
+// Обложки и аватары лежат в S3/MinIO и отдаются по S3_PUBLIC_ENDPOINT
+// (локально http://localhost:9000, на проде — Selectel). next/image должен
+// знать этот хост, иначе оптимизатор откажется их грузить.
+function s3RemotePattern() {
+  try {
+    const u = new URL(process.env.S3_PUBLIC_ENDPOINT ?? 'http://localhost:9000');
+    return {
+      protocol: u.protocol.replace(':', '') as 'http' | 'https',
+      hostname: u.hostname,
+      port: u.port || undefined,
+      pathname: '/**',
+    };
+  } catch {
+    return { protocol: 'http' as const, hostname: 'localhost', port: '9000', pathname: '/**' };
+  }
+}
+
 const nextConfig: NextConfig = {
   transpilePackages: ['@vire/core', '@vire/db', '@vire/ui'],
+  images: {
+    remotePatterns: [s3RemotePattern()],
+  },
   experimental: {
     // proxy.ts (Auth.js) заставляет Next 16 буферизовать тело запроса. Лимит по
     // умолчанию — 10MB: WAV-мастер крупнее обрезается, multipart-граница рвётся,

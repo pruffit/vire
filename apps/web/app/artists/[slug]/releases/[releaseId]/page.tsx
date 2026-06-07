@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
@@ -89,7 +90,7 @@ export default async function ReleasePage({ params }: Props) {
           <div className="flex flex-col sm:flex-row gap-8 items-start">
             <div className="shrink-0">
               {release.coverUrl ? (
-                <img src={release.coverUrl} alt={release.title} className="w-52 h-52 shadow-2xl" />
+                <Image src={release.coverUrl} alt={release.title} width={208} height={208} className="w-52 h-52 object-cover shadow-2xl" />
               ) : (
                 <div className="w-52 h-52 bg-white/5 flex items-center justify-center opacity-20">
                   <MusicIcon />
