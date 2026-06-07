@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { auth, signOut } from '@/auth';
+import { NavSearch } from './nav-search';
 
 export async function Nav() {
   const session = await auth();
@@ -25,7 +26,7 @@ export async function Nav() {
 
         {/* Right side */}
         <div className="flex items-center gap-1 shrink-0">
-          <SearchIconLink />
+          <NavSearch />
           {user ? (
             <>
               {isArtist && <NavLink href="/dashboard">Дашборд</NavLink>}
@@ -64,17 +65,3 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   );
 }
 
-function SearchIconLink() {
-  return (
-    <Link
-      href="/search"
-      aria-label="Поиск"
-      className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-    >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <circle cx="11" cy="11" r="8" />
-        <path d="m21 21-4.35-4.35" />
-      </svg>
-    </Link>
-  );
-}
