@@ -71,10 +71,10 @@ export default async function TrackPage({ params }: Props) {
 
   const queue = tracks
     .filter((t) => t.status === 'READY')
-    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl }));
+    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId }));
 
   const playerTrack = track.status === 'READY'
-    ? { id: track.id, title: track.title, artistName: artist.name, coverUrl: release.coverUrl }
+    ? { id: track.id, title: track.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId }
     : null;
 
   return (

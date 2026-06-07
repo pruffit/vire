@@ -28,6 +28,8 @@ export default async function ProfilePage() {
     title: t.title,
     artistName: t.artistName,
     coverUrl: t.releaseCoverUrl,
+    artistSlug: t.artistSlug,
+    releaseId: t.releaseId,
   }));
 
   return (
@@ -60,7 +62,7 @@ export default async function ProfilePage() {
             {likedTracks.map((track, i) => (
               <LikedTrackRow
                 key={track.id}
-                track={{ id: track.id, title: track.title, artistName: track.artistName, coverUrl: track.releaseCoverUrl }}
+                track={{ id: track.id, title: track.title, artistName: track.artistName, coverUrl: track.releaseCoverUrl, artistSlug: track.artistSlug, releaseId: track.releaseId }}
                 queue={likedQueue}
                 queueIndex={i}
                 durationSec={track.durationSec}

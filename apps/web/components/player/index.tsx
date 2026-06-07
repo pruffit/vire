@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, type MouseEvent } from 'react';
-import { usePlayerStore } from '@/store/player';
+import { useEffect, useState, type MouseEvent } from 'react';
+import Link from 'next/link';
+import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from './audio-engine';
 import { formatDuration } from '@/lib/format';
 
 export function Player() {
+  const [expanded, setExpanded] = useState(false);
+
   useEffect(() => {
     initAudioEngine();
   }, []);
@@ -14,34 +17,131 @@ export function Player() {
   if (!track) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-40 h-16 bg-card border-t border-border flex items-center px-4 gap-4">
-      <TrackInfo />
-      <Controls />
-      <ProgressSection />
-    </div>
+    <>
+      <div className="fixed bottom-0 inset-x-0 z-40 h-16 bg-card border-t border-border flex items-center px-4 gap-4">
+        <TrackInfo onExpandCover={() => setExpanded(true)} />
+        <Controls />
+        <ProgressSection />
+      </div>
+      {expanded && <FullscreenPlayer onClose={() => setExpanded(false)} />}
+    </>
   );
 }
 
-function TrackInfo() {
+/** Имя артиста → страница артиста, название → страница релиза. Если слаг/releaseId
+ *  не известны источнику, показываем простой текст без ссылки. */
+function ArtistLink({ track, className }: { track: PlayerTrack; className?: string }) {
+  if (!track.artistSlug) return <span className={className}>{track.artistName}</span>;
+  return (
+    <Link href={`/artists/${track.artistSlug}`} className={`${className ?? ''} hover:underline`}>
+      {track.artistName}
+    </Link>
+  );
+}
+
+function TitleLink({ track, className }: { track: PlayerTrack; className?: string }) {
+  if (!track.artistSlug || !track.releaseId) return <span className={className}>{track.title}</span>;
+  return (
+    <Link
+      href={`/artists/${track.artistSlug}/releases/${track.releaseId}`}
+      className={`${className ?? ''} hover:underline`}
+    >
+      {track.title}
+    </Link>
+  );
+}
+
+function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
   const track = usePlayerStore((s) => s.track);
   if (!track) return null;
 
   return (
     <div className="flex items-center gap-3 w-1/3 min-w-0">
-      {track.coverUrl ? (
-        <img
-          src={track.coverUrl}
-          alt={track.title}
-          className="w-10 h-10 rounded-sm shrink-0 object-cover"
-        />
-      ) : (
-        <div className="w-10 h-10 rounded-sm bg-white/5 shrink-0" />
-      )}
+      <button
+        onClick={onExpandCover}
+        aria-label="Открыть плеер на весь экран"
+        className="w-10 h-10 rounded-sm shrink-0 overflow-hidden relative group"
+      >
+        {track.coverUrl ? (
+          <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-white/5" />
+        )}
+        <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <ExpandIcon />
+        </span>
+      </button>
       <div className="min-w-0 hidden sm:block">
-        <p className="text-sm font-medium truncate leading-tight">{track.title}</p>
-        <p className="text-xs text-muted-foreground truncate">{track.artistName}</p>
+        <TitleLink track={track} className="text-sm font-medium truncate leading-tight block" />
+        <ArtistLink track={track} className="text-xs text-muted-foreground truncate block" />
       </div>
     </div>
+  );
+}
+
+function FullscreenPlayer({ onClose }: { onClose: () => void }) {
+  const track = usePlayerStore((s) => s.track);
+
+  // Esc закрывает полноэкранный режим
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  if (!track) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-card/95 backdrop-blur-xl flex flex-col items-center justify-center px-6 py-12">
+      <button
+        onClick={onClose}
+        aria-label="Свернуть плеер"
+        className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity"
+      >
+        <ChevronDownIcon />
+      </button>
+
+      <div className="w-full max-w-md flex flex-col items-center gap-8">
+        {/* Большая обложка */}
+        {track.coverUrl ? (
+          <img
+            src={track.coverUrl}
+            alt={track.title}
+            className="w-64 h-64 sm:w-80 sm:h-80 rounded-lg object-cover shadow-2xl"
+          />
+        ) : (
+          <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-lg bg-white/5" />
+        )}
+
+        {/* Название + артист */}
+        <div className="text-center min-w-0 w-full" onClick={onClose}>
+          <TitleLink track={track} className="text-xl font-semibold truncate block" />
+          <ArtistLink track={track} className="text-sm text-muted-foreground truncate block mt-1" />
+        </div>
+
+        {/* Прогресс */}
+        <div className="w-full flex items-center gap-3">
+          <TimeLabel which="current" />
+          <Waveform />
+          <TimeLabel which="duration" />
+        </div>
+
+        {/* Управление */}
+        <Controls />
+      </div>
+    </div>
+  );
+}
+
+function TimeLabel({ which }: { which: 'current' | 'duration' }) {
+  const currentTime = usePlayerStore((s) => s.currentTime);
+  const duration = usePlayerStore((s) => s.duration);
+  return (
+    <span className="text-xs font-mono text-muted-foreground tabular-nums w-9 text-center shrink-0">
+      {formatDuration(which === 'current' ? currentTime : duration)}
+    </span>
   );
 }
 
@@ -187,6 +287,25 @@ function Waveform() {
           />
         );
       })}
+    </svg>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 3 21 3 21 9" />
+      <polyline points="9 21 3 21 3 15" />
+      <line x1="21" y1="3" x2="14" y2="10" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9" />
     </svg>
   );
 }

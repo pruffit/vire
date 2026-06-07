@@ -5,6 +5,10 @@ export interface PlayerTrack {
   title: string;
   artistName: string;
   coverUrl: string | null;
+  // Опциональны: нужны плееру для переходов на страницы артиста и релиза.
+  // Если источник не знает их (например, дашборд) — ссылки просто не рендерятся.
+  artistSlug?: string;
+  releaseId?: string;
 }
 
 interface State {

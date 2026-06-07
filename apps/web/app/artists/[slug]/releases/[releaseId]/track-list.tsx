@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { controls } from '@/components/player/audio-engine';
-import { type PlayerTrack } from '@/store/player';
+import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import type { TrackStatus, TrackCredit } from '@vire/core';
 import { formatDuration } from '@/lib/format';
 
@@ -30,12 +30,16 @@ export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl 
 
   const queue: PlayerTrack[] = tracks
     .filter((t) => t.status === 'READY')
-    .map((t) => ({ id: t.id, title: t.title, artistName, coverUrl }));
+    .map((t) => ({ id: t.id, title: t.title, artistName, coverUrl, artistSlug, releaseId }));
 
   function handlePlay(track: ClientTrack) {
     if (track.status !== 'READY') return;
     const idx = queue.findIndex((q) => q.id === track.id);
-    controls.play(queue[idx] ?? { id: track.id, title: track.title, artistName, coverUrl }, queue, idx);
+    controls.play(
+      queue[idx] ?? { id: track.id, title: track.title, artistName, coverUrl, artistSlug, releaseId },
+      queue,
+      idx,
+    );
   }
 
   return (
@@ -67,6 +71,9 @@ function TrackRow({
   const ready = track.status === 'READY';
   const processing = track.status === 'PROCESSING';
 
+  const isActive = usePlayerStore((s) => s.track?.id) === track.id;
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+
   return (
     <div
       role={ready ? 'button' : undefined}
@@ -77,14 +84,23 @@ function TrackRow({
         ready
           ? 'hover:bg-white/5 cursor-pointer'
           : 'opacity-40 cursor-default'
-      }`}
+      } ${isActive ? 'bg-white/5' : ''}`}
     >
-      <span className="w-6 text-right text-xs font-mono opacity-30 shrink-0">
-        {track.trackNumber}
+      <span className={`w-6 flex justify-end text-xs font-mono shrink-0 ${isActive ? '' : 'opacity-30'}`}>
+        {isActive ? (
+          <PlayingBars animate={isPlaying} />
+        ) : (
+          track.trackNumber
+        )}
       </span>
 
       <div className="flex-1 min-w-0">
-        <span className="text-sm truncate block">{track.title}</span>
+        <span
+          className="text-sm truncate block"
+          style={isActive ? { color: 'var(--artist-accent)' } : undefined}
+        >
+          {track.title}
+        </span>
         {track.credits.length > 0 && (
           <span className="text-[10px] font-mono opacity-30 truncate block">
             {track.credits.map((c) => c.name).join(', ')}
@@ -125,5 +141,24 @@ function TrackRow({
         </Link>
       </div>
     </div>
+  );
+}
+
+/** Маленький эквалайзер: три полоски, анимируются пока трек играет. */
+function PlayingBars({ animate }: { animate: boolean }) {
+  return (
+    <span className="flex items-end gap-[2px] h-3" style={{ color: 'var(--artist-accent)' }} aria-label="Сейчас играет">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-[2px] bg-current rounded-full"
+          style={{
+            height: animate ? undefined : '40%',
+            animation: animate ? `vire-eq 0.9s ease-in-out ${i * 0.15}s infinite` : undefined,
+          }}
+        />
+      ))}
+      <style>{`@keyframes vire-eq { 0%,100% { height: 30%; } 50% { height: 100%; } }`}</style>
+    </span>
   );
 }
