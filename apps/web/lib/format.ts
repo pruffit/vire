@@ -28,3 +28,20 @@ export function pluralTracks(n: number): string {
   if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'трека';
   return 'треков';
 }
+
+/** Release year from a Date or ISO string; null if absent or unparseable. */
+export function releaseYear(date: Date | string | null | undefined): number | null {
+  if (!date) return null;
+  const year = new Date(date).getFullYear();
+  return Number.isNaN(year) ? null : year;
+}
+
+/** Combined formatted duration of READY tracks (e.g. "12:34"); null if there is none. */
+export function totalDuration(
+  tracks: { status: string; durationSec: number | null }[],
+): string | null {
+  const total = tracks
+    .filter((t) => t.status === 'READY' && t.durationSec != null)
+    .reduce((s, t) => s + (t.durationSec ?? 0), 0);
+  return total > 0 ? formatDuration(total) : null;
+}

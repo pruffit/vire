@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDuration, formatListenTime, formatCount, pluralTracks } from '../format';
+import { formatDuration, formatListenTime, formatCount, pluralTracks, releaseYear, totalDuration } from '../format';
 
 describe('formatDuration', () => {
   it('formats sub-minute durations with zero-padded seconds', () => {
@@ -70,5 +70,40 @@ describe('pluralTracks', () => {
     expect(pluralTracks(12)).toBe('треков');
     expect(pluralTracks(14)).toBe('треков');
     expect(pluralTracks(20)).toBe('треков');
+  });
+});
+
+describe('releaseYear', () => {
+  it('returns null for absent dates', () => {
+    expect(releaseYear(null)).toBeNull();
+    expect(releaseYear(undefined)).toBeNull();
+  });
+
+  it('extracts the year from a Date or ISO string', () => {
+    expect(releaseYear(new Date('2026-06-07T00:00:00Z'))).toBe(2026);
+    expect(releaseYear('2024-01-15')).toBe(2024);
+  });
+
+  it('returns null for an unparseable string', () => {
+    expect(releaseYear('not a date')).toBeNull();
+  });
+});
+
+describe('totalDuration', () => {
+  it('sums only READY tracks with a duration', () => {
+    expect(
+      totalDuration([
+        { status: 'READY', durationSec: 65 },
+        { status: 'READY', durationSec: 130 },
+        { status: 'PROCESSING', durationSec: 999 }, // ignored
+        { status: 'READY', durationSec: null }, // ignored
+      ]),
+    ).toBe('3:15');
+  });
+
+  it('returns null when nothing qualifies', () => {
+    expect(totalDuration([])).toBeNull();
+    expect(totalDuration([{ status: 'PROCESSING', durationSec: 100 }])).toBeNull();
+    expect(totalDuration([{ status: 'READY', durationSec: 0 }])).toBeNull();
   });
 });

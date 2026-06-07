@@ -8,7 +8,7 @@ import type { ArtistProfile, ArtistLink, ArtistVideo, Release } from '@vire/core
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
 import { getEmbedUrl } from '@/lib/embed';
-import { formatCount } from '@/lib/format';
+import { formatCount, releaseYear } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
 type Props = { params: Promise<{ slug: string }> };
@@ -224,7 +224,7 @@ function VideosSection({ videos }: { videos: ArtistVideo[] }) {
 }
 
 function ReleaseCard({ release, artistSlug }: { release: Release; artistSlug: string }) {
-  const year = release.releaseDate ? new Date(release.releaseDate).getFullYear() : null;
+  const year = releaseYear(release.releaseDate);
 
   return (
     <Link href={`/artists/${artistSlug}/releases/${release.id}`}>

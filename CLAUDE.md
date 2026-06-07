@@ -200,10 +200,11 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 ## Что делать дальше (следующий шаг)
 
 Этап 1 закрыт. В рамках доводки:
-1. **Вынести дублирующиеся хелперы** (`year`, `totalDuration`) в `lib/format` + тесты
-   (`fmt`/`pluralTracks`/форматтеры уже централизованы в `apps/web/lib/format.ts`)
-2. **`<img>` → `next/image`** (21 шт.) + домен S3/MinIO в `next.config` — производительность
-3. **Тесты Этап-2 роутов** (purchase/webhook) и **YooKassa боевая настройка** — по команде (Этап 2)
+1. **`<img>` → `next/image`** (21 шт.) + домен S3/MinIO в `next.config` — производительность
+2. **Тесты Этап-2 роутов** (purchase/webhook) и **YooKassa боевая настройка** — по команде (Этап 2)
+
+Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)
+централизованы в `apps/web/lib/format.ts` и покрыты тестами.
 
 > ⚠️ Не интерполируй JS-`Date` в raw-`sql`-шаблон Drizzle — postgres.js получает её как
 > нетипизированный bind-параметр и падает с `ERR_INVALID_ARG_TYPE: Received an instance of Date`.

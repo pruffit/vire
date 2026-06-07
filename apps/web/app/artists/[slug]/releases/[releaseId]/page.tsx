@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import { TrackList, type ClientTrack } from './track-list';
-import { formatDuration, pluralTracks } from '@/lib/format';
+import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
 type Props = { params: Promise<{ slug: string; releaseId: string }> };
@@ -53,7 +53,7 @@ export default async function ReleasePage({ params }: Props) {
   const clientTracks: ClientTrack[] = tracks.map(({ id, title, trackNumber, durationSec, status, isExclusive, isWip, credits }) => ({
     id, title, trackNumber, durationSec, status, isExclusive, isWip, credits,
   }));
-  const year = release.releaseDate ? new Date(release.releaseDate).getFullYear() : null;
+  const year = releaseYear(release.releaseDate);
 
   return (
     <div
@@ -165,9 +165,3 @@ function MusicIcon() {
   );
 }
 
-function totalDuration(tracks: { status: string; durationSec: number | null }[]): string | null {
-  const total = tracks
-    .filter((t) => t.status === 'READY' && t.durationSec != null)
-    .reduce((s, t) => s + (t.durationSec ?? 0), 0);
-  return total > 0 ? formatDuration(total) : null;
-}

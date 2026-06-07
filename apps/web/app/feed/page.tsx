@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { getFeed } from '@vire/db';
 import type { FeedRelease } from '@vire/db';
+import { releaseYear } from '@/lib/format';
 
 export const metadata: Metadata = {
   title: 'Лента — Vire',
@@ -42,9 +43,7 @@ export default async function FeedPage() {
 }
 
 function FeedCard({ release }: { release: FeedRelease }) {
-  const year = release.releaseDate
-    ? new Date(release.releaseDate).getFullYear()
-    : null;
+  const year = releaseYear(release.releaseDate);
 
   return (
     <Link
