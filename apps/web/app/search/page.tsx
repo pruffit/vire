@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
+import { Stagger, StaggerItem } from '@vire/ui/motion';
 import { searchAll } from '@vire/db';
 import type { SearchArtist, SearchRelease, SearchTrack } from '@vire/db';
 import { GlobalSearch } from '@/components/global-search';
@@ -51,27 +52,33 @@ export default async function SearchPage({ searchParams }: Props) {
           {results.artists.length > 0 && (
             <section className="space-y-3">
               <SectionHeader label="Артисты" count={results.artists.length} />
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {results.artists.map((a) => <ArtistCard key={a.id} artist={a} />)}
-              </div>
+              <Stagger step={0.035} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {results.artists.map((a) => (
+                  <StaggerItem key={a.id}><ArtistCard artist={a} /></StaggerItem>
+                ))}
+              </Stagger>
             </section>
           )}
 
           {results.releases.length > 0 && (
             <section className="space-y-2">
               <SectionHeader label="Релизы" count={results.releases.length} />
-              <div className="flex flex-col divide-y divide-border">
-                {results.releases.map((r) => <ReleaseRow key={r.id} release={r} />)}
-              </div>
+              <Stagger step={0.035} className="flex flex-col divide-y divide-border">
+                {results.releases.map((r) => (
+                  <StaggerItem key={r.id}><ReleaseRow release={r} /></StaggerItem>
+                ))}
+              </Stagger>
             </section>
           )}
 
           {results.tracks.length > 0 && (
             <section className="space-y-2">
               <SectionHeader label="Треки" count={results.tracks.length} />
-              <div className="flex flex-col divide-y divide-border">
-                {results.tracks.map((t) => <TrackRow key={t.id} track={t} />)}
-              </div>
+              <Stagger step={0.035} className="flex flex-col divide-y divide-border">
+                {results.tracks.map((t) => (
+                  <StaggerItem key={t.id}><TrackRow track={t} /></StaggerItem>
+                ))}
+              </Stagger>
             </section>
           )}
         </div>

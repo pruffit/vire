@@ -3,6 +3,8 @@
 import { useEffect, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { AnimatePresence, motion, type PanInfo } from 'motion/react';
+import { spring } from '@vire/ui/motion';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from './audio-engine';
 import { formatDuration } from '@/lib/format';
@@ -15,16 +17,31 @@ export function Player() {
   }, []);
 
   const track = usePlayerStore((s) => s.track);
-  if (!track) return null;
 
   return (
     <>
-      <div className="shrink-0 h-16 bg-card border-t border-border flex items-center px-4 gap-4">
-        <TrackInfo onExpandCover={() => setExpanded(true)} />
-        <Controls />
-        <ProgressSection />
-      </div>
-      {expanded && <FullscreenPlayer onClose={() => setExpanded(false)} />}
+      {/* Мини-бар: всплывает снизу при появлении трека, уезжает вниз при сбросе. */}
+      <AnimatePresence>
+        {track && (
+          <motion.div
+            key="player-bar"
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            transition={spring.smooth}
+            className="shrink-0 h-16 bg-card border-t border-border flex items-center px-4 gap-4"
+          >
+            <TrackInfo onExpandCover={() => setExpanded(true)} />
+            <Controls />
+            <ProgressSection />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Фуллскрин: обложка разворачивается из мини-бара (shared layoutId). */}
+      <AnimatePresence>
+        {expanded && track && <FullscreenPlayer onClose={() => setExpanded(false)} />}
+      </AnimatePresence>
     </>
   );
 }
@@ -61,14 +78,20 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
       <button
         onClick={onExpandCover}
         aria-label="Открыть плеер на весь экран"
-        className="w-10 h-10 rounded-sm shrink-0 overflow-hidden relative group"
+        className="w-10 h-10 shrink-0 relative group"
       >
-        {track.coverUrl ? (
-          <Image src={track.coverUrl} alt={track.title} fill sizes="40px" className="object-cover" />
-        ) : (
-          <div className="w-full h-full bg-white/5" />
-        )}
-        <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+        {/* layoutId связывает эту обложку с большой в фуллскрине — motion плавно
+            интерполирует размер/позицию 40px ↔ 320px при разворачивании. */}
+        <motion.div
+          layoutId="player-cover"
+          className="absolute inset-0 rounded-sm overflow-hidden bg-white/5"
+          transition={spring.smooth}
+        >
+          {track.coverUrl && (
+            <Image src={track.coverUrl} alt={track.title} fill sizes="40px" className="object-cover" />
+          )}
+        </motion.div>
+        <span className="absolute inset-0 rounded-sm bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
           <ExpandIcon />
         </span>
       </button>
@@ -94,8 +117,23 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
 
   if (!track) return null;
 
+  // Свайп вниз достаточно далеко/быстро — закрыть. Иначе пружина вернёт на место.
+  function handleDragEnd(_e: unknown, info: PanInfo) {
+    if (info.offset.y > 120 || info.velocity.y > 600) onClose();
+  }
+
   return (
-    <div className="fixed inset-0 z-50 bg-card/95 backdrop-blur-xl flex flex-col items-center justify-center px-6 py-12">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      drag="y"
+      dragConstraints={{ top: 0, bottom: 0 }}
+      dragElastic={{ top: 0, bottom: 0.7 }}
+      onDragEnd={handleDragEnd}
+      className="fixed inset-0 z-50 bg-card/95 backdrop-blur-xl flex flex-col items-center justify-center px-6 py-12 cursor-grab active:cursor-grabbing"
+    >
       <button
         onClick={onClose}
         aria-label="Свернуть плеер"
@@ -104,22 +142,23 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
         <ChevronDownIcon />
       </button>
 
+      {/* Подсказка-«хваталка» для свайпа вниз */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/15" />
+
       <div className="w-full max-w-md flex flex-col items-center gap-8">
-        {/* Большая обложка */}
-        {track.coverUrl ? (
-          <Image
-            src={track.coverUrl}
-            alt={track.title}
-            width={320}
-            height={320}
-            className="w-64 h-64 sm:w-80 sm:h-80 rounded-lg object-cover shadow-2xl"
-          />
-        ) : (
-          <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-lg bg-white/5" />
-        )}
+        {/* Большая обложка — тот же layoutId, что у мини-бара */}
+        <motion.div
+          layoutId="player-cover"
+          transition={spring.smooth}
+          className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-lg overflow-hidden shadow-2xl bg-white/5"
+        >
+          {track.coverUrl && (
+            <Image src={track.coverUrl} alt={track.title} fill sizes="320px" className="object-cover" />
+          )}
+        </motion.div>
 
         {/* Название + артист */}
-        <div className="text-center min-w-0 w-full" onClick={onClose}>
+        <div className="text-center min-w-0 w-full">
           <TitleLink track={track} className="text-xl font-semibold truncate block" />
           <ArtistLink track={track} className="text-sm text-muted-foreground truncate block mt-1" />
         </div>
@@ -134,7 +173,7 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
         {/* Управление */}
         <Controls />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -153,38 +192,61 @@ function Controls() {
   const isLoading = usePlayerStore((s) => s.isLoading);
   const hasAudio = usePlayerStore((s) => s.hasAudio);
 
+  // Иконка плеера: загрузка / пауза / играть — выбираем ключ для морфинга.
+  const iconKey = isLoading ? 'loading' : isPlaying ? 'pause' : 'play';
+
   return (
     <div className="flex items-center gap-5 justify-center flex-1">
-      <button
+      <motion.button
         onClick={() => controls.prev()}
         aria-label="Предыдущий трек"
+        whileHover={{ scale: 1.12 }}
+        whileTap={{ scale: 0.88 }}
+        transition={spring.snappy}
         className="opacity-50 hover:opacity-100 transition-opacity"
       >
         <SkipBackIcon />
-      </button>
+      </motion.button>
 
-      <button
+      <motion.button
         onClick={() => controls.togglePlay()}
         disabled={!hasAudio || isLoading}
         aria-label={isPlaying ? 'Пауза' : 'Играть'}
-        className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:bg-primary/90 transition-colors"
+        whileHover={hasAudio && !isLoading ? { scale: 1.08 } : undefined}
+        whileTap={hasAudio && !isLoading ? { scale: 0.88 } : undefined}
+        transition={spring.snappy}
+        className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:bg-primary/90"
       >
-        {isLoading ? (
-          <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-        ) : isPlaying ? (
-          <PauseIcon />
-        ) : (
-          <PlayIcon />
-        )}
-      </button>
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.span
+            key={iconKey}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={spring.snappy}
+            className="flex items-center justify-center"
+          >
+            {isLoading ? (
+              <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : isPlaying ? (
+              <PauseIcon />
+            ) : (
+              <PlayIcon />
+            )}
+          </motion.span>
+        </AnimatePresence>
+      </motion.button>
 
-      <button
+      <motion.button
         onClick={() => controls.next()}
         aria-label="Следующий трек"
+        whileHover={{ scale: 1.12 }}
+        whileTap={{ scale: 0.88 }}
+        transition={spring.snappy}
         className="opacity-50 hover:opacity-100 transition-opacity"
       >
         <SkipForwardIcon />
-      </button>
+      </motion.button>
     </div>
   );
 }
@@ -287,6 +349,7 @@ function Waveform() {
             height={h}
             rx={0.5}
             fill={played ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.18)'}
+            style={{ transition: 'fill 0.12s linear' }}
           />
         );
       })}

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { MotionProvider } from '@vire/ui/motion';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
 import { Nav } from '@/components/nav';
 import { fontVariables } from '@/lib/fonts';
@@ -65,11 +66,13 @@ export default function RootLayout({
         >
           К содержимому
         </a>
-        <Nav />
-        <div id="main-content" className="flex-1 min-h-0 overflow-y-auto">
-          {children}
-        </div>
-        <PlayerWrapper />
+        <MotionProvider>
+          <Nav />
+          <div id="main-content" className="flex-1 min-h-0 overflow-y-auto">
+            {children}
+          </div>
+          <PlayerWrapper />
+        </MotionProvider>
       </body>
     </html>
   );

@@ -5,12 +5,14 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./motion": "./src/motion/index.ts",
     "./globals.css": "./src/globals.css"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "motion": "^12.40.0",
     "tailwind-merge": "^2.5.0"
   },
   "devDependencies": {

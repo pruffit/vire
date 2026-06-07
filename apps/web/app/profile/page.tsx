@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
+import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { getLikedTracks, getFollowedArtists } from '@vire/db';
 import type { FollowedArtist } from '@vire/db';
@@ -36,12 +37,14 @@ export default async function ProfilePage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-12 space-y-14">
       {/* Header */}
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {session.user.name ?? session.user.email}
-        </h1>
-        <p className="text-sm text-muted-foreground">{session.user.email}</p>
-      </header>
+      <FadeUp>
+        <header className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {session.user.name ?? session.user.email}
+          </h1>
+          <p className="text-sm text-muted-foreground">{session.user.email}</p>
+        </header>
+      </FadeUp>
 
       {/* Liked tracks */}
       <section className="space-y-4">
@@ -59,20 +62,21 @@ export default async function ProfilePage() {
             Ты ещё ничего не лайкал.
           </p>
         ) : (
-          <div className="flex flex-col">
+          <Stagger step={0.035} className="flex flex-col">
             {likedTracks.map((track, i) => (
-              <LikedTrackRow
-                key={track.id}
-                track={{ id: track.id, title: track.title, artistName: track.artistName, coverUrl: track.releaseCoverUrl, artistSlug: track.artistSlug, releaseId: track.releaseId }}
-                queue={likedQueue}
-                queueIndex={i}
-                durationSec={track.durationSec}
-                releaseCoverUrl={track.releaseCoverUrl}
-                artistSlug={track.artistSlug}
-                releaseId={track.releaseId}
-              />
+              <StaggerItem key={track.id}>
+                <LikedTrackRow
+                  track={{ id: track.id, title: track.title, artistName: track.artistName, coverUrl: track.releaseCoverUrl, artistSlug: track.artistSlug, releaseId: track.releaseId }}
+                  queue={likedQueue}
+                  queueIndex={i}
+                  durationSec={track.durationSec}
+                  releaseCoverUrl={track.releaseCoverUrl}
+                  artistSlug={track.artistSlug}
+                  releaseId={track.releaseId}
+                />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         )}
       </section>
 
@@ -95,11 +99,13 @@ export default async function ProfilePage() {
             </Link>
           </p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <Stagger step={0.035} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {followedArtists.map((artist) => (
-              <ArtistCard key={artist.id} artist={artist} />
+              <StaggerItem key={artist.id}>
+                <ArtistCard artist={artist} />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         )}
       </section>
     </main>

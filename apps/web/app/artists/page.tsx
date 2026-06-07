@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { listActiveArtists } from '@vire/db';
 import type { ArtistListItem } from '@vire/db';
 
@@ -20,26 +21,30 @@ export default async function ArtistsPage({ searchParams }: Props) {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12 space-y-10">
-      <header className="space-y-6">
-        <div className="flex items-baseline justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Артисты</h1>
-          {artists.length > 0 && (
-            <span className="text-xs font-mono text-muted-foreground tabular-nums">
-              {artists.length}
-            </span>
-          )}
-        </div>
-        <SearchBar defaultValue={query} />
-      </header>
+      <FadeUp>
+        <header className="space-y-6">
+          <div className="flex items-baseline justify-between">
+            <h1 className="text-2xl font-semibold tracking-tight">Артисты</h1>
+            {artists.length > 0 && (
+              <span className="text-xs font-mono text-muted-foreground tabular-nums">
+                {artists.length}
+              </span>
+            )}
+          </div>
+          <SearchBar defaultValue={query} />
+        </header>
+      </FadeUp>
 
       {artists.length === 0 ? (
         <EmptyState query={query} />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+        <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
           {artists.map((artist) => (
-            <ArtistCard key={artist.id} artist={artist} />
+            <StaggerItem key={artist.id}>
+              <ArtistCard artist={artist} />
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       )}
     </main>
   );
@@ -100,16 +105,16 @@ function EmptyState({ query }: { query?: string }) {
 
 function ArtistCard({ artist }: { artist: ArtistListItem }) {
   return (
-    <Link href={`/artists/${artist.slug}`}>
-      <article className="group space-y-3 text-center">
-        <div className="relative mx-auto w-full aspect-square rounded-full overflow-hidden bg-muted ring-1 ring-white/5 transition-shadow group-hover:ring-white/20">
+    <Link href={`/artists/${artist.slug}`} className="block">
+      <article className="group space-y-3 text-center transition-transform duration-300 ease-soft hover:-translate-y-1">
+        <div className="relative mx-auto w-full aspect-square rounded-full overflow-hidden bg-muted ring-1 ring-white/5 transition-shadow duration-300 group-hover:ring-white/25">
           {artist.avatarUrl ? (
             <Image
               src={artist.avatarUrl}
               alt={artist.name}
               fill
               sizes="(max-width: 640px) 50vw, 200px"
-              className="object-cover"
+              className="object-cover transition-transform duration-500 ease-soft group-hover:scale-105"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-2xl font-mono text-muted-foreground">

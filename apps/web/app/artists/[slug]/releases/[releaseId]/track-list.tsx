@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { motion } from 'motion/react';
+import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import type { TrackStatus, TrackCredit } from '@vire/core';
@@ -43,17 +45,18 @@ export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl 
   }
 
   return (
-    <section className="space-y-0.5">
+    <Stagger step={0.035} className="space-y-0.5">
       {tracks.map((track) => (
-        <TrackRow
-          key={track.id}
-          track={track}
-          artistSlug={artistSlug}
-          releaseId={releaseId}
-          onPlay={() => handlePlay(track)}
-        />
+        <StaggerItem key={track.id}>
+          <TrackRow
+            track={track}
+            artistSlug={artistSlug}
+            releaseId={releaseId}
+            onPlay={() => handlePlay(track)}
+          />
+        </StaggerItem>
       ))}
-    </section>
+    </Stagger>
   );
 }
 
@@ -75,11 +78,13 @@ function TrackRow({
   const isPlaying = usePlayerStore((s) => s.isPlaying);
 
   return (
-    <div
+    <motion.div
       role={ready ? 'button' : undefined}
       tabIndex={ready ? 0 : undefined}
       onClick={ready ? onPlay : undefined}
       onKeyDown={ready ? (e) => e.key === 'Enter' && onPlay() : undefined}
+      whileTap={ready ? { scale: 0.99 } : undefined}
+      transition={spring.snappy}
       className={`group flex items-center gap-4 px-3 py-2.5 rounded-sm transition-colors select-none ${
         ready
           ? 'hover:bg-white/5 cursor-pointer'
@@ -140,7 +145,7 @@ function TrackRow({
           →
         </Link>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

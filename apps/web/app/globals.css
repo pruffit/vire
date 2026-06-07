@@ -5,6 +5,10 @@
   /* Web-specific: font tokens injected by Next.js font loader */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Мягкая «эпловская» кривая для ховеров/переходов (≈ easeOutQuint).
+     Доступна как утилита ease-soft (transition-timing-function). */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Native select dropdowns: the app shell is dark, so force readable option
@@ -72,20 +76,37 @@
   background: transparent;
 }
 
-/* Subtle entrance animation, used on page headers/hero. */
+/* Entrance animations, used on page headers/hero and list items. */
 @keyframes vire-fade-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
+@keyframes vire-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 
 @utility animate-fade-up {
-  animation: vire-fade-up 0.4s ease-out both;
+  animation: vire-fade-up 0.5s var(--ease-soft) both;
+}
+@utility animate-fade-in {
+  animation: vire-fade-in 0.4s var(--ease-soft) both;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 /* Respect users who prefer reduced motion: kill animations/transitions. */

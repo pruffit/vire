@@ -6,6 +6,7 @@ import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getFollowState, getFollowerCount } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import type { ArtistProfile, ArtistLink, ArtistVideo, Release } from '@vire/core';
+import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
 import { getEmbedUrl } from '@/lib/embed';
@@ -129,7 +130,8 @@ function GuestFollowButton({ slug, followerCount }: { slug: string; followerCoun
 
 function ArtistHeader({ artist, followButton }: { artist: ArtistProfile; followButton: ReactNode }) {
   return (
-    <header className="flex flex-col sm:flex-row items-start gap-8 animate-fade-up">
+    <FadeUp>
+      <header className="flex flex-col sm:flex-row items-start gap-8">
       {artist.avatarUrl ? (
         <Image
           src={artist.avatarUrl}
@@ -161,7 +163,8 @@ function ArtistHeader({ artist, followButton }: { artist: ArtistProfile; followB
         )}
         {followButton}
       </div>
-    </header>
+      </header>
+    </FadeUp>
   );
 }
 
@@ -188,14 +191,18 @@ function ReleasesSection({ releases, artistSlug }: { releases: Release[]; artist
   if (releases.length === 0) return null;
 
   return (
-    <section className="space-y-6">
-      <h2 className="text-xs uppercase tracking-widest opacity-40 font-mono">Релизы</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-        {releases.map((release) => (
-          <ReleaseCard key={release.id} release={release} artistSlug={artistSlug} />
-        ))}
-      </div>
-    </section>
+    <Reveal>
+      <section className="space-y-6">
+        <h2 className="text-xs uppercase tracking-widest opacity-40 font-mono">Релизы</h2>
+        <Stagger className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+          {releases.map((release) => (
+            <StaggerItem key={release.id}>
+              <ReleaseCard release={release} artistSlug={artistSlug} />
+            </StaggerItem>
+          ))}
+        </Stagger>
+      </section>
+    </Reveal>
   );
 }
 
@@ -207,11 +214,12 @@ function VideosSection({ videos }: { videos: ArtistVideo[] }) {
   if (embeds.length === 0) return null;
 
   return (
-    <section className="space-y-6">
-      <h2 className="text-xs uppercase tracking-widest opacity-40 font-mono">Видео</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {embeds.map((v, i) => (
-          <div key={i} className="space-y-2">
+    <Reveal>
+      <section className="space-y-6">
+        <h2 className="text-xs uppercase tracking-widest opacity-40 font-mono">Видео</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {embeds.map((v, i) => (
+            <div key={i} className="space-y-2">
             <div className="relative w-full aspect-video rounded-sm overflow-hidden bg-white/5">
               <iframe
                 src={v.embedUrl}
@@ -226,8 +234,9 @@ function VideosSection({ videos }: { videos: ArtistVideo[] }) {
             )}
           </div>
         ))}
-      </div>
-    </section>
+        </div>
+      </section>
+    </Reveal>
   );
 }
 
@@ -235,16 +244,16 @@ function ReleaseCard({ release, artistSlug }: { release: Release; artistSlug: st
   const year = releaseYear(release.releaseDate);
 
   return (
-    <Link href={`/artists/${artistSlug}/releases/${release.id}`}>
-      <article className="group space-y-3">
-        <div className="relative aspect-square rounded-sm overflow-hidden bg-white/5">
+    <Link href={`/artists/${artistSlug}/releases/${release.id}`} className="block">
+      <article className="group space-y-3 transition-transform duration-300 ease-soft hover:-translate-y-1">
+        <div className="relative aspect-square rounded-sm overflow-hidden bg-white/5 ring-1 ring-transparent transition-all duration-300 group-hover:ring-white/15 group-hover:shadow-xl group-hover:shadow-black/40">
           {release.coverUrl ? (
             <Image
               src={release.coverUrl}
               alt={release.title}
               fill
               sizes="(max-width: 640px) 50vw, 300px"
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              className="object-cover transition-transform duration-500 ease-soft group-hover:scale-105"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center opacity-20">

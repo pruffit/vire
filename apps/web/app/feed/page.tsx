@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
+import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { getFeed } from '@vire/db';
 import type { FeedRelease } from '@vire/db';
@@ -21,23 +22,27 @@ export default async function FeedPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12 space-y-10">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Лента</h1>
-        {releases.length > 0 && (
-          <span className="text-xs font-mono text-muted-foreground tabular-nums">
-            {releases.length}
-          </span>
-        )}
-      </header>
+      <FadeUp>
+        <header className="flex items-baseline justify-between">
+          <h1 className="text-2xl font-semibold tracking-tight">Лента</h1>
+          {releases.length > 0 && (
+            <span className="text-xs font-mono text-muted-foreground tabular-nums">
+              {releases.length}
+            </span>
+          )}
+        </header>
+      </FadeUp>
 
       {releases.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="flex flex-col divide-y divide-border">
+        <Stagger className="flex flex-col divide-y divide-border">
           {releases.map((release) => (
-            <FeedCard key={release.id} release={release} />
+            <StaggerItem key={release.id}>
+              <FeedCard release={release} />
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       )}
     </main>
   );
