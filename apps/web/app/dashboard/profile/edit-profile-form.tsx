@@ -20,6 +20,18 @@ const MONO_VAR: Record<string, string> = {
 const FONT_SANS = Object.keys(SANS_VAR);
 const FONT_MONO = Object.keys(MONO_VAR);
 
+// Готовые палитры темы: клик применяет фон/текст/акцент разом. Ручной ввод остаётся.
+const THEME_PRESETS: { name: string; bg: string; text: string; accent: string }[] = [
+  { name: 'Тёмный тёплый', bg: '#100f0d', text: '#e9e2d0', accent: '#6f9d92' },
+  { name: 'Уголь', bg: '#121212', text: '#ededed', accent: '#ff5c39' },
+  { name: 'Ночь', bg: '#0a0a12', text: '#d8d8e8', accent: '#7c6cff' },
+  { name: 'Сепия', bg: '#1a1410', text: '#e7d6bd', accent: '#c98a3a' },
+  { name: 'Мята', bg: '#0e1513', text: '#dceee7', accent: '#57c2a3' },
+  { name: 'Неон', bg: '#0b0b0b', text: '#f0f0f0', accent: '#c8ff3d' },
+  { name: 'Кремовый', bg: '#f4f1ea', text: '#1c1a17', accent: '#b5532f' },
+  { name: 'Бумага', bg: '#efe9dd', text: '#23201b', accent: '#3a6b5f' },
+];
+
 // Date-free subset of ArtistProfile — RSC can't serialize Date props to a client component
 export interface EditableProfile {
   name: string;
@@ -266,6 +278,32 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
           <div className="w-3 h-3 rounded-full shrink-0" style={{ background: accent }} />
           <span className="font-medium">{artist.name}</span>
           <span className="opacity-40 ml-auto" style={{ fontFamily: MONO_VAR[fontMono] }}>123 · предпросмотр</span>
+        </div>
+
+        {/* Пресеты палитр — клик применяет фон/текст/акцент разом */}
+        <div className="flex flex-col gap-2">
+          <span className="text-xs text-white/40">Пресеты палитры</span>
+          <div className="flex flex-wrap gap-2">
+            {THEME_PRESETS.map((p) => {
+              const active = bg === p.bg && textColor === p.text && accent === p.accent;
+              return (
+                <button
+                  key={p.name}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => { setBg(p.bg); setTextColor(p.text); setAccent(p.accent); }}
+                  title={p.name}
+                  aria-label={`Палитра ${p.name}`}
+                  aria-pressed={active}
+                  className={`relative h-9 w-14 rounded-md overflow-hidden border transition-all disabled:opacity-50 ${active ? 'border-white/70 ring-1 ring-white/40' : 'border-white/10 hover:border-white/30'}`}
+                  style={{ background: p.bg }}
+                >
+                  <span className="absolute left-1.5 top-1.5 h-2.5 w-2.5 rounded-full" style={{ background: p.accent }} />
+                  <span className="absolute bottom-1.5 left-1.5 right-1.5 h-1 rounded-full" style={{ background: p.text }} />
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
