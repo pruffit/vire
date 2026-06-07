@@ -8,7 +8,7 @@ import type { FeedRelease } from '@vire/db';
 import { releaseYear } from '@/lib/format';
 
 export const metadata: Metadata = {
-  title: 'Лента — Vire',
+  title: 'Лента',
 };
 
 export const dynamic = 'force-dynamic';

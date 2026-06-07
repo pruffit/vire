@@ -3,7 +3,7 @@ import { auth } from '@/auth';
 import { db, DrizzleArtistRepository } from '@vire/db';
 import { EditProfileForm, type EditableProfile } from './edit-profile-form';
 
-export const metadata = { title: 'Профиль артиста — Vire' };
+export const metadata = { title: 'Профиль артиста' };
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardProfilePage() {

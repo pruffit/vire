@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
 import { Nav } from '@/components/nav';
 import { fontVariables } from '@/lib/fonts';
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from '@/lib/site';
 import './globals.css';
 
 const geistSans = Geist({
@@ -16,8 +17,29 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Vire',
-  description: 'Независимая музыкальная площадка для артистов и слушателей СНГ',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — независимая музыкальная площадка`,
+    template: `%s — ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: ['музыка', 'артисты', 'релизы', 'СНГ', 'инди', 'независимая музыка', SITE_NAME],
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    locale: 'ru_RU',
+    url: '/',
+    title: `${SITE_NAME} — независимая музыкальная площадка`,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME} — независимая музыкальная площадка`,
+    description: SITE_DESCRIPTION,
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({
@@ -37,8 +59,14 @@ export default function RootLayout({
         (не min-h-screen — иначе высота Nav давала бы лишний скролл).
       */}
       <body className="h-full flex flex-col bg-background text-foreground font-sans overflow-hidden">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-3 focus:left-3 focus:rounded-md focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+        >
+          К содержимому
+        </a>
         <Nav />
-        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
+        <div id="main-content" className="flex-1 min-h-0 overflow-y-auto flex flex-col">
           {children}
         </div>
         <PlayerWrapper />

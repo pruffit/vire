@@ -10,7 +10,7 @@ import { LikedTrackRow } from './liked-track-row';
 import { UnfollowButton } from './unfollow-button';
 
 export const metadata: Metadata = {
-  title: 'Профиль — Vire',
+  title: 'Профиль',
 };
 
 export const dynamic = 'force-dynamic';

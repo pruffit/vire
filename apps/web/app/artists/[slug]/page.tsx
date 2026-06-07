@@ -31,12 +31,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return { title: 'Не найдено' };
 
   const { artist } = data;
+  const url = `/artists/${slug}`;
+  const description = artist.bio ?? `${artist.name} на Vire — релизы, треки и ссылки.`;
   return {
     title: artist.name,
-    description: artist.bio ?? undefined,
+    description,
+    alternates: { canonical: url },
     openGraph: {
+      type: 'profile',
+      url,
       title: artist.name,
-      description: artist.bio ?? undefined,
+      description,
       images: artist.avatarUrl ? [{ url: artist.avatarUrl }] : [],
     },
   };
@@ -124,7 +129,7 @@ function GuestFollowButton({ slug, followerCount }: { slug: string; followerCoun
 
 function ArtistHeader({ artist, followButton }: { artist: ArtistProfile; followButton: ReactNode }) {
   return (
-    <header className="flex flex-col sm:flex-row items-start gap-8">
+    <header className="flex flex-col sm:flex-row items-start gap-8 animate-fade-up">
       {artist.avatarUrl ? (
         <Image
           src={artist.avatarUrl}

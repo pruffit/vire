@@ -14,4 +14,53 @@
     background-color: #1a1a1a;
     color: #f5f2eb;
   }
+
+  /* Tailwind v4 dropped the default `cursor: pointer` on buttons. Restore it
+     for everything that is meant to be clicked. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  /* Visible, consistent keyboard focus for accessibility. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+/* Subtle entrance animation, used on page headers/hero. */
+@keyframes vire-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-fade-up {
+  animation: vire-fade-up 0.4s ease-out both;
+}
+
+/* Respect users who prefer reduced motion: kill animations/transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -32,12 +32,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return { title: 'Не найдено' };
 
   const { artist, release } = data;
+  const url = `/artists/${slug}/releases/${releaseId}`;
+  const description = release.description ?? `${release.title} — релиз ${artist.name} на Vire.`;
   return {
     title: `${release.title} — ${artist.name}`,
-    description: release.description ?? undefined,
+    description,
+    alternates: { canonical: url },
     openGraph: {
+      type: 'music.album',
+      url,
       title: `${release.title} — ${artist.name}`,
-      description: release.description ?? undefined,
+      description,
       images: release.coverUrl ? [{ url: release.coverUrl }] : [],
     },
   };

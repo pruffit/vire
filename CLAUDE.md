@@ -182,6 +182,14 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 ### Backoffice (`/admin`, только MODERATOR/ADMIN/SUPERADMIN)
 - [x] Статистика, `/admin/users`, `/admin/tracks`, `/admin/releases` со сменой роли/статуса
 
+### SEO и доступность
+- [x] `metadataBase` + title-template `%s — Vire`, OG/Twitter дефолты (`app/layout.tsx`, `lib/site.ts`)
+- [x] `generateMetadata` артиста/релиза/трека: canonical + OG `profile`/`music.album`/`music.song`
+- [x] `app/robots.ts`, `app/sitemap.ts` (артисты + релизы из БД), `app/manifest.ts`
+- [x] a11y: skip-link, `:focus-visible` обводка, `cursor: pointer` на кнопках (Tailwind v4 убрал
+  дефолт), `prefers-reduced-motion` глушит анимации; entrance-анимация `animate-fade-up`
+- Базовый URL — `NEXT_PUBLIC_SITE_URL` → `AUTH_URL` → localhost (`lib/site.ts`)
+
 ### Этап 2 (прямые продажи) — частично
 - [x] Покупка трека: `POST /api/v1/tracks/[id]/purchase` → YooKassa redirect → webhook → PAID
 - [x] Скачивание FLAC по presigned S3 URL; список покупок в `/profile`

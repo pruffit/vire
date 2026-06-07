@@ -6,7 +6,7 @@ export default async function HomePage() {
   const session = await auth();
 
   return (
-    <main className="flex-1 flex flex-col items-center justify-center px-6 pb-24 gap-10">
+    <main className="flex-1 flex flex-col items-center justify-center px-6 pb-24 gap-10 animate-fade-up">
       <div className="text-center space-y-3">
         <h1 className="text-4xl font-semibold tracking-tight">Vire</h1>
         <p className="text-sm text-muted-foreground max-w-xs">

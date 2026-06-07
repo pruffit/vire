@@ -5,7 +5,7 @@ import { listActiveArtists } from '@vire/db';
 import type { ArtistListItem } from '@vire/db';
 
 export const metadata: Metadata = {
-  title: 'Артисты — Vire',
+  title: 'Артисты',
   description: 'Все артисты на платформе Vire',
 };
 
