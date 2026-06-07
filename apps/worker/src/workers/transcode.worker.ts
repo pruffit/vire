@@ -10,7 +10,7 @@ import { transcodeToHls, computeWaveformPeaks, probeDuration } from '../lib/ffmp
 import { readAudioMetadata } from '../lib/metadata.js';
 import { connection } from '../queues/connection.js';
 
-async function process(job: Job<TranscodeJobData>): Promise<void> {
+export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<void> {
   const { trackId, sourceKey } = job.data;
 
   // Идемпотентность: если трек уже обработан — ничего не делаем
@@ -106,7 +106,7 @@ async function process(job: Job<TranscodeJobData>): Promise<void> {
 
 export function createTranscodeWorker() {
   // defaultJobOptions — опция Queue, не Worker; retry задаётся при постановке задачи в очередь
-  const worker = new Worker<TranscodeJobData>(QUEUE_TRANSCODE, process, {
+  const worker = new Worker<TranscodeJobData>(QUEUE_TRANSCODE, processTranscodeJob, {
     connection,
     concurrency: 2,
   });
