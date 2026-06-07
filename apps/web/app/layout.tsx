@@ -66,7 +66,7 @@ export default function RootLayout({
           К содержимому
         </a>
         <Nav />
-        <div id="main-content" className="flex-1 min-h-0 overflow-y-auto flex flex-col">
+        <div id="main-content" className="flex-1 min-h-0 overflow-y-auto">
           {children}
         </div>
         <PlayerWrapper />

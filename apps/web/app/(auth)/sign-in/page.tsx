@@ -7,7 +7,7 @@ export default function SignInPage({
   searchParams: Promise<{ callbackUrl?: string }>;
 }) {
   return (
-    <main className="flex-1 flex items-center justify-center p-8">
+    <main className="min-h-full flex items-center justify-center p-8">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Войти в Vire</CardTitle>
