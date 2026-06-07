@@ -46,8 +46,8 @@ describe('app-shell layout invariants', () => {
     expect(layout).toMatch(/<body[^>]*className="[^"]*\boverflow-hidden\b/);
     // единственная вертикальная скролл-область для контента
     expect(layout).toMatch(/overflow-y-auto/);
-    // резерв под фиксированный плеер
-    expect(layout).toMatch(/pb-16/);
+    // плеер — элемент потока (занимает место только когда играет), без постоянного резерва
+    expect(layout).toMatch(/<PlayerWrapper\s*\/>/);
   });
 
   it('admin layout скроллит контент внутри, а не страницей целиком', () => {

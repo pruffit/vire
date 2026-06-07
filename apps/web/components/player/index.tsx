@@ -18,7 +18,7 @@ export function Player() {
 
   return (
     <>
-      <div className="fixed bottom-0 inset-x-0 z-40 h-16 bg-card border-t border-border flex items-center px-4 gap-4">
+      <div className="shrink-0 h-16 bg-card border-t border-border flex items-center px-4 gap-4">
         <TrackInfo onExpandCover={() => setExpanded(true)} />
         <Controls />
         <ProgressSection />
