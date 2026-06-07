@@ -95,7 +95,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       <Field label="Имя артиста">
         <input name="name" type="text" required disabled={busy}
           defaultValue={artist.name}
-          className={inp} />
+          className={`${inp} w-full`} />
       </Field>
 
       {/* Bio */}
@@ -103,7 +103,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
         <textarea name="bio" rows={4} disabled={busy}
           defaultValue={artist.bio ?? ''}
           placeholder="Расскажи о себе…"
-          className={`${inp} resize-none`} />
+          className={`${inp} w-full resize-none`} />
       </Field>
 
       {/* Links */}
@@ -112,6 +112,10 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
           <span className="text-sm font-medium">Ссылки</span>
           <span className="text-xs text-white/30">до 10 ссылок</span>
         </div>
+        <p className="text-xs text-white/40 -mt-1">
+          Соцсети и площадки. Название — это подпись кнопки, ссылка — куда она ведёт.
+          Появятся блоком на твоей странице артиста.
+        </p>
 
         {links.map((link, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -137,7 +141,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
                   prev.map((l, j) => j === i ? { ...l, url: e.target.value } : l),
                 )
               }
-              className={inp}
+              className={`${inp} flex-1 min-w-0`}
             />
             <button
               type="button"
@@ -169,6 +173,10 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
           <span className="text-sm font-medium">Видео</span>
           <span className="text-xs text-white/30">YouTube или VK · до 20</span>
         </div>
+        <p className="text-xs text-white/40 -mt-1">
+          Клипы и влоги. Вставь ссылку на ролик YouTube или VK — он встроится плеером
+          на твоей странице артиста.
+        </p>
 
         {videos.map((video, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -194,7 +202,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
                   prev.map((v, j) => j === i ? { ...v, url: e.target.value } : v),
                 )
               }
-              className={inp}
+              className={`${inp} flex-1 min-w-0`}
             />
             <button
               type="button"
@@ -282,12 +290,12 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Шрифт текста">
-            <select name="fontSans" value={fontSans} onChange={(e) => setFontSans(e.target.value)} disabled={busy} className={inp}>
+            <select name="fontSans" value={fontSans} onChange={(e) => setFontSans(e.target.value)} disabled={busy} className={`${inp} w-full`}>
               {FONT_SANS.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
           </Field>
           <Field label="Шрифт моно">
-            <select name="fontMono" value={fontMono} onChange={(e) => setFontMono(e.target.value)} disabled={busy} className={inp}>
+            <select name="fontMono" value={fontMono} onChange={(e) => setFontMono(e.target.value)} disabled={busy} className={`${inp} w-full`}>
               {FONT_MONO.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
           </Field>
@@ -352,4 +360,6 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-const inp = 'rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50 w-full';
+// Базовые стили инпута БЕЗ ширины — ширину задаёт каждое поле явно, иначе
+// `w-full` конфликтует с `w-32`/`flex-1` в строках ссылок и видео.
+const inp = 'rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50';
