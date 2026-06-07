@@ -40,7 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </aside>
 
       {/* Content — единственная скролл-область админки; сайдбар остаётся на месте */}
-      <main className="flex-1 min-w-0 overflow-y-auto px-8 py-8">
+      <main data-scroll-area className="flex-1 min-w-0 overflow-y-auto px-8 py-8">
         {children}
       </main>
     </div>

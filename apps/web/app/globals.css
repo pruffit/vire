@@ -35,6 +35,41 @@
     outline-offset: 2px;
     border-radius: 2px;
   }
+
+  /* Тонкий аккуратный скроллбар в тон тёмной теме (Firefox). Цвета наследуются. */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent) transparent;
+  }
+
+  /* Резервируем место под скроллбар всегда, чтобы контент не «прыгал» по горизонтали
+     при появлении/исчезновении скролла. Применяем к скролл-областям app-shell. */
+  #main-content,
+  [data-scroll-area] {
+    scrollbar-gutter: stable;
+  }
+}
+
+/* WebKit/Chromium: overlay-подобный тонкий скроллбар. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklab, var(--foreground) 18%, transparent);
+  border-radius: 9999px;
+  /* прозрачная рамка + clip создаёт отступ, бегунок выглядит тоньше дорожки */
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklab, var(--foreground) 34%, transparent);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Subtle entrance animation, used on page headers/hero. */
