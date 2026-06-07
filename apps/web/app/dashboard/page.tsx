@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getArtistPlayStats } from '@vire/db';
 import type { TrackStatus, ReleaseStatus, ReleaseType } from '@vire/core';
@@ -174,12 +175,12 @@ export default async function DashboardPage() {
                   Релизы
                   <span className="ml-2 text-sm text-white/30 font-normal">{releases.length}</span>
                 </h2>
-                <a
+                <Link
                   href="/dashboard/releases/new"
                   className="text-sm px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/15 transition-colors"
                 >
                   + Создать
-                </a>
+                </Link>
               </div>
               {releases.length === 0 ? (
                 <p className="text-white/40 text-sm">Нет релизов</p>

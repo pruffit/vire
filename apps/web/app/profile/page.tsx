@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { getLikedTracks, getFollowedArtists } from '@vire/db';
-import type { LikedTrack, FollowedArtist } from '@vire/db';
+import type { FollowedArtist } from '@vire/db';
 import type { PlayerTrack } from '@/store/player';
 import { LikedTrackRow } from './liked-track-row';
 import { UnfollowButton } from './unfollow-button';

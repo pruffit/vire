@@ -66,7 +66,7 @@ function SearchBar({ defaultValue }: { defaultValue?: string }) {
         </svg>
       </button>
       {defaultValue && (
-        <a
+        <Link
           href="/artists"
           aria-label="Сбросить поиск"
           className="absolute right-8 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -74,7 +74,7 @@ function SearchBar({ defaultValue }: { defaultValue?: string }) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>
-        </a>
+        </Link>
       )}
     </form>
   );
@@ -86,9 +86,9 @@ function EmptyState({ query }: { query?: string }) {
       {query ? (
         <>
           Артист <span className="text-foreground">&ldquo;{query}&rdquo;</span> не найден.{' '}
-          <a href="/artists" className="underline underline-offset-2 hover:text-foreground">
+          <Link href="/artists" className="underline underline-offset-2 hover:text-foreground">
             Сбросить
-          </a>
+          </Link>
         </>
       ) : (
         'Пока нет ни одного артиста.'

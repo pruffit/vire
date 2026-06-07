@@ -13,7 +13,7 @@ interface Props {
 export function DownloadButton({ trackId, trackTitle, initialOwned, initialPending }: Props) {
   const router = useRouter();
   const [owned, setOwned] = useState(initialOwned);
-  const [pending, setPending] = useState(initialPending);
+  const [pending] = useState(initialPending);
   const [busy, setBusy] = useState(false);
 
   async function handleBuy() {
