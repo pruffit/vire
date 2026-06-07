@@ -2,6 +2,24 @@ import ffmpeg from 'fluent-ffmpeg';
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
 
+// fluent-ffmpeg ищет ffmpeg/ffprobe в системном PATH. В Docker-проде они ставятся
+// через apk (см. apps/worker/Dockerfile). Для локальной разработки (особенно на
+// Windows, где ffmpeg обычно не установлен) подхватываем бандл-бинарники из
+// ffmpeg-static / ffprobe-static. Это devDependencies — в прод-сборку
+// (pnpm install --prod) они не попадают, и там используется системный ffmpeg.
+try {
+  const ffmpegMod = await import('ffmpeg-static');
+  const ffmpegPath = (ffmpegMod.default ?? ffmpegMod) as unknown as string | null;
+  if (typeof ffmpegPath === 'string' && ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
+
+  const ffprobeMod = await import('ffprobe-static');
+  const ffprobePath = (ffprobeMod.default?.path ?? ffprobeMod.path) as string | undefined;
+  if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath);
+} catch {
+  // Бандл-бинарники не установлены (например, прод-сборка) — полагаемся на
+  // системный ffmpeg/ffprobe в PATH.
+}
+
 export interface HlsResult {
   manifestPath: string;
   segmentPaths: string[];
