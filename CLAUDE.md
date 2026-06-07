@@ -189,15 +189,18 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 
 ### Тесты
 - [x] `packages/core` — сервисы artist/release/track, Result/errors (Vitest)
-- [x] `apps/web/lib/embed` — парсинг YouTube/VK
-- [ ] Route handlers (права + zod-валидация) — не покрыты
+- [x] `apps/web/lib/embed` — парсинг YouTube/VK; `apps/web/lib/upload` — хелперы валидации
+- [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),
+  dashboard profile, follow, like, play, download — `app/api/**/route.test.ts`
+- [x] App-shell лейаут — инвариант `app/__tests__/layout-shell.test.ts` (нет `min-h-screen`)
+- [ ] Route handlers Этап 2 (purchase, webhooks/yookassa) — не покрыты
 - [ ] `apps/worker` — не покрыт
 
 ## Что делать дальше (следующий шаг)
 
 Этап 1 закрыт. В рамках доводки:
-1. **Тесты на route handlers** — проверки прав (`release.artistProfileId !== artist.id`) и zod-валидация
-2. **Вынести дублирующиеся хелперы** (`fmt`, `pluralTracks`, `totalDuration`) в `shared` + тесты
+1. **Вынести дублирующиеся хелперы** (`fmt`, `pluralTracks`, `totalDuration`) в `shared` + тесты
+2. **Тесты на `apps/worker`** (transcode-пайплайн) и на Этап-2 роуты (purchase/webhook)
 3. **YooKassa боевая настройка** (Этап 2) — по отдельной команде
 
 > ⚠️ Не интерполируй JS-`Date` в raw-`sql`-шаблон Drizzle — postgres.js получает её как
