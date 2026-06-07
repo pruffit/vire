@@ -21,6 +21,10 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@vire/core', '@vire/db', '@vire/ui'],
   images: {
     remotePatterns: [s3RemotePattern()],
+    // Next 16 блокирует оптимизацию картинок с приватных/loopback IP (SSRF-защита).
+    // Локально MinIO живёт на localhost → разрешаем только в dev. На проде хранилище
+    // (Selectel) публичное, поэтому флаг не нужен и остаётся выключенным.
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
   },
   experimental: {
     // proxy.ts (Auth.js) заставляет Next 16 буферизовать тело запроса. Лимит по
