@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
-import { TrackService, NotFoundError, type TrackCredit, type ContributorRole } from '@vire/core';
+import { TrackService, NotFoundError } from '@vire/core';
 import { uploadBuffer } from '@/lib/s3';
 import { transcodeQueue } from '@/lib/queue';
+import { isUuid, parseAudioExt, parseCredits, parseTrackNumber } from '@/lib/upload';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -38,39 +39,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!UUID_RE.test(releaseId)) {
+  if (!isUuid(releaseId)) {
     return NextResponse.json({ error: 'Invalid releaseId' }, { status: 400 });
   }
 
-  const trackNum = parseInt(trackNumber, 10);
-  if (isNaN(trackNum) || trackNum < 1) {
+  const trackNum = parseTrackNumber(trackNumber);
+  if (trackNum === null) {
     return NextResponse.json({ error: 'trackNumber must be a positive integer' }, { status: 400 });
   }
 
-  const VALID_ROLES: ContributorRole[] = ['PERFORMER', 'LYRICIST', 'COMPOSER', 'PRODUCER'];
-  const creditsRaw = formData.get('credits');
-  let credits: TrackCredit[] = [];
-  if (typeof creditsRaw === 'string') {
-    try {
-      const parsed: unknown = JSON.parse(creditsRaw);
-      if (Array.isArray(parsed)) {
-        credits = parsed
-          .filter((c): c is TrackCredit =>
-            c !== null &&
-            typeof c === 'object' &&
-            typeof (c as TrackCredit).name === 'string' &&
-            (c as TrackCredit).name.trim().length > 0 &&
-            VALID_ROLES.includes((c as TrackCredit).role),
-          )
-          .slice(0, 20);
-      }
-    } catch { /* keep empty */ }
-  }
+  const credits = parseCredits(formData.get('credits'));
 
   // Артисты заливают мастер либо в WAV, либо в FLAC — определяем по расширению.
-  const name = file.name.toLowerCase();
-  const ext = name.endsWith('.wav') ? 'wav' : name.endsWith('.flac') ? 'flac' : null;
+  const ext = parseAudioExt(file.name);
   if (!ext) {
     return NextResponse.json({ error: 'Файл должен быть WAV или FLAC' }, { status: 400 });
   }
