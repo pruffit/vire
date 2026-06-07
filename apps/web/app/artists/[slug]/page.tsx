@@ -9,7 +9,8 @@ import type { ArtistProfile, ArtistLink, ArtistVideo, Release } from '@vire/core
 import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
-import { getEmbedUrl } from '@/lib/embed';
+import { parseEmbed, type EmbedInfo } from '@/lib/embed';
+import { VideoEmbed } from '@/components/video-embed';
 import { formatCount, releaseYear } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
@@ -208,8 +209,8 @@ function ReleasesSection({ releases, artistSlug }: { releases: Release[]; artist
 
 function VideosSection({ videos }: { videos: ArtistVideo[] }) {
   const embeds = videos
-    .map((v) => ({ ...v, embedUrl: getEmbedUrl(v.url) }))
-    .filter((v): v is typeof v & { embedUrl: string } => v.embedUrl !== null);
+    .map((v) => ({ title: v.title, embed: parseEmbed(v.url) }))
+    .filter((v): v is { title: string; embed: EmbedInfo } => v.embed !== null);
 
   if (embeds.length === 0) return null;
 
@@ -220,20 +221,12 @@ function VideosSection({ videos }: { videos: ArtistVideo[] }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {embeds.map((v, i) => (
             <div key={i} className="space-y-2">
-            <div className="relative w-full aspect-video rounded-sm overflow-hidden bg-white/5">
-              <iframe
-                src={v.embedUrl}
-                title={v.title || 'Видео'}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="absolute inset-0 w-full h-full"
-              />
+              <VideoEmbed embed={v.embed} title={v.title} />
+              {v.title && (
+                <p className="text-sm opacity-70 leading-snug">{v.title}</p>
+              )}
             </div>
-            {v.title && (
-              <p className="text-sm opacity-70 leading-snug">{v.title}</p>
-            )}
-          </div>
-        ))}
+          ))}
         </div>
       </section>
     </Reveal>

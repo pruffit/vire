@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getEmbedUrl } from '../embed';
+import { getEmbedUrl, parseEmbed, activeEmbedUrl } from '../embed';
 
 describe('getEmbedUrl — YouTube', () => {
   it('parses youtube.com/watch?v=', () => {
@@ -77,5 +77,40 @@ describe('getEmbedUrl — invalid input', () => {
 
   it('returns null for bare domain', () => {
     expect(getEmbedUrl('https://youtube.com')).toBeNull();
+  });
+});
+
+describe('parseEmbed — rich info', () => {
+  it('returns platform/id/thumbnail for YouTube', () => {
+    expect(parseEmbed('https://youtu.be/dQw4w9WgXcQ')).toEqual({
+      platform: 'youtube',
+      id: 'dQw4w9WgXcQ',
+      embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      thumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+    });
+  });
+
+  it('returns platform/id with null thumbnail for VK', () => {
+    expect(parseEmbed('https://vk.com/video-12345_67890')).toEqual({
+      platform: 'vk',
+      id: '-12345_67890',
+      embedUrl: 'https://vk.com/video_ext.php?oid=-12345&id=67890&hd=2',
+      thumbnailUrl: null,
+    });
+  });
+
+  it('returns null for unrelated url', () => {
+    expect(parseEmbed('https://soundcloud.com/x')).toBeNull();
+  });
+
+  it('activeEmbedUrl adds autoplay + modest branding for YouTube', () => {
+    const e = parseEmbed('https://youtu.be/dQw4w9WgXcQ')!;
+    expect(activeEmbedUrl(e)).toContain('autoplay=1');
+    expect(activeEmbedUrl(e)).toContain('modestbranding=1');
+  });
+
+  it('activeEmbedUrl adds autoplay for VK', () => {
+    const e = parseEmbed('https://vk.com/video-12345_67890')!;
+    expect(activeEmbedUrl(e)).toBe('https://vk.com/video_ext.php?oid=-12345&id=67890&hd=2&autoplay=1');
   });
 });

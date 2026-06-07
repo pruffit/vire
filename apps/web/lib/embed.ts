@@ -1,31 +1,59 @@
-export function getEmbedUrl(url: string): string | null {
+export type EmbedPlatform = 'youtube' | 'vk';
+
+export interface EmbedInfo {
+  platform: EmbedPlatform;
+  /** Платформенный id (YouTube videoId; VK `${oid}_${id}`). */
+  id: string;
+  /** Базовый URL для встраивания (без autoplay-параметров). */
+  embedUrl: string;
+  /** Постер для фасада. У YouTube есть всегда, у VK — нет (нужен API). */
+  thumbnailUrl: string | null;
+}
+
+/**
+ * Разбирает ссылку на видео в структуру для кастомного плеера-фасада:
+ * платформа, id, embed-URL и постер. Поддержка YouTube (watch/youtu.be/shorts)
+ * и VK (video{oid}_{id} в пути или ?z=).
+ */
+export function parseEmbed(url: string): EmbedInfo | null {
   try {
     const u = new URL(url);
 
-    // YouTube: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID
+    // YouTube
+    let ytId: string | null = null;
     if (u.hostname === 'www.youtube.com' || u.hostname === 'youtube.com') {
-      const v = u.searchParams.get('v');
-      if (v) return `https://www.youtube.com/embed/${v}`;
-      const shorts = u.pathname.match(/^\/shorts\/([^/?]+)/);
-      if (shorts) return `https://www.youtube.com/embed/${shorts[1]}`;
-    }
-    if (u.hostname === 'youtu.be') {
+      ytId = u.searchParams.get('v');
+      if (!ytId) {
+        const shorts = u.pathname.match(/^\/shorts\/([^/?]+)/);
+        if (shorts) ytId = shorts[1];
+      }
+    } else if (u.hostname === 'youtu.be') {
       const id = u.pathname.slice(1);
-      if (id) return `https://www.youtube.com/embed/${id}`;
+      if (id) ytId = id;
+    }
+    if (ytId) {
+      return {
+        platform: 'youtube',
+        id: ytId,
+        embedUrl: `https://www.youtube.com/embed/${ytId}`,
+        thumbnailUrl: `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`,
+      };
     }
 
-    // VK: vk.com/video{oid}_{id} or vk.com/video?z=video{oid}_{id}
+    // VK
     if (u.hostname === 'vk.com' || u.hostname === 'www.vk.com') {
-      const pathMatch = u.pathname.match(/^\/video(-?\d+)_(\d+)/);
-      if (pathMatch) {
-        return `https://vk.com/video_ext.php?oid=${pathMatch[1]}&id=${pathMatch[2]}&hd=2`;
+      let m = u.pathname.match(/^\/video(-?\d+)_(\d+)/);
+      if (!m) {
+        const z = u.searchParams.get('z');
+        if (z) m = z.match(/^video(-?\d+)_(\d+)/);
       }
-      const z = u.searchParams.get('z');
-      if (z) {
-        const zMatch = z.match(/^video(-?\d+)_(\d+)/);
-        if (zMatch) {
-          return `https://vk.com/video_ext.php?oid=${zMatch[1]}&id=${zMatch[2]}&hd=2`;
-        }
+      if (m) {
+        return {
+          platform: 'vk',
+          id: `${m[1]}_${m[2]}`,
+          embedUrl: `https://vk.com/video_ext.php?oid=${m[1]}&id=${m[2]}&hd=2`,
+          thumbnailUrl: null,
+        };
       }
     }
 
@@ -33,4 +61,17 @@ export function getEmbedUrl(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+/** URL для прямого встраивания (совместимость со старым кодом/тестами). */
+export function getEmbedUrl(url: string): string | null {
+  return parseEmbed(url)?.embedUrl ?? null;
+}
+
+/** Embed-URL с автоплеем и приглушённым брендингом — для активного плеера-фасада. */
+export function activeEmbedUrl(embed: EmbedInfo): string {
+  if (embed.platform === 'youtube') {
+    return `${embed.embedUrl}?autoplay=1&modestbranding=1&rel=0&color=white&playsinline=1`;
+  }
+  return `${embed.embedUrl}&autoplay=1`;
 }
