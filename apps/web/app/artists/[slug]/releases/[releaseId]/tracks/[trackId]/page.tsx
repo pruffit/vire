@@ -80,7 +80,7 @@ export default async function TrackPage({ params }: Props) {
   return (
     <div
       style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
-      className="min-h-screen bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
+      className="min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
     >
       {grain && <GrainOverlay />}
 

@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] text-white flex">
+    <div className="h-full bg-[#0d0d0d] text-white flex">
       {/* Sidebar */}
       <aside className="w-48 shrink-0 border-r border-white/10 flex flex-col gap-1 px-3 py-6">
         <p className="text-xs font-mono text-white/30 uppercase tracking-widest px-3 mb-4">
@@ -39,8 +39,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </aside>
 
-      {/* Content */}
-      <main className="flex-1 min-w-0 px-8 py-8">
+      {/* Content — единственная скролл-область админки; сайдбар остаётся на месте */}
+      <main className="flex-1 min-w-0 overflow-y-auto px-8 py-8">
         {children}
       </main>
     </div>

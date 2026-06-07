@@ -65,7 +65,7 @@ export default async function ArtistPage({ params }: Props) {
           ...artistFontStyle(artist.themeTokens),
         } as React.CSSProperties
       }
-      className="min-h-screen bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
+      className="min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
     >
       {grain && <GrainOverlay />}
 

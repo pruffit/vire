@@ -13,7 +13,7 @@ export default async function NewReleasePage() {
   if (!artist) redirect('/dashboard');
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] text-white">
+    <div className="min-h-full bg-[#0d0d0d] text-white">
       <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
 
         <div className="flex flex-col gap-1">

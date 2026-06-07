@@ -26,7 +26,7 @@ export default async function EditReleasePage({ params }: Props) {
   const { release, tracks } = data;
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] text-white">
+    <div className="min-h-full bg-[#0d0d0d] text-white">
       <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
         <div className="flex items-center gap-4">
           <a

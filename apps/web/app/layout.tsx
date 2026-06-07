@@ -28,9 +28,18 @@ export default function RootLayout({
       lang="ru"
       className={`${geistSans.variable} ${geistMono.variable} ${fontVariables} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans pb-16">
+      {/*
+        App-shell: окно фиксированной высоты (h-full + overflow-hidden), скролла
+        на уровне документа нет. Nav закреплён сверху, контент скроллится внутри
+        единой области ниже. pb-16 резервирует место под фиксированный плеер,
+        поэтому контент не уезжает под него. Страницы заполняют область через
+        min-h-full (не min-h-screen — иначе высота Nav давала бы лишний скролл).
+      */}
+      <body className="h-full flex flex-col bg-background text-foreground font-sans overflow-hidden">
         <Nav />
-        {children}
+        <div className="flex-1 min-h-0 overflow-y-auto pb-16 flex flex-col">
+          {children}
+        </div>
         <PlayerWrapper />
       </body>
     </html>
