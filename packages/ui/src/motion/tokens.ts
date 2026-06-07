@@ -10,12 +10,12 @@ import type { Transition } from 'motion/react';
  */
 
 export const spring = {
-  /** Жёсткая, короткая — кнопки, тапы, иконки. Почти без оверщута. */
-  snappy: { type: 'spring', stiffness: 520, damping: 32, mass: 0.7 },
+  /** Короткая, но мягкая — тапы и нажатия. Без резкого «удара». */
+  snappy: { type: 'spring', stiffness: 380, damping: 30, mass: 0.8 },
   /** Сбалансированная — layout-переходы, разворот плеера, морфинг состояний. */
-  smooth: { type: 'spring', stiffness: 320, damping: 34, mass: 0.9 },
+  smooth: { type: 'spring', stiffness: 300, damping: 32, mass: 0.9 },
   /** Мягкая, с лёгкой инерцией — появления, scroll-reveal. */
-  gentle: { type: 'spring', stiffness: 180, damping: 26, mass: 1 },
+  gentle: { type: 'spring', stiffness: 170, damping: 24, mass: 1 },
 } satisfies Record<string, Transition>;
 
 /** Кривая easeOutQuint — тот же `cubic-bezier(0.22, 1, 0.36, 1)`, что `--ease-soft`. */

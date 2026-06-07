@@ -172,8 +172,60 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
 
         {/* Управление */}
         <Controls />
+
+        {/* Громкость + поделиться */}
+        <FullscreenExtras track={track} />
       </div>
     </motion.div>
+  );
+}
+
+function FullscreenExtras({ track }: { track: PlayerTrack }) {
+  const volume = usePlayerStore((s) => s.volume);
+
+  const shareUrl =
+    track.artistSlug && track.releaseId
+      ? `${window.location.origin}/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`
+      : null;
+
+  async function share() {
+    if (!shareUrl) return;
+    const data = { title: track.title, text: `${track.artistName} — ${track.title}`, url: shareUrl };
+    try {
+      if (navigator.share) await navigator.share(data);
+      else await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      /* пользователь отменил шеринг — игнорируем */
+    }
+  }
+
+  return (
+    // stopPropagation, чтобы перетаскивание ползунка громкости не закрывало плеер
+    <div
+      className="w-full flex items-center gap-4"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <VolumeIcon muted={volume === 0} />
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.02}
+        value={volume}
+        onChange={(e) => controls.setVolume(Number(e.target.value))}
+        aria-label="Громкость"
+        className="flex-1 h-1 accent-primary cursor-pointer"
+      />
+      {shareUrl && (
+        <button
+          onClick={share}
+          aria-label="Поделиться треком"
+          className="opacity-50 hover:opacity-100 transition-opacity shrink-0"
+        >
+          <ShareIcon />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -200,8 +252,7 @@ function Controls() {
       <motion.button
         onClick={() => controls.prev()}
         aria-label="Предыдущий трек"
-        whileHover={{ scale: 1.12 }}
-        whileTap={{ scale: 0.88 }}
+        whileTap={{ scale: 0.92 }}
         transition={spring.snappy}
         className="opacity-50 hover:opacity-100 transition-opacity"
       >
@@ -212,8 +263,7 @@ function Controls() {
         onClick={() => controls.togglePlay()}
         disabled={!hasAudio || isLoading}
         aria-label={isPlaying ? 'Пауза' : 'Играть'}
-        whileHover={hasAudio && !isLoading ? { scale: 1.08 } : undefined}
-        whileTap={hasAudio && !isLoading ? { scale: 0.88 } : undefined}
+        whileTap={hasAudio && !isLoading ? { scale: 0.92 } : undefined}
         transition={spring.snappy}
         className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:bg-primary/90"
       >
@@ -240,8 +290,7 @@ function Controls() {
       <motion.button
         onClick={() => controls.next()}
         aria-label="Следующий трек"
-        whileHover={{ scale: 1.12 }}
-        whileTap={{ scale: 0.88 }}
+        whileTap={{ scale: 0.92 }}
         transition={spring.snappy}
         className="opacity-50 hover:opacity-100 transition-opacity"
       >
@@ -407,6 +456,34 @@ function SkipForwardIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
       <polygon points="5,4 15,12 5,20" />
       <rect x="17" y="4" width="2" height="16" rx="1" />
+    </svg>
+  );
+}
+
+function VolumeIcon({ muted }: { muted: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50 shrink-0">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
+      {muted ? (
+        <line x1="22" y1="9" x2="16" y2="15" />
+      ) : (
+        <>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
     </svg>
   );
 }
