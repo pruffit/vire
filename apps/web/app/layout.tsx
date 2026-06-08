@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { MotionProvider } from '@vire/ui/motion';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
+import { CommandPalette } from '@/components/command-palette';
 import { Nav } from '@/components/nav';
 import { fontVariables } from '@/lib/fonts';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from '@/lib/site';
@@ -72,6 +73,7 @@ export default function RootLayout({
             {children}
           </div>
           <PlayerWrapper />
+          <CommandPalette />
         </MotionProvider>
       </body>
     </html>
