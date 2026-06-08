@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getFollowState, getFollowerCount } from '@vire/db';
@@ -11,7 +10,8 @@ import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
 import { parseEmbed, type EmbedInfo } from '@/lib/embed';
 import { VideoPlayer } from '@/components/video-player';
-import { formatCount, releaseYear } from '@/lib/format';
+import { ReleaseQuickLook } from '@/components/release-quick-look';
+import { formatCount } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
 type Props = { params: Promise<{ slug: string }> };
@@ -87,7 +87,7 @@ export default async function ArtistPage({ params }: Props) {
           }
         />
         {artist.links.length > 0 && <LinksSection links={artist.links} />}
-        <ReleasesSection releases={releases} artistSlug={artist.slug} />
+        <ReleasesSection releases={releases} artistSlug={artist.slug} artistName={artist.name} />
         {artist.videos.length > 0 && <VideosSection videos={artist.videos} />}
       </div>
     </div>
@@ -188,7 +188,7 @@ function LinksSection({ links }: { links: ArtistLink[] }) {
   );
 }
 
-function ReleasesSection({ releases, artistSlug }: { releases: Release[]; artistSlug: string }) {
+function ReleasesSection({ releases, artistSlug, artistName }: { releases: Release[]; artistSlug: string; artistName: string }) {
   if (releases.length === 0) return null;
 
   return (
@@ -198,7 +198,18 @@ function ReleasesSection({ releases, artistSlug }: { releases: Release[]; artist
         <Stagger className="grid grid-cols-2 sm:grid-cols-3 gap-6">
           {releases.map((release) => (
             <StaggerItem key={release.id}>
-              <ReleaseCard release={release} artistSlug={artistSlug} />
+              <ReleaseQuickLook
+                showArtist={false}
+                release={{
+                  id: release.id,
+                  title: release.title,
+                  coverUrl: release.coverUrl,
+                  type: release.type,
+                  artistName,
+                  artistSlug,
+                  releaseDate: release.releaseDate,
+                }}
+              />
             </StaggerItem>
           ))}
         </Stagger>
@@ -233,38 +244,3 @@ function VideosSection({ videos }: { videos: ArtistVideo[] }) {
   );
 }
 
-function ReleaseCard({ release, artistSlug }: { release: Release; artistSlug: string }) {
-  const year = releaseYear(release.releaseDate);
-
-  return (
-    <Link href={`/artists/${artistSlug}/releases/${release.id}`} className="block">
-      <article className="group space-y-3 transition-transform duration-300 ease-soft hover:-translate-y-1">
-        <div className="relative aspect-square rounded-sm overflow-hidden bg-white/5 ring-1 ring-transparent transition-all duration-300 group-hover:ring-white/15 group-hover:shadow-xl group-hover:shadow-black/40">
-          {release.coverUrl ? (
-            <Image
-              src={release.coverUrl}
-              alt={release.title}
-              fill
-              sizes="(max-width: 640px) 50vw, 300px"
-              className="object-cover transition-transform duration-500 ease-soft group-hover:scale-105"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center opacity-20">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-              </svg>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-sm font-medium leading-snug">{release.title}</p>
-          <p className="text-xs opacity-40 font-mono">
-            {year && `${year} · `}
-            {release.type}
-          </p>
-        </div>
-      </article>
-    </Link>
-  );
-}

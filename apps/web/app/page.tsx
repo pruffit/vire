@@ -6,12 +6,11 @@ import {
   getUpcomingReleases,
   listActiveArtists,
   getFeed,
-  type DiscoveryRelease,
   type ArtistListItem,
 } from '@vire/db';
 import { GlobalSearch } from '@/components/global-search';
+import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { FadeUp, Stagger, StaggerItem, Reveal } from '@vire/ui/motion';
-import { releaseYear } from '@/lib/format';
 
 export default async function HomePage() {
   const session = await auth();
@@ -48,7 +47,7 @@ export default async function HomePage() {
           <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
             {feed.slice(0, 8).map((r) => (
               <StaggerItem key={r.id}>
-                <ReleaseCard release={r} />
+                <ReleaseQuickLook release={r} />
               </StaggerItem>
             ))}
           </Stagger>
@@ -61,7 +60,7 @@ export default async function HomePage() {
           <Section title="Скоро выйдет">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
               {upcoming.map((r) => (
-                <ReleaseCard key={r.id} release={r} upcoming />
+                <ReleaseQuickLook key={r.id} release={r} upcoming />
               ))}
             </div>
           </Section>
@@ -74,7 +73,7 @@ export default async function HomePage() {
           <Section title="Свежие релизы">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
               {latest.map((r) => (
-                <ReleaseCard key={r.id} release={r} />
+                <ReleaseQuickLook key={r.id} release={r} />
               ))}
             </div>
           </Section>
@@ -132,49 +131,6 @@ function Section({
   );
 }
 
-function ReleaseCard({ release, upcoming }: { release: DiscoveryRelease; upcoming?: boolean }) {
-  const year = releaseYear(release.releaseDate);
-  return (
-    <Link
-      href={`/artists/${release.artistSlug}/releases/${release.id}`}
-      className="block group"
-    >
-      <div className="relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30">
-        {release.coverUrl ? (
-          <Image
-            src={release.coverUrl}
-            alt={release.title}
-            fill
-            sizes="(max-width: 640px) 50vw, 250px"
-            className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center opacity-20">
-            <NoteIcon />
-          </div>
-        )}
-        {upcoming && release.releaseDate && (
-          <span className="absolute top-2 left-2 rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/90">
-            {untilLabel(release.releaseDate)}
-          </span>
-        )}
-      </div>
-      <div className="mt-2.5 space-y-0.5">
-        <p className="text-sm font-medium leading-snug truncate group-hover:text-foreground transition-colors">
-          {release.title}
-        </p>
-        <p className="text-xs text-muted-foreground truncate">
-          {release.artistName}
-          <span className="opacity-50 font-mono">
-            {' · '}
-            {upcoming ? release.type : year ? `${year}` : release.type}
-          </span>
-        </p>
-      </div>
-    </Link>
-  );
-}
-
 function ArtistChip({ artist }: { artist: ArtistListItem }) {
   return (
     <Link href={`/artists/${artist.slug}`} className="block group text-center">
@@ -200,23 +156,3 @@ function ArtistChip({ artist }: { artist: ArtistListItem }) {
   );
 }
 
-/** «сегодня» / «завтра» / «через N дн.» / дата — для грядущих релизов. */
-function untilLabel(date: Date): string {
-  const MS = 86_400_000;
-  const today = new Date();
-  const d0 = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const d1 = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  const days = Math.round((d1 - d0) / MS);
-  if (days <= 0) return 'сегодня';
-  if (days === 1) return 'завтра';
-  if (days < 7) return `через ${days} дн.`;
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-}
-
-function NoteIcon() {
-  return (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-    </svg>
-  );
-}
