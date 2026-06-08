@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getTrackAudio, getLikeState, getLikeCount, hasPurchasedTrack, getPendingPurchase } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import { auth } from '@/auth';
+import { ZoomableCover } from '@/components/zoomable-cover';
 import { LikeButton } from './like-button';
 import { TrackWaveformPlayer } from './waveform-player';
 import { DownloadButton } from './download-button';
@@ -106,13 +106,7 @@ export default async function TrackPage({ params }: Props) {
         {/* Track header */}
         <header className="flex items-start gap-6">
           {release.coverUrl ? (
-            <Image
-              src={release.coverUrl}
-              alt={release.title}
-              width={96}
-              height={96}
-              className="w-24 h-24 shrink-0 object-cover shadow-lg"
-            />
+            <ZoomableCover src={release.coverUrl} alt={release.title} className="w-24 h-24 shrink-0 shadow-lg" sizes="96px" />
           ) : (
             <div className="w-24 h-24 shrink-0 bg-white/5" />
           )}
