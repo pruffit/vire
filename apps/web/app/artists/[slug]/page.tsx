@@ -10,7 +10,7 @@ import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
 import { parseEmbed, type EmbedInfo } from '@/lib/embed';
-import { VideoEmbed } from '@/components/video-embed';
+import { VideoPlayer } from '@/components/video-player';
 import { formatCount, releaseYear } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
@@ -221,7 +221,7 @@ function VideosSection({ videos }: { videos: ArtistVideo[] }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {embeds.map((v, i) => (
             <div key={i} className="space-y-2">
-              <VideoEmbed embed={v.embed} title={v.title} />
+              <VideoPlayer embed={v.embed} title={v.title} />
               {v.title && (
                 <p className="text-sm opacity-70 leading-snug">{v.title}</p>
               )}

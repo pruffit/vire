@@ -44,11 +44,14 @@
 
 ## Этап 5 — Кастомный плеер для видео-эмбедов
 - [x] **5.1** Видео-фасад: своя оболочка под сайт (постер + кнопка play, ленивый
-  iframe — грузится только по клику = перф-выигрыш), автоплей + приглушённый
-  брендинг при активации. `lib/embed.ts` (новые `parseEmbed`/`activeEmbedUrl`),
-  `components/video-embed.tsx`, обновлён VideosSection в `app/artists/[slug]/page.tsx`.
-  Тесты на парсер добавлены (98 шт). _Следующий шаг (опц.):_ полный кастом-транспорт
-  (play/scrub через YouTube IFrame API), пока после старта — нативные контролы платформы.
+  iframe = перф-выигрыш). `lib/embed.ts` (`parseEmbed`/`activeEmbedUrl`), +5 тестов.
+- [x] **5.2** Полностью кастомный плеер (YouTube): свои контролы через IFrame
+  Player API — play/pause, перемотка (seek-бар), громкость + mute, фуллскрин,
+  автоскрытие контролов, центральная play/replay. Нативные контролы YouTube
+  скрыты (`controls=0`). `lib/youtube-api.ts` (загрузчик+типы),
+  `components/video-player.tsx` (старый `video-embed.tsx` удалён).
+  _VK:_ полное кастом-управление требует app-credentials VK и тестов — пока VK
+  отдаёт нативные контролы после фасада (см. ниже, нужен фидбэк нужен ли VK).
 
 ## Этап 6 — Дашборд: редактирование релиза и треков
 - [x] **6.1** Поля релиза уже редактируются (`EditReleaseForm`) — было готово.
@@ -89,3 +92,4 @@
 - **8.1** — `app/profile/followed-artists.tsx`: оптимистичная отписка.
 - **6.1–6.2** — менеджер треков (rename/delete/reorder) + роут tracks/[id], optimistic.
 - **7.1–7.2** — главная-хаб (`app/page.tsx`) + `queries/discovery.ts`, навбар почищен.
+- **5.2** — `components/video-player.tsx` + `lib/youtube-api.ts`: кастомный YouTube-плеер.
