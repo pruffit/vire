@@ -12,6 +12,8 @@ export { getLikeState, getLikeCount, likeTrack, unlikeTrack } from './queries/li
 export { getFollowState, getFollowerCount, followArtist, unfollowArtist } from './queries/follows';
 export { getFeed } from './queries/feed';
 export type { FeedRelease } from './queries/feed';
+export { getLatestReleases, getUpcomingReleases } from './queries/discovery';
+export type { DiscoveryRelease } from './queries/discovery';
 export { insertPlayEvent } from './queries/play-events';
 export type { InsertPlayEventData } from './queries/play-events';
 export { getLikedTracks, getFollowedArtists } from './queries/profile';

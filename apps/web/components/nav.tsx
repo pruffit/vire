@@ -18,12 +18,6 @@ export async function Nav() {
           Vire
         </Link>
 
-        {/* Center links */}
-        <div className="flex items-center gap-1">
-          <NavLink href="/artists">Артисты</NavLink>
-          {user && <NavLink href="/feed">Лента</NavLink>}
-        </div>
-
         {/* Right side */}
         <div className="flex items-center gap-1 shrink-0">
           <NavSearch />
