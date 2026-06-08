@@ -1,32 +1,35 @@
-/* Vire design tokens — always dark platform shell */
+/* Vire design tokens — always dark platform shell.
+   Нейтраль НЕ чистый серый (chroma 0), а с едва заметной тёплой подкраской
+   (hue ~75, низкая chroma) — «не чистый чёрный, с лёгкой теплотой», пыльный беж
+   из концепта. Принцип Impeccable: «tint your grays», не использовать pure gray. */
 :root {
-  --background: oklch(0.08 0 0);
-  --foreground: oklch(0.93 0 0);
+  --background: oklch(0.085 0.006 75);
+  --foreground: oklch(0.93 0.008 83);
 
-  --card: oklch(0.11 0 0);
-  --card-foreground: oklch(0.93 0 0);
+  --card: oklch(0.115 0.006 75);
+  --card-foreground: oklch(0.93 0.008 83);
 
-  --popover: oklch(0.11 0 0);
-  --popover-foreground: oklch(0.93 0 0);
+  --popover: oklch(0.115 0.006 75);
+  --popover-foreground: oklch(0.93 0.008 83);
 
-  /* Primary = inverted (white button on dark bg) */
-  --primary: oklch(0.93 0 0);
-  --primary-foreground: oklch(0.08 0 0);
+  /* Primary = inverted (тёплый кремовый «белый» на тёмном) */
+  --primary: oklch(0.93 0.008 83);
+  --primary-foreground: oklch(0.085 0.006 75);
 
-  --secondary: oklch(0.16 0 0);
-  --secondary-foreground: oklch(0.93 0 0);
+  --secondary: oklch(0.165 0.006 75);
+  --secondary-foreground: oklch(0.93 0.008 83);
 
-  --muted: oklch(0.16 0 0);
-  --muted-foreground: oklch(0.56 0 0);
+  --muted: oklch(0.165 0.006 75);
+  --muted-foreground: oklch(0.57 0.009 80);
 
-  --accent: oklch(0.16 0 0);
-  --accent-foreground: oklch(0.93 0 0);
+  --accent: oklch(0.165 0.006 75);
+  --accent-foreground: oklch(0.93 0.008 83);
 
   --destructive: oklch(0.55 0.22 27);
 
-  --border: oklch(0.22 0 0);
-  --input: oklch(0.22 0 0);
-  --ring: oklch(0.42 0 0);
+  --border: oklch(0.225 0.006 75);
+  --input: oklch(0.225 0.006 75);
+  --ring: oklch(0.44 0.01 78);
 
   --radius: 0.375rem;
 
