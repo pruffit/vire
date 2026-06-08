@@ -3,7 +3,7 @@
 import { useEffect, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { AnimatePresence, motion, type PanInfo } from 'motion/react';
+import { AnimatePresence, Reorder, motion, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from './audio-engine';
@@ -105,6 +105,8 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
 
 function FullscreenPlayer({ onClose }: { onClose: () => void }) {
   const track = usePlayerStore((s) => s.track);
+  const queueLength = usePlayerStore((s) => s.queue.length);
+  const [showQueue, setShowQueue] = useState(false);
 
   // Esc закрывает полноэкранный режим
   useEffect(() => {
@@ -128,29 +130,30 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-      drag="y"
+      // Очередь использует свой drag-reorder + скролл — отключаем dismiss-свайп при ней.
+      drag={showQueue ? false : 'y'}
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0, bottom: 0.7 }}
       onDragEnd={handleDragEnd}
-      className="fixed inset-0 z-50 bg-card/95 backdrop-blur-xl flex flex-col items-center justify-center px-6 py-12 cursor-grab active:cursor-grabbing"
+      className="fixed inset-0 z-50 bg-card/95 backdrop-blur-xl flex flex-col items-center overflow-y-auto px-6 py-12"
     >
       <button
         onClick={onClose}
         aria-label="Свернуть плеер"
-        className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity"
+        className="fixed top-5 right-5 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity"
       >
         <ChevronDownIcon />
       </button>
 
       {/* Подсказка-«хваталка» для свайпа вниз */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/15" />
+      <div className="fixed top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/15" />
 
-      <div className="w-full max-w-md flex flex-col items-center gap-8">
+      <div className="my-auto w-full max-w-md flex flex-col items-center gap-8">
         {/* Большая обложка — тот же layoutId, что у мини-бара */}
         <motion.div
           layoutId="player-cover"
           transition={spring.smooth}
-          className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-lg overflow-hidden shadow-2xl bg-white/5"
+          className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-lg overflow-hidden shadow-2xl bg-white/5 cursor-grab active:cursor-grabbing"
         >
           {track.coverUrl && (
             <Image src={track.coverUrl} alt={track.title} fill sizes="320px" className="object-cover" />
@@ -175,8 +178,86 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
 
         {/* Громкость + поделиться */}
         <FullscreenExtras track={track} />
+
+        {/* Очередь */}
+        {queueLength > 1 && (
+          <div className="w-full">
+            <button
+              type="button"
+              onClick={() => setShowQueue((s) => !s)}
+              aria-expanded={showQueue}
+              className="mx-auto flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <QueueIcon />
+              {showQueue ? 'Скрыть очередь' : `Очередь · ${queueLength}`}
+            </button>
+            <AnimatePresence initial={false}>
+              {showQueue && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={spring.smooth}
+                  className="overflow-hidden"
+                >
+                  <QueuePanel onJump={() => setShowQueue(false)} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </motion.div>
+  );
+}
+
+function QueuePanel({ onJump }: { onJump: () => void }) {
+  const queue = usePlayerStore((s) => s.queue);
+  const currentId = usePlayerStore((s) => s.track?.id);
+
+  function handleReorder(order: PlayerTrack[]) {
+    const idx = currentId ? order.findIndex((t) => t.id === currentId) : 0;
+    usePlayerStore.getState()._setState({ queue: order, queueIndex: Math.max(0, idx) });
+  }
+
+  function jump(t: PlayerTrack) {
+    const q = usePlayerStore.getState().queue;
+    const idx = q.findIndex((x) => x.id === t.id);
+    if (idx >= 0) controls.play(q[idx], q, idx);
+    onJump();
+  }
+
+  return (
+    <Reorder.Group axis="y" values={queue} onReorder={handleReorder} className="mt-3 w-full space-y-1">
+      {queue.map((t) => {
+        const isCurrent = t.id === currentId;
+        return (
+          <Reorder.Item
+            key={t.id}
+            value={t}
+            className={`flex items-center gap-2 px-2 py-2 rounded-md select-none ${isCurrent ? 'bg-white/10' : 'hover:bg-white/5'}`}
+          >
+            <span className="text-white/25 cursor-grab active:cursor-grabbing shrink-0" aria-hidden="true">
+              <GripIcon />
+            </span>
+            <button
+              type="button"
+              onClick={() => jump(t)}
+              className="flex-1 min-w-0 text-left"
+            >
+              <span
+                className="text-sm truncate block"
+                style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
+              >
+                {t.title}
+              </span>
+              <span className="text-xs text-muted-foreground truncate block">{t.artistName}</span>
+            </button>
+            {isCurrent && <PlayingDot />}
+          </Reorder.Item>
+        );
+      })}
+    </Reorder.Group>
   );
 }
 
@@ -508,5 +589,36 @@ function ShareIcon() {
       <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
       <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
     </svg>
+  );
+}
+
+function QueueIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="3" y1="6" x2="16" y2="6" />
+      <line x1="3" y1="12" x2="16" y2="12" />
+      <line x1="3" y1="18" x2="12" y2="18" />
+      <polygon points="19 8 19 16 23 12" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function GripIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="9" cy="6" r="1.4" /><circle cx="15" cy="6" r="1.4" />
+      <circle cx="9" cy="12" r="1.4" /><circle cx="15" cy="12" r="1.4" />
+      <circle cx="9" cy="18" r="1.4" /><circle cx="15" cy="18" r="1.4" />
+    </svg>
+  );
+}
+
+function PlayingDot() {
+  return (
+    <span
+      className="shrink-0 w-1.5 h-1.5 rounded-full animate-pulse"
+      style={{ background: 'var(--artist-accent)' }}
+      aria-hidden="true"
+    />
   );
 }
