@@ -6,9 +6,9 @@ import {
   listActiveArtists,
   getFeed,
 } from '@vire/db';
-import { GlobalSearch } from '@/components/global-search';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { ArtistHoverChip } from '@/components/artist-hover-chip';
+import { FeaturedRelease } from '@/components/featured-release';
 import { FadeUp, Stagger, StaggerItem, Reveal } from '@vire/ui/motion';
 
 export default async function HomePage() {
@@ -16,41 +16,40 @@ export default async function HomePage() {
   const userId = session?.user?.id;
 
   const [latest, upcoming, artists, feed] = await Promise.all([
-    getLatestReleases(12),
+    getLatestReleases(13),
     getUpcomingReleases(8),
     listActiveArtists(),
     userId ? getFeed(userId) : Promise.resolve([]),
   ]);
+
+  const featured = latest[0] ?? null;
+  const rest = latest.slice(1, 13);
 
   const topArtists = artists.slice(0, 12);
   const empty = latest.length === 0 && upcoming.length === 0 && topArtists.length === 0;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12 space-y-16">
-      {/* Hero */}
-      <FadeUp>
-        <div className="flex flex-col items-center text-center gap-5 pt-4">
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight">Vire</h1>
-          <p className="text-sm text-muted-foreground max-w-md">
-            Независимая музыкальная площадка для артистов и слушателей СНГ
-          </p>
-          <div className="w-full flex justify-center pt-2">
-            <GlobalSearch variant="hero" />
-          </div>
-        </div>
-      </FadeUp>
+      {/* Редакционный выбор */}
+      {featured && (
+        <FadeUp>
+          <FeaturedRelease release={featured} />
+        </FadeUp>
+      )}
 
       {/* Активность подписок (для вошедших) */}
       {feed.length > 0 && (
-        <Section title="Новое у тех, на кого ты подписан">
-          <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-            {feed.slice(0, 8).map((r) => (
-              <StaggerItem key={r.id}>
-                <ReleaseQuickLook release={r} />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </Section>
+        <Reveal>
+          <Section title="Новое у тех, на кого ты подписан">
+            <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              {feed.slice(0, 8).map((r) => (
+                <StaggerItem key={r.id}>
+                  <ReleaseQuickLook release={r} />
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </Section>
+        </Reveal>
       )}
 
       {/* Скоро выйдет */}
@@ -67,11 +66,11 @@ export default async function HomePage() {
       )}
 
       {/* Свежие релизы */}
-      {latest.length > 0 && (
+      {rest.length > 0 && (
         <Reveal>
           <Section title="Свежие релизы">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-              {latest.map((r) => (
+              {rest.map((r) => (
                 <ReleaseQuickLook key={r.id} release={r} />
               ))}
             </div>
@@ -129,4 +128,3 @@ function Section({
     </section>
   );
 }
-
