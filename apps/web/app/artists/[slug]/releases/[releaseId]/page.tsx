@@ -4,7 +4,9 @@ import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import { ZoomableCover } from '@/components/zoomable-cover';
+import { ReleaseHeroPlay } from '@/components/release-hero-play';
 import { TrackList, type ClientTrack } from './track-list';
+import type { PlayerTrack } from '@/store/player';
 import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
@@ -59,6 +61,9 @@ export default async function ReleasePage({ params }: Props) {
   const clientTracks: ClientTrack[] = tracks.map(({ id, title, trackNumber, durationSec, status, isExclusive, isWip, credits }) => ({
     id, title, trackNumber, durationSec, status, isExclusive, isWip, credits,
   }));
+  const readyQueue: PlayerTrack[] = tracks
+    .filter((t) => t.status === 'READY')
+    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId }));
   const year = releaseYear(release.releaseDate);
 
   return (
@@ -92,22 +97,27 @@ export default async function ReleasePage({ params }: Props) {
             ← {artist.name}
           </Link>
 
-          <div className="flex flex-col sm:flex-row gap-8 items-start">
-            <div className="shrink-0">
+          <div className="flex flex-col sm:flex-row gap-8 sm:gap-10 items-start">
+            <div className="shrink-0 mx-auto sm:mx-0">
               {release.coverUrl ? (
-                <ZoomableCover src={release.coverUrl} alt={release.title} className="w-52 h-52 shadow-2xl" sizes="208px" />
+                <ZoomableCover
+                  src={release.coverUrl}
+                  alt={release.title}
+                  className="w-56 h-56 sm:w-[300px] sm:h-[300px] shadow-2xl rounded-xl"
+                  sizes="(max-width: 640px) 224px, 300px"
+                />
               ) : (
-                <div className="w-52 h-52 bg-white/5 flex items-center justify-center opacity-20">
+                <div className="w-56 h-56 sm:w-[300px] sm:h-[300px] rounded-xl bg-white/5 flex items-center justify-center opacity-20">
                   <MusicIcon />
                 </div>
               )}
             </div>
 
-            <div className="space-y-3 pt-1">
+            <div className="space-y-4 pt-1 flex flex-col">
               <p className="text-xs font-mono opacity-40 uppercase tracking-widest">
                 {release.type}{year ? ` · ${year}` : ''}
               </p>
-              <h1 className="text-3xl font-semibold tracking-tight leading-tight">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight text-balance">
                 {release.title}
               </h1>
               {release.description && (
@@ -119,6 +129,9 @@ export default async function ReleasePage({ params }: Props) {
                 {tracks.length} {pluralTracks(tracks.length)}
                 {totalDuration(tracks) && ` · ${totalDuration(tracks)}`}
               </p>
+              <div className="pt-2">
+                <ReleaseHeroPlay queue={readyQueue} />
+              </div>
             </div>
           </div>
         </div>

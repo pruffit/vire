@@ -82,8 +82,8 @@ export default async function HomePage() {
       {topArtists.length > 0 && (
         <Reveal>
           <Section title="Артисты" href="/artists" hrefLabel="Все артисты →">
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-5">
-              {topArtists.map((a) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5">
+              {topArtists.slice(0, 10).map((a) => (
                 <ArtistHoverChip key={a.id} artist={a} />
               ))}
             </div>

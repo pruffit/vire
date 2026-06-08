@@ -29,11 +29,28 @@ export function Player() {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
             transition={spring.smooth}
-            className="shrink-0 h-16 bg-card border-t border-border flex items-center px-4 gap-4"
+            className="relative shrink-0 h-16 border-t border-border overflow-hidden"
           >
-            <TrackInfo onExpandCover={() => setExpanded(true)} />
-            <Controls />
-            <ProgressSection />
+            {/* Ambient — размытая обложка создаёт цветовой ореол без JS-извлечения цвета */}
+            {track.coverUrl && (
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 scale-110"
+                style={{
+                  backgroundImage: `url(${track.coverUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(48px) saturate(2)',
+                  opacity: 0.12,
+                }}
+              />
+            )}
+            <div className="absolute inset-0 bg-card/88" />
+            <div className="relative z-10 flex items-center h-full px-4 gap-4">
+              <TrackInfo onExpandCover={() => setExpanded(true)} />
+              <Controls />
+              <ProgressSection />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -78,26 +95,25 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
       <button
         onClick={onExpandCover}
         aria-label="Открыть плеер на весь экран"
-        className="w-10 h-10 shrink-0 relative group"
+        className="w-11 h-11 shrink-0 relative group"
       >
-        {/* layoutId связывает эту обложку с большой в фуллскрине — motion плавно
-            интерполирует размер/позицию 40px ↔ 320px при разворачивании. */}
+        {/* layoutId связывает эту обложку с большой в фуллскрине */}
         <motion.div
           layoutId="player-cover"
-          className="absolute inset-0 rounded-sm overflow-hidden bg-white/5"
+          className="absolute inset-0 rounded overflow-hidden bg-white/5"
           transition={spring.smooth}
         >
           {track.coverUrl && (
-            <Image src={track.coverUrl} alt={track.title} fill sizes="40px" className="object-cover" />
+            <Image src={track.coverUrl} alt={track.title} fill sizes="44px" className="object-cover" />
           )}
         </motion.div>
-        <span className="absolute inset-0 rounded-sm bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+        <span className="absolute inset-0 rounded bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
           <ExpandIcon />
         </span>
       </button>
-      <div className="min-w-0 hidden sm:block">
-        <TitleLink track={track} className="text-sm font-medium truncate leading-tight block" />
-        <ArtistLink track={track} className="text-xs text-muted-foreground truncate block" />
+      <div className="min-w-0">
+        <TitleLink track={track} className="text-[11px] sm:text-sm font-medium truncate leading-tight block" />
+        <ArtistLink track={track} className="hidden sm:block text-xs text-muted-foreground truncate" />
       </div>
     </div>
   );
@@ -369,7 +385,7 @@ function Controls() {
         aria-label={isPlaying ? 'Пауза' : 'Играть'}
         whileTap={hasAudio && !isLoading ? { scale: 0.92 } : undefined}
         transition={spring.snappy}
-        className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:bg-primary/90"
+        className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:bg-primary/90"
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span
