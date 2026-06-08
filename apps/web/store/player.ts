@@ -9,6 +9,8 @@ export interface PlayerTrack {
   // Если источник не знает их (например, дашборд) — ссылки просто не рендерятся.
   artistSlug?: string;
   releaseId?: string;
+  // Акцент-цвет артиста — инжектируется в плеер как --artist-accent.
+  accentColor?: string;
 }
 
 interface State {

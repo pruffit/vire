@@ -64,7 +64,7 @@ export default async function ReleasePage({ params }: Props) {
   }));
   const readyQueue: PlayerTrack[] = tracks
     .filter((t) => t.status === 'READY')
-    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId }));
+    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, accentColor: accent ?? undefined }));
   const year = releaseYear(release.releaseDate);
 
   return (

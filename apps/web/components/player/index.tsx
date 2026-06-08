@@ -31,6 +31,7 @@ export function Player() {
             exit={{ y: '100%', opacity: 0 }}
             transition={spring.smooth}
             className="relative shrink-0 h-16 border-t border-border overflow-hidden"
+            style={{ '--artist-accent': track.accentColor ?? undefined } as React.CSSProperties}
           >
             {/* Ambient — размытая обложка создаёт цветовой ореол без JS-извлечения цвета */}
             {track.coverUrl && (
@@ -158,6 +159,7 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
       dragElastic={{ top: 0, bottom: 0.7 }}
       onDragEnd={handleDragEnd}
       className="fixed inset-0 z-50 bg-card/95 backdrop-blur-xl flex flex-col items-center overflow-y-auto px-6 py-12"
+      style={{ '--artist-accent': track.accentColor ?? undefined } as React.CSSProperties}
     >
       <button
         onClick={onClose}
@@ -557,8 +559,10 @@ function Waveform() {
             width={BAR_W}
             height={h}
             rx={0.5}
-            fill={played ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.18)'}
-            style={{ transition: 'fill 0.12s linear' }}
+            style={{
+              fill: played ? 'var(--artist-accent, rgba(255,255,255,0.75))' : 'rgba(255,255,255,0.18)',
+              transition: 'fill 0.12s linear',
+            }}
           />
         );
       })}
