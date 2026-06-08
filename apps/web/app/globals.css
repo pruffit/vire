@@ -33,11 +33,19 @@
     cursor: not-allowed;
   }
 
-  /* Visible, consistent keyboard focus for accessibility. */
+  /* Visible, consistent keyboard focus for accessibility.
+     Без border-radius: outline сам следует скруглению элемента (иначе круглые
+     аватары/кнопки «квадратятся» при фокусе). Кольцо ярче дефолтного --ring
+     ради контраста на тёмном фоне. */
   :focus-visible {
-    outline: 2px solid var(--ring);
+    outline: 2px solid color-mix(in oklab, var(--foreground) 65%, transparent);
     outline-offset: 2px;
-    border-radius: 2px;
+  }
+
+  /* Тематическое выделение текста: подхватывает акцент артиста на его странице
+     (var(--artist-accent) → var(--primary) на оболочке платформы). */
+  ::selection {
+    background-color: color-mix(in oklab, var(--artist-accent) 35%, transparent);
   }
 
   /* Тонкий аккуратный скроллбар в тон тёмной теме (Firefox). Цвета наследуются. */

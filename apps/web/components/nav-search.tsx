@@ -71,6 +71,22 @@ export function NavSearch() {
     return () => document.removeEventListener('pointerdown', onDown);
   }, []);
 
+  // Горячая клавиша «/» — открыть поиск (если не печатаешь в поле/textarea)
+  useEffect(() => {
+    function onKey(e: globalThis.KeyboardEvent) {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      const typing =
+        !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+      if (typing) return;
+      e.preventDefault();
+      setOpen(true);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   function toggle() {
     setOpen((o) => {
       const next = !o;

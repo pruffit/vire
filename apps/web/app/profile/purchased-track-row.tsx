@@ -85,7 +85,7 @@ export function PurchasedTrackRow({
         href={`/api/v1/tracks/${trackId}/download`}
         download
         title="Скачать FLAC"
-        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
         aria-label="Скачать FLAC"
       >
         <DownloadIcon />

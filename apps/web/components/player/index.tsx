@@ -182,6 +182,7 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
 
 function FullscreenExtras({ track }: { track: PlayerTrack }) {
   const volume = usePlayerStore((s) => s.volume);
+  const [copied, setCopied] = useState(false);
 
   const shareUrl =
     track.artistSlug && track.releaseId
@@ -192,8 +193,13 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
     if (!shareUrl) return;
     const data = { title: track.title, text: `${track.artistName} — ${track.title}`, url: shareUrl };
     try {
-      if (navigator.share) await navigator.share(data);
-      else await navigator.clipboard.writeText(shareUrl);
+      if (navigator.share) {
+        await navigator.share(data);
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1600);
+      }
     } catch {
       /* пользователь отменил шеринг — игнорируем */
     }
@@ -217,13 +223,30 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
         className="flex-1 h-1 accent-primary cursor-pointer"
       />
       {shareUrl && (
-        <button
-          onClick={share}
-          aria-label="Поделиться треком"
-          className="opacity-50 hover:opacity-100 transition-opacity shrink-0"
-        >
-          <ShareIcon />
-        </button>
+        <div className="relative shrink-0">
+          <motion.button
+            onClick={share}
+            aria-label="Поделиться треком"
+            whileTap={{ scale: 0.9 }}
+            transition={spring.snappy}
+            className="opacity-50 hover:opacity-100 transition-opacity"
+          >
+            <ShareIcon />
+          </motion.button>
+          <AnimatePresence>
+            {copied && (
+              <motion.span
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                transition={spring.snappy}
+                className="absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-md bg-foreground/90 text-background text-[11px] font-medium px-2 py-1 pointer-events-none"
+              >
+                Скопировано
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
       )}
     </div>
   );

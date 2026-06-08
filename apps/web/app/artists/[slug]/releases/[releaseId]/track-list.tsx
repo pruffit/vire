@@ -140,7 +140,7 @@ function TrackRow({
           href={`/artists/${artistSlug}/releases/${releaseId}/tracks/${track.id}`}
           onClick={(e) => e.stopPropagation()}
           aria-label="Страница трека"
-          className="opacity-0 group-hover:opacity-30 hover:!opacity-70 transition-opacity text-[10px] font-mono"
+          className="opacity-0 group-hover:opacity-30 hover:!opacity-70 focus-visible:opacity-70 transition-opacity text-[10px] font-mono"
         >
           →
         </Link>
