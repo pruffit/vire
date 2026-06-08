@@ -72,18 +72,31 @@ function TrackRow({ track }: { track: DashboardTrack }) {
   );
 }
 
-function ReleaseCard({ data }: { data: DashboardRelease }) {
+function ReleaseCard({ data, artistSlug }: { data: DashboardRelease; artistSlug: string }) {
   const { tracks } = data;
   return (
     <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1.5">
-          <a
-            href={`/dashboard/releases/${data.id}`}
-            className="font-medium hover:text-white/70 transition-colors"
-          >
-            {data.title}
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/dashboard/releases/${data.id}`}
+              className="font-medium hover:text-white/70 transition-colors"
+            >
+              {data.title}
+            </a>
+            {data.status === 'PUBLISHED' && (
+              <a
+                href={`/artists/${artistSlug}/releases/${data.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-white/30 hover:text-white/60 transition-colors"
+                title="Открыть публичную страницу"
+              >
+                ↗
+              </a>
+            )}
+          </div>
           <p className={`text-sm ${RELEASE_STATUS_COLOR[data.status]}`}>
             {data.type} · {RELEASE_STATUS_LABEL[data.status]}
             {data.status === 'SCHEDULED' && data.releaseDate && (
@@ -150,16 +163,32 @@ export default async function DashboardPage() {
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-3xl mx-auto px-4 py-12 flex flex-col gap-10">
 
-        <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-semibold">Dashboard</h1>
+            {artist && (
+              <p className="text-white/50 mt-1 text-sm">
+                @{artist.slug} · {artist.name}
+              </p>
+            )}
+          </div>
           {artist && (
-            <p className="text-white/50 mt-1">
-              @{artist.slug} · {artist.name}
-              {' · '}
-              <a href="/dashboard/profile" className="hover:text-white/80 underline underline-offset-2 transition-colors">
-                редактировать профиль
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                href={`/artists/${artist.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm px-3 py-1.5 rounded-md text-white/50 hover:text-white/80 border border-white/10 hover:border-white/20 transition-colors"
+              >
+                Страница артиста ↗
               </a>
-            </p>
+              <a
+                href="/dashboard/profile"
+                className="text-sm px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/15 transition-colors"
+              >
+                Профиль
+              </a>
+            </div>
           )}
         </div>
 
@@ -189,7 +218,7 @@ export default async function DashboardPage() {
               ) : (
                 <div className="flex flex-col gap-3">
                   {releases.map((r) => (
-                    <ReleaseCard key={r.id} data={r} />
+                    <ReleaseCard key={r.id} data={r} artistSlug={artist.slug} />
                   ))}
                 </div>
               )}

@@ -3,8 +3,9 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { Stagger, StaggerItem } from '@vire/ui/motion';
 import { searchAll } from '@vire/db';
-import type { SearchArtist, SearchRelease, SearchTrack } from '@vire/db';
+import type { SearchArtist, SearchRelease } from '@vire/db';
 import { GlobalSearch } from '@/components/global-search';
+import { SearchTracksSection } from '@/components/search-tracks-section';
 
 type Props = { searchParams: Promise<{ q?: string }> };
 
@@ -74,11 +75,7 @@ export default async function SearchPage({ searchParams }: Props) {
           {results.tracks.length > 0 && (
             <section className="space-y-2">
               <SectionHeader label="Треки" count={results.tracks.length} />
-              <Stagger step={0.035} className="flex flex-col divide-y divide-border">
-                {results.tracks.map((t) => (
-                  <StaggerItem key={t.id}><TrackRow track={t} /></StaggerItem>
-                ))}
-              </Stagger>
+              <SearchTracksSection tracks={results.tracks} />
             </section>
           )}
         </div>
@@ -140,22 +137,3 @@ function ReleaseRow({ release }: { release: SearchRelease }) {
   );
 }
 
-function TrackRow({ track }: { track: SearchTrack }) {
-  return (
-    <Link
-      href={`/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`}
-      className="group flex items-center gap-3 py-3 hover:bg-accent/5 -mx-2 px-2 rounded-sm transition-colors"
-    >
-      <div className="relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
-        {track.coverUrl
-          ? <Image src={track.coverUrl} alt={track.title} fill sizes="36px" className="object-cover" />
-          : <div className="w-full h-full bg-white/5" />
-        }
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate group-hover:text-foreground transition-colors">{track.title}</p>
-        <p className="text-xs text-muted-foreground truncate">{track.artistName}</p>
-      </div>
-    </Link>
-  );
-}
