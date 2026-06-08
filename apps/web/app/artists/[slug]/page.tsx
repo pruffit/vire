@@ -116,7 +116,7 @@ function GuestFollowButton({ slug, followerCount }: { slug: string; followerCoun
       <a
         href={`/sign-in?callbackUrl=/artists/${slug}`}
         className="px-4 py-1.5 rounded-full text-sm font-medium transition-opacity hover:opacity-80"
-        style={{ background: 'var(--artist-accent)', color: 'var(--artist-bg, #0d0d0d)' }}
+        style={{ background: 'var(--artist-accent)', color: 'var(--artist-bg, var(--background))' }}
       >
         Подписаться
       </a>
@@ -132,38 +132,49 @@ function GuestFollowButton({ slug, followerCount }: { slug: string; followerCoun
 function ArtistHeader({ artist, followButton }: { artist: ArtistProfile; followButton: ReactNode }) {
   return (
     <FadeUp>
-      <header className="flex flex-col sm:flex-row items-start gap-8">
-      {artist.avatarUrl ? (
-        <Image
-          src={artist.avatarUrl}
-          alt={artist.name}
-          width={128}
-          height={128}
-          className="w-32 h-32 rounded-full object-cover shrink-0 ring-1 ring-white/10"
-        />
-      ) : (
-        <div className="w-32 h-32 rounded-full shrink-0 bg-white/5 flex items-center justify-center text-4xl font-mono opacity-40">
-          {artist.name[0]}
-        </div>
-      )}
-
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-semibold tracking-tight">{artist.name}</h1>
-          {artist.verified && (
-            <span
-              className="text-xs px-2 py-0.5 rounded-full border opacity-60"
-              style={{ borderColor: 'var(--artist-accent)', color: 'var(--artist-accent)' }}
-            >
-              verified
-            </span>
-          )}
-        </div>
-        {artist.bio && (
-          <p className="text-sm leading-relaxed opacity-70 max-w-prose">{artist.bio}</p>
+      <header className="flex flex-col sm:flex-row items-start gap-8 sm:gap-10">
+        {artist.avatarUrl ? (
+          <Image
+            src={artist.avatarUrl}
+            alt={artist.name}
+            width={192}
+            height={192}
+            className="w-36 h-36 sm:w-48 sm:h-48 rounded-full object-cover shrink-0"
+            style={{
+              boxShadow: [
+                '0 0 0 2px color-mix(in oklch, var(--artist-accent) 40%, transparent)',
+                '0 0 24px 4px color-mix(in oklch, var(--artist-accent) 14%, transparent)',
+              ].join(', '),
+            }}
+          />
+        ) : (
+          <div
+            className="w-36 h-36 sm:w-48 sm:h-48 rounded-full shrink-0 bg-white/5 flex items-center justify-center text-5xl font-mono opacity-40"
+            style={{ boxShadow: '0 0 0 2px color-mix(in oklch, var(--artist-accent) 40%, transparent)' }}
+          >
+            {artist.name[0]}
+          </div>
         )}
-        {followButton}
-      </div>
+
+        <div className="space-y-4 sm:pt-3 min-w-0">
+          <div className="space-y-2">
+            <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-tight text-balance">
+              {artist.name}
+            </h1>
+            {artist.verified && (
+              <span
+                className="inline-flex text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full border opacity-60"
+                style={{ borderColor: 'var(--artist-accent)', color: 'var(--artist-accent)' }}
+              >
+                verified
+              </span>
+            )}
+          </div>
+          {artist.bio && (
+            <p className="text-sm leading-relaxed opacity-70 max-w-prose">{artist.bio}</p>
+          )}
+          {followButton}
+        </div>
       </header>
     </FadeUp>
   );

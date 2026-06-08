@@ -97,24 +97,29 @@ export default async function TrackPage({ params }: Props) {
           <Link href={`/artists/${slug}`} className="hover:opacity-100 transition-opacity">
             {artist.name}
           </Link>
-          <span>/</span>
+          <span className="opacity-50">·</span>
           <Link href={`/artists/${slug}/releases/${releaseId}`} className="hover:opacity-100 transition-opacity">
             {release.title}
           </Link>
         </nav>
 
         {/* Track header */}
-        <header className="flex items-start gap-6">
+        <header className="flex items-start gap-6 sm:gap-8">
           {release.coverUrl ? (
-            <ZoomableCover src={release.coverUrl} alt={release.title} className="w-24 h-24 shrink-0 shadow-lg" sizes="96px" />
+            <ZoomableCover
+              src={release.coverUrl}
+              alt={release.title}
+              className="w-28 h-28 sm:w-36 sm:h-36 shrink-0 shadow-xl rounded-lg"
+              sizes="(max-width: 640px) 112px, 144px"
+            />
           ) : (
-            <div className="w-24 h-24 shrink-0 bg-white/5" />
+            <div className="w-28 h-28 sm:w-36 sm:h-36 shrink-0 rounded-lg bg-white/5" />
           )}
-          <div className="space-y-2 pt-1">
-            <p className="text-xs font-mono opacity-40">
-              {track.trackNumber}. {release.title}
+          <div className="space-y-3 pt-1 min-w-0">
+            <p className="text-[10px] font-mono opacity-40 uppercase tracking-widest">
+              {track.trackNumber < 10 ? `0${track.trackNumber}` : track.trackNumber} · {release.title}
             </p>
-            <h1 className="text-2xl font-semibold tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-balance">
               {track.title}
             </h1>
             <div className="flex items-center gap-4 flex-wrap">
@@ -156,9 +161,9 @@ export default async function TrackPage({ params }: Props) {
           </div>
         )}
 
-        {/* Metadata */}
+        {/* Metadata — TE-стиль: данные как приборная панель */}
         {(trackAudio?.bpm || trackAudio?.musicalKey) && (
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             {trackAudio.bpm && (
               <MetaPill label="BPM" value={String(trackAudio.bpm)} />
             )}
@@ -174,9 +179,9 @@ export default async function TrackPage({ params }: Props) {
 
 function MetaPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="px-3 py-1.5 rounded-md bg-white/5 border border-white/10 space-y-0.5">
-      <p className="text-[10px] font-mono uppercase tracking-widest opacity-40">{label}</p>
-      <p className="text-sm font-mono">{value}</p>
+    <div className="px-4 py-3 rounded-lg bg-white/5 border border-white/8 space-y-1 min-w-[72px]">
+      <p className="text-[9px] font-mono uppercase tracking-[0.18em] opacity-35">{label}</p>
+      <p className="text-xl font-mono leading-none tabular-nums">{value}</p>
     </div>
   );
 }
