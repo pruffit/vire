@@ -155,6 +155,23 @@ pnpm --filter @vire/web dev
 Переменные окружения: скопируй `.env.example` в `.env` и заполни.
 DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 
+## Проверки качества (гонять после каждого набора изменений)
+
+```bash
+pnpm --filter @vire/web typecheck      # tsc --noEmit
+pnpm --filter @vire/web lint           # eslint
+pnpm --filter @vire/web test           # vitest
+pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов
+pnpm --filter @vire/web build          # прод-сборка
+```
+
+**Impeccable** (`audit:design`) — равноправный гейт качества рядом с typecheck/lint/test:
+детектит дизайн-анти-паттерны (дефолтные шрифты, серый текст на цвете, pure-gray без
+подкраски, лишняя вложенность карточек, bounce-easing, низкий контраст). Закреплён как
+devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Скилл-команды
+`/impeccable …` (audit/critique/polish/delight) — ставятся отдельно: `npx impeccable skills install`.
+Принципы Impeccable применяем по умолчанию во всей дизайн-работе.
+
 ## Текущий статус
 
 **Этап 1 (Friends & Family) — завершён.** Этап 2 (прямые продажи) — частично.
