@@ -4,22 +4,17 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 
-export function ReleaseShareButton({ title, artistName }: { title: string; artistName: string }) {
+export function ReleaseShareButton(_props: { title: string; artistName: string }) {
   const [copied, setCopied] = useState(false);
 
   async function share() {
     const url = window.location.href;
-    const data = { title, text: `${artistName} — ${title}`, url };
     try {
-      if (navigator.share) {
-        await navigator.share(data);
-      } else {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1800);
-      }
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
     } catch {
-      /* отмена */
+      /* нет доступа к буферу */
     }
   }
 

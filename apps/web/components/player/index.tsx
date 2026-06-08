@@ -299,17 +299,12 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
 
   async function share() {
     if (!shareUrl) return;
-    const data = { title: track.title, text: `${track.artistName} — ${track.title}`, url: shareUrl };
     try {
-      if (navigator.share) {
-        await navigator.share(data);
-      } else {
-        await navigator.clipboard.writeText(shareUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1600);
-      }
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
     } catch {
-      /* пользователь отменил шеринг — игнорируем */
+      /* нет доступа к буферу */
     }
   }
 

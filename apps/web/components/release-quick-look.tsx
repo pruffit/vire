@@ -97,13 +97,6 @@ export function ReleaseQuickLook({
     loadTracks();
   }
 
-  function handleCardClick() {
-    if (isThisReleasePlaying) {
-      controls.togglePlay();
-    } else {
-      openQuickLook();
-    }
-  }
 
   function readyQueue(): PlayerTrack[] {
     return (tracks ?? [])
@@ -139,9 +132,9 @@ export function ReleaseQuickLook({
       <motion.button
         type="button"
         layoutId={layoutId}
-        onClick={handleCardClick}
+        onClick={openQuickLook}
         transition={spring.smooth}
-        aria-label={isThisReleasePlaying ? (isPlaying ? 'Пауза' : 'Продолжить') : `Быстрый просмотр: ${release.title}`}
+        aria-label={`Быстрый просмотр: ${release.title}`}
         className="block w-full text-left group"
       >
         <div className="relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30">
@@ -240,13 +233,14 @@ export function ReleaseQuickLook({
               <div className="px-5 pb-3 flex items-center gap-3">
                 <motion.button
                   type="button"
-                  onClick={playAll}
+                  onClick={isThisReleasePlaying ? () => controls.togglePlay() : playAll}
                   whileTap={{ scale: 0.96 }}
                   transition={spring.snappy}
                   disabled={!tracks || readyQueue().length === 0}
                   className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-30 transition-opacity"
                 >
-                  <PlayIcon /> Слушать
+                  {isThisReleasePlaying && isPlaying ? <PauseIcon /> : <PlayIcon />}
+                  {isThisReleasePlaying ? (isPlaying ? 'Пауза' : 'Продолжить') : 'Слушать'}
                 </motion.button>
                 <Link href={releaseHref} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   К релизу →
