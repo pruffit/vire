@@ -136,7 +136,7 @@ export function NavSearch() {
           placeholder="Поиск артистов, релизов, треков…"
           autoComplete="off"
           tabIndex={open ? 0 : -1}
-          className="w-[220px] h-8 rounded-md border border-border bg-card px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="w-[220px] h-8 rounded-md border border-border bg-card px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus-visible:border-ring focus-visible:ring-0"
         />
       </motion.div>
 
