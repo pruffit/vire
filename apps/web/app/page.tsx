@@ -1,15 +1,14 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { auth } from '@/auth';
 import {
   getLatestReleases,
   getUpcomingReleases,
   listActiveArtists,
   getFeed,
-  type ArtistListItem,
 } from '@vire/db';
 import { GlobalSearch } from '@/components/global-search';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
+import { ArtistHoverChip } from '@/components/artist-hover-chip';
 import { FadeUp, Stagger, StaggerItem, Reveal } from '@vire/ui/motion';
 
 export default async function HomePage() {
@@ -86,7 +85,7 @@ export default async function HomePage() {
           <Section title="Артисты" href="/artists" hrefLabel="Все артисты →">
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-5">
               {topArtists.map((a) => (
-                <ArtistChip key={a.id} artist={a} />
+                <ArtistHoverChip key={a.id} artist={a} />
               ))}
             </div>
           </Section>
@@ -128,31 +127,6 @@ function Section({
       </div>
       {children}
     </section>
-  );
-}
-
-function ArtistChip({ artist }: { artist: ArtistListItem }) {
-  return (
-    <Link href={`/artists/${artist.slug}`} className="block group text-center">
-      <div className="relative mx-auto w-full aspect-square rounded-full overflow-hidden bg-muted ring-1 ring-white/5 transition-shadow duration-300 ease-soft group-hover:ring-white/20">
-        {artist.avatarUrl ? (
-          <Image
-            src={artist.avatarUrl}
-            alt={artist.name}
-            fill
-            sizes="(max-width: 640px) 33vw, 160px"
-            className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-xl font-mono text-muted-foreground">
-            {artist.name[0]?.toUpperCase()}
-          </div>
-        )}
-      </div>
-      <p className="mt-2 text-xs font-medium leading-snug truncate group-hover:text-foreground transition-colors">
-        {artist.name}
-      </p>
-    </Link>
   );
 }
 
