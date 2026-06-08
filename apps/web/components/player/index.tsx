@@ -319,7 +319,15 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
       className="w-full flex items-center gap-4"
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <VolumeIcon muted={volume === 0} />
+      <motion.button
+        onClick={() => controls.toggleMute()}
+        aria-label={volume === 0 ? 'Включить звук' : 'Выключить звук'}
+        whileTap={{ scale: 0.88 }}
+        transition={spring.snappy}
+        className="opacity-50 hover:opacity-100 transition-opacity shrink-0"
+      >
+        <VolumeIcon muted={volume === 0} />
+      </motion.button>
       <input
         type="range"
         min={0}
@@ -335,18 +343,44 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
           <motion.button
             onClick={share}
             aria-label="Поделиться треком"
-            whileTap={{ scale: 0.9 }}
+            whileTap={{ scale: 0.88 }}
             transition={spring.snappy}
-            className="opacity-50 hover:opacity-100 transition-opacity"
+            className="relative w-5 h-5 flex items-center justify-center transition-opacity"
+            style={{ opacity: copied ? 1 : 0.5 }}
           >
-            <ShareIcon />
+            <AnimatePresence mode="popLayout" initial={false}>
+              {copied ? (
+                <motion.span
+                  key="check"
+                  initial={{ opacity: 0, scale: 0.4, rotate: -15 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                  exit={{ opacity: 0, scale: 0.4 }}
+                  transition={spring.snappy}
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ color: 'var(--artist-accent, oklch(72% 0.19 145))' }}
+                >
+                  <CheckIcon />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="share"
+                  initial={{ opacity: 0, scale: 0.4 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.4 }}
+                  transition={spring.snappy}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <ShareIcon />
+                </motion.span>
+              )}
+            </AnimatePresence>
           </motion.button>
           <AnimatePresence>
             {copied && (
               <motion.span
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
+                initial={{ opacity: 0, y: 6, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.96 }}
                 transition={spring.snappy}
                 className="absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-md bg-foreground/90 text-background text-[11px] font-medium px-2 py-1 pointer-events-none"
               >
@@ -647,5 +681,13 @@ function PlayingDot() {
       style={{ background: 'var(--artist-accent)' }}
       aria-hidden="true"
     />
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
   );
 }

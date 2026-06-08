@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-
-type LikeState = { trackId: string; liked: boolean };
+import { useLikesStore } from '@/store/likes';
 
 export function PlayerLikeButton({
   trackId,
@@ -13,27 +12,19 @@ export function PlayerLikeButton({
   trackId: string;
   size?: 'sm' | 'md';
 }) {
-  const [state, setState] = useState<LikeState | null>(null);
+  const load = useLikesStore((s) => s.load);
+  const update = useLikesStore((s) => s.update);
+  const liked = useLikesStore((s) => s.state[trackId] ?? null);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/v1/tracks/${trackId}/like`)
-      .then((r) => (r.ok ? (r.json() as Promise<{ liked: boolean }>) : null))
-      .then((d) => { if (!cancelled && d !== null) setState({ trackId, liked: d.liked }); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [trackId]);
-
-  // Если state ещё для другого трека — скрываем до загрузки нового.
-  const liked = state?.trackId === trackId ? state.liked : null;
+  useEffect(() => { load(trackId); }, [trackId, load]);
 
   function toggle() {
     if (liked === null) return;
     const next = !liked;
-    setState({ trackId, liked: next });
+    update(trackId, next);
     fetch(`/api/v1/tracks/${trackId}/like`, { method: next ? 'POST' : 'DELETE' })
-      .then((r) => { if (!r.ok) setState({ trackId, liked: !next }); })
-      .catch(() => setState({ trackId, liked: !next }));
+      .then((r) => { if (!r.ok) update(trackId, !next); })
+      .catch(() => update(trackId, !next));
   }
 
   if (liked === null) return null;
@@ -46,8 +37,9 @@ export function PlayerLikeButton({
       onClick={toggle}
       aria-label={liked ? 'Убрать лайк' : 'Лайкнуть'}
       whileTap={{ scale: 0.82 }}
+      whileHover={{ scale: 1.15 }}
       transition={spring.snappy}
-      className="shrink-0 inline-flex transition-opacity duration-200"
+      className="shrink-0 inline-flex transition-[color,opacity] duration-150"
       style={{
         color: liked ? 'var(--artist-accent, var(--foreground))' : undefined,
         opacity: liked ? 1 : 0.35,

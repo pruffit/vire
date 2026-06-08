@@ -5,6 +5,7 @@ import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db'
 import { ArtistService, ReleaseService } from '@vire/core';
 import { ZoomableCover } from '@/components/zoomable-cover';
 import { ReleaseHeroPlay } from '@/components/release-hero-play';
+import { ReleaseShareButton } from '@/components/release-share-button';
 import { TrackList, type ClientTrack } from './track-list';
 import type { PlayerTrack } from '@/store/player';
 import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
@@ -129,8 +130,9 @@ export default async function ReleasePage({ params }: Props) {
                 {tracks.length} {pluralTracks(tracks.length)}
                 {totalDuration(tracks) && ` · ${totalDuration(tracks)}`}
               </p>
-              <div className="pt-2">
+              <div className="pt-2 flex items-center gap-3 flex-wrap">
                 <ReleaseHeroPlay queue={readyQueue} />
+                <ReleaseShareButton title={release.title} artistName={artist.name} />
               </div>
             </div>
           </div>

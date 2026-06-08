@@ -75,8 +75,8 @@ function TrackRow({
     <motion.div
       role={ready ? 'button' : undefined}
       tabIndex={ready ? 0 : undefined}
-      onClick={ready ? onPlay : undefined}
-      onKeyDown={ready ? (e) => e.key === 'Enter' && onPlay() : undefined}
+      onClick={ready ? (isActive ? () => controls.togglePlay() : onPlay) : undefined}
+      onKeyDown={ready ? (e) => e.key === 'Enter' && (isActive ? controls.togglePlay() : onPlay()) : undefined}
       whileTap={ready ? { scale: 0.99 } : undefined}
       transition={spring.snappy}
       className={`group flex items-center gap-4 px-3 py-2.5 rounded-sm transition-colors select-none ${

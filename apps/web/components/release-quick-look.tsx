@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
-import type { PlayerTrack } from '@/store/player';
+import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { formatDuration } from '@/lib/format';
 
 export interface QuickLookRelease {
@@ -71,6 +71,10 @@ export function ReleaseQuickLook({
   const yr = year(release.releaseDate);
   const releaseHref = `/artists/${release.artistSlug}/releases/${release.id}`;
 
+  const activeTrack = usePlayerStore((s) => s.track);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const isThisReleasePlaying = activeTrack?.releaseId === release.id;
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
@@ -91,6 +95,14 @@ export function ReleaseQuickLook({
   function openQuickLook() {
     setOpen(true);
     loadTracks();
+  }
+
+  function handleCardClick() {
+    if (isThisReleasePlaying) {
+      controls.togglePlay();
+    } else {
+      openQuickLook();
+    }
   }
 
   function readyQueue(): PlayerTrack[] {
@@ -127,9 +139,9 @@ export function ReleaseQuickLook({
       <motion.button
         type="button"
         layoutId={layoutId}
-        onClick={openQuickLook}
+        onClick={handleCardClick}
         transition={spring.smooth}
-        aria-label={`Быстрый просмотр: ${release.title}`}
+        aria-label={isThisReleasePlaying ? (isPlaying ? 'Пауза' : 'Продолжить') : `Быстрый просмотр: ${release.title}`}
         className="block w-full text-left group"
       >
         <div className="relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30">
@@ -143,10 +155,35 @@ export function ReleaseQuickLook({
               {untilLabel(release.releaseDate) ?? release.type}
             </span>
           )}
-          {/* Play-подсказка на ховере */}
+          {/* Now-playing индикатор поверх обложки */}
+          <AnimatePresence>
+            {isThisReleasePlaying && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="absolute bottom-2 right-2 flex items-end gap-[2px] h-3.5"
+                aria-hidden="true"
+              >
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="w-[2.5px] bg-white rounded-full"
+                    style={{
+                      height: isPlaying ? undefined : '35%',
+                      animation: isPlaying ? `vire-eq 0.9s ease-in-out ${i * 0.15}s infinite` : undefined,
+                    }}
+                  />
+                ))}
+                <style>{`@keyframes vire-eq { 0%,100% { height: 30%; } 50% { height: 100%; } }`}</style>
+              </motion.span>
+            )}
+          </AnimatePresence>
+          {/* Play/pause-подсказка на ховере */}
           <span className="absolute inset-0 grid place-items-center bg-black/0 group-hover:bg-black/15 transition-colors">
             <span className="opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300 ease-soft grid place-items-center w-11 h-11 rounded-full bg-black/55 backdrop-blur-md ring-1 ring-white/30 text-white">
-              <PlayIcon />
+              {isThisReleasePlaying && isPlaying ? <PauseIcon /> : <PlayIcon />}
             </span>
           </span>
         </div>
@@ -169,6 +206,7 @@ export function ReleaseQuickLook({
             transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
             onClick={() => setOpen(false)}
             className="fixed inset-0 z-[60] grid place-items-center p-4 sm:p-6 bg-black/80 backdrop-blur-xl"
+            style={{ paddingBottom: activeTrack ? 'calc(64px + 1.5rem)' : undefined }}
           >
             <motion.div
               drag="y"
@@ -227,16 +265,19 @@ export function ReleaseQuickLook({
                 )}
                 {tracks && tracks.map((t) => {
                   const ready = t.status === 'READY';
+                  const isCurrent = activeTrack?.id === t.id;
                   return (
                     <button
                       key={t.id}
                       type="button"
-                      onClick={() => ready && playFrom(t.id)}
+                      onClick={() => ready && (isCurrent ? controls.togglePlay() : playFrom(t.id))}
                       disabled={!ready}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${ready ? 'hover:bg-white/5 cursor-pointer' : 'opacity-40 cursor-default'}`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${ready ? 'hover:bg-white/5 cursor-pointer' : 'opacity-40 cursor-default'} ${isCurrent ? 'bg-white/5' : ''}`}
                     >
-                      <span className="w-5 text-right text-xs font-mono opacity-30 shrink-0">{t.trackNumber}</span>
-                      <span className="flex-1 truncate text-sm">{t.title}</span>
+                      <span className="w-5 text-right text-xs font-mono opacity-30 shrink-0">
+                        {isCurrent ? <MiniEq animate={isPlaying} /> : t.trackNumber}
+                      </span>
+                      <span className="flex-1 truncate text-sm" style={isCurrent ? { color: 'var(--artist-accent, hsl(200 80% 65%))' } : undefined}>{t.title}</span>
                       {t.durationSec != null && ready && (
                         <span className="text-xs font-mono opacity-30 shrink-0">{formatDuration(t.durationSec)}</span>
                       )}
@@ -256,6 +297,30 @@ export function ReleaseQuickLook({
 function PlayIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="translate-x-[1px]"><polygon points="6,4 20,12 6,20" /></svg>;
 }
+function PauseIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="5" y="3" width="4" height="18" rx="1" />
+      <rect x="15" y="3" width="4" height="18" rx="1" />
+    </svg>
+  );
+}
 function NoteIcon() {
   return <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" /></svg>;
+}
+function MiniEq({ animate }: { animate: boolean }) {
+  return (
+    <span className="inline-flex items-end gap-[1.5px] h-3" style={{ color: 'var(--artist-accent, hsl(200 80% 65%))' }} aria-label="Сейчас играет">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-[2px] bg-current rounded-full"
+          style={{
+            height: animate ? undefined : '35%',
+            animation: animate ? `vire-eq 0.9s ease-in-out ${i * 0.15}s infinite` : undefined,
+          }}
+        />
+      ))}
+    </span>
+  );
 }

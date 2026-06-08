@@ -18,6 +18,7 @@ function getSessionId(): string {
 
 let playStartedAt: number | null = null;
 let playStartedTrackId: string | null = null;
+let _savedVolume = 1;
 
 function flushPlayEvent(source: string = 'direct'): void {
   if (!playStartedTrackId || playStartedAt === null) return;
@@ -142,6 +143,16 @@ export const controls = {
   setVolume(volume: number): void {
     if (audio) audio.volume = volume;
     usePlayerStore.getState()._setState({ volume });
+  },
+
+  toggleMute(): void {
+    const { volume } = usePlayerStore.getState();
+    if (volume > 0) {
+      _savedVolume = volume;
+      controls.setVolume(0);
+    } else {
+      controls.setVolume(_savedVolume || 1);
+    }
   },
 
   next(): void {
