@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { motion } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
+import { PlayerLikeButton } from '@/components/player-like-button';
 import type { TrackStatus, TrackCredit } from '@vire/core';
 import { formatDuration } from '@/lib/format';
 
@@ -50,8 +50,6 @@ export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl 
         <StaggerItem key={track.id}>
           <TrackRow
             track={track}
-            artistSlug={artistSlug}
-            releaseId={releaseId}
             onPlay={() => handlePlay(track)}
           />
         </StaggerItem>
@@ -62,13 +60,9 @@ export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl 
 
 function TrackRow({
   track,
-  artistSlug,
-  releaseId,
   onPlay,
 }: {
   track: ClientTrack;
-  artistSlug: string;
-  releaseId: string;
   onPlay: () => void;
 }) {
   const ready = track.status === 'READY';
@@ -136,14 +130,14 @@ function TrackRow({
             {formatDuration(track.durationSec)}
           </span>
         )}
-        <Link
-          href={`/artists/${artistSlug}/releases/${releaseId}/tracks/${track.id}`}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Страница трека"
-          className="opacity-0 group-hover:opacity-30 hover:!opacity-70 focus-visible:opacity-70 transition-opacity text-[10px] font-mono"
-        >
-          →
-        </Link>
+        {ready && (
+          <span
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <PlayerLikeButton trackId={track.id} size="sm" />
+          </span>
+        )}
       </div>
     </motion.div>
   );

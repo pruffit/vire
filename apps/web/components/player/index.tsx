@@ -7,6 +7,7 @@ import { AnimatePresence, Reorder, motion, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from './audio-engine';
+import { PlayerLikeButton } from '@/components/player-like-button';
 import { formatDuration } from '@/lib/format';
 
 export function Player() {
@@ -111,9 +112,14 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
           <ExpandIcon />
         </span>
       </button>
-      <div className="min-w-0">
-        <TitleLink track={track} className="text-[11px] sm:text-sm font-medium truncate leading-tight block" />
-        <ArtistLink track={track} className="hidden sm:block text-xs text-muted-foreground truncate" />
+      <div className="min-w-0 flex-1 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <TitleLink track={track} className="text-[11px] sm:text-sm font-medium truncate leading-tight block" />
+          <ArtistLink track={track} className="hidden sm:block text-xs text-muted-foreground truncate" />
+        </div>
+        <span className="hidden sm:inline-flex shrink-0">
+          <PlayerLikeButton trackId={track.id} size="sm" />
+        </span>
       </div>
     </div>
   );
@@ -176,10 +182,15 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
           )}
         </motion.div>
 
-        {/* Название + артист */}
-        <div className="text-center min-w-0 w-full">
-          <TitleLink track={track} className="text-xl font-semibold truncate block" />
-          <ArtistLink track={track} className="text-sm text-muted-foreground truncate block mt-1" />
+        {/* Название + артист + лайк */}
+        <div className="flex items-center gap-3 min-w-0 w-full">
+          <div className="flex-1 min-w-0 text-center">
+            <TitleLink track={track} className="text-xl font-semibold truncate block" />
+            <ArtistLink track={track} className="text-sm text-muted-foreground truncate block mt-1" />
+          </div>
+          <div className="shrink-0">
+            <PlayerLikeButton trackId={track.id} size="md" />
+          </div>
         </div>
 
         {/* Прогресс */}
