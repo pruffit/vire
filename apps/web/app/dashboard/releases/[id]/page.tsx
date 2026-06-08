@@ -4,6 +4,7 @@ import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db'
 import { EditReleaseForm } from './edit-release-form';
 import { AddTrackForm } from './add-track-form';
 import { TrackManager } from './track-manager';
+import { DeleteReleaseButton } from './delete-release-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ export default async function EditReleasePage({ params }: Props) {
   const { release, tracks } = data;
 
   return (
-    <div className="min-h-full bg-[#0d0d0d] text-white">
+    <div className="min-h-full bg-background text-foreground">
       <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
         <div className="flex items-center gap-4">
           <a
@@ -74,6 +75,10 @@ export default async function EditReleasePage({ params }: Props) {
             <AddTrackForm releaseId={release.id} nextTrackNumber={tracks.length + 1} />
           </div>
         </section>
+
+        <div className="border-t border-white/5 pt-4">
+          <DeleteReleaseButton releaseId={release.id} title={release.title} />
+        </div>
       </div>
     </div>
   );

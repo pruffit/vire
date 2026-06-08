@@ -24,7 +24,7 @@ export default async function DashboardProfilePage() {
   };
 
   return (
-    <div className="min-h-full bg-[#0d0d0d] text-white">
+    <div className="min-h-full bg-background text-foreground">
       <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
         <div className="flex flex-col gap-1">
           <a href="/dashboard" className="text-xs text-white/30 hover:text-white/60 transition-colors mb-2 self-start">

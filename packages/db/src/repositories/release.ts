@@ -1,5 +1,8 @@
-import { eq, asc, and, or, lte, isNotNull, desc, sql } from 'drizzle-orm';
-import { releases, tracks } from '../schema';
+import { eq, asc, and, or, lte, isNotNull, desc, sql, inArray } from 'drizzle-orm';
+import {
+  releases, tracks, trackAudio, trackContributors, trackMoods,
+  playlistTracks, likes, favoriteMoments,
+} from '../schema';
 import type { DB } from '../client';
 import type { CreateReleaseInput, UpdateReleaseInput, IReleaseRepository, Release, ReleaseStatus, ReleaseWithTracks, Track, TrackCredit } from '@vire/core';
 
@@ -100,6 +103,30 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
       })
       .returning();
     return mapToRelease(row!);
+  }
+
+  async delete(releaseId: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const trackRows = await tx
+        .select({ id: tracks.id })
+        .from(tracks)
+        .where(eq(tracks.releaseId, releaseId));
+
+      if (trackRows.length > 0) {
+        const ids = trackRows.map((r) => r.id);
+        // FK без ON DELETE CASCADE — чистим зависимые строки вручную.
+        // play_events и purchases намеренно не трогаем: аналитика и история покупок.
+        await tx.delete(trackAudio).where(inArray(trackAudio.trackId, ids));
+        await tx.delete(trackContributors).where(inArray(trackContributors.trackId, ids));
+        await tx.delete(trackMoods).where(inArray(trackMoods.trackId, ids));
+        await tx.delete(playlistTracks).where(inArray(playlistTracks.trackId, ids));
+        await tx.delete(likes).where(inArray(likes.trackId, ids));
+        await tx.delete(favoriteMoments).where(inArray(favoriteMoments.trackId, ids));
+        await tx.delete(tracks).where(eq(tracks.releaseId, releaseId));
+      }
+
+      await tx.delete(releases).where(eq(releases.id, releaseId));
+    });
   }
 
   async findPublishedByArtist(artistProfileId: string): Promise<Release[]> {

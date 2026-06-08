@@ -27,4 +27,5 @@ export interface IReleaseRepository {
   create(input: CreateReleaseInput): Promise<Release>;
   update(releaseId: string, input: UpdateReleaseInput): Promise<Release>;
   updateStatus(releaseId: string, status: ReleaseStatus): Promise<void>;
+  delete(releaseId: string): Promise<void>;
 }

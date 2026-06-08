@@ -147,7 +147,7 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <div className="min-h-full bg-[#0d0d0d] text-white">
+    <div className="min-h-full bg-background text-foreground">
       <div className="max-w-3xl mx-auto px-4 py-12 flex flex-col gap-10">
 
         <div>

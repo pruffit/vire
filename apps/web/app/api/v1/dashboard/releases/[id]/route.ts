@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
-import type { ReleaseType } from '@vire/core';
+import { ReleaseService, NotFoundError, type ReleaseType } from '@vire/core';
 
 const VALID_TYPES = new Set<ReleaseType>(['ALBUM', 'EP', 'SINGLE']);
 const COVER_MIME: Record<string, string> = {
@@ -82,4 +82,29 @@ export async function PATCH(req: Request, { params }: Params) {
   });
 
   return NextResponse.json({ releaseId: updated.id });
+}
+
+export async function DELETE(
+  _req: Request,
+  { params }: Params,
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
+  if (!artist) {
+    return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const service = new ReleaseService(new DrizzleReleaseRepository(db));
+  const result = await service.deleteRelease({ releaseId: id, artistProfileId: artist.id });
+
+  if (!result.ok) {
+    const status = result.error instanceof NotFoundError ? 404 : 403;
+    return NextResponse.json({ error: result.error.message }, { status });
+  }
+  return NextResponse.json({ ok: true });
 }
