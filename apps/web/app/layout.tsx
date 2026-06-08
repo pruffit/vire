@@ -5,7 +5,7 @@ import { PlayerWrapper } from '@/components/player/player-wrapper';
 import { CommandPalette } from '@/components/command-palette';
 import { Nav } from '@/components/nav';
 import { fontVariables } from '@/lib/fonts';
-import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from '@/lib/site';
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_TITLE } from '@/lib/site';
 import './globals.css';
 
 const geistSans = Geist({
@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} — независимая музыкальная площадка`,
+    default: SITE_TITLE,
     template: `%s — ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -33,12 +33,12 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     locale: 'ru_RU',
     url: '/',
-    title: `${SITE_NAME} — независимая музыкальная площадка`,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${SITE_NAME} — независимая музыкальная площадка`,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
   robots: { index: true, follow: true },
@@ -55,10 +55,10 @@ export default function RootLayout({
       {/*
         App-shell: окно фиксированной высоты (h-full + overflow-hidden), скролла
         на уровне документа нет. Nav закреплён сверху, контент скроллится внутри
-        единой области ниже. Плеер — элемент потока (см. PlayerWrapper), он
-        занимает место только когда играет трек, поэтому никакой постоянной
-        «полосы» под плеер нет. Страницы заполняют область через min-h-full
-        (не min-h-screen — иначе высота Nav давала бы лишний скролл).
+        единой области ниже. Плеер (элемент потока, см. PlayerWrapper) занимает
+        место только когда играет трек, поэтому постоянной «полосы» под плеер нет.
+        Страницы заполняют область через min-h-full (НЕ min-h-screen: иначе высота
+        Nav давала бы лишний скролл).
       */}
       <body className="h-full flex flex-col bg-background text-foreground font-sans overflow-hidden">
         <a
