@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { EditReleaseForm } from './edit-release-form';
 import { AddTrackForm } from './add-track-form';
+import { TrackManager } from './track-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,27 +59,15 @@ export default async function EditReleasePage({ params }: Props) {
             <span className="ml-2 text-sm text-white/30 font-normal">{tracks.length}</span>
           </h2>
 
-          {tracks.length > 0 && (
-            <div className="rounded-xl bg-white/5 border border-white/10 divide-y divide-white/5">
-              {tracks.map((track) => (
-                <div key={track.id} className="flex items-center gap-3 px-4 py-3 text-sm">
-                  <span className="w-6 text-right text-white/30 shrink-0 font-mono text-xs">
-                    {track.trackNumber}
-                  </span>
-                  <span className="flex-1 truncate">{track.title}</span>
-                  <span className={`text-xs font-mono shrink-0 ${
-                    track.status === 'READY' ? 'text-green-400'
-                    : track.status === 'PROCESSING' ? 'text-yellow-400'
-                    : 'text-red-400'
-                  }`}>
-                    {track.status === 'READY' ? 'готов'
-                      : track.status === 'PROCESSING' ? 'обрабатывается'
-                      : 'заблокирован'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          <TrackManager
+            key={tracks.map((t) => t.id).join('-')}
+            initial={tracks.map((t) => ({
+              id: t.id,
+              title: t.title,
+              trackNumber: t.trackNumber,
+              status: t.status,
+            }))}
+          />
 
           <div className="rounded-xl bg-white/5 border border-white/10 p-5">
             <p className="text-sm font-medium mb-4">Добавить трек</p>

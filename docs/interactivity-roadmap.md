@@ -51,10 +51,14 @@
   (play/scrub через YouTube IFrame API), пока после старта — нативные контролы платформы.
 
 ## Этап 6 — Дашборд: редактирование релиза и треков
-- [ ] **6.1** На странице релиза в дашборде редактировать поля релиза.
-- [ ] **6.2** Редактировать сами треки: переименование, удаление, порядок —
-  не только поочерёдное добавление. Файлы: `app/dashboard/releases/[id]/*`,
-  при необходимости новые роуты `app/api/v1/dashboard/tracks/[id]`.
+- [x] **6.1** Поля релиза уже редактируются (`EditReleaseForm`) — было готово.
+- [x] **6.2** Менеджер треков: переименование (inline, optimistic), удаление
+  (каскад зависимых строк в транзакции на уровне репозитория — FK без cascade;
+  optimistic + подтверждение), порядок (▲▼, optimistic swap + персист 2 PATCH).
+  Бэкенд: `ITrackRepository.findById/update/delete` + `DrizzleTrackRepository`,
+  `TrackService.updateTrack/deleteTrack` (проверка владения), роут
+  `app/api/v1/dashboard/tracks/[id]` (PATCH/DELETE). Фронт:
+  `app/dashboard/releases/[id]/track-manager.tsx`. Тесты сервиса (+4, core 29).
 
 ## Этап 7 — Переосмысление ленты и главной
 - [ ] **7.1** Лента (`/feed`) — пересмотреть ценность/контент.
@@ -76,3 +80,4 @@
 - **4.1** — `app/template.tsx`: opacity-crossfade переходов (h-full, без поломки shell).
 - **5.1** — `components/video-embed.tsx` + `lib/embed.ts`: видео-фасад под сайт.
 - **8.1** — `app/profile/followed-artists.tsx`: оптимистичная отписка.
+- **6.1–6.2** — менеджер треков (rename/delete/reorder) + роут tracks/[id], optimistic.
