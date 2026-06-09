@@ -8,6 +8,8 @@ import { ReleaseHeroPlay } from '@/components/release-hero-play';
 import { ReleaseShareButton } from '@/components/release-share-button';
 import { TrackList, type ClientTrack } from './track-list';
 import type { PlayerTrack } from '@/store/player';
+import { JsonLd } from '@/components/json-ld';
+import { musicAlbumJsonLd } from '@/lib/structured-data';
 import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
@@ -72,6 +74,13 @@ export default async function ReleasePage({ params }: Props) {
       style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
       className="min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
     >
+      <JsonLd
+        data={musicAlbumJsonLd(
+          { id: release.id, title: release.title, coverUrl: release.coverUrl, releaseDate: release.releaseDate, description: release.description },
+          { name: artist.name, slug },
+          clientTracks.map((t) => ({ id: t.id, title: t.title, trackNumber: t.trackNumber, durationSec: t.durationSec })),
+        )}
+      />
       {grain && <GrainOverlay />}
 
       {/* Hero */}

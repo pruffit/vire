@@ -19,6 +19,8 @@ import { parseEmbed, type EmbedInfo } from '@/lib/embed';
 import { VideoPlayer } from '@/components/video-player';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { CountdownBadge } from '@/components/countdown-badge';
+import { JsonLd } from '@/components/json-ld';
+import { musicGroupJsonLd } from '@/lib/structured-data';
 import { artistFontStyle } from '@/lib/fonts';
 
 type Props = { params: Promise<{ slug: string }> };
@@ -92,6 +94,15 @@ export default async function ArtistPage({ params }: Props) {
       }
       className="min-h-full text-[var(--artist-text)] font-sans"
     >
+      <JsonLd
+        data={musicGroupJsonLd({
+          name: artist.name,
+          slug: artist.slug,
+          avatarUrl: artist.avatarUrl,
+          bio: artist.bio,
+          links: artist.links,
+        })}
+      />
       {grain && <GrainOverlay />}
 
       {/* Full-bleed hero — breaks out of any container */}

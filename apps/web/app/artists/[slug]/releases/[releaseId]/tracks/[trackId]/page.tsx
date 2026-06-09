@@ -14,6 +14,8 @@ import { TrackWaveformPlayer } from './waveform-player';
 import { DownloadButton } from './download-button';
 import { MoodBadges } from '@/components/mood-badges';
 import { AddToPlaylistButton } from '@/components/add-to-playlist-button';
+import { JsonLd } from '@/components/json-ld';
+import { musicRecordingJsonLd } from '@/lib/structured-data';
 import { formatDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
@@ -100,6 +102,13 @@ export default async function TrackPage({ params, searchParams }: Props) {
       style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
       className="min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
     >
+      <JsonLd
+        data={musicRecordingJsonLd(
+          { id: track.id, title: track.title, trackNumber: track.trackNumber, durationSec: track.durationSec },
+          { id: release.id, title: release.title, coverUrl: release.coverUrl },
+          { name: artist.name, slug },
+        )}
+      />
       {grain && <GrainOverlay />}
 
       <div className="mx-auto max-w-2xl px-6 py-12 space-y-12">
