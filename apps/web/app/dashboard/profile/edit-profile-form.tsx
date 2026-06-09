@@ -21,15 +21,23 @@ const FONT_SANS = Object.keys(SANS_VAR);
 const FONT_MONO = Object.keys(MONO_VAR);
 
 // Готовые палитры темы: клик применяет фон/текст/акцент разом. Ручной ввод остаётся.
-const THEME_PRESETS: { name: string; bg: string; text: string; accent: string }[] = [
-  { name: 'Тёмный тёплый', bg: '#100f0d', text: '#e9e2d0', accent: '#6f9d92' },
-  { name: 'Уголь', bg: '#121212', text: '#ededed', accent: '#ff5c39' },
-  { name: 'Ночь', bg: '#0a0a12', text: '#d8d8e8', accent: '#7c6cff' },
-  { name: 'Сепия', bg: '#1a1410', text: '#e7d6bd', accent: '#c98a3a' },
-  { name: 'Мята', bg: '#0e1513', text: '#dceee7', accent: '#57c2a3' },
-  { name: 'Неон', bg: '#0b0b0b', text: '#f0f0f0', accent: '#c8ff3d' },
-  { name: 'Кремовый', bg: '#f4f1ea', text: '#1c1a17', accent: '#b5532f' },
-  { name: 'Бумага', bg: '#efe9dd', text: '#23201b', accent: '#3a6b5f' },
+// Тёмные темы переходят в платформенный шелл (nav + player) без резкого контраста.
+// Световые работают, но создают переход тёмный nav → светлый фон — отмечены флагом.
+const THEME_PRESETS: { name: string; bg: string; text: string; accent: string; light?: true }[] = [
+  // — Тёмные —
+  { name: 'Платформа',    bg: '#121210', text: '#edebe5', accent: '#9b8e7e' },
+  { name: 'Тёплый',       bg: '#100f0d', text: '#e9e2d0', accent: '#6f9d92' },
+  { name: 'Уголь',        bg: '#111111', text: '#ededed', accent: '#ff5c39' },
+  { name: 'Ночь',         bg: '#0a0a12', text: '#d8d8e8', accent: '#7c6cff' },
+  { name: 'Сепия',        bg: '#1a1410', text: '#e7d6bd', accent: '#c98a3a' },
+  { name: 'Мята',         bg: '#0e1513', text: '#dceee7', accent: '#57c2a3' },
+  { name: 'Неон',         bg: '#0b0b0b', text: '#f0f0f0', accent: '#c8ff3d' },
+  { name: 'Аметист',      bg: '#0d0b14', text: '#dcd4f2', accent: '#a87fff' },
+  { name: 'Ржавчина',     bg: '#130a08', text: '#ead3c6', accent: '#d45628' },
+  { name: 'Лёд',          bg: '#080e16', text: '#cce4f6', accent: '#4bbde8' },
+  // — Световые —
+  { name: 'Кремовый',     bg: '#f4f1ea', text: '#1c1a17', accent: '#b5532f', light: true },
+  { name: 'Бумага',       bg: '#eeead9', text: '#23201b', accent: '#3a6b5f', light: true },
 ];
 
 // Date-free subset of ArtistProfile — RSC can't serialize Date props to a client component
@@ -270,20 +278,64 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       <div className="flex flex-col gap-4 pt-1">
         <p className="text-sm font-medium">Тема страницы</p>
 
-        {/* Live preview strip */}
+        {/* Live preview — мини-страница артиста */}
         <div
-          className="rounded-lg px-4 py-3 flex items-center gap-3 text-sm transition-colors"
-          style={{ background: bg, color: textColor, fontFamily: SANS_VAR[fontSans] }}
+          className="rounded-xl overflow-hidden transition-colors"
+          style={{ background: bg }}
         >
-          <div className="w-3 h-3 rounded-full shrink-0" style={{ background: accent }} />
-          <span className="font-medium">{artist.name}</span>
-          <span className="opacity-40 ml-auto" style={{ fontFamily: MONO_VAR[fontMono] }}>123 · предпросмотр</span>
+          {/* Навбар платформы сверху — показывает стыковку */}
+          <div className="h-8 px-4 flex items-center gap-2" style={{ background: '#0e0d0b' }}>
+            <div className="w-12 h-2 rounded-full" style={{ background: '#ffffff18' }} />
+            <div className="ml-auto flex gap-2">
+              <div className="w-6 h-2 rounded-full" style={{ background: '#ffffff18' }} />
+              <div className="w-6 h-2 rounded-full" style={{ background: '#ffffff18' }} />
+            </div>
+          </div>
+          {/* Контент страницы артиста */}
+          <div className="px-5 pt-5 pb-4 space-y-4" style={{ color: textColor, fontFamily: SANS_VAR[fontSans] }}>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full shrink-0" style={{ background: accent, opacity: 0.35 }} />
+              <div className="space-y-1.5 flex-1">
+                <div className="text-sm font-semibold leading-none">{artist.name}</div>
+                <div className="flex gap-1.5">
+                  <div className="h-1.5 w-16 rounded-full" style={{ background: textColor, opacity: 0.25 }} />
+                </div>
+              </div>
+              <div
+                className="text-[10px] font-medium px-3 py-1 rounded-full shrink-0"
+                style={{ background: accent, color: bg }}
+              >
+                Подписаться
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="space-y-1.5">
+                  <div
+                    className="w-full rounded-md"
+                    style={{ paddingTop: '100%', background: i === 0 ? accent : textColor, opacity: i === 0 ? 0.2 : 0.06 }}
+                  />
+                  <div className="h-1.5 rounded-full" style={{ background: textColor, opacity: 0.2, width: `${70 - i * 15}%` }} />
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Плеер платформы снизу */}
+          <div className="h-8 px-4 flex items-center gap-2" style={{ background: '#0e0d0b' }}>
+            <div className="w-6 h-6 rounded shrink-0" style={{ background: '#ffffff12' }} />
+            <div className="flex-1 h-1.5 rounded-full" style={{ background: '#ffffff18' }} />
+            <div className="flex gap-1.5">
+              <div className="w-5 h-5 rounded-full" style={{ background: '#ffffff10' }} />
+              <div className="w-5 h-5 rounded-full" style={{ background: '#ffffff10' }} />
+              <div className="w-5 h-5 rounded-full" style={{ background: '#ffffff10' }} />
+            </div>
+          </div>
         </div>
 
         {/* Пресеты палитр — клик применяет фон/текст/акцент разом */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <span className="text-xs text-white/40">Пресеты палитры</span>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-6 gap-2">
             {THEME_PRESETS.map((p) => {
               const active = bg === p.bg && textColor === p.text && accent === p.accent;
               return (
@@ -292,18 +344,43 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
                   type="button"
                   disabled={busy}
                   onClick={() => { setBg(p.bg); setTextColor(p.text); setAccent(p.accent); }}
-                  title={p.name}
                   aria-label={`Палитра ${p.name}`}
                   aria-pressed={active}
-                  className={`relative h-9 w-14 rounded-md overflow-hidden border transition-all disabled:opacity-50 ${active ? 'border-white/70 ring-1 ring-white/40' : 'border-white/10 hover:border-white/30'}`}
-                  style={{ background: p.bg }}
+                  className={`group relative flex flex-col items-center gap-1.5 disabled:opacity-50`}
                 >
-                  <span className="absolute left-1.5 top-1.5 h-2.5 w-2.5 rounded-full" style={{ background: p.accent }} />
-                  <span className="absolute bottom-1.5 left-1.5 right-1.5 h-1 rounded-full" style={{ background: p.text }} />
+                  <div
+                    className={`relative w-full rounded-lg overflow-hidden transition-all ${active ? 'ring-2 ring-white/60' : 'ring-1 ring-white/10 hover:ring-white/30'}`}
+                    style={{ background: p.bg, paddingTop: '70%' }}
+                  >
+                    {/* Акцент-точка */}
+                    <span
+                      className="absolute top-1.5 left-1.5 w-2.5 h-2.5 rounded-full"
+                      style={{ background: p.accent }}
+                    />
+                    {/* Имитация текста */}
+                    <span
+                      className="absolute bottom-2 left-1.5 right-1.5 h-0.5 rounded-full"
+                      style={{ background: p.text, opacity: 0.5 }}
+                    />
+                    <span
+                      className="absolute bottom-3.5 left-1.5 h-0.5 rounded-full"
+                      style={{ background: p.text, opacity: 0.25, width: '55%' }}
+                    />
+                    {/* Световая метка */}
+                    {p.light && (
+                      <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-yellow-400/70" title="Световая тема" />
+                    )}
+                  </div>
+                  <span className="text-[10px] text-white/40 leading-none text-center w-full truncate group-hover:text-white/70 transition-colors">
+                    {p.name}
+                  </span>
                 </button>
               );
             })}
           </div>
+          <p className="text-[10px] text-white/25 leading-snug">
+            Жёлтая точка — световая тема. Создаёт контраст при переходе с тёмного навбара.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
