@@ -103,7 +103,7 @@ body (h-full, overflow-hidden, flex flex-col)
 
 ## База данных
 
-Схема в `packages/db/src/schema/`. 16 таблиц, ключевые решения:
+Схема в `packages/db/src/schema/`, ключевые решения:
 
 - `track_contributors` с `payout_share numeric(5,2)` — не `artist_id` в треке напрямую
 - `rights_holders` отдельно от `artist_profiles` (бренд ≠ получатель денег)
@@ -111,6 +111,8 @@ body (h-full, overflow-hidden, flex flex-col)
 - `play_events` — аналитический лог, пишется через буфер, не прямым инсертом
 - `theme_tokens` JSONB в профиле артиста — темизация на уровне данных
 - `subscriptions.type` полиморфный: `ARTIST_TIER` | `LISTENER_PREMIUM`
+- `artist_posts` — анонсы/новости артиста (FK на профиль, `onDelete: cascade`)
+- Live-присутствие («слушают сейчас») живёт в Redis (ZSET), не в Postgres
 
 Команды:
 ```bash
@@ -178,7 +180,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 
 ### Фундамент
 - [x] Монорепо (Turborepo + pnpm), docker-compose (postgres/redis/minio)
-- [x] `packages/db` — Drizzle схема 16 таблиц + миграции 0000–0003
+- [x] `packages/db` — Drizzle схема + миграции 0000–0008 (последняя — `artist_posts`)
 - [x] `packages/core` — Result<T,E>, domain types, сервисы, репозитории
 - [x] `packages/ui` — OKLCH-токены, Button, Card, Input
 - [x] `packages/config` — tsconfig/eslint/tailwind пресеты
@@ -186,26 +188,42 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] `apps/worker` — BullMQ + ffmpeg → HLS + waveform peaks → S3 → DB; play-events; notify-release
 
 ### Публичные страницы
-- [x] `/` — главная (hero-поиск), `/artists` — каталог + поиск, `/search` — поиск SSR
-- [x] `/artists/[slug]` — профиль: темизация, grain, ссылки, видео-эмбеды, follow-кнопка
+- [x] `/` — главная (контент-хаб + кнопка запуска потока), `/artists` — каталог + поиск, `/search` — поиск SSR
+- [x] `/artists/[slug]` — профиль: full-bleed hero, темизация, grain, ссылки, видео, follow, анонсы
 - [x] `/artists/[slug]/releases/[releaseId]` — релиз, трек-лист, liner notes, credits
-- [x] `.../tracks/[trackId]` — waveform-плеер, BPM/key, like, покупка/скачивание
-- [x] `/feed` — лента подписок, `/profile` — лайки, подписки, покупки
-- [x] Глобальный плеер — Zustand + HLS.js + SVG waveform scrubber
+- [x] `.../tracks/[trackId]` — waveform-плеер, BPM/key, like, покупка/скачивание, live-счётчик
+- [x] `/feed` — лента подписок, `/profile` — карточка профиля, лайки, подписки, покупки
+- [x] Глобальный плеер — Zustand + HLS.js + SVG waveform scrubber, wave-режим
+
+### Взаимодействие слушателя (концепт «Взаимодействие слушателя» — закрыто)
+- [x] Лайк трека (плеер + трек-лист + страница трека, синхронизация состояния)
+- [x] Плейлисты — `/playlists/[id]`, добавление трека, приватность, переименование/удаление
+- [x] Теги настроения (`track_moods`) + mood-picker; **Волна** ступени 1 (теги+BPM+тональность),
+  seed-режим, автоплей при исчерпании очереди
+- [x] Любимые моменты — анонимные маркеры на волне (`favorite_moments`), агрегат на странице трека
+- [x] Шеринг с таймкодом — `TrackShare` поповер (ссылка / «с момента M:SS») в плеере и на треке
+- [x] Live «слушают сейчас» — Redis-присутствие (ZSET + окно 45с), heartbeat из плеера;
+  показ слушателю (трек) и артисту (дашборд); деградирует до 0 при сбое Redis (`lib/presence.ts`)
 
 ### Dashboard артиста (`/dashboard`)
-- [x] Список релизов со статусами + статистика прослушиваний
+- [x] Список релизов со статусами + статистика прослушиваний + live «слушают сейчас» в шапке
 - [x] `/dashboard/releases/new` — создание релиза; `/dashboard/releases/[id]` — редактирование
-- [x] `/dashboard/profile` — имя, bio, аватар, тема (live color picker), grain, шрифты
+- [x] `/dashboard/profile` — имя, bio, аватар, тема (live color picker, расширенные пресеты), grain, шрифты
+- [x] `/dashboard/posts` — анонсы/новости: композер + инлайн-редактирование + оптимистичное удаление
 - [x] Загрузка треков (FLAC → S3 → BullMQ), PublishButton (DRAFT→PUBLISHED/SCHEDULED)
+- [x] Аналитика переслушиваний — возвраты к треку (2+ разных дня) в `StatsSection`
 
 ### Backoffice (`/admin`, только MODERATOR/ADMIN/SUPERADMIN)
-- [x] Статистика, `/admin/users`, `/admin/tracks`, `/admin/releases` со сменой роли/статуса
+- [x] Обзор: панель «требует внимания» (зависшие/заблокированные треки, неверифицированные артисты),
+  метрики, недавно опубликованное; активная подсветка в сайдбаре
+- [x] `/admin/users` (смена роли + верификация артиста), `/admin/tracks`, `/admin/releases` (смена статуса)
 
 ### SEO и доступность
 - [x] `metadataBase` + title-template `%s — Vire`, OG/Twitter дефолты (`app/layout.tsx`, `lib/site.ts`)
 - [x] `generateMetadata` артиста/релиза/трека: canonical + OG `profile`/`music.album`/`music.song`
 - [x] `app/robots.ts`, `app/sitemap.ts` (артисты + релизы из БД), `app/manifest.ts`
+- [x] Schema.org JSON-LD — `MusicGroup`/`MusicAlbum`/`MusicRecording` (`lib/structured-data.ts`,
+  `<JsonLd>`); билдеры — чистые функции, покрыты тестами
 - [x] a11y: skip-link, `:focus-visible` обводка, `cursor: pointer` на кнопках (Tailwind v4 убрал
   дефолт), `prefers-reduced-motion` глушит анимации; entrance-анимация `animate-fade-up`
 - Базовый URL — `NEXT_PUBLIC_SITE_URL` → `AUTH_URL` → localhost (`lib/site.ts`)
@@ -215,11 +233,12 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Скачивание FLAC по presigned S3 URL; список покупок в `/profile`
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
-### Тесты
+### Тесты (apps/web — 125, гонять `pnpm --filter @vire/web test`)
 - [x] `packages/core` — сервисы artist/release/track, Result/errors (Vitest)
-- [x] `apps/web/lib/embed` — парсинг YouTube/VK; `apps/web/lib/upload` — хелперы валидации
+- [x] `apps/web/lib` — `embed` (YouTube/VK), `upload` (валидация), `format`, `structured-data` (JSON-LD билдеры)
 - [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),
-  dashboard profile, follow, like, play, download — `app/api/**/route.test.ts`
+  dashboard profile, dashboard posts (create/edit/delete), follow, like, play, download,
+  tracks/listening (presence) — `app/api/**/route.test.ts`
 - [x] App-shell лейаут — инвариант `app/__tests__/layout-shell.test.ts` (нет `min-h-screen`)
 - [x] `apps/worker` — transcode-пайплайн (`processTranscodeJob`: идемпотентность, derive ext,
   HLS-загрузка, READY-транзакция, fallback на ffprobe) + waveform-пики (`peaksFromPcm`)
@@ -227,16 +246,18 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 
 ## Что делать дальше (следующий шаг)
 
-Этап 1 закрыт. Доводка завершена. Дальше — только Этап 2:
+Этап 1 закрыт, включая все взаимодействия слушателя из концепта. Дальше — только Этап 2:
 1. **Тесты Этап-2 роутов** (purchase/webhook) и **YooKassa боевая настройка** — по команде
 
 Сделано в доводке:
 - Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)
   централизованы в `apps/web/lib/format.ts` и покрыты тестами.
 - Все удалённые изображения (обложки/аватары из S3) — на `next/image`; хост S3/MinIO задаётся
-  через `images.remotePatterns` в `next.config.ts` из `S3_PUBLIC_ENDPOINT`. Локальные blob-превью
-  в формах остаются `<img>` (next/image не оптимизирует blob:). После правки `next.config.ts`
-  dev-сервер нужно перезапустить.
+  через `images.remotePatterns` в `next.config.ts` из `S3_PUBLIC_ENDPOINT`. Также разрешён
+  `avatars.yandex.net` (OAuth-аватары Yandex). Локальные blob-превью в формах остаются `<img>`
+  (next/image не оптимизирует blob:). После правки `next.config.ts` dev-сервер нужно перезапустить.
+- Live-присутствие использует Redis напрямую (`ioredis`, `lib/presence.ts`) — отдельно от BullMQ-очередей,
+  но тот же `REDIS_URL`. Все presence-эндпоинты деградируют до `count:0` при недоступности Redis.
 
 > ⚠️ Не интерполируй JS-`Date` в raw-`sql`-шаблон Drizzle — postgres.js получает её как
 > нетипизированный bind-параметр и падает с `ERR_INVALID_ARG_TYPE: Received an instance of Date`.
