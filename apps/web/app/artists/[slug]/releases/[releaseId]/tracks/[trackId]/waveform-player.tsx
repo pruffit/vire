@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, type MouseEvent } from 'react';
+import { useEffect, useCallback, useRef, type MouseEvent } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from '@/components/player/audio-engine';
 import { formatDuration } from '@/lib/format';
+import type { MomentBucket } from '@vire/db';
 
 const BAR_COUNT = 120;
 const SVG_H = 80;
@@ -16,9 +18,23 @@ interface Props {
   queue: PlayerTrack[];
   queueIndex: number;
   peaks: number[] | null;
+  moments: MomentBucket[];
+  trackId: string;
+  /** Автоматически перемотать к этой секунде при загрузке */
+  seekTo?: number;
 }
 
-export function TrackWaveformPlayer({ track, queue, queueIndex, peaks }: Props) {
+export function TrackWaveformPlayer({
+  track,
+  queue,
+  queueIndex,
+  peaks,
+  moments,
+  trackId,
+  seekTo,
+}: Props) {
+  const didSeek = useRef(false);
+
   useEffect(() => {
     initAudioEngine();
   }, []);
@@ -32,68 +48,130 @@ export function TrackWaveformPlayer({ track, queue, queueIndex, peaks }: Props) 
   const isThisTrack = currentTrackId === track.id;
   const progress = isThisTrack && duration > 0 ? currentTime / duration : 0;
 
+  // Seek to ?t= param after track loads
+  useEffect(() => {
+    if (!seekTo || didSeek.current || !isThisTrack || duration <= 0) return;
+    didSeek.current = true;
+    controls.seek(Math.min(seekTo, duration - 1));
+  }, [seekTo, isThisTrack, duration]);
+
   function handleWaveformClick(e: MouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const frac = (e.clientX - rect.left) / rect.width;
+
     if (isThisTrack && duration) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      controls.seek(((e.clientX - rect.left) / rect.width) * duration);
+      controls.seek(frac * duration);
     } else {
       controls.play(track, queue, queueIndex);
     }
   }
 
   function handlePlayPause() {
-    if (isThisTrack) {
-      controls.togglePlay();
-    } else {
-      controls.play(track, queue, queueIndex);
-    }
+    if (isThisTrack) controls.togglePlay();
+    else controls.play(track, queue, queueIndex);
+  }
+
+  /** Добавить любимый момент в текущей позиции */
+  const handleMarkMoment = useCallback(() => {
+    if (!isThisTrack || !duration) return;
+    const positionSec = Math.round(currentTime);
+    fetch(`/api/v1/tracks/${trackId}/moments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ positionSec }),
+    }).catch(() => {});
+  }, [isThisTrack, duration, currentTime, trackId]);
+
+  /** Share со ссылкой на текущий таймкод */
+  function handleShareTimestamp() {
+    const base = window.location.href.split('?')[0];
+    const sec = isThisTrack ? Math.round(currentTime) : 0;
+    const url = sec > 0 ? `${base}?t=${sec}` : base;
+    navigator.clipboard.writeText(url).catch(() => {});
   }
 
   const bars = buildBars(peaks);
 
+  // Нормализуем моменты для отрисовки поверх волны
+  const maxMoment = moments.reduce((m, b) => Math.max(m, b.count), 0);
+  const momentMap = new Map(moments.map((b) => [b.positionSec, b.count]));
+
   return (
     <div className="space-y-3">
-      {/* Waveform */}
-      <svg
-        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        preserveAspectRatio="none"
-        onClick={handleWaveformClick}
-        aria-label={isThisTrack ? 'Прогресс воспроизведения' : 'Воспроизвести'}
-        role={isThisTrack ? 'slider' : 'button'}
-        aria-valuenow={isThisTrack ? Math.round(currentTime) : undefined}
-        aria-valuemin={isThisTrack ? 0 : undefined}
-        aria-valuemax={isThisTrack ? Math.round(duration) : undefined}
-        className="w-full h-20 cursor-pointer"
-      >
-        {bars.map((peak, i) => {
-          const h = Math.max(2, peak * (SVG_H - 8));
-          const x = i * (BAR_W + BAR_GAP);
-          const played = i / BAR_COUNT < progress;
-          return (
-            <rect
-              key={i}
-              x={x}
-              y={(SVG_H - h) / 2}
-              width={BAR_W}
-              height={h}
-              rx={1}
-              fill={
-                played
-                  ? 'var(--artist-accent, rgba(255,255,255,0.8))'
-                  : 'rgba(255,255,255,0.15)'
-              }
-            />
-          );
-        })}
-      </svg>
+      {/* Waveform + момент-маркеры */}
+      <div className="relative group">
+        <svg
+          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+          preserveAspectRatio="none"
+          onClick={handleWaveformClick}
+          aria-label={isThisTrack ? 'Прогресс воспроизведения' : 'Воспроизвести'}
+          role={isThisTrack ? 'slider' : 'button'}
+          aria-valuenow={isThisTrack ? Math.round(currentTime) : undefined}
+          aria-valuemin={isThisTrack ? 0 : undefined}
+          aria-valuemax={isThisTrack ? Math.round(duration) : undefined}
+          className="w-full h-20 cursor-pointer"
+        >
+          {bars.map((peak, i) => {
+            const h = Math.max(2, peak * (SVG_H - 8));
+            const x = i * (BAR_W + BAR_GAP);
+            const played = i / BAR_COUNT < progress;
+            return (
+              <rect
+                key={i}
+                x={x}
+                y={(SVG_H - h) / 2}
+                width={BAR_W}
+                height={h}
+                rx={1}
+                fill={
+                  played
+                    ? 'var(--artist-accent, rgba(255,255,255,0.8))'
+                    : 'rgba(255,255,255,0.15)'
+                }
+              />
+            );
+          })}
+
+          {/* Агрегированные моменты — точки снизу */}
+          {duration > 0 && moments.map((bucket) => {
+            const frac = bucket.positionSec / duration;
+            const x = frac * SVG_W;
+            const intensity = maxMoment > 0 ? bucket.count / maxMoment : 0;
+            const radius = 2 + intensity * 3.5;
+            const opacity = 0.4 + intensity * 0.55;
+            return (
+              <circle
+                key={bucket.positionSec}
+                cx={x}
+                cy={SVG_H - 4}
+                r={radius}
+                fill="var(--artist-accent, rgba(255,255,255,0.7))"
+                opacity={opacity}
+              />
+            );
+          })}
+        </svg>
+
+        {/* Тултип — время под курсором */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+          aria-hidden="true"
+        >
+          <div
+            className="absolute bottom-1 w-px h-full bg-[var(--artist-accent)] opacity-40"
+            style={{ left: `${progress * 100}%` }}
+          />
+        </div>
+      </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {/* Play/Pause */}
         <button
           onClick={handlePlayPause}
           disabled={isThisTrack && isLoading}
           aria-label={isThisTrack && isPlaying ? 'Пауза' : 'Играть'}
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity disabled:opacity-40"
+          className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity disabled:opacity-40 shrink-0"
           style={{ background: 'var(--artist-accent)', color: 'var(--artist-bg, #0d0d0d)' }}
         >
           {isThisTrack && isLoading ? (
@@ -105,11 +183,44 @@ export function TrackWaveformPlayer({ track, queue, queueIndex, peaks }: Props) 
           )}
         </button>
 
+        {/* Time */}
         {isThisTrack && (
-          <span className="text-xs font-mono opacity-40 tabular-nums">
+          <span className="text-xs font-mono opacity-40 tabular-nums shrink-0">
             {formatDuration(currentTime)} / {formatDuration(duration)}
           </span>
         )}
+
+        <div className="flex-1" />
+
+        {/* Момент-маркер */}
+        {isThisTrack && (
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            whileHover={{ scale: 1.08 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+            onClick={handleMarkMoment}
+            title="Отметить любимый момент"
+            aria-label="Отметить любимый момент"
+            className="w-8 h-8 rounded-full flex items-center justify-center opacity-40 hover:opacity-80 transition-opacity"
+            style={{ border: '1px solid var(--artist-accent)' }}
+          >
+            <HeartPulseIcon />
+          </motion.button>
+        )}
+
+        {/* Share с таймкодом */}
+        <motion.button
+          whileTap={{ scale: 0.88 }}
+          whileHover={{ scale: 1.08 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+          onClick={handleShareTimestamp}
+          title={isThisTrack ? 'Поделиться с таймкодом' : 'Поделиться'}
+          aria-label="Поделиться"
+          className="w-8 h-8 rounded-full flex items-center justify-center opacity-40 hover:opacity-80 transition-opacity"
+          style={{ border: '1px solid var(--artist-accent)' }}
+        >
+          <ShareIcon />
+        </motion.button>
       </div>
     </div>
   );
@@ -142,6 +253,26 @@ function PauseIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
       <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+    </svg>
+  );
+}
+
+function HeartPulseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
     </svg>
   );
 }

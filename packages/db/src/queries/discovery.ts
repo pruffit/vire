@@ -47,6 +47,23 @@ export async function getLatestReleases(limit = 12): Promise<DiscoveryRelease[]>
     .limit(limit);
 }
 
+/** Грядущие релизы конкретного артиста (для страницы артиста / countdown). */
+export async function getUpcomingByArtist(artistProfileId: string): Promise<DiscoveryRelease[]> {
+  return db
+    .select(releaseCardColumns)
+    .from(releases)
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(
+      and(
+        eq(artistProfiles.id, artistProfileId),
+        eq(releases.status, 'SCHEDULED'),
+        isNotNull(releases.releaseDate),
+        gt(releases.releaseDate, sql`now()`),
+      ),
+    )
+    .orderBy(asc(releases.releaseDate));
+}
+
 /** Грядущие релизы: запланированы с датой в будущем («скоро выйдет»). */
 export async function getUpcomingReleases(limit = 8): Promise<DiscoveryRelease[]> {
   return db

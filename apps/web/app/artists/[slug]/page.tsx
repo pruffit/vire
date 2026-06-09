@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getFollowState, getFollowerCount } from '@vire/db';
+import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getFollowState, getFollowerCount, getUpcomingByArtist } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import type { ArtistProfile, ArtistLink, ArtistVideo, Release } from '@vire/core';
 import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
@@ -11,6 +11,7 @@ import { FollowButton } from './follow-button';
 import { parseEmbed, type EmbedInfo } from '@/lib/embed';
 import { VideoPlayer } from '@/components/video-player';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
+import { CountdownBadge } from '@/components/countdown-badge';
 import { formatCount } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
@@ -22,9 +23,12 @@ async function getArtistData(slug: string) {
   if (!result.ok) return null;
 
   const releaseService = new ReleaseService(new DrizzleReleaseRepository(db));
-  const releases = await releaseService.getPublishedByArtist(result.value.id);
+  const [releases, upcoming] = await Promise.all([
+    releaseService.getPublishedByArtist(result.value.id),
+    getUpcomingByArtist(result.value.id),
+  ]);
 
-  return { artist: result.value, releases };
+  return { artist: result.value, releases, upcoming };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -54,7 +58,7 @@ export default async function ArtistPage({ params }: Props) {
   const data = await getArtistData(slug);
   if (!data) notFound();
 
-  const { artist, releases } = data;
+  const { artist, releases, upcoming } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
   const session = await auth();
@@ -87,6 +91,7 @@ export default async function ArtistPage({ params }: Props) {
           }
         />
         {artist.links.length > 0 && <LinksSection links={artist.links} />}
+        {upcoming.length > 0 && <UpcomingSection upcoming={upcoming} />}
         <ReleasesSection releases={releases} artistSlug={artist.slug} artistName={artist.name} />
         {artist.videos.length > 0 && <VideosSection videos={artist.videos} />}
       </div>
@@ -196,6 +201,24 @@ function LinksSection({ links }: { links: ArtistLink[] }) {
         </a>
       ))}
     </section>
+  );
+}
+
+function UpcomingSection({ upcoming }: { upcoming: Array<{ id: string; title: string; releaseDate: Date | null }> }) {
+  const withDate = upcoming.filter((r) => r.releaseDate);
+  if (withDate.length === 0) return null;
+
+  return (
+    <Reveal>
+      <section className="space-y-4">
+        <h2 className="text-xs uppercase tracking-widest opacity-40 font-mono">Скоро</h2>
+        <div className="flex flex-col gap-3">
+          {withDate.map((r) => (
+            <CountdownBadge key={r.id} releaseDate={r.releaseDate!} title={r.title} />
+          ))}
+        </div>
+      </section>
+    </Reveal>
   );
 }
 

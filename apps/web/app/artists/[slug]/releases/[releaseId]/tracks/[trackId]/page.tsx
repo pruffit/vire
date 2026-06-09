@@ -1,17 +1,23 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getTrackAudio, getLikeState, getLikeCount, hasPurchasedTrack, getPendingPurchase } from '@vire/db';
+import {
+  db, DrizzleArtistRepository, DrizzleReleaseRepository,
+  getTrackAudio, getLikeState, getLikeCount, hasPurchasedTrack, getPendingPurchase,
+  getTrackMoods, getAggregateMoments,
+} from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import { auth } from '@/auth';
 import { ZoomableCover } from '@/components/zoomable-cover';
 import { LikeButton } from './like-button';
 import { TrackWaveformPlayer } from './waveform-player';
 import { DownloadButton } from './download-button';
+import { MoodBadges } from '@/components/mood-badges';
+import { AddToPlaylistButton } from '@/components/add-to-playlist-button';
 import { formatDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
-type Props = { params: Promise<{ slug: string; releaseId: string; trackId: string }> };
+type Props = { params: Promise<{ slug: string; releaseId: string; trackId: string }>; searchParams: Promise<{ t?: string }> };
 
 async function getPageData(slug: string, releaseId: string, trackId: string) {
   const [artistResult, releaseResult] = await Promise.all([
@@ -54,18 +60,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function TrackPage({ params }: Props) {
+export default async function TrackPage({ params, searchParams }: Props) {
   const { slug, releaseId, trackId } = await params;
+  const { t } = await searchParams;
+  const seekTo = t ? parseInt(t, 10) : undefined;
+
   const data = await getPageData(slug, releaseId, trackId);
   if (!data) notFound();
 
   const { artist, release, tracks, track } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
-  const [session, trackAudio, likeCount] = await Promise.all([
+  const [session, trackAudio, likeCount, moods, moments] = await Promise.all([
     auth(),
     getTrackAudio(trackId),
     getLikeCount(trackId),
+    getTrackMoods(trackId),
+    getAggregateMoments(trackId),
   ]);
 
   const userId = session?.user?.id;
@@ -142,7 +153,15 @@ export default async function TrackPage({ params }: Props) {
                   initialPending={pending}
                 />
               )}
+              {session?.user && (
+                <AddToPlaylistButton trackId={trackId} variant="artist" />
+              )}
             </div>
+
+            {/* Mood tags */}
+            {moods.length > 0 && (
+              <MoodBadges moods={moods} variant="artist" className="pt-1" />
+            )}
           </div>
         </header>
 
@@ -153,6 +172,9 @@ export default async function TrackPage({ params }: Props) {
             queue={queue}
             queueIndex={queue.findIndex((q) => q.id === track.id)}
             peaks={trackAudio?.waveformPeaks ?? null}
+            moments={moments}
+            trackId={trackId}
+            seekTo={seekTo}
           />
         )}
         {track.status === 'PROCESSING' && (
@@ -161,7 +183,7 @@ export default async function TrackPage({ params }: Props) {
           </div>
         )}
 
-        {/* Metadata — TE-стиль: данные как приборная панель */}
+        {/* Metadata */}
         {(trackAudio?.bpm || trackAudio?.musicalKey) && (
           <div className="flex gap-3">
             {trackAudio.bpm && (

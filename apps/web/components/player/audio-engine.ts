@@ -5,7 +5,6 @@ let audio: HTMLAudioElement | null = null;
 let hls: Hls | null = null;
 let loadedTrackId: string | null = null;
 
-// Per-session ID, persists across track changes within one browser session
 function getSessionId(): string {
   const key = 'vire_sid';
   let sid = sessionStorage.getItem(key);
@@ -19,6 +18,9 @@ function getSessionId(): string {
 let playStartedAt: number | null = null;
 let playStartedTrackId: string | null = null;
 let _savedVolume = 1;
+
+// История треков в текущей сессии — для wave (не повторяем уже сыгранное)
+const waveHistory: string[] = [];
 
 function flushPlayEvent(source: string = 'direct'): void {
   if (!playStartedTrackId || playStartedAt === null) return;
@@ -35,6 +37,28 @@ function flushPlayEvent(source: string = 'direct'): void {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionId: getSessionId(), source, durationPlayedSec, startedAt }),
   }).catch(() => {});
+}
+
+/** Запрашивает следующий трек у волны когда очередь исчерпана. */
+async function fetchWaveNext(currentTrackId: string): Promise<PlayerTrack | null> {
+  const played = waveHistory.slice(-30).join(',');
+  const url = `/api/v1/wave?trackId=${currentTrackId}${played ? `&played=${played}` : ''}`;
+
+  const res = await fetch(url).catch(() => null);
+  if (!res?.ok) return null;
+
+  const data = await res.json() as { track: { id: string; title: string; artistName: string; artistSlug: string; releaseId: string; coverUrl: string | null; accentColor: string | null } | null };
+  if (!data.track) return null;
+
+  return {
+    id: data.track.id,
+    title: data.track.title,
+    artistName: data.track.artistName,
+    coverUrl: data.track.coverUrl,
+    artistSlug: data.track.artistSlug,
+    releaseId: data.track.releaseId,
+    accentColor: data.track.accentColor ?? undefined,
+  };
 }
 
 export function initAudioEngine(): void {
@@ -79,7 +103,6 @@ export function initAudioEngine(): void {
 async function loadAndPlay(track: PlayerTrack): Promise<void> {
   if (!audio) return;
 
-  // Flush event for the previous track before loading a new one
   flushPlayEvent('direct');
 
   usePlayerStore.getState()._setState({ isLoading: true, hasAudio: false, currentTime: 0, duration: 0, waveformPeaks: null });
@@ -121,6 +144,11 @@ export const controls = {
       queueIndex: index,
     });
 
+    // Добавляем в историю волны
+    if (!waveHistory.includes(track.id)) {
+      waveHistory.push(track.id);
+    }
+
     if (track.id !== loadedTrackId) {
       loadedTrackId = track.id;
       loadAndPlay(track);
@@ -155,10 +183,28 @@ export const controls = {
     }
   },
 
-  next(): void {
-    const { queue, queueIndex } = usePlayerStore.getState();
+  async next(): Promise<void> {
+    const { queue, queueIndex, track: currentTrack, waveMode } = usePlayerStore.getState();
     const i = queueIndex + 1;
-    if (i < queue.length) controls.play(queue[i], queue, i);
+
+    if (i < queue.length) {
+      controls.play(queue[i], queue, i);
+      return;
+    }
+
+    // Очередь исчерпана — если wave mode включён, запрашиваем следующий
+    if (waveMode && currentTrack) {
+      usePlayerStore.getState()._setState({ isLoading: true });
+      const next = await fetchWaveNext(currentTrack.id);
+      if (next) {
+        // Добавляем в очередь и играем
+        const newQueue = [...queue, next];
+        usePlayerStore.getState()._setState({ queue: newQueue, queueIndex: newQueue.length - 1 });
+        controls.play(next, newQueue, newQueue.length - 1);
+      } else {
+        usePlayerStore.getState()._setState({ isLoading: false });
+      }
+    }
   },
 
   prev(): void {
@@ -171,5 +217,9 @@ export const controls = {
       if (i >= 0) controls.play(queue[i], queue, i);
       else controls.seek(0);
     }
+  },
+
+  setWaveMode(on: boolean): void {
+    usePlayerStore.getState()._setState({ waveMode: on });
   },
 };

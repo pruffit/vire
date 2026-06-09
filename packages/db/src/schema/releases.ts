@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, boolean, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, boolean, jsonb, pgEnum, primaryKey } from 'drizzle-orm/pg-core';
 import { artistProfiles } from './artists';
 
 export const releaseTypeEnum = pgEnum('release_type', ['ALBUM', 'EP', 'SINGLE']);
@@ -35,6 +35,26 @@ export const tracks = pgTable('tracks', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
+
+export const moodEnum = pgEnum('mood', [
+  'MELANCHOLY',
+  'NIGHT',
+  'DRIVE',
+  'AMBIENT',
+  'HYPE',
+  'CHILL',
+  'EPIC',
+  'DARK',
+  'ROMANTIC',
+  'NOSTALGIC',
+]);
+
+// Теги настроения — фиксированный список, не свободный ввод (нет UGC/модерации)
+// Сырьё для волны ступени 1
+export const trackMoods = pgTable('track_moods', {
+  trackId: uuid('track_id').notNull().references(() => tracks.id, { onDelete: 'cascade' }),
+  mood: moodEnum('mood').notNull(),
+}, (t) => [primaryKey({ columns: [t.trackId, t.mood] })]);
 
 // Медиа-часть трека — заполняется воркером асинхронно
 export const trackAudio = pgTable('track_audio', {

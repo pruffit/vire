@@ -50,6 +50,13 @@
       "when": 1780753608315,
       "tag": "0006_glossy_robbie_robertson",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781002757106,
+      "tag": "0007_natural_hawkeye",
+      "breakpoints": true
     }
   ]
 }

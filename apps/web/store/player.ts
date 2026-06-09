@@ -24,6 +24,8 @@ interface State {
   duration: number;
   volume: number;
   waveformPeaks: number[] | null;
+  /** Режим волны — автоплей похожих треков когда очередь исчерпана */
+  waveMode: boolean;
 }
 
 interface Store extends State {
@@ -41,5 +43,6 @@ export const usePlayerStore = create<Store>((set) => ({
   duration: 0,
   volume: 0.8,
   waveformPeaks: null,
+  waveMode: false,
   _setState: (patch) => set(patch),
 }));

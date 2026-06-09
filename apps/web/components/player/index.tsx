@@ -405,6 +405,7 @@ function Controls() {
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isLoading = usePlayerStore((s) => s.isLoading);
   const hasAudio = usePlayerStore((s) => s.hasAudio);
+  const waveMode = usePlayerStore((s) => s.waveMode);
 
   // Иконка плеера: загрузка / пауза / играть — выбираем ключ для морфинга.
   const iconKey = isLoading ? 'loading' : isPlaying ? 'pause' : 'play';
@@ -457,6 +458,35 @@ function Controls() {
         className="opacity-50 hover:opacity-100 transition-opacity"
       >
         <SkipForwardIcon />
+      </motion.button>
+
+      <motion.button
+        onClick={() => controls.setWaveMode(!waveMode)}
+        aria-label={waveMode ? 'Режим волны включён' : 'Режим волны выключен'}
+        aria-pressed={waveMode}
+        whileTap={{ scale: 0.88 }}
+        transition={spring.snappy}
+        className="relative transition-colors"
+        style={
+          waveMode
+            ? { color: 'var(--artist-accent, oklch(72% 0.19 145))' }
+            : { opacity: 0.3 }
+        }
+      >
+        <WaveIcon />
+        <AnimatePresence>
+          {waveMode && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 0.22, scale: 1.9 }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              transition={spring.snappy}
+              aria-hidden="true"
+              className="absolute inset-0 rounded-full blur-md pointer-events-none"
+              style={{ background: 'var(--artist-accent, oklch(72% 0.19 145))' }}
+            />
+          )}
+        </AnimatePresence>
       </motion.button>
     </div>
   );
@@ -680,6 +710,14 @@ function PlayingDot() {
       style={{ background: 'var(--artist-accent)' }}
       aria-hidden="true"
     />
+  );
+}
+
+function WaveIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12 C4.5 6, 7.5 6, 10 12 C12.5 18, 15.5 18, 18 12 C20.5 6, 22 6, 22 12" />
+    </svg>
   );
 }
 

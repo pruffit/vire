@@ -12,7 +12,7 @@ export { getLikeState, getLikeCount, likeTrack, unlikeTrack } from './queries/li
 export { getFollowState, getFollowerCount, followArtist, unfollowArtist } from './queries/follows';
 export { getFeed } from './queries/feed';
 export type { FeedRelease } from './queries/feed';
-export { getLatestReleases, getUpcomingReleases } from './queries/discovery';
+export { getLatestReleases, getUpcomingReleases, getUpcomingByArtist } from './queries/discovery';
 export type { DiscoveryRelease } from './queries/discovery';
 export { insertPlayEvent } from './queries/play-events';
 export type { InsertPlayEventData } from './queries/play-events';
@@ -44,4 +44,25 @@ export type { AdminStats, AdminUser, AdminTrack, AdminRelease } from './queries/
 export type { UserRole } from './queries/admin-types';
 export { getFollowerEmails } from './queries/notifications';
 export type { FollowerEmail } from './queries/notifications';
+export {
+  getTrackMoods, setTrackMoods, getMoodsForTracks, ALL_MOODS, MOOD_LABELS,
+} from './queries/track-moods';
+export type { Mood } from './queries/track-moods';
+export {
+  getAggregateMoments, addFavoriteMoment, getMomentCount,
+} from './queries/favorite-moments';
+export type { MomentBucket } from './queries/favorite-moments';
+export { getWaveNextTrack } from './queries/wave';
+export type { WaveTrack } from './queries/wave';
+export {
+  getUserPlaylists,
+  getPlaylistWithTracks,
+  createPlaylist,
+  deletePlaylist,
+  addTrackToPlaylist,
+  removeTrackFromPlaylist,
+  getTrackPlaylistIds,
+  renamePlaylist,
+} from './queries/playlists';
+export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow } from './queries/playlists';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

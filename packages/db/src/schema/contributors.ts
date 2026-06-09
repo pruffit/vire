@@ -22,21 +22,3 @@ export const trackContributors = pgTable('track_contributors', {
   payoutShare: numeric('payout_share', { precision: 5, scale: 2 }).notNull().default('100.00'),
 });
 
-export const moodEnum = pgEnum('mood', [
-  'MELANCHOLY',
-  'NIGHT',
-  'DRIVE',
-  'AMBIENT',
-  'FOCUS',
-  'ENERGY',
-  'CHILL',
-  'DARK',
-]);
-
-// Теги настроения — фиксированный список, не свободный ввод
-// Сырьё для волны ступени 1 и для обнаружения
-export const trackMoods = pgTable('track_moods', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  trackId: uuid('track_id').notNull().references(() => tracks.id),
-  mood: moodEnum('mood').notNull(),
-});
