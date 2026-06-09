@@ -16,6 +16,8 @@ import { MoodBadges } from '@/components/mood-badges';
 import { AddToPlaylistButton } from '@/components/add-to-playlist-button';
 import { JsonLd } from '@/components/json-ld';
 import { musicRecordingJsonLd } from '@/lib/structured-data';
+import { LiveListeners } from '@/components/live-listeners';
+import { countListening } from '@/lib/presence';
 import { formatDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
@@ -73,12 +75,13 @@ export default async function TrackPage({ params, searchParams }: Props) {
   const { artist, release, tracks, track } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
-  const [session, trackAudio, likeCount, moods, moments] = await Promise.all([
+  const [session, trackAudio, likeCount, moods, moments, liveCount] = await Promise.all([
     auth(),
     getTrackAudio(trackId),
     getLikeCount(trackId),
     getTrackMoods(trackId),
     getAggregateMoments(trackId),
+    countListening(trackId).catch(() => 0),
   ]);
 
   const userId = session?.user?.id;
@@ -166,6 +169,9 @@ export default async function TrackPage({ params, searchParams }: Props) {
                 <AddToPlaylistButton trackId={trackId} variant="artist" />
               )}
             </div>
+
+            {/* Live «слушают сейчас» */}
+            <LiveListeners trackId={trackId} initialCount={liveCount} />
 
             {/* Mood tags */}
             {moods.length > 0 && (

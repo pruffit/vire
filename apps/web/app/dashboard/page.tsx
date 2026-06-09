@@ -6,6 +6,7 @@ import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getArtistPlaySta
 import type { TrackStatus, ReleaseStatus, ReleaseType } from '@vire/core';
 import { PublishButton } from './publish-button';
 import { StatsSection } from './stats-section';
+import { LiveNow } from './live-now';
 
 export const dynamic = 'force-dynamic';
 
@@ -166,7 +167,10 @@ export default async function DashboardPage() {
 
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-semibold">Dashboard</h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-semibold">Dashboard</h1>
+              {artist && <LiveNow />}
+            </div>
             {artist && (
               <p className="text-white/50 mt-1 text-sm">
                 @{artist.slug} · {artist.name}

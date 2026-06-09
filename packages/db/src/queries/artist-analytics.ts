@@ -1,6 +1,16 @@
-import { count, desc, eq, gte, sql } from 'drizzle-orm';
+import { count, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { playEvents, tracks, releases } from '../schema';
+
+/** ID всех треков артиста — для live-присутствия и прочих агрегатов. */
+export async function getArtistTrackIds(artistProfileId: string): Promise<string[]> {
+  const rows = await db
+    .select({ id: tracks.id })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .where(eq(releases.artistProfileId, artistProfileId));
+  return rows.map((r) => r.id);
+}
 
 export interface TrackPlayStat {
   trackId: string;

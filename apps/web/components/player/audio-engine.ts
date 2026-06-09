@@ -19,6 +19,37 @@ let playStartedAt: number | null = null;
 let playStartedTrackId: string | null = null;
 let _savedVolume = 1;
 
+// ─── Live-присутствие «слушают сейчас» ──────────────────────────────────────
+// Пока трек играет, шлём heartbeat в presence-эндпоинт. Окно на сервере 45с,
+// поэтому 20с с запасом переживают один пропущенный тик. На паузе/смене/конце
+// останавливаем — присутствие истекает само.
+const HEARTBEAT_MS = 20_000;
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+let heartbeatTrackId: string | null = null;
+
+function sendHeartbeat(trackId: string): void {
+  fetch(`/api/v1/tracks/${trackId}/listening`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: getSessionId() }),
+    keepalive: true,
+  }).catch(() => {});
+}
+
+function startHeartbeat(trackId: string): void {
+  if (heartbeatTrackId === trackId && heartbeatTimer) return;
+  stopHeartbeat();
+  heartbeatTrackId = trackId;
+  sendHeartbeat(trackId); // сразу, не дожидаясь первого интервала
+  heartbeatTimer = setInterval(() => sendHeartbeat(trackId), HEARTBEAT_MS);
+}
+
+function stopHeartbeat(): void {
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  heartbeatTimer = null;
+  heartbeatTrackId = null;
+}
+
 // История треков в текущей сессии — для wave (не повторяем уже сыгранное)
 const waveHistory: string[] = [];
 
@@ -79,6 +110,7 @@ export function initAudioEngine(): void {
 
   audio.addEventListener('ended', () => {
     flushPlayEvent('direct');
+    stopHeartbeat();
     controls.next();
   });
   audio.addEventListener('playing', () => {
@@ -88,10 +120,12 @@ export function initAudioEngine(): void {
       playStartedAt = Date.now();
       playStartedTrackId = track.id;
     }
+    if (track) startHeartbeat(track.id);
   });
-  audio.addEventListener('pause', () =>
-    usePlayerStore.getState()._setState({ isPlaying: false }),
-  );
+  audio.addEventListener('pause', () => {
+    usePlayerStore.getState()._setState({ isPlaying: false });
+    stopHeartbeat();
+  });
   audio.addEventListener('waiting', () =>
     usePlayerStore.getState()._setState({ isLoading: true }),
   );
