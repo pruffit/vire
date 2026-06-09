@@ -4,6 +4,7 @@ import { useEffect, useCallback, useRef, type MouseEvent } from 'react';
 import { motion } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from '@/components/player/audio-engine';
+import { TrackShare } from '@/components/track-share';
 import { formatDuration } from '@/lib/format';
 import type { MomentBucket } from '@vire/db';
 
@@ -81,14 +82,6 @@ export function TrackWaveformPlayer({
       body: JSON.stringify({ positionSec }),
     }).catch(() => {});
   }, [isThisTrack, duration, currentTime, trackId]);
-
-  /** Share со ссылкой на текущий таймкод */
-  function handleShareTimestamp() {
-    const base = window.location.href.split('?')[0];
-    const sec = isThisTrack ? Math.round(currentTime) : 0;
-    const url = sec > 0 ? `${base}?t=${sec}` : base;
-    navigator.clipboard.writeText(url).catch(() => {});
-  }
 
   const bars = buildBars(peaks);
 
@@ -207,19 +200,13 @@ export function TrackWaveformPlayer({
           </motion.button>
         )}
 
-        {/* Share с таймкодом */}
-        <motion.button
-          whileTap={{ scale: 0.88 }}
-          whileHover={{ scale: 1.08 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-          onClick={handleShareTimestamp}
-          title={isThisTrack ? 'Поделиться с таймкодом' : 'Поделиться'}
-          aria-label="Поделиться"
-          className="w-8 h-8 rounded-full flex items-center justify-center opacity-40 hover:opacity-80 transition-opacity"
-          style={{ border: '1px solid var(--artist-accent)' }}
-        >
-          <ShareIcon />
-        </motion.button>
+        {/* Share с таймкодом — поповер: ссылка на трек или с момента */}
+        <TrackShare
+          currentTime={isThisTrack ? currentTime : undefined}
+          size="sm"
+          variant="bordered"
+          align="right"
+        />
       </div>
     </div>
   );
@@ -260,18 +247,6 @@ function HeartPulseIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-}
-
-function ShareIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="18" cy="5" r="3" />
-      <circle cx="6" cy="12" r="3" />
-      <circle cx="18" cy="19" r="3" />
-      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
     </svg>
   );
 }

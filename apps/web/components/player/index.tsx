@@ -8,6 +8,7 @@ import { spring } from '@vire/ui/motion';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from './audio-engine';
 import { PlayerLikeButton } from '@/components/player-like-button';
+import { TrackShare } from '@/components/track-share';
 import { formatDuration } from '@/lib/format';
 
 export function Player() {
@@ -292,23 +293,12 @@ function QueuePanel({ onJump }: { onJump: () => void }) {
 
 function FullscreenExtras({ track }: { track: PlayerTrack }) {
   const volume = usePlayerStore((s) => s.volume);
-  const [copied, setCopied] = useState(false);
+  const currentTime = usePlayerStore((s) => s.currentTime);
 
   const shareUrl =
     track.artistSlug && track.releaseId
       ? `${window.location.origin}/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`
-      : null;
-
-  async function share() {
-    if (!shareUrl) return;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      /* нет доступа к буферу */
-    }
-  }
+      : undefined;
 
   return (
     // stopPropagation, чтобы перетаскивание ползунка громкости не закрывало плеер
@@ -336,56 +326,7 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
         className="flex-1 h-1 accent-primary cursor-pointer"
       />
       {shareUrl && (
-        <div className="relative shrink-0">
-          <motion.button
-            onClick={share}
-            aria-label="Поделиться треком"
-            whileTap={{ scale: 0.88 }}
-            transition={spring.snappy}
-            className="relative w-5 h-5 flex items-center justify-center transition-opacity"
-            style={{ opacity: copied ? 1 : 0.5 }}
-          >
-            <AnimatePresence mode="popLayout" initial={false}>
-              {copied ? (
-                <motion.span
-                  key="check"
-                  initial={{ opacity: 0, scale: 0.4, rotate: -15 }}
-                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                  exit={{ opacity: 0, scale: 0.4 }}
-                  transition={spring.snappy}
-                  className="absolute inset-0 flex items-center justify-center"
-                  style={{ color: 'var(--artist-accent, oklch(72% 0.19 145))' }}
-                >
-                  <CheckIcon />
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="share"
-                  initial={{ opacity: 0, scale: 0.4 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.4 }}
-                  transition={spring.snappy}
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  <ShareIcon />
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.button>
-          <AnimatePresence>
-            {copied && (
-              <motion.span
-                initial={{ opacity: 0, y: 6, scale: 0.92 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 4, scale: 0.96 }}
-                transition={spring.snappy}
-                className="absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-md bg-foreground/90 text-background text-[11px] font-medium px-2 py-1 pointer-events-none"
-              >
-                Скопировано
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </div>
+        <TrackShare trackUrl={shareUrl} currentTime={currentTime} align="right" />
       )}
     </div>
   );
@@ -670,18 +611,6 @@ function VolumeIcon({ muted }: { muted: boolean }) {
   );
 }
 
-function ShareIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="18" cy="5" r="3" />
-      <circle cx="6" cy="12" r="3" />
-      <circle cx="18" cy="19" r="3" />
-      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-    </svg>
-  );
-}
-
 function QueueIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -717,14 +646,6 @@ function WaveIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M2 12 C4.5 6, 7.5 6, 10 12 C12.5 18, 15.5 18, 18 12 C20.5 6, 22 6, 22 12" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }
