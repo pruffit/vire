@@ -9,7 +9,9 @@ import {
   getFollowState,
   getFollowerCount,
   getUpcomingByArtist,
+  listArtistPosts,
 } from '@vire/db';
+import type { ArtistPost } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import type { ArtistProfile, ArtistLink, ArtistVideo, Release } from '@vire/core';
 import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
@@ -31,12 +33,13 @@ async function getArtistData(slug: string) {
   if (!result.ok) return null;
 
   const releaseService = new ReleaseService(new DrizzleReleaseRepository(db));
-  const [releases, upcoming] = await Promise.all([
+  const [releases, upcoming, posts] = await Promise.all([
     releaseService.getPublishedByArtist(result.value.id),
     getUpcomingByArtist(result.value.id),
+    listArtistPosts(result.value.id, 5),
   ]);
 
-  return { artist: result.value, releases, upcoming };
+  return { artist: result.value, releases, upcoming, posts };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -66,7 +69,7 @@ export default async function ArtistPage({ params }: Props) {
   const data = await getArtistData(slug);
   if (!data) notFound();
 
-  const { artist, releases, upcoming } = data;
+  const { artist, releases, upcoming, posts } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
   const session = await auth();
@@ -116,6 +119,7 @@ export default async function ArtistPage({ params }: Props) {
           artistSlug={artist.slug}
           artistName={artist.name}
         />
+        {posts.length > 0 && <PostsSection posts={posts} />}
         {artist.videos.length > 0 && <VideosSection videos={artist.videos} />}
       </div>
     </div>
@@ -319,6 +323,47 @@ function ReleasesSection({
       </section>
     </Reveal>
   );
+}
+
+// ─── Posts (анонсы) ──────────────────────────────────────────────────────────
+
+function PostsSection({ posts }: { posts: ArtistPost[] }) {
+  return (
+    <Reveal>
+      <section className="space-y-4">
+        {posts.map((post) => (
+          <article
+            key={post.id}
+            className="rounded-xl p-4 sm:p-5 space-y-1.5"
+            style={{
+              background: 'color-mix(in oklch, var(--artist-accent) 5%, transparent)',
+              border: '1px solid color-mix(in oklch, var(--artist-accent) 14%, transparent)',
+            }}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              {post.title ? (
+                <h3 className="font-medium leading-snug">{post.title}</h3>
+              ) : (
+                <span />
+              )}
+              <time className="text-[11px] font-mono opacity-40 shrink-0">
+                {postDate(post.createdAt)}
+              </time>
+            </div>
+            <p className="text-sm leading-relaxed opacity-75 whitespace-pre-line">{post.body}</p>
+          </article>
+        ))}
+      </section>
+    </Reveal>
+  );
+}
+
+function postDate(d: Date): string {
+  return new Date(d).toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 // ─── Videos ────────────────────────────────────────────────────────────────

@@ -25,6 +25,19 @@ export const artistProfiles = pgTable('artist_profiles', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Анонсы и новости артиста — канал коммуникации с аудиторией помимо музыки.
+// Не полноценный блог: короткие записи, хронология. title опционален.
+export const artistPosts = pgTable('artist_posts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  artistProfileId: uuid('artist_profile_id')
+    .notNull()
+    .references(() => artistProfiles.id, { onDelete: 'cascade' }),
+  title: text('title'),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Правообладатель — отдельно от витрины артиста
 // Артист = бренд, правообладатель = кому идут деньги
 export const rightsHolders = pgTable('rights_holders', {

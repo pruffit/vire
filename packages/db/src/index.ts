@@ -25,6 +25,14 @@ export type { ArtistPlayStats, TrackPlayStat } from './queries/artist-analytics'
 export { getArtistRelistenStats } from './queries/relisten';
 export type { ArtistRelistenStats, RelistenTrack } from './queries/relisten';
 export {
+  listArtistPosts,
+  getArtistPostById,
+  createArtistPost,
+  updateArtistPost,
+  deleteArtistPost,
+} from './queries/posts';
+export type { ArtistPost } from './queries/posts';
+export {
   hasPurchasedTrack,
   getPendingPurchase,
   createPendingPurchase,

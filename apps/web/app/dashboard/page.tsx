@@ -183,6 +183,12 @@ export default async function DashboardPage() {
               >
                 Страница артиста ↗
               </a>
+              <Link
+                href="/dashboard/posts"
+                className="text-sm px-3 py-1.5 rounded-md text-white/50 hover:text-white/80 border border-white/10 hover:border-white/20 transition-colors"
+              >
+                Анонсы
+              </Link>
               <a
                 href="/dashboard/profile"
                 className="text-sm px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/15 transition-colors"
