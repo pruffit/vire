@@ -86,9 +86,7 @@ export default async function ArtistPage({ params }: Props) {
           '--artist-bg': bg,
           '--artist-text': text,
           '--artist-accent': accent,
-          // Stage-light gradient: accent bleeds from the top, fading into artist bg
-          background:
-            'radial-gradient(ellipse 90% 50% at 50% -8%, color-mix(in oklch, var(--artist-accent) 10%, var(--artist-bg)), var(--artist-bg))',
+          background: 'var(--artist-bg)',
           ...artistFontStyle(artist.themeTokens),
         } as React.CSSProperties
       }
@@ -96,8 +94,11 @@ export default async function ArtistPage({ params }: Props) {
     >
       {grain && <GrainOverlay />}
 
-      <div className="mx-auto max-w-4xl px-6 py-16 space-y-16">
-        <ArtistHero artist={artist} followButton={followButton} />
+      {/* Full-bleed hero — breaks out of any container */}
+      <ArtistHero artist={artist} followButton={followButton} />
+
+      {/* Content below hero */}
+      <div className="mx-auto max-w-4xl px-6 pb-16 space-y-14">
         {upcoming.length > 0 && <UpcomingSection upcoming={upcoming} />}
         <ReleasesSection
           releases={releases}
@@ -121,85 +122,116 @@ function ArtistHero({
 }) {
   return (
     <FadeUp>
-      <header className="flex flex-col items-center text-center gap-5 pt-4">
-        {/* Avatar with layered accent glow */}
-        {artist.avatarUrl ? (
-          <Image
-            src={artist.avatarUrl}
-            alt={artist.name}
-            width={200}
-            height={200}
-            priority
-            className="w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover"
-            style={{
-              boxShadow: [
-                '0 0 0 2px color-mix(in oklch, var(--artist-accent) 55%, transparent)',
-                '0 0 40px 8px color-mix(in oklch, var(--artist-accent) 18%, transparent)',
-                '0 0 100px 30px color-mix(in oklch, var(--artist-accent) 7%, transparent)',
-              ].join(', '),
-            }}
-          />
-        ) : (
-          <div
-            className="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-white/5 flex items-center justify-center text-6xl font-mono opacity-30"
-            style={{
-              boxShadow: [
-                '0 0 0 2px color-mix(in oklch, var(--artist-accent) 55%, transparent)',
-                '0 0 40px 8px color-mix(in oklch, var(--artist-accent) 18%, transparent)',
-              ].join(', '),
-            }}
-          >
-            {artist.name[0]}
-          </div>
-        )}
+      <header
+        className="relative overflow-hidden"
+        style={{
+          minHeight: 'clamp(380px, 55vh, 580px)',
+          // Glow radiates from the right where the avatar lives
+          background:
+            'radial-gradient(ellipse 55% 85% at 88% 50%, color-mix(in oklch, var(--artist-accent) 20%, var(--artist-bg)), var(--artist-bg))',
+        }}
+      >
+        <div className="relative z-10 mx-auto max-w-4xl px-6 h-full flex items-end pb-14 pt-16">
+          <div className="w-full grid grid-cols-1 sm:grid-cols-5 gap-6 sm:gap-10 items-end">
 
-        {/* Name */}
-        <div className="space-y-2">
-          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-none text-balance">
-            {artist.name}
-          </h1>
-          {artist.verified && (
-            <span
-              className="inline-flex items-center gap-1.5 text-[10px] font-mono px-2.5 py-0.5 rounded-full border"
-              style={{
-                borderColor: 'color-mix(in oklch, var(--artist-accent) 45%, transparent)',
-                color: 'var(--artist-accent)',
-              }}
-            >
-              <VerifiedStar />
-              verified
-            </span>
-          )}
+            {/* Left: name + bio + actions */}
+            <div className="sm:col-span-3 space-y-5">
+              <div className="space-y-3">
+                <h1
+                  className="font-bold tracking-tight leading-[0.92] text-balance"
+                  style={{ fontSize: 'clamp(2.6rem, 7.5vw, 5.5rem)' }}
+                >
+                  {artist.name}
+                </h1>
+                {artist.verified && (
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-sm border"
+                    style={{
+                      borderColor: 'color-mix(in oklch, var(--artist-accent) 40%, transparent)',
+                      color: 'var(--artist-accent)',
+                    }}
+                  >
+                    <VerifiedStar />
+                    verified
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {artist.bio && (
+                  <p className="text-sm leading-relaxed opacity-60 max-w-[44ch]">
+                    {artist.bio}
+                  </p>
+                )}
+
+                {/* Follow + links on one line */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  {followButton}
+                  {artist.links.map((link: ArtistLink, i: number) => (
+                    <a
+                      key={i}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium transition-opacity hover:opacity-80 underline-offset-2 hover:underline"
+                      style={{ color: 'var(--artist-accent)', opacity: 0.55 }}
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: avatar with atmospheric glow */}
+            <div className="sm:col-span-2 flex justify-end items-end">
+              <div className="relative">
+                {/* Glow blob — fills the right side of hero */}
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-full blur-3xl opacity-30 scale-[1.8]"
+                  style={{ background: 'var(--artist-accent)' }}
+                />
+                {artist.avatarUrl ? (
+                  <Image
+                    src={artist.avatarUrl}
+                    alt={artist.name}
+                    width={280}
+                    height={280}
+                    priority
+                    className="relative z-10 w-40 h-40 sm:w-64 sm:h-64 rounded-full object-cover"
+                    style={{
+                      boxShadow:
+                        '0 0 0 1.5px color-mix(in oklch, var(--artist-accent) 50%, transparent)',
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="relative z-10 w-40 h-40 sm:w-64 sm:h-64 rounded-full bg-white/5 flex items-center justify-center font-mono"
+                    style={{
+                      fontSize: 'clamp(3rem, 8vw, 5rem)',
+                      opacity: 0.2,
+                      boxShadow:
+                        '0 0 0 1.5px color-mix(in oklch, var(--artist-accent) 50%, transparent)',
+                    }}
+                  >
+                    {artist.name[0]}
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
         </div>
 
-        {/* Follow */}
-        <div>{followButton}</div>
-
-        {/* Bio */}
-        {artist.bio && (
-          <p className="text-sm leading-relaxed opacity-60 max-w-[58ch]">{artist.bio}</p>
-        )}
-
-        {/* Links */}
-        {artist.links.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2">
-            {artist.links.map((link: ArtistLink, i: number) => (
-              <a
-                key={i}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-1.5 rounded-full text-xs font-medium border transition-all hover:opacity-70"
-                style={{
-                  borderColor: 'color-mix(in oklch, var(--artist-accent) 40%, transparent)',
-                  color: 'var(--artist-accent)',
-                }}
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
-        )}
+        {/* Bottom fade — hero bleeds into content below */}
+        <div
+          aria-hidden="true"
+          className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
+          style={{
+            background: 'linear-gradient(to bottom, transparent, var(--artist-bg))',
+          }}
+        />
       </header>
     </FadeUp>
   );
@@ -257,14 +289,12 @@ function ReleasesSection({
     <Reveal>
       <section>
         {releases.length === 1 ? (
-          // Single release: show at reasonable width
-          <div className="max-w-[220px]">
+          <div className="max-w-[200px]">
             <ReleaseQuickLook showArtist={false} release={toQL(first)} />
           </div>
         ) : (
-          // Multiple releases: featured first (larger), rest smaller grid
           <Stagger className="grid grid-cols-2 sm:grid-cols-4 gap-5">
-            {/* Featured — spans 2 cols, appears larger */}
+            {/* First release spans 2 cols — larger, more prominent */}
             <StaggerItem className="col-span-2">
               <ReleaseQuickLook showArtist={false} release={toQL(first)} />
             </StaggerItem>
@@ -296,7 +326,7 @@ function VideosSection({ videos }: { videos: ArtistVideo[] }) {
           {embeds.map((v, i) => (
             <div key={i} className="space-y-2">
               <VideoPlayer embed={v.embed} title={v.title} />
-              {v.title && <p className="text-sm opacity-60 leading-snug">{v.title}</p>}
+              {v.title && <p className="text-sm opacity-55 leading-snug">{v.title}</p>}
             </div>
           ))}
         </div>
@@ -305,7 +335,7 @@ function VideosSection({ videos }: { videos: ArtistVideo[] }) {
   );
 }
 
-// ─── Utility components ────────────────────────────────────────────────────
+// ─── Utilities ─────────────────────────────────────────────────────────────
 
 function GrainOverlay() {
   return (
@@ -350,13 +380,7 @@ function GuestFollowButton({
 
 function VerifiedStar() {
   return (
-    <svg
-      width="8"
-      height="8"
-      viewBox="0 0 10 10"
-      fill="currentColor"
-      aria-hidden="true"
-    >
+    <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
       <path d="M5 0L6.18 3.32L9.76 3.09L7.1 5.27L8.09 8.82L5 6.9L1.91 8.82L2.9 5.27L0.24 3.09L3.82 3.32L5 0Z" />
     </svg>
   );
