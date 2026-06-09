@@ -1,6 +1,15 @@
 import { desc, eq } from 'drizzle-orm';
 import { db } from '../client';
-import { likes, follows, tracks, releases, artistProfiles } from '../schema';
+import { likes, follows, tracks, releases, artistProfiles, users } from '../schema';
+
+export async function getUserCreatedAt(userId: string): Promise<Date | null> {
+  const rows = await db.select({ createdAt: users.createdAt }).from(users).where(eq(users.id, userId)).limit(1);
+  return rows[0]?.createdAt ?? null;
+}
+
+export async function updateUserName(userId: string, name: string): Promise<void> {
+  await db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId));
+}
 
 export interface LikedTrack {
   id: string;
