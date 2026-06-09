@@ -20,7 +20,11 @@ function s3RemotePattern() {
 const nextConfig: NextConfig = {
   transpilePackages: ['@vire/core', '@vire/db', '@vire/ui'],
   images: {
-    remotePatterns: [s3RemotePattern()],
+    remotePatterns: [
+      s3RemotePattern(),
+      // Yandex OAuth аватары
+      { protocol: 'https', hostname: 'avatars.yandex.net', pathname: '/**' },
+    ],
     // Next 16 блокирует оптимизацию картинок с приватных/loopback IP (SSRF-защита).
     // Локально MinIO живёт на localhost → разрешаем только в dev. На проде хранилище
     // (Selectel) публичное, поэтому флаг не нужен и остаётся выключенным.
