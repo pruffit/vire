@@ -2,18 +2,15 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'motion/react';
 
 interface Props {
   playlistId: string;
   title: string;
-  visibility: 'PRIVATE' | 'PUBLIC';
 }
 
-export function PlaylistActions({ playlistId, title, visibility }: Props) {
+export function PlaylistActions({ playlistId, title }: Props) {
   const [editing, setEditing] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
-  const [currentVisibility, setCurrentVisibility] = useState(visibility);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 

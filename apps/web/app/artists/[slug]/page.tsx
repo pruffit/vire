@@ -2,7 +2,14 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getFollowState, getFollowerCount, getUpcomingByArtist } from '@vire/db';
+import {
+  db,
+  DrizzleArtistRepository,
+  DrizzleReleaseRepository,
+  getFollowState,
+  getFollowerCount,
+  getUpcomingByArtist,
+} from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import type { ArtistProfile, ArtistLink, ArtistVideo, Release } from '@vire/core';
 import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
@@ -12,7 +19,6 @@ import { parseEmbed, type EmbedInfo } from '@/lib/embed';
 import { VideoPlayer } from '@/components/video-player';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { CountdownBadge } from '@/components/countdown-badge';
-import { formatCount } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 
 type Props = { params: Promise<{ slug: string }> };
@@ -67,6 +73,12 @@ export default async function ArtistPage({ params }: Props) {
     getFollowerCount(artist.id),
   ]);
 
+  const followButton = session?.user ? (
+    <FollowButton slug={artist.slug} initialFollowing={following} initialCount={followerCount} />
+  ) : (
+    <GuestFollowButton slug={artist.slug} followerCount={followerCount} />
+  );
+
   return (
     <div
       style={
@@ -74,30 +86,226 @@ export default async function ArtistPage({ params }: Props) {
           '--artist-bg': bg,
           '--artist-text': text,
           '--artist-accent': accent,
+          // Stage-light gradient: accent bleeds from the top, fading into artist bg
+          background:
+            'radial-gradient(ellipse 90% 50% at 50% -8%, color-mix(in oklch, var(--artist-accent) 10%, var(--artist-bg)), var(--artist-bg))',
           ...artistFontStyle(artist.themeTokens),
         } as React.CSSProperties
       }
-      className="min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
+      className="min-h-full text-[var(--artist-text)] font-sans"
     >
       {grain && <GrainOverlay />}
 
       <div className="mx-auto max-w-4xl px-6 py-16 space-y-16">
-        <ArtistHeader
-          artist={artist}
-          followButton={
-            session?.user
-              ? <FollowButton slug={artist.slug} initialFollowing={following} initialCount={followerCount} />
-              : <GuestFollowButton slug={artist.slug} followerCount={followerCount} />
-          }
-        />
-        {artist.links.length > 0 && <LinksSection links={artist.links} />}
+        <ArtistHero artist={artist} followButton={followButton} />
         {upcoming.length > 0 && <UpcomingSection upcoming={upcoming} />}
-        <ReleasesSection releases={releases} artistSlug={artist.slug} artistName={artist.name} />
+        <ReleasesSection
+          releases={releases}
+          artistSlug={artist.slug}
+          artistName={artist.name}
+        />
         {artist.videos.length > 0 && <VideosSection videos={artist.videos} />}
       </div>
     </div>
   );
 }
+
+// ─── Hero ──────────────────────────────────────────────────────────────────
+
+function ArtistHero({
+  artist,
+  followButton,
+}: {
+  artist: ArtistProfile;
+  followButton: ReactNode;
+}) {
+  return (
+    <FadeUp>
+      <header className="flex flex-col items-center text-center gap-5 pt-4">
+        {/* Avatar with layered accent glow */}
+        {artist.avatarUrl ? (
+          <Image
+            src={artist.avatarUrl}
+            alt={artist.name}
+            width={200}
+            height={200}
+            priority
+            className="w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover"
+            style={{
+              boxShadow: [
+                '0 0 0 2px color-mix(in oklch, var(--artist-accent) 55%, transparent)',
+                '0 0 40px 8px color-mix(in oklch, var(--artist-accent) 18%, transparent)',
+                '0 0 100px 30px color-mix(in oklch, var(--artist-accent) 7%, transparent)',
+              ].join(', '),
+            }}
+          />
+        ) : (
+          <div
+            className="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-white/5 flex items-center justify-center text-6xl font-mono opacity-30"
+            style={{
+              boxShadow: [
+                '0 0 0 2px color-mix(in oklch, var(--artist-accent) 55%, transparent)',
+                '0 0 40px 8px color-mix(in oklch, var(--artist-accent) 18%, transparent)',
+              ].join(', '),
+            }}
+          >
+            {artist.name[0]}
+          </div>
+        )}
+
+        {/* Name */}
+        <div className="space-y-2">
+          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-none text-balance">
+            {artist.name}
+          </h1>
+          {artist.verified && (
+            <span
+              className="inline-flex items-center gap-1.5 text-[10px] font-mono px-2.5 py-0.5 rounded-full border"
+              style={{
+                borderColor: 'color-mix(in oklch, var(--artist-accent) 45%, transparent)',
+                color: 'var(--artist-accent)',
+              }}
+            >
+              <VerifiedStar />
+              verified
+            </span>
+          )}
+        </div>
+
+        {/* Follow */}
+        <div>{followButton}</div>
+
+        {/* Bio */}
+        {artist.bio && (
+          <p className="text-sm leading-relaxed opacity-60 max-w-[58ch]">{artist.bio}</p>
+        )}
+
+        {/* Links */}
+        {artist.links.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {artist.links.map((link: ArtistLink, i: number) => (
+              <a
+                key={i}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-1.5 rounded-full text-xs font-medium border transition-all hover:opacity-70"
+                style={{
+                  borderColor: 'color-mix(in oklch, var(--artist-accent) 40%, transparent)',
+                  color: 'var(--artist-accent)',
+                }}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        )}
+      </header>
+    </FadeUp>
+  );
+}
+
+// ─── Upcoming ──────────────────────────────────────────────────────────────
+
+function UpcomingSection({
+  upcoming,
+}: {
+  upcoming: Array<{ id: string; title: string; releaseDate: Date | null }>;
+}) {
+  const withDate = upcoming.filter((r) => r.releaseDate);
+  if (withDate.length === 0) return null;
+
+  return (
+    <Reveal>
+      <section className="flex flex-col gap-3">
+        {withDate.map((r) => (
+          <CountdownBadge key={r.id} releaseDate={r.releaseDate!} title={r.title} />
+        ))}
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── Releases ──────────────────────────────────────────────────────────────
+
+function ReleasesSection({
+  releases,
+  artistSlug,
+  artistName,
+}: {
+  releases: Release[];
+  artistSlug: string;
+  artistName: string;
+}) {
+  if (releases.length === 0) return null;
+
+  function toQL(r: Release) {
+    return {
+      id: r.id,
+      title: r.title,
+      coverUrl: r.coverUrl,
+      type: r.type,
+      artistName,
+      artistSlug,
+      releaseDate: r.releaseDate,
+    };
+  }
+
+  const [first, ...rest] = releases;
+
+  return (
+    <Reveal>
+      <section>
+        {releases.length === 1 ? (
+          // Single release: show at reasonable width
+          <div className="max-w-[220px]">
+            <ReleaseQuickLook showArtist={false} release={toQL(first)} />
+          </div>
+        ) : (
+          // Multiple releases: featured first (larger), rest smaller grid
+          <Stagger className="grid grid-cols-2 sm:grid-cols-4 gap-5">
+            {/* Featured — spans 2 cols, appears larger */}
+            <StaggerItem className="col-span-2">
+              <ReleaseQuickLook showArtist={false} release={toQL(first)} />
+            </StaggerItem>
+            {rest.map((r) => (
+              <StaggerItem key={r.id}>
+                <ReleaseQuickLook showArtist={false} release={toQL(r)} />
+              </StaggerItem>
+            ))}
+          </Stagger>
+        )}
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── Videos ────────────────────────────────────────────────────────────────
+
+function VideosSection({ videos }: { videos: ArtistVideo[] }) {
+  const embeds = videos
+    .map((v) => ({ title: v.title, embed: parseEmbed(v.url) }))
+    .filter((v): v is { title: string; embed: EmbedInfo } => v.embed !== null);
+
+  if (embeds.length === 0) return null;
+
+  return (
+    <Reveal>
+      <section>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {embeds.map((v, i) => (
+            <div key={i} className="space-y-2">
+              <VideoPlayer embed={v.embed} title={v.title} />
+              {v.title && <p className="text-sm opacity-60 leading-snug">{v.title}</p>}
+            </div>
+          ))}
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── Utility components ────────────────────────────────────────────────────
 
 function GrainOverlay() {
   return (
@@ -115,7 +323,13 @@ function GrainOverlay() {
   );
 }
 
-function GuestFollowButton({ slug, followerCount }: { slug: string; followerCount: number }) {
+function GuestFollowButton({
+  slug,
+  followerCount,
+}: {
+  slug: string;
+  followerCount: number;
+}) {
   return (
     <div className="flex items-center gap-3">
       <a
@@ -126,155 +340,24 @@ function GuestFollowButton({ slug, followerCount }: { slug: string; followerCoun
         Подписаться
       </a>
       {followerCount > 0 && (
-        <span className="text-xs opacity-40 tabular-nums">
-          {formatCount(followerCount)} слушателей
+        <span className="text-xs opacity-40 tabular-nums font-mono">
+          {followerCount.toLocaleString('ru')} слушателей
         </span>
       )}
     </div>
   );
 }
 
-function ArtistHeader({ artist, followButton }: { artist: ArtistProfile; followButton: ReactNode }) {
+function VerifiedStar() {
   return (
-    <FadeUp>
-      <header className="flex flex-col sm:flex-row items-start gap-8 sm:gap-10">
-        {artist.avatarUrl ? (
-          <Image
-            src={artist.avatarUrl}
-            alt={artist.name}
-            width={192}
-            height={192}
-            className="w-36 h-36 sm:w-48 sm:h-48 rounded-full object-cover shrink-0"
-            style={{
-              boxShadow: [
-                '0 0 0 2px color-mix(in oklch, var(--artist-accent) 40%, transparent)',
-                '0 0 24px 4px color-mix(in oklch, var(--artist-accent) 14%, transparent)',
-              ].join(', '),
-            }}
-          />
-        ) : (
-          <div
-            className="w-36 h-36 sm:w-48 sm:h-48 rounded-full shrink-0 bg-white/5 flex items-center justify-center text-5xl font-mono opacity-40"
-            style={{ boxShadow: '0 0 0 2px color-mix(in oklch, var(--artist-accent) 40%, transparent)' }}
-          >
-            {artist.name[0]}
-          </div>
-        )}
-
-        <div className="space-y-4 sm:pt-3 min-w-0">
-          <div className="space-y-2">
-            <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-tight text-balance">
-              {artist.name}
-            </h1>
-            {artist.verified && (
-              <span
-                className="inline-flex text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full border opacity-60"
-                style={{ borderColor: 'var(--artist-accent)', color: 'var(--artist-accent)' }}
-              >
-                verified
-              </span>
-            )}
-          </div>
-          {artist.bio && (
-            <p className="text-sm leading-relaxed opacity-70 max-w-prose">{artist.bio}</p>
-          )}
-          {followButton}
-        </div>
-      </header>
-    </FadeUp>
+    <svg
+      width="8"
+      height="8"
+      viewBox="0 0 10 10"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M5 0L6.18 3.32L9.76 3.09L7.1 5.27L8.09 8.82L5 6.9L1.91 8.82L2.9 5.27L0.24 3.09L3.82 3.32L5 0Z" />
+    </svg>
   );
 }
-
-function LinksSection({ links }: { links: ArtistLink[] }) {
-  return (
-    <section className="flex flex-wrap gap-3">
-      {links.map((link, i) => (
-        <a
-          key={i}
-          href={link.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-4 py-2 rounded-full text-sm font-medium border transition-opacity hover:opacity-70"
-          style={{ borderColor: 'var(--artist-accent)', color: 'var(--artist-accent)' }}
-        >
-          {link.label}
-        </a>
-      ))}
-    </section>
-  );
-}
-
-function UpcomingSection({ upcoming }: { upcoming: Array<{ id: string; title: string; releaseDate: Date | null }> }) {
-  const withDate = upcoming.filter((r) => r.releaseDate);
-  if (withDate.length === 0) return null;
-
-  return (
-    <Reveal>
-      <section className="space-y-4">
-        <h2 className="text-xs uppercase tracking-widest opacity-40 font-mono">Скоро</h2>
-        <div className="flex flex-col gap-3">
-          {withDate.map((r) => (
-            <CountdownBadge key={r.id} releaseDate={r.releaseDate!} title={r.title} />
-          ))}
-        </div>
-      </section>
-    </Reveal>
-  );
-}
-
-function ReleasesSection({ releases, artistSlug, artistName }: { releases: Release[]; artistSlug: string; artistName: string }) {
-  if (releases.length === 0) return null;
-
-  return (
-    <Reveal>
-      <section className="space-y-6">
-        <h2 className="text-xs uppercase tracking-widest opacity-40 font-mono">Релизы</h2>
-        <Stagger className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-          {releases.map((release) => (
-            <StaggerItem key={release.id}>
-              <ReleaseQuickLook
-                showArtist={false}
-                release={{
-                  id: release.id,
-                  title: release.title,
-                  coverUrl: release.coverUrl,
-                  type: release.type,
-                  artistName,
-                  artistSlug,
-                  releaseDate: release.releaseDate,
-                }}
-              />
-            </StaggerItem>
-          ))}
-        </Stagger>
-      </section>
-    </Reveal>
-  );
-}
-
-function VideosSection({ videos }: { videos: ArtistVideo[] }) {
-  const embeds = videos
-    .map((v) => ({ title: v.title, embed: parseEmbed(v.url) }))
-    .filter((v): v is { title: string; embed: EmbedInfo } => v.embed !== null);
-
-  if (embeds.length === 0) return null;
-
-  return (
-    <Reveal>
-      <section className="space-y-6">
-        <h2 className="text-xs uppercase tracking-widest opacity-40 font-mono">Видео</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {embeds.map((v, i) => (
-            <div key={i} className="space-y-2">
-              <VideoPlayer embed={v.embed} title={v.title} />
-              {v.title && (
-                <p className="text-sm opacity-70 leading-snug">{v.title}</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-    </Reveal>
-  );
-}
-

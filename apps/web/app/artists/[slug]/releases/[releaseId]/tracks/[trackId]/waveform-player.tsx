@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useRef, type MouseEvent } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from '@/components/player/audio-engine';
 import { formatDuration } from '@/lib/format';
@@ -94,7 +94,6 @@ export function TrackWaveformPlayer({
 
   // Нормализуем моменты для отрисовки поверх волны
   const maxMoment = moments.reduce((m, b) => Math.max(m, b.count), 0);
-  const momentMap = new Map(moments.map((b) => [b.positionSec, b.count]));
 
   return (
     <div className="space-y-3">

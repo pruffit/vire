@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
@@ -82,7 +81,7 @@ export default async function PlaylistPage({ params }: Props) {
               {totalSec > 0 && ` · ${formatDuration(totalSec)}`}
             </p>
             {isOwner && (
-              <PlaylistActions playlistId={id} title={playlist.title} visibility={playlist.visibility} />
+              <PlaylistActions playlistId={id} title={playlist.title} />
             )}
           </div>
         </header>
