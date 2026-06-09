@@ -33,14 +33,26 @@ export {
 export type { PendingPurchase, PurchasedTrack } from './queries/purchases';
 export {
   getAdminStats,
+  getAdminAttention,
+  getRecentPublishedReleases,
   listUsersAdmin,
   setUserRole,
   verifyArtist,
   listTracksAdmin,
   setTrackStatus,
   listReleasesAdmin,
+  setReleaseStatus,
 } from './queries/admin';
-export type { AdminStats, AdminUser, AdminTrack, AdminRelease } from './queries/admin';
+export type {
+  AdminStats,
+  AdminUser,
+  AdminTrack,
+  AdminRelease,
+  AdminAttention,
+  StuckTrack,
+  UnverifiedArtist,
+  AdminRecentRelease,
+} from './queries/admin';
 export type { UserRole } from './queries/admin-types';
 export { getFollowerEmails } from './queries/notifications';
 export type { FollowerEmail } from './queries/notifications';

@@ -1,6 +1,7 @@
 import { listUsersAdmin } from '@vire/db';
 import type { UserRole } from '@vire/db';
 import { UserRoleSelect } from './user-role-select';
+import { VerifyButton } from './verify-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,7 @@ const ROLE_COLOR: Record<string, string> = {
   ADMIN: 'text-orange-400',
   MODERATOR: 'text-yellow-400',
   ARTIST: 'text-blue-400',
-  LISTENER: 'text-white/40',
+  LISTENER: 'text-white/35',
 };
 
 type Props = { searchParams: Promise<{ q?: string }> };
@@ -21,8 +22,8 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Пользователи</h1>
-        <span className="text-sm text-white/40">{users.length}</span>
+        <h1 className="text-xl font-semibold">Пользователи</h1>
+        <span className="text-sm text-white/30 tabular-nums">{users.length}</span>
       </div>
 
       <form method="GET" className="flex gap-2">
@@ -34,7 +35,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         />
         <button
           type="submit"
-          className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/15 text-sm transition-colors"
+          className="px-4 py-2 rounded-md bg-white/8 hover:bg-white/12 text-sm transition-colors"
         >
           Найти
         </button>
@@ -43,7 +44,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
       <div className="rounded-xl border border-white/10 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10 text-white/40 text-xs font-mono uppercase tracking-wider">
+            <tr className="border-b border-white/10 text-white/30 text-xs font-mono">
               <th className="text-left px-4 py-3">Email</th>
               <th className="text-left px-4 py-3">Имя</th>
               <th className="text-left px-4 py-3">Роль</th>
@@ -54,38 +55,46 @@ export default async function AdminUsersPage({ searchParams }: Props) {
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
-                <td className="px-4 py-3 font-mono text-xs">{user.email}</td>
+              <tr
+                key={user.id}
+                className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
+              >
+                <td className="px-4 py-3 font-mono text-xs text-white/60">{user.email}</td>
                 <td className="px-4 py-3 text-white/70">{user.name ?? '—'}</td>
                 <td className="px-4 py-3">
-                  <span className={`font-mono text-xs ${ROLE_COLOR[user.role] ?? 'text-white/40'}`}>
+                  <span className={`font-mono text-xs ${ROLE_COLOR[user.role] ?? 'text-white/35'}`}>
                     {user.role}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   {user.artistSlug ? (
-                    <span className="text-xs">
+                    <div className="flex items-center gap-2">
                       <a
                         href={`/artists/${user.artistSlug}`}
                         target="_blank"
-                        className="text-white/60 hover:text-white underline underline-offset-2"
+                        className="text-xs text-white/55 hover:text-white underline underline-offset-2 transition-colors"
                       >
                         @{user.artistSlug}
                       </a>
-                      {user.artistVerified && (
-                        <span className="ml-1.5 text-blue-400">✓</span>
+                      {user.artistProfileId && (
+                        <VerifyButton
+                          artistProfileId={user.artistProfileId}
+                          verified={user.artistVerified ?? false}
+                        />
                       )}
-                    </span>
-                  ) : '—'}
+                    </div>
+                  ) : (
+                    <span className="text-white/20">—</span>
+                  )}
                 </td>
-                <td className="px-4 py-3 text-white/30 text-xs font-mono">
+                <td className="px-4 py-3 text-white/25 text-xs font-mono">
                   {new Date(user.createdAt).toLocaleDateString('ru-RU')}
                 </td>
                 <td className="px-4 py-3">
                   <UserRoleSelect
                     userId={user.id}
                     currentRole={user.role as UserRole}
-                    artistProfileId={user.artistSlug ? undefined : undefined}
+                    artistProfileId={user.artistProfileId ?? undefined}
                   />
                 </td>
               </tr>

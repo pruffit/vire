@@ -1,4 +1,4 @@
-import { count, desc, eq, ilike, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, lt, or, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { users, artistProfiles, releases, tracks } from '../schema';
 import type { UserRole } from './admin-types';
@@ -36,6 +36,119 @@ export async function getAdminStats(): Promise<AdminStats> {
   };
 }
 
+// ─── Attention items ───────────────────────────────────────────────────────
+
+export interface StuckTrack {
+  id: string;
+  title: string;
+  releaseTitle: string;
+  artistSlug: string;
+  releaseId: string;
+  updatedAt: Date;
+}
+
+export interface UnverifiedArtist {
+  profileId: string;
+  name: string;
+  slug: string;
+  publishedCount: number;
+}
+
+export interface AdminAttention {
+  stuckTracks: StuckTrack[];
+  blockedTracksCount: number;
+  unverifiedArtists: UnverifiedArtist[];
+}
+
+export async function getAdminAttention(): Promise<AdminAttention> {
+  const [stuckRows, [blockedRow], unverifiedRows] = await Promise.all([
+    // Треки, которые зависли в PROCESSING больше 2 часов
+    db
+      .select({
+        id: tracks.id,
+        title: tracks.title,
+        releaseTitle: releases.title,
+        artistSlug: artistProfiles.slug,
+        releaseId: releases.id,
+        updatedAt: tracks.updatedAt,
+      })
+      .from(tracks)
+      .innerJoin(releases, eq(releases.id, tracks.releaseId))
+      .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+      .where(
+        and(
+          eq(tracks.status, 'PROCESSING'),
+          lt(tracks.updatedAt, sql`now() - interval '2 hours'`),
+        ),
+      )
+      .orderBy(asc(tracks.updatedAt))
+      .limit(10),
+
+    // Количество заблокированных треков
+    db.select({ n: count() }).from(tracks).where(eq(tracks.status, 'BLOCKED')),
+
+    // Артисты с опубликованными релизами, но без верификации
+    db
+      .select({
+        profileId: artistProfiles.id,
+        name: artistProfiles.name,
+        slug: artistProfiles.slug,
+        publishedCount: count(releases.id),
+      })
+      .from(artistProfiles)
+      .innerJoin(
+        releases,
+        and(
+          eq(releases.artistProfileId, artistProfiles.id),
+          eq(releases.status, 'PUBLISHED'),
+        ),
+      )
+      .where(eq(artistProfiles.verified, false))
+      .groupBy(artistProfiles.id, artistProfiles.name, artistProfiles.slug)
+      .orderBy(desc(count(releases.id)))
+      .limit(5),
+  ]);
+
+  return {
+    stuckTracks: stuckRows,
+    blockedTracksCount: Number(blockedRow?.n ?? 0),
+    unverifiedArtists: unverifiedRows.map((r) => ({
+      ...r,
+      publishedCount: Number(r.publishedCount),
+    })),
+  };
+}
+
+// ─── Recent activity ───────────────────────────────────────────────────────
+
+export interface AdminRecentRelease {
+  id: string;
+  title: string;
+  type: string;
+  artistName: string;
+  artistSlug: string;
+  updatedAt: Date;
+}
+
+export async function getRecentPublishedReleases(limit = 8): Promise<AdminRecentRelease[]> {
+  return db
+    .select({
+      id: releases.id,
+      title: releases.title,
+      type: releases.type,
+      artistName: artistProfiles.name,
+      artistSlug: artistProfiles.slug,
+      updatedAt: releases.updatedAt,
+    })
+    .from(releases)
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(eq(releases.status, 'PUBLISHED'))
+    .orderBy(desc(releases.updatedAt))
+    .limit(limit);
+}
+
+// ─── Users ─────────────────────────────────────────────────────────────────
+
 export interface AdminUser {
   id: string;
   name: string | null;
@@ -44,6 +157,7 @@ export interface AdminUser {
   createdAt: Date;
   artistSlug: string | null;
   artistVerified: boolean | null;
+  artistProfileId: string | null;
 }
 
 export async function listUsersAdmin(opts: {
@@ -62,6 +176,7 @@ export async function listUsersAdmin(opts: {
       createdAt: users.createdAt,
       artistSlug: artistProfiles.slug,
       artistVerified: artistProfiles.verified,
+      artistProfileId: artistProfiles.id,
     })
     .from(users)
     .leftJoin(artistProfiles, eq(artistProfiles.userId, users.id))
@@ -90,6 +205,8 @@ export async function verifyArtist(artistProfileId: string, verified: boolean): 
     .set({ verified, updatedAt: new Date() })
     .where(eq(artistProfiles.id, artistProfileId));
 }
+
+// ─── Tracks ────────────────────────────────────────────────────────────────
 
 export interface AdminTrack {
   id: string;
@@ -137,11 +254,10 @@ export async function setTrackStatus(
   trackId: string,
   status: 'READY' | 'BLOCKED' | 'PROCESSING',
 ): Promise<void> {
-  await db
-    .update(tracks)
-    .set({ status, updatedAt: new Date() })
-    .where(eq(tracks.id, trackId));
+  await db.update(tracks).set({ status, updatedAt: new Date() }).where(eq(tracks.id, trackId));
 }
+
+// ─── Releases ──────────────────────────────────────────────────────────────
 
 export interface AdminRelease {
   id: string;
@@ -177,11 +293,22 @@ export async function listReleasesAdmin(opts: {
     .from(releases)
     .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
     .leftJoin(tracks, eq(tracks.releaseId, releases.id))
-    .where(status ? eq(releases.status, status as 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED') : undefined)
+    .where(
+      status
+        ? eq(releases.status, status as 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED')
+        : undefined,
+    )
     .groupBy(releases.id, artistProfiles.name, artistProfiles.slug)
     .orderBy(desc(releases.createdAt))
     .limit(limit)
     .offset(offset);
 
   return rows.map((r) => ({ ...r, trackCount: Number(r.trackCount) }));
+}
+
+export async function setReleaseStatus(
+  releaseId: string,
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED',
+): Promise<void> {
+  await db.update(releases).set({ status, updatedAt: new Date() }).where(eq(releases.id, releaseId));
 }
