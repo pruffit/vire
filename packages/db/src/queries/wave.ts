@@ -16,15 +16,51 @@ export interface WaveTrack {
  * Волна ступень 1: находит следующий трек на основе тегов настроения + BPM + тональность.
  * Взвешенный SQL-запрос без ML.
  *
- * @param currentTrackId — текущий трек (исключается из результатов)
+ * @param currentTrackId — текущий трек; null = seed-режим (случайный стартовый трек)
  * @param playedIds — уже сыгранные в сессии (не повторяем)
  * @param limit — сколько кандидатов вернуть
  */
 export async function getWaveNextTrack(
-  currentTrackId: string,
+  currentTrackId: string | null,
   playedIds: string[] = [],
   limit = 1,
 ): Promise<WaveTrack | null> {
+  // Seed-режим: нет текущего трека — возвращаем случайный опубликованный трек
+  if (!currentTrackId) {
+    const excludeIds = playedIds.filter(Boolean);
+    const q = db
+      .select({
+        id: tracks.id,
+        title: tracks.title,
+        artistName: artistProfiles.name,
+        artistSlug: artistProfiles.slug,
+        releaseId: releases.id,
+        coverUrl: releases.coverUrl,
+        accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
+      })
+      .from(tracks)
+      .innerJoin(releases, eq(releases.id, tracks.releaseId))
+      .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+      .where(
+        and(
+          eq(tracks.status, 'READY'),
+          or(
+            eq(releases.status, 'PUBLISHED'),
+            and(eq(releases.status, 'SCHEDULED'), isNotNull(releases.releaseDate), lte(releases.releaseDate, sql`now()`)),
+          ),
+          eq(artistProfiles.isActive, true),
+          excludeIds.length > 0 ? notInArray(tracks.id, excludeIds) : undefined,
+        ),
+      )
+      .orderBy(sql`random()`)
+      .limit(1);
+
+    const rows = await q;
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return { id: r.id, title: r.title, artistName: r.artistName, artistSlug: r.artistSlug, releaseId: r.releaseId, coverUrl: r.coverUrl, accentColor: r.accentColor };
+  }
+
   // Получаем данные текущего трека
   const [currentAudio] = await db
     .select({ bpm: trackAudio.bpm, musicalKey: trackAudio.musicalKey })

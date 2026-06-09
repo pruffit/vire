@@ -9,6 +9,7 @@ import {
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { ArtistHoverChip } from '@/components/artist-hover-chip';
 import { FeaturedRelease } from '@/components/featured-release';
+import { WaveStartButton } from '@/components/wave-start-button';
 import { FadeUp, Stagger, StaggerItem, Reveal } from '@vire/ui/motion';
 
 export default async function HomePage() {
@@ -36,6 +37,9 @@ export default async function HomePage() {
           <FeaturedRelease release={featured} />
         </FadeUp>
       )}
+
+      {/* Wave — запуск потока */}
+      <WaveStartButton />
 
       {/* Активность подписок (для вошедших) */}
       {feed.length > 0 && (

@@ -3,10 +3,8 @@ import { getWaveNextTrack } from '@vire/db';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const trackId = url.searchParams.get('trackId');
+  const trackId = url.searchParams.get('trackId') ?? null; // null = seed mode
   const played = url.searchParams.get('played')?.split(',').filter(Boolean) ?? [];
-
-  if (!trackId) return NextResponse.json({ error: 'trackId required' }, { status: 400 });
 
   const next = await getWaveNextTrack(trackId, played);
   if (!next) return NextResponse.json({ track: null });
