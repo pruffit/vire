@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getArtistPlayStats } from '@vire/db';
+import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getArtistPlayStats, getArtistRelistenStats } from '@vire/db';
 import type { TrackStatus, ReleaseStatus, ReleaseType } from '@vire/core';
 import { PublishButton } from './publish-button';
 import { StatsSection } from './stats-section';
@@ -138,9 +138,10 @@ export default async function DashboardPage() {
   const artistRepo = new DrizzleArtistRepository(db);
   const artist = await artistRepo.findByUserId(session.user.id);
 
-  const [rawReleases, playStats] = await Promise.all([
+  const [rawReleases, playStats, relistenStats] = await Promise.all([
     artist ? new DrizzleReleaseRepository(db).findAllByArtist(artist.id) : Promise.resolve([]),
     artist ? getArtistPlayStats(artist.id) : Promise.resolve(null),
+    artist ? getArtistRelistenStats(artist.id) : Promise.resolve(null),
   ]);
 
   const releases: DashboardRelease[] = rawReleases.map(({ release, tracks }) => ({
@@ -198,7 +199,7 @@ export default async function DashboardPage() {
           </p>
         ) : (
           <>
-            {playStats && <StatsSection stats={playStats} />}
+            {playStats && <StatsSection stats={playStats} relisten={relistenStats} />}
 
             <section className="flex flex-col gap-4">
               <div className="flex items-center justify-between">

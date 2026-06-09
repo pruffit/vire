@@ -22,6 +22,8 @@ export { searchAll } from './queries/search';
 export type { SearchResults, SearchArtist, SearchRelease, SearchTrack } from './queries/search';
 export { getArtistPlayStats } from './queries/artist-analytics';
 export type { ArtistPlayStats, TrackPlayStat } from './queries/artist-analytics';
+export { getArtistRelistenStats } from './queries/relisten';
+export type { ArtistRelistenStats, RelistenTrack } from './queries/relisten';
 export {
   hasPurchasedTrack,
   getPendingPurchase,
