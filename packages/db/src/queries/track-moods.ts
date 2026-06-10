@@ -1,6 +1,6 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, lte, or, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { trackMoods, type moodEnum } from '../schema';
+import { trackMoods, tracks, releases, artistProfiles, type moodEnum } from '../schema';
 
 export type Mood = typeof moodEnum.enumValues[number];
 
@@ -37,6 +37,33 @@ export async function setTrackMoods(trackId: string, moods: Mood[]): Promise<voi
       await tx.insert(trackMoods).values(moods.map((mood) => ({ trackId, mood })));
     }
   });
+}
+
+export interface MoodCount {
+  mood: Mood;
+  count: number;
+}
+
+/** Счётчик публично слышимых треков по каждому тегу настроения (для секции на главной). */
+export async function getMoodCounts(): Promise<MoodCount[]> {
+  return db
+    .select({ mood: trackMoods.mood, count: sql<number>`count(*)::int` })
+    .from(trackMoods)
+    .innerJoin(tracks, eq(tracks.id, trackMoods.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(
+      and(
+        eq(tracks.status, 'READY'),
+        eq(artistProfiles.isActive, true),
+        or(
+          eq(releases.status, 'PUBLISHED'),
+          and(eq(releases.status, 'SCHEDULED'), isNotNull(releases.releaseDate), lte(releases.releaseDate, sql`now()`)),
+        ),
+      ),
+    )
+    .groupBy(trackMoods.mood)
+    .orderBy(sql`count(*) DESC`);
 }
 
 export async function getMoodsForTracks(trackIds: string[]): Promise<Record<string, Mood[]>> {

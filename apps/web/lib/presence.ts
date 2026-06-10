@@ -60,6 +60,37 @@ export async function countListening(trackId: string): Promise<number> {
   return Number(res?.[1]?.[1] ?? 0);
 }
 
+/** Все треки с активными слушателями сейчас (для секции на главной).
+ *  Перечисляет presence-ключи через SCAN — их единицы-десятки, это дёшево. */
+export async function listListening(limit = 12): Promise<Array<{ trackId: string; count: number }>> {
+  const redis = getRedis();
+  const now = Date.now();
+
+  const keys: string[] = [];
+  let cursor = '0';
+  do {
+    const [next, batch] = await redis.scan(cursor, 'MATCH', 'presence:track:*', 'COUNT', 100);
+    cursor = next;
+    keys.push(...batch);
+  } while (cursor !== '0' && keys.length < 500);
+  if (keys.length === 0) return [];
+
+  const pipeline = redis.multi();
+  for (const key of keys) {
+    pipeline.zremrangebyscore(key, 0, now - WINDOW_MS);
+    pipeline.zcard(key);
+  }
+  const res = await pipeline.exec();
+  if (!res) return [];
+
+  const out: Array<{ trackId: string; count: number }> = [];
+  for (let i = 0; i < keys.length; i++) {
+    const count = Number(res[i * 2 + 1]?.[1] ?? 0);
+    if (count > 0) out.push({ trackId: keys[i].slice('presence:track:'.length), count });
+  }
+  return out.sort((a, b) => b.count - a.count).slice(0, limit);
+}
+
 /** Суммарное число слушателей по нескольким трекам (для дашборда артиста). */
 export async function countListeningMany(trackIds: string[]): Promise<number> {
   if (trackIds.length === 0) return 0;

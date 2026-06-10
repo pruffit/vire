@@ -5,22 +5,28 @@ import {
   getUpcomingReleases,
   listActiveArtists,
   getFeed,
+  getMoodCounts,
 } from '@vire/db';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { ArtistHoverChip } from '@/components/artist-hover-chip';
 import { FeaturedRelease } from '@/components/featured-release';
 import { WaveStartButton } from '@/components/wave-start-button';
+import { ListeningNow } from '@/components/listening-now';
+import { MoodWaveChips } from '@/components/mood-wave-chips';
+import { getListeningNow } from '@/lib/listening-now';
 import { FadeUp, Stagger, StaggerItem, Reveal } from '@vire/ui/motion';
 
 export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [latest, upcoming, artists, feed] = await Promise.all([
+  const [latest, upcoming, artists, feed, listeningNow, moodCounts] = await Promise.all([
     getLatestReleases(13),
     getUpcomingReleases(8),
     listActiveArtists(),
     userId ? getFeed(userId) : Promise.resolve([]),
+    getListeningNow(6),
+    getMoodCounts().catch(() => []),
   ]);
 
   const featured = latest[0] ?? null;
@@ -40,6 +46,18 @@ export default async function HomePage() {
 
       {/* Wave — запуск потока */}
       <WaveStartButton />
+
+      {/* Live: кто что слушает прямо сейчас (исчезает, когда никого) */}
+      <ListeningNow initial={listeningNow} />
+
+      {/* Поток по настроению */}
+      {moodCounts.length > 0 && (
+        <Reveal>
+          <Section title="По настроению">
+            <MoodWaveChips moods={moodCounts} />
+          </Section>
+        </Reveal>
+      )}
 
       {/* Активность подписок (для вошедших) */}
       {feed.length > 0 && (

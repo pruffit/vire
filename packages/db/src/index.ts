@@ -12,8 +12,8 @@ export { getLikeState, getLikeCount, likeTrack, unlikeTrack } from './queries/li
 export { getFollowState, getFollowerCount, followArtist, unfollowArtist } from './queries/follows';
 export { getFeed } from './queries/feed';
 export type { FeedRelease } from './queries/feed';
-export { getLatestReleases, getUpcomingReleases, getUpcomingByArtist } from './queries/discovery';
-export type { DiscoveryRelease } from './queries/discovery';
+export { getLatestReleases, getUpcomingReleases, getUpcomingByArtist, getTracksByIds } from './queries/discovery';
+export type { DiscoveryRelease, DiscoveryTrack } from './queries/discovery';
 export { insertPlayEvent } from './queries/play-events';
 export type { InsertPlayEventData } from './queries/play-events';
 export { getLikedTracks, getFollowedArtists, getUserCreatedAt, updateUserName } from './queries/profile';
@@ -67,9 +67,9 @@ export type { UserRole } from './queries/admin-types';
 export { getFollowerEmails } from './queries/notifications';
 export type { FollowerEmail } from './queries/notifications';
 export {
-  getTrackMoods, setTrackMoods, getMoodsForTracks, ALL_MOODS, MOOD_LABELS,
+  getTrackMoods, setTrackMoods, getMoodsForTracks, getMoodCounts, ALL_MOODS, MOOD_LABELS,
 } from './queries/track-moods';
-export type { Mood } from './queries/track-moods';
+export type { Mood, MoodCount } from './queries/track-moods';
 export {
   getAggregateMoments, addFavoriteMoment, getMomentCount,
 } from './queries/favorite-moments';

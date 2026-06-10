@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, gt, isNotNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNotNull, lte, or, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { artistProfiles, releases } from '../schema';
+import { artistProfiles, releases, tracks } from '../schema';
 
 export interface DiscoveryRelease {
   id: string;
@@ -23,6 +23,45 @@ const releaseCardColumns = {
   artistSlug: artistProfiles.slug,
   artistAvatarUrl: artistProfiles.avatarUrl,
 };
+
+export interface DiscoveryTrack {
+  id: string;
+  title: string;
+  artistName: string;
+  artistSlug: string;
+  releaseId: string;
+  coverUrl: string | null;
+  accentColor: string | null;
+}
+
+/** Публично слышимые треки по списку id (для секции «Сейчас слушают»). */
+export async function getTracksByIds(ids: string[]): Promise<DiscoveryTrack[]> {
+  if (ids.length === 0) return [];
+  return db
+    .select({
+      id: tracks.id,
+      title: tracks.title,
+      artistName: artistProfiles.name,
+      artistSlug: artistProfiles.slug,
+      releaseId: releases.id,
+      coverUrl: releases.coverUrl,
+      accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
+    })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(
+      and(
+        inArray(tracks.id, ids),
+        eq(tracks.status, 'READY'),
+        eq(artistProfiles.isActive, true),
+        or(
+          eq(releases.status, 'PUBLISHED'),
+          and(eq(releases.status, 'SCHEDULED'), isNotNull(releases.releaseDate), lte(releases.releaseDate, sql`now()`)),
+        ),
+      ),
+    );
+}
 
 /** Свежие релизы по всей платформе (опубликованные / запланированные с прошедшей датой). */
 export async function getLatestReleases(limit = 12): Promise<DiscoveryRelease[]> {

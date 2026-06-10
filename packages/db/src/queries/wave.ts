@@ -1,6 +1,7 @@
 import { and, eq, ne, inArray, notInArray, sql, isNotNull, or, lte } from 'drizzle-orm';
 import { db } from '../client';
 import { trackMoods, trackAudio, tracks, releases, artistProfiles } from '../schema';
+import type { Mood } from './track-moods';
 
 export interface WaveTrack {
   id: string;
@@ -19,11 +20,13 @@ export interface WaveTrack {
  * @param currentTrackId — текущий трек; null = seed-режим (случайный стартовый трек)
  * @param playedIds — уже сыгранные в сессии (не повторяем)
  * @param limit — сколько кандидатов вернуть
+ * @param seedMood — только для seed-режима: стартовать с трека с этим тегом настроения
  */
 export async function getWaveNextTrack(
   currentTrackId: string | null,
   playedIds: string[] = [],
   limit = 1,
+  seedMood: Mood | null = null,
 ): Promise<WaveTrack | null> {
   // Seed-режим: нет текущего трека — возвращаем случайный опубликованный трек
   if (!currentTrackId) {
@@ -50,6 +53,9 @@ export async function getWaveNextTrack(
           ),
           eq(artistProfiles.isActive, true),
           excludeIds.length > 0 ? notInArray(tracks.id, excludeIds) : undefined,
+          seedMood
+            ? sql`EXISTS (SELECT 1 FROM track_moods tm WHERE tm.track_id = ${tracks.id} AND tm.mood = ${seedMood})`
+            : undefined,
         ),
       )
       .orderBy(sql`random()`)
