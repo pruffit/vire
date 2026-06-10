@@ -242,14 +242,17 @@ export async function listArtistsAdmin(opts: { search?: string; limit?: number; 
       verified: artistProfiles.verified,
       isActive: artistProfiles.isActive,
       createdAt: artistProfiles.createdAt,
-      followerCount: sql<number>`(select count(*) from follows f where f.artist_profile_id = ${artistProfiles.id})::int`,
-      releaseCount: sql<number>`(select count(*) from releases r where r.artist_profile_id = ${artistProfiles.id})::int`,
-      trackCount: sql<number>`(select count(*) from tracks t join releases r on r.id = t.release_id where r.artist_profile_id = ${artistProfiles.id})::int`,
+      // Внешняя таблица в подзапросах указана литералом: drizzle рендерит
+      // интерполированную колонку без квалификации («id»), и внутри подзапроса
+      // с другими таблицами она становится неоднозначной.
+      followerCount: sql<number>`(select count(*) from follows f where f.artist_profile_id = artist_profiles.id)::int`,
+      releaseCount: sql<number>`(select count(*) from releases r where r.artist_profile_id = artist_profiles.id)::int`,
+      trackCount: sql<number>`(select count(*) from tracks t join releases r on r.id = t.release_id where r.artist_profile_id = artist_profiles.id)::int`,
       plays30d: sql<number>`(
         select count(*) from play_events pe
         join tracks t on t.id = pe.track_id
         join releases r on r.id = t.release_id
-        where r.artist_profile_id = ${artistProfiles.id}
+        where r.artist_profile_id = artist_profiles.id
           and pe.started_at >= now() - interval '30 days'
       )::int`,
     })
@@ -492,8 +495,10 @@ export async function listTracksAdmin(opts: {
       bpm: trackAudio.bpm,
       musicalKey: trackAudio.musicalKey,
       hasHls: sql<boolean>`${trackAudio.hlsManifestKey} is not null`,
-      playsTotal: sql<number>`(select count(*) from play_events pe where pe.track_id = ${tracks.id})::int`,
-      likesCount: sql<number>`(select count(*) from likes l where l.track_id = ${tracks.id})::int`,
+      // tracks.id литералом: интерполяция в select-контексте рендерится как «id»
+      // и внутри подзапроса резолвится в id его собственной таблицы (pe.id/l.id)
+      playsTotal: sql<number>`(select count(*) from play_events pe where pe.track_id = tracks.id)::int`,
+      likesCount: sql<number>`(select count(*) from likes l where l.track_id = tracks.id)::int`,
     })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))

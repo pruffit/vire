@@ -4,6 +4,7 @@ import {
 } from '@vire/db';
 import type { AdminAttention, AdminRecentRelease, AdminStats, AdminPlatformMetrics } from '@vire/db';
 import { getAdminHealth, type AdminHealth } from '@/lib/admin-health';
+import { QueueFailedActions } from './queue-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,6 +101,35 @@ function HealthPanel({ health }: { health: AdminHealth }) {
           </tbody>
         </table>
       </div>
+
+      {/* Детали упавших задач + управление */}
+      {health.queues.filter((q) => q.failedJobs.length > 0).map((q) => (
+        <div key={q.name} className="mt-3 rounded-lg border border-red-500/25 bg-red-500/[0.06] overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-red-500/15">
+            <span className="text-sm text-red-300">
+              {q.label}: упавшие задачи
+              <span className="text-xs text-red-400/50 ml-2">
+                хранятся в Redis, при повторе нужен запущенный worker
+              </span>
+            </span>
+            <QueueFailedActions queueName={q.name} />
+          </div>
+          <div className="divide-y divide-red-500/10">
+            {q.failedJobs.map((j) => (
+              <div key={j.id} className="px-4 py-2 flex items-baseline gap-3">
+                <span className="text-xs font-mono text-white/30 shrink-0">#{j.id}</span>
+                <span className="text-xs text-white/60 flex-1 min-w-0 truncate" title={j.failedReason}>
+                  {j.failedReason}
+                </span>
+                <span className="text-[10px] font-mono text-white/25 shrink-0 tabular-nums">
+                  {j.attemptsMade} поп.
+                  {j.finishedOn ? ` · ${new Date(j.finishedOn).toLocaleDateString('ru-RU')}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </section>
   );
 }

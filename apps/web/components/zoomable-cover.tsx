@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { AnimatePresence, motion, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
@@ -60,31 +61,38 @@ export function ZoomableCover({
         </Tilt>
       </motion.button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            onClick={() => setOpen(false)}
-            className="fixed inset-0 z-[60] grid place-items-center p-6 bg-black/80 backdrop-blur-xl cursor-zoom-out"
-          >
-            <motion.div
-              layoutId={layoutId}
-              transition={spring.smooth}
-              drag
-              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-              dragElastic={0.5}
-              onDragEnd={onDragEnd}
-              onClick={(e) => e.stopPropagation()}
-              className="relative aspect-square w-full max-w-[min(88vw,88vh)] rounded-xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing"
-            >
-              <Image src={src} alt={alt} fill sizes="88vw" className="object-cover pointer-events-none" />
-            </motion.div>
-          </motion.div>
+      {/* Оверлей — порталом в body: страницы артиста оборачивают контент в
+          stacking context (relative z-10), внутри которого z-[60] не поднял бы
+          оверлей над навбаром и плеером. */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                onClick={() => setOpen(false)}
+                className="fixed inset-0 z-[70] grid place-items-center p-6 bg-black/80 backdrop-blur-xl cursor-zoom-out"
+              >
+                <motion.div
+                  layoutId={layoutId}
+                  transition={spring.smooth}
+                  drag
+                  dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                  dragElastic={0.5}
+                  onDragEnd={onDragEnd}
+                  onClick={(e) => e.stopPropagation()}
+                  className="relative aspect-square w-full max-w-[min(88vw,88vh)] rounded-xl overflow-hidden shadow-2xl cursor-grab active:cursor-grabbing"
+                >
+                  <Image src={src} alt={alt} fill sizes="88vw" className="object-cover pointer-events-none" />
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
         )}
-      </AnimatePresence>
     </>
   );
 }

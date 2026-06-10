@@ -54,7 +54,7 @@ export async function getWaveNextTrack(
           eq(artistProfiles.isActive, true),
           excludeIds.length > 0 ? notInArray(tracks.id, excludeIds) : undefined,
           seedMood
-            ? sql`EXISTS (SELECT 1 FROM track_moods tm WHERE tm.track_id = ${tracks.id} AND tm.mood = ${seedMood})`
+            ? sql`EXISTS (SELECT 1 FROM track_moods tm WHERE tm.track_id = tracks.id AND tm.mood = ${seedMood})`
             : undefined,
         ),
       )
@@ -86,7 +86,7 @@ export async function getWaveNextTrack(
     ? sql<number>`(
         SELECT COUNT(*)::float
         FROM track_moods tm2
-        WHERE tm2.track_id = ${tracks.id}
+        WHERE tm2.track_id = tracks.id
           AND tm2.mood = ANY(ARRAY[${sql.raw(moodValues.map((m) => `'${m}'`).join(','))}]::mood[])
       ) / NULLIF(${moodValues.length}, 0)`
     : sql<number>`0`;

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus } from '@vire/db';
 import type { UserRole } from '@vire/db';
+import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
 
 const ADMIN_ROLES = new Set<UserRole>(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
 
@@ -32,6 +33,24 @@ export async function actionSetArtistActive(artistProfileId: string, isActive: b
   await requireAdmin();
   await setArtistActive(artistProfileId, isActive);
   revalidatePath('/admin/artists');
+}
+
+function assertManagedQueue(name: string) {
+  if (!(MANAGED_QUEUES as readonly string[]).includes(name)) throw new Error('Unknown queue');
+}
+
+export async function actionRetryQueueFailed(queueName: string) {
+  await requireAdmin();
+  assertManagedQueue(queueName);
+  await retryFailedJobs(queueName);
+  revalidatePath('/admin');
+}
+
+export async function actionCleanQueueFailed(queueName: string) {
+  await requireAdmin();
+  assertManagedQueue(queueName);
+  await cleanFailedJobs(queueName);
+  revalidatePath('/admin');
 }
 
 export async function actionSetTrackStatus(trackId: string, status: 'READY' | 'BLOCKED' | 'PROCESSING') {
