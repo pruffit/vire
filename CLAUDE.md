@@ -154,6 +154,12 @@ pnpm dev
 pnpm --filter @vire/web dev
 ```
 
+> ⚠️ Загруженные треки висят в PROCESSING, а в админке очередь transcode копит
+> «в ожидании»? Значит не запущен **worker** (`pnpm --filter @vire/worker dev`).
+> `pnpm dev` из корня поднимает и web, и worker. Ставить трекам READY руками
+> нельзя — без прогона воркера у них нет HLS-манифеста (в админке маркер `!hls`),
+> плеер скажет «нет файлов».
+
 Переменные окружения: скопируй `.env.example` в `.env` и заполни.
 DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 
