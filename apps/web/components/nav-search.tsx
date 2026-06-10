@@ -148,9 +148,24 @@ export function NavSearch() {
         whileHover={{ scale: 1.15 }}
         whileTap={{ scale: 0.9 }}
         transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-        className="ml-1 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+        className="ml-1 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors flex items-center gap-1.5"
       >
         <SearchIcon />
+        {/* Хинт горячей клавиши — только desktop, прячется когда поле раскрыто */}
+        <AnimatePresence initial={false}>
+          {!open && (
+            <motion.kbd
+              aria-hidden="true"
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: 'auto' }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.15, ease: ease.soft }}
+              className="hidden md:inline-flex items-center justify-center h-4.5 px-1.5 rounded border border-border text-[10px] font-mono leading-none overflow-hidden select-none"
+            >
+              /
+            </motion.kbd>
+          )}
+        </AnimatePresence>
       </motion.button>
 
       <AnimatePresence>

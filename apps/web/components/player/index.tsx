@@ -7,6 +7,7 @@ import { AnimatePresence, Reorder, motion, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from './audio-engine';
+import { usePlayerHotkeys } from './use-player-hotkeys';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { TrackShare } from '@/components/track-share';
 import { formatDuration } from '@/lib/format';
@@ -17,6 +18,7 @@ export function Player() {
   useEffect(() => {
     initAudioEngine();
   }, []);
+  usePlayerHotkeys();
 
   const track = usePlayerStore((s) => s.track);
 
