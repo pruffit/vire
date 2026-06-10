@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { motion } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
@@ -50,6 +51,7 @@ export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl 
         <StaggerItem key={track.id}>
           <TrackRow
             track={track}
+            href={`/artists/${artistSlug}/releases/${releaseId}/tracks/${track.id}`}
             onPlay={() => handlePlay(track)}
           />
         </StaggerItem>
@@ -60,9 +62,11 @@ export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl 
 
 function TrackRow({
   track,
+  href,
   onPlay,
 }: {
   track: ClientTrack;
+  href: string;
   onPlay: () => void;
 }) {
   const ready = track.status === 'READY';
@@ -138,8 +142,26 @@ function TrackRow({
             <PlayerLikeButton trackId={track.id} size="sm" />
           </span>
         )}
+        {/* Переход на страницу трека: клик по строке играет, стрелка — открывает.
+            На тач-устройствах ховера нет, поэтому стрелка видна всегда. */}
+        <Link
+          href={href}
+          aria-label={`Страница трека «${track.title}»`}
+          onClick={(e) => e.stopPropagation()}
+          className="p-1 -m-1 opacity-40 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+        >
+          <ArrowIcon />
+        </Link>
       </div>
     </motion.div>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 18l6-6-6-6" />
+    </svg>
   );
 }
 

@@ -66,22 +66,23 @@ export function Player() {
   );
 }
 
-/** Имя артиста → страница артиста, название → страница релиза. Если слаг/releaseId
+/** Имя артиста → страница артиста, название → страница трека. Если слаг/releaseId
  *  не известны источнику, показываем простой текст без ссылки. */
-function ArtistLink({ track, className }: { track: PlayerTrack; className?: string }) {
+function ArtistLink({ track, className, onClick }: { track: PlayerTrack; className?: string; onClick?: () => void }) {
   if (!track.artistSlug) return <span className={className}>{track.artistName}</span>;
   return (
-    <Link href={`/artists/${track.artistSlug}`} className={`${className ?? ''} hover:underline`}>
+    <Link href={`/artists/${track.artistSlug}`} onClick={onClick} className={`${className ?? ''} hover:underline`}>
       {track.artistName}
     </Link>
   );
 }
 
-function TitleLink({ track, className }: { track: PlayerTrack; className?: string }) {
+function TitleLink({ track, className, onClick }: { track: PlayerTrack; className?: string; onClick?: () => void }) {
   if (!track.artistSlug || !track.releaseId) return <span className={className}>{track.title}</span>;
   return (
     <Link
-      href={`/artists/${track.artistSlug}/releases/${track.releaseId}`}
+      href={`/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`}
+      onClick={onClick}
       className={`${className ?? ''} hover:underline`}
     >
       {track.title}
@@ -188,8 +189,8 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
         {/* Название + артист + лайк */}
         <div className="flex items-center gap-3 min-w-0 w-full">
           <div className="flex-1 min-w-0 text-center">
-            <TitleLink track={track} className="text-xl font-semibold truncate block" />
-            <ArtistLink track={track} className="text-sm text-muted-foreground truncate block mt-1" />
+            <TitleLink track={track} onClick={onClose} className="text-xl font-semibold truncate block" />
+            <ArtistLink track={track} onClick={onClose} className="text-sm text-muted-foreground truncate block mt-1" />
           </div>
           <div className="shrink-0">
             <PlayerLikeButton trackId={track.id} size="md" />
