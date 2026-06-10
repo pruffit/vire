@@ -12,6 +12,9 @@ export interface YTPlayer {
   unMute(): void;
   isMuted(): boolean;
   getPlayerState(): number;
+  setPlaybackRate(rate: number): void;
+  getPlaybackRate(): number;
+  getAvailablePlaybackRates(): number[];
   destroy(): void;
 }
 
