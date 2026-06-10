@@ -9,6 +9,8 @@ import { ReleaseShareButton } from '@/components/release-share-button';
 import { TrackList, type ClientTrack } from './track-list';
 import type { PlayerTrack } from '@/store/player';
 import { JsonLd } from '@/components/json-ld';
+import { GrainOverlay } from '@/components/grain-overlay';
+import { AmbientBackdrop } from '@/components/ambient-backdrop';
 import { musicAlbumJsonLd } from '@/lib/structured-data';
 import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
@@ -72,7 +74,7 @@ export default async function ReleasePage({ params }: Props) {
   return (
     <div
       style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
-      className="min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans"
+      className="relative min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans overflow-hidden"
     >
       <JsonLd
         data={musicAlbumJsonLd(
@@ -81,25 +83,12 @@ export default async function ReleasePage({ params }: Props) {
           clientTracks.map((t) => ({ id: t.id, title: t.title, trackNumber: t.trackNumber, durationSec: t.durationSec })),
         )}
       />
+      {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
       {grain && <GrainOverlay />}
 
       {/* Hero */}
-      <div className="relative overflow-hidden">
-        {release.coverUrl && (
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 scale-110"
-            style={{
-              backgroundImage: `url(${release.coverUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: 'blur(48px) saturate(1.4)',
-              opacity: 0.25,
-            }}
-          />
-        )}
-
-        <div className="relative mx-auto max-w-4xl px-6 pt-10 pb-12">
+      <div className="relative z-10">
+        <div className="mx-auto max-w-4xl px-6 pt-10 pb-12">
           <Link
             href={`/artists/${slug}`}
             className="inline-flex items-center gap-1.5 text-xs font-mono opacity-40 hover:opacity-70 transition-opacity mb-10"
@@ -124,10 +113,11 @@ export default async function ReleasePage({ params }: Props) {
             </div>
 
             <div className="space-y-4 pt-1 flex flex-col">
-              <p className="text-xs font-mono opacity-40 uppercase tracking-widest">
-                {release.type}{year ? ` · ${year}` : ''}
+              <p className="text-xs font-mono opacity-50 uppercase tracking-widest">
+                <span style={{ color: 'var(--artist-accent)' }}>{release.type}</span>
+                {year ? <span className="opacity-60"> · {year}</span> : null}
               </p>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight text-balance">
+              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance">
                 {release.title}
               </h1>
               {release.description && (
@@ -135,7 +125,7 @@ export default async function ReleasePage({ params }: Props) {
                   {release.description}
                 </p>
               )}
-              <p className="text-xs font-mono opacity-30">
+              <p className="text-xs font-mono opacity-40 tabular-nums">
                 {tracks.length} {pluralTracks(tracks.length)}
                 {totalDuration(tracks) && ` · ${totalDuration(tracks)}`}
               </p>
@@ -149,7 +139,7 @@ export default async function ReleasePage({ params }: Props) {
       </div>
 
       {/* Tracks + liner notes */}
-      <div className="mx-auto max-w-4xl px-6 pb-32 space-y-12">
+      <div className="relative z-10 mx-auto max-w-4xl px-6 pb-32 space-y-12">
         <TrackList
           tracks={clientTracks}
           artistName={artist.name}
@@ -168,22 +158,6 @@ export default async function ReleasePage({ params }: Props) {
         )}
       </div>
     </div>
-  );
-}
-
-function GrainOverlay() {
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-50 will-change-transform"
-      style={{
-        opacity: 0.035,
-        backgroundImage:
-          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-        backgroundRepeat: 'repeat',
-        backgroundSize: '256px 256px',
-      }}
-    />
   );
 }
 
