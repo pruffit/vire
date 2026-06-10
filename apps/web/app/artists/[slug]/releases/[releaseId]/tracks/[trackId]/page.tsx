@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import {
   db, DrizzleArtistRepository, DrizzleReleaseRepository,
-  getTrackAudio, getLikeState, getLikeCount, hasPurchasedTrack, getPendingPurchase,
+  getTrackAudio, getLikeState, getLikeCount,
   getTrackMoods, getAggregateMoments,
 } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
@@ -11,7 +11,6 @@ import { auth } from '@/auth';
 import { ZoomableCover } from '@/components/zoomable-cover';
 import { LikeButton } from './like-button';
 import { TrackWaveformPlayer } from './waveform-player';
-import { DownloadButton } from './download-button';
 import { MoodBadges } from '@/components/mood-badges';
 import { AddToPlaylistButton } from '@/components/add-to-playlist-button';
 import { JsonLd } from '@/components/json-ld';
@@ -87,12 +86,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
   ]);
 
   const userId = session?.user?.id;
-  const [liked, owned, pendingPurchase] = await Promise.all([
-    userId ? getLikeState(userId, trackId) : Promise.resolve(false),
-    userId && track.status === 'READY' ? hasPurchasedTrack(userId, trackId) : Promise.resolve(false),
-    userId && track.status === 'READY' ? getPendingPurchase(userId, trackId) : Promise.resolve(null),
-  ]);
-  const pending = !owned && pendingPurchase !== null;
+  const liked = userId ? await getLikeState(userId, trackId) : false;
 
   const queue = tracks
     .filter((t) => t.status === 'READY')
@@ -169,14 +163,6 @@ export default async function TrackPage({ params, searchParams }: Props) {
                     </span>
                   )
               }
-              {session?.user && track.status === 'READY' && (
-                <DownloadButton
-                  trackId={trackId}
-                  trackTitle={`${track.title} - ${artist.name}`}
-                  initialOwned={owned}
-                  initialPending={pending}
-                />
-              )}
               {session?.user && (
                 <AddToPlaylistButton trackId={trackId} variant="artist" />
               )}

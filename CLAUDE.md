@@ -191,7 +191,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] `/` — главная (контент-хаб + кнопка запуска потока), `/artists` — каталог + поиск, `/search` — поиск SSR
 - [x] `/artists/[slug]` — профиль: full-bleed hero, темизация, grain, ссылки, видео, follow, анонсы
 - [x] `/artists/[slug]/releases/[releaseId]` — релиз, трек-лист, liner notes, credits
-- [x] `.../tracks/[trackId]` — waveform-плеер, BPM/key, like, покупка/скачивание, live-счётчик
+- [x] `.../tracks/[trackId]` — waveform-плеер, BPM/key, like, live-счётчик
 - [x] `/feed` — лента подписок, `/profile` — карточка профиля, лайки, подписки, покупки
 - [x] Глобальный плеер — Zustand + HLS.js + SVG waveform scrubber, wave-режим
 
@@ -228,9 +228,12 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   дефолт), `prefers-reduced-motion` глушит анимации; entrance-анимация `animate-fade-up`
 - Базовый URL — `NEXT_PUBLIC_SITE_URL` → `AUTH_URL` → localhost (`lib/site.ts`)
 
-### Этап 2 (прямые продажи) — частично
+### Этап 2 (прямые продажи) — частично, UI скрыт с витрины
+**Покупок в Этапе 1 нет:** весь purchase-UI отвязан от публичных страниц до старта Этапа 2.
+Бэкенд-код сохранён: API-роуты (purchase/download/webhook), `download-button.tsx` и
+`purchased-track-row.tsx` лежат неподключёнными — вернуть при старте Этапа 2.
 - [x] Покупка трека: `POST /api/v1/tracks/[id]/purchase` → YooKassa redirect → webhook → PAID
-- [x] Скачивание FLAC по presigned S3 URL; список покупок в `/profile`
+- [x] Скачивание FLAC по presigned S3 URL
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
 ### Тесты (apps/web — 125, гонять `pnpm --filter @vire/web test`)
