@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { toast } from '@/components/toast';
 
 interface PlaylistItem {
   id: string;
@@ -46,19 +47,35 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
     return () => document.removeEventListener('mousedown', onOutside);
   }, [open]);
 
-  function togglePlaylist(playlistId: string) {
-    const inIt = inPlaylists.has(playlistId);
+  function togglePlaylist(playlistId: string, title: string) {
+    const adding = !inPlaylists.has(playlistId);
+
+    // Оптимистично: галочка меняется сразу, при ошибке откатываем
+    setInPlaylists((prev) => {
+      const next = new Set(prev);
+      if (adding) next.add(playlistId); else next.delete(playlistId);
+      return next;
+    });
+
     startTransition(async () => {
-      if (inIt) {
-        await fetch(`/api/v1/playlists/${playlistId}/tracks/${trackId}`, { method: 'DELETE' });
-        setInPlaylists((prev) => { const next = new Set(prev); next.delete(playlistId); return next; });
-      } else {
-        await fetch(`/api/v1/playlists/${playlistId}/tracks`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trackId }),
+      const res = await (adding
+        ? fetch(`/api/v1/playlists/${playlistId}/tracks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trackId }),
+          })
+        : fetch(`/api/v1/playlists/${playlistId}/tracks/${trackId}`, { method: 'DELETE' })
+      ).catch(() => null);
+
+      if (!res?.ok) {
+        setInPlaylists((prev) => {
+          const next = new Set(prev);
+          if (adding) next.delete(playlistId); else next.add(playlistId);
+          return next;
         });
-        setInPlaylists((prev) => new Set([...prev, playlistId]));
+        toast.error(adding ? 'Не удалось добавить в плейлист' : 'Не удалось убрать из плейлиста');
+      } else if (adding) {
+        toast(`Добавлено в «${title}»`);
       }
     });
   }
@@ -66,26 +83,35 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
   function handleCreate() {
     if (!newTitle.trim()) return;
     startTransition(async () => {
+      const title = newTitle.trim();
       const res = await fetch('/api/v1/playlists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTitle.trim() }),
-      });
-      const data = await res.json();
-      if (data.id) {
-        const newPl: PlaylistItem = { id: data.id, title: newTitle.trim(), trackCount: 0 };
-        setPlaylists((prev) => [newPl, ...prev]);
-
-        // Сразу добавляем трек в новый плейлист
-        await fetch(`/api/v1/playlists/${data.id}/tracks`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trackId }),
-        });
-        setInPlaylists((prev) => new Set([...prev, data.id]));
-        setNewTitle('');
-        setCreating(false);
+        body: JSON.stringify({ title }),
+      }).catch(() => null);
+      const data = res?.ok ? await res.json() : null;
+      if (!data?.id) {
+        toast.error('Не удалось создать плейлист');
+        return;
       }
+
+      const newPl: PlaylistItem = { id: data.id, title, trackCount: 0 };
+      setPlaylists((prev) => [newPl, ...prev]);
+
+      // Сразу добавляем трек в новый плейлист
+      const added = await fetch(`/api/v1/playlists/${data.id}/tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackId }),
+      }).catch(() => null);
+      if (added?.ok) {
+        setInPlaylists((prev) => new Set([...prev, data.id]));
+        toast(`Добавлено в «${title}»`);
+      } else {
+        toast.error('Плейлист создан, но трек добавить не удалось');
+      }
+      setNewTitle('');
+      setCreating(false);
     });
   }
 
@@ -136,7 +162,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
                 return (
                   <button
                     key={p.id}
-                    onClick={() => togglePlaylist(p.id)}
+                    onClick={() => togglePlaylist(p.id, p.title)}
                     disabled={isPending}
                     className={cn(
                       'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors',

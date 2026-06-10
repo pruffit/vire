@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { MotionProvider } from '@vire/ui/motion';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
 import { CommandPalette } from '@/components/command-palette';
+import { Toaster } from '@/components/toast';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { Nav } from '@/components/nav';
 import { fontVariables } from '@/lib/fonts';
@@ -76,6 +77,7 @@ export default function RootLayout({
           <PlayerWrapper />
           <CommandPalette />
           <KeyboardShortcuts />
+          <Toaster />
         </MotionProvider>
       </body>
     </html>

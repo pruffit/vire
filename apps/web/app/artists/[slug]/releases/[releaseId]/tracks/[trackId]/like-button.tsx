@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { toast } from '@/components/toast';
 
 interface Props {
   trackId: string;
@@ -23,10 +24,11 @@ export function LikeButton({ trackId, initialLiked, initialCount }: Props) {
     startTransition(async () => {
       const res = await fetch(`/api/v1/tracks/${trackId}/like`, {
         method: next ? 'POST' : 'DELETE',
-      });
-      if (!res.ok) {
+      }).catch(() => null);
+      if (!res?.ok) {
         setLiked(!next);
         setCount((c) => c + (next ? -1 : 1));
+        toast.error('Не удалось сохранить лайк');
       }
     });
   }

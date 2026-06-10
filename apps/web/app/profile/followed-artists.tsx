@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import type { FollowedArtist } from '@vire/db';
+import { toast } from '@/components/toast';
 
 /**
  * Список подписок с оптимистичной отпиской: карточка исчезает мгновенно (с exit-
@@ -24,6 +25,7 @@ export function FollowedArtists({ initial }: { initial: FollowedArtist[] }) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       setArtists(prev); // откат
+      toast.error('Не удалось отписаться');
     } finally {
       setPending((p) => { const n = new Set(p); n.delete(slug); return n; });
     }

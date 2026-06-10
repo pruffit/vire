@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { useLikesStore } from '@/store/likes';
+import { toast } from '@/components/toast';
 
 export function PlayerLikeButton({
   trackId,
@@ -23,8 +24,13 @@ export function PlayerLikeButton({
     const next = !liked;
     update(trackId, next);
     fetch(`/api/v1/tracks/${trackId}/like`, { method: next ? 'POST' : 'DELETE' })
-      .then((r) => { if (!r.ok) update(trackId, !next); })
-      .catch(() => update(trackId, !next));
+      .then((r) => { if (!r.ok) rollback(); })
+      .catch(rollback);
+
+    function rollback() {
+      update(trackId, !next);
+      toast.error('Не удалось сохранить лайк');
+    }
   }
 
   if (liked === null) return null;

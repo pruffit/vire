@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { formatCount } from '@/lib/format';
+import { toast } from '@/components/toast';
 
 interface Props {
   slug: string;
@@ -24,11 +25,12 @@ export function FollowButton({ slug, initialFollowing, initialCount }: Props) {
     startTransition(async () => {
       const res = await fetch(`/api/v1/artists/${slug}/follow`, {
         method: next ? 'POST' : 'DELETE',
-      });
-      if (!res.ok) {
+      }).catch(() => null);
+      if (!res?.ok) {
         // rollback on error
         setFollowing(!next);
         setCount((c) => c + (next ? -1 : 1));
+        toast.error('Не удалось обновить подписку');
       }
     });
   }
