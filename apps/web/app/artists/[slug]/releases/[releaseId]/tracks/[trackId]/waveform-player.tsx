@@ -9,7 +9,7 @@ import { formatDuration } from '@/lib/format';
 import type { MomentBucket } from '@vire/db';
 
 const BAR_COUNT = 120;
-const SVG_H = 80;
+const SVG_H = 100;
 const BAR_W = 2;
 const BAR_GAP = 1;
 const SVG_W = BAR_COUNT * (BAR_W + BAR_GAP);
@@ -101,7 +101,7 @@ export function TrackWaveformPlayer({
           aria-valuenow={isThisTrack ? Math.round(currentTime) : undefined}
           aria-valuemin={isThisTrack ? 0 : undefined}
           aria-valuemax={isThisTrack ? Math.round(duration) : undefined}
-          className="w-full h-20 cursor-pointer"
+          className="w-full h-24 sm:h-28 cursor-pointer"
         >
           {bars.map((peak, i) => {
             const h = Math.max(2, peak * (SVG_H - 8));
@@ -163,11 +163,15 @@ export function TrackWaveformPlayer({
           onClick={handlePlayPause}
           disabled={isThisTrack && isLoading}
           aria-label={isThisTrack && isPlaying ? 'Пауза' : 'Играть'}
-          className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity disabled:opacity-40 shrink-0"
-          style={{ background: 'var(--artist-accent)', color: 'var(--artist-bg, #0d0d0d)' }}
+          className="w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 disabled:opacity-40 shrink-0"
+          style={{
+            background: 'var(--artist-accent)',
+            color: 'var(--artist-bg, #0d0d0d)',
+            boxShadow: '0 0 28px 2px color-mix(in oklch, var(--artist-accent) 30%, transparent)',
+          }}
         >
           {isThisTrack && isLoading ? (
-            <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
           ) : isThisTrack && isPlaying ? (
             <PauseIcon />
           ) : (
@@ -229,7 +233,7 @@ function buildBars(peaks: number[] | null): number[] {
 
 function PlayIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="translate-x-[1px]">
       <path d="M8 5v14l11-7z" />
     </svg>
   );
@@ -237,7 +241,7 @@ function PlayIcon() {
 
 function PauseIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
       <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
     </svg>
   );
