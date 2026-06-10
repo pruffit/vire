@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { toast } from '@/components/toast';
 
 export interface ClientPost {
   id: string;
@@ -29,8 +30,11 @@ export function PostsManager({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, body }),
-    });
-    if (!res.ok) return false;
+    }).catch(() => null);
+    if (!res?.ok) {
+      toast.error('Не удалось опубликовать пост');
+      return false;
+    }
     const { post } = (await res.json()) as { post: ClientPost & { createdAt: string } };
     setPosts((prev) => [post, ...prev]);
     return true;
@@ -44,15 +48,21 @@ export function PostsManager({
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, body }),
-    });
-    if (!res.ok) setPosts(prev); // откат
+    }).catch(() => null);
+    if (!res?.ok) {
+      setPosts(prev); // откат
+      toast.error('Не удалось сохранить пост');
+    }
   }
 
   async function remove(id: string) {
     const prev = posts;
     setPosts((p) => p.filter((x) => x.id !== id));
-    const res = await fetch(`/api/v1/dashboard/posts/${id}`, { method: 'DELETE' });
-    if (!res.ok) setPosts(prev); // откат
+    const res = await fetch(`/api/v1/dashboard/posts/${id}`, { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) {
+      setPosts(prev); // откат
+      toast.error('Не удалось удалить пост');
+    }
   }
 
   return (

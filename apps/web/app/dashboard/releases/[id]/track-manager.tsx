@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { toast } from '@/components/toast';
 
 export interface ManagedTrack {
   id: string;
@@ -16,8 +17,8 @@ async function patchTrack(id: string, patch: Record<string, unknown>): Promise<b
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),
-  });
-  return res.ok;
+  }).catch(() => null);
+  return res?.ok ?? false;
 }
 
 /**
@@ -52,16 +53,23 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     markBusy(id, true);
     const ok = await patchTrack(id, { title });
     markBusy(id, false);
-    if (ok) savedTitles.current.set(id, title);
-    else setTitle(id, savedTitles.current.get(id) ?? ''); // откат
+    if (ok) {
+      savedTitles.current.set(id, title);
+    } else {
+      setTitle(id, savedTitles.current.get(id) ?? ''); // откат
+      toast.error('Не удалось переименовать трек');
+    }
   }
 
   async function remove(id: string) {
     if (!confirm('Удалить трек? Это действие необратимо.')) return;
     const prev = tracks;
     setTracks((ts) => ts.filter((t) => t.id !== id));
-    const res = await fetch(`/api/v1/dashboard/tracks/${id}`, { method: 'DELETE' });
-    if (!res.ok) setTracks(prev); // откат
+    const res = await fetch(`/api/v1/dashboard/tracks/${id}`, { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) {
+      setTracks(prev); // откат
+      toast.error('Не удалось удалить трек');
+    }
   }
 
   async function move(id: string, dir: -1 | 1) {
@@ -84,7 +92,10 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
       patchTrack(b.id, { trackNumber: b.trackNumber }),
     ]);
     markBusy(a.id, false); markBusy(b.id, false);
-    if (!okA || !okB) setTracks(prev); // откат
+    if (!okA || !okB) {
+      setTracks(prev); // откат
+      toast.error('Не удалось изменить порядок треков');
+    }
   }
 
   if (tracks.length === 0) {
