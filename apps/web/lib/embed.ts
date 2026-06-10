@@ -40,8 +40,9 @@ export function parseEmbed(url: string): EmbedInfo | null {
       };
     }
 
-    // VK
-    if (u.hostname === 'vk.com' || u.hostname === 'www.vk.com') {
+    // VK (vk.com и новый домен vkvideo.ru)
+    const vkHosts = ['vk.com', 'www.vk.com', 'vkvideo.ru', 'www.vkvideo.ru', 'm.vk.com'];
+    if (vkHosts.includes(u.hostname)) {
       let m = u.pathname.match(/^\/video(-?\d+)_(\d+)/);
       if (!m) {
         const z = u.searchParams.get('z');

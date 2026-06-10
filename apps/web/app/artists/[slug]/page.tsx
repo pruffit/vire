@@ -18,6 +18,7 @@ import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
 import { parseEmbed, type EmbedInfo } from '@/lib/embed';
+import { fetchVkPoster } from '@/lib/vk-api';
 import { VideoPlayer } from '@/components/video-player';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { CountdownBadge } from '@/components/countdown-badge';
@@ -373,10 +374,19 @@ function postDate(d: Date): string {
 
 // ─── Videos ────────────────────────────────────────────────────────────────
 
-function VideosSection({ videos }: { videos: ArtistVideo[] }) {
-  const embeds = videos
+async function VideosSection({ videos }: { videos: ArtistVideo[] }) {
+  const parsed = videos
     .map((v) => ({ title: v.title, embed: parseEmbed(v.url) }))
     .filter((v): v is { title: string; embed: EmbedInfo } => v.embed !== null);
+
+  // У VK постер не выводится из ссылки — подтягиваем через video.get (server-only)
+  const embeds = await Promise.all(
+    parsed.map(async (v) =>
+      v.embed.platform === 'vk' && !v.embed.thumbnailUrl
+        ? { ...v, embed: { ...v.embed, thumbnailUrl: await fetchVkPoster(v.embed.id) } }
+        : v,
+    ),
+  );
 
   if (embeds.length === 0) return null;
 

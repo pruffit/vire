@@ -57,6 +57,16 @@ describe('getEmbedUrl — VK', () => {
       .toBe('https://vk.com/video_ext.php?oid=-12345&id=67890&hd=2');
   });
 
+  it('parses vkvideo.ru links (новый домен VK Видео)', () => {
+    expect(getEmbedUrl('https://vkvideo.ru/video-12345_67890'))
+      .toBe('https://vk.com/video_ext.php?oid=-12345&id=67890&hd=2');
+  });
+
+  it('parses www.vkvideo.ru links', () => {
+    expect(getEmbedUrl('https://www.vkvideo.ru/video12345_67890'))
+      .toBe('https://vk.com/video_ext.php?oid=12345&id=67890&hd=2');
+  });
+
   it('returns null for vk.com with unrecognized path', () => {
     expect(getEmbedUrl('https://vk.com/wall-12345_67890')).toBeNull();
   });

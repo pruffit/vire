@@ -5,13 +5,14 @@ import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { activeEmbedUrl, type EmbedInfo } from '@/lib/embed';
 import { loadYouTubeApi, YT_STATE, type YTPlayer } from '@/lib/youtube-api';
+import { loadVkPlayerApi, type VkPlayerInstance } from '@/lib/vk-player-api';
 import { formatDuration } from '@/lib/format';
 
 /**
- * Видео-плеер под стиль сайта. Для YouTube — полностью свои контролы через
- * IFrame Player API (нативные скрыты: play/pause, перемотка, громкость,
- * фуллскрин). Для VK — фасад с нативным плеером (полное кастом-управление VK
- * требует app-credentials, пока отдаём нативные контролы).
+ * Видео-плеер под стиль сайта: полностью свои контролы (play/pause, перемотка,
+ * громкость, фуллскрин) поверх скрытых нативных. YouTube — IFrame Player API,
+ * VK — Video Player API (js_api=1 + videoplayer.js); если их скрипт не
+ * загрузился, VK деградирует до нативных контролов.
  */
 export function VideoPlayer({ embed, title }: { embed: EmbedInfo; title?: string }) {
   if (embed.platform === 'youtube') return <YouTubePlayer videoId={embed.id} title={title} />;
@@ -154,7 +155,7 @@ function YouTubePlayer({ videoId, title }: { videoId: string; title?: string }) 
       className="relative w-full aspect-video rounded-md overflow-hidden bg-black ring-1 ring-white/10 select-none group [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:w-full [&_iframe]:h-full [&_iframe]:z-0 [&_iframe]:pointer-events-none"
     >
       {!started ? (
-        <Facade videoId={videoId} title={title} onPlay={() => setStarted(true)} />
+        <Facade posterUrl={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`} title={title} onPlay={() => setStarted(true)} />
       ) : (
         <>
           {/* Слой клика по видео — тоггл play/pause */}
@@ -267,7 +268,7 @@ function ControlsBar({
   );
 }
 
-function Facade({ videoId, title, onPlay }: { videoId: string; title?: string; onPlay: () => void }) {
+function Facade({ posterUrl, title, onPlay }: { posterUrl: string | null; title?: string; onPlay: () => void }) {
   return (
     <motion.button
       type="button"
@@ -277,13 +278,21 @@ function Facade({ videoId, title, onPlay }: { videoId: string; title?: string; o
       aria-label={`Смотреть${title ? `: ${title}` : ' видео'}`}
       className="absolute inset-0 w-full h-full group/f"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-        alt=""
-        loading="lazy"
-        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-soft group-hover/f:scale-105"
-      />
+      {posterUrl ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={posterUrl}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-soft group-hover/f:scale-105"
+        />
+      ) : (
+        <span className="absolute inset-0 grid place-items-center text-white/15">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+          </svg>
+        </span>
+      )}
       <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
       <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-16 h-16 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/40 text-white transition-transform duration-300 ease-soft group-hover/f:scale-110">
         <PlayIcon size={26} />
@@ -293,35 +302,173 @@ function Facade({ videoId, title, onPlay }: { videoId: string; title?: string; o
 }
 
 function VkPlayer({ embed, title }: { embed: EmbedInfo; title?: string }) {
-  const [active, setActive] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [apiFailed, setApiFailed] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [ended, setEnded] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(100); // UI: 0..100, VK API: 0..1
+  const [controlsShown, setControlsShown] = useState(true);
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playerRef = useRef<VkPlayerInstance | null>(null);
+  const hideRef = useRef<number | null>(null);
+  const savedVolRef = useRef(100);
+
+  // Подключаем Video Player API к iframe и опрашиваем состояние.
+  // События VK не всегда стабильны, поэтому источник правды — поллинг getState().
+  useEffect(() => {
+    if (!started) return;
+    let destroyed = false;
+    let poll: number | null = null;
+
+    loadVkPlayerApi()
+      .then((VideoPlayer) => {
+        if (destroyed || !iframeRef.current) return;
+        const p = VideoPlayer(iframeRef.current);
+        playerRef.current = p;
+
+        poll = window.setInterval(() => {
+          const player = playerRef.current;
+          if (!player) return;
+          try {
+            const state = player.getState();
+            if (state && state !== 'uninited') setReady(true);
+            setPlaying(state === 'playing');
+            if (state === 'ended') setEnded(true);
+            else if (state === 'playing') setEnded(false);
+            setCurrent(player.getCurrentTime() || 0);
+            const d = player.getDuration();
+            if (d) setDuration((prev) => (d !== prev ? d : prev));
+            const v = player.getVolume();
+            if (typeof v === 'number' && !Number.isNaN(v)) setVolume(Math.round(v * 100));
+          } catch {
+            // iframe мог перезагрузиться — пропускаем тик
+          }
+        }, 300);
+      })
+      .catch(() => {
+        // Скрипт VK не загрузился — отдаём нативные контролы
+        if (!destroyed) setApiFailed(true);
+      });
+
+    return () => {
+      destroyed = true;
+      if (poll) clearInterval(poll);
+      try { playerRef.current?.destroy(); } catch { /* noop */ }
+      playerRef.current = null;
+    };
+  }, [started]);
+
+  const togglePlay = useCallback(() => {
+    const p = playerRef.current;
+    if (!p) return;
+    if (ended) { p.seek(0); p.play(); setEnded(false); return; }
+    if (playing) p.pause(); else p.play();
+  }, [playing, ended]);
+
+  const onSeek = useCallback((t: number) => {
+    playerRef.current?.seek(t);
+    setCurrent(t);
+  }, []);
+
+  const onVolume = useCallback((v: number) => {
+    playerRef.current?.setVolume(v / 100);
+    setVolume(v);
+    if (v > 0) savedVolRef.current = v;
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    if (volume === 0) onVolume(savedVolRef.current || 100);
+    else { savedVolRef.current = volume; onVolume(0); }
+  }, [volume, onVolume]);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen();
+    else el.requestFullscreen?.();
+  }, []);
+
+  useEffect(() => {
+    if (!playing && hideRef.current) { clearTimeout(hideRef.current); hideRef.current = null; }
+    return () => { if (hideRef.current) clearTimeout(hideRef.current); };
+  }, [playing]);
+
+  function handleActivity() {
+    setControlsShown(true);
+    if (hideRef.current) clearTimeout(hideRef.current);
+    if (playing) hideRef.current = window.setTimeout(() => setControlsShown(false), 2600);
+  }
+
+  const customControls = started && !apiFailed;
+
   return (
-    <div className="relative w-full aspect-video rounded-md overflow-hidden bg-white/5 ring-1 ring-white/10 group">
-      {active ? (
-        <iframe
-          src={activeEmbedUrl(embed)}
-          title={title || 'Видео'}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          className="absolute inset-0 w-full h-full"
-        />
+    <div
+      ref={wrapperRef}
+      onPointerMove={customControls ? handleActivity : undefined}
+      onPointerLeave={customControls ? () => { if (playing) setControlsShown(false); } : undefined}
+      className={`relative w-full aspect-video rounded-md overflow-hidden bg-black ring-1 ring-white/10 select-none group ${
+        customControls ? '[&_iframe]:pointer-events-none' : ''
+      }`}
+    >
+      {!started ? (
+        <Facade posterUrl={embed.thumbnailUrl} title={title} onPlay={() => setStarted(true)} />
       ) : (
-        <motion.button
-          type="button"
-          onClick={() => setActive(true)}
-          whileTap={{ scale: 0.99 }}
-          transition={spring.snappy}
-          aria-label={`Смотреть${title ? `: ${title}` : ' видео'}`}
-          className="absolute inset-0 w-full h-full grid place-items-center"
-        >
-          <span className="absolute inset-0 grid place-items-center text-white/15">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-            </svg>
-          </span>
-          <span className="relative grid place-items-center w-16 h-16 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/30 text-white transition-transform group-hover:scale-110">
-            <PlayIcon size={26} />
-          </span>
-        </motion.button>
+        <>
+          <iframe
+            ref={iframeRef}
+            src={`${activeEmbedUrl(embed)}&js_api=1`}
+            title={title || 'Видео'}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full z-0"
+          />
+
+          {customControls && (
+            <>
+              {/* Слой клика по видео — тоггл play/pause */}
+              <button
+                type="button"
+                onClick={togglePlay}
+                aria-label={playing ? 'Пауза' : 'Воспроизвести'}
+                className="absolute inset-0 z-[1] cursor-pointer"
+              />
+
+              {!ready && (
+                <span className="absolute left-1/2 top-1/2 z-[2] -translate-x-1/2 -translate-y-1/2 w-9 h-9 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
+              )}
+
+              {ready && !playing && (
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  aria-label="Воспроизвести"
+                  className="absolute left-1/2 top-1/2 z-[2] -translate-x-1/2 -translate-y-1/2 grid place-items-center w-16 h-16 rounded-full bg-black/50 backdrop-blur-md ring-1 ring-white/30 text-white transition-transform hover:scale-105"
+                >
+                  {ended ? <ReplayIcon /> : <PlayIcon size={26} />}
+                </button>
+              )}
+
+              <ControlsBar
+                shown={controlsShown || !playing}
+                playing={playing}
+                current={current}
+                duration={duration}
+                volume={volume}
+                muted={volume === 0}
+                onTogglePlay={togglePlay}
+                onSeek={onSeek}
+                onVolume={onVolume}
+                onToggleMute={toggleMute}
+                onFullscreen={toggleFullscreen}
+              />
+            </>
+          )}
+        </>
       )}
     </div>
   );

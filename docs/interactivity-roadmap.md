@@ -50,10 +50,13 @@
   автоскрытие контролов, центральная play/replay. Нативные контролы YouTube
   скрыты (`controls=0`). `lib/youtube-api.ts` (загрузчик+типы),
   `components/video-player.tsx` (старый `video-embed.tsx` удалён).
-- [ ] **5.3 VK — кастомные контролы (отложено).** По решению Danya сейчас не делаем.
-  Требует VK Open API + app-credentials VK и проверки на реальном видео. Пока VK
-  после фасада отдаёт нативный плеер (`VkPlayer` в `components/video-player.tsx`).
-  Вернуться, когда появятся credentials. Danya проверит YouTube-плеер позже.
+- [x] **5.3 VK — кастомные контролы.** Сервисный ключ VK получен (`VK_SERVICE_TOKEN`
+  в `apps/web/.env.local`). Сделано: постер фасада через `video.get`
+  (`lib/vk-api.ts`, server-only, revalidate 1ч), управление плеером через
+  VK Video Player API (`lib/vk-player-api.ts`: js_api=1 + videoplayer.js,
+  поллинг getState как источник правды), общий `ControlsBar` с YouTube.
+  Если скрипт VK не загрузился — деградация до нативных контролов.
+  Парсер понимает новый домен vkvideo.ru. Проверено на живом видео.
 
 ## Этап 6 — Дашборд: редактирование релиза и треков
 - [x] **6.1** Поля релиза уже редактируются (`EditReleaseForm`) — было готово.
