@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { auth, signOut } from '@/auth';
 import { NavSearch } from './nav-search';
+import { NavLink } from './nav-link';
 
 export async function Nav() {
   const session = await auth();
@@ -56,17 +57,6 @@ export async function Nav() {
         </div>
       </div>
     </nav>
-  );
-}
-
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center px-2 sm:px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-    >
-      {children}
-    </Link>
   );
 }
 

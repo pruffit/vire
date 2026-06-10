@@ -25,6 +25,7 @@ import { JsonLd } from '@/components/json-ld';
 import { musicGroupJsonLd } from '@/lib/structured-data';
 import { artistFontStyle } from '@/lib/fonts';
 import { GrainOverlay } from '@/components/grain-overlay';
+import { ArtistCollapseBar } from './artist-collapse-bar';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -111,6 +112,9 @@ export default async function ArtistPage({ params }: Props) {
 
       {/* Full-bleed hero — breaks out of any container */}
       <ArtistHero artist={artist} followButton={followButton} />
+
+      {/* Компактная полоска при скролле за hero */}
+      <ArtistCollapseBar name={artist.name} avatarUrl={artist.avatarUrl} verified={artist.verified} />
 
       {/* Content below hero */}
       <div className="mx-auto max-w-4xl px-6 pb-16 space-y-14">
