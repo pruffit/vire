@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { Tilt } from './tilt';
 
 /**
  * Обложка, которая разворачивается в полноэкранный просмотр — тем же приёмом, что
@@ -48,12 +49,15 @@ export function ZoomableCover({
         aria-label={`Открыть обложку крупнее: ${alt}`}
         className={`group relative block overflow-hidden cursor-zoom-in ${className ?? ''}`}
       >
-        <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" />
-        <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors grid place-items-center">
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white drop-shadow">
-            <ExpandIcon />
+        {/* Тилт на внутреннем слое, чтобы не мешать layoutId-морфу кнопки */}
+        <Tilt className="absolute inset-0">
+          <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" />
+          <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors grid place-items-center">
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white drop-shadow">
+              <ExpandIcon />
+            </span>
           </span>
-        </span>
+        </Tilt>
       </motion.button>
 
       <AnimatePresence>

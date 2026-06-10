@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { DiscoveryRelease } from '@vire/db';
 import { FeaturedPlayButton } from './featured-play-button';
+import { Tilt } from './tilt';
 
 const typeLabel: Record<string, string> = {
   ALBUM: 'Альбом',
@@ -23,23 +24,25 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
 
   return (
     <section aria-label="Редакционный выбор" className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-      {/* Обложка */}
-      <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/[0.07]">
-        {release.coverUrl ? (
-          <Image
-            src={release.coverUrl}
-            alt={release.title}
-            fill
-            sizes="(max-width: 768px) 100vw, 45vw"
-            className="object-cover"
-            priority
-          />
-        ) : (
-          <div className="w-full h-full bg-muted grid place-items-center">
-            <NoteIcon />
-          </div>
-        )}
-      </div>
+      {/* Обложка — лёгкий 3D-тилт за курсором */}
+      <Tilt>
+        <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/[0.07]">
+          {release.coverUrl ? (
+            <Image
+              src={release.coverUrl}
+              alt={release.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 45vw"
+              className="object-cover"
+              priority
+            />
+          ) : (
+            <div className="w-full h-full bg-muted grid place-items-center">
+              <NoteIcon />
+            </div>
+          )}
+        </div>
+      </Tilt>
 
       {/* Информация */}
       <div className="flex flex-col gap-5">
