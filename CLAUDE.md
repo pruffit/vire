@@ -272,3 +272,8 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 > Считай дату на стороне SQL (`now() - interval '7 days'`). Через `.set({ updatedAt: new Date() })`
 > на типизированной timestamp-колонке `Date` передавать можно — Drizzle знает тип.
 > (Передавать `Date` в пропсах Client Component, наоборот, можно — React 19 Flight это сериализует.)
+
+> ⚠️ Не интерполируй колонку (`${tracks.id}`) в `sql`-шаблон внутри `.select()` — Drizzle
+> рендерит её там БЕЗ квалификации (просто `"id"`). В коррелированном подзапросе это либо
+> «column reference is ambiguous», либо тихо резолвится в id таблицы подзапроса (счётчики = 0).
+> Ссылайся на внешнюю таблицу литералом: `where f.artist_profile_id = artist_profiles.id`.
