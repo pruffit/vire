@@ -31,6 +31,18 @@ function getRedis(): Redis {
 
 const trackKey = (trackId: string) => `presence:track:${trackId}`;
 
+/** Пинг Redis: латентность в мс или null, если недоступен (для health-панели). */
+export async function pingRedis(): Promise<number | null> {
+  try {
+    const redis = getRedis();
+    const t0 = Date.now();
+    await redis.ping();
+    return Date.now() - t0;
+  } catch {
+    return null;
+  }
+}
+
 /** Записывает heartbeat и возвращает актуальное число слушателей трека. */
 export async function recordListening(trackId: string, sessionId: string): Promise<number> {
   const redis = getRedis();

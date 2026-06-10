@@ -1,5 +1,6 @@
 import { listTracksAdmin } from '@vire/db';
 import { TrackStatusSelect } from './track-status-select';
+import { formatDuration } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,9 @@ export default async function AdminTracksPage({ searchParams }: Props) {
               <th className="text-left px-4 py-3">Релиз</th>
               <th className="text-left px-4 py-3">Артист</th>
               <th className="text-left px-4 py-3">Статус</th>
+              <th className="text-right px-4 py-3">Аудио</th>
+              <th className="text-right px-4 py-3">Прослуш.</th>
+              <th className="text-right px-4 py-3">Лайки</th>
               <th className="text-left px-4 py-3">Дата</th>
               <th className="px-4 py-3" />
             </tr>
@@ -85,7 +89,21 @@ export default async function AdminTracksPage({ searchParams }: Props) {
                   <span className={`font-mono text-xs ${STATUS_COLOR[track.status] ?? ''}`}>
                     {STATUS_LABEL[track.status] ?? track.status}
                   </span>
+                  {track.status === 'READY' && !track.hasHls && (
+                    <span className="ml-1.5 text-[10px] font-mono text-red-400" title="READY без HLS-манифеста">
+                      !hls
+                    </span>
+                  )}
                 </td>
+                <td className="px-4 py-3 text-right text-white/50 text-xs font-mono tabular-nums whitespace-nowrap">
+                  {[
+                    track.durationSec != null ? formatDuration(track.durationSec) : null,
+                    track.bpm != null ? `${track.bpm} bpm` : null,
+                    track.musicalKey,
+                  ].filter(Boolean).join(' · ') || '—'}
+                </td>
+                <td className="px-4 py-3 text-right text-white/60 text-xs tabular-nums">{track.playsTotal}</td>
+                <td className="px-4 py-3 text-right text-white/60 text-xs tabular-nums">{track.likesCount}</td>
                 <td className="px-4 py-3 text-white/30 text-xs font-mono">
                   {new Date(track.createdAt).toLocaleDateString('ru-RU')}
                 </td>

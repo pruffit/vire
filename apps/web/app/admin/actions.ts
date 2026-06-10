@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
-import { setUserRole, verifyArtist, setTrackStatus, setReleaseStatus } from '@vire/db';
+import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus } from '@vire/db';
 import type { UserRole } from '@vire/db';
 
 const ADMIN_ROLES = new Set<UserRole>(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
@@ -25,6 +25,13 @@ export async function actionVerifyArtist(artistProfileId: string, verified: bool
   await requireAdmin();
   await verifyArtist(artistProfileId, verified);
   revalidatePath('/admin/users');
+  revalidatePath('/admin/artists');
+}
+
+export async function actionSetArtistActive(artistProfileId: string, isActive: boolean) {
+  await requireAdmin();
+  await setArtistActive(artistProfileId, isActive);
+  revalidatePath('/admin/artists');
 }
 
 export async function actionSetTrackStatus(trackId: string, status: 'READY' | 'BLOCKED' | 'PROCESSING') {

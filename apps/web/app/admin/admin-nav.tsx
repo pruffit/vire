@@ -5,7 +5,9 @@ import { usePathname } from 'next/navigation';
 
 const NAV = [
   { href: '/admin', label: 'Обзор', exact: true },
+  { href: '/admin/analytics', label: 'Аналитика' },
   { href: '/admin/users', label: 'Пользователи' },
+  { href: '/admin/artists', label: 'Артисты' },
   { href: '/admin/tracks', label: 'Треки' },
   { href: '/admin/releases', label: 'Релизы' },
 ];

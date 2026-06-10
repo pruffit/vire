@@ -1,14 +1,19 @@
 import Link from 'next/link';
-import { getAdminStats, getAdminAttention, getRecentPublishedReleases } from '@vire/db';
-import type { AdminAttention, AdminRecentRelease, AdminStats } from '@vire/db';
+import {
+  getAdminStats, getAdminAttention, getRecentPublishedReleases, getAdminPlatformMetrics,
+} from '@vire/db';
+import type { AdminAttention, AdminRecentRelease, AdminStats, AdminPlatformMetrics } from '@vire/db';
+import { getAdminHealth, type AdminHealth } from '@/lib/admin-health';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
-  const [stats, attention, recent] = await Promise.all([
+  const [stats, attention, recent, metrics, health] = await Promise.all([
     getAdminStats(),
     getAdminAttention(),
     getRecentPublishedReleases(8),
+    getAdminPlatformMetrics(),
+    getAdminHealth(),
   ]);
 
   const hasIssues =
@@ -17,18 +22,205 @@ export default async function AdminPage() {
     attention.unverifiedArtists.length > 0;
 
   return (
-    <div className="flex flex-col gap-10 max-w-3xl">
+    <div className="flex flex-col gap-10 max-w-4xl">
       <h1 className="text-xl font-semibold">Обзор</h1>
 
       {/* Attention panel */}
       {hasIssues && <AttentionPanel attention={attention} />}
 
-      {/* Key metrics */}
-      <MetricsRow stats={stats} />
+      {/* Система */}
+      <HealthPanel health={health} />
+
+      {/* Аудитория и каталог */}
+      <CatalogPanel stats={stats} metrics={metrics} />
+
+      {/* Вовлечённость */}
+      <EngagementPanel metrics={metrics} />
 
       {/* Recent published */}
       {recent.length > 0 && <RecentReleases releases={recent} />}
     </div>
+  );
+}
+
+// ─── Система ───────────────────────────────────────────────────────────────
+
+function HealthPanel({ health }: { health: AdminHealth }) {
+  const failedTotal = health.queues.reduce((s, q) => s + q.failed, 0);
+  return (
+    <section>
+      <p className="text-xs text-white/35 font-mono mb-3">Система</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <HealthCard
+          label="PostgreSQL"
+          ok={health.dbLatencyMs !== null}
+          value={health.dbLatencyMs !== null ? `${health.dbLatencyMs} мс` : 'недоступен'}
+        />
+        <HealthCard
+          label="Redis"
+          ok={health.redisLatencyMs !== null}
+          value={health.redisLatencyMs !== null ? `${health.redisLatencyMs} мс` : 'недоступен'}
+        />
+        <HealthCard
+          label="Слушают сейчас"
+          ok
+          value={String(health.liveListeners)}
+        />
+        <HealthCard
+          label="Ошибок в очередях"
+          ok={failedTotal === 0}
+          value={String(failedTotal)}
+        />
+      </div>
+      <div className="mt-3 rounded-xl border border-white/10 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-white/30 border-b border-white/10">
+              <th className="px-4 py-2 text-left font-normal">Очередь</th>
+              <th className="px-4 py-2 text-right font-normal">в ожидании</th>
+              <th className="px-4 py-2 text-right font-normal">в работе</th>
+              <th className="px-4 py-2 text-right font-normal">отложено</th>
+              <th className="px-4 py-2 text-right font-normal">ошибки</th>
+            </tr>
+          </thead>
+          <tbody>
+            {health.queues.map((q) => (
+              <tr key={q.name} className="border-b border-white/5 last:border-0">
+                <td className="px-4 py-2.5">
+                  {q.label} <span className="text-xs text-white/25 font-mono ml-1">{q.name}</span>
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-white/60">{q.waiting}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-white/60">{q.active}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-white/60">{q.delayed}</td>
+                <td className={`px-4 py-2.5 text-right tabular-nums ${q.failed > 0 ? 'text-red-400' : 'text-white/60'}`}>
+                  {q.failed}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function HealthCard({ label, ok, value }: { label: string; ok: boolean; value: string }) {
+  return (
+    <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col gap-1">
+      <span className="text-xs text-white/35 flex items-center gap-1.5">
+        <span className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-green-400' : 'bg-red-400'}`} aria-hidden="true" />
+        {label}
+      </span>
+      <span className={`text-xl font-semibold tabular-nums ${ok ? '' : 'text-red-400'}`}>{value}</span>
+    </div>
+  );
+}
+
+// ─── Аудитория и каталог ───────────────────────────────────────────────────
+
+const ROLE_LABEL: Record<string, string> = {
+  LISTENER: 'слушатели',
+  ARTIST: 'артисты',
+  MODERATOR: 'модераторы',
+  ADMIN: 'админы',
+  SUPERADMIN: 'суперадмины',
+};
+
+const RELEASE_STATUS_SHORT: Record<string, string> = {
+  DRAFT: 'черновики',
+  SCHEDULED: 'запланированы',
+  PUBLISHED: 'опубликованы',
+  ARCHIVED: 'архив',
+};
+
+function CatalogPanel({ stats, metrics }: { stats: AdminStats; metrics: AdminPlatformMetrics }) {
+  const roles = Object.entries(metrics.usersByRole)
+    .sort((a, b) => b[1] - a[1])
+    .map(([role, n]) => `${n} ${ROLE_LABEL[role] ?? role.toLowerCase()}`)
+    .join(' · ');
+  const releaseBreakdown = Object.entries(metrics.releasesByStatus)
+    .sort((a, b) => b[1] - a[1])
+    .map(([s, n]) => `${n} ${RELEASE_STATUS_SHORT[s] ?? s.toLowerCase()}`)
+    .join(' · ');
+
+  return (
+    <section>
+      <p className="text-xs text-white/35 font-mono mb-3">Аудитория и каталог</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatCard
+          label="Пользователей"
+          value={stats.totalUsers}
+          sub={`+${metrics.newUsers7d} за 7 дней`}
+          href="/admin/users"
+        />
+        <StatCard
+          label="Артистов"
+          value={stats.totalArtists}
+          sub={`${metrics.artistsActive} активны · ${metrics.artistsVerified} верифиц.`}
+          href="/admin/artists"
+        />
+        <StatCard
+          label="Релизов"
+          value={stats.totalReleases}
+          sub={releaseBreakdown || undefined}
+          href="/admin/releases"
+        />
+        <StatCard
+          label="Треков"
+          value={stats.totalTracks}
+          sub={`${stats.tracksReady} готовы · ${stats.tracksProcessing} в обработке · ${stats.tracksBlocked} блок.`}
+          href="/admin/tracks"
+        />
+      </div>
+      <p className="mt-2 text-xs text-white/25">{roles}</p>
+    </section>
+  );
+}
+
+// ─── Вовлечённость ─────────────────────────────────────────────────────────
+
+function EngagementPanel({ metrics }: { metrics: AdminPlatformMetrics }) {
+  return (
+    <section>
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="text-xs text-white/35 font-mono">Вовлечённость</p>
+        <Link href="/admin/analytics" className="text-xs text-white/40 hover:text-white transition-colors">
+          Аналитика →
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatCard label="Прослушиваний · 24ч" value={metrics.plays24h} />
+        <StatCard label="Прослушиваний · 7д" value={metrics.plays7d} sub={`${metrics.uniqueListeners7d} уник. слушателей`} />
+        <StatCard label="Прослушиваний · 30д" value={metrics.plays30d} />
+        <StatCard label="Прослушиваний · всего" value={metrics.playsTotal} />
+        <StatCard label="Лайков" value={metrics.likesTotal} sub={`+${metrics.likes7d} за 7 дней`} />
+        <StatCard label="Подписок на артистов" value={metrics.followsTotal} sub={`+${metrics.follows7d} за 7 дней`} />
+        <StatCard label="Плейлистов" value={metrics.playlistsTotal} />
+        <StatCard label="Постов артистов" value={metrics.postsTotal} />
+        <StatCard label="Mood-тегов" value={metrics.moodTagsTotal} />
+        <StatCard label="Любимых моментов" value={metrics.momentsTotal} />
+      </div>
+    </section>
+  );
+}
+
+function StatCard({
+  label, value, sub, href,
+}: {
+  label: string; value: number; sub?: string; href?: string;
+}) {
+  const inner = (
+    <>
+      <span className="text-xs text-white/35">{label}</span>
+      <span className="text-3xl font-semibold tabular-nums">{value.toLocaleString('ru-RU')}</span>
+      {sub && <span className="text-xs text-white/25">{sub}</span>}
+    </>
+  );
+  const cls = 'rounded-xl bg-white/5 border border-white/10 p-5 flex flex-col gap-1';
+  return href ? (
+    <Link href={href} className={`${cls} hover:bg-white/[0.08] transition-colors`}>{inner}</Link>
+  ) : (
+    <div className={cls}>{inner}</div>
   );
 }
 
@@ -68,10 +260,10 @@ function AttentionPanel({ attention }: { attention: AdminAttention }) {
               <span className="text-xs text-blue-400/50 ml-2">с опубликованными релизами</span>
             </div>
             <Link
-              href="/admin/users"
+              href="/admin/artists"
               className="text-xs text-blue-400/60 hover:text-blue-300 transition-colors"
             >
-              К пользователям →
+              К артистам →
             </Link>
           </div>
           <div className="border-t border-blue-500/15 divide-y divide-blue-500/10">
@@ -120,35 +312,6 @@ function AlertRow({
       </div>
       <span className="text-xs opacity-40 shrink-0 ml-4">→</span>
     </Link>
-  );
-}
-
-// ─── Metrics ───────────────────────────────────────────────────────────────
-
-function MetricsRow({ stats }: { stats: AdminStats }) {
-  return (
-    <section>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Пользователей" value={stats.totalUsers} />
-        <StatCard label="Артистов" value={stats.totalArtists} />
-        <StatCard
-          label="Треков"
-          value={stats.totalTracks}
-          sub={`${stats.tracksReady} готовы`}
-        />
-        <StatCard label="Релизов" value={stats.totalReleases} />
-      </div>
-    </section>
-  );
-}
-
-function StatCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
-  return (
-    <div className="rounded-xl bg-white/5 border border-white/10 p-5 flex flex-col gap-1">
-      <span className="text-xs text-white/35">{label}</span>
-      <span className="text-3xl font-semibold tabular-nums">{value.toLocaleString('ru-RU')}</span>
-      {sub && <span className="text-xs text-white/25">{sub}</span>}
-    </div>
   );
 }
 

@@ -42,12 +42,19 @@ export {
 } from './queries/purchases';
 export type { PendingPurchase, PurchasedTrack } from './queries/purchases';
 export {
+  pingDb,
   getAdminStats,
   getAdminAttention,
   getRecentPublishedReleases,
+  getAdminPlatformMetrics,
+  getAdminDailyPlays,
+  getAdminTopTracks,
+  getAdminTopArtists,
   listUsersAdmin,
   setUserRole,
   verifyArtist,
+  listArtistsAdmin,
+  setArtistActive,
   listTracksAdmin,
   setTrackStatus,
   listReleasesAdmin,
@@ -62,6 +69,11 @@ export type {
   StuckTrack,
   UnverifiedArtist,
   AdminRecentRelease,
+  AdminPlatformMetrics,
+  AdminDailyPlays,
+  AdminTopTrack,
+  AdminTopArtist,
+  AdminArtist,
 } from './queries/admin';
 export type { UserRole } from './queries/admin-types';
 export { getFollowerEmails } from './queries/notifications';
