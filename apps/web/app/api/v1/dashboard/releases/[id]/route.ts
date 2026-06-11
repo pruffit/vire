@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
-import { ReleaseService, NotFoundError, type ReleaseType } from '@vire/core';
+import { ReleaseService, NotFoundError, ALL_GENRES, type Genre, type ReleaseType } from '@vire/core';
 
 const VALID_TYPES = new Set<ReleaseType>(['ALBUM', 'EP', 'SINGLE']);
+const VALID_GENRES = new Set<string>(ALL_GENRES);
 const COVER_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -45,6 +46,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const title = formData.get('title');
   const type = formData.get('type');
+  const genreRaw = formData.get('genre');
   const releaseDateRaw = formData.get('releaseDate');
   const description = formData.get('description');
   const linerNotes = formData.get('linerNotes');
@@ -56,6 +58,10 @@ export async function PATCH(req: Request, { params }: Params) {
   if (typeof type !== 'string' || !VALID_TYPES.has(type as ReleaseType)) {
     return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
   }
+  if (typeof genreRaw === 'string' && genreRaw && !VALID_GENRES.has(genreRaw)) {
+    return NextResponse.json({ error: 'Invalid genre' }, { status: 400 });
+  }
+  const genre = typeof genreRaw === 'string' && genreRaw ? (genreRaw as Genre) : null;
 
   const releaseDate =
     typeof releaseDateRaw === 'string' && releaseDateRaw
@@ -75,6 +81,7 @@ export async function PATCH(req: Request, { params }: Params) {
   const updated = await releaseRepo.update(id, {
     title: title.trim(),
     type: type as ReleaseType,
+    genre,
     releaseDate,
     coverUrl,
     description: typeof description === 'string' && description.trim() ? description.trim() : null,

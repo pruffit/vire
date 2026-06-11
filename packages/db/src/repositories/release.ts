@@ -70,6 +70,7 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
       .set({
         ...(input.title !== undefined && { title: input.title }),
         ...(input.type !== undefined && { type: input.type }),
+        ...(input.genre !== undefined && { genre: input.genre }),
         ...(input.releaseDate !== undefined && { releaseDate: input.releaseDate }),
         ...(input.coverUrl !== undefined && { coverUrl: input.coverUrl }),
         ...(input.description !== undefined && { description: input.description }),
@@ -96,6 +97,7 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
         artistProfileId: input.artistProfileId,
         title: input.title,
         type: input.type,
+        genre: input.genre ?? null,
         releaseDate: input.releaseDate ?? null,
         coverUrl: input.coverUrl ?? null,
         description: input.description ?? null,
@@ -158,6 +160,7 @@ function mapToRelease(row: typeof releases.$inferSelect): Release {
     artistProfileId: row.artistProfileId,
     title: row.title,
     type: row.type,
+    genre: row.genre,
     coverUrl: row.coverUrl,
     releaseDate: row.releaseDate,
     status: row.status,

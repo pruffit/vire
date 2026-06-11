@@ -1,0 +1,2 @@
+CREATE TYPE "public"."genre" AS ENUM('ELECTRONIC', 'HIPHOP', 'ROCK', 'INDIE', 'POP', 'AMBIENT', 'JAZZ', 'CLASSICAL', 'METAL', 'FOLK', 'RNB', 'TECHNO', 'EXPERIMENTAL', 'LOFI');--> statement-breakpoint
+ALTER TABLE "releases" ADD COLUMN "genre" "genre";

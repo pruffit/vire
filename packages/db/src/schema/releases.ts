@@ -2,6 +2,11 @@ import { pgTable, uuid, text, timestamp, integer, boolean, jsonb, pgEnum, primar
 import { artistProfiles } from './artists';
 
 export const releaseTypeEnum = pgEnum('release_type', ['ALBUM', 'EP', 'SINGLE']);
+// Жанры — фиксированный список, заполняет артист (зеркало ALL_GENRES в @vire/core)
+export const genreEnum = pgEnum('genre', [
+  'ELECTRONIC', 'HIPHOP', 'ROCK', 'INDIE', 'POP', 'AMBIENT', 'JAZZ',
+  'CLASSICAL', 'METAL', 'FOLK', 'RNB', 'TECHNO', 'EXPERIMENTAL', 'LOFI',
+]);
 export const releaseStatusEnum = pgEnum('release_status', ['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED']);
 export const trackStatusEnum = pgEnum('track_status', ['PROCESSING', 'READY', 'BLOCKED']);
 
@@ -10,6 +15,7 @@ export const releases = pgTable('releases', {
   artistProfileId: uuid('artist_profile_id').notNull().references(() => artistProfiles.id),
   title: text('title').notNull(),
   type: releaseTypeEnum('type').notNull().default('ALBUM'),
+  genre: genreEnum('genre'),
   coverUrl: text('cover_url'),
   releaseDate: timestamp('release_date'),
   status: releaseStatusEnum('status').notNull().default('DRAFT'),

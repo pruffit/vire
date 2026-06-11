@@ -1,10 +1,11 @@
-import type { Release, ReleaseStatus, ReleaseType, ReleaseWithTracks } from '../types/release';
+import type { Genre, Release, ReleaseStatus, ReleaseType, ReleaseWithTracks } from '../types/release';
 
 export interface CreateReleaseInput {
   id: string;
   artistProfileId: string;
   title: string;
   type: ReleaseType;
+  genre?: Genre | null;
   releaseDate?: Date | null;
   coverUrl?: string | null;
   description?: string | null;
@@ -13,6 +14,7 @@ export interface CreateReleaseInput {
 export interface UpdateReleaseInput {
   title?: string;
   type?: ReleaseType;
+  genre?: Genre | null;
   releaseDate?: Date | null;
   coverUrl?: string | null;
   description?: string | null;

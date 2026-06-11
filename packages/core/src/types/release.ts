@@ -1,4 +1,12 @@
 export type ReleaseType = 'ALBUM' | 'EP' | 'SINGLE';
+
+// Жанры — фиксированный список (как mood-теги: без свободного ввода и модерации).
+// Заполняет артист при создании/редактировании релиза.
+export const ALL_GENRES = [
+  'ELECTRONIC', 'HIPHOP', 'ROCK', 'INDIE', 'POP', 'AMBIENT', 'JAZZ',
+  'CLASSICAL', 'METAL', 'FOLK', 'RNB', 'TECHNO', 'EXPERIMENTAL', 'LOFI',
+] as const;
+export type Genre = (typeof ALL_GENRES)[number];
 export type ContributorRole = 'PERFORMER' | 'LYRICIST' | 'COMPOSER' | 'PRODUCER';
 
 export interface TrackCredit {
@@ -13,6 +21,7 @@ export interface Release {
   artistProfileId: string;
   title: string;
   type: ReleaseType;
+  genre: Genre | null;
   coverUrl: string | null;
   releaseDate: Date | null;
   status: ReleaseStatus;
