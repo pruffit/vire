@@ -14,6 +14,7 @@ export interface SearchRelease {
   id: string;
   title: string;
   type: string;
+  genre: string | null;
   coverUrl: string | null;
   artistSlug: string;
   artistName: string;
@@ -57,6 +58,7 @@ export async function searchAll(query: string, limit = 5): Promise<SearchResults
         id: releases.id,
         title: releases.title,
         type: releases.type,
+        genre: releases.genre,
         coverUrl: releases.coverUrl,
         artistSlug: artistProfiles.slug,
         artistName: artistProfiles.name,

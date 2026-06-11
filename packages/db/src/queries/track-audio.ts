@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { db } from '../client';
 import { trackAudio, tracks } from '../schema';
 
@@ -31,6 +31,21 @@ export async function getTrackAudio(trackId: string): Promise<TrackAudioData | n
     musicalKey: row.musicalKey ?? null,
     flacKey: row.flacKey ?? null,
   };
+}
+
+export async function getTrackAudioMeta(
+  trackIds: string[],
+): Promise<Record<string, { bpm: number | null; musicalKey: string | null }>> {
+  if (trackIds.length === 0) return {};
+  const rows = await db
+    .select({ trackId: trackAudio.trackId, bpm: trackAudio.bpm, musicalKey: trackAudio.musicalKey })
+    .from(trackAudio)
+    .where(inArray(trackAudio.trackId, trackIds));
+  const result: Record<string, { bpm: number | null; musicalKey: string | null }> = {};
+  for (const row of rows) {
+    result[row.trackId] = { bpm: row.bpm ?? null, musicalKey: row.musicalKey ?? null };
+  }
+  return result;
 }
 
 export async function trackExists(trackId: string): Promise<boolean> {

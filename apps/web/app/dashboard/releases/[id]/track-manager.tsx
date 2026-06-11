@@ -13,6 +13,8 @@ export interface ManagedTrack {
   trackNumber: number;
   status: 'PROCESSING' | 'READY' | 'BLOCKED';
   moods: Mood[];
+  bpm: number | null;
+  musicalKey: string | null;
 }
 
 async function patchTrack(id: string, patch: Record<string, unknown>): Promise<boolean> {
@@ -35,6 +37,16 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
   const savedTitles = useRef<Map<string, string>>(
     new Map(initial.map((t) => [t.id, t.title])),
   );
+  const savedBpm = useRef<Map<string, string>>(
+    new Map(initial.map((t) => [t.id, t.bpm != null ? String(t.bpm) : ''])),
+  );
+  const savedKey = useRef<Map<string, string>>(
+    new Map(initial.map((t) => [t.id, t.musicalKey ?? ''])),
+  );
+  // локальные строковые значения для BPM/key input-полей
+  const [audioInputs, setAudioInputs] = useState<Map<string, { bpm: string; key: string }>>(
+    () => new Map(initial.map((t) => [t.id, { bpm: t.bpm != null ? String(t.bpm) : '', key: t.musicalKey ?? '' }])),
+  );
 
   function markBusy(id: string, on: boolean) {
     setBusy((p) => { const n = new Set(p); if (on) n.add(id); else n.delete(id); return n; });
@@ -51,6 +63,51 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
       else next.add(id);
       return next;
     });
+  }
+
+  function setAudioInput(id: string, field: 'bpm' | 'key', value: string) {
+    setAudioInputs((prev) => {
+      const next = new Map(prev);
+      const cur = next.get(id) ?? { bpm: '', key: '' };
+      next.set(id, { ...cur, [field]: value });
+      return next;
+    });
+  }
+
+  async function commitBpm(id: string) {
+    const raw = (audioInputs.get(id)?.bpm ?? '').trim();
+    if (raw === savedBpm.current.get(id)) return;
+    const parsed = raw === '' ? null : parseInt(raw, 10);
+    if (raw !== '' && (isNaN(parsed!) || parsed! < 20 || parsed! > 500)) {
+      setAudioInput(id, 'bpm', savedBpm.current.get(id) ?? '');
+      return;
+    }
+    markBusy(id, true);
+    const ok = await patchTrack(id, { bpm: parsed });
+    markBusy(id, false);
+    if (ok) {
+      savedBpm.current.set(id, raw);
+      setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, bpm: parsed } : t)));
+    } else {
+      setAudioInput(id, 'bpm', savedBpm.current.get(id) ?? '');
+      toast.error('Не удалось сохранить BPM');
+    }
+  }
+
+  async function commitKey(id: string) {
+    const raw = (audioInputs.get(id)?.key ?? '').trim();
+    if (raw === savedKey.current.get(id)) return;
+    const value = raw === '' ? null : raw;
+    markBusy(id, true);
+    const ok = await patchTrack(id, { musicalKey: value });
+    markBusy(id, false);
+    if (ok) {
+      savedKey.current.set(id, raw);
+      setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, musicalKey: value } : t)));
+    } else {
+      setAudioInput(id, 'key', savedKey.current.get(id) ?? '');
+      toast.error('Не удалось сохранить тональность');
+    }
   }
 
   async function commitTitle(id: string) {
@@ -212,8 +269,42 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
                   transition={spring.snappy}
                   className="overflow-hidden border-t border-white/5"
                 >
-                  <div className="px-4 py-3">
-                    <MoodPicker trackId={track.id} initial={track.moods} />
+                  <div className="px-4 py-3 space-y-4">
+                    {/* BPM + Key */}
+                    <div className="flex items-center gap-5">
+                      <label className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-white/40 w-8">BPM</span>
+                        <input
+                          type="number"
+                          min="20"
+                          max="500"
+                          placeholder="—"
+                          value={audioInputs.get(track.id)?.bpm ?? ''}
+                          onChange={(e) => setAudioInput(track.id, 'bpm', e.target.value)}
+                          onBlur={() => commitBpm(track.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                          disabled={busy.has(track.id)}
+                          className="w-16 bg-transparent border border-white/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-white/40 w-14">Тональность</span>
+                        <input
+                          type="text"
+                          placeholder="—"
+                          value={audioInputs.get(track.id)?.key ?? ''}
+                          onChange={(e) => setAudioInput(track.id, 'key', e.target.value)}
+                          onBlur={() => commitKey(track.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                          disabled={busy.has(track.id)}
+                          className="w-20 bg-transparent border border-white/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="border-t border-white/5 pt-3">
+                      <MoodPicker trackId={track.id} initial={track.moods} />
+                    </div>
                   </div>
                 </motion.div>
               )}

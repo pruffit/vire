@@ -60,6 +60,18 @@ export async function PATCH(
     if (typeof b.isWip !== 'boolean') return NextResponse.json({ error: 'Invalid isWip' }, { status: 400 });
     patch.isWip = b.isWip;
   }
+  if (b.bpm !== undefined) {
+    if (b.bpm !== null && (typeof b.bpm !== 'number' || !Number.isInteger(b.bpm) || b.bpm < 20 || b.bpm > 500)) {
+      return NextResponse.json({ error: 'Invalid bpm' }, { status: 400 });
+    }
+    patch.bpm = b.bpm as number | null;
+  }
+  if (b.musicalKey !== undefined) {
+    if (b.musicalKey !== null && (typeof b.musicalKey !== 'string' || b.musicalKey.length > 20)) {
+      return NextResponse.json({ error: 'Invalid musicalKey' }, { status: 400 });
+    }
+    patch.musicalKey = b.musicalKey as string | null;
+  }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   }

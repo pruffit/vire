@@ -60,17 +60,30 @@ export class DrizzleTrackRepository implements ITrackRepository {
   }
 
   async update(id: string, patch: UpdateTrackParams): Promise<Track | null> {
-    const values: Partial<typeof tracks.$inferInsert> = { updatedAt: new Date() };
-    if (patch.title !== undefined) values.title = patch.title;
-    if (patch.trackNumber !== undefined) values.trackNumber = patch.trackNumber;
-    if (patch.isExclusive !== undefined) values.isExclusive = patch.isExclusive;
-    if (patch.isWip !== undefined) values.isWip = patch.isWip;
+    const trackValues: Partial<typeof tracks.$inferInsert> = {};
+    if (patch.title !== undefined) trackValues.title = patch.title;
+    if (patch.trackNumber !== undefined) trackValues.trackNumber = patch.trackNumber;
+    if (patch.isExclusive !== undefined) trackValues.isExclusive = patch.isExclusive;
+    if (patch.isWip !== undefined) trackValues.isWip = patch.isWip;
 
-    const [row] = await this.db
-      .update(tracks)
-      .set(values)
-      .where(eq(tracks.id, id))
-      .returning();
+    let row: typeof tracks.$inferSelect | undefined;
+    if (Object.keys(trackValues).length > 0) {
+      trackValues.updatedAt = new Date();
+      [row] = await this.db.update(tracks).set(trackValues).where(eq(tracks.id, id)).returning();
+    } else {
+      [row] = await this.db.select().from(tracks).where(eq(tracks.id, id)).limit(1);
+    }
+
+    const hasAudioPatch = patch.bpm !== undefined || patch.musicalKey !== undefined;
+    if (hasAudioPatch && row) {
+      const audioSet: Partial<typeof trackAudio.$inferInsert> = { updatedAt: new Date() };
+      if (patch.bpm !== undefined) audioSet.bpm = patch.bpm;
+      if (patch.musicalKey !== undefined) audioSet.musicalKey = patch.musicalKey;
+      await this.db
+        .insert(trackAudio)
+        .values({ trackId: id, ...audioSet })
+        .onConflictDoUpdate({ target: trackAudio.trackId, set: audioSet });
+    }
 
     return row ? mapRow(row) : null;
   }

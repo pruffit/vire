@@ -67,18 +67,26 @@ export async function getWaveNextTrack(
     return { id: r.id, title: r.title, artistName: r.artistName, artistSlug: r.artistSlug, releaseId: r.releaseId, coverUrl: r.coverUrl, accentColor: r.accentColor };
   }
 
-  // Получаем данные текущего трека
-  const [currentAudio] = await db
-    .select({ bpm: trackAudio.bpm, musicalKey: trackAudio.musicalKey })
-    .from(trackAudio)
-    .where(eq(trackAudio.trackId, currentTrackId));
-
-  const currentMoods = await db
-    .select({ mood: trackMoods.mood })
-    .from(trackMoods)
-    .where(eq(trackMoods.trackId, currentTrackId));
+  // Получаем данные текущего трека: audio meta + mood + genre релиза
+  const [[currentAudio], currentMoods, [currentReleaseRow]] = await Promise.all([
+    db
+      .select({ bpm: trackAudio.bpm, musicalKey: trackAudio.musicalKey })
+      .from(trackAudio)
+      .where(eq(trackAudio.trackId, currentTrackId)),
+    db
+      .select({ mood: trackMoods.mood })
+      .from(trackMoods)
+      .where(eq(trackMoods.trackId, currentTrackId)),
+    db
+      .select({ genre: releases.genre })
+      .from(tracks)
+      .innerJoin(releases, eq(releases.id, tracks.releaseId))
+      .where(eq(tracks.id, currentTrackId))
+      .limit(1),
+  ]);
 
   const moodValues = currentMoods.map((m) => m.mood);
+  const currentGenre = currentReleaseRow?.genre ?? null;
   const excludeIds = [currentTrackId, ...playedIds].filter(Boolean);
 
   // Строим score: 1 за каждый совпавший тег + 0.5 за близкий BPM
@@ -105,7 +113,11 @@ export async function getWaveNextTrack(
     ? sql<number>`CASE WHEN ${trackAudio.musicalKey} = ${currentAudio.musicalKey} THEN 0.5 ELSE 0 END`
     : sql<number>`0`;
 
-  const totalScore = sql<number>`${moodScore} + ${bpmScore} + ${keyScore} + random() * 0.15`;
+  const genreScore = currentGenre
+    ? sql<number>`CASE WHEN ${releases.genre} = ${currentGenre} THEN 0.3 ELSE 0 END`
+    : sql<number>`0`;
+
+  const totalScore = sql<number>`${moodScore} + ${bpmScore} + ${keyScore} + ${genreScore} + random() * 0.15`;
 
   const query = db
     .select({

@@ -3,9 +3,10 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { Stagger, StaggerItem } from '@vire/ui/motion';
 import { searchAll } from '@vire/db';
-import type { SearchArtist, SearchRelease } from '@vire/db';
+import type { SearchArtist } from '@vire/db';
 import { GlobalSearch } from '@/components/global-search';
 import { SearchTracksSection } from '@/components/search-tracks-section';
+import { SearchReleasesSection } from '@/components/search-releases-section';
 
 type Props = { searchParams: Promise<{ q?: string }> };
 
@@ -64,11 +65,7 @@ export default async function SearchPage({ searchParams }: Props) {
           {results.releases.length > 0 && (
             <section className="space-y-2">
               <SectionHeader label="Релизы" count={results.releases.length} />
-              <Stagger step={0.035} className="flex flex-col divide-y divide-border">
-                {results.releases.map((r) => (
-                  <StaggerItem key={r.id}><ReleaseRow release={r} /></StaggerItem>
-                ))}
-              </Stagger>
+              <SearchReleasesSection releases={results.releases} />
             </section>
           )}
 
@@ -116,24 +113,4 @@ function ArtistCard({ artist }: { artist: SearchArtist }) {
   );
 }
 
-function ReleaseRow({ release }: { release: SearchRelease }) {
-  return (
-    <Link
-      href={`/artists/${release.artistSlug}/releases/${release.id}`}
-      className="group flex items-center gap-3 py-3 hover:bg-accent/5 -mx-2 px-2 rounded-sm transition-colors"
-    >
-      <div className="relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
-        {release.coverUrl
-          ? <Image src={release.coverUrl} alt={release.title} fill sizes="36px" className="object-cover" />
-          : <div className="w-full h-full bg-white/5" />
-        }
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate group-hover:text-foreground transition-colors">{release.title}</p>
-        <p className="text-xs text-muted-foreground truncate">{release.artistName}</p>
-      </div>
-      <span className="text-xs font-mono text-muted-foreground shrink-0">{release.type}</span>
-    </Link>
-  );
-}
 
