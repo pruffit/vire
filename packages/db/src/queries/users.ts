@@ -212,34 +212,41 @@ export async function linkOAuthAccount(
  *
  * Возвращает true если перенос выполнен, false если владелец — настоящий юзер.
  */
+/**
+ * Забрать OAuth-аккаунт у другого пользователя и отдать targeting-пользователю.
+ *
+ * Безопасно вызывать только из OAuth-callback: факт успешного Google-редиректа
+ * означает, что текущий пользователь является реальным владельцем этого аккаунта.
+ * «Другой пользователь» (currentOwnerId) — артефакт предыдущей неудачной попытки
+ * привязки. Если после передачи у него не остаётся других аккаунтов и нет пароля
+ * — удаляем его.
+ */
 export async function tryClaimOAuthAccount(
   provider: string,
   providerAccountId: string,
   targetUserId: string,
   currentOwnerId: string,
 ): Promise<boolean> {
-  const [owner] = await db
-    .select({ email: users.email, passwordHash: users.passwordHash })
-    .from(users)
-    .where(eq(users.id, currentOwnerId))
-    .limit(1);
-
-  // Реальный пользователь — не трогаем
-  if (!owner || owner.email !== null || owner.passwordHash !== null) return false;
-
   await db
     .update(accounts)
     .set({ userId: targetUserId })
     .where(and(eq(accounts.provider, provider), eq(accounts.providerAccountId, providerAccountId)));
 
-  const remaining = await db
-    .select({ p: accounts.providerAccountId })
+  // Удалить старого пользователя если он остался без аккаунтов и без пароля
+  const [{ cnt }] = await db
+    .select({ cnt: count() })
     .from(accounts)
-    .where(eq(accounts.userId, currentOwnerId))
-    .limit(1);
+    .where(eq(accounts.userId, currentOwnerId));
 
-  if (remaining.length === 0) {
-    await db.delete(users).where(eq(users.id, currentOwnerId));
+  if (Number(cnt) === 0) {
+    const [old] = await db
+      .select({ passwordHash: users.passwordHash })
+      .from(users)
+      .where(eq(users.id, currentOwnerId))
+      .limit(1);
+    if (old && old.passwordHash === null) {
+      await db.delete(users).where(eq(users.id, currentOwnerId));
+    }
   }
 
   return true;
