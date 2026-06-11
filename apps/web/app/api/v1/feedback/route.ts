@@ -3,7 +3,13 @@ import { Resend } from 'resend';
 import { z } from 'zod';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
-const resend = new Resend(process.env.AUTH_RESEND_KEY);
+// Ленивая инициализация: на уровне модуля `new Resend()` без ключа бросает на сборке
+// (Next вычисляет модуль при сборе данных роута).
+let resend: Resend | null = null;
+function getResend(): Resend {
+  if (!resend) resend = new Resend(process.env.RESEND_API_KEY);
+  return resend;
+}
 
 const schema = z.object({
   type: z.enum(['bug', 'idea', 'other']),
@@ -47,15 +53,22 @@ export async function POST(req: Request) {
     .filter(Boolean)
     .join('\n');
 
-  const to = process.env.FEEDBACK_TO ?? process.env.EMAIL_FROM ?? 'onboarding@resend.dev';
+  const from = process.env.RESEND_FROM ?? 'onboarding@resend.dev';
+  const to = process.env.FEEDBACK_TO ?? from;
 
-  await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
+  const { error } = await getResend().emails.send({
+    from,
     to,
     replyTo: email || undefined,
     subject,
     text,
   });
+
+  // Раньше ответ Resend игнорировался — форма «отправляла» в пустоту.
+  if (error) {
+    console.error('[feedback] resend error:', error);
+    return NextResponse.json({ error: 'Не удалось отправить сообщение' }, { status: 502 });
+  }
 
   return NextResponse.json({ ok: true });
 }

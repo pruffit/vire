@@ -24,8 +24,8 @@ AUTH_SECRET=                    # обязательно
 AUTH_URL=                       # публичный URL (https://vire.ru)
 AUTH_YANDEX_ID=
 AUTH_YANDEX_SECRET=
-AUTH_RESEND_KEY=                # Resend API key для magic-link
-EMAIL_FROM=                     # отправитель magic-link (noreply@vire.ru)
+RESEND_API_KEY=                 # Resend API key для magic-link (и обратной связи)
+RESEND_FROM=                    # отправитель писем (noreply@vire.ru)
 ```
 
 ## Известные ограничения

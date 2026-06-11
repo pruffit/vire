@@ -131,8 +131,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Yandex({ allowDangerousEmailAccountLinking: true }),
     Google({ allowDangerousEmailAccountLinking: true }),
     Resend({
-      apiKey: process.env.AUTH_RESEND_KEY,
-      from: process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
+      apiKey: process.env.RESEND_API_KEY,
+      from: process.env.RESEND_FROM ?? 'onboarding@resend.dev',
       async sendVerificationRequest({ identifier, url }) {
         // В dev просто печатаем ссылку в консоль — Resend free-план разрешает
         // слать только на свой email, а нам нужно тестировать с любыми адресами.
@@ -140,9 +140,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           console.log(`\n[auth] Magic link for ${identifier}:\n${url}\n`);
           return;
         }
-        const client = new ResendClient(process.env.AUTH_RESEND_KEY!);
+        const client = new ResendClient(process.env.RESEND_API_KEY!);
         const { error } = await client.emails.send({
-          from: process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
+          from: process.env.RESEND_FROM ?? 'onboarding@resend.dev',
           to: identifier,
           subject: 'Ссылка для входа в Vire',
           text: `Твоя ссылка для входа в Vire:\n\n${url}\n\nДействительна 24 часа.`,
