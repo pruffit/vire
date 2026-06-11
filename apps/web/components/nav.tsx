@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { auth, signOut } from '@/auth';
 import { NavSearch } from './nav-search';
 import { NavLink } from './nav-link';
+import { Logo } from './logo';
 
 export async function Nav() {
   const session = await auth();
@@ -16,9 +17,10 @@ export async function Nav() {
         {/* Logo */}
         <Link
           href="/"
-          className="text-sm font-semibold tracking-tight shrink-0 hover:opacity-70 transition-opacity"
+          aria-label="Vire, на главную"
+          className="shrink-0 hover:opacity-70 transition-opacity"
         >
-          Vire
+          <Logo className="h-5 w-auto" />
         </Link>
 
         {/* Center: основная навигация */}
