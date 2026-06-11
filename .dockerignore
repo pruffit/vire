@@ -1,0 +1,23 @@
+# Зависимости и артефакты сборки — ставятся/собираются внутри образа
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+
+# VCS и локальное окружение
+.git
+.gitignore
+**/.env
+**/.env.*
+!**/.env.example
+
+# Локальная инфраструктура и доки
+docker-compose.yml
+**/*.md
+**/.vscode
+**/.idea
+
+# Тесты и отчёты
+**/coverage
+**/*.test.ts
+**/__tests__

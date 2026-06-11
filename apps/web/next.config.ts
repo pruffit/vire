@@ -1,4 +1,10 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Корень монорепо — чтобы standalone-трейсинг собрал воркспейс-пакеты
+// (@vire/core, @vire/db, @vire/ui), а не только apps/web.
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../');
 
 // Обложки и аватары лежат в S3/MinIO и отдаются по S3_PUBLIC_ENDPOINT
 // (локально http://localhost:9000, на проде — Selectel). next/image должен
@@ -62,6 +68,9 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Самодостаточный бандл (server.js + только нужные node_modules) для Docker.
+  output: 'standalone',
+  outputFileTracingRoot: repoRoot,
   transpilePackages: ['@vire/core', '@vire/db', '@vire/ui'],
   images: {
     remotePatterns: [

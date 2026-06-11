@@ -1,0 +1,18 @@
+# Домены берутся из .env (DOMAIN, CDN_DOMAIN, ACME_EMAIL).
+# Caddy сам выпускает и продлевает TLS Let's Encrypt.
+{
+	email {$ACME_EMAIL}
+}
+
+# Основной сайт → Next.js
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+# CDN-сабдомен → публичный bucket MinIO (обложки + HLS-стрим).
+# Приватный vault MinIO отдаёт здесь AccessDenied без подписи — безопасно.
+{$CDN_DOMAIN} {
+	encode gzip
+	reverse_proxy minio:9000
+}
