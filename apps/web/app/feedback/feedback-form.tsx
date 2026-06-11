@@ -158,9 +158,13 @@ export function FeedbackForm() {
       <button
         type="submit"
         disabled={status === 'sending' || message.trim().length < 10}
-        className="w-full rounded-full bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full rounded-full bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
-        {status === 'sending' ? 'Отправляю…' : 'Отправить'}
+        {status === 'sending'
+          ? 'Отправляю…'
+          : message.trim().length < 10 && message.length > 0
+          ? `Ещё ${10 - message.trim().length} симв.`
+          : 'Отправить'}
       </button>
     </form>
   );

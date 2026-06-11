@@ -47,9 +47,11 @@ export async function POST(req: Request) {
     .filter(Boolean)
     .join('\n');
 
+  const to = process.env.FEEDBACK_TO ?? process.env.EMAIL_FROM ?? 'onboarding@resend.dev';
+
   await resend.emails.send({
     from: process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
-    to: 'hello@vire.ru',
+    to,
     replyTo: email || undefined,
     subject,
     text,
