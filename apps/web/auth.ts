@@ -97,9 +97,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
 
     // ── OAuth ─────────────────────────────────────────────────────────────
-    Yandex,
-    Google,
-    VK,
+    // allowDangerousEmailAccountLinking — разрешает привязку нового OAuth-провайдера
+    // к существующему аккаунту по совпадению email. «Dangerous» потому что теоретически
+    // злоумышленник мог зарегистрировать email до верификации, но у нас email
+    // при регистрации сразу помечается как verified — риск минимален.
+    Yandex({ allowDangerousEmailAccountLinking: true }),
+    Google({ allowDangerousEmailAccountLinking: true }),
+    VK({ allowDangerousEmailAccountLinking: true }),
     Resend({
       apiKey: process.env.AUTH_RESEND_KEY,
       from: process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
