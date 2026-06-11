@@ -71,7 +71,9 @@ function createAdapter() {
         if (linkUid && base.getUser) {
           return await base.getUser(linkUid);
         }
-      } catch {}
+      } catch {
+        // нет cookie-привязки — падаем на обычный поиск по email
+      }
       return base.getUserByEmail?.(email) ?? null;
     },
   };
