@@ -50,7 +50,10 @@ export function CookieBanner() {
         >
           <div className="rounded-xl bg-card border border-border/60 shadow-xl shadow-black/30 px-4 py-3 flex items-start gap-3 backdrop-blur-sm">
             <p className="flex-1 text-xs text-muted-foreground leading-relaxed">
-              Мы используем только необходимые cookie для работы сайта — сессия авторизации. Сторонней аналитики нет.
+              Мы используем только необходимые cookie — сессия авторизации. Сторонней аналитики нет.{' '}
+              <a href="/privacy" className="underline underline-offset-2 hover:opacity-70 transition-opacity">
+                Подробнее
+              </a>
             </p>
             <button
               onClick={dismiss}

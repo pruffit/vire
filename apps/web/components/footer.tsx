@@ -25,6 +25,9 @@ export function Footer() {
             <a href="mailto:hello@vire.ru" className="hover:text-white/70 transition-colors">
               hello@vire.ru
             </a>
+            <Link href="/feedback" className="hover:text-white/70 transition-colors">
+              Обратная связь
+            </Link>
             <Link
               href="/sign-in"
               className="hover:text-white/70 transition-colors"

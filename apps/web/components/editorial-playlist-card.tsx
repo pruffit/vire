@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import type { EditorialPlaylist } from '@vire/db';
+import { pluralTracks } from '@/lib/format';
 
 const KIND_LABELS: Record<string, string | undefined> = {
   USER: undefined, // пользовательские плейлисты — бейдж не показываем
@@ -148,8 +149,3 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-function pluralTracks(n: number): string {
-  if (n % 10 === 1 && n % 100 !== 11) return 'трек';
-  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'трека';
-  return 'треков';
-}

@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { redirect } from 'next/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
@@ -27,7 +26,7 @@ export default async function PlaylistPage({ params }: Props) {
   if (!playlist) notFound();
 
   if (playlist.visibility === 'PRIVATE' && playlist.ownerUserId !== session?.user?.id) {
-    redirect('/sign-in');
+    notFound();
   }
 
   const isOwner = session?.user?.id === playlist.ownerUserId;

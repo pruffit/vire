@@ -25,9 +25,12 @@ export async function POST(_req: Request, { params }: Params) {
   return NextResponse.json({ liked: true });
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const rl = await rateLimit(`playlist-like:${session.user.id}`, 60, 60);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const { id } = await params;
   await unlikePlaylist(session.user.id, id);

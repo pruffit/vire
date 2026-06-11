@@ -139,12 +139,12 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
 
   flushPlayEvent('direct');
 
-  usePlayerStore.getState()._setState({ isLoading: true, hasAudio: false, currentTime: 0, duration: 0, waveformPeaks: null });
+  usePlayerStore.getState()._setState({ isLoading: true, hasAudio: false, audioError: false, currentTime: 0, duration: 0, waveformPeaks: null });
 
   const res = await fetch(`/api/v1/tracks/${track.id}/manifest`).catch(() => null);
 
   if (!res?.ok) {
-    usePlayerStore.getState()._setState({ isLoading: false });
+    usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
     return;
   }
 
@@ -161,6 +161,13 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
     hls.attachMedia(audio);
     hls.once(Hls.Events.MANIFEST_PARSED, () => {
       audio?.play().catch(() => {});
+    });
+    hls.on(Hls.Events.ERROR, (_evt, data) => {
+      if (data.fatal) {
+        usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
+        hls?.destroy();
+        hls = null;
+      }
     });
   } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
     audio.src = hlsUrl;

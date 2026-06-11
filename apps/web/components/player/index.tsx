@@ -56,6 +56,8 @@ export function Player() {
               <Controls />
               <ProgressSection />
             </div>
+            {/* Тонкая полоска прогресса внизу бара — видна на всех размерах */}
+            <MiniProgressBar />
           </motion.div>
         )}
       </AnimatePresence>
@@ -349,10 +351,11 @@ function Controls() {
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isLoading = usePlayerStore((s) => s.isLoading);
   const hasAudio = usePlayerStore((s) => s.hasAudio);
+  const audioError = usePlayerStore((s) => s.audioError);
   const waveMode = usePlayerStore((s) => s.waveMode);
 
-  // Иконка плеера: загрузка / пауза / играть — выбираем ключ для морфинга.
-  const iconKey = isLoading ? 'loading' : isPlaying ? 'pause' : 'play';
+  // Иконка плеера: ошибка / загрузка / пауза / играть — выбираем ключ для морфинга.
+  const iconKey = audioError ? 'error' : isLoading ? 'loading' : isPlaying ? 'pause' : 'play';
 
   return (
     <div className="flex items-center gap-5 justify-center flex-1">
@@ -368,9 +371,10 @@ function Controls() {
 
       <motion.button
         onClick={() => controls.togglePlay()}
-        disabled={!hasAudio || isLoading}
-        aria-label={isPlaying ? 'Пауза' : 'Играть'}
-        whileTap={hasAudio && !isLoading ? { scale: 0.92 } : undefined}
+        disabled={!hasAudio || isLoading || audioError}
+        aria-label={audioError ? 'Ошибка загрузки' : isPlaying ? 'Пауза' : 'Играть'}
+        title={audioError ? 'Не удалось загрузить трек' : undefined}
+        whileTap={hasAudio && !isLoading && !audioError ? { scale: 0.92 } : undefined}
         transition={spring.snappy}
         className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:bg-primary/90"
       >
@@ -383,7 +387,9 @@ function Controls() {
             transition={spring.snappy}
             className="flex items-center justify-center"
           >
-            {isLoading ? (
+            {audioError ? (
+              <ErrorIcon />
+            ) : isLoading ? (
               <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
             ) : isPlaying ? (
               <PauseIcon />
@@ -432,6 +438,33 @@ function Controls() {
           )}
         </AnimatePresence>
       </motion.button>
+    </div>
+  );
+}
+
+function MiniProgressBar() {
+  const currentTime = usePlayerStore((s) => s.currentTime);
+  const duration = usePlayerStore((s) => s.duration);
+  const progress = duration > 0 ? currentTime / duration : 0;
+
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5"
+      onClick={(e) => {
+        if (!duration) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        controls.seek(((e.clientX - rect.left) / rect.width) * duration);
+      }}
+    >
+      <div
+        className="h-full transition-[width] duration-100 ease-linear"
+        style={{
+          width: `${progress * 100}%`,
+          background: 'var(--artist-accent, oklch(72% 0.19 145))',
+          opacity: 0.7,
+        }}
+      />
     </div>
   );
 }
@@ -559,6 +592,14 @@ function ChevronDownIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function ErrorIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
     </svg>
   );
 }

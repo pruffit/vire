@@ -1,0 +1,167 @@
+'use client';
+
+import { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { spring } from '@vire/ui/motion';
+
+type FeedbackType = 'bug' | 'idea' | 'other';
+
+const TYPES: { value: FeedbackType; label: string; emoji: string; hint: string }[] = [
+  { value: 'bug', label: 'Баг', emoji: '🐛', hint: 'Что-то сломалось или работает неожиданно' },
+  { value: 'idea', label: 'Идея', emoji: '💡', hint: 'Предложение по улучшению платформы' },
+  { value: 'other', label: 'Другое', emoji: '💬', hint: 'Что угодно ещё' },
+];
+
+type Status = 'idle' | 'sending' | 'done' | 'error';
+
+export function FeedbackForm() {
+  const [type, setType] = useState<FeedbackType>('bug');
+  const [message, setMessage] = useState('');
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<Status>('idle');
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const currentPage = typeof window !== 'undefined' ? window.location.href : '';
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (status === 'sending') return;
+    setStatus('sending');
+
+    try {
+      const res = await fetch('/api/v1/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, message: message.trim(), page: currentPage, email: email.trim() || undefined }),
+      });
+
+      if (!res.ok) throw new Error('Server error');
+      setStatus('done');
+    } catch {
+      setStatus('error');
+    }
+  }
+
+  if (status === 'done') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={spring.smooth}
+        className="rounded-xl bg-card border border-border px-6 py-10 text-center space-y-3"
+      >
+        <p className="text-3xl">🙏</p>
+        <p className="font-semibold text-lg">Спасибо!</p>
+        <p className="text-sm text-muted-foreground">
+          Сообщение отправлено. Мы прочитаем и постараемся ответить.
+        </p>
+        <button
+          type="button"
+          onClick={() => { setStatus('idle'); setMessage(''); setEmail(''); }}
+          className="mt-2 text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+        >
+          Отправить ещё одно
+        </button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <form ref={formRef} onSubmit={submit} className="space-y-6">
+      {/* Тип */}
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Тип</legend>
+        <div className="grid grid-cols-3 gap-2">
+          {TYPES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setType(t.value)}
+              className={[
+                'rounded-lg border px-3 py-3 text-left transition-all',
+                type === t.value
+                  ? 'border-primary bg-primary/5 text-foreground'
+                  : 'border-border text-muted-foreground hover:border-border/80 hover:text-foreground',
+              ].join(' ')}
+            >
+              <span className="text-lg block mb-1">{t.emoji}</span>
+              <span className="text-xs font-medium block">{t.label}</span>
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {TYPES.find((t) => t.value === type)?.hint}
+        </p>
+      </fieldset>
+
+      {/* Сообщение */}
+      <div className="space-y-1.5">
+        <label htmlFor="fb-message" className="text-sm font-medium">
+          Сообщение
+          <span className="text-muted-foreground font-normal ml-1">(мин. 10 символов)</span>
+        </label>
+        <textarea
+          id="fb-message"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          required
+          minLength={10}
+          maxLength={2000}
+          rows={5}
+          placeholder={
+            type === 'bug'
+              ? 'Опиши что произошло: что делал, что ожидал увидеть, что увидел на самом деле...'
+              : type === 'idea'
+              ? 'Расскажи свою идею...'
+              : 'Напиши что хочешь...'
+          }
+          className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+        />
+        <p className="text-xs text-muted-foreground text-right tabular-nums">
+          {message.length} / 2000
+        </p>
+      </div>
+
+      {/* Email (необязательно) */}
+      <div className="space-y-1.5">
+        <label htmlFor="fb-email" className="text-sm font-medium">
+          Email
+          <span className="text-muted-foreground font-normal ml-1">(необязательно — для ответа)</span>
+        </label>
+        <input
+          id="fb-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+      </div>
+
+      <AnimatePresence>
+        {status === 'error' && (
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={spring.snappy}
+            className="text-sm text-red-400"
+          >
+            Не удалось отправить. Попробуй ещё раз или напиши напрямую на{' '}
+            <a href="mailto:hello@vire.ru" className="underline underline-offset-2">
+              hello@vire.ru
+            </a>
+          </motion.p>
+        )}
+      </AnimatePresence>
+
+      <button
+        type="submit"
+        disabled={status === 'sending' || message.trim().length < 10}
+        className="w-full rounded-full bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {status === 'sending' ? 'Отправляю…' : 'Отправить'}
+      </button>
+    </form>
+  );
+}
