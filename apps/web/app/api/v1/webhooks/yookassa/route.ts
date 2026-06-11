@@ -24,7 +24,12 @@ export async function POST(req: Request) {
       await confirmPurchaseByExternalId(paymentId);
     }
   } else if (event === 'payment.canceled') {
-    await failPurchaseByExternalId(paymentId);
+    // Re-fetch перед действием — иначе подделанный canceled-вебхук мог бы
+    // пометить чужую ожидающую покупку FAILED.
+    const payment = await getPayment(paymentId).catch(() => null);
+    if (payment?.status === 'canceled') {
+      await failPurchaseByExternalId(paymentId);
+    }
   }
 
   // Always return 200 so YooKassa doesn't retry on unknown events

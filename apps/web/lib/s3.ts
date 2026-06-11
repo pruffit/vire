@@ -11,6 +11,19 @@ export const s3 = new S3Client({
   forcePathStyle: true,
 });
 
+// Отдельный клиент для подписи СКАЧИВАЕМЫХ ссылок: подпись SigV4 привязана к хосту,
+// а на проде S3_ENDPOINT внутренний (minio:9000) и из браузера недоступен. Подписываем
+// под публичным хостом (через Caddy → MinIO). Локально оба совпадают.
+const s3Signer = new S3Client({
+  endpoint: process.env.S3_PUBLIC_ENDPOINT ?? process.env.S3_ENDPOINT ?? 'http://localhost:9000',
+  region: process.env.S3_REGION ?? 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY ?? 'minioadmin',
+    secretAccessKey: process.env.S3_SECRET_KEY ?? 'minioadmin',
+  },
+  forcePathStyle: true,
+});
+
 export const VAULT = process.env.S3_BUCKET_VAULT ?? 'vire-vault';
 export const STREAM = process.env.S3_BUCKET_STREAM ?? 'vire-stream';
 
@@ -40,8 +53,8 @@ export async function getSourceDownloadUrl(key: string, filename: string): Promi
     ResponseContentDisposition: `attachment; filename="${encodeURIComponent(filename)}.${ext}"`,
     ResponseContentType: contentType,
   });
-  // 15 minutes — enough to start the download
-  return getSignedUrl(s3, command, { expiresIn: 900 });
+  // 15 minutes — enough to start the download. Подписываем публичным клиентом.
+  return getSignedUrl(s3Signer, command, { expiresIn: 900 });
 }
 
 export async function uploadToStream(
