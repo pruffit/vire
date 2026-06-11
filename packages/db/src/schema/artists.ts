@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, jsonb, index } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
 export const artistProfiles = pgTable('artist_profiles', {
@@ -23,7 +23,7 @@ export const artistProfiles = pgTable('artist_profiles', {
   verified: boolean('verified').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [index('artist_profiles_user_id_idx').on(t.userId)]);
 
 // Анонсы и новости артиста — канал коммуникации с аудиторией помимо музыки.
 // Не полноценный блог: короткие записи, хронология. title опционален.
@@ -36,7 +36,7 @@ export const artistPosts = pgTable('artist_posts', {
   body: text('body').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [index('artist_posts_artist_profile_id_idx').on(t.artistProfileId)]);
 
 // Правообладатель — отдельно от витрины артиста
 // Артист = бренд, правообладатель = кому идут деньги

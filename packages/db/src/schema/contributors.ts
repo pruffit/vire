@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, pgEnum, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, pgEnum, numeric, index } from 'drizzle-orm/pg-core';
 import { tracks } from './releases';
 import { rightsHolders } from './artists';
 
@@ -20,5 +20,5 @@ export const trackContributors = pgTable('track_contributors', {
   role: contributorRoleEnum('role').notNull().default('PERFORMER'),
   // Сумма долей по треку должна = 100.00 — проверяется в сервисе
   payoutShare: numeric('payout_share', { precision: 5, scale: 2 }).notNull().default('100.00'),
-});
+}, (t) => [index('track_contributors_track_id_idx').on(t.trackId)]);
 

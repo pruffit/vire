@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, timestamp, integer, boolean, pgEnum, numeric, unique
+  pgTable, uuid, text, timestamp, integer, boolean, pgEnum, numeric, unique, index
 } from 'drizzle-orm/pg-core';
 import { users } from './users';
 import { tracks, releases } from './releases';
@@ -27,7 +27,10 @@ export const purchases = pgTable('purchases', {
   externalPaymentId: text('external_payment_id').unique(),
   purchasedAt: timestamp('purchased_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (t) => [
+  // hasPurchasedTrack фильтрует по (userId, itemId, status); список покупок — по userId
+  index('purchases_user_item_idx').on(t.userId, t.itemId),
+]);
 
 export const playlists = pgTable('playlists', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -42,7 +45,7 @@ export const playlists = pgTable('playlists', {
   likesCount: integer('likes_count').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [index('playlists_owner_user_id_idx').on(t.ownerUserId)]);
 
 export const playlistTracks = pgTable('playlist_tracks', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -51,28 +54,40 @@ export const playlistTracks = pgTable('playlist_tracks', {
   position: integer('position').notNull(),
   addedBy: uuid('added_by').references(() => users.id),
   addedAt: timestamp('added_at').notNull().defaultNow(),
-});
+}, (t) => [index('playlist_tracks_playlist_id_idx').on(t.playlistId)]);
 
 export const playlistLikes = pgTable('playlist_likes', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   playlistId: uuid('playlist_id').notNull().references(() => playlists.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (t) => [unique('playlist_likes_user_playlist_unique').on(t.userId, t.playlistId)]);
+}, (t) => [
+  unique('playlist_likes_user_playlist_unique').on(t.userId, t.playlistId),
+  // unique ведёт по userId — счётчик по плейлисту требует отдельного индекса
+  index('playlist_likes_playlist_id_idx').on(t.playlistId),
+]);
 
 export const likes = pgTable('likes', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id),
   trackId: uuid('track_id').notNull().references(() => tracks.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (t) => [unique('likes_user_track_unique').on(t.userId, t.trackId)]);
+}, (t) => [
+  unique('likes_user_track_unique').on(t.userId, t.trackId),
+  // счётчик лайков по треку — unique(userId, trackId) его не покрывает
+  index('likes_track_id_idx').on(t.trackId),
+]);
 
 export const follows = pgTable('follows', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id),
   artistProfileId: uuid('artist_profile_id').notNull().references(() => artistProfiles.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (t) => [unique('follows_user_artist_unique').on(t.userId, t.artistProfileId)]);
+}, (t) => [
+  unique('follows_user_artist_unique').on(t.userId, t.artistProfileId),
+  // счётчик фолловеров по артисту — unique(userId, artistId) его не покрывает
+  index('follows_artist_profile_id_idx').on(t.artistProfileId),
+]);
 
 // Анонимные маркеры на волне — не комментарии, просто точка
 // Агрегируется: артист видит пики вовлечённости
@@ -82,7 +97,7 @@ export const favoriteMoments = pgTable('favorite_moments', {
   userId: uuid('user_id').references(() => users.id),
   positionSec: integer('position_sec').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (t) => [index('favorite_moments_track_id_idx').on(t.trackId)]);
 
 // Полиморфная подписка — один тип для artist-tier и listener-premium
 // Проверки доступа в middleware пишутся один раз
@@ -95,4 +110,4 @@ export const subscriptions = pgTable('subscriptions', {
   providerSubscriptionId: text('provider_subscription_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [index('subscriptions_user_id_idx').on(t.userId)]);

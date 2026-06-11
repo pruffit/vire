@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, integer, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, integer, primaryKey, index } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
 export const accounts = pgTable(
@@ -18,7 +18,10 @@ export const accounts = pgTable(
     id_token: text('id_token'),
     session_state: text('session_state'),
   },
-  (t) => [primaryKey({ columns: [t.provider, t.providerAccountId] })]
+  (t) => [
+    primaryKey({ columns: [t.provider, t.providerAccountId] }),
+    index('accounts_user_id_idx').on(t.userId),
+  ]
 );
 
 export const sessions = pgTable('sessions', {

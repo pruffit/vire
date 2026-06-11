@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
 
 // Лог прослушиваний — ОТДЕЛЬНО от основной транзакционной базы
 // Не пишем прямым инсертом на каждый тик — только через буфер/очередь
@@ -14,4 +14,9 @@ export const playEvents = pgTable('play_events', {
   source: text('source').notNull().default('direct'),
   durationPlayedSec: integer('duration_played_sec').notNull().default(0),
   startedAt: timestamp('started_at').notNull().defaultNow(),
-});
+}, (t) => [
+  // Самая быстрорастущая таблица — без индексов вся аналитика идёт seq-scan'ом.
+  index('play_events_track_id_idx').on(t.trackId),
+  index('play_events_started_at_idx').on(t.startedAt),
+  index('play_events_user_id_idx').on(t.userId),
+]);

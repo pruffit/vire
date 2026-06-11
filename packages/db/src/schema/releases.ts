@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, boolean, jsonb, pgEnum, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, boolean, jsonb, pgEnum, primaryKey, index } from 'drizzle-orm/pg-core';
 import { artistProfiles } from './artists';
 
 export const releaseTypeEnum = pgEnum('release_type', ['ALBUM', 'EP', 'SINGLE']);
@@ -23,7 +23,7 @@ export const releases = pgTable('releases', {
   linerNotes: text('liner_notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [index('releases_artist_profile_id_idx').on(t.artistProfileId)]);
 
 export const tracks = pgTable('tracks', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -40,7 +40,7 @@ export const tracks = pgTable('tracks', {
   credits: jsonb('credits').default([]),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [index('tracks_release_id_idx').on(t.releaseId)]);
 
 export const moodEnum = pgEnum('mood', [
   'MELANCHOLY',
