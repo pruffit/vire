@@ -95,11 +95,6 @@ export async function signInGoogleAction(formData: FormData) {
   await signIn('google', { redirectTo: callbackUrl });
 }
 
-export async function signInVKAction(formData: FormData) {
-  const callbackUrl = (formData.get('callbackUrl') as string) ?? '/';
-  await signIn('vk', { redirectTo: callbackUrl });
-}
-
 export async function signInMagicLinkAction(
   _prev: string | null,
   formData: FormData,

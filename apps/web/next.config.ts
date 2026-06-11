@@ -33,8 +33,8 @@ function buildCsp(): string {
     // telegram.org нужен для виджета входа; vk.com для VK OAuth скриптов
     `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://telegram.org`,
     `style-src 'self' 'unsafe-inline'`,
-    // аватары: Yandex, Google (lh3), VK (userapi CDN), Telegram (t.me)
-    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://*.userapi.com https://t.me ${s3}`,
+    // аватары: Yandex, Google (lh3), Telegram (t.me)
+    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me ${s3}`,
     `media-src 'self' blob: ${s3}`,
     `connect-src 'self' blob: ${s3}${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
@@ -68,7 +68,6 @@ const nextConfig: NextConfig = {
       s3RemotePattern(),
       { protocol: 'https', hostname: 'avatars.yandex.net', pathname: '/**' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com', pathname: '/**' },
-      { protocol: 'https', hostname: '*.userapi.com', pathname: '/**' },
       { protocol: 'https', hostname: 't.me', pathname: '/**' },
     ],
     // Next 16 блокирует оптимизацию картинок с приватных/loopback IP (SSRF-защита).

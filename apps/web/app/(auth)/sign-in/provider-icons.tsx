@@ -36,18 +36,6 @@ export function GoogleIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-export function VKIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="none">
-      <rect width="24" height="24" rx="5" fill="#0077FF" />
-      <path
-        d="M12.8 16.3h1.1s.3 0 .5-.2c.1-.2.1-.5.1-.5s0-1.5.7-1.7c.7-.2 1.6 1.4 2.6 2.1.7.5 1.3.4 1.3.4l2.5 0s1.3-.1.7-1.1c-.1-.1-.4-.8-1.9-2.2-1.6-1.5-1.4-1.2.5-3.8 1.2-1.6 1.7-2.5 1.5-2.9-.2-.4-1-.3-1-.3l-2.8 0s-.2 0-.4.1c-.2.1-.3.3-.3.3s-.5 1.2-1.1 2.2c-1.3 2.2-1.8 2.3-2 2.2-.5-.3-.4-1.3-.4-1.9 0-2.1.3-3-.6-3.2-.3-.1-.5-.1-1.4-.1-1 0-1.9 0-2.4.2-.3.2-.6.5-.4.5.2 0 .6.1.9.4.3.4.3 1.3.3 1.3s.2 2.5-.4 2.8c-.4.2-.9-.2-2.1-2.2-.6-1-.1-2.1-1-2.1l-2.7 0s-.4 0-.6.2c-.2.2-.1.5-.1.5s2.1 5 4.6 7.5c2.2 2.3 4.7 2.2 4.7 2.2z"
-        fill="white"
-      />
-    </svg>
-  );
-}
-
 export function TelegramIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="none">

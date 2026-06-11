@@ -9,9 +9,8 @@ import {
   signInMagicLinkAction,
   signInYandexAction,
   signInGoogleAction,
-  signInVKAction,
 } from './auth-actions';
-import { YandexIcon, GoogleIcon, VKIcon } from './provider-icons';
+import { YandexIcon, GoogleIcon } from './provider-icons';
 import { TelegramButton } from './telegram-button';
 
 type Tab = 'login' | 'register' | 'magic';
@@ -198,16 +197,12 @@ function MagicLinkForm({ callbackUrl, onBack }: { callbackUrl: string; onBack: (
 function SocialProviders({ callbackUrl }: { callbackUrl: string }) {
   return (
     <div className="space-y-2.5">
-      {/* Яндекс, Google, VK в ряд */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <OAuthButton action={signInYandexAction} callbackUrl={callbackUrl} label="Яндекс">
           <YandexIcon size={17} />
         </OAuthButton>
         <OAuthButton action={signInGoogleAction} callbackUrl={callbackUrl} label="Google">
           <GoogleIcon size={17} />
-        </OAuthButton>
-        <OAuthButton action={signInVKAction} callbackUrl={callbackUrl} label="ВКонтакте">
-          <VKIcon size={17} />
         </OAuthButton>
       </div>
 

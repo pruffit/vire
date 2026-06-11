@@ -3,20 +3,19 @@
 import { useActionState, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { YandexIcon, GoogleIcon, VKIcon, TelegramIcon } from '@/app/(auth)/sign-in/provider-icons';
-import { setPasswordAction, linkYandexAction, linkGoogleAction, linkVKAction } from './account-actions';
+import { YandexIcon, GoogleIcon, TelegramIcon } from '@/app/(auth)/sign-in/provider-icons';
+import { setPasswordAction, linkYandexAction, linkGoogleAction } from './account-actions';
 
 interface Props {
   hasPassword: boolean;
-  linkedProviders: string[]; // ['yandex', 'google', 'vk', 'telegram', ...]
+  linkedProviders: string[];
   linkError?: string;
 }
 
 const PROVIDERS = [
-  { id: 'yandex',    label: 'Яндекс',    Icon: YandexIcon    },
-  { id: 'google',    label: 'Google',    Icon: GoogleIcon    },
-  { id: 'vk',        label: 'ВКонтакте', Icon: VKIcon        },
-  { id: 'telegram',  label: 'Telegram',  Icon: TelegramIcon  },
+  { id: 'yandex',   label: 'Яндекс',   Icon: YandexIcon   },
+  { id: 'google',   label: 'Google',   Icon: GoogleIcon   },
+  { id: 'telegram', label: 'Telegram', Icon: TelegramIcon },
 ] as const;
 
 type OAuthLinkAction = (formData: FormData) => void | Promise<void>;
@@ -24,7 +23,6 @@ type OAuthLinkAction = (formData: FormData) => void | Promise<void>;
 const LINK_ACTIONS: Record<string, OAuthLinkAction> = {
   yandex: linkYandexAction,
   google: linkGoogleAction,
-  vk: linkVKAction,
 };
 
 const LINK_ERROR_MESSAGES: Record<string, string> = {

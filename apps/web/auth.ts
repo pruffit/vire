@@ -2,7 +2,6 @@ import NextAuth, { type DefaultSession } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Yandex from 'next-auth/providers/yandex';
 import Google from 'next-auth/providers/google';
-import VK from 'next-auth/providers/vk';
 import Resend from 'next-auth/providers/resend';
 import { Resend as ResendClient } from 'resend';
 import { compare } from 'bcryptjs';
@@ -129,7 +128,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // мы возвращаем linking-пользователя (который мог быть создан через другой провайдер)
     Yandex({ allowDangerousEmailAccountLinking: true }),
     Google({ allowDangerousEmailAccountLinking: true }),
-    VK({ allowDangerousEmailAccountLinking: true }),
     Resend({
       apiKey: process.env.AUTH_RESEND_KEY,
       from: process.env.EMAIL_FROM ?? 'onboarding@resend.dev',

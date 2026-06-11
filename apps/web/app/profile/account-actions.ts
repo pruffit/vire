@@ -66,6 +66,3 @@ export async function linkGoogleAction() {
   await linkOAuthProvider('google');
 }
 
-export async function linkVKAction() {
-  await linkOAuthProvider('vk');
-}
