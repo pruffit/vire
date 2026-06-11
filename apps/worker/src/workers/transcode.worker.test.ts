@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   computeWaveformPeaks: vi.fn(),
   probeDuration: vi.fn(),
   readAudioMetadata: vi.fn(),
+  analyzeAudioFeatures: vi.fn(),
   txUpdate: vi.fn(),
   txInsert: vi.fn(),
 }));
@@ -39,6 +40,7 @@ vi.mock('../lib/ffmpeg.js', () => ({
   probeDuration: h.probeDuration,
 }));
 vi.mock('../lib/metadata.js', () => ({ readAudioMetadata: h.readAudioMetadata }));
+vi.mock('../lib/audio-analysis.js', () => ({ analyzeAudioFeatures: h.analyzeAudioFeatures }));
 vi.mock('../queues/connection.js', () => ({ connection: {} }));
 
 import { processTranscodeJob } from './transcode.worker.js';
@@ -72,6 +74,8 @@ beforeEach(() => {
   });
   h.computeWaveformPeaks.mockResolvedValue([0.1, 0.2]);
   h.readAudioMetadata.mockResolvedValue({ durationSec: 200, bpm: 120, musicalKey: 'Am' });
+  // analyzeAudioFeatures should not be called when tags are complete (bpm/key present)
+  h.analyzeAudioFeatures.mockResolvedValue({ bpm: null, musicalKey: null });
   h.probeDuration.mockResolvedValue(321);
 });
 
@@ -130,11 +134,47 @@ describe('processTranscodeJob', () => {
     expect(h.lastUpdateSet).toMatchObject({ status: 'READY', durationSec: 200 });
   });
 
+  it('skips audio analysis when tags already have bpm and key', async () => {
+    await processTranscodeJob(makeJob());
+    expect(h.analyzeAudioFeatures).not.toHaveBeenCalled();
+  });
+
   it('falls back to ffprobe duration when tags have none', async () => {
     h.readAudioMetadata.mockResolvedValue({ durationSec: 0, bpm: null, musicalKey: null });
+    h.analyzeAudioFeatures.mockResolvedValue({ bpm: null, musicalKey: null });
     await processTranscodeJob(makeJob());
     expect(h.probeDuration).toHaveBeenCalledTimes(1);
     expect(h.lastUpdateSet).toMatchObject({ durationSec: 321 });
+  });
+
+  it('auto-detects bpm and key when tags are missing', async () => {
+    h.readAudioMetadata.mockResolvedValue({ durationSec: 180, bpm: null, musicalKey: null });
+    h.analyzeAudioFeatures.mockResolvedValue({ bpm: 128, musicalKey: 'C major' });
+
+    await processTranscodeJob(makeJob());
+
+    expect(h.analyzeAudioFeatures).toHaveBeenCalledWith(
+      expect.stringMatching(/source\.wav$/),
+      { bpm: true, key: true },
+    );
+
+    const insertCall = (h.txInsert as Mock).mock.calls[0];
+    expect(insertCall).toBeDefined();
+    // The insert is chained: values() → onConflictDoUpdate(), so we verify analyzeAudioFeatures was called
+    // and the job completed without error
+    expect(h.txUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('auto-detects only missing fields (bpm present, key missing)', async () => {
+    h.readAudioMetadata.mockResolvedValue({ durationSec: 180, bpm: 120, musicalKey: null });
+    h.analyzeAudioFeatures.mockResolvedValue({ bpm: null, musicalKey: 'G minor' });
+
+    await processTranscodeJob(makeJob());
+
+    expect(h.analyzeAudioFeatures).toHaveBeenCalledWith(
+      expect.any(String),
+      { bpm: false, key: true },
+    );
   });
 
   it('reports completion progress', async () => {

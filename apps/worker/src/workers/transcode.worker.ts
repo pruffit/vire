@@ -8,6 +8,7 @@ import { QUEUE_TRANSCODE, type TranscodeJobData } from '@vire/core';
 import { VAULT, STREAM, downloadToFile, uploadFile } from '../lib/s3.js';
 import { transcodeToHls, computeWaveformPeaks, probeDuration } from '../lib/ffmpeg.js';
 import { readAudioMetadata } from '../lib/metadata.js';
+import { analyzeAudioFeatures } from '../lib/audio-analysis.js';
 import { connection } from '../queues/connection.js';
 
 export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<void> {
@@ -42,21 +43,33 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
     const durationSec = metadata.durationSec || (await probeDuration(sourcePath));
     await job.updateProgress(30);
 
-    // 3. HLS-транскодинг
+    // 3. Автоопределение BPM/тональности (только если теги не заполнены)
+    let { bpm, musicalKey } = metadata;
+    if (bpm === null || musicalKey === null) {
+      const analyzed = await analyzeAudioFeatures(sourcePath, {
+        bpm: bpm === null,
+        key: musicalKey === null,
+      });
+      if (bpm === null) bpm = analyzed.bpm;
+      if (musicalKey === null) musicalKey = analyzed.musicalKey;
+    }
+    await job.updateProgress(45);
+
+    // 4. HLS-транскодинг
     const hlsDir = path.join(tmpDir, 'hls');
     mkdirSync(hlsDir);
     const { manifestPath, segmentPaths } = await transcodeToHls(sourcePath, hlsDir);
-    await job.updateProgress(65);
+    await job.updateProgress(75);
 
-    // 4. Waveform peaks
+    // 5. Waveform peaks
     const waveformPeaks = await computeWaveformPeaks(sourcePath);
-    await job.updateProgress(80);
+    await job.updateProgress(88);
 
-    // 5. S3-ключи. Исходник уже на постоянном ключе (sourceKey) — отдаём его как есть.
+    // 6. S3-ключи. Исходник уже на постоянном ключе (sourceKey) — отдаём его как есть.
     const hlsManifestKey = `tracks/${trackId}/hls/index.m3u8`;
     const sourceVaultKey = sourceKey;
 
-    // 6. Загружаем HLS-файлы в stream-бакет
+    // 7. Загружаем HLS-файлы в stream-бакет
     await uploadFile(STREAM, hlsManifestKey, manifestPath, 'application/vnd.apple.mpegurl');
     for (const seg of segmentPaths) {
       await uploadFile(
@@ -66,9 +79,9 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
         'video/mp2t',
       );
     }
-    await job.updateProgress(90);
+    await job.updateProgress(95);
 
-    // 7. Атомарно обновляем БД (flacKey хранит ключ исходного мастера — wav или flac)
+    // 8. Атомарно обновляем БД (flacKey хранит ключ исходного мастера — wav или flac)
     await db.transaction(async (tx) => {
       await tx
         .update(tracks)
@@ -82,8 +95,8 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
           hlsManifestKey,
           waveformPeaks,
           flacKey: sourceVaultKey,
-          bpm: metadata.bpm,
-          musicalKey: metadata.musicalKey,
+          bpm,
+          musicalKey,
         })
         .onConflictDoUpdate({
           target: trackAudio.trackId,
@@ -91,8 +104,8 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
             hlsManifestKey,
             waveformPeaks,
             flacKey: sourceVaultKey,
-            bpm: metadata.bpm,
-            musicalKey: metadata.musicalKey,
+            bpm,
+            musicalKey,
             updatedAt: new Date(),
           },
         });
