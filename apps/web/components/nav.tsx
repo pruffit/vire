@@ -20,7 +20,7 @@ export async function Nav() {
           aria-label="Vire, на главную"
           className="shrink-0 hover:opacity-70 transition-opacity"
         >
-          <Logo className="h-5 w-auto" />
+          <Logo className="h-4 w-auto" />
         </Link>
 
         {/* Center: основная навигация */}
