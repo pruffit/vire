@@ -1,14 +1,21 @@
-import { signIn } from '@/auth';
-import { Button, Card, CardContent, Input } from '@vire/ui';
+import type { Metadata } from 'next';
+import { AuthForms } from './auth-forms';
 
-export default function SignInPage({
+export const metadata: Metadata = {
+  title: 'Войти',
+};
+
+export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; sent?: string }>;
 }) {
+  const { callbackUrl, sent } = await searchParams;
+  const redirectTo = callbackUrl ?? '/';
+
   return (
     <main className="relative min-h-full flex items-center justify-center p-8 overflow-hidden">
-      {/* Тёплое свечение за карточкой — собирает взгляд в центре пустой страницы */}
+      {/* Тёплое свечение за карточкой */}
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none"
@@ -22,58 +29,20 @@ export default function SignInPage({
         <p className="text-xs font-mono uppercase tracking-[0.22em] text-muted-foreground mb-4 text-center">
           Vire
         </p>
-        <Card>
-          <CardContent className="flex flex-col gap-4 pt-6">
-            <h1 className="text-2xl font-bold tracking-tight text-center">Войти</h1>
 
-            <form
-              action={async () => {
-                'use server';
-                const { callbackUrl } = await searchParams;
-                await signIn('yandex', { redirectTo: callbackUrl ?? '/' });
-              }}
-            >
-              <Button type="submit" className="w-full">
-                Продолжить с Яндексом
-              </Button>
-            </form>
-
-            <div className="relative my-1">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-2 text-muted-foreground">или по почте</span>
-              </div>
-            </div>
-
-            <form
-              action={async (data: FormData) => {
-                'use server';
-                const { callbackUrl } = await searchParams;
-                await signIn('resend', {
-                  email: data.get('email'),
-                  redirectTo: callbackUrl ?? '/',
-                });
-              }}
-              className="flex flex-col gap-2"
-            >
-              <Input
-                type="email"
-                name="email"
-                placeholder="you@example.ru"
-                required
-                autoComplete="email"
-              />
-              <Button type="submit" size="sm" variant="secondary" className="w-full">
-                Отправить ссылку
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Пришлём ссылку для входа, пароль не нужен.
+        <div className="rounded-xl border border-border bg-card shadow-xl shadow-black/20 p-6">
+          {sent ? (
+            <div className="text-center space-y-3 py-4">
+              <p className="text-3xl">📬</p>
+              <h1 className="text-xl font-semibold">Письмо отправлено</h1>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Проверь почту — там ссылка для входа. Если не видишь, загляни в спам.
               </p>
-            </form>
-          </CardContent>
-        </Card>
+            </div>
+          ) : (
+            <AuthForms callbackUrl={redirectTo} />
+          )}
+        </div>
       </div>
     </main>
   );

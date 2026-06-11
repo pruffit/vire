@@ -8,6 +8,7 @@ import { LikedTrackRow } from './liked-track-row';
 import { FollowedArtists } from './followed-artists';
 import { PlaylistCard } from './playlist-card';
 import { ProfileCard } from './profile-card';
+import { LinkedAccounts } from './linked-accounts';
 
 export const metadata: Metadata = {
   title: 'Профиль',
@@ -53,6 +54,11 @@ export default async function ProfilePage() {
             playlists: playlists.length,
           }}
         />
+      </FadeUp>
+
+      {/* Linked accounts */}
+      <FadeUp delay={0.05}>
+        <LinkedAccounts userId={session.user.id} />
       </FadeUp>
 
       {/* Playlists */}

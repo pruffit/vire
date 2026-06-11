@@ -107,4 +107,12 @@ export {
 } from './queries/playlists';
 export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist } from './queries/playlists';
 export { generateAllEditorialPlaylists } from './queries/editorial';
+export {
+  findUserByEmail,
+  createUserWithPassword,
+  setUserPasswordHash,
+  getUserLinkedProviders,
+  getUserAuthInfo,
+} from './queries/users';
+export type { UserWithPassword, LinkedProvider, UserAuthInfo } from './queries/users';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
