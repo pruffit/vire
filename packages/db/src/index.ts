@@ -113,6 +113,7 @@ export {
   setUserPasswordHash,
   getUserLinkedProviders,
   getUserAuthInfo,
+  findOrCreateTelegramUser,
 } from './queries/users';
-export type { UserWithPassword, LinkedProvider, UserAuthInfo } from './queries/users';
+export type { UserWithPassword, LinkedProvider, UserAuthInfo, TelegramProfile } from './queries/users';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

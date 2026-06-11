@@ -399,7 +399,7 @@ export async function getRecentPublishedReleases(limit = 8): Promise<AdminRecent
 export interface AdminUser {
   id: string;
   name: string | null;
-  email: string;
+  email: string | null;
   role: string;
   createdAt: Date;
   artistSlug: string | null;

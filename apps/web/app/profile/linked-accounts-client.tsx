@@ -3,14 +3,30 @@
 import { useActionState, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { setPasswordAction, linkYandexAction } from './account-actions';
+import { YandexIcon, GoogleIcon, VKIcon, TelegramIcon } from '@/app/(auth)/sign-in/provider-icons';
+import { setPasswordAction, linkYandexAction, linkGoogleAction, linkVKAction } from './account-actions';
 
 interface Props {
   hasPassword: boolean;
-  hasYandex: boolean;
+  linkedProviders: string[]; // ['yandex', 'google', 'vk', 'telegram', ...]
 }
 
-export function LinkedAccountsClient({ hasPassword, hasYandex }: Props) {
+const PROVIDERS = [
+  { id: 'yandex',    label: 'Яндекс',    Icon: YandexIcon    },
+  { id: 'google',    label: 'Google',    Icon: GoogleIcon    },
+  { id: 'vk',        label: 'ВКонтакте', Icon: VKIcon        },
+  { id: 'telegram',  label: 'Telegram',  Icon: TelegramIcon  },
+] as const;
+
+type OAuthLinkAction = (formData: FormData) => void | Promise<void>;
+
+const LINK_ACTIONS: Record<string, OAuthLinkAction> = {
+  yandex: linkYandexAction,
+  google: linkGoogleAction,
+  vk: linkVKAction,
+};
+
+export function LinkedAccountsClient({ hasPassword, linkedProviders }: Props) {
   const [showSetPassword, setShowSetPassword] = useState(false);
 
   return (
@@ -19,7 +35,7 @@ export function LinkedAccountsClient({ hasPassword, hasYandex }: Props) {
       <div className="px-4 py-3.5 space-y-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <ProviderIcon type="email" />
+            <EmailIcon />
             <span className="text-sm font-medium">Email и пароль</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -33,7 +49,7 @@ export function LinkedAccountsClient({ hasPassword, hasYandex }: Props) {
                   onClick={() => setShowSetPassword((s) => !s)}
                   className="text-xs text-primary underline-offset-2 hover:underline cursor-pointer"
                 >
-                  {showSetPassword ? 'Отмена' : 'Задать пароль'}
+                  {showSetPassword ? 'Отмена' : 'Задать'}
                 </button>
               </>
             )}
@@ -55,30 +71,39 @@ export function LinkedAccountsClient({ hasPassword, hasYandex }: Props) {
         </AnimatePresence>
       </div>
 
-      {/* Яндекс */}
-      <div className="px-4 py-3.5 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <ProviderIcon type="yandex" />
-          <span className="text-sm font-medium">Яндекс</span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {hasYandex ? (
-            <StatusBadge ok>Привязан</StatusBadge>
-          ) : (
-            <>
-              <StatusBadge ok={false}>Не привязан</StatusBadge>
-              <form action={linkYandexAction}>
-                <button
-                  type="submit"
-                  className="text-xs text-primary underline-offset-2 hover:underline cursor-pointer"
-                >
-                  Привязать
-                </button>
-              </form>
-            </>
-          )}
-        </div>
-      </div>
+      {/* OAuth провайдеры */}
+      {PROVIDERS.map(({ id, label, Icon }) => {
+        const linked = linkedProviders.includes(id);
+        const linkAction = LINK_ACTIONS[id];
+
+        return (
+          <div key={id} className="px-4 py-3.5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Icon size={16} />
+              <span className="text-sm font-medium">{label}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {linked ? (
+                <StatusBadge ok>Привязан</StatusBadge>
+              ) : id === 'telegram' ? (
+                <StatusBadge ok={false}>Привязать — через страницу входа</StatusBadge>
+              ) : linkAction ? (
+                <>
+                  <StatusBadge ok={false}>Не привязан</StatusBadge>
+                  <form action={linkAction}>
+                    <button
+                      type="submit"
+                      className="text-xs text-primary underline-offset-2 hover:underline cursor-pointer"
+                    >
+                      Привязать
+                    </button>
+                  </form>
+                </>
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -104,20 +129,12 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
         <label className="text-xs font-medium text-muted-foreground">Новый пароль</label>
         <div className="relative">
           <input
-            type={showPw ? 'text' : 'password'}
-            name="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            placeholder="Минимум 8 символов"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            type={showPw ? 'text' : 'password'} name="password" required minLength={8}
+            autoComplete="new-password" placeholder="Минимум 8 символов"
+            value={password} onChange={(e) => setPassword(e.target.value)}
             className={`${inputCn} pr-16`}
           />
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={() => setShowPw((s) => !s)}
+          <button type="button" tabIndex={-1} onClick={() => setShowPw((s) => !s)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors text-xs cursor-pointer"
           >
             {showPw ? 'скрыть' : 'показать'}
@@ -129,24 +146,16 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-muted-foreground">Повтори пароль</label>
         <input
-          type={showPw ? 'text' : 'password'}
-          name="confirmPassword"
-          required
-          autoComplete="new-password"
-          placeholder="Повтори пароль"
-          className={inputCn}
+          type={showPw ? 'text' : 'password'} name="confirmPassword" required
+          autoComplete="new-password" placeholder="Повтори пароль" className={inputCn}
         />
       </div>
 
       <AnimatePresence>
         {result && result !== 'ok' && (
           <motion.p
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={spring.snappy}
-            className="text-sm text-red-400"
-            role="alert"
+            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            transition={spring.snappy} className="text-sm text-red-400" role="alert"
           >
             {result}
           </motion.p>
@@ -155,11 +164,9 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
 
       <div className="flex gap-2">
         <button type="submit" disabled={pending} className={primaryBtn}>
-          {pending ? 'Сохраняем…' : 'Сохранить пароль'}
+          {pending ? 'Сохраняем…' : 'Сохранить'}
         </button>
-        <button
-          type="button"
-          onClick={onDone}
+        <button type="button" onClick={onDone}
           className="px-4 py-2 rounded-full text-xs text-muted-foreground hover:text-foreground border border-border transition-colors cursor-pointer"
         >
           Отмена
@@ -176,9 +183,7 @@ function StatusBadge({ ok, children }: { ok: boolean; children: React.ReactNode 
     <span
       className={[
         'text-[10px] font-medium px-2 py-0.5 rounded-full',
-        ok
-          ? 'bg-green-500/12 text-green-500'
-          : 'bg-muted text-muted-foreground',
+        ok ? 'bg-green-500/12 text-green-500' : 'bg-muted text-muted-foreground',
       ].join(' ')}
     >
       {children}
@@ -186,16 +191,11 @@ function StatusBadge({ ok, children }: { ok: boolean; children: React.ReactNode 
   );
 }
 
-function ProviderIcon({ type }: { type: 'email' | 'yandex' }) {
-  if (type === 'yandex') {
-    return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="text-foreground/70">
-        <path d="M13.582 11.977L19.832 2h-3.09l-4.008 6.58L8.75 2H5.66l6.023 9.832L5.09 22h3.09l4.372-7.174L16.914 22H20l-6.418-10.023z" />
-      </svg>
-    );
-  }
+function EmailIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true" className="text-foreground/70">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" aria-hidden="true" className="text-foreground/70 shrink-0"
+    >
       <rect x="2" y="4" width="20" height="16" rx="2" />
       <path d="M2 8l10 6 10-6" />
     </svg>

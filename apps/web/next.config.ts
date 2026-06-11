@@ -30,13 +30,17 @@ function buildCsp(): string {
   const dev = process.env.NODE_ENV !== 'production';
   const parts = [
     `default-src 'self'`,
-    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''}`,
+    // telegram.org нужен для виджета входа; vk.com для VK OAuth скриптов
+    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://telegram.org`,
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data: blob: https://avatars.yandex.net ${s3}`,
+    // аватары: Yandex, Google (lh3), VK (userapi CDN), Telegram (t.me)
+    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://*.userapi.com https://t.me ${s3}`,
     `media-src 'self' blob: ${s3}`,
     `connect-src 'self' blob: ${s3}${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
     `worker-src blob:`,
+    // oauth.telegram.org — iframe виджета Telegram Login
+    `frame-src https://oauth.telegram.org`,
     `frame-ancestors 'none'`,
     `object-src 'none'`,
     `base-uri 'self'`,
@@ -62,8 +66,10 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       s3RemotePattern(),
-      // Yandex OAuth аватары
       { protocol: 'https', hostname: 'avatars.yandex.net', pathname: '/**' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com', pathname: '/**' },
+      { protocol: 'https', hostname: '*.userapi.com', pathname: '/**' },
+      { protocol: 'https', hostname: 't.me', pathname: '/**' },
     ],
     // Next 16 блокирует оптимизацию картинок с приватных/loopback IP (SSRF-защита).
     // Локально MinIO живёт на localhost → разрешаем только в dev. На проде хранилище

@@ -1,10 +1,10 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../client';
 import { users, accounts } from '../schema';
 
 export interface UserWithPassword {
   id: string;
-  email: string;
+  email: string | null;
   name: string | null;
   image: string | null;
   passwordHash: string | null;
@@ -71,9 +71,55 @@ export async function getUserLinkedProviders(userId: string): Promise<LinkedProv
   return rows;
 }
 
+export interface TelegramProfile {
+  name: string;
+  photoUrl?: string;
+}
+
 export interface UserAuthInfo {
   hasPassword: boolean;
   providers: LinkedProvider[];
+}
+
+/**
+ * Найти существующего Telegram-пользователя по telegramId или создать нового.
+ * Создаёт запись в accounts (provider='telegram') для последующей проверки
+ * в разделе «Способы входа» в профиле.
+ */
+export async function findOrCreateTelegramUser(
+  telegramId: string,
+  profile: TelegramProfile,
+): Promise<{ id: string; role: string }> {
+  const [existing] = await db
+    .select({ userId: accounts.userId })
+    .from(accounts)
+    .where(
+      and(eq(accounts.provider, 'telegram'), eq(accounts.providerAccountId, telegramId)),
+    )
+    .limit(1);
+
+  if (existing) {
+    const [user] = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.id, existing.userId))
+      .limit(1);
+    return user;
+  }
+
+  const [newUser] = await db
+    .insert(users)
+    .values({ name: profile.name, image: profile.photoUrl ?? null, emailVerified: new Date() })
+    .returning({ id: users.id, role: users.role });
+
+  await db.insert(accounts).values({
+    userId: newUser.id,
+    type: 'oauth',
+    provider: 'telegram',
+    providerAccountId: telegramId,
+  });
+
+  return newUser;
 }
 
 /** Возвращает способы входа: есть ли пароль + список OAuth-провайдеров. */

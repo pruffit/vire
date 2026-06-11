@@ -40,3 +40,11 @@ export async function setPasswordAction(
 export async function linkYandexAction() {
   await signIn('yandex', { redirectTo: '/profile' });
 }
+
+export async function linkGoogleAction() {
+  await signIn('google', { redirectTo: '/profile' });
+}
+
+export async function linkVKAction() {
+  await signIn('vk', { redirectTo: '/profile' });
+}

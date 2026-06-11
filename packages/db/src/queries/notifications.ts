@@ -14,5 +14,6 @@ export async function getFollowerEmails(artistProfileId: string): Promise<Follow
     .innerJoin(users, eq(users.id, follows.userId))
     .where(eq(follows.artistProfileId, artistProfileId));
 
-  return rows;
+  // Telegram-пользователи не имеют email — их пропускаем для рассылок
+  return rows.filter((r): r is FollowerEmail => r.email !== null);
 }
