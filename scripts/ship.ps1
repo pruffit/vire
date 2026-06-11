@@ -9,14 +9,18 @@ $ErrorActionPreference = "Stop"
 $repo = Split-Path $PSScriptRoot -Parent
 Set-Location $repo
 
+# Имена образов = как в docker-compose.prod.yml (GHCR), чтобы compose их нашёл
+$web = "ghcr.io/pruffit/vire-web:latest"
+$worker = "ghcr.io/pruffit/vire-worker:latest"
+
 Write-Host "==> Сборка vire-web и vire-worker" -ForegroundColor Cyan
-docker build -f apps/web/Dockerfile    -t vire-web:latest    .
+docker build -f apps/web/Dockerfile    -t $web    .
 if ($LASTEXITCODE) { throw "build web failed" }
-docker build -f apps/worker/Dockerfile -t vire-worker:latest .
+docker build -f apps/worker/Dockerfile -t $worker .
 if ($LASTEXITCODE) { throw "build worker failed" }
 
 Write-Host "==> Экспорт образов в tar" -ForegroundColor Cyan
-docker save vire-web:latest vire-worker:latest -o vire-images.tar
+docker save $web $worker -o vire-images.tar
 if ($LASTEXITCODE) { throw "docker save failed" }
 
 Write-Host "==> Перенос на $Server`:$RemoteDir" -ForegroundColor Cyan

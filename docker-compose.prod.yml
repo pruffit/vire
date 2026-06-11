@@ -1,6 +1,7 @@
 # Прод-стек на одном VPS (1 vCPU / 1 ГБ + swap / 40 ГБ).
-# Образы vire-web/vire-worker собираются НЕ здесь, а переносятся готовыми
-# (см. docs/deployment.md). Наружу торчит только Caddy (80/443).
+# Образы vire-web/vire-worker собираются НЕ здесь (1 ГБ не тянет next build), а
+# тянутся из GHCR — их собирает и пушит CI/CD (.github/workflows/deploy.yml).
+# Ручной фолбэк — scripts/ship.ps1. Наружу торчит только Caddy (80/443).
 #
 # Запуск:   docker compose -f docker-compose.prod.yml --env-file .env up -d
 # Миграции: docker compose -f docker-compose.prod.yml run --rm worker \
@@ -23,7 +24,7 @@ services:
       - minio
 
   web:
-    image: vire-web:latest
+    image: ghcr.io/pruffit/vire-web:latest
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -33,7 +34,7 @@ services:
     # портов наружу нет — проксирует Caddy
 
   worker:
-    image: vire-worker:latest
+    image: ghcr.io/pruffit/vire-worker:latest
     restart: unless-stopped
     env_file: .env
     depends_on:

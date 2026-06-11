@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Те же гейты, что и локально (CLAUDE.md): typecheck · lint · test · design · build
+      - name: Typecheck
+        run: pnpm turbo run typecheck
+      - name: Lint
+        run: pnpm turbo run lint
+      - name: Test
+        run: pnpm turbo run test
+      - name: Design audit (Impeccable)
+        run: pnpm --filter @vire/web audit:design
+      - name: Build
+        run: pnpm --filter @vire/web build

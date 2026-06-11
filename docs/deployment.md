@@ -1,8 +1,8 @@
 # Деплой Vire на один VPS
 
 Стек целиком в Docker Compose на одном сервере **Timeweb Cloud 1 vCPU / 1 ГБ / 40 ГБ + swap**.
-Образы собираются **не на сервере** (1 ГБ не потянет `next build`), а локально/в CI и
-переносятся готовыми. Наружу торчит только Caddy (80/443) с авто-TLS.
+Образы собирает **CI (GitHub Actions)** и пушит в **GHCR** — сервер их только тянет
+(1 ГБ не потянет `next build`). Наружу торчит только Caddy (80/443) с авто-TLS.
 
 ```
 Caddy ──┬─ vire.example.ru      → web (Next.js standalone, :3000)
@@ -13,7 +13,11 @@ web / worker ── postgres · redis · minio   (внутренняя сеть,
 ## 0. Что нужно заранее
 - VPS с Ubuntu 24.04, root/sudo по SSH.
 - Домен и **две A-записи** на IP сервера: `vire.example.ru` и `cdn.vire.example.ru`.
-- Docker Desktop на рабочей машине (для сборки образов).
+- **Секреты GitHub** (Settings → Secrets and variables → Actions) для деплоя:
+  - `SSH_HOST` — IP сервера
+  - `SSH_USER` — пользователь (напр. `root`)
+  - `SSH_KEY` — приватный SSH-ключ (публичный добавлен в `~/.ssh/authorized_keys` на сервере)
+- (Опц.) Docker Desktop на рабочей машине — только для ручного фолбэка `ship.ps1`.
 
 ## 1. Подготовка сервера (один раз)
 
@@ -45,40 +49,39 @@ mkdir -p /opt/vire && cd /opt/vire
 - `AUTH_SECRET` — `openssl rand -base64 32`.
 - OAuth redirect URI в кабинетах провайдеров → `https://<DOMAIN>/api/auth/callback/<provider>`.
 
-## 3. Сборка образов (на рабочей машине)
+## 3. Деплой через CI/CD (основной путь)
 
-Из корня репо. PowerShell:
-```powershell
-docker build -f apps/web/Dockerfile    -t vire-web:latest    .
-docker build -f apps/worker/Dockerfile -t vire-worker:latest .
-docker save vire-web:latest vire-worker:latest -o vire-images.tar
-```
-Или одной командой — `scripts/ship.ps1` (сборка + перенос + загрузка + рестарт).
+Пайплайны:
+- **`.github/workflows/ci.yml`** — на каждый push/PR гоняет гейты (typecheck · lint · test · design · build).
+- **`.github/workflows/deploy.yml`** — по тегу `vX.Y.Z` (или вручную: Actions → Deploy → Run workflow)
+  собирает образы в раннере, пушит в GHCR (`ghcr.io/pruffit/vire-{web,worker}`) и по SSH на сервере
+  делает `docker compose pull && up -d` + миграции.
 
-## 4. Перенос и запуск
-
-```powershell
-scp vire-images.tar root@SERVER_IP:/opt/vire/
-```
-На сервере:
+**Первый деплой** (инфраструктура поднимется тем же `up -d`):
 ```bash
-cd /opt/vire
-docker load -i vire-images.tar
+# локально: пометить релиз и запушить тег
+git tag v1.0.0
+git push origin v1.0.0
+```
+Деплой-воркфлоу сам: соберёт → запушит в GHCR → зайдёт по SSH → `compose pull && up -d` (поднимет
+postgres/redis/minio/caddy/web/worker) → прогонит миграции.
 
-# Поднять инфраструктуру и приложение
-docker compose -f docker-compose.prod.yml --env-file .env up -d
+> GHCR-пакеты по умолчанию приватные. Деплой логинится на сервере через `GITHUB_TOKEN`.
+> Если pull падает с denied — в GitHub: Packages → vire-web/vire-worker → Package settings →
+> сделать **public**, либо связать пакет с репозиторием (Manage Actions access).
 
-# Миграции БД (ops-образ = worker: в нём tsx + @vire/db)
-docker compose -f docker-compose.prod.yml run --rm worker \
-  pnpm --filter @vire/db exec tsx src/migrate.ts
-
-# Выдать себе админа (после первого входа на сайте)
+После первого деплоя — выдать себе админа (один раз, после входа на сайте):
+```bash
 docker compose -f docker-compose.prod.yml run --rm worker \
   pnpm --filter @vire/db exec tsx src/make-admin.ts you@example.com SUPERADMIN
 ```
 
 Проверка: `docker compose -f docker-compose.prod.yml ps` — все healthy;
 `https://<DOMAIN>` открывается с валидным TLS.
+
+### Ручной фолбэк (если CI недоступен)
+С рабочей машины (нужен Docker Desktop): `.\scripts\ship.ps1 -Server root@SERVER_IP` —
+соберёт образы под GHCR-именами, перенесёт tar'ом, загрузит и поднимет. Миграции — командой выше.
 
 ## 5. Бэкапы (обязательно)
 
@@ -93,8 +96,12 @@ crontab -e
 > → проект `vire` → сеть `vire_default`. Проверь: `docker network ls`.
 
 ## 6. Обновление (выкатка новой версии)
-Повтори шаги 3–4 (`ship.ps1`), затем при изменении схемы — миграции из шага 4.
-`docker compose ... up -d` пересоздаёт только изменившиеся контейнеры.
+Поднять версию в `package.json` + `SITE_VERSION` (`lib/site.ts`), затем тег:
+```bash
+git tag v1.0.1 && git push origin v1.0.1
+```
+Деплой-воркфлоу соберёт, запушит и накатит сам (включая миграции). `up -d` пересоздаёт
+только изменившиеся контейнеры.
 
 ## Заметки
 - **Скачивание FLAC (Этап 2)** в UI выключено, но presigned-ссылки уже подписываются под
