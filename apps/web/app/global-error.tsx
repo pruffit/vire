@@ -61,6 +61,7 @@ export default function GlobalError({
           >
             Попробовать снова
           </button>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- next/link недоступен когда root layout упал */}
           <a
             href="/"
             style={{
