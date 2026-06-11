@@ -6,6 +6,8 @@ import { CommandPalette } from '@/components/command-palette';
 import { Toaster } from '@/components/toast';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { Nav } from '@/components/nav';
+import { Footer } from '@/components/footer';
+import { CookieBanner } from '@/components/cookie-banner';
 import { fontVariables } from '@/lib/fonts';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_TITLE } from '@/lib/site';
 import './globals.css';
@@ -73,11 +75,13 @@ export default function RootLayout({
           <Nav />
           <div id="main-content" className="flex-1 min-h-0 overflow-y-auto">
             {children}
+            <Footer />
           </div>
           <PlayerWrapper />
           <CommandPalette />
           <KeyboardShortcuts />
           <Toaster />
+          <CookieBanner />
         </MotionProvider>
       </body>
     </html>
