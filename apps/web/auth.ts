@@ -8,7 +8,7 @@ import { compare } from 'bcryptjs';
 import { createHash, createHmac } from 'crypto';
 import { cookies } from 'next/headers';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import { db, findUserByEmail, findOrCreateTelegramUser } from '@vire/db';
+import { db, findUserByEmail, findOrCreateTelegramUser, tryClaimOAuthAccount } from '@vire/db';
 import { accounts, sessions, verificationTokens, users } from '@vire/db/schema';
 
 export type UserRole = 'LISTENER' | 'ARTIST' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
@@ -42,6 +42,28 @@ function createAdapter() {
 
   return {
     ...base,
+    // Если Google-аккаунт был ранее прилинкован к ghost-пользователю
+    // (предыдущая неудачная попытка привязки) — забираем его у ghost'а.
+    getUserByAccount: async (providerAccount: Parameters<NonNullable<typeof base.getUserByAccount>>[0]) => {
+      const found = await base.getUserByAccount!(providerAccount);
+      if (!found) return null;
+      try {
+        const jar = await cookies();
+        const linkUid = jar.get('vire_link_uid')?.value;
+        if (linkUid && found.id !== linkUid) {
+          const claimed = await tryClaimOAuthAccount(
+            providerAccount.provider,
+            providerAccount.providerAccountId,
+            linkUid,
+            found.id,
+          );
+          if (claimed && base.getUser) return base.getUser(linkUid);
+        }
+      } catch (e) {
+        console.error('[auth:link:getUserByAccount]', e);
+      }
+      return found;
+    },
     getUserByEmail: async (email: string) => {
       try {
         const jar = await cookies();

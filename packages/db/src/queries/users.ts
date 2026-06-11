@@ -205,6 +205,46 @@ export async function linkOAuthAccount(
   return 'ok';
 }
 
+/**
+ * Забрать OAuth-аккаунт у ghost-пользователя (без email и пароля,
+ * созданного Auth.js в предыдущей неудачной попытке привязки) и отдать
+ * его targeting-пользователю.
+ *
+ * Возвращает true если перенос выполнен, false если владелец — настоящий юзер.
+ */
+export async function tryClaimOAuthAccount(
+  provider: string,
+  providerAccountId: string,
+  targetUserId: string,
+  currentOwnerId: string,
+): Promise<boolean> {
+  const [owner] = await db
+    .select({ email: users.email, passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, currentOwnerId))
+    .limit(1);
+
+  // Реальный пользователь — не трогаем
+  if (!owner || owner.email !== null || owner.passwordHash !== null) return false;
+
+  await db
+    .update(accounts)
+    .set({ userId: targetUserId })
+    .where(and(eq(accounts.provider, provider), eq(accounts.providerAccountId, providerAccountId)));
+
+  const remaining = await db
+    .select({ p: accounts.providerAccountId })
+    .from(accounts)
+    .where(eq(accounts.userId, currentOwnerId))
+    .limit(1);
+
+  if (remaining.length === 0) {
+    await db.delete(users).where(eq(users.id, currentOwnerId));
+  }
+
+  return true;
+}
+
 /** Найти пользователя по ID — для jwt callback при привязке аккаунта. */
 export async function getUserById(
   userId: string,

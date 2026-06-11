@@ -116,6 +116,7 @@ export {
   findOrCreateTelegramUser,
   linkOAuthAccount,
   getUserById,
+  tryClaimOAuthAccount,
 } from './queries/users';
 export type {
   UserWithPassword,
