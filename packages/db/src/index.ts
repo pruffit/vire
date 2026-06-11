@@ -82,6 +82,8 @@ export {
   getTrackMoods, setTrackMoods, getMoodsForTracks, getMoodCounts, ALL_MOODS, MOOD_LABELS,
 } from './queries/track-moods';
 export type { Mood, MoodCount } from './queries/track-moods';
+export { getTrackGenres, setTrackGenres, getGenresForTracks, ALL_TRACK_GENRES, TRACK_GENRE_LABELS } from './queries/track-genres';
+export type { TrackGenre } from './queries/track-genres';
 export {
   getAggregateMoments, addFavoriteMoment, getMomentCount,
 } from './queries/favorite-moments';

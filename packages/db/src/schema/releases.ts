@@ -55,6 +55,12 @@ export const moodEnum = pgEnum('mood', [
   'NOSTALGIC',
 ]);
 
+// Жанры трека — до 3, из фиксированного списка (тот же enum что у релиза)
+export const trackGenres = pgTable('track_genres', {
+  trackId: uuid('track_id').notNull().references(() => tracks.id, { onDelete: 'cascade' }),
+  genre: genreEnum('genre').notNull(),
+}, (t) => [primaryKey({ columns: [t.trackId, t.genre] })]);
+
 // Теги настроения — фиксированный список, не свободный ввод (нет UGC/модерации)
 // Сырьё для волны ступени 1
 export const trackMoods = pgTable('track_moods', {

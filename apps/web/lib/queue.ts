@@ -104,7 +104,7 @@ class AnalyzeQueue {
 
   // jobId = trackId — дедупликация при повторном нажатии кнопки
   async add(data: AnalyzeJobData): Promise<void> {
-    await this.q.add('analyze-audio', data, { jobId: `analyze:${data.trackId}` });
+    await this.q.add('analyze-audio', data, { jobId: `analyze-${data.trackId}` });
   }
 }
 

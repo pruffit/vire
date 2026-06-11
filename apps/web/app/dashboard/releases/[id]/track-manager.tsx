@@ -5,7 +5,9 @@ import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
 import { MoodPicker } from '@/components/mood-picker';
+import { GenrePicker } from '@/components/genre-picker';
 import type { Mood } from '@/lib/moods';
+import type { Genre } from '@/lib/genres';
 
 export interface ManagedTrack {
   id: string;
@@ -13,6 +15,7 @@ export interface ManagedTrack {
   trackNumber: number;
   status: 'PROCESSING' | 'READY' | 'BLOCKED';
   moods: Mood[];
+  genres: Genre[];
   bpm: number | null;
   musicalKey: string | null;
 }
@@ -288,7 +291,7 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
                         />
                       </label>
                       <label className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-white/40 w-14">Тональность</span>
+                        <span className="text-xs font-mono text-white/40 shrink-0">Тональность</span>
                         <input
                           type="text"
                           placeholder="—"
@@ -300,6 +303,10 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
                           className="w-20 bg-transparent border border-white/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50"
                         />
                       </label>
+                    </div>
+
+                    <div className="border-t border-white/5 pt-3">
+                      <GenrePicker trackId={track.id} initial={track.genres} />
                     </div>
 
                     <div className="border-t border-white/5 pt-3">

@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getMoodsForTracks, getTrackAudioMeta } from '@vire/db';
+import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getMoodsForTracks, getTrackAudioMeta, getGenresForTracks } from '@vire/db';
 import { EditReleaseForm } from './edit-release-form';
 import { AddTrackForm } from './add-track-form';
 import { TrackManager } from './track-manager';
@@ -27,9 +27,10 @@ export default async function EditReleasePage({ params }: Props) {
 
   const { release, tracks } = data;
   const trackIds = tracks.map((t) => t.id);
-  const [moodsMap, audioMetaMap] = await Promise.all([
+  const [moodsMap, audioMetaMap, genresMap] = await Promise.all([
     getMoodsForTracks(trackIds),
     getTrackAudioMeta(trackIds),
+    getGenresForTracks(trackIds),
   ]);
 
   return (
@@ -74,6 +75,7 @@ export default async function EditReleasePage({ params }: Props) {
               trackNumber: t.trackNumber,
               status: t.status,
               moods: moodsMap[t.id] ?? [],
+              genres: genresMap[t.id] ?? [],
               bpm: audioMetaMap[t.id]?.bpm ?? null,
               musicalKey: audioMetaMap[t.id]?.musicalKey ?? null,
             }))}
