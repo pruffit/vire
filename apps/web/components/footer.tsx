@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Logo } from './logo';
+import { SITE_VERSION } from '@/lib/site';
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -29,13 +30,16 @@ export function Footer() {
             <FooterCol title="Правовое">
               <FooterLink href="/terms">Условия</FooterLink>
               <FooterLink href="/privacy">Конфиденциальность</FooterLink>
+              <FooterLink href="/design">Дизайн</FooterLink>
             </FooterCol>
           </div>
         </div>
 
         {/* Нижняя полоса */}
-        <div className="mt-10 border-t border-border/60 pt-6">
+        <div className="mt-10 flex items-center gap-2 border-t border-border/60 pt-6">
           <span className="font-mono text-xs text-muted-foreground">© {year} Vire</span>
+          <span className="text-muted-foreground/40">·</span>
+          <span className="font-mono text-xs text-muted-foreground/60">v{SITE_VERSION}</span>
         </div>
       </div>
     </footer>
