@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, isNull, or, and, isNotNull } from 'drizzle-orm';
 import { db } from '../client';
 import { trackAudio, tracks } from '../schema';
 
@@ -46,6 +46,33 @@ export async function getTrackAudioMeta(
     result[row.trackId] = { bpm: row.bpm ?? null, musicalKey: row.musicalKey ?? null };
   }
   return result;
+}
+
+/** Треки, у которых нет bpm или тональности, но есть исходник в vault. */
+export async function listTracksNeedingAnalysis(): Promise<Array<{ trackId: string; flacKey: string }>> {
+  const rows = await db
+    .select({ trackId: trackAudio.trackId, flacKey: trackAudio.flacKey })
+    .from(trackAudio)
+    .innerJoin(tracks, eq(tracks.id, trackAudio.trackId))
+    .where(
+      and(
+        eq(tracks.status, 'READY'),
+        isNotNull(trackAudio.flacKey),
+        or(isNull(trackAudio.bpm), isNull(trackAudio.musicalKey)),
+      ),
+    );
+  return rows.filter((r): r is { trackId: string; flacKey: string } => r.flacKey !== null);
+}
+
+export async function updateTrackAnalysis(
+  trackId: string,
+  bpm: number | null,
+  musicalKey: string | null,
+): Promise<void> {
+  await db
+    .update(trackAudio)
+    .set({ bpm, musicalKey, updatedAt: new Date() })
+    .where(eq(trackAudio.trackId, trackId));
 }
 
 export async function trackExists(trackId: string): Promise<boolean> {

@@ -1,5 +1,6 @@
 import { listTracksAdmin } from '@vire/db';
 import { TrackStatusSelect } from './track-status-select';
+import { BackfillAnalysisButton } from '../backfill-analysis-button';
 import { formatDuration } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,10 @@ export default async function AdminTracksPage({ searchParams }: Props) {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Треки</h1>
-        <span className="text-sm text-white/40">{tracks.length}</span>
+        <div className="flex items-center gap-3">
+          <BackfillAnalysisButton />
+          <span className="text-sm text-white/40">{tracks.length}</span>
+        </div>
       </div>
 
       <div className="flex gap-2 text-sm">

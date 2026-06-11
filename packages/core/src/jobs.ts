@@ -2,6 +2,7 @@
 export const QUEUE_TRANSCODE = 'transcode' as const;
 export const QUEUE_PLAY_EVENTS = 'play-events' as const;
 export const QUEUE_NOTIFY_RELEASE = 'notify-release' as const;
+export const QUEUE_ANALYZE = 'analyze-audio' as const;
 
 export interface TranscodeJobData {
   trackId: string;
@@ -22,6 +23,11 @@ export interface NotifyReleaseJobData {
   artistProfileId: string;
   artistName: string;
   artistSlug: string;
+}
+
+export interface AnalyzeJobData {
+  trackId: string;
+  flacKey: string;
 }
 
 export interface PlayEventJobData {

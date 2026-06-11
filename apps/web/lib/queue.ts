@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { QUEUE_TRANSCODE, QUEUE_PLAY_EVENTS, QUEUE_NOTIFY_RELEASE, type TranscodeJobData, type PlayEventJobData, type NotifyReleaseJobData } from '@vire/core';
+import { QUEUE_TRANSCODE, QUEUE_PLAY_EVENTS, QUEUE_NOTIFY_RELEASE, QUEUE_ANALYZE, type TranscodeJobData, type PlayEventJobData, type NotifyReleaseJobData, type AnalyzeJobData } from '@vire/core';
 
 // Синглтон — переиспользуется между запросами в рамках процесса Next.js
 const globalForQueue = globalThis as unknown as { _transcodeQueue?: TranscodeQueue };
@@ -84,4 +84,33 @@ export const notifyReleaseQueue: NotifyReleaseQueue =
 
 if (process.env.NODE_ENV !== 'production') {
   globalForNotify._notifyReleaseQueue = notifyReleaseQueue;
+}
+
+const globalForAnalyze = globalThis as unknown as { _analyzeQueue?: AnalyzeQueue };
+
+class AnalyzeQueue {
+  private q = new Queue<AnalyzeJobData>(QUEUE_ANALYZE, {
+    connection: {
+      url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+      maxRetriesPerRequest: null as unknown as number,
+    },
+    defaultJobOptions: {
+      attempts: 2,
+      backoff: { type: 'exponential', delay: 5_000 },
+      removeOnComplete: { count: 200 },
+      removeOnFail: { count: 50 },
+    },
+  });
+
+  // jobId = trackId — дедупликация при повторном нажатии кнопки
+  async add(data: AnalyzeJobData): Promise<void> {
+    await this.q.add('analyze-audio', data, { jobId: `analyze:${data.trackId}` });
+  }
+}
+
+export const analyzeQueue: AnalyzeQueue =
+  globalForAnalyze._analyzeQueue ?? new AnalyzeQueue();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForAnalyze._analyzeQueue = analyzeQueue;
 }
