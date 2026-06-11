@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { db } from '../client';
 import { users, accounts } from '../schema';
 
@@ -120,6 +120,101 @@ export async function findOrCreateTelegramUser(
   });
 
   return newUser;
+}
+
+export type LinkAccountResult = 'ok' | 'already_linked_to_other';
+
+export interface OAuthAccountData {
+  type: string;
+  provider: string;
+  providerAccountId: string;
+  access_token?: string | null;
+  refresh_token?: string | null;
+  expires_at?: number | null;
+  token_type?: string | null;
+  scope?: string | null;
+  id_token?: string | null;
+}
+
+/**
+ * Привязать OAuth-аккаунт к существующему пользователю.
+ * Вызывается из Auth.js signIn callback когда пользователь хочет добавить
+ * второй провайдер к уже существующему аккаунту.
+ *
+ * @param targetUserId  ID пользователя, к которому привязываем
+ * @param oauthUserId   ID пользователя, которого создал DrizzleAdapter для OAuth
+ * @param account       OAuth account data
+ */
+export async function linkOAuthAccount(
+  targetUserId: string,
+  oauthUserId: string | undefined,
+  account: OAuthAccountData,
+): Promise<LinkAccountResult> {
+  const [existing] = await db
+    .select({ userId: accounts.userId })
+    .from(accounts)
+    .where(and(
+      eq(accounts.provider, account.provider),
+      eq(accounts.providerAccountId, account.providerAccountId),
+    ))
+    .limit(1);
+
+  if (existing?.userId === targetUserId) {
+    return 'ok'; // Уже привязан к нужному пользователю
+  }
+
+  if (existing && existing.userId !== oauthUserId) {
+    return 'already_linked_to_other'; // Принадлежит стороннему пользователю
+  }
+
+  if (existing) {
+    // DrizzleAdapter создал аккаунт для OAuth-пользователя — переназначаем
+    await db
+      .update(accounts)
+      .set({ userId: targetUserId })
+      .where(and(
+        eq(accounts.provider, account.provider),
+        eq(accounts.providerAccountId, account.providerAccountId),
+      ));
+  } else {
+    await db.insert(accounts).values({
+      userId: targetUserId,
+      type: account.type,
+      provider: account.provider,
+      providerAccountId: account.providerAccountId,
+      access_token: account.access_token ?? null,
+      refresh_token: account.refresh_token ?? null,
+      expires_at: account.expires_at ?? null,
+      token_type: account.token_type ?? null,
+      scope: account.scope ?? null,
+      id_token: account.id_token ?? null,
+    });
+  }
+
+  // Если Auth.js создал временного пользователя только для этого OAuth — удаляем
+  if (oauthUserId && oauthUserId !== targetUserId) {
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(accounts)
+      .where(eq(accounts.userId, oauthUserId));
+    if (Number(total) === 0) {
+      await db.delete(users).where(eq(users.id, oauthUserId));
+    }
+  }
+
+  return 'ok';
+}
+
+/** Найти пользователя по ID — для jwt callback при привязке аккаунта. */
+export async function getUserById(
+  userId: string,
+): Promise<{ id: string; role: string } | null> {
+  const [row] = await db
+    .select({ id: users.id, role: users.role })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row ?? null;
 }
 
 /** Возвращает способы входа: есть ли пароль + список OAuth-провайдеров. */
