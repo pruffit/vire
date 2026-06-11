@@ -98,6 +98,7 @@ export {
   getTrackPlaylistIds,
   renamePlaylist,
   getEditorialPlaylists,
+  getPublicUserPlaylists,
   upsertEditorialPlaylist,
   likePlaylist,
   unlikePlaylist,

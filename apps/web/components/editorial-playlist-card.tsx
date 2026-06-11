@@ -7,7 +7,8 @@ import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import type { EditorialPlaylist } from '@vire/db';
 
-const KIND_LABELS: Record<string, string> = {
+const KIND_LABELS: Record<string, string | undefined> = {
+  USER: undefined, // пользовательские плейлисты — бейдж не показываем
   MOOD: 'Настроение',
   TRENDING: 'В тренде',
   RELISTEN: 'Снова и снова',
@@ -87,7 +88,7 @@ export function EditorialPlaylistCard({
     }
   }
 
-  const kindLabel = KIND_LABELS[playlist.kind] ?? playlist.kind;
+  const kindLabel = KIND_LABELS[playlist.kind];
 
   return (
     <div className="group flex flex-col gap-2.5">
@@ -96,10 +97,12 @@ export function EditorialPlaylistCard({
         className="block relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30"
       >
         <PlaylistCollage covers={playlist.covers} />
-        {/* Тип подборки */}
-        <span className="absolute top-2 left-2 rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/80 pointer-events-none">
-          {kindLabel}
-        </span>
+        {/* Тип подборки — только для редакционных */}
+        {kindLabel && (
+          <span className="absolute top-2 left-2 rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/80 pointer-events-none">
+            {kindLabel}
+          </span>
+        )}
       </Link>
 
       <div className="flex items-start justify-between gap-2">

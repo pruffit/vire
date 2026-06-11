@@ -327,6 +327,74 @@ export async function upsertEditorialPlaylist(opts: {
   }
 }
 
+/** Публичные пользовательские плейлисты для секции на главной. */
+export async function getPublicUserPlaylists(limit = 8): Promise<EditorialPlaylist[]> {
+  const rows = await db
+    .select({
+      id: playlists.id,
+      title: playlists.title,
+      description: playlists.description,
+      kind: playlists.kind,
+      likesCount: playlists.likesCount,
+    })
+    .from(playlists)
+    .where(
+      and(
+        eq(playlists.visibility, 'PUBLIC'),
+        eq(playlists.kind, 'USER'),
+      ),
+    )
+    .orderBy(desc(playlists.likesCount), desc(playlists.updatedAt))
+    .limit(limit);
+
+  if (rows.length === 0) return [];
+
+  const playlistIds = rows.map((r) => r.id);
+
+  const trackCountRows = await db
+    .select({ playlistId: playlistTracks.playlistId, c: count() })
+    .from(playlistTracks)
+    .where(inArray(playlistTracks.playlistId, playlistIds))
+    .groupBy(playlistTracks.playlistId);
+
+  const countByPlaylist = Object.fromEntries(
+    trackCountRows.map((r) => [r.playlistId, Number(r.c)]),
+  );
+
+  const coverRows = await db
+    .select({
+      playlistId: playlistTracks.playlistId,
+      coverUrl: releases.coverUrl,
+      position: playlistTracks.position,
+    })
+    .from(playlistTracks)
+    .innerJoin(tracks, eq(tracks.id, playlistTracks.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .where(
+      and(
+        inArray(playlistTracks.playlistId, playlistIds),
+        sql`${releases.coverUrl} IS NOT NULL`,
+      ),
+    )
+    .orderBy(asc(playlistTracks.position));
+
+  const coversByPlaylist: Record<string, string[]> = {};
+  for (const row of coverRows) {
+    const list = (coversByPlaylist[row.playlistId] ??= []);
+    if (list.length < 4 && row.coverUrl) list.push(row.coverUrl);
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    kind: r.kind,
+    trackCount: countByPlaylist[r.id] ?? 0,
+    likesCount: r.likesCount,
+    covers: coversByPlaylist[r.id] ?? [],
+  }));
+}
+
 // ─── Лайки плейлистов ──────────────────────────────────────────────────────
 
 export async function getPlaylistLikeState(

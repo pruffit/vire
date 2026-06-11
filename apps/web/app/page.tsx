@@ -7,6 +7,7 @@ import {
   getFeed,
   getMoodCounts,
   getEditorialPlaylists,
+  getPublicUserPlaylists,
   getLikedPlaylistIds,
 } from '@vire/db';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
@@ -23,7 +24,7 @@ export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [latest, upcoming, artists, feed, listeningNow, moodCounts, editorialPlaylists, likedPlaylistIds] = await Promise.all([
+  const [latest, upcoming, artists, feed, listeningNow, moodCounts, editorialPlaylists, publicPlaylists, likedPlaylistIds] = await Promise.all([
     getLatestReleases(13),
     getUpcomingReleases(8),
     listActiveArtists(),
@@ -31,6 +32,7 @@ export default async function HomePage() {
     getListeningNow(6),
     getMoodCounts().catch(() => []),
     getEditorialPlaylists(8),
+    getPublicUserPlaylists(8),
     userId ? getLikedPlaylistIds(userId) : Promise.resolve([]),
   ]);
 
@@ -70,6 +72,24 @@ export default async function HomePage() {
           <Section title="Подборки">
             <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
               {editorialPlaylists.map((p) => (
+                <StaggerItem key={p.id}>
+                  <EditorialPlaylistCard
+                    playlist={p}
+                    liked={likedPlaylistIds.includes(p.id)}
+                  />
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </Section>
+        </Reveal>
+      )}
+
+      {/* Публичные плейлисты слушателей */}
+      {publicPlaylists.length > 0 && (
+        <Reveal>
+          <Section title="Плейлисты слушателей">
+            <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+              {publicPlaylists.map((p) => (
                 <StaggerItem key={p.id}>
                   <EditorialPlaylistCard
                     playlist={p}

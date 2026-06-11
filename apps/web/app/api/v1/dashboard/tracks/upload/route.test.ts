@@ -9,6 +9,11 @@ const { findByUserId, uploadBuffer, transcodeAdd } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 19, retryAfter: 0 }),
+  clientKey: vi.fn().mockReturnValue('upload:test'),
+  tooManyRequests: vi.fn(),
+}));
 vi.mock('@vire/db', () => ({
   db: {},
   DrizzleArtistRepository: class {
