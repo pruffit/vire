@@ -8,6 +8,7 @@ import { artistProfiles } from './artists';
 export const purchaseItemTypeEnum = pgEnum('purchase_item_type', ['TRACK', 'RELEASE']);
 export const purchaseStatusEnum = pgEnum('purchase_status', ['PENDING', 'PAID', 'FAILED', 'REFUNDED']);
 export const playlistVisibilityEnum = pgEnum('playlist_visibility', ['PRIVATE', 'PUBLIC']);
+export const playlistKindEnum = pgEnum('playlist_kind', ['USER', 'MOOD', 'TRENDING', 'RELISTEN', 'FRESH']);
 export const subscriptionTypeEnum = pgEnum('subscription_type', ['ARTIST_TIER', 'LISTENER_PREMIUM']);
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['ACTIVE', 'CANCELLED', 'EXPIRED']);
 
@@ -30,11 +31,15 @@ export const purchases = pgTable('purchases', {
 
 export const playlists = pgTable('playlists', {
   id: uuid('id').primaryKey().defaultRandom(),
-  ownerUserId: uuid('owner_user_id').notNull().references(() => users.id),
+  // null для редакционных подборок — у них нет пользователя-владельца
+  ownerUserId: uuid('owner_user_id').references(() => users.id),
   title: text('title').notNull(),
+  description: text('description'),
+  kind: playlistKindEnum('kind').notNull().default('USER'),
   visibility: playlistVisibilityEnum('visibility').notNull().default('PRIVATE'),
   isCollaborative: boolean('is_collaborative').notNull().default(false),
   isCurated: boolean('is_curated').notNull().default(false),
+  likesCount: integer('likes_count').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -47,6 +52,13 @@ export const playlistTracks = pgTable('playlist_tracks', {
   addedBy: uuid('added_by').references(() => users.id),
   addedAt: timestamp('added_at').notNull().defaultNow(),
 });
+
+export const playlistLikes = pgTable('playlist_likes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  playlistId: uuid('playlist_id').notNull().references(() => playlists.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [unique('playlist_likes_user_playlist_unique').on(t.userId, t.playlistId)]);
 
 export const likes = pgTable('likes', {
   id: uuid('id').primaryKey().defaultRandom(),

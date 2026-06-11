@@ -5,6 +5,7 @@ import {
 import type { AdminAttention, AdminRecentRelease, AdminStats, AdminPlatformMetrics } from '@vire/db';
 import { getAdminHealth, type AdminHealth } from '@/lib/admin-health';
 import { QueueFailedActions } from './queue-actions';
+import { EditorialGenerateButton } from './editorial-generate-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,18 @@ export default async function AdminPage() {
 
       {/* Recent published */}
       {recent.length > 0 && <RecentReleases releases={recent} />}
+
+      {/* Редакционные подборки */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-white/35 font-mono">Подборки</p>
+          <EditorialGenerateButton />
+        </div>
+        <p className="text-xs text-white/40">
+          Алгоритмические плейлисты на главной: по mood-тегам, трендам, переслушиваниям и свежести.
+          Нажми «Обновить», чтобы пересчитать сейчас.
+        </p>
+      </section>
     </div>
   );
 }

@@ -6,6 +6,8 @@ import {
   listActiveArtists,
   getFeed,
   getMoodCounts,
+  getEditorialPlaylists,
+  getLikedPlaylistIds,
 } from '@vire/db';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { ArtistHoverChip } from '@/components/artist-hover-chip';
@@ -13,6 +15,7 @@ import { FeaturedRelease } from '@/components/featured-release';
 import { WaveStartButton } from '@/components/wave-start-button';
 import { ListeningNow } from '@/components/listening-now';
 import { MoodWaveChips } from '@/components/mood-wave-chips';
+import { EditorialPlaylistCard } from '@/components/editorial-playlist-card';
 import { getListeningNow } from '@/lib/listening-now';
 import { FadeUp, Stagger, StaggerItem, Reveal } from '@vire/ui/motion';
 
@@ -20,13 +23,15 @@ export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [latest, upcoming, artists, feed, listeningNow, moodCounts] = await Promise.all([
+  const [latest, upcoming, artists, feed, listeningNow, moodCounts, editorialPlaylists, likedPlaylistIds] = await Promise.all([
     getLatestReleases(13),
     getUpcomingReleases(8),
     listActiveArtists(),
     userId ? getFeed(userId) : Promise.resolve([]),
     getListeningNow(6),
     getMoodCounts().catch(() => []),
+    getEditorialPlaylists(8),
+    userId ? getLikedPlaylistIds(userId) : Promise.resolve([]),
   ]);
 
   const featured = latest[0] ?? null;
@@ -55,6 +60,24 @@ export default async function HomePage() {
         <Reveal>
           <Section title="По настроению">
             <MoodWaveChips moods={moodCounts} />
+          </Section>
+        </Reveal>
+      )}
+
+      {/* Редакционные подборки */}
+      {editorialPlaylists.length > 0 && (
+        <Reveal>
+          <Section title="Подборки">
+            <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+              {editorialPlaylists.map((p) => (
+                <StaggerItem key={p.id}>
+                  <EditorialPlaylistCard
+                    playlist={p}
+                    liked={likedPlaylistIds.includes(p.id)}
+                  />
+                </StaggerItem>
+              ))}
+            </Stagger>
           </Section>
         </Reveal>
       )}

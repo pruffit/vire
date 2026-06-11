@@ -97,6 +97,13 @@ export {
   removeTrackFromPlaylist,
   getTrackPlaylistIds,
   renamePlaylist,
+  getEditorialPlaylists,
+  upsertEditorialPlaylist,
+  likePlaylist,
+  unlikePlaylist,
+  getPlaylistLikeState,
+  getLikedPlaylistIds,
 } from './queries/playlists';
-export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow } from './queries/playlists';
+export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist } from './queries/playlists';
+export { generateAllEditorialPlaylists } from './queries/editorial';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

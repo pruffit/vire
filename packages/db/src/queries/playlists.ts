@@ -1,6 +1,6 @@
-import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { playlists, playlistTracks, tracks, releases, artistProfiles } from '../schema';
+import { playlists, playlistTracks, playlistLikes, tracks, releases, artistProfiles } from '../schema';
 
 export interface PlaylistSummary {
   id: string;
@@ -26,8 +26,18 @@ export interface PlaylistWithTracks {
   id: string;
   title: string;
   visibility: 'PRIVATE' | 'PUBLIC';
-  ownerUserId: string;
+  ownerUserId: string | null;
   tracks: PlaylistTrackRow[];
+}
+
+export interface EditorialPlaylist {
+  id: string;
+  title: string;
+  description: string | null;
+  kind: string;
+  trackCount: number;
+  likesCount: number;
+  covers: string[]; // up to 4 cover URLs for collage
 }
 
 export async function getUserPlaylists(userId: string): Promise<PlaylistSummary[]> {
@@ -203,4 +213,167 @@ export async function renamePlaylist(
     .update(playlists)
     .set({ title, updatedAt: new Date() })
     .where(and(eq(playlists.id, playlistId), eq(playlists.ownerUserId, userId)));
+}
+
+// ─── Редакционные плейлисты ────────────────────────────────────────────────
+
+/** Возвращает редакционные плейлисты с обложками треков (до 4 для коллажа). */
+export async function getEditorialPlaylists(limit = 8): Promise<EditorialPlaylist[]> {
+  const rows = await db
+    .select({
+      id: playlists.id,
+      title: playlists.title,
+      description: playlists.description,
+      kind: playlists.kind,
+      likesCount: playlists.likesCount,
+    })
+    .from(playlists)
+    .where(eq(playlists.isCurated, true))
+    .orderBy(desc(playlists.updatedAt))
+    .limit(limit);
+
+  if (rows.length === 0) return [];
+
+  const playlistIds = rows.map((r) => r.id);
+
+  // Считаем треки и собираем коллаж одним запросом на id
+  const trackCountRows = await db
+    .select({ playlistId: playlistTracks.playlistId, c: count() })
+    .from(playlistTracks)
+    .where(inArray(playlistTracks.playlistId, playlistIds))
+    .groupBy(playlistTracks.playlistId);
+
+  const countByPlaylist = Object.fromEntries(
+    trackCountRows.map((r) => [r.playlistId, Number(r.c)]),
+  );
+
+  // Первые 4 обложки для каждого плейлиста
+  const coverRows = await db
+    .select({
+      playlistId: playlistTracks.playlistId,
+      coverUrl: releases.coverUrl,
+      position: playlistTracks.position,
+    })
+    .from(playlistTracks)
+    .innerJoin(tracks, eq(tracks.id, playlistTracks.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .where(
+      and(
+        inArray(playlistTracks.playlistId, playlistIds),
+        sql`${releases.coverUrl} IS NOT NULL`,
+      ),
+    )
+    .orderBy(asc(playlistTracks.position));
+
+  const coversByPlaylist: Record<string, string[]> = {};
+  for (const row of coverRows) {
+    const list = (coversByPlaylist[row.playlistId] ??= []);
+    if (list.length < 4 && row.coverUrl) list.push(row.coverUrl);
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    kind: r.kind,
+    trackCount: countByPlaylist[r.id] ?? 0,
+    likesCount: r.likesCount,
+    covers: coversByPlaylist[r.id] ?? [],
+  }));
+}
+
+/** Создаёт или обновляет редакционный плейлист по kind+title. */
+export async function upsertEditorialPlaylist(opts: {
+  kind: 'MOOD' | 'TRENDING' | 'RELISTEN' | 'FRESH';
+  title: string;
+  description?: string;
+  trackIds: string[];
+}): Promise<void> {
+  const { kind, title, description, trackIds } = opts;
+
+  const existing = await db
+    .select({ id: playlists.id })
+    .from(playlists)
+    .where(and(eq(playlists.kind, kind), eq(playlists.title, title)))
+    .limit(1);
+
+  let playlistId: string;
+  if (existing.length > 0) {
+    playlistId = existing[0].id;
+    await db
+      .update(playlists)
+      .set({ description: description ?? null, updatedAt: new Date() })
+      .where(eq(playlists.id, playlistId));
+    // Заменяем треки полностью
+    await db.delete(playlistTracks).where(eq(playlistTracks.playlistId, playlistId));
+  } else {
+    const [row] = await db
+      .insert(playlists)
+      .values({
+        title,
+        description: description ?? null,
+        kind,
+        visibility: 'PUBLIC',
+        isCurated: true,
+      })
+      .returning({ id: playlists.id });
+    playlistId = row.id;
+  }
+
+  if (trackIds.length > 0) {
+    await db.insert(playlistTracks).values(
+      trackIds.map((trackId, i) => ({ playlistId, trackId, position: i })),
+    );
+  }
+}
+
+// ─── Лайки плейлистов ──────────────────────────────────────────────────────
+
+export async function getPlaylistLikeState(
+  userId: string,
+  playlistId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: playlistLikes.id })
+    .from(playlistLikes)
+    .where(
+      and(eq(playlistLikes.userId, userId), eq(playlistLikes.playlistId, playlistId)),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function likePlaylist(userId: string, playlistId: string): Promise<void> {
+  await db
+    .insert(playlistLikes)
+    .values({ userId, playlistId })
+    .onConflictDoNothing();
+  await db
+    .update(playlists)
+    .set({ likesCount: sql`${playlists.likesCount} + 1` })
+    .where(eq(playlists.id, playlistId));
+}
+
+export async function unlikePlaylist(userId: string, playlistId: string): Promise<void> {
+  const result = await db
+    .delete(playlistLikes)
+    .where(
+      and(eq(playlistLikes.userId, userId), eq(playlistLikes.playlistId, playlistId)),
+    )
+    .returning({ id: playlistLikes.id });
+  if (result.length > 0) {
+    await db
+      .update(playlists)
+      .set({ likesCount: sql`GREATEST(${playlists.likesCount} - 1, 0)` })
+      .where(eq(playlists.id, playlistId));
+  }
+}
+
+/** Возвращает id редакционных плейлистов, лайкнутых пользователем. */
+export async function getLikedPlaylistIds(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ playlistId: playlistLikes.playlistId })
+    .from(playlistLikes)
+    .where(eq(playlistLikes.userId, userId));
+  return rows.map((r) => r.playlistId);
 }

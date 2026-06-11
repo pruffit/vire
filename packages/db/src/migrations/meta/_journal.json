@@ -71,6 +71,13 @@
       "when": 1781155788905,
       "tag": "0009_round_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781165837350,
+      "tag": "0010_absurd_skreet",
+      "breakpoints": true
     }
   ]
 }
