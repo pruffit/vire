@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getWaveNextTrack, ALL_MOODS, type Mood } from '@vire/db';
+import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export async function GET(req: Request) {
+  // Rate limit: 120 requests per minute per IP (player calls this continuously)
+  const rl = await rateLimit(clientKey(req, 'wave'), 120, 60);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
+
   const url = new URL(req.url);
   const trackId = url.searchParams.get('trackId') ?? null; // null = seed mode
   const played = url.searchParams.get('played')?.split(',').filter(Boolean) ?? [];

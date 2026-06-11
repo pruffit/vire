@@ -4,13 +4,18 @@ import { db, DrizzleArtistRepository, DrizzleReleaseRepository, DrizzleTrackRepo
 import { TrackService, NotFoundError } from '@vire/core';
 import { uploadBuffer } from '@/lib/s3';
 import { transcodeQueue } from '@/lib/queue';
-import { isUuid, parseAudioExt, parseCredits, parseTrackNumber } from '@/lib/upload';
+import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, MAX_AUDIO_FILE_SIZE, validateMagicBytes } from '@/lib/upload';
+import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Rate limit: 20 uploads per hour per IP
+  const rl = await rateLimit(clientKey(req, 'upload'), 20, 3600);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const artistRepo = new DrizzleArtistRepository(db);
   const artist = await artistRepo.findByUserId(session.user.id);
@@ -54,6 +59,16 @@ export async function POST(req: Request) {
   const ext = parseAudioExt(file.name);
   if (!ext) {
     return NextResponse.json({ error: 'Файл должен быть WAV или FLAC' }, { status: 400 });
+  }
+
+  if (file.size > MAX_AUDIO_FILE_SIZE) {
+    return NextResponse.json({ error: 'Файл слишком большой (макс. 300 МБ)' }, { status: 413 });
+  }
+
+  // Read only the header to validate magic bytes before buffering the whole file
+  const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  if (!validateMagicBytes(header, ext)) {
+    return NextResponse.json({ error: 'Формат файла не соответствует расширению' }, { status: 400 });
   }
 
   const trackId = crypto.randomUUID();

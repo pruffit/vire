@@ -1,6 +1,24 @@
 // Pure validation helpers for the track-upload route handler. Kept framework-free
 // so they can be unit-tested without mocking Next/DB/S3.
 
+/** Maximum accepted source-audio file size (matches proxyClientMaxBodySize). */
+export const MAX_AUDIO_FILE_SIZE = 300 * 1024 * 1024; // 300 MB
+
+/**
+ * Check that the first bytes of the file match the expected audio container.
+ * FLAC: "fLaC" (4 bytes). WAV: "RIFF" at 0-3 + "WAVE" at 8-11 (12 bytes).
+ */
+export function validateMagicBytes(header: Uint8Array, ext: 'wav' | 'flac'): boolean {
+  if (ext === 'flac') {
+    return header.length >= 4 &&
+      header[0] === 0x66 && header[1] === 0x4C &&
+      header[2] === 0x61 && header[3] === 0x43;
+  }
+  return header.length >= 12 &&
+    header[0] === 0x52 && header[1] === 0x49 && header[2] === 0x46 && header[3] === 0x46 &&
+    header[8] === 0x57 && header[9] === 0x41 && header[10] === 0x56 && header[11] === 0x45;
+}
+
 export type ContributorRole = 'PERFORMER' | 'LYRICIST' | 'COMPOSER' | 'PRODUCER';
 export interface TrackCredit {
   name: string;

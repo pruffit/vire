@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { likeTrack, unlikeTrack, trackExists, getLikeState } from '@vire/db';
+import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -15,6 +16,10 @@ export async function GET(_req: Request, { params }: Params) {
 export async function POST(_req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Rate limit: 60 likes per minute per user
+  const rl = await rateLimit(`like:${session.user.id}`, 60, 60);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const { id } = await params;
   if (!(await trackExists(id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });

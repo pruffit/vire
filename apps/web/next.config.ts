@@ -17,6 +17,45 @@ function s3RemotePattern() {
   }
 }
 
+function s3Origin(): string {
+  try {
+    return new URL(process.env.S3_PUBLIC_ENDPOINT ?? 'http://localhost:9000').origin;
+  } catch {
+    return 'http://localhost:9000';
+  }
+}
+
+function buildCsp(): string {
+  const s3 = s3Origin();
+  const dev = process.env.NODE_ENV !== 'production';
+  const parts = [
+    `default-src 'self'`,
+    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''}`,
+    `style-src 'self' 'unsafe-inline'`,
+    `img-src 'self' data: blob: https://avatars.yandex.net ${s3}`,
+    `media-src 'self' blob: ${s3}`,
+    `connect-src 'self' blob: ${s3}${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
+    `font-src 'self' data:`,
+    `worker-src blob:`,
+    `frame-ancestors 'none'`,
+    `object-src 'none'`,
+    `base-uri 'self'`,
+    `form-action 'self'`,
+  ];
+  return parts.join('; ');
+}
+
+const SECURITY_HEADERS = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  },
+  { key: 'Content-Security-Policy', value: buildCsp() },
+];
+
 const nextConfig: NextConfig = {
   transpilePackages: ['@vire/core', '@vire/db', '@vire/ui'],
   images: {
@@ -29,6 +68,9 @@ const nextConfig: NextConfig = {
     // Локально MinIO живёт на localhost → разрешаем только в dev. На проде хранилище
     // (Selectel) публичное, поэтому флаг не нужен и остаётся выключенным.
     dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
+  },
+  async headers() {
+    return [{ source: '/(.*)', headers: SECURITY_HEADERS }];
   },
   experimental: {
     // proxy.ts (Auth.js) заставляет Next 16 буферизовать тело запроса. Лимит по

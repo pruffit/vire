@@ -18,6 +18,10 @@
     "turbo": "^2.3.3"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["ffmpeg-static", "ffprobe-static"]
+    "onlyBuiltDependencies": ["ffmpeg-static", "ffprobe-static"],
+    "overrides": {
+      "postcss": ">=8.5.10",
+      "esbuild": ">=0.25.0"
+    }
   }
 }
