@@ -9,6 +9,7 @@ import { setPasswordAction, linkYandexAction, linkGoogleAction, linkVKAction } f
 interface Props {
   hasPassword: boolean;
   linkedProviders: string[]; // ['yandex', 'google', 'vk', 'telegram', ...]
+  linkError?: string;
 }
 
 const PROVIDERS = [
@@ -26,10 +27,22 @@ const LINK_ACTIONS: Record<string, OAuthLinkAction> = {
   vk: linkVKAction,
 };
 
-export function LinkedAccountsClient({ hasPassword, linkedProviders }: Props) {
+const LINK_ERROR_MESSAGES: Record<string, string> = {
+  taken: 'Этот аккаунт уже привязан к другому пользователю.',
+};
+
+export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }: Props) {
   const [showSetPassword, setShowSetPassword] = useState(false);
 
+  const errorMessage = linkError ? (LINK_ERROR_MESSAGES[linkError] ?? 'Не удалось привязать аккаунт.') : null;
+
   return (
+    <div className="space-y-2">
+    {errorMessage && (
+      <p className="text-xs text-red-400 bg-red-500/8 border border-red-500/20 rounded-lg px-3 py-2">
+        {errorMessage}
+      </p>
+    )}
     <div className="rounded-xl border border-border bg-card/60 divide-y divide-border">
       {/* Email / пароль */}
       <div className="px-4 py-3.5 space-y-3">
@@ -104,6 +117,7 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders }: Props) {
           </div>
         );
       })}
+    </div>
     </div>
   );
 }

@@ -8,13 +8,7 @@ import { compare } from 'bcryptjs';
 import { createHash, createHmac } from 'crypto';
 import { cookies } from 'next/headers';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import {
-  db,
-  findUserByEmail,
-  findOrCreateTelegramUser,
-  linkOAuthAccount,
-  getUserById,
-} from '@vire/db';
+import { db, findUserByEmail, findOrCreateTelegramUser } from '@vire/db';
 import { accounts, sessions, verificationTokens, users } from '@vire/db/schema';
 
 export type UserRole = 'LISTENER' | 'ARTIST' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
@@ -28,13 +22,41 @@ declare module 'next-auth' {
   }
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db, {
+/**
+ * Адаптер с поддержкой привязки провайдеров.
+ *
+ * Проблема: Auth.js бросает OAuthAccountNotLinked ещё до вызова signIn-callback,
+ * если у пользователя другой email или другой провайдер.
+ *
+ * Решение: когда выставлена cookie `vire_link_uid`, перекрываем getUserByEmail —
+ * возвращаем текущего (linking) пользователя вместо поиска по email.
+ * Auth.js видит «пользователь найден по email» → вызывает linkAccount → привязывает.
+ */
+function createAdapter() {
+  const base = DrizzleAdapter(db, {
     usersTable: users,
     accountsTable: accounts,
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
-  }),
+  });
+
+  return {
+    ...base,
+    getUserByEmail: async (email: string) => {
+      try {
+        const jar = await cookies();
+        const linkUid = jar.get('vire_link_uid')?.value;
+        if (linkUid && base.getUser) {
+          return await base.getUser(linkUid);
+        }
+      } catch {}
+      return base.getUserByEmail?.(email) ?? null;
+    },
+  };
+}
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: createAdapter(),
   providers: [
     // ── Email / пароль ────────────────────────────────────────────────────
     Credentials({
@@ -61,32 +83,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         const botToken = process.env.TELEGRAM_BOT_TOKEN;
         if (!botToken) return null;
-
         const creds = credentials as Record<string, string | undefined>;
         const { hash, ...data } = creds;
         if (!hash || !data.id) return null;
-
         const secretKey = createHash('sha256').update(botToken).digest();
         const checkString = Object.entries(data)
           .filter(([, v]) => v !== undefined && v !== '')
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([k, v]) => `${k}=${v}`)
           .join('\n');
-
-        const computed = createHmac('sha256', secretKey).update(checkString).digest('hex');
-        if (computed !== hash) return null;
-
+        if (createHmac('sha256', secretKey).update(checkString).digest('hex') !== hash) return null;
         if (Date.now() / 1000 - parseInt(data.auth_date ?? '0', 10) > 86400) return null;
-
         const name = [data.first_name, data.last_name].filter(Boolean).join(' ') || 'Telegram';
         const user = await findOrCreateTelegramUser(data.id, { name, photoUrl: data.photo_url || undefined });
-
         return { id: user.id, name, email: null, image: data.photo_url || null, role: user.role as UserRole };
       },
     }),
 
     // ── OAuth ─────────────────────────────────────────────────────────────
-    // allowDangerousEmailAccountLinking — автосвязка когда email совпадает
+    // allowDangerousEmailAccountLinking нужен потому что при вызове getUserByEmail
+    // мы возвращаем linking-пользователя (который мог быть создан через другой провайдер)
     Yandex({ allowDangerousEmailAccountLinking: true }),
     Google({ allowDangerousEmailAccountLinking: true }),
     VK({ allowDangerousEmailAccountLinking: true }),
@@ -97,69 +113,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   session: { strategy: 'jwt' },
   callbacks: {
-    /**
-     * Перехватываем OAuth-колбэк при намеренной привязке провайдера.
-     * Cookie `vire_link_uid` выставляется в linkOAuthProvider() до signIn().
-     * Переназначаем аккаунт целевому пользователю независимо от совпадения email.
-     */
     async signIn({ user, account }) {
       if (account?.type !== 'oauth') return true;
-
       try {
         const jar = await cookies();
         const linkUid = jar.get('vire_link_uid')?.value;
         if (!linkUid) return true;
-
-        const result = await linkOAuthAccount(linkUid, user.id, {
-          type: account.type,
-          provider: account.provider,
-          providerAccountId: account.providerAccountId,
-          access_token: account.access_token,
-          refresh_token: account.refresh_token,
-          expires_at: account.expires_at,
-          token_type: account.token_type,
-          scope: account.scope,
-          id_token: account.id_token,
-        });
-
         jar.delete('vire_link_uid');
-
-        if (result === 'already_linked_to_other') {
-          return '/profile?link_error=taken';
-        }
-
-        // Сигнал jwt-callback: вернуть токен исходного пользователя
-        jar.set('vire_link_jwt_uid', linkUid, { maxAge: 60, httpOnly: true, sameSite: 'lax', path: '/' });
+        // Аккаунт принадлежит другому пользователю (getUserByAccount нашёл его раньше нас)
+        if (user.id && user.id !== linkUid) return '/profile?link_error=taken';
       } catch (e) {
-        console.error('[auth:link:signIn]', e);
+        console.error('[auth:link]', e);
       }
-
       return true;
     },
 
-    async jwt({ token, user, account }) {
+    jwt({ token, user }) {
       if (user) {
-        let uid = user.id as string;
-        let role = user.role as UserRole;
-
-        // При привязке провайдера восстанавливаем токен исходного пользователя
-        if (account?.type === 'oauth') {
-          try {
-            const jar = await cookies();
-            const linkUid = jar.get('vire_link_jwt_uid')?.value;
-            if (linkUid) {
-              const original = await getUserById(linkUid);
-              if (original) {
-                uid = original.id;
-                role = original.role as UserRole;
-              }
-              jar.delete('vire_link_jwt_uid');
-            }
-          } catch {}
-        }
-
-        token.id = uid;
-        token.role = role;
+        token.id = user.id as string;
+        token.role = user.role as UserRole;
       }
       return token;
     },

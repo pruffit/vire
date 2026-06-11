@@ -16,9 +16,16 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ link_error?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/profile');
+
+  const params = await searchParams;
+  const linkError = params.link_error;
 
   const [likedTracks, followedArtists, playlists, createdAt] = await Promise.all([
     getLikedTracks(session.user.id),
@@ -58,7 +65,7 @@ export default async function ProfilePage() {
 
       {/* Linked accounts */}
       <FadeUp delay={0.05}>
-        <LinkedAccounts userId={session.user.id} />
+        <LinkedAccounts userId={session.user.id} linkError={linkError} />
       </FadeUp>
 
       {/* Playlists */}

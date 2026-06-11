@@ -1,7 +1,12 @@
 import { getUserAuthInfo } from '@vire/db';
 import { LinkedAccountsClient } from './linked-accounts-client';
 
-export async function LinkedAccounts({ userId }: { userId: string }) {
+interface Props {
+  userId: string;
+  linkError?: string;
+}
+
+export async function LinkedAccounts({ userId, linkError }: Props) {
   const info = await getUserAuthInfo(userId);
   const linkedProviders = info.providers.map((p) => p.provider);
 
@@ -11,6 +16,7 @@ export async function LinkedAccounts({ userId }: { userId: string }) {
       <LinkedAccountsClient
         hasPassword={info.hasPassword}
         linkedProviders={linkedProviders}
+        linkError={linkError}
       />
     </section>
   );
