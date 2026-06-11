@@ -79,6 +79,7 @@ function createAdapter() {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: createAdapter(),
+  trustHost: true,
   providers: [
     // ── Email / пароль ────────────────────────────────────────────────────
     Credentials({
