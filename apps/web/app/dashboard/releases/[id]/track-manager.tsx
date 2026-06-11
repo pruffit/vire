@@ -4,12 +4,15 @@ import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
+import { MoodPicker } from '@/components/mood-picker';
+import type { Mood } from '@/lib/moods';
 
 export interface ManagedTrack {
   id: string;
   title: string;
   trackNumber: number;
   status: 'PROCESSING' | 'READY' | 'BLOCKED';
+  moods: Mood[];
 }
 
 async function patchTrack(id: string, patch: Record<string, unknown>): Promise<boolean> {
@@ -22,13 +25,13 @@ async function patchTrack(id: string, patch: Record<string, unknown>): Promise<b
 }
 
 /**
- * Управление треками релиза: переименование, удаление и порядок — всё с
- * оптимистичным UI (меняем сразу, откатываем при ошибке запроса).
+ * Управление треками релиза: переименование, удаление, порядок и mood-теги —
+ * всё с оптимистичным UI (меняем сразу, откатываем при ошибке запроса).
  */
 export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
   const [tracks, setTracks] = useState<ManagedTrack[]>(initial);
   const [busy, setBusy] = useState<Set<string>>(new Set());
-  // последний сохранённый заголовок — для отката при ошибке
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const savedTitles = useRef<Map<string, string>>(
     new Map(initial.map((t) => [t.id, t.title])),
   );
@@ -41,12 +44,21 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, title } : t)));
   }
 
+  function toggleExpanded(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   async function commitTitle(id: string) {
     const current = tracks.find((t) => t.id === id);
     if (!current) return;
     const title = current.title.trim();
-    if (title === savedTitles.current.get(id)) return; // без изменений
-    if (!title) { // пустое — откат
+    if (title === savedTitles.current.get(id)) return;
+    if (!title) {
       setTitle(id, savedTitles.current.get(id) ?? '');
       return;
     }
@@ -56,7 +68,7 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     if (ok) {
       savedTitles.current.set(id, title);
     } else {
-      setTitle(id, savedTitles.current.get(id) ?? ''); // откат
+      setTitle(id, savedTitles.current.get(id) ?? '');
       toast.error('Не удалось переименовать трек');
     }
   }
@@ -67,7 +79,7 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     setTracks((ts) => ts.filter((t) => t.id !== id));
     const res = await fetch(`/api/v1/dashboard/tracks/${id}`, { method: 'DELETE' }).catch(() => null);
     if (!res?.ok) {
-      setTracks(prev); // откат
+      setTracks(prev);
       toast.error('Не удалось удалить трек');
     }
   }
@@ -80,11 +92,9 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     const prev = tracks;
     const next = [...tracks];
     [next[i], next[j]] = [next[j], next[i]];
-    // пересчитываем номера по позиции
     const renumbered = next.map((t, idx) => ({ ...t, trackNumber: idx + 1 }));
     setTracks(renumbered);
 
-    // персистим два изменившихся трека
     const a = renumbered[i], b = renumbered[j];
     markBusy(a.id, true); markBusy(b.id, true);
     const [okA, okB] = await Promise.all([
@@ -93,7 +103,7 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     ]);
     markBusy(a.id, false); markBusy(b.id, false);
     if (!okA || !okB) {
-      setTracks(prev); // откат
+      setTracks(prev);
       toast.error('Не удалось изменить порядок треков');
     }
   }
@@ -113,68 +123,121 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, height: 0 }}
             transition={spring.snappy}
-            className="flex items-center gap-2 px-3 py-2.5 text-sm"
           >
-            <span className="w-5 text-right text-white/30 shrink-0 font-mono text-xs">
-              {track.trackNumber}
-            </span>
+            {/* Track row */}
+            <div className="flex items-center gap-2 px-3 py-2.5 text-sm">
+              <span className="w-5 text-right text-white/30 shrink-0 font-mono text-xs">
+                {track.trackNumber}
+              </span>
 
-            {/* Порядок */}
-            <div className="flex flex-col shrink-0 -my-1">
-              <button
+              {/* Порядок */}
+              <div className="flex flex-col shrink-0 -my-1">
+                <button
+                  type="button"
+                  onClick={() => move(track.id, -1)}
+                  disabled={i === 0 || busy.has(track.id)}
+                  aria-label="Выше"
+                  className="text-white/30 hover:text-white/80 disabled:opacity-20 transition-colors leading-none"
+                >▲</button>
+                <button
+                  type="button"
+                  onClick={() => move(track.id, 1)}
+                  disabled={i === tracks.length - 1 || busy.has(track.id)}
+                  aria-label="Ниже"
+                  className="text-white/30 hover:text-white/80 disabled:opacity-20 transition-colors leading-none"
+                >▼</button>
+              </div>
+
+              {/* Название (редактируемое) */}
+              <input
+                value={track.title}
+                onChange={(e) => setTitle(track.id, e.target.value)}
+                onBlur={() => commitTitle(track.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                aria-label="Название трека"
+                className="flex-1 min-w-0 bg-transparent rounded px-2 py-1 -mx-2 hover:bg-white/5 focus:bg-white/5 focus:outline-none focus:ring-1 focus:ring-white/20 transition-colors"
+              />
+
+              <span className={`text-xs font-mono shrink-0 ${
+                track.status === 'READY' ? 'text-green-400'
+                : track.status === 'PROCESSING' ? 'text-yellow-400'
+                : 'text-red-400'
+              }`}>
+                {track.status === 'READY' ? 'готов'
+                  : track.status === 'PROCESSING' ? 'обрабатывается'
+                  : 'заблокирован'}
+              </span>
+
+              {/* Настроения */}
+              <motion.button
                 type="button"
-                onClick={() => move(track.id, -1)}
-                disabled={i === 0 || busy.has(track.id)}
-                aria-label="Выше"
-                className="text-white/30 hover:text-white/80 disabled:opacity-20 transition-colors leading-none"
-              >▲</button>
-              <button
+                onClick={() => toggleExpanded(track.id)}
+                whileTap={{ scale: 0.9 }}
+                transition={spring.snappy}
+                aria-label="Настроение трека"
+                aria-expanded={expanded.has(track.id)}
+                title="Настроение трека"
+                className={`shrink-0 grid place-items-center w-7 h-7 rounded-full transition-colors ${
+                  expanded.has(track.id)
+                    ? 'bg-white/10 text-white/70'
+                    : 'text-white/30 hover:bg-white/10 hover:text-white/60'
+                }`}
+              >
+                <TagIcon />
+              </motion.button>
+
+              {/* Удалить */}
+              <motion.button
                 type="button"
-                onClick={() => move(track.id, 1)}
-                disabled={i === tracks.length - 1 || busy.has(track.id)}
-                aria-label="Ниже"
-                className="text-white/30 hover:text-white/80 disabled:opacity-20 transition-colors leading-none"
-              >▼</button>
+                onClick={() => remove(track.id)}
+                disabled={busy.has(track.id)}
+                whileTap={{ scale: 0.9 }}
+                transition={spring.snappy}
+                aria-label="Удалить трек"
+                title="Удалить трек"
+                className="shrink-0 grid place-items-center w-7 h-7 rounded-full text-white/30 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 transition-colors"
+              >
+                <TrashIcon />
+              </motion.button>
             </div>
 
-            {/* Название (редактируемое) */}
-            <input
-              value={track.title}
-              onChange={(e) => setTitle(track.id, e.target.value)}
-              onBlur={() => commitTitle(track.id)}
-              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-              aria-label="Название трека"
-              className="flex-1 min-w-0 bg-transparent rounded px-2 py-1 -mx-2 hover:bg-white/5 focus:bg-white/5 focus:outline-none focus:ring-1 focus:ring-white/20 transition-colors"
-            />
-
-            <span className={`text-xs font-mono shrink-0 ${
-              track.status === 'READY' ? 'text-green-400'
-              : track.status === 'PROCESSING' ? 'text-yellow-400'
-              : 'text-red-400'
-            }`}>
-              {track.status === 'READY' ? 'готов'
-                : track.status === 'PROCESSING' ? 'обрабатывается'
-                : 'заблокирован'}
-            </span>
-
-            {/* Удалить */}
-            <motion.button
-              type="button"
-              onClick={() => remove(track.id)}
-              disabled={busy.has(track.id)}
-              whileTap={{ scale: 0.9 }}
-              transition={spring.snappy}
-              aria-label="Удалить трек"
-              title="Удалить трек"
-              className="shrink-0 grid place-items-center w-7 h-7 rounded-full text-white/30 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 transition-colors"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-              </svg>
-            </motion.button>
+            {/* MoodPicker — разворачивается по кнопке */}
+            <AnimatePresence>
+              {expanded.has(track.id) && (
+                <motion.div
+                  key="moods"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={spring.snappy}
+                  className="overflow-hidden border-t border-white/5"
+                >
+                  <div className="px-4 py-3">
+                    <MoodPicker trackId={track.id} initial={track.moods} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         ))}
       </AnimatePresence>
     </div>
+  );
+}
+
+function TagIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+    </svg>
   );
 }

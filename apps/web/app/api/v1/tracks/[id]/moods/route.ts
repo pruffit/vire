@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { getTrackMoods, setTrackMoods, trackExists, ALL_MOODS, db, DrizzleArtistRepository } from '@vire/db';
+import {
+  getTrackMoods, setTrackMoods, trackExists, ALL_MOODS, db,
+  DrizzleArtistRepository, DrizzleTrackRepository, DrizzleReleaseRepository,
+} from '@vire/db';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -19,11 +22,17 @@ export async function PUT(req: Request, { params }: Params) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  if (!(await trackExists(id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Только артист-владелец трека может менять настроения
   const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
   if (!artist) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const track = await new DrizzleTrackRepository(db).findById(id);
+  if (!track) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const release = await new DrizzleReleaseRepository(db).findById(track.releaseId);
+  if (!release || release.artistProfileId !== artist.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = moodSchema.safeParse(body?.moods);

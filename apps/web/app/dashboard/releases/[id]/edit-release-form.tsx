@@ -3,10 +3,12 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ReleaseType } from '@vire/core';
+import { ALL_GENRES, GENRE_LABELS } from '@/lib/genres';
 
 interface Initial {
   title: string;
   type: ReleaseType;
+  genre: string | null;
   releaseDate: string;
   description: string;
   linerNotes: string;
@@ -76,6 +78,15 @@ export function EditReleaseForm({ releaseId, initial }: Props) {
           <option value="ALBUM">Альбом</option>
           <option value="EP">EP</option>
           <option value="SINGLE">Сингл</option>
+        </select>
+      </Field>
+
+      <Field label="Жанр" hint="необязательно">
+        <select name="genre" disabled={busy} defaultValue={initial.genre ?? ''} className={input}>
+          <option value="">— выберите жанр</option>
+          {ALL_GENRES.map((g) => (
+            <option key={g} value={g}>{GENRE_LABELS[g]}</option>
+          ))}
         </select>
       </Field>
 

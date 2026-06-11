@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
+import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getMoodsForTracks } from '@vire/db';
 import { EditReleaseForm } from './edit-release-form';
 import { AddTrackForm } from './add-track-form';
 import { TrackManager } from './track-manager';
@@ -26,6 +26,7 @@ export default async function EditReleasePage({ params }: Props) {
   if (data.release.artistProfileId !== artist.id) notFound();
 
   const { release, tracks } = data;
+  const moodsMap = await getMoodsForTracks(tracks.map((t) => t.id));
 
   return (
     <div className="min-h-full bg-background text-foreground">
@@ -46,6 +47,7 @@ export default async function EditReleasePage({ params }: Props) {
             initial={{
               title: release.title,
               type: release.type,
+              genre: release.genre ?? null,
               releaseDate: release.releaseDate?.toISOString().slice(0, 10) ?? '',
               description: release.description ?? '',
               linerNotes: release.linerNotes ?? '',
@@ -67,6 +69,7 @@ export default async function EditReleasePage({ params }: Props) {
               title: t.title,
               trackNumber: t.trackNumber,
               status: t.status,
+              moods: moodsMap[t.id] ?? [],
             }))}
           />
 

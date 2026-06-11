@@ -14,6 +14,7 @@ import { AmbientBackdrop } from '@/components/ambient-backdrop';
 import { musicAlbumJsonLd } from '@/lib/structured-data';
 import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
+import { GENRE_LABELS } from '@/lib/genres';
 
 type Props = { params: Promise<{ slug: string; releaseId: string }> };
 
@@ -116,6 +117,7 @@ export default async function ReleasePage({ params }: Props) {
               <p className="text-xs font-mono opacity-50 uppercase tracking-widest">
                 <span style={{ color: 'var(--artist-accent)' }}>{release.type}</span>
                 {year ? <span className="opacity-60"> · {year}</span> : null}
+                {release.genre ? <span className="opacity-60"> · {GENRE_LABELS[release.genre]}</span> : null}
               </p>
               <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance">
                 {release.title}
