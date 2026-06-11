@@ -74,8 +74,7 @@ beforeEach(() => {
   });
   h.computeWaveformPeaks.mockResolvedValue([0.1, 0.2]);
   h.readAudioMetadata.mockResolvedValue({ durationSec: 200, bpm: 120, musicalKey: 'Am' });
-  // analyzeAudioFeatures should not be called when tags are complete (bpm/key present)
-  h.analyzeAudioFeatures.mockResolvedValue({ bpm: null, musicalKey: null });
+  h.analyzeAudioFeatures.mockResolvedValue({ bpm: 120, musicalKey: 'A minor' });
   h.probeDuration.mockResolvedValue(321);
 });
 
@@ -134,47 +133,26 @@ describe('processTranscodeJob', () => {
     expect(h.lastUpdateSet).toMatchObject({ status: 'READY', durationSec: 200 });
   });
 
-  it('skips audio analysis when tags already have bpm and key', async () => {
+  it('always runs audio analysis regardless of tag values', async () => {
     await processTranscodeJob(makeJob());
-    expect(h.analyzeAudioFeatures).not.toHaveBeenCalled();
+    expect(h.analyzeAudioFeatures).toHaveBeenCalledWith(
+      expect.stringMatching(/source\.wav$/),
+      { bpm: true, key: true },
+    );
   });
 
   it('falls back to ffprobe duration when tags have none', async () => {
     h.readAudioMetadata.mockResolvedValue({ durationSec: 0, bpm: null, musicalKey: null });
-    h.analyzeAudioFeatures.mockResolvedValue({ bpm: null, musicalKey: null });
     await processTranscodeJob(makeJob());
     expect(h.probeDuration).toHaveBeenCalledTimes(1);
     expect(h.lastUpdateSet).toMatchObject({ durationSec: 321 });
   });
 
-  it('auto-detects bpm and key when tags are missing', async () => {
-    h.readAudioMetadata.mockResolvedValue({ durationSec: 180, bpm: null, musicalKey: null });
-    h.analyzeAudioFeatures.mockResolvedValue({ bpm: 128, musicalKey: 'C major' });
-
+  it('falls back to tag bpm/key when analysis returns null', async () => {
+    h.readAudioMetadata.mockResolvedValue({ durationSec: 180, bpm: 140, musicalKey: 'Dm' });
+    h.analyzeAudioFeatures.mockResolvedValue({ bpm: null, musicalKey: null });
     await processTranscodeJob(makeJob());
-
-    expect(h.analyzeAudioFeatures).toHaveBeenCalledWith(
-      expect.stringMatching(/source\.wav$/),
-      { bpm: true, key: true },
-    );
-
-    const insertCall = (h.txInsert as Mock).mock.calls[0];
-    expect(insertCall).toBeDefined();
-    // The insert is chained: values() → onConflictDoUpdate(), so we verify analyzeAudioFeatures was called
-    // and the job completed without error
     expect(h.txUpdate).toHaveBeenCalledTimes(1);
-  });
-
-  it('auto-detects only missing fields (bpm present, key missing)', async () => {
-    h.readAudioMetadata.mockResolvedValue({ durationSec: 180, bpm: 120, musicalKey: null });
-    h.analyzeAudioFeatures.mockResolvedValue({ bpm: null, musicalKey: 'G minor' });
-
-    await processTranscodeJob(makeJob());
-
-    expect(h.analyzeAudioFeatures).toHaveBeenCalledWith(
-      expect.any(String),
-      { bpm: false, key: true },
-    );
   });
 
   it('reports completion progress', async () => {

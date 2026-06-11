@@ -43,16 +43,10 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
     const durationSec = metadata.durationSec || (await probeDuration(sourcePath));
     await job.updateProgress(30);
 
-    // 3. Автоопределение BPM/тональности (только если теги не заполнены)
-    let { bpm, musicalKey } = metadata;
-    if (bpm === null || musicalKey === null) {
-      const analyzed = await analyzeAudioFeatures(sourcePath, {
-        bpm: bpm === null,
-        key: musicalKey === null,
-      });
-      if (bpm === null) bpm = analyzed.bpm;
-      if (musicalKey === null) musicalKey = analyzed.musicalKey;
-    }
+    // 3. Автоопределение BPM/тональности (всегда, перезаписывает теги)
+    const analyzed = await analyzeAudioFeatures(sourcePath, { bpm: true, key: true });
+    const bpm = analyzed.bpm ?? metadata.bpm;
+    const musicalKey = analyzed.musicalKey ?? metadata.musicalKey;
     await job.updateProgress(45);
 
     // 4. HLS-транскодинг
