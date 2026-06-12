@@ -25,7 +25,7 @@ export function Footer() {
             </FooterCol>
             <FooterCol title="Поддержка">
               <FooterLink href="/feedback">Обратная связь</FooterLink>
-              <FooterLink href="mailto:hello@vire.ru">hello@vire.ru</FooterLink>
+              <FooterLink href="mailto:hello@viremusic.ru">hello@viremusic.ru</FooterLink>
             </FooterCol>
             <FooterCol title="Правовое">
               <FooterLink href="/terms">Условия</FooterLink>

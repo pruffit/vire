@@ -148,8 +148,8 @@ export function FeedbackForm() {
             className="text-sm text-red-400"
           >
             Не удалось отправить. Попробуй ещё раз или напиши напрямую на{' '}
-            <a href="mailto:hello@vire.ru" className="underline underline-offset-2">
-              hello@vire.ru
+            <a href="mailto:hello@viremusic.ru" className="underline underline-offset-2">
+              hello@viremusic.ru
             </a>
           </motion.p>
         )}
