@@ -37,7 +37,7 @@ function buildCsp(): string {
   const parts = [
     `default-src 'self'`,
     // telegram.org нужен для виджета входа; vk.com для VK OAuth скриптов
-    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://telegram.org`,
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org`,
     `style-src 'self' 'unsafe-inline'`,
     // аватары: Yandex, Google (lh3), Telegram (t.me)
     `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me ${s3}`,
