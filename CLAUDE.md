@@ -10,10 +10,10 @@
 - **UI:** Radix Primitives / shadcn (headless) + Tailwind — кастомные токены, не дефолтный shadcn
 - **База:** PostgreSQL + Drizzle ORM (`packages/db`)
 - **Очередь:** Redis + BullMQ
-- **Хранилище:** S3 (Selectel на проде, MinIO локально)
+- **Хранилище:** S3-совместимое — MinIO (и на проде за Caddy на `cdn.viremusic.ru`, и локально)
 - **Транскодинг:** ffmpeg-воркер (`apps/worker`), HLS-нарезка
 - **Аутентификация:** Auth.js (NextAuth)
-- **Деплой:** Selectel VPS + Docker
+- **Деплой:** Timeweb Cloud VPS + Docker (Caddy → web/worker из GHCR); CI/CD по тегу `vX.Y.Z`
 
 ## Структура монорепо
 
@@ -186,11 +186,14 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 
 ### Фундамент
 - [x] Монорепо (Turborepo + pnpm), docker-compose (postgres/redis/minio)
-- [x] `packages/db` — Drizzle схема + миграции 0000–0008 (последняя — `artist_posts`)
+- [x] `packages/db` — Drizzle схема + миграции 0000–0014
 - [x] `packages/core` — Result<T,E>, domain types, сервисы, репозитории
 - [x] `packages/ui` — OKLCH-токены, Button, Card, Input
 - [x] `packages/config` — tsconfig/eslint/tailwind пресеты
-- [x] Auth.js v5 — Yandex OAuth + Resend magic link, JWT, `proxy.ts`
+- [x] Auth.js v5 — провайдеры: email/пароль (Credentials), magic link, Yandex, Google,
+  Telegram Login Widget; JWT, `proxy.ts`. Привязка нескольких провайдеров к одному
+  аккаунту через cookie `vire_link_uid` (см. `auth.ts`, `/profile` → «Способы входа»).
+  Письма шлёт Brevo HTTP API (`lib/mailer.ts`) — SMTP не используется (Timeweb блокирует порты).
 - [x] `apps/worker` — BullMQ + ffmpeg → HLS + waveform peaks → S3 → DB; play-events; notify-release
 
 ### Публичные страницы
@@ -198,7 +201,8 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] `/artists/[slug]` — профиль: full-bleed hero, темизация, grain, ссылки, видео, follow, анонсы
 - [x] `/artists/[slug]/releases/[releaseId]` — релиз, трек-лист, liner notes, credits
 - [x] `.../tracks/[trackId]` — waveform-плеер, BPM/key, like, live-счётчик
-- [x] `/feed` — лента подписок, `/profile` — карточка профиля, лайки, подписки, покупки
+- [x] `/feed` — лента подписок, `/profile` — карточка профиля (смена имени, загрузка своего
+  аватара в S3, «Способы входа»: пароль + привязка OAuth/Telegram), лайки, подписки, покупки
 - [x] Глобальный плеер — Zustand + HLS.js + SVG waveform scrubber, wave-режим
 
 ### Взаимодействие слушателя (концепт «Взаимодействие слушателя» — закрыто)
@@ -225,9 +229,12 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   аудитория/каталог (юзеры по ролям, артисты, релизы/треки по статусам); вовлечённость
   (прослушивания 24ч/7д/30д, уник. слушатели, лайки/подписки/плейлисты/посты/теги/моменты)
 - [x] `/admin/analytics` — динамика прослушиваний по дням (14д), топ треков/артистов за 30д
-- [x] `/admin/users` (смена роли + верификация), `/admin/artists` (фолловеры/релизы/прослушивания,
-  верификация + скрытие с витрины isActive), `/admin/tracks` (аудио-характеристики, прослушивания,
-  лайки, маркер `!hls`), `/admin/releases` (смена статуса)
+- [x] `/admin/users` (смена роли + верификация, форма «Создать артиста» по email),
+  `/admin/artists` (фолловеры/релизы/прослушивания, верификация + скрытие с витрины isActive),
+  `/admin/tracks` (аудио-характеристики, прослушивания, лайки, маркер `!hls`),
+  `/admin/releases` (смена статуса)
+- [x] Адаптивная вёрстка: на десктопе сайдбар сбоку, на мобилках — горизонтальный
+  топ-бар; широкие таблицы скроллятся по горизонтали (`overflow-x-auto` + `min-width`)
 
 ### SEO и доступность
 - [x] `metadataBase` + title-template `%s — Vire`, OG/Twitter дефолты (`app/layout.tsx`, `lib/site.ts`)
@@ -267,9 +274,13 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)
   централизованы в `apps/web/lib/format.ts` и покрыты тестами.
 - Все удалённые изображения (обложки/аватары из S3) — на `next/image`; хост S3/MinIO задаётся
-  через `images.remotePatterns` в `next.config.ts` из `S3_PUBLIC_ENDPOINT`. Также разрешён
-  `avatars.yandex.net` (OAuth-аватары Yandex). Локальные blob-превью в формах остаются `<img>`
-  (next/image не оптимизирует blob:). После правки `next.config.ts` dev-сервер нужно перезапустить.
+  через `images.remotePatterns` в `next.config.ts` из `S3_PUBLIC_ENDPOINT`. Разрешены и хосты
+  OAuth-аватаров: `avatars.yandex.net`, `lh3.googleusercontent.com` (Google), `t.me` (Telegram).
+  Локальные blob-превью в формах остаются `<img>` (next/image не оптимизирует blob:).
+  После правки `next.config.ts` dev-сервер нужно перезапустить. CSP/remotePatterns/`S3_PUBLIC_ENDPOINT`
+  пекутся на build-time — в Docker передаются через build-args (см. `apps/web/Dockerfile`, `deploy.yml`).
+- Свой аватар слушателя грузится через `POST /api/v1/user/profile` (multipart) в S3
+  (`avatars/users/{id}.{ext}`), ключ стабильный — к URL добавляется `?v=timestamp` для сброса кэша.
 - Live-присутствие использует Redis напрямую (`ioredis`, `lib/presence.ts`) — отдельно от BullMQ-очередей,
   но тот же `REDIS_URL`. Все presence-эндпоинты деградируют до `count:0` при недоступности Redis.
 
@@ -283,3 +294,12 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 > рендерит её там БЕЗ квалификации (просто `"id"`). В коррелированном подзапросе это либо
 > «column reference is ambiguous», либо тихо резолвится в id таблицы подзапроса (счётчики = 0).
 > Ссылайся на внешнюю таблицу литералом: `where f.artist_profile_id = artist_profiles.id`.
+
+> ⚠️ Роль и identity (имя/аватар) кладутся в JWT **в момент логина** (`jwt`-callback в `auth.ts`).
+> Стратегия `jwt` не перечитывает БД — после смены роли (`db:make-admin`, верификация) или
+> правки имени/фото пользователь должен **выйти и войти заново**, иначе сессия остаётся старой.
+> Поэтому `/profile` читает актуальные имя/аватар из БД (`getUserProfile`), а не из сессии.
+
+> ⚠️ `createArtistForUser` повышает до `ARTIST` только `LISTENER` — роли `MODERATOR`/`ADMIN`/
+> `SUPERADMIN` не понижаются. Иначе создание артиста на email админа отбирает доступ к админке
+> (так уже один раз слетел SUPERADMIN). При любых изменениях формы «Создать артиста» это сохранять.
