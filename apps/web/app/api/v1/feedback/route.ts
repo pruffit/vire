@@ -1,15 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Resend } from 'resend';
 import { z } from 'zod';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
-
-// Ленивая инициализация: на уровне модуля `new Resend()` без ключа бросает на сборке
-// (Next вычисляет модуль при сборе данных роута).
-let resend: Resend | null = null;
-function getResend(): Resend {
-  if (!resend) resend = new Resend(process.env.RESEND_API_KEY);
-  return resend;
-}
+import { sendMail } from '@/lib/mailer';
 
 const schema = z.object({
   type: z.enum(['bug', 'idea', 'other']),
@@ -53,20 +45,12 @@ export async function POST(req: Request) {
     .filter(Boolean)
     .join('\n');
 
-  const from = process.env.RESEND_FROM ?? 'onboarding@resend.dev';
-  const to = process.env.FEEDBACK_TO ?? from;
+  const to = process.env.FEEDBACK_TO ?? process.env.SMTP_FROM ?? 'noreply@viremusic.ru';
 
-  const { error } = await getResend().emails.send({
-    from,
-    to,
-    replyTo: email || undefined,
-    subject,
-    text,
-  });
-
-  // Раньше ответ Resend игнорировался — форма «отправляла» в пустоту.
-  if (error) {
-    console.error('[feedback] resend error:', error);
+  try {
+    await sendMail({ to, subject, text, replyTo: email || undefined });
+  } catch (err) {
+    console.error('[feedback] smtp error:', err);
     return NextResponse.json({ error: 'Не удалось отправить сообщение' }, { status: 502 });
   }
 

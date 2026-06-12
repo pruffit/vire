@@ -21,11 +21,15 @@
 
 ```
 AUTH_SECRET=                    # обязательно
-AUTH_URL=                       # публичный URL (https://vire.ru)
+AUTH_URL=                       # публичный URL (https://viremusic.ru)
 AUTH_YANDEX_ID=
 AUTH_YANDEX_SECRET=
-RESEND_API_KEY=                 # Resend API key для magic-link (и обратной связи)
-RESEND_FROM=                    # отправитель писем (noreply@vire.ru)
+SMTP_HOST=smtp-relay.brevo.com  # SMTP-сервер (Brevo)
+SMTP_PORT=587
+SMTP_LOGIN=                     # логин Brevo (из Transactional → SMTP & API)
+SMTP_PASSWORD=                  # пароль Brevo
+SMTP_FROM=Vire <noreply@viremusic.ru>   # отправитель (домен должен быть верифицирован)
+FEEDBACK_TO=                    # куда падает форма обратной связи
 ```
 
 ## Известные ограничения

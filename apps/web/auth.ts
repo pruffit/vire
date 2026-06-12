@@ -2,8 +2,8 @@ import NextAuth, { type DefaultSession } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Yandex from 'next-auth/providers/yandex';
 import Google from 'next-auth/providers/google';
-import Resend from 'next-auth/providers/resend';
-import { Resend as ResendClient } from 'resend';
+import Nodemailer from 'next-auth/providers/nodemailer';
+import { sendMail } from '@/lib/mailer';
 import { compare } from 'bcryptjs';
 import { createHash, createHmac } from 'crypto';
 import { cookies } from 'next/headers';
@@ -130,24 +130,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // мы возвращаем linking-пользователя (который мог быть создан через другой провайдер)
     Yandex({ allowDangerousEmailAccountLinking: true }),
     Google({ allowDangerousEmailAccountLinking: true }),
-    Resend({
-      apiKey: process.env.RESEND_API_KEY,
-      from: process.env.RESEND_FROM ?? 'onboarding@resend.dev',
+    Nodemailer({
+      server: process.env.SMTP_HOST
+        ? { host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT ?? 587), secure: false,
+            auth: { user: process.env.SMTP_LOGIN, pass: process.env.SMTP_PASSWORD } }
+        : 'smtp://localhost:587',
+      from: process.env.SMTP_FROM ?? 'Vire <noreply@viremusic.ru>',
       async sendVerificationRequest({ identifier, url }) {
-        // В dev просто печатаем ссылку в консоль — Resend free-план разрешает
-        // слать только на свой email, а нам нужно тестировать с любыми адресами.
         if (process.env.NODE_ENV === 'development') {
           console.log(`\n[auth] Magic link for ${identifier}:\n${url}\n`);
           return;
         }
-        const client = new ResendClient(process.env.RESEND_API_KEY!);
-        const { error } = await client.emails.send({
-          from: process.env.RESEND_FROM ?? 'onboarding@resend.dev',
+        await sendMail({
           to: identifier,
           subject: 'Ссылка для входа в Vire',
           text: `Твоя ссылка для входа в Vire:\n\n${url}\n\nДействительна 24 часа.`,
         });
-        if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`);
       },
     }),
   ],
