@@ -44,12 +44,49 @@ export function ProfileCard({ user, stats }: Props) {
   const initials = displayName.slice(0, 2).toUpperCase();
 
   const [name, setName] = useState(displayName);
+  const [image, setImage] = useState(user.image);
   const [imgError, setImgError] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(displayName);
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // позволяем выбрать тот же файл повторно
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setAvatarError('Файл больше 5 МБ'); return; }
+
+    setUploading(true);
+    setAvatarError(null);
+    const fd = new FormData();
+    fd.append('avatar', file);
+    const res = await fetch('/api/v1/user/profile', { method: 'POST', body: fd });
+    setUploading(false);
+    if (res.ok) {
+      const data = await res.json();
+      setImage(data.image);
+      setImgError(false);
+    } else {
+      const data = await res.json().catch(() => null);
+      setAvatarError(data?.error ?? 'Не удалось загрузить фото');
+    }
+  }
+
+  async function handleAvatarRemove() {
+    setUploading(true);
+    setAvatarError(null);
+    const fd = new FormData();
+    fd.append('removeAvatar', '1');
+    const res = await fetch('/api/v1/user/profile', { method: 'POST', body: fd });
+    setUploading(false);
+    if (res.ok) { setImage(null); setImgError(false); }
+    else setAvatarError('Не удалось удалить фото');
+  }
 
   useEffect(() => {
     if (editing) inputRef.current?.select();
@@ -87,15 +124,21 @@ export function ProfileCard({ user, stats }: Props) {
       {/* Avatar + identity */}
       <div className="flex items-start gap-5">
         {/* Avatar */}
-        <div className="relative shrink-0">
-          <div className="w-[72px] h-[72px] rounded-full overflow-hidden ring-2 ring-border ring-offset-2 ring-offset-background">
-            {user.image && !imgError ? (
+        <div className="shrink-0 flex flex-col items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            aria-label="Изменить фото"
+            className="group relative w-[72px] h-[72px] rounded-full overflow-hidden ring-2 ring-border ring-offset-2 ring-offset-background cursor-pointer disabled:cursor-wait"
+          >
+            {image && !imgError ? (
               <Image
-                src={user.image}
+                src={image}
                 alt={name}
                 width={72}
                 height={72}
-                className="object-cover"
+                className="w-full h-full object-cover"
                 onError={() => setImgError(true)}
               />
             ) : (
@@ -103,7 +146,32 @@ export function ProfileCard({ user, stats }: Props) {
                 {initials}
               </div>
             )}
-          </div>
+            {/* Оверлей */}
+            <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity">
+              {uploading ? (
+                <span className="text-[10px] font-medium text-white">…</span>
+              ) : (
+                <CameraIcon />
+              )}
+            </span>
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
+          {image && !uploading && (
+            <button
+              type="button"
+              onClick={handleAvatarRemove}
+              className="text-[10px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+            >
+              Удалить
+            </button>
+          )}
+          {avatarError && <p className="text-[10px] text-red-400 text-center max-w-[80px] leading-tight">{avatarError}</p>}
         </div>
 
         {/* Name + email + date */}
@@ -217,6 +285,15 @@ function StatItem({ value, label }: { value: number; label: string }) {
       <span className="text-2xl font-semibold tabular-nums tracking-tight">{value}</span>
       <span className="text-xs text-muted-foreground">{label}</span>
     </div>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+      <circle cx="12" cy="13" r="3" />
+    </svg>
   );
 }
 

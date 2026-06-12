@@ -16,7 +16,7 @@ export { getLatestReleases, getUpcomingReleases, getUpcomingByArtist, getTracksB
 export type { DiscoveryRelease, DiscoveryTrack } from './queries/discovery';
 export { insertPlayEvent } from './queries/play-events';
 export type { InsertPlayEventData } from './queries/play-events';
-export { getLikedTracks, getFollowedArtists, getUserCreatedAt, updateUserName } from './queries/profile';
+export { getLikedTracks, getFollowedArtists, getUserCreatedAt, getUserProfile, updateUserName, updateUserImage } from './queries/profile';
 export type { LikedTrack, FollowedArtist } from './queries/profile';
 export { searchAll } from './queries/search';
 export type { SearchResults, SearchArtist, SearchRelease, SearchTrack } from './queries/search';

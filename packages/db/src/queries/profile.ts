@@ -7,8 +7,27 @@ export async function getUserCreatedAt(userId: string): Promise<Date | null> {
   return rows[0]?.createdAt ?? null;
 }
 
+/**
+ * Актуальные имя/аватар/дата из БД. Нужно потому что при JWT-стратегии сессия
+ * не перечитывает users — после смены имени/фото токен остаётся устаревшим.
+ */
+export async function getUserProfile(
+  userId: string,
+): Promise<{ name: string | null; image: string | null; createdAt: Date | null } | null> {
+  const [row] = await db
+    .select({ name: users.name, image: users.image, createdAt: users.createdAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function updateUserName(userId: string, name: string): Promise<void> {
   await db.update(users).set({ name, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
+export async function updateUserImage(userId: string, image: string | null): Promise<void> {
+  await db.update(users).set({ image, updatedAt: new Date() }).where(eq(users.id, userId));
 }
 
 export interface LikedTrack {

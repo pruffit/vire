@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
-import { getLikedTracks, getFollowedArtists, getUserPlaylists, getUserCreatedAt } from '@vire/db';
+import { getLikedTracks, getFollowedArtists, getUserPlaylists, getUserProfile } from '@vire/db';
 import type { PlayerTrack } from '@/store/player';
 import { LikedTrackRow } from './liked-track-row';
 import { FollowedArtists } from './followed-artists';
@@ -27,11 +27,11 @@ export default async function ProfilePage({
   const params = await searchParams;
   const linkError = params.link_error;
 
-  const [likedTracks, followedArtists, playlists, createdAt] = await Promise.all([
+  const [likedTracks, followedArtists, playlists, profile] = await Promise.all([
     getLikedTracks(session.user.id),
     getFollowedArtists(session.user.id),
     getUserPlaylists(session.user.id),
-    getUserCreatedAt(session.user.id),
+    getUserProfile(session.user.id),
   ]);
 
   const likedQueue: PlayerTrack[] = likedTracks.map((t) => ({
@@ -50,10 +50,10 @@ export default async function ProfilePage({
         <ProfileCard
           user={{
             id: session.user.id,
-            name: session.user.name ?? null,
+            name: profile?.name ?? session.user.name ?? null,
             email: session.user.email ?? null,
-            image: session.user.image ?? null,
-            createdAt,
+            image: profile?.image ?? session.user.image ?? null,
+            createdAt: profile?.createdAt ?? null,
           }}
           stats={{
             likes: likedTracks.length,
