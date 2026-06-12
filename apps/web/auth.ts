@@ -131,6 +131,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Yandex({ allowDangerousEmailAccountLinking: true }),
     Google({ allowDangerousEmailAccountLinking: true }),
     Nodemailer({
+      server: 'smtp://localhost:25', // не используется — sendVerificationRequest переопределён
       from: process.env.SMTP_FROM ?? 'Vire <noreply@viremusic.ru>',
       async sendVerificationRequest({ identifier, url }) {
         if (process.env.NODE_ENV === 'development') {
