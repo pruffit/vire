@@ -16,44 +16,75 @@ const KIND_LABELS: Record<string, string | undefined> = {
   FRESH: 'Свежее',
 };
 
+interface Layer {
+  src: string;
+  rot: number; // поворот, deg
+  dx: number; // смещение по X, % от размера карточки
+  z: number;
+  back: boolean; // задняя карта — приглушаем
+}
+
+// Раскладка «веером»: первая обложка — лицевая (прямо), остальные выглядывают сзади.
+function buildLayers(stack: string[]): Layer[] {
+  if (stack.length === 1) {
+    return [{ src: stack[0], rot: 0, dx: 0, z: 30, back: false }];
+  }
+  if (stack.length === 2) {
+    return [
+      { src: stack[1], rot: 8, dx: 13, z: 10, back: true },
+      { src: stack[0], rot: 0, dx: 0, z: 30, back: false },
+    ];
+  }
+  return [
+    { src: stack[1], rot: -9, dx: -13, z: 10, back: true },
+    { src: stack[2], rot: 9, dx: 13, z: 10, back: true },
+    { src: stack[0], rot: 0, dx: 0, z: 30, back: false },
+  ];
+}
+
 function PlaylistCollage({ covers }: { covers: string[] }) {
   if (covers.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center opacity-20">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/[0.08] to-white/[0.01]">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="opacity-20">
           <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z" />
         </svg>
       </div>
     );
   }
 
-  if (covers.length === 1) {
-    return (
+  const stack = covers.slice(0, 3);
+  const layers = buildLayers(stack);
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Размытый фон из первой обложки — цвет самой музыки */}
       <Image
-        src={covers[0]}
+        src={stack[0]}
         alt=""
         fill
         sizes="(max-width: 640px) 50vw, 250px"
-        className="object-cover"
+        className="object-cover scale-150 blur-2xl brightness-[0.45] saturate-150"
       />
-    );
-  }
+      <div className="absolute inset-0 bg-black/20" />
 
-  // 2×2 collage — fill gaps with the last cover
-  const cells = [covers[0], covers[1] ?? covers[0], covers[2] ?? covers[0], covers[3] ?? covers[0]];
-  return (
-    <div className="grid grid-cols-2 grid-rows-2 w-full h-full">
-      {cells.map((src, i) => (
-        <div key={i} className="relative overflow-hidden">
-          <Image
-            src={src}
-            alt=""
-            fill
-            sizes="(max-width: 640px) 25vw, 125px"
-            className="object-cover"
-          />
-        </div>
-      ))}
+      {/* Колода обложек веером */}
+      <div className="absolute inset-0 transition-transform duration-500 ease-soft group-hover:scale-[1.04]">
+        {layers.map((l, i) => (
+          <div
+            key={i}
+            className={`absolute left-1/2 top-1/2 w-[66%] h-[66%] rounded-[10px] overflow-hidden ring-1 ring-black/30 shadow-lg shadow-black/40 ${
+              l.back ? 'brightness-[0.72]' : ''
+            }`}
+            style={{
+              transform: `translate(-50%, -50%) rotate(${l.rot}deg) translateX(${l.dx}%)`,
+              zIndex: l.z,
+            }}
+          >
+            <Image src={l.src} alt="" fill sizes="(max-width: 640px) 33vw, 165px" className="object-cover" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
