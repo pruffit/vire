@@ -1,23 +1,32 @@
-import nodemailer from 'nodemailer';
-
 export async function sendMail(opts: {
   to: string;
   subject: string;
   text: string;
   replyTo?: string;
 }) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_LOGIN,
-      pass: process.env.SMTP_PASSWORD,
-    },
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) throw new Error('BREVO_API_KEY is not set');
+
+  const fromRaw = process.env.SMTP_FROM ?? 'Vire <noreply@viremusic.ru>';
+  const match = fromRaw.match(/^(.+?)\s*<(.+?)>$/);
+  const sender = match ? { name: match[1].trim(), email: match[2].trim() } : { email: fromRaw };
+
+  const body: Record<string, unknown> = {
+    sender,
+    to: [{ email: opts.to }],
+    subject: opts.subject,
+    textContent: opts.text,
+  };
+  if (opts.replyTo) body.replyTo = { email: opts.replyTo };
+
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'api-key': apiKey },
+    body: JSON.stringify(body),
   });
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM ?? 'Vire <noreply@viremusic.ru>',
-    ...opts,
-  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Brevo API ${res.status}: ${text}`);
+  }
 }
