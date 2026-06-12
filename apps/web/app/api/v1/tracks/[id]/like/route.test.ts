@@ -7,6 +7,10 @@ const { likeTrack, unlikeTrack, trackExists } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
+  tooManyRequests: vi.fn(),
+}));
 vi.mock('@vire/db', () => ({ likeTrack, unlikeTrack, trackExists }));
 
 import { auth } from '@/auth';

@@ -14,9 +14,9 @@ COPY . .
 # Ставим только подграф web (+ core/db/ui/config), с devDeps — нужны для сборки.
 RUN pnpm install --frozen-lockfile --filter @vire/web...
 
-# Прод-сборка. DATABASE_URL не нужен: динамические страницы помечены
-# force-dynamic, sitemap деградирует без БД.
-RUN pnpm --filter @vire/web build
+# DATABASE_URL нужен при сборке: db-клиент инициализируется на уровне модуля.
+# Dummy-значение безопасно — реальные запросы идут только в рантайме.
+RUN DATABASE_URL=postgresql://build:build@localhost/build pnpm --filter @vire/web build
 
 # ===== Рантайм =====
 FROM node:22-alpine AS runner
