@@ -4,7 +4,7 @@ import { useActionState, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { YandexIcon, GoogleIcon, TelegramIcon } from '@/app/(auth)/sign-in/provider-icons';
-import { setPasswordAction, linkYandexAction, linkGoogleAction } from './account-actions';
+import { setPasswordAction, linkYandexAction, linkGoogleAction, linkTelegramAction } from './account-actions';
 
 interface Props {
   hasPassword: boolean;
@@ -23,6 +23,7 @@ type OAuthLinkAction = (formData: FormData) => void | Promise<void>;
 const LINK_ACTIONS: Record<string, OAuthLinkAction> = {
   yandex: linkYandexAction,
   google: linkGoogleAction,
+  telegram: linkTelegramAction,
 };
 
 const LINK_ERROR_MESSAGES: Record<string, string> = {
@@ -96,8 +97,6 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }
             <div className="flex items-center gap-2 shrink-0">
               {linked ? (
                 <StatusBadge ok>Привязан</StatusBadge>
-              ) : id === 'telegram' ? (
-                <StatusBadge ok={false}>Привязать — через страницу входа</StatusBadge>
               ) : linkAction ? (
                 <>
                   <StatusBadge ok={false}>Не привязан</StatusBadge>

@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { hash } from 'bcryptjs';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { auth, signIn } from '@/auth';
 import { setUserPasswordHash, getUserAuthInfo } from '@vire/db';
 
@@ -64,5 +65,21 @@ export async function linkYandexAction() {
 
 export async function linkGoogleAction() {
   await linkOAuthProvider('google');
+}
+
+export async function linkTelegramAction() {
+  const session = await auth();
+  if (!session?.user?.id) return;
+
+  const jar = await cookies();
+  jar.set('vire_link_uid', session.user.id, {
+    maxAge: 300,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+  });
+
+  redirect('/sign-in?callbackUrl=%2Fprofile');
 }
 

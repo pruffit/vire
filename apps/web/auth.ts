@@ -120,7 +120,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (createHmac('sha256', secretKey).update(checkString).digest('hex') !== hash) return null;
         if (Date.now() / 1000 - parseInt(data.auth_date ?? '0', 10) > 86400) return null;
         const name = [data.first_name, data.last_name].filter(Boolean).join(' ') || 'Telegram';
-        const user = await findOrCreateTelegramUser(data.id, { name, photoUrl: data.photo_url || undefined });
+        let linkUid: string | undefined;
+        try {
+          const jar = await cookies();
+          linkUid = jar.get('vire_link_uid')?.value;
+          if (linkUid) jar.delete('vire_link_uid');
+        } catch { /* нет cookie — обычный вход */ }
+        const user = await findOrCreateTelegramUser(data.id, { name, photoUrl: data.photo_url || undefined }, linkUid);
+        if (!user) return null;
         return { id: user.id, name, email: null, image: data.photo_url || null, role: user.role as UserRole };
       },
     }),

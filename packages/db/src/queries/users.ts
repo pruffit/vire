@@ -83,13 +83,14 @@ export interface UserAuthInfo {
 
 /**
  * Найти существующего Telegram-пользователя по telegramId или создать нового.
- * Создаёт запись в accounts (provider='telegram') для последующей проверки
- * в разделе «Способы входа» в профиле.
+ * Если передан linkUserId — привязать Telegram к существующему пользователю
+ * вместо создания нового. Возвращает null при конфликте (уже занят другим юзером).
  */
 export async function findOrCreateTelegramUser(
   telegramId: string,
   profile: TelegramProfile,
-): Promise<{ id: string; role: string }> {
+  linkUserId?: string,
+): Promise<{ id: string; role: string } | null> {
   const [existing] = await db
     .select({ userId: accounts.userId })
     .from(accounts)
@@ -99,12 +100,32 @@ export async function findOrCreateTelegramUser(
     .limit(1);
 
   if (existing) {
+    // Telegram уже привязан к другому пользователю — конфликт при линковке
+    if (linkUserId && existing.userId !== linkUserId) return null;
     const [user] = await db
       .select({ id: users.id, role: users.role })
       .from(users)
       .where(eq(users.id, existing.userId))
       .limit(1);
-    return user;
+    return user ?? null;
+  }
+
+  // Привязать Telegram к уже существующему пользователю
+  if (linkUserId) {
+    const [user] = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.id, linkUserId))
+      .limit(1);
+    if (user) {
+      await db.insert(accounts).values({
+        userId: linkUserId,
+        type: 'oauth',
+        provider: 'telegram',
+        providerAccountId: telegramId,
+      });
+      return user;
+    }
   }
 
   const [newUser] = await db
