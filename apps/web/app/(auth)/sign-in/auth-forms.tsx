@@ -15,7 +15,7 @@ import { TelegramButton } from './telegram-button';
 
 type Tab = 'login' | 'register' | 'magic';
 
-export function AuthForms({ callbackUrl }: { callbackUrl: string }) {
+export function AuthForms({ callbackUrl, telegramBotUsername = '' }: { callbackUrl: string; telegramBotUsername?: string }) {
   const [tab, setTab] = useState<Tab>('login');
 
   return (
@@ -65,7 +65,7 @@ export function AuthForms({ callbackUrl }: { callbackUrl: string }) {
       <Divider />
 
       {/* Социальные провайдеры */}
-      <SocialProviders callbackUrl={callbackUrl} />
+      <SocialProviders callbackUrl={callbackUrl} telegramBotUsername={telegramBotUsername} />
     </div>
   );
 }
@@ -194,7 +194,7 @@ function MagicLinkForm({ callbackUrl, onBack }: { callbackUrl: string; onBack: (
 
 // ─── Социальные провайдеры ────────────────────────────────────────────────────
 
-function SocialProviders({ callbackUrl }: { callbackUrl: string }) {
+function SocialProviders({ callbackUrl, telegramBotUsername }: { callbackUrl: string; telegramBotUsername: string }) {
   return (
     <div className="space-y-2.5">
       <div className="grid grid-cols-2 gap-2">
@@ -207,7 +207,7 @@ function SocialProviders({ callbackUrl }: { callbackUrl: string }) {
       </div>
 
       {/* Telegram — отдельная строка (виджет рендерит свой iframe) */}
-      <TelegramButton callbackUrl={callbackUrl} />
+      <TelegramButton callbackUrl={callbackUrl} botUsername={telegramBotUsername} />
     </div>
   );
 }

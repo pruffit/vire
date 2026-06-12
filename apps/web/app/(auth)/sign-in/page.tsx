@@ -40,7 +40,14 @@ export default async function SignInPage({
               </p>
             </div>
           ) : (
-            <AuthForms callbackUrl={redirectTo} />
+            <AuthForms
+              callbackUrl={redirectTo}
+              telegramBotUsername={
+                process.env.TELEGRAM_BOT_USERNAME ??
+                process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ??
+                ''
+              }
+            />
           )}
         </div>
       </div>

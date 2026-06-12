@@ -4,9 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { TelegramIcon } from './provider-icons';
 
-const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? '';
-
-export function TelegramButton({ callbackUrl }: { callbackUrl: string }) {
+export function TelegramButton({ callbackUrl, botUsername }: { callbackUrl: string; botUsername: string }) {
+  const BOT_USERNAME = botUsername;
   const widgetRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
