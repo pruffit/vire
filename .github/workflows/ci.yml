@@ -42,3 +42,4 @@ jobs:
         env:
           DATABASE_URL: postgresql://build:build@localhost/build
           S3_PUBLIC_ENDPOINT: https://cdn.viremusic.ru
+          NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: viremusicbot

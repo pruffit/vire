@@ -18,8 +18,10 @@ RUN pnpm install --frozen-lockfile --filter @vire/web...
 # S3_PUBLIC_ENDPOINT нужен: next/image бакает remotePatterns в next.config.ts при сборке.
 # Dummy-значения безопасны — реальные запросы идут только в рантайме.
 ARG S3_PUBLIC_ENDPOINT=http://localhost:9000
+ARG NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=
 RUN DATABASE_URL=postgresql://build:build@localhost/build \
     S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT} \
+    NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME} \
     pnpm --filter @vire/web build
 
 # ===== Рантайм =====
