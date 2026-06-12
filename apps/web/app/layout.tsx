@@ -73,7 +73,7 @@ export default function RootLayout({
         </a>
         <MotionProvider>
           <Nav />
-          <div id="main-content" className="flex-1 min-h-0 overflow-y-auto">
+          <div id="main-content" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             {/* Flex-обёртка внутри scroll-area прибивает футер вниз на коротких страницах.
                 Сама scroll-area остаётся plain block — иначе min-h-full страниц
                 сжимается флексом и скролл ломается. */}

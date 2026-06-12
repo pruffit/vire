@@ -8,6 +8,7 @@ export async function Nav() {
   const session = await auth();
   const user = session?.user;
   const isArtist = user?.role === 'ARTIST' || user?.role === 'MODERATOR' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
+  const isAdmin = user?.role === 'MODERATOR' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
 
   const displayName = user?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'Профиль';
 
@@ -38,6 +39,12 @@ export async function Nav() {
                 <NavLink href="/dashboard">
                   <span className="hidden sm:inline">Дашборд</span>
                   <span className="sm:hidden" aria-label="Дашборд"><DashboardIcon /></span>
+                </NavLink>
+              )}
+              {isAdmin && (
+                <NavLink href="/admin">
+                  <span className="hidden sm:inline">Админка</span>
+                  <span className="sm:hidden" aria-label="Админка"><AdminIcon /></span>
                 </NavLink>
               )}
               <NavLink href="/profile">
@@ -75,6 +82,14 @@ function DashboardIcon() {
       <rect x="14" y="3" width="7" height="7" rx="1" />
       <rect x="3" y="14" width="7" height="7" rx="1" />
       <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
+
+function AdminIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
 }

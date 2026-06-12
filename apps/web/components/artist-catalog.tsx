@@ -38,7 +38,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
           placeholder="Поиск по имени…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 px-3 py-1.5 rounded-md bg-white/5 border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+          className="flex-1 min-w-0 px-3 py-1.5 rounded-md bg-white/5 border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
         />
         <div className="flex items-center gap-0.5 shrink-0">
           {(Object.keys(SORT_LABELS) as Sort[]).map((s) => (
