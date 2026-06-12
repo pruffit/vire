@@ -15,8 +15,12 @@ COPY . .
 RUN pnpm install --frozen-lockfile --filter @vire/web...
 
 # DATABASE_URL нужен при сборке: db-клиент инициализируется на уровне модуля.
-# Dummy-значение безопасно — реальные запросы идут только в рантайме.
-RUN DATABASE_URL=postgresql://build:build@localhost/build pnpm --filter @vire/web build
+# S3_PUBLIC_ENDPOINT нужен: next/image бакает remotePatterns в next.config.ts при сборке.
+# Dummy-значения безопасны — реальные запросы идут только в рантайме.
+ARG S3_PUBLIC_ENDPOINT=http://localhost:9000
+RUN DATABASE_URL=postgresql://build:build@localhost/build \
+    S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT} \
+    pnpm --filter @vire/web build
 
 # ===== Рантайм =====
 FROM node:22-alpine AS runner

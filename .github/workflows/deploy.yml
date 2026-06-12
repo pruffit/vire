@@ -44,6 +44,7 @@ jobs:
         run: pnpm --filter @vire/web build
         env:
           DATABASE_URL: postgresql://build:build@localhost/build
+          S3_PUBLIC_ENDPOINT: https://cdn.viremusic.ru
 
   build-and-push:
     needs: gates
@@ -73,6 +74,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.OWNER }}/vire-web:latest
             ${{ env.REGISTRY }}/${{ env.OWNER }}/vire-web:${{ github.ref_name }}
+          build-args: |
+            S3_PUBLIC_ENDPOINT=https://cdn.viremusic.ru
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

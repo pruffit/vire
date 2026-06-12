@@ -41,3 +41,4 @@ jobs:
         run: pnpm --filter @vire/web build
         env:
           DATABASE_URL: postgresql://build:build@localhost/build
+          S3_PUBLIC_ENDPOINT: https://cdn.viremusic.ru
