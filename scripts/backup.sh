@@ -27,6 +27,9 @@ MC="docker run --rm --network=vire_default \
   -e S3_ACCESS_KEY -e S3_SECRET_KEY \
   --entrypoint sh minio/mc:latest -c"
 
+# Сколько дней хранить дампы Postgres (vault зеркалится, не накапливает версии)
+BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+
 echo "[$(date -Is)] Загрузка дампа + зеркало vault…"
 $MC "
   set -e
@@ -34,6 +37,8 @@ $MC "
   mc alias set local http://minio:9000 \"\$S3_ACCESS_KEY\" \"\$S3_SECRET_KEY\"
   mc cp /tmp/vire-db-${STAMP}.sql.gz backup/${BACKUP_S3_BUCKET}/db/
   mc mirror --overwrite --remove local/${S3_BUCKET_VAULT} backup/${BACKUP_S3_BUCKET}/vault
+  echo 'Чистка дампов старше ${BACKUP_RETENTION_DAYS}д…'
+  mc rm --recursive --force --older-than ${BACKUP_RETENTION_DAYS}d backup/${BACKUP_S3_BUCKET}/db/ || true
 "
 
 rm -f "/tmp/vire-db-${STAMP}.sql.gz"
