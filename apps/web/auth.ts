@@ -135,7 +135,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         } catch { /* нет cookie — обычный вход */ }
         const user = await findOrCreateTelegramUser(tgId, { name, photoUrl: data.photo_url || undefined }, linkUid);
         if (!user) return null;
-        return { id: user.id, name, email: null, image: data.photo_url || null, role: user.role as UserRole };
+        // При привязке к существующему аккаунту сохраняем его имя/аватар,
+        // а не подменяем на Telegram-данные.
+        return {
+          id: user.id,
+          name: user.name ?? name,
+          email: null,
+          image: user.image ?? data.photo_url ?? null,
+          role: user.role as UserRole,
+        };
       },
     }),
 

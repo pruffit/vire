@@ -44,6 +44,7 @@ export function ProfileCard({ user, stats }: Props) {
   const initials = displayName.slice(0, 2).toUpperCase();
 
   const [name, setName] = useState(displayName);
+  const [imgError, setImgError] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(displayName);
   const [isPending, startTransition] = useTransition();
@@ -88,8 +89,15 @@ export function ProfileCard({ user, stats }: Props) {
         {/* Avatar */}
         <div className="relative shrink-0">
           <div className="w-[72px] h-[72px] rounded-full overflow-hidden ring-2 ring-border ring-offset-2 ring-offset-background">
-            {user.image ? (
-              <Image src={user.image} alt={name} width={72} height={72} className="object-cover" />
+            {user.image && !imgError ? (
+              <Image
+                src={user.image}
+                alt={name}
+                width={72}
+                height={72}
+                className="object-cover"
+                onError={() => setImgError(true)}
+              />
             ) : (
               <div className="w-full h-full bg-secondary flex items-center justify-center text-xl font-semibold text-muted-foreground">
                 {initials}

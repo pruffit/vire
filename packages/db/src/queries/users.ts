@@ -90,7 +90,9 @@ export async function findOrCreateTelegramUser(
   telegramId: string,
   profile: TelegramProfile,
   linkUserId?: string,
-): Promise<{ id: string; role: string } | null> {
+): Promise<{ id: string; role: string; name: string | null; image: string | null } | null> {
+  const userCols = { id: users.id, role: users.role, name: users.name, image: users.image };
+
   const [existing] = await db
     .select({ userId: accounts.userId })
     .from(accounts)
@@ -103,17 +105,17 @@ export async function findOrCreateTelegramUser(
     // Telegram уже привязан к другому пользователю — конфликт при линковке
     if (linkUserId && existing.userId !== linkUserId) return null;
     const [user] = await db
-      .select({ id: users.id, role: users.role })
+      .select(userCols)
       .from(users)
       .where(eq(users.id, existing.userId))
       .limit(1);
     return user ?? null;
   }
 
-  // Привязать Telegram к уже существующему пользователю
+  // Привязать Telegram к уже существующему пользователю — не трогаем его имя/аватар
   if (linkUserId) {
     const [user] = await db
-      .select({ id: users.id, role: users.role })
+      .select(userCols)
       .from(users)
       .where(eq(users.id, linkUserId))
       .limit(1);
@@ -131,7 +133,7 @@ export async function findOrCreateTelegramUser(
   const [newUser] = await db
     .insert(users)
     .values({ name: profile.name, image: profile.photoUrl ?? null, emailVerified: new Date() })
-    .returning({ id: users.id, role: users.role });
+    .returning(userCols);
 
   await db.insert(accounts).values({
     userId: newUser.id,
