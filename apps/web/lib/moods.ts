@@ -8,11 +8,21 @@ export type Mood =
   | 'EPIC'
   | 'DARK'
   | 'ROMANTIC'
-  | 'NOSTALGIC';
+  | 'NOSTALGIC'
+  | 'DREAMY'
+  | 'AGGRESSIVE'
+  | 'UPLIFTING'
+  | 'SAD'
+  | 'GROOVY'
+  | 'MEDITATIVE'
+  | 'TENSE'
+  | 'PLAYFUL';
 
 export const ALL_MOODS: Mood[] = [
   'MELANCHOLY', 'NIGHT', 'DRIVE', 'AMBIENT', 'HYPE',
   'CHILL', 'EPIC', 'DARK', 'ROMANTIC', 'NOSTALGIC',
+  'DREAMY', 'AGGRESSIVE', 'UPLIFTING', 'SAD', 'GROOVY',
+  'MEDITATIVE', 'TENSE', 'PLAYFUL',
 ];
 
 export const MOOD_LABELS: Record<Mood, string> = {
@@ -26,4 +36,12 @@ export const MOOD_LABELS: Record<Mood, string> = {
   DARK: 'Тёмное',
   ROMANTIC: 'Романтика',
   NOSTALGIC: 'Ностальгия',
+  DREAMY: 'Мечтательное',
+  AGGRESSIVE: 'Агрессивное',
+  UPLIFTING: 'Воодушевляющее',
+  SAD: 'Грустное',
+  GROOVY: 'Грувовое',
+  MEDITATIVE: 'Медитативное',
+  TENSE: 'Напряжённое',
+  PLAYFUL: 'Игривое',
 };

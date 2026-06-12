@@ -1,30 +1,12 @@
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '../client';
-import { trackGenres, type genreEnum } from '../schema';
+import { trackGenres, genreEnum } from '../schema';
 
 export type TrackGenre = typeof genreEnum.enumValues[number];
 
-export const ALL_TRACK_GENRES: TrackGenre[] = [
-  'ELECTRONIC', 'HIPHOP', 'ROCK', 'INDIE', 'POP', 'AMBIENT', 'JAZZ',
-  'CLASSICAL', 'METAL', 'FOLK', 'RNB', 'TECHNO', 'EXPERIMENTAL', 'LOFI',
-];
-
-export const TRACK_GENRE_LABELS: Record<TrackGenre, string> = {
-  ELECTRONIC: 'Электроника',
-  HIPHOP: 'Хип-хоп',
-  ROCK: 'Рок',
-  INDIE: 'Инди',
-  POP: 'Поп',
-  AMBIENT: 'Эмбиент',
-  JAZZ: 'Джаз',
-  CLASSICAL: 'Классика',
-  METAL: 'Метал',
-  FOLK: 'Фолк',
-  RNB: 'R&B',
-  TECHNO: 'Техно',
-  EXPERIMENTAL: 'Экспериментальное',
-  LOFI: 'Lo-fi',
-};
+// Источник правды — сам enum: список не дублируем, чтобы не расходился со схемой.
+// Человеко-читаемые подписи живут в apps/web/lib/genres.ts (клиентский слой).
+export const ALL_TRACK_GENRES: TrackGenre[] = [...genreEnum.enumValues];
 
 export async function getTrackGenres(trackId: string): Promise<TrackGenre[]> {
   const rows = await db

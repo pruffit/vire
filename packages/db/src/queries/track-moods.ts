@@ -1,13 +1,11 @@
 import { and, eq, inArray, isNotNull, lte, or, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { trackMoods, tracks, releases, artistProfiles, type moodEnum } from '../schema';
+import { trackMoods, tracks, releases, artistProfiles, moodEnum } from '../schema';
 
 export type Mood = typeof moodEnum.enumValues[number];
 
-export const ALL_MOODS: Mood[] = [
-  'MELANCHOLY', 'NIGHT', 'DRIVE', 'AMBIENT',
-  'HYPE', 'CHILL', 'EPIC', 'DARK', 'ROMANTIC', 'NOSTALGIC',
-];
+// Источник правды — сам enum, чтобы список не расходился со схемой.
+export const ALL_MOODS: Mood[] = [...moodEnum.enumValues];
 
 export const MOOD_LABELS: Record<Mood, string> = {
   MELANCHOLY: 'Меланхолия',
@@ -20,6 +18,14 @@ export const MOOD_LABELS: Record<Mood, string> = {
   DARK:       'Тёмное',
   ROMANTIC:   'Романтика',
   NOSTALGIC:  'Ностальгия',
+  DREAMY:     'Мечтательное',
+  AGGRESSIVE: 'Агрессивное',
+  UPLIFTING:  'Воодушевляющее',
+  SAD:        'Грустное',
+  GROOVY:     'Грувовое',
+  MEDITATIVE: 'Медитативное',
+  TENSE:      'Напряжённое',
+  PLAYFUL:    'Игривое',
 };
 
 export async function getTrackMoods(trackId: string): Promise<Mood[]> {

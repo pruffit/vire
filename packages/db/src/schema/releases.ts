@@ -2,10 +2,23 @@ import { pgTable, uuid, text, timestamp, integer, boolean, jsonb, pgEnum, primar
 import { artistProfiles } from './artists';
 
 export const releaseTypeEnum = pgEnum('release_type', ['ALBUM', 'EP', 'SINGLE']);
-// Жанры — фиксированный список, заполняет артист (зеркало ALL_GENRES в @vire/core)
+// Жанры — фиксированный список, заполняет артист (зеркало ALL_GENRES в @vire/core).
+// ПОРЯДОК append-only: исходные 14 первыми (в историческом порядке), новые дописаны
+// в конец — так миграция остаётся чистым ALTER TYPE ADD VALUE, без пересоздания enum.
+// Группировку для UI см. apps/web/lib/genres.ts (от порядка enum не зависит).
 export const genreEnum = pgEnum('genre', [
+  // Исходные 14 — не трогать порядок
   'ELECTRONIC', 'HIPHOP', 'ROCK', 'INDIE', 'POP', 'AMBIENT', 'JAZZ',
   'CLASSICAL', 'METAL', 'FOLK', 'RNB', 'TECHNO', 'EXPERIMENTAL', 'LOFI',
+  // Добавлены позже (append-only)
+  'HOUSE', 'TRANCE', 'DNB', 'DUBSTEP', 'GARAGE', 'BREAKBEAT', 'IDM', 'SYNTHWAVE',
+  'DOWNTEMPO', 'HARDSTYLE', 'BOOMBAP', 'TRAP', 'DRILL', 'CLOUDRAP', 'PHONK',
+  'NEOSOUL', 'SOUL', 'FUNK', 'ALTERNATIVE', 'PUNK', 'POSTPUNK', 'PSYCHEDELIC',
+  'SHOEGAZE', 'GRUNGE', 'PROGROCK', 'HEAVYMETAL', 'DEATHMETAL', 'BLACKMETAL',
+  'DOOM', 'METALCORE', 'POSTMETAL', 'INDIEPOP', 'SYNTHPOP', 'HYPERPOP', 'DREAMPOP',
+  'BLUES', 'BEBOP', 'FUSION', 'SWING', 'ORCHESTRAL', 'CINEMATIC', 'NEOCLASSICAL',
+  'OPERA', 'PIANO', 'ACOUSTIC', 'SINGER_SONGWRITER', 'COUNTRY', 'WORLD', 'NOISE',
+  'DRONE', 'INDUSTRIAL', 'REGGAE', 'DUB', 'SOUNDTRACK', 'SPOKENWORD',
 ]);
 export const releaseStatusEnum = pgEnum('release_status', ['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED']);
 export const trackStatusEnum = pgEnum('track_status', ['PROCESSING', 'READY', 'BLOCKED']);
@@ -53,6 +66,15 @@ export const moodEnum = pgEnum('mood', [
   'DARK',
   'ROMANTIC',
   'NOSTALGIC',
+  // Добавлены позже — порядок append-only (enum)
+  'DREAMY',
+  'AGGRESSIVE',
+  'UPLIFTING',
+  'SAD',
+  'GROOVY',
+  'MEDITATIVE',
+  'TENSE',
+  'PLAYFUL',
 ]);
 
 // Жанры трека — до 3, из фиксированного списка (тот же enum что у релиза)

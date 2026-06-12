@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ReleaseType } from '@vire/core';
-import { ALL_GENRES, GENRE_LABELS } from '@/lib/genres';
+import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 
 interface Initial {
   title: string;
@@ -84,8 +84,12 @@ export function EditReleaseForm({ releaseId, initial }: Props) {
       <Field label="Жанр" hint="необязательно">
         <select name="genre" disabled={busy} defaultValue={initial.genre ?? ''} className={input}>
           <option value="">— выберите жанр</option>
-          {ALL_GENRES.map((g) => (
-            <option key={g} value={g}>{GENRE_LABELS[g]}</option>
+          {GENRE_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.genres.map((g) => (
+                <option key={g} value={g}>{GENRE_LABELS[g]}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </Field>
