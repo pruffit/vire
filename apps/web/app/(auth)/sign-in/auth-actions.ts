@@ -103,7 +103,7 @@ export async function signInMagicLinkAction(
   const callbackUrl = (formData.get('callbackUrl') as string) ?? '/';
   if (!email) return 'Введи email.';
   try {
-    await signIn('resend', { email, redirectTo: callbackUrl });
+    await signIn('nodemailer', { email, redirectTo: callbackUrl });
   } catch (error) {
     if (error instanceof AuthError) return 'Не удалось отправить письмо. Проверь email.';
     throw error;
