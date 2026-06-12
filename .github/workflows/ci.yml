@@ -36,3 +36,5 @@ jobs:
         run: pnpm --filter @vire/web audit:design
       - name: Build
         run: pnpm --filter @vire/web build
+        env:
+          DATABASE_URL: postgresql://build:build@localhost/build
