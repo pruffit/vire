@@ -77,8 +77,7 @@ jobs:
           build-args: |
             S3_PUBLIC_ENDPOINT=https://cdn.viremusic.ru
             NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=viremusicbot
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: Build & push worker
         uses: docker/build-push-action@v6
