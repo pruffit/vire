@@ -1,10 +1,12 @@
 name: CI
 
+# Гейты для ветки dev и PRs в main/dev.
+# На теги и прямые пуши в main не вешаем — там всё делает deploy.yml.
 on:
   push:
-    branches: [main]
+    branches: [dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
   gates:
@@ -25,7 +27,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Те же гейты, что и локально (CLAUDE.md): typecheck · lint · test · design · build
       - name: Typecheck
         run: pnpm turbo run typecheck
       - name: Lint

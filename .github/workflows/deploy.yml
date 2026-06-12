@@ -1,6 +1,7 @@
 name: Deploy
 
-# Релизный деплой: по тегу vX.Y.Z или вручную (Actions → Deploy → Run workflow).
+# Полный продакшн-пайплайн: gates → сборка образов → выкатка на сервер.
+# Запускается тегом vX.Y.Z или вручную (Actions → Deploy → Run workflow).
 on:
   push:
     tags: ['v*']
@@ -11,7 +12,39 @@ env:
   OWNER: pruffit
 
 jobs:
+  gates:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm turbo run typecheck
+      - name: Lint
+        run: pnpm turbo run lint
+      - name: Test
+        run: pnpm turbo run test
+      - name: Design audit (Impeccable)
+        run: pnpm --filter @vire/web audit:design
+      - name: Build
+        run: pnpm --filter @vire/web build
+        env:
+          DATABASE_URL: postgresql://build:build@localhost/build
+
   build-and-push:
+    needs: gates
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -29,7 +62,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Образы собираются здесь (в раннере хватает RAM — на 1 ГБ сервере next build не идёт)
       - name: Build & push web
         uses: docker/build-push-action@v6
         with:
