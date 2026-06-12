@@ -107,18 +107,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         const botToken = process.env.TELEGRAM_BOT_TOKEN;
-        if (!botToken) return null;
+        if (!botToken) { console.error('[tg-auth] TELEGRAM_BOT_TOKEN not set'); return null; }
         const creds = credentials as Record<string, string | undefined>;
         const { hash, ...data } = creds;
-        if (!hash || !data.id) return null;
+        if (!hash || !data.id) { console.error('[tg-auth] missing hash or id'); return null; }
         const secretKey = createHash('sha256').update(botToken).digest();
         const checkString = Object.entries(data)
           .filter(([, v]) => v !== undefined && v !== '')
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([k, v]) => `${k}=${v}`)
           .join('\n');
-        if (createHmac('sha256', secretKey).update(checkString).digest('hex') !== hash) return null;
-        if (Date.now() / 1000 - parseInt(data.auth_date ?? '0', 10) > 86400) return null;
+        const computed = createHmac('sha256', secretKey).update(checkString).digest('hex');
+        if (computed !== hash) { console.error('[tg-auth] hash mismatch', { computed, hash }); return null; }
+        if (Date.now() / 1000 - parseInt(data.auth_date ?? '0', 10) > 86400) { console.error('[tg-auth] auth_date expired'); return null; }
         const name = [data.first_name, data.last_name].filter(Boolean).join(' ') || 'Telegram';
         let linkUid: string | undefined;
         try {
