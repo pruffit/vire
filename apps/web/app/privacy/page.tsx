@@ -59,8 +59,8 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="5. Хранение и удаление данных">
-          <p>Данные хранятся на серверах в России (Selectel VPS).</p>
-          <p>Для удаления аккаунта и связанных с ним персональных данных напишите нам на <a href="mailto:hello@vire.ru" className="underline underline-offset-4 hover:opacity-70 transition-opacity">hello@vire.ru</a>. Мы обработаем запрос в течение 14 дней.</p>
+          <p>Данные хранятся на серверах в России (Timeweb Cloud VPS).</p>
+          <p>Для удаления аккаунта и связанных с ним персональных данных напишите нам на <a href="mailto:hello@viremusic.ru" className="underline underline-offset-4 hover:opacity-70 transition-opacity">hello@viremusic.ru</a>. Мы обработаем запрос в течение 14 дней.</p>
           <p>После удаления аккаунта анонимизированные play events (без user_id) могут сохраняться в агрегированной статистике.</p>
         </Section>
 
@@ -73,7 +73,7 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="8. Контакт">
-          <p>По вопросам обработки персональных данных: <a href="mailto:hello@vire.ru" className="underline underline-offset-4 hover:opacity-70 transition-opacity">hello@vire.ru</a></p>
+          <p>По вопросам обработки персональных данных: <a href="mailto:hello@viremusic.ru" className="underline underline-offset-4 hover:opacity-70 transition-opacity">hello@viremusic.ru</a></p>
         </Section>
       </Prose>
     </main>

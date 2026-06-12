@@ -57,7 +57,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="8. Контакт">
-          <p>По вопросам, связанным с соглашением: <a href="mailto:hello@vire.ru" className="underline underline-offset-4 hover:opacity-70 transition-opacity">hello@vire.ru</a></p>
+          <p>По вопросам, связанным с соглашением: <a href="mailto:hello@viremusic.ru" className="underline underline-offset-4 hover:opacity-70 transition-opacity">hello@viremusic.ru</a></p>
         </Section>
       </Prose>
     </main>

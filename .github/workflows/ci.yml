@@ -33,6 +33,8 @@ jobs:
         run: pnpm turbo run lint
       - name: Test
         run: pnpm turbo run test
+      - name: Security audit
+        run: pnpm audit --audit-level=high
       - name: Design audit (Impeccable)
         run: pnpm --filter @vire/web audit:design
       - name: Build
