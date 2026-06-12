@@ -62,8 +62,10 @@ headers (`next.config.ts`), rate limiting (Redis fixed-window), лимиты з�
 - [x] Security headers: CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy.
 - [x] Лимиты загрузки: размер FLAC, mime/magic bytes валидация в `lib/upload`.
 - [x] `pnpm audit --audit-level=high` в gates CI/CD.
-- [~] Бэкапы Postgres: `scripts/backup.sh` есть — проверить, что крон активен на VPS.
-- [ ] Dependabot/Renovate для авто-обновления зависимостей.
+- [x] Dependabot: еженедельные PR обновлений (npm/pnpm + github-actions),
+  `.github/dependabot.yml`.
+- [~] Бэкапы Postgres: `scripts/backup.sh` (+ ретеншн дампов 30д) — проверить
+  на VPS: заданы `BACKUP_S3_*` в .env, крон установлен, тестовый прогон удался.
 - [ ] Пентест-проход по чек-листу OWASP Top 10.
 
 ## 4. Алгоритмические плейлисты на главной ✓
