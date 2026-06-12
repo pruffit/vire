@@ -109,8 +109,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const botToken = process.env.TELEGRAM_BOT_TOKEN;
         if (!botToken) { console.error('[tg-auth] TELEGRAM_BOT_TOKEN not set'); return null; }
         const creds = credentials as Record<string, string | undefined>;
-        const { hash, ...data } = creds;
-        if (!hash || !data.id) { console.error('[tg-auth] missing hash or id'); return null; }
+        const hash = creds.hash;
+        // Только поля, которые реально подписывает Telegram. Любые лишние поля
+        // (csrfToken/callbackUrl от next-auth) сломали бы check-string.
+        const TG_FIELDS = ['auth_date', 'first_name', 'id', 'last_name', 'photo_url', 'username'] as const;
+        const data: Record<string, string | undefined> = {};
+        for (const k of TG_FIELDS) data[k] = creds[k];
+        const tgId = data.id;
+        if (!hash || !tgId) { console.error('[tg-auth] missing hash or id'); return null; }
         const secretKey = createHash('sha256').update(botToken).digest();
         const checkString = Object.entries(data)
           .filter(([, v]) => v !== undefined && v !== '')
@@ -118,7 +124,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .map(([k, v]) => `${k}=${v}`)
           .join('\n');
         const computed = createHmac('sha256', secretKey).update(checkString).digest('hex');
-        if (computed !== hash) { console.error('[tg-auth] hash mismatch', { computed, hash }); return null; }
+        if (computed !== hash) { console.error('[tg-auth] hash mismatch', { computed, hash, checkString }); return null; }
         if (Date.now() / 1000 - parseInt(data.auth_date ?? '0', 10) > 86400) { console.error('[tg-auth] auth_date expired'); return null; }
         const name = [data.first_name, data.last_name].filter(Boolean).join(' ') || 'Telegram';
         let linkUid: string | undefined;
@@ -127,7 +133,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           linkUid = jar.get('vire_link_uid')?.value;
           if (linkUid) jar.delete('vire_link_uid');
         } catch { /* нет cookie — обычный вход */ }
-        const user = await findOrCreateTelegramUser(data.id, { name, photoUrl: data.photo_url || undefined }, linkUid);
+        const user = await findOrCreateTelegramUser(tgId, { name, photoUrl: data.photo_url || undefined }, linkUid);
         if (!user) return null;
         return { id: user.id, name, email: null, image: data.photo_url || null, role: user.role as UserRole };
       },
