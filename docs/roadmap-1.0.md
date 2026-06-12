@@ -2,6 +2,7 @@
 
 > Зафиксировано 10 июня 2026 по повестке Danya. Порядок блоков — приоритет.
 > Статус: `[ ]` не начато · `[~]` в работе · `[x]` готово.
+> Обновлено 12 июня 2026: блок 7 (инженерная зрелость) закрыт — v1.0.0 выпущен, CI/CD настроен.
 
 ---
 
@@ -55,14 +56,12 @@ webhook верифицируется через API (телу не доверя�
 разделены (vault приватный / stream публичный), CSRF — внутри Auth.js.
 
 **Дыры, закрыть до 1.0:**
-- [ ] Rate limiting на API (login/magic-link, поиск, лайки, upload) — Redis уже есть.
-- [ ] Security headers: CSP, X-Frame-Options/frame-ancestors, Referrer-Policy,
-  Permissions-Policy (next.config headers()).
-- [ ] Лимиты загрузки: максимальный размер FLAC, проверка mime/magic bytes
-  (сейчас валидация есть в `lib/upload` — перепроверить серверно).
+- [x] Rate limiting на API (follow, like, upload, play, presence) — Redis fixed-window.
+- [x] Security headers: CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy (`next.config.ts`).
+- [x] Лимиты загрузки: размер FLAC, mime/magic bytes валидация в `lib/upload`.
 - [ ] `pnpm audit` в CI + Dependabot/Renovate.
-- [ ] Бэкапы Postgres (pg_dump по крону) и стратегия восстановления.
-- [ ] Пентест-проход по чек-листу OWASP Top 10 перед продом.
+- [x] Бэкапы Postgres: `scripts/backup.sh` + pg_dump по крону в внешний S3.
+- [ ] Пентест-проход по чек-листу OWASP Top 10.
 
 ## 4. Алгоритмические плейлисты на главной
 
@@ -112,13 +111,14 @@ webhook верифицируется через API (телу не доверя�
   SEO/JSON-LD, дашборд артиста (+аналитика), админка (+health), уведомления.
 - [ ] В CLAUDE.md — правило: новая фича не считается готовой без файла в features/.
 
-## 7. Инженерная зрелость (после п.1–6)
+## 7. Инженерная зрелость ✓
 
-- [ ] Ветки: main защищён, фичи через PR (даже соло — ради ревью и CI).
-- [ ] Версионирование: semver, CHANGELOG.md, тег v1.0.0 когда п.1–6 закрыты.
-- [ ] CI (GitHub Actions): typecheck + lint + test + audit:design + build на PR.
-- [ ] Стейджинг: второй VPS/окружение с прод-конфигом (Selectel), деплой из main.
-- [ ] CD: автодеплой стейджинга, ручной промоут в прод.
+- [x] Ветки: `dev` — разработка, `main` — стабильный, PR-флоу.
+- [x] Версионирование: semver, тег `v1.0.0` выпущен (12.06.2026).
+- [x] CI (GitHub Actions): typecheck + lint + test + audit:design + build на `dev` и PRs.
+- [x] CD: один пайплайн по тегу `vX.Y.Z` — gates → сборка образов → деплой на VPS.
+- [x] VPS: Timeweb Cloud, Docker Compose + Caddy, авто-TLS, swap 4 ГБ.
+- [ ] Стейджинг: второй VPS/окружение (когда оправдает нагрузка).
 - [ ] Мониторинг: Sentry (ошибки), uptime-чек, алерты на failed-джобы очередей.
 
 ---

@@ -2,9 +2,7 @@
 
 Независимая музыкальная площадка для артистов и слушателей СНГ. Место, где артист владеет своей музыкой, получает деньги напрямую и выглядит как артист, а не как трек в чужом алгоритме.
 
-Проект растёт по слоям: от личного артист-сайта до полноценной платформы. Подробности — в документации ниже.
-
-> Статус: ранняя разработка. Этап 1 (Friends & Family).
+> **v1.0.0** · Этап 1 (Friends & Family) — запущен
 
 ---
 
@@ -13,21 +11,23 @@
 Читать в этом порядке:
 
 1. [`docs/concept.md`](docs/concept.md) — продукт и видение: зачем, для кого, четыре этапа развития, юридика, фичи.
-2. [`docs/architecture.md`](docs/architecture.md) — технический фундамент: стек, структура монорепо, принципы, отказоустойчивость, деплой.
+2. [`docs/architecture.md`](docs/architecture.md) — технический фундамент: стек, структура монорепо, принципы, отказоустойчивость.
 3. [`docs/data-schema.md`](docs/data-schema.md) — модель данных: сущности, связи, решения «на вырост».
+4. [`docs/deployment.md`](docs/deployment.md) — деплой на VPS: Docker Compose, Caddy, CI/CD, бэкапы.
 
 ---
 
 ## Стек
 
 - **Монорепо:** Turborepo + pnpm
-- **Фронт + API:** Next.js (App Router), TypeScript
-- **UI:** Radix / shadcn (headless) + Tailwind
+- **Фронт + API:** Next.js 15 (App Router), TypeScript strict
+- **UI:** Radix Primitives / shadcn (headless) + Tailwind — кастомные OKLCH-токены
 - **База:** PostgreSQL + Drizzle ORM
-- **Очередь и кэш:** Redis + BullMQ
-- **Хранилище:** S3-совместимое (Selectel Object Storage / MinIO локально)
-- **Транскодинг:** ffmpeg-воркер (HLS)
-- **Деплой:** Selectel
+- **Очередь:** Redis + BullMQ
+- **Хранилище:** S3-совместимое (MinIO локально и на проде, внешний S3 при росте)
+- **Транскодинг:** ffmpeg-воркер (HLS-нарезка + waveform-пики)
+- **Аутентификация:** Auth.js v5 — Yandex OAuth + Resend magic-link
+- **Деплой:** Timeweb Cloud VPS + Docker Compose + Caddy (авто-TLS)
 
 ---
 
@@ -35,16 +35,16 @@
 
 ```
 apps/
-  web/        — Next.js: фронт + API
-  worker/     — фоновые воркеры (транскодинг, рассылки)
+  web/        — Next.js: фронт + API (Route Handlers /api/v1/*)
+  worker/     — BullMQ воркеры: транскодинг, рассылки
 packages/
-  core/       — бизнес-логика (чистый TS, не зависит от Next)
-  db/         — схема, миграции, Drizzle-клиент
-  api-contracts/ — типы и zod-схемы запросов/ответов
-  api-client/ — типизированный клиент API для всех клиентов
-  ui/         — общий UI-кит
-  media/      — утилиты транскодинга, HLS, waveform
-  config/     — общие конфиги (eslint, tsconfig, tailwind)
+  core/       — бизнес-логика, use-cases (чистый TS, не зависит от Next)
+  db/         — Drizzle схема + миграции + клиент (@vire/db)
+  api-contracts/ — zod-схемы запросов/ответов, общие типы
+  api-client/ — типизированный fetch-клиент
+  ui/         — общий UI-кит (Radix + кастомный Tailwind)
+  media/      — утилиты HLS, waveform
+  config/     — tsconfig, eslint, tailwind preset
 docs/         — документация проекта
 ```
 
@@ -52,20 +52,32 @@ docs/         — документация проекта
 
 ## Разработка
 
-> Требования: Node >= 22, pnpm >= 10, Docker (для локальной инфраструктуры).
+> Требования: Node >= 22, pnpm >= 10, Docker.
 
 ```bash
-# установить зависимости
-pnpm install
-
 # поднять локальную инфраструктуру (postgres, redis, minio)
 docker compose up -d
 
-# запустить дев-режим
+# установить зависимости
+pnpm install
+
+# запустить дев-режим (web + worker)
 pnpm dev
 ```
 
-Подробности по окружению и переменным — в `architecture.md` и `.env.example` (появится на следующем шаге).
+Переменные окружения: скопируй `.env.example` в `.env` и заполни.
+
+---
+
+## Ветки и CI/CD
+
+| Ветка | Назначение |
+|---|---|
+| `dev` | текущая разработка; CI (тесты + линт + сборка) на каждый пуш |
+| `main` | стабильный код; изменения через PR из `dev` |
+| тег `vX.Y.Z` | запускает полный деплой: gates → сборка образов → выкатка на прод |
+
+Образы собираются в **GitHub Actions** (раннер с достаточным RAM) и пушатся в GHCR — сервер только тянет готовые образы. Подробности — в [`docs/deployment.md`](docs/deployment.md).
 
 ---
 

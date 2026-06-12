@@ -51,11 +51,18 @@ mkdir -p /opt/vire && cd /opt/vire
 
 ## 3. Деплой через CI/CD (основной путь)
 
-Пайплайны:
-- **`.github/workflows/ci.yml`** — на каждый push/PR гоняет гейты (typecheck · lint · test · design · build).
-- **`.github/workflows/deploy.yml`** — по тегу `vX.Y.Z` (или вручную: Actions → Deploy → Run workflow)
-  собирает образы в раннере, пушит в GHCR (`ghcr.io/pruffit/vire-{web,worker}`) и по SSH на сервере
-  делает `docker compose pull && up -d` + миграции.
+### Ветки
+
+| Ветка | Назначение | Что запускается |
+|---|---|---|
+| `dev` | текущая разработка | CI (gates) на каждый пуш |
+| `main` | стабильный код | только через PR из `dev` |
+| тег `vX.Y.Z` | релиз | полный deploy-пайплайн |
+
+### Пайплайны
+
+- **`.github/workflows/ci.yml`** — пуш в `dev` и PR в `main`/`dev`: typecheck · lint · test · design audit · build. Красный CI не мёржится.
+- **`.github/workflows/deploy.yml`** — по тегу `vX.Y.Z` (или вручную: Actions → Deploy → Run workflow). Три последовательных job: **gates** → **build-and-push** (собирает образы в раннере, пушит в GHCR) → **deploy** (SSH на сервер: `compose pull && up -d` + миграции). Deploy не запускается если gates упали.
 
 **Первый деплой** (инфраструктура поднимется тем же `up -d`):
 ```bash
