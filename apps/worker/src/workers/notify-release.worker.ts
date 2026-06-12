@@ -1,16 +1,47 @@
 import { Worker, type Job } from 'bullmq';
-import { Resend } from 'resend';
 import { getFollowerEmails } from '@vire/db';
 import { QUEUE_NOTIFY_RELEASE, type NotifyReleaseJobData } from '@vire/core';
 import { connection } from '../queues/connection.js';
 
-let resend: Resend | null = null;
-function getResend(): Resend {
-  if (!resend) resend = new Resend(process.env.RESEND_API_KEY);
-  return resend;
+// Почта идёт через Brevo HTTP API (как apps/web/lib/mailer.ts) — SMTP на проде
+// заблокирован хостингом. `messageVersions` — батч: каждый адресат получает
+// отдельное письмо (без CC), с персональным приветствием.
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
+function brevoSender(): { name?: string; email: string } {
+  const raw = process.env.SMTP_FROM ?? 'Vire <noreply@viremusic.ru>';
+  const m = raw.match(/^(.+?)\s*<(.+?)>$/);
+  return m ? { name: m[1].trim(), email: m[2].trim() } : { email: raw };
 }
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-const FROM = process.env.RESEND_FROM ?? 'Vire <noreply@vire.music>';
+
+interface BrevoMessageVersion {
+  to: Array<{ email: string; name?: string }>;
+  htmlContent: string;
+}
+
+async function sendBrevoBatch(
+  subject: string,
+  htmlFallback: string,
+  messageVersions: BrevoMessageVersion[],
+): Promise<void> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) throw new Error('BREVO_API_KEY is not set');
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', accept: 'application/json', 'api-key': apiKey },
+    body: JSON.stringify({
+      sender: brevoSender(),
+      subject,
+      htmlContent: htmlFallback,
+      messageVersions,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Brevo API ${res.status}: ${text}`);
+  }
+}
 
 const RELEASE_TYPE_RU: Record<string, string> = {
   ALBUM: 'Альбом',
@@ -64,17 +95,18 @@ async function handle(job: Job<NotifyReleaseJobData>): Promise<void> {
 
   await job.log(`Sending to ${followers.length} followers`);
 
-  // Resend batch: up to 100 per call
-  const BATCH = 100;
+  const subject = `${data.artistName} — ${data.releaseTitle}`;
+  // Brevo messageVersions: до 1000 на запрос — берём с запасом по 500
+  const BATCH = 500;
   for (let i = 0; i < followers.length; i += BATCH) {
     const chunk = followers.slice(i, i + BATCH);
 
-    await getResend().batch.send(
+    await sendBrevoBatch(
+      subject,
+      buildHtml(data, null),
       chunk.map((f) => ({
-        from: FROM,
-        to: f.email,
-        subject: `${data.artistName} — ${data.releaseTitle}`,
-        html: buildHtml(data, f.name),
+        to: [f.name ? { email: f.email, name: f.name } : { email: f.email }],
+        htmlContent: buildHtml(data, f.name),
       })),
     );
 
