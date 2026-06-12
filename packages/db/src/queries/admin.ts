@@ -608,7 +608,11 @@ export async function createArtistForUser(data: {
       isActive: true,
       verified: false,
     });
-    await tx.update(users).set({ role: 'ARTIST', updatedAt: new Date() }).where(eq(users.id, user.id));
+    // Повышаем до ARTIST только обычного слушателя — модератора/админа/суперадмина
+    // не понижаем (иначе создание артиста на своём же email отбирает доступ к админке).
+    if (user.role === 'LISTENER') {
+      await tx.update(users).set({ role: 'ARTIST', updatedAt: new Date() }).where(eq(users.id, user.id));
+    }
   });
 
   return { ok: true, slug: data.slug };
