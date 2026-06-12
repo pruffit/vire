@@ -86,8 +86,8 @@ function HealthPanel({ health }: { health: AdminHealth }) {
           value={String(failedTotal)}
         />
       </div>
-      <div className="mt-3 rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="mt-3 rounded-xl border border-white/10 overflow-x-auto">
+        <table className="w-full min-w-[520px] text-sm">
           <thead>
             <tr className="text-xs text-white/30 border-b border-white/10">
               <th className="px-4 py-2 text-left font-normal">Очередь</th>
@@ -364,8 +364,8 @@ function RecentReleases({ releases }: { releases: AdminRecentRelease[] }) {
   return (
     <section>
       <p className="text-xs text-white/35 font-mono mb-3">Недавно опубликовано</p>
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <table className="w-full min-w-[480px] text-sm">
           <tbody>
             {releases.map((r) => (
               <tr key={r.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">

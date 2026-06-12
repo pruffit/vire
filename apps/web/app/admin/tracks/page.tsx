@@ -49,8 +49,8 @@ export default async function AdminTracksPage({ searchParams }: Props) {
         ))}
       </div>
 
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <table className="w-full min-w-[880px] text-sm">
           <thead>
             <tr className="border-b border-white/10 text-white/40 text-xs font-mono uppercase tracking-wider">
               <th className="text-left px-4 py-3">Трек</th>

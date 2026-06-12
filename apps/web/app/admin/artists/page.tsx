@@ -22,7 +22,7 @@ export default async function AdminArtistsPage({ searchParams }: Props) {
           name="q"
           defaultValue={q}
           placeholder="Поиск по имени или слагу…"
-          className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30 w-72"
+          className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30 flex-1 sm:flex-none sm:w-72"
         />
         <button
           type="submit"
@@ -32,8 +32,8 @@ export default async function AdminArtistsPage({ searchParams }: Props) {
         </button>
       </form>
 
-      <div className="rounded-xl border border-white/10 overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-white/10 text-white/30 text-xs font-mono">
               <th className="text-left px-4 py-3">Артист</th>

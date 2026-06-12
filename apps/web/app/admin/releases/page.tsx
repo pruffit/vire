@@ -46,8 +46,8 @@ export default async function AdminReleasesPage({ searchParams }: Props) {
         ))}
       </div>
 
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <table className="w-full min-w-[620px] text-sm">
           <thead>
             <tr className="border-b border-white/10 text-white/30 text-xs font-mono">
               <th className="text-left px-4 py-3">Релиз</th>
