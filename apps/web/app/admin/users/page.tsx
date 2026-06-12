@@ -2,6 +2,7 @@ import { listUsersAdmin } from '@vire/db';
 import type { UserRole } from '@vire/db';
 import { UserRoleSelect } from './user-role-select';
 import { VerifyButton } from './verify-button';
+import { CreateArtistForm } from './create-artist-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,8 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         <h1 className="text-xl font-semibold">Пользователи</h1>
         <span className="text-sm text-white/30 tabular-nums">{users.length}</span>
       </div>
+
+      <CreateArtistForm />
 
       <form method="GET" className="flex gap-2">
         <input

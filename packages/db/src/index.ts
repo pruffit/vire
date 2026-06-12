@@ -59,6 +59,7 @@ export {
   setTrackStatus,
   listReleasesAdmin,
   setReleaseStatus,
+  createArtistForUser,
 } from './queries/admin';
 export type {
   AdminStats,

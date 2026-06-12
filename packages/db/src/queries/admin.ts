@@ -3,6 +3,7 @@ import { db } from '../client';
 import {
   users, artistProfiles, releases, tracks, trackAudio, playEvents,
   likes, follows, playlists, artistPosts, trackMoods, favoriteMoments,
+  rightsHolders,
 } from '../schema';
 import type { UserRole } from './admin-types';
 
@@ -578,4 +579,37 @@ export async function setReleaseStatus(
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED',
 ): Promise<void> {
   await db.update(releases).set({ status, updatedAt: new Date() }).where(eq(releases.id, releaseId));
+}
+
+// ─── Create Artist ──────────────────────────────────────────────────────────
+
+export async function createArtistForUser(data: {
+  email: string;
+  name: string;
+  slug: string;
+}): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+  const [user] = await db.select().from(users).where(eq(users.email, data.email)).limit(1);
+  if (!user) return { ok: false, error: 'Пользователь не найден' };
+
+  const [existing] = await db.select({ slug: artistProfiles.slug })
+    .from(artistProfiles).where(eq(artistProfiles.userId, user.id)).limit(1);
+  if (existing) return { ok: false, error: `Уже есть профиль @${existing.slug}` };
+
+  const [slugTaken] = await db.select({ id: artistProfiles.id })
+    .from(artistProfiles).where(eq(artistProfiles.slug, data.slug)).limit(1);
+  if (slugTaken) return { ok: false, error: `Slug @${data.slug} уже занят` };
+
+  await db.transaction(async (tx) => {
+    await tx.insert(rightsHolders).values({ userId: user.id, displayName: data.name });
+    await tx.insert(artistProfiles).values({
+      userId: user.id,
+      slug: data.slug,
+      name: data.name,
+      isActive: true,
+      verified: false,
+    });
+    await tx.update(users).set({ role: 'ARTIST', updatedAt: new Date() }).where(eq(users.id, user.id));
+  });
+
+  return { ok: true, slug: data.slug };
 }

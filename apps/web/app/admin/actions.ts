@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
-import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus } from '@vire/db';
+import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser } from '@vire/db';
 import type { UserRole } from '@vire/db';
 import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
 
@@ -66,4 +66,17 @@ export async function actionSetReleaseStatus(
   await requireAdmin();
   await setReleaseStatus(releaseId, status);
   revalidatePath('/admin/releases');
+}
+
+export async function actionCreateArtist(
+  email: string,
+  name: string,
+  slug: string,
+): Promise<{ error?: string; slug?: string }> {
+  await requireAdmin();
+  const result = await createArtistForUser({ email, name, slug });
+  if (!result.ok) return { error: result.error };
+  revalidatePath('/admin/users');
+  revalidatePath('/admin/artists');
+  return { slug: result.slug };
 }
