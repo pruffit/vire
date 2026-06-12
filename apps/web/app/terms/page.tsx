@@ -11,7 +11,7 @@ export default function TermsPage() {
       <header className="space-y-2">
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Vire</p>
         <h1 className="text-3xl font-bold tracking-tight">Пользовательское соглашение</h1>
-        <p className="text-sm text-muted-foreground">Редакция от 11 июня 2026 г. (драфт — не юридическая консультация)</p>
+        <p className="text-sm text-muted-foreground">Редакция от 12 июня 2026 г. (драфт — не юридическая консультация)</p>
       </header>
 
       <Prose>
@@ -38,7 +38,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="4. Аккаунт пользователя">
-          <p>Для доступа к части функций требуется создание аккаунта через Яндекс OAuth или email (magic link).</p>
+          <p>Для доступа к части функций требуется создание аккаунта через Яндекс OAuth, Google OAuth, Telegram или email (magic link).</p>
           <p>Вы несёте ответственность за сохранность доступа к своему аккаунту и за все действия, совершённые под вашим аккаунтом.</p>
         </Section>
 
@@ -57,7 +57,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="8. Контакт">
-          <p>По вопросам, связанным с соглашением: <a href="mailto:hello@viremusic.ru" className="underline underline-offset-4 hover:opacity-70 transition-opacity">hello@viremusic.ru</a></p>
+          <p>По вопросам, связанным с соглашением: <a href="/feedback" className="underline underline-offset-4 hover:opacity-70 transition-opacity">форма обратной связи</a></p>
         </Section>
       </Prose>
     </main>

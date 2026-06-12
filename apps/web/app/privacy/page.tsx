@@ -11,17 +11,18 @@ export default function PrivacyPage() {
       <header className="space-y-2">
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Vire</p>
         <h1 className="text-3xl font-bold tracking-tight">Политика конфиденциальности</h1>
-        <p className="text-sm text-muted-foreground">Редакция от 11 июня 2026 г. (драфт — не юридическая консультация)</p>
+        <p className="text-sm text-muted-foreground">Редакция от 12 июня 2026 г. (драфт — не юридическая консультация)</p>
       </header>
 
       <Prose>
         <Section title="1. Какие данные мы собираем">
-          <p>При регистрации через Яндекс OAuth мы получаем:</p>
+          <p>При регистрации через Яндекс OAuth или Google OAuth мы получаем:</p>
           <ul>
             <li>email-адрес;</li>
             <li>отображаемое имя;</li>
             <li>URL аватара (хранится ссылка, изображение не копируется).</li>
           </ul>
+          <p>При регистрации через Telegram мы получаем имя и аватар из профиля Telegram; email не передаётся.</p>
           <p>При регистрации через email (magic link) мы получаем только email-адрес.</p>
           <p>В процессе использования Сервиса мы фиксируем:</p>
           <ul>
@@ -60,7 +61,7 @@ export default function PrivacyPage() {
 
         <Section title="5. Хранение и удаление данных">
           <p>Данные хранятся на серверах в России (Timeweb Cloud VPS).</p>
-          <p>Для удаления аккаунта и связанных с ним персональных данных напишите нам на <a href="mailto:hello@viremusic.ru" className="underline underline-offset-4 hover:opacity-70 transition-opacity">hello@viremusic.ru</a>. Мы обработаем запрос в течение 14 дней.</p>
+          <p>Для удаления аккаунта и связанных с ним персональных данных воспользуйся <a href="/feedback" className="underline underline-offset-4 hover:opacity-70 transition-opacity">формой обратной связи</a>. Мы обработаем запрос в течение 14 дней.</p>
           <p>После удаления аккаунта анонимизированные play events (без user_id) могут сохраняться в агрегированной статистике.</p>
         </Section>
 
@@ -73,7 +74,7 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="8. Контакт">
-          <p>По вопросам обработки персональных данных: <a href="mailto:hello@viremusic.ru" className="underline underline-offset-4 hover:opacity-70 transition-opacity">hello@viremusic.ru</a></p>
+          <p>По вопросам обработки персональных данных: <a href="/feedback" className="underline underline-offset-4 hover:opacity-70 transition-opacity">форма обратной связи</a></p>
         </Section>
       </Prose>
     </main>
