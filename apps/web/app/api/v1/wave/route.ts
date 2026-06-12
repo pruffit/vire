@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getWaveNextTrack, ALL_MOODS, type Mood } from '@vire/db';
+import { auth } from '@/auth';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export async function GET(req: Request) {
@@ -18,7 +19,11 @@ export async function GET(req: Request) {
     ? (moodParam as Mood)
     : null;
 
-  const next = await getWaveNextTrack(trackId, played, 1, seedMood);
+  // Слушатель (для профиля вкуса и анти-усталости); аноним → только глобальные сигналы
+  const session = await auth();
+  const userId = session?.user?.id ?? null;
+
+  const next = await getWaveNextTrack(trackId, played, 1, seedMood, userId);
   if (!next) return NextResponse.json({ track: null });
 
   return NextResponse.json({ track: next });

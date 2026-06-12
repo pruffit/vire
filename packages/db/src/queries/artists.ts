@@ -10,6 +10,8 @@ export interface ArtistListItem {
   avatarUrl: string | null;
   verified: boolean;
   releaseCount: number;
+  // Жанры артиста — distinct по жанрам его опубликованных релизов (для фильтра в каталоге)
+  genres: string[];
 }
 
 export async function listActiveArtists(query?: string): Promise<ArtistListItem[]> {
@@ -22,6 +24,7 @@ export async function listActiveArtists(query?: string): Promise<ArtistListItem[
       avatarUrl: artistProfiles.avatarUrl,
       verified: artistProfiles.verified,
       releaseCount: count(releases.id),
+      genres: sql<string[]>`coalesce(array_agg(distinct ${releases.genre}::text) filter (where ${releases.genre} is not null), '{}')`,
     })
     .from(artistProfiles)
     .leftJoin(
@@ -49,5 +52,6 @@ export async function listActiveArtists(query?: string): Promise<ArtistListItem[
   return rows.map((r) => ({
     ...r,
     releaseCount: Number(r.releaseCount),
+    genres: r.genres ?? [],
   }));
 }

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import type { ArtistListItem } from '@vire/db';
+import { ALL_GENRES, GENRE_LABELS, type Genre } from '@/lib/genres';
 
 type Sort = 'default' | 'name' | 'releases';
 
@@ -18,9 +19,18 @@ const SORT_LABELS: Record<Sort, string> = {
 export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<Sort>('default');
+  const [genre, setGenre] = useState<Genre | null>(null);
+
+  // Только встречающиеся в каталоге жанры, в порядке групп (ALL_GENRES)
+  const availableGenres = useMemo(() => {
+    const present = new Set<string>();
+    for (const a of artists) for (const g of a.genres) present.add(g);
+    return ALL_GENRES.filter((g) => present.has(g));
+  }, [artists]);
 
   const filtered = useMemo(() => {
     let list = artists;
+    if (genre) list = list.filter((a) => a.genres.includes(genre));
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter((a) => a.name.toLowerCase().includes(q));
@@ -28,7 +38,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
     if (sort === 'name') return [...list].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
     if (sort === 'releases') return [...list].sort((a, b) => b.releaseCount - a.releaseCount);
     return list;
-  }, [artists, query, sort]);
+  }, [artists, query, sort, genre]);
 
   return (
     <div className="space-y-6">
@@ -56,6 +66,35 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
           ))}
         </div>
       </div>
+
+      {/* Фильтр по жанрам — только встречающиеся в каталоге */}
+      {availableGenres.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            onClick={() => setGenre(null)}
+            className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-mono border transition-all duration-150 ${
+              genre === null
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
+            }`}
+          >
+            Все
+          </button>
+          {availableGenres.map((g) => (
+            <button
+              key={g}
+              onClick={() => setGenre(genre === g ? null : (g as Genre))}
+              className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-mono border transition-all duration-150 ${
+                genre === g
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
+              }`}
+            >
+              {GENRE_LABELS[g as Genre] ?? g}
+            </button>
+          ))}
+        </div>
+      )}
 
       <AnimatePresence mode="wait" initial={false}>
         {filtered.length === 0 ? (
