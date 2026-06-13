@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getMoodsForTracks, getTrackAudioMeta, getGenresForTracks } from '@vire/db';
 import { EditReleaseForm } from './edit-release-form';
-import { AddTrackForm } from './add-track-form';
+import { BatchTrackUpload } from './batch-track-upload';
 import { TrackManager } from './track-manager';
 import { DeleteReleaseButton } from './delete-release-button';
 
@@ -69,6 +69,7 @@ export default async function EditReleasePage({ params }: Props) {
 
           <TrackManager
             key={tracks.map((t) => t.id).join('-')}
+            releaseId={release.id}
             initial={tracks.map((t) => ({
               id: t.id,
               title: t.title,
@@ -82,8 +83,12 @@ export default async function EditReleasePage({ params }: Props) {
           />
 
           <div className="rounded-xl bg-white/5 border border-white/10 p-5">
-            <p className="text-sm font-medium mb-4">Добавить трек</p>
-            <AddTrackForm releaseId={release.id} nextTrackNumber={tracks.length + 1} />
+            <p className="text-sm font-medium mb-4">Добавить треки</p>
+            <BatchTrackUpload
+              releaseId={release.id}
+              nextTrackNumber={tracks.length + 1}
+              artistName={artist.name}
+            />
           </div>
         </section>
 

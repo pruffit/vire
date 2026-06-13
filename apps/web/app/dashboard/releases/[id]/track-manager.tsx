@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
@@ -33,10 +33,11 @@ async function patchTrack(id: string, patch: Record<string, unknown>): Promise<b
  * Управление треками релиза: переименование, удаление, порядок и mood-теги —
  * всё с оптимистичным UI (меняем сразу, откатываем при ошибке запроса).
  */
-export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
+export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; releaseId: string }) {
   const [tracks, setTracks] = useState<ManagedTrack[]>(initial);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [justSaved, setJustSaved] = useState<Set<string>>(new Set());
   const savedTitles = useRef<Map<string, string>>(
     new Map(initial.map((t) => [t.id, t.title])),
   );
@@ -51,8 +52,36 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     () => new Map(initial.map((t) => [t.id, { bpm: t.bpm != null ? String(t.bpm) : '', key: t.musicalKey ?? '' }])),
   );
 
+  // Пока есть треки в обработке — опрашиваем статус, чтобы показать «обрабатывается → готов»
+  // вживую, без перезагрузки. Останавливаемся, когда обработка завершилась.
+  const hasProcessing = tracks.some((t) => t.status === 'PROCESSING');
+  useEffect(() => {
+    if (!hasProcessing) return;
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      const res = await fetch(`/api/v1/dashboard/releases/${releaseId}/tracks`).catch(() => null);
+      if (cancelled || !res?.ok) return;
+      const data = (await res.json().catch(() => null)) as
+        | { tracks?: { id: string; status: ManagedTrack['status'] }[] }
+        | null;
+      if (cancelled || !data?.tracks) return;
+      const map = new Map(data.tracks.map((t) => [t.id, t.status]));
+      setTracks((ts) => ts.map((t) => {
+        const s = map.get(t.id);
+        return s && s !== t.status ? { ...t, status: s } : t;
+      }));
+    }, 3000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [hasProcessing, releaseId]);
+
   function markBusy(id: string, on: boolean) {
     setBusy((p) => { const n = new Set(p); if (on) n.add(id); else n.delete(id); return n; });
+  }
+
+  // Короткая отметка «✓ сохранено» у строки после успешного сохранения правки.
+  function flashSaved(id: string) {
+    setJustSaved((p) => new Set(p).add(id));
+    setTimeout(() => setJustSaved((p) => { const n = new Set(p); n.delete(id); return n; }), 1600);
   }
 
   function setTitle(id: string, title: string) {
@@ -91,6 +120,7 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     if (ok) {
       savedBpm.current.set(id, raw);
       setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, bpm: parsed } : t)));
+      flashSaved(id);
     } else {
       setAudioInput(id, 'bpm', savedBpm.current.get(id) ?? '');
       toast.error('Не удалось сохранить BPM');
@@ -107,6 +137,7 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     if (ok) {
       savedKey.current.set(id, raw);
       setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, musicalKey: value } : t)));
+      flashSaved(id);
     } else {
       setAudioInput(id, 'key', savedKey.current.get(id) ?? '');
       toast.error('Не удалось сохранить тональность');
@@ -127,6 +158,7 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     markBusy(id, false);
     if (ok) {
       savedTitles.current.set(id, title);
+      flashSaved(id);
     } else {
       setTitle(id, savedTitles.current.get(id) ?? '');
       toast.error('Не удалось переименовать трек');
@@ -165,6 +197,9 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
     if (!okA || !okB) {
       setTracks(prev);
       toast.error('Не удалось изменить порядок треков');
+    } else {
+      flashSaved(a.id);
+      flashSaved(b.id);
     }
   }
 
@@ -218,15 +253,41 @@ export function TrackManager({ initial }: { initial: ManagedTrack[] }) {
                 className="flex-1 min-w-0 bg-transparent rounded px-2 py-1 -mx-2 hover:bg-white/5 focus:bg-white/5 focus:outline-none focus:ring-1 focus:ring-white/20 transition-colors"
               />
 
-              <span className={`text-xs font-mono shrink-0 ${
-                track.status === 'READY' ? 'text-green-400'
-                : track.status === 'PROCESSING' ? 'text-yellow-400'
-                : 'text-red-400'
-              }`}>
-                {track.status === 'READY' ? 'готов'
-                  : track.status === 'PROCESSING' ? 'обрабатывается'
-                  : 'заблокирован'}
-              </span>
+              <AnimatePresence mode="wait">
+                {justSaved.has(track.id) ? (
+                  <motion.span
+                    key="saved"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={spring.snappy}
+                    className="text-xs shrink-0 text-green-400"
+                  >
+                    ✓ сохранено
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="status"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={`text-xs font-mono shrink-0 inline-flex items-center gap-1.5 ${
+                      track.status === 'READY' ? 'text-green-400'
+                      : track.status === 'PROCESSING' ? 'text-yellow-400'
+                      : 'text-red-400'
+                    }`}
+                  >
+                    {track.status === 'PROCESSING' && (
+                      <span className="relative grid place-items-center w-2 h-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                        <span className="absolute inset-0 rounded-full bg-yellow-400 opacity-40 animate-ping" />
+                      </span>
+                    )}
+                    {track.status === 'READY' ? 'готов'
+                      : track.status === 'PROCESSING' ? 'обрабатывается'
+                      : 'заблокирован'}
+                  </motion.span>
+                )}
+              </AnimatePresence>
 
               {/* Настроения */}
               <motion.button
