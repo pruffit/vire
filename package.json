@@ -1,6 +1,6 @@
 {
   "name": "vire",
-  "version": "1.0.0",
+  "version": "1.0.31",
   "private": true,
   "packageManager": "pnpm@10.17.1",
   "engines": {
@@ -18,7 +18,10 @@
     "turbo": "^2.3.3"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["ffmpeg-static", "ffprobe-static"],
+    "onlyBuiltDependencies": [
+      "ffmpeg-static",
+      "ffprobe-static"
+    ],
     "overrides": {
       "postcss": ">=8.5.10",
       "esbuild": ">=0.25.0"
