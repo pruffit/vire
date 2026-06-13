@@ -100,15 +100,8 @@ export function parseAudioExt(filename: string): AudioExt | null {
   return null;
 }
 
-/** Parse + validate the credits JSON blob from the upload form. */
-export function parseCredits(raw: unknown, max = 20): TrackCredit[] {
-  if (typeof raw !== 'string') return [];
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return [];
-  }
+/** Validate an already-parsed array of credits: drop bad entries, trim names, cap count. */
+export function sanitizeCredits(parsed: unknown, max = 20): TrackCredit[] {
   if (!Array.isArray(parsed)) return [];
   return parsed
     .filter(
@@ -119,7 +112,18 @@ export function parseCredits(raw: unknown, max = 20): TrackCredit[] {
         (c as TrackCredit).name.trim().length > 0 &&
         VALID_ROLES.includes((c as TrackCredit).role),
     )
+    .map((c) => ({ name: c.name.trim(), role: c.role }))
     .slice(0, max);
+}
+
+/** Parse + validate the credits JSON blob from the upload form. */
+export function parseCredits(raw: unknown, max = 20): TrackCredit[] {
+  if (typeof raw !== 'string') return [];
+  try {
+    return sanitizeCredits(JSON.parse(raw), max);
+  } catch {
+    return [];
+  }
 }
 
 /** Parse a positive-integer track number from a form field. */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, validateMagicBytes, parseWavFormat } from '../upload';
+import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, validateMagicBytes, parseWavFormat, sanitizeCredits } from '../upload';
 
 /** Build a minimal RIFF/WAVE buffer with one `fmt ` chunk. */
 function makeWav({
@@ -148,5 +148,32 @@ describe('parseCredits', () => {
       Array.from({ length: 30 }, (_, i) => ({ name: `n${i}`, role: 'PERFORMER' })),
     );
     expect(parseCredits(raw, 20)).toHaveLength(20);
+  });
+});
+
+describe('sanitizeCredits', () => {
+  it('returns [] for non-arrays', () => {
+    expect(sanitizeCredits(null)).toEqual([]);
+    expect(sanitizeCredits('x')).toEqual([]);
+    expect(sanitizeCredits({ name: 'a', role: 'PERFORMER' })).toEqual([]);
+  });
+
+  it('keeps valid entries, trims names, drops blanks and bad roles', () => {
+    expect(
+      sanitizeCredits([
+        { name: '  Danya ', role: 'PERFORMER' },
+        { name: '   ', role: 'COMPOSER' },
+        { name: 'X', role: 'NOPE' },
+        { name: 'Y', role: 'PRODUCER' },
+      ]),
+    ).toEqual([
+      { name: 'Danya', role: 'PERFORMER' },
+      { name: 'Y', role: 'PRODUCER' },
+    ]);
+  });
+
+  it('caps the count', () => {
+    const many = Array.from({ length: 25 }, (_, i) => ({ name: `n${i}`, role: 'LYRICIST' }));
+    expect(sanitizeCredits(many, 20)).toHaveLength(20);
   });
 });

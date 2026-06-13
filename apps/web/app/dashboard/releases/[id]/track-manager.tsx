@@ -6,8 +6,10 @@ import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
 import { MoodPicker } from '@/components/mood-picker';
 import { GenrePicker } from '@/components/genre-picker';
+import { CreditsEditor } from '@/components/credits-editor';
 import type { Mood } from '@/lib/moods';
 import type { Genre } from '@/lib/genres';
+import type { TrackCredit } from '@/lib/upload';
 
 export interface ManagedTrack {
   id: string;
@@ -16,6 +18,7 @@ export interface ManagedTrack {
   status: 'PROCESSING' | 'READY' | 'BLOCKED';
   moods: Mood[];
   genres: Genre[];
+  credits: TrackCredit[];
   bpm: number | null;
   musicalKey: string | null;
 }
@@ -372,6 +375,10 @@ export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; 
 
                     <div className="border-t border-white/5 pt-3">
                       <MoodPicker trackId={track.id} initial={track.moods} />
+                    </div>
+
+                    <div className="border-t border-white/5 pt-3">
+                      <CreditsEditor trackId={track.id} initial={track.credits} />
                     </div>
                   </div>
                 </motion.div>

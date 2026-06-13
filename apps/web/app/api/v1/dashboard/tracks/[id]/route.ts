@@ -3,7 +3,7 @@ import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
 import { TrackService, NotFoundError, type UpdateTrackParams } from '@vire/core';
 import { transcodeQueue } from '@/lib/queue';
-import { isUuid } from '@/lib/upload';
+import { isUuid, sanitizeCredits } from '@/lib/upload';
 
 function trackService() {
   return new TrackService(
@@ -71,6 +71,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid musicalKey' }, { status: 400 });
     }
     patch.musicalKey = b.musicalKey as string | null;
+  }
+  if (b.credits !== undefined) {
+    if (!Array.isArray(b.credits)) {
+      return NextResponse.json({ error: 'Invalid credits' }, { status: 400 });
+    }
+    // Чистим вход: отбрасываем мусор, тримим имена, режем до лимита.
+    patch.credits = sanitizeCredits(b.credits);
   }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });

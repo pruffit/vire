@@ -65,6 +65,7 @@ export class DrizzleTrackRepository implements ITrackRepository {
     if (patch.trackNumber !== undefined) trackValues.trackNumber = patch.trackNumber;
     if (patch.isExclusive !== undefined) trackValues.isExclusive = patch.isExclusive;
     if (patch.isWip !== undefined) trackValues.isWip = patch.isWip;
+    if (patch.credits !== undefined) trackValues.credits = patch.credits;
 
     let row: typeof tracks.$inferSelect | undefined;
     if (Object.keys(trackValues).length > 0) {

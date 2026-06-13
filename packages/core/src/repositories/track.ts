@@ -15,6 +15,7 @@ export interface UpdateTrackParams {
   isWip?: boolean;
   bpm?: number | null;
   musicalKey?: string | null;
+  credits?: TrackCredit[];
 }
 
 export interface ITrackRepository {

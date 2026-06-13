@@ -77,6 +77,7 @@ export default async function EditReleasePage({ params }: Props) {
               status: t.status,
               moods: moodsMap[t.id] ?? [],
               genres: genresMap[t.id] ?? [],
+              credits: t.credits,
               bpm: audioMetaMap[t.id]?.bpm ?? null,
               musicalKey: audioMetaMap[t.id]?.musicalKey ?? null,
             }))}
