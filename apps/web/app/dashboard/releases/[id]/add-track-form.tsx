@@ -78,15 +78,19 @@ export function AddTrackForm({ releaseId, nextTrackNumber }: { releaseId: string
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm text-white/50">Аудиофайл <span className="text-white/30">· WAV или FLAC</span></label>
+        <label className="text-sm text-white/50">Аудиофайл <span className="text-white/30">· WAV, FLAC или MP3</span></label>
         <input
           name="file"
           type="file"
-          accept=".wav,.flac,audio/wav,audio/x-wav,audio/flac,audio/x-flac"
+          accept=".wav,.flac,.mp3,audio/wav,audio/x-wav,audio/flac,audio/x-flac,audio/mpeg"
           required
           disabled={busy}
           className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-sm file:cursor-pointer hover:file:bg-white/20 disabled:opacity-50"
         />
+        <p className="text-xs text-white/40 leading-relaxed">
+          Для наилучшего качества рекомендуем WAV 44.1&nbsp;kHz, 16/24&nbsp;бит (PCM).
+          Принимаем также FLAC и MP3. Максимум 300&nbsp;МБ.
+        </p>
       </div>
 
       {/* Credits */}

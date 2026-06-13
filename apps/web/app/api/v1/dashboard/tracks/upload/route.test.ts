@@ -68,7 +68,7 @@ describe('POST /api/v1/dashboard/tracks/upload', () => {
     expect(uploadBuffer).not.toHaveBeenCalled();
   });
 
-  it('400 when the audio file is not WAV/FLAC', async () => {
+  it('400 when the audio file is an unsupported format', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     findByUserId.mockResolvedValue({ id: 'artist1' });
     const res = await POST(
@@ -76,12 +76,36 @@ describe('POST /api/v1/dashboard/tracks/upload', () => {
         releaseId: RELEASE_ID,
         title: 'Song',
         trackNumber: '1',
-        file: new File([new Uint8Array([1, 2, 3])], 'track.mp3', { type: 'audio/mpeg' }),
+        file: new File([new Uint8Array([1, 2, 3])], 'track.aiff', { type: 'audio/aiff' }),
       }),
     );
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toMatch(/WAV|FLAC/);
+    expect(body.error).toMatch(/WAV|FLAC|MP3/);
+    expect(uploadBuffer).not.toHaveBeenCalled();
+  });
+
+  it('400 when a WAV master is not PCM (compressed)', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    findByUserId.mockResolvedValue({ id: 'artist1' });
+    // Minimal RIFF/WAVE with a fmt chunk declaring audioFormat 0x0011 (IMA ADPCM).
+    const wav = new Uint8Array(44);
+    wav.set([0x52, 0x49, 0x46, 0x46], 0); // "RIFF"
+    wav.set([0x57, 0x41, 0x56, 0x45], 8); // "WAVE"
+    wav.set([0x66, 0x6d, 0x74, 0x20], 12); // "fmt "
+    new DataView(wav.buffer).setUint32(16, 16, true); // fmt size
+    new DataView(wav.buffer).setUint16(20, 0x0011, true); // audioFormat = ADPCM
+    const res = await POST(
+      makeReq({
+        releaseId: RELEASE_ID,
+        title: 'Song',
+        trackNumber: '1',
+        file: new File([wav], 'track.wav', { type: 'audio/wav' }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/PCM/);
     expect(uploadBuffer).not.toHaveBeenCalled();
   });
 

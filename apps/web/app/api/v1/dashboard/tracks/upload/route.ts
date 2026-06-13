@@ -4,7 +4,7 @@ import { db, DrizzleArtistRepository, DrizzleReleaseRepository, DrizzleTrackRepo
 import { TrackService, NotFoundError } from '@vire/core';
 import { uploadBuffer } from '@/lib/s3';
 import { transcodeQueue } from '@/lib/queue';
-import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, MAX_AUDIO_FILE_SIZE, validateMagicBytes } from '@/lib/upload';
+import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, MAX_AUDIO_FILE_SIZE, validateMagicBytes, parseWavFormat, type AudioExt } from '@/lib/upload';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
@@ -55,25 +55,46 @@ export async function POST(req: Request) {
 
   const credits = parseCredits(formData.get('credits'));
 
-  // Артисты заливают мастер либо в WAV, либо в FLAC — определяем по расширению.
+  // Мастер принимаем в WAV / FLAC / MP3 — определяем по расширению.
   const ext = parseAudioExt(file.name);
   if (!ext) {
-    return NextResponse.json({ error: 'Файл должен быть WAV или FLAC' }, { status: 400 });
+    return NextResponse.json({ error: 'Файл должен быть WAV, FLAC или MP3' }, { status: 400 });
   }
 
   if (file.size > MAX_AUDIO_FILE_SIZE) {
     return NextResponse.json({ error: 'Файл слишком большой (макс. 300 МБ)' }, { status: 413 });
   }
 
-  // Read only the header to validate magic bytes before buffering the whole file
-  const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  // Читаем только начало файла (хватает для magic bytes и WAV-заголовка fmt),
+  // не буферизуя весь файл ради валидации.
+  const header = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
   if (!validateMagicBytes(header, ext)) {
     return NextResponse.json({ error: 'Формат файла не соответствует расширению' }, { status: 400 });
   }
 
+  // WAV принимаем только несжатый (PCM). Частоту/битность не ограничиваем —
+  // 48 kHz / 24 бит тоже допустимы (рекомендация 44.1/16-24 — в форме).
+  if (ext === 'wav') {
+    const fmt = parseWavFormat(header);
+    if (!fmt) {
+      return NextResponse.json({ error: 'Не удалось прочитать заголовок WAV' }, { status: 400 });
+    }
+    if (!fmt.isPcm) {
+      return NextResponse.json(
+        { error: 'WAV должен быть несжатым (PCM / импульсно-кодовая модуляция)' },
+        { status: 400 },
+      );
+    }
+  }
+
   const trackId = crypto.randomUUID();
   const sourceKey = `tracks/${trackId}/source.${ext}`;
-  const contentType = ext === 'wav' ? 'audio/wav' : 'audio/flac';
+  const CONTENT_TYPE: Record<AudioExt, string> = {
+    wav: 'audio/wav',
+    flac: 'audio/flac',
+    mp3: 'audio/mpeg',
+  };
+  const contentType = CONTENT_TYPE[ext];
 
   // Загружаем мастер в vault перед созданием записи в БД
   const buffer = Buffer.from(await file.arrayBuffer());
