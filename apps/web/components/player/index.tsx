@@ -190,8 +190,11 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
           )}
         </motion.div>
 
-        {/* Название + артист + лайк */}
+        {/* Поток (слева) + название + артист + лайк (справа) — поток зеркалит лайк */}
         <div className="flex items-center gap-3 min-w-0 w-full">
+          <div className="shrink-0">
+            <WaveModeButton />
+          </div>
           <div className="flex-1 min-w-0 text-center">
             <TitleLink track={track} onClick={onClose} className="text-xl font-semibold truncate block" />
             <ArtistLink track={track} onClick={onClose} className="text-sm text-muted-foreground truncate block mt-1" />
@@ -208,8 +211,8 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
           <TimeLabel which="duration" />
         </div>
 
-        {/* Управление */}
-        <Controls />
+        {/* Управление (без кнопки потока — она перенесена в строку названия) */}
+        <Controls showWaveMode={false} />
 
         {/* Громкость + поделиться */}
         <FullscreenExtras track={track} />
@@ -347,12 +350,11 @@ function TimeLabel({ which }: { which: 'current' | 'duration' }) {
   );
 }
 
-function Controls() {
+function Controls({ showWaveMode = true }: { showWaveMode?: boolean }) {
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isLoading = usePlayerStore((s) => s.isLoading);
   const hasAudio = usePlayerStore((s) => s.hasAudio);
   const audioError = usePlayerStore((s) => s.audioError);
-  const waveMode = usePlayerStore((s) => s.waveMode);
 
   // Иконка плеера: ошибка / загрузка / пауза / играть — выбираем ключ для морфинга.
   const iconKey = audioError ? 'error' : isLoading ? 'loading' : isPlaying ? 'pause' : 'play';
@@ -410,35 +412,45 @@ function Controls() {
         <SkipForwardIcon />
       </motion.button>
 
-      <motion.button
-        onClick={() => controls.setWaveMode(!waveMode)}
-        aria-label={waveMode ? 'Режим волны включён' : 'Режим волны выключен'}
-        aria-pressed={waveMode}
-        whileTap={{ scale: 0.88 }}
-        transition={spring.snappy}
-        className="relative transition-colors"
-        style={
-          waveMode
-            ? { color: 'var(--artist-accent, oklch(72% 0.19 145))' }
-            : { opacity: 0.3 }
-        }
-      >
-        <WaveIcon />
-        <AnimatePresence>
-          {waveMode && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 0.22, scale: 1.9 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              transition={spring.snappy}
-              aria-hidden="true"
-              className="absolute inset-0 rounded-full blur-md pointer-events-none"
-              style={{ background: 'var(--artist-accent, oklch(72% 0.19 145))' }}
-            />
-          )}
-        </AnimatePresence>
-      </motion.button>
+      {showWaveMode && <WaveModeButton />}
     </div>
+  );
+}
+
+/** Кнопка «Волны» (поток). Вынесена из Controls, чтобы в фуллскрине её можно
+ *  было поставить отдельно — зеркально кнопке лайка в строке названия. */
+function WaveModeButton() {
+  const waveMode = usePlayerStore((s) => s.waveMode);
+
+  return (
+    <motion.button
+      onClick={() => controls.setWaveMode(!waveMode)}
+      aria-label={waveMode ? 'Режим волны включён' : 'Режим волны выключен'}
+      aria-pressed={waveMode}
+      whileTap={{ scale: 0.88 }}
+      transition={spring.snappy}
+      className="relative transition-colors"
+      style={
+        waveMode
+          ? { color: 'var(--artist-accent, oklch(72% 0.19 145))' }
+          : { opacity: 0.3 }
+      }
+    >
+      <WaveIcon />
+      <AnimatePresence>
+        {waveMode && (
+          <motion.span
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 0.22, scale: 1.9 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={spring.snappy}
+            aria-hidden="true"
+            className="absolute inset-0 rounded-full blur-md pointer-events-none"
+            style={{ background: 'var(--artist-accent, oklch(72% 0.19 145))' }}
+          />
+        )}
+      </AnimatePresence>
+    </motion.button>
   );
 }
 
