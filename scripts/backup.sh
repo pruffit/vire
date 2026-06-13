@@ -7,7 +7,23 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-set -a; source .env; set +a
+
+# Грузим .env БЕЗ `source`: значения со спецсимволами shell (напр.
+# SMTP_FROM=Vire <noreply@…> с < >) ломают source. Читаем построчно и
+# экспортируем литерально — без исполнения значений.
+set -a
+while IFS= read -r line || [ -n "$line" ]; do
+  case "$line" in ''|'#'*) continue ;; esac
+  key=${line%%=*}; key=${key%$'\r'}
+  case "$key" in *[!A-Za-z0-9_]*|'') continue ;; esac
+  val=${line#*=}; val=${val%$'\r'}
+  case "$val" in
+    \"*\") val=${val#\"}; val=${val%\"} ;;
+    \'*\') val=${val#\'}; val=${val%\'} ;;
+  esac
+  export "$key=$val"
+done < .env
+set +a
 
 COMPOSE="docker compose -f docker-compose.prod.yml"
 STAMP="$(date +%F_%H%M)"
