@@ -163,6 +163,12 @@ pnpm --filter @vire/web dev
 Переменные окружения: скопируй `.env.example` в `.env` и заполни.
 DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 
+## Документация фич
+
+Каждая фича описывается файлом в `docs/features/` (что делает, где код, env,
+ограничения — шаблон в `docs/features/README.md`). **Новая фича не считается
+готовой без файла в `docs/features/`.** Безопасность — `docs/security/owasp-top-10.md`.
+
 ## Проверки качества (гонять после каждого набора изменений)
 
 ```bash

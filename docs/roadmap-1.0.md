@@ -66,7 +66,8 @@ headers (`next.config.ts`), rate limiting (Redis fixed-window), лимиты з�
   `.github/dependabot.yml`.
 - [~] Бэкапы Postgres: `scripts/backup.sh` (+ ретеншн дампов 30д) — проверить
   на VPS: заданы `BACKUP_S3_*` в .env, крон установлен, тестовый прогон удался.
-- [ ] Пентест-проход по чек-листу OWASP Top 10.
+- [x] Пентест-проход по чек-листу OWASP Top 10 (`docs/security/owasp-top-10.md`).
+  Добавлено: rate-limit на логине (брутфорс, A07).
 
 ## 4. Алгоритмические плейлисты на главной ✓
 
@@ -94,7 +95,9 @@ headers (`next.config.ts`), rate limiting (Redis fixed-window), лимиты з�
 
 ## 6. Документация фич
 
-- [ ] `docs/features/` — по файлу на фичу: что делает, где код (страницы/роуты/
+- [~] `docs/features/` — каркас + правило заведены (README/шаблон/индекс), готовы
+  файлы: monitoring, uploads, authentication. Остальные фичи — в индексе как план.
+  По файлу на фичу: что делает, где код (страницы/роуты/
   сервисы/таблицы), какие env нужны, известные ограничения. Покрыть ВСЁ:
   аутентификация (+привязка провайдеров), профиль (тема, аватар), релизы и треки
   (загрузка, транскодинг, BPM/key-анализ, статусы), плеер (HLS, очередь, волна,
@@ -102,7 +105,7 @@ headers (`next.config.ts`), rate limiting (Redis fixed-window), лимиты з�
   моменты, шеринг, live-присутствие, посты, лента/главная, поиск (+⌘K),
   countdown/scheduled, видео-эмбеды, SEO/JSON-LD, дашборд (+аналитика),
   админка (+health), рассылки (Brevo).
-- [ ] В CLAUDE.md — правило: новая фича не считается готовой без файла в features/.
+- [x] В CLAUDE.md — правило: новая фича не считается готовой без файла в features/.
 
 ## 7. Инженерная зрелость ✓ (частично)
 
@@ -112,7 +115,9 @@ headers (`next.config.ts`), rate limiting (Redis fixed-window), лимиты з�
 - [x] CD: один пайплайн по тегу `vX.Y.Z` — gates → сборка образов → деплой на VPS.
 - [x] VPS: Timeweb Cloud, Docker Compose + Caddy, авто-TLS, swap.
 - [ ] Стейджинг: второй VPS/окружение (когда оправдает нагрузка).
-- [ ] Мониторинг: Sentry (ошибки), uptime-чек, алерты на failed-джобы очередей.
+- [~] Мониторинг: health-эндпоинт (`/api/health`), webhook-алерты на ошибки роутов
+  и упавшие джобы (`ALERT_WEBHOOK_URL`), см. `docs/features/monitoring.md`. Осталось:
+  подключить внешний uptime + webhook на проде; Sentry SDK — опционально позже.
 
 ## 8. Этап 2 — прямые продажи (бэкенд готов, UI отвязан)
 
