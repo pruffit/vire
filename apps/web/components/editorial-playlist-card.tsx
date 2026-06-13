@@ -131,7 +131,7 @@ export function EditorialPlaylistCard({
         <PlaylistCollage covers={playlist.covers} />
         {/* Тип подборки — только для редакционных */}
         {kindLabel && (
-          <span className="absolute top-2 left-2 rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/80 pointer-events-none">
+          <span className="absolute top-2 left-2 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-mono text-white/80 pointer-events-none">
             {kindLabel}
           </span>
         )}
