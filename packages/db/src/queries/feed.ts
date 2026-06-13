@@ -41,7 +41,8 @@ export async function getFeed(userId: string): Promise<FeedRelease[]> {
         ),
       ),
     )
-    .orderBy(desc(sql`coalesce(${releases.releaseDate}, ${releases.createdAt})`))
+    // Свежесть = момент выхода в эфир (см. getLatestReleases).
+    .orderBy(desc(sql`coalesce(${releases.publishedAt}, ${releases.releaseDate}, ${releases.createdAt})`))
     .limit(50);
 
   return rows;

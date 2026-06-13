@@ -31,6 +31,10 @@ export const releases = pgTable('releases', {
   genre: genreEnum('genre'),
   coverUrl: text('cover_url'),
   releaseDate: timestamp('release_date'),
+  // Момент реального выхода в эфир (DRAFT/SCHEDULED → PUBLISHED). В отличие от
+  // release_date (задаёт артист) и created_at (создание черновика) — это честная
+  // отметка «когда релиз стал публичным». Источник правды для сортировки «свежее».
+  publishedAt: timestamp('published_at'),
   status: releaseStatusEnum('status').notNull().default('DRAFT'),
   description: text('description'),
   linerNotes: text('liner_notes'),

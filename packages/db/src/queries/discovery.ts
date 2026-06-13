@@ -82,7 +82,10 @@ export async function getLatestReleases(limit = 12): Promise<DiscoveryRelease[]>
         ),
       ),
     )
-    .orderBy(desc(sql`coalesce(${releases.releaseDate}, ${releases.createdAt})`))
+    // Свежесть = момент выхода в эфир. published_at для прямой публикации; для
+    // запланированных, открывшихся по дате (published_at ещё null) — release_date;
+    // created_at — запасной вариант для легаси-строк без обоих.
+    .orderBy(desc(sql`coalesce(${releases.publishedAt}, ${releases.releaseDate}, ${releases.createdAt})`))
     .limit(limit);
 }
 

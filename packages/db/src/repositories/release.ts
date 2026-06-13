@@ -85,7 +85,15 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
   async updateStatus(releaseId: string, status: ReleaseStatus): Promise<void> {
     await this.db
       .update(releases)
-      .set({ status, updatedAt: new Date() })
+      .set({
+        status,
+        updatedAt: new Date(),
+        // Штампуем момент выхода один раз — coalesce не даёт перезаписать его при
+        // повторной публикации (PUBLISHED → ARCHIVED → PUBLISHED).
+        ...(status === 'PUBLISHED' && {
+          publishedAt: sql`coalesce(${releases.publishedAt}, now())`,
+        }),
+      })
       .where(eq(releases.id, releaseId));
   }
 
