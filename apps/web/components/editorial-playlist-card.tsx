@@ -58,13 +58,16 @@ function PlaylistCollage({ covers }: { covers: string[] }) {
 
   return (
     <div className="relative w-full h-full">
-      {/* Размытый фон из первой обложки — цвет самой музыки */}
+      {/* Размытый фон из первой обложки — цвет самой музыки.
+          transform-gpu выносит блюр на отдельный композит-слой: он
+          растеризуется один раз и кэшируется, а не пересчитывается на
+          каждом кадре скролла (иначе джанк при прокрутке секции подборок). */}
       <Image
         src={stack[0]}
         alt=""
         fill
         sizes="(max-width: 640px) 50vw, 250px"
-        className="object-cover scale-150 blur-2xl brightness-[0.45] saturate-150"
+        className="object-cover scale-150 blur-2xl brightness-[0.45] saturate-150 transform-gpu"
       />
       <div className="absolute inset-0 bg-black/20" />
 
@@ -123,7 +126,10 @@ export function EditorialPlaylistCard({
   const kindLabel = KIND_LABELS[playlist.kind];
 
   return (
-    <div className="group flex flex-col gap-2.5">
+    // content-visibility:auto — карточки вне вьюпорта не отрисовываются (тяжёлые
+    // блюр-коллажи рисуются только когда видимы). contain-intrinsic-size держит
+    // высоту до первой отрисовки, чтобы скролл-бар не прыгал.
+    <div className="group flex flex-col gap-2.5 [content-visibility:auto] [contain-intrinsic-size:auto_280px]">
       <Link
         href={`/playlists/${playlist.id}`}
         className="block relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30"
