@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import {
   getTrackMoods, setTrackMoods, trackExists, ALL_MOODS, db,
-  DrizzleArtistRepository, DrizzleTrackRepository, DrizzleReleaseRepository,
+  DrizzleTrackRepository, DrizzleReleaseRepository,
 } from '@vire/db';
+import { getActiveArtist } from '@/lib/active-artist';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -23,7 +24,7 @@ export async function PUT(req: Request, { params }: Params) {
 
   const { id } = await params;
 
-  const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
+  const artist = await getActiveArtist(session.user.id, req);
   if (!artist) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const track = await new DrizzleTrackRepository(db).findById(id);

@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import {
-  db, DrizzleArtistRepository, DrizzleTrackRepository, DrizzleReleaseRepository,
+  db, DrizzleTrackRepository, DrizzleReleaseRepository,
   setTrackGenres, ALL_TRACK_GENRES,
 } from '@vire/db';
 import { isUuid } from '@/lib/upload';
+import { getActiveArtist } from '@/lib/active-artist';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -18,7 +19,7 @@ export async function PUT(req: Request, { params }: Params) {
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: 'Invalid track id' }, { status: 400 });
 
-  const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
+  const artist = await getActiveArtist(session.user.id, req);
   if (!artist) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const track = await new DrizzleTrackRepository(db).findById(id);

@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, getArtistTrackIds } from '@vire/db';
+import { getArtistTrackIds } from '@vire/db';
 import { countListeningMany } from '@/lib/presence';
+import { getActiveArtist } from '@/lib/active-artist';
 
 /** Сколько слушателей прямо сейчас слушают треки этого артиста (для дашборда). */
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
+  const artist = await getActiveArtist(session.user.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }

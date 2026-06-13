@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
+import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
 import type { ThemeTokens, ArtistLink, ArtistVideo } from '@vire/core';
 
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
   }
 
   const artistRepo = new DrizzleArtistRepository(db);
-  const artist = await artistRepo.findByUserId(session.user.id);
+  const artist = await getActiveArtist(session.user.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }

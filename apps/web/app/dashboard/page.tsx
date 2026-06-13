@@ -2,11 +2,13 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getArtistPlayStats, getArtistRelistenStats } from '@vire/db';
+import { db, DrizzleReleaseRepository, getArtistPlayStats, getArtistRelistenStats } from '@vire/db';
 import type { TrackStatus, ReleaseStatus, ReleaseType } from '@vire/core';
+import { getActiveArtistForPage, listUserArtists } from '@/lib/active-artist';
 import { PublishButton } from './publish-button';
 import { StatsSection } from './stats-section';
 import { LiveNow } from './live-now';
+import { ArtistSwitcher } from './artist-switcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,8 +138,10 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/dashboard');
 
-  const artistRepo = new DrizzleArtistRepository(db);
-  const artist = await artistRepo.findByUserId(session.user.id);
+  const [artist, allArtists] = await Promise.all([
+    getActiveArtistForPage(session.user.id),
+    listUserArtists(session.user.id),
+  ]);
 
   const [rawReleases, playStats, relistenStats] = await Promise.all([
     artist ? new DrizzleReleaseRepository(db).findAllByArtist(artist.id) : Promise.resolve([]),
@@ -175,6 +179,14 @@ export default async function DashboardPage() {
               <p className="text-white/50 mt-1 text-sm">
                 @{artist.slug} · {artist.name}
               </p>
+            )}
+            {artist && allArtists.length > 1 && (
+              <div className="mt-3">
+                <ArtistSwitcher
+                  activeId={artist.id}
+                  artists={allArtists.map((a) => ({ id: a.id, name: a.name, slug: a.slug }))}
+                />
+              </div>
             )}
           </div>
           {artist && (

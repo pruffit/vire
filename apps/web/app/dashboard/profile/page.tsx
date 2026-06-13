@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository } from '@vire/db';
+import { getActiveArtistForPage } from '@/lib/active-artist';
 import { EditProfileForm, type EditableProfile } from './edit-profile-form';
 
 export const metadata = { title: 'Профиль артиста' };
@@ -10,7 +10,7 @@ export default async function DashboardProfilePage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/dashboard/profile');
 
-  const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
+  const artist = await getActiveArtistForPage(session.user.id);
   if (!artist) redirect('/dashboard');
 
   // Strip Date fields (createdAt/updatedAt) before passing to the client form

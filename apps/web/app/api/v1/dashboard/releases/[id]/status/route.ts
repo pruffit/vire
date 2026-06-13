@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
+import { db, DrizzleReleaseRepository } from '@vire/db';
 import type { ReleaseStatus } from '@vire/core';
 import { notifyReleaseQueue } from '@/lib/queue';
+import { getActiveArtist } from '@/lib/active-artist';
 
 const ALLOWED: ReleaseStatus[] = ['PUBLISHED', 'SCHEDULED', 'ARCHIVED', 'DRAFT'];
 
@@ -15,8 +16,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const artistRepo = new DrizzleArtistRepository(db);
-  const artist = await artistRepo.findByUserId(session.user.id);
+  const artist = await getActiveArtist(session.user.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }

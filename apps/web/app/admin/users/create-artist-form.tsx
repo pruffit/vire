@@ -72,6 +72,10 @@ export function CreateArtistForm() {
           ×
         </button>
       </div>
+      <p className="text-xs text-white/40 -mt-1">
+        Один аккаунт может управлять несколькими артистами — можно создать ещё одного
+        на тот же email (slug должен быть уникальным).
+      </p>
 
       <input
         required

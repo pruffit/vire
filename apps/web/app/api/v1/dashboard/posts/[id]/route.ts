@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import {
-  db,
-  DrizzleArtistRepository,
   getArtistPostById,
   updateArtistPost,
   deleteArtistPost,
 } from '@vire/db';
+import { getActiveArtist } from '@/lib/active-artist';
 
 const TITLE_MAX = 120;
 const BODY_MAX = 2000;
@@ -14,11 +13,11 @@ const BODY_MAX = 2000;
 type Params = { params: Promise<{ id: string }> };
 
 /** Проверяет вход (auth + владение постом), возвращает либо ошибку, либо ok. */
-async function authorize(id: string) {
+async function authorize(id: string, req: Request) {
   const session = await auth();
   if (!session?.user?.id) return { error: 'Unauthorized', status: 401 } as const;
 
-  const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
+  const artist = await getActiveArtist(session.user.id, req);
   if (!artist) return { error: 'Artist profile not found', status: 403 } as const;
 
   const post = await getArtistPostById(id);
@@ -30,7 +29,7 @@ async function authorize(id: string) {
 
 export async function PATCH(req: Request, { params }: Params) {
   const { id } = await params;
-  const gate = await authorize(id);
+  const gate = await authorize(id, req);
   if (!('ok' in gate)) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
   let payload: unknown;
@@ -55,9 +54,9 @@ export async function PATCH(req: Request, { params }: Params) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const { id } = await params;
-  const gate = await authorize(id);
+  const gate = await authorize(id, req);
   if (!('ok' in gate)) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
   await deleteArtistPost(id);

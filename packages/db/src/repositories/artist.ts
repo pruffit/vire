@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { artistProfiles } from '../schema';
 import type { DB } from '../client';
 import type { IArtistRepository, ArtistProfile, ThemeTokens, ArtistLink, ArtistVideo, UpdateArtistProfileData } from '@vire/core';
@@ -23,6 +23,28 @@ export class DrizzleArtistRepository implements IArtistRepository {
       .select()
       .from(artistProfiles)
       .where(eq(artistProfiles.userId, userId))
+      .orderBy(asc(artistProfiles.createdAt))
+      .limit(1);
+
+    if (!row) return null;
+    return mapToArtistProfile(row);
+  }
+
+  async findAllByUserId(userId: string): Promise<ArtistProfile[]> {
+    const rows = await this.db
+      .select()
+      .from(artistProfiles)
+      .where(eq(artistProfiles.userId, userId))
+      .orderBy(asc(artistProfiles.createdAt));
+
+    return rows.map(mapToArtistProfile);
+  }
+
+  async findByIdForUser(artistId: string, userId: string): Promise<ArtistProfile | null> {
+    const [row] = await this.db
+      .select()
+      .from(artistProfiles)
+      .where(and(eq(artistProfiles.id, artistId), eq(artistProfiles.userId, userId)))
       .limit(1);
 
     if (!row) return null;

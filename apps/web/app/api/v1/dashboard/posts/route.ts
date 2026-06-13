@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, createArtistPost } from '@vire/db';
+import { createArtistPost } from '@vire/db';
+import { getActiveArtist } from '@/lib/active-artist';
 
 const TITLE_MAX = 120;
 const BODY_MAX = 2000;
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
+  const artist = await getActiveArtist(session.user.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }

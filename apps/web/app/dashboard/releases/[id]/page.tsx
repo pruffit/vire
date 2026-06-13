@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getMoodsForTracks, getTrackAudioMeta, getGenresForTracks } from '@vire/db';
+import { db, DrizzleReleaseRepository, getMoodsForTracks, getTrackAudioMeta, getGenresForTracks } from '@vire/db';
+import { getActiveArtistForPage } from '@/lib/active-artist';
 import { EditReleaseForm } from './edit-release-form';
 import { BatchTrackUpload } from './batch-track-upload';
 import { TrackManager } from './track-manager';
@@ -16,8 +17,7 @@ export default async function EditReleasePage({ params }: Props) {
 
   const { id } = await params;
 
-  const artistRepo = new DrizzleArtistRepository(db);
-  const artist = await artistRepo.findByUserId(session.user.id);
+  const artist = await getActiveArtistForPage(session.user.id);
   if (!artist) redirect('/dashboard');
 
   const releaseRepo = new DrizzleReleaseRepository(db);

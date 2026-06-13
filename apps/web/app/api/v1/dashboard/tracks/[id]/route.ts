@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
+import { db, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
 import { TrackService, NotFoundError, type UpdateTrackParams } from '@vire/core';
 import { transcodeQueue } from '@/lib/queue';
 import { isUuid, sanitizeCredits } from '@/lib/upload';
+import { getActiveArtist } from '@/lib/active-artist';
 
 function trackService() {
   return new TrackService(
@@ -13,10 +14,10 @@ function trackService() {
   );
 }
 
-async function authorizeArtist() {
+async function authorizeArtist(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return { error: 'Unauthorized', status: 401 as const };
-  const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
+  const artist = await getActiveArtist(session.user.id, req);
   if (!artist) return { error: 'Artist profile not found', status: 403 as const };
   return { artistId: artist.id };
 }
@@ -28,7 +29,7 @@ export async function PATCH(
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: 'Invalid track id' }, { status: 400 });
 
-  const guard = await authorizeArtist();
+  const guard = await authorizeArtist(req);
   if ('error' in guard) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
   let body: unknown;
@@ -92,13 +93,13 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: 'Invalid track id' }, { status: 400 });
 
-  const guard = await authorizeArtist();
+  const guard = await authorizeArtist(req);
   if ('error' in guard) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
   const result = await trackService().deleteTrack({ trackId: id, artistProfileId: guard.artistId });

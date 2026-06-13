@@ -31,6 +31,8 @@ function makeRepo(overrides?: Partial<IArtistRepository>): IArtistRepository {
   return {
     findBySlug: vi.fn(),
     findByUserId: vi.fn(),
+    findAllByUserId: vi.fn(),
+    findByIdForUser: vi.fn(),
     update: vi.fn(),
     ...overrides,
   };

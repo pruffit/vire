@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
+import { db, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
 import { TrackService, NotFoundError } from '@vire/core';
 import { uploadBuffer } from '@/lib/s3';
+import { getActiveArtist } from '@/lib/active-artist';
 import { transcodeQueue } from '@/lib/queue';
 import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, MAX_AUDIO_FILE_SIZE, validateMagicBytes, parseWavFormat, type AudioExt } from '@/lib/upload';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
@@ -17,8 +18,7 @@ export async function POST(req: Request) {
   const rl = await rateLimit(clientKey(req, 'upload'), 20, 3600);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
-  const artistRepo = new DrizzleArtistRepository(db);
-  const artist = await artistRepo.findByUserId(session.user.id);
+  const artist = await getActiveArtist(session.user.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }

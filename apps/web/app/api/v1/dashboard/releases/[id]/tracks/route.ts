@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
+import { db, DrizzleReleaseRepository } from '@vire/db';
 import { isUuid } from '@/lib/upload';
+import { getActiveArtist } from '@/lib/active-artist';
 
 // Лёгкий поллинг статусов треков релиза: фронт опрашивает, пока есть PROCESSING,
 // чтобы показать переход «обрабатывается → готов» без перезагрузки страницы.
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -15,7 +16,7 @@ export async function GET(
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
+  const artist = await getActiveArtist(session.user.id, req);
   if (!artist) return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
 
   const releaseRepo = new DrizzleReleaseRepository(db);

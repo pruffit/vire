@@ -591,10 +591,8 @@ export async function createArtistForUser(data: {
   const [user] = await db.select().from(users).where(eq(users.email, data.email)).limit(1);
   if (!user) return { ok: false, error: 'Пользователь не найден' };
 
-  const [existing] = await db.select({ slug: artistProfiles.slug })
-    .from(artistProfiles).where(eq(artistProfiles.userId, user.id)).limit(1);
-  if (existing) return { ok: false, error: `Уже есть профиль @${existing.slug}` };
-
+  // Несколько артистов на один аккаунт разрешены — один человек может управлять
+  // несколькими карточками. Уникален только slug (глобально).
   const [slugTaken] = await db.select({ id: artistProfiles.id })
     .from(artistProfiles).where(eq(artistProfiles.slug, data.slug)).limit(1);
   if (slugTaken) return { ok: false, error: `Slug @${data.slug} уже занят` };

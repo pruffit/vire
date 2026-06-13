@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, listArtistPosts } from '@vire/db';
+import { listArtistPosts } from '@vire/db';
+import { getActiveArtistForPage } from '@/lib/active-artist';
 import { PostsManager, type ClientPost } from './posts-manager';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export default async function DashboardPostsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/dashboard/posts');
 
-  const artist = await new DrizzleArtistRepository(db).findByUserId(session.user.id);
+  const artist = await getActiveArtistForPage(session.user.id);
   if (!artist) {
     return (
       <div className="min-h-full bg-background text-foreground">
