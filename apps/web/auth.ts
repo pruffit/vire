@@ -87,8 +87,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       id: 'credentials',
       credentials: { email: { type: 'email' }, password: { type: 'password' } },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null;
+        // Брутфорс-защита: лимит попыток входа по IP (Redis fixed-window).
+        // Динамический импорт — чтобы ioredis не попадал в граф middleware.
+        try {
+          const { rateLimit, clientKey } = await import('@/lib/rate-limit');
+          const rl = await rateLimit(clientKey(request as Request, 'login'), 30, 300);
+          if (!rl.ok) return null;
+        } catch { /* rate-limit недоступен — не блокируем вход */ }
         const user = await findUserByEmail(credentials.email as string);
         if (!user?.passwordHash) return null;
         const ok = await compare(credentials.password as string, user.passwordHash);
