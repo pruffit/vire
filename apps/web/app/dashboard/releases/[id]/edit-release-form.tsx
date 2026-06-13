@@ -98,7 +98,7 @@ export function EditReleaseForm({ releaseId, initial }: Props) {
         <input name="releaseDate" type="date" disabled={busy} defaultValue={initial.releaseDate} className={`${input} w-44`} />
       </Field>
 
-      <Field label="Обложка" hint="оставь пустым — обложка не изменится">
+      <Field label="Обложка" hint="Квадрат 1:1, от 1400×1400 (рек. 3000×3000) · оставь пустым — без изменений">
         <div className="flex items-start gap-4">
           <input
             name="cover"

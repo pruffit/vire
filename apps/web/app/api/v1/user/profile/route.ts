@@ -3,18 +3,11 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { updateUserName, updateUserImage } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
+import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
 
 const schema = z.object({
   name: z.string().min(1).max(50),
 });
-
-const AVATAR_MIME: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
-
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 МБ
 
 export async function PATCH(req: Request) {
   const session = await auth();
@@ -51,16 +44,11 @@ export async function POST(req: Request) {
   if (!(avatar instanceof File) || avatar.size === 0) {
     return NextResponse.json({ error: 'No file' }, { status: 400 });
   }
-  const ext = AVATAR_MIME[avatar.type];
-  if (!ext) {
-    return NextResponse.json({ error: 'Аватар должен быть JPEG, PNG или WebP' }, { status: 400 });
-  }
-  if (avatar.size > MAX_AVATAR_BYTES) {
-    return NextResponse.json({ error: 'Файл больше 5 МБ' }, { status: 400 });
-  }
 
   const buffer = Buffer.from(await avatar.arrayBuffer());
-  const url = await uploadToStream(`avatars/users/${session.user.id}.${ext}`, buffer, avatar.type);
+  const v = validateImageUpload(avatar.size, buffer, AVATAR_POLICY);
+  if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
+  const url = await uploadToStream(`avatars/users/${session.user.id}.${v.info.ext}`, buffer, v.info.mime);
   // ?v= сбивает кэш браузера/next-image при стабильном ключе S3
   const image = `${url}?v=${Date.now()}`;
   await updateUserImage(session.user.id, image);

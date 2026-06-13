@@ -98,7 +98,7 @@ export function CreateReleaseForm() {
       </Field>
 
       {/* Cover */}
-      <Field label="Обложка" hint="JPEG, PNG или WebP · необязательно">
+      <Field label="Обложка" hint="Квадрат 1:1, от 1400×1400 (рекомендуем 3000×3000) · JPEG/PNG/WebP · необязательно">
         <div className="flex items-start gap-4">
           <input
             name="cover"

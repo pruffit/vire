@@ -249,7 +249,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       </div>
 
       {/* Avatar */}
-      <Field label="Аватар" hint="JPEG, PNG или WebP · необязательно">
+      <Field label="Аватар" hint="Около-квадрат, от 400×400 · JPEG/PNG/WebP · необязательно">
         <div className="flex items-center gap-4">
           {avatarPreview && !removeAvatar ? (
             // Локальное превью выбранного файла (blob:) — next/image его не оптимизирует

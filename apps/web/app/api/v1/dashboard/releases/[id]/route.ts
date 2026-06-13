@@ -2,15 +2,11 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
+import { validateImageUpload, COVER_POLICY } from '@/lib/image';
 import { ReleaseService, NotFoundError, ALL_GENRES, type Genre, type ReleaseType } from '@vire/core';
 
 const VALID_TYPES = new Set<ReleaseType>(['ALBUM', 'EP', 'SINGLE']);
 const VALID_GENRES = new Set<string>(ALL_GENRES);
-const COVER_MIME: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -70,12 +66,10 @@ export async function PATCH(req: Request, { params }: Params) {
 
   let coverUrl = release.coverUrl;
   if (cover instanceof File && cover.size > 0) {
-    const ext = COVER_MIME[cover.type];
-    if (!ext) {
-      return NextResponse.json({ error: 'Cover must be JPEG, PNG or WebP' }, { status: 400 });
-    }
     const buffer = Buffer.from(await cover.arrayBuffer());
-    coverUrl = await uploadToStream(`covers/${id}.${ext}`, buffer, cover.type);
+    const v = validateImageUpload(cover.size, buffer, COVER_POLICY);
+    if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
+    coverUrl = await uploadToStream(`covers/${id}.${v.info.ext}`, buffer, v.info.mime);
   }
 
   const updated = await releaseRepo.update(id, {

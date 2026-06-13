@@ -2,13 +2,8 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
+import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
 import type { ThemeTokens, ArtistLink, ArtistVideo } from '@vire/core';
-
-const AVATAR_MIME: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
 
 const FONT_SANS = ['Inter', 'Montserrat', 'Unbounded', 'Manrope', 'Geologica'];
 const FONT_MONO = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono'];
@@ -89,12 +84,10 @@ export async function POST(req: Request) {
   if (removeAvatar) {
     avatarUrl = null;
   } else if (avatar instanceof File && avatar.size > 0) {
-    const ext = AVATAR_MIME[avatar.type];
-    if (!ext) {
-      return NextResponse.json({ error: 'Avatar must be JPEG, PNG or WebP' }, { status: 400 });
-    }
     const buffer = Buffer.from(await avatar.arrayBuffer());
-    avatarUrl = await uploadToStream(`avatars/${artist.id}.${ext}`, buffer, avatar.type);
+    const v = validateImageUpload(avatar.size, buffer, AVATAR_POLICY);
+    if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
+    avatarUrl = await uploadToStream(`avatars/${artist.id}.${v.info.ext}`, buffer, v.info.mime);
   }
 
   const themeTokens: ThemeTokens = {
