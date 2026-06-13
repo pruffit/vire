@@ -24,7 +24,7 @@ export default async function NewReleasePage() {
           <p className="text-sm text-white/40">{artist.name}</p>
         </div>
 
-        <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+        <div className="rounded-xl bg-white/5 border border-white/10 p-4 sm:p-6">
           <CreateReleaseForm />
         </div>
 

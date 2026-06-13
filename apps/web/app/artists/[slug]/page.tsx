@@ -118,7 +118,7 @@ export default async function ArtistPage({ params }: Props) {
       <ArtistCollapseBar name={artist.name} avatarUrl={artist.avatarUrl} verified={artist.verified} />
 
       {/* Content below hero */}
-      <div className="mx-auto max-w-4xl px-6 pb-16 space-y-14">
+      <div className="mx-auto max-w-4xl px-5 sm:px-6 pb-16 space-y-14">
         {upcoming.length > 0 && <UpcomingSection upcoming={upcoming} />}
         <ReleasesSection
           releases={releases}
@@ -146,21 +146,21 @@ function ArtistHero({
       <header
         className="relative overflow-hidden"
         style={{
-          minHeight: 'clamp(380px, 55vh, 580px)',
+          minHeight: 'clamp(320px, 50vh, 580px)',
           // Glow radiates from the right where the avatar lives
           background:
             'radial-gradient(ellipse 55% 85% at 88% 50%, color-mix(in oklch, var(--artist-accent) 20%, var(--artist-bg)), var(--artist-bg))',
         }}
       >
-        <div className="relative z-10 mx-auto max-w-4xl px-6 h-full flex items-end pb-14 pt-16">
-          <div className="w-full grid grid-cols-1 sm:grid-cols-5 gap-6 sm:gap-10 items-end">
+        <div className="relative z-10 mx-auto max-w-4xl px-5 sm:px-6 h-full flex items-end pb-10 pt-14 sm:pb-14 sm:pt-16">
+          <div className="w-full grid grid-cols-1 sm:grid-cols-5 gap-5 sm:gap-10 items-end">
 
             {/* Left: name + bio + actions */}
             <div className="sm:col-span-3 space-y-5">
               <div className="space-y-3">
                 <h1
-                  className="font-bold tracking-tight leading-[0.92] text-balance"
-                  style={{ fontSize: 'clamp(2.6rem, 7.5vw, 5.5rem)' }}
+                  className="font-bold tracking-tight leading-[0.92] text-balance break-words"
+                  style={{ fontSize: 'clamp(2.2rem, 8vw, 5.5rem)' }}
                 >
                   {artist.name}
                 </h1>
@@ -204,8 +204,8 @@ function ArtistHero({
               </div>
             </div>
 
-            {/* Right: avatar with atmospheric glow */}
-            <div className="sm:col-span-2 flex justify-end items-end">
+            {/* Right: avatar with atmospheric glow (на мобилке — сверху, слева) */}
+            <div className="order-first sm:order-none sm:col-span-2 flex justify-start sm:justify-end items-center sm:items-end">
               <div className="relative">
                 {/* Glow blob — fills the right side of hero */}
                 <div
@@ -220,7 +220,7 @@ function ArtistHero({
                     width={280}
                     height={280}
                     priority
-                    className="relative z-10 w-40 h-40 sm:w-64 sm:h-64 rounded-full object-cover"
+                    className="relative z-10 w-28 h-28 sm:w-64 sm:h-64 rounded-full object-cover"
                     style={{
                       boxShadow:
                         '0 0 0 1.5px color-mix(in oklch, var(--artist-accent) 50%, transparent)',
@@ -228,7 +228,7 @@ function ArtistHero({
                   />
                 ) : (
                   <div
-                    className="relative z-10 w-40 h-40 sm:w-64 sm:h-64 rounded-full bg-white/5 flex items-center justify-center font-mono"
+                    className="relative z-10 w-28 h-28 sm:w-64 sm:h-64 rounded-full bg-white/5 flex items-center justify-center font-mono"
                     style={{
                       fontSize: 'clamp(3rem, 8vw, 5rem)',
                       opacity: 0.2,

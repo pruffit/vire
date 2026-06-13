@@ -99,14 +99,14 @@ export function CreateReleaseForm() {
 
       {/* Cover */}
       <Field label="Обложка" hint="Квадрат 1:1, от 1400×1400 (рекомендуем 3000×3000) · JPEG/PNG/WebP · необязательно">
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4 min-w-0">
           <input
             name="cover"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             disabled={busy}
             onChange={handleCoverChange}
-            className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-sm file:cursor-pointer hover:file:bg-white/20 disabled:opacity-50"
+            className="min-w-0 max-w-full flex-1 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-sm file:cursor-pointer hover:file:bg-white/20 disabled:opacity-50"
           />
           {coverPreview && (
             // Локальное превью выбранного файла (blob:) — next/image его не оптимизирует
@@ -164,8 +164,8 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline gap-2">
+    <div className="flex flex-col gap-1.5 min-w-0">
+      <div className="flex items-baseline gap-2 flex-wrap">
         <span className="text-sm font-medium">{label}</span>
         {hint && <span className="text-xs text-white/30">{hint}</span>}
       </div>
