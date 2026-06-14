@@ -10,7 +10,7 @@ export const SITE_URL = (
 export const SITE_NAME = 'Vire';
 
 // Версия проекта — показывается в футере. Держим в синхроне с package.json.
-export const SITE_VERSION = '1.0.37';
+export const SITE_VERSION = '1.0.38';
 
 export const SITE_DESCRIPTION =
   'Независимая музыкальная площадка для артистов и слушателей СНГ';
