@@ -7,6 +7,8 @@ import {
   getFeed,
   getMoodCounts,
   getEditorialPlaylists,
+  getPersonalPlaylists,
+  getPopularPlaylists,
   getPublicUserPlaylists,
   getLikedPlaylistIds,
 } from '@vire/db';
@@ -24,17 +26,29 @@ export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [latest, upcoming, artists, feed, listeningNow, moodCounts, editorialPlaylists, publicPlaylists, likedPlaylistIds] = await Promise.all([
+  const [latest, upcoming, artists, feed, listeningNow, moodCounts, sharedPlaylists, personalRaw, publicPlaylists, likedPlaylistIds] = await Promise.all([
     getLatestReleases(13),
     getUpcomingReleases(8),
     listActiveArtists(),
     userId ? getFeed(userId) : Promise.resolve([]),
     getListeningNow(6),
     getMoodCounts().catch(() => []),
-    getEditorialPlaylists(8),
+    getEditorialPlaylists(4),
+    userId ? getPersonalPlaylists(userId, 4) : Promise.resolve([]),
     getPublicUserPlaylists(8),
     userId ? getLikedPlaylistIds(userId) : Promise.resolve([]),
   ]);
+
+  // «Подборки» = две группы: 4 общих (одинаковы для всех) + 4 личных. Личную
+  // половину при нехватке сигнала (гость/новый юзер) добиваем популярным, чтобы
+  // сетка всегда была полной.
+  let personalPlaylists = personalRaw;
+  if (personalPlaylists.length < 4) {
+    const exclude = [...sharedPlaylists, ...personalPlaylists].map((p) => p.id);
+    const fill = await getPopularPlaylists(4 - personalPlaylists.length, exclude);
+    personalPlaylists = [...personalPlaylists, ...fill];
+  }
+  const editorialPlaylists = [...sharedPlaylists, ...personalPlaylists];
 
   const featured = latest[0] ?? null;
   const rest = latest.slice(1, 13);

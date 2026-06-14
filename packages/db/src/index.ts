@@ -101,15 +101,24 @@ export {
   getTrackPlaylistIds,
   renamePlaylist,
   getEditorialPlaylists,
+  getPersonalPlaylists,
+  getPopularPlaylists,
   getPublicUserPlaylists,
   upsertEditorialPlaylist,
+  createPersonalPlaylist,
+  deletePersonalPlaylists,
   likePlaylist,
   unlikePlaylist,
   getPlaylistLikeState,
   getLikedPlaylistIds,
 } from './queries/playlists';
 export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist } from './queries/playlists';
-export { generateAllEditorialPlaylists } from './queries/editorial';
+export {
+  generateAllEditorialPlaylists,
+  generateSharedPlaylists,
+  generatePersonalPlaylistsForAllUsers,
+  generatePersonalPlaylists,
+} from './queries/editorial';
 export {
   findUserByEmail,
   createUserWithPassword,

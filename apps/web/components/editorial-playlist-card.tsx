@@ -11,6 +11,7 @@ import { HeartIcon } from '@/components/icons';
 
 const KIND_LABELS: Record<string, string | undefined> = {
   USER: undefined, // пользовательские плейлисты — бейдж не показываем
+  PERSONAL: undefined, // личные — заголовок уже говорит «для тебя», бейдж лишний
   MOOD: 'Настроение',
   TRENDING: 'В тренде',
   RELISTEN: 'Снова и снова',

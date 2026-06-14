@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { playlists, playlistTracks, playlistLikes, tracks, releases, artistProfiles } from '../schema';
 
@@ -215,28 +215,21 @@ export async function renamePlaylist(
     .where(and(eq(playlists.id, playlistId), eq(playlists.ownerUserId, userId)));
 }
 
-// ─── Редакционные плейлисты ────────────────────────────────────────────────
+// ─── Редакционные и личные подборки ────────────────────────────────────────
 
-/** Возвращает редакционные плейлисты с обложками треков (до 4 для коллажа). */
-export async function getEditorialPlaylists(limit = 8): Promise<EditorialPlaylist[]> {
-  const rows = await db
-    .select({
-      id: playlists.id,
-      title: playlists.title,
-      description: playlists.description,
-      kind: playlists.kind,
-      likesCount: playlists.likesCount,
-    })
-    .from(playlists)
-    .where(eq(playlists.isCurated, true))
-    .orderBy(desc(playlists.updatedAt))
-    .limit(limit);
+interface PlaylistMetaRow {
+  id: string;
+  title: string;
+  description: string | null;
+  kind: string;
+  likesCount: number;
+}
 
+/** Досчитывает trackCount + до 4 обложек (коллаж). Общий хелпер всех геттеров подборок. */
+async function hydratePlaylists(rows: PlaylistMetaRow[]): Promise<EditorialPlaylist[]> {
   if (rows.length === 0) return [];
-
   const playlistIds = rows.map((r) => r.id);
 
-  // Считаем треки и собираем коллаж одним запросом на id
   const trackCountRows = await db
     .select({ playlistId: playlistTracks.playlistId, c: count() })
     .from(playlistTracks)
@@ -247,7 +240,6 @@ export async function getEditorialPlaylists(limit = 8): Promise<EditorialPlaylis
     trackCountRows.map((r) => [r.playlistId, Number(r.c)]),
   );
 
-  // Первые 4 обложки для каждого плейлиста
   const coverRows = await db
     .select({
       playlistId: playlistTracks.playlistId,
@@ -271,6 +263,7 @@ export async function getEditorialPlaylists(limit = 8): Promise<EditorialPlaylis
     if (list.length < 4 && row.coverUrl) list.push(row.coverUrl);
   }
 
+  // Сохраняем порядок входных rows (важно для приоритета показа).
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -282,7 +275,69 @@ export async function getEditorialPlaylists(limit = 8): Promise<EditorialPlaylis
   }));
 }
 
-/** Создаёт или обновляет редакционный плейлист по kind+title. */
+const META = {
+  id: playlists.id,
+  title: playlists.title,
+  description: playlists.description,
+  kind: playlists.kind,
+  likesCount: playlists.likesCount,
+};
+
+// Приоритет показа общих подборок: тренды и свежее впереди, затем настроения,
+// «возвращаются снова» — как фолбэк-наполнитель.
+const SHARED_PRIORITY = sql`CASE ${playlists.kind}
+  WHEN 'TRENDING' THEN 0 WHEN 'FRESH' THEN 1 WHEN 'MOOD' THEN 2 ELSE 3 END`;
+
+/**
+ * Общие (одинаковые для всех) редакционные подборки. Без личных
+ * (`target_user_id IS NULL`) и без пользовательских (`kind <> 'USER'`).
+ */
+export async function getEditorialPlaylists(limit = 4): Promise<EditorialPlaylist[]> {
+  const rows = await db
+    .select(META)
+    .from(playlists)
+    .where(and(
+      eq(playlists.isCurated, true),
+      sql`${playlists.targetUserId} IS NULL`,
+      sql`${playlists.kind} <> 'USER'`,
+    ))
+    .orderBy(SHARED_PRIORITY, desc(playlists.likesCount), desc(playlists.updatedAt))
+    .limit(limit);
+  return hydratePlaylists(rows);
+}
+
+/** Личные подборки конкретного юзера (kind=PERSONAL, target_user_id = userId). */
+export async function getPersonalPlaylists(userId: string, limit = 4): Promise<EditorialPlaylist[]> {
+  const rows = await db
+    .select(META)
+    .from(playlists)
+    .where(eq(playlists.targetUserId, userId))
+    .orderBy(desc(playlists.updatedAt))
+    .limit(limit);
+  return hydratePlaylists(rows);
+}
+
+/**
+ * Популярные общие подборки — фолбэк для личной половины (гость / новый юзер
+ * без сигнала). Исключает уже показанные id.
+ */
+export async function getPopularPlaylists(limit: number, excludeIds: string[] = []): Promise<EditorialPlaylist[]> {
+  if (limit <= 0) return [];
+  const rows = await db
+    .select(META)
+    .from(playlists)
+    .where(and(
+      eq(playlists.isCurated, true),
+      sql`${playlists.targetUserId} IS NULL`,
+      sql`${playlists.kind} <> 'USER'`,
+      excludeIds.length > 0 ? notInArray(playlists.id, excludeIds) : sql`true`,
+    ))
+    .orderBy(desc(playlists.likesCount), desc(playlists.updatedAt))
+    .limit(limit);
+  return hydratePlaylists(rows);
+}
+
+/** Создаёт или обновляет общую редакционную подборку по kind+title (target_user_id IS NULL). */
 export async function upsertEditorialPlaylist(opts: {
   kind: 'MOOD' | 'TRENDING' | 'RELISTEN' | 'FRESH';
   title: string;
@@ -294,7 +349,11 @@ export async function upsertEditorialPlaylist(opts: {
   const existing = await db
     .select({ id: playlists.id })
     .from(playlists)
-    .where(and(eq(playlists.kind, kind), eq(playlists.title, title)))
+    .where(and(
+      eq(playlists.kind, kind),
+      eq(playlists.title, title),
+      sql`${playlists.targetUserId} IS NULL`,
+    ))
     .limit(1);
 
   let playlistId: string;
@@ -327,72 +386,53 @@ export async function upsertEditorialPlaylist(opts: {
   }
 }
 
+/** Создаёт личную подборку (kind=PERSONAL) для юзера. Личные пересобираются целиком,
+ *  поэтому это insert, а не upsert — перед партией вызывай deletePersonalPlaylists. */
+export async function createPersonalPlaylist(opts: {
+  userId: string;
+  title: string;
+  description?: string;
+  trackIds: string[];
+}): Promise<void> {
+  const { userId, title, description, trackIds } = opts;
+  if (trackIds.length === 0) return;
+  const [row] = await db
+    .insert(playlists)
+    .values({
+      title,
+      description: description ?? null,
+      kind: 'PERSONAL',
+      visibility: 'PUBLIC',
+      isCurated: true,
+      targetUserId: userId,
+    })
+    .returning({ id: playlists.id });
+  await db.insert(playlistTracks).values(
+    trackIds.map((trackId, i) => ({ playlistId: row.id, trackId, position: i })),
+  );
+}
+
+/** Удаляет все личные подборки юзера вместе с их треками. */
+export async function deletePersonalPlaylists(userId: string): Promise<void> {
+  const rows = await db
+    .select({ id: playlists.id })
+    .from(playlists)
+    .where(eq(playlists.targetUserId, userId));
+  if (rows.length === 0) return;
+  const ids = rows.map((r) => r.id);
+  await db.delete(playlistTracks).where(inArray(playlistTracks.playlistId, ids));
+  await db.delete(playlists).where(inArray(playlists.id, ids)); // playlist_likes — onDelete cascade
+}
+
 /** Публичные пользовательские плейлисты для секции на главной. */
 export async function getPublicUserPlaylists(limit = 8): Promise<EditorialPlaylist[]> {
   const rows = await db
-    .select({
-      id: playlists.id,
-      title: playlists.title,
-      description: playlists.description,
-      kind: playlists.kind,
-      likesCount: playlists.likesCount,
-    })
+    .select(META)
     .from(playlists)
-    .where(
-      and(
-        eq(playlists.visibility, 'PUBLIC'),
-        eq(playlists.kind, 'USER'),
-      ),
-    )
+    .where(and(eq(playlists.visibility, 'PUBLIC'), eq(playlists.kind, 'USER')))
     .orderBy(desc(playlists.likesCount), desc(playlists.updatedAt))
     .limit(limit);
-
-  if (rows.length === 0) return [];
-
-  const playlistIds = rows.map((r) => r.id);
-
-  const trackCountRows = await db
-    .select({ playlistId: playlistTracks.playlistId, c: count() })
-    .from(playlistTracks)
-    .where(inArray(playlistTracks.playlistId, playlistIds))
-    .groupBy(playlistTracks.playlistId);
-
-  const countByPlaylist = Object.fromEntries(
-    trackCountRows.map((r) => [r.playlistId, Number(r.c)]),
-  );
-
-  const coverRows = await db
-    .select({
-      playlistId: playlistTracks.playlistId,
-      coverUrl: releases.coverUrl,
-      position: playlistTracks.position,
-    })
-    .from(playlistTracks)
-    .innerJoin(tracks, eq(tracks.id, playlistTracks.trackId))
-    .innerJoin(releases, eq(releases.id, tracks.releaseId))
-    .where(
-      and(
-        inArray(playlistTracks.playlistId, playlistIds),
-        sql`${releases.coverUrl} IS NOT NULL`,
-      ),
-    )
-    .orderBy(asc(playlistTracks.position));
-
-  const coversByPlaylist: Record<string, string[]> = {};
-  for (const row of coverRows) {
-    const list = (coversByPlaylist[row.playlistId] ??= []);
-    if (list.length < 4 && row.coverUrl) list.push(row.coverUrl);
-  }
-
-  return rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    description: r.description,
-    kind: r.kind,
-    trackCount: countByPlaylist[r.id] ?? 0,
-    likesCount: r.likesCount,
-    covers: coversByPlaylist[r.id] ?? [],
-  }));
+  return hydratePlaylists(rows);
 }
 
 // ─── Лайки плейлистов ──────────────────────────────────────────────────────

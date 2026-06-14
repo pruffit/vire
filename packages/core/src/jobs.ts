@@ -3,6 +3,7 @@ export const QUEUE_TRANSCODE = 'transcode' as const;
 export const QUEUE_PLAY_EVENTS = 'play-events' as const;
 export const QUEUE_NOTIFY_RELEASE = 'notify-release' as const;
 export const QUEUE_ANALYZE = 'analyze-audio' as const;
+export const QUEUE_EDITORIAL = 'editorial' as const;
 
 export interface TranscodeJobData {
   trackId: string;
@@ -37,4 +38,9 @@ export interface PlayEventJobData {
   source: string;
   durationPlayedSec: number;
   startedAt: string; // ISO string
+}
+
+// Регенерация подборок по расписанию: shared — раз в сутки, personal — раз в 4ч.
+export interface EditorialJobData {
+  scope: 'shared' | 'personal';
 }

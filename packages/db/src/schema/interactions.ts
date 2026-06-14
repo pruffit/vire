@@ -8,7 +8,9 @@ import { artistProfiles } from './artists';
 export const purchaseItemTypeEnum = pgEnum('purchase_item_type', ['TRACK', 'RELEASE']);
 export const purchaseStatusEnum = pgEnum('purchase_status', ['PENDING', 'PAID', 'FAILED', 'REFUNDED']);
 export const playlistVisibilityEnum = pgEnum('playlist_visibility', ['PRIVATE', 'PUBLIC']);
-export const playlistKindEnum = pgEnum('playlist_kind', ['USER', 'MOOD', 'TRENDING', 'RELISTEN', 'FRESH']);
+// Порядок append-only (миграция = ALTER TYPE ADD VALUE). PERSONAL — личные
+// подборки под конкретного юзера (target_user_id), генерятся раз в 4ч.
+export const playlistKindEnum = pgEnum('playlist_kind', ['USER', 'MOOD', 'TRENDING', 'RELISTEN', 'FRESH', 'PERSONAL']);
 export const subscriptionTypeEnum = pgEnum('subscription_type', ['ARTIST_TIER', 'LISTENER_PREMIUM']);
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['ACTIVE', 'CANCELLED', 'EXPIRED']);
 
@@ -36,6 +38,8 @@ export const playlists = pgTable('playlists', {
   id: uuid('id').primaryKey().defaultRandom(),
   // null для редакционных подборок — у них нет пользователя-владельца
   ownerUserId: uuid('owner_user_id').references(() => users.id),
+  // Для личных подборок (kind=PERSONAL): кому они сгенерированы. У общих/пользовательских — null.
+  targetUserId: uuid('target_user_id').references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
   kind: playlistKindEnum('kind').notNull().default('USER'),
@@ -45,7 +49,10 @@ export const playlists = pgTable('playlists', {
   likesCount: integer('likes_count').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (t) => [index('playlists_owner_user_id_idx').on(t.ownerUserId)]);
+}, (t) => [
+  index('playlists_owner_user_id_idx').on(t.ownerUserId),
+  index('playlists_target_user_id_idx').on(t.targetUserId),
+]);
 
 export const playlistTracks = pgTable('playlist_tracks', {
   id: uuid('id').primaryKey().defaultRandom(),
