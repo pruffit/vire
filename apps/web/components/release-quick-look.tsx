@@ -7,6 +7,7 @@ import { AnimatePresence, motion, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
+import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 
 export interface QuickLookRelease {
@@ -176,7 +177,7 @@ export function ReleaseQuickLook({
           {/* Play/pause-подсказка на ховере */}
           <span className="absolute inset-0 grid place-items-center bg-black/0 group-hover:bg-black/15 transition-colors">
             <span className="opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300 ease-soft grid place-items-center w-11 h-11 rounded-full bg-black/55 backdrop-blur-md ring-1 ring-white/30 text-white">
-              {isThisReleasePlaying && isPlaying ? <PauseIcon /> : <PlayIcon />}
+              {isThisReleasePlaying && isPlaying ? <PauseIcon size={13} /> : <PlayIcon size={15} className="translate-x-[1px]" />}
             </span>
           </span>
         </div>
@@ -239,7 +240,7 @@ export function ReleaseQuickLook({
                   disabled={!tracks || readyQueue().length === 0}
                   className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-30 transition-opacity"
                 >
-                  {isThisReleasePlaying && isPlaying ? <PauseIcon /> : <PlayIcon />}
+                  {isThisReleasePlaying && isPlaying ? <PauseIcon size={13} /> : <PlayIcon size={15} className="translate-x-[1px]" />}
                   {isThisReleasePlaying ? (isPlaying ? 'Пауза' : 'Продолжить') : 'Слушать'}
                 </motion.button>
                 <Link href={releaseHref} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -288,17 +289,6 @@ export function ReleaseQuickLook({
   );
 }
 
-function PlayIcon() {
-  return <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="translate-x-[1px]"><polygon points="6,4 20,12 6,20" /></svg>;
-}
-function PauseIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <rect x="5" y="3" width="4" height="18" rx="1" />
-      <rect x="15" y="3" width="4" height="18" rx="1" />
-    </svg>
-  );
-}
 function NoteIcon() {
   return <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" /></svg>;
 }

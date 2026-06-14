@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring, ease } from '@vire/ui/motion';
+import { SearchIcon } from '@/components/icons';
 import type { SearchResults } from '@vire/db';
 
 interface FlatResult {
@@ -150,7 +151,7 @@ export function NavSearch() {
         transition={{ type: 'spring', stiffness: 220, damping: 18 }}
         className="ml-1 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors flex items-center gap-1.5"
       >
-        <SearchIcon />
+        <SearchIcon size={15} />
         {/* Хинт горячей клавиши — только desktop, прячется когда поле раскрыто */}
         <AnimatePresence initial={false}>
           {!open && (
@@ -214,11 +215,3 @@ export function NavSearch() {
   );
 }
 
-function SearchIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.35-4.35" />
-    </svg>
-  );
-}

@@ -10,6 +10,7 @@ import { controls, initAudioEngine } from './audio-engine';
 import { usePlayerHotkeys } from './use-player-hotkeys';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { TrackShare } from '@/components/track-share';
+import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 
 export function Player() {
@@ -396,7 +397,7 @@ function Controls({ showWaveMode = true }: { showWaveMode?: boolean }) {
             ) : isPlaying ? (
               <PauseIcon />
             ) : (
-              <PlayIcon />
+              <PlayIcon className="translate-x-[1px]" />
             )}
           </motion.span>
         </AnimatePresence>
@@ -612,23 +613,6 @@ function ErrorIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-    </svg>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-      <polygon points="5,3 19,12 5,21" />
-    </svg>
-  );
-}
-
-function PauseIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-      <rect x="5" y="3" width="4" height="18" rx="1" />
-      <rect x="15" y="3" width="4" height="18" rx="1" />
     </svg>
   );
 }

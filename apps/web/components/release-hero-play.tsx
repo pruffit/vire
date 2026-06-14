@@ -3,15 +3,8 @@
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
+import { PlayIcon } from '@/components/icons';
 import type { PlayerTrack } from '@/store/player';
-
-function PlayIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="translate-x-[1px]">
-      <polygon points="6,4 20,12 6,20" />
-    </svg>
-  );
-}
 
 export function ReleaseHeroPlay({ queue }: { queue: PlayerTrack[] }) {
   if (queue.length === 0) return null;
@@ -32,7 +25,7 @@ export function ReleaseHeroPlay({ queue }: { queue: PlayerTrack[] }) {
         color: 'var(--artist-bg)',
       }}
     >
-      <PlayIcon />
+      <PlayIcon className="translate-x-[1px]" />
       Слушать
     </motion.button>
   );

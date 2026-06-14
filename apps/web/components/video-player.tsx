@@ -6,6 +6,7 @@ import { spring } from '@vire/ui/motion';
 import { activeEmbedUrl, type EmbedInfo } from '@/lib/embed';
 import { loadYouTubeApi, YT_STATE, type YTPlayer } from '@/lib/youtube-api';
 import { loadVkPlayerApi, type VkPlayerInstance } from '@/lib/vk-player-api';
+import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 
 /**
@@ -254,7 +255,7 @@ function YouTubePlayer({ videoId, title }: { videoId: string; title?: string }) 
               aria-label="Воспроизвести"
               className="absolute left-1/2 top-1/2 z-[3] -translate-x-1/2 -translate-y-1/2 grid place-items-center w-16 h-16 rounded-full bg-black/50 backdrop-blur-md ring-1 ring-white/30 text-white transition-transform hover:scale-105"
             >
-              {ended ? <ReplayIcon /> : <PlayIcon size={26} />}
+              {ended ? <ReplayIcon /> : <PlayIcon size={26} className="translate-x-[1px]" />}
             </button>
           )}
 
@@ -316,7 +317,7 @@ function ControlsBar({
 
       <div className="mt-1.5 flex items-center gap-3 text-white">
         <button type="button" onClick={onTogglePlay} aria-label={playing ? 'Пауза' : 'Воспроизвести'} className="shrink-0 hover:opacity-80 transition-opacity">
-          {playing ? <PauseIcon /> : <PlayIcon size={16} />}
+          {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} className="translate-x-[1px]" />}
         </button>
 
         <span className="text-[11px] font-mono tabular-nums text-white/80 shrink-0">
@@ -408,7 +409,7 @@ function Facade({ posterUrl, title, onPlay }: { posterUrl: string | null; title?
       )}
       <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
       <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-16 h-16 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/40 text-white transition-transform duration-300 ease-soft group-hover/f:scale-110">
-        <PlayIcon size={26} />
+        <PlayIcon size={26} className="translate-x-[1px]" />
       </span>
     </motion.button>
   );
@@ -578,7 +579,7 @@ function VkPlayer({ embed, title }: { embed: EmbedInfo; title?: string }) {
                   aria-label="Воспроизвести"
                   className="absolute left-1/2 top-1/2 z-[3] -translate-x-1/2 -translate-y-1/2 grid place-items-center w-16 h-16 rounded-full bg-black/50 backdrop-blur-md ring-1 ring-white/30 text-white transition-transform hover:scale-105"
                 >
-                  {ended ? <ReplayIcon /> : <PlayIcon size={26} />}
+                  {ended ? <ReplayIcon /> : <PlayIcon size={26} className="translate-x-[1px]" />}
                 </button>
               )}
 
@@ -603,12 +604,6 @@ function VkPlayer({ embed, title }: { embed: EmbedInfo; title?: string }) {
   );
 }
 
-function PlayIcon({ size = 20 }: { size?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="translate-x-[1px]"><polygon points="6,4 20,12 6,20" /></svg>;
-}
-function PauseIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>;
-}
 function ReplayIcon() {
   return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>;
 }

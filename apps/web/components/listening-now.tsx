@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
+import { PlayIcon } from '@/components/icons';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 
 export interface ListeningNowTrack {
@@ -112,7 +113,7 @@ function TrackRow({ track }: { track: ListeningNowTrack }) {
           <Image src={track.coverUrl} alt="" fill sizes="40px" className="object-cover" />
         )}
         <span className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <PlayIcon />
+          <PlayIcon size={12} className="text-white" />
         </span>
       </span>
       <span className="flex-1 min-w-0">
@@ -139,10 +140,3 @@ function LivePulse({ small = false }: { small?: boolean }) {
   );
 }
 
-function PlayIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-      <polygon points="5,3 19,12 5,21" />
-    </svg>
-  );
-}

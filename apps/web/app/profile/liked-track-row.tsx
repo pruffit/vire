@@ -6,6 +6,7 @@ import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { useLikesStore } from '@/store/likes';
 import { controls, initAudioEngine } from '@/components/player/audio-engine';
 import { PlayerLikeButton } from '@/components/player-like-button';
+import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 
 interface Props {
@@ -44,7 +45,7 @@ export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCo
           <div className="w-full h-full bg-white/5" />
         )}
         <span className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-          {isThisTrack && isPlaying ? <PauseIcon /> : <PlayIcon />}
+          {isThisTrack && isPlaying ? <PauseIcon size={12} className="text-white" /> : <PlayIcon size={12} className="text-white" />}
         </span>
       </div>
 
@@ -71,9 +72,3 @@ export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCo
   );
 }
 
-function PlayIcon() {
-  return <svg width="12" height="12" viewBox="0 0 24 24" fill="white" aria-hidden="true"><polygon points="5,3 19,12 5,21" /></svg>;
-}
-function PauseIcon() {
-  return <svg width="12" height="12" viewBox="0 0 24 24" fill="white" aria-hidden="true"><rect x="5" y="3" width="4" height="18" rx="1" /><rect x="15" y="3" width="4" height="18" rx="1" /></svg>;
-}

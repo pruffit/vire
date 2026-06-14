@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { motion } from 'motion/react';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
+import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 import type { PlayerTrack } from '@/store/player';
 import type { PlaylistTrackRow as TrackData } from '@vire/db';
@@ -72,7 +73,7 @@ export function PlaylistTrackRow({ track, queue, queueIndex, playlistId, isOwner
             isThisTrack ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
           }`}
         >
-          {isThisTrack && isPlaying ? <PauseIcon /> : <PlayIcon />}
+          {isThisTrack && isPlaying ? <PauseIcon size={12} className="text-white" /> : <PlayIcon size={12} className="text-white" />}
         </div>
         {isThisTrack && isPlaying && (
           <div className="absolute bottom-0.5 left-0 right-0 flex justify-center gap-px">
@@ -123,22 +124,6 @@ export function PlaylistTrackRow({ track, queue, queueIndex, playlistId, isOwner
         </button>
       )}
     </motion.div>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-      <path d="M8 5v14l11-7z" />
-    </svg>
-  );
-}
-
-function PauseIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-    </svg>
   );
 }
 

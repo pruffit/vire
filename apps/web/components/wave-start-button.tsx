@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
+import { PlayIcon } from '@/components/icons';
 import type { PlayerTrack } from '@/store/player';
 
 type WaveApiTrack = {
@@ -119,7 +120,7 @@ export function WaveStartButton() {
             {loading ? (
               <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
             ) : (
-              <PlayIcon />
+              <PlayIcon size={13} />
             )}
             Запустить
           </motion.button>
@@ -156,10 +157,3 @@ function PlayingBars() {
   );
 }
 
-function PlayIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <polygon points="5,3 19,12 5,21" />
-    </svg>
-  );
-}
