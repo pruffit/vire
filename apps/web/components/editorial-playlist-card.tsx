@@ -127,10 +127,11 @@ export function EditorialPlaylistCard({
   const kindLabel = KIND_LABELS[playlist.kind];
 
   return (
-    // content-visibility:auto — карточки вне вьюпорта не отрисовываются (тяжёлые
-    // блюр-коллажи рисуются только когда видимы). contain-intrinsic-size держит
-    // высоту до первой отрисовки, чтобы скролл-бар не прыгал.
-    <div className="group flex flex-col gap-2.5 [content-visibility:auto] [contain-intrinsic-size:auto_280px]">
+    // Без content-visibility:auto — на главной карточек немного (макс ~16), а
+    // фиксированный contain-intrinsic-size не совпадал с реальной высотой
+    // (квадратная обложка зависит от ширины колонки), из-за чего текстовый блок
+    // под обложкой прыгал при скролле, когда карточка впервые входила во вьюпорт.
+    <div className="group flex flex-col gap-2.5">
       <Link
         href={`/playlists/${playlist.id}`}
         className="block relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30"
