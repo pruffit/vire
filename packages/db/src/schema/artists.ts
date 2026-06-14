@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, jsonb, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, jsonb, index, unique } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
 export const artistProfiles = pgTable('artist_profiles', {
@@ -24,6 +24,31 @@ export const artistProfiles = pgTable('artist_profiles', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [index('artist_profiles_user_id_idx').on(t.userId)]);
+
+// Smart-link лендинги (bandlink): красивая страница релиза со ссылками на
+// стриминги и соцсети. Самостоятельный маркетинг-инструмент — НЕ требует
+// загрузки музыки в Vire, живёт отдельно от releases/tracks.
+// Публичный URL: /smartlink/{artistSlug}/{slug}. links — массив { url, label? },
+// площадка распознаётся из URL при рендере (lib/platforms).
+export const smartLinks = pgTable('smart_links', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  artistProfileId: uuid('artist_profile_id')
+    .notNull()
+    .references(() => artistProfiles.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  title: text('title').notNull(),
+  subtitle: text('subtitle'),
+  coverUrl: text('cover_url'),
+  releaseDate: timestamp('release_date'),
+  links: jsonb('links').default([]),
+  isPublished: boolean('is_published').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [
+  // slug уникален в пределах артиста — URL /smartlink/{artist}/{slug}
+  unique('smart_links_artist_slug_unique').on(t.artistProfileId, t.slug),
+  index('smart_links_artist_profile_id_idx').on(t.artistProfileId),
+]);
 
 // Анонсы и новости артиста — канал коммуникации с аудиторией помимо музыки.
 // Не полноценный блог: короткие записи, хронология. title опционален.

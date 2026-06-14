@@ -10,10 +10,13 @@ import {
   getFollowerCount,
   getUpcomingByArtist,
   listArtistPosts,
+  getPublishedSmartLinks,
 } from '@vire/db';
 import type { ArtistPost } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
-import type { ArtistProfile, ArtistLink, ArtistVideo, Release } from '@vire/core';
+import type { ArtistProfile, ArtistLink, ArtistVideo, Release, SmartLink } from '@vire/core';
+import { PlatformIcon } from '@/components/platform-icon';
+import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
@@ -36,13 +39,14 @@ async function getArtistData(slug: string) {
   if (!result.ok) return null;
 
   const releaseService = new ReleaseService(new DrizzleReleaseRepository(db));
-  const [releases, upcoming, posts] = await Promise.all([
+  const [releases, upcoming, posts, smartLinks] = await Promise.all([
     releaseService.getPublishedByArtist(result.value.id),
     getUpcomingByArtist(result.value.id),
     listArtistPosts(result.value.id, 5),
+    getPublishedSmartLinks(result.value.id),
   ]);
 
-  return { artist: result.value, releases, upcoming, posts };
+  return { artist: result.value, releases, upcoming, posts, smartLinks };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -72,7 +76,7 @@ export default async function ArtistPage({ params }: Props) {
   const data = await getArtistData(slug);
   if (!data) notFound();
 
-  const { artist, releases, upcoming, posts } = data;
+  const { artist, releases, upcoming, posts, smartLinks } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
   const session = await auth();
@@ -125,6 +129,7 @@ export default async function ArtistPage({ params }: Props) {
           artistSlug={artist.slug}
           artistName={artist.name}
         />
+        {smartLinks.length > 0 && <SmartLinksSection smartLinks={smartLinks} artistSlug={artist.slug} />}
         {posts.length > 0 && <PostsSection posts={posts} />}
         {artist.videos.length > 0 && <VideosSection videos={artist.videos} />}
       </div>
@@ -185,8 +190,8 @@ function ArtistHero({
                   </p>
                 )}
 
-                {/* Follow + links on one line */}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                {/* Follow + links (иконки площадок/соцсетей) on one line */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   {followButton}
                   {artist.links.map((link: ArtistLink, i: number) => (
                     <a
@@ -194,10 +199,13 @@ function ArtistHero({
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-medium transition-opacity hover:opacity-80 underline-offset-2 hover:underline"
-                      style={{ color: 'var(--artist-accent)', opacity: 0.55 }}
+                      title={linkLabel(link.url, link.label)}
+                      aria-label={linkLabel(link.url, link.label)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-100"
+                      style={{ color: 'var(--artist-accent)', opacity: 0.6 }}
                     >
-                      {link.label}
+                      <PlatformIcon platform={detectPlatform(link.url).key} size={16} />
+                      <span>{linkLabel(link.url, link.label)}</span>
                     </a>
                   ))}
                 </div>
@@ -274,6 +282,44 @@ function UpcomingSection({
         {withDate.map((r) => (
           <CountdownBadge key={r.id} releaseDate={r.releaseDate!} title={r.title} />
         ))}
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── Smart-links (bandlink-лендинги) ────────────────────────────────────────
+
+function SmartLinksSection({ smartLinks, artistSlug }: { smartLinks: SmartLink[]; artistSlug: string }) {
+  return (
+    <Reveal>
+      <section className="space-y-5">
+        <h2 className="text-lg font-semibold tracking-tight">Слушать на площадках</h2>
+        <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+          {smartLinks.map((sl) => (
+            <StaggerItem key={sl.id}>
+              <a href={`/smartlink/${artistSlug}/${sl.slug}`} className="group flex flex-col gap-2.5">
+                <div
+                  className="relative aspect-square rounded-md overflow-hidden ring-1 transition-all duration-300 ease-soft group-hover:scale-[1.02]"
+                  style={{ '--tw-ring-color': 'color-mix(in oklch, var(--artist-text) 12%, transparent)' } as React.CSSProperties}
+                >
+                  {sl.coverUrl ? (
+                    <Image src={sl.coverUrl} alt={sl.title} fill sizes="(max-width: 640px) 50vw, 200px" className="object-cover" />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center bg-[color-mix(in_oklch,var(--artist-accent)_22%,var(--artist-bg))]">
+                      <PlatformIcon platform="website" size={28} className="opacity-30" />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-snug truncate">{sl.title}</p>
+                  <p className="text-xs truncate" style={{ color: 'color-mix(in oklch, var(--artist-text) 50%, transparent)' }}>
+                    {sl.links.length > 0 ? `${sl.links.length} площадок` : 'ссылки'}
+                  </p>
+                </div>
+              </a>
+            </StaggerItem>
+          ))}
+        </Stagger>
       </section>
     </Reveal>
   );

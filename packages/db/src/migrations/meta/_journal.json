@@ -127,6 +127,13 @@
       "when": 1781432835282,
       "tag": "0017_harsh_cerise",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781434354340,
+      "tag": "0018_chief_wallow",
+      "breakpoints": true
     }
   ]
 }

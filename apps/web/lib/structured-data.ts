@@ -35,7 +35,7 @@ export interface ArtistLd {
   slug: string;
   avatarUrl?: string | null;
   bio?: string | null;
-  links?: { label: string; url: string }[];
+  links?: { url: string; label?: string }[];
 }
 
 export interface ReleaseLd {

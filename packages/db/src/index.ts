@@ -120,6 +120,17 @@ export {
   generatePersonalPlaylists,
 } from './queries/editorial';
 export {
+  getSmartLinkBySlug,
+  getSmartLinkById,
+  getPublishedSmartLinks,
+  listSmartLinks,
+  smartLinkSlugTaken,
+  createSmartLink,
+  updateSmartLink,
+  deleteSmartLink,
+} from './queries/smart-links';
+export type { SmartLinkInput } from './queries/smart-links';
+export {
   findUserByEmail,
   createUserWithPassword,
   setUserPasswordHash,

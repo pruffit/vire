@@ -17,8 +17,28 @@ export const defaultThemeTokens: ThemeTokens = {
 };
 
 export interface ArtistLink {
-  label: string;
   url: string;
+  /** Необязательная подпись. Если пусто — площадка/название берётся из URL (detectPlatform). */
+  label?: string;
+}
+
+/**
+ * Smart-link лендинг (bandlink) — самостоятельная страница релиза со ссылками на
+ * стриминги/соцсети. Не требует загрузки музыки в Vire.
+ * Публичный URL: /smartlink/{artistSlug}/{slug}.
+ */
+export interface SmartLink {
+  id: string;
+  artistProfileId: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  coverUrl: string | null;
+  releaseDate: Date | null;
+  links: ArtistLink[];
+  isPublished: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ArtistVideo {
