@@ -60,6 +60,16 @@
   [data-scroll-area] {
     scrollbar-gutter: stable;
   }
+
+  /* Во время активной прокрутки гасим hover на контенте: на десктопе курсор
+     стоит на месте, а карточки проезжают под ним, каждая ловит :hover
+     (scale/ring/тень/оверлей) — обложки и текст «дрожат». Класс is-scrolling
+     вешает JS (components/scroll-state.tsx); снимается через паузу после
+     остановки, так что обычный hover в покое работает как прежде. */
+  #main-content.is-scrolling,
+  #main-content.is-scrolling * {
+    pointer-events: none;
+  }
 }
 
 /* WebKit/Chromium: overlay-подобный тонкий скроллбар. */

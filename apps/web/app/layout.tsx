@@ -8,6 +8,7 @@ import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { Nav } from '@/components/nav';
 import { Footer } from '@/components/footer';
 import { CookieBanner } from '@/components/cookie-banner';
+import { ScrollState } from '@/components/scroll-state';
 import { fontVariables } from '@/lib/fonts';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_TITLE } from '@/lib/site';
 import './globals.css';
@@ -73,6 +74,7 @@ export default function RootLayout({
         </a>
         <MotionProvider>
           <Nav />
+          <ScrollState />
           <div id="main-content" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             {/* Flex-обёртка внутри scroll-area прибивает футер вниз на коротких страницах.
                 Сама scroll-area остаётся plain block — иначе min-h-full страниц

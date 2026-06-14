@@ -190,7 +190,7 @@ export default async function DashboardPage() {
             )}
           </div>
           {artist && (
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap">
               <a
                 href={`/artists/${artist.slug}`}
                 target="_blank"

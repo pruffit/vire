@@ -131,14 +131,14 @@ export function SmartLinkForm({ artistSlug, initial }: { artistSlug: string; ini
 
       {/* Адрес */}
       <Field label="Адрес страницы" hint="латиница, цифры, дефис">
-        <div className="flex items-center gap-1 text-sm">
-          <span className="text-white/40 shrink-0 font-mono text-xs">/smartlink/{artistSlug}/</span>
+        <div className="flex items-center gap-1 text-sm min-w-0">
+          <span className="text-white/40 shrink-0 font-mono text-xs max-w-[45%] truncate">/smartlink/{artistSlug}/</span>
           <input
             value={slug}
             onChange={(e) => { setSlug(normalizeSlug(e.target.value)); setSlugEdited(true); }}
             disabled={busy}
             placeholder={normalizeSlug(title) || 'moy-reliz'}
-            className={`${inputCls} font-mono`}
+            className={`${inputCls} font-mono min-w-0`}
           />
         </div>
       </Field>

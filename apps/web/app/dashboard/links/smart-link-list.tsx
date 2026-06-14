@@ -62,27 +62,29 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
               layout
               exit={{ opacity: 0, height: 0 }}
               transition={spring.snappy}
-              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3"
+              className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:flex-row sm:items-center"
             >
-              <div className="shrink-0 w-12 h-12 rounded-md overflow-hidden bg-white/5 border border-white/10">
-                {row.coverUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={row.coverUrl} alt="" className="w-full h-full object-cover" />
-                )}
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="shrink-0 w-12 h-12 rounded-md overflow-hidden bg-white/5 border border-white/10">
+                  {row.coverUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={row.coverUrl} alt="" className="w-full h-full object-cover" />
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{row.title}</p>
+                  <p className="text-xs text-white/40 font-mono truncate">/smartlink/{artistSlug}/{row.slug}</p>
+                </div>
+
+                <span className={`shrink-0 text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                  row.isPublished ? 'bg-green-500/15 text-green-400' : 'bg-white/10 text-white/40'
+                }`}>
+                  {row.isPublished ? 'опубликован' : 'черновик'}
+                </span>
               </div>
 
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{row.title}</p>
-                <p className="text-xs text-white/40 font-mono truncate">/smartlink/{artistSlug}/{row.slug}</p>
-              </div>
-
-              <span className={`shrink-0 text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                row.isPublished ? 'bg-green-500/15 text-green-400' : 'bg-white/10 text-white/40'
-              }`}>
-                {row.isPublished ? 'опубликован' : 'черновик'}
-              </span>
-
-              <div className="shrink-0 flex items-center gap-1 text-xs">
+              <div className="shrink-0 flex items-center gap-1 text-xs justify-end">
                 {row.isPublished && (
                   <button onClick={() => copyLink(row.slug)} className="px-2 py-1 rounded text-white/50 hover:text-white hover:bg-white/5 transition-colors">
                     Копировать
