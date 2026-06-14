@@ -1,8 +1,15 @@
-import { desc, eq, gte, sql, and, count, inArray, notInArray, isNotNull } from 'drizzle-orm';
+import { desc, eq, gte, lte, or, sql, and, count, inArray, notInArray, isNotNull } from 'drizzle-orm';
 import { db } from '../client';
 import { tracks, releases, trackMoods, playEvents, likes, playlists, playlistTracks } from '../schema';
 import { upsertEditorialPlaylist, createPersonalPlaylist, deletePersonalPlaylists } from './playlists';
 import { MOOD_LABELS, type Mood } from './track-moods';
+
+// Релиз доступен (треки можно слушать): опубликован или запланирован с прошедшей
+// датой. Не пускаем невышедшие релизы в подборки — иначе их можно слушать с главной.
+const releaseIsPublic = or(
+  eq(releases.status, 'PUBLISHED'),
+  and(eq(releases.status, 'SCHEDULED'), isNotNull(releases.releaseDate), lte(releases.releaseDate, sql`now()`)),
+);
 
 const SHARED_MOOD_COUNT = 3; // сколько топ-настроений держим в общих подборках
 const PERSONAL_MAX = 4; // максимум личных подборок на юзера
@@ -89,7 +96,7 @@ async function generateFreshPlaylist(): Promise<void> {
     .select({ id: tracks.id })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
-    .where(eq(tracks.status, 'READY'))
+    .where(and(eq(tracks.status, 'READY'), releaseIsPublic))
     .orderBy(desc(releases.releaseDate))
     .limit(LIST_LIMIT);
 
@@ -141,7 +148,8 @@ async function moodTrackIds(mood: Mood): Promise<string[]> {
     .select({ trackId: trackMoods.trackId })
     .from(trackMoods)
     .innerJoin(tracks, eq(tracks.id, trackMoods.trackId))
-    .where(and(eq(trackMoods.mood, mood), eq(tracks.status, 'READY')))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .where(and(eq(trackMoods.mood, mood), eq(tracks.status, 'READY'), releaseIsPublic))
     .limit(LIST_LIMIT);
   return rows.map((r) => r.trackId);
 }
@@ -231,7 +239,8 @@ export async function generatePersonalPlaylists(userId: string): Promise<void> {
     .selectDistinct({ trackId: trackMoods.trackId })
     .from(trackMoods)
     .innerJoin(tracks, eq(tracks.id, trackMoods.trackId))
-    .where(and(inArray(trackMoods.mood, mixMoods), eq(tracks.status, 'READY')))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .where(and(inArray(trackMoods.mood, mixMoods), eq(tracks.status, 'READY'), releaseIsPublic))
     .limit(LIST_LIMIT);
   if (mixRows.length >= MIN_TRACKS) {
     await createPersonalPlaylist({

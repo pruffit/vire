@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
@@ -123,7 +124,7 @@ export default async function ArtistPage({ params }: Props) {
 
       {/* Content below hero */}
       <div className="mx-auto max-w-4xl px-5 sm:px-6 pb-16 space-y-14">
-        {upcoming.length > 0 && <UpcomingSection upcoming={upcoming} />}
+        {upcoming.length > 0 && <UpcomingSection upcoming={upcoming} artistSlug={artist.slug} />}
         <ReleasesSection
           releases={releases}
           artistSlug={artist.slug}
@@ -270,8 +271,10 @@ function ArtistHero({
 
 function UpcomingSection({
   upcoming,
+  artistSlug,
 }: {
   upcoming: Array<{ id: string; title: string; releaseDate: Date | null }>;
+  artistSlug: string;
 }) {
   const withDate = upcoming.filter((r) => r.releaseDate);
   if (withDate.length === 0) return null;
@@ -280,7 +283,9 @@ function UpcomingSection({
     <Reveal>
       <section className="flex flex-col gap-3">
         {withDate.map((r) => (
-          <CountdownBadge key={r.id} releaseDate={r.releaseDate!} title={r.title} />
+          <Link key={r.id} href={`/artists/${artistSlug}/releases/${r.id}`} className="self-start transition-opacity hover:opacity-80">
+            <CountdownBadge releaseDate={r.releaseDate!} title={r.title} />
+          </Link>
         ))}
       </section>
     </Reveal>

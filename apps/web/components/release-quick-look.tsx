@@ -76,6 +76,34 @@ export function ReleaseQuickLook({
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isThisReleasePlaying = activeTrack?.releaseId === release.id;
 
+  // Невышедший релиз нельзя слушать: карточка ведёт на страницу с обратным
+  // отсчётом, без peek-оверлея и плеера.
+  if (upcoming) {
+    return (
+      <Link href={releaseHref} className="block w-full text-left group" aria-label={`${release.title} — скоро`}>
+        <div className="relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30">
+          {release.coverUrl ? (
+            <Image src={release.coverUrl} alt={release.title} fill sizes="(max-width: 640px) 50vw, 250px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
+          ) : (
+            <div className="w-full h-full grid place-items-center opacity-20"><NoteIcon /></div>
+          )}
+          {release.releaseDate && (
+            <span className="absolute top-2 left-2 rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/90">
+              {untilLabel(release.releaseDate) ?? release.type}
+            </span>
+          )}
+        </div>
+        <div className="mt-2.5 space-y-0.5">
+          <p className="text-sm font-medium leading-snug truncate group-hover:text-foreground transition-colors">{release.title}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {showArtist ? release.artistName : release.type}
+            <span className="opacity-50 font-mono">{' · '}{release.type}</span>
+          </p>
+        </div>
+      </Link>
+    );
+  }
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };

@@ -6,6 +6,7 @@ import { ArtistService, ReleaseService } from '@vire/core';
 import { ZoomableCover } from '@/components/zoomable-cover';
 import { ReleaseHeroPlay } from '@/components/release-hero-play';
 import { ReleaseShareButton } from '@/components/release-share-button';
+import { ReleaseCountdown } from '@/components/release-countdown';
 import { TrackList, type ClientTrack } from './track-list';
 import type { PlayerTrack } from '@/store/player';
 import { JsonLd } from '@/components/json-ld';
@@ -63,6 +64,35 @@ export default async function ReleasePage({ params }: Props) {
 
   const { artist, release, tracks } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
+
+  // Релиз доступен (играбелен), если опубликован или запланирован с прошедшей датой.
+  const releaseAtMs = release.releaseDate ? new Date(release.releaseDate).getTime() : null;
+  const isReleased =
+    release.status === 'PUBLISHED' ||
+    (release.status === 'SCHEDULED' && releaseAtMs != null && releaseAtMs <= Date.now());
+
+  // Не вышел: будущая дата → обратный отсчёт (слушать нельзя); черновик/без даты →
+  // публично не показываем.
+  if (!isReleased) {
+    if (releaseAtMs == null || releaseAtMs <= Date.now()) notFound();
+    return (
+      <div
+        style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
+        className="relative min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans overflow-hidden"
+      >
+        {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
+        {grain && <GrainOverlay />}
+        <ReleaseCountdown
+          coverUrl={release.coverUrl}
+          title={release.title}
+          type={release.type}
+          artistName={artist.name}
+          artistSlug={slug}
+          releaseAtMs={releaseAtMs}
+        />
+      </div>
+    );
+  }
 
   const clientTracks: ClientTrack[] = tracks.map(({ id, title, trackNumber, durationSec, status, isExclusive, isWip, credits }) => ({
     id, title, trackNumber, durationSec, status, isExclusive, isWip, credits,
