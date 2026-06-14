@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, createSmartLink, smartLinkSlugTaken } from '@vire/db';
+import { createSmartLink, smartLinkSlugTaken } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, COVER_POLICY } from '@/lib/image';

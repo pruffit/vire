@@ -76,8 +76,15 @@ export function ReleaseQuickLook({
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isThisReleasePlaying = activeTrack?.releaseId === release.id;
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   // Невышедший релиз нельзя слушать: карточка ведёт на страницу с обратным
-  // отсчётом, без peek-оверлея и плеера.
+  // отсчётом, без peek-оверлея и плеера. (Возврат после всех хуков — правило hooks.)
   if (upcoming) {
     return (
       <Link href={releaseHref} className="block w-full text-left group" aria-label={`${release.title} — скоро`}>
@@ -103,13 +110,6 @@ export function ReleaseQuickLook({
       </Link>
     );
   }
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
 
   function loadTracks() {
     if (tracks || loading) return;

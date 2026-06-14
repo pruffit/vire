@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getActiveArtistForPage } from '@/lib/active-artist';
@@ -17,9 +18,9 @@ export default async function NewSmartLinkPage() {
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
         <div className="flex flex-col gap-1">
-          <a href="/dashboard/links" className="text-xs text-white/30 hover:text-white/60 transition-colors mb-2 self-start">
+          <Link href="/dashboard/links" className="text-xs text-white/30 hover:text-white/60 transition-colors mb-2 self-start">
             ← смартлинки
-          </a>
+          </Link>
           <h1 className="text-2xl font-semibold">Новый лендинг</h1>
         </div>
 

@@ -32,7 +32,15 @@ async function getPageData(slug: string, releaseId: string) {
 
   if (release.artistProfileId !== artist.id) return null;
 
-  return { artist, release, tracks };
+  // Релиз доступен (играбелен), если опубликован или запланирован с прошедшей
+  // датой. Считаем здесь (не в компоненте) — иначе react-hooks/purity ругается
+  // на Date.now() в рендере.
+  const releaseAtMs = release.releaseDate ? new Date(release.releaseDate).getTime() : null;
+  const isReleased =
+    release.status === 'PUBLISHED' ||
+    (release.status === 'SCHEDULED' && releaseAtMs != null && releaseAtMs <= Date.now());
+
+  return { artist, release, tracks, releaseAtMs, isReleased };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -62,19 +70,15 @@ export default async function ReleasePage({ params }: Props) {
   const data = await getPageData(slug, releaseId);
   if (!data) notFound();
 
-  const { artist, release, tracks } = data;
+  const { artist, release, tracks, releaseAtMs, isReleased } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
-  // Релиз доступен (играбелен), если опубликован или запланирован с прошедшей датой.
-  const releaseAtMs = release.releaseDate ? new Date(release.releaseDate).getTime() : null;
-  const isReleased =
-    release.status === 'PUBLISHED' ||
-    (release.status === 'SCHEDULED' && releaseAtMs != null && releaseAtMs <= Date.now());
-
   // Не вышел: будущая дата → обратный отсчёт (слушать нельзя); черновик/без даты →
-  // публично не показываем.
+  // публично не показываем. (isReleased/releaseAtMs посчитаны в getPageData.)
   if (!isReleased) {
-    if (releaseAtMs == null || releaseAtMs <= Date.now()) notFound();
+    // Отсчёт только для запланированных (SCHEDULED ⇒ дата в будущем, раз !isReleased).
+    // Черновики/архив/без даты публично не показываем.
+    if (release.status !== 'SCHEDULED' || releaseAtMs == null) notFound();
     return (
       <div
         style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
