@@ -21,11 +21,15 @@
 - **Доставка** — алерт уходит во все настроенные каналы (любой/оба/ни одного);
   без настройки — только структурированный лог в stderr. Анти-шторм: одинаковый
   текст — не чаще раза в 60с на процесс (решение принимается один раз, до веера).
-  - **Telegram** — если заданы `TELEGRAM_BOT_TOKEN` (тот же, что для входа) +
-    `TELEGRAM_ALERT_CHAT_ID`. POST на `api.telegram.org/bot<token>/sendMessage`
-    напрямую — не зависит от того, жив ли web.
+  - **Telegram (прямой)** — если заданы `TELEGRAM_BOT_TOKEN` + `TELEGRAM_ALERT_CHAT_ID`,
+    POST на `api.telegram.org/.../sendMessage`. ⚠️ С прод-VPS (Timeweb) **не работает**:
+    egress на `api.telegram.org` заблокирован. Годится для окружений с доступом.
   - **Generic-webhook** — если задан `ALERT_WEBHOOK_URL`: POST JSON-ом (поля
     `text` для Slack, `content` для Discord, плюс structured-поля).
+
+  **На проде** Telegram достигается через Cloudflare Worker-релей (`VPS → Worker →
+  Telegram`), `ALERT_WEBHOOK_URL` указывает на него. Код и настройка —
+  `ops/telegram-alert-worker/`. Discord/Slack с VPS доступны напрямую.
 
 ## Где код
 - **API:** `apps/web/app/api/health/route.ts`
