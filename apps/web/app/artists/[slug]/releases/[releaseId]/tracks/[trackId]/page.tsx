@@ -14,6 +14,7 @@ import { TrackWaveformPlayer } from './waveform-player';
 import { MoodBadges } from '@/components/mood-badges';
 import { AddToPlaylistButton } from '@/components/add-to-playlist-button';
 import { JsonLd } from '@/components/json-ld';
+import { HeartIcon } from '@/components/icons';
 import { musicRecordingJsonLd } from '@/lib/structured-data';
 import { LiveListeners } from '@/components/live-listeners';
 import { GrainOverlay } from '@/components/grain-overlay';
@@ -159,7 +160,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
                 ? <LikeButton trackId={trackId} initialLiked={liked} initialCount={likeCount} />
                 : likeCount > 0 && (
                     <span className="text-xs font-mono opacity-40 flex items-center gap-1">
-                      <HeartOutline /> {likeCount}
+                      <HeartIcon size={12} /> {likeCount}
                     </span>
                   )
               }
@@ -286,13 +287,5 @@ function MetaRow({
         </span>
       ))}
     </div>
-  );
-}
-
-function HeartOutline() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
   );
 }

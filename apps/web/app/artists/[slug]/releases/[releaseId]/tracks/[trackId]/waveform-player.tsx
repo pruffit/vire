@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from '@/components/player/audio-engine';
 import { TrackShare } from '@/components/track-share';
-import { PlayIcon, PauseIcon } from '@/components/icons';
+import { PlayIcon, PauseIcon, HeartIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 import type { MomentBucket } from '@vire/db';
 
@@ -201,7 +201,7 @@ export function TrackWaveformPlayer({
             className="w-8 h-8 rounded-full flex items-center justify-center opacity-40 hover:opacity-80 transition-opacity"
             style={{ border: '1px solid var(--artist-accent)' }}
           >
-            <HeartPulseIcon />
+            <HeartIcon size={14} strokeWidth={2} />
           </motion.button>
         )}
 
@@ -230,12 +230,4 @@ function buildBars(peaks: number[] | null): number[] {
     const slice = peaks.slice(from, to);
     return slice.length > 0 ? slice.reduce((a, b) => a + b, 0) / slice.length : 0;
   });
-}
-
-function HeartPulseIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
 }
