@@ -7,10 +7,10 @@
 
 ### Аудио (треки)
 - Форматы: **WAV, FLAC, MP3** (определяются по расширению + magic bytes).
-- **WAV — только PCM** (несжатый): `parseWavFormat` читает `fmt`-чанк, понимает
-  `WAVE_FORMAT_EXTENSIBLE` (24-бит мастера), сканирует чанки мимо JUNK/bext.
-  Частоту/битность не ограничиваем (48k/24-бит проходят); рекомендация 44.1/16-24 —
-  текстом в форме.
+- **Кодек WAV не ограничиваем.** Принимаем любой валидный RIFF/WAVE — PCM, 32-бит
+  float (типичный экспорт DAW), сжатый. Воркер всё равно прогоняет мастер через
+  ffmpeg (как MP3/FLAC), а он декодирует всё. Частоту/битность тоже не ограничиваем;
+  рекомендация 44.1/16-24 — текстом в форме.
 - Лимит размера 300 МБ. Загрузка пачкой (drag-n-drop + мультивыбор) с прогрессом
   и live-статусом обработки (PROCESSING → готов).
 
@@ -22,7 +22,7 @@
 ## Где код
 - **Валидаторы (чистые функции):**
   - аудио — `apps/web/lib/upload.ts` (`parseAudioExt`, `validateMagicBytes`,
-    `parseWavFormat`, `sanitizeCredits`)
+    `sanitizeCredits`)
   - изображения — `apps/web/lib/image.ts` (`probeImage`, `validateImageUpload`,
     `COVER_POLICY`, `AVATAR_POLICY`)
 - **API:**

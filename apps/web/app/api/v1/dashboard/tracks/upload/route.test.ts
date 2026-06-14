@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mocks must be created via vi.hoisted so the hoisted vi.mock factories can
 // reference them without a TDZ error.
-const { findByUserId, uploadBuffer, transcodeAdd } = vi.hoisted(() => ({
+const { findByUserId, uploadBuffer, transcodeAdd, releaseFindById, trackCreate } = vi.hoisted(() => ({
   findByUserId: vi.fn(),
   uploadBuffer: vi.fn(),
   transcodeAdd: vi.fn(),
+  releaseFindById: vi.fn(),
+  trackCreate: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
@@ -19,8 +21,12 @@ vi.mock('@vire/db', () => ({
   DrizzleArtistRepository: class {
     findByUserId = findByUserId;
   },
-  DrizzleReleaseRepository: class {},
-  DrizzleTrackRepository: class {},
+  DrizzleReleaseRepository: class {
+    findById = releaseFindById;
+  },
+  DrizzleTrackRepository: class {
+    create = trackCreate;
+  },
 }));
 vi.mock('@/lib/s3', () => ({ uploadBuffer }));
 vi.mock('@/lib/queue', () => ({ transcodeQueue: { add: transcodeAdd } }));
@@ -85,9 +91,11 @@ describe('POST /api/v1/dashboard/tracks/upload', () => {
     expect(uploadBuffer).not.toHaveBeenCalled();
   });
 
-  it('400 when a WAV master is not PCM (compressed)', async () => {
+  it('accepts a non-PCM (compressed) WAV — codec is left to the ffmpeg worker', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     findByUserId.mockResolvedValue({ id: 'artist1' });
+    releaseFindById.mockResolvedValue({ id: RELEASE_ID, artistProfileId: 'artist1' });
+    trackCreate.mockResolvedValue({ id: 'track1', releaseId: RELEASE_ID });
     // Minimal RIFF/WAVE with a fmt chunk declaring audioFormat 0x0011 (IMA ADPCM).
     const wav = new Uint8Array(44);
     wav.set([0x52, 0x49, 0x46, 0x46], 0); // "RIFF"
@@ -103,10 +111,9 @@ describe('POST /api/v1/dashboard/tracks/upload', () => {
         file: new File([wav], 'track.wav', { type: 'audio/wav' }),
       }),
     );
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error).toMatch(/PCM/);
-    expect(uploadBuffer).not.toHaveBeenCalled();
+    // Passes header validation and reaches the vault upload (no 400 on codec).
+    expect(uploadBuffer).toHaveBeenCalled();
+    expect(res.status).not.toBe(400);
   });
 
   it('400 on a malformed releaseId', async () => {

@@ -5,7 +5,7 @@ import { TrackService, NotFoundError } from '@vire/core';
 import { uploadBuffer } from '@/lib/s3';
 import { getActiveArtist } from '@/lib/active-artist';
 import { transcodeQueue } from '@/lib/queue';
-import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, MAX_AUDIO_FILE_SIZE, validateMagicBytes, parseWavFormat, type AudioExt } from '@/lib/upload';
+import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, MAX_AUDIO_FILE_SIZE, validateMagicBytes, type AudioExt } from '@/lib/upload';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
@@ -72,20 +72,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Формат файла не соответствует расширению' }, { status: 400 });
   }
 
-  // WAV принимаем только несжатый (PCM). Частоту/битность не ограничиваем —
-  // 48 kHz / 24 бит тоже допустимы (рекомендация 44.1/16-24 — в форме).
-  if (ext === 'wav') {
-    const fmt = parseWavFormat(header);
-    if (!fmt) {
-      return NextResponse.json({ error: 'Не удалось прочитать заголовок WAV' }, { status: 400 });
-    }
-    if (!fmt.isPcm) {
-      return NextResponse.json(
-        { error: 'WAV должен быть несжатым (PCM / импульсно-кодовая модуляция)' },
-        { status: 400 },
-      );
-    }
-  }
+  // Кодек WAV не ограничиваем: воркер всё равно прогоняет мастер через ffmpeg
+  // (как MP3/FLAC), а он декодирует и сжатый, и 32-бит float — типичный экспорт DAW.
+  // Раньше тут стоял жёсткий PCM-гейт; он зря отбивал валидные мастера.
 
   const trackId = crypto.randomUUID();
   const sourceKey = `tracks/${trackId}/source.${ext}`;
