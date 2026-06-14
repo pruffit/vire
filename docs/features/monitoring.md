@@ -10,8 +10,14 @@
   недоступны. Отдаёт версию. Подключается к внешнему uptime-чеку (UptimeRobot и т.п.).
 - **Трекинг ошибок web** — `instrumentation.ts → onRequestError` ловит
   необработанные ошибки серверных роутов и передаёт в `captureError`.
-- **Алерты воркера** — обработчики `failed` всех очередей (transcode, analyze,
-  play-events, notify-release) шлют `alertJobFailure`.
+- **Алерты воркера** — три уровня:
+  - `failed` всех очередей (transcode, analyze, play-events, notify-release) →
+    `alertJobFailure` (🔴 упавший джоб);
+  - `error` воркера (обрыв Redis, сбой подключения — очередь могла встать) →
+    `alertWorkerError` (🟠);
+  - **падение процесса** (`uncaughtException` / `unhandledRejection`) →
+    `alertCrash` (🛑), затем `process.exit(1)`. Алерт дожидается доставки до
+    выхода, иначе воркер умирал бы молча, а загрузки застревали в PROCESSING.
 - **Webhook** — если задан `ALERT_WEBHOOK_URL`, ошибки/падения POST-ятся туда
   JSON-ом (поля `text` для Slack, `content` для Discord, плюс structured-поля).
   Анти-шторм: одинаковый текст — не чаще раза в 60с на процесс. Без URL —
@@ -21,8 +27,8 @@
 - **API:** `apps/web/app/api/health/route.ts`
 - **Web-трекинг:** `apps/web/instrumentation.ts`, `apps/web/lib/observability.ts`
   (`captureError`), `apps/web/lib/rate-limit.ts` (`pingRedis`)
-- **Воркер:** `apps/worker/src/lib/alert.ts` (`alertJobFailure`),
-  подключение — `apps/worker/src/index.ts`
+- **Воркер:** `apps/worker/src/lib/alert.ts` (`alertJobFailure`,
+  `alertWorkerError`, `alertCrash`), подключение — `apps/worker/src/index.ts`
 - **Админ-обзор системы** (дополняет): `apps/web/lib/admin-health.ts` (`/admin` —
   пинг PG/Redis, очереди BullMQ с ошибками, live-слушатели)
 

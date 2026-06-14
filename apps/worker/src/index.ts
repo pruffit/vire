@@ -3,7 +3,7 @@ import { createTranscodeWorker } from './workers/transcode.worker.js';
 import { createPlayEventsWorker } from './workers/play-events.worker.js';
 import { createNotifyReleaseWorker } from './workers/notify-release.worker.js';
 import { createAnalyzeWorker } from './workers/analyze.worker.js';
-import { alertJobFailure } from './lib/alert.js';
+import { alertJobFailure, alertWorkerError, alertCrash } from './lib/alert.js';
 
 const transcodeWorker = createTranscodeWorker();
 const playEventsWorker = createPlayEventsWorker();
@@ -19,7 +19,7 @@ transcodeWorker.on('failed', (job, err) => {
 });
 
 transcodeWorker.on('error', (err) => {
-  console.error('[transcode] worker error', err);
+  void alertWorkerError('transcode', err);
 });
 
 playEventsWorker.on('failed', (job, err) => {
@@ -27,7 +27,7 @@ playEventsWorker.on('failed', (job, err) => {
 });
 
 playEventsWorker.on('error', (err) => {
-  console.error('[play-events] worker error', err);
+  void alertWorkerError('play-events', err);
 });
 
 notifyReleaseWorker.on('completed', (job) => {
@@ -39,7 +39,7 @@ notifyReleaseWorker.on('failed', (job, err) => {
 });
 
 notifyReleaseWorker.on('error', (err) => {
-  console.error('[notify-release] worker error', err);
+  void alertWorkerError('notify-release', err);
 });
 
 console.log('[worker] transcode + analyze + play-events + notify-release workers started');
@@ -49,6 +49,20 @@ analyzeWorker.on('completed', (job) => {
 });
 analyzeWorker.on('failed', (job, err) => {
   void alertJobFailure('analyze', job?.id, err, { trackId: job?.data.trackId });
+});
+analyzeWorker.on('error', (err) => {
+  void alertWorkerError('analyze', err);
+});
+
+// Падение процесса целиком: алертим (дождавшись доставки) и выходим с кодом 1,
+// сохраняя crash-семантику Node. Иначе воркер умирал бы молча, а загрузки
+// застревали бы в PROCESSING без единого уведомления.
+process.on('uncaughtException', (err) => {
+  void alertCrash('uncaughtException', err).finally(() => process.exit(1));
+});
+process.on('unhandledRejection', (reason) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  void alertCrash('unhandledRejection', err).finally(() => process.exit(1));
 });
 
 async function shutdown() {
