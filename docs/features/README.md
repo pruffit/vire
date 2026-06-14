@@ -45,12 +45,12 @@
 - [x] [Посты артиста](posts.md) — анонсы/новости на профиле
 - [x] [Поиск](search.md) — страница, инлайн-дропдаун, ⌘K палитра
 - [x] [Видео-эмбеды](video-embeds.md) — YouTube/VK плеер-фасад
-- [x] [Загрузка и валидация файлов](uploads.md) — треки (WAV/FLAC/MP3, PCM) + картинки (обложки/аватары)
+- [x] [Загрузка и валидация файлов](uploads.md) — треки (WAV/FLAC/MP3, любой кодек) + картинки (обложки/аватары)
 - [x] [SEO и структурированные данные](seo.md) — JSON-LD, sitemap, robots, OG
 - [x] [Дашборд артиста](dashboard.md) — релизы, профиль, посты, аналитика
 - [x] [Backoffice (/admin)](admin.md) — модерация, health, аналитика
 - [x] [Письма и рассылки](mailings.md) — Brevo (magic-link, обратная связь, нотификации о релизах)
-- [x] [Мониторинг и алерты](monitoring.md) — `/api/health`, webhook-алерты
+- [x] [Мониторинг и алерты](monitoring.md) — `/api/health`, крэш-алерты воркера, Telegram через CF Worker
 - [ ] Этап 2 — продажи (YooKassa)
 
 См. также: [`docs/security/owasp-top-10.md`](../security/owasp-top-10.md).
