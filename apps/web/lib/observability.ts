@@ -1,6 +1,6 @@
 // Лёгкий трекинг ошибок без внешних зависимостей: структурированный лог в stderr
-// + опциональный POST на ALERT_WEBHOOK_URL (Telegram-бот через прокси, Discord,
-// Slack, Sentry-webhook — любой консьюмер). Алерты не должны бросать в вызывающий код.
+// + опциональная доставка в Telegram и/или generic-webhook (Discord/Slack/
+// Sentry-webhook — любой консьюмер). Алерты не должны бросать в вызывающий код.
 
 interface ErrorContext {
   service?: 'web' | 'worker';
@@ -21,24 +21,46 @@ export async function captureError(error: unknown, ctx: ErrorContext = {}): Prom
     level: 'error', service, message, ...stripService(ctx), ts: new Date().toISOString(),
   }));
 
-  const url = process.env.ALERT_WEBHOOK_URL;
-  if (!url) return;
-
   const text = `🔴 [${service}] ${ctx.where ?? 'error'}: ${message}`;
   const now = Date.now();
   const prev = lastSent.get(text);
   if (prev && now - prev < THROTTLE_MS) return;
   lastSent.set(text, now);
 
+  await Promise.all([
+    sendTelegram(text),
+    sendWebhook({ text, content: text, level: 'error', service, where: ctx.where, message, stack: stack?.slice(0, 2000), ts: now }),
+  ]);
+}
+
+// Telegram — если заданы TELEGRAM_BOT_TOKEN + TELEGRAM_ALERT_CHAT_ID.
+async function sendTelegram(text: string): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_ALERT_CHAT_ID;
+  if (!token || !chatId) return;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch {
+    // алертинг падать молча — он не должен ломать основной поток
+  }
+}
+
+// Generic-webhook — если задан ALERT_WEBHOOK_URL. text для Slack, content для Discord.
+async function sendWebhook(payload: Record<string, unknown>): Promise<void> {
+  const url = process.env.ALERT_WEBHOOK_URL;
+  if (!url) return;
+
   try {
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // text — для Slack, content — для Discord, остальное — для прочих консьюмеров.
-      body: JSON.stringify({
-        text, content: text, level: 'error', service,
-        where: ctx.where, message, stack: stack?.slice(0, 2000), ts: now,
-      }),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(5000),
     });
   } catch {

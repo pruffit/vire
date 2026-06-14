@@ -18,10 +18,14 @@
   - **падение процесса** (`uncaughtException` / `unhandledRejection`) →
     `alertCrash` (🛑), затем `process.exit(1)`. Алерт дожидается доставки до
     выхода, иначе воркер умирал бы молча, а загрузки застревали в PROCESSING.
-- **Webhook** — если задан `ALERT_WEBHOOK_URL`, ошибки/падения POST-ятся туда
-  JSON-ом (поля `text` для Slack, `content` для Discord, плюс structured-поля).
-  Анти-шторм: одинаковый текст — не чаще раза в 60с на процесс. Без URL —
-  только структурированный лог в stderr.
+- **Доставка** — алерт уходит во все настроенные каналы (любой/оба/ни одного);
+  без настройки — только структурированный лог в stderr. Анти-шторм: одинаковый
+  текст — не чаще раза в 60с на процесс (решение принимается один раз, до веера).
+  - **Telegram** — если заданы `TELEGRAM_BOT_TOKEN` (тот же, что для входа) +
+    `TELEGRAM_ALERT_CHAT_ID`. POST на `api.telegram.org/bot<token>/sendMessage`
+    напрямую — не зависит от того, жив ли web.
+  - **Generic-webhook** — если задан `ALERT_WEBHOOK_URL`: POST JSON-ом (поля
+    `text` для Slack, `content` для Discord, плюс structured-поля).
 
 ## Где код
 - **API:** `apps/web/app/api/health/route.ts`
@@ -33,15 +37,22 @@
   пинг PG/Redis, очереди BullMQ с ошибками, live-слушатели)
 
 ## Env
-- `ALERT_WEBHOOK_URL` — куда слать алерты (POST JSON). Discord/Slack-вебхук или
-  прокси к Telegram-боту. Пусто → только лог. Нужна и web, и worker.
+- `TELEGRAM_BOT_TOKEN` — тот же токен, что для входа через Telegram (переиспользуется).
+- `TELEGRAM_ALERT_CHAT_ID` — ID чата для алертов (личка/группа/канал). Пусто →
+  Telegram-канал выключен.
+- `ALERT_WEBHOOK_URL` — Discord/Slack-вебхук (POST JSON). Пусто → выключен.
+- Любой/оба пустые → только лог. Переменные нужны и web, и worker (оба `env_file: .env`).
 - БД/Redis health использует уже имеющиеся `DATABASE_URL` / `REDIS_URL`.
 
 ## Как подключить (прод)
 1. **Uptime:** UptimeRobot (free) → HTTP(s)-монитор на `https://viremusic.ru/api/health`,
    ожидать код 200, интервал 5 мин. Алерт на почту/Telegram при не-200.
-2. **Webhook ошибок:** создать Incoming Webhook в Discord/Slack (или бот-прокси
-   Telegram), положить URL в `ALERT_WEBHOOK_URL` в `.env` web и worker, перезапустить.
+2. **Telegram-алерты:** написать боту (нажать Start) — иначе бот не сможет
+   инициировать личку. Узнать `chat_id`: открыть
+   `https://api.telegram.org/bot<TOKEN>/getUpdates`, взять `message.chat.id`.
+   Положить `TELEGRAM_ALERT_CHAT_ID` в `.env` (web и worker), перезапустить.
+3. **Discord/Slack (опц.):** создать Incoming Webhook, положить URL в
+   `ALERT_WEBHOOK_URL`, перезапустить.
 
 ## Ограничения / на будущее
 - Нет агрегации/трейсов/группировки как у Sentry — только точечные алерты + лог.

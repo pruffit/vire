@@ -10,12 +10,17 @@ beforeEach(() => {
   // глушим структурированный лог, чтобы не шуметь в выводе тестов
   vi.spyOn(console, 'error').mockImplementation(() => {});
   process.env.ALERT_WEBHOOK_URL = 'https://hook.test/x';
+  // Telegram-канал по умолчанию выключен — отдельный describe его включает.
+  delete process.env.TELEGRAM_BOT_TOKEN;
+  delete process.env.TELEGRAM_ALERT_CHAT_ID;
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   delete process.env.ALERT_WEBHOOK_URL;
+  delete process.env.TELEGRAM_BOT_TOKEN;
+  delete process.env.TELEGRAM_ALERT_CHAT_ID;
 });
 
 /** Тело последнего POST-а, распарсенное из JSON. */
@@ -63,5 +68,37 @@ describe('alert webhook', () => {
   it('сбой доставки алерта не бросает', async () => {
     fetchMock.mockRejectedValue(new Error('network down'));
     await expect(alertCrash('unhandledRejection', new Error('x'))).resolves.toBeUndefined();
+  });
+});
+
+describe('Telegram-канал', () => {
+  beforeEach(() => {
+    delete process.env.ALERT_WEBHOOK_URL; // только Telegram
+    process.env.TELEGRAM_BOT_TOKEN = 'bot-123';
+    process.env.TELEGRAM_ALERT_CHAT_ID = '42';
+  });
+
+  it('шлёт в Telegram Bot API с chat_id и текстом', async () => {
+    await alertCrash('uncaughtException', new Error('tg boom'));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.telegram.org/botbot-123/sendMessage');
+    const body = JSON.parse(init.body as string);
+    expect(body.chat_id).toBe('42');
+    expect(body.text).toContain('tg boom');
+  });
+
+  it('без TELEGRAM_ALERT_CHAT_ID в Telegram не шлёт', async () => {
+    delete process.env.TELEGRAM_ALERT_CHAT_ID;
+    await alertCrash('uncaughtException', new Error('no chat'));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('оба канала: и Telegram, и webhook', async () => {
+    process.env.ALERT_WEBHOOK_URL = 'https://hook.test/x';
+    await alertWorkerError('transcode', new Error('both'));
+    const urls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(urls).toContain('https://api.telegram.org/botbot-123/sendMessage');
+    expect(urls).toContain('https://hook.test/x');
   });
 });
