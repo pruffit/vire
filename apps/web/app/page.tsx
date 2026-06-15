@@ -20,7 +20,7 @@ import { ListeningNow } from '@/components/listening-now';
 import { MoodWaveChips } from '@/components/mood-wave-chips';
 import { EditorialPlaylistCard } from '@/components/editorial-playlist-card';
 import { getListeningNow } from '@/lib/listening-now';
-import { FadeUp, Stagger, StaggerItem, Reveal } from '@vire/ui/motion';
+import { FadeUp, Reveal } from '@vire/ui/motion';
 
 export default async function HomePage() {
   const session = await auth();
@@ -80,53 +80,47 @@ export default async function HomePage() {
         </Reveal>
       )}
 
-      {/* Редакционные подборки */}
+      {/* Редакционные подборки — без motion-обёрток: transform/will-change на
+          обёртках делают блок отдельным композит-слоем, и он «дрожит» при скролле
+          относительно остального документа. Здесь только обычные div. */}
       {editorialPlaylists.length > 0 && (
-        <Reveal>
-          <Section title="Подборки">
-            <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
-              {editorialPlaylists.map((p) => (
-                <StaggerItem key={p.id}>
-                  <EditorialPlaylistCard
-                    playlist={p}
-                    liked={likedPlaylistIds.includes(p.id)}
-                  />
-                </StaggerItem>
-              ))}
-            </Stagger>
-          </Section>
-        </Reveal>
+        <Section title="Подборки">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+            {editorialPlaylists.map((p) => (
+              <EditorialPlaylistCard
+                key={p.id}
+                playlist={p}
+                liked={likedPlaylistIds.includes(p.id)}
+              />
+            ))}
+          </div>
+        </Section>
       )}
 
-      {/* Публичные плейлисты слушателей */}
+      {/* Публичные плейлисты слушателей — тоже без motion (см. выше). */}
       {publicPlaylists.length > 0 && (
-        <Reveal>
-          <Section title="Плейлисты слушателей">
-            <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
-              {publicPlaylists.map((p) => (
-                <StaggerItem key={p.id}>
-                  <EditorialPlaylistCard
-                    playlist={p}
-                    liked={likedPlaylistIds.includes(p.id)}
-                  />
-                </StaggerItem>
-              ))}
-            </Stagger>
-          </Section>
-        </Reveal>
+        <Section title="Плейлисты слушателей">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+            {publicPlaylists.map((p) => (
+              <EditorialPlaylistCard
+                key={p.id}
+                playlist={p}
+                liked={likedPlaylistIds.includes(p.id)}
+              />
+            ))}
+          </div>
+        </Section>
       )}
 
       {/* Активность подписок (для вошедших) */}
       {feed.length > 0 && (
         <Reveal>
           <Section title="Новое у тех, на кого ты подписан">
-            <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
               {feed.slice(0, 8).map((r) => (
-                <StaggerItem key={r.id}>
-                  <ReleaseQuickLook release={r} />
-                </StaggerItem>
+                <ReleaseQuickLook key={r.id} release={r} />
               ))}
-            </Stagger>
+            </div>
           </Section>
         </Reveal>
       )}

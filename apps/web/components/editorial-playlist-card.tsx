@@ -18,78 +18,66 @@ const KIND_LABELS: Record<string, string | undefined> = {
   FRESH: 'Свежее',
 };
 
-interface Layer {
+interface FanLayer {
   src: string;
-  rot: number; // поворот, deg
-  dx: number; // смещение по X, % от размера карточки
+  rot: number; // наклон, deg
+  dx: number; // сдвиг по X, % ширины
   z: number;
-  back: boolean; // задняя карта — приглушаем
 }
 
-// Раскладка «веером»: первая обложка — лицевая (прямо), остальные выглядывают сзади.
-function buildLayers(stack: string[]): Layer[] {
+// Веер обложек: первая — лицевая по центру, остальные выглядывают сзади под
+// наклоном. Только плоские 2D-трансформы (никаких 3D/blur/will-change) — поэтому
+// ничего не дёргается при скролле.
+function buildFan(stack: string[]): FanLayer[] {
   if (stack.length === 1) {
-    return [{ src: stack[0], rot: 0, dx: 0, z: 30, back: false }];
+    return [{ src: stack[0], rot: 0, dx: 0, z: 30 }];
   }
   if (stack.length === 2) {
     return [
-      { src: stack[1], rot: 8, dx: 13, z: 10, back: true },
-      { src: stack[0], rot: 0, dx: 0, z: 30, back: false },
+      { src: stack[1], rot: 8, dx: 15, z: 10 },
+      { src: stack[0], rot: -4, dx: -3, z: 30 },
     ];
   }
   return [
-    { src: stack[1], rot: -9, dx: -13, z: 10, back: true },
-    { src: stack[2], rot: 9, dx: 13, z: 10, back: true },
-    { src: stack[0], rot: 0, dx: 0, z: 30, back: false },
+    { src: stack[1], rot: -10, dx: -16, z: 10 },
+    { src: stack[2], rot: 10, dx: 16, z: 10 },
+    { src: stack[0], rot: 0, dx: 0, z: 30 },
   ];
 }
 
-function PlaylistCollage({ covers }: { covers: string[] }) {
-  if (covers.length === 0) {
+function CoverFan({ covers }: { covers: string[] }) {
+  const stack = covers.slice(0, 3);
+
+  if (stack.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/[0.08] to-white/[0.01]">
+      <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-white/[0.07] to-white/[0.01]">
         <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="opacity-20">
-          <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z" />
+          <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6zm0 16a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
         </svg>
       </div>
     );
   }
 
-  const stack = covers.slice(0, 3);
-  const layers = buildLayers(stack);
-
   return (
-    <div className="relative w-full h-full">
-      {/* Размытый фон из первой обложки — цвет самой музыки.
-          transform-gpu выносит блюр на отдельный композит-слой: он
-          растеризуется один раз и кэшируется, а не пересчитывается на
-          каждом кадре скролла (иначе джанк при прокрутке секции подборок). */}
-      <Image
-        src={stack[0]}
-        alt=""
-        fill
-        sizes="(max-width: 640px) 50vw, 250px"
-        className="object-cover scale-150 blur-2xl brightness-[0.45] saturate-150 transform-gpu"
-      />
-      <div className="absolute inset-0 bg-black/20" />
-
-      {/* Колода обложек веером */}
-      <div className="absolute inset-0 transition-transform duration-500 ease-soft group-hover:scale-[1.04]">
-        {layers.map((l, i) => (
-          <div
-            key={i}
-            className={`absolute left-1/2 top-1/2 w-[66%] h-[66%] rounded-[10px] overflow-hidden ring-1 ring-black/30 shadow-lg shadow-black/40 ${
-              l.back ? 'brightness-[0.72]' : ''
-            }`}
-            style={{
-              transform: `translate(-50%, -50%) rotate(${l.rot}deg) translateX(${l.dx}%)`,
-              zIndex: l.z,
-            }}
-          >
-            <Image src={l.src} alt="" fill sizes="(max-width: 640px) 33vw, 165px" className="object-cover" />
-          </div>
-        ))}
-      </div>
+    <div className="absolute inset-0">
+      {buildFan(stack).map((l, i) => (
+        <div
+          key={i}
+          className="absolute left-1/2 top-1/2 w-[62%] aspect-square rounded-[4px] overflow-hidden bg-muted ring-1 ring-black/40 shadow-lg shadow-black/40"
+          style={{
+            transform: `translate(-50%, -50%) translateX(${l.dx}%) rotate(${l.rot}deg)`,
+            zIndex: l.z,
+          }}
+        >
+          <Image
+            src={l.src}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 30vw, 150px"
+            className="object-cover"
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -128,19 +116,18 @@ export function EditorialPlaylistCard({
   const kindLabel = KIND_LABELS[playlist.kind];
 
   return (
-    // Без content-visibility:auto — на главной карточек немного (макс ~16), а
-    // фиксированный contain-intrinsic-size не совпадал с реальной высотой
-    // (квадратная обложка зависит от ширины колонки), из-за чего текстовый блок
-    // под обложкой прыгал при скролле, когда карточка впервые входила во вьюпорт.
+    // Никаких промоутеров композит-слоя (transform-gpu/will-change/3D) — иначе
+    // блок скроллится не в такт с документом и «дрожит». overflow-hidden держит
+    // веер внутри карточки, чтобы между карточками был зазор сетки.
     <div className="group flex flex-col gap-2.5">
       <Link
         href={`/playlists/${playlist.id}`}
-        className="block relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30"
+        className="block relative aspect-square rounded-md overflow-hidden transition-transform duration-500 ease-soft group-hover:-translate-y-0.5"
       >
-        <PlaylistCollage covers={playlist.covers} />
+        <CoverFan covers={playlist.covers} />
         {/* Тип подборки — только для редакционных */}
         {kindLabel && (
-          <span className="absolute top-2 left-2 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-mono text-white/80 pointer-events-none">
+          <span className="absolute top-1 left-1 z-40 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-mono text-white/80 pointer-events-none">
             {kindLabel}
           </span>
         )}
@@ -169,4 +156,3 @@ export function EditorialPlaylistCard({
     </div>
   );
 }
-
