@@ -60,6 +60,21 @@
   [data-scroll-area] {
     scrollbar-gutter: stable;
   }
+
+  /* ТОЛЬКО десктоп (мышь): во время активной прокрутки гасим hit-testing у
+     СОДЕРЖИМОГО скролл-области (не у самого контейнера — он должен продолжать
+     скроллиться). Курсор стоит на месте, карточки проезжают под ним и каждая
+     ловит :hover → group-hover:scale на обложке дёргает её вверх-вниз. С
+     pointer-events:none hover не срабатывает; класс is-scrolling вешает JS
+     (components/scroll-state.tsx) и снимает через паузу — hover в покое цел.
+     pointer-events не вызывает repaint/relayout, так что собственного дрожания
+     не добавляет. На тач-устройствах правило не действует (@media hover) —
+     палец, держащий скролл через контент, никогда не теряется. */
+  @media (hover: hover) and (pointer: fine) {
+    #main-content.is-scrolling * {
+      pointer-events: none;
+    }
+  }
 }
 
 /* WebKit/Chromium: overlay-подобный тонкий скроллбар. */
