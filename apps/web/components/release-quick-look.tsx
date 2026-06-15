@@ -95,7 +95,7 @@ export function ReleaseQuickLook({
             <div className="w-full h-full grid place-items-center opacity-20"><NoteIcon /></div>
           )}
           {release.releaseDate && (
-            <span className="absolute top-2 left-2 rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/90">
+            <span className="absolute top-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-mono text-white/90">
               {untilLabel(release.releaseDate) ?? release.type}
             </span>
           )}
@@ -173,7 +173,7 @@ export function ReleaseQuickLook({
             <div className="w-full h-full grid place-items-center opacity-20"><NoteIcon /></div>
           )}
           {upcoming && release.releaseDate && (
-            <span className="absolute top-2 left-2 rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[10px] font-mono text-white/90">
+            <span className="absolute top-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-mono text-white/90">
               {untilLabel(release.releaseDate) ?? release.type}
             </span>
           )}

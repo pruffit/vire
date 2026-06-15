@@ -63,7 +63,7 @@ export function ListeningNow({ initial }: { initial: ListeningNowTrack[] }) {
               <LivePulse />
             </h2>
             <div className="grid sm:grid-cols-2 gap-1">
-              <AnimatePresence mode="popLayout" initial={false}>
+              <AnimatePresence initial={false}>
                 {items.map((t) => (
                   <TrackRow key={t.id} track={t} />
                 ))}
@@ -97,8 +97,11 @@ function TrackRow({ track }: { track: ListeningNowTrack }) {
   }
 
   return (
+    // Без motion `layout`: скролл-контейнер (#main-content) — обычный div, motion
+    // не знает про его scroll-offset, поэтому layout-проекция «плыла» за скроллом
+    // и дёргала строку (обложку/кружки) на каждом кадре прокрутки. Enter/exit
+    // по-прежнему анимируются через initial/animate/exit.
     <motion.button
-      layout
       type="button"
       onClick={play}
       initial={{ opacity: 0, y: 8 }}
