@@ -11,10 +11,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.726.0",
+    "@aws-sdk/client-s3": "^3.1068.0",
     "@vire/core": "workspace:*",
     "@vire/db": "workspace:*",
-    "bullmq": "^5.34.0",
+    "bullmq": "^5.78.1",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "fluent-ffmpeg": "^2.1.3",
