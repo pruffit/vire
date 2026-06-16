@@ -11,6 +11,8 @@ export interface PlayerTrack {
   releaseId?: string;
   // Акцент-цвет артиста — инжектируется в плеер как --artist-accent.
   accentColor?: string;
+  // Возрастная маркировка 18+ (explicit) — плеер показывает бейдж.
+  isExplicit?: boolean;
 }
 
 interface State {

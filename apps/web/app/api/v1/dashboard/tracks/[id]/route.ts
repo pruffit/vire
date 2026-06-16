@@ -61,6 +61,10 @@ export async function PATCH(
     if (typeof b.isWip !== 'boolean') return NextResponse.json({ error: 'Invalid isWip' }, { status: 400 });
     patch.isWip = b.isWip;
   }
+  if (b.isExplicit !== undefined) {
+    if (typeof b.isExplicit !== 'boolean') return NextResponse.json({ error: 'Invalid isExplicit' }, { status: 400 });
+    patch.isExplicit = b.isExplicit;
+  }
   if (b.bpm !== undefined) {
     if (b.bpm !== null && (typeof b.bpm !== 'number' || !Number.isInteger(b.bpm) || b.bpm < 20 || b.bpm > 500)) {
       return NextResponse.json({ error: 'Invalid bpm' }, { status: 400 });

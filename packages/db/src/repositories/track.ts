@@ -29,6 +29,7 @@ function mapRow(row: TrackRow): Track {
     status: row.status,
     isExclusive: row.isExclusive,
     isWip: row.isWip,
+    isExplicit: row.isExplicit,
     credits: Array.isArray(row.credits) ? (row.credits as TrackCredit[]) : [],
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -65,6 +66,7 @@ export class DrizzleTrackRepository implements ITrackRepository {
     if (patch.trackNumber !== undefined) trackValues.trackNumber = patch.trackNumber;
     if (patch.isExclusive !== undefined) trackValues.isExclusive = patch.isExclusive;
     if (patch.isWip !== undefined) trackValues.isWip = patch.isWip;
+    if (patch.isExplicit !== undefined) trackValues.isExplicit = patch.isExplicit;
     if (patch.credits !== undefined) trackValues.credits = patch.credits;
 
     let row: typeof tracks.$inferSelect | undefined;

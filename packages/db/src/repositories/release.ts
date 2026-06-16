@@ -189,6 +189,7 @@ function mapToTrack(row: typeof tracks.$inferSelect): Track {
     status: row.status,
     isExclusive: row.isExclusive,
     isWip: row.isWip,
+    isExplicit: row.isExplicit,
     credits: Array.isArray(row.credits) ? (row.credits as TrackCredit[]) : [],
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

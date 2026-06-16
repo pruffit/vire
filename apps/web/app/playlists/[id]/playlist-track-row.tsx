@@ -10,6 +10,7 @@ import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 import type { PlayerTrack } from '@/store/player';
 import type { PlaylistTrackRow as TrackData } from '@vire/db';
+import { Icon } from '@/components/icon';
 
 interface Props {
   track: TrackData;
@@ -128,10 +129,5 @@ export function PlaylistTrackRow({ track, queue, queueIndex, playlistId, isOwner
 }
 
 function RemoveIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
+  return <Icon name="x" size={12} />;
 }

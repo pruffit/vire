@@ -8,6 +8,7 @@ import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { Nav } from '@/components/nav';
 import { Footer } from '@/components/footer';
 import { CookieBanner } from '@/components/cookie-banner';
+import { ComplianceNotice } from '@/components/compliance-notice';
 import { ScrollState } from '@/components/scroll-state';
 import { fontVariables } from '@/lib/fonts';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_TITLE } from '@/lib/site';
@@ -89,6 +90,7 @@ export default function RootLayout({
           <KeyboardShortcuts />
           <Toaster />
           <CookieBanner />
+          <ComplianceNotice />
         </MotionProvider>
       </body>
     </html>

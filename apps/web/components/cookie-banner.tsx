@@ -29,9 +29,9 @@ export function CookieBanner() {
 
   const visible = storageNotDismissed && !dismissed;
 
-  function dismiss() {
+  function decide(choice: 'accepted' | 'rejected') {
     try {
-      localStorage.setItem(STORAGE_KEY, '1');
+      localStorage.setItem(STORAGE_KEY, choice);
     } catch { /* ignore */ }
     setDismissed(true);
   }
@@ -48,19 +48,27 @@ export function CookieBanner() {
           transition={spring.snappy}
           className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm z-50 pointer-events-auto"
         >
-          <div className="rounded-xl bg-card border border-border/60 shadow-xl shadow-black/30 px-4 py-3 flex items-start gap-3 backdrop-blur-sm">
-            <p className="flex-1 text-xs text-muted-foreground leading-relaxed">
-              Мы используем только необходимые cookie — сессия авторизации. Сторонней аналитики нет.{' '}
+          <div className="rounded-xl bg-card border border-border/60 shadow-xl shadow-black/30 px-4 py-3.5 space-y-3 backdrop-blur-sm">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Мы используем только необходимые cookie — сессия входа. Аналитики и сторонних cookie нет.{' '}
               <a href="/privacy" className="underline underline-offset-2 hover:opacity-70 transition-opacity">
                 Подробнее
               </a>
             </p>
-            <button
-              onClick={dismiss}
-              className="shrink-0 text-xs font-medium text-foreground hover:opacity-70 transition-opacity mt-0.5 cursor-pointer"
-            >
-              Понятно
-            </button>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => decide('rejected')}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 cursor-pointer"
+              >
+                Отклонить
+              </button>
+              <button
+                onClick={() => decide('accepted')}
+                className="text-xs font-medium rounded-full bg-primary text-primary-foreground px-4 py-1.5 hover:bg-primary/90 transition-opacity cursor-pointer"
+              >
+                Принять
+              </button>
+            </div>
           </div>
         </motion.div>
       )}

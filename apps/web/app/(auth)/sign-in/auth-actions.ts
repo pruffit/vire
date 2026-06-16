@@ -16,6 +16,8 @@ const registerSchema = z.object({
   name: z.string().min(2).max(60),
   email: z.string().email(),
   password: z.string().min(8).max(100),
+  // Явное согласие на обработку ПДн — обязательно (152-ФЗ).
+  consent: z.literal('on'),
   callbackUrl: z.string().optional(),
 });
 
@@ -56,6 +58,7 @@ export async function registerAction(
     name: formData.get('name'),
     email: formData.get('email'),
     password: formData.get('password'),
+    consent: formData.get('consent'),
     callbackUrl: formData.get('callbackUrl') ?? '/',
   };
 
@@ -65,6 +68,7 @@ export async function registerAction(
     if (first.path.includes('name')) return 'Имя должно быть от 2 до 60 символов.';
     if (first.path.includes('email')) return 'Введи корректный email.';
     if (first.path.includes('password')) return 'Пароль должен быть не менее 8 символов.';
+    if (first.path.includes('consent')) return 'Нужно принять условия и согласие на обработку данных.';
     return 'Проверь введённые данные.';
   }
 
@@ -88,11 +92,6 @@ export async function registerAction(
 export async function signInYandexAction(formData: FormData) {
   const callbackUrl = (formData.get('callbackUrl') as string) ?? '/';
   await signIn('yandex', { redirectTo: callbackUrl });
-}
-
-export async function signInGoogleAction(formData: FormData) {
-  const callbackUrl = (formData.get('callbackUrl') as string) ?? '/';
-  await signIn('google', { redirectTo: callbackUrl });
 }
 
 export async function signInMagicLinkAction(

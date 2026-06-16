@@ -63,7 +63,11 @@ function CoverFan({ covers }: { covers: string[] }) {
       {buildFan(stack).map((l, i) => (
         <div
           key={i}
-          className="absolute left-1/2 top-1/2 w-[62%] aspect-square rounded-[4px] overflow-hidden bg-muted ring-1 ring-black/40 shadow-lg shadow-black/40"
+          // Тень — только у лицевой (z>=30) и лёгкая: большие box-shadow на
+          // повёрнутых обложках дорого перерисовываются при скролле (лаг секции).
+          className={`absolute left-1/2 top-1/2 w-[62%] aspect-square rounded-[4px] overflow-hidden bg-muted ring-1 ring-black/40 ${
+            l.z >= 30 ? 'shadow-md shadow-black/40' : ''
+          }`}
           style={{
             transform: `translate(-50%, -50%) translateX(${l.dx}%) rotate(${l.rot}deg)`,
             zIndex: l.z,

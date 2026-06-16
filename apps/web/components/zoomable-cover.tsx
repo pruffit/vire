@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Tilt } from './tilt';
+import { Icon } from '@/components/icon';
 
 /**
  * Обложка, которая разворачивается в полноэкранный просмотр — тем же приёмом, что
@@ -98,12 +99,5 @@ export function ZoomableCover({
 }
 
 function ExpandIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="15 3 21 3 21 9" />
-      <polyline points="9 21 3 21 3 15" />
-      <line x1="21" y1="3" x2="14" y2="10" />
-      <line x1="3" y1="21" x2="10" y2="14" />
-    </svg>
-  );
+  return <Icon name="maximize-2" size={22} />;
 }

@@ -80,6 +80,7 @@ export default async function EditReleasePage({ params }: Props) {
               credits: t.credits,
               bpm: audioMetaMap[t.id]?.bpm ?? null,
               musicalKey: audioMetaMap[t.id]?.musicalKey ?? null,
+              isExplicit: t.isExplicit,
             }))}
           />
 

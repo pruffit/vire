@@ -8,14 +8,12 @@ import {
   registerAction,
   signInMagicLinkAction,
   signInYandexAction,
-  signInGoogleAction,
 } from './auth-actions';
-import { YandexIcon, GoogleIcon } from './provider-icons';
-import { TelegramButton } from './telegram-button';
+import { YandexIcon } from './provider-icons';
 
 type Tab = 'login' | 'register' | 'magic';
 
-export function AuthForms({ callbackUrl, telegramBotUsername = '' }: { callbackUrl: string; telegramBotUsername?: string }) {
+export function AuthForms({ callbackUrl }: { callbackUrl: string }) {
   const [tab, setTab] = useState<Tab>('login');
 
   return (
@@ -64,8 +62,8 @@ export function AuthForms({ callbackUrl, telegramBotUsername = '' }: { callbackU
 
       <Divider />
 
-      {/* Социальные провайдеры */}
-      <SocialProviders callbackUrl={callbackUrl} telegramBotUsername={telegramBotUsername} />
+      {/* Вход через Яндекс ID (росс. система — допустимо по 406-ФЗ). */}
+      <SocialProviders callbackUrl={callbackUrl} />
     </div>
   );
 }
@@ -152,15 +150,23 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
         {password.length > 0 && <PasswordStrength password={password} />}
       </FormField>
       <ErrorMessage error={error} />
+      {/* Явное согласие (152-ФЗ): отдельный обязательный чекбокс, не предотмечен. */}
+      <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed cursor-pointer">
+        <input
+          type="checkbox" name="consent" value="on" required
+          className="mt-0.5 size-3.5 shrink-0 accent-primary cursor-pointer"
+        />
+        <span>
+          Принимаю{' '}
+          <a href="/terms" className="underline underline-offset-2 hover:opacity-70" target="_blank" rel="noopener">условия</a>{' '}
+          и{' '}
+          <a href="/privacy" className="underline underline-offset-2 hover:opacity-70" target="_blank" rel="noopener">политику конфиденциальности</a>{' '}
+          и даю согласие на обработку персональных данных.
+        </span>
+      </label>
       <button type="submit" disabled={pending} className={primaryBtn}>
         {pending ? 'Создаём аккаунт…' : 'Создать аккаунт'}
       </button>
-      <p className="text-xs text-muted-foreground text-center leading-relaxed">
-        Создавая аккаунт, ты соглашаешься с{' '}
-        <a href="/terms" className="underline underline-offset-2 hover:opacity-70">условиями</a>{' '}
-        и{' '}
-        <a href="/privacy" className="underline underline-offset-2 hover:opacity-70">политикой конфиденциальности</a>.
-      </p>
     </form>
   );
 }
@@ -194,21 +200,11 @@ function MagicLinkForm({ callbackUrl, onBack }: { callbackUrl: string; onBack: (
 
 // ─── Социальные провайдеры ────────────────────────────────────────────────────
 
-function SocialProviders({ callbackUrl, telegramBotUsername }: { callbackUrl: string; telegramBotUsername: string }) {
+function SocialProviders({ callbackUrl }: { callbackUrl: string }) {
   return (
-    <div className="space-y-2.5">
-      <div className="grid grid-cols-2 gap-2">
-        <OAuthButton action={signInYandexAction} callbackUrl={callbackUrl} label="Яндекс">
-          <YandexIcon size={17} />
-        </OAuthButton>
-        <OAuthButton action={signInGoogleAction} callbackUrl={callbackUrl} label="Google">
-          <GoogleIcon size={17} />
-        </OAuthButton>
-      </div>
-
-      {/* Telegram — отдельная строка (виджет рендерит свой iframe) */}
-      <TelegramButton callbackUrl={callbackUrl} botUsername={telegramBotUsername} />
-    </div>
+    <OAuthButton action={signInYandexAction} callbackUrl={callbackUrl} label="Войти через Яндекс">
+      <YandexIcon size={17} />
+    </OAuthButton>
   );
 }
 

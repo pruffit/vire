@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { DiscoveryRelease } from '@vire/db';
 import { FeaturedPlayButton } from './featured-play-button';
 import { Tilt } from './tilt';
+import { Icon } from '@/components/icon';
 
 const typeLabel: Record<string, string> = {
   ALBUM: 'Альбом',
@@ -83,9 +84,5 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
 }
 
 function NoteIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="opacity-20">
-      <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-    </svg>
-  );
+  return <Icon name="music" size={48} className="opacity-20" />;
 }

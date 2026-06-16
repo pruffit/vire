@@ -1,0 +1,1 @@
+ALTER TABLE "tracks" ADD COLUMN "is_explicit" boolean DEFAULT false NOT NULL;

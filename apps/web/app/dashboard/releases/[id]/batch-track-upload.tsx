@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
+import { Icon } from '@/components/icon';
 
 type ItemState = 'queued' | 'uploading' | 'processing' | 'error';
 
@@ -240,11 +241,5 @@ function StateDot({ state }: { state: ItemState }) {
 }
 
 function UploadIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-white/50" aria-hidden="true">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  );
+  return <Icon name="upload" size={22} className="text-white/50" />;
 }

@@ -9,6 +9,8 @@ import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from './audio-engine';
 import { usePlayerHotkeys } from './use-player-hotkeys';
 import { PlayerLikeButton } from '@/components/player-like-button';
+import { ExplicitBadge } from '@/components/explicit-badge';
+import { Icon } from '@/components/icon';
 import { TrackShare } from '@/components/track-share';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
@@ -122,7 +124,10 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
       </button>
       <div className="min-w-0 flex-1 flex items-center gap-2">
         <div className="min-w-0 flex-1">
-          <TitleLink track={track} className="text-[11px] sm:text-sm font-medium truncate leading-tight block" />
+          <span className="flex items-center gap-1.5 min-w-0">
+            <TitleLink track={track} className="text-[11px] sm:text-sm font-medium truncate leading-tight" />
+            {track.isExplicit && <ExplicitBadge />}
+          </span>
           <ArtistLink track={track} className="hidden sm:block text-xs text-muted-foreground truncate" />
         </div>
         <span className="hidden sm:inline-flex shrink-0">
@@ -197,7 +202,10 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
             <WaveModeButton />
           </div>
           <div className="flex-1 min-w-0 text-center">
-            <TitleLink track={track} onClick={onClose} className="text-xl font-semibold truncate block" />
+            <span className="flex items-center justify-center gap-2 min-w-0">
+              <TitleLink track={track} onClick={onClose} className="text-xl font-semibold truncate" />
+              {track.isExplicit && <ExplicitBadge />}
+            </span>
             <ArtistLink track={track} onClick={onClose} className="text-sm text-muted-foreground truncate block mt-1" />
           </div>
           <div className="shrink-0">
@@ -285,10 +293,11 @@ function QueuePanel({ onJump }: { onJump: () => void }) {
               className="flex-1 min-w-0 text-left"
             >
               <span
-                className="text-sm truncate block"
+                className="text-sm truncate flex items-center gap-1.5"
                 style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
               >
-                {t.title}
+                <span className="truncate">{t.title}</span>
+                {t.isExplicit && <ExplicitBadge />}
               </span>
               <span className="text-xs text-muted-foreground truncate block">{t.artistName}</span>
             </button>
@@ -591,22 +600,11 @@ function Waveform() {
 }
 
 function ExpandIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="15 3 21 3 21 9" />
-      <polyline points="9 21 3 21 3 15" />
-      <line x1="21" y1="3" x2="14" y2="10" />
-      <line x1="3" y1="21" x2="10" y2="14" />
-    </svg>
-  );
+  return <Icon name="maximize-2" size={14} className="text-white" />;
 }
 
 function ChevronDownIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
+  return <Icon name="chevron-down" size={20} />;
 }
 
 function ErrorIcon() {
@@ -636,30 +634,11 @@ function SkipForwardIcon() {
 }
 
 function VolumeIcon({ muted }: { muted: boolean }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50 shrink-0">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
-      {muted ? (
-        <line x1="22" y1="9" x2="16" y2="15" />
-      ) : (
-        <>
-          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-          <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-        </>
-      )}
-    </svg>
-  );
+  return <Icon name={muted ? 'volume-x' : 'volume-2'} size={16} className="opacity-50 shrink-0" />;
 }
 
 function QueueIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="3" y1="6" x2="16" y2="6" />
-      <line x1="3" y1="12" x2="16" y2="12" />
-      <line x1="3" y1="18" x2="12" y2="18" />
-      <polygon points="19 8 19 16 23 12" fill="currentColor" stroke="none" />
-    </svg>
-  );
+  return <Icon name="list" size={15} />;
 }
 
 function GripIcon() {

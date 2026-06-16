@@ -3,8 +3,9 @@
 import { useActionState, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { YandexIcon, GoogleIcon, TelegramIcon } from '@/app/(auth)/sign-in/provider-icons';
-import { setPasswordAction, linkYandexAction, linkGoogleAction, linkTelegramAction } from './account-actions';
+import { YandexIcon } from '@/app/(auth)/sign-in/provider-icons';
+import { setPasswordAction, linkYandexAction } from './account-actions';
+import { Icon } from '@/components/icon';
 
 interface Props {
   hasPassword: boolean;
@@ -13,17 +14,13 @@ interface Props {
 }
 
 const PROVIDERS = [
-  { id: 'yandex',   label: 'Яндекс',   Icon: YandexIcon   },
-  { id: 'google',   label: 'Google',   Icon: GoogleIcon   },
-  { id: 'telegram', label: 'Telegram', Icon: TelegramIcon },
+  { id: 'yandex', label: 'Яндекс', Icon: YandexIcon },
 ] as const;
 
 type OAuthLinkAction = (formData: FormData) => void | Promise<void>;
 
 const LINK_ACTIONS: Record<string, OAuthLinkAction> = {
   yandex: linkYandexAction,
-  google: linkGoogleAction,
-  telegram: linkTelegramAction,
 };
 
 const LINK_ERROR_MESSAGES: Record<string, string> = {
@@ -203,14 +200,7 @@ function StatusBadge({ ok, children }: { ok: boolean; children: React.ReactNode 
 }
 
 function EmailIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.8" aria-hidden="true" className="text-foreground/70 shrink-0"
-    >
-      <rect x="2" y="4" width="20" height="16" rx="2" />
-      <path d="M2 8l10 6 10-6" />
-    </svg>
-  );
+  return <Icon name="mail" size={16} className="text-foreground/70 shrink-0" />;
 }
 
 function PasswordStrength({ password }: { password: string }) {

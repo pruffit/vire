@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Logo } from './logo';
+import { NoticeReopenLink } from './compliance-notice';
 import { SITE_VERSION } from '@/lib/site';
 
 export function Footer() {
@@ -29,6 +30,9 @@ export function Footer() {
             <FooterCol title="Правовое">
               <FooterLink href="/terms">Условия</FooterLink>
               <FooterLink href="/privacy">Конфиденциальность</FooterLink>
+              <li>
+                <NoticeReopenLink className="text-xs text-muted-foreground transition-colors hover:text-foreground cursor-pointer text-left" />
+              </li>
               <FooterLink href="/design">Дизайн</FooterLink>
             </FooterCol>
           </div>

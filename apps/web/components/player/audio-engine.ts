@@ -78,7 +78,7 @@ async function fetchWaveNext(currentTrackId: string): Promise<PlayerTrack | null
   const res = await fetch(url).catch(() => null);
   if (!res?.ok) return null;
 
-  const data = await res.json() as { track: { id: string; title: string; artistName: string; artistSlug: string; releaseId: string; coverUrl: string | null; accentColor: string | null } | null };
+  const data = await res.json() as { track: { id: string; title: string; artistName: string; artistSlug: string; releaseId: string; coverUrl: string | null; accentColor: string | null; isExplicit?: boolean } | null };
   if (!data.track) return null;
 
   return {
@@ -89,6 +89,7 @@ async function fetchWaveNext(currentTrackId: string): Promise<PlayerTrack | null
     artistSlug: data.track.artistSlug,
     releaseId: data.track.releaseId,
     accentColor: data.track.accentColor ?? undefined,
+    isExplicit: data.track.isExplicit,
   };
 }
 

@@ -6,8 +6,10 @@ import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { PlayerLikeButton } from '@/components/player-like-button';
+import { ExplicitBadge } from '@/components/explicit-badge';
 import type { TrackStatus, TrackCredit } from '@vire/core';
 import { formatDuration } from '@/lib/format';
+import { Icon } from '@/components/icon';
 
 export interface ClientTrack {
   id: string;
@@ -17,6 +19,7 @@ export interface ClientTrack {
   status: TrackStatus;
   isExclusive: boolean;
   isWip: boolean;
+  isExplicit: boolean;
   credits: TrackCredit[];
 }
 
@@ -33,13 +36,13 @@ export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl 
 
   const queue: PlayerTrack[] = tracks
     .filter((t) => t.status === 'READY')
-    .map((t) => ({ id: t.id, title: t.title, artistName, coverUrl, artistSlug, releaseId }));
+    .map((t) => ({ id: t.id, title: t.title, artistName, coverUrl, artistSlug, releaseId, isExplicit: t.isExplicit }));
 
   function handlePlay(track: ClientTrack) {
     if (track.status !== 'READY') return;
     const idx = queue.findIndex((q) => q.id === track.id);
     controls.play(
-      queue[idx] ?? { id: track.id, title: track.title, artistName, coverUrl, artistSlug, releaseId },
+      queue[idx] ?? { id: track.id, title: track.title, artistName, coverUrl, artistSlug, releaseId, isExplicit: track.isExplicit },
       queue,
       idx,
     );
@@ -99,10 +102,11 @@ function TrackRow({
 
       <div className="flex-1 min-w-0">
         <span
-          className="text-sm truncate block"
+          className="text-sm truncate flex items-center gap-1.5"
           style={isActive ? { color: 'var(--artist-accent)' } : undefined}
         >
-          {track.title}
+          <span className="truncate">{track.title}</span>
+          {track.isExplicit && <ExplicitBadge />}
         </span>
         {track.credits.length > 0 && (
           <span className="text-[10px] font-mono opacity-30 truncate block">
@@ -158,11 +162,7 @@ function TrackRow({
 }
 
 function ArrowIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 18l6-6-6-6" />
-    </svg>
-  );
+  return <Icon name="chevron-right" size={14} />;
 }
 
 /** Маленький эквалайзер: три полоски, анимируются пока трек играет. */

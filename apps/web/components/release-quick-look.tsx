@@ -8,7 +8,9 @@ import { spring } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { PlayIcon, PauseIcon } from '@/components/icons';
+import { ExplicitBadge } from '@/components/explicit-badge';
 import { formatDuration } from '@/lib/format';
+import { Icon } from '@/components/icon';
 
 export interface QuickLookRelease {
   id: string;
@@ -26,6 +28,7 @@ interface QLTrack {
   trackNumber: number;
   durationSec: number | null;
   status: 'PROCESSING' | 'READY' | 'BLOCKED';
+  isExplicit?: boolean;
 }
 
 function year(d: Date | string | null): string | null {
@@ -137,6 +140,7 @@ export function ReleaseQuickLook({
         coverUrl: release.coverUrl,
         artistSlug: release.artistSlug,
         releaseId: release.id,
+        isExplicit: t.isExplicit,
       }));
   }
 
@@ -300,7 +304,10 @@ export function ReleaseQuickLook({
                       <span className="w-5 text-right text-xs font-mono opacity-30 shrink-0">
                         {isCurrent ? <MiniEq animate={isPlaying} /> : t.trackNumber}
                       </span>
-                      <span className="flex-1 truncate text-sm" style={isCurrent ? { color: 'var(--artist-accent, hsl(200 80% 65%))' } : undefined}>{t.title}</span>
+                      <span className="flex-1 truncate text-sm flex items-center gap-1.5" style={isCurrent ? { color: 'var(--artist-accent, hsl(200 80% 65%))' } : undefined}>
+                        <span className="truncate">{t.title}</span>
+                        {t.isExplicit && <ExplicitBadge />}
+                      </span>
                       {t.durationSec != null && ready && (
                         <span className="text-xs font-mono opacity-30 shrink-0">{formatDuration(t.durationSec)}</span>
                       )}
@@ -318,7 +325,7 @@ export function ReleaseQuickLook({
 }
 
 function NoteIcon() {
-  return <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" /></svg>;
+  return <Icon name="music" size={36} />;
 }
 function MiniEq({ animate }: { animate: boolean }) {
   return (

@@ -51,6 +51,7 @@ export interface Track {
   status: TrackStatus;
   isExclusive: boolean;
   isWip: boolean;
+  isExplicit: boolean;
   credits: TrackCredit[];
   createdAt: Date;
   updatedAt: Date;

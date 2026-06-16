@@ -16,6 +16,7 @@ import { musicAlbumJsonLd } from '@/lib/structured-data';
 import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 import { GENRE_LABELS } from '@/lib/genres';
+import { Icon } from '@/components/icon';
 
 type Props = { params: Promise<{ slug: string; releaseId: string }> };
 
@@ -98,12 +99,12 @@ export default async function ReleasePage({ params }: Props) {
     );
   }
 
-  const clientTracks: ClientTrack[] = tracks.map(({ id, title, trackNumber, durationSec, status, isExclusive, isWip, credits }) => ({
-    id, title, trackNumber, durationSec, status, isExclusive, isWip, credits,
+  const clientTracks: ClientTrack[] = tracks.map(({ id, title, trackNumber, durationSec, status, isExclusive, isWip, isExplicit, credits }) => ({
+    id, title, trackNumber, durationSec, status, isExclusive, isWip, isExplicit, credits,
   }));
   const readyQueue: PlayerTrack[] = tracks
     .filter((t) => t.status === 'READY')
-    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, accentColor: accent ?? undefined }));
+    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, accentColor: accent ?? undefined, isExplicit: t.isExplicit }));
   const year = releaseYear(release.releaseDate);
 
   return (
@@ -198,10 +199,6 @@ export default async function ReleasePage({ params }: Props) {
 }
 
 function MusicIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-    </svg>
-  );
+  return <Icon name="music" size={48} />;
 }
 

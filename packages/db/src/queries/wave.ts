@@ -11,6 +11,7 @@ export interface WaveTrack {
   releaseId: string;
   coverUrl: string | null;
   accentColor: string | null;
+  isExplicit: boolean;
 }
 
 /**
@@ -49,6 +50,7 @@ export async function getWaveNextTrack(
         releaseId: releases.id,
         coverUrl: releases.coverUrl,
         accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
+        isExplicit: tracks.isExplicit,
       })
       .from(tracks)
       .innerJoin(releases, eq(releases.id, tracks.releaseId))
@@ -73,7 +75,7 @@ export async function getWaveNextTrack(
     const rows = await q;
     if (rows.length === 0) return null;
     const r = rows[0];
-    return { id: r.id, title: r.title, artistName: r.artistName, artistSlug: r.artistSlug, releaseId: r.releaseId, coverUrl: r.coverUrl, accentColor: r.accentColor };
+    return { id: r.id, title: r.title, artistName: r.artistName, artistSlug: r.artistSlug, releaseId: r.releaseId, coverUrl: r.coverUrl, accentColor: r.accentColor, isExplicit: r.isExplicit };
   }
 
   // Данные текущего трека: audio meta + mood + genre релиза + жанры трека.
@@ -202,6 +204,7 @@ export async function getWaveNextTrack(
       releaseId: releases.id,
       coverUrl: releases.coverUrl,
       accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
+      isExplicit: tracks.isExplicit,
       score: totalScore,
     })
     .from(tracks)
@@ -240,5 +243,6 @@ export async function getWaveNextTrack(
     releaseId: r.releaseId,
     coverUrl: r.coverUrl,
     accentColor: r.accentColor,
+    isExplicit: r.isExplicit,
   };
 }

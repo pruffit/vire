@@ -12,6 +12,7 @@ import { ZoomableCover } from '@/components/zoomable-cover';
 import { LikeButton } from './like-button';
 import { TrackWaveformPlayer } from './waveform-player';
 import { MoodBadges } from '@/components/mood-badges';
+import { ExplicitBadge } from '@/components/explicit-badge';
 import { AddToPlaylistButton } from '@/components/add-to-playlist-button';
 import { JsonLd } from '@/components/json-ld';
 import { HeartIcon } from '@/components/icons';
@@ -91,10 +92,10 @@ export default async function TrackPage({ params, searchParams }: Props) {
 
   const queue = tracks
     .filter((t) => t.status === 'READY')
-    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId }));
+    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, isExplicit: t.isExplicit }));
 
   const playerTrack = track.status === 'READY'
-    ? { id: track.id, title: track.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId }
+    ? { id: track.id, title: track.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, isExplicit: track.isExplicit }
     : null;
 
   const trackNo = track.trackNumber < 10 ? `0${track.trackNumber}` : String(track.trackNumber);
@@ -143,8 +144,9 @@ export default async function TrackPage({ params, searchParams }: Props) {
               <span style={{ color: 'var(--artist-accent)' }}>{trackNo}</span>
               <span className="opacity-60"> · {release.title}</span>
             </p>
-            <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance">
+            <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance flex items-center gap-3 flex-wrap">
               {track.title}
+              {track.isExplicit && <ExplicitBadge />}
             </h1>
 
             {/* Технический мета-ряд: длительность · BPM · тональность */}
@@ -221,10 +223,11 @@ export default async function TrackPage({ params, searchParams }: Props) {
                       {no}
                     </span>
                     <span
-                      className="flex-1 truncate text-sm"
+                      className="flex-1 truncate text-sm flex items-center gap-1.5"
                       style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
                     >
-                      {t.title}
+                      <span className="truncate">{t.title}</span>
+                      {t.isExplicit && <ExplicitBadge />}
                     </span>
                     {t.status === 'PROCESSING' && (
                       <span className="text-[10px] font-mono opacity-30 shrink-0">обработка…</span>

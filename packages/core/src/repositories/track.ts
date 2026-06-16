@@ -13,6 +13,7 @@ export interface UpdateTrackParams {
   trackNumber?: number;
   isExclusive?: boolean;
   isWip?: boolean;
+  isExplicit?: boolean;
   bpm?: number | null;
   musicalKey?: string | null;
   credits?: TrackCredit[];

@@ -10,6 +10,7 @@ import { CreditsEditor } from '@/components/credits-editor';
 import type { Mood } from '@/lib/moods';
 import type { Genre } from '@/lib/genres';
 import type { TrackCredit } from '@/lib/upload';
+import { Icon } from '@/components/icon';
 
 export interface ManagedTrack {
   id: string;
@@ -21,6 +22,7 @@ export interface ManagedTrack {
   credits: TrackCredit[];
   bpm: number | null;
   musicalKey: string | null;
+  isExplicit: boolean;
 }
 
 async function patchTrack(id: string, patch: Record<string, unknown>): Promise<boolean> {
@@ -165,6 +167,22 @@ export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; 
     } else {
       setTitle(id, savedTitles.current.get(id) ?? '');
       toast.error('Не удалось переименовать трек');
+    }
+  }
+
+  async function toggleExplicit(id: string) {
+    const current = tracks.find((t) => t.id === id);
+    if (!current) return;
+    const next = !current.isExplicit;
+    setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, isExplicit: next } : t)));
+    markBusy(id, true);
+    const ok = await patchTrack(id, { isExplicit: next });
+    markBusy(id, false);
+    if (ok) {
+      flashSaved(id);
+    } else {
+      setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, isExplicit: !next } : t)));
+      toast.error('Не удалось сохранить метку 18+');
     }
   }
 
@@ -369,6 +387,21 @@ export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; 
                       </label>
                     </div>
 
+                    {/* Возрастная маркировка 18+ */}
+                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={track.isExplicit}
+                        onChange={() => toggleExplicit(track.id)}
+                        disabled={busy.has(track.id)}
+                        className="size-4 shrink-0 accent-red-500 cursor-pointer disabled:opacity-50"
+                      />
+                      <span className="text-xs text-white/60">
+                        <span className="font-mono font-semibold text-white/80">18+</span> Explicit — мат или
+                        откровенный контент
+                      </span>
+                    </label>
+
                     <div className="border-t border-white/5 pt-3">
                       <GenrePicker trackId={track.id} initial={track.genres} />
                     </div>
@@ -401,9 +434,5 @@ function TagIcon() {
 }
 
 function TrashIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-    </svg>
-  );
+  return <Icon name="trash" size={14} />;
 }

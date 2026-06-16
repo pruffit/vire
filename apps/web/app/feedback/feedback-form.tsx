@@ -18,6 +18,7 @@ export function FeedbackForm() {
   const [type, setType] = useState<FeedbackType>('bug');
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
+  const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<Status>('idle');
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -25,7 +26,7 @@ export function FeedbackForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (status === 'sending') return;
+    if (status === 'sending' || !consent) return;
     setStatus('sending');
 
     try {
@@ -57,7 +58,7 @@ export function FeedbackForm() {
         </p>
         <button
           type="button"
-          onClick={() => { setStatus('idle'); setMessage(''); setEmail(''); }}
+          onClick={() => { setStatus('idle'); setMessage(''); setEmail(''); setConsent(false); }}
           className="mt-2 text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
         >
           Отправить ещё одно
@@ -155,9 +156,25 @@ export function FeedbackForm() {
         )}
       </AnimatePresence>
 
+      {/* Согласие на обработку ПДн (152-ФЗ) — обязательно, не предотмечено. */}
+      <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed cursor-pointer">
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+          className="mt-0.5 size-3.5 shrink-0 accent-primary cursor-pointer"
+        />
+        <span>
+          Даю согласие на обработку персональных данных в соответствии с{' '}
+          <a href="/privacy" target="_blank" rel="noopener" className="underline underline-offset-2 hover:opacity-70">
+            политикой конфиденциальности
+          </a>.
+        </span>
+      </label>
+
       <button
         type="submit"
-        disabled={status === 'sending' || message.trim().length < 10}
+        disabled={status === 'sending' || message.trim().length < 10 || !consent}
         className="w-full rounded-full bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
         {status === 'sending'
