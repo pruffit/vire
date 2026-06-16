@@ -6,6 +6,7 @@ import type { ArtistLink } from '@vire/core';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { normalizeSlug, MAX_SMART_LINKS } from '@/lib/smart-link';
 import { PlatformIcon } from '@/components/platform-icon';
+import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
 import { toast } from '@/components/toast';
 
 export interface SmartLinkInitial {
@@ -162,11 +163,18 @@ export function SmartLinkForm({ artistSlug, initial }: { artistSlug: string; ini
 
         {links.map((link, i) => {
           const { key } = detectPlatform(link.url);
+          const brand = link.url ? PLATFORM_BRAND[key] : null;
           return (
             <div key={i} className="flex items-center gap-2">
-              <span className="shrink-0 w-9 h-9 grid place-items-center rounded-md bg-white/5 border border-white/10 text-white/70">
-                <PlatformIcon platform={link.url ? key : 'website'} size={18} />
-              </span>
+              {brand ? (
+                <span className="shrink-0 inline-flex h-9 min-w-9 items-center justify-center rounded-md bg-white px-2">
+                  <BrandIcon name={brand} size={isBrandWordmark(brand) ? 14 : 18} />
+                </span>
+              ) : (
+                <span className="shrink-0 w-9 h-9 grid place-items-center rounded-md bg-white/5 border border-white/10 text-white/70">
+                  <PlatformIcon platform={link.url ? key : 'website'} size={18} />
+                </span>
+              )}
               <div className="flex-1 flex flex-col gap-1 min-w-0">
                 <input
                   type="url" value={link.url} disabled={busy}

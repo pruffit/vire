@@ -17,6 +17,7 @@ import type { ArtistPost } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import type { ArtistProfile, ArtistLink, ArtistVideo, Release, SmartLink } from '@vire/core';
 import { PlatformIcon } from '@/components/platform-icon';
+import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
@@ -194,21 +195,34 @@ function ArtistHero({
                 {/* Follow + links (иконки площадок/соцсетей) on one line */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   {followButton}
-                  {artist.links.map((link: ArtistLink, i: number) => (
-                    <a
-                      key={i}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={linkLabel(link.url, link.label)}
-                      aria-label={linkLabel(link.url, link.label)}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-100"
-                      style={{ color: 'var(--artist-accent)', opacity: 0.6 }}
-                    >
-                      <PlatformIcon platform={detectPlatform(link.url).key} size={16} />
-                      <span>{linkLabel(link.url, link.label)}</span>
-                    </a>
-                  ))}
+                  {artist.links.map((link: ArtistLink, i: number) => {
+                    const key = detectPlatform(link.url).key;
+                    const name = linkLabel(link.url, link.label);
+                    // Своя подпись ссылки важнее лого — для неё показываем глиф + текст.
+                    const brand = link.label?.trim() ? null : PLATFORM_BRAND[key];
+                    const wordmark = brand ? isBrandWordmark(brand) : false;
+                    return (
+                      <a
+                        key={i}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={name}
+                        aria-label={name}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-100"
+                        style={{ color: 'var(--artist-accent)', opacity: 0.85 }}
+                      >
+                        {brand ? (
+                          <span className="inline-flex items-center rounded-md bg-white px-1.5 py-1">
+                            <BrandIcon name={brand} size={wordmark ? 14 : 16} label={wordmark ? name : undefined} />
+                          </span>
+                        ) : (
+                          <PlatformIcon platform={key} size={16} />
+                        )}
+                        {!wordmark && <span>{name}</span>}
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             </div>
