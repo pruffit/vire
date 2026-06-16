@@ -119,9 +119,11 @@ export default async function SmartLinkPage({ params }: Props) {
             {smartLink.links.map((link, i) => {
               const { key } = detectPlatform(link.url);
               const name = linkLabel(link.url, link.label);
-              // Своя подпись у ссылки важнее лого — для неё показываем глиф + текст.
-              const brand = link.label?.trim() ? null : PLATFORM_BRAND[key];
+              const custom = link.label?.trim();
+              const brand = PLATFORM_BRAND[key];
               const wordmark = brand ? isBrandWordmark(brand) : false;
+              // Текст прячем только когда вордмарк сам = название (и нет своей подписи).
+              const showText = !(brand && wordmark && !custom);
               return (
                 <StaggerItem key={i}>
                   <a
@@ -137,19 +139,15 @@ export default async function SmartLinkPage({ params }: Props) {
                     {brand ? (
                       // Белая плашка — лого читается на любой теме артиста (в т.ч. тёмной).
                       <span className="inline-flex shrink-0 items-center rounded-[10px] bg-white p-2">
-                        <BrandIcon
-                          name={brand}
-                          size={wordmark ? 20 : 24}
-                          label={wordmark ? name : undefined}
-                        />
+                        <BrandIcon name={brand} size={wordmark ? 20 : 24} />
                       </span>
                     ) : (
                       <PlatformIcon platform={key} size={22} className="shrink-0 opacity-90" />
                     )}
-                    {wordmark ? (
-                      <span aria-hidden="true" className="flex-1" />
-                    ) : (
+                    {showText ? (
                       <span className="flex-1 text-sm font-medium">{name}</span>
+                    ) : (
+                      <span aria-hidden="true" className="flex-1" />
                     )}
                     <span
                       className="text-sm transition-transform group-hover:translate-x-0.5"
