@@ -28,13 +28,13 @@ export function Footer() {
               <FooterLink href="/artists">Артисты</FooterLink>
               <FooterLink href="/about">О платформе</FooterLink>
               <FooterLink href="/design">Дизайн</FooterLink>
+              <li>
+                <AnnouncementReopenLink id="stage1" className={reopenCls} />
+              </li>
             </FooterCol>
             <FooterCol title="Поддержка">
               <FooterLink href="/feedback?type=artist">Стать артистом</FooterLink>
               <FooterLink href="/feedback">Обратная связь</FooterLink>
-              <li>
-                <AnnouncementReopenLink id="stage1" className={reopenCls} />
-              </li>
             </FooterCol>
             <FooterCol title="Правовое">
               <FooterLink href="/terms">Условия</FooterLink>
