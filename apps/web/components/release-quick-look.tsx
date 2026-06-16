@@ -63,10 +63,13 @@ export function ReleaseQuickLook({
   release,
   showArtist = true,
   upcoming = false,
+  priority = false,
 }: {
   release: QuickLookRelease;
   showArtist?: boolean;
   upcoming?: boolean;
+  /** Грузить обложку сразу — для первой карточки над сгибом (LCP). */
+  priority?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [tracks, setTracks] = useState<QLTrack[] | null>(null);
@@ -93,7 +96,7 @@ export function ReleaseQuickLook({
       <Link href={releaseHref} className="block w-full text-left group" aria-label={`${release.title} — скоро`}>
         <div className="relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30">
           {release.coverUrl ? (
-            <Image src={release.coverUrl} alt={release.title} fill sizes="(max-width: 640px) 50vw, 250px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
+            <Image src={release.coverUrl} alt={release.title} fill priority={priority} sizes="(max-width: 640px) 50vw, 250px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
           ) : (
             <div className="w-full h-full grid place-items-center opacity-20"><NoteIcon /></div>
           )}
@@ -172,7 +175,7 @@ export function ReleaseQuickLook({
       >
         <div className="relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30">
           {release.coverUrl ? (
-            <Image src={release.coverUrl} alt={release.title} fill sizes="(max-width: 640px) 50vw, 250px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
+            <Image src={release.coverUrl} alt={release.title} fill priority={priority} sizes="(max-width: 640px) 50vw, 250px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
           ) : (
             <div className="w-full h-full grid place-items-center opacity-20"><NoteIcon /></div>
           )}

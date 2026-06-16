@@ -36,9 +36,9 @@ export default async function FeedPage() {
         <EmptyState />
       ) : (
         <Stagger step={0.04} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {releases.map((release) => (
+          {releases.map((release, i) => (
             <StaggerItem key={release.id}>
-              <ReleaseQuickLook release={release} showArtist />
+              <ReleaseQuickLook release={release} showArtist priority={i === 0} />
             </StaggerItem>
           ))}
         </Stagger>

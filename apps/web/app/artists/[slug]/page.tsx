@@ -378,13 +378,13 @@ function ReleasesSection({
       <section>
         {releases.length === 1 ? (
           <div className="max-w-[200px]">
-            <ReleaseQuickLook showArtist={false} release={toQL(first)} />
+            <ReleaseQuickLook showArtist={false} release={toQL(first)} priority />
           </div>
         ) : (
           <Stagger className="grid grid-cols-2 sm:grid-cols-4 gap-5">
             {/* First release spans 2 cols — larger, more prominent */}
             <StaggerItem className="col-span-2">
-              <ReleaseQuickLook showArtist={false} release={toQL(first)} />
+              <ReleaseQuickLook showArtist={false} release={toQL(first)} priority />
             </StaggerItem>
             {rest.map((r) => (
               <StaggerItem key={r.id}>
