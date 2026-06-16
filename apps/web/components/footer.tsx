@@ -31,6 +31,7 @@ export function Footer() {
             </FooterCol>
             <FooterCol title="Поддержка">
               <FooterLink href="/feedback">Обратная связь</FooterLink>
+              <FooterLink href="/design">Дизайн</FooterLink>
               <li>
                 <AnnouncementReopenLink id="stage1" className={reopenCls} />
               </li>
@@ -38,7 +39,6 @@ export function Footer() {
             <FooterCol title="Правовое">
               <FooterLink href="/terms">Условия</FooterLink>
               <FooterLink href="/privacy">Конфиденциальность</FooterLink>
-              <FooterLink href="/design">Дизайн</FooterLink>
               <li>
                 <AnnouncementReopenLink id="auth" className={reopenCls} />
               </li>

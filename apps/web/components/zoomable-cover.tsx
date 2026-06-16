@@ -18,12 +18,15 @@ export function ZoomableCover({
   alt,
   className,
   sizes = '208px',
+  priority = false,
 }: {
   src: string;
   alt: string;
   /** Размеры/тень маленькой обложки, напр. "w-52 h-52 shadow-2xl". */
   className?: string;
   sizes?: string;
+  /** Грузить сразу (для обложки над сгибом — LCP). */
+  priority?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const layoutId = useId();
@@ -53,7 +56,7 @@ export function ZoomableCover({
       >
         {/* Тилт на внутреннем слое, чтобы не мешать layoutId-морфу кнопки */}
         <Tilt className="absolute inset-0">
-          <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" />
+          <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className="object-cover" />
           <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors grid place-items-center">
             <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white drop-shadow">
               <ExpandIcon />

@@ -140,6 +140,7 @@ export default async function ReleasePage({ params }: Props) {
                   alt={release.title}
                   className="w-56 h-56 sm:w-[300px] sm:h-[300px] shadow-2xl rounded-xl"
                   sizes="(max-width: 640px) 224px, 300px"
+                  priority
                 />
               ) : (
                 <div className="w-56 h-56 sm:w-[300px] sm:h-[300px] rounded-xl bg-white/5 flex items-center justify-center opacity-20">
