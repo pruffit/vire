@@ -41,20 +41,20 @@ const MOODS = ['меланхолия', 'драйв', 'ночь', 'фокус', '
 
 export function AboutContent() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16 space-y-20">
+    <main className="mx-auto max-w-3xl px-6 py-16 sm:py-20 space-y-24">
       {/* Hero */}
       <FadeUp>
-        <header className="relative space-y-4">
+        <header className="relative space-y-5">
           <div
             aria-hidden="true"
-            className="absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-[120%] -z-10 opacity-60 blur-3xl pointer-events-none"
-            style={{ background: 'radial-gradient(ellipse 50% 60% at 50% 0%, color-mix(in oklch, var(--primary) 30%, transparent), transparent)' }}
+            className="absolute -top-28 left-1/2 -translate-x-1/2 h-72 w-[130%] -z-10 opacity-60 blur-3xl pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse 50% 60% at 50% 0%, color-mix(in oklch, var(--primary) 32%, transparent), transparent)' }}
           />
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-mono uppercase tracking-widest text-muted-foreground">
             <span className="size-1.5 rounded-full bg-primary animate-pulse" />
             Этап 1 · Friends &amp; Family
           </span>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.02] text-balance">
+          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.0] text-balance">
             Независимая музыка
             <br />
             <span className="text-primary">на своих условиях</span>
@@ -67,105 +67,86 @@ export function AboutContent() {
         </header>
       </FadeUp>
 
-      {/* Roadmap progress */}
-      <Reveal>
-        <section className="space-y-5 rounded-2xl border border-border bg-card p-6 sm:p-7">
-          <h2 className="text-lg font-semibold tracking-tight">Дорожная карта</h2>
-          <div className="space-y-5">
-            <ProgressRow label="Этап 1 — Friends & Family" caption="запущен" value={100} done />
-            <ProgressRow label="Этап 2 — Прямые продажи" caption="в разработке" value={20} />
-            <ProgressRow label="Этап 3 — Сообщество и большой запуск" caption="скоро" value={5} />
-          </div>
-        </section>
-      </Reveal>
+      {/* 01 — Roadmap */}
+      <Section index="01" title="Дорожная карта">
+        <div className="space-y-5 rounded-2xl border border-border bg-card p-6 sm:p-7">
+          <ProgressRow icon="check" label="Этап 1 — Friends & Family" caption="запущен" value={100} done />
+          <ProgressRow icon="settings" label="Этап 2 — Прямые продажи" caption="в разработке" value={20} />
+          <ProgressRow icon="users" label="Этап 3 — Сообщество и большой запуск" caption="скоро" value={5} />
+        </div>
+      </Section>
 
-      {/* Examples */}
-      <Reveal>
-        <section className="space-y-5">
-          <h2 className="text-lg font-semibold tracking-tight">Как это выглядит</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <DemoCard icon="shuffle" title="Волна">
-              <Equalizer />
-            </DemoCard>
+      {/* 02 — Examples */}
+      <Section index="02" title="Как это выглядит" subtitle="Живые элементы интерфейса — не картинки.">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <DemoCard icon="shuffle" title="Волна">
+            <Equalizer />
+          </DemoCard>
 
-            <DemoCard icon="hash" title="Теги настроения">
-              <div className="flex flex-wrap gap-2">
-                {MOODS.map((m) => (
-                  <span key={m} className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground">
-                    {m}
-                  </span>
-                ))}
-              </div>
-            </DemoCard>
+          <DemoCard icon="hash" title="Теги настроения">
+            <div className="flex flex-wrap gap-2">
+              {MOODS.map((m) => (
+                <span key={m} className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">
+                  {m}
+                </span>
+              ))}
+            </div>
+          </DemoCard>
 
-            <DemoCard icon="link-2" title="Смартлинк — слушать везде">
-              <div className="flex flex-wrap items-center gap-2">
-                {SMARTLINK_DEMO.map((b) => (
-                  <span key={b} className="inline-flex items-center rounded-lg bg-white px-2 py-1.5">
-                    <BrandIcon name={b} size={16} />
-                  </span>
-                ))}
-              </div>
-            </DemoCard>
+          <DemoCard icon="link-2" title="Смартлинк — слушать везде">
+            <div className="flex flex-wrap items-center gap-2">
+              {SMARTLINK_DEMO.map((b) => (
+                <span key={b} className="inline-flex items-center rounded-lg bg-white px-2 py-1.5 transition-transform hover:-translate-y-0.5">
+                  <BrandIcon name={b} size={16} />
+                </span>
+              ))}
+            </div>
+          </DemoCard>
 
-            <DemoCard icon="music" title="Маркировка треков">
-              <div className="space-y-2">
-                <TrackLine n={1} title="Полуночный экспресс" explicit />
-                <TrackLine n={2} title="Тихий час" />
-              </div>
-            </DemoCard>
-          </div>
-        </section>
-      </Reveal>
+          <DemoCard icon="music" title="Маркировка треков">
+            <div className="space-y-2">
+              <TrackLine n={1} title="Полуночный экспресс" explicit />
+              <TrackLine n={2} title="Тихий час" />
+            </div>
+          </DemoCard>
+        </div>
+      </Section>
 
-      {/* For listeners */}
-      <section className="space-y-6">
-        <Reveal>
-          <h2 className="text-lg font-semibold tracking-tight">Для слушателей</h2>
-        </Reveal>
+      {/* 03 — For listeners */}
+      <Section index="03" title="Для слушателей">
         <FeatureGrid items={FOR_LISTENERS} />
-      </section>
+      </Section>
 
-      {/* For artists */}
-      <section className="space-y-6">
-        <Reveal>
-          <h2 className="text-lg font-semibold tracking-tight">Для артистов</h2>
-        </Reveal>
+      {/* 04 — For artists */}
+      <Section index="04" title="Для артистов">
         <FeatureGrid items={FOR_ARTISTS} />
-      </section>
+      </Section>
 
-      {/* What's next */}
-      <Reveal>
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold tracking-tight">Что дальше</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-prose">
-            На следующем этапе появятся <strong className="text-foreground">прямые продажи</strong>:
-            можно будет купить трек или релиз и поддержать артиста рублём напрямую. В Этапе 1 покупки
-            ещё выключены — включим, когда всё будет готово.
-          </p>
-        </section>
-      </Reveal>
+      {/* 05 — What's next */}
+      <Section index="05" title="Что дальше">
+        <NextStageTeaser />
+      </Section>
 
       {/* CTA */}
       <Reveal>
-        <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-7 sm:p-8">
+        <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-7 sm:p-9">
           <div
             aria-hidden="true"
-            className="absolute inset-0 -z-10 opacity-50"
-            style={{ background: 'radial-gradient(ellipse 60% 120% at 85% 0%, color-mix(in oklch, var(--primary) 18%, transparent), transparent)' }}
+            className="absolute inset-0 -z-10 opacity-60"
+            style={{ background: 'radial-gradient(ellipse 60% 130% at 85% 0%, color-mix(in oklch, var(--primary) 20%, transparent), transparent)' }}
           />
           <div className="space-y-1.5">
-            <h2 className="text-xl font-semibold tracking-tight">Вы артист?</h2>
+            <h2 className="text-2xl font-bold tracking-tight">Вы артист?</h2>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-prose">
               Профили на Этапе 1 заводим вручную — расскажите о себе и оставьте ссылки на музыку,
               и мы откроем доступ к загрузке и оформлению страницы.
             </p>
           </div>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link href="/feedback?type=artist" className="rounded-full bg-primary text-primary-foreground px-5 py-2 text-sm font-medium hover:bg-primary/90 transition-opacity">
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/feedback?type=artist" className="rounded-full bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium hover:bg-primary/90 transition-opacity">
               Стать артистом
             </Link>
-            <Link href="/artists" className="rounded-full border border-border px-5 py-2 text-sm font-medium hover:bg-foreground/5 transition-colors">
+            <Link href="/artists" className="rounded-full border border-border px-5 py-2.5 text-sm font-medium hover:bg-foreground/5 transition-colors">
               Слушать артистов
             </Link>
           </div>
@@ -175,14 +156,37 @@ export function AboutContent() {
   );
 }
 
-// ─── building blocks ─────────────────────────────────────────────────────────
+// ─── layout ──────────────────────────────────────────────────────────────────
 
-function ProgressRow({ label, caption, value, done = false }: { label: string; caption: string; value: number; done?: boolean }) {
+function Section({ index, title, subtitle, children }: { index: string; title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-baseline justify-between gap-3 text-sm">
-        <span className="font-medium">{label}</span>
-        <span className={`text-xs font-mono uppercase tracking-wide ${done ? 'text-primary' : 'text-muted-foreground'}`}>
+    <Reveal>
+      <section className="space-y-6">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-xs font-medium tracking-widest text-primary">{index}</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        </div>
+        {children}
+      </section>
+    </Reveal>
+  );
+}
+
+// ─── roadmap ───────────────────────────────────────────────────────────────
+
+function ProgressRow({ icon, label, caption, value, done = false }: { icon: IconName; label: string; caption: string; value: number; done?: boolean }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="flex items-center gap-2 font-medium">
+          <Icon name={icon} size={15} className={done ? 'text-primary' : 'text-muted-foreground'} />
+          {label}
+        </span>
+        <span className={`shrink-0 text-xs font-mono uppercase tracking-wide ${done ? 'text-primary' : 'text-muted-foreground'}`}>
           {caption}
         </span>
       </div>
@@ -200,9 +204,11 @@ function ProgressRow({ label, caption, value, done = false }: { label: string; c
   );
 }
 
+// ─── examples ──────────────────────────────────────────────────────────────
+
 function DemoCard({ icon, title, children }: { icon: IconName; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3 transition-colors hover:border-primary/30">
       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <Icon name={icon} size={15} className="text-primary" />
         {title}
@@ -240,22 +246,72 @@ function TrackLine({ n, title, explicit = false }: { n: number; title: string; e
   );
 }
 
+// ─── features ──────────────────────────────────────────────────────────────
+
 function FeatureGrid({ items }: { items: Feature[] }) {
   return (
     <Stagger className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {items.map((f) => (
         <StaggerItem key={f.title}>
-          <div className="group h-full rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/40">
+          <motion.div
+            whileHover={{ y: -3 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="group relative h-full overflow-hidden rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/40"
+          >
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 -z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              style={{ background: 'radial-gradient(ellipse 70% 90% at 0% 0%, color-mix(in oklch, var(--primary) 12%, transparent), transparent)' }}
+            />
             <div className="flex items-center gap-2.5">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-background border border-border transition-colors group-hover:border-primary/40">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-background transition-colors group-hover:border-primary/50 group-hover:bg-primary/10">
                 <Icon name={f.icon} size={18} className="text-primary" />
               </span>
               <h3 className="text-sm font-medium leading-snug">{f.title}</h3>
             </div>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{f.text}</p>
-          </div>
+          </motion.div>
         </StaggerItem>
       ))}
     </Stagger>
+  );
+}
+
+// ─── next-stage teaser ───────────────────────────────────────────────────────
+
+function NextStageTeaser() {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-dashed border-border bg-card p-6 sm:p-7 space-y-5">
+      <div className="space-y-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+          <Icon name="lock" size={12} />
+          Скоро · Этап 2
+        </span>
+        <p className="text-sm text-muted-foreground leading-relaxed max-w-prose">
+          Появятся <strong className="text-foreground">прямые продажи</strong>: купить трек или
+          релиз и поддержать артиста рублём напрямую, без посредников. В Этапе 1 покупки выключены —
+          включим, когда всё будет готово. Так это будет выглядеть:
+        </p>
+      </div>
+
+      {/* мок-превью покупки (выключено) */}
+      <div className="flex items-center gap-3 rounded-xl border border-border bg-background/60 p-3 opacity-90">
+        <div className="grid size-12 shrink-0 place-items-center rounded-md bg-foreground/10 text-muted-foreground">
+          <Icon name="music" size={20} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">Новый релиз</p>
+          <p className="truncate text-xs text-muted-foreground">FLAC · поддержать артиста</p>
+        </div>
+        <span
+          aria-hidden="true"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-foreground/10 px-4 py-2 text-sm font-medium text-muted-foreground"
+          title="Покупки появятся на Этапе 2"
+        >
+          <Icon name="lock" size={13} />
+          299 ₽
+        </span>
+      </div>
+    </div>
   );
 }
