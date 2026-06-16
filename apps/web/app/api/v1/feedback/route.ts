@@ -4,7 +4,7 @@ import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { sendMail } from '@/lib/mailer';
 
 const schema = z.object({
-  type: z.enum(['bug', 'idea', 'other']),
+  type: z.enum(['bug', 'idea', 'artist', 'other']),
   message: z.string().min(10).max(2000),
   page: z.string().max(200).optional(),
   email: z.string().email().optional().or(z.literal('')),
@@ -31,10 +31,11 @@ export async function POST(req: Request) {
   const typeLabel: Record<string, string> = {
     bug: '🐛 Баг',
     idea: '💡 Идея',
+    artist: '🎤 Заявка артиста',
     other: '💬 Другое',
   };
 
-  const subject = `[Vire] ${typeLabel[type] ?? type} — обратная связь`;
+  const subject = `[Vire] ${typeLabel[type] ?? type}`;
   const text = [
     `Тип: ${typeLabel[type] ?? type}`,
     page ? `Страница: ${page}` : null,

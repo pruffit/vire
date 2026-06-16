@@ -1,44 +1,49 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Пасхалки. Безвредные, выключаются сами, не мешают UI и доступности
-// (декоративный слой pointer-events-none). Konami запускается только вне полей ввода.
+// (декоративный слой pointer-events-none). Без вывода в консоль.
 
+/** Событие запуска «праздника» (нотный дождь) — можно слать из любого места. */
+export const PARTY_EVENT = 'vire:party';
+
+// e.code (а не e.key) — чтобы код работал на любой раскладке клавиатуры.
 const KONAMI = [
   'ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown',
-  'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a',
+  'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA',
 ];
 
 export function EasterEggs() {
   const [party, setParty] = useState(false);
 
-  // 1) Привет в консоли — для тех, кто заглянул в devtools.
-  useEffect(() => {
-    console.log('%cVire ♪', 'font-size:30px;font-weight:800;letter-spacing:1px');
-    console.log(
-      '%cНезависимая музыка для СНГ. Копаешься в коде? Нам по пути — /feedback',
-      'font-size:13px;font-weight:600',
-    );
-    console.log('%c↑ ↑ ↓ ↓ ← → ← → B A', 'font-family:monospace;color:#7c7c7c');
-  }, []);
+  const start = () => {
+    setParty(true);
+    window.setTimeout(() => setParty(false), 3400);
+  };
 
-  // 2) Konami-код → нотный дождь.
+  // Konami-код → нотный дождь.
   useEffect(() => {
     let buf: string[] = [];
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-      buf = [...buf, e.key].slice(-KONAMI.length);
-      if (buf.length === KONAMI.length && KONAMI.every((k, i) => k.toLowerCase() === buf[i].toLowerCase())) {
+      buf = [...buf, e.code].slice(-KONAMI.length);
+      if (buf.length === KONAMI.length && KONAMI.every((c, i) => c === buf[i])) {
         buf = [];
-        setParty(true);
-        window.setTimeout(() => setParty(false), 3400);
+        start();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Внешний триггер (напр. тройной клик по «© Vire» в футере).
+  useEffect(() => {
+    const onParty = () => start();
+    window.addEventListener(PARTY_EVENT, onParty);
+    return () => window.removeEventListener(PARTY_EVENT, onParty);
   }, []);
 
   return <AnimatePresence>{party && <NoteRain key="note-rain" />}</AnimatePresence>;
@@ -78,5 +83,30 @@ function NoteRain() {
         </motion.span>
       ))}
     </motion.div>
+  );
+}
+
+/**
+ * Обёртка-триггер: тройной клик по содержимому запускает нотный дождь.
+ * Используется для «© Vire» в футере — скрытый интерактивный прикол.
+ */
+export function PartyText({ children, className }: { children: ReactNode; className?: string }) {
+  const clicks = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onClick = () => {
+    clicks.current += 1;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => (clicks.current = 0), 600);
+    if (clicks.current >= 3) {
+      clicks.current = 0;
+      window.dispatchEvent(new Event(PARTY_EVENT));
+    }
+  };
+
+  return (
+    <span onClick={onClick} className={className}>
+      {children}
+    </span>
   );
 }

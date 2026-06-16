@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { AnnouncementReopenLink } from './announcements';
+import { PartyText } from './easter-eggs';
 import { SITE_VERSION } from '@/lib/site';
 
 const reopenCls =
@@ -26,7 +27,7 @@ export function Footer() {
             <FooterCol title="Площадка">
               <FooterLink href="/artists">Артисты</FooterLink>
               <FooterLink href="/about">О платформе</FooterLink>
-              <FooterLink href="/feedback">Стать артистом</FooterLink>
+              <FooterLink href="/feedback?type=artist">Стать артистом</FooterLink>
             </FooterCol>
             <FooterCol title="Поддержка">
               <FooterLink href="/feedback">Обратная связь</FooterLink>
@@ -37,6 +38,7 @@ export function Footer() {
             <FooterCol title="Правовое">
               <FooterLink href="/terms">Условия</FooterLink>
               <FooterLink href="/privacy">Конфиденциальность</FooterLink>
+              <FooterLink href="/design">Дизайн</FooterLink>
               <li>
                 <AnnouncementReopenLink id="auth" className={reopenCls} />
               </li>
@@ -46,7 +48,7 @@ export function Footer() {
 
         {/* Нижняя полоса */}
         <div className="mt-10 flex items-center gap-2 border-t border-border/60 pt-6">
-          <span className="font-mono text-xs text-muted-foreground">© {year} Vire</span>
+          <PartyText className="font-mono text-xs text-muted-foreground select-none">© {year} Vire</PartyText>
           <span className="text-muted-foreground/40">·</span>
           <span className="font-mono text-xs text-muted-foreground/60">v{SITE_VERSION}</span>
         </div>

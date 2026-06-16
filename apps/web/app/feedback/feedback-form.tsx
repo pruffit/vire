@@ -4,18 +4,19 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 
-type FeedbackType = 'bug' | 'idea' | 'other';
+export type FeedbackType = 'bug' | 'idea' | 'artist' | 'other';
 
 const TYPES: { value: FeedbackType; label: string; emoji: string; hint: string }[] = [
   { value: 'bug', label: 'Баг', emoji: '🐛', hint: 'Что-то сломалось или работает неожиданно' },
   { value: 'idea', label: 'Идея', emoji: '💡', hint: 'Предложение по улучшению платформы' },
+  { value: 'artist', label: 'Стать артистом', emoji: '🎤', hint: 'Хочу публиковать музыку на Vire' },
   { value: 'other', label: 'Другое', emoji: '💬', hint: 'Что угодно ещё' },
 ];
 
 type Status = 'idle' | 'sending' | 'done' | 'error';
 
-export function FeedbackForm() {
-  const [type, setType] = useState<FeedbackType>('bug');
+export function FeedbackForm({ initialType = 'bug' }: { initialType?: FeedbackType }) {
+  const [type, setType] = useState<FeedbackType>(initialType);
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
   const [consent, setConsent] = useState(false);
@@ -72,7 +73,7 @@ export function FeedbackForm() {
       {/* Тип */}
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Тип</legend>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {TYPES.map((t) => (
             <button
               key={t.value}
@@ -114,6 +115,8 @@ export function FeedbackForm() {
               ? 'Опиши что произошло: что делал, что ожидал увидеть, что увидел на самом деле...'
               : type === 'idea'
               ? 'Расскажи свою идею...'
+              : type === 'artist'
+              ? 'Расскажи о себе: имя/проект, ссылки на музыку (стриминги, соцсети), пару слов о том, что играешь...'
               : 'Напиши что хочешь...'
           }
           className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"

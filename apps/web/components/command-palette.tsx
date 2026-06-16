@@ -76,10 +76,11 @@ export function CommandPalette() {
     setActiveIdx(0);
   }, []);
 
-  // Глобальный хоткей ⌘K / Ctrl+K
+  // Глобальный хоткей ⌘K / Ctrl+K. По e.code (KeyK) — чтобы работало на любой
+  // раскладке (на ЙЦУКЕН физическая клавиша K даёт «л», а e.key вернул бы 'л').
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+      if ((e.metaKey || e.ctrlKey) && e.code === 'KeyK') {
         e.preventDefault();
         if (open) close(); else setOpen(true);
       }
