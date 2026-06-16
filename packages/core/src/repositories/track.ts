@@ -1,4 +1,4 @@
-import type { Track, TrackCredit } from '../types/release';
+import type { Track, TrackCredit, LyricLine } from '../types/release';
 
 export interface CreateTrackParams {
   id: string;
@@ -17,6 +17,7 @@ export interface UpdateTrackParams {
   bpm?: number | null;
   musicalKey?: string | null;
   credits?: TrackCredit[];
+  lyrics?: LyricLine[] | null;
 }
 
 export interface ITrackRepository {

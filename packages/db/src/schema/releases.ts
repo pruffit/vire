@@ -57,6 +57,8 @@ export const tracks = pgTable('tracks', {
   isExplicit: boolean('is_explicit').notNull().default(false),
   // Отображаемые кредиты — для витрины. Финансовые доли — в track_contributors (этап 4)
   credits: jsonb('credits').default([]),
+  // Синхронизированный текст: массив строк { t: секунды|null, text }. null/[] — нет текста.
+  lyrics: jsonb('lyrics'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [index('tracks_release_id_idx').on(t.releaseId)]);

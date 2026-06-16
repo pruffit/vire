@@ -5,6 +5,7 @@ import { TrackService, NotFoundError, type UpdateTrackParams } from '@vire/core'
 import { transcodeQueue } from '@/lib/queue';
 import { isUuid, sanitizeCredits } from '@/lib/upload';
 import { getActiveArtist } from '@/lib/active-artist';
+import { parseLrc } from '@/lib/lrc';
 
 function trackService() {
   return new TrackService(
@@ -83,6 +84,17 @@ export async function PATCH(
     }
     // Чистим вход: отбрасываем мусор, тримим имена, режем до лимита.
     patch.credits = sanitizeCredits(b.credits);
+  }
+  if (b.lyrics !== undefined) {
+    // Принимаем сырой LRC-текст; парсим в строки. Пусто → очищаем (null).
+    if (b.lyrics !== null && typeof b.lyrics !== 'string') {
+      return NextResponse.json({ error: 'Invalid lyrics' }, { status: 400 });
+    }
+    if (typeof b.lyrics === 'string' && b.lyrics.length > 20000) {
+      return NextResponse.json({ error: 'Lyrics too long' }, { status: 400 });
+    }
+    const parsed = typeof b.lyrics === 'string' ? parseLrc(b.lyrics) : null;
+    patch.lyrics = parsed && parsed.length > 0 ? parsed : null;
   }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });

@@ -24,6 +24,12 @@ export interface TrackCredit {
   name: string;
   role: ContributorRole;
 }
+
+/** Строка текста трека. `t` — таймкод в секундах (null = строка без синхронизации). */
+export interface LyricLine {
+  t: number | null;
+  text: string;
+}
 export type ReleaseStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
 export type TrackStatus = 'PROCESSING' | 'READY' | 'BLOCKED';
 
@@ -53,6 +59,7 @@ export interface Track {
   isWip: boolean;
   isExplicit: boolean;
   credits: TrackCredit[];
+  lyrics: LyricLine[] | null;
   createdAt: Date;
   updatedAt: Date;
 }

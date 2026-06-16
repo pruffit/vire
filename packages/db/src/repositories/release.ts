@@ -4,7 +4,7 @@ import {
   playlistTracks, likes, favoriteMoments,
 } from '../schema';
 import type { DB } from '../client';
-import type { CreateReleaseInput, UpdateReleaseInput, IReleaseRepository, Release, ReleaseStatus, ReleaseWithTracks, Track, TrackCredit } from '@vire/core';
+import type { CreateReleaseInput, UpdateReleaseInput, IReleaseRepository, Release, ReleaseStatus, ReleaseWithTracks, Track, TrackCredit, LyricLine } from '@vire/core';
 
 export class DrizzleReleaseRepository implements IReleaseRepository {
   constructor(private readonly db: DB) {}
@@ -191,6 +191,7 @@ function mapToTrack(row: typeof tracks.$inferSelect): Track {
     isWip: row.isWip,
     isExplicit: row.isExplicit,
     credits: Array.isArray(row.credits) ? (row.credits as TrackCredit[]) : [],
+    lyrics: Array.isArray(row.lyrics) ? (row.lyrics as LyricLine[]) : null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

@@ -15,6 +15,7 @@ import type {
   UpdateTrackParams,
   Track,
   TrackCredit,
+  LyricLine,
 } from '@vire/core';
 
 type TrackRow = typeof tracks.$inferSelect;
@@ -31,6 +32,7 @@ function mapRow(row: TrackRow): Track {
     isWip: row.isWip,
     isExplicit: row.isExplicit,
     credits: Array.isArray(row.credits) ? (row.credits as TrackCredit[]) : [],
+    lyrics: Array.isArray(row.lyrics) ? (row.lyrics as LyricLine[]) : null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -68,6 +70,7 @@ export class DrizzleTrackRepository implements ITrackRepository {
     if (patch.isWip !== undefined) trackValues.isWip = patch.isWip;
     if (patch.isExplicit !== undefined) trackValues.isExplicit = patch.isExplicit;
     if (patch.credits !== undefined) trackValues.credits = patch.credits;
+    if (patch.lyrics !== undefined) trackValues.lyrics = patch.lyrics;
 
     let row: typeof tracks.$inferSelect | undefined;
     if (Object.keys(trackValues).length > 0) {

@@ -6,6 +6,7 @@ export * from './repositories/release';
 export * from './repositories/track';
 export { getTrackAudio, getTrackAudioMeta, trackExists, getTrackTitle, listTracksNeedingAnalysis, updateTrackAnalysis } from './queries/track-audio';
 export type { TrackAudioData } from './queries/track-audio';
+export { getPublicTrackLyrics } from './queries/lyrics';
 export { listActiveArtists } from './queries/artists';
 export type { ArtistListItem } from './queries/artists';
 export { getLikeState, getLikeCount, likeTrack, unlikeTrack } from './queries/likes';

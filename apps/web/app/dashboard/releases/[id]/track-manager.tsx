@@ -7,9 +7,11 @@ import { toast } from '@/components/toast';
 import { MoodPicker } from '@/components/mood-picker';
 import { GenrePicker } from '@/components/genre-picker';
 import { CreditsEditor } from '@/components/credits-editor';
+import { LyricsEditor } from '@/components/lyrics-editor';
 import type { Mood } from '@/lib/moods';
 import type { Genre } from '@/lib/genres';
 import type { TrackCredit } from '@/lib/upload';
+import type { LyricLine } from '@/lib/lrc';
 import { Icon } from '@/components/icon';
 
 export interface ManagedTrack {
@@ -23,6 +25,7 @@ export interface ManagedTrack {
   bpm: number | null;
   musicalKey: string | null;
   isExplicit: boolean;
+  lyrics: LyricLine[] | null;
 }
 
 async function patchTrack(id: string, patch: Record<string, unknown>): Promise<boolean> {
@@ -412,6 +415,10 @@ export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; 
 
                     <div className="border-t border-white/5 pt-3">
                       <CreditsEditor trackId={track.id} initial={track.credits} />
+                    </div>
+
+                    <div className="border-t border-white/5 pt-3">
+                      <LyricsEditor trackId={track.id} initial={track.lyrics} />
                     </div>
                   </div>
                 </motion.div>

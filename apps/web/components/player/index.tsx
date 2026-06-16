@@ -12,6 +12,7 @@ import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { Icon } from '@/components/icon';
 import { TrackShare } from '@/components/track-share';
+import { Lyrics } from './lyrics';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 
@@ -225,6 +226,9 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
 
         {/* Громкость + поделиться */}
         <FullscreenExtras track={track} />
+
+        {/* Синхронизированный текст (если есть) */}
+        <Lyrics key={track.id} trackId={track.id} />
 
         {/* Очередь */}
         {queueLength > 1 && (
