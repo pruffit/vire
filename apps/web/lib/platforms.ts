@@ -13,10 +13,19 @@ export type PlatformKey =
   | 'zvuk'
   | 'soundcloud'
   | 'bandcamp'
+  | 'deezer'
+  | 'tidal'
+  | 'amazon_music'
+  | 'bandlab'
   | 'telegram'
   | 'instagram'
   | 'tiktok'
   | 'x'
+  | 'facebook'
+  | 'bluesky'
+  | 'discord'
+  | 'twitch'
+  | 'bandsintown'
   | 'website';
 
 export const PLATFORM_NAMES: Record<PlatformKey, string> = {
@@ -30,10 +39,19 @@ export const PLATFORM_NAMES: Record<PlatformKey, string> = {
   zvuk: 'Звук',
   soundcloud: 'SoundCloud',
   bandcamp: 'Bandcamp',
+  deezer: 'Deezer',
+  tidal: 'TIDAL',
+  amazon_music: 'Amazon Music',
+  bandlab: 'BandLab',
   telegram: 'Telegram',
   instagram: 'Instagram',
   tiktok: 'TikTok',
   x: 'X',
+  facebook: 'Facebook',
+  bluesky: 'Bluesky',
+  discord: 'Discord',
+  twitch: 'Twitch',
+  bandsintown: 'Bandsintown',
   website: 'Сайт',
 };
 
@@ -67,10 +85,19 @@ export function detectPlatform(url: string): DetectedPlatform {
     if (is('zvuk.com', 'sber-zvuk.com')) return 'zvuk';
     if (is('soundcloud.com')) return 'soundcloud';
     if (is('bandcamp.com')) return 'bandcamp';
+    if (is('deezer.com', 'deezer.page.link', 'dzr.fm')) return 'deezer';
+    if (is('tidal.com')) return 'tidal';
+    if (host.startsWith('music.amazon.') || is('amazon.com', 'amazon.de', 'amazon.co.uk') && path.startsWith('/music')) return 'amazon_music';
+    if (is('bandlab.com')) return 'bandlab';
     if (host === 't.me' || is('telegram.me', 'telegram.org')) return 'telegram';
     if (is('instagram.com')) return 'instagram';
     if (is('tiktok.com')) return 'tiktok';
     if (is('x.com', 'twitter.com')) return 'x';
+    if (is('facebook.com', 'fb.com', 'fb.me')) return 'facebook';
+    if (is('bsky.app')) return 'bluesky';
+    if (is('discord.gg', 'discord.com', 'discordapp.com')) return 'discord';
+    if (is('twitch.tv')) return 'twitch';
+    if (is('bandsintown.com')) return 'bandsintown';
     return 'website';
   })();
 

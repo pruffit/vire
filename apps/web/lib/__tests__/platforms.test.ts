@@ -25,6 +25,18 @@ describe('detectPlatform', () => {
     expect(detectPlatform('https://www.tiktok.com/@user').key).toBe('tiktok');
     expect(detectPlatform('https://x.com/user').key).toBe('x');
     expect(detectPlatform('https://twitter.com/user').key).toBe('x');
+    expect(detectPlatform('https://facebook.com/page').key).toBe('facebook');
+    expect(detectPlatform('https://bsky.app/profile/x').key).toBe('bluesky');
+    expect(detectPlatform('https://discord.gg/abc').key).toBe('discord');
+    expect(detectPlatform('https://twitch.tv/streamer').key).toBe('twitch');
+    expect(detectPlatform('https://www.bandsintown.com/a/123').key).toBe('bandsintown');
+  });
+
+  it('распознаёт дополнительные стриминги', () => {
+    expect(detectPlatform('https://www.deezer.com/album/123').key).toBe('deezer');
+    expect(detectPlatform('https://tidal.com/browse/album/123').key).toBe('tidal');
+    expect(detectPlatform('https://music.amazon.com/albums/123').key).toBe('amazon_music');
+    expect(detectPlatform('https://www.bandlab.com/artist').key).toBe('bandlab');
   });
 
   it('неизвестный домен → website с именем хоста', () => {
