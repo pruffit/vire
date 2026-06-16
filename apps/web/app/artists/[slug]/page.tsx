@@ -198,11 +198,8 @@ function ArtistHero({
                   {artist.links.map((link: ArtistLink, i: number) => {
                     const key = detectPlatform(link.url).key;
                     const name = linkLabel(link.url, link.label);
-                    const custom = link.label?.trim();
                     const brand = PLATFORM_BRAND[key];
                     const wordmark = brand ? isBrandWordmark(brand) : false;
-                    // Текст прячем только когда вордмарк сам = название (и нет своей подписи).
-                    const showText = !(brand && wordmark && !custom);
                     return (
                       <a
                         key={i}
@@ -215,13 +212,16 @@ function ArtistHero({
                         style={{ color: 'var(--artist-accent)', opacity: 0.85 }}
                       >
                         {brand ? (
+                          // Распознанная площадка — только лого (название несёт само лого).
                           <span className="inline-flex items-center rounded-md bg-white px-1.5 py-1">
                             <BrandIcon name={brand} size={wordmark ? 14 : 16} />
                           </span>
                         ) : (
-                          <PlatformIcon platform={key} size={16} />
+                          <>
+                            <PlatformIcon platform={key} size={16} />
+                            <span>{name}</span>
+                          </>
                         )}
-                        {showText && <span>{name}</span>}
                       </a>
                     );
                   })}

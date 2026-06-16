@@ -119,17 +119,15 @@ export default async function SmartLinkPage({ params }: Props) {
             {smartLink.links.map((link, i) => {
               const { key } = detectPlatform(link.url);
               const name = linkLabel(link.url, link.label);
-              const custom = link.label?.trim();
               const brand = PLATFORM_BRAND[key];
               const wordmark = brand ? isBrandWordmark(brand) : false;
-              // Текст прячем только когда вордмарк сам = название (и нет своей подписи).
-              const showText = !(brand && wordmark && !custom);
               return (
                 <StaggerItem key={i}>
                   <a
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label={name}
                     className="group flex items-center gap-3.5 rounded-xl border px-4 py-3.5 transition-all hover:scale-[1.015]"
                     style={{
                       borderColor: 'color-mix(in oklch, var(--artist-text) 14%, transparent)',
@@ -144,10 +142,10 @@ export default async function SmartLinkPage({ params }: Props) {
                     ) : (
                       <PlatformIcon platform={key} size={22} className="shrink-0 opacity-90" />
                     )}
-                    {showText ? (
-                      <span className="flex-1 text-sm font-medium">{name}</span>
-                    ) : (
+                    {brand ? (
                       <span aria-hidden="true" className="flex-1" />
+                    ) : (
+                      <span className="flex-1 text-sm font-medium">{name}</span>
                     )}
                     <span
                       className="text-sm transition-transform group-hover:translate-x-0.5"

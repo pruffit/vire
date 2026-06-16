@@ -24,9 +24,10 @@
 - **Тип:** `packages/core/src/types/artist.ts` (`SmartLink`, `ArtistLink.label` → опционально).
 - **Запросы:** `packages/db/src/queries/smart-links.ts` (get/list/create/update/delete + slug-проверка).
 - **Площадки/иконки:** `apps/web/lib/platforms.ts` (`detectPlatform`, `linkLabel`).
-  Хаб артиста — монохромные глифы `apps/web/components/platform-icon.tsx`.
-  Кнопки лендинга — цветные бренд-лого `BrandIcon` (`PLATFORM_BRAND`,
-  `isBrandWordmark`); вордмарк заменяет подпись, глиф идёт с подписью. См. `icons.md`.
+  Распознанная площадка → цветное бренд-лого `BrandIcon` без текста (название
+  несёт само лого; в редакторе поле подписи скрыто). Нераспознанная ссылка →
+  монохромный глиф `platform-icon.tsx` + подпись (своя или хост). Маппинг
+  `PLATFORM_BRAND` (`@/components/brand-icon`). См. `icons.md`.
 - **Валидация:** `apps/web/lib/smart-link.ts` (`normalizeSlug`, `isValidSlug`, `parseSmartLinkLinks`).
 - **Публичная страница:** `apps/web/app/smartlink/[artistSlug]/[linkSlug]/page.tsx`.
 - **Дашборд:** `apps/web/app/dashboard/links/*` (список, форма, new, [id]).
@@ -39,8 +40,9 @@
   переменные, что у обложек релизов.
 
 ## Ограничения / на будущее
-- Кнопки лендинга — точные бренд-лого (`BrandIcon`); хаб артиста пока на упрощённых
-  монохромных глифах (`PlatformIcon`) — наследуют тему артиста.
+- Распознанные площадки показываются только бренд-лого (без текста) на лендинге,
+  в хабе артиста и в превью редактора; подпись остаётся лишь у нераспознанных
+  ссылок (монохромный глиф `PlatformIcon` + текст).
 - Площадка определяется при рендере из URL (в БД хранится только url + опц. подпись).
 - Slug — только латиница/цифры/дефис; кириллические названия дают slug из того,
   что осталось (артист правит вручную).

@@ -182,12 +182,15 @@ export function SmartLinkForm({ artistSlug, initial }: { artistSlug: string; ini
                   placeholder="https://open.spotify.com/…"
                   className={inputCls}
                 />
-                <input
-                  type="text" value={link.label ?? ''} disabled={busy}
-                  onChange={(e) => updateLink(i, { label: e.target.value })}
-                  placeholder={link.url ? `Подпись (по умолчанию «${linkLabel(link.url)}»)` : 'Подпись (необязательно)'}
-                  className={`${inputCls} text-xs`}
-                />
+                {/* Подпись нужна только для нераспознанных ссылок — у площадки своё лого/название. */}
+                {!brand && (
+                  <input
+                    type="text" value={link.label ?? ''} disabled={busy}
+                    onChange={(e) => updateLink(i, { label: e.target.value })}
+                    placeholder={link.url ? `Подпись (по умолчанию «${linkLabel(link.url)}»)` : 'Подпись (необязательно)'}
+                    className={`${inputCls} text-xs`}
+                  />
+                )}
               </div>
               <button type="button" onClick={() => setLinks((p) => p.filter((_, j) => j !== i))}
                 className="shrink-0 text-white/30 hover:text-red-400 transition-colors text-lg leading-none" aria-label="Удалить ссылку">
