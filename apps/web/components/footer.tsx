@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { Logo } from './logo';
-import { NoticeReopenLink } from './compliance-notice';
+import { AnnouncementReopenLink } from './announcements';
 import { SITE_VERSION } from '@/lib/site';
+
+const reopenCls =
+  'text-xs text-muted-foreground transition-colors hover:text-foreground cursor-pointer text-left';
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -22,18 +25,21 @@ export function Footer() {
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-12">
             <FooterCol title="Площадка">
               <FooterLink href="/artists">Артисты</FooterLink>
+              <FooterLink href="/about">О платформе</FooterLink>
               <FooterLink href="/feedback">Стать артистом</FooterLink>
             </FooterCol>
             <FooterCol title="Поддержка">
               <FooterLink href="/feedback">Обратная связь</FooterLink>
+              <li>
+                <AnnouncementReopenLink id="stage1" className={reopenCls} />
+              </li>
             </FooterCol>
             <FooterCol title="Правовое">
               <FooterLink href="/terms">Условия</FooterLink>
               <FooterLink href="/privacy">Конфиденциальность</FooterLink>
               <li>
-                <NoticeReopenLink className="text-xs text-muted-foreground transition-colors hover:text-foreground cursor-pointer text-left" />
+                <AnnouncementReopenLink id="auth" className={reopenCls} />
               </li>
-              <FooterLink href="/design">Дизайн</FooterLink>
             </FooterCol>
           </div>
         </div>
