@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { motion } from 'motion/react';
 import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
 import { Icon, type IconName } from '@/components/icon';
@@ -219,7 +219,14 @@ function DemoCard({ icon, title, children }: { icon: IconName; title: string; ch
 }
 
 function Equalizer() {
-  const [bars] = useState(() => Array.from({ length: 28 }, () => 0.2 + Math.random() * 0.8));
+  // Рендерим только после маунта: motion по-разному сериализует transform на
+  // сервере и клиенте → иначе рассинхрон гидрации. SSR отдаёт плейсхолдер той же
+  // высоты (useSyncExternalStore: сервер → false, клиент → true, без warning).
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
+  if (!mounted) return <div className="h-12" />;
+
+  // Детерминированные высоты (формула от индекса), «живость» — зацикленная анимация.
+  const bars = Array.from({ length: 28 }, (_, i) => 0.25 + 0.7 * Math.abs(Math.sin((i + 1) * 1.27)));
   return (
     <div className="flex h-12 items-end gap-1">
       {bars.map((h, i) => (
@@ -228,7 +235,7 @@ function Equalizer() {
           className="h-full flex-1 rounded-full bg-primary/70"
           style={{ originY: 1 }}
           initial={{ scaleY: h }}
-          animate={{ scaleY: [h, Math.min(1, h + 0.35), Math.max(0.15, h - 0.25), h] }}
+          animate={{ scaleY: [h, Math.min(1, h + 0.3), Math.max(0.15, h - 0.25), h] }}
           transition={{ duration: 1.2 + (i % 5) * 0.18, repeat: Infinity, ease: 'easeInOut' }}
         />
       ))}
