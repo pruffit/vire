@@ -42,6 +42,7 @@
   не нужно. Поэтому `currentColor` к ним неприменим.
 - Добавить новый бренд: положить `kebab-case.svg` в `icons/social|streaming`, прогнать
   `pnpm icons:build`, добавить подпись в `BRAND_LABELS`.
-- `platform-icon.tsx` (смартлинки) пока рисует свои упрощённые глифы — на эти
-  бренд-лого можно переключить (`PlatformKey → BrandName` почти 1:1). См. `smart-links.md`.
+- Кнопки лендинга смартлинка уже на `BrandIcon` (`PLATFORM_BRAND` мапит
+  `PlatformKey → BrandName`, `isBrandWordmark` решает «лого вместо подписи»). Хаб
+  артиста остаётся на монохромных глифах `platform-icon.tsx`. См. `smart-links.md`.
 - `icons/Icons.svg` — мастер-экспорт системных иконок из Figma (для перерисовки пака).

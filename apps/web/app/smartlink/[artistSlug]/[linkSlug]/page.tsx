@@ -7,6 +7,7 @@ import { ArtistService } from '@vire/core';
 import { artistFontStyle } from '@/lib/fonts';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { PlatformIcon } from '@/components/platform-icon';
+import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 
@@ -118,6 +119,9 @@ export default async function SmartLinkPage({ params }: Props) {
             {smartLink.links.map((link, i) => {
               const { key } = detectPlatform(link.url);
               const name = linkLabel(link.url, link.label);
+              // Своя подпись у ссылки важнее лого — для неё показываем глиф + текст.
+              const brand = link.label?.trim() ? null : PLATFORM_BRAND[key];
+              const wordmark = brand ? isBrandWordmark(brand) : false;
               return (
                 <StaggerItem key={i}>
                   <a
@@ -130,8 +134,23 @@ export default async function SmartLinkPage({ params }: Props) {
                       background: 'color-mix(in oklch, var(--artist-text) 5%, transparent)',
                     }}
                   >
-                    <PlatformIcon platform={key} size={22} className="shrink-0 opacity-90" />
-                    <span className="flex-1 text-sm font-medium">{name}</span>
+                    {brand ? (
+                      // Белая плашка — лого читается на любой теме артиста (в т.ч. тёмной).
+                      <span className="inline-flex shrink-0 items-center rounded-[10px] bg-white p-2">
+                        <BrandIcon
+                          name={brand}
+                          size={wordmark ? 20 : 24}
+                          label={wordmark ? name : undefined}
+                        />
+                      </span>
+                    ) : (
+                      <PlatformIcon platform={key} size={22} className="shrink-0 opacity-90" />
+                    )}
+                    {wordmark ? (
+                      <span aria-hidden="true" className="flex-1" />
+                    ) : (
+                      <span className="flex-1 text-sm font-medium">{name}</span>
+                    )}
                     <span
                       className="text-sm transition-transform group-hover:translate-x-0.5"
                       style={{ color: 'var(--artist-accent)' }}

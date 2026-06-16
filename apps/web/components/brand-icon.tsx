@@ -3,11 +3,39 @@
 // В отличие от Icon (монохром, currentColor через спрайт), бренд-логотипы
 // рендерятся тегом картинки по файлу — у них свои цвета/градиенты, перекрашивать нельзя.
 import type { CSSProperties } from 'react';
-import { SOCIAL_ICON_NAMES, STREAMING_ICON_NAMES } from './icon-manifest.generated';
+import type { PlatformKey } from '@/lib/platforms';
+import { SOCIAL_ICON_NAMES, STREAMING_ICON_NAMES, BRAND_RATIO } from './icon-manifest.generated';
 
 export type SocialIconName = (typeof SOCIAL_ICON_NAMES)[number];
 export type StreamingIconName = (typeof STREAMING_ICON_NAMES)[number];
 export type BrandName = SocialIconName | StreamingIconName;
+
+/**
+ * Площадка смартлинка (`detectPlatform`) → бренд-лого. `null` — лого нет
+ * (`website`), рисуем монохромный глиф `PlatformIcon`.
+ */
+export const PLATFORM_BRAND: Record<PlatformKey, BrandName | null> = {
+  spotify: 'spotify',
+  apple_music: 'apple-music',
+  youtube_music: 'youtube-music',
+  youtube: 'youtube',
+  yandex_music: 'yandex-music',
+  vk_music: 'vk-music',
+  vk: 'vk',
+  zvuk: 'zvuk',
+  soundcloud: 'soundcloud',
+  bandcamp: 'bandcamp',
+  telegram: 'telegram',
+  instagram: 'instagram',
+  tiktok: 'tiktok',
+  x: 'x',
+  website: null,
+};
+
+/** Лого-вордмарк (содержит название бренда) — рядом не нужна текстовая подпись. */
+export function isBrandWordmark(name: BrandName): boolean {
+  return (BRAND_RATIO[name] ?? 1) > 2.2;
+}
 
 /** Человекочитаемые названия — для alt/подписей. */
 export const BRAND_LABELS: Record<BrandName, string> = {

@@ -151,3 +151,31 @@ export const STREAMING_ICON_NAMES = [
   'youtube-music',
   'zvuk',
 ] as const;
+
+/** Соотношение сторон бренд-лого (ширина/высота). >2.2 — вордмарк (с текстом). */
+export const BRAND_RATIO: Record<string, number> = {
+  'bandlab': 4.393,
+  'bandsintown': 6.57,
+  'bluesky': 1.132,
+  'discord': 1,
+  'facebook': 0.998,
+  'instagram': 1,
+  'telegram': 1,
+  'tiktok': 1,
+  'twitch': 1.62,
+  'vk': 1,
+  'x': 1,
+  'youtube': 4.633,
+  'amazon-music': 5,
+  'apple-music': 1,
+  'bandcamp': 1,
+  'deezer': 1.007,
+  'kion-music': 8.4,
+  'soundcloud': 8.83,
+  'spotify': 4.163,
+  'tidal': 7.074,
+  'vk-music': 5.11,
+  'yandex-music': 8.364,
+  'youtube-music': 2.924,
+  'zvuk': 3.904,
+};

@@ -87,18 +87,24 @@ function cleanBrand(svg) {
   return `<svg ${kept.join(' ')}>${s.slice(end)}`.replace(/\s+$/, '') + '\n';
 }
 
-function buildBrands(group, names) {
+function buildBrands(group, names, ratios) {
   const outDir = path.join(PUBLIC_ICONS, 'brands');
   fs.mkdirSync(outDir, { recursive: true });
   for (const name of names) {
     const svg = fs.readFileSync(path.join(SRC, group, `${name}.svg`), 'utf8');
-    fs.writeFileSync(path.join(outDir, `${name}.svg`), cleanBrand(svg));
+    const cleaned = cleanBrand(svg);
+    fs.writeFileSync(path.join(outDir, `${name}.svg`), cleaned);
+    // соотношение сторон (ширина/высота) — чтобы знать вордмарк это или глиф
+    const vb = attr(rootSvgTag(cleaned).tag, 'viewBox');
+    const parts = vb ? vb.trim().split(/[\s,]+/).map(Number) : null;
+    ratios[name] = parts && parts[3] ? Math.round((parts[2] / parts[3]) * 1000) / 1000 : 1;
   }
 }
 
 // --- манифест имён --------------------------------------------------------------
-function writeManifest(system, social, streaming) {
+function writeManifest(system, social, streaming, ratios) {
   const arr = (names) => names.map((n) => `  '${n}',`).join('\n');
+  const ratioLines = [...social, ...streaming].map((n) => `  '${n}': ${ratios[n]},`).join('\n');
   const out = `// АВТО-СГЕНЕРИРОВАНО: node scripts/build-icons.mjs — не править руками.
 // Источник: папка icons/{system,social,streaming}/*.svg
 
@@ -113,6 +119,11 @@ ${arr(social)}
 export const STREAMING_ICON_NAMES = [
 ${arr(streaming)}
 ] as const;
+
+/** Соотношение сторон бренд-лого (ширина/высота). >2.2 — вордмарк (с текстом). */
+export const BRAND_RATIO: Record<string, number> = {
+${ratioLines}
+};
 `;
   fs.writeFileSync(path.join(COMPONENTS, 'icon-manifest.generated.ts'), out);
 }
@@ -123,9 +134,10 @@ const streaming = svgNames(path.join(SRC, 'streaming'));
 
 fs.mkdirSync(PUBLIC_ICONS, { recursive: true });
 const symCount = buildSystemSprite(system);
-buildBrands('social', social);
-buildBrands('streaming', streaming);
-writeManifest(system, social, streaming);
+const ratios = {};
+buildBrands('social', social, ratios);
+buildBrands('streaming', streaming, ratios);
+writeManifest(system, social, streaming, ratios);
 
 console.log(`✓ system-sprite.svg: ${symCount} symbols`);
 console.log(`✓ brands: ${social.length} social + ${streaming.length} streaming → public/icons/brands/`);
