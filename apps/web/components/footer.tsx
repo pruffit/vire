@@ -27,10 +27,10 @@ export function Footer() {
             <FooterCol title="Площадка">
               <FooterLink href="/artists">Артисты</FooterLink>
               <FooterLink href="/about">О платформе</FooterLink>
-              <FooterLink href="/feedback?type=artist">Стать артистом</FooterLink>
               <FooterLink href="/design">Дизайн</FooterLink>
             </FooterCol>
             <FooterCol title="Поддержка">
+              <FooterLink href="/feedback?type=artist">Стать артистом</FooterLink>
               <FooterLink href="/feedback">Обратная связь</FooterLink>
               <li>
                 <AnnouncementReopenLink id="stage1" className={reopenCls} />
