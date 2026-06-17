@@ -194,7 +194,6 @@ function ArtistHero({
 
                 {/* Follow + links (иконки площадок/соцсетей) на разных строках */}
                 <div className="flex flex-col gap-2">
-                  {followButton}
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                   {artist.links.map((link: ArtistLink, i: number) => {
                     const key = detectPlatform(link.url).key;
@@ -226,6 +225,7 @@ function ArtistHero({
                     );
                   })}
                   </div>
+                  {followButton}
                 </div>
               </div>
             </div>
