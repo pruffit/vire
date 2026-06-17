@@ -136,17 +136,13 @@ export default async function SmartLinkPage({ params }: Props) {
                   >
                     {brand ? (
                       // Белая плашка — лого читается на любой теме артиста (в т.ч. тёмной).
-                      <span className="inline-flex shrink-0 items-center rounded-[10px] bg-white p-2">
-                        <BrandIcon name={brand} size={wordmark ? 20 : 24} />
+                      <span className="inline-flex shrink-0 items-center rounded-lg bg-white px-2 py-1.5">
+                        <BrandIcon name={brand} size={wordmark ? 18 : 22} style={{ maxWidth: 88 }} />
                       </span>
                     ) : (
                       <PlatformIcon platform={key} size={22} className="shrink-0 opacity-90" />
                     )}
-                    {brand ? (
-                      <span aria-hidden="true" className="flex-1" />
-                    ) : (
-                      <span className="flex-1 text-sm font-medium">{name}</span>
-                    )}
+                    <span className="flex-1 text-sm font-medium">{name}</span>
                     <span
                       className="text-sm transition-transform group-hover:translate-x-0.5"
                       style={{ color: 'var(--artist-accent)' }}
