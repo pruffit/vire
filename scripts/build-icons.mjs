@@ -68,6 +68,10 @@ function cleanBrand(svg) {
     .replace(/<title>[\s\S]*?<\/title>/gi, '')
     .replace(/<desc>[\s\S]*?<\/desc>/gi, '')
     .replace(/<metadata[\s\S]*?<\/metadata>/gi, '')
+    .replace(/<sodipodi:namedview[\s\S]*?<\/sodipodi:namedview>/gi, '')
+    .replace(/<sodipodi:namedview[^>]*\/>/gi, '')
+    // убрать все атрибуты с Inkscape/Sodipodi-префиксами (inkscape:foo="bar", sodipodi:baz="qux")
+    .replace(/\s+(?:inkscape|sodipodi|dc|cc|rdf):[a-z-]+=(?:"[^"]*"|'[^']*')/gi, '')
     .trim();
 
   const { tag, end } = rootSvgTag(s);
