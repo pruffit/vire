@@ -156,8 +156,8 @@ export const STREAMING_ICON_NAMES = [
 export const BRAND_RATIO: Record<string, number> = {
   'bandlab': 4.393,
   'bandsintown': 6.57,
-  'bluesky': 1.132,
-  'discord': 1,
+  'bluesky': 4.486,
+  'discord': 6.256,
   'facebook': 0.998,
   'instagram': 1,
   'telegram': 1,

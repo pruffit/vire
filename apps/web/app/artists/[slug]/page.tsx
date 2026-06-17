@@ -208,18 +208,16 @@ function ArtistHero({
                         rel="noopener noreferrer"
                         title={name}
                         aria-label={name}
-                        className="inline-flex items-center gap-1 text-xs font-medium transition-opacity hover:opacity-100"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-100"
                         style={{ color: 'var(--artist-accent)', opacity: 0.85 }}
                       >
-                        {brand && !wordmark ? (
-                          // Квадратная иконка — белый pill для читаемости на любой теме.
-                          <span className="inline-flex items-center rounded-md bg-white p-1">
-                            <BrandIcon name={brand} size={14} />
+                        {brand ? (
+                          <span className="inline-flex items-center rounded-md bg-white px-1.5 py-1">
+                            <BrandIcon name={brand} size={wordmark ? 10 : 16} />
                           </span>
                         ) : (
-                          // Вордмарк или неизвестная площадка — монохромный гиф + текст.
                           <>
-                            <PlatformIcon platform={key} size={15} />
+                            <PlatformIcon platform={key} size={16} />
                             <span>{name}</span>
                           </>
                         )}
