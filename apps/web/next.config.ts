@@ -42,10 +42,10 @@ function buildCsp(): string {
     `default-src 'self'`,
     // telegram.org нужен для виджета входа; mc.yandex.ru — Метрика (если задан NEXT_PUBLIC_METRIKA_ID).
     // 'unsafe-eval' только в dev (webpack source maps); prod-сборка не использует eval.
-    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://telegram.org https://mc.yandex.ru`,
+    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://telegram.org https://mc.yandex.ru https://mc.yandex.com`,
     `style-src 'self' 'unsafe-inline'`,
-    // аватары: Yandex, Google (lh3), Telegram (t.me); mc.yandex.ru — пиксель Метрики
-    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru ${s3}`,
+    // аватары: Yandex, Google (lh3), Telegram (t.me); mc.yandex.ru/.com — Метрика (пиксели, gif, синк)
+    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru https://mc.yandex.com ${s3}`,
     `media-src 'self' blob: ${s3}`,
     `connect-src 'self' blob: ${s3} https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
