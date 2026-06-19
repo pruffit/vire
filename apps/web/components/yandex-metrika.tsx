@@ -1,19 +1,36 @@
 'use client';
 
 import Script from 'next/script';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 
 const id = process.env.NEXT_PUBLIC_METRIKA_ID;
 
-// Трекинг SPA-навигации: при смене маршрута шлём hit вручную.
-// Без этого Метрика считает только первый pageview (SSR).
+function sendHit(referer?: string) {
+  if (!id || typeof window === 'undefined' || !('ym' in window)) return;
+  // @ts-expect-error ym — глобал Яндекс.Метрики
+  window.ym(Number(id), 'hit', window.location.href, {
+    title: document.title,
+    referer: referer ?? '',
+  });
+}
+
+// defer:true отключает авто-хит при init; первый hit отправляет onLoad,
+// последующие (SPA-навигация) — этот хук.
 function useMetrikaPageview() {
   const pathname = usePathname();
+  const isFirst = useRef(true);
+  const prevUrl = useRef('');
+
   useEffect(() => {
-    if (!id || typeof window === 'undefined' || !('ym' in window)) return;
-    // @ts-expect-error ym — глобал Яндекс.Метрики
-    window.ym(Number(id), 'hit', window.location.href);
+    if (isFirst.current) {
+      isFirst.current = false;
+      prevUrl.current = window.location.href;
+      return;
+    }
+    const referer = prevUrl.current;
+    prevUrl.current = window.location.href;
+    sendHit(referer);
   }, [pathname]);
 }
 
@@ -24,7 +41,11 @@ export function YandexMetrika() {
 
   return (
     <>
-      <Script id="ym-init" strategy="afterInteractive">{`
+      <Script
+        id="ym-init"
+        strategy="afterInteractive"
+        onLoad={() => sendHit(document.referrer)}
+      >{`
         (function(m,e,t,r,i,k,a){
           m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
           m[i].l=1*new Date();
@@ -32,12 +53,9 @@ export function YandexMetrika() {
           k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
         })(window,document,"script","https://mc.yandex.ru/metrika/tag.js?id=${id}","ym");
         ym(${id},"init",{
-          ssr:true,
+          defer:true,
           webvisor:true,
           clickmap:true,
-          ecommerce:"dataLayer",
-          referrer:document.referrer,
-          url:location.href,
           accurateTrackBounce:true,
           trackLinks:true
         });
