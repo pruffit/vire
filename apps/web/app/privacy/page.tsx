@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <header className="space-y-2">
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Vire</p>
         <h1 className="text-3xl font-bold tracking-tight">Политика конфиденциальности</h1>
-        <p className="text-sm text-muted-foreground">Редакция от 12 июня 2026 г. (драфт — не юридическая консультация)</p>
+        <p className="text-sm text-muted-foreground">Редакция от 19 июня 2026 г. (драфт — не юридическая консультация)</p>
       </header>
 
       <Prose>
@@ -53,9 +53,16 @@ export default function PrivacyPage() {
           </ul>
         </Section>
 
-        <Section title="4. Cookie и хранилище браузера">
-          <p>Мы используем только необходимые cookie — сессионный токен Auth.js для авторизации пользователя. Сторонней аналитики (Google Analytics, Yandex Metrica и т.п.) на платформе нет.</p>
-          <p>localStorage используется для хранения предпочтений интерфейса (например, факт закрытия данного баннера).</p>
+        <Section title="4. Cookie, хранилище браузера и аналитика">
+          <p>Мы используем необходимые cookie — сессионный токен Auth.js для авторизации пользователя.</p>
+          <p>Для сбора статистики о посещаемости на платформе подключена <strong className="text-foreground">Яндекс.Метрика</strong> (АО «Яндекс», Россия). Метрика собирает:</p>
+          <ul>
+            <li>данные о просмотренных страницах, источниках переходов, времени на сайте;</li>
+            <li>клик-карты и карты скролла (clickmap);</li>
+            <li>записи сессий пользователей — Вебвизор (движения мыши, клики, прокрутка). Вебвизор не фиксирует ввод в поля форм (пароли, email).</li>
+          </ul>
+          <p>Данные обрабатываются Яндексом в соответствии с <a href="https://yandex.ru/legal/confidential/" className="underline underline-offset-4 hover:opacity-70 transition-opacity" target="_blank" rel="noopener noreferrer">политикой конфиденциальности Яндекса</a>. Мы не передаём Яндексу персональные данные (email, имя) — только поведенческие данные браузерной сессии.</p>
+          <p>localStorage используется для хранения предпочтений интерфейса (например, факт закрытия баннера).</p>
         </Section>
 
         <Section title="5. Хранение и удаление данных">

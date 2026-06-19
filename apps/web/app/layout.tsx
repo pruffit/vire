@@ -11,6 +11,7 @@ import { CookieBanner } from '@/components/cookie-banner';
 import { Announcements } from '@/components/announcements';
 import { EasterEggs } from '@/components/easter-eggs';
 import { ScrollState } from '@/components/scroll-state';
+import { YandexMetrika } from '@/components/yandex-metrika';
 import { fontVariables } from '@/lib/fonts';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_TITLE } from '@/lib/site';
 import './globals.css';
@@ -18,11 +19,13 @@ import './globals.css';
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin', 'latin-ext'],
+  display: 'swap',
 });
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -93,6 +96,7 @@ export default function RootLayout({
           <CookieBanner />
           <Announcements />
           <EasterEggs />
+          <YandexMetrika />
         </MotionProvider>
       </body>
     </html>

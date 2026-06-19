@@ -137,6 +137,17 @@ export function musicRecordingJsonLd(
   });
 }
 
+/** WebSite — главная страница платформы (для поисковых чекеров). */
+export function websiteJsonLd(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Vire',
+    url: SITE_URL,
+    description: 'Независимая музыкальная площадка для артистов и слушателей СНГ',
+  };
+}
+
 /** Убирает ключи со значением undefined (рекурсивно, для чистого JSON-LD). */
 function prune<T extends Record<string, unknown>>(obj: T): T {
   for (const key of Object.keys(obj)) {

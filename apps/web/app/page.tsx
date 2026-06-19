@@ -20,7 +20,9 @@ import { ListeningNow } from '@/components/listening-now';
 import { MoodWaveChips } from '@/components/mood-wave-chips';
 import { EditorialPlaylistCard } from '@/components/editorial-playlist-card';
 import { getListeningNow } from '@/lib/listening-now';
-import { FadeUp, Reveal } from '@vire/ui/motion';
+import { Reveal } from '@vire/ui/motion';
+import { JsonLd } from '@/components/json-ld';
+import { websiteJsonLd } from '@/lib/structured-data';
 
 export default async function HomePage() {
   const session = await auth();
@@ -58,13 +60,11 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12 space-y-16">
+      <JsonLd data={websiteJsonLd()} />
       <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
-      {/* Редакционный выбор */}
-      {featured && (
-        <FadeUp>
-          <FeaturedRelease release={featured} />
-        </FadeUp>
-      )}
+      {/* Редакционный выбор — без FadeUp: FeaturedRelease содержит LCP-изображение,
+          анимация opacity:0→1 задерживает его обнаружение браузером (+1-2с на LCP) */}
+      {featured && <FeaturedRelease release={featured} />}
 
       {/* Wave — запуск потока */}
       <WaveStartButton />

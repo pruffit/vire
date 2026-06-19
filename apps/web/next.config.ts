@@ -40,13 +40,14 @@ function buildCsp(): string {
   const dev = process.env.NODE_ENV !== 'production';
   const parts = [
     `default-src 'self'`,
-    // telegram.org нужен для виджета входа; vk.com для VK OAuth скриптов
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org`,
+    // telegram.org нужен для виджета входа; mc.yandex.ru — Метрика (если задан NEXT_PUBLIC_METRIKA_ID).
+    // 'unsafe-eval' только в dev (webpack source maps); prod-сборка не использует eval.
+    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://telegram.org https://mc.yandex.ru`,
     `style-src 'self' 'unsafe-inline'`,
-    // аватары: Yandex, Google (lh3), Telegram (t.me)
-    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me ${s3}`,
+    // аватары: Yandex, Google (lh3), Telegram (t.me); mc.yandex.ru — пиксель Метрики
+    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru ${s3}`,
     `media-src 'self' blob: ${s3}`,
-    `connect-src 'self' blob: ${s3}${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
+    `connect-src 'self' blob: ${s3} https://mc.yandex.ru${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
     `worker-src blob:`,
     // oauth.telegram.org — iframe виджета Telegram Login
@@ -55,6 +56,7 @@ function buildCsp(): string {
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
+    ...(!dev ? [`upgrade-insecure-requests`] : []),
   ];
   return parts.join('; ');
 }
@@ -66,8 +68,23 @@ const SECURITY_HEADERS = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+    value: [
+      'camera=()',
+      'microphone=()',
+      'geolocation=()',
+      'payment=()',
+      'usb=()',
+      'accelerometer=()',
+      'gyroscope=()',
+      'magnetometer=()',
+      'ambient-light-sensor=()',
+      'display-capture=()',
+      'interest-cohort=()',
+    ].join(', '),
   },
+  // same-origin-allow-popups: изолируем от cross-origin opener'ов (Spectre),
+  // но разрешаем OAuth-попапы (Google, Yandex, Telegram) открывать нас обратно.
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
   { key: 'Content-Security-Policy', value: buildCsp() },
 ];
 

@@ -3,21 +3,21 @@
 ## Performance & SEO (из PageSpeed аудита 17.06.2026)
 
 - [x] **H1 на главной** — добавлен `sr-only` H1 в `app/page.tsx`
-- [ ] **LCP мобайл 6.4с → <2.5с** — оптимизировать hero-изображение (preload, размер, формат)
-- [ ] **Аналитика** — подключить Яндекс.Метрику и/или Google Analytics
-- [ ] **WWW-редирект** — настроить редирект www → без www в Caddy
-- [ ] **Render-blocking запросы** — шрифты/скрипты блокируют рендер (−600мс мобайл)
-- [ ] **Unused JS 190 КиБ** — проверить tree-shaking, найти источник
-- [ ] **alt у изображений** — пройтись по img без alt на всех страницах
-- [ ] **Контраст текста** — проверить токены темы на соответствие WCAG AA
+- [x] **LCP мобайл** — убран `<FadeUp>` вокруг `FeaturedRelease` (opacity:0→1 задерживал LCP); `priority` и `sizes` уже были правильными
+- [x] **Аналитика** — `YandexMetrika` компонент в layout, `NEXT_PUBLIC_METRIKA_ID` в env; CSP расширен для `mc.yandex.ru`
+- [x] **WWW-редирект** — настроить редирект www → без www в Caddy
+- [x] **Render-blocking запросы** — добавлен `display: swap` на Geist/Geist_Mono в `layout.tsx`; остальные шрифты уже были со swap
+- [x] **Unused JS 190 КиБ** — источник: `hls.js` (~190 КиБ) статически импортировался в `audio-engine.ts`. Переведён на динамический `import('hls.js')` внутри `loadAndPlay` — загружается только при первом воспроизведении
+- [x] **alt у изображений** — проверено: все `<img>` и `<Image>` имеют alt (пустые где декоративно)
+- [x] **Контраст текста** — Impeccable не нашёл нарушений
 - [x] **llms.txt** — создан `public/llms.txt` с описанием платформы для AI-краулеров
-- [ ] **CSP / COOP** — усилить заголовки безопасности против XSS
-- [ ] **Schema.org на главной** — проверить, почему чекер не видит JSON-LD (есть в коде, но не на `/`)
+- [x] **CSP / COOP** — `'unsafe-eval'` теперь только в dev; добавлен `upgrade-insecure-requests` в prod; расширена `Permissions-Policy`; добавлен `Cross-Origin-Opener-Policy: same-origin-allow-popups`
+- [x] **Schema.org на главной** — добавлен `WebSite` JSON-LD через `websiteJsonLd()` в `app/page.tsx`
 
 ## Архитектура
 
-- [ ] **Architecture Audit** — проверить, что `packages/core` не импортирует ничего из Next.js, Drizzle, BullMQ, HTTP-слоя. Зафиксировать нарушения.
-- [ ] **TECHNICAL_DEBT.md** — зафиксировать все архитектурные компромиссы этапа 1: shortcuts, временные решения, места где нарушены принципы ради скорости.
+- [x] **Architecture Audit** — `packages/core` чистый: только внутренние импорты + vitest в тестах. Нарушений нет.
+- [x] **TECHNICAL_DEBT.md** — создан `docs/TECHNICAL_DEBT.md`: JWT без refresh, `'unsafe-inline'` в CSP, отсутствие retry в воркере, прямые инсерты play_events, один владелец артиста.
 
 ## Надёжность
 
@@ -26,7 +26,7 @@
 
 ## Качество
 
-- [ ] **Тесты `packages/core`** — расширить покрытие бизнес-логики (сервисы, use-cases, чистые функции). Без БД, без сети, без Docker.
+- [x] **Тесты `packages/core`** — добавлены тесты `ReleaseService.deleteRelease` (4 кейса); `makeRepo` исправлен (добавлены `delete`, `updateStatus`, `findAllByArtist`). Итого: 33 теста.
 - [ ] **Mobile polish** — Impeccable critique + polish плеера и волны на мобильных. Waveform scrubber на тач, управление треками на узких экранах.
 
 ## Этап 2
@@ -38,7 +38,7 @@
 
 - [x] **Блок хоткеев на странице /about** — секция 06 с таблицей всех клавиш в `about-content.tsx`.
 - [x] **Пасхальное яйцо: Konami → попап** — Konami теперь открывает попап с кнопкой `/secret`; тройной клик по копирайту — дождь иконок по-прежнему.
-- [ ] **Создать страницу /secret** — то, куда ведёт кнопка из Konami-попапа.
+- [x] **Создать страницу /secret** — сделана как `/fwqa688` (терминал-пасхалка).
 - [ ] **Несколько аккаунтов на одного артиста** — возможность привязать несколько user-аккаунтов к одному `artist_profile`, возможно с разными ролями (owner / collaborator / manager). Нужна новая таблица `artist_members` или расширение `track_contributors`.
 - [ ] **Актуализировать дорожную карту** — занести всё сделанное по факту в этап 1 в CLAUDE.md/concept.md и переформировать этапы 2–4 с учётом реального состояния.
 - [ ] **Индексация в поисковиках** — разобраться почему Google/Яндекс не индексируют (домен 6 дней, но нужно проверить: submit sitemap в GSC и Яндекс.Вебмастер, проверить noindex на страницах, убедиться что краулеры доходят).

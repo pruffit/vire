@@ -1,8 +1,15 @@
-import Hls from 'hls.js';
+import type HlsType from 'hls.js';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 
 let audio: HTMLAudioElement | null = null;
-let hls: Hls | null = null;
+let hls: HlsType | null = null;
+// hls.js (~190 КиБ) подгружается только при первом воспроизведении, не в начальном бандле
+let HlsClass: typeof HlsType | null = null;
+
+async function getHls(): Promise<typeof HlsType> {
+  if (!HlsClass) HlsClass = (await import('hls.js')).default;
+  return HlsClass;
+}
 let loadedTrackId: string | null = null;
 
 function getSessionId(): string {
@@ -156,6 +163,7 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
 
   usePlayerStore.getState()._setState({ hasAudio: true });
 
+  const Hls = await getHls();
   if (Hls.isSupported()) {
     hls = new Hls();
     hls.loadSource(hlsUrl);
