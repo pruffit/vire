@@ -1,6 +1,10 @@
 import type { NextConfig } from 'next';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+
+const _require = createRequire(import.meta.url);
+const { version } = _require('./package.json') as { version: string };
 
 // Корень монорепо — чтобы standalone-трейсинг собрал воркспейс-пакеты
 // (@vire/core, @vire/db, @vire/ui), а не только apps/web.
@@ -68,6 +72,9 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_VERSION: version,
+  },
   // Самодостаточный бандл (server.js + только нужные node_modules) для Docker.
   output: 'standalone',
   outputFileTracingRoot: repoRoot,

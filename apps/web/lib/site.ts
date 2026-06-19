@@ -9,8 +9,8 @@ export const SITE_URL = (
 
 export const SITE_NAME = 'Vire';
 
-// Версия проекта — показывается в футере. Держим в синхроне с package.json.
-export const SITE_VERSION = '1.0.44';
+// Версия проекта — пробрасывается из package.json через next.config.ts.
+export const SITE_VERSION = process.env.NEXT_PUBLIC_VERSION ?? '0.0.0';
 
 export const SITE_DESCRIPTION =
   'Независимая музыкальная площадка для артистов и слушателей СНГ';
