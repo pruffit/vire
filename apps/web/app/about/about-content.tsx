@@ -311,7 +311,6 @@ const SHORTCUTS: { keys: string[]; desc: string; group: string }[] = [
   { group: 'Плеер', keys: ['Shift', '←'], desc: 'Предыдущий трек' },
   { group: 'Плеер', keys: ['Shift', '→'], desc: 'Следующий трек' },
   { group: 'Плеер', keys: ['M'], desc: 'Mute / Unmute' },
-  { group: 'Пасхалка', keys: ['↑↑↓↓←→←→BA'], desc: '???' },
 ];
 
 function ShortcutsTable() {
