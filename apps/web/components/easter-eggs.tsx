@@ -104,7 +104,7 @@ function SecretPopup({ onClose }: { onClose: () => void }) {
           </p>
         </div>
         <Link
-          href="/secret"
+          href="/fwqa688"
           onClick={onClose}
           className="block rounded-full bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium hover:bg-primary/90 transition-opacity"
         >
