@@ -19,9 +19,11 @@ RUN pnpm install --frozen-lockfile --filter @vire/web...
 # Dummy-значения безопасны — реальные запросы идут только в рантайме.
 ARG S3_PUBLIC_ENDPOINT=http://localhost:9000
 ARG NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=
+ARG NEXT_PUBLIC_METRIKA_ID=
 RUN DATABASE_URL=postgresql://build:build@localhost/build \
     S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT} \
     NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME} \
+    NEXT_PUBLIC_METRIKA_ID=${NEXT_PUBLIC_METRIKA_ID} \
     pnpm --filter @vire/web build
 
 # ===== Рантайм =====
