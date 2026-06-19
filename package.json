@@ -25,7 +25,8 @@
     ],
     "overrides": {
       "postcss": ">=8.5.10",
-      "esbuild": ">=0.28.1"
+      "esbuild": ">=0.28.1",
+      "nodemailer": ">=9.0.1"
     }
   }
 }
