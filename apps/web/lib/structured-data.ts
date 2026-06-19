@@ -148,6 +148,36 @@ export function websiteJsonLd(): Record<string, unknown> {
   };
 }
 
+/** CollectionPage — страница каталога артистов. */
+export function artistsCatalogJsonLd(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Артисты — Vire',
+    description: 'Все артисты на платформе Vire',
+    url: abs('/artists'),
+  };
+}
+
+export interface BreadcrumbItem {
+  name: string;
+  url: string;
+}
+
+/** BreadcrumbList — хлебные крошки для страниц артиста/релиза/трека. */
+export function breadcrumbListJsonLd(items: BreadcrumbItem[]): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      item: abs(item.url),
+    })),
+  };
+}
+
 /** Убирает ключи со значением undefined (рекурсивно, для чистого JSON-LD). */
 function prune<T extends Record<string, unknown>>(obj: T): T {
   for (const key of Object.keys(obj)) {

@@ -28,7 +28,7 @@ import { VideoPlayer } from '@/components/video-player';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { CountdownBadge } from '@/components/countdown-badge';
 import { JsonLd } from '@/components/json-ld';
-import { musicGroupJsonLd } from '@/lib/structured-data';
+import { musicGroupJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
 import { artistFontStyle } from '@/lib/fonts';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { ArtistCollapseBar } from './artist-collapse-bar';
@@ -115,6 +115,11 @@ export default async function ArtistPage({ params }: Props) {
           links: artist.links,
         })}
       />
+      <JsonLd data={breadcrumbListJsonLd([
+        { name: 'Главная', url: '/' },
+        { name: 'Артисты', url: '/artists' },
+        { name: artist.name, url: `/artists/${artist.slug}` },
+      ])} />
       {grain && <GrainOverlay />}
 
       {/* Full-bleed hero — breaks out of any container */}

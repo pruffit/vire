@@ -77,7 +77,6 @@ const SECURITY_HEADERS = [
       'accelerometer=()',
       'gyroscope=()',
       'magnetometer=()',
-      'ambient-light-sensor=()',
       'display-capture=()',
       'interest-cohort=()',
     ].join(', '),

@@ -4,6 +4,8 @@ import {
   musicGroupJsonLd,
   musicAlbumJsonLd,
   musicRecordingJsonLd,
+  breadcrumbListJsonLd,
+  artistsCatalogJsonLd,
 } from '../structured-data';
 
 // SITE_URL по умолчанию (без env) = http://localhost:3000
@@ -99,6 +101,37 @@ describe('musicAlbumJsonLd', () => {
     );
     expect(ld).not.toHaveProperty('track');
     expect(ld).not.toHaveProperty('numTracks');
+  });
+});
+
+describe('breadcrumbListJsonLd', () => {
+  it('builds a BreadcrumbList with absolute urls and 1-based positions', () => {
+    const ld = breadcrumbListJsonLd([
+      { name: 'Главная', url: '/' },
+      { name: 'Артисты', url: '/artists' },
+      { name: 'Kotlaev', url: '/artists/kotlaev' },
+    ]);
+    expect(ld['@type']).toBe('BreadcrumbList');
+    const items = ld.itemListElement as Record<string, unknown>[];
+    expect(items).toHaveLength(3);
+    expect(items[0]).toMatchObject({ '@type': 'ListItem', position: 1, name: 'Главная', item: `${BASE}/` });
+    expect(items[1]).toMatchObject({ position: 2, name: 'Артисты', item: `${BASE}/artists` });
+    expect(items[2]).toMatchObject({ position: 3, name: 'Kotlaev', item: `${BASE}/artists/kotlaev` });
+  });
+
+  it('passes through absolute urls unchanged', () => {
+    const ld = breadcrumbListJsonLd([{ name: 'X', url: 'https://other.com/page' }]);
+    const items = ld.itemListElement as Record<string, unknown>[];
+    expect(items[0].item).toBe('https://other.com/page');
+  });
+});
+
+describe('artistsCatalogJsonLd', () => {
+  it('builds a CollectionPage for the artists catalog', () => {
+    const ld = artistsCatalogJsonLd();
+    expect(ld['@type']).toBe('CollectionPage');
+    expect(ld.url).toBe(`${BASE}/artists`);
+    expect(ld.name).toBe('Артисты — Vire');
   });
 });
 

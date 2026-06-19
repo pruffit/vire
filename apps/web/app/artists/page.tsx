@@ -2,10 +2,13 @@ import type { Metadata } from 'next';
 import { listActiveArtists } from '@vire/db';
 import { FadeUp } from '@vire/ui/motion';
 import { ArtistCatalog } from '@/components/artist-catalog';
+import { JsonLd } from '@/components/json-ld';
+import { artistsCatalogJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
 
 export const metadata: Metadata = {
   title: 'Артисты',
   description: 'Все артисты на платформе Vire',
+  alternates: { canonical: '/artists' },
 };
 
 export default async function ArtistsPage() {
@@ -13,6 +16,11 @@ export default async function ArtistsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12 space-y-8">
+      <JsonLd data={artistsCatalogJsonLd()} />
+      <JsonLd data={breadcrumbListJsonLd([
+        { name: 'Главная', url: '/' },
+        { name: 'Артисты', url: '/artists' },
+      ])} />
       <FadeUp>
         <header className="flex items-baseline justify-between">
           <h1 className="text-2xl font-semibold tracking-tight">Артисты</h1>

@@ -12,7 +12,7 @@ import type { PlayerTrack } from '@/store/player';
 import { JsonLd } from '@/components/json-ld';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { AmbientBackdrop } from '@/components/ambient-backdrop';
-import { musicAlbumJsonLd } from '@/lib/structured-data';
+import { musicAlbumJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
 import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 import { GENRE_LABELS } from '@/lib/genres';
@@ -119,6 +119,12 @@ export default async function ReleasePage({ params }: Props) {
           clientTracks.map((t) => ({ id: t.id, title: t.title, trackNumber: t.trackNumber, durationSec: t.durationSec })),
         )}
       />
+      <JsonLd data={breadcrumbListJsonLd([
+        { name: 'Главная', url: '/' },
+        { name: 'Артисты', url: '/artists' },
+        { name: artist.name, url: `/artists/${slug}` },
+        { name: release.title, url: `/artists/${slug}/releases/${releaseId}` },
+      ])} />
       {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
       {grain && <GrainOverlay />}
 
