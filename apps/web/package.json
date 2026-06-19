@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@vire/web",
   "version": "1.0.55",
   "private": true,
@@ -48,4 +48,3 @@
     "vitest": "^4.1.8"
   }
 }
-
