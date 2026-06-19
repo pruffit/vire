@@ -47,7 +47,7 @@ function buildCsp(): string {
     // аватары: Yandex, Google (lh3), Telegram (t.me); mc.yandex.ru — пиксель Метрики
     `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru ${s3}`,
     `media-src 'self' blob: ${s3}`,
-    `connect-src 'self' blob: ${s3} https://mc.yandex.ru${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
+    `connect-src 'self' blob: ${s3} https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
     `worker-src blob:`,
     // oauth.telegram.org — iframe виджета Telegram Login
