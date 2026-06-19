@@ -137,7 +137,7 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
           <input
             type={showPw ? 'text' : 'password'} name="password" required minLength={8}
             autoComplete="new-password" placeholder="Минимум 8 символов"
-            value={password} onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             className={`${inputCn} pr-10`}
           />
           <button type="button" onClick={() => setShowPw((s) => !s)} tabIndex={-1}

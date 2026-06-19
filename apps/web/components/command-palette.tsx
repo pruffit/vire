@@ -80,7 +80,7 @@ export function CommandPalette() {
   // раскладке (на ЙЦУКЕН физическая клавиша K даёт «л», а e.key вернул бы 'л').
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.code === 'KeyK') {
+      if ((e.metaKey || e.ctrlKey) && (e.code === 'KeyK' || e.code === 'KeyF')) {
         e.preventDefault();
         if (open) close(); else setOpen(true);
       }

@@ -58,6 +58,7 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12 space-y-16">
+      <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
       {/* Редакционный выбор */}
       {featured && (
         <FadeUp>

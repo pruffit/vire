@@ -137,6 +137,11 @@ export function AboutContent() {
         <NextStageTeaser />
       </Section>
 
+      {/* 06 — Shortcuts */}
+      <Section index="06" title="Горячие клавиши">
+        <ShortcutsTable />
+      </Section>
+
       {/* CTA */}
       <Reveal>
         <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-7 sm:p-9">
@@ -291,6 +296,53 @@ function FeatureGrid({ items }: { items: Feature[] }) {
         </StaggerItem>
       ))}
     </Stagger>
+  );
+}
+
+// ─── shortcuts ───────────────────────────────────────────────────────────────
+
+const SHORTCUTS: { keys: string[]; desc: string; group: string }[] = [
+  { group: 'Навигация', keys: ['/'], desc: 'Открыть поиск' },
+  { group: 'Навигация', keys: ['Ctrl', 'K'], desc: 'Командная палитра' },
+  { group: 'Навигация', keys: ['Ctrl', 'F'], desc: 'Командная палитра (альтернатива)' },
+  { group: 'Плеер', keys: ['Space'], desc: 'Play / Pause' },
+  { group: 'Плеер', keys: ['←'], desc: 'Перемотка −5 сек' },
+  { group: 'Плеер', keys: ['→'], desc: 'Перемотка +5 сек' },
+  { group: 'Плеер', keys: ['Shift', '←'], desc: 'Предыдущий трек' },
+  { group: 'Плеер', keys: ['Shift', '→'], desc: 'Следующий трек' },
+  { group: 'Плеер', keys: ['M'], desc: 'Mute / Unmute' },
+  { group: 'Пасхалка', keys: ['↑↑↓↓←→←→BA'], desc: '???' },
+];
+
+function ShortcutsTable() {
+  const groups = [...new Set(SHORTCUTS.map((s) => s.group))];
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border">
+      {groups.map((group) => (
+        <div key={group}>
+          <div className="px-5 py-2.5 bg-muted/40">
+            <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground">{group}</span>
+          </div>
+          <div className="divide-y divide-border/50">
+            {SHORTCUTS.filter((s) => s.group === group).map((s) => (
+              <div key={s.desc} className="flex items-center justify-between gap-4 px-5 py-3">
+                <span className="text-sm text-muted-foreground">{s.desc}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  {s.keys.map((k) => (
+                    <kbd
+                      key={k}
+                      className="inline-flex items-center justify-center rounded border border-border bg-background px-2 py-0.5 font-mono text-[11px] text-foreground shadow-sm"
+                    >
+                      {k}
+                    </kbd>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

@@ -75,7 +75,7 @@ export function NavSearch() {
   // Горячая клавиша «/» — открыть поиск (если не печатаешь в поле/textarea)
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
-      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((e.key !== '/' && e.code !== 'Slash') || e.metaKey || e.ctrlKey || e.altKey) return;
       const el = e.target as HTMLElement | null;
       const typing =
         !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
