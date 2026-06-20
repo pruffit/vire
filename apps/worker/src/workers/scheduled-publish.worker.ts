@@ -17,6 +17,12 @@ import { connection } from '../queues/connection.js';
 const notifyQueue = new Queue<NotifyReleaseJobData>(QUEUE_NOTIFY_RELEASE, { connection });
 const presaveQueue = new Queue<FulfillPresaveJobData>(QUEUE_FULFILL_PRESAVE, { connection });
 
+// Уведомляем (письма подписчикам + пресейверам) только если релиз вышел недавно.
+// Здоровый воркер ловит дату в пределах минуты, так что окна с запасом хватает.
+// Защита от спама на первом прогоне/после простоя: легаси SCHEDULED-релизы с
+// давно прошедшей датой публикуются «тихо», без рассылки задним числом.
+const NOTIFY_WINDOW_MS = 60 * 60 * 1000; // 1 час
+
 async function handle(job: Job): Promise<void> {
   const due = await findDueScheduledReleases();
   for (const r of due) {
@@ -24,7 +30,13 @@ async function handle(job: Job): Promise<void> {
     // двух прогонов даст один true, дубля уведомлений не будет.
     const published = await publishScheduledRelease(r.id);
     if (!published) continue;
-    await job.log(`published ${r.id} (${r.title})`);
+
+    const dueMsAgo = r.releaseDate ? Date.now() - new Date(r.releaseDate).getTime() : Infinity;
+    if (dueMsAgo > NOTIFY_WINDOW_MS) {
+      await job.log(`published ${r.id} (${r.title}) silently — stale (${Math.round(dueMsAgo / 86_400_000)}d ago)`);
+      continue;
+    }
+    await job.log(`published ${r.id} (${r.title}), notifying`);
 
     await notifyQueue.add('notify-release', {
       releaseId: r.id,

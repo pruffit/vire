@@ -72,6 +72,7 @@ export interface DueRelease {
   title: string;
   type: string;
   coverUrl: string | null;
+  releaseDate: Date | null;
   artistProfileId: string;
   artistName: string;
   artistSlug: string;
@@ -85,6 +86,7 @@ export async function findDueScheduledReleases(): Promise<DueRelease[]> {
       title: releases.title,
       type: releases.type,
       coverUrl: releases.coverUrl,
+      releaseDate: releases.releaseDate,
       artistProfileId: releases.artistProfileId,
       artistName: artistProfiles.name,
       artistSlug: artistProfiles.slug,
