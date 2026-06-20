@@ -80,6 +80,10 @@ function YouTubePlayer({ videoId, title }: { videoId: string; title?: string }) 
   // Вуаль скрывает нативный UI YouTube на паузе/в конце/до старта.
   // Буферизация вуаль не включает — иначе мигало бы при перемотке.
   const [veiled, setVeiled] = useState(true);
+  // Ролик не запускается встраиваемым плеером (onError): чаще всего владелец
+  // отключил встраивание (101/150), либо приватный/удалён (100). Показываем
+  // фолбэк со ссылкой на YouTube вместо бесконечно мигающего постера.
+  const [failed, setFailed] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(100);
@@ -91,6 +95,9 @@ function YouTubePlayer({ videoId, title }: { videoId: string; title?: string }) 
   const playerRef = useRef<YTPlayer | null>(null);
   const pollRef = useRef<number | null>(null);
   const hideRef = useRef<number | null>(null);
+  // Видео хоть раз дошло до PLAYING. До первого старта держим постер стабильно
+  // (не снимаем вуаль на BUFFERING) — иначе постер мигает на медленной сети.
+  const hasPlayedRef = useRef(false);
 
   // Создаём плеер императивно (YT заменяет наш узел на iframe — чтобы React не
   // конфликтовал с заменённым DOM, монтируем отдельный div вне реконсиляции).
@@ -117,13 +124,24 @@ function YouTubePlayer({ videoId, title }: { videoId: string; title?: string }) 
             e.target.playVideo();
           },
           onStateChange: (e) => {
-            setPlaying(e.data === YT_STATE.PLAYING);
-            setVeiled(e.data !== YT_STATE.PLAYING && e.data !== YT_STATE.BUFFERING);
-            if (e.data === YT_STATE.ENDED) setEnded(true);
-            else if (e.data === YT_STATE.PLAYING) setEnded(false);
+            const s = e.data;
+            const isPlaying = s === YT_STATE.PLAYING;
+            setPlaying(isPlaying);
+            if (isPlaying) hasPlayedRef.current = true;
+            // Постер держим до первого реального старта и возвращаем только на
+            // явной паузе/конце. BUFFERING после старта вуаль не включает
+            // (бесшовная перемотка), а ДО старта — наоборот держит, иначе
+            // «постер ↔ чёрный кадр» мигает на медленной сети.
+            if (isPlaying) setVeiled(false);
+            else if (s === YT_STATE.PAUSED || s === YT_STATE.ENDED) setVeiled(true);
+            else if (s === YT_STATE.BUFFERING) setVeiled(!hasPlayedRef.current);
+            else if (!hasPlayedRef.current) setVeiled(true); // UNSTARTED / CUED до старта
+            if (s === YT_STATE.ENDED) setEnded(true);
+            else if (isPlaying) setEnded(false);
             const d = e.target.getDuration();
             setDuration((prev) => (d && d !== prev ? d : prev));
           },
+          onError: () => setFailed(true),
         },
       });
     });
@@ -275,8 +293,32 @@ function YouTubePlayer({ videoId, title }: { videoId: string; title?: string }) 
             onToggleMute={toggleMute}
             onFullscreen={toggleFullscreen}
           />
+
+          {failed && <YouTubeFallback posterUrl={poster} videoId={videoId} />}
         </>
       )}
+    </div>
+  );
+}
+
+/** Фолбэк, когда встраиваемый плеер не смог запустить ролик (onError YouTube):
+ *  стабильный постер + явная ссылка «Смотреть на YouTube» вместо мигания. */
+function YouTubeFallback({ posterUrl, videoId }: { posterUrl: string; videoId: string }) {
+  return (
+    <div className="absolute inset-0 z-[4] grid place-items-center bg-black/85 px-4 text-center">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={posterUrl} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+      <div className="relative space-y-3">
+        <p className="text-sm text-white/75">Это видео нельзя воспроизвести здесь</p>
+        <a
+          href={`https://www.youtube.com/watch?v=${videoId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-full bg-white text-black px-4 py-2 text-sm font-medium hover:opacity-80 transition-opacity"
+        >
+          Смотреть на YouTube →
+        </a>
+      </div>
     </div>
   );
 }

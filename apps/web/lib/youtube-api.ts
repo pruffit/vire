@@ -29,6 +29,8 @@ interface YTPlayerOptions {
   events?: {
     onReady?: (e: YTPlayerEvent) => void;
     onStateChange?: (e: YTPlayerEvent) => void;
+    // data: 2 (неверный id) | 5 (HTML5) | 100 (приватный/удалён) | 101,150 (встраивание запрещено владельцем)
+    onError?: (e: YTPlayerEvent) => void;
   };
 }
 
