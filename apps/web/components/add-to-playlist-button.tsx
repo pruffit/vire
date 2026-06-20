@@ -143,7 +143,9 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.97 }}
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
+            // Открываем вправо от кнопки (она слева в шапке трека) и не даём
+            // вылезти за вьюпорт на мобилке: max-w по ширине экрана с полями.
+            className="absolute left-0 top-full mt-2 w-56 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
           >
             <div className="px-3 pt-3 pb-1">
               <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
