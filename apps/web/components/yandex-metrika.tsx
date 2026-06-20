@@ -43,7 +43,10 @@ export function YandexMetrika() {
     <>
       <Script
         id="ym-init"
-        strategy="afterInteractive"
+        // lazyOnload — грузим Метрику (85 KiB, ~26% всего JS) после load,
+        // вне критического окна LCP: на медленном 4G её ранняя загрузка
+        // отъедала канал у hero-обложки. Первый hit всё равно шлёт onLoad.
+        strategy="lazyOnload"
         onLoad={() => sendHit(document.referrer)}
       >{`
         (function(m,e,t,r,i,k,a){

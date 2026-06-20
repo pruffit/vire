@@ -40,6 +40,10 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
               // без него браузер на узком 4G грузит hero-обложку (LCP) в общей
               // очереди, после JS/прочих картинок (LCP ~8с). Форсируем явно.
               fetchPriority="high"
+              // q60: hero — это LCP-ресурс, на медленном 4G каждые ~50 KiB =
+              // ~250мс. q60 в AVIF на обложке визуально чистый (мыло прошлый
+              // раз было от размера 96px, не от quality).
+              quality={60}
             />
           ) : (
             <div className="w-full h-full bg-muted grid place-items-center">
