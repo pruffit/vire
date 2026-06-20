@@ -11,7 +11,7 @@ export default function TermsPage() {
       <header className="space-y-2">
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Vire</p>
         <h1 className="text-3xl font-bold tracking-tight">Пользовательское соглашение</h1>
-        <p className="text-sm text-muted-foreground">Редакция от 12 июня 2026 г. (драфт — не юридическая консультация)</p>
+        <p className="text-sm text-muted-foreground">Редакция от 20 июня 2026 г. (драфт — не юридическая консультация)</p>
       </header>
 
       <Prose>
@@ -38,7 +38,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="4. Аккаунт пользователя">
-          <p>Для доступа к части функций требуется создание аккаунта через Яндекс OAuth или email (пароль либо ссылка-magic link).</p>
+          <p>Для доступа к части функций требуется создание аккаунта — через Яндекс (OAuth) либо по email (пароль или ссылка magic-link).</p>
           <p>Вы несёте ответственность за сохранность доступа к своему аккаунту и за все действия, совершённые под вашим аккаунтом.</p>
         </Section>
 

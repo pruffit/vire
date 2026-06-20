@@ -11,18 +11,19 @@ export default function PrivacyPage() {
       <header className="space-y-2">
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Vire</p>
         <h1 className="text-3xl font-bold tracking-tight">Политика конфиденциальности</h1>
-        <p className="text-sm text-muted-foreground">Редакция от 19 июня 2026 г. (драфт — не юридическая консультация)</p>
+        <p className="text-sm text-muted-foreground">Редакция от 20 июня 2026 г. (драфт — не юридическая консультация)</p>
       </header>
 
       <Prose>
         <Section title="1. Какие данные мы собираем">
-          <p>При регистрации через Яндекс OAuth мы получаем:</p>
+          <p>При регистрации через Яндекс (OAuth) мы получаем:</p>
           <ul>
             <li>email-адрес;</li>
             <li>отображаемое имя;</li>
             <li>URL аватара (хранится ссылка, изображение не копируется).</li>
           </ul>
-          <p>При регистрации по email (пароль или ссылка-magic link) мы получаем только email-адрес.</p>
+          <p>При регистрации по email (пароль или ссылка magic-link) мы получаем только email-адрес.</p>
+          <p>Если вы загружаете собственный аватар, изображение сохраняется в нашем файловом хранилище (S3).</p>
           <p>В процессе использования Сервиса мы фиксируем:</p>
           <ul>
             <li>лайки треков (track_id + user_id);</li>
