@@ -71,6 +71,11 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
   const [fontSans, setFontSans] = useState(t.fontSans);
   const [fontMono, setFontMono] = useState(t.fontMono);
 
+  // Кегль имени в превью подгоняем под длину самого длинного слова — крупно для
+  // коротких имён, мельче для длинных, чтобы оно не рвалось в узком hero превью.
+  const longestWord = Math.max(1, ...artist.name.split(/\s+/).map((w) => w.length));
+  const previewNameRem = Math.max(0.95, Math.min(1.6, 12 / longestWord));
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
@@ -278,57 +283,114 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       <div className="flex flex-col gap-4 pt-1">
         <p className="text-sm font-medium">Тема страницы</p>
 
-        {/* Live preview — мини-страница артиста */}
+        {/* Live preview — уменьшённая копия реальной страницы артиста: тот же
+            full-bleed hero с accent-свечением, крупным именем в выбранном шрифте,
+            аватаром в accent-кольце, verified-чипом и follow-пиллом. Так превью
+            предсказывает факт, а не показывает «другой экран». */}
         <div
           className="rounded-xl overflow-hidden transition-colors"
-          style={{ background: bg }}
+          style={{ background: bg, fontFamily: SANS_VAR[fontSans], color: textColor }}
         >
-          {/* Навбар платформы сверху — показывает стыковку */}
-          <div className="h-8 px-4 flex items-center gap-2" style={{ background: '#0e0d0b' }}>
+          {/* Тонкая полоса навбара платформы — сохраняет историю «стыковки»
+              тёмной оболочки с фоном артиста (важно для светлых тем). */}
+          <div className="h-7 px-4 flex items-center gap-2" style={{ background: '#0e0d0b' }}>
             <div className="w-12 h-2 rounded-full" style={{ background: '#ffffff18' }} />
             <div className="ml-auto flex gap-2">
               <div className="w-6 h-2 rounded-full" style={{ background: '#ffffff18' }} />
               <div className="w-6 h-2 rounded-full" style={{ background: '#ffffff18' }} />
             </div>
           </div>
-          {/* Контент страницы артиста */}
-          <div className="px-5 pt-5 pb-4 space-y-4" style={{ color: textColor, fontFamily: SANS_VAR[fontSans] }}>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full shrink-0" style={{ background: accent, opacity: 0.35 }} />
-              <div className="space-y-1.5 flex-1">
-                <div className="text-sm font-semibold leading-none">{artist.name}</div>
-                <div className="flex gap-1.5">
-                  <div className="h-1.5 w-16 rounded-full" style={{ background: textColor, opacity: 0.25 }} />
-                </div>
-              </div>
+
+          {/* Hero: тот же радиальный accent-глоу, что и на реальной странице */}
+          <div
+            className="relative px-5 pt-6 pb-5"
+            style={{
+              background:
+                'radial-gradient(ellipse 60% 90% at 88% 45%, color-mix(in oklch, ' +
+                accent + ' 22%, ' + bg + '), ' + bg + ')',
+            }}
+          >
+            {grain && (
               <div
-                className="text-[10px] font-medium px-3 py-1 rounded-full shrink-0"
-                style={{ background: accent, color: bg }}
-              >
-                Подписаться
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="space-y-1.5">
-                  <div
-                    className="w-full rounded-md"
-                    style={{ paddingTop: '100%', background: i === 0 ? accent : textColor, opacity: i === 0 ? 0.2 : 0.06 }}
-                  />
-                  <div className="h-1.5 rounded-full" style={{ background: textColor, opacity: 0.2, width: `${70 - i * 15}%` }} />
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  opacity: 0.05,
+                  backgroundImage:
+                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+                  backgroundRepeat: 'repeat',
+                  backgroundSize: '180px 180px',
+                }}
+              />
+            )}
+            <div className="relative flex items-end gap-4">
+              {/* Имя + verified + follow */}
+              <div className="flex-1 min-w-0 space-y-2.5">
+                <div
+                  className="font-bold tracking-tight leading-[0.95] break-words"
+                  style={{ fontSize: `${previewNameRem}rem` }}
+                >
+                  {artist.name}
                 </div>
-              ))}
+                <span
+                  className="inline-flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded-sm border"
+                  style={{
+                    fontFamily: MONO_VAR[fontMono],
+                    borderColor: `color-mix(in oklch, ${accent} 45%, transparent)`,
+                    color: accent,
+                  }}
+                >
+                  ★ verified
+                </span>
+                <div
+                  className="inline-block text-[10px] font-medium px-3 py-1 rounded-full"
+                  style={{ background: accent, color: bg }}
+                >
+                  Подписаться
+                </div>
+              </div>
+              {/* Аватар в accent-кольце с глоу */}
+              <div className="relative shrink-0">
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-full blur-xl opacity-40 scale-150"
+                  style={{ background: accent }}
+                />
+                {avatarPreview && !removeAvatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarPreview}
+                    alt=""
+                    className="relative w-16 h-16 rounded-full object-cover"
+                    style={{ boxShadow: `0 0 0 1.5px color-mix(in oklch, ${accent} 55%, transparent)` }}
+                  />
+                ) : (
+                  <div
+                    className="relative w-16 h-16 rounded-full grid place-items-center text-xl font-bold"
+                    style={{
+                      background: `color-mix(in oklch, ${accent} 18%, ${bg})`,
+                      color: accent,
+                      boxShadow: `0 0 0 1.5px color-mix(in oklch, ${accent} 55%, transparent)`,
+                    }}
+                  >
+                    {artist.name[0]?.toUpperCase()}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-          {/* Плеер платформы снизу */}
-          <div className="h-8 px-4 flex items-center gap-2" style={{ background: '#0e0d0b' }}>
-            <div className="w-6 h-6 rounded shrink-0" style={{ background: '#ffffff12' }} />
-            <div className="flex-1 h-1.5 rounded-full" style={{ background: '#ffffff18' }} />
-            <div className="flex gap-1.5">
-              <div className="w-5 h-5 rounded-full" style={{ background: '#ffffff10' }} />
-              <div className="w-5 h-5 rounded-full" style={{ background: '#ffffff10' }} />
-              <div className="w-5 h-5 rounded-full" style={{ background: '#ffffff10' }} />
-            </div>
+
+          {/* Релизы — ровная сетка, как на реальной странице */}
+          <div className="px-5 pb-5 grid grid-cols-3 gap-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="space-y-1.5">
+                <div
+                  className="w-full rounded-md"
+                  style={{ paddingTop: '100%', background: i === 0 ? accent : textColor, opacity: i === 0 ? 0.18 : 0.06 }}
+                />
+                <div className="h-1.5 rounded-full" style={{ background: textColor, opacity: 0.2, width: `${70 - i * 12}%` }} />
+              </div>
+            ))}
           </div>
         </div>
 

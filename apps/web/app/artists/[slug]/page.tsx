@@ -164,6 +164,12 @@ function ArtistHero({
   displayAvatar: string | null;
   followButton: ReactNode;
 }) {
+  // Имя живёт в узкой колонке (≈31rem на десктопе). Длинное слово на максимальном
+  // кегле не влезает и `break-words` рвёт его посреди (было: AVOCADIC|K). Поэтому
+  // верхнюю границу клампа выводим из длины самого длинного слова: крупно для
+  // коротких имён, но достаточно мелко, чтобы длинное слово осталось на строке.
+  const longestWord = Math.max(1, ...artist.name.split(/\s+/).map((w) => w.length));
+  const maxRem = Math.max(2.4, Math.min(5.5, 28 / longestWord));
   return (
     <FadeUp>
       <header
@@ -183,7 +189,7 @@ function ArtistHero({
               <div className="space-y-3">
                 <h1
                   className="font-bold tracking-tight leading-[0.92] text-balance break-words"
-                  style={{ fontSize: 'clamp(2.2rem, 8vw, 5.5rem)' }}
+                  style={{ fontSize: `clamp(2.2rem, 8vw, ${maxRem}rem)` }}
                 >
                   {artist.name}
                 </h1>
@@ -388,24 +394,20 @@ function ReleasesSection({
     };
   }
 
-  const [first, ...rest] = releases;
-
   return (
     <Reveal>
       <section>
         {releases.length === 1 ? (
           <div className="max-w-[200px]">
-            <ReleaseQuickLook showArtist={false} release={toQL(first)} priority />
+            <ReleaseQuickLook showArtist={false} release={toQL(releases[0])} priority />
           </div>
         ) : (
-          <Stagger className="grid grid-cols-2 sm:grid-cols-4 gap-5">
-            {/* First release spans 2 cols — larger, more prominent */}
-            <StaggerItem className="col-span-2">
-              <ReleaseQuickLook showArtist={false} release={toQL(first)} priority />
-            </StaggerItem>
-            {rest.map((r) => (
+          // Ровная сетка без «героя» на 2 колонки: квадратная обложка в col-span-2
+          // становилась вдвое выше соседей и оставляла пустоту рядом с ними.
+          <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+            {releases.map((r, i) => (
               <StaggerItem key={r.id}>
-                <ReleaseQuickLook showArtist={false} release={toQL(r)} />
+                <ReleaseQuickLook showArtist={false} release={toQL(r)} priority={i === 0} />
               </StaggerItem>
             ))}
           </Stagger>

@@ -24,8 +24,13 @@ type WaveApiTrack = {
  * Чипы тегов настроения на главной: клик запускает волну с трека с этим тегом
  * (seed-режим волны с mood-фильтром), дальше похожесть ведёт поток сама.
  */
+// Сколько тегов показывать свёрнутыми — остальные прячем за «ещё», чтобы блок
+// не разрастался в три-четыре ряда при большом числе задействованных настроений.
+const COLLAPSED_LIMIT = 10;
+
 export function MoodWaveChips({ moods }: { moods: MoodChip[] }) {
   const [loading, setLoading] = useState<Mood | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   async function start(mood: Mood) {
     if (loading) return;
@@ -55,9 +60,12 @@ export function MoodWaveChips({ moods }: { moods: MoodChip[] }) {
 
   if (moods.length === 0) return null;
 
+  const hiddenCount = moods.length - COLLAPSED_LIMIT;
+  const visible = expanded ? moods : moods.slice(0, COLLAPSED_LIMIT);
+
   return (
     <div className="flex flex-wrap gap-2">
-      {moods.map(({ mood }) => (
+      {visible.map(({ mood }) => (
         <motion.button
           key={mood}
           type="button"
@@ -76,6 +84,17 @@ export function MoodWaveChips({ moods }: { moods: MoodChip[] }) {
           {MOOD_LABELS[mood]}
         </motion.button>
       ))}
+
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="inline-flex items-center px-3.5 py-1.5 rounded-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {expanded ? 'Свернуть' : `Ещё ${hiddenCount}`}
+        </button>
+      )}
     </div>
   );
 }

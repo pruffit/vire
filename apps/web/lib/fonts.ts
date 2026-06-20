@@ -55,12 +55,24 @@ export const MONO_FONTS = Object.keys(MONO_VARS);
  * CSS-variable overrides for an artist's chosen fonts. Spread into the root
  * element's `style` on a themed page; descendants using `font-sans`/`font-mono`
  * (or inheriting from it) then resolve to the artist's fonts.
+ *
+ * NB: globals.css declares the font tokens with `@theme inline`, so Tailwind
+ * compiles `.font-sans` → `font-family: var(--font-geist-sans)` (the value is
+ * inlined, not `var(--font-sans)`). Overriding `--font-sans` here would do
+ * nothing — we must override the variable the utility actually reads,
+ * `--font-geist-sans` / `--font-geist-mono`.
  */
 export function artistFontStyle(tokens: { fontSans?: string; fontMono?: string }): Record<string, string> {
   const style: Record<string, string> = {};
   const sans = tokens.fontSans ? SANS_VARS[tokens.fontSans] : undefined;
   const mono = tokens.fontMono ? MONO_VARS[tokens.fontMono] : undefined;
-  if (sans) style['--font-sans'] = sans;
-  if (mono) style['--font-mono'] = mono;
+  if (sans) {
+    style['--font-geist-sans'] = sans;
+    style['--font-sans'] = sans;
+  }
+  if (mono) {
+    style['--font-geist-mono'] = mono;
+    style['--font-mono'] = mono;
+  }
   return style;
 }

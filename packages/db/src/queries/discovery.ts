@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, gt, inArray, isNotNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, lte, or, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { artistProfiles, releases, tracks } from '../schema';
+import { artistProfiles, playEvents, releases, tracks } from '../schema';
 
 export interface DiscoveryRelease {
   id: string;
@@ -86,6 +86,62 @@ export async function getLatestReleases(limit = 12): Promise<DiscoveryRelease[]>
     // запланированных, открывшихся по дате (published_at ещё null) — release_date;
     // created_at — запасной вариант для легаси-строк без обоих.
     .orderBy(desc(sql`coalesce(${releases.publishedAt}, ${releases.releaseDate}, ${releases.createdAt})`))
+    .limit(limit);
+}
+
+// Релиз слышен (опубликован / запланирован с прошедшей датой) — тот же предикат,
+// что в getLatestReleases. Вынесен, чтобы переиспользовать в каталоге.
+const releaseIsAired = or(
+  eq(releases.status, 'PUBLISHED'),
+  and(eq(releases.status, 'SCHEDULED'), isNotNull(releases.releaseDate), lte(releases.releaseDate, sql`now()`)),
+);
+
+// Момент выхода в эфир: published_at → release_date → created_at (см. getLatestReleases).
+const releaseFreshness = sql`coalesce(${releases.publishedAt}, ${releases.releaseDate}, ${releases.createdAt})`;
+
+export type ReleaseSort = 'fresh' | 'popular';
+
+/**
+ * Каталог релизов с сортировкой и опциональным окном по дате выхода.
+ * `fresh` — по свежести, `popular` — по числу прослушиваний (треки релиза).
+ * `sinceDays` ограничивает витрину релизами за последние N дней.
+ */
+export async function listReleases({
+  sort = 'fresh',
+  sinceDays,
+  limit = 60,
+}: {
+  sort?: ReleaseSort;
+  sinceDays?: number;
+  limit?: number;
+} = {}): Promise<DiscoveryRelease[]> {
+  const conds = [eq(artistProfiles.isActive, true), releaseIsAired];
+  if (sinceDays) {
+    conds.push(sql`${releaseFreshness} >= now() - make_interval(days => ${sinceDays})`);
+  }
+
+  if (sort === 'popular') {
+    // Прослушивания релиза = play-events его треков. left join — релизы без
+    // прослушиваний остаются в выдаче с нулём. group by по PK (releases.id,
+    // artist_profiles.id) — остальные колонки функционально зависят от них.
+    return db
+      .select(releaseCardColumns)
+      .from(releases)
+      .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+      .leftJoin(tracks, eq(tracks.releaseId, releases.id))
+      .leftJoin(playEvents, eq(playEvents.trackId, tracks.id))
+      .where(and(...conds))
+      .groupBy(releases.id, artistProfiles.id)
+      .orderBy(desc(count(playEvents.id)), desc(releaseFreshness))
+      .limit(limit);
+  }
+
+  return db
+    .select(releaseCardColumns)
+    .from(releases)
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(and(...conds))
+    .orderBy(desc(releaseFreshness))
     .limit(limit);
 }
 

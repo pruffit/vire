@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { auth } from '@/auth';
 import {
   getLatestReleases,
+  listReleases,
   getUpcomingReleases,
   listActiveArtists,
   getFeed,
@@ -35,8 +36,9 @@ export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [latest, upcoming, artists, feed, listeningNow, moodCounts, sharedPlaylists, personalRaw, publicPlaylists, likedPlaylistIds] = await Promise.all([
+  const [latest, freshWeek, upcoming, artists, feed, listeningNow, moodCounts, sharedPlaylists, personalRaw, publicPlaylists, likedPlaylistIds] = await Promise.all([
     getLatestReleases(13),
+    listReleases({ sort: 'fresh', sinceDays: 7, limit: 12 }),
     getUpcomingReleases(8),
     listActiveArtists(),
     userId ? getFeed(userId) : Promise.resolve([]),
@@ -60,7 +62,12 @@ export default async function HomePage() {
   const editorialPlaylists = [...sharedPlaylists, ...personalPlaylists];
 
   const featured = latest[0] ?? null;
-  const rest = latest.slice(1, 13);
+  // «Свежие релизы» = вышедшие за последние 7 дней (без редакционного featured).
+  // На маленьком каталоге неделя бывает пустой/скудной — тогда добиваем общим
+  // списком свежего, чтобы секция не выглядела поломанной. «Посмотреть все» ведёт
+  // в полный каталог /releases с фильтрами.
+  const weekFresh = freshWeek.filter((r) => r.id !== featured?.id);
+  const rest = (weekFresh.length >= 4 ? weekFresh : latest.slice(1)).slice(0, 8);
 
   const topArtists = artists.slice(0, 12);
   const empty = latest.length === 0 && upcoming.length === 0 && topArtists.length === 0;
@@ -149,7 +156,7 @@ export default async function HomePage() {
       {/* Свежие релизы */}
       {rest.length > 0 && (
         <Reveal>
-          <Section title="Свежие релизы">
+          <Section title="Свежие релизы" href="/releases" hrefLabel="Посмотреть все →">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
               {rest.map((r) => (
                 <ReleaseQuickLook key={r.id} release={r} />
