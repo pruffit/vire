@@ -16,7 +16,7 @@ import { ExplicitBadge } from '@/components/explicit-badge';
 import { AddToPlaylistButton } from '@/components/add-to-playlist-button';
 import { JsonLd } from '@/components/json-ld';
 import { HeartIcon } from '@/components/icons';
-import { musicRecordingJsonLd } from '@/lib/structured-data';
+import { musicRecordingJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
 import { LiveListeners } from '@/components/live-listeners';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { AmbientBackdrop } from '@/components/ambient-backdrop';
@@ -108,10 +108,17 @@ export default async function TrackPage({ params, searchParams }: Props) {
       <JsonLd
         data={musicRecordingJsonLd(
           { id: track.id, title: track.title, trackNumber: track.trackNumber, durationSec: track.durationSec },
-          { id: release.id, title: release.title, coverUrl: release.coverUrl },
+          { id: release.id, title: release.title, coverUrl: release.coverUrl, releaseDate: release.releaseDate },
           { name: artist.name, slug },
         )}
       />
+      <JsonLd data={breadcrumbListJsonLd([
+        { name: 'Главная', url: '/' },
+        { name: 'Артисты', url: '/artists' },
+        { name: artist.name, url: `/artists/${slug}` },
+        { name: release.title, url: `/artists/${slug}/releases/${releaseId}` },
+        { name: track.title, url: `/artists/${slug}/releases/${releaseId}/tracks/${track.id}` },
+      ])} />
       {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
       {grain && <GrainOverlay />}
 

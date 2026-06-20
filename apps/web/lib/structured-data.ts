@@ -53,6 +53,18 @@ export interface TrackLd {
   durationSec?: number | null;
 }
 
+/**
+ * Издатель страниц платформы — Organization Vire. Добавляется как `publisher`
+ * в Music-схемы, чтобы у страниц был явный источник публикации (GEO/AI-движки
+ * ищут author/publisher; раньше hasAuthorInfo: no).
+ */
+const VIRE_PUBLISHER = {
+  '@type': 'Organization',
+  name: 'Vire',
+  url: SITE_URL,
+  logo: abs('/icon-512.png'),
+};
+
 /** MusicGroup — страница артиста. sameAs из внешних ссылок (соцсети). */
 export function musicGroupJsonLd(artist: ArtistLd): Record<string, unknown> {
   const url = abs(`/artists/${artist.slug}`);
@@ -68,6 +80,7 @@ export function musicGroupJsonLd(artist: ArtistLd): Record<string, unknown> {
     image: artist.avatarUrl ? abs(artist.avatarUrl) : undefined,
     description: artist.bio || undefined,
     sameAs: sameAs.length > 0 ? sameAs : undefined,
+    publisher: VIRE_PUBLISHER,
   });
 }
 
@@ -94,6 +107,7 @@ export function musicAlbumJsonLd(
       name: artist.name,
       url: artistUrl,
     },
+    publisher: VIRE_PUBLISHER,
     track: tracks.length
       ? tracks.map((t) =>
           prune({
@@ -124,6 +138,7 @@ export function musicRecordingJsonLd(
     url: `${albumUrl}/tracks/${track.id}`,
     duration: secondsToISO8601(track.durationSec),
     image: release.coverUrl ? abs(release.coverUrl) : undefined,
+    datePublished: yearOrDate(release.releaseDate),
     byArtist: {
       '@type': 'MusicGroup',
       name: artist.name,
@@ -134,6 +149,7 @@ export function musicRecordingJsonLd(
       name: release.title,
       url: albumUrl,
     },
+    publisher: VIRE_PUBLISHER,
   });
 }
 

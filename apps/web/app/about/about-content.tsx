@@ -58,7 +58,7 @@ export function AboutContent() {
             Этап 1 · Friends &amp; Family
           </span>
           <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.0] text-balance">
-            Независимая музыка
+            Независимая музыка{' '}
             <br />
             <span className="text-primary">на своих условиях</span>
           </h1>
