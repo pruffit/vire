@@ -28,7 +28,7 @@ import { VideoPlayer } from '@/components/video-player';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { CountdownBadge } from '@/components/countdown-badge';
 import { JsonLd } from '@/components/json-ld';
-import { musicGroupJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
+import { musicGroupJsonLd, breadcrumbListJsonLd, artistPostJsonLd } from '@/lib/structured-data';
 import { artistFontStyle } from '@/lib/fonts';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { ArtistCollapseBar } from './artist-collapse-bar';
@@ -120,6 +120,12 @@ export default async function ArtistPage({ params }: Props) {
         { name: 'Артисты', url: '/artists' },
         { name: artist.name, url: `/artists/${artist.slug}` },
       ])} />
+      {posts.map((post) => (
+        <JsonLd
+          key={post.id}
+          data={artistPostJsonLd(post, { name: artist.name, slug: artist.slug })}
+        />
+      ))}
       {grain && <GrainOverlay />}
 
       {/* Full-bleed hero — breaks out of any container */}
@@ -413,6 +419,7 @@ function PostsSection({ posts }: { posts: ArtistPost[] }) {
         {posts.map((post) => (
           <article
             key={post.id}
+            id={`post-${post.id}`}
             className="rounded-xl p-4 sm:p-5 space-y-1.5"
             style={{
               background: 'color-mix(in oklch, var(--artist-accent) 5%, transparent)',

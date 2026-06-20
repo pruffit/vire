@@ -7,6 +7,7 @@ import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
 import { Icon, type IconName } from '@/components/icon';
 import { BrandIcon, type BrandName } from '@/components/brand-icon';
 import { ExplicitBadge } from '@/components/explicit-badge';
+import { SITE_FAQ } from '@/lib/faq';
 
 interface Feature {
   icon: IconName;
@@ -140,6 +141,11 @@ export function AboutContent() {
       {/* 06 — Shortcuts */}
       <Section index="06" title="Горячие клавиши">
         <ShortcutsTable />
+      </Section>
+
+      {/* 07 — FAQ */}
+      <Section index="07" title="Частые вопросы">
+        <FaqList />
       </Section>
 
       {/* CTA */}
@@ -340,6 +346,30 @@ function ShortcutsTable() {
             ))}
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── faq ───────────────────────────────────────────────────────────────────
+
+function FaqList() {
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border">
+      {SITE_FAQ.map((item) => (
+        <details key={item.question} className="group">
+          <summary className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 text-sm font-medium list-none transition-colors hover:bg-foreground/[0.03]">
+            {item.question}
+            <Icon
+              name="chevron-down"
+              size={16}
+              className="shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+            />
+          </summary>
+          <p className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed">
+            {item.answer}
+          </p>
+        </details>
       ))}
     </div>
   );

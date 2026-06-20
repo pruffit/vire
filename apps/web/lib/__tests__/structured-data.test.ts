@@ -6,6 +6,8 @@ import {
   musicRecordingJsonLd,
   breadcrumbListJsonLd,
   artistsCatalogJsonLd,
+  faqPageJsonLd,
+  artistPostJsonLd,
 } from '../structured-data';
 
 // SITE_URL по умолчанию (без env) = http://localhost:3000
@@ -132,6 +134,47 @@ describe('artistsCatalogJsonLd', () => {
     expect(ld['@type']).toBe('CollectionPage');
     expect(ld.url).toBe(`${BASE}/artists`);
     expect(ld.name).toBe('Артисты — Vire');
+  });
+});
+
+describe('faqPageJsonLd', () => {
+  it('builds a FAQPage with Question/Answer pairs', () => {
+    const ld = faqPageJsonLd([
+      { question: 'Что?', answer: 'Ответ.' },
+      { question: 'Как?', answer: 'Так.' },
+    ]);
+    expect(ld['@type']).toBe('FAQPage');
+    const items = ld.mainEntity as Record<string, unknown>[];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ '@type': 'Question', name: 'Что?' });
+    expect((items[0].acceptedAnswer as Record<string, unknown>)).toMatchObject({
+      '@type': 'Answer',
+      text: 'Ответ.',
+    });
+  });
+});
+
+describe('artistPostJsonLd', () => {
+  it('builds an Article with explicit title as headline', () => {
+    const ld = artistPostJsonLd(
+      { id: 'p1', title: 'Анонс', body: 'Полный текст поста.', createdAt: new Date('2025-06-01T10:00:00Z') },
+      { name: 'Kotlaev', slug: 'kotlaev' },
+    );
+    expect(ld['@type']).toBe('Article');
+    expect(ld.headline).toBe('Анонс');
+    expect(ld.articleBody).toBe('Полный текст поста.');
+    expect(ld.datePublished).toBe('2025-06-01T10:00:00.000Z');
+    expect(ld.url).toBe(`${BASE}/artists/kotlaev#post-p1`);
+    expect((ld.author as Record<string, unknown>).url).toBe(`${BASE}/artists/kotlaev`);
+  });
+
+  it('falls back to first body line as headline when no title', () => {
+    const ld = artistPostJsonLd(
+      { id: 'p2', title: null, body: 'Первая строка\nвторая строка', createdAt: '2025-01-01' },
+      { name: 'A', slug: 'a' },
+    );
+    expect(ld.headline).toBe('Первая строка');
+    expect(ld.datePublished).toBe('2025-01-01');
   });
 });
 

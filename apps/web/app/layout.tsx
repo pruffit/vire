@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   alternates: { canonical: '/' },
-  // Явные иконки — чтобы Яндекс/Google гарантированно подхватили favicon в выдаче
+  // Явные иконки, чтобы Яндекс/Google гарантированно подхватили favicon в выдаче
   // (в поиске иконка не показывалась). Файлы лежат в app/ и public/.
   icons: {
     icon: [

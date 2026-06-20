@@ -178,6 +178,65 @@ export function breadcrumbListJsonLd(items: BreadcrumbItem[]): Record<string, un
   };
 }
 
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+/** FAQPage — список вопрос/ответ. Поддерживает rich-сниппеты в Яндексе/Google. */
+export function faqPageJsonLd(items: FaqItem[]): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
+  };
+}
+
+export interface ArtistPostLd {
+  id: string;
+  title: string | null;
+  body: string;
+  createdAt: Date | string;
+}
+
+/**
+ * Article для анонса артиста — чтобы посты попадали в индекс как датированный
+ * контент (раньше hasArticleSchema: no). headline обязателен для Article.
+ */
+export function artistPostJsonLd(post: ArtistPostLd, artist: ArtistLd): Record<string, unknown> {
+  const datePublished =
+    post.createdAt instanceof Date ? post.createdAt.toISOString() : post.createdAt;
+  const headline = post.title?.trim() || post.body.trim().split('\n')[0].slice(0, 110);
+  const artistUrl = abs(`/artists/${artist.slug}`);
+
+  return prune({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline,
+    articleBody: post.body,
+    datePublished,
+    url: `${artistUrl}#post-${post.id}`,
+    mainEntityOfPage: artistUrl,
+    author: {
+      '@type': 'MusicGroup',
+      name: artist.name,
+      url: artistUrl,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Vire',
+      url: SITE_URL,
+    },
+  });
+}
+
 /** Убирает ключи со значением undefined (рекурсивно, для чистого JSON-LD). */
 function prune<T extends Record<string, unknown>>(obj: T): T {
   for (const key of Object.keys(obj)) {
