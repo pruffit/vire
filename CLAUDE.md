@@ -174,10 +174,23 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 ```bash
 pnpm --filter @vire/web typecheck      # tsc --noEmit
 pnpm --filter @vire/web lint           # eslint
+pnpm --filter @vire/web check:routes   # инвариант роутинга (см. ниже)
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов
-pnpm --filter @vire/web build          # прод-сборка
+pnpm --filter @vire/web build          # прод-сборка (prebuild сам гоняет check:routes)
 ```
+
+> ⚠️ **Рантайм-баги старта сервера typecheck/lint/test/build НЕ ловят.** Так уже
+> один раз слёг прод (v1.0.70): два соседних динамических сегмента с разными
+> именами (`app/api/v1/releases/[id]` рядом с `[releaseId]`) — Next кидает
+> «You cannot use different slug names for the same dynamic path» **только в
+> рантайме на каждый запрос** (вкл. `/api/health`, favicon), а `next build`
+> компилирует молча. Барьеры в CI (`.github/workflows/deploy.yml`, job `gates`):
+> **(1)** `check:routes` — статический детектор конфликта имён сегментов
+> (`scripts/check-route-slugs.mjs`, висит и на `prebuild`); **(2)** smoke —
+> поднимает прод-артефакт `apps/web/.next/standalone/apps/web/server.js` и дёргает
+> `/robots.txt` (роут без БД): любой 5xx красит CI. Новые динамические сегменты
+> называй так же, как соседние (`[releaseId]`, не `[id]`).
 
 **Impeccable** (`audit:design`) — равноправный гейт качества рядом с typecheck/lint/test:
 детектит дизайн-анти-паттерны (дефолтные шрифты, серый текст на цвете, pure-gray без

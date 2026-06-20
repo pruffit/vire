@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "check:routes": "node scripts/check-route-slugs.mjs",
+    "prebuild": "node scripts/check-route-slugs.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

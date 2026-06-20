@@ -34,6 +34,10 @@ jobs:
         run: pnpm turbo run typecheck
       - name: Lint
         run: pnpm turbo run lint
+      # Барьер 1: конфликт имён динамических сегментов ([id] vs [releaseId]) Next
+      # пропускает на build и валит в рантайме каждый запрос (клал прод в v1.0.70).
+      - name: Route slug check
+        run: pnpm --filter @vire/web check:routes
       - name: Test
         run: pnpm turbo run test
       - name: Security audit
@@ -45,6 +49,33 @@ jobs:
         env:
           DATABASE_URL: postgresql://build:build@localhost/build
           S3_PUBLIC_ENDPOINT: https://cdn.viremusic.ru
+
+      # Барьер 2: поднимаем РОВНО прод-артефакт — standalone server.js (как в
+      # Docker, CMD ["node","apps/web/server.js"]) — и дёргаем роут без БД
+      # (robots.txt). Ошибки старта/роутера/middleware (как слаг-конфликт) дают
+      # 5xx на любой запрос: здесь это красит CI, а не прод. 2xx/3xx = обслуживает.
+      - name: Smoke (prod standalone server boots & serves)
+        run: |
+          cd apps/web/.next/standalone
+          HOSTNAME=0.0.0.0 PORT=3000 node apps/web/server.js > /tmp/next.log 2>&1 &
+          PID=$!
+          trap "kill $PID 2>/dev/null || true" EXIT
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/robots.txt || echo 000)
+            echo "try $i: HTTP $code"
+            case "$code" in
+              5*) echo "::error::Smoke: $code на /robots.txt — рантайм-ошибка старта/роутера"; cat /tmp/next.log; exit 1 ;;
+              200|3*) echo "Smoke OK ($code)"; exit 0 ;;
+            esac
+            sleep 2
+          done
+          echo "::error::Smoke: сервер не ответил 2xx/3xx за 60с"; cat /tmp/next.log; exit 1
+        env:
+          DATABASE_URL: postgresql://build:build@localhost/build
+          S3_PUBLIC_ENDPOINT: https://cdn.viremusic.ru
+          NEXT_PUBLIC_SITE_URL: https://viremusic.ru
+          AUTH_SECRET: ci-smoke-secret-0000000000000000000000000000
+          AUTH_URL: http://localhost:3000
 
   build-and-push:
     needs: gates
