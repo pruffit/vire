@@ -33,7 +33,10 @@ interface QLTrack {
 
 function year(d: Date | string | null): string | null {
   if (!d) return null;
-  const y = new Date(d).getFullYear();
+  // UTC — это клиентский компонент: getFullYear() в локальной TZ браузера мог бы
+  // разойтись с серверным рендером (UTC) у дат на границе года → ошибка
+  // гидрации React #418. Считаем год в UTC, как и дни в untilLabel ниже.
+  const y = new Date(d).getUTCFullYear();
   return Number.isFinite(y) ? String(y) : null;
 }
 
@@ -50,7 +53,10 @@ function untilLabel(d: Date | string | null): string | null {
   if (days <= 0) return 'сегодня';
   if (days === 1) return 'завтра';
   if (days < 7) return `через ${days} дн.`;
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  // timeZone:'UTC' обязателен — без него день/месяц форматируются в локальной TZ
+  // рантайма, и серверный рендер (UTC) расходится с браузером юзера у дат возле
+  // границы суток → ошибка гидрации React #418 («1 июл» vs «30 июн»).
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
 /**
