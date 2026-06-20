@@ -51,7 +51,26 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
   robots: { index: true, follow: true },
-  verification: { yandex: '6fdc9d6fa3807d7b' },
+  alternates: { canonical: '/' },
+  // Явные иконки, чтобы Яндекс/Google гарантированно подхватили favicon в выдаче
+  // (в поиске иконка не показывалась). Файлы лежат в app/ и public/.
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: '/apple-icon.png',
+    shortcut: '/favicon.ico',
+  },
+  verification: {
+    yandex: '6fdc9d6fa3807d7b',
+    // Google Search Console: задаётся через env, чтобы подтвердить сайт и начать
+    // индексацию в Google (сейчас сайт там не индексируется).
+    ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+      : {}),
+  },
 };
 
 export default function RootLayout({

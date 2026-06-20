@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { SearchIcon } from '@/components/icons';
 import type { SearchResults } from '@vire/db';
+import { resolveAvatarUrl } from '@/lib/avatar';
 
 interface Item {
   key: string;
@@ -47,7 +48,7 @@ export function CommandPalette() {
 
   const resultItems: Item[] = results
     ? [
-        ...results.artists.map((a) => ({ key: `ar:${a.id}`, href: `/artists/${a.slug}`, label: a.name, sub: 'Артист', img: a.avatarUrl, round: true, initial: a.name[0]?.toUpperCase() })),
+        ...results.artists.map((a) => ({ key: `ar:${a.id}`, href: `/artists/${a.slug}`, label: a.name, sub: 'Артист', img: resolveAvatarUrl(a.avatarUrl, a.firstReleaseCoverUrl), round: true, initial: a.name[0]?.toUpperCase() })),
         ...results.releases.map((r) => ({ key: `re:${r.id}`, href: `/artists/${r.artistSlug}/releases/${r.id}`, label: r.title, sub: `${r.type} · ${r.artistName}`, img: r.coverUrl, initial: r.title[0]?.toUpperCase() })),
         ...results.tracks.map((t) => ({ key: `tr:${t.id}`, href: `/artists/${t.artistSlug}/releases/${t.releaseId}/tracks/${t.id}`, label: t.title, sub: `Трек · ${t.artistName}`, img: t.coverUrl, initial: t.title[0]?.toUpperCase() })),
       ]
@@ -160,7 +161,7 @@ export function CommandPalette() {
                   >
                     <span className="relative w-7 h-7 shrink-0 rounded overflow-hidden bg-muted grid place-items-center text-xs font-mono text-muted-foreground">
                       {item.isAction ? <ArrowIcon /> : item.img ? (
-                        <Image src={item.img} alt="" fill sizes="28px" className={`object-cover ${item.round ? 'rounded-full' : ''}`} />
+                        <Image src={item.img} alt="" fill quality={60} sizes="28px" className={`object-cover ${item.round ? 'rounded-full' : ''}`} />
                       ) : item.initial}
                     </span>
                     <span className="min-w-0 flex-1">

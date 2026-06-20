@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import { AboutContent } from './about-content';
+import { JsonLd } from '@/components/json-ld';
+import { faqPageJsonLd } from '@/lib/structured-data';
+import { SITE_FAQ } from '@/lib/faq';
 
 export const metadata: Metadata = {
   title: 'О платформе',
@@ -9,5 +12,10 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
-  return <AboutContent />;
+  return (
+    <>
+      <JsonLd data={faqPageJsonLd(SITE_FAQ)} />
+      <AboutContent />
+    </>
+  );
 }

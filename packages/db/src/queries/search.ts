@@ -1,4 +1,4 @@
-import { and, eq, ilike, or } from 'drizzle-orm';
+import { and, eq, ilike, or, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { artistProfiles, releases, tracks } from '../schema';
 
@@ -7,6 +7,7 @@ export interface SearchArtist {
   slug: string;
   name: string;
   avatarUrl: string | null;
+  firstReleaseCoverUrl: string | null;
   verified: boolean;
 }
 
@@ -47,6 +48,14 @@ export async function searchAll(query: string, limit = 5): Promise<SearchResults
         slug: artistProfiles.slug,
         name: artistProfiles.name,
         avatarUrl: artistProfiles.avatarUrl,
+        firstReleaseCoverUrl: sql<string | null>`(
+          select cover_url from releases r2
+          where r2.artist_profile_id = ${artistProfiles.id}
+            and r2.status = 'PUBLISHED'
+            and r2.cover_url is not null
+          order by r2.created_at asc
+          limit 1
+        )`,
         verified: artistProfiles.verified,
       })
       .from(artistProfiles)

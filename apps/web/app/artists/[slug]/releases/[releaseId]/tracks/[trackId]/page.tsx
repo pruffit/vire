@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url,
       title: `${track.title} — ${artist.name}`,
       description,
-      images: release.coverUrl ? [{ url: release.coverUrl }] : [],
+      images: release.coverUrl ? [{ url: release.coverUrl }] : undefined,
     },
   };
 }

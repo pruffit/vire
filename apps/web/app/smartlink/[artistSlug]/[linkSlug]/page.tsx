@@ -10,6 +10,8 @@ import { PlatformIcon } from '@/components/platform-icon';
 import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
+import { JsonLd } from '@/components/json-ld';
+import { abs } from '@/lib/structured-data';
 
 type Props = { params: Promise<{ artistSlug: string; linkSlug: string }> };
 
@@ -29,10 +31,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { artist, smartLink } = data;
   const title = `${smartLink.title} — ${artist.name}`;
   const description = smartLink.subtitle ?? `Слушай «${smartLink.title}» от ${artist.name} на всех площадках`;
+  const url = `/smartlink/${artistSlug}/${linkSlug}`;
   return {
     title,
     description,
+    alternates: { canonical: url },
     openGraph: {
+      url,
       title,
       description,
       type: 'music.album',
@@ -51,7 +56,28 @@ export default async function SmartLinkPage({ params }: Props) {
   const { bg, text, accent, grain } = artist.themeTokens;
   const year = smartLink.releaseDate ? new Date(smartLink.releaseDate).getFullYear() : null;
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'MusicAlbum',
+    name: smartLink.title,
+    url: abs(`/smartlink/${artist.slug}/${smartLink.slug}`),
+    ...(smartLink.coverUrl ? { image: abs(smartLink.coverUrl) } : {}),
+    ...(smartLink.releaseDate
+      ? { datePublished: new Date(smartLink.releaseDate).toISOString().slice(0, 10) }
+      : {}),
+    byArtist: {
+      '@type': 'MusicGroup',
+      name: artist.name,
+      url: abs(`/artists/${artist.slug}`),
+    },
+    ...(smartLink.links.length
+      ? { sameAs: smartLink.links.map((l) => l.url) }
+      : {}),
+  };
+
   return (
+    <>
+    <JsonLd data={jsonLd} />
     <div
       style={
         {
@@ -85,7 +111,7 @@ export default async function SmartLinkPage({ params }: Props) {
                 src={smartLink.coverUrl}
                 alt={smartLink.title}
                 fill
-                sizes="256px"
+                sizes="(max-width: 640px) 224px, 256px"
                 className="object-cover"
                 priority
               />
@@ -167,5 +193,6 @@ export default async function SmartLinkPage({ params }: Props) {
         </Link>
       </main>
     </div>
+    </>
   );
 }

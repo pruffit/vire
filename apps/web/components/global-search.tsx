@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { SearchIcon } from '@/components/icons';
 import type { SearchResults } from '@vire/db';
+import { resolveAvatarUrl } from '@/lib/avatar';
 
 interface Props {
   variant?: 'hero' | 'page';
@@ -37,7 +38,7 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
           href: `/artists/${a.slug}`,
           label: a.name,
           sub: 'Артист',
-          avatarUrl: a.avatarUrl,
+          avatarUrl: resolveAvatarUrl(a.avatarUrl, a.firstReleaseCoverUrl),
           initial: a.name[0]?.toUpperCase(),
         })),
         ...results.releases.map((r) => ({
