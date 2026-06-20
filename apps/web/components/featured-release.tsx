@@ -36,6 +36,10 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
               sizes="(max-width: 768px) 100vw, 45vw"
               className="object-cover"
               priority
+              // Next 16 при priority не проставляет fetchpriority=high сам —
+              // без него браузер на узком 4G грузит hero-обложку (LCP) в общей
+              // очереди, после JS/прочих картинок (LCP ~8с). Форсируем явно.
+              fetchPriority="high"
             />
           ) : (
             <div className="w-full h-full bg-muted grid place-items-center">
