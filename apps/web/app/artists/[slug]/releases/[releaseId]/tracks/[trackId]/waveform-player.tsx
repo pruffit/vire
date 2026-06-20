@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef, type MouseEvent } from 'react';
+import { useEffect, useCallback, useRef, useState, type PointerEvent, type KeyboardEvent } from 'react';
 import { motion } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls, initAudioEngine } from '@/components/player/audio-engine';
@@ -47,8 +47,13 @@ export function TrackWaveformPlayer({
   const currentTime = usePlayerStore((s) => s.currentTime);
   const duration = usePlayerStore((s) => s.duration);
 
+  const svgRef = useRef<SVGSVGElement>(null);
+  // Скраб (0..1) при перетаскивании активного трека: визуал мгновенно, seek —
+  // на отпускании. Когда трек не играет, волна работает как «play» по тапу.
+  const [scrub, setScrub] = useState<number | null>(null);
+
   const isThisTrack = currentTrackId === track.id;
-  const progress = isThisTrack && duration > 0 ? currentTime / duration : 0;
+  const progress = scrub ?? (isThisTrack && duration > 0 ? currentTime / duration : 0);
 
   // Seek to ?t= param after track loads
   useEffect(() => {
@@ -57,15 +62,42 @@ export function TrackWaveformPlayer({
     controls.seek(Math.min(seekTo, duration - 1));
   }, [seekTo, isThisTrack, duration]);
 
-  function handleWaveformClick(e: MouseEvent<SVGSVGElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const frac = (e.clientX - rect.left) / rect.width;
-
-    if (isThisTrack && duration) {
-      controls.seek(frac * duration);
-    } else {
-      controls.play(track, queue, queueIndex);
+  function ratioFromX(clientX: number): number {
+    const el = svgRef.current;
+    if (!el) return 0;
+    const r = el.getBoundingClientRect();
+    return Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+  }
+  function onPointerDown(e: PointerEvent<SVGSVGElement>) {
+    // Не этот трек → не скраббим: тап запустит воспроизведение через onClick.
+    if (!isThisTrack || !duration) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setScrub(ratioFromX(e.clientX));
+  }
+  function onPointerMove(e: PointerEvent<SVGSVGElement>) {
+    if (scrub === null || !duration) return;
+    setScrub(ratioFromX(e.clientX));
+  }
+  function commitScrub() {
+    if (scrub === null || !duration) return;
+    controls.seek(scrub * duration);
+    setScrub(null);
+  }
+  function onKeyDown(e: KeyboardEvent<SVGSVGElement>) {
+    if (!isThisTrack || !duration) return;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      controls.seek(Math.min(duration, currentTime + 5));
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      controls.seek(Math.max(0, currentTime - 5));
     }
+  }
+
+  // Клик нужен только чтобы запустить трек, который сейчас не играет: перемотку
+  // активного трека целиком ведёт pointer-скраб (тап = down+up на одной точке).
+  function handleWaveformClick() {
+    if (!isThisTrack) controls.play(track, queue, queueIndex);
   }
 
   function handlePlayPause() {
@@ -94,15 +126,26 @@ export function TrackWaveformPlayer({
       {/* Waveform + момент-маркеры */}
       <div className="relative group">
         <svg
+          ref={svgRef}
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
           preserveAspectRatio="none"
           onClick={handleWaveformClick}
-          aria-label={isThisTrack ? 'Прогресс воспроизведения' : 'Воспроизвести'}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={commitScrub}
+          onPointerCancel={() => setScrub(null)}
+          onKeyDown={onKeyDown}
+          tabIndex={isThisTrack ? 0 : undefined}
+          aria-label={isThisTrack ? 'Перемотка' : 'Воспроизвести'}
           role={isThisTrack ? 'slider' : 'button'}
-          aria-valuenow={isThisTrack ? Math.round(currentTime) : undefined}
+          aria-valuenow={isThisTrack ? Math.round(progress * duration) : undefined}
           aria-valuemin={isThisTrack ? 0 : undefined}
           aria-valuemax={isThisTrack ? Math.round(duration) : undefined}
-          className="w-full h-24 sm:h-28 cursor-pointer"
+          // touch-none только для активного трека (режим скраба) — иначе на
+          // мобилке палец не сможет проскроллить страницу мимо большой волны.
+          className={`w-full h-24 sm:h-28 select-none focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30 rounded ${
+            isThisTrack ? 'touch-none' : ''
+          } ${scrub !== null ? 'cursor-grabbing' : 'cursor-pointer'}`}
         >
           {bars.map((peak, i) => {
             const h = Math.max(2, peak * (SVG_H - 8));
@@ -143,6 +186,17 @@ export function TrackWaveformPlayer({
               />
             );
           })}
+
+          {/* Playhead активного трека — позиция/скраб */}
+          {isThisTrack && duration > 0 && (
+            <rect
+              x={Math.min(SVG_W - 1.5, Math.max(0, progress * SVG_W - 0.75))}
+              y={0}
+              width={1.5}
+              height={SVG_H}
+              style={{ fill: 'var(--artist-accent, rgba(255,255,255,0.9))', opacity: scrub !== null ? 0.95 : 0.55 }}
+            />
+          )}
         </svg>
 
         {/* Тултип — время под курсором */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { AnimatePresence, Reorder, motion, type PanInfo } from 'motion/react';
@@ -217,7 +217,7 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
         {/* Прогресс */}
         <div className="w-full flex items-center gap-3">
           <TimeLabel which="current" />
-          <Waveform />
+          <Waveform large />
           <TimeLabel which="duration" />
         </div>
 
@@ -380,7 +380,7 @@ function Controls({ showWaveMode = true }: { showWaveMode?: boolean }) {
         aria-label="Предыдущий трек"
         whileTap={{ scale: 0.92 }}
         transition={spring.snappy}
-        className="opacity-50 hover:opacity-100 transition-opacity"
+        className="p-2 -m-1 opacity-50 hover:opacity-100 transition-opacity"
       >
         <SkipBackIcon />
       </motion.button>
@@ -421,7 +421,7 @@ function Controls({ showWaveMode = true }: { showWaveMode?: boolean }) {
         aria-label="Следующий трек"
         whileTap={{ scale: 0.92 }}
         transition={spring.snappy}
-        className="opacity-50 hover:opacity-100 transition-opacity"
+        className="p-2 -m-1 opacity-50 hover:opacity-100 transition-opacity"
       >
         <SkipForwardIcon />
       </motion.button>
@@ -443,7 +443,7 @@ function WaveModeButton() {
       aria-pressed={waveMode}
       whileTap={{ scale: 0.88 }}
       transition={spring.snappy}
-      className="relative transition-colors"
+      className="relative p-2 -m-1 transition-colors"
       style={
         waveMode
           ? { color: 'var(--artist-accent, oklch(72% 0.19 145))' }
@@ -471,26 +471,59 @@ function WaveModeButton() {
 function MiniProgressBar() {
   const currentTime = usePlayerStore((s) => s.currentTime);
   const duration = usePlayerStore((s) => s.duration);
-  const progress = duration > 0 ? currentTime / duration : 0;
+  const ref = useRef<HTMLDivElement>(null);
+  const [scrub, setScrub] = useState<number | null>(null);
+  const shown = scrub ?? (duration > 0 ? currentTime / duration : 0);
+
+  function ratioFromX(clientX: number): number {
+    const el = ref.current;
+    if (!el) return 0;
+    const r = el.getBoundingClientRect();
+    return Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+  }
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!duration) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setScrub(ratioFromX(e.clientX));
+  }
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (scrub === null || !duration) return;
+    setScrub(ratioFromX(e.clientX));
+  }
+  function commit() {
+    if (scrub === null || !duration) return;
+    controls.seek(scrub * duration);
+    setScrub(null);
+  }
+
+  const dragging = scrub !== null;
 
   return (
+    // Зона касания 12px по высоте (видимая полоска — 2px у самого низа); на
+    // мобилке это единственная перемотка в мини-баре. touch-none — без скролла.
     <div
-      aria-hidden="true"
-      className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5"
-      onClick={(e) => {
-        if (!duration) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        controls.seek(((e.clientX - rect.left) / rect.width) * duration);
-      }}
+      ref={ref}
+      role="slider"
+      aria-label="Перемотка"
+      aria-valuenow={Math.round(shown * duration)}
+      aria-valuemin={0}
+      aria-valuemax={Math.round(duration)}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={commit}
+      onPointerCancel={() => setScrub(null)}
+      className="absolute bottom-0 left-0 right-0 h-3 flex items-end touch-none cursor-pointer group"
     >
-      <div
-        className="h-full transition-[width] duration-100 ease-linear"
-        style={{
-          width: `${progress * 100}%`,
-          background: 'var(--artist-accent, oklch(72% 0.19 145))',
-          opacity: 0.7,
-        }}
-      />
+      <div className={`relative w-full bg-white/5 transition-[height] ${dragging ? 'h-[3px]' : 'h-[2px]'}`}>
+        <div
+          className={dragging ? 'h-full' : 'h-full transition-[width] duration-100 ease-linear'}
+          style={{
+            width: `${shown * 100}%`,
+            background: 'var(--artist-accent, oklch(72% 0.19 145))',
+            opacity: dragging ? 1 : 0.7,
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -526,19 +559,51 @@ function ProgressSection() {
   );
 }
 
-function Waveform() {
+function Waveform({ large = false }: { large?: boolean }) {
   const peaks = usePlayerStore((s) => s.waveformPeaks);
   const currentTime = usePlayerStore((s) => s.currentTime);
   const duration = usePlayerStore((s) => s.duration);
 
-  const progress = duration > 0 ? currentTime / duration : 0;
+  const svgRef = useRef<SVGSVGElement>(null);
+  // Локальный скраб (0..1) во время перетаскивания: ведёт визуал мгновенно,
+  // seek в аудио — только на отпускании (без рывков HLS при каждом движении).
+  const [scrub, setScrub] = useState<number | null>(null);
+  const progress = scrub ?? (duration > 0 ? currentTime / duration : 0);
 
-  function handleClick(e: MouseEvent<SVGSVGElement>) {
+  function ratioFromX(clientX: number): number {
+    const el = svgRef.current;
+    if (!el) return 0;
+    const r = el.getBoundingClientRect();
+    return Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+  }
+  function onPointerDown(e: React.PointerEvent<SVGSVGElement>) {
     if (!duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    controls.seek(((e.clientX - rect.left) / rect.width) * duration);
+    e.stopPropagation(); // не запускать dismiss-свайп фуллскрина
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setScrub(ratioFromX(e.clientX));
+  }
+  function onPointerMove(e: React.PointerEvent<SVGSVGElement>) {
+    if (scrub === null || !duration) return;
+    setScrub(ratioFromX(e.clientX));
+  }
+  function commit() {
+    if (scrub === null || !duration) return;
+    controls.seek(scrub * duration);
+    setScrub(null);
+  }
+  function onKeyDown(e: React.KeyboardEvent<SVGSVGElement>) {
+    if (!duration) return;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      controls.seek(Math.min(duration, currentTime + 5));
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      controls.seek(Math.max(0, currentTime - 5));
+    }
   }
 
+  // Нет пиков — нативный range (тач/драг из коробки). stopPropagation, чтобы
+  // перетаскивание не закрывало фуллскрин; touch-none — без скролла страницы.
   if (!peaks || peaks.length === 0) {
     return (
       <input
@@ -548,8 +613,9 @@ function Waveform() {
         value={currentTime}
         step={0.5}
         onChange={(e) => controls.seek(Number(e.target.value))}
-        aria-label="Прогресс"
-        className="flex-1 h-1 accent-primary cursor-pointer"
+        onPointerDown={(e) => e.stopPropagation()}
+        aria-label="Перемотка"
+        className={`flex-1 accent-primary cursor-pointer touch-none ${large ? 'h-1.5' : 'h-1'}`}
       />
     );
   }
@@ -567,18 +633,30 @@ function Waveform() {
   const BAR_W = 2;
   const BAR_GAP = 1;
   const SVG_W = BAR_COUNT * (BAR_W + BAR_GAP);
+  const playheadX = progress * SVG_W;
+  const dragging = scrub !== null;
 
   return (
     <svg
+      ref={svgRef}
       viewBox={`0 0 ${SVG_W} ${SVG_H}`}
       preserveAspectRatio="none"
-      onClick={handleClick}
-      aria-label="Прогресс"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={commit}
+      onPointerCancel={() => setScrub(null)}
+      onKeyDown={onKeyDown}
+      tabIndex={0}
+      aria-label="Перемотка"
       role="slider"
-      aria-valuenow={Math.round(currentTime)}
+      aria-valuenow={Math.round(progress * duration)}
       aria-valuemin={0}
       aria-valuemax={Math.round(duration)}
-      className="flex-1 h-6 cursor-pointer"
+      // touch-none — палец скраббит, а не скроллит страницу; крупнее зона на
+      // фуллскрине (мобилка). На драге явно растим высоту для точности.
+      className={`flex-1 touch-none select-none focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded-sm transition-[height] ${
+        large ? 'h-9' : 'h-6'
+      } ${dragging ? 'cursor-grabbing' : 'cursor-pointer'}`}
     >
       {bars.map((peak, i) => {
         const h = Math.max(2, peak * (SVG_H - 4));
@@ -594,11 +672,21 @@ function Waveform() {
             rx={0.5}
             style={{
               fill: played ? 'var(--artist-accent, rgba(255,255,255,0.75))' : 'rgba(255,255,255,0.18)',
-              transition: 'fill 0.12s linear',
+              transition: dragging ? 'none' : 'fill 0.12s linear',
             }}
           />
         );
       })}
+      {/* Playhead — тонкая линия позиции; ярче во время перетаскивания */}
+      {duration > 0 && (
+        <rect
+          x={Math.min(SVG_W - 1, Math.max(0, playheadX - 0.5))}
+          y={0}
+          width={1}
+          height={SVG_H}
+          style={{ fill: 'var(--artist-accent, rgba(255,255,255,0.9))', opacity: dragging ? 0.9 : 0.5 }}
+        />
+      )}
     </svg>
   );
 }

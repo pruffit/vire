@@ -50,7 +50,7 @@
 ## Качество
 
 - [x] **Тесты `packages/core`** — добавлены тесты `ReleaseService.deleteRelease` (4 кейса); `makeRepo` исправлен (добавлены `delete`, `updateStatus`, `findAllByArtist`). Итого: 33 теста.
-- [ ] **Mobile polish** — Impeccable critique + polish плеера и волны на мобильных. Waveform scrubber на тач, управление треками на узких экранах.
+- [x] **Mobile polish (плеер/волна)** — waveform переведён на pointer-скраббер (драг пальцем/мышью + playhead, `touch-action:none`, клавиатура ←/→) в глобальном плеере (мини-бар h-1.5/фуллскрин h-9) и на странице трека (скраб только для активного трека, иначе тап = play). MiniProgressBar: драг + тач-зона 12px (видимая полоска 2px). Тап-таргеты транспорта prev/next/wave увеличены. typecheck/audit:design/тесты/сборка — зелёные. (v1.0.67)
 
 ## Этап 2
 
