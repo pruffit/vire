@@ -23,6 +23,13 @@ import { getListeningNow } from '@/lib/listening-now';
 import { Reveal } from '@vire/ui/motion';
 import { JsonLd } from '@/components/json-ld';
 import { websiteJsonLd } from '@/lib/structured-data';
+import type { Metadata } from 'next';
+
+// Главная: явный canonical (в аудите был пустой). OG-картинку наследует из
+// app/opengraph-image.tsx, title/description — из layout.
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 export default async function HomePage() {
   const session = await auth();
