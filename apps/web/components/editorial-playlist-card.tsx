@@ -77,7 +77,10 @@ function CoverFan({ covers }: { covers: string[] }) {
             src={l.src}
             alt=""
             fill
-            sizes="96px"
+            // Обложка веера = 62% карточки. На десктопе (4 кол.) это ~150–180px
+            // CSS → на ретине нужно ~320px исходника. Не занижать (было 96px →
+            // мыло/блочность на зернистой текстуре).
+            sizes="(max-width: 640px) 33vw, (max-width: 768px) 20vw, 180px"
             className="object-cover"
           />
         </div>
