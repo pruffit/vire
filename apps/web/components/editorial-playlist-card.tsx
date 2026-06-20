@@ -77,7 +77,7 @@ function CoverFan({ covers }: { covers: string[] }) {
             src={l.src}
             alt=""
             fill
-            sizes="(max-width: 640px) 30vw, 150px"
+            sizes="96px"
             className="object-cover"
           />
         </div>

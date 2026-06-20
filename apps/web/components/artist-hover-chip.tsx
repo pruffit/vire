@@ -40,7 +40,7 @@ export function ArtistHoverChip({ artist }: { artist: ArtistListItem }) {
       <Link href={`/artists/${artist.slug}`} className="block group text-center">
         <div className="relative mx-auto w-full aspect-square rounded-full overflow-hidden bg-muted ring-1 ring-white/5 transition-shadow duration-300 ease-soft group-hover:ring-white/20">
           {displayAvatar ? (
-            <Image src={displayAvatar} alt={artist.name} fill sizes="(max-width: 640px) 33vw, 160px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
+            <Image src={displayAvatar} alt={artist.name} fill sizes="(max-width: 640px) 33vw, 128px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
           ) : (
             <div className="w-full h-full grid place-items-center text-xl font-mono text-muted-foreground">
               {artist.name[0]?.toUpperCase()}

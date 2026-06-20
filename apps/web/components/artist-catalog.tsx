@@ -143,7 +143,7 @@ function ArtistCard({ artist }: { artist: ArtistListItem }) {
               src={displayAvatar}
               alt={artist.name}
               fill
-              sizes="(max-width: 640px) 50vw, 200px"
+              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
               className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]"
             />
           ) : (

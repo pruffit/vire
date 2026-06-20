@@ -23,7 +23,7 @@ export function PlaylistCard({ playlist }: Props) {
               src={playlist.coverUrl}
               alt={playlist.title}
               fill
-              sizes="(max-width: 640px) 50vw, 33vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 300px"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (

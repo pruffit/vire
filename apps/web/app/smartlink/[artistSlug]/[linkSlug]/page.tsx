@@ -111,7 +111,7 @@ export default async function SmartLinkPage({ params }: Props) {
                 src={smartLink.coverUrl}
                 alt={smartLink.title}
                 fill
-                sizes="256px"
+                sizes="(max-width: 640px) 224px, 256px"
                 className="object-cover"
                 priority
               />

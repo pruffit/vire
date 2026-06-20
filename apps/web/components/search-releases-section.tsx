@@ -78,7 +78,7 @@ function ReleaseRow({ release }: { release: SearchRelease }) {
     >
       <div className="relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
         {release.coverUrl
-          ? <Image src={release.coverUrl} alt={release.title} fill sizes="36px" className="object-cover" />
+          ? <Image src={release.coverUrl} alt={release.title} fill quality={60} sizes="36px" className="object-cover" />
           : <div className="w-full h-full bg-white/5" />
         }
       </div>

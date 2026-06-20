@@ -96,6 +96,11 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: repoRoot,
   transpilePackages: ['@vire/core', '@vire/db', '@vire/ui'],
   images: {
+    // AVIF даёт ~50% экономии vs JPEG при том же качестве; WebP — fallback.
+    formats: ['image/avif', 'image/webp'],
+    // Только нужные брейкпоинты — меньше вариантов кешируется на сервере.
+    deviceSizes: [640, 828, 1080, 1200, 1920],
+    imageSizes: [24, 36, 48, 64, 96, 128, 180, 256, 320],
     remotePatterns: [
       s3RemotePattern(),
       { protocol: 'https', hostname: 'avatars.yandex.net', pathname: '/**' },

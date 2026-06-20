@@ -161,7 +161,7 @@ export function CommandPalette() {
                   >
                     <span className="relative w-7 h-7 shrink-0 rounded overflow-hidden bg-muted grid place-items-center text-xs font-mono text-muted-foreground">
                       {item.isAction ? <ArrowIcon /> : item.img ? (
-                        <Image src={item.img} alt="" fill sizes="28px" className={`object-cover ${item.round ? 'rounded-full' : ''}`} />
+                        <Image src={item.img} alt="" fill quality={60} sizes="28px" className={`object-cover ${item.round ? 'rounded-full' : ''}`} />
                       ) : item.initial}
                     </span>
                     <span className="min-w-0 flex-1">

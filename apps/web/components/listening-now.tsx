@@ -113,7 +113,7 @@ function TrackRow({ track }: { track: ListeningNowTrack }) {
     >
       <span className="relative w-10 h-10 shrink-0 rounded overflow-hidden bg-muted">
         {track.coverUrl && (
-          <Image src={track.coverUrl} alt="" fill sizes="40px" className="object-cover" />
+          <Image src={track.coverUrl} alt="" fill quality={60} sizes="40px" className="object-cover" />
         )}
         <span className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <PlayIcon size={12} className="text-white" />

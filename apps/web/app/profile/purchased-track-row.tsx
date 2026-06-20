@@ -50,7 +50,7 @@ export function PurchasedTrackRow({
       {/* Cover */}
       <div className="w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted relative">
         {releaseCoverUrl ? (
-          <Image src={releaseCoverUrl} alt={track.title} fill sizes="36px" className="object-cover" />
+          <Image src={releaseCoverUrl} alt={track.title} fill quality={60} sizes="36px" className="object-cover" />
         ) : (
           <div className="w-full h-full bg-white/5" />
         )}

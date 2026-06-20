@@ -63,7 +63,7 @@ function SearchTrackRow({
     >
       <div className="relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
         {track.coverUrl ? (
-          <Image src={track.coverUrl} alt={track.title} fill sizes="36px" className="object-cover" />
+          <Image src={track.coverUrl} alt={track.title} fill quality={60} sizes="36px" className="object-cover" />
         ) : (
           <div className="w-full h-full bg-white/5" />
         )}

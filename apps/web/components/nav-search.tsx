@@ -189,7 +189,7 @@ export function NavSearch() {
               >
                 <span className="relative w-7 h-7 shrink-0 rounded overflow-hidden bg-muted flex items-center justify-center text-xs font-mono text-muted-foreground">
                   {item.img ? (
-                    <Image src={item.img} alt="" fill sizes="28px" className={`object-cover ${item.round ? 'rounded-full' : ''}`} />
+                    <Image src={item.img} alt="" fill quality={60} sizes="28px" className={`object-cover ${item.round ? 'rounded-full' : ''}`} />
                   ) : (
                     item.initial
                   )}

@@ -64,7 +64,7 @@ export function ArtistCollapseBar({
             >
               {avatarUrl ? (
                 <span className="relative w-6 h-6 rounded-full overflow-hidden shrink-0">
-                  <Image src={avatarUrl} alt="" fill sizes="24px" className="object-cover" />
+                  <Image src={avatarUrl} alt="" fill quality={60} sizes="24px" className="object-cover" />
                 </span>
               ) : (
                 <span className="w-6 h-6 rounded-full bg-white/10 shrink-0" />
