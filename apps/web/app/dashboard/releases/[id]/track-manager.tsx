@@ -18,7 +18,7 @@ export interface ManagedTrack {
   id: string;
   title: string;
   trackNumber: number;
-  status: 'PROCESSING' | 'READY' | 'BLOCKED';
+  status: 'PROCESSING' | 'READY' | 'BLOCKED' | 'FAILED';
   moods: Mood[];
   genres: Genre[];
   credits: TrackCredit[];
@@ -308,6 +308,7 @@ export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; 
                     )}
                     {track.status === 'READY' ? 'готов'
                       : track.status === 'PROCESSING' ? 'обрабатывается'
+                      : track.status === 'FAILED' ? 'ошибка обработки'
                       : 'заблокирован'}
                   </motion.span>
                 )}

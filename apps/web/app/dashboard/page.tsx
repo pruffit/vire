@@ -35,6 +35,7 @@ const STATUS_LABEL: Record<TrackStatus, string> = {
   PROCESSING: 'обрабатывается',
   READY: 'готов',
   BLOCKED: 'заблокирован',
+  FAILED: 'ошибка обработки',
 };
 
 const RELEASE_STATUS_LABEL: Record<ReleaseStatus, string> = {
@@ -55,6 +56,7 @@ const STATUS_COLOR: Record<TrackStatus, string> = {
   PROCESSING: 'text-yellow-400',
   READY: 'text-green-400',
   BLOCKED: 'text-red-400',
+  FAILED: 'text-red-500',
 };
 
 function TrackRow({ track }: { track: DashboardTrack }) {

@@ -304,12 +304,13 @@ export interface UnverifiedArtist {
 
 export interface AdminAttention {
   stuckTracks: StuckTrack[];
+  failedTracks: StuckTrack[];
   blockedTracksCount: number;
   unverifiedArtists: UnverifiedArtist[];
 }
 
 export async function getAdminAttention(): Promise<AdminAttention> {
-  const [stuckRows, [blockedRow], unverifiedRows] = await Promise.all([
+  const [stuckRows, failedRows, [blockedRow], unverifiedRows] = await Promise.all([
     // Треки, которые зависли в PROCESSING больше 2 часов
     db
       .select({
@@ -330,6 +331,24 @@ export async function getAdminAttention(): Promise<AdminAttention> {
         ),
       )
       .orderBy(asc(tracks.updatedAt))
+      .limit(10),
+
+    // Треки, у которых транскодинг окончательно упал (FAILED) — артист уже
+    // уведомлён письмом, но админу стоит видеть для разбора.
+    db
+      .select({
+        id: tracks.id,
+        title: tracks.title,
+        releaseTitle: releases.title,
+        artistSlug: artistProfiles.slug,
+        releaseId: releases.id,
+        updatedAt: tracks.updatedAt,
+      })
+      .from(tracks)
+      .innerJoin(releases, eq(releases.id, tracks.releaseId))
+      .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+      .where(eq(tracks.status, 'FAILED'))
+      .orderBy(desc(tracks.updatedAt))
       .limit(10),
 
     // Количество заблокированных треков
@@ -359,6 +378,7 @@ export async function getAdminAttention(): Promise<AdminAttention> {
 
   return {
     stuckTracks: stuckRows,
+    failedTracks: failedRows,
     blockedTracksCount: Number(blockedRow?.n ?? 0),
     unverifiedArtists: unverifiedRows.map((r) => ({
       ...r,
@@ -520,7 +540,7 @@ export async function listTracksAdmin(opts: {
 
 export async function setTrackStatus(
   trackId: string,
-  status: 'READY' | 'BLOCKED' | 'PROCESSING',
+  status: 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED',
 ): Promise<void> {
   await db.update(tracks).set({ status, updatedAt: new Date() }).where(eq(tracks.id, trackId));
 }

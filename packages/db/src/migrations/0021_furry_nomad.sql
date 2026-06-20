@@ -1,0 +1,1 @@
+ALTER TYPE "public"."track_status" ADD VALUE 'FAILED';

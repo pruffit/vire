@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { Queue } from 'bullmq';
 import { QUEUE_EDITORIAL } from '@vire/core';
-import { createTranscodeWorker } from './workers/transcode.worker.js';
+import { createTranscodeWorker, handleTerminalTranscodeFailure } from './workers/transcode.worker.js';
 import { createPlayEventsWorker } from './workers/play-events.worker.js';
 import { createNotifyReleaseWorker } from './workers/notify-release.worker.js';
 import { createAnalyzeWorker } from './workers/analyze.worker.js';
@@ -42,6 +42,9 @@ transcodeWorker.on('completed', (job) => {
 
 transcodeWorker.on('failed', (job, err) => {
   void alertJobFailure('transcode', job?.id, err, { trackId: job?.data.trackId });
+  // На окончательном падении (исчерпаны попытки) — пометить трек FAILED и
+  // уведомить артиста письмом. Функция сама проверяет, что это финал.
+  void handleTerminalTranscodeFailure(job);
 });
 
 transcodeWorker.on('error', (err) => {

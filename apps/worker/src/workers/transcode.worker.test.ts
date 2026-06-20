@@ -5,6 +5,7 @@ import type { TranscodeJobData } from '@vire/core';
 const h = vi.hoisted(() => ({
   selectRows: [] as unknown[],
   lastUpdateSet: undefined as unknown,
+  updateReturning: [] as unknown[],
   downloadToFile: vi.fn(),
   uploadFile: vi.fn(),
   transcodeToHls: vi.fn(),
@@ -14,6 +15,9 @@ const h = vi.hoisted(() => ({
   analyzeAudioFeatures: vi.fn(),
   txUpdate: vi.fn(),
   txInsert: vi.fn(),
+  dbUpdate: vi.fn(),
+  getTrackOwnerContact: vi.fn(),
+  sendMail: vi.fn(),
 }));
 
 vi.mock('@vire/db', () => ({
@@ -21,13 +25,16 @@ vi.mock('@vire/db', () => ({
     select: () => ({
       from: () => ({ where: () => ({ limit: () => Promise.resolve(h.selectRows) }) }),
     }),
+    update: h.dbUpdate,
     transaction: (cb: (tx: unknown) => Promise<void>) =>
       cb({ update: h.txUpdate, insert: h.txInsert }),
   },
   tracks: { id: 'tracks.id', status: 'tracks.status' },
   trackAudio: { trackId: 'trackAudio.trackId' },
+  getTrackOwnerContact: h.getTrackOwnerContact,
 }));
 vi.mock('@vire/core', () => ({ QUEUE_TRANSCODE: 'transcode' }));
+vi.mock('../lib/mailer.js', () => ({ sendMail: h.sendMail }));
 vi.mock('../lib/s3.js', () => ({
   VAULT: 'vire-vault',
   STREAM: 'vire-stream',
@@ -43,7 +50,7 @@ vi.mock('../lib/metadata.js', () => ({ readAudioMetadata: h.readAudioMetadata })
 vi.mock('../lib/audio-analysis.js', () => ({ analyzeAudioFeatures: h.analyzeAudioFeatures }));
 vi.mock('../queues/connection.js', () => ({ connection: {} }));
 
-import { processTranscodeJob } from './transcode.worker.js';
+import { processTranscodeJob, handleTerminalTranscodeFailure } from './transcode.worker.js';
 
 const TRACK_ID = '20804250-9bb2-48dc-8af5-a4a6fd54ab06';
 
@@ -76,6 +83,59 @@ beforeEach(() => {
   h.readAudioMetadata.mockResolvedValue({ durationSec: 200, bpm: 120, musicalKey: 'Am' });
   h.analyzeAudioFeatures.mockResolvedValue({ bpm: 120, musicalKey: 'A minor' });
   h.probeDuration.mockResolvedValue(321);
+
+  // Хвост обработки падения: db.update(...).set(...).where(...).returning(...)
+  h.updateReturning = [{ id: TRACK_ID }];
+  h.dbUpdate.mockImplementation(() => ({
+    set: () => ({ where: () => ({ returning: () => Promise.resolve(h.updateReturning) }) }),
+  }));
+  h.getTrackOwnerContact.mockResolvedValue({
+    email: 'artist@example.com',
+    name: 'Artist',
+    trackTitle: 'Song',
+    releaseId: 'rel-1',
+    artistSlug: 'artist',
+  });
+  h.sendMail.mockResolvedValue(undefined);
+});
+
+function makeFailJob(over?: { attemptsMade?: number; attempts?: number }): Job<TranscodeJobData> {
+  return {
+    data: { trackId: TRACK_ID, sourceKey: `tracks/${TRACK_ID}/source.wav` },
+    log: vi.fn(),
+    attemptsMade: over?.attemptsMade ?? 3,
+    opts: { attempts: over?.attempts ?? 3 },
+  } as unknown as Job<TranscodeJobData>;
+}
+
+describe('handleTerminalTranscodeFailure', () => {
+  it('does nothing while retries remain', async () => {
+    await handleTerminalTranscodeFailure(makeFailJob({ attemptsMade: 1, attempts: 3 }));
+    expect(h.dbUpdate).not.toHaveBeenCalled();
+    expect(h.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('marks the track FAILED and emails the artist on the final attempt', async () => {
+    await handleTerminalTranscodeFailure(makeFailJob({ attemptsMade: 3, attempts: 3 }));
+    expect(h.dbUpdate).toHaveBeenCalledTimes(1);
+    expect(h.sendMail).toHaveBeenCalledTimes(1);
+    const arg = (h.sendMail as Mock).mock.calls[0][0];
+    expect(arg.to).toBe('artist@example.com');
+    expect(arg.subject).toContain('Song');
+  });
+
+  it('does not email when the track was no longer PROCESSING (race with success)', async () => {
+    h.updateReturning = [];
+    await handleTerminalTranscodeFailure(makeFailJob({ attemptsMade: 3, attempts: 3 }));
+    expect(h.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('never throws if notifying the artist fails', async () => {
+    h.sendMail.mockRejectedValue(new Error('brevo down'));
+    await expect(
+      handleTerminalTranscodeFailure(makeFailJob({ attemptsMade: 3, attempts: 3 })),
+    ).resolves.toBeUndefined();
+  });
 });
 
 describe('processTranscodeJob', () => {

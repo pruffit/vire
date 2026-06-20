@@ -20,6 +20,7 @@ export default async function AdminPage() {
 
   const hasIssues =
     attention.stuckTracks.length > 0 ||
+    attention.failedTracks.length > 0 ||
     attention.blockedTracksCount > 0 ||
     attention.unverifiedArtists.length > 0;
 
@@ -280,6 +281,15 @@ function AttentionPanel({ attention }: { attention: AdminAttention }) {
           href="/admin/tracks?status=PROCESSING"
           label={`${attention.stuckTracks.length} ${plural(attention.stuckTracks.length, 'трек', 'трека', 'треков')} зависл${attention.stuckTracks.length === 1 ? '' : 'о'} в обработке`}
           sub="не двигается более 2 часов — возможная ошибка ffmpeg"
+        />
+      )}
+
+      {attention.failedTracks.length > 0 && (
+        <AlertRow
+          variant="error"
+          href="/admin/tracks?status=FAILED"
+          label={`${attention.failedTracks.length} ${plural(attention.failedTracks.length, 'трек', 'трека', 'треков')} с ошибкой транскодинга`}
+          sub="транскодинг упал после всех попыток — артист уведомлён письмом"
         />
       )}
 

@@ -9,12 +9,14 @@ const STATUS_COLOR: Record<string, string> = {
   READY: 'text-green-400',
   PROCESSING: 'text-yellow-400',
   BLOCKED: 'text-red-400',
+  FAILED: 'text-red-500',
 };
 
 const STATUS_LABEL: Record<string, string> = {
   READY: 'готов',
   PROCESSING: 'обрабатывается',
   BLOCKED: 'заблокирован',
+  FAILED: 'ошибка',
 };
 
 type Props = { searchParams: Promise<{ status?: string }> };
@@ -34,7 +36,7 @@ export default async function AdminTracksPage({ searchParams }: Props) {
       </div>
 
       <div className="flex gap-2 text-sm">
-        {[undefined, 'PROCESSING', 'READY', 'BLOCKED'].map((s) => (
+        {[undefined, 'PROCESSING', 'READY', 'BLOCKED', 'FAILED'].map((s) => (
           <a
             key={s ?? 'all'}
             href={s ? `?status=${s}` : '/admin/tracks'}
@@ -112,7 +114,7 @@ export default async function AdminTracksPage({ searchParams }: Props) {
                   {new Date(track.createdAt).toLocaleDateString('ru-RU')}
                 </td>
                 <td className="px-4 py-3">
-                  <TrackStatusSelect trackId={track.id} currentStatus={track.status as 'READY' | 'BLOCKED' | 'PROCESSING'} />
+                  <TrackStatusSelect trackId={track.id} currentStatus={track.status as 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED'} />
                 </td>
               </tr>
             ))}

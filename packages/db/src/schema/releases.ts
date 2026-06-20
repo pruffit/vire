@@ -21,7 +21,9 @@ export const genreEnum = pgEnum('genre', [
   'DRONE', 'INDUSTRIAL', 'REGGAE', 'DUB', 'SOUNDTRACK', 'SPOKENWORD',
 ]);
 export const releaseStatusEnum = pgEnum('release_status', ['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED']);
-export const trackStatusEnum = pgEnum('track_status', ['PROCESSING', 'READY', 'BLOCKED']);
+// FAILED — транскодинг исчерпал все попытки; трек не воспроизводится, артист
+// уведомлён письмом, в админке помечен в «требует внимания».
+export const trackStatusEnum = pgEnum('track_status', ['PROCESSING', 'READY', 'BLOCKED', 'FAILED']);
 
 export const releases = pgTable('releases', {
   id: uuid('id').primaryKey().defaultRandom(),

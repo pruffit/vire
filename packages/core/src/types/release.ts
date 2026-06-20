@@ -31,7 +31,7 @@ export interface LyricLine {
   text: string;
 }
 export type ReleaseStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
-export type TrackStatus = 'PROCESSING' | 'READY' | 'BLOCKED';
+export type TrackStatus = 'PROCESSING' | 'READY' | 'BLOCKED' | 'FAILED';
 
 export interface Release {
   id: string;

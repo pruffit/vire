@@ -148,6 +148,13 @@
       "when": 1781636245762,
       "tag": "0020_shiny_swarm",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1781966345446,
+      "tag": "0021_furry_nomad",
+      "breakpoints": true
     }
   ]
 }

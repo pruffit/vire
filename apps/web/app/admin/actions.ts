@@ -53,7 +53,7 @@ export async function actionCleanQueueFailed(queueName: string) {
   revalidatePath('/admin');
 }
 
-export async function actionSetTrackStatus(trackId: string, status: 'READY' | 'BLOCKED' | 'PROCESSING') {
+export async function actionSetTrackStatus(trackId: string, status: 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED') {
   await requireAdmin();
   await setTrackStatus(trackId, status);
   revalidatePath('/admin/tracks');

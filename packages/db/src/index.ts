@@ -78,7 +78,8 @@ export type {
   AdminArtist,
 } from './queries/admin';
 export type { UserRole } from './queries/admin-types';
-export { getFollowerEmails } from './queries/notifications';
+export { getFollowerEmails, getTrackOwnerContact } from './queries/notifications';
+export type { TrackOwnerContact } from './queries/notifications';
 export type { FollowerEmail } from './queries/notifications';
 export {
   getTrackMoods, setTrackMoods, getMoodsForTracks, getMoodCounts, ALL_MOODS, MOOD_LABELS,

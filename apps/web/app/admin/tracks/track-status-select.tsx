@@ -3,9 +3,9 @@
 import { useTransition } from 'react';
 import { actionSetTrackStatus } from '../actions';
 
-type TrackStatus = 'READY' | 'BLOCKED' | 'PROCESSING';
+type TrackStatus = 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED';
 
-const STATUSES: TrackStatus[] = ['PROCESSING', 'READY', 'BLOCKED'];
+const STATUSES: TrackStatus[] = ['PROCESSING', 'READY', 'BLOCKED', 'FAILED'];
 
 interface Props {
   trackId: string;
