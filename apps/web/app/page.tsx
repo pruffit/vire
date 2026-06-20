@@ -38,7 +38,8 @@ export default async function HomePage() {
 
   const [latest, freshWeek, upcoming, artists, feed, listeningNow, moodCounts, sharedPlaylists, personalRaw, publicPlaylists, likedPlaylistIds] = await Promise.all([
     getLatestReleases(13),
-    listReleases({ sort: 'fresh', sinceDays: 7, limit: 12 }),
+    // .catch — главная не должна падать целиком из-за одной секции (как getMoodCounts).
+    listReleases({ sort: 'fresh', sinceDays: 7, limit: 12 }).catch(() => []),
     getUpcomingReleases(8),
     listActiveArtists(),
     userId ? getFeed(userId) : Promise.resolve([]),

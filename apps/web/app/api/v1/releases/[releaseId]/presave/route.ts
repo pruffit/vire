@@ -10,7 +10,7 @@ import {
 } from '@vire/db';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ releaseId: string }> };
 
 const guestSchema = z.object({ email: z.string().email().max(254) });
 
@@ -26,14 +26,14 @@ function isPresavable(info: { status: string; releaseDate: Date | null }): boole
 export async function GET(_req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ presaved: false });
-  const { id } = await params;
-  const presaved = await getPresaveState(session.user.id, id);
+  const { releaseId } = await params;
+  const presaved = await getPresaveState(session.user.id, releaseId);
   return NextResponse.json({ presaved });
 }
 
 export async function POST(req: Request, { params }: Params) {
-  const { id } = await params;
-  const info = await getReleasePresaveInfo(id);
+  const { releaseId } = await params;
+  const info = await getReleasePresaveInfo(releaseId);
   if (!info) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (!isPresavable(info)) {
     return NextResponse.json(
@@ -47,7 +47,7 @@ export async function POST(req: Request, { params }: Params) {
   if (session?.user?.id) {
     const rl = await rateLimit(`presave:${session.user.id}`, 30, 60);
     if (!rl.ok) return tooManyRequests(rl.retryAfter);
-    await presaveForUser(session.user.id, id);
+    await presaveForUser(session.user.id, releaseId);
     return NextResponse.json({ presaved: true });
   }
 
@@ -61,14 +61,14 @@ export async function POST(req: Request, { params }: Params) {
   const email = parsed.data.email.trim().toLowerCase();
   const rl = await rateLimit(`presave-guest:${email}`, 10, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
-  await presaveForGuest(email, id);
+  await presaveForGuest(email, releaseId);
   return NextResponse.json({ presaved: true, guest: true });
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { id } = await params;
-  await unpresaveForUser(session.user.id, id);
+  const { releaseId } = await params;
+  await unpresaveForUser(session.user.id, releaseId);
   return NextResponse.json({ presaved: false });
 }

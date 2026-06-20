@@ -117,7 +117,12 @@ export async function listReleases({
 } = {}): Promise<DiscoveryRelease[]> {
   const conds = [eq(artistProfiles.isActive, true), releaseIsAired];
   if (sinceDays) {
-    conds.push(sql`${releaseFreshness} >= now() - make_interval(days => ${sinceDays})`);
+    // sinceDays — внутреннее число (не пользовательский ввод). Бинд-параметр
+    // внутри make_interval/умножения на interval Postgres не может типизировать
+    // («could not determine data type of parameter») и запрос падает в рантайме.
+    // Поэтому санитизируем в целое и вставляем литералом: now() - interval 'N days'.
+    const days = Math.max(0, Math.floor(sinceDays));
+    conds.push(sql`${releaseFreshness} >= now() - ${sql.raw(`interval '${days} days'`)}`);
   }
 
   if (sort === 'popular') {

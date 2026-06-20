@@ -27,7 +27,7 @@ import { POST, DELETE } from './route';
 
 const mockedAuth = vi.mocked(auth);
 const RELEASE_ID = 'rel-1';
-const ctx = { params: Promise.resolve({ id: RELEASE_ID }) };
+const ctx = { params: Promise.resolve({ releaseId: RELEASE_ID }) };
 
 // Релиз пресейвабелен: запланирован на будущее.
 const future = () => ({
