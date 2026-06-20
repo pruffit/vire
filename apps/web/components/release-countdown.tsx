@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'motion/react';
+import { PresaveButton } from '@/components/presave-button';
 
 interface TimeLeft {
   days: number;
@@ -30,19 +31,25 @@ function getTimeLeft(target: number): TimeLeft | null {
  * При обнулении таймера перезагружает страницу — релиз уже доступен.
  */
 export function ReleaseCountdown({
+  releaseId,
   coverUrl,
   title,
   type,
   artistName,
   artistSlug,
   releaseAtMs,
+  presaved,
+  isAuthed,
 }: {
+  releaseId: string;
   coverUrl: string | null;
   title: string;
   type: string;
   artistName: string;
   artistSlug: string;
   releaseAtMs: number;
+  presaved: boolean;
+  isAuthed: boolean;
 }) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(releaseAtMs));
 
@@ -105,6 +112,16 @@ export function ReleaseCountdown({
       )}
 
       <p className="mt-8 text-xs opacity-40">Выходит {dateLabel}</p>
+
+      {/* Пресейв: сохранить релиз заранее — при выходе авто-лайк + письмо */}
+      <div className="mt-6">
+        <PresaveButton releaseId={releaseId} initialPresaved={presaved} isAuthed={isAuthed} />
+      </div>
+      <p className="mt-3 max-w-xs text-[11px] leading-relaxed opacity-35">
+        {isAuthed
+          ? 'Добавим релиз в твои «Лайки» и пришлём письмо, когда выйдет.'
+          : 'Пришлём письмо на почту, когда релиз выйдет.'}
+      </p>
     </main>
   );
 }

@@ -10,6 +10,22 @@ export { getPublicTrackLyrics } from './queries/lyrics';
 export { listActiveArtists } from './queries/artists';
 export type { ArtistListItem } from './queries/artists';
 export { getLikeState, getLikeCount, likeTrack, unlikeTrack } from './queries/likes';
+export {
+  presaveForUser,
+  unpresaveForUser,
+  presaveForGuest,
+  getPresaveState,
+  getPresaveCount,
+  getReleasePresaveInfo,
+  findDueScheduledReleases,
+  publishScheduledRelease,
+  getPresaverUserIds,
+  getPresaverContacts,
+  getReadyTrackIds,
+  bulkLikeTracks,
+  markPresavesFulfilled,
+} from './queries/release-presaves';
+export type { ReleasePresaveInfo, DueRelease, PresaverContact } from './queries/release-presaves';
 export { getFollowState, getFollowerCount, followArtist, unfollowArtist } from './queries/follows';
 export { getFeed } from './queries/feed';
 export type { FeedRelease } from './queries/feed';

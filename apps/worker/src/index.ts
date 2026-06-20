@@ -1,11 +1,13 @@
 import 'dotenv/config';
 import { Queue } from 'bullmq';
-import { QUEUE_EDITORIAL } from '@vire/core';
+import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH } from '@vire/core';
 import { createTranscodeWorker, handleTerminalTranscodeFailure } from './workers/transcode.worker.js';
 import { createPlayEventsWorker } from './workers/play-events.worker.js';
 import { createNotifyReleaseWorker } from './workers/notify-release.worker.js';
 import { createAnalyzeWorker } from './workers/analyze.worker.js';
 import { createEditorialWorker } from './workers/editorial.worker.js';
+import { createScheduledPublishWorker } from './workers/scheduled-publish.worker.js';
+import { createFulfillPresaveWorker } from './workers/fulfill-presave.worker.js';
 import { connection } from './queues/connection.js';
 import { alertJobFailure, alertWorkerError, alertCrash } from './lib/alert.js';
 
@@ -14,6 +16,8 @@ const playEventsWorker = createPlayEventsWorker();
 const notifyReleaseWorker = createNotifyReleaseWorker();
 const analyzeWorker = createAnalyzeWorker();
 const editorialWorker = createEditorialWorker();
+const scheduledPublishWorker = createScheduledPublishWorker();
+const fulfillPresaveWorker = createFulfillPresaveWorker();
 
 // Планировщики регенерации подборок (cron в МСК): общие — ежедневно в 00:00,
 // личные — каждые 4 часа. upsertJobScheduler идемпотентен: повторный запуск
@@ -25,6 +29,13 @@ editorialQueue
 editorialQueue
   .upsertJobScheduler('personal-4h', { pattern: '0 */4 * * *', tz: 'Europe/Moscow' }, { name: 'personal', data: { scope: 'personal' } })
   .catch((err) => void alertWorkerError('editorial', err as Error));
+
+// Планировщик авто-выхода SCHEDULED-релизов: раз в минуту проверяем наступившую
+// дату выхода, публикуем, шлём уведомления подписчикам и исполняем пресейвы.
+const scheduledPublishQueue = new Queue(QUEUE_SCHEDULED_PUBLISH, { connection });
+scheduledPublishQueue
+  .upsertJobScheduler('due-every-min', { pattern: '* * * * *' }, { name: 'due', data: {} })
+  .catch((err) => void alertWorkerError('scheduled-publish', err as Error));
 
 editorialWorker.on('completed', (job) => {
   console.log(`[editorial] ✓ job=${job.id} scope=${job.data.scope}`);
@@ -71,7 +82,24 @@ notifyReleaseWorker.on('error', (err) => {
   void alertWorkerError('notify-release', err);
 });
 
-console.log('[worker] transcode + analyze + play-events + notify-release + editorial workers started');
+scheduledPublishWorker.on('failed', (job, err) => {
+  void alertJobFailure('scheduled-publish', job?.id, err);
+});
+scheduledPublishWorker.on('error', (err) => {
+  void alertWorkerError('scheduled-publish', err);
+});
+
+fulfillPresaveWorker.on('completed', (job) => {
+  console.log(`[fulfill-presave] ✓ job=${job.id} release=${job.data.releaseId}`);
+});
+fulfillPresaveWorker.on('failed', (job, err) => {
+  void alertJobFailure('fulfill-presave', job?.id, err, { releaseId: job?.data.releaseId });
+});
+fulfillPresaveWorker.on('error', (err) => {
+  void alertWorkerError('fulfill-presave', err);
+});
+
+console.log('[worker] transcode + analyze + play-events + notify-release + editorial + scheduled-publish + fulfill-presave workers started');
 
 analyzeWorker.on('completed', (job) => {
   console.log(`[analyze] ✓ job=${job.id} track=${job.data.trackId}`);
@@ -102,6 +130,9 @@ async function shutdown() {
     analyzeWorker.close(),
     editorialWorker.close(),
     editorialQueue.close(),
+    scheduledPublishWorker.close(),
+    fulfillPresaveWorker.close(),
+    scheduledPublishQueue.close(),
   ]);
   process.exit(0);
 }

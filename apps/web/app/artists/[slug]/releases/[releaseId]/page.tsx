@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
+import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getPresaveState } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
+import { auth } from '@/auth';
 import { ZoomableCover } from '@/components/zoomable-cover';
 import { ReleaseHeroPlay } from '@/components/release-hero-play';
 import { ReleaseShareButton } from '@/components/release-share-button';
@@ -80,6 +81,8 @@ export default async function ReleasePage({ params }: Props) {
     // Отсчёт только для запланированных (SCHEDULED ⇒ дата в будущем, раз !isReleased).
     // Черновики/архив/без даты публично не показываем.
     if (release.status !== 'SCHEDULED' || releaseAtMs == null) notFound();
+    const session = await auth();
+    const presaved = session?.user?.id ? await getPresaveState(session.user.id, release.id) : false;
     return (
       <div
         style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
@@ -88,12 +91,15 @@ export default async function ReleasePage({ params }: Props) {
         {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
         {grain && <GrainOverlay />}
         <ReleaseCountdown
+          releaseId={release.id}
           coverUrl={release.coverUrl}
           title={release.title}
           type={release.type}
           artistName={artist.name}
           artistSlug={slug}
           releaseAtMs={releaseAtMs}
+          presaved={presaved}
+          isAuthed={!!session?.user}
         />
       </div>
     );

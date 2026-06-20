@@ -155,6 +155,13 @@
       "when": 1781966345446,
       "tag": "0021_furry_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1781984385966,
+      "tag": "0022_new_trauma",
+      "breakpoints": true
     }
   ]
 }

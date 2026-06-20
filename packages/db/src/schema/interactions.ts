@@ -96,6 +96,26 @@ export const follows = pgTable('follows', {
   index('follows_artist_profile_id_idx').on(t.artistProfileId),
 ]);
 
+// Пресейв релиза — слушатель «сохраняет заранее» ещё не вышедший (SCHEDULED)
+// релиз. При выходе воркер авто-лайкает треки релиза и шлёт письмо «вышло».
+// Залогиненный — userId (email NULL); гость без аккаунта — email (userId NULL).
+export const releasePresaves = pgTable('release_presaves', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  releaseId: uuid('release_id').notNull().references(() => releases.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  email: text('email'),
+  // Отметка исполнения при выходе релиза — чтобы повторный прогон планировщика
+  // не дублировал письма/лайки.
+  fulfilledAt: timestamp('fulfilled_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  index('release_presaves_release_id_idx').on(t.releaseId),
+  // NULL-различимость Postgres даёт нужную семантику: один пресейв на (релиз,юзер)
+  // и один на (релиз,email); строки противоположного типа (с NULL) не конфликтуют.
+  unique('release_presaves_release_user_uq').on(t.releaseId, t.userId),
+  unique('release_presaves_release_email_uq').on(t.releaseId, t.email),
+]);
+
 // Анонимные маркеры на волне — не комментарии, просто точка
 // Агрегируется: артист видит пики вовлечённости
 export const favoriteMoments = pgTable('favorite_moments', {
