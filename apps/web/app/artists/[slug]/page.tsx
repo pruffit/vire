@@ -29,6 +29,7 @@ import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { CountdownBadge } from '@/components/countdown-badge';
 import { JsonLd } from '@/components/json-ld';
 import { musicGroupJsonLd, breadcrumbListJsonLd, artistPostJsonLd } from '@/lib/structured-data';
+import { resolveAvatarUrl } from '@/lib/avatar';
 import { artistFontStyle } from '@/lib/fonts';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { ArtistCollapseBar } from './artist-collapse-bar';
@@ -56,9 +57,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await getArtistData(slug);
   if (!data) return { title: 'Не найдено' };
 
-  const { artist } = data;
+  const { artist, releases } = data;
   const url = `/artists/${slug}`;
   const description = artist.bio ?? `${artist.name} на Vire — релизы, треки и ссылки.`;
+  const ogImage = resolveAvatarUrl(artist.avatarUrl, releases[0]?.coverUrl ?? null);
   return {
     title: artist.name,
     description,
@@ -68,7 +70,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url,
       title: artist.name,
       description,
-      images: artist.avatarUrl ? [{ url: artist.avatarUrl }] : undefined,
+      images: ogImage ? [{ url: ogImage }] : undefined,
     },
   };
 }
@@ -80,6 +82,7 @@ export default async function ArtistPage({ params }: Props) {
 
   const { artist, releases, upcoming, posts, smartLinks } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
+  const displayAvatar = resolveAvatarUrl(artist.avatarUrl, releases[0]?.coverUrl ?? null);
 
   const session = await auth();
   const [following, followerCount] = await Promise.all([
@@ -129,10 +132,10 @@ export default async function ArtistPage({ params }: Props) {
       {grain && <GrainOverlay />}
 
       {/* Full-bleed hero — breaks out of any container */}
-      <ArtistHero artist={artist} followButton={followButton} />
+      <ArtistHero artist={artist} displayAvatar={displayAvatar} followButton={followButton} />
 
       {/* Компактная полоска при скролле за hero */}
-      <ArtistCollapseBar name={artist.name} avatarUrl={artist.avatarUrl} verified={artist.verified} />
+      <ArtistCollapseBar name={artist.name} avatarUrl={displayAvatar} verified={artist.verified} />
 
       {/* Content below hero */}
       <div className="mx-auto max-w-4xl px-5 sm:px-6 pb-16 space-y-14">
@@ -154,9 +157,11 @@ export default async function ArtistPage({ params }: Props) {
 
 function ArtistHero({
   artist,
+  displayAvatar,
   followButton,
 }: {
   artist: ArtistProfile;
+  displayAvatar: string | null;
   followButton: ReactNode;
 }) {
   return (
@@ -250,9 +255,9 @@ function ArtistHero({
                   className="absolute inset-0 rounded-full blur-3xl opacity-30 scale-[1.8]"
                   style={{ background: 'var(--artist-accent)' }}
                 />
-                {artist.avatarUrl ? (
+                {displayAvatar ? (
                   <Image
-                    src={artist.avatarUrl}
+                    src={displayAvatar}
                     alt={artist.name}
                     width={280}
                     height={280}

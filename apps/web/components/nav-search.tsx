@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { spring, ease } from '@vire/ui/motion';
 import { SearchIcon } from '@/components/icons';
 import type { SearchResults } from '@vire/db';
+import { resolveAvatarUrl } from '@/lib/avatar';
 
 interface FlatResult {
   href: string;
@@ -36,7 +37,7 @@ export function NavSearch() {
     ? [
         ...results.artists.map((a) => ({
           href: `/artists/${a.slug}`, label: a.name, sub: 'Артист',
-          img: a.avatarUrl, round: true, initial: a.name[0]?.toUpperCase(),
+          img: resolveAvatarUrl(a.avatarUrl, a.firstReleaseCoverUrl), round: true, initial: a.name[0]?.toUpperCase(),
         })),
         ...results.releases.map((r) => ({
           href: `/artists/${r.artistSlug}/releases/${r.id}`, label: r.title,

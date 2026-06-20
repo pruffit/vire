@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import type { ArtistListItem } from '@vire/db';
+import { resolveAvatarUrl } from '@/lib/avatar';
 
 function pluralReleases(n: number): string {
   const m10 = n % 10, m100 = n % 100;
@@ -19,6 +20,7 @@ function pluralReleases(n: number): string {
  * с увеличенным аватаром и инфо — peek перед переходом. На тач просто ссылка.
  */
 export function ArtistHoverChip({ artist }: { artist: ArtistListItem }) {
+  const displayAvatar = resolveAvatarUrl(artist.avatarUrl, artist.firstReleaseCoverUrl);
   const [preview, setPreview] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -37,8 +39,8 @@ export function ArtistHoverChip({ artist }: { artist: ArtistListItem }) {
     <div className="relative" onMouseEnter={enter} onMouseLeave={leave}>
       <Link href={`/artists/${artist.slug}`} className="block group text-center">
         <div className="relative mx-auto w-full aspect-square rounded-full overflow-hidden bg-muted ring-1 ring-white/5 transition-shadow duration-300 ease-soft group-hover:ring-white/20">
-          {artist.avatarUrl ? (
-            <Image src={artist.avatarUrl} alt={artist.name} fill sizes="(max-width: 640px) 33vw, 160px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
+          {displayAvatar ? (
+            <Image src={displayAvatar} alt={artist.name} fill sizes="(max-width: 640px) 33vw, 160px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
           ) : (
             <div className="w-full h-full grid place-items-center text-xl font-mono text-muted-foreground">
               {artist.name[0]?.toUpperCase()}
@@ -61,8 +63,8 @@ export function ArtistHoverChip({ artist }: { artist: ArtistListItem }) {
             className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-20 w-44 rounded-xl bg-popover border border-border shadow-2xl p-3 flex items-center gap-3"
           >
             <span className="relative w-12 h-12 shrink-0 rounded-full overflow-hidden bg-muted">
-              {artist.avatarUrl ? (
-                <Image src={artist.avatarUrl} alt="" fill sizes="48px" className="object-cover" />
+              {displayAvatar ? (
+                <Image src={displayAvatar} alt="" fill sizes="48px" className="object-cover" />
               ) : (
                 <span className="w-full h-full grid place-items-center text-sm font-mono text-muted-foreground">{artist.name[0]?.toUpperCase()}</span>
               )}

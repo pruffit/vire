@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import type { ArtistListItem } from '@vire/db';
 import { ALL_GENRES, GENRE_LABELS, type Genre } from '@/lib/genres';
+import { resolveAvatarUrl } from '@/lib/avatar';
 
 type Sort = 'default' | 'name' | 'releases';
 
@@ -128,6 +129,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
 }
 
 function ArtistCard({ artist }: { artist: ArtistListItem }) {
+  const displayAvatar = resolveAvatarUrl(artist.avatarUrl, artist.firstReleaseCoverUrl);
   return (
     <Link href={`/artists/${artist.slug}`} className="block">
       <motion.article
@@ -136,9 +138,9 @@ function ArtistCard({ artist }: { artist: ArtistListItem }) {
         className="group space-y-3 text-center"
       >
         <div className="relative mx-auto w-full aspect-square rounded-full overflow-hidden bg-muted ring-1 ring-white/5 transition-shadow duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-lg group-hover:shadow-black/20">
-          {artist.avatarUrl ? (
+          {displayAvatar ? (
             <Image
-              src={artist.avatarUrl}
+              src={displayAvatar}
               alt={artist.name}
               fill
               sizes="(max-width: 640px) 50vw, 200px"
