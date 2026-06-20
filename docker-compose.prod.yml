@@ -31,6 +31,12 @@ services:
       - postgres
       - redis
       - minio
+    volumes:
+      # Кэш next/image переживает пересоздание контейнера при деплое — иначе
+      # первые посетители после каждой выкатки ловят холодную AVIF-кодировку
+      # обложек (LCP 9с в PageSpeed). Только подпапка images: остальной
+      # .next/cache (fetch/route) должен пересобираться под новый билд.
+      - web_image_cache:/app/apps/web/.next/cache/images
     # портов наружу нет — проксирует Caddy
 
   worker:
@@ -106,3 +112,4 @@ volumes:
   vire-minio-data:
   caddy-data:
   caddy-config:
+  web_image_cache:

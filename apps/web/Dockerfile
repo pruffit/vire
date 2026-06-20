@@ -41,6 +41,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
+# Кэш оптимизатора картинок (.next/cache/images) персистится в проде через том
+# (docker-compose.prod.yml). Создаём папку заранее с владельцем nextjs: иначе
+# Docker примонтирует пустой том как root, и nextjs не сможет в него писать —
+# каждый запрос обложки превращался бы в холодную AVIF-кодировку (LCP 9с).
+RUN mkdir -p apps/web/.next/cache/images && chown -R nextjs:nodejs apps/web/.next/cache
+
 USER nextjs
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]
