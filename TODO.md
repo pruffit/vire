@@ -45,7 +45,13 @@
 ## Надёжность
 
 - [x] **Воркер: надёжность** — retry/backoff + removeOnFail (DLQ-поведение) уже в `lib/queue.ts`. Добавлено: статус `FAILED` (миграция 0021), на финальном падении транскодинга трек PROCESSING→FAILED + письмо артисту (Brevo), `FAILED` в админ-«требует внимания» и бейджах дашборда. Идемпотентность по `track_id` подтверждена (skip если READY; FAILED не затирает READY/BLOCKED). Миграции в деплое переставлены ДО `up -d`. (v1.0.66)
-- [ ] **Observability** — Sentry (фронт + бэк), JSON-логи с `request_id`, метрики: латентность API, длина BullMQ-очереди, % успешного транскодинга, ошибки HLS/вебхуков.
+- [x] **Observability — Sentry (фронт + бэк)** (21.06.2026, DSN-gated). Клиентские
+  JS-ошибки (`instrumentation-client.ts` + error-boundary'ы), серверные роуты/RSC
+  (`onRequestError → captureRequestError`), исключения воркера (`captureWorkerException`
+  в alert-функциях + `flushSentry` на крэше). Без `SENTRY_DSN` — полный no-op.
+  Дедуп drizzle-orm зафиксирован tsconfig-paths. Доки — `docs/features/monitoring.md`.
+  Осталось опционально: source maps (читаемые стектрейсы), `request_id` в логах,
+  внешний uptime-чек (UptimeRobot на `/api/health`).
 
 ## Качество
 

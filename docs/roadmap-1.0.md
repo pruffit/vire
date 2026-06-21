@@ -113,9 +113,9 @@ headers (`next.config.ts`), rate limiting (Redis fixed-window), лимиты з�
 - [x] CD: один пайплайн по тегу `vX.Y.Z` — gates → сборка образов → деплой на VPS.
 - [x] VPS: Timeweb Cloud, Docker Compose + Caddy, авто-TLS, swap.
 - [ ] Стейджинг: второй VPS/окружение (когда оправдает нагрузка).
-- [~] Мониторинг: health-эндпоинт (`/api/health`), webhook-алерты на ошибки роутов
-  и упавшие джобы (`ALERT_WEBHOOK_URL`), см. `docs/features/monitoring.md`. Осталось:
-  подключить внешний uptime + webhook на проде; Sentry SDK — опционально позже.
+- [x] Мониторинг: health-эндпоинт (`/api/health`), webhook/Telegram-алерты на ошибки
+  роутов и упавшие джобы, **Sentry (фронт+бэк, DSN-gated)** — см. `docs/features/monitoring.md`.
+  Осталось опционально: внешний uptime-чек (UptimeRobot), source maps для Sentry.
 
 ## 8. Этап 2 — прямые продажи (бэкенд готов, UI отвязан)
 

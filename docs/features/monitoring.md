@@ -1,8 +1,10 @@
 # Мониторинг и алерты
 
-Наблюдаемость без внешних платных сервисов: health-эндпоинт для uptime-чека,
-структурированный лог ошибок и опциональные webhook-алерты (ошибки роутов +
-упавшие джобы очередей).
+Два слоя наблюдаемости, работают независимо:
+1. **Алерты** (факт ошибки → Telegram/webhook) + health-эндпоинт + структурированный
+   лог — без внешних платных сервисов, всегда включены.
+2. **Sentry** (детальный стектрейс, группировка, **клиентские JS-ошибки**) —
+   опционально, рядом с алертами; включается DSN'ом.
 
 ## Что делает
 - **Health-эндпоинт** `GET /api/health` — публичный, пингует Postgres и Redis.
@@ -31,12 +33,28 @@
   Telegram`), `ALERT_WEBHOOK_URL` указывает на него. Код и настройка —
   `ops/telegram-alert-worker/`. Discord/Slack с VPS доступны напрямую.
 
+- **Sentry (опц., DSN-gated)** — богатый бэкенд ошибок рядом с алертами. Без `SENTRY_DSN`
+  полностью выключен (init не вызывается, capture — no-op). Что ловит:
+  - **клиентские JS-ошибки** у реальных юзеров (`instrumentation-client.ts` +
+    error-boundary'ы `app/error.tsx`/`app/global-error.tsx`) — раньше их не ловил никто;
+  - **серверные ошибки роутов/RSC** — `onRequestError → captureRequestError` (рядом с
+    существующим `captureError`-алертом);
+  - **исключения воркера** — `captureWorkerException` из `alertJobFailure`/
+    `alertWorkerError`/`alertCrash`; на крэше `flushSentry()` перед `exit(1)`.
+
+  Telegram даёт «тебя пингнули», Sentry — «полный стектрейс + группировка + частота».
+  Выборка трейсов `tracesSampleRate: 0.1`, PII (email/ip) не шлём.
+
 ## Где код
 - **API:** `apps/web/app/api/health/route.ts`
 - **Web-трекинг:** `apps/web/instrumentation.ts`, `apps/web/lib/observability.ts`
   (`captureError`), `apps/web/lib/rate-limit.ts` (`pingRedis`)
 - **Воркер:** `apps/worker/src/lib/alert.ts` (`alertJobFailure`,
   `alertWorkerError`, `alertCrash`), подключение — `apps/worker/src/index.ts`
+- **Sentry:** web — `apps/web/instrumentation-client.ts` (клиент),
+  `apps/web/instrumentation.ts` (сервер + `register()`), error-boundary'ы;
+  воркер — `apps/worker/src/lib/sentry.ts` (`initSentry`/`captureWorkerException`/
+  `flushSentry`). CSP `connect-src` пропускает `*.ingest.sentry.io` (`next.config.ts`).
 - **Админ-обзор системы** (дополняет): `apps/web/lib/admin-health.ts` (`/admin` —
   пинг PG/Redis, очереди BullMQ с ошибками, live-слушатели)
 
@@ -47,6 +65,9 @@
 - `ALERT_WEBHOOK_URL` — Discord/Slack-вебхук (POST JSON). Пусто → выключен.
 - Любой/оба пустые → только лог. Переменные нужны и web, и worker (оба `env_file: .env`).
 - БД/Redis health использует уже имеющиеся `DATABASE_URL` / `REDIS_URL`.
+- `SENTRY_DSN` — сервер (web-роуты/RSC) + воркер; `NEXT_PUBLIC_SENTRY_DSN` — браузер
+  (тот же DSN из проекта Sentry). Пусто → Sentry выключен. `NEXT_PUBLIC_SENTRY_DSN`
+  и CSP пекутся на build-time → в Docker передаются build-args (как `S3_PUBLIC_ENDPOINT`).
 
 ## Как подключить (прод)
 1. **Uptime:** UptimeRobot (free) → HTTP(s)-монитор на `https://viremusic.ru/api/health`,
@@ -58,10 +79,20 @@
 3. **Discord/Slack (опц.):** создать Incoming Webhook, положить URL в
    `ALERT_WEBHOOK_URL`, перезапустить.
 
+## Как подключить Sentry (прод)
+1. Завести проект в Sentry (тип Next.js), скопировать DSN (Settings → Client Keys).
+2. Положить `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` (тот же DSN) в `.env` (web + worker).
+   `NEXT_PUBLIC_*` пекутся на build → прокинуть build-arg'ом в Docker, как `S3_PUBLIC_ENDPOINT`.
+3. Перезапустить — ошибки пойдут в Sentry. Тест: кинуть исключение в любом роуте/клиенте.
+
 ## Ограничения / на будущее
-- Нет агрегации/трейсов/группировки как у Sentry — только точечные алерты + лог.
-  Полноценный Sentry SDK (`@sentry/nextjs` + `@sentry/node`) можно навесить позже
-  поверх `captureError`/`alertJobFailure` без переписывания вызовов.
-- Троттлинг — per-process, in-memory: при нескольких репликах web/worker один и
-  тот же алерт может прийти от каждой реплики.
+- **Source maps не загружаются** — стектрейсы в Sentry минифицированы. Чтобы читались,
+  добавить upload (через `withSentryConfig` + `SENTRY_AUTH_TOKEN`/`SENTRY_ORG`/
+  `SENTRY_PROJECT` в CI, либо `sentry-cli`). Пока пропущено: не блокирует капчер ошибок,
+  а Turbopack-сборка + плагин — отдельная настройка. Vars уже зарезервированы в `.env.example`.
+- **Дедуп drizzle-orm:** `@sentry/node` тянет OpenTelemetry → drizzle-orm подхватывает
+  опц. peer `@opentelemetry/api` и в дереве появляется второй экземпляр, ломавший типы.
+  Зафиксировано tsconfig-`paths` в `apps/web` (drizzle-orm резолвится в копию `@vire/db`).
+- Троттлинг (Telegram/webhook) — per-process, in-memory: при нескольких репликах web/worker
+  один и тот же алерт может прийти от каждой реплики. Sentry группирует сам.
 - Стейджинг-окружение (отдельный VPS) — отложено до роста нагрузки.

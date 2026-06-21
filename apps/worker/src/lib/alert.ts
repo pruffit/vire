@@ -1,6 +1,6 @@
-// Алерты воркера: структурированный лог + опциональная доставка в Telegram
-// и/или generic-webhook. Без внешних зависимостей (global fetch, Node 18+).
-// Алертинг не должен бросать в воркер.
+// Алерты воркера: структурированный лог + Telegram/webhook (факт ошибки) +
+// Sentry (детальный стектрейс/группировка, DSN-gated). Алертинг не бросает в воркер.
+import { captureWorkerException } from './sentry.js';
 
 const lastSent = new Map<string, number>();
 const THROTTLE_MS = 60_000;
@@ -68,6 +68,7 @@ export async function alertJobFailure(
     level: 'error', service: 'worker', queue, jobId, message: err.message, ...extra,
     ts: new Date().toISOString(),
   }));
+  captureWorkerException(err, { queue, jobId, ...extra });
 
   const text = `🔴 [worker:${queue}] job=${jobId ?? '?'} ${err.message}`;
   await dispatch(text, {
@@ -82,6 +83,7 @@ export async function alertJobFailure(
  */
 export async function alertWorkerError(queue: string, err: Error): Promise<void> {
   console.error(`[${queue}] worker error`, err);
+  captureWorkerException(err, { queue, kind: 'worker-error' });
 
   const text = `🟠 [worker:${queue}] сбой воркера: ${err.message}`;
   await dispatch(text, {
@@ -99,6 +101,7 @@ export async function alertCrash(scope: string, err: Error): Promise<void> {
     level: 'fatal', service: 'worker', scope, message: err.message, stack: err.stack,
     ts: new Date().toISOString(),
   }));
+  captureWorkerException(err, { scope, kind: 'crash' });
 
   const text = `🛑 [worker] упал процесс (${scope}): ${err.message}`;
   await dispatch(text, {

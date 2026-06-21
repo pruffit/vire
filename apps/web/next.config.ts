@@ -49,7 +49,9 @@ function buildCsp(): string {
     // ytimg — постеры YouTube-фасадов; userapi/mycdn — постеры VK-видео (video.get).
     `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru https://mc.yandex.com https://i.ytimg.com https://*.ytimg.com https://*.userapi.com https://*.mycdn.me ${s3}`,
     `media-src 'self' blob: ${s3}`,
-    `connect-src 'self' blob: ${s3} https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
+    // *.ingest.sentry.io / *.ingest.de.sentry.io — клиентский Sentry шлёт ошибки
+    // напрямую в ingest (DSN-gated; если Sentry выключен, запросов просто нет).
+    `connect-src 'self' blob: ${s3} https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
     `worker-src blob:`,
     // oauth.telegram.org — iframe виджета Telegram Login; youtube.com/vk.com/vkvideo.ru — встраиваемые плееры видео

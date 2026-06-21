@@ -1,4 +1,9 @@
 import 'dotenv/config';
+import { initSentry, flushSentry } from './lib/sentry.js';
+
+// Инициализируем Sentry до создания воркеров, чтобы ловить исключения с первого джоба.
+initSentry();
+
 import { Queue } from 'bullmq';
 import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH } from '@vire/core';
 import { createTranscodeWorker, handleTerminalTranscodeFailure } from './workers/transcode.worker.js';
@@ -115,11 +120,13 @@ analyzeWorker.on('error', (err) => {
 // сохраняя crash-семантику Node. Иначе воркер умирал бы молча, а загрузки
 // застревали бы в PROCESSING без единого уведомления.
 process.on('uncaughtException', (err) => {
-  void alertCrash('uncaughtException', err).finally(() => process.exit(1));
+  // alertCrash синхронно вызывает captureWorkerException до await — флашим Sentry
+  // параллельно с доставкой Telegram, затем выходим.
+  void Promise.allSettled([alertCrash('uncaughtException', err), flushSentry()]).finally(() => process.exit(1));
 });
 process.on('unhandledRejection', (reason) => {
   const err = reason instanceof Error ? reason : new Error(String(reason));
-  void alertCrash('unhandledRejection', err).finally(() => process.exit(1));
+  void Promise.allSettled([alertCrash('unhandledRejection', err), flushSentry()]).finally(() => process.exit(1));
 });
 
 async function shutdown() {
