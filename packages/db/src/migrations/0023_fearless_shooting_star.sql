@@ -1,0 +1,2 @@
+ALTER TABLE "smart_links" ADD COLUMN "release_id" uuid;--> statement-breakpoint
+ALTER TABLE "smart_links" ADD CONSTRAINT "smart_links_release_id_releases_id_fk" FOREIGN KEY ("release_id") REFERENCES "public"."releases"("id") ON DELETE set null ON UPDATE no action;

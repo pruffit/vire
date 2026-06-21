@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { getSmartLinkById, updateSmartLink, deleteSmartLink, smartLinkSlugTaken } from '@vire/db';
+import { getSmartLinkById, updateSmartLink, deleteSmartLink, smartLinkSlugTaken, getReleaseOptions } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, COVER_POLICY } from '@/lib/image';
@@ -55,6 +55,20 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
   const releaseDateRaw = formData.get('releaseDate');
   if (typeof releaseDateRaw === 'string') patch.releaseDate = releaseDateRaw ? new Date(releaseDateRaw) : null;
+
+  // Привязка к релизу: пусто — отвязать; иначе только собственный релиз артиста.
+  const releaseIdRaw = formData.get('releaseId');
+  if (typeof releaseIdRaw === 'string') {
+    if (!releaseIdRaw.trim()) {
+      patch.releaseId = null;
+    } else {
+      const owned = await getReleaseOptions(artist.id);
+      if (!owned.some((r) => r.id === releaseIdRaw)) {
+        return NextResponse.json({ error: 'Релиз не найден' }, { status: 400 });
+      }
+      patch.releaseId = releaseIdRaw;
+    }
+  }
 
   if (formData.get('links') !== null) patch.links = parseSmartLinkLinks(formData.get('links'));
 

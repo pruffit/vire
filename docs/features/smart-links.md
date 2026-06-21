@@ -17,10 +17,18 @@
   соцсети (Telegram, Instagram, TikTok, X, сайт). Неизвестное — обычной ссылкой.
 - **Дашборд** `/dashboard/links` — CRUD: обложка (S3), название, адрес (slug с
   автогенерацией из названия), подзаголовок, дата, ссылки (автоиконка), публикация.
+- **Привязка к релизу Vire (Фаза B)** — необязательный дропдаун «Релиз на Vire» в
+  редакторе. Когда задан, на лендинге **первой кнопкой** идёт «Слушать на Vire»
+  (релиз вышел) или «Пресейв на Vire» (релиз SCHEDULED с будущей датой → ведёт на
+  страницу обратного отсчёта с нативным пресейвом). Обложка/название/дата релиза
+  дополняют пустые поля лендинга. Привязать можно только собственный релиз (проверка
+  владения в API). Внешние пресейв/follow-ссылки (Spotify/Apple/Яндекс) добавляются
+  как обычные ссылки площадок — без OAuth.
 
 ## Где код
-- **Схема:** `packages/db/src/schema/artists.ts` (`smart_links`, миграция `0018`),
-  `target` — артист, `slug` уникален в пределах артиста.
+- **Схема:** `packages/db/src/schema/artists.ts` (`smart_links`, миграция `0018`;
+  `release_id` FK → `releases` `onDelete: set null`, миграция `0023` — привязка к
+  релизу Vire), `target` — артист, `slug` уникален в пределах артиста.
 - **Тип:** `packages/core/src/types/artist.ts` (`SmartLink`, `ArtistLink.label` → опционально).
 - **Запросы:** `packages/db/src/queries/smart-links.ts` (get/list/create/update/delete + slug-проверка).
 - **Площадки/иконки:** `apps/web/lib/platforms.ts` (`detectPlatform`, `linkLabel`).

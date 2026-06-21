@@ -16,11 +16,33 @@ export interface SmartLinkInitial {
   subtitle: string | null;
   coverUrl: string | null;
   releaseDate: string | null; // ISO
+  releaseId: string | null;
   links: ArtistLink[];
   isPublished: boolean;
 }
 
-export function SmartLinkForm({ artistSlug, initial }: { artistSlug: string; initial?: SmartLinkInitial }) {
+export interface ReleaseOption {
+  id: string;
+  title: string;
+  status: string;
+}
+
+const RELEASE_STATUS_LABEL: Record<string, string> = {
+  DRAFT: 'черновик',
+  SCHEDULED: 'запланирован',
+  PUBLISHED: 'опубликован',
+  ARCHIVED: 'архив',
+};
+
+export function SmartLinkForm({
+  artistSlug,
+  initial,
+  releaseOptions = [],
+}: {
+  artistSlug: string;
+  initial?: SmartLinkInitial;
+  releaseOptions?: ReleaseOption[];
+}) {
   const router = useRouter();
   const editing = !!initial;
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +52,7 @@ export function SmartLinkForm({ artistSlug, initial }: { artistSlug: string; ini
   const [slugEdited, setSlugEdited] = useState(!!initial);
   const [subtitle, setSubtitle] = useState(initial?.subtitle ?? '');
   const [releaseDate, setReleaseDate] = useState(initial?.releaseDate ? initial.releaseDate.slice(0, 10) : '');
+  const [releaseId, setReleaseId] = useState(initial?.releaseId ?? '');
   const [links, setLinks] = useState<ArtistLink[]>(initial?.links ?? []);
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -74,6 +97,7 @@ export function SmartLinkForm({ artistSlug, initial }: { artistSlug: string; ini
     fd.set('slug', effectiveSlug);
     fd.set('subtitle', subtitle.trim());
     fd.set('releaseDate', releaseDate);
+    fd.set('releaseId', releaseId);
     fd.set('links', JSON.stringify(links.filter((l) => l.url.trim())));
     fd.set('isPublished', isPublished ? '1' : '0');
     if (coverFile) fd.set('cover', coverFile);
@@ -152,6 +176,19 @@ export function SmartLinkForm({ artistSlug, initial }: { artistSlug: string; ini
       <Field label="Дата релиза" hint="необязательно">
         <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} disabled={busy} className={inputCls} />
       </Field>
+
+      {releaseOptions.length > 0 && (
+        <Field label="Релиз на Vire" hint="первой кнопкой — «Слушать/Пресейв на Vire»">
+          <select value={releaseId} onChange={(e) => setReleaseId(e.target.value)} disabled={busy} className={inputCls}>
+            <option value="">— не привязан —</option>
+            {releaseOptions.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.title} · {RELEASE_STATUS_LABEL[r.status] ?? r.status.toLowerCase()}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
 
       {/* Ссылки на площадки */}
       <div className="flex flex-col gap-2">

@@ -162,6 +162,13 @@
       "when": 1781984385966,
       "tag": "0022_new_trauma",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1782024399383,
+      "tag": "0023_fearless_shooting_star",
+      "breakpoints": true
     }
   ]
 }

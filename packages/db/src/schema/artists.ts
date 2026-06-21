@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, boolean, jsonb, index, unique } from 'drizzle-orm/pg-core';
 import { users } from './users';
+import { releases } from './releases';
 
 export const artistProfiles = pgTable('artist_profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -40,6 +41,10 @@ export const smartLinks = pgTable('smart_links', {
   subtitle: text('subtitle'),
   coverUrl: text('cover_url'),
   releaseDate: timestamp('release_date'),
+  // Фаза B: привязка к релизу Vire. Когда задан — лендинг авто-подхватывает
+  // обложку/название/дату релиза, а первой кнопкой идёт «Слушать/Пресейв на Vire».
+  // onDelete: set null — удаление релиза не сносит маркетинговый лендинг.
+  releaseId: uuid('release_id').references(() => releases.id, { onDelete: 'set null' }),
   links: jsonb('links').default([]),
   isPublished: boolean('is_published').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),

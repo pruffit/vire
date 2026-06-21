@@ -140,6 +140,8 @@ export {
 export {
   getSmartLinkBySlug,
   getSmartLinkById,
+  getSmartLinkRelease,
+  getReleaseOptions,
   getPublishedSmartLinks,
   listSmartLinks,
   smartLinkSlugTaken,
@@ -147,7 +149,7 @@ export {
   updateSmartLink,
   deleteSmartLink,
 } from './queries/smart-links';
-export type { SmartLinkInput } from './queries/smart-links';
+export type { SmartLinkInput, SmartLinkRelease, ReleaseOption } from './queries/smart-links';
 export {
   findUserByEmail,
   createUserWithPassword,

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getActiveArtistForPage } from '@/lib/active-artist';
+import { getReleaseOptions } from '@vire/db';
 import { SmartLinkForm } from '../smart-link-form';
 
 export const metadata = { title: 'Новый смартлинк' };
@@ -14,6 +15,8 @@ export default async function NewSmartLinkPage() {
   const artist = await getActiveArtistForPage(session.user.id);
   if (!artist) redirect('/dashboard');
 
+  const releaseOptions = await getReleaseOptions(artist.id);
+
   return (
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
@@ -25,7 +28,7 @@ export default async function NewSmartLinkPage() {
         </div>
 
         <div className="rounded-xl bg-white/5 border border-white/10 p-6">
-          <SmartLinkForm artistSlug={artist.slug} />
+          <SmartLinkForm artistSlug={artist.slug} releaseOptions={releaseOptions} />
         </div>
       </div>
     </div>

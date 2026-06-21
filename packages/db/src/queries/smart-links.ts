@@ -1,6 +1,7 @@
 import { and, desc, eq, ne } from 'drizzle-orm';
 import { db } from '../client';
-import { smartLinks } from '../schema';
+import { smartLinks, releases } from '../schema';
+import { isUuid } from '@vire/core';
 import type { SmartLink, ArtistLink } from '@vire/core';
 
 type SmartLinkRow = typeof smartLinks.$inferSelect;
@@ -14,6 +15,7 @@ function toSmartLink(row: SmartLinkRow): SmartLink {
     subtitle: row.subtitle,
     coverUrl: row.coverUrl,
     releaseDate: row.releaseDate,
+    releaseId: row.releaseId,
     links: (row.links ?? []) as ArtistLink[],
     isPublished: row.isPublished,
     createdAt: row.createdAt,
@@ -29,6 +31,49 @@ export async function getSmartLinkBySlug(artistProfileId: string, slug: string):
     .where(and(eq(smartLinks.artistProfileId, artistProfileId), eq(smartLinks.slug, slug)))
     .limit(1);
   return row ? toSmartLink(row) : null;
+}
+
+/**
+ * Минимум о привязанном релизе для лендинга: статус/дата (для выбора CTA
+ * «Слушать»/«Пресейв») + обложка/название/дата как фолбэк отображения.
+ */
+export interface SmartLinkRelease {
+  id: string;
+  title: string;
+  coverUrl: string | null;
+  releaseDate: Date | null;
+  status: string;
+}
+
+export async function getSmartLinkRelease(releaseId: string): Promise<SmartLinkRelease | null> {
+  if (!isUuid(releaseId)) return null;
+  const [row] = await db
+    .select({
+      id: releases.id,
+      title: releases.title,
+      coverUrl: releases.coverUrl,
+      releaseDate: releases.releaseDate,
+      status: releases.status,
+    })
+    .from(releases)
+    .where(eq(releases.id, releaseId))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Опции релизов артиста для дропдауна привязки смартлинка (любой статус). */
+export interface ReleaseOption {
+  id: string;
+  title: string;
+  status: string;
+}
+
+export async function getReleaseOptions(artistProfileId: string): Promise<ReleaseOption[]> {
+  return db
+    .select({ id: releases.id, title: releases.title, status: releases.status })
+    .from(releases)
+    .where(eq(releases.artistProfileId, artistProfileId))
+    .orderBy(desc(releases.createdAt));
 }
 
 export async function getSmartLinkById(id: string): Promise<SmartLink | null> {
@@ -76,6 +121,7 @@ export interface SmartLinkInput {
   subtitle?: string | null;
   coverUrl?: string | null;
   releaseDate?: Date | null;
+  releaseId?: string | null;
   links: ArtistLink[];
   isPublished: boolean;
 }
@@ -90,6 +136,7 @@ export async function createSmartLink(artistProfileId: string, input: SmartLinkI
       subtitle: input.subtitle ?? null,
       coverUrl: input.coverUrl ?? null,
       releaseDate: input.releaseDate ?? null,
+      releaseId: input.releaseId ?? null,
       links: input.links,
       isPublished: input.isPublished,
     })
@@ -109,6 +156,7 @@ export async function updateSmartLink(
   if (input.subtitle !== undefined) patch.subtitle = input.subtitle;
   if (input.coverUrl !== undefined) patch.coverUrl = input.coverUrl;
   if (input.releaseDate !== undefined) patch.releaseDate = input.releaseDate;
+  if (input.releaseId !== undefined) patch.releaseId = input.releaseId;
   if (input.links !== undefined) patch.links = input.links;
   if (input.isPublished !== undefined) patch.isPublished = input.isPublished;
 

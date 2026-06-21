@@ -35,6 +35,8 @@ export interface SmartLink {
   subtitle: string | null;
   coverUrl: string | null;
   releaseDate: Date | null;
+  /** Фаза B: привязка к релизу Vire (опц.) — даёт кнопку «Слушать/Пресейв на Vire». */
+  releaseId: string | null;
   links: ArtistLink[];
   isPublished: boolean;
   createdAt: Date;

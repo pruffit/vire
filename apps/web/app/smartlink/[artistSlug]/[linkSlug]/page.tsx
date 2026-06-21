@@ -2,12 +2,13 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { db, DrizzleArtistRepository, getSmartLinkBySlug } from '@vire/db';
+import { db, DrizzleArtistRepository, getSmartLinkBySlug, getSmartLinkRelease } from '@vire/db';
 import { ArtistService } from '@vire/core';
 import { artistFontStyle } from '@/lib/fonts';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { PlatformIcon } from '@/components/platform-icon';
 import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
+import { Logo } from '@/components/logo';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { JsonLd } from '@/components/json-ld';
@@ -21,7 +22,30 @@ async function getData(artistSlug: string, linkSlug: string) {
   const artist = artistResult.value;
   const smartLink = await getSmartLinkBySlug(artist.id, linkSlug);
   if (!smartLink || !smartLink.isPublished) return null;
-  return { artist, smartLink };
+
+  // Привязанный релиз Vire (Фаза B): даёт первую кнопку «Слушать/Пресейв на Vire»
+  // и фолбэк обложки/названия/даты. Показываем CTA только когда релиз публичен
+  // (вышел) или запланирован на будущее (пресейв) — черновик/архив не светим.
+  const release = smartLink.releaseId ? await getSmartLinkRelease(smartLink.releaseId) : null;
+  let vire: { kind: 'listen' | 'presave'; href: string } | null = null;
+  if (release) {
+    const airedAt = release.releaseDate ? new Date(release.releaseDate).getTime() : null;
+    const href = `/artists/${artist.slug}/releases/${release.id}`;
+    if (release.status === 'PUBLISHED' || (release.status === 'SCHEDULED' && airedAt != null && airedAt <= Date.now())) {
+      vire = { kind: 'listen', href };
+    } else if (release.status === 'SCHEDULED' && airedAt != null && airedAt > Date.now()) {
+      vire = { kind: 'presave', href };
+    }
+  }
+
+  // Релиз дополняет пустые поля лендинга (обложка/название/дата) — не клобберит заданные.
+  const display = {
+    title: smartLink.title || release?.title || '',
+    coverUrl: smartLink.coverUrl ?? release?.coverUrl ?? null,
+    releaseDate: smartLink.releaseDate ?? release?.releaseDate ?? null,
+  };
+
+  return { artist, smartLink, vire, display };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -52,9 +76,9 @@ export default async function SmartLinkPage({ params }: Props) {
   const data = await getData(artistSlug, linkSlug);
   if (!data) notFound();
 
-  const { artist, smartLink } = data;
+  const { artist, smartLink, vire, display } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
-  const year = smartLink.releaseDate ? new Date(smartLink.releaseDate).getFullYear() : null;
+  const year = display.releaseDate ? new Date(display.releaseDate).getFullYear() : null;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -106,10 +130,10 @@ export default async function SmartLinkPage({ params }: Props) {
         <FadeUp className="w-full flex flex-col items-center">
           {/* Обложка */}
           <div className="relative aspect-square w-56 sm:w-64 overflow-hidden rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10">
-            {smartLink.coverUrl ? (
+            {display.coverUrl ? (
               <Image
-                src={smartLink.coverUrl}
-                alt={smartLink.title}
+                src={display.coverUrl}
+                alt={display.title}
                 fill
                 sizes="(max-width: 640px) 224px, 256px"
                 className="object-cover"
@@ -124,7 +148,7 @@ export default async function SmartLinkPage({ params }: Props) {
 
           {/* Заголовок */}
           <h1 className="mt-6 text-center text-2xl font-bold tracking-tight text-balance">
-            {smartLink.title}
+            {display.title}
           </h1>
           <p className="mt-1 text-center text-sm" style={{ color: 'color-mix(in oklch, var(--artist-text) 65%, transparent)' }}>
             <Link href={`/artists/${artist.slug}`} className="transition-opacity hover:opacity-70 underline-offset-2 hover:underline">
@@ -139,9 +163,32 @@ export default async function SmartLinkPage({ params }: Props) {
           )}
         </FadeUp>
 
+        {/* Первой — кнопка Vire (если лендинг привязан к релизу): слушать/пресейв */}
+        {vire && (
+          <FadeUp className="mt-8 w-full">
+            <Link
+              href={vire.href}
+              aria-label={vire.kind === 'listen' ? 'Слушать на Vire' : 'Пресейв на Vire'}
+              className="group flex items-center gap-3.5 rounded-xl px-4 py-3.5 font-medium transition-all hover:scale-[1.015]"
+              style={{
+                background: 'var(--artist-accent)',
+                color: 'color-mix(in oklch, var(--artist-bg) 88%, black)',
+              }}
+            >
+              <span className="inline-flex shrink-0 items-center rounded-lg bg-white/90 px-2.5 py-2">
+                <Logo className="h-3 w-auto text-black" />
+              </span>
+              <span className="flex-1 text-sm">
+                {vire.kind === 'listen' ? 'Слушать на Vire' : 'Пресейв на Vire'}
+              </span>
+              <span className="text-sm transition-transform group-hover:translate-x-0.5" aria-hidden="true">→</span>
+            </Link>
+          </FadeUp>
+        )}
+
         {/* Кнопки площадок */}
         {smartLink.links.length > 0 && (
-          <Stagger className="mt-8 w-full space-y-2.5">
+          <Stagger className={`${vire ? 'mt-2.5' : 'mt-8'} w-full space-y-2.5`}>
             {smartLink.links.map((link, i) => {
               const { key } = detectPlatform(link.url);
               const name = linkLabel(link.url, link.label);

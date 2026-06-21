@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { createSmartLink, smartLinkSlugTaken } from '@vire/db';
+import { createSmartLink, smartLinkSlugTaken, getReleaseOptions } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, COVER_POLICY } from '@/lib/image';
@@ -47,6 +47,17 @@ export async function POST(req: Request) {
     typeof releaseDateRaw === 'string' && releaseDateRaw ? new Date(releaseDateRaw) : null;
   const isPublished = formData.get('isPublished') === '1';
 
+  // Привязка к релизу: разрешаем только собственный релиз артиста.
+  const releaseIdRaw = formData.get('releaseId');
+  let releaseId: string | null = null;
+  if (typeof releaseIdRaw === 'string' && releaseIdRaw.trim()) {
+    const owned = await getReleaseOptions(artist.id);
+    if (!owned.some((r) => r.id === releaseIdRaw)) {
+      return NextResponse.json({ error: 'Релиз не найден' }, { status: 400 });
+    }
+    releaseId = releaseIdRaw;
+  }
+
   let coverUrl: string | null = null;
   if (cover instanceof File && cover.size > 0) {
     const buffer = Buffer.from(await cover.arrayBuffer());
@@ -61,6 +72,7 @@ export async function POST(req: Request) {
     subtitle: typeof subtitle === 'string' && subtitle.trim() ? subtitle.trim() : null,
     coverUrl,
     releaseDate,
+    releaseId,
     links,
     isPublished,
   });

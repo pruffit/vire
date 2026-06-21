@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getActiveArtistForPage } from '@/lib/active-artist';
-import { getSmartLinkById } from '@vire/db';
+import { getSmartLinkById, getReleaseOptions } from '@vire/db';
 import { SmartLinkForm, type SmartLinkInitial } from '../smart-link-form';
 
 export const metadata = { title: 'Смартлинк' };
@@ -21,6 +21,8 @@ export default async function EditSmartLinkPage({ params }: Props) {
   const smartLink = await getSmartLinkById(id);
   if (!smartLink || smartLink.artistProfileId !== artist.id) notFound();
 
+  const releaseOptions = await getReleaseOptions(artist.id);
+
   const initial: SmartLinkInitial = {
     id: smartLink.id,
     slug: smartLink.slug,
@@ -28,6 +30,7 @@ export default async function EditSmartLinkPage({ params }: Props) {
     subtitle: smartLink.subtitle,
     coverUrl: smartLink.coverUrl,
     releaseDate: smartLink.releaseDate ? smartLink.releaseDate.toISOString() : null,
+    releaseId: smartLink.releaseId,
     links: smartLink.links,
     isPublished: smartLink.isPublished,
   };
@@ -53,7 +56,7 @@ export default async function EditSmartLinkPage({ params }: Props) {
         </div>
 
         <div className="rounded-xl bg-white/5 border border-white/10 p-6">
-          <SmartLinkForm artistSlug={artist.slug} initial={initial} />
+          <SmartLinkForm artistSlug={artist.slug} initial={initial} releaseOptions={releaseOptions} />
         </div>
       </div>
     </div>
