@@ -36,11 +36,9 @@ export interface TrackCredit {
 
 const VALID_ROLES: ContributorRole[] = ['PERFORMER', 'LYRICIST', 'COMPOSER', 'PRODUCER'];
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export function isUuid(value: string): boolean {
-  return UUID_RE.test(value);
-}
+// Единый источник правды — @vire/core; реэкспорт сохраняет существующие импорты
+// `import { isUuid } from '@/lib/upload'` в роутах.
+export { isUuid } from '@vire/core';
 
 /** Detect the master audio extension from a filename. WAV/FLAC/MP3 accepted. */
 export function parseAudioExt(filename: string): AudioExt | null {

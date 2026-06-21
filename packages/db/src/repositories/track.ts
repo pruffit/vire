@@ -8,6 +8,7 @@ import {
   likes,
   favoriteMoments,
 } from '../schema';
+import { isUuid } from '@vire/core';
 import type { DB } from '../client';
 import type {
   ITrackRepository,
@@ -58,6 +59,8 @@ export class DrizzleTrackRepository implements ITrackRepository {
   }
 
   async findById(id: string): Promise<Track | null> {
+    // Битый UUID из URL → 404, а не 500 от Postgres (см. isUuid).
+    if (!isUuid(id)) return null;
     const [row] = await this.db.select().from(tracks).where(eq(tracks.id, id)).limit(1);
     return row ? mapRow(row) : null;
   }

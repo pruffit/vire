@@ -18,6 +18,10 @@ describe('isUuid', () => {
     expect(isUuid('')).toBe(false);
     expect(isUuid('1321eb20c9e64d95b4e77e6a08fc8cf9')).toBe(false);
   });
+  it('rejects a truncated uuid (битая ссылка из ТГ — last group 11 hex)', () => {
+    // Реальный кейс: обрезанный URL релиза ронял Postgres-запрос 500-кой вместо 404.
+    expect(isUuid('f442053f-e7c9-44a0-91ea-9181855a1a2')).toBe(false);
+  });
 });
 
 describe('parseAudioExt', () => {

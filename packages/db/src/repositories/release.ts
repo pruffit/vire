@@ -4,12 +4,15 @@ import {
   playlistTracks, likes, favoriteMoments,
 } from '../schema';
 import type { DB } from '../client';
+import { isUuid } from '@vire/core';
 import type { CreateReleaseInput, UpdateReleaseInput, IReleaseRepository, Release, ReleaseStatus, ReleaseWithTracks, Track, TrackCredit, LyricLine } from '@vire/core';
 
 export class DrizzleReleaseRepository implements IReleaseRepository {
   constructor(private readonly db: DB) {}
 
   async findById(releaseId: string): Promise<Release | null> {
+    // Битый UUID из URL (обрезанная/кривая ссылка) → 404, а не 500 от Postgres.
+    if (!isUuid(releaseId)) return null;
     const [row] = await this.db
       .select()
       .from(releases)
@@ -44,6 +47,7 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
   }
 
   async findWithTracks(releaseId: string): Promise<ReleaseWithTracks | null> {
+    if (!isUuid(releaseId)) return null;
     const [releaseRow] = await this.db
       .select()
       .from(releases)
