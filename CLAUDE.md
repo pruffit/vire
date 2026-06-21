@@ -223,6 +223,14 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] `/feed` — лента подписок, `/profile` — карточка профиля (смена имени, загрузка своего
   аватара в S3, «Способы входа»: пароль + привязка OAuth/Telegram), лайки, подписки, покупки
 - [x] Глобальный плеер — Zustand + HLS.js + SVG waveform scrubber, wave-режим
+- [x] `/releases` — каталог релизов (сортировка свежесть/популярность); explicit-бейдж (E)
+  на карточках релизов везде, где видна обложка (`hasExplicit` агрегат, `docs/features/...`)
+- [x] Смартлинки (bandlink-лендинги) `/smartlink/{artist}/{slug}` + хаб на странице артиста;
+  **Фаза B**: привязка к релизу Vire (`release_id`) → кнопка «Слушать/Пресейв на Vire»
+  (`docs/features/smart-links.md`)
+- [x] Пресейвы релизов (Фаза A+B): нативный пресейв на экране отсчёта, авто-выход
+  SCHEDULED по дате, авто-лайк + письмо, инлайн в «Скоро выйдет» (`docs/features/presaves.md`)
+- [x] Курируемые/алгоритмические + пользовательские плейлисты на главной (`docs/features/curated-playlists.md`)
 
 ### Взаимодействие слушателя (концепт «Взаимодействие слушателя» — закрыто)
 - [x] Лайк трека (плеер + трек-лист + страница трека, синхронизация состояния)
@@ -275,7 +283,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Скачивание FLAC по presigned S3 URL
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
-### Тесты (apps/web — 125, гонять `pnpm --filter @vire/web test`)
+### Тесты (apps/web — 200, гонять `pnpm --filter @vire/web test`)
 - [x] `packages/core` — сервисы artist/release/track, Result/errors (Vitest)
 - [x] `apps/web/lib` — `embed` (YouTube/VK), `upload` (валидация), `format`, `structured-data` (JSON-LD билдеры)
 - [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),
@@ -288,8 +296,11 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 
 ## Что делать дальше (следующий шаг)
 
-Этап 1 закрыт, включая все взаимодействия слушателя из концепта. Дальше — только Этап 2:
+Этап 1 закрыт, включая все взаимодействия слушателя из концепта, смартлинки и
+пресейвы (Фаза A+B). Открытый бэклог — в `TODO.md` (Observability/Sentry, контент-SEO,
+несколько аккаунтов на артиста) и Этап 2:
 1. **Тесты Этап-2 роутов** (purchase/webhook) и **YooKassa боевая настройка** — по команде
+2. **Observability** (Sentry + метрики) и **несколько аккаунтов на артиста** — см. `TODO.md`
 
 Сделано в доводке:
 - Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)
