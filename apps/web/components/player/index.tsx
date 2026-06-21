@@ -15,7 +15,7 @@ import { TrackShare } from '@/components/track-share';
 import { Lyrics } from './lyrics';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
-import { canControlVolume } from '@/lib/can-control-volume';
+import { isDesktopPointer } from '@/lib/is-desktop-pointer';
 
 export function Player() {
   const [expanded, setExpanded] = useState(false);
@@ -314,18 +314,17 @@ function QueuePanel({ onJump }: { onJump: () => void }) {
   );
 }
 
-// Управляемость громкостью не меняется в рантайме — подписка-пустышка для useSyncExternalStore.
+// Тип указателя (десктоп/тач) в рамках сессии считаем стабильным — подписка-пустышка.
 const subscribeNoop = () => () => {};
 
 function FullscreenExtras({ track }: { track: PlayerTrack }) {
   const volume = usePlayerStore((s) => s.volume);
   const currentTime = usePlayerStore((s) => s.currentTime);
 
-  // Громкость показываем только там, где ею реально можно управлять из JS (на iOS
-  // audio.volume read-only — ползунок двигался бы вхолостую). useSyncExternalStore:
-  // на сервере true (показываем), на клиенте — фича-детект, без рассинхрона гидрации
-  // и без setState-в-эффекте.
-  const canVolume = useSyncExternalStore(subscribeNoop, canControlVolume, () => true);
+  // Ползунок громкости — только на десктопе (мышь/трекпад). На планшетах/телефонах
+  // прячем: там громкостью рулят хардварные кнопки. useSyncExternalStore: на сервере
+  // true (показываем), на клиенте — реальный детект, без рассинхрона гидрации.
+  const showVolume = useSyncExternalStore(subscribeNoop, isDesktopPointer, () => true);
 
   const shareUrl =
     track.artistSlug && track.releaseId
@@ -333,12 +332,13 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
       : undefined;
 
   return (
-    // stopPropagation, чтобы перетаскивание ползунка громкости не закрывало плеер
+    // stopPropagation, чтобы перетаскивание ползунка громкости не закрывало плеер.
+    // Без громкости (тач) в строке только share — центрируем, иначе слева зияет пустота.
     <div
-      className="w-full flex items-center gap-4"
+      className={showVolume ? 'w-full flex items-center gap-4' : 'w-full flex items-center justify-center gap-4'}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {canVolume && (
+      {showVolume && (
         <>
           <motion.button
             onClick={() => controls.toggleMute()}
@@ -361,9 +361,9 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
           />
         </>
       )}
-      {/* Без volume-блока share уезжает вправо сам (ml-auto). */}
+      {/* С громкостью share уезжает вправо сам (ползунок flex-1); без неё — центр (justify-center выше). */}
       {shareUrl && (
-        <div className={!canVolume ? 'ml-auto' : undefined}>
+        <div>
           <TrackShare trackUrl={shareUrl} currentTime={currentTime} align="right" />
         </div>
       )}
@@ -550,9 +550,9 @@ function ProgressSection() {
   const duration = usePlayerStore((s) => s.duration);
   const volume = usePlayerStore((s) => s.volume);
 
-  // См. FullscreenExtras: прячем ползунок там, где громкостью нельзя рулить из JS
-  // (iPad в ландшафте ≥lg — тоже WebKit с read-only volume).
-  const canVolume = useSyncExternalStore(subscribeNoop, canControlVolume, () => true);
+  // Ползунок громкости — только на десктопе (см. FullscreenExtras). На планшете в
+  // ландшафте (≥lg по ширине, но тач) тоже прячем.
+  const showVolume = useSyncExternalStore(subscribeNoop, isDesktopPointer, () => true);
 
   return (
     <div className="hidden sm:flex items-center gap-2 w-1/3 justify-end">
@@ -566,7 +566,7 @@ function ProgressSection() {
         {formatDuration(duration)}
       </span>
 
-      {canVolume && (
+      {showVolume && (
         <input
           type="range"
           min={0}
