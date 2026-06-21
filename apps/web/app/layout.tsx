@@ -11,6 +11,7 @@ import { CookieBanner } from '@/components/cookie-banner';
 import { Announcements } from '@/components/announcements';
 import { EasterEggs } from '@/components/easter-eggs';
 import { ScrollState } from '@/components/scroll-state';
+import { ScrollRestoration } from '@/components/scroll-restoration';
 import { YandexMetrika } from '@/components/yandex-metrika';
 import { fontVariables } from '@/lib/fonts';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_TITLE } from '@/lib/site';
@@ -99,6 +100,7 @@ export default function RootLayout({
         <MotionProvider>
           <Nav />
           <ScrollState />
+          <ScrollRestoration />
           <div id="main-content" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             {/* Flex-обёртка внутри scroll-area прибивает футер вниз на коротких страницах.
                 Сама scroll-area остаётся plain block — иначе min-h-full страниц

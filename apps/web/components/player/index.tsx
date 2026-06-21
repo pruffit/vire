@@ -225,39 +225,32 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
         {/* Управление (без кнопки потока — она перенесена в строку названия) */}
         <Controls showWaveMode={false} />
 
-        {/* Громкость + поделиться */}
-        <FullscreenExtras track={track} />
-
         {/* Синхронизированный текст (если есть) */}
         <Lyrics key={track.id} trackId={track.id} />
 
-        {/* Очередь */}
-        {queueLength > 1 && (
-          <div className="w-full">
-            <button
-              type="button"
-              onClick={() => setShowQueue((s) => !s)}
-              aria-expanded={showQueue}
-              className="mx-auto flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <QueueIcon />
-              {showQueue ? 'Скрыть очередь' : `Очередь · ${queueLength}`}
-            </button>
-            <AnimatePresence initial={false}>
-              {showQueue && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={spring.smooth}
-                  className="overflow-hidden"
-                >
-                  <QueuePanel onJump={() => setShowQueue(false)} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+        {/* Нижняя панель: громкость (десктоп) + поделиться + очередь — одной строкой,
+            список очереди раскрывается под ней (а не отдельным центрированным блоком). */}
+        <div className="w-full flex flex-col items-center gap-3">
+          <FullscreenExtras
+            track={track}
+            queueLength={queueLength}
+            showQueue={showQueue}
+            onToggleQueue={() => setShowQueue((s) => !s)}
+          />
+          <AnimatePresence initial={false}>
+            {showQueue && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={spring.smooth}
+                className="w-full overflow-hidden"
+              >
+                <QueuePanel onJump={() => setShowQueue(false)} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </motion.div>
   );
@@ -317,7 +310,17 @@ function QueuePanel({ onJump }: { onJump: () => void }) {
 // Тип указателя (десктоп/тач) в рамках сессии считаем стабильным — подписка-пустышка.
 const subscribeNoop = () => () => {};
 
-function FullscreenExtras({ track }: { track: PlayerTrack }) {
+function FullscreenExtras({
+  track,
+  queueLength,
+  showQueue,
+  onToggleQueue,
+}: {
+  track: PlayerTrack;
+  queueLength: number;
+  showQueue: boolean;
+  onToggleQueue: () => void;
+}) {
   const volume = usePlayerStore((s) => s.volume);
   const currentTime = usePlayerStore((s) => s.currentTime);
 
@@ -332,10 +335,11 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
       : undefined;
 
   return (
-    // stopPropagation, чтобы перетаскивание ползунка громкости не закрывало плеер.
-    // Без громкости (тач) в строке только share — центрируем, иначе слева зияет пустота.
+    // stopPropagation, чтобы взаимодействие с громкостью/share/очередью не закрывало плеер свайпом.
+    // Десктоп: ползунок (flex-1) раздвигает строку, share+очередь уходят вправо.
+    // Тач (без громкости): share и «Очередь» стоят рядом одной центрированной группой.
     <div
-      className={showVolume ? 'w-full flex items-center gap-4' : 'w-full flex items-center justify-center gap-4'}
+      className={showVolume ? 'w-full flex items-center gap-4' : 'flex items-center gap-6'}
       onPointerDown={(e) => e.stopPropagation()}
     >
       {showVolume && (
@@ -361,11 +365,17 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
           />
         </>
       )}
-      {/* С громкостью share уезжает вправо сам (ползунок flex-1); без неё — центр (justify-center выше). */}
-      {shareUrl && (
-        <div>
-          <TrackShare trackUrl={shareUrl} currentTime={currentTime} align="right" />
-        </div>
+      {shareUrl && <TrackShare trackUrl={shareUrl} currentTime={currentTime} align="right" />}
+      {queueLength > 1 && (
+        <button
+          type="button"
+          onClick={onToggleQueue}
+          aria-expanded={showQueue}
+          className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        >
+          <QueueIcon />
+          {showQueue ? 'Скрыть очередь' : `Очередь · ${queueLength}`}
+        </button>
       )}
     </div>
   );

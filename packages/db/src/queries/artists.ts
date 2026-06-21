@@ -16,6 +16,18 @@ export interface ArtistListItem {
   genres: string[];
 }
 
+// Артист виден слушателям только если у него есть хотя бы один трек в
+// опубликованном релизе. Пустые профили (зарегистрировался, но ничего не залил)
+// скрываем из каталога, поиска и sitemap. Внешнюю таблицу адресуем ЛИТЕРАЛОМ
+// `artist_profiles.id`, а не `${artistProfiles.id}`: интерполяция колонки в
+// коррелированный sql-подзапрос даёт неквалифицированное имя (см. CLAUDE.md).
+const artistHasPublishedTrack = sql`exists (
+  select 1 from tracks t
+  join releases r on r.id = t.release_id
+  where r.artist_profile_id = artist_profiles.id
+    and r.status = 'PUBLISHED'
+)`;
+
 export async function listActiveArtists(query?: string): Promise<ArtistListItem[]> {
   const rows = await db
     .select({
@@ -46,8 +58,8 @@ export async function listActiveArtists(query?: string): Promise<ArtistListItem[
     )
     .where(
       query
-        ? and(eq(artistProfiles.isActive, true), ilike(artistProfiles.name, `%${query}%`))
-        : eq(artistProfiles.isActive, true),
+        ? and(eq(artistProfiles.isActive, true), artistHasPublishedTrack, ilike(artistProfiles.name, `%${query}%`))
+        : and(eq(artistProfiles.isActive, true), artistHasPublishedTrack),
     )
     .groupBy(
       artistProfiles.id,

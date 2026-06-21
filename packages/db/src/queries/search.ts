@@ -59,7 +59,20 @@ export async function searchAll(query: string, limit = 5): Promise<SearchResults
         verified: artistProfiles.verified,
       })
       .from(artistProfiles)
-      .where(and(eq(artistProfiles.isActive, true), ilike(artistProfiles.name, q)))
+      // Только артисты с хотя бы одним треком в опубликованном релизе — пустые
+      // профили в поиске не показываем. Внешняя таблица литералом (см. CLAUDE.md).
+      .where(
+        and(
+          eq(artistProfiles.isActive, true),
+          sql`exists (
+            select 1 from tracks t
+            join releases r on r.id = t.release_id
+            where r.artist_profile_id = artist_profiles.id
+              and r.status = 'PUBLISHED'
+          )`,
+          ilike(artistProfiles.name, q),
+        ),
+      )
       .limit(limit),
 
     db
