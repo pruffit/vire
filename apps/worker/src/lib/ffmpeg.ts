@@ -35,6 +35,9 @@ export async function transcodeToHls(
 
   await new Promise<void>((resolve, reject) => {
     ffmpeg(inputPath)
+      // +genpts — пересобрать презентационные таймстампы, если у исходника они
+      // битые/смещённые/отсутствуют (частая причина «дыры» и залипания плеера).
+      .inputOptions(['-fflags', '+genpts'])
       .audioCodec('aac')
       .audioBitrate('192k')
       // Непрерывная аудио-дорожка без дыр в таймстампах: часть исходников
@@ -47,6 +50,8 @@ export async function transcodeToHls(
         '-hls_time', '6',
         '-hls_playlist_type', 'vod',
         '-hls_segment_filename', segmentPattern,
+        // Нормализуем отрицательные таймстампы к нулю на уровне мьюксера TS.
+        '-avoid_negative_ts', 'make_zero',
       ])
       .save(manifestPath)
       .on('end', () => resolve())
