@@ -203,10 +203,13 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
       audio?.play().catch(() => {});
     });
     hls.on(Hls.Events.ERROR, (_evt, data) => {
-      // Логируем ВСЕ ошибки, включая нефатальные: иначе проблемы с сегментами
-      // (битый/отсутствующий чанк, залипший буфер) молча проглатываются — отсюда
-      // «бесконечная загрузка без ошибок в консоли».
-      console.warn('[player] HLS error', data.type, data.details, 'fatal:', data.fatal);
+      // Логируем нефатальные ошибки для диагностики, но НЕ benign-восстановление:
+      // bufferSeekOverHole/bufferNudgeOnStall — это hls.js успешно перепрыгнул дыру,
+      // не сбой (иначе консоль «кричит» при нормальном воспроизведении).
+      const benign = data.details === 'bufferSeekOverHole' || data.details === 'bufferNudgeOnStall';
+      if (!benign) {
+        console.warn('[player] HLS error', data.type, data.details, 'fatal:', data.fatal);
+      }
 
       // Залип на дыре в начале буфера: данных в текущей позиции нет, но первый
       // буферизованный диапазон начинается позже → перепрыгиваем на его старт.

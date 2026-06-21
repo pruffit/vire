@@ -37,6 +37,12 @@ export async function transcodeToHls(
     ffmpeg(inputPath)
       .audioCodec('aac')
       .audioBitrate('192k')
+      // Непрерывная аудио-дорожка без дыр в таймстампах: часть исходников
+      // (ведущая тишина/смещение PTS, edit-list) давала gap в начале/потоке →
+      // в плеере bufferStalledError/bufferSeekOverHole, залипание на 0:00.
+      // aresample async=1 заполняет/подрезает разрывы, first_pts=0 ставит старт в ноль.
+      // Для «чистых» файлов это практически no-op.
+      .audioFilters('aresample=async=1:first_pts=0')
       .addOutputOptions([
         '-hls_time', '6',
         '-hls_playlist_type', 'vod',
