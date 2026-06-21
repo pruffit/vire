@@ -10,6 +10,7 @@ import {
   getFollowState,
   getFollowerCount,
   getUpcomingByArtist,
+  getExplicitReleaseIds,
   listArtistPosts,
   getPublishedSmartLinks,
 } from '@vire/db';
@@ -49,7 +50,9 @@ async function getArtistData(slug: string) {
     getPublishedSmartLinks(result.value.id),
   ]);
 
-  return { artist: result.value, releases, upcoming, posts, smartLinks };
+  const explicitReleaseIds = await getExplicitReleaseIds(releases.map((r) => r.id));
+
+  return { artist: result.value, releases, upcoming, posts, smartLinks, explicitReleaseIds };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -80,7 +83,7 @@ export default async function ArtistPage({ params }: Props) {
   const data = await getArtistData(slug);
   if (!data) notFound();
 
-  const { artist, releases, upcoming, posts, smartLinks } = data;
+  const { artist, releases, upcoming, posts, smartLinks, explicitReleaseIds } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
   const displayAvatar = resolveAvatarUrl(artist.avatarUrl, releases[0]?.coverUrl ?? null);
 
@@ -142,6 +145,7 @@ export default async function ArtistPage({ params }: Props) {
         {upcoming.length > 0 && <UpcomingSection upcoming={upcoming} artistSlug={artist.slug} />}
         <ReleasesSection
           releases={releases}
+          explicitReleaseIds={explicitReleaseIds}
           artistSlug={artist.slug}
           artistName={artist.name}
         />
@@ -373,10 +377,12 @@ function SmartLinksSection({ smartLinks, artistSlug }: { smartLinks: SmartLink[]
 
 function ReleasesSection({
   releases,
+  explicitReleaseIds,
   artistSlug,
   artistName,
 }: {
   releases: Release[];
+  explicitReleaseIds: Set<string>;
   artistSlug: string;
   artistName: string;
 }) {
@@ -391,6 +397,7 @@ function ReleasesSection({
       artistName,
       artistSlug,
       releaseDate: r.releaseDate,
+      hasExplicit: explicitReleaseIds.has(r.id),
     };
   }
 

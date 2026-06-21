@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { DiscoveryRelease } from '@vire/db';
 import { FeaturedPlayButton } from './featured-play-button';
 import { Tilt } from './tilt';
+import { ExplicitBadge } from '@/components/explicit-badge';
 import { Icon } from '@/components/icon';
 
 const typeLabel: Record<string, string> = {
@@ -66,6 +67,7 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
         {/* Название релиза — герой */}
         <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter leading-[1.05] text-balance">
           {release.title}
+          {release.hasExplicit && <ExplicitBadge className="ml-2 align-middle" />}
         </h2>
 
         {/* Тип · год */}

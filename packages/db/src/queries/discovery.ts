@@ -11,6 +11,7 @@ export interface DiscoveryRelease {
   artistName: string;
   artistSlug: string;
   artistAvatarUrl: string | null;
+  hasExplicit: boolean;
 }
 
 const releaseCardColumns = {
@@ -22,6 +23,11 @@ const releaseCardColumns = {
   artistName: artistProfiles.name,
   artistSlug: artistProfiles.slug,
   artistAvatarUrl: artistProfiles.avatarUrl,
+  // Explicit-флаг релиза = любой его трек explicit. Коррелированный EXISTS:
+  // внешняя таблица квалифицирована литералом ("releases".id) — Drizzle в .select()
+  // рендерит интерполированную колонку без квалификации, что в подзапросе дало бы
+  // ambiguity/0 (см. предупреждение в CLAUDE.md). Внутренний tracks под алиасом t.
+  hasExplicit: sql<boolean>`exists (select 1 from "tracks" t where t.release_id = "releases".id and t.is_explicit)`,
 };
 
 export interface DiscoveryTrack {
@@ -32,6 +38,20 @@ export interface DiscoveryTrack {
   releaseId: string;
   coverUrl: string | null;
   accentColor: string | null;
+}
+
+/**
+ * Множество id релизов (из переданного списка), у которых есть хотя бы один
+ * explicit-трек. Для поверхностей, что отдают доменный Release без explicit-данных
+ * (страница артиста): один запрос вместо N. Пустой вход → пустое множество.
+ */
+export async function getExplicitReleaseIds(releaseIds: string[]): Promise<Set<string>> {
+  if (releaseIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ releaseId: tracks.releaseId })
+    .from(tracks)
+    .where(and(inArray(tracks.releaseId, releaseIds), eq(tracks.isExplicit, true)));
+  return new Set(rows.map((r) => r.releaseId));
 }
 
 /** Публично слышимые треки по списку id (для секции «Сейчас слушают»). */

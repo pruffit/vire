@@ -20,6 +20,8 @@ export interface QuickLookRelease {
   artistName: string;
   artistSlug: string;
   releaseDate: Date | string | null;
+  /** Любой трек релиза explicit — показываем бейдж (E) у названия. */
+  hasExplicit?: boolean;
 }
 
 interface QLTrack {
@@ -113,7 +115,10 @@ export function ReleaseQuickLook({
           )}
         </div>
         <div className="mt-2.5 space-y-0.5">
-          <p className="text-sm font-medium leading-snug truncate group-hover:text-foreground transition-colors">{release.title}</p>
+          <p className="text-sm font-medium leading-snug group-hover:text-foreground transition-colors flex items-center gap-1.5 min-w-0">
+            <span className="truncate">{release.title}</span>
+            {release.hasExplicit && <ExplicitBadge />}
+          </p>
           <p className="text-xs text-muted-foreground truncate">
             {showArtist ? release.artistName : release.type}
             <span className="opacity-50 font-mono">{' · '}{release.type}</span>
@@ -223,7 +228,10 @@ export function ReleaseQuickLook({
           </span>
         </div>
         <div className="mt-2.5 space-y-0.5">
-          <p className="text-sm font-medium leading-snug truncate group-hover:text-foreground transition-colors">{release.title}</p>
+          <p className="text-sm font-medium leading-snug group-hover:text-foreground transition-colors flex items-center gap-1.5 min-w-0">
+            <span className="truncate">{release.title}</span>
+            {release.hasExplicit && <ExplicitBadge />}
+          </p>
           <p className="text-xs text-muted-foreground truncate">
             {showArtist ? release.artistName : release.type}
             <span className="opacity-50 font-mono">{' · '}{showArtist ? (upcoming ? release.type : yr ?? release.type) : (yr ?? '')}</span>

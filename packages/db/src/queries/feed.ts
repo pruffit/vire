@@ -11,6 +11,7 @@ export interface FeedRelease {
   artistName: string;
   artistSlug: string;
   artistAvatarUrl: string | null;
+  hasExplicit: boolean;
 }
 
 export async function getFeed(userId: string): Promise<FeedRelease[]> {
@@ -24,6 +25,8 @@ export async function getFeed(userId: string): Promise<FeedRelease[]> {
       artistName: artistProfiles.name,
       artistSlug: artistProfiles.slug,
       artistAvatarUrl: artistProfiles.avatarUrl,
+      // Любой трек релиза explicit (см. discovery.releaseCardColumns).
+      hasExplicit: sql<boolean>`exists (select 1 from "tracks" t where t.release_id = "releases".id and t.is_explicit)`,
     })
     .from(follows)
     .innerJoin(artistProfiles, eq(artistProfiles.id, follows.artistProfileId))
