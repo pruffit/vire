@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { AnimatePresence, Reorder, motion, type PanInfo } from 'motion/react';
@@ -15,6 +15,7 @@ import { TrackShare } from '@/components/track-share';
 import { Lyrics } from './lyrics';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
+import { detectIOS } from '@/lib/is-ios';
 
 export function Player() {
   const [expanded, setExpanded] = useState(false);
@@ -313,9 +314,18 @@ function QueuePanel({ onJump }: { onJump: () => void }) {
   );
 }
 
+// Значение iOS не меняется в рантайме — подписка-пустышка для useSyncExternalStore.
+const subscribeNoop = () => () => {};
+
 function FullscreenExtras({ track }: { track: PlayerTrack }) {
   const volume = usePlayerStore((s) => s.volume);
   const currentTime = usePlayerStore((s) => s.currentTime);
+
+  // На iOS громкость нельзя менять из JS (audio.volume read-only) — ползунок там
+  // только двигался бы вхолостую, поэтому прячем его. useSyncExternalStore: на
+  // сервере false (нет navigator), на клиенте — реальный детект, без рассинхрона
+  // гидрации и без setState-в-эффекте.
+  const isIOS = useSyncExternalStore(subscribeNoop, detectIOS, () => false);
 
   const shareUrl =
     track.artistSlug && track.releaseId
@@ -328,27 +338,34 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
       className="w-full flex items-center gap-4"
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <motion.button
-        onClick={() => controls.toggleMute()}
-        aria-label={volume === 0 ? 'Включить звук' : 'Выключить звук'}
-        whileTap={{ scale: 0.88 }}
-        transition={spring.snappy}
-        className="opacity-50 hover:opacity-100 transition-opacity shrink-0"
-      >
-        <VolumeIcon muted={volume === 0} />
-      </motion.button>
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.02}
-        value={volume}
-        onChange={(e) => controls.setVolume(Number(e.target.value))}
-        aria-label="Громкость"
-        className="flex-1 h-1 accent-primary cursor-pointer"
-      />
+      {!isIOS && (
+        <>
+          <motion.button
+            onClick={() => controls.toggleMute()}
+            aria-label={volume === 0 ? 'Включить звук' : 'Выключить звук'}
+            whileTap={{ scale: 0.88 }}
+            transition={spring.snappy}
+            className="opacity-50 hover:opacity-100 transition-opacity shrink-0"
+          >
+            <VolumeIcon muted={volume === 0} />
+          </motion.button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.02}
+            value={volume}
+            onChange={(e) => controls.setVolume(Number(e.target.value))}
+            aria-label="Громкость"
+            className="flex-1 h-1 accent-primary cursor-pointer"
+          />
+        </>
+      )}
+      {/* На iOS volume-блока нет — share уезжает вправо сам (ml-auto). */}
       {shareUrl && (
-        <TrackShare trackUrl={shareUrl} currentTime={currentTime} align="right" />
+        <div className={isIOS ? 'ml-auto' : undefined}>
+          <TrackShare trackUrl={shareUrl} currentTime={currentTime} align="right" />
+        </div>
       )}
     </div>
   );

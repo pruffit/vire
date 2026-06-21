@@ -16,7 +16,9 @@ describe('detectPlatform', () => {
 
   it('различает VK музыку и VK профиль', () => {
     expect(detectPlatform('https://vk.com/music/album/x').key).toBe('vk_music');
+    expect(detectPlatform('https://vk.com/artist/kotlaev_danil').key).toBe('vk_music');
     expect(detectPlatform('https://vk.com/artistpage').key).toBe('vk');
+    expect(detectPlatform('https://vk.com/durov').key).toBe('vk');
   });
 
   it('распознаёт соцсети', () => {

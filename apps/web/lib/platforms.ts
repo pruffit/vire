@@ -80,7 +80,13 @@ export function detectPlatform(url: string): DetectedPlatform {
     if (host === 'music.youtube.com') return 'youtube_music';
     if (is('youtube.com') || host === 'youtu.be') return 'youtube';
     if (host.startsWith('music.yandex')) return 'yandex_music';
-    if (is('vk.com', 'vkmusic.ru') && (path.startsWith('/music') || path.startsWith('/audio') || host === 'vkmusic.ru')) return 'vk_music';
+    // VK Музыка: /artist/<slug> (страница артиста — именно с «/», чтобы не ловить
+    // профиль типа /artistpage), /music*, /audio* (треки/альбомы/плейлисты), либо
+    // отдельный домен vkmusic.ru. Иначе vk.com — обычный профиль/сообщество.
+    if (
+      is('vk.com', 'vkmusic.ru') &&
+      (path === '/artist' || path.startsWith('/artist/') || path.startsWith('/music') || path.startsWith('/audio') || host === 'vkmusic.ru')
+    ) return 'vk_music';
     if (is('vk.com', 'vk.ru')) return 'vk';
     if (is('zvuk.com', 'sber-zvuk.com')) return 'zvuk';
     if (is('soundcloud.com')) return 'soundcloud';
