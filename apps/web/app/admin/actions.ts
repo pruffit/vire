@@ -2,10 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
-import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers, getTrackSourceKey, getArtistTrackSources } from '@vire/db';
+import { db, setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers, getTrackSourceKey, getArtistTrackSources, DrizzleReleaseRepository, DrizzleTrackRepository, setTrackMoods, setTrackGenres, ALL_MOODS, ALL_TRACK_GENRES } from '@vire/db';
 import type { UserRole, ArtistMemberRow } from '@vire/db';
+import { ALL_GENRES, type ReleaseType, type Genre, type UpdateReleaseInput, type UpdateTrackParams } from '@vire/core';
 import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
 import { transcodeQueue } from '@/lib/queue';
+
+const RELEASE_TYPES: ReleaseType[] = ['ALBUM', 'EP', 'SINGLE'];
 
 const ADMIN_ROLES = new Set<UserRole>(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
 
@@ -101,6 +104,67 @@ export async function actionSetReleaseStatus(
   await requireAdmin();
   await setReleaseStatus(releaseId, status);
   revalidatePath('/admin/releases');
+}
+
+// ─── Полная редактура контента из админки (§9.1) — минуя ownership-гард сервиса:
+// репозитории update(id,…) принимают id напрямую, проверка владения живёт в сервисе.
+
+export async function actionAdminUpdateRelease(
+  releaseId: string,
+  input: { title: string; type: string; genre: string | null; releaseDate: string | null; description: string | null; linerNotes: string | null },
+): Promise<{ error?: string; ok?: boolean }> {
+  await requireAdmin();
+  const title = (input.title ?? '').trim();
+  if (!title || title.length > 200) return { error: 'Название: 1–200 символов' };
+  if (!RELEASE_TYPES.includes(input.type as ReleaseType)) return { error: 'Неверный тип' };
+  if (input.genre != null && !(ALL_GENRES as readonly string[]).includes(input.genre)) return { error: 'Неверный жанр' };
+  let releaseDate: Date | null = null;
+  if (input.releaseDate) {
+    const d = new Date(input.releaseDate);
+    if (isNaN(d.getTime())) return { error: 'Неверная дата' };
+    releaseDate = d;
+  }
+  const patch: UpdateReleaseInput = {
+    title,
+    type: input.type as ReleaseType,
+    genre: (input.genre as Genre | null) ?? null,
+    releaseDate,
+    description: input.description?.trim() ? input.description.trim().slice(0, 5000) : null,
+    linerNotes: input.linerNotes?.trim() ? input.linerNotes.trim().slice(0, 10000) : null,
+  };
+  await new DrizzleReleaseRepository(db).update(releaseId, patch);
+  revalidatePath('/admin/releases');
+  return { ok: true };
+}
+
+export async function actionAdminUpdateTrack(
+  trackId: string,
+  input: {
+    title: string; trackNumber: number; isExplicit: boolean; isExclusive: boolean;
+    isWip: boolean; bpm: number | null; musicalKey: string | null; moods: string[]; genres: string[];
+  },
+): Promise<{ error?: string; ok?: boolean }> {
+  await requireAdmin();
+  const title = (input.title ?? '').trim();
+  if (!title || title.length > 200) return { error: 'Название: 1–200 символов' };
+  if (!Number.isInteger(input.trackNumber) || input.trackNumber < 1) return { error: 'Неверный номер' };
+  if (input.bpm != null && (!Number.isInteger(input.bpm) || input.bpm < 20 || input.bpm > 500)) return { error: 'BPM: 20–500' };
+  const moods = (input.moods ?? []).filter((m) => (ALL_MOODS as string[]).includes(m)).slice(0, 5);
+  const genres = (input.genres ?? []).filter((g) => (ALL_TRACK_GENRES as string[]).includes(g)).slice(0, 3);
+  const patch: UpdateTrackParams = {
+    title,
+    trackNumber: input.trackNumber,
+    isExplicit: !!input.isExplicit,
+    isExclusive: !!input.isExclusive,
+    isWip: !!input.isWip,
+    bpm: input.bpm,
+    musicalKey: input.musicalKey?.trim() ? input.musicalKey.trim().slice(0, 20) : null,
+  };
+  await new DrizzleTrackRepository(db).update(trackId, patch);
+  await setTrackMoods(trackId, moods as Parameters<typeof setTrackMoods>[1]);
+  await setTrackGenres(trackId, genres as Parameters<typeof setTrackGenres>[1]);
+  revalidatePath('/admin/tracks');
+  return { ok: true };
 }
 
 export async function actionCreateArtist(

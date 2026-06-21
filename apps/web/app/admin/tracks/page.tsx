@@ -118,6 +118,12 @@ export default async function AdminTracksPage({ searchParams }: Props) {
                   <div className="flex items-center gap-2">
                     <TrackStatusSelect trackId={track.id} currentStatus={track.status as 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED'} />
                     <RetranscodeButton trackId={track.id} />
+                    <a
+                      href={`/admin/tracks/${track.id}/edit`}
+                      className="rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono hover:bg-white/10 transition-colors whitespace-nowrap"
+                    >
+                      Изм.
+                    </a>
                   </div>
                 </td>
               </tr>

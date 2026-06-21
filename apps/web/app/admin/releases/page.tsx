@@ -95,12 +95,20 @@ export default async function AdminReleasesPage({ searchParams }: Props) {
                   {new Date(release.createdAt).toLocaleDateString('ru-RU')}
                 </td>
                 <td className="px-4 py-3">
-                  {release.status !== 'SCHEDULED' && (
-                    <ReleaseStatusSelect
-                      releaseId={release.id}
-                      currentStatus={release.status as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'}
-                    />
-                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    {release.status !== 'SCHEDULED' && (
+                      <ReleaseStatusSelect
+                        releaseId={release.id}
+                        currentStatus={release.status as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'}
+                      />
+                    )}
+                    <a
+                      href={`/admin/releases/${release.id}/edit`}
+                      className="rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono hover:bg-white/10 transition-colors whitespace-nowrap"
+                    >
+                      Изм.
+                    </a>
+                  </div>
                 </td>
               </tr>
             ))}
