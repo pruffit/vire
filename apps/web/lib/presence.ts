@@ -30,6 +30,8 @@ function getRedis(): Redis {
 }
 
 const trackKey = (trackId: string) => `presence:track:${trackId}`;
+// Присутствие на сайте в целом (не на конкретном треке) — один ZSET на всех.
+const SITE_KEY = 'presence:site';
 
 /** Пинг Redis: латентность в мс или null, если недоступен (для health-панели). */
 export async function pingRedis(): Promise<number | null> {
@@ -101,6 +103,36 @@ export async function listListening(limit = 12): Promise<Array<{ trackId: string
     if (count > 0) out.push({ trackId: keys[i].slice('presence:track:'.length), count });
   }
   return out.sort((a, b) => b.count - a.count).slice(0, limit);
+}
+
+/** Heartbeat присутствия на сайте (любая страница). Возвращает онлайн сейчас. */
+export async function recordSitePresence(sessionId: string): Promise<number> {
+  const redis = getRedis();
+  const now = Date.now();
+  const res = await redis
+    .multi()
+    .zadd(SITE_KEY, now, sessionId)
+    .zremrangebyscore(SITE_KEY, 0, now - WINDOW_MS)
+    .zcard(SITE_KEY)
+    .expire(SITE_KEY, KEY_TTL_SEC)
+    .exec();
+  return Number(res?.[2]?.[1] ?? 0);
+}
+
+/** Сколько человек на сайте прямо сейчас (для админ-панели). Деградирует до 0. */
+export async function countSiteOnline(): Promise<number> {
+  try {
+    const redis = getRedis();
+    const now = Date.now();
+    const res = await redis
+      .multi()
+      .zremrangebyscore(SITE_KEY, 0, now - WINDOW_MS)
+      .zcard(SITE_KEY)
+      .exec();
+    return Number(res?.[1]?.[1] ?? 0);
+  } catch {
+    return 0;
+  }
 }
 
 /** Суммарное число слушателей по нескольким трекам (для дашборда артиста). */

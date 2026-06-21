@@ -10,6 +10,7 @@ const NAV = [
   { href: '/admin/artists', label: 'Артисты' },
   { href: '/admin/tracks', label: 'Треки' },
   { href: '/admin/releases', label: 'Релизы' },
+  { href: '/admin/system', label: 'Система' },
 ];
 
 export function AdminNav() {
