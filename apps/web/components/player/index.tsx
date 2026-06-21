@@ -15,7 +15,7 @@ import { TrackShare } from '@/components/track-share';
 import { Lyrics } from './lyrics';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
-import { detectIOS } from '@/lib/is-ios';
+import { canControlVolume } from '@/lib/can-control-volume';
 
 export function Player() {
   const [expanded, setExpanded] = useState(false);
@@ -314,18 +314,18 @@ function QueuePanel({ onJump }: { onJump: () => void }) {
   );
 }
 
-// Значение iOS не меняется в рантайме — подписка-пустышка для useSyncExternalStore.
+// Управляемость громкостью не меняется в рантайме — подписка-пустышка для useSyncExternalStore.
 const subscribeNoop = () => () => {};
 
 function FullscreenExtras({ track }: { track: PlayerTrack }) {
   const volume = usePlayerStore((s) => s.volume);
   const currentTime = usePlayerStore((s) => s.currentTime);
 
-  // На iOS громкость нельзя менять из JS (audio.volume read-only) — ползунок там
-  // только двигался бы вхолостую, поэтому прячем его. useSyncExternalStore: на
-  // сервере false (нет navigator), на клиенте — реальный детект, без рассинхрона
-  // гидрации и без setState-в-эффекте.
-  const isIOS = useSyncExternalStore(subscribeNoop, detectIOS, () => false);
+  // Громкость показываем только там, где ею реально можно управлять из JS (на iOS
+  // audio.volume read-only — ползунок двигался бы вхолостую). useSyncExternalStore:
+  // на сервере true (показываем), на клиенте — фича-детект, без рассинхрона гидрации
+  // и без setState-в-эффекте.
+  const canVolume = useSyncExternalStore(subscribeNoop, canControlVolume, () => true);
 
   const shareUrl =
     track.artistSlug && track.releaseId
@@ -338,7 +338,7 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
       className="w-full flex items-center gap-4"
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {!isIOS && (
+      {canVolume && (
         <>
           <motion.button
             onClick={() => controls.toggleMute()}
@@ -361,9 +361,9 @@ function FullscreenExtras({ track }: { track: PlayerTrack }) {
           />
         </>
       )}
-      {/* На iOS volume-блока нет — share уезжает вправо сам (ml-auto). */}
+      {/* Без volume-блока share уезжает вправо сам (ml-auto). */}
       {shareUrl && (
-        <div className={isIOS ? 'ml-auto' : undefined}>
+        <div className={!canVolume ? 'ml-auto' : undefined}>
           <TrackShare trackUrl={shareUrl} currentTime={currentTime} align="right" />
         </div>
       )}
@@ -550,6 +550,10 @@ function ProgressSection() {
   const duration = usePlayerStore((s) => s.duration);
   const volume = usePlayerStore((s) => s.volume);
 
+  // См. FullscreenExtras: прячем ползунок там, где громкостью нельзя рулить из JS
+  // (iPad в ландшафте ≥lg — тоже WebKit с read-only volume).
+  const canVolume = useSyncExternalStore(subscribeNoop, canControlVolume, () => true);
+
   return (
     <div className="hidden sm:flex items-center gap-2 w-1/3 justify-end">
       <span className="text-xs font-mono text-muted-foreground tabular-nums w-8 text-right">
@@ -562,16 +566,18 @@ function ProgressSection() {
         {formatDuration(duration)}
       </span>
 
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.02}
-        value={volume}
-        onChange={(e) => controls.setVolume(Number(e.target.value))}
-        aria-label="Громкость"
-        className="w-16 h-1 accent-primary cursor-pointer hidden lg:block"
-      />
+      {canVolume && (
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.02}
+          value={volume}
+          onChange={(e) => controls.setVolume(Number(e.target.value))}
+          aria-label="Громкость"
+          className="w-16 h-1 accent-primary cursor-pointer hidden lg:block"
+        />
+      )}
     </div>
   );
 }
