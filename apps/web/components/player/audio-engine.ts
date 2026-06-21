@@ -193,7 +193,10 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
 
   const Hls = await getHls();
   if (Hls.isSupported()) {
-    hls = new Hls();
+    // Часть исходников даёт «дыру» в медиа-буфере (gap в таймстампах, обычно в
+    // начале) → bufferStalledError/bufferSeekOverHole, плеер залипает на 0:00.
+    // Повышаем терпимость к дырам и число попыток перепрыгнуть их.
+    hls = new Hls({ maxBufferHole: 0.5, nudgeOffset: 0.2, nudgeMaxRetry: 8 });
     hls.loadSource(hlsUrl);
     hls.attachMedia(audio);
     hls.once(Hls.Events.MANIFEST_PARSED, () => {
@@ -204,6 +207,19 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
       // (битый/отсутствующий чанк, залипший буфер) молча проглатываются — отсюда
       // «бесконечная загрузка без ошибок в консоли».
       console.warn('[player] HLS error', data.type, data.details, 'fatal:', data.fatal);
+
+      // Залип на дыре в начале буфера: данных в текущей позиции нет, но первый
+      // буферизованный диапазон начинается позже → перепрыгиваем на его старт.
+      if (!data.fatal && data.details === 'bufferStalledError' && audio) {
+        try {
+          const b = audio.buffered;
+          if (b.length > 0 && audio.currentTime < b.start(0)) {
+            audio.currentTime = b.start(0) + 0.01;
+            audio.play().catch(() => {});
+          }
+        } catch { /* buffered может бросить, если медиа ещё не готово */ }
+      }
+
       if (data.fatal) {
         clearLoadWatchdog();
         usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
