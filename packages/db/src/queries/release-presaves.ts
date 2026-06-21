@@ -1,4 +1,4 @@
-import { and, count, eq, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { releasePresaves, releases, tracks, likes, users, artistProfiles } from '../schema';
 
@@ -33,6 +33,16 @@ export async function getPresaveState(userId: string, releaseId: string): Promis
     .where(and(eq(releasePresaves.releaseId, releaseId), eq(releasePresaves.userId, userId)))
     .limit(1);
   return !!row;
+}
+
+/** Множество releaseId (из списка), которые юзер уже пресейвнул — один запрос. */
+export async function getPresaveStates(userId: string, releaseIds: string[]): Promise<Set<string>> {
+  if (releaseIds.length === 0) return new Set();
+  const rows = await db
+    .select({ releaseId: releasePresaves.releaseId })
+    .from(releasePresaves)
+    .where(and(eq(releasePresaves.userId, userId), inArray(releasePresaves.releaseId, releaseIds)));
+  return new Set(rows.map((r) => r.releaseId));
 }
 
 export async function getPresaveCount(releaseId: string): Promise<number> {

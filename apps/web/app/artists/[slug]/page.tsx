@@ -11,6 +11,7 @@ import {
   getFollowerCount,
   getUpcomingByArtist,
   getExplicitReleaseIds,
+  getPresaveStates,
   listArtistPosts,
   getPublishedSmartLinks,
 } from '@vire/db';
@@ -28,6 +29,7 @@ import { fetchVkPoster } from '@/lib/vk-api';
 import { VideoPlayer } from '@/components/video-player';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { CountdownBadge } from '@/components/countdown-badge';
+import { UpcomingPresaveButton } from '@/components/upcoming-presave-button';
 import { JsonLd } from '@/components/json-ld';
 import { musicGroupJsonLd, breadcrumbListJsonLd, artistPostJsonLd } from '@/lib/structured-data';
 import { resolveAvatarUrl } from '@/lib/avatar';
@@ -85,12 +87,18 @@ export default async function ArtistPage({ params }: Props) {
 
   const { artist, releases, upcoming, posts, smartLinks, explicitReleaseIds } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
+
   const displayAvatar = resolveAvatarUrl(artist.avatarUrl, releases[0]?.coverUrl ?? null);
 
   const session = await auth();
-  const [following, followerCount] = await Promise.all([
+  const isAuthed = !!session?.user;
+  // Пресейв-состояние для секции «Скоро выйдет»: для вошедшего — какие уже сохранены
+  // (батч-запрос); гостю кнопка ведёт на страницу релиза (там email-флоу).
+  const upcomingIds = upcoming.filter((r) => r.releaseDate).map((r) => r.id);
+  const [following, followerCount, presavedIds] = await Promise.all([
     session?.user?.id ? getFollowState(session.user.id, artist.id) : Promise.resolve(false),
     getFollowerCount(artist.id),
+    session?.user?.id ? getPresaveStates(session.user.id, upcomingIds) : Promise.resolve(new Set<string>()),
   ]);
 
   const followButton = session?.user ? (
@@ -142,7 +150,14 @@ export default async function ArtistPage({ params }: Props) {
 
       {/* Content below hero */}
       <div className="mx-auto max-w-4xl px-5 sm:px-6 pb-16 space-y-14">
-        {upcoming.length > 0 && <UpcomingSection upcoming={upcoming} artistSlug={artist.slug} />}
+        {upcoming.length > 0 && (
+          <UpcomingSection
+            upcoming={upcoming}
+            artistSlug={artist.slug}
+            presavedIds={presavedIds}
+            isAuthed={isAuthed}
+          />
+        )}
         <ReleasesSection
           releases={releases}
           explicitReleaseIds={explicitReleaseIds}
@@ -315,9 +330,13 @@ function ArtistHero({
 function UpcomingSection({
   upcoming,
   artistSlug,
+  presavedIds,
+  isAuthed,
 }: {
   upcoming: Array<{ id: string; title: string; releaseDate: Date | null }>;
   artistSlug: string;
+  presavedIds: Set<string>;
+  isAuthed: boolean;
 }) {
   const withDate = upcoming.filter((r) => r.releaseDate);
   if (withDate.length === 0) return null;
@@ -325,11 +344,22 @@ function UpcomingSection({
   return (
     <Reveal>
       <section className="flex flex-col gap-3">
-        {withDate.map((r) => (
-          <Link key={r.id} href={`/artists/${artistSlug}/releases/${r.id}`} className="self-start transition-opacity hover:opacity-80">
-            <CountdownBadge releaseDate={r.releaseDate!} title={r.title} />
-          </Link>
-        ))}
+        {withDate.map((r) => {
+          const href = `/artists/${artistSlug}/releases/${r.id}`;
+          return (
+            <div key={r.id} className="flex items-center gap-3 flex-wrap">
+              <Link href={href} className="self-start transition-opacity hover:opacity-80">
+                <CountdownBadge releaseDate={r.releaseDate!} title={r.title} />
+              </Link>
+              <UpcomingPresaveButton
+                releaseId={r.id}
+                initialPresaved={presavedIds.has(r.id)}
+                isAuthed={isAuthed}
+                releaseHref={href}
+              />
+            </div>
+          );
+        })}
       </section>
     </Reveal>
   );

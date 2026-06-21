@@ -15,6 +15,7 @@ export {
   unpresaveForUser,
   presaveForGuest,
   getPresaveState,
+  getPresaveStates,
   getPresaveCount,
   getReleasePresaveInfo,
   findDueScheduledReleases,
