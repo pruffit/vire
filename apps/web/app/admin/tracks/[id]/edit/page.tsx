@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { db, DrizzleTrackRepository, getTrackAudioMeta, getTrackMoods, getTrackGenres } from '@vire/db';
+import { serializeLrc } from '@/lib/lrc';
 import { TrackEditForm } from './track-edit-form';
 
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,7 @@ export default async function AdminTrackEditPage({ params }: { params: Promise<{
           musicalKey: m.musicalKey ?? '',
           moods: moods as string[],
           genres: genres as string[],
+          lyrics: serializeLrc(track.lyrics),
         }}
       />
     </div>

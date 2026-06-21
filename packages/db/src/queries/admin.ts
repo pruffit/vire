@@ -2,7 +2,7 @@ import { and, asc, count, desc, eq, ilike, lt, or, sql } from 'drizzle-orm';
 import { db } from '../client';
 import {
   users, artistProfiles, artistMembers, releases, tracks, trackAudio, playEvents,
-  likes, follows, playlists, artistPosts, trackMoods, favoriteMoments,
+  likes, follows, playlists, playlistTracks, artistPosts, trackMoods, favoriteMoments,
   rightsHolders,
 } from '../schema';
 import type { UserRole } from './admin-types';
@@ -282,6 +282,119 @@ export async function setArtistActive(artistProfileId: string, isActive: boolean
     .update(artistProfiles)
     .set({ isActive, updatedAt: new Date() })
     .where(eq(artistProfiles.id, artistProfileId));
+}
+
+/** Базовые поля профиля артиста для админ-редактуры (§9.1). */
+export async function getArtistCore(
+  id: string,
+): Promise<{ id: string; name: string; slug: string; bio: string | null; avatarUrl: string | null } | null> {
+  const [row] = await db
+    .select({
+      id: artistProfiles.id,
+      name: artistProfiles.name,
+      slug: artistProfiles.slug,
+      bio: artistProfiles.bio,
+      avatarUrl: artistProfiles.avatarUrl,
+    })
+    .from(artistProfiles)
+    .where(eq(artistProfiles.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Полная админ-редактура профиля артиста, включая slug (он уникален → ловим конфликт). */
+export async function adminUpdateArtist(
+  id: string,
+  data: { name: string; slug: string; bio: string | null; avatarUrl: string | null },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await db
+      .update(artistProfiles)
+      .set({ name: data.name, slug: data.slug, bio: data.bio, avatarUrl: data.avatarUrl, updatedAt: new Date() })
+      .where(eq(artistProfiles.id, id));
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Не удалось сохранить — возможно, slug уже занят' };
+  }
+}
+
+// ─── Посты и плейлисты для админ-редактуры (§9.1) ────────────────────────────
+
+export interface AdminPost {
+  id: string;
+  title: string | null;
+  body: string;
+  artistName: string;
+  artistSlug: string;
+  createdAt: Date;
+}
+
+export async function listPostsAdmin(limit = 100): Promise<AdminPost[]> {
+  const rows = await db
+    .select({
+      id: artistPosts.id,
+      title: artistPosts.title,
+      body: artistPosts.body,
+      artistName: artistProfiles.name,
+      artistSlug: artistProfiles.slug,
+      createdAt: artistPosts.createdAt,
+    })
+    .from(artistPosts)
+    .innerJoin(artistProfiles, eq(artistProfiles.id, artistPosts.artistProfileId))
+    .orderBy(desc(artistPosts.createdAt))
+    .limit(limit);
+  return rows;
+}
+
+export interface AdminPlaylist {
+  id: string;
+  title: string;
+  visibility: 'PRIVATE' | 'PUBLIC';
+  kind: string;
+  isCurated: boolean;
+  ownerEmail: string | null;
+  trackCount: number;
+  likesCount: number;
+  createdAt: Date;
+}
+
+export async function listPlaylistsAdmin(limit = 100): Promise<AdminPlaylist[]> {
+  const rows = await db
+    .select({
+      id: playlists.id,
+      title: playlists.title,
+      visibility: playlists.visibility,
+      kind: playlists.kind,
+      isCurated: playlists.isCurated,
+      ownerEmail: users.email,
+      likesCount: playlists.likesCount,
+      createdAt: playlists.createdAt,
+      trackCount: sql<number>`(select count(*) from playlist_tracks pt where pt.playlist_id = playlists.id)`,
+    })
+    .from(playlists)
+    .leftJoin(users, eq(users.id, playlists.ownerUserId))
+    .orderBy(desc(playlists.createdAt))
+    .limit(limit);
+  return rows.map((r) => ({ ...r, trackCount: Number(r.trackCount) }));
+}
+
+export async function adminUpdatePlaylist(
+  id: string,
+  data: { title: string; visibility: 'PRIVATE' | 'PUBLIC' },
+): Promise<void> {
+  await db
+    .update(playlists)
+    .set({ title: data.title, visibility: data.visibility })
+    .where(eq(playlists.id, id));
+}
+
+/** Удаление плейлиста админом. playlist_tracks не каскадит — чистим в транзакции;
+ *  playlist_likes удалятся каскадом по FK. */
+export async function adminDeletePlaylist(id: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.delete(playlistTracks).where(eq(playlistTracks.playlistId, id));
+    await tx.delete(playlists).where(eq(playlists.id, id));
+  });
 }
 
 // ─── Attention items ───────────────────────────────────────────────────────

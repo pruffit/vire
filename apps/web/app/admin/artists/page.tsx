@@ -71,6 +71,12 @@ export default async function AdminArtistsPage({ searchParams }: Props) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2">
+                    <a
+                      href={`/admin/artists/${a.id}/edit`}
+                      className="rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono hover:bg-white/10 transition-colors whitespace-nowrap"
+                    >
+                      Изм.
+                    </a>
                     <RetranscodeArtistButton artistProfileId={a.id} />
                     <MembersManager artistProfileId={a.id} />
                     <VerifyButton artistProfileId={a.id} verified={a.verified} />

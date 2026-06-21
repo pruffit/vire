@@ -16,6 +16,7 @@ interface Initial {
   musicalKey: string;
   moods: string[];
   genres: string[];
+  lyrics: string; // LRC-текст (`[mm:ss.xx]строка`) или простой текст
 }
 
 const inputCls =
@@ -58,6 +59,7 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
         musicalKey: f.musicalKey || null,
         moods: f.moods,
         genres: f.genres,
+        lyrics: f.lyrics || null,
       });
       if (res.error) setMsg({ text: res.error, ok: false });
       else {
@@ -136,6 +138,16 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
             </optgroup>
           ))}
         </select>
+      </Field>
+
+      <Field label="Текст (LRC: [mm:ss.xx]строка — для подсветки в плеере; или простой текст)">
+        <textarea
+          className={`${inputCls} min-h-32 font-mono text-xs`}
+          value={f.lyrics}
+          onChange={(e) => set('lyrics', e.target.value)}
+          maxLength={20000}
+          placeholder={'[00:15.20]первая строка\n[00:18.50]вторая строка'}
+        />
       </Field>
 
       <div className="flex items-center gap-3 pt-1">

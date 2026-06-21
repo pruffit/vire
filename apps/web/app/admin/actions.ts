@@ -2,11 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
-import { db, setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers, getTrackSourceKey, getArtistTrackSources, DrizzleReleaseRepository, DrizzleTrackRepository, setTrackMoods, setTrackGenres, ALL_MOODS, ALL_TRACK_GENRES } from '@vire/db';
+import { db, setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers, getTrackSourceKey, getArtistTrackSources, DrizzleReleaseRepository, DrizzleTrackRepository, setTrackMoods, setTrackGenres, ALL_MOODS, ALL_TRACK_GENRES, adminUpdateArtist, updateArtistPost, deleteArtistPost, adminUpdatePlaylist, adminDeletePlaylist } from '@vire/db';
 import type { UserRole, ArtistMemberRow } from '@vire/db';
 import { ALL_GENRES, type ReleaseType, type Genre, type UpdateReleaseInput, type UpdateTrackParams } from '@vire/core';
 import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
 import { transcodeQueue } from '@/lib/queue';
+import { parseLrc } from '@/lib/lrc';
 
 const RELEASE_TYPES: ReleaseType[] = ['ALBUM', 'EP', 'SINGLE'];
 
@@ -109,6 +110,66 @@ export async function actionSetReleaseStatus(
 // ─── Полная редактура контента из админки (§9.1) — минуя ownership-гард сервиса:
 // репозитории update(id,…) принимают id напрямую, проверка владения живёт в сервисе.
 
+export async function actionAdminUpdatePost(
+  id: string,
+  input: { title: string | null; body: string },
+): Promise<{ error?: string; ok?: boolean }> {
+  await requireAdmin();
+  const body = (input.body ?? '').trim();
+  if (!body || body.length > 10000) return { error: 'Текст: 1–10000 символов' };
+  const title = input.title?.trim() ? input.title.trim().slice(0, 200) : null;
+  await updateArtistPost(id, { title, body });
+  revalidatePath('/admin/posts');
+  return { ok: true };
+}
+
+export async function actionAdminDeletePost(id: string): Promise<{ ok?: boolean }> {
+  await requireAdmin();
+  await deleteArtistPost(id);
+  revalidatePath('/admin/posts');
+  return { ok: true };
+}
+
+export async function actionAdminUpdatePlaylist(
+  id: string,
+  input: { title: string; visibility: string },
+): Promise<{ error?: string; ok?: boolean }> {
+  await requireAdmin();
+  const title = (input.title ?? '').trim();
+  if (!title || title.length > 200) return { error: 'Название: 1–200 символов' };
+  if (input.visibility !== 'PRIVATE' && input.visibility !== 'PUBLIC') return { error: 'Неверная видимость' };
+  await adminUpdatePlaylist(id, { title, visibility: input.visibility });
+  revalidatePath('/admin/playlists');
+  return { ok: true };
+}
+
+export async function actionAdminDeletePlaylist(id: string): Promise<{ ok?: boolean }> {
+  await requireAdmin();
+  await adminDeletePlaylist(id);
+  revalidatePath('/admin/playlists');
+  return { ok: true };
+}
+
+export async function actionAdminUpdateArtist(
+  artistProfileId: string,
+  input: { name: string; slug: string; bio: string | null; avatarUrl: string | null },
+): Promise<{ error?: string; ok?: boolean }> {
+  await requireAdmin();
+  const name = (input.name ?? '').trim();
+  if (!name || name.length > 120) return { error: 'Имя: 1–120 символов' };
+  const slug = (input.slug ?? '').trim().toLowerCase();
+  if (!/^[a-z0-9-]{2,60}$/.test(slug)) return { error: 'Slug: 2–60 символов, латиница/цифры/дефис' };
+  const res = await adminUpdateArtist(artistProfileId, {
+    name,
+    slug,
+    bio: input.bio?.trim() ? input.bio.trim().slice(0, 2000) : null,
+    avatarUrl: input.avatarUrl?.trim() || null,
+  });
+  if (!res.ok) return { error: res.error };
+  revalidatePath('/admin/artists');
+  return { ok: true };
+}
+
 export async function actionAdminUpdateRelease(
   releaseId: string,
   input: { title: string; type: string; genre: string | null; releaseDate: string | null; description: string | null; linerNotes: string | null },
@@ -142,6 +203,7 @@ export async function actionAdminUpdateTrack(
   input: {
     title: string; trackNumber: number; isExplicit: boolean; isExclusive: boolean;
     isWip: boolean; bpm: number | null; musicalKey: string | null; moods: string[]; genres: string[];
+    lyrics: string | null;
   },
 ): Promise<{ error?: string; ok?: boolean }> {
   await requireAdmin();
@@ -149,8 +211,10 @@ export async function actionAdminUpdateTrack(
   if (!title || title.length > 200) return { error: 'Название: 1–200 символов' };
   if (!Number.isInteger(input.trackNumber) || input.trackNumber < 1) return { error: 'Неверный номер' };
   if (input.bpm != null && (!Number.isInteger(input.bpm) || input.bpm < 20 || input.bpm > 500)) return { error: 'BPM: 20–500' };
+  if (typeof input.lyrics === 'string' && input.lyrics.length > 20000) return { error: 'Текст слишком длинный' };
   const moods = (input.moods ?? []).filter((m) => (ALL_MOODS as string[]).includes(m)).slice(0, 5);
   const genres = (input.genres ?? []).filter((g) => (ALL_TRACK_GENRES as string[]).includes(g)).slice(0, 3);
+  const parsedLyrics = typeof input.lyrics === 'string' && input.lyrics.trim() ? parseLrc(input.lyrics) : null;
   const patch: UpdateTrackParams = {
     title,
     trackNumber: input.trackNumber,
@@ -159,6 +223,7 @@ export async function actionAdminUpdateTrack(
     isWip: !!input.isWip,
     bpm: input.bpm,
     musicalKey: input.musicalKey?.trim() ? input.musicalKey.trim().slice(0, 20) : null,
+    lyrics: parsedLyrics && parsedLyrics.length > 0 ? parsedLyrics : null,
   };
   await new DrizzleTrackRepository(db).update(trackId, patch);
   await setTrackMoods(trackId, moods as Parameters<typeof setTrackMoods>[1]);
