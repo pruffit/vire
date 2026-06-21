@@ -92,4 +92,11 @@
 
 ## Skills
 
-- [ ] Установить через marketplace: FFmpeg Media Expert, Clean/Hexagonal Architecture, Testing/TDD, BullMQ + Drizzle.
+- [x] **Project-скиллы под стек Vire** (21.06.2026). Готовых плагинов по этим темам
+  в подключённых маркетплейсах (claude-plugins-official 2185 шт. + ponytail) нет —
+  каталог почти весь вендорный. Вместо них заскаффолжены 4 локальных скилла в
+  `.claude/skills/` с привязкой к реальному коду и конвенциям из CLAUDE.md:
+  `vire-architecture` (слои handler→service→repo, Result, DI, zod),
+  `vire-media` (FFmpeg/HLS-конвейер, waveform, vault/stream), `vire-testing`
+  (Vitest/TDD по слоям, регресс на инциденты, гейты), `vire-queues` (BullMQ
+  producer/consumer, идемпотентность/jobId, грабли Drizzle). Едут в репозитории.
