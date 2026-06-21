@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
-import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers, getTrackSourceKey } from '@vire/db';
+import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers, getTrackSourceKey, getArtistTrackSources } from '@vire/db';
 import type { UserRole, ArtistMemberRow } from '@vire/db';
 import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
 import { transcodeQueue } from '@/lib/queue';
@@ -74,6 +74,24 @@ export async function actionRetranscodeTrack(trackId: string): Promise<{ error?:
   await transcodeQueue.add({ trackId, sourceKey });
   revalidatePath('/admin/tracks');
   return { ok: true };
+}
+
+/**
+ * Массовый пере-транскод всех треков артиста (у кого есть исходник в vault).
+ * Нужен, когда у артиста системно битый HLS (напр. вшитая обложка-видео) — чтобы
+ * не жать ⟳ HLS по каждому треку вручную.
+ */
+export async function actionRetranscodeArtist(artistProfileId: string): Promise<{ error?: string; queued?: number }> {
+  await requireAdmin();
+  const sources = await getArtistTrackSources(artistProfileId);
+  if (sources.length === 0) return { error: 'Нет треков с исходником в vault' };
+  for (const s of sources) {
+    await setTrackStatus(s.trackId, 'PROCESSING');
+    await transcodeQueue.add({ trackId: s.trackId, sourceKey: s.sourceKey });
+  }
+  revalidatePath('/admin/artists');
+  revalidatePath('/admin/tracks');
+  return { queued: sources.length };
 }
 
 export async function actionSetReleaseStatus(

@@ -1,6 +1,6 @@
 import { eq, inArray, isNull, or, and, isNotNull } from 'drizzle-orm';
 import { db } from '../client';
-import { trackAudio, tracks } from '../schema';
+import { trackAudio, tracks, releases } from '../schema';
 
 export interface TrackAudioData {
   hlsManifestKey: string;
@@ -45,6 +45,25 @@ export async function getTrackSourceKey(trackId: string): Promise<string | null>
     .where(eq(trackAudio.trackId, trackId))
     .limit(1);
   return row?.flacKey ?? null;
+}
+
+/**
+ * Все треки артиста, у которых есть исходник в vault — для МАССОВОГО пере-транскода
+ * (когда у артиста системно битый HLS, напр. вшитая обложка-видео). Возвращает пары
+ * {trackId, sourceKey=flacKey}. Треки без исходника пропускаются.
+ */
+export async function getArtistTrackSources(
+  artistProfileId: string,
+): Promise<Array<{ trackId: string; sourceKey: string }>> {
+  const rows = await db
+    .select({ trackId: tracks.id, flacKey: trackAudio.flacKey })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(trackAudio, eq(trackAudio.trackId, tracks.id))
+    .where(and(eq(releases.artistProfileId, artistProfileId), isNotNull(trackAudio.flacKey)));
+  return rows
+    .filter((r): r is { trackId: string; flacKey: string } => r.flacKey !== null)
+    .map((r) => ({ trackId: r.trackId, sourceKey: r.flacKey }));
 }
 
 export async function getTrackAudioMeta(

@@ -2,6 +2,7 @@ import { listArtistsAdmin } from '@vire/db';
 import { VerifyButton } from '../users/verify-button';
 import { ActiveToggle } from './active-toggle';
 import { MembersManager } from './members-manager';
+import { RetranscodeArtistButton } from './retranscode-artist-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +71,7 @@ export default async function AdminArtistsPage({ searchParams }: Props) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2">
+                    <RetranscodeArtistButton artistProfileId={a.id} />
                     <MembersManager artistProfileId={a.id} />
                     <VerifyButton artistProfileId={a.id} verified={a.verified} />
                     <ActiveToggle artistProfileId={a.id} isActive={a.isActive} />
