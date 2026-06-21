@@ -54,7 +54,7 @@ Cloudflare-релея (тот же, что `ALERT_WEBHOOK_URL`, см. `ops/teleg
 Так факт ошибки прилетит в Telegram, а детали/группировка останутся в GlitchTip.
 
 ## Заметки
-- Образ закреплён на `glitchtip/glitchtip:v4.3` — перед апгрейдом сверь актуальный
-  релиз на glitchtip.com и читай migration notes.
+- Образ закреплён на `glitchtip/glitchtip:6.1.8` (актуальный стабильный на 2026-06) —
+  перед апгрейдом сверь свежий релиз на glitchtip.com и читай migration notes.
 - Бэкап: том `glitchtip-pg` (Postgres GlitchTip). Не путать с основной БД Vire.
 - Ресурсы: worker (celery) — самый прожорливый; на тесном VPS дай swap.

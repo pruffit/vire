@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: glitchtip/glitchtip:v4.3
+    image: glitchtip/glitchtip:6.1.8
     depends_on: *default-depends_on
     ports:
       - "8080:8080"
@@ -54,14 +54,14 @@ services:
     restart: unless-stopped
 
   worker:
-    image: glitchtip/glitchtip:v4.3
+    image: glitchtip/glitchtip:6.1.8
     command: ./bin/run-celery-with-beat.sh
     depends_on: *default-depends_on
     environment: *default-environment
     restart: unless-stopped
 
   migrate:
-    image: glitchtip/glitchtip:v4.3
+    image: glitchtip/glitchtip:6.1.8
     depends_on: *default-depends_on
     command: ./bin/run-migrate.sh
     environment: *default-environment
