@@ -50,8 +50,10 @@
   (`onRequestError → captureRequestError`), исключения воркера (`captureWorkerException`
   в alert-функциях + `flushSentry` на крэше). Без `SENTRY_DSN` — полный no-op.
   Дедуп drizzle-orm зафиксирован tsconfig-paths. Доки — `docs/features/monitoring.md`.
-  Осталось опционально: source maps (читаемые стектрейсы), `request_id` в логах,
-  внешний uptime-чек (UptimeRobot на `/api/health`).
+  ⚠️ sentry.io блокирует РФ (403) → приёмник = **self-hosted GlitchTip** (wire-совместим,
+  код не меняется): compose+инструкция `ops/glitchtip/`. CSP-origin выводится из DSN.
+  Осталось: поднять GlitchTip на VPS + завести DSN; опц. source maps, `request_id`,
+  внешний uptime-чек.
 
 ## Качество
 

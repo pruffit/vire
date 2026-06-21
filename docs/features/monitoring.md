@@ -79,11 +79,16 @@
 3. **Discord/Slack (опц.):** создать Incoming Webhook, положить URL в
    `ALERT_WEBHOOK_URL`, перезапустить.
 
-## Как подключить Sentry (прод)
-1. Завести проект в Sentry (тип Next.js), скопировать DSN (Settings → Client Keys).
-2. Положить `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` (тот же DSN) в `.env` (web + worker).
-   `NEXT_PUBLIC_*` пекутся на build → прокинуть build-arg'ом в Docker, как `S3_PUBLIC_ENDPOINT`.
-3. Перезапустить — ошибки пойдут в Sentry. Тест: кинуть исключение в любом роуте/клиенте.
+## Как подключить (прод) — через GlitchTip, НЕ sentry.io
+⚠️ **sentry.io блокирует РФ** (403 Forbidden): ни завести проект, ни слать ingest с
+российского VPS/аудитории нельзя. Поэтому приёмник — **self-hosted GlitchTip**
+(wire-совместим с Sentry, наш SDK не меняется). Развёртывание и получение DSN —
+`ops/glitchtip/README.md`. Дальше:
+1. `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` (DSN своего GlitchTip) — `SENTRY_DSN` в
+   VPS `.env` (web+worker, рантайм); `NEXT_PUBLIC_SENTRY_DSN` — GitHub-секрет
+   (build-arg уже проброшен в `Dockerfile`/`deploy.yml`).
+2. CSP пропустит origin сам — `connect-src` берёт его из DSN (`sentryOrigin()`).
+3. Перезапуск/деплой — ошибки пойдут в GlitchTip. Тест: кинуть исключение в роуте/клиенте.
 
 ## Ограничения / на будущее
 - **Source maps не загружаются** — стектрейсы в Sentry минифицированы. Чтобы читались,
