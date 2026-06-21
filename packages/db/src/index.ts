@@ -78,8 +78,12 @@ export {
   listReleasesAdmin,
   setReleaseStatus,
   createArtistForUser,
+  listArtistMembers,
+  addArtistMember,
+  removeArtistMember,
 } from './queries/admin';
 export type {
+  ArtistMemberRow,
   AdminStats,
   AdminUser,
   AdminTrack,

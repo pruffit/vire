@@ -169,6 +169,13 @@
       "when": 1782024399383,
       "tag": "0023_fearless_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1782027158072,
+      "tag": "0024_boring_vindicator",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { and, asc, eq } from 'drizzle-orm';
-import { artistProfiles } from '../schema';
+import { artistProfiles, artistMembers } from '../schema';
 import type { DB } from '../client';
 import type { IArtistRepository, ArtistProfile, ThemeTokens, ArtistLink, ArtistVideo, UpdateArtistProfileData } from '@vire/core';
 import { defaultThemeTokens } from '@vire/core';
@@ -18,37 +18,44 @@ export class DrizzleArtistRepository implements IArtistRepository {
     return mapToArtistProfile(row);
   }
 
+  // Доступ к дашборду = членство в artist_members (несколько аккаунтов на профиль).
+  // Владелец заведён OWNER-строкой при создании/бэкфилом. Джойним профиль с членством
+  // текущего пользователя.
+
   async findByUserId(userId: string): Promise<ArtistProfile | null> {
     const [row] = await this.db
-      .select()
+      .select({ profile: artistProfiles })
       .from(artistProfiles)
-      .where(eq(artistProfiles.userId, userId))
+      .innerJoin(artistMembers, eq(artistMembers.artistProfileId, artistProfiles.id))
+      .where(eq(artistMembers.userId, userId))
       .orderBy(asc(artistProfiles.createdAt))
       .limit(1);
 
     if (!row) return null;
-    return mapToArtistProfile(row);
+    return mapToArtistProfile(row.profile);
   }
 
   async findAllByUserId(userId: string): Promise<ArtistProfile[]> {
     const rows = await this.db
-      .select()
+      .select({ profile: artistProfiles })
       .from(artistProfiles)
-      .where(eq(artistProfiles.userId, userId))
+      .innerJoin(artistMembers, eq(artistMembers.artistProfileId, artistProfiles.id))
+      .where(eq(artistMembers.userId, userId))
       .orderBy(asc(artistProfiles.createdAt));
 
-    return rows.map(mapToArtistProfile);
+    return rows.map((r) => mapToArtistProfile(r.profile));
   }
 
   async findByIdForUser(artistId: string, userId: string): Promise<ArtistProfile | null> {
     const [row] = await this.db
-      .select()
+      .select({ profile: artistProfiles })
       .from(artistProfiles)
-      .where(and(eq(artistProfiles.id, artistId), eq(artistProfiles.userId, userId)))
+      .innerJoin(artistMembers, eq(artistMembers.artistProfileId, artistProfiles.id))
+      .where(and(eq(artistProfiles.id, artistId), eq(artistMembers.userId, userId)))
       .limit(1);
 
     if (!row) return null;
-    return mapToArtistProfile(row);
+    return mapToArtistProfile(row.profile);
   }
 
   async update(id: string, data: UpdateArtistProfileData): Promise<void> {

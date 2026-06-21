@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, ilike, lt, or, sql } from 'drizzle-orm';
 import { db } from '../client';
 import {
-  users, artistProfiles, releases, tracks, trackAudio, playEvents,
+  users, artistProfiles, artistMembers, releases, tracks, trackAudio, playEvents,
   likes, follows, playlists, artistPosts, trackMoods, favoriteMoments,
   rightsHolders,
 } from '../schema';
@@ -619,12 +619,18 @@ export async function createArtistForUser(data: {
 
   await db.transaction(async (tx) => {
     await tx.insert(rightsHolders).values({ userId: user.id, displayName: data.name });
-    await tx.insert(artistProfiles).values({
+    const [profile] = await tx.insert(artistProfiles).values({
       userId: user.id,
       slug: data.slug,
       name: data.name,
       isActive: true,
       verified: false,
+    }).returning({ id: artistProfiles.id });
+    // Создатель — OWNER-участник: контроль доступа к дашборду идёт через artist_members.
+    await tx.insert(artistMembers).values({
+      artistProfileId: profile.id,
+      userId: user.id,
+      role: 'OWNER',
     });
     // Повышаем до ARTIST только обычного слушателя — модератора/админа/суперадмина
     // не понижаем (иначе создание артиста на своём же email отбирает доступ к админке).
@@ -634,4 +640,74 @@ export async function createArtistForUser(data: {
   });
 
   return { ok: true, slug: data.slug };
+}
+
+// ─── Участники артист-профиля (несколько аккаунтов на профиль) ────────────────
+
+export interface ArtistMemberRow {
+  userId: string;
+  email: string | null;
+  name: string | null;
+  role: string;
+  createdAt: Date;
+}
+
+export async function listArtistMembers(artistProfileId: string): Promise<ArtistMemberRow[]> {
+  return db
+    .select({
+      userId: artistMembers.userId,
+      email: users.email,
+      name: users.name,
+      role: artistMembers.role,
+      createdAt: artistMembers.createdAt,
+    })
+    .from(artistMembers)
+    .innerJoin(users, eq(users.id, artistMembers.userId))
+    .where(eq(artistMembers.artistProfileId, artistProfileId))
+    // OWNER сверху, далее по дате добавления.
+    .orderBy(desc(eq(artistMembers.role, 'OWNER')), asc(artistMembers.createdAt));
+}
+
+/** Привязывает существующий аккаунт (по email) к профилю как MEMBER. Идемпотентно по уникальности. */
+export async function addArtistMember(
+  artistProfileId: string,
+  email: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const [user] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
+  if (!user) return { ok: false, error: 'Пользователь с таким email не найден' };
+
+  const [existing] = await db
+    .select({ id: artistMembers.id })
+    .from(artistMembers)
+    .where(and(eq(artistMembers.artistProfileId, artistProfileId), eq(artistMembers.userId, user.id)))
+    .limit(1);
+  if (existing) return { ok: false, error: 'Этот аккаунт уже участник' };
+
+  await db.transaction(async (tx) => {
+    await tx.insert(artistMembers).values({ artistProfileId, userId: user.id, role: 'MEMBER' });
+    // Доступ к дашборду требует роли ARTIST; обычного слушателя повышаем (как в createArtistForUser).
+    if (user.role === 'LISTENER') {
+      await tx.update(users).set({ role: 'ARTIST', updatedAt: new Date() }).where(eq(users.id, user.id));
+    }
+  });
+  return { ok: true };
+}
+
+/** Снимает участника. OWNER удалить нельзя (профиль не должен остаться без владельца). */
+export async function removeArtistMember(
+  artistProfileId: string,
+  userId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const [m] = await db
+    .select({ role: artistMembers.role })
+    .from(artistMembers)
+    .where(and(eq(artistMembers.artistProfileId, artistProfileId), eq(artistMembers.userId, userId)))
+    .limit(1);
+  if (!m) return { ok: false, error: 'Не участник' };
+  if (m.role === 'OWNER') return { ok: false, error: 'Нельзя удалить владельца' };
+
+  await db
+    .delete(artistMembers)
+    .where(and(eq(artistMembers.artistProfileId, artistProfileId), eq(artistMembers.userId, userId)));
+  return { ok: true };
 }

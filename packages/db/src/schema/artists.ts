@@ -55,6 +55,27 @@ export const smartLinks = pgTable('smart_links', {
   index('smart_links_artist_profile_id_idx').on(t.artistProfileId),
 ]);
 
+// Участники артист-профиля: несколько аккаунтов могут управлять одной карточкой.
+// role: OWNER (создатель, неудаляем) | MEMBER (равный доступ к дашборду в v1 — права
+// не разводим). artist_profiles.user_id остаётся указателем на владельца; членство —
+// список ВСЕХ аккаунтов с доступом (включая владельца, заведён бэкфилом). Контроль
+// доступа к /dashboard скоупится через эту таблицу. Добавляет участников админ.
+export const artistMembers = pgTable('artist_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  artistProfileId: uuid('artist_profile_id')
+    .notNull()
+    .references(() => artistProfiles.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull().default('MEMBER'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  unique('artist_members_artist_user_unique').on(t.artistProfileId, t.userId),
+  index('artist_members_user_id_idx').on(t.userId),
+  index('artist_members_artist_profile_id_idx').on(t.artistProfileId),
+]);
+
 // Анонсы и новости артиста — канал коммуникации с аудиторией помимо музыки.
 // Не полноценный блог: короткие записи, хронология. title опционален.
 export const artistPosts = pgTable('artist_posts', {

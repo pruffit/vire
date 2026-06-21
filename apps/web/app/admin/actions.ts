@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
-import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser } from '@vire/db';
-import type { UserRole } from '@vire/db';
+import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers } from '@vire/db';
+import type { UserRole, ArtistMemberRow } from '@vire/db';
 import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
 
 const ADMIN_ROLES = new Set<UserRole>(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
@@ -79,4 +79,31 @@ export async function actionCreateArtist(
   revalidatePath('/admin/users');
   revalidatePath('/admin/artists');
   return { slug: result.slug };
+}
+
+export async function actionListArtistMembers(artistProfileId: string): Promise<ArtistMemberRow[]> {
+  await requireAdmin();
+  return listArtistMembers(artistProfileId);
+}
+
+export async function actionAddArtistMember(
+  artistProfileId: string,
+  email: string,
+): Promise<{ error?: string; ok?: boolean }> {
+  await requireAdmin();
+  const result = await addArtistMember(artistProfileId, email);
+  if (!result.ok) return { error: result.error };
+  revalidatePath('/admin/artists');
+  return { ok: true };
+}
+
+export async function actionRemoveArtistMember(
+  artistProfileId: string,
+  userId: string,
+): Promise<{ error?: string; ok?: boolean }> {
+  await requireAdmin();
+  const result = await removeArtistMember(artistProfileId, userId);
+  if (!result.ok) return { error: result.error };
+  revalidatePath('/admin/artists');
+  return { ok: true };
 }
