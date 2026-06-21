@@ -2,9 +2,7 @@
   "extends": "@vire/config/tsconfig/nextjs.json",
   "compilerOptions": {
     "paths": {
-      "@/*": ["./*"],
-      "drizzle-orm": ["../../packages/db/node_modules/drizzle-orm"],
-      "drizzle-orm/*": ["../../packages/db/node_modules/drizzle-orm/*"]
+      "@/*": ["./*"]
     }
   },
   "include": [

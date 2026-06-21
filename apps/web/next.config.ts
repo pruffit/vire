@@ -35,22 +35,8 @@ function s3Origin(): string {
   }
 }
 
-// Origin приёмника ошибок (Sentry/GlitchTip) — берём из самого DSN, чтобы CSP
-// автоматически пропускал куда реально шлёт клиент (self-hosted GlitchTip имеет
-// свой хост, а не *.ingest.sentry.io). Пусто/невалидно → ничего не добавляем.
-function sentryOrigin(): string | null {
-  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
-  if (!dsn) return null;
-  try {
-    return new URL(dsn).origin;
-  } catch {
-    return null;
-  }
-}
-
 function buildCsp(): string {
   const s3 = s3Origin();
-  const sentry = sentryOrigin();
   const dev = process.env.NODE_ENV !== 'production';
   const parts = [
     `default-src 'self'`,
@@ -63,9 +49,7 @@ function buildCsp(): string {
     // ytimg — постеры YouTube-фасадов; userapi/mycdn — постеры VK-видео (video.get).
     `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru https://mc.yandex.com https://i.ytimg.com https://*.ytimg.com https://*.userapi.com https://*.mycdn.me ${s3}`,
     `media-src 'self' blob: ${s3}`,
-    // Клиентский Sentry/GlitchTip шлёт ошибки на origin своего DSN (sentryOrigin).
-    // DSN-gated: без NEXT_PUBLIC_SENTRY_DSN запись не добавляется и запросов нет.
-    `connect-src 'self' blob: ${s3} https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com${sentry ? ` ${sentry}` : ''}${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
+    `connect-src 'self' blob: ${s3} https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
     `worker-src blob:`,
     // oauth.telegram.org — iframe виджета Telegram Login; youtube.com/vk.com/vkvideo.ru — встраиваемые плееры видео

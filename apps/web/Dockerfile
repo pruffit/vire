@@ -20,14 +20,10 @@ RUN pnpm install --frozen-lockfile --filter @vire/web...
 ARG S3_PUBLIC_ENDPOINT=http://localhost:9000
 ARG NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=
 ARG NEXT_PUBLIC_METRIKA_ID=
-# NEXT_PUBLIC_SENTRY_DSN пекётся в клиентский бандл (Sentry DSN-gated): пусто →
-# клиентский Sentry выключен. Задать build-arg'ом, чтобы ловить JS-ошибки на проде.
-ARG NEXT_PUBLIC_SENTRY_DSN=
 RUN DATABASE_URL=postgresql://build:build@localhost/build \
     S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT} \
     NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME} \
     NEXT_PUBLIC_METRIKA_ID=${NEXT_PUBLIC_METRIKA_ID} \
-    NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
     pnpm --filter @vire/web build
 
 # ===== Рантайм =====

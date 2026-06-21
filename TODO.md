@@ -45,15 +45,12 @@
 ## Надёжность
 
 - [x] **Воркер: надёжность** — retry/backoff + removeOnFail (DLQ-поведение) уже в `lib/queue.ts`. Добавлено: статус `FAILED` (миграция 0021), на финальном падении транскодинга трек PROCESSING→FAILED + письмо артисту (Brevo), `FAILED` в админ-«требует внимания» и бейджах дашборда. Идемпотентность по `track_id` подтверждена (skip если READY; FAILED не затирает READY/BLOCKED). Миграции в деплое переставлены ДО `up -d`. (v1.0.66)
-- [x] **Observability — Sentry (фронт + бэк)** (21.06.2026, DSN-gated). Клиентские
-  JS-ошибки (`instrumentation-client.ts` + error-boundary'ы), серверные роуты/RSC
-  (`onRequestError → captureRequestError`), исключения воркера (`captureWorkerException`
-  в alert-функциях + `flushSentry` на крэше). Без `SENTRY_DSN` — полный no-op.
-  Дедуп drizzle-orm зафиксирован tsconfig-paths. Доки — `docs/features/monitoring.md`.
-  ⚠️ sentry.io блокирует РФ (403) → приёмник = **self-hosted GlitchTip** (wire-совместим,
-  код не меняется): compose+инструкция `ops/glitchtip/`. CSP-origin выводится из DSN.
-  Осталось: поднять GlitchTip на VPS + завести DSN; опц. source maps, `request_id`,
-  внешний uptime-чек.
+- [ ] **Observability — внешний приёмник ошибок (Sentry/GlitchTip).** Отложено до
+  апгрейда VPS. sentry.io блокирует РФ (403), а self-hosted GlitchTip не влезает в
+  текущий 1 ГБ RAM (celery-worker прожорлив, гарантированный OOM). Sentry-SDK из кода
+  **вырезан** (21.06.2026) — тяжёлые `@sentry/*` депы + OTel/drizzle-костыль не нужны
+  без приёмника. Что есть сейчас: health-эндпоинт + Telegram/webhook-алерты + лог
+  (см. `docs/features/monitoring.md`). Вернуться при отдельной машине/большем сервере.
 
 ## Качество
 

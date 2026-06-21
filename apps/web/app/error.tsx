@@ -1,20 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
-import * as Sentry from '@sentry/nextjs';
-
 export default function RouteError({
-  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  // Ошибка рендера сегмента маршрута — в Sentry (no-op без DSN).
-  useEffect(() => {
-    Sentry.captureException(error);
-  }, [error]);
-
   return (
     <main className="min-h-full flex flex-col items-center justify-center gap-6 px-6 text-center">
       <p className="text-8xl font-bold font-mono tabular-nums" style={{ opacity: 0.08 }}>
