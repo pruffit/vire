@@ -40,7 +40,7 @@
 ## Архитектура
 
 - [x] **Architecture Audit** — `packages/core` чистый: только внутренние импорты + vitest в тестах. Нарушений нет.
-- [x] **TECHNICAL_DEBT.md** — создан `docs/TECHNICAL_DEBT.md`: JWT без refresh, `'unsafe-inline'` в CSP, отсутствие retry в воркере, прямые инсерты play_events, один владелец артиста.
+- [x] **TECHNICAL_DEBT.md** — создан `docs/foundation/TECHNICAL_DEBT.md`: JWT без refresh, `'unsafe-inline'` в CSP, отсутствие retry в воркере, прямые инсерты play_events, один владелец артиста.
 
 ## Надёжность
 

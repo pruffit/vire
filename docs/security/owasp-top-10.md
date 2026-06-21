@@ -30,7 +30,7 @@
 ## A02:2021 — Cryptographic Failures ✅
 
 - Пароли — `bcryptjs` (`compare`/хэш), открытым текстом не хранятся.
-- Telegram Login — проверка HMAC-SHA256 от `bot_token` (`auth.ts`), подделка отклоняется.
+- Magic-link токены и OAuth-state (Yandex) — генерируются и проверяются внутри Auth.js.
 - Сессии — Auth.js v5, JWT (httpOnly cookie), `AUTH_SECRET` из env.
 - TLS — Caddy авто-TLS на проде; HSTS `max-age=63072000; includeSubDomains; preload`.
 - Секреты — только в env (`.env` не в гите); в код не зашиты.
@@ -75,7 +75,7 @@
 
 ## A07:2021 — Identification and Authentication Failures ✅
 
-- Несколько провайдеров (email/пароль, magic link, Yandex, Google, Telegram);
+- Несколько провайдеров (email/пароль, magic link, Yandex; Google/Telegram убраны по 406-ФЗ);
   привязка к одному аккаунту через cookie `vire_link_uid`.
 - **Брутфорс-защита (добавлено в этом проходе)**: `authorize` Credentials-провайдера
   лимитирует попытки входа по IP (30 / 5 мин, Redis fixed-window) и при превышении

@@ -10,10 +10,12 @@
 
 Читать в этом порядке:
 
-1. [`docs/concept.md`](docs/concept.md) — продукт и видение: зачем, для кого, четыре этапа развития, юридика, фичи.
-2. [`docs/architecture.md`](docs/architecture.md) — технический фундамент: стек, структура монорепо, принципы, отказоустойчивость.
-3. [`docs/data-schema.md`](docs/data-schema.md) — модель данных: сущности, связи, решения «на вырост».
-4. [`docs/deployment.md`](docs/deployment.md) — деплой на VPS: Docker Compose, Caddy, CI/CD, бэкапы.
+1. [`docs/vision/concept.md`](docs/vision/concept.md) — продукт и видение: зачем, для кого, четыре этапа развития, юридика, фичи.
+2. [`docs/foundation/architecture.md`](docs/foundation/architecture.md) — технический фундамент: стек, структура монорепо, принципы, отказоустойчивость.
+3. [`docs/foundation/data-schema.md`](docs/foundation/data-schema.md) — модель данных: сущности, связи, решения «на вырост».
+4. [`docs/ops/deployment.md`](docs/ops/deployment.md) — деплой на VPS: Docker Compose, Caddy, CI/CD, бэкапы.
+
+Карта всех документов — [`docs/README.md`](docs/README.md).
 
 ---
 
@@ -77,7 +79,7 @@ pnpm dev
 | `main` | стабильный код; изменения через PR из `dev` |
 | тег `vX.Y.Z` | запускает полный деплой: gates → сборка образов → выкатка на прод |
 
-Образы собираются в **GitHub Actions** (раннер с достаточным RAM) и пушатся в GHCR — сервер только тянет готовые образы. Подробности — в [`docs/deployment.md`](docs/deployment.md).
+Образы собираются в **GitHub Actions** (раннер с достаточным RAM) и пушатся в GHCR — сервер только тянет готовые образы. Подробности — в [`docs/ops/deployment.md`](docs/ops/deployment.md).
 
 ---
 

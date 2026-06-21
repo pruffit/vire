@@ -38,4 +38,4 @@ ssh $Server $remote
 if ($LASTEXITCODE) { throw "remote deploy failed" }
 
 Remove-Item vire-images.tar -ErrorAction SilentlyContinue
-Write-Host "==> Готово. Не забудь миграции при изменении схемы (см. docs/deployment.md)." -ForegroundColor Green
+Write-Host "==> Готово. Не забудь миграции при изменении схемы (см. docs/ops/deployment.md)." -ForegroundColor Green

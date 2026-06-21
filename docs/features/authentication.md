@@ -5,7 +5,8 @@ Auth.js v5 (NextAuth) с несколькими провайдерами и пр
 
 ## Что делает
 - **Провайдеры:** email/пароль (Credentials, `bcryptjs`), magic link (Nodemailer →
-  Brevo HTTP API), Yandex, Google, Telegram Login Widget (проверка HMAC-SHA256).
+  Brevo HTTP API), Yandex. **Google и Telegram убраны** (406-ФЗ запрещает росс. сайтам
+  вход через иностранные сервисы) — в `auth.ts` остался только остаточный код привязки.
 - **Привязка нескольких провайдеров** к одному аккаунту через cookie
   `vire_link_uid` (см. `/profile` → «Способы входа»).
 - **Роли** (`LISTENER | ARTIST | MODERATOR | ADMIN | SUPERADMIN`) кладутся в JWT
@@ -22,13 +23,12 @@ Auth.js v5 (NextAuth) с несколькими провайдерами и пр
 - **Письма:** `apps/web/lib/mailer.ts` (Brevo HTTP API — SMTP не используется)
 - **Рейт-лимит:** `apps/web/lib/rate-limit.ts`
 - **Данные:** `@vire/db` — `users`, `accounts`, `sessions`, `verificationTokens`;
-  хелперы `findUserByEmail`, `findOrCreateTelegramUser`, `tryClaimOAuthAccount`
+  хелперы `findUserByEmail`, `tryClaimOAuthAccount` (привязка OAuth-аккаунта Яндекса)
 
 ## Env
 - `AUTH_SECRET` — подпись JWT.
 - `AUTH_URL` / `NEXT_PUBLIC_SITE_URL` — базовый URL.
-- OAuth: `AUTH_YANDEX_ID/SECRET`, `AUTH_GOOGLE_ID/SECRET`.
-- Telegram: `AUTH_TELEGRAM_BOT_TOKEN` (для HMAC).
+- OAuth: `AUTH_YANDEX_ID/SECRET` (Google/Telegram env больше не нужны — провайдеры убраны).
 - Почта: `BREVO_API_KEY`, `SMTP_FROM`.
 
 ## Ограничения / на будущее

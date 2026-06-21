@@ -1,7 +1,7 @@
 # Vire — инструкция для Claude Code
 
 Независимая музыкальная площадка для артистов и слушателей СНГ.
-Полная документация: `docs/concept.md`, `docs/architecture.md`, `docs/data-schema.md`.
+Полная документация: `docs/vision/concept.md`, `docs/foundation/architecture.md`, `docs/foundation/data-schema.md` (карта всех доков — `docs/README.md`).
 
 ## Стек
 
@@ -297,10 +297,10 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 ## Что делать дальше (следующий шаг)
 
 Этап 1 закрыт, включая все взаимодействия слушателя из концепта, смартлинки и
-пресейвы (Фаза A+B). Открытый бэклог — в `TODO.md` (Observability/Sentry, контент-SEO,
+пресейвы (Фаза A+B). Открытый бэклог — в `docs/roadmap/TODO.md` (Observability/Sentry, контент-SEO,
 несколько аккаунтов на артиста) и Этап 2:
 1. **Тесты Этап-2 роутов** (purchase/webhook) и **YooKassa боевая настройка** — по команде
-2. **Observability** (Sentry + метрики) и **несколько аккаунтов на артиста** — см. `TODO.md`
+2. **Observability** (Sentry + метрики) и **несколько аккаунтов на артиста** — см. `docs/roadmap/TODO.md`
 
 Сделано в доводке:
 - Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)
