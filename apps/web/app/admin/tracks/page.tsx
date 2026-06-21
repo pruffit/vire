@@ -1,5 +1,6 @@
 import { listTracksAdmin } from '@vire/db';
 import { TrackStatusSelect } from './track-status-select';
+import { RetranscodeButton } from './retranscode-button';
 import { BackfillAnalysisButton } from '../backfill-analysis-button';
 import { formatDuration } from '@/lib/format';
 
@@ -114,7 +115,10 @@ export default async function AdminTracksPage({ searchParams }: Props) {
                   {new Date(track.createdAt).toLocaleDateString('ru-RU')}
                 </td>
                 <td className="px-4 py-3">
-                  <TrackStatusSelect trackId={track.id} currentStatus={track.status as 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED'} />
+                  <div className="flex items-center gap-2">
+                    <TrackStatusSelect trackId={track.id} currentStatus={track.status as 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED'} />
+                    <RetranscodeButton trackId={track.id} />
+                  </div>
                 </td>
               </tr>
             ))}

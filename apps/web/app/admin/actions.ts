@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
-import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers } from '@vire/db';
+import { setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers, getTrackSourceKey } from '@vire/db';
 import type { UserRole, ArtistMemberRow } from '@vire/db';
 import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
+import { transcodeQueue } from '@/lib/queue';
 
 const ADMIN_ROLES = new Set<UserRole>(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
 
@@ -57,6 +58,22 @@ export async function actionSetTrackStatus(trackId: string, status: 'READY' | 'B
   await requireAdmin();
   await setTrackStatus(trackId, status);
   revalidatePath('/admin/tracks');
+}
+
+/**
+ * Повторный транскод трека: пересобирает HLS из исходного мастера в vault.
+ * Нужен, когда трек READY и манифест в БД есть (маркера `!hls` нет), но реальные
+ * HLS-файлы в stream-бакете отсутствуют/битые — плеер бесконечно грузится.
+ * Сбрасываем статус в PROCESSING, иначе воркер пропустит READY-трек (идемпотентность).
+ */
+export async function actionRetranscodeTrack(trackId: string): Promise<{ error?: string; ok?: boolean }> {
+  await requireAdmin();
+  const sourceKey = await getTrackSourceKey(trackId);
+  if (!sourceKey) return { error: 'Нет исходника в vault — пересобрать нечем' };
+  await setTrackStatus(trackId, 'PROCESSING');
+  await transcodeQueue.add({ trackId, sourceKey });
+  revalidatePath('/admin/tracks');
+  return { ok: true };
 }
 
 export async function actionSetReleaseStatus(

@@ -12,6 +12,30 @@ async function getHls(): Promise<typeof HlsType> {
 }
 let loadedTrackId: string | null = null;
 
+// Watchdog загрузки: если за это время трек так и не заиграл (битые/недокачанные
+// HLS-сегменты, висящий запрос), показываем ошибку вместо вечного спиннера.
+const LOAD_TIMEOUT_MS = 20_000;
+let loadWatchdog: ReturnType<typeof setTimeout> | null = null;
+
+function clearLoadWatchdog(): void {
+  if (loadWatchdog) {
+    clearTimeout(loadWatchdog);
+    loadWatchdog = null;
+  }
+}
+
+function armLoadWatchdog(): void {
+  clearLoadWatchdog();
+  loadWatchdog = setTimeout(() => {
+    const s = usePlayerStore.getState();
+    // Сработал, а трек всё ещё грузится и не играет — значит залип.
+    if (s.isLoading && !s.isPlaying) {
+      usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
+      if (hls) { hls.destroy(); hls = null; }
+    }
+  }, LOAD_TIMEOUT_MS);
+}
+
 function getSessionId(): string {
   const key = 'vire_sid';
   let sid = sessionStorage.getItem(key);
@@ -122,6 +146,7 @@ export function initAudioEngine(): void {
     controls.next();
   });
   audio.addEventListener('playing', () => {
+    clearLoadWatchdog();
     usePlayerStore.getState()._setState({ isPlaying: true, isLoading: false });
     const { track } = usePlayerStore.getState();
     if (track && track.id !== playStartedTrackId) {
@@ -131,6 +156,7 @@ export function initAudioEngine(): void {
     if (track) startHeartbeat(track.id);
   });
   audio.addEventListener('pause', () => {
+    clearLoadWatchdog();
     usePlayerStore.getState()._setState({ isPlaying: false });
     stopHeartbeat();
   });
@@ -148,10 +174,12 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
   flushPlayEvent('direct');
 
   usePlayerStore.getState()._setState({ isLoading: true, hasAudio: false, audioError: false, currentTime: 0, duration: 0, waveformPeaks: null });
+  armLoadWatchdog();
 
   const res = await fetch(`/api/v1/tracks/${track.id}/manifest`).catch(() => null);
 
   if (!res?.ok) {
+    clearLoadWatchdog();
     usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
     return;
   }
@@ -172,7 +200,12 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
       audio?.play().catch(() => {});
     });
     hls.on(Hls.Events.ERROR, (_evt, data) => {
+      // Логируем ВСЕ ошибки, включая нефатальные: иначе проблемы с сегментами
+      // (битый/отсутствующий чанк, залипший буфер) молча проглатываются — отсюда
+      // «бесконечная загрузка без ошибок в консоли».
+      console.warn('[player] HLS error', data.type, data.details, 'fatal:', data.fatal);
       if (data.fatal) {
+        clearLoadWatchdog();
         usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
         hls?.destroy();
         hls = null;

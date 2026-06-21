@@ -33,6 +33,20 @@ export async function getTrackAudio(trackId: string): Promise<TrackAudioData | n
   };
 }
 
+/**
+ * Ключ исходного мастера (wav/flac) в vault — для повторного транскода. В отличие
+ * от getTrackAudio, отдаёт flacKey даже если HLS-манифест отсутствует/битый
+ * (тогда как раз и нужен ре-транскод). null — исходника нет, пересобрать нечем.
+ */
+export async function getTrackSourceKey(trackId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ flacKey: trackAudio.flacKey })
+    .from(trackAudio)
+    .where(eq(trackAudio.trackId, trackId))
+    .limit(1);
+  return row?.flacKey ?? null;
+}
+
 export async function getTrackAudioMeta(
   trackIds: string[],
 ): Promise<Record<string, { bpm: number | null; musicalKey: string | null }>> {

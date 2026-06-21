@@ -4,7 +4,7 @@ export * from './schema';
 export * from './repositories/artist';
 export * from './repositories/release';
 export * from './repositories/track';
-export { getTrackAudio, getTrackAudioMeta, trackExists, getTrackTitle, listTracksNeedingAnalysis, updateTrackAnalysis } from './queries/track-audio';
+export { getTrackAudio, getTrackSourceKey, getTrackAudioMeta, trackExists, getTrackTitle, listTracksNeedingAnalysis, updateTrackAnalysis } from './queries/track-audio';
 export type { TrackAudioData } from './queries/track-audio';
 export { getPublicTrackLyrics } from './queries/lyrics';
 export { listActiveArtists } from './queries/artists';
