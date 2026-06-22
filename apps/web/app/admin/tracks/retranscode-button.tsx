@@ -33,7 +33,7 @@ export function RetranscodeButton({ trackId }: Props) {
         title="Пересобрать HLS из исходника"
         className="rounded-md border border-foreground/10 bg-foreground/5 px-2 py-1 font-mono text-xs transition-colors hover:bg-foreground/10 hover:border-foreground/20 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40 whitespace-nowrap active:scale-[0.98]"
       >
-        {pending ? '…' : '⟳ HLS'}
+        {pending ? '…' : '⟳'}
       </button>
       {error && <span className="text-[10px] text-red-400" title={error}>!</span>}
     </span>

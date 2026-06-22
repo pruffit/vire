@@ -298,7 +298,7 @@ export function Th({
   return (
     <th
       className={cn(
-        'px-4 py-2.5 font-mono text-[11px] font-normal uppercase tracking-[0.08em] text-foreground/40',
+        'px-3 py-2.5 font-mono text-[11px] font-normal uppercase tracking-[0.08em] text-foreground/40',
         align === 'right' && 'text-right',
         align === 'center' && 'text-center',
         align === 'left' && 'text-left',
@@ -352,7 +352,7 @@ export function Td({
     <td
       colSpan={colSpan}
       className={cn(
-        'px-4 py-2.5 align-middle',
+        'px-3 py-2.5 align-middle',
         tone === 'soft' && 'text-foreground/65',
         tone === 'muted' && 'text-foreground/45',
         tone === 'faint' && 'text-foreground/30',

@@ -22,17 +22,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </span>
         </div>
         <AdminNav />
-        <div className="hidden md:flex md:flex-col md:gap-1.5 mt-auto pt-4 px-3 border-t border-foreground/10">
-          <p className="text-xs text-foreground/40 truncate" title={session.user.email ?? undefined}>
+        <div className="hidden md:flex md:flex-col md:items-start md:gap-1.5 mt-auto pt-4 px-3 border-t border-foreground/10">
+          <p className="max-w-full truncate text-xs text-foreground/40" title={session.user.email ?? undefined}>
             {session.user.email}
           </p>
           <RoleBadge role={session.user.role} />
         </div>
       </aside>
 
-      {/* Content */}
+      {/* Content — на всю ширину рабочей области (админка плотная, таблицы широкие).
+          Узкие экраны (формы редактирования) ограничивают себя сами через max-w-2xl. */}
       <main data-scroll-area className="flex-1 min-w-0 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
-        <div className="mx-auto w-full max-w-5xl">{children}</div>
+        {children}
       </main>
     </div>
   );
