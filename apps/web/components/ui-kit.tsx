@@ -384,13 +384,15 @@ export type BadgeTone =
   | 'info'
   | 'accent';
 
+// У каждого тона — тонкий бордер чуть ярче заливки: бейдж читается как объёмный
+// чип, а не как плоское цветное пятно.
 const BADGE_TONE: Record<BadgeTone, string> = {
-  neutral: 'bg-foreground/[0.08] text-foreground/70',
-  success: 'bg-emerald-500/15 text-emerald-300',
-  warn: 'bg-amber-500/15 text-amber-300',
-  error: 'bg-red-500/15 text-red-300',
-  info: 'bg-sky-500/15 text-sky-300',
-  accent: 'bg-orange-500/15 text-orange-300',
+  neutral: 'bg-foreground/[0.08] text-foreground/70 border border-foreground/15',
+  success: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25',
+  warn: 'bg-amber-500/15 text-amber-300 border border-amber-500/25',
+  error: 'bg-red-500/15 text-red-300 border border-red-500/25',
+  info: 'bg-sky-500/15 text-sky-300 border border-sky-500/25',
+  accent: 'bg-orange-500/15 text-orange-300 border border-orange-500/25',
 };
 
 const BADGE_DOT: Record<BadgeTone, string> = {

@@ -26,7 +26,7 @@ export function VerifyButton({
       className={cn(
         'inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-none whitespace-nowrap transition-colors disabled:opacity-40',
         verified
-          ? 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25'
+          ? 'bg-sky-500/15 text-sky-300 border border-sky-500/25 hover:bg-sky-500/25'
           : 'border border-foreground/15 text-foreground/45 hover:border-foreground/30 hover:text-foreground/80',
       )}
     >
