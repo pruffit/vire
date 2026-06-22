@@ -1,21 +1,18 @@
 import { listReleasesAdmin } from '@vire/db';
 import { ReleaseStatusSelect } from './release-status-select';
+import {
+  PageHeader, FilterTabs, Table, Thead, Th, Tr, Td, ReleaseStatusBadge, ActionLink, EmptyState,
+} from '@/components/admin/ui';
 
 export const dynamic = 'force-dynamic';
 
-const STATUS_COLOR: Record<string, string> = {
-  PUBLISHED: 'text-green-400',
-  SCHEDULED: 'text-blue-400',
-  DRAFT: 'text-white/40',
-  ARCHIVED: 'text-white/20',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  PUBLISHED: 'опубликован',
-  SCHEDULED: 'запланирован',
-  DRAFT: 'черновик',
-  ARCHIVED: 'архив',
-};
+const STATUS_FILTERS: { value?: string; label: string }[] = [
+  { value: undefined, label: 'Все' },
+  { value: 'DRAFT', label: 'черновик' },
+  { value: 'SCHEDULED', label: 'запланирован' },
+  { value: 'PUBLISHED', label: 'опубликован' },
+  { value: 'ARCHIVED', label: 'архив' },
+];
 
 type Props = { searchParams: Promise<{ status?: string }> };
 
@@ -25,99 +22,79 @@ export default async function AdminReleasesPage({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Релизы</h1>
-        <span className="text-sm text-white/30 tabular-nums">{releases.length}</span>
-      </div>
+      <PageHeader title="Релизы" count={releases.length} />
 
-      <div className="flex gap-1.5 text-sm flex-wrap">
-        {[undefined, 'DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'].map((s) => (
-          <a
-            key={s ?? 'all'}
-            href={s ? `?status=${s}` : '/admin/releases'}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
-              status === s
-                ? 'bg-white/15 text-white'
-                : 'text-white/40 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            {s ? STATUS_LABEL[s] : 'Все'}
-          </a>
-        ))}
-      </div>
+      <FilterTabs
+        tabs={STATUS_FILTERS.map((s) => ({
+          href: s.value ? `?status=${s.value}` : '/admin/releases',
+          label: s.label,
+          active: status === s.value,
+        }))}
+      />
 
-      <div className="rounded-xl border border-white/10 overflow-x-auto">
-        <table className="w-full min-w-[620px] text-sm">
-          <thead>
-            <tr className="border-b border-white/10 text-white/30 text-xs font-mono">
-              <th className="text-left px-4 py-3">Релиз</th>
-              <th className="text-left px-4 py-3">Артист</th>
-              <th className="text-left px-4 py-3">Тип</th>
-              <th className="text-left px-4 py-3">Треков</th>
-              <th className="text-left px-4 py-3">Дата</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {releases.map((release) => (
-              <tr
-                key={release.id}
-                className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
-              >
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={`/artists/${release.artistSlug}/releases/${release.id}`}
-                      target="_blank"
-                      className="hover:text-white/60 transition-colors"
-                    >
-                      {release.title}
-                    </a>
-                    <span className={`font-mono text-xs ${STATUS_COLOR[release.status] ?? ''}`}>
-                      {STATUS_LABEL[release.status] ?? release.status}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-white/45 text-xs">
+      <Table minWidth="min-w-[620px]">
+        <Thead>
+          <Th>Релиз</Th>
+          <Th>Артист</Th>
+          <Th>Тип</Th>
+          <Th align="right">Треков</Th>
+          <Th>Дата</Th>
+          <Th />
+        </Thead>
+        <tbody>
+          {releases.map((release) => (
+            <Tr key={release.id}>
+              <Td>
+                <div className="flex items-center gap-2">
                   <a
-                    href={`/artists/${release.artistSlug}`}
+                    href={`/artists/${release.artistSlug}/releases/${release.id}`}
                     target="_blank"
-                    className="hover:text-white transition-colors"
+                    className="hover:text-foreground/60 transition-colors"
                   >
-                    @{release.artistSlug}
+                    {release.title}
                   </a>
-                </td>
-                <td className="px-4 py-3 text-white/35 text-xs font-mono">{release.type}</td>
-                <td className="px-4 py-3 text-white/35 text-xs tabular-nums">
-                  {release.trackCount}
-                </td>
-                <td className="px-4 py-3 text-white/25 text-xs font-mono">
-                  {new Date(release.createdAt).toLocaleDateString('ru-RU')}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-2">
-                    {release.status !== 'SCHEDULED' && (
-                      <ReleaseStatusSelect
-                        releaseId={release.id}
-                        currentStatus={release.status as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'}
-                      />
-                    )}
-                    <a
-                      href={`/admin/releases/${release.id}/edit`}
-                      className="rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono hover:bg-white/10 transition-colors whitespace-nowrap"
-                    >
-                      Изм.
-                    </a>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {releases.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-white/30">Релизов нет</p>
-        )}
-      </div>
+                  <ReleaseStatusBadge status={release.status} />
+                </div>
+              </Td>
+              <Td tone="soft" mono>
+                <a
+                  href={`/artists/${release.artistSlug}`}
+                  target="_blank"
+                  className="hover:text-foreground transition-colors"
+                >
+                  @{release.artistSlug}
+                </a>
+              </Td>
+              <Td tone="muted" mono>{release.type}</Td>
+              <Td align="right" tone="muted" nums className="text-xs">{release.trackCount}</Td>
+              <Td mono tone="faint">
+                {new Date(release.createdAt).toLocaleDateString('ru-RU')}
+              </Td>
+              <Td>
+                <div className="flex items-center justify-end gap-2">
+                  {release.status !== 'SCHEDULED' && (
+                    <ReleaseStatusSelect
+                      releaseId={release.id}
+                      currentStatus={release.status as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'}
+                    />
+                  )}
+                  <ActionLink href={`/admin/releases/${release.id}/edit`}>Изм.</ActionLink>
+                </div>
+              </Td>
+            </Tr>
+          ))}
+          {releases.length === 0 && (
+            <tr>
+              <td colSpan={6}>
+                <EmptyState
+                  title={status ? 'Релизов в этом статусе нет' : 'Релизов пока нет'}
+                  hint={status ? 'Сними фильтр, чтобы увидеть все.' : undefined}
+                />
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </Table>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { actionCreateArtist } from '../actions';
+import { fieldClass } from '@/components/admin/ui';
 
 function toSlug(value: string): string {
   return value
@@ -50,7 +51,7 @@ export function CreateArtistForm() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/15 text-sm transition-colors"
+        className="self-start px-4 py-2 rounded-md bg-foreground/10 hover:bg-foreground/15 text-sm transition-colors active:scale-[0.98]"
       >
         + Создать артиста
       </button>
@@ -60,19 +61,20 @@ export function CreateArtistForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-xl border border-white/10 bg-white/[0.03] p-4 flex flex-col gap-3 w-full max-w-md"
+      className="rounded-xl border border-foreground/10 bg-foreground/[0.025] p-4 flex flex-col gap-3 w-full max-w-md"
     >
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Новый артист</p>
         <button
           type="button"
           onClick={() => { setOpen(false); setResult(null); }}
-          className="text-white/30 hover:text-white/60 text-lg leading-none transition-colors"
+          aria-label="Закрыть"
+          className="text-foreground/30 hover:text-foreground/60 text-lg leading-none transition-colors"
         >
           ×
         </button>
       </div>
-      <p className="text-xs text-white/40 -mt-1">
+      <p className="text-xs text-foreground/45 -mt-1 leading-relaxed">
         Один аккаунт может управлять несколькими артистами — можно создать ещё одного
         на тот же email (slug должен быть уникальным).
       </p>
@@ -83,7 +85,7 @@ export function CreateArtistForm() {
         placeholder="Email пользователя"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30"
+        className={`w-full ${fieldClass}`}
       />
       <input
         required
@@ -91,17 +93,17 @@ export function CreateArtistForm() {
         placeholder="Имя артиста"
         value={name}
         onChange={(e) => handleNameChange(e.target.value)}
-        className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30"
+        className={`w-full ${fieldClass}`}
       />
       <div className="flex items-center gap-2">
-        <span className="text-white/30 text-sm shrink-0">@</span>
+        <span className="text-foreground/30 text-sm shrink-0">@</span>
         <input
           required
           type="text"
           placeholder="slug (латиница, цифры, дефис)"
           value={slug}
           onChange={(e) => handleSlugChange(e.target.value)}
-          className="flex-1 rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30"
+          className={`flex-1 ${fieldClass}`}
         />
       </div>
 
@@ -109,7 +111,7 @@ export function CreateArtistForm() {
         <p className="text-red-400 text-xs">{result.error}</p>
       )}
       {result?.slug && (
-        <p className="text-green-400 text-xs">
+        <p className="text-emerald-400 text-xs">
           Артист создан:{' '}
           <a href={`/artists/${result.slug}`} target="_blank" className="underline">
             @{result.slug}
@@ -120,7 +122,7 @@ export function CreateArtistForm() {
       <button
         type="submit"
         disabled={pending || !email || !name || !slug}
-        className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/15 text-sm transition-colors disabled:opacity-40"
+        className="px-4 py-2 rounded-md bg-foreground/10 hover:bg-foreground/15 text-sm transition-colors disabled:opacity-40 active:scale-[0.98]"
       >
         {pending ? 'Создаём…' : 'Создать'}
       </button>

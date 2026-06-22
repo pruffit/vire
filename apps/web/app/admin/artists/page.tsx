@@ -3,6 +3,9 @@ import { VerifyButton } from '../users/verify-button';
 import { ActiveToggle } from './active-toggle';
 import { MembersManager } from './members-manager';
 import { RetranscodeArtistButton } from './retranscode-artist-button';
+import {
+  PageHeader, SearchForm, Table, Thead, Th, Tr, Td, ActionLink, EmptyState,
+} from '@/components/admin/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,83 +17,65 @@ export default async function AdminArtistsPage({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Артисты</h1>
-        <span className="text-sm text-white/30 tabular-nums">{artists.length}</span>
-      </div>
+      <PageHeader title="Артисты" count={artists.length} />
 
-      <form method="GET" className="flex gap-2">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Поиск по имени или слагу…"
-          className="rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30 flex-1 sm:flex-none sm:w-72"
-        />
-        <button
-          type="submit"
-          className="px-4 py-2 rounded-md bg-white/8 hover:bg-white/12 text-sm transition-colors"
-        >
-          Найти
-        </button>
-      </form>
+      <SearchForm defaultValue={q} placeholder="Поиск по имени или слагу…" />
 
-      <div className="rounded-xl border border-white/10 overflow-x-auto">
-        <table className="w-full min-w-[720px] text-sm">
-          <thead>
-            <tr className="border-b border-white/10 text-white/30 text-xs font-mono">
-              <th className="text-left px-4 py-3">Артист</th>
-              <th className="text-right px-4 py-3">Фолловеры</th>
-              <th className="text-right px-4 py-3">Релизы</th>
-              <th className="text-right px-4 py-3">Треки</th>
-              <th className="text-right px-4 py-3">Прослуш. 30д</th>
-              <th className="text-left px-4 py-3">Создан</th>
-              <th className="px-4 py-3" />
+      <Table minWidth="min-w-[720px]">
+        <Thead>
+          <Th>Артист</Th>
+          <Th align="right">Фолловеры</Th>
+          <Th align="right">Релизы</Th>
+          <Th align="right">Треки</Th>
+          <Th align="right">Прослуш. 30д</Th>
+          <Th>Создан</Th>
+          <Th />
+        </Thead>
+        <tbody>
+          {artists.map((a) => (
+            <Tr key={a.id}>
+              <Td>
+                <div className="flex items-center gap-2.5">
+                  <a
+                    href={`/artists/${a.slug}`}
+                    target="_blank"
+                    className="text-foreground/85 hover:text-foreground transition-colors"
+                  >
+                    {a.name}
+                  </a>
+                  <span className="font-mono text-xs text-foreground/30">@{a.slug}</span>
+                </div>
+              </Td>
+              <Td align="right" tone="soft" nums>{a.followerCount}</Td>
+              <Td align="right" tone="soft" nums>{a.releaseCount}</Td>
+              <Td align="right" tone="soft" nums>{a.trackCount}</Td>
+              <Td align="right" tone="soft" nums>{a.plays30d}</Td>
+              <Td mono tone="faint">
+                {new Date(a.createdAt).toLocaleDateString('ru-RU')}
+              </Td>
+              <Td>
+                <div className="flex items-center justify-end gap-2">
+                  <ActionLink href={`/admin/artists/${a.id}/edit`}>Изм.</ActionLink>
+                  <RetranscodeArtistButton artistProfileId={a.id} />
+                  <MembersManager artistProfileId={a.id} />
+                  <VerifyButton artistProfileId={a.id} verified={a.verified} />
+                  <ActiveToggle artistProfileId={a.id} isActive={a.isActive} />
+                </div>
+              </Td>
+            </Tr>
+          ))}
+          {artists.length === 0 && (
+            <tr>
+              <td colSpan={7}>
+                <EmptyState
+                  title={q ? 'Артистов не нашли' : 'Артистов пока нет'}
+                  hint={q ? 'Попробуй другое имя или слаг.' : undefined}
+                />
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {artists.map((a) => (
-              <tr key={a.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <a
-                      href={`/artists/${a.slug}`}
-                      target="_blank"
-                      className="text-white/80 hover:text-white transition-colors"
-                    >
-                      {a.name}
-                    </a>
-                    <span className="text-xs text-white/25 font-mono">@{a.slug}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-white/60">{a.followerCount}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-white/60">{a.releaseCount}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-white/60">{a.trackCount}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-white/60">{a.plays30d}</td>
-                <td className="px-4 py-3 text-white/25 text-xs font-mono">
-                  {new Date(a.createdAt).toLocaleDateString('ru-RU')}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-2">
-                    <a
-                      href={`/admin/artists/${a.id}/edit`}
-                      className="rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono hover:bg-white/10 transition-colors whitespace-nowrap"
-                    >
-                      Изм.
-                    </a>
-                    <RetranscodeArtistButton artistProfileId={a.id} />
-                    <MembersManager artistProfileId={a.id} />
-                    <VerifyButton artistProfileId={a.id} verified={a.verified} />
-                    <ActiveToggle artistProfileId={a.id} isActive={a.isActive} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {artists.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-white/30">Артисты не найдены</p>
-        )}
-      </div>
+          )}
+        </tbody>
+      </Table>
     </div>
   );
 }

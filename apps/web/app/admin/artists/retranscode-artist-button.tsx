@@ -31,11 +31,11 @@ export function RetranscodeArtistButton({ artistProfileId }: Props) {
         onClick={handleClick}
         disabled={pending}
         title="Пересобрать HLS всех треков артиста"
-        className="rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono hover:bg-white/10 focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-40 cursor-pointer whitespace-nowrap"
+        className="rounded-md border border-foreground/10 bg-foreground/5 px-2 py-1 font-mono text-xs transition-colors hover:bg-foreground/10 hover:border-foreground/20 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40 whitespace-nowrap active:scale-[0.98]"
       >
         {pending ? '…' : '⟳ HLS'}
       </button>
-      {msg && <span className="text-[10px] text-white/50" title={msg}>{msg}</span>}
+      {msg && <span className="text-[10px] text-foreground/50" title={msg}>{msg}</span>}
     </span>
   );
 }

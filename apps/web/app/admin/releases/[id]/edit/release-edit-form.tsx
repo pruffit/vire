@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { actionAdminUpdateRelease } from '../../../actions';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
+import { fieldClass } from '@/components/admin/ui';
 
 interface Initial {
   title: string;
@@ -14,8 +15,7 @@ interface Initial {
   linerNotes: string;
 }
 
-const inputCls =
-  'w-full rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30';
+const inputCls = `w-full ${fieldClass}`;
 
 export function ReleaseEditForm({ releaseId, initial }: { releaseId: string; initial: Initial }) {
   const router = useRouter();
@@ -95,7 +95,7 @@ export function ReleaseEditForm({ releaseId, initial }: { releaseId: string; ini
         >
           {pending ? 'Сохраняю…' : 'Сохранить'}
         </button>
-        {msg && <span className={`text-xs ${msg.ok ? 'text-green-400' : 'text-red-400'}`}>{msg.text}</span>}
+        {msg && <span className={`text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</span>}
       </div>
     </form>
   );
@@ -104,7 +104,7 @@ export function ReleaseEditForm({ releaseId, initial }: { releaseId: string; ini
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-mono uppercase tracking-wider text-white/40">{label}</span>
+      <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">{label}</span>
       {children}
     </label>
   );

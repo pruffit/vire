@@ -76,35 +76,35 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
       <button
         type="button"
         onClick={toggle}
-        className="px-2.5 py-1 rounded-md bg-white/8 hover:bg-white/12 text-xs transition-colors"
+        className="px-2.5 py-1 rounded-md bg-foreground/[0.08] hover:bg-foreground/[0.12] text-xs transition-colors active:scale-[0.98]"
       >
         Участники
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 w-72 rounded-lg border border-white/10 bg-[#16151a] shadow-xl p-3 flex flex-col gap-2.5 text-left">
-          <p className="text-xs text-white/40">Аккаунты с доступом к дашборду артиста.</p>
+        <div className="absolute right-0 top-full mt-1 z-20 w-72 rounded-lg border border-foreground/10 bg-popover shadow-xl p-3 flex flex-col gap-2.5 text-left">
+          <p className="text-xs text-foreground/45">Аккаунты с доступом к дашборду артиста.</p>
 
           {members === null ? (
-            <p className="text-xs text-white/30 py-2">Загрузка…</p>
+            <p className="text-xs text-foreground/30 py-2">Загрузка…</p>
           ) : members.length === 0 ? (
-            <p className="text-xs text-white/30 py-2">Нет участников.</p>
+            <p className="text-xs text-foreground/30 py-2">Нет участников.</p>
           ) : (
             <ul className="flex flex-col gap-1">
               {members.map((m) => (
                 <li key={m.userId} className="flex items-center gap-2 text-xs">
                   <span className="flex-1 min-w-0 truncate" title={m.email ?? undefined}>
                     {m.email ?? m.userId}
-                    {m.name && <span className="text-white/30"> · {m.name}</span>}
+                    {m.name && <span className="text-foreground/30"> · {m.name}</span>}
                   </span>
                   {m.role === 'OWNER' ? (
-                    <span className="shrink-0 text-[10px] font-mono uppercase text-white/30">owner</span>
+                    <span className="shrink-0 text-[10px] font-mono uppercase text-foreground/30">owner</span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => remove(m.userId)}
                       disabled={pending}
-                      className="shrink-0 text-white/30 hover:text-red-400 transition-colors disabled:opacity-40"
+                      className="shrink-0 text-foreground/30 hover:text-red-400 transition-colors disabled:opacity-40"
                       aria-label="Снять участника"
                     >
                       ×
@@ -115,19 +115,19 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
             </ul>
           )}
 
-          <form onSubmit={add} className="flex gap-1.5 pt-1 border-t border-white/10">
+          <form onSubmit={add} className="flex gap-1.5 pt-1 border-t border-foreground/10">
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email участника"
               disabled={pending}
-              className="flex-1 min-w-0 rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50"
+              className="flex-1 min-w-0 rounded-md bg-foreground/5 border border-foreground/10 px-2 py-1.5 text-xs transition-colors placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={pending || !email.trim()}
-              className="shrink-0 px-2.5 py-1.5 rounded-md bg-white/10 hover:bg-white/15 text-xs transition-colors disabled:opacity-40"
+              className="shrink-0 px-2.5 py-1.5 rounded-md bg-foreground/10 hover:bg-foreground/15 text-xs transition-colors disabled:opacity-40 active:scale-[0.98]"
             >
               +
             </button>

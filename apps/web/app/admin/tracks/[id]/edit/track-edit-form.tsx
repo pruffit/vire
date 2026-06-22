@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { actionAdminUpdateTrack } from '../../../actions';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 import { ALL_MOODS, MOOD_LABELS } from '@/lib/moods';
+import { fieldClass } from '@/components/admin/ui';
 
 interface Initial {
   title: string;
@@ -19,8 +20,7 @@ interface Initial {
   lyrics: string; // LRC-текст (`[mm:ss.xx]строка`) или простой текст
 }
 
-const inputCls =
-  'w-full rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30';
+const inputCls = `w-full ${fieldClass}`;
 
 export function TrackEditForm({ trackId, initial }: { trackId: string; initial: Initial }) {
   const router = useRouter();
@@ -117,8 +117,8 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
                 key={m}
                 type="button"
                 onClick={() => toggleMood(m)}
-                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-                  on ? 'border-primary bg-primary/15 text-foreground' : 'border-white/10 text-white/50 hover:text-white hover:border-white/30'
+                className={`rounded-full border px-3 py-1 text-xs transition-colors active:scale-[0.97] ${
+                  on ? 'border-primary bg-primary/15 text-foreground' : 'border-foreground/10 text-foreground/50 hover:text-foreground hover:border-foreground/30'
                 }`}
               >
                 {MOOD_LABELS[m]}
@@ -158,7 +158,7 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
         >
           {pending ? 'Сохраняю…' : 'Сохранить'}
         </button>
-        {msg && <span className={`text-xs ${msg.ok ? 'text-green-400' : 'text-red-400'}`}>{msg.text}</span>}
+        {msg && <span className={`text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</span>}
       </div>
     </form>
   );
@@ -167,7 +167,7 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-mono uppercase tracking-wider text-white/40">{label}</span>
+      <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">{label}</span>
       {children}
     </label>
   );
@@ -175,7 +175,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+    <label className="flex items-center gap-2 text-sm text-foreground/70 cursor-pointer">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="accent-primary" />
       {label}
     </label>

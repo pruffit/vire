@@ -28,10 +28,11 @@ export function AdminNav() {
           <Link
             key={item.href}
             href={item.href}
+            aria-current={active ? 'page' : undefined}
             className={`shrink-0 whitespace-nowrap px-3 py-2 rounded-md text-sm transition-colors ${
               active
-                ? 'bg-white/10 text-white'
-                : 'text-white/50 hover:text-white hover:bg-white/5'
+                ? 'bg-foreground/10 text-foreground font-medium'
+                : 'text-foreground/50 hover:text-foreground hover:bg-foreground/5'
             }`}
           >
             {item.label}

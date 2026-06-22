@@ -13,7 +13,7 @@ export function QueueFailedActions({ queueName }: { queueName: string }) {
         disabled={pending}
         onClick={() => startTransition(() => actionRetryQueueFailed(queueName))}
         title="Вернуть упавшие задачи в очередь (нужен запущенный worker)"
-        className="text-xs font-mono px-2 py-0.5 rounded border border-white/15 text-white/50 hover:border-white/30 hover:text-white/80 transition-colors disabled:opacity-40"
+        className="text-xs font-mono px-2 py-0.5 rounded border border-foreground/15 text-foreground/50 hover:border-foreground/30 hover:text-foreground/80 transition-colors disabled:opacity-40"
       >
         {pending ? '…' : 'повторить все'}
       </button>

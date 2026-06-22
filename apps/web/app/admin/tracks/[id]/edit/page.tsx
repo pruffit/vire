@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { db, DrizzleTrackRepository, getTrackAudioMeta, getTrackMoods, getTrackGenres } from '@vire/db';
 import { serializeLrc } from '@/lib/lrc';
 import { TrackEditForm } from './track-edit-form';
+import { DetailHeader } from '@/components/admin/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,11 +20,7 @@ export default async function AdminTrackEditPage({ params }: { params: Promise<{
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      <div>
-        <a href="/admin/tracks" className="text-sm text-white/40 hover:text-white transition-colors">← Треки</a>
-        <h1 className="text-2xl font-semibold mt-2">Редактировать трек</h1>
-        <p className="text-xs text-white/30 font-mono mt-1">{track.id}</p>
-      </div>
+      <DetailHeader backHref="/admin/tracks" backLabel="Треки" title="Редактировать трек" subtitle={track.id} />
       <TrackEditForm
         trackId={track.id}
         initial={{

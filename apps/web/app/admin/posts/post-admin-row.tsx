@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { actionAdminUpdatePost, actionAdminDeletePost } from '../actions';
+import { fieldClass } from '@/components/admin/ui';
 
 interface Post {
   id: string;
@@ -13,8 +14,7 @@ interface Post {
   createdAt: string | Date;
 }
 
-const inputCls =
-  'w-full rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30';
+const inputCls = `w-full ${fieldClass}`;
 
 export function PostAdminRow({ post }: { post: Post }) {
   const router = useRouter();
@@ -42,21 +42,21 @@ export function PostAdminRow({ post }: { post: Post }) {
   }
 
   return (
-    <div className="rounded-xl border border-white/10 p-4">
+    <div className="rounded-xl border border-foreground/10 bg-foreground/[0.02] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <a href={`/artists/${post.artistSlug}`} target="_blank" className="text-xs font-mono text-white/40 hover:text-white">
+          <a href={`/artists/${post.artistSlug}`} target="_blank" className="text-xs font-mono text-foreground/40 hover:text-foreground transition-colors">
             @{post.artistSlug}
           </a>
           {post.title && <div className="font-medium mt-0.5">{post.title}</div>}
-          {!open && <p className="text-sm text-white/60 mt-1 line-clamp-2 whitespace-pre-wrap">{post.body}</p>}
+          {!open && <p className="text-sm text-foreground/60 mt-1 line-clamp-2 whitespace-pre-wrap">{post.body}</p>}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[11px] text-white/25 font-mono">{new Date(post.createdAt).toLocaleDateString('ru-RU')}</span>
-          <button onClick={() => setOpen((s) => !s)} className="rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono hover:bg-white/10">
+          <span className="text-[11px] text-foreground/30 font-mono">{new Date(post.createdAt).toLocaleDateString('ru-RU')}</span>
+          <button onClick={() => setOpen((s) => !s)} className="rounded-md border border-foreground/10 bg-foreground/5 px-2 py-1 text-xs font-mono transition-colors hover:bg-foreground/10 hover:border-foreground/20 active:scale-[0.98]">
             {open ? 'Свернуть' : 'Изм.'}
           </button>
-          <button onClick={del} disabled={pending} className="rounded-md bg-red-500/10 border border-red-500/20 text-red-400 px-2 py-1 text-xs font-mono hover:bg-red-500/20 disabled:opacity-40">
+          <button onClick={del} disabled={pending} className="rounded-md bg-red-500/10 border border-red-500/20 text-red-300 px-2 py-1 text-xs font-mono transition-colors hover:bg-red-500/20 disabled:opacity-40 active:scale-[0.98]">
             Удалить
           </button>
         </div>

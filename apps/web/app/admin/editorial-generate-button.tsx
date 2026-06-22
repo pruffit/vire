@@ -26,7 +26,7 @@ export function EditorialGenerateButton() {
       whileTap={{ scale: 0.97 }}
       transition={spring.snappy}
       disabled={state === 'loading'}
-      className="text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-wait"
+      className="text-xs px-3 py-1.5 rounded-lg border border-foreground/10 hover:border-foreground/20 hover:bg-foreground/5 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-wait"
     >
       {state === 'loading' && 'Генерирую…'}
       {state === 'done' && '✓ Готово'}

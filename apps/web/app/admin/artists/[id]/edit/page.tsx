@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getArtistCore } from '@vire/db';
 import { ArtistEditForm } from './artist-edit-form';
+import { DetailHeader } from '@/components/admin/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,11 +12,7 @@ export default async function AdminArtistEditPage({ params }: { params: Promise<
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      <div>
-        <a href="/admin/artists" className="text-sm text-white/40 hover:text-white transition-colors">← Артисты</a>
-        <h1 className="text-2xl font-semibold mt-2">Редактировать артиста</h1>
-        <p className="text-xs text-white/30 font-mono mt-1">{artist.id}</p>
-      </div>
+      <DetailHeader backHref="/admin/artists" backLabel="Артисты" title="Редактировать артиста" subtitle={artist.id} />
       <ArtistEditForm
         artistProfileId={artist.id}
         initial={{

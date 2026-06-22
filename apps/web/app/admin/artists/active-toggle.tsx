@@ -24,8 +24,8 @@ export function ActiveToggle({
       title={isActive ? 'Скрыть с витрины' : 'Вернуть на витрину'}
       className={`text-xs font-mono px-2 py-0.5 rounded border transition-colors disabled:opacity-40 ${
         isActive
-          ? 'border-green-500/30 text-green-400 hover:bg-green-500/10'
-          : 'border-red-500/30 text-red-400 hover:bg-red-500/10'
+          ? 'border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10'
+          : 'border-red-500/30 text-red-300 hover:bg-red-500/10'
       }`}
     >
       {isActive ? 'активен' : 'скрыт'}

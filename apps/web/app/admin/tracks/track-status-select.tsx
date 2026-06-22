@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react';
 import { actionSetTrackStatus } from '../actions';
+import { selectClass } from '@/components/admin/ui';
 
 type TrackStatus = 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED';
 
@@ -25,7 +26,7 @@ export function TrackStatusSelect({ trackId, currentStatus }: Props) {
       defaultValue={currentStatus}
       onChange={handleChange}
       disabled={pending}
-      className="rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-40 cursor-pointer"
+      className={selectClass}
     >
       {STATUSES.map((s) => (
         <option key={s} value={s}>{s}</option>

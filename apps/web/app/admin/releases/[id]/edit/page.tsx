@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { db, DrizzleReleaseRepository } from '@vire/db';
 import { ReleaseEditForm } from './release-edit-form';
+import { DetailHeader } from '@/components/admin/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,11 +12,7 @@ export default async function AdminReleaseEditPage({ params }: { params: Promise
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      <div>
-        <a href="/admin/releases" className="text-sm text-white/40 hover:text-white transition-colors">← Релизы</a>
-        <h1 className="text-2xl font-semibold mt-2">Редактировать релиз</h1>
-        <p className="text-xs text-white/30 font-mono mt-1">{release.id}</p>
-      </div>
+      <DetailHeader backHref="/admin/releases" backLabel="Релизы" title="Редактировать релиз" subtitle={release.id} />
       <ReleaseEditForm
         releaseId={release.id}
         initial={{
