@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import type { ArtistListItem } from '@vire/db';
 import { resolveAvatarUrl } from '@/lib/avatar';
+import { Icon } from '@/components/icon';
 
 function pluralReleases(n: number): string {
   const m10 = n % 10, m100 = n % 100;
@@ -72,7 +73,7 @@ export function ArtistHoverChip({ artist }: { artist: ArtistListItem }) {
             <span className="min-w-0">
               <span className="flex items-center gap-1 text-sm font-medium truncate">
                 {artist.name}
-                {artist.verified && <span className="text-[10px] text-muted-foreground">✓</span>}
+                {artist.verified && <Icon name="check" size={12} className="text-muted-foreground shrink-0" />}
               </span>
               <span className="block text-xs text-muted-foreground">
                 {artist.releaseCount > 0 ? `${artist.releaseCount} ${pluralReleases(artist.releaseCount)}` : 'Открыть →'}

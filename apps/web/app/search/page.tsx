@@ -5,6 +5,7 @@ import { Stagger, StaggerItem } from '@vire/ui/motion';
 import { searchAll } from '@vire/db';
 import type { SearchArtist } from '@vire/db';
 import { GlobalSearch } from '@/components/global-search';
+import { Icon } from '@/components/icon';
 import { SearchTracksSection } from '@/components/search-tracks-section';
 import { SearchReleasesSection } from '@/components/search-releases-section';
 
@@ -106,7 +107,7 @@ function ArtistCard({ artist }: { artist: SearchArtist }) {
       <div className="min-w-0">
         <p className="text-sm font-medium truncate group-hover:text-foreground transition-colors">
           {artist.name}
-          {artist.verified && <span className="ml-1 text-[10px] text-muted-foreground">✓</span>}
+          {artist.verified && <Icon name="check" size={12} className="ml-1 inline-block align-middle text-muted-foreground" />}
         </p>
       </div>
     </Link>

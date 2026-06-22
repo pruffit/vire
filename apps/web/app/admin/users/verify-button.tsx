@@ -2,6 +2,8 @@
 
 import { useTransition } from 'react';
 import { actionVerifyArtist } from '../actions';
+import { Icon } from '@/components/icon';
+import { cn } from '@/lib/utils';
 
 export function VerifyButton({
   artistProfileId,
@@ -21,13 +23,15 @@ export function VerifyButton({
       onClick={handle}
       disabled={pending}
       title={verified ? 'Верифицирован — снять' : 'Верифицировать артиста'}
-      className={`text-xs font-mono px-2 py-0.5 rounded border transition-colors disabled:opacity-40 whitespace-nowrap ${
+      className={cn(
+        'inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] leading-none whitespace-nowrap transition-colors disabled:opacity-40',
         verified
-          ? 'border-sky-500/30 text-sky-300 hover:bg-sky-500/10'
-          : 'border-foreground/15 text-foreground/40 hover:border-foreground/30 hover:text-foreground/70'
-      }`}
+          ? 'bg-sky-500/15 text-sky-300 hover:bg-sky-500/25'
+          : 'border border-foreground/15 text-foreground/45 hover:border-foreground/30 hover:text-foreground/80',
+      )}
     >
-      {verified ? '✓ верифиц.' : 'верифиц.'}
+      {verified && <Icon name="check" size={12} />}
+      верифиц.
     </button>
   );
 }

@@ -4,6 +4,7 @@ import { getActiveArtistForPage } from '@/lib/active-artist';
 import { getSmartLinkById, getReleaseOptions } from '@vire/db';
 import { SmartLinkForm, type SmartLinkInitial } from '../smart-link-form';
 import { DashboardPageHeader } from '@/components/ui-kit';
+import { Icon } from '@/components/icon';
 
 export const metadata = { title: 'Смартлинк' };
 export const dynamic = 'force-dynamic';
@@ -48,9 +49,9 @@ export default async function EditSmartLinkPage({ params }: Props) {
                 href={`/smartlink/${artist.slug}/${smartLink.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-foreground/70 transition-colors font-mono"
+                className="inline-flex items-center gap-1 hover:text-foreground/70 transition-colors font-mono"
               >
-                /smartlink/{artist.slug}/{smartLink.slug} ↗
+                /smartlink/{artist.slug}/{smartLink.slug} <Icon name="external-link" size={12} />
               </a>
             ) : undefined
           }

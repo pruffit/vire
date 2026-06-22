@@ -107,12 +107,12 @@ export function Check({
           checked={checked}
           disabled={disabled}
           onChange={(e) => onChange(e.target.checked)}
-          className="peer size-4 appearance-none rounded border border-foreground/30 bg-foreground/5 transition-colors checked:bg-primary checked:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer disabled:opacity-50"
+          className="peer size-4 appearance-none rounded border border-foreground/30 bg-foreground/5 transition-colors checked:bg-foreground checked:border-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer disabled:opacity-50"
         />
         <svg
           viewBox="0 0 12 12"
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 m-auto size-3 text-primary-foreground opacity-0 peer-checked:opacity-100"
+          className="pointer-events-none absolute inset-0 m-auto size-3 text-background opacity-0 peer-checked:opacity-100"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
@@ -157,13 +157,13 @@ export function Switch({
       onClick={() => onChange(!checked)}
       className={cn(
         'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
-        checked ? 'bg-primary' : 'bg-foreground/15',
+        checked ? 'bg-foreground/80' : 'bg-foreground/15',
       )}
     >
       <span
         className={cn(
-          'inline-block h-4 w-4 rounded-full bg-white shadow transition-transform',
-          checked ? 'translate-x-[18px]' : 'translate-x-0.5',
+          'inline-block h-3.5 w-3.5 rounded-full shadow-sm transition-transform',
+          checked ? 'translate-x-[18px] bg-background' : 'translate-x-0.5 bg-foreground/60',
         )}
       />
     </button>

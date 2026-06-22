@@ -7,6 +7,7 @@ import { btnPrimary, Switch } from '@/components/ui-kit';
 import { Select } from '@/components/select';
 import { ColorField } from '@/components/color-field';
 import { LinksEditor } from '@/components/links-editor';
+import { VideosEditor } from '@/components/videos-editor';
 import { VerifiedBadge } from '@/components/verified-badge';
 
 // Font name → CSS variable (the fonts are loaded globally in app/layout via lib/fonts).
@@ -147,65 +148,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       />
 
       {/* Videos */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm font-medium">Видео</span>
-          <span className="text-xs text-foreground/30">YouTube или VK · до 20</span>
-        </div>
-        <p className="text-xs text-foreground/40 -mt-1">
-          Клипы и влоги. Вставь ссылку на ролик YouTube или VK — он встроится плеером
-          на твоей странице артиста.
-        </p>
-
-        {videos.map((video, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Название"
-              value={video.title}
-              disabled={busy}
-              onChange={(e) =>
-                setVideos((prev) =>
-                  prev.map((v, j) => j === i ? { ...v, title: e.target.value } : v),
-                )
-              }
-              className={`${inp} w-36 shrink-0`}
-            />
-            <input
-              type="url"
-              placeholder="https://youtube.com/watch?v=…"
-              value={video.url}
-              disabled={busy}
-              onChange={(e) =>
-                setVideos((prev) =>
-                  prev.map((v, j) => j === i ? { ...v, url: e.target.value } : v),
-                )
-              }
-              className={`${inp} flex-1 min-w-0`}
-            />
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setVideos((prev) => prev.filter((_, j) => j !== i))}
-              className="shrink-0 text-foreground/30 hover:text-red-400 transition-colors text-lg leading-none"
-              aria-label="Удалить видео"
-            >
-              ×
-            </button>
-          </div>
-        ))}
-
-        {videos.length < 20 && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setVideos((prev) => [...prev, { title: '', url: '' }])}
-            className="self-start text-sm text-foreground/40 hover:text-foreground/70 transition-colors"
-          >
-            + добавить видео
-          </button>
-        )}
-      </div>
+      <VideosEditor videos={videos} onChange={setVideos} max={20} disabled={busy} />
 
       {/* Avatar */}
       <Field label="Аватар" hint="Около-квадрат, от 400×400 · JPEG/PNG/WebP · необязательно">

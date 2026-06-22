@@ -10,6 +10,7 @@ import { StatsSection } from './stats-section';
 import { LiveNow } from './live-now';
 import { ArtistSwitcher } from './artist-switcher';
 import { ReleaseStatusBadge, TrackStatusBadge, btnGhost, btnPrimary } from '@/components/ui-kit';
+import { Icon } from '@/components/icon';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,10 +69,10 @@ function ReleaseCard({ data, artistSlug }: { data: DashboardRelease; artistSlug:
                 href={`/artists/${artistSlug}/releases/${data.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[11px] text-foreground/30 hover:text-foreground/60 transition-colors"
+                className="inline-flex text-foreground/30 hover:text-foreground/60 transition-colors"
                 title="Открыть публичную страницу"
               >
-                ↗
+                <Icon name="external-link" size={14} />
               </a>
             )}
           </div>
@@ -175,7 +176,7 @@ export default async function DashboardPage() {
                 rel="noopener noreferrer"
                 className={btnGhost}
               >
-                Страница артиста ↗
+                Страница артиста <Icon name="external-link" size={14} className="ml-1.5" />
               </a>
               <Link href="/dashboard/posts" className={btnGhost}>
                 Анонсы

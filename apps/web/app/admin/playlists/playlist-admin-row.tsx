@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { actionAdminUpdatePlaylist, actionAdminDeletePlaylist } from '../actions';
 import { fieldClass } from '@/components/admin/ui';
 import { Select } from '@/components/select';
+import { Icon } from '@/components/icon';
 
 const VISIBILITY_OPTIONS = [
   { value: 'PRIVATE', label: 'приватный' },
@@ -61,10 +62,10 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
         aria-label="Видимость"
         className="w-36"
       />
-      <span className="text-xs font-mono text-foreground/40 flex gap-2">
+      <span className="text-xs font-mono text-foreground/40 flex items-center gap-2.5">
         <span title="вид">{playlist.kind}{playlist.isCurated ? '·кур' : ''}</span>
-        <span title="треков">{playlist.trackCount}♪</span>
-        <span title="лайков">{playlist.likesCount}♥</span>
+        <span title="треков" className="inline-flex items-center gap-1"><Icon name="music" size={12} />{playlist.trackCount}</span>
+        <span title="лайков" className="inline-flex items-center gap-1"><Icon name="heart" size={12} />{playlist.likesCount}</span>
       </span>
       <span className="text-[11px] text-foreground/30 font-mono truncate max-w-40" title={playlist.ownerEmail ?? 'система'}>
         {playlist.ownerEmail ?? 'система'}

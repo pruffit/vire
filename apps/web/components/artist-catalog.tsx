@@ -8,6 +8,7 @@ import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import type { ArtistListItem } from '@vire/db';
 import { ALL_GENRES, GENRE_LABELS, type Genre } from '@/lib/genres';
 import { resolveAvatarUrl } from '@/lib/avatar';
+import { Icon } from '@/components/icon';
 
 type Sort = 'default' | 'name' | 'releases';
 
@@ -157,7 +158,7 @@ function ArtistCard({ artist }: { artist: ArtistListItem }) {
           <p className="text-sm font-medium leading-snug truncate transition-colors">
             {artist.name}
             {artist.verified && (
-              <span className="ml-1.5 text-[10px] align-middle text-muted-foreground">✓</span>
+              <Icon name="check" size={12} className="ml-1 inline-block align-middle text-muted-foreground" />
             )}
           </p>
           {artist.releaseCount > 0 && (

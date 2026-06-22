@@ -4,6 +4,7 @@ import type { ArtistLink } from '@vire/core';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { PlatformIcon } from '@/components/platform-icon';
 import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
+import { Icon } from '@/components/icon';
 import { fieldClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
 
@@ -21,7 +22,7 @@ export function LinksEditor({
   onChange,
   max,
   disabled,
-  addLabel = '+ добавить ссылку',
+  addLabel = 'добавить ссылку',
 }: {
   title: string;
   hint: string;
@@ -60,9 +61,9 @@ export function LinksEditor({
           type="button"
           disabled={disabled}
           onClick={add}
-          className="self-start text-sm text-foreground/50 hover:text-foreground/80 transition-colors mt-1 disabled:opacity-50"
+          className="self-start inline-flex items-center gap-1 text-sm text-foreground/50 hover:text-foreground/80 transition-colors mt-1 disabled:opacity-50"
         >
-          {addLabel}
+          <Icon name="plus" size={14} /> {addLabel}
         </button>
       )}
     </div>
@@ -121,10 +122,10 @@ function LinkRow({
         type="button"
         onClick={onRemove}
         disabled={disabled}
-        className="shrink-0 text-foreground/30 hover:text-red-400 transition-colors text-lg leading-none disabled:opacity-50"
+        className="shrink-0 mt-2 text-foreground/30 hover:text-red-400 transition-colors disabled:opacity-50"
         aria-label="Удалить ссылку"
       >
-        ×
+        <Icon name="x" size={16} />
       </button>
     </div>
   );

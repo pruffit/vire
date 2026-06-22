@@ -4,6 +4,7 @@ import { db, DrizzleArtistRepository } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
+import { resolveVideoTitle } from '@/lib/video-meta';
 import type { ThemeTokens, ArtistLink, ArtistVideo } from '@vire/core';
 
 const FONT_SANS = ['Inter', 'Montserrat', 'Unbounded', 'Manrope', 'Geologica'];
@@ -39,13 +40,16 @@ export async function POST(req: Request) {
     try {
       const parsed: unknown = JSON.parse(linksRaw);
       if (Array.isArray(parsed)) {
+        // label необязателен (распознанные площадки берут название из URL).
         links = parsed
-          .filter((l): l is ArtistLink =>
-            l !== null &&
-            typeof l === 'object' &&
-            typeof (l as ArtistLink).label === 'string' &&
-            typeof (l as ArtistLink).url === 'string',
+          .filter((l): l is { url: string; label?: unknown } =>
+            l !== null && typeof l === 'object' && typeof (l as { url?: unknown }).url === 'string',
           )
+          .map((l) => {
+            const label = typeof l.label === 'string' ? l.label.trim() : '';
+            return label ? { url: l.url, label } : { url: l.url };
+          })
+          .filter((l) => l.url.trim())
           .slice(0, 10);
       }
     } catch { /* keep existing links */ }
@@ -57,14 +61,17 @@ export async function POST(req: Request) {
     try {
       const parsed: unknown = JSON.parse(videosRaw);
       if (Array.isArray(parsed)) {
-        videos = parsed
-          .filter((v): v is ArtistVideo =>
-            v !== null &&
-            typeof v === 'object' &&
-            typeof (v as ArtistVideo).url === 'string' &&
-            typeof (v as ArtistVideo).title === 'string',
+        const raw = parsed
+          .filter((v): v is { url: string; title?: unknown } =>
+            v !== null && typeof v === 'object' && typeof (v as { url?: unknown }).url === 'string',
           )
+          .map((v) => ({ url: v.url.trim(), title: typeof v.title === 'string' ? v.title.trim() : '' }))
+          .filter((v) => v.url)
           .slice(0, 20);
+        // Тайтл подтягиваем сами от YouTube/VK, если он пуст (артист его не вводит).
+        videos = await Promise.all(
+          raw.map(async (v) => (v.title ? v : { url: v.url, title: await resolveVideoTitle(v.url) })),
+        );
       }
     } catch { /* keep existing */ }
   }
