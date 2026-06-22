@@ -1,5 +1,5 @@
 // АВТО-СГЕНЕРИРОВАНО: node scripts/build-icons.mjs — не править руками.
-// Источник: папка icons/{system,social,streaming}/*.svg
+// Источник: папка icons/{system,social,streaming,brand-glyph}/*.svg
 
 export const SYSTEM_ICON_NAMES = [
   'align-center',
@@ -135,6 +135,13 @@ export const SOCIAL_ICON_NAMES = [
   'vk',
   'x',
   'youtube',
+] as const;
+
+// Компактные квадратные глифы брендов (для мелких строк редактора). Источник:
+// icons/brand-glyph/*.svg. Вордмарки (icons/{social,streaming}) — отдельно, их
+// используют лендинги смартлинков.
+export const BRAND_GLYPH_NAMES = [
+
 ] as const;
 
 export const STREAMING_ICON_NAMES = [

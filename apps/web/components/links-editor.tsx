@@ -3,7 +3,8 @@
 import type { ArtistLink } from '@vire/core';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { PlatformIcon } from '@/components/platform-icon';
-import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
+import { PLATFORM_BRAND } from '@/components/brand-icon';
+import { BrandGlyph, hasBrandGlyph } from '@/components/brand-glyph';
 import { Icon } from '@/components/icon';
 import { fieldClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
@@ -85,12 +86,13 @@ function LinkRow({
 }) {
   const { key } = detectPlatform(link.url);
   const brand = link.url ? PLATFORM_BRAND[key] : null;
+  const glyph = !!link.url && hasBrandGlyph(key);
 
   return (
     <div className="flex items-center gap-2">
-      {brand ? (
-        <span className="shrink-0 inline-flex h-9 min-w-9 items-center justify-center rounded-md bg-white px-2">
-          <BrandIcon name={brand} size={isBrandWordmark(brand) ? 14 : 18} />
+      {glyph ? (
+        <span className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md bg-white">
+          <BrandGlyph platform={key} size={20} />
         </span>
       ) : (
         <span className="shrink-0 w-9 h-9 grid place-items-center rounded-md bg-foreground/5 border border-foreground/10 text-foreground/70">

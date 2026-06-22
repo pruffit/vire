@@ -91,8 +91,8 @@ function cleanBrand(svg) {
   return `<svg ${kept.join(' ')}>${s.slice(end)}`.replace(/\s+$/, '') + '\n';
 }
 
-function buildBrands(group, names, ratios) {
-  const outDir = path.join(PUBLIC_ICONS, 'brands');
+function buildBrands(group, names, ratios, outSub = 'brands') {
+  const outDir = path.join(PUBLIC_ICONS, outSub);
   fs.mkdirSync(outDir, { recursive: true });
   for (const name of names) {
     const svg = fs.readFileSync(path.join(SRC, group, `${name}.svg`), 'utf8');
@@ -106,11 +106,11 @@ function buildBrands(group, names, ratios) {
 }
 
 // --- манифест имён --------------------------------------------------------------
-function writeManifest(system, social, streaming, ratios) {
+function writeManifest(system, social, streaming, glyph, ratios) {
   const arr = (names) => names.map((n) => `  '${n}',`).join('\n');
   const ratioLines = [...social, ...streaming].map((n) => `  '${n}': ${ratios[n]},`).join('\n');
   const out = `// АВТО-СГЕНЕРИРОВАНО: node scripts/build-icons.mjs — не править руками.
-// Источник: папка icons/{system,social,streaming}/*.svg
+// Источник: папка icons/{system,social,streaming,brand-glyph}/*.svg
 
 export const SYSTEM_ICON_NAMES = [
 ${arr(system)}
@@ -118,6 +118,13 @@ ${arr(system)}
 
 export const SOCIAL_ICON_NAMES = [
 ${arr(social)}
+] as const;
+
+// Компактные квадратные глифы брендов (для мелких строк редактора). Источник:
+// icons/brand-glyph/*.svg. Вордмарки (icons/{social,streaming}) — отдельно, их
+// используют лендинги смартлинков.
+export const BRAND_GLYPH_NAMES = [
+${arr(glyph)}
 ] as const;
 
 export const STREAMING_ICON_NAMES = [
@@ -135,14 +142,17 @@ ${ratioLines}
 const system = svgNames(path.join(SRC, 'system'));
 const social = svgNames(path.join(SRC, 'social'));
 const streaming = svgNames(path.join(SRC, 'streaming'));
+const glyph = svgNames(path.join(SRC, 'brand-glyph'));
 
 fs.mkdirSync(PUBLIC_ICONS, { recursive: true });
 const symCount = buildSystemSprite(system);
 const ratios = {};
 buildBrands('social', social, ratios);
 buildBrands('streaming', streaming, ratios);
-writeManifest(system, social, streaming, ratios);
+buildBrands('brand-glyph', glyph, {}, 'brands-glyph');
+writeManifest(system, social, streaming, glyph, ratios);
 
 console.log(`✓ system-sprite.svg: ${symCount} symbols`);
 console.log(`✓ brands: ${social.length} social + ${streaming.length} streaming → public/icons/brands/`);
+console.log(`✓ brand-glyph: ${glyph.length} → public/icons/brands-glyph/`);
 console.log(`✓ icon-manifest.generated.ts`);
