@@ -268,7 +268,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   `components/admin/ui.tsx` (токены вместо `white/X`, бейджи статусов, состояния,
   таблицы, пустые состояния), раскатан по всем страницам; редактор трека
   (кастомные чекбоксы + подписи, жанры пилюлями), CPU current+avg, live-статус
-  треков. Детали и хвосты — `docs/roadmap/stage-2.md` §2.7 / §9.
+  треков. Детали и хвосты — `docs/roadmap/stage-2.md` §9.6.
 
 ### SEO и доступность
 - [x] `metadataBase` + title-template `%s — Vire`, OG/Twitter дефолты (`app/layout.tsx`, `lib/site.ts`)
