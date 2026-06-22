@@ -186,9 +186,9 @@ export function DetailHeader({
 // ─── Dashboard page header (сабстраницы дашборда артиста) ────────────────────
 
 /**
- * Единый хедер сабстраниц дашборда: «← назад» над заголовком слева, крупный
- * заголовок (`text-2xl`), опц. подзаголовок и опц. действие справа от заголовка.
- * Закрывает разнобой: раньше кнопка «назад» была то над заголовком, то справа.
+ * Единый хедер сабстраниц дашборда: заголовок (+подзаголовок) слева, кнопка
+ * «← назад» справа в одну строку — как на главной дашборда и в «Релизах». Опц.
+ * `action` встаёт слева от кнопки «назад».
  */
 export function DashboardPageHeader({
   backHref,
@@ -204,16 +204,16 @@ export function DashboardPageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <Link href={backHref} className={cn(btnGhost, 'self-start mb-2')}>
-        ← {backLabel}
-      </Link>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-foreground/40">{subtitle}</p>}
-        </div>
-        {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="text-2xl font-semibold">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm text-foreground/40">{subtitle}</p>}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {action}
+        <Link href={backHref} className={btnGhost}>
+          ← {backLabel}
+        </Link>
       </div>
     </div>
   );

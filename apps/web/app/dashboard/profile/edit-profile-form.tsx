@@ -6,6 +6,7 @@ import type { ArtistLink, ArtistVideo, ThemeTokens } from '@vire/core';
 import { btnPrimary } from '@/components/ui-kit';
 import { Select } from '@/components/select';
 import { ColorField } from '@/components/color-field';
+import { LinksEditor } from '@/components/links-editor';
 
 // Font name → CSS variable (the fonts are loaded globally in app/layout via lib/fonts).
 const SANS_VAR: Record<string, string> = {
@@ -135,65 +136,14 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       </Field>
 
       {/* Links */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm font-medium">Ссылки</span>
-          <span className="text-xs text-foreground/30">до 10 ссылок</span>
-        </div>
-        <p className="text-xs text-foreground/40 -mt-1">
-          Соцсети и площадки. Название — это подпись кнопки, ссылка — куда она ведёт.
-          Появятся блоком на твоей странице артиста.
-        </p>
-
-        {links.map((link, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Название"
-              value={link.label}
-              disabled={busy}
-              onChange={(e) =>
-                setLinks((prev) =>
-                  prev.map((l, j) => j === i ? { ...l, label: e.target.value } : l),
-                )
-              }
-              className={`${inp} w-32 shrink-0`}
-            />
-            <input
-              type="url"
-              placeholder="https://…"
-              value={link.url}
-              disabled={busy}
-              onChange={(e) =>
-                setLinks((prev) =>
-                  prev.map((l, j) => j === i ? { ...l, url: e.target.value } : l),
-                )
-              }
-              className={`${inp} flex-1 min-w-0`}
-            />
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setLinks((prev) => prev.filter((_, j) => j !== i))}
-              className="shrink-0 text-foreground/30 hover:text-red-400 transition-colors text-lg leading-none"
-              aria-label="Удалить ссылку"
-            >
-              ×
-            </button>
-          </div>
-        ))}
-
-        {links.length < 10 && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setLinks((prev) => [...prev, { label: '', url: '' }])}
-            className="self-start text-sm text-foreground/40 hover:text-foreground/70 transition-colors"
-          >
-            + добавить ссылку
-          </button>
-        )}
-      </div>
+      <LinksEditor
+        title="Ссылки"
+        hint="Соцсети и площадки — иконка и название подхватятся сами; для нераспознанных задай подпись. Появятся блоком на твоей странице артиста."
+        links={links}
+        onChange={setLinks}
+        max={10}
+        disabled={busy}
+      />
 
       {/* Videos */}
       <div className="flex flex-col gap-3">

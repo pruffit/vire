@@ -3,13 +3,11 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArtistLink } from '@vire/core';
-import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { normalizeSlug, MAX_SMART_LINKS } from '@/lib/smart-link';
-import { PlatformIcon } from '@/components/platform-icon';
-import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
 import { toast } from '@/components/toast';
 import { Select } from '@/components/select';
 import { DateField } from '@/components/date-field';
+import { LinksEditor } from '@/components/links-editor';
 
 export interface SmartLinkInitial {
   id: string;
@@ -81,10 +79,6 @@ export function SmartLinkForm({
     setCoverPreview(null);
     setRemoveCover(true);
     if (coverInputRef.current) coverInputRef.current.value = '';
-  }
-
-  function updateLink(i: number, patch: Partial<ArtistLink>) {
-    setLinks((prev) => prev.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   }
 
   async function submit(e: React.FormEvent) {
@@ -199,59 +193,14 @@ export function SmartLinkForm({
       )}
 
       {/* Ссылки на площадки */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm font-medium">Ссылки на площадки</span>
-          <span className="text-xs text-foreground/30">{links.length}/{MAX_SMART_LINKS}</span>
-        </div>
-        <p className="text-xs text-foreground/40 -mt-1">Вставь ссылку — иконка и название подхватятся сами.</p>
-
-        {links.map((link, i) => {
-          const { key } = detectPlatform(link.url);
-          const brand = link.url ? PLATFORM_BRAND[key] : null;
-          return (
-            <div key={i} className="flex items-center gap-2">
-              {brand ? (
-                <span className="shrink-0 inline-flex h-9 min-w-9 items-center justify-center rounded-md bg-white px-2">
-                  <BrandIcon name={brand} size={isBrandWordmark(brand) ? 14 : 18} />
-                </span>
-              ) : (
-                <span className="shrink-0 w-9 h-9 grid place-items-center rounded-md bg-foreground/5 border border-foreground/10 text-foreground/70">
-                  <PlatformIcon platform={link.url ? key : 'website'} size={18} />
-                </span>
-              )}
-              <div className="flex-1 flex flex-col gap-1 min-w-0">
-                <input
-                  type="url" value={link.url} disabled={busy}
-                  onChange={(e) => updateLink(i, { url: e.target.value })}
-                  placeholder="https://open.spotify.com/…"
-                  className={inputCls}
-                />
-                {/* Подпись нужна только для нераспознанных ссылок — у площадки своё лого/название. */}
-                {!brand && (
-                  <input
-                    type="text" value={link.label ?? ''} disabled={busy}
-                    onChange={(e) => updateLink(i, { label: e.target.value })}
-                    placeholder={link.url ? `Подпись (по умолчанию «${linkLabel(link.url)}»)` : 'Подпись (необязательно)'}
-                    className={`${inputCls} text-xs`}
-                  />
-                )}
-              </div>
-              <button type="button" onClick={() => setLinks((p) => p.filter((_, j) => j !== i))}
-                className="shrink-0 text-foreground/30 hover:text-red-400 transition-colors text-lg leading-none" aria-label="Удалить ссылку">
-                ×
-              </button>
-            </div>
-          );
-        })}
-
-        {links.length < MAX_SMART_LINKS && (
-          <button type="button" onClick={() => setLinks((p) => [...p, { url: '' }])}
-            className="self-start text-xs text-foreground/50 hover:text-foreground/80 transition-colors mt-1">
-            + добавить ссылку
-          </button>
-        )}
-      </div>
+      <LinksEditor
+        title="Ссылки на площадки"
+        hint="Вставь ссылку — иконка и название подхватятся сами."
+        links={links}
+        onChange={setLinks}
+        max={MAX_SMART_LINKS}
+        disabled={busy}
+      />
 
       {/* Публикация + submit */}
       <label className="flex items-center gap-2.5 text-sm cursor-pointer select-none">
