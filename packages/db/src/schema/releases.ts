@@ -49,6 +49,9 @@ export const tracks = pgTable('tracks', {
   releaseId: uuid('release_id').notNull().references(() => releases.id),
   title: text('title').notNull(),
   trackNumber: integer('track_number').notNull(),
+  // Версия/ремикс: «Radio Edit», «Slowed + Reverb», «Sped Up» и т.п. Отдельно от
+  // названия (его не засоряем) — показывается бейджем/суффиксом рядом с треком.
+  version: text('version'),
   durationSec: integer('duration_sec'),
   status: trackStatusEnum('status').notNull().default('PROCESSING'),
   // Файл в хранилище всегда по track_id, не по артисту

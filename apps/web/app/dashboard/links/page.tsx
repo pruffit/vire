@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { getActiveArtistForPage } from '@/lib/active-artist';
 import { listSmartLinks } from '@vire/db';
 import { SmartLinkList, type SmartLinkRow } from './smart-link-list';
+import { btnGhost } from '@/components/ui-kit';
 
 export const metadata = { title: 'Смартлинки' };
 export const dynamic = 'force-dynamic';
@@ -28,9 +29,7 @@ export default async function DashboardLinksPage() {
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
         <div className="flex flex-col gap-1">
-          <a href="/dashboard" className="text-xs text-foreground/30 hover:text-foreground/60 transition-colors mb-2 self-start">
-            ← дашборд
-          </a>
+          <a href="/dashboard" className={`${btnGhost} self-start mb-2`}>← Дашборд</a>
           <h1 className="text-2xl font-semibold">Смартлинки</h1>
           <p className="text-sm text-foreground/40">
             Красивые страницы релизов со ссылками на стриминги и соцсети. Работают и без публикации музыки на Vire.

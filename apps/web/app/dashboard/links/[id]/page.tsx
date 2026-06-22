@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { getActiveArtistForPage } from '@/lib/active-artist';
 import { getSmartLinkById, getReleaseOptions } from '@vire/db';
 import { SmartLinkForm, type SmartLinkInitial } from '../smart-link-form';
+import { btnGhost } from '@/components/ui-kit';
 
 export const metadata = { title: 'Смартлинк' };
 export const dynamic = 'force-dynamic';
@@ -39,9 +40,7 @@ export default async function EditSmartLinkPage({ params }: Props) {
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
         <div className="flex flex-col gap-1">
-          <Link href="/dashboard/links" className="text-xs text-foreground/30 hover:text-foreground/60 transition-colors mb-2 self-start">
-            ← смартлинки
-          </Link>
+          <Link href="/dashboard/links" className={`${btnGhost} self-start mb-2`}>← Смартлинки</Link>
           <h1 className="text-2xl font-semibold">Редактирование</h1>
           {smartLink.isPublished && (
             <a

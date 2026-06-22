@@ -188,6 +188,7 @@ function mapToTrack(row: typeof tracks.$inferSelect): Track {
     id: row.id,
     releaseId: row.releaseId,
     title: row.title,
+    version: row.version,
     trackNumber: row.trackNumber,
     durationSec: row.durationSec,
     status: row.status,

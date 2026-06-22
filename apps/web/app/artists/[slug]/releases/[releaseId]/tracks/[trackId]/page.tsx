@@ -13,6 +13,7 @@ import { LikeButton } from './like-button';
 import { TrackWaveformPlayer } from './waveform-player';
 import { MoodBadges } from '@/components/mood-badges';
 import { ExplicitBadge } from '@/components/explicit-badge';
+import { displayTrackTitle } from '@/lib/track-display';
 import { AddToPlaylistButton } from '@/components/add-to-playlist-button';
 import { JsonLd } from '@/components/json-ld';
 import { HeartIcon } from '@/components/icons';
@@ -152,7 +153,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
               <span className="opacity-60"> · {release.title}</span>
             </p>
             <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance flex items-center gap-3 flex-wrap">
-              {track.title}
+              {displayTrackTitle(track.title, { version: track.version, credits: track.credits })}
               {track.isExplicit && <ExplicitBadge />}
             </h1>
 

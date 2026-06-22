@@ -28,13 +28,13 @@ export function validateMagicBytes(header: Uint8Array, ext: AudioExt): boolean {
     header[8] === 0x57 && header[9] === 0x41 && header[10] === 0x56 && header[11] === 0x45;
 }
 
-export type ContributorRole = 'PERFORMER' | 'LYRICIST' | 'COMPOSER' | 'PRODUCER';
+export type ContributorRole = 'PERFORMER' | 'FEATURED' | 'LYRICIST' | 'COMPOSER' | 'PRODUCER';
 export interface TrackCredit {
   name: string;
   role: ContributorRole;
 }
 
-const VALID_ROLES: ContributorRole[] = ['PERFORMER', 'LYRICIST', 'COMPOSER', 'PRODUCER'];
+const VALID_ROLES: ContributorRole[] = ['PERFORMER', 'FEATURED', 'LYRICIST', 'COMPOSER', 'PRODUCER'];
 
 // Единый источник правды — @vire/core; реэкспорт сохраняет существующие импорты
 // `import { isUuid } from '@/lib/upload'` в роутах.

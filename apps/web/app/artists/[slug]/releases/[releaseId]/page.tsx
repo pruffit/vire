@@ -105,8 +105,8 @@ export default async function ReleasePage({ params }: Props) {
     );
   }
 
-  const clientTracks: ClientTrack[] = tracks.map(({ id, title, trackNumber, durationSec, status, isExclusive, isWip, isExplicit, credits }) => ({
-    id, title, trackNumber, durationSec, status, isExclusive, isWip, isExplicit, credits,
+  const clientTracks: ClientTrack[] = tracks.map(({ id, title, version, trackNumber, durationSec, status, isExclusive, isWip, isExplicit, credits }) => ({
+    id, title, version, trackNumber, durationSec, status, isExclusive, isWip, isExplicit, credits,
   }));
   const readyQueue: PlayerTrack[] = tracks
     .filter((t) => t.status === 'READY')

@@ -3,8 +3,8 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ReleaseType } from '@vire/core';
-import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 import { Field, fieldClass, btnPrimary } from '@/components/ui-kit';
+import { GenreSelect } from '@/components/genre-select';
 import { titleRepeatsArtist } from '@/lib/title-hygiene';
 import { cn } from '@/lib/utils';
 
@@ -98,16 +98,7 @@ export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
       </Field>
 
       <Field label="Жанр" hint="необязательно">
-        <select name="genre" disabled={busy} defaultValue={initial.genre ?? ''} className={cn(fieldClass, 'w-full')}>
-          <option value="">— выберите жанр</option>
-          {GENRE_GROUPS.map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.genres.map((g) => (
-                <option key={g} value={g}>{GENRE_LABELS[g]}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+        <GenreSelect name="genre" defaultValue={initial.genre ?? ''} disabled={busy} />
       </Field>
 
       <Field label="Дата релиза" hint="необязательно">

@@ -8,8 +8,9 @@ import { MoodPicker } from '@/components/mood-picker';
 import { GenrePicker } from '@/components/genre-picker';
 import { CreditsEditor } from '@/components/credits-editor';
 import { LyricsEditor } from '@/components/lyrics-editor';
-import { Check, TrackStatusBadge } from '@/components/ui-kit';
+import { Check, TrackStatusBadge, fieldClass } from '@/components/ui-kit';
 import { titleRepeatsArtist } from '@/lib/title-hygiene';
+import { featLabel } from '@/lib/track-display';
 import { cn } from '@/lib/utils';
 import type { Mood } from '@/lib/moods';
 import type { Genre } from '@/lib/genres';
@@ -20,6 +21,7 @@ import { Icon } from '@/components/icon';
 export interface ManagedTrack {
   id: string;
   title: string;
+  version: string | null;
   trackNumber: number;
   status: 'PROCESSING' | 'READY' | 'BLOCKED' | 'FAILED';
   moods: Mood[];
@@ -153,12 +155,13 @@ export function TrackManager({
     }
   }
 
-  async function commitAudio(id: string, field: 'bpm' | 'musicalKey', value: number | string | null) {
+  async function commitField(id: string, field: 'bpm' | 'musicalKey' | 'version', value: number | string | null) {
     markBusy(id, true);
     const ok = await patchTrack(id, { [field]: value });
     markBusy(id, false);
     if (ok) {
       setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, [field]: value } : t)));
+      committed.current = committed.current.map((t) => (t.id === id ? { ...t, [field]: value } : t));
       flashSaved(id);
     } else {
       toast.error('Не удалось сохранить');
@@ -216,7 +219,7 @@ export function TrackManager({
           onTitleCommit={() => commitTitle(track.id)}
           onToggleExpanded={() => toggleExpanded(track.id)}
           onToggleFlag={(flag, next) => toggleFlag(track.id, flag, next)}
-          onCommitAudio={(field, value) => commitAudio(track.id, field, value)}
+          onCommitField={(field, value) => commitField(track.id, field, value)}
           onRemove={() => remove(track.id)}
         />
       ))}
@@ -235,7 +238,7 @@ function TrackRow({
   onTitleCommit,
   onToggleExpanded,
   onToggleFlag,
-  onCommitAudio,
+  onCommitField,
   onRemove,
 }: {
   track: ManagedTrack;
@@ -248,13 +251,15 @@ function TrackRow({
   onTitleCommit: () => void;
   onToggleExpanded: () => void;
   onToggleFlag: (flag: 'isExplicit' | 'isExclusive' | 'isWip', next: boolean) => void;
-  onCommitAudio: (field: 'bpm' | 'musicalKey', value: number | string | null) => void;
+  onCommitField: (field: 'bpm' | 'musicalKey' | 'version', value: number | string | null) => void;
   onRemove: () => void;
 }) {
   const controls = useDragControls();
   const [bpm, setBpm] = useState(track.bpm != null ? String(track.bpm) : '');
   const [key, setKey] = useState(track.musicalKey ?? '');
+  const [version, setVersion] = useState(track.version ?? '');
   const titleWarn = artistName ? titleRepeatsArtist(track.title, artistName) : false;
+  const feat = featLabel(track.credits);
 
   function commitBpm() {
     const raw = bpm.trim();
@@ -264,12 +269,17 @@ function TrackRow({
       setBpm(track.bpm != null ? String(track.bpm) : '');
       return;
     }
-    onCommitAudio('bpm', parsed);
+    onCommitField('bpm', parsed);
   }
   function commitKey() {
     const raw = key.trim();
     if (raw === (track.musicalKey ?? '')) return;
-    onCommitAudio('musicalKey', raw === '' ? null : raw);
+    onCommitField('musicalKey', raw === '' ? null : raw);
+  }
+  function commitVersion() {
+    const raw = version.trim();
+    if (raw === (track.version ?? '')) return;
+    onCommitField('version', raw === '' ? null : raw);
   }
 
   return (
@@ -312,6 +322,13 @@ function TrackRow({
           {titleWarn && (
             <p className="px-0.5 pt-1 text-[11px] text-amber-400/90 leading-snug">
               Имя артиста уже показано рядом — в названии его дублировать не нужно.
+            </p>
+          )}
+          {(feat || track.version) && (
+            <p className="px-0.5 pt-0.5 text-[11px] font-mono text-foreground/35 leading-snug truncate">
+              {feat}
+              {feat && track.version ? ' · ' : ''}
+              {track.version}
             </p>
           )}
         </div>
@@ -431,6 +448,24 @@ function TrackRow({
                   />
                 </label>
               </div>
+
+              {/* Версия / ремикс */}
+              <label className="flex flex-col gap-1.5">
+                <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">
+                  Версия <span className="normal-case tracking-normal text-foreground/30">необязательно</span>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Radio Edit · Slowed + Reverb · Sped Up · Acoustic…"
+                  value={version}
+                  onChange={(e) => setVersion(e.target.value)}
+                  onBlur={commitVersion}
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                  disabled={busy}
+                  maxLength={80}
+                  className={cn(fieldClass, 'w-full sm:max-w-sm')}
+                />
+              </label>
 
               <div className="border-t border-foreground/[0.06] pt-3">
                 <GenrePicker trackId={track.id} initial={track.genres} />

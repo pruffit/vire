@@ -9,6 +9,7 @@ import type { ContributorRole, TrackCredit } from '@/lib/upload';
 
 const ROLES: { value: ContributorRole; label: string }[] = [
   { value: 'PERFORMER', label: 'Исполнитель' },
+  { value: 'FEATURED', label: 'Гость (feat.)' },
   { value: 'LYRICIST', label: 'Автор текста' },
   { value: 'COMPOSER', label: 'Композитор' },
   { value: 'PRODUCER', label: 'Продюсер' },
@@ -106,8 +107,9 @@ export function CreditsEditor({
       </div>
 
       <p className="text-[11px] text-foreground/35 leading-snug">
-        Кто работал над треком: вокал, текст, музыка, продакшн. Имя — без приставок;
-        роль выбери ниже.
+        Кто работал над треком: вокал, текст, музыка, продакшн. Для фита добавь
+        приглашённого артиста с ролью «Гость (feat.)» — он подпишется как feat.
+        рядом с названием. Имя — без приставок.
       </p>
 
       <div className="space-y-2">

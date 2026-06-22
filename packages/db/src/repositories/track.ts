@@ -26,6 +26,7 @@ function mapRow(row: TrackRow): Track {
     id: row.id,
     releaseId: row.releaseId,
     title: row.title,
+    version: row.version,
     trackNumber: row.trackNumber,
     durationSec: row.durationSec,
     status: row.status,
@@ -68,6 +69,7 @@ export class DrizzleTrackRepository implements ITrackRepository {
   async update(id: string, patch: UpdateTrackParams): Promise<Track | null> {
     const trackValues: Partial<typeof tracks.$inferInsert> = {};
     if (patch.title !== undefined) trackValues.title = patch.title;
+    if (patch.version !== undefined) trackValues.version = patch.version;
     if (patch.trackNumber !== undefined) trackValues.trackNumber = patch.trackNumber;
     if (patch.isExclusive !== undefined) trackValues.isExclusive = patch.isExclusive;
     if (patch.isWip !== undefined) trackValues.isWip = patch.isWip;

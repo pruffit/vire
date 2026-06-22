@@ -6,6 +6,7 @@ import { EditReleaseForm } from './edit-release-form';
 import { BatchTrackUpload } from './batch-track-upload';
 import { TrackManager } from './track-manager';
 import { DeleteReleaseButton } from './delete-release-button';
+import { btnGhost } from '@/components/ui-kit';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,12 +38,7 @@ export default async function EditReleasePage({ params }: Props) {
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
         <div className="flex items-center gap-4">
-          <a
-            href="/dashboard"
-            className="text-foreground/40 hover:text-foreground/70 text-sm transition-colors"
-          >
-            ← Назад
-          </a>
+          <a href="/dashboard" className={btnGhost}>← Назад</a>
           <h1 className="text-2xl font-semibold">Редактировать релиз</h1>
         </div>
 
@@ -75,6 +71,7 @@ export default async function EditReleasePage({ params }: Props) {
             initial={tracks.map((t) => ({
               id: t.id,
               title: t.title,
+              version: t.version,
               trackNumber: t.trackNumber,
               status: t.status,
               moods: moodsMap[t.id] ?? [],

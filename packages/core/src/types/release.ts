@@ -18,7 +18,7 @@ export const ALL_GENRES = [
   'DRONE', 'INDUSTRIAL', 'REGGAE', 'DUB', 'SOUNDTRACK', 'SPOKENWORD',
 ] as const;
 export type Genre = (typeof ALL_GENRES)[number];
-export type ContributorRole = 'PERFORMER' | 'LYRICIST' | 'COMPOSER' | 'PRODUCER';
+export type ContributorRole = 'PERFORMER' | 'FEATURED' | 'LYRICIST' | 'COMPOSER' | 'PRODUCER';
 
 export interface TrackCredit {
   name: string;
@@ -52,6 +52,8 @@ export interface Track {
   id: string;
   releaseId: string;
   title: string;
+  /** Версия/ремикс («Radio Edit», «Slowed + Reverb»). null — обычная версия. */
+  version: string | null;
   trackNumber: number;
   durationSec: number | null;
   status: TrackStatus;

@@ -25,6 +25,7 @@ const mockTrack: Track = {
   id: 'track-1',
   releaseId: 'release-1',
   title: 'Track One',
+  version: null,
   trackNumber: 1,
   durationSec: null,
   status: 'PROCESSING',

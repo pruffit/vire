@@ -10,6 +10,7 @@ export interface CreateTrackParams {
 
 export interface UpdateTrackParams {
   title?: string;
+  version?: string | null;
   trackNumber?: number;
   isExclusive?: boolean;
   isWip?: boolean;

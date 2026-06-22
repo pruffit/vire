@@ -9,11 +9,13 @@ import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import type { TrackStatus, TrackCredit } from '@vire/core';
 import { formatDuration } from '@/lib/format';
+import { displayTrackTitle } from '@/lib/track-display';
 import { Icon } from '@/components/icon';
 
 export interface ClientTrack {
   id: string;
   title: string;
+  version: string | null;
   trackNumber: number;
   durationSec: number | null;
   status: TrackStatus;
@@ -105,14 +107,20 @@ function TrackRow({
           className="text-sm truncate flex items-center gap-1.5"
           style={isActive ? { color: 'var(--artist-accent)' } : undefined}
         >
-          <span className="truncate">{track.title}</span>
+          <span className="truncate">
+            {displayTrackTitle(track.title, { version: track.version, credits: track.credits })}
+          </span>
           {track.isExplicit && <ExplicitBadge />}
         </span>
-        {track.credits.length > 0 && (
-          <span className="text-[10px] font-mono opacity-30 truncate block">
-            {track.credits.map((c) => c.name).join(', ')}
-          </span>
-        )}
+        {(() => {
+          // feat-имена уже в названии — в строке кредитов показываем остальных
+          const rest = track.credits.filter((c) => c.role !== 'FEATURED').map((c) => c.name);
+          return rest.length > 0 ? (
+            <span className="text-[10px] font-mono opacity-30 truncate block">
+              {rest.join(', ')}
+            </span>
+          ) : null;
+        })()}
       </div>
 
       <div className="flex items-center gap-2 shrink-0">

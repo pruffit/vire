@@ -176,6 +176,13 @@
       "when": 1782027158072,
       "tag": "0024_boring_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1782136180598,
+      "tag": "0025_fair_darkhawk",
+      "breakpoints": true
     }
   ]
 }

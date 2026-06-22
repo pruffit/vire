@@ -43,9 +43,7 @@ export default async function DashboardPostsPage() {
               Новости и анонсы для подписчиков — появляются на странице артиста
             </p>
           </div>
-          <Link href="/dashboard" className={`${btnGhost} shrink-0`}>
-            ← Dashboard
-          </Link>
+          <Link href="/dashboard" className={`${btnGhost} shrink-0`}>← Дашборд</Link>
         </div>
 
         <PostsManager initialPosts={initial} artistSlug={artist.slug} />

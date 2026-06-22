@@ -48,6 +48,13 @@ export async function PATCH(
     }
     patch.title = b.title.trim();
   }
+  if (b.version !== undefined) {
+    if (b.version !== null && (typeof b.version !== 'string' || b.version.length > 80)) {
+      return NextResponse.json({ error: 'Invalid version' }, { status: 400 });
+    }
+    const v = typeof b.version === 'string' ? b.version.trim() : null;
+    patch.version = v ? v : null;
+  }
   if (b.trackNumber !== undefined) {
     if (typeof b.trackNumber !== 'number' || !Number.isInteger(b.trackNumber) || b.trackNumber < 1) {
       return NextResponse.json({ error: 'Invalid trackNumber' }, { status: 400 });
