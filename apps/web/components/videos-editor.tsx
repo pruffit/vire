@@ -24,8 +24,9 @@ export function VideosEditor({
   max: number;
   disabled?: boolean;
 }) {
+  // При правке ссылки сбрасываем тайтл — он подтянется заново на сервере.
   const update = (i: number, url: string) =>
-    onChange(videos.map((v, j) => (j === i ? { ...v, url } : v)));
+    onChange(videos.map((v, j) => (j === i ? { url, title: '' } : v)));
   const remove = (i: number) => onChange(videos.filter((_, j) => j !== i));
   const add = () => onChange([...videos, { url: '', title: '' }]);
 
