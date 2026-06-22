@@ -265,20 +265,10 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Адаптивная вёрстка: на десктопе сайдбар сбоку, на мобилках — горизонтальный
   топ-бар; широкие таблицы скроллятся по горизонтали (`overflow-x-auto` + `min-width`)
 - [x] **UX/дизайн-доводка админки (v1.4.0–1.4.2)** — единый дизайн-кит
-  `components/admin/ui.tsx` (PageHeader, Section, Panel, StatCard, Badge +
-  RoleBadge/TrackStatusBadge/ReleaseStatusBadge, Table/Th/Tr/Td, FilterTabs,
-  SearchForm, EmptyState, DetailHeader, общие классы полей/селектов). Раскатан по
-  всем страницам: токены вместо `white/X` (тёплая нейтраль), статусы → бейджи,
-  единые заголовки/плотность/состояния/пустые состояния, контент на всю ширину.
-  Фиксы: график аналитики (height:% схлопывался), поповер «Участники» (портал +
-  fixed против клиппинга в overflow-таблице), бейдж роли в сайдбаре (растягивался).
-- [x] Редактор трека (`/admin/tracks/[id]/edit`): чекбоксы Explicit/Эксклюзив/WIP
-  кастомные + подписи; жанры — пилюли по группам вместо нативного multiselect.
-- [x] `/admin/system`: CPU показывает текущую загрузку (мгновенный замер) + средние
-  load 1/5/15 мин (`cpuPct`, `loadAvg5/15` в `lib/system-metrics.ts`).
-- [x] `/admin/tracks`: live-обновление статуса (router.refresh пока есть PROCESSING)
-  + индикатор «N в обработке · обновляется» и пульс на бейдже PROCESSING
-  (`tracks/live-refresh.tsx`).
+  `components/admin/ui.tsx` (токены вместо `white/X`, бейджи статусов, состояния,
+  таблицы, пустые состояния), раскатан по всем страницам; редактор трека
+  (кастомные чекбоксы + подписи, жанры пилюлями), CPU current+avg, live-статус
+  треков. Детали и хвосты — `docs/roadmap/stage-2.md` §2.7 / §9.
 
 ### SEO и доступность
 - [x] `metadataBase` + title-template `%s — Vire`, OG/Twitter дефолты (`app/layout.tsx`, `lib/site.ts`)
