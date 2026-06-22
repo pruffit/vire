@@ -1,10 +1,9 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getActiveArtistForPage } from '@/lib/active-artist';
 import { getReleaseOptions } from '@vire/db';
 import { SmartLinkForm } from '../smart-link-form';
-import { btnGhost } from '@/components/ui-kit';
+import { DashboardPageHeader } from '@/components/ui-kit';
 
 export const metadata = { title: 'Новый смартлинк' };
 export const dynamic = 'force-dynamic';
@@ -21,10 +20,7 @@ export default async function NewSmartLinkPage() {
   return (
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
-        <div className="flex flex-col gap-1">
-          <Link href="/dashboard/links" className={`${btnGhost} self-start mb-2`}>← Смартлинки</Link>
-          <h1 className="text-2xl font-semibold">Новый лендинг</h1>
-        </div>
+        <DashboardPageHeader backHref="/dashboard/links" backLabel="Смартлинки" title="Новый лендинг" />
 
         <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
           <SmartLinkForm artistSlug={artist.slug} releaseOptions={releaseOptions} />

@@ -4,8 +4,16 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Field, fieldClass, btnPrimary } from '@/components/ui-kit';
 import { GenreSelect } from '@/components/genre-select';
+import { Select } from '@/components/select';
+import { DateField } from '@/components/date-field';
 import { titleRepeatsArtist } from '@/lib/title-hygiene';
 import { cn } from '@/lib/utils';
+
+const RELEASE_TYPE_OPTIONS = [
+  { value: 'ALBUM', label: 'Альбом' },
+  { value: 'EP', label: 'EP' },
+  { value: 'SINGLE', label: 'Сингл' },
+];
 
 type State = 'idle' | 'submitting' | 'error';
 
@@ -78,11 +86,7 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
 
       {/* Type */}
       <Field label="Тип">
-        <select name="type" required disabled={busy} className={cn(fieldClass, 'w-full')}>
-          <option value="ALBUM">Альбом</option>
-          <option value="EP">EP</option>
-          <option value="SINGLE">Сингл</option>
-        </select>
+        <Select name="type" defaultValue="ALBUM" options={RELEASE_TYPE_OPTIONS} disabled={busy} aria-label="Тип" />
       </Field>
 
       {/* Genre */}
@@ -92,12 +96,7 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
 
       {/* Release date */}
       <Field label="Дата релиза" hint="необязательно">
-        <input
-          name="releaseDate"
-          type="date"
-          disabled={busy}
-          className={cn(fieldClass, 'w-44')}
-        />
+        <DateField name="releaseDate" disabled={busy} className="w-44" aria-label="Дата релиза" />
       </Field>
 
       {/* Cover */}

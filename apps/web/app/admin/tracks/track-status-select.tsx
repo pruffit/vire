@@ -2,11 +2,12 @@
 
 import { useTransition } from 'react';
 import { actionSetTrackStatus } from '../actions';
-import { selectClass } from '@/components/admin/ui';
+import { Select } from '@/components/select';
 
 type TrackStatus = 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED';
 
 const STATUSES: TrackStatus[] = ['PROCESSING', 'READY', 'BLOCKED', 'FAILED'];
+const STATUS_OPTIONS = STATUSES.map((s) => ({ value: s, label: s }));
 
 interface Props {
   trackId: string;
@@ -16,21 +17,16 @@ interface Props {
 export function TrackStatusSelect({ trackId, currentStatus }: Props) {
   const [pending, startTransition] = useTransition();
 
-  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const status = e.target.value as TrackStatus;
-    startTransition(() => actionSetTrackStatus(trackId, status));
-  }
-
   return (
-    <select
-      defaultValue={currentStatus}
-      onChange={handleChange}
+    <Select
+      size="sm"
+      align="end"
+      options={STATUS_OPTIONS}
+      value={currentStatus}
+      onValueChange={(s) => startTransition(() => actionSetTrackStatus(trackId, s as TrackStatus))}
       disabled={pending}
-      className={selectClass}
-    >
-      {STATUSES.map((s) => (
-        <option key={s} value={s}>{s}</option>
-      ))}
-    </select>
+      aria-label="Статус трека"
+      className="w-36"
+    />
   );
 }

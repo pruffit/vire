@@ -183,6 +183,42 @@ export function DetailHeader({
   );
 }
 
+// ─── Dashboard page header (сабстраницы дашборда артиста) ────────────────────
+
+/**
+ * Единый хедер сабстраниц дашборда: «← назад» над заголовком слева, крупный
+ * заголовок (`text-2xl`), опц. подзаголовок и опц. действие справа от заголовка.
+ * Закрывает разнобой: раньше кнопка «назад» была то над заголовком, то справа.
+ */
+export function DashboardPageHeader({
+  backHref,
+  backLabel = 'Дашборд',
+  title,
+  subtitle,
+  action,
+}: {
+  backHref: string;
+  backLabel?: string;
+  title: string;
+  subtitle?: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Link href={backHref} className={cn(btnGhost, 'self-start mb-2')}>
+        ← {backLabel}
+      </Link>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold">{title}</h1>
+          {subtitle && <p className="mt-1 text-sm text-foreground/40">{subtitle}</p>}
+        </div>
+        {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
+      </div>
+    </div>
+  );
+}
+
 // ─── Section ─────────────────────────────────────────────────────────────────
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {

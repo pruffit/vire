@@ -6,7 +6,7 @@ import { EditReleaseForm } from './edit-release-form';
 import { BatchTrackUpload } from './batch-track-upload';
 import { TrackManager } from './track-manager';
 import { DeleteReleaseButton } from './delete-release-button';
-import { btnGhost } from '@/components/ui-kit';
+import { DashboardPageHeader } from '@/components/ui-kit';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,10 +37,7 @@ export default async function EditReleasePage({ params }: Props) {
   return (
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
-        <div className="flex items-center gap-4">
-          <a href="/dashboard" className={btnGhost}>← Назад</a>
-          <h1 className="text-2xl font-semibold">Редактировать релиз</h1>
-        </div>
+        <DashboardPageHeader backHref="/dashboard" title="Редактировать релиз" />
 
         <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
           <EditReleaseForm

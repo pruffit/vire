@@ -2,10 +2,11 @@
 
 import { useTransition } from 'react';
 import { actionSetReleaseStatus } from '../actions';
-import { selectClass } from '@/components/admin/ui';
+import { Select } from '@/components/select';
 
 type ReleaseStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 const STATUSES: ReleaseStatus[] = ['DRAFT', 'PUBLISHED', 'ARCHIVED'];
+const STATUS_OPTIONS = STATUSES.map((s) => ({ value: s, label: s }));
 
 export function ReleaseStatusSelect({
   releaseId,
@@ -16,21 +17,16 @@ export function ReleaseStatusSelect({
 }) {
   const [pending, startTransition] = useTransition();
 
-  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const status = e.target.value as ReleaseStatus;
-    startTransition(() => actionSetReleaseStatus(releaseId, status));
-  }
-
   return (
-    <select
-      defaultValue={currentStatus}
-      onChange={handleChange}
+    <Select
+      size="sm"
+      align="end"
+      options={STATUS_OPTIONS}
+      value={currentStatus}
+      onValueChange={(s) => startTransition(() => actionSetReleaseStatus(releaseId, s as ReleaseStatus))}
       disabled={pending}
-      className={selectClass}
-    >
-      {STATUSES.map((s) => (
-        <option key={s} value={s}>{s}</option>
-      ))}
-    </select>
+      aria-label="Статус релиза"
+      className="w-40"
+    />
   );
 }

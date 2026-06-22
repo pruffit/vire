@@ -5,6 +5,22 @@ import { useRouter } from 'next/navigation';
 import { actionAdminUpdateRelease } from '../../../actions';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 import { fieldClass } from '@/components/admin/ui';
+import { Select, type SelectGroup } from '@/components/select';
+import { DateField } from '@/components/date-field';
+
+const TYPE_OPTIONS = [
+  { value: 'ALBUM', label: 'ALBUM' },
+  { value: 'EP', label: 'EP' },
+  { value: 'SINGLE', label: 'SINGLE' },
+];
+
+const GENRE_OPTION_GROUPS: SelectGroup[] = [
+  { label: '', options: [{ value: '', label: '— без жанра —' }] },
+  ...GENRE_GROUPS.map((g) => ({
+    label: g.label,
+    options: g.genres.map((gen) => ({ value: gen, label: GENRE_LABELS[gen] })),
+  })),
+];
 
 interface Initial {
   title: string;
@@ -55,28 +71,21 @@ export function ReleaseEditForm({ releaseId, initial }: { releaseId: string; ini
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="Тип">
-          <select className={inputCls} value={f.type} onChange={(e) => set('type', e.target.value)}>
-            <option value="ALBUM">ALBUM</option>
-            <option value="EP">EP</option>
-            <option value="SINGLE">SINGLE</option>
-          </select>
+          <Select options={TYPE_OPTIONS} value={f.type} onValueChange={(v) => set('type', v)} aria-label="Тип" />
         </Field>
         <Field label="Дата релиза">
-          <input type="date" className={inputCls} value={f.releaseDate} onChange={(e) => set('releaseDate', e.target.value)} />
+          <DateField value={f.releaseDate} onValueChange={(v) => set('releaseDate', v)} aria-label="Дата релиза" />
         </Field>
       </div>
 
       <Field label="Жанр">
-        <select className={inputCls} value={f.genre ?? ''} onChange={(e) => set('genre', e.target.value || null)}>
-          <option value="">— без жанра —</option>
-          {GENRE_GROUPS.map((g) => (
-            <optgroup key={g.label} label={g.label}>
-              {g.genres.map((gen) => (
-                <option key={gen} value={gen}>{GENRE_LABELS[gen]}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+        <Select
+          groups={GENRE_OPTION_GROUPS}
+          searchable
+          value={f.genre ?? ''}
+          onValueChange={(v) => set('genre', v || null)}
+          aria-label="Жанр"
+        />
       </Field>
 
       <Field label="Описание">

@@ -4,6 +4,8 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArtistLink, ArtistVideo, ThemeTokens } from '@vire/core';
 import { btnPrimary } from '@/components/ui-kit';
+import { Select } from '@/components/select';
+import { ColorField } from '@/components/color-field';
 
 // Font name → CSS variable (the fonts are loaded globally in app/layout via lib/fonts).
 const SANS_VAR: Record<string, string> = {
@@ -468,14 +470,24 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Шрифт текста">
-            <select name="fontSans" value={fontSans} onChange={(e) => setFontSans(e.target.value)} disabled={busy} className={`${inp} w-full`}>
-              {FONT_SANS.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
+            <Select
+              name="fontSans"
+              value={fontSans}
+              onValueChange={setFontSans}
+              disabled={busy}
+              aria-label="Шрифт текста"
+              options={FONT_SANS.map((f) => ({ value: f, label: f }))}
+            />
           </Field>
           <Field label="Шрифт моно">
-            <select name="fontMono" value={fontMono} onChange={(e) => setFontMono(e.target.value)} disabled={busy} className={`${inp} w-full`}>
-              {FONT_MONO.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
+            <Select
+              name="fontMono"
+              value={fontMono}
+              onValueChange={setFontMono}
+              disabled={busy}
+              aria-label="Шрифт моно"
+              options={FONT_MONO.map((f) => ({ value: f, label: f }))}
+            />
           </Field>
         </div>
       </div>
@@ -492,36 +504,6 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
         </a>
       </div>
     </form>
-  );
-}
-
-function ColorField({ label, name, value, onChange, disabled }: {
-  label: string; name: string; value: string;
-  onChange: (v: string) => void; disabled: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium">{label}</span>
-      <div className="flex items-center gap-2">
-        <input type="color" name={name} value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0 disabled:opacity-50" />
-        <input
-          type="text"
-          value={value}
-          disabled={disabled}
-          spellCheck={false}
-          maxLength={7}
-          onChange={(e) => {
-            let v = e.target.value.trim();
-            if (v && !v.startsWith('#')) v = `#${v}`;
-            onChange(v);
-          }}
-          placeholder="#000000"
-          className="w-24 rounded-md bg-foreground/5 border border-foreground/10 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50" />
-      </div>
-    </div>
   );
 }
 

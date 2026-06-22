@@ -1,10 +1,9 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { auth } from '@/auth';
 import { listArtistPosts } from '@vire/db';
 import { getActiveArtistForPage } from '@/lib/active-artist';
 import { PostsManager, type ClientPost } from './posts-manager';
-import { btnGhost } from '@/components/ui-kit';
+import { DashboardPageHeader } from '@/components/ui-kit';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,15 +35,11 @@ export default async function DashboardPostsPage() {
   return (
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Анонсы</h1>
-            <p className="text-foreground/50 mt-1 text-sm">
-              Новости и анонсы для подписчиков — появляются на странице артиста
-            </p>
-          </div>
-          <Link href="/dashboard" className={`${btnGhost} shrink-0`}>← Дашборд</Link>
-        </div>
+        <DashboardPageHeader
+          backHref="/dashboard"
+          title="Анонсы"
+          subtitle="Новости и анонсы для подписчиков — появляются на странице артиста"
+        />
 
         <PostsManager initialPosts={initial} artistSlug={artist.slug} />
       </div>

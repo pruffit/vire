@@ -4,6 +4,12 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { actionAdminUpdatePlaylist, actionAdminDeletePlaylist } from '../actions';
 import { fieldClass } from '@/components/admin/ui';
+import { Select } from '@/components/select';
+
+const VISIBILITY_OPTIONS = [
+  { value: 'PRIVATE', label: 'приватный' },
+  { value: 'PUBLIC', label: 'публичный' },
+];
 
 interface Playlist {
   id: string;
@@ -48,10 +54,13 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
   return (
     <div className="rounded-xl border border-foreground/10 bg-foreground/[0.02] p-4 flex flex-wrap items-center gap-3">
       <input className={`${inputCls} flex-1 min-w-48`} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
-      <select className={inputCls} value={visibility} onChange={(e) => setVisibility(e.target.value as 'PRIVATE' | 'PUBLIC')}>
-        <option value="PRIVATE">приватный</option>
-        <option value="PUBLIC">публичный</option>
-      </select>
+      <Select
+        options={VISIBILITY_OPTIONS}
+        value={visibility}
+        onValueChange={(v) => setVisibility(v as 'PRIVATE' | 'PUBLIC')}
+        aria-label="Видимость"
+        className="w-36"
+      />
       <span className="text-xs font-mono text-foreground/40 flex gap-2">
         <span title="вид">{playlist.kind}{playlist.isCurated ? '·кур' : ''}</span>
         <span title="треков">{playlist.trackCount}♪</span>

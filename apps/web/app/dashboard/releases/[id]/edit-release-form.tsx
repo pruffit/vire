@@ -5,8 +5,16 @@ import { useRouter } from 'next/navigation';
 import type { ReleaseType } from '@vire/core';
 import { Field, fieldClass, btnPrimary } from '@/components/ui-kit';
 import { GenreSelect } from '@/components/genre-select';
+import { Select } from '@/components/select';
+import { DateField } from '@/components/date-field';
 import { titleRepeatsArtist } from '@/lib/title-hygiene';
 import { cn } from '@/lib/utils';
+
+const RELEASE_TYPE_OPTIONS = [
+  { value: 'ALBUM', label: 'Альбом' },
+  { value: 'EP', label: 'EP' },
+  { value: 'SINGLE', label: 'Сингл' },
+];
 
 interface Initial {
   title: string;
@@ -90,11 +98,7 @@ export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
       </Field>
 
       <Field label="Тип">
-        <select name="type" required disabled={busy} defaultValue={initial.type} className={cn(fieldClass, 'w-full')}>
-          <option value="ALBUM">Альбом</option>
-          <option value="EP">EP</option>
-          <option value="SINGLE">Сингл</option>
-        </select>
+        <Select name="type" defaultValue={initial.type} options={RELEASE_TYPE_OPTIONS} disabled={busy} aria-label="Тип" />
       </Field>
 
       <Field label="Жанр" hint="необязательно">
@@ -102,7 +106,7 @@ export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
       </Field>
 
       <Field label="Дата релиза" hint="необязательно">
-        <input name="releaseDate" type="date" disabled={busy} defaultValue={initial.releaseDate} className={cn(fieldClass, 'w-44')} />
+        <DateField name="releaseDate" defaultValue={initial.releaseDate} disabled={busy} className="w-44" aria-label="Дата релиза" />
       </Field>
 
       <Field label="Обложка" hint="Квадрат 1:1, от 1400×1400 (рек. 3000×3000) · оставь пустым — без изменений">

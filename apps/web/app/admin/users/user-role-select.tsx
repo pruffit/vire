@@ -3,9 +3,10 @@
 import { useTransition } from 'react';
 import { actionSetUserRole } from '../actions';
 import type { UserRole } from '@vire/db';
-import { selectClass } from '@/components/admin/ui';
+import { Select } from '@/components/select';
 
 const ROLES: UserRole[] = ['LISTENER', 'ARTIST', 'MODERATOR', 'ADMIN', 'SUPERADMIN'];
+const ROLE_OPTIONS = ROLES.map((r) => ({ value: r, label: r }));
 
 interface Props {
   userId: string;
@@ -16,21 +17,16 @@ interface Props {
 export function UserRoleSelect({ userId, currentRole }: Props) {
   const [pending, startTransition] = useTransition();
 
-  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const role = e.target.value as UserRole;
-    startTransition(() => actionSetUserRole(userId, role));
-  }
-
   return (
-    <select
-      defaultValue={currentRole}
-      onChange={handleChange}
+    <Select
+      size="sm"
+      align="end"
+      options={ROLE_OPTIONS}
+      value={currentRole}
+      onValueChange={(role) => startTransition(() => actionSetUserRole(userId, role as UserRole))}
       disabled={pending}
-      className={selectClass}
-    >
-      {ROLES.map((r) => (
-        <option key={r} value={r}>{r}</option>
-      ))}
-    </select>
+      aria-label="Роль"
+      className="w-36"
+    />
   );
 }

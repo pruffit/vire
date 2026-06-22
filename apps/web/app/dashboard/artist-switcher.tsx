@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/components/toast';
+import { Select } from '@/components/select';
 
 export interface SwitcherArtist {
   id: string;
@@ -45,20 +46,17 @@ export function ArtistSwitcher({
   }
 
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <div className="flex items-center gap-2 text-sm">
       <span className="text-foreground/40 shrink-0">Артист</span>
-      <select
+      <Select
+        size="sm"
         value={value}
         disabled={isPending}
-        onChange={(e) => select(e.target.value)}
-        className="min-w-0 max-w-[200px] truncate rounded-md bg-foreground/10 border border-foreground/10 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-      >
-        {artists.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.name} (@{a.slug})
-          </option>
-        ))}
-      </select>
-    </label>
+        onValueChange={select}
+        aria-label="Активный артист"
+        className="max-w-[220px]"
+        options={artists.map((a) => ({ value: a.id, label: `${a.name} (@${a.slug})` }))}
+      />
+    </div>
   );
 }

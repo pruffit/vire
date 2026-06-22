@@ -8,6 +8,8 @@ import { normalizeSlug, MAX_SMART_LINKS } from '@/lib/smart-link';
 import { PlatformIcon } from '@/components/platform-icon';
 import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
 import { toast } from '@/components/toast';
+import { Select } from '@/components/select';
+import { DateField } from '@/components/date-field';
 
 export interface SmartLinkInitial {
   id: string;
@@ -174,19 +176,25 @@ export function SmartLinkForm({
       </Field>
 
       <Field label="Дата релиза" hint="необязательно">
-        <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} disabled={busy} className={inputCls} />
+        <DateField value={releaseDate} onValueChange={setReleaseDate} disabled={busy} aria-label="Дата релиза" />
       </Field>
 
       {releaseOptions.length > 0 && (
         <Field label="Релиз на Vire" hint="первой кнопкой — «Слушать/Пресейв на Vire»">
-          <select value={releaseId} onChange={(e) => setReleaseId(e.target.value)} disabled={busy} className={inputCls}>
-            <option value="">— не привязан —</option>
-            {releaseOptions.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.title} · {RELEASE_STATUS_LABEL[r.status] ?? r.status.toLowerCase()}
-              </option>
-            ))}
-          </select>
+          <Select
+            value={releaseId}
+            onValueChange={setReleaseId}
+            disabled={busy}
+            placeholder="— не привязан —"
+            aria-label="Релиз на Vire"
+            options={[
+              { value: '', label: '— не привязан —' },
+              ...releaseOptions.map((r) => ({
+                value: r.id,
+                label: `${r.title} · ${RELEASE_STATUS_LABEL[r.status] ?? r.status.toLowerCase()}`,
+              })),
+            ]}
+          />
         </Field>
       )}
 
