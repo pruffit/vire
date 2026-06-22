@@ -41,26 +41,35 @@ function DailyChart({ daily }: { daily: AdminDailyPlays[] }) {
       }
     >
       <Panel className="p-5">
+        {/* Столбцы: каждый — h-full в ряду фиксированной высоты, иначе height:%
+            схлопывается (родитель flex-элемент без явной высоты). Даты — отдельным
+            рядом ниже, выровнены по тем же flex-1 колонкам. */}
         <div className="flex items-end gap-1.5 h-36">
           {daily.map((d) => {
-            const h = Math.max(2, Math.round((d.plays / max) * 100));
-            const date = new Date(`${d.day}T00:00:00`);
+            const h = d.plays === 0 ? 2 : Math.max(6, Math.round((d.plays / max) * 100));
             return (
-              <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5 min-w-0 group">
-                <span className="text-[10px] font-mono text-foreground/45 tabular-nums opacity-0 group-hover:opacity-100 transition-opacity">
-                  {d.plays}
-                </span>
+              <div
+                key={d.day}
+                className="group relative flex-1 h-full flex items-end min-w-0"
+                title={`${d.day}: ${d.plays} прослушиваний, ${d.listeners} слушателей`}
+              >
                 <div
-                  className="w-full rounded-sm bg-foreground/25 group-hover:bg-foreground/50 transition-colors"
+                  className="w-full rounded-sm bg-foreground/30 group-hover:bg-foreground/55 transition-colors"
                   style={{ height: `${h}%` }}
-                  title={`${d.day}: ${d.plays} прослушиваний, ${d.listeners} слушателей`}
                 />
-                <span className="text-[10px] font-mono text-foreground/30 tabular-nums">
-                  {date.getDate()}
+                <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] font-mono text-foreground/60 tabular-nums opacity-0 group-hover:opacity-100 transition-opacity">
+                  {d.plays}
                 </span>
               </div>
             );
           })}
+        </div>
+        <div className="flex gap-1.5 mt-1.5">
+          {daily.map((d) => (
+            <span key={d.day} className="flex-1 text-center text-[10px] font-mono text-foreground/30 tabular-nums">
+              {new Date(`${d.day}T00:00:00`).getDate()}
+            </span>
+          ))}
         </div>
       </Panel>
     </Section>
