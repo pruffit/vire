@@ -83,4 +83,35 @@ export class TrackService {
     await this.trackRepo.delete(params.trackId);
     return ok(undefined);
   }
+
+  /**
+   * Переупорядочить треки релиза. `orderedIds` — полный список id треков релиза
+   * в новом порядке. Проверяем владение релизом и что набор id в точности
+   * совпадает с треками релиза (ни лишних, ни недостающих, без дублей) — иначе
+   * частичная перенумерация порушила бы нумерацию.
+   */
+  async reorderTracks(params: {
+    releaseId: string;
+    artistProfileId: string;
+    orderedIds: string[];
+  }): Promise<Result<void, NotFoundError | Error>> {
+    const release = await this.releaseRepo.findById(params.releaseId);
+    if (!release) return err(new NotFoundError('Release', params.releaseId));
+    if (release.artistProfileId !== params.artistProfileId) {
+      return err(new Error('Forbidden: release does not belong to this artist'));
+    }
+
+    const withTracks = await this.releaseRepo.findWithTracks(params.releaseId);
+    const actualIds = withTracks ? withTracks.tracks.map((t) => t.id) : [];
+
+    const seen = new Set(params.orderedIds);
+    const sameSize = seen.size === params.orderedIds.length && seen.size === actualIds.length;
+    const sameMembers = sameSize && actualIds.every((id) => seen.has(id));
+    if (!sameMembers) {
+      return err(new Error('Order does not match release tracks'));
+    }
+
+    await this.trackRepo.reorder(params.releaseId, params.orderedIds);
+    return ok(undefined);
+  }
 }

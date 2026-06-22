@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, Reorder, useDragControls } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
 import { MoodPicker } from '@/components/mood-picker';
 import { GenrePicker } from '@/components/genre-picker';
 import { CreditsEditor } from '@/components/credits-editor';
 import { LyricsEditor } from '@/components/lyrics-editor';
+import { Check, TrackStatusBadge } from '@/components/ui-kit';
+import { titleRepeatsArtist } from '@/lib/title-hygiene';
+import { cn } from '@/lib/utils';
 import type { Mood } from '@/lib/moods';
 import type { Genre } from '@/lib/genres';
 import type { TrackCredit } from '@/lib/upload';
@@ -25,6 +28,8 @@ export interface ManagedTrack {
   bpm: number | null;
   musicalKey: string | null;
   isExplicit: boolean;
+  isExclusive: boolean;
+  isWip: boolean;
   lyrics: LyricLine[] | null;
 }
 
@@ -38,30 +43,28 @@ async function patchTrack(id: string, patch: Record<string, unknown>): Promise<b
 }
 
 /**
- * Управление треками релиза: переименование, удаление, порядок и mood-теги —
- * всё с оптимистичным UI (меняем сразу, откатываем при ошибке запроса).
+ * Управление треками релиза: переименование, удаление, перетаскивание порядка
+ * (drag-n-drop), флаги (18+/эксклюзив/демо), аудио-теги, кредиты, текст — всё
+ * с оптимистичным UI (меняем сразу, откатываем при ошибке запроса).
  */
-export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; releaseId: string }) {
+export function TrackManager({
+  initial,
+  releaseId,
+  artistName,
+}: {
+  initial: ManagedTrack[];
+  releaseId: string;
+  artistName: string;
+}) {
   const [tracks, setTracks] = useState<ManagedTrack[]>(initial);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [justSaved, setJustSaved] = useState<Set<string>>(new Set());
-  const savedTitles = useRef<Map<string, string>>(
-    new Map(initial.map((t) => [t.id, t.title])),
-  );
-  const savedBpm = useRef<Map<string, string>>(
-    new Map(initial.map((t) => [t.id, t.bpm != null ? String(t.bpm) : ''])),
-  );
-  const savedKey = useRef<Map<string, string>>(
-    new Map(initial.map((t) => [t.id, t.musicalKey ?? ''])),
-  );
-  // локальные строковые значения для BPM/key input-полей
-  const [audioInputs, setAudioInputs] = useState<Map<string, { bpm: string; key: string }>>(
-    () => new Map(initial.map((t) => [t.id, { bpm: t.bpm != null ? String(t.bpm) : '', key: t.musicalKey ?? '' }])),
-  );
+  // Снимок порядка/состава, известного серверу — для отката DnD при ошибке.
+  const committed = useRef<ManagedTrack[]>(initial);
 
-  // Пока есть треки в обработке — опрашиваем статус, чтобы показать «обрабатывается → готов»
-  // вживую, без перезагрузки. Останавливаемся, когда обработка завершилась.
+  // Пока есть треки в обработке — опрашиваем статус, чтобы показать
+  // «обрабатывается → готов» вживую, без перезагрузки.
   const hasProcessing = tracks.some((t) => t.status === 'PROCESSING');
   useEffect(() => {
     if (!hasProcessing) return;
@@ -86,7 +89,7 @@ export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; 
     setBusy((p) => { const n = new Set(p); if (on) n.add(id); else n.delete(id); return n; });
   }
 
-  // Короткая отметка «✓ сохранено» у строки после успешного сохранения правки.
+  // Короткая отметка «✓ сохранено» у строки после успешной правки.
   function flashSaved(id: string) {
     setJustSaved((p) => new Set(p).add(id));
     setTimeout(() => setJustSaved((p) => { const n = new Set(p); n.delete(id); return n; }), 1600);
@@ -99,56 +102,35 @@ export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; 
   function toggleExpanded(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }
 
-  function setAudioInput(id: string, field: 'bpm' | 'key', value: string) {
-    setAudioInputs((prev) => {
-      const next = new Map(prev);
-      const cur = next.get(id) ?? { bpm: '', key: '' };
-      next.set(id, { ...cur, [field]: value });
-      return next;
-    });
+  // ── DnD: меняем порядок локально на каждый шаг, персистим при отпускании ──
+  function handleReorder(next: ManagedTrack[]) {
+    setTracks(next.map((t, i) => ({ ...t, trackNumber: i + 1 })));
   }
 
-  async function commitBpm(id: string) {
-    const raw = (audioInputs.get(id)?.bpm ?? '').trim();
-    if (raw === savedBpm.current.get(id)) return;
-    const parsed = raw === '' ? null : parseInt(raw, 10);
-    if (raw !== '' && (isNaN(parsed!) || parsed! < 20 || parsed! > 500)) {
-      setAudioInput(id, 'bpm', savedBpm.current.get(id) ?? '');
-      return;
-    }
-    markBusy(id, true);
-    const ok = await patchTrack(id, { bpm: parsed });
-    markBusy(id, false);
-    if (ok) {
-      savedBpm.current.set(id, raw);
-      setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, bpm: parsed } : t)));
-      flashSaved(id);
-    } else {
-      setAudioInput(id, 'bpm', savedBpm.current.get(id) ?? '');
-      toast.error('Не удалось сохранить BPM');
-    }
-  }
+  async function commitOrder() {
+    const ids = tracks.map((t) => t.id);
+    const prevIds = committed.current.map((t) => t.id);
+    if (ids.length === prevIds.length && ids.every((id, i) => id === prevIds[i])) return;
 
-  async function commitKey(id: string) {
-    const raw = (audioInputs.get(id)?.key ?? '').trim();
-    if (raw === savedKey.current.get(id)) return;
-    const value = raw === '' ? null : raw;
-    markBusy(id, true);
-    const ok = await patchTrack(id, { musicalKey: value });
-    markBusy(id, false);
-    if (ok) {
-      savedKey.current.set(id, raw);
-      setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, musicalKey: value } : t)));
-      flashSaved(id);
+    const snapshot = committed.current;
+    setBusy((p) => { const n = new Set(p); ids.forEach((id) => n.add(id)); return n; });
+    const res = await fetch(`/api/v1/dashboard/releases/${releaseId}/tracks`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: ids }),
+    }).catch(() => null);
+    setBusy((p) => { const n = new Set(p); ids.forEach((id) => n.delete(id)); return n; });
+
+    if (res?.ok) {
+      committed.current = tracks;
     } else {
-      setAudioInput(id, 'key', savedKey.current.get(id) ?? '');
-      toast.error('Не удалось сохранить тональность');
+      setTracks(snapshot);
+      toast.error('Не удалось изменить порядок треков');
     }
   }
 
@@ -156,36 +138,44 @@ export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; 
     const current = tracks.find((t) => t.id === id);
     if (!current) return;
     const title = current.title.trim();
-    if (title === savedTitles.current.get(id)) return;
-    if (!title) {
-      setTitle(id, savedTitles.current.get(id) ?? '');
-      return;
-    }
+    const savedTitle = committed.current.find((t) => t.id === id)?.title ?? '';
+    if (title === savedTitle) return;
+    if (!title) { setTitle(id, savedTitle); return; }
     markBusy(id, true);
     const ok = await patchTrack(id, { title });
     markBusy(id, false);
     if (ok) {
-      savedTitles.current.set(id, title);
+      committed.current = committed.current.map((t) => (t.id === id ? { ...t, title } : t));
       flashSaved(id);
     } else {
-      setTitle(id, savedTitles.current.get(id) ?? '');
+      setTitle(id, savedTitle);
       toast.error('Не удалось переименовать трек');
     }
   }
 
-  async function toggleExplicit(id: string) {
-    const current = tracks.find((t) => t.id === id);
-    if (!current) return;
-    const next = !current.isExplicit;
-    setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, isExplicit: next } : t)));
+  async function commitAudio(id: string, field: 'bpm' | 'musicalKey', value: number | string | null) {
     markBusy(id, true);
-    const ok = await patchTrack(id, { isExplicit: next });
+    const ok = await patchTrack(id, { [field]: value });
     markBusy(id, false);
     if (ok) {
+      setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, [field]: value } : t)));
       flashSaved(id);
     } else {
-      setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, isExplicit: !next } : t)));
-      toast.error('Не удалось сохранить метку 18+');
+      toast.error('Не удалось сохранить');
+    }
+  }
+
+  async function toggleFlag(id: string, flag: 'isExplicit' | 'isExclusive' | 'isWip', next: boolean) {
+    setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, [flag]: next } : t)));
+    markBusy(id, true);
+    const ok = await patchTrack(id, { [flag]: next });
+    markBusy(id, false);
+    if (ok) {
+      committed.current = committed.current.map((t) => (t.id === id ? { ...t, [flag]: next } : t));
+      flashSaved(id);
+    } else {
+      setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, [flag]: !next } : t)));
+      toast.error('Не удалось сохранить метку');
     }
   }
 
@@ -194,241 +184,274 @@ export function TrackManager({ initial, releaseId }: { initial: ManagedTrack[]; 
     const prev = tracks;
     setTracks((ts) => ts.filter((t) => t.id !== id));
     const res = await fetch(`/api/v1/dashboard/tracks/${id}`, { method: 'DELETE' }).catch(() => null);
-    if (!res?.ok) {
+    if (res?.ok) {
+      committed.current = committed.current.filter((t) => t.id !== id);
+    } else {
       setTracks(prev);
       toast.error('Не удалось удалить трек');
     }
   }
 
-  async function move(id: string, dir: -1 | 1) {
-    const i = tracks.findIndex((t) => t.id === id);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= tracks.length) return;
-
-    const prev = tracks;
-    const next = [...tracks];
-    [next[i], next[j]] = [next[j], next[i]];
-    const renumbered = next.map((t, idx) => ({ ...t, trackNumber: idx + 1 }));
-    setTracks(renumbered);
-
-    const a = renumbered[i], b = renumbered[j];
-    markBusy(a.id, true); markBusy(b.id, true);
-    const [okA, okB] = await Promise.all([
-      patchTrack(a.id, { trackNumber: a.trackNumber }),
-      patchTrack(b.id, { trackNumber: b.trackNumber }),
-    ]);
-    markBusy(a.id, false); markBusy(b.id, false);
-    if (!okA || !okB) {
-      setTracks(prev);
-      toast.error('Не удалось изменить порядок треков');
-    } else {
-      flashSaved(a.id);
-      flashSaved(b.id);
-    }
-  }
-
   if (tracks.length === 0) {
-    return <p className="text-sm text-white/30 px-1">Пока нет треков. Добавь первый ниже.</p>;
+    return <p className="text-sm text-foreground/30 px-1">Пока нет треков. Добавь первый ниже.</p>;
   }
 
   return (
-    <div className="rounded-xl bg-white/5 border border-white/10 divide-y divide-white/5 overflow-hidden">
-      <AnimatePresence mode="popLayout" initial={false}>
-        {tracks.map((track, i) => (
+    <Reorder.Group
+      axis="y"
+      values={tracks}
+      onReorder={handleReorder}
+      className="rounded-xl bg-foreground/[0.025] border border-foreground/10 divide-y divide-foreground/[0.06] overflow-hidden"
+    >
+      {tracks.map((track) => (
+        <TrackRow
+          key={track.id}
+          track={track}
+          busy={busy.has(track.id)}
+          expanded={expanded.has(track.id)}
+          justSaved={justSaved.has(track.id)}
+          artistName={artistName}
+          onReorderEnd={commitOrder}
+          onTitleChange={(v) => setTitle(track.id, v)}
+          onTitleCommit={() => commitTitle(track.id)}
+          onToggleExpanded={() => toggleExpanded(track.id)}
+          onToggleFlag={(flag, next) => toggleFlag(track.id, flag, next)}
+          onCommitAudio={(field, value) => commitAudio(track.id, field, value)}
+          onRemove={() => remove(track.id)}
+        />
+      ))}
+    </Reorder.Group>
+  );
+}
+
+function TrackRow({
+  track,
+  busy,
+  expanded,
+  justSaved,
+  artistName,
+  onReorderEnd,
+  onTitleChange,
+  onTitleCommit,
+  onToggleExpanded,
+  onToggleFlag,
+  onCommitAudio,
+  onRemove,
+}: {
+  track: ManagedTrack;
+  busy: boolean;
+  expanded: boolean;
+  justSaved: boolean;
+  artistName: string;
+  onReorderEnd: () => void;
+  onTitleChange: (v: string) => void;
+  onTitleCommit: () => void;
+  onToggleExpanded: () => void;
+  onToggleFlag: (flag: 'isExplicit' | 'isExclusive' | 'isWip', next: boolean) => void;
+  onCommitAudio: (field: 'bpm' | 'musicalKey', value: number | string | null) => void;
+  onRemove: () => void;
+}) {
+  const controls = useDragControls();
+  const [bpm, setBpm] = useState(track.bpm != null ? String(track.bpm) : '');
+  const [key, setKey] = useState(track.musicalKey ?? '');
+  const titleWarn = artistName ? titleRepeatsArtist(track.title, artistName) : false;
+
+  function commitBpm() {
+    const raw = bpm.trim();
+    if (raw === (track.bpm != null ? String(track.bpm) : '')) return;
+    const parsed = raw === '' ? null : parseInt(raw, 10);
+    if (raw !== '' && (isNaN(parsed!) || parsed! < 20 || parsed! > 500)) {
+      setBpm(track.bpm != null ? String(track.bpm) : '');
+      return;
+    }
+    onCommitAudio('bpm', parsed);
+  }
+  function commitKey() {
+    const raw = key.trim();
+    if (raw === (track.musicalKey ?? '')) return;
+    onCommitAudio('musicalKey', raw === '' ? null : raw);
+  }
+
+  return (
+    <Reorder.Item
+      value={track}
+      dragListener={false}
+      dragControls={controls}
+      onDragEnd={onReorderEnd}
+      whileDrag={{ scale: 1.01, backgroundColor: 'rgba(255,255,255,0.04)', zIndex: 10 }}
+      transition={spring.snappy}
+      className="bg-background"
+    >
+      {/* Track row */}
+      <div className="flex items-center gap-2 px-2 sm:px-3 py-2.5 text-sm">
+        {/* Drag handle (тач-таргет ≥44px по высоте строки) */}
+        <button
+          type="button"
+          onPointerDown={(e) => { e.preventDefault(); controls.start(e); }}
+          aria-label="Перетащить для изменения порядка"
+          title="Перетащить"
+          className="grid h-9 w-7 shrink-0 cursor-grab touch-none place-items-center text-foreground/25 hover:text-foreground/60 active:cursor-grabbing transition-colors"
+        >
+          <GripIcon />
+        </button>
+
+        <span className="w-5 text-right text-foreground/30 shrink-0 font-mono text-xs tabular-nums">
+          {track.trackNumber}
+        </span>
+
+        {/* Название (редактируемое) */}
+        <div className="flex-1 min-w-0">
+          <input
+            value={track.title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            onBlur={onTitleCommit}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+            aria-label="Название трека"
+            className="w-full bg-transparent rounded px-2 py-1 -mx-2 hover:bg-foreground/5 focus:bg-foreground/5 focus:outline-none focus:ring-1 focus:ring-foreground/20 transition-colors"
+          />
+          {titleWarn && (
+            <p className="px-0.5 pt-1 text-[11px] text-amber-400/90 leading-snug">
+              Имя артиста уже показано рядом — в названии его дублировать не нужно.
+            </p>
+          )}
+        </div>
+
+        {justSaved ? (
+          <motion.span
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={spring.snappy}
+            className="text-xs shrink-0 text-emerald-400"
+          >
+            ✓
+          </motion.span>
+        ) : (
+          <span className="shrink-0">
+            <TrackStatusBadge status={track.status} />
+          </span>
+        )}
+
+        {/* Раскрыть детали */}
+        <motion.button
+          type="button"
+          onClick={onToggleExpanded}
+          whileTap={{ scale: 0.9 }}
+          transition={spring.snappy}
+          aria-label="Параметры трека"
+          aria-expanded={expanded}
+          title="Параметры трека"
+          className={cn(
+            'shrink-0 grid place-items-center size-9 rounded-full transition-colors',
+            expanded ? 'bg-foreground/10 text-foreground/70' : 'text-foreground/30 hover:bg-foreground/10 hover:text-foreground/60',
+          )}
+        >
+          <TagIcon />
+        </motion.button>
+
+        {/* Удалить */}
+        <motion.button
+          type="button"
+          onClick={onRemove}
+          disabled={busy}
+          whileTap={{ scale: 0.9 }}
+          transition={spring.snappy}
+          aria-label="Удалить трек"
+          title="Удалить трек"
+          className="shrink-0 grid place-items-center size-9 rounded-full text-foreground/30 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 transition-colors"
+        >
+          <Icon name="trash" size={14} />
+        </motion.button>
+      </div>
+
+      {/* Детали — разворачиваются по кнопке */}
+      <AnimatePresence>
+        {expanded && (
           <motion.div
-            key={track.id}
-            layout
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            key="details"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={spring.snappy}
+            className="overflow-hidden border-t border-foreground/[0.06]"
           >
-            {/* Track row */}
-            <div className="flex items-center gap-2 px-3 py-2.5 text-sm">
-              <span className="w-5 text-right text-white/30 shrink-0 font-mono text-xs">
-                {track.trackNumber}
-              </span>
-
-              {/* Порядок */}
-              <div className="flex flex-col shrink-0 -my-1">
-                <button
-                  type="button"
-                  onClick={() => move(track.id, -1)}
-                  disabled={i === 0 || busy.has(track.id)}
-                  aria-label="Выше"
-                  className="text-white/30 hover:text-white/80 disabled:opacity-20 transition-colors leading-none"
-                >▲</button>
-                <button
-                  type="button"
-                  onClick={() => move(track.id, 1)}
-                  disabled={i === tracks.length - 1 || busy.has(track.id)}
-                  aria-label="Ниже"
-                  className="text-white/30 hover:text-white/80 disabled:opacity-20 transition-colors leading-none"
-                >▼</button>
+            <div className="px-3 sm:px-4 py-3 space-y-4">
+              {/* Флаги */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-8 sm:gap-y-2">
+                <Check
+                  label={<><span className="font-mono font-semibold text-foreground/80">18+</span> Explicit</>}
+                  hint="Мат/контент 18+ — бейдж «E» на витрине"
+                  checked={track.isExplicit}
+                  disabled={busy}
+                  onChange={(v) => onToggleFlag('isExplicit', v)}
+                />
+                <Check
+                  label="Эксклюзив"
+                  hint="Метка «excl» в трек-листе релиза"
+                  checked={track.isExclusive}
+                  disabled={busy}
+                  onChange={(v) => onToggleFlag('isExclusive', v)}
+                />
+                <Check
+                  label="WIP (демо)"
+                  hint="Черновик/демо — метка «wip»"
+                  checked={track.isWip}
+                  disabled={busy}
+                  onChange={(v) => onToggleFlag('isWip', v)}
+                />
               </div>
 
-              {/* Название (редактируемое) */}
-              <input
-                value={track.title}
-                onChange={(e) => setTitle(track.id, e.target.value)}
-                onBlur={() => commitTitle(track.id)}
-                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                aria-label="Название трека"
-                className="flex-1 min-w-0 bg-transparent rounded px-2 py-1 -mx-2 hover:bg-white/5 focus:bg-white/5 focus:outline-none focus:ring-1 focus:ring-white/20 transition-colors"
-              />
+              {/* BPM + Key */}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-foreground/[0.06] pt-3">
+                <label className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-foreground/40 w-8">BPM</span>
+                  <input
+                    type="number"
+                    min="20"
+                    max="500"
+                    placeholder="—"
+                    value={bpm}
+                    onChange={(e) => setBpm(e.target.value)}
+                    onBlur={commitBpm}
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                    disabled={busy}
+                    className="w-16 bg-transparent border border-foreground/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-foreground/30 disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </label>
+                <label className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-foreground/40 shrink-0">Тональность</span>
+                  <input
+                    type="text"
+                    placeholder="—"
+                    value={key}
+                    onChange={(e) => setKey(e.target.value)}
+                    onBlur={commitKey}
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                    disabled={busy}
+                    className="w-20 bg-transparent border border-foreground/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-foreground/30 disabled:opacity-50"
+                  />
+                </label>
+              </div>
 
-              <AnimatePresence mode="wait">
-                {justSaved.has(track.id) ? (
-                  <motion.span
-                    key="saved"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={spring.snappy}
-                    className="text-xs shrink-0 text-green-400"
-                  >
-                    ✓ сохранено
-                  </motion.span>
-                ) : (
-                  <motion.span
-                    key="status"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={`text-xs font-mono shrink-0 inline-flex items-center gap-1.5 ${
-                      track.status === 'READY' ? 'text-green-400'
-                      : track.status === 'PROCESSING' ? 'text-yellow-400'
-                      : 'text-red-400'
-                    }`}
-                  >
-                    {track.status === 'PROCESSING' && (
-                      <span className="relative grid place-items-center w-2 h-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-                        <span className="absolute inset-0 rounded-full bg-yellow-400 opacity-40 animate-ping" />
-                      </span>
-                    )}
-                    {track.status === 'READY' ? 'готов'
-                      : track.status === 'PROCESSING' ? 'обрабатывается'
-                      : track.status === 'FAILED' ? 'ошибка обработки'
-                      : 'заблокирован'}
-                  </motion.span>
-                )}
-              </AnimatePresence>
+              <div className="border-t border-foreground/[0.06] pt-3">
+                <GenrePicker trackId={track.id} initial={track.genres} />
+              </div>
 
-              {/* Настроения */}
-              <motion.button
-                type="button"
-                onClick={() => toggleExpanded(track.id)}
-                whileTap={{ scale: 0.9 }}
-                transition={spring.snappy}
-                aria-label="Настроение трека"
-                aria-expanded={expanded.has(track.id)}
-                title="Настроение трека"
-                className={`shrink-0 grid place-items-center w-7 h-7 rounded-full transition-colors ${
-                  expanded.has(track.id)
-                    ? 'bg-white/10 text-white/70'
-                    : 'text-white/30 hover:bg-white/10 hover:text-white/60'
-                }`}
-              >
-                <TagIcon />
-              </motion.button>
+              <div className="border-t border-foreground/[0.06] pt-3">
+                <MoodPicker trackId={track.id} initial={track.moods} />
+              </div>
 
-              {/* Удалить */}
-              <motion.button
-                type="button"
-                onClick={() => remove(track.id)}
-                disabled={busy.has(track.id)}
-                whileTap={{ scale: 0.9 }}
-                transition={spring.snappy}
-                aria-label="Удалить трек"
-                title="Удалить трек"
-                className="shrink-0 grid place-items-center w-7 h-7 rounded-full text-white/30 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 transition-colors"
-              >
-                <TrashIcon />
-              </motion.button>
+              <div className="border-t border-foreground/[0.06] pt-3">
+                <CreditsEditor trackId={track.id} initial={track.credits} artistName={artistName} />
+              </div>
+
+              <div className="border-t border-foreground/[0.06] pt-3">
+                <LyricsEditor trackId={track.id} initial={track.lyrics} />
+              </div>
             </div>
-
-            {/* MoodPicker — разворачивается по кнопке */}
-            <AnimatePresence>
-              {expanded.has(track.id) && (
-                <motion.div
-                  key="moods"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={spring.snappy}
-                  className="overflow-hidden border-t border-white/5"
-                >
-                  <div className="px-4 py-3 space-y-4">
-                    {/* BPM + Key */}
-                    <div className="flex items-center gap-5">
-                      <label className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-white/40 w-8">BPM</span>
-                        <input
-                          type="number"
-                          min="20"
-                          max="500"
-                          placeholder="—"
-                          value={audioInputs.get(track.id)?.bpm ?? ''}
-                          onChange={(e) => setAudioInput(track.id, 'bpm', e.target.value)}
-                          onBlur={() => commitBpm(track.id)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                          disabled={busy.has(track.id)}
-                          className="w-16 bg-transparent border border-white/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-white/40 shrink-0">Тональность</span>
-                        <input
-                          type="text"
-                          placeholder="—"
-                          value={audioInputs.get(track.id)?.key ?? ''}
-                          onChange={(e) => setAudioInput(track.id, 'key', e.target.value)}
-                          onBlur={() => commitKey(track.id)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                          disabled={busy.has(track.id)}
-                          className="w-20 bg-transparent border border-white/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50"
-                        />
-                      </label>
-                    </div>
-
-                    {/* Возрастная маркировка 18+ */}
-                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={track.isExplicit}
-                        onChange={() => toggleExplicit(track.id)}
-                        disabled={busy.has(track.id)}
-                        className="size-4 shrink-0 accent-red-500 cursor-pointer disabled:opacity-50"
-                      />
-                      <span className="text-xs text-white/60">
-                        <span className="font-mono font-semibold text-white/80">18+</span> Explicit — мат или
-                        откровенный контент
-                      </span>
-                    </label>
-
-                    <div className="border-t border-white/5 pt-3">
-                      <GenrePicker trackId={track.id} initial={track.genres} />
-                    </div>
-
-                    <div className="border-t border-white/5 pt-3">
-                      <MoodPicker trackId={track.id} initial={track.moods} />
-                    </div>
-
-                    <div className="border-t border-white/5 pt-3">
-                      <CreditsEditor trackId={track.id} initial={track.credits} />
-                    </div>
-
-                    <div className="border-t border-white/5 pt-3">
-                      <LyricsEditor trackId={track.id} initial={track.lyrics} />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
-        ))}
+        )}
       </AnimatePresence>
-    </div>
+    </Reorder.Item>
   );
 }
 
@@ -441,6 +464,12 @@ function TagIcon() {
   );
 }
 
-function TrashIcon() {
-  return <Icon name="trash" size={14} />;
+function GripIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+      <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+    </svg>
+  );
 }

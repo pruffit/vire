@@ -51,7 +51,7 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
       </Link>
 
       {rows.length === 0 ? (
-        <p className="text-sm text-white/40 py-8 text-center">
+        <p className="text-sm text-foreground/40 py-8 text-center">
           Пока нет лендингов. Создай первый — собери ссылки на стриминги и соцсети в одну красивую страницу.
         </p>
       ) : (
@@ -62,10 +62,10 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
               layout
               exit={{ opacity: 0, height: 0 }}
               transition={spring.snappy}
-              className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:flex-row sm:items-center"
+              className="flex flex-col gap-3 rounded-xl border border-foreground/10 bg-foreground/[0.03] p-3 sm:flex-row sm:items-center"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="shrink-0 w-12 h-12 rounded-md overflow-hidden bg-white/5 border border-white/10">
+                <div className="shrink-0 w-12 h-12 rounded-md overflow-hidden bg-foreground/5 border border-foreground/10">
                   {row.coverUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={row.coverUrl} alt="" className="w-full h-full object-cover" />
@@ -74,11 +74,11 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{row.title}</p>
-                  <p className="text-xs text-white/40 font-mono truncate">/smartlink/{artistSlug}/{row.slug}</p>
+                  <p className="text-xs text-foreground/40 font-mono truncate">/smartlink/{artistSlug}/{row.slug}</p>
                 </div>
 
                 <span className={`shrink-0 text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                  row.isPublished ? 'bg-green-500/15 text-green-400' : 'bg-white/10 text-white/40'
+                  row.isPublished ? 'bg-emerald-500/15 text-emerald-300' : 'bg-foreground/10 text-foreground/40'
                 }`}>
                   {row.isPublished ? 'опубликован' : 'черновик'}
                 </span>
@@ -86,15 +86,15 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
 
               <div className="shrink-0 flex items-center gap-1 text-xs justify-end">
                 {row.isPublished && (
-                  <button onClick={() => copyLink(row.slug)} className="px-2 py-1 rounded text-white/50 hover:text-white hover:bg-white/5 transition-colors">
+                  <button onClick={() => copyLink(row.slug)} className="px-2 py-1 rounded text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors">
                     Копировать
                   </button>
                 )}
-                <Link href={`/dashboard/links/${row.id}`} className="px-2 py-1 rounded text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                <Link href={`/dashboard/links/${row.id}`} className="px-2 py-1 rounded text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors">
                   Изменить
                 </Link>
                 <button onClick={() => remove(row.id, row.title)} disabled={pendingId === row.id}
-                  className="px-2 py-1 rounded text-white/40 hover:text-red-400 hover:bg-white/5 transition-colors disabled:opacity-50">
+                  className="px-2 py-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 transition-colors disabled:opacity-50">
                   Удалить
                 </button>
               </div>

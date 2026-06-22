@@ -46,12 +46,12 @@ export function ArtistSwitcher({
 
   return (
     <label className="flex items-center gap-2 text-sm">
-      <span className="text-white/40 shrink-0">Артист</span>
+      <span className="text-foreground/40 shrink-0">Артист</span>
       <select
         value={value}
         disabled={isPending}
         onChange={(e) => select(e.target.value)}
-        className="min-w-0 max-w-[200px] truncate rounded-md bg-white/10 border border-white/10 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50"
+        className="min-w-0 max-w-[200px] truncate rounded-md bg-foreground/10 border border-foreground/10 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       >
         {artists.map((a) => (
           <option key={a.id} value={a.id}>

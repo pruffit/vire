@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArtistLink, ArtistVideo, ThemeTokens } from '@vire/core';
+import { btnPrimary } from '@/components/ui-kit';
 
 // Font name → CSS variable (the fonts are loaded globally in app/layout via lib/fonts).
 const SANS_VAR: Record<string, string> = {
@@ -135,9 +136,9 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       <div className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
           <span className="text-sm font-medium">Ссылки</span>
-          <span className="text-xs text-white/30">до 10 ссылок</span>
+          <span className="text-xs text-foreground/30">до 10 ссылок</span>
         </div>
-        <p className="text-xs text-white/40 -mt-1">
+        <p className="text-xs text-foreground/40 -mt-1">
           Соцсети и площадки. Название — это подпись кнопки, ссылка — куда она ведёт.
           Появятся блоком на твоей странице артиста.
         </p>
@@ -172,7 +173,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
               type="button"
               disabled={busy}
               onClick={() => setLinks((prev) => prev.filter((_, j) => j !== i))}
-              className="shrink-0 text-white/30 hover:text-red-400 transition-colors text-lg leading-none"
+              className="shrink-0 text-foreground/30 hover:text-red-400 transition-colors text-lg leading-none"
               aria-label="Удалить ссылку"
             >
               ×
@@ -185,7 +186,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
             type="button"
             disabled={busy}
             onClick={() => setLinks((prev) => [...prev, { label: '', url: '' }])}
-            className="self-start text-sm text-white/40 hover:text-white/70 transition-colors"
+            className="self-start text-sm text-foreground/40 hover:text-foreground/70 transition-colors"
           >
             + добавить ссылку
           </button>
@@ -196,9 +197,9 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       <div className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
           <span className="text-sm font-medium">Видео</span>
-          <span className="text-xs text-white/30">YouTube или VK · до 20</span>
+          <span className="text-xs text-foreground/30">YouTube или VK · до 20</span>
         </div>
-        <p className="text-xs text-white/40 -mt-1">
+        <p className="text-xs text-foreground/40 -mt-1">
           Клипы и влоги. Вставь ссылку на ролик YouTube или VK — он встроится плеером
           на твоей странице артиста.
         </p>
@@ -233,7 +234,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
               type="button"
               disabled={busy}
               onClick={() => setVideos((prev) => prev.filter((_, j) => j !== i))}
-              className="shrink-0 text-white/30 hover:text-red-400 transition-colors text-lg leading-none"
+              className="shrink-0 text-foreground/30 hover:text-red-400 transition-colors text-lg leading-none"
               aria-label="Удалить видео"
             >
               ×
@@ -246,7 +247,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
             type="button"
             disabled={busy}
             onClick={() => setVideos((prev) => [...prev, { title: '', url: '' }])}
-            className="self-start text-sm text-white/40 hover:text-white/70 transition-colors"
+            className="self-start text-sm text-foreground/40 hover:text-foreground/70 transition-colors"
           >
             + добавить видео
           </button>
@@ -261,17 +262,17 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={avatarPreview} alt="avatar" className="w-16 h-16 rounded-full object-cover shrink-0" />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center text-xl font-medium shrink-0">
+            <div className="w-16 h-16 rounded-full bg-foreground/10 flex items-center justify-center text-xl font-medium shrink-0">
               {artist.name[0]?.toUpperCase()}
             </div>
           )}
           <div className="flex flex-col gap-2">
             <input name="avatar" type="file" accept="image/jpeg,image/png,image/webp"
               disabled={busy} onChange={handleAvatarChange}
-              className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-sm file:cursor-pointer hover:file:bg-white/20 disabled:opacity-50" />
+              className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-foreground/10 file:px-3 file:py-1.5 file:text-sm file:cursor-pointer hover:file:bg-foreground/20 disabled:opacity-50" />
             {artist.avatarUrl && !removeAvatar && (
               <button type="button" onClick={() => { setRemoveAvatar(true); setAvatarPreview(null); }}
-                className="text-xs text-white/40 hover:text-red-400 transition-colors text-left">
+                className="text-xs text-foreground/40 hover:text-red-400 transition-colors text-left">
                 Удалить аватар
               </button>
             )}
@@ -396,7 +397,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
 
         {/* Пресеты палитр — клик применяет фон/текст/акцент разом */}
         <div className="flex flex-col gap-3">
-          <span className="text-xs text-white/40">Пресеты палитры</span>
+          <span className="text-xs text-foreground/40">Пресеты палитры</span>
           <div className="grid grid-cols-6 gap-2">
             {THEME_PRESETS.map((p) => {
               const active = bg === p.bg && textColor === p.text && accent === p.accent;
@@ -433,14 +434,14 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
                       <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-yellow-400/70" title="Световая тема" />
                     )}
                   </div>
-                  <span className="text-[10px] text-white/40 leading-none text-center w-full truncate group-hover:text-white/70 transition-colors">
+                  <span className="text-[10px] text-foreground/40 leading-none text-center w-full truncate group-hover:text-foreground/70 transition-colors">
                     {p.name}
                   </span>
                 </button>
               );
             })}
           </div>
-          <p className="text-[10px] text-white/25 leading-snug">
+          <p className="text-[10px] text-foreground/25 leading-snug">
             Жёлтая точка — световая тема. Создаёт контраст при переходе с тёмного навбара.
           </p>
         </div>
@@ -456,7 +457,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
               role="switch"
               aria-checked={grain}
               onClick={() => setGrain((g) => !g)}
-              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${grain ? 'bg-white/60' : 'bg-white/15'}`}
+              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${grain ? 'bg-foreground/60' : 'bg-foreground/15'}`}
             >
               <span
                 className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${grain ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
@@ -480,14 +481,13 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
-      {saved && <p className="text-sm text-green-400">Сохранено</p>}
+      {saved && <p className="text-sm text-emerald-400">Сохранено</p>}
 
       <div className="flex items-center gap-4 pt-1">
-        <button type="submit" disabled={busy}
-          className="rounded-md bg-white text-black px-5 py-2 text-sm font-medium hover:opacity-80 disabled:opacity-40 transition-opacity">
+        <button type="submit" disabled={busy} className={btnPrimary}>
           {busy ? 'Сохраняю…' : 'Сохранить'}
         </button>
-        <a href="/dashboard" className="text-sm text-white/40 hover:text-white/70 transition-colors">
+        <a href="/dashboard" className="text-sm text-foreground/40 hover:text-foreground/70 transition-colors">
           Отмена
         </a>
       </div>
@@ -519,7 +519,7 @@ function ColorField({ label, name, value, onChange, disabled }: {
             onChange(v);
           }}
           placeholder="#000000"
-          className="w-24 rounded-md bg-white/5 border border-white/10 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50" />
+          className="w-24 rounded-md bg-foreground/5 border border-foreground/10 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50" />
       </div>
     </div>
   );
@@ -530,7 +530,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline gap-2">
         <span className="text-sm font-medium">{label}</span>
-        {hint && <span className="text-xs text-white/30">{hint}</span>}
+        {hint && <span className="text-xs text-foreground/30">{hint}</span>}
       </div>
       {children}
     </div>
@@ -539,4 +539,4 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 // Базовые стили инпута БЕЗ ширины — ширину задаёт каждое поле явно, иначе
 // `w-full` конфликтует с `w-32`/`flex-1` в строках ссылок и видео.
-const inp = 'rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50';
+const inp = 'rounded-md bg-foreground/5 border border-foreground/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50';

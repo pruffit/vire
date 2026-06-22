@@ -124,13 +124,13 @@ export function SmartLinkForm({
         <button
           type="button"
           onClick={() => coverInputRef.current?.click()}
-          className="relative shrink-0 w-28 h-28 rounded-lg overflow-hidden border border-white/10 bg-white/5 grid place-items-center hover:border-white/25 transition-colors"
+          className="relative shrink-0 w-28 h-28 rounded-lg overflow-hidden border border-foreground/10 bg-foreground/5 grid place-items-center hover:border-foreground/25 transition-colors"
         >
           {coverPreview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={coverPreview} alt="" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-xs text-white/40 text-center px-2">Обложка<br />1:1</span>
+            <span className="text-xs text-foreground/40 text-center px-2">Обложка<br />1:1</span>
           )}
         </button>
         <input
@@ -147,7 +147,7 @@ export function SmartLinkForm({
               placeholder="Название релиза" className={inputCls} />
           </Field>
           {coverPreview && (
-            <button type="button" onClick={clearCover} className="self-start text-xs text-white/40 hover:text-red-400 transition-colors">
+            <button type="button" onClick={clearCover} className="self-start text-xs text-foreground/40 hover:text-red-400 transition-colors">
               Убрать обложку
             </button>
           )}
@@ -157,7 +157,7 @@ export function SmartLinkForm({
       {/* Адрес */}
       <Field label="Адрес страницы" hint="латиница, цифры, дефис">
         <div className="flex items-center gap-1 text-sm min-w-0">
-          <span className="text-white/40 shrink-0 font-mono text-xs max-w-[45%] truncate">/smartlink/{artistSlug}/</span>
+          <span className="text-foreground/40 shrink-0 font-mono text-xs max-w-[45%] truncate">/smartlink/{artistSlug}/</span>
           <input
             value={slug}
             onChange={(e) => { setSlug(normalizeSlug(e.target.value)); setSlugEdited(true); }}
@@ -194,9 +194,9 @@ export function SmartLinkForm({
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
           <span className="text-sm font-medium">Ссылки на площадки</span>
-          <span className="text-xs text-white/30">{links.length}/{MAX_SMART_LINKS}</span>
+          <span className="text-xs text-foreground/30">{links.length}/{MAX_SMART_LINKS}</span>
         </div>
-        <p className="text-xs text-white/40 -mt-1">Вставь ссылку — иконка и название подхватятся сами.</p>
+        <p className="text-xs text-foreground/40 -mt-1">Вставь ссылку — иконка и название подхватятся сами.</p>
 
         {links.map((link, i) => {
           const { key } = detectPlatform(link.url);
@@ -208,7 +208,7 @@ export function SmartLinkForm({
                   <BrandIcon name={brand} size={isBrandWordmark(brand) ? 14 : 18} />
                 </span>
               ) : (
-                <span className="shrink-0 w-9 h-9 grid place-items-center rounded-md bg-white/5 border border-white/10 text-white/70">
+                <span className="shrink-0 w-9 h-9 grid place-items-center rounded-md bg-foreground/5 border border-foreground/10 text-foreground/70">
                   <PlatformIcon platform={link.url ? key : 'website'} size={18} />
                 </span>
               )}
@@ -230,7 +230,7 @@ export function SmartLinkForm({
                 )}
               </div>
               <button type="button" onClick={() => setLinks((p) => p.filter((_, j) => j !== i))}
-                className="shrink-0 text-white/30 hover:text-red-400 transition-colors text-lg leading-none" aria-label="Удалить ссылку">
+                className="shrink-0 text-foreground/30 hover:text-red-400 transition-colors text-lg leading-none" aria-label="Удалить ссылку">
                 ×
               </button>
             </div>
@@ -239,7 +239,7 @@ export function SmartLinkForm({
 
         {links.length < MAX_SMART_LINKS && (
           <button type="button" onClick={() => setLinks((p) => [...p, { url: '' }])}
-            className="self-start text-xs text-white/50 hover:text-white/80 transition-colors mt-1">
+            className="self-start text-xs text-foreground/50 hover:text-foreground/80 transition-colors mt-1">
             + добавить ссылку
           </button>
         )}
@@ -261,13 +261,13 @@ export function SmartLinkForm({
 }
 
 const inputCls =
-  'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-white/30 transition-colors disabled:opacity-50 placeholder:text-white/30';
+  'w-full bg-foreground/5 border border-foreground/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-foreground/30 transition-colors disabled:opacity-50 placeholder:text-foreground/30';
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-medium">
-        {label} {hint && <span className="text-white/30 font-normal text-xs">· {hint}</span>}
+        {label} {hint && <span className="text-foreground/30 font-normal text-xs">· {hint}</span>}
       </span>
       {children}
     </label>

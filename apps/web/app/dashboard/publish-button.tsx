@@ -55,7 +55,7 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={spring.snappy}
-            className="text-xs text-green-400"
+            className="text-xs text-emerald-400"
           >
             {isFuture ? 'Запланирован ✓' : 'Опубликован ✓'}
           </motion.span>
@@ -65,7 +65,7 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
             onClick={publish}
-            className="text-xs px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 transition-colors"
+            className="text-xs px-2.5 py-1 rounded bg-foreground/10 hover:bg-foreground/20 transition-colors"
           >
             {label}
           </motion.button>

@@ -41,6 +41,7 @@ function makeTrackRepo(overrides?: Partial<ITrackRepository>): ITrackRepository 
     findById: vi.fn().mockResolvedValue(mockTrack),
     update: vi.fn().mockResolvedValue(mockTrack),
     delete: vi.fn().mockResolvedValue(undefined),
+    reorder: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -233,5 +234,92 @@ describe('TrackService.deleteTrack', () => {
 
     expect(result.ok).toBe(false);
     expect(trackRepo.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe('TrackService.reorderTracks', () => {
+  const withTracks = {
+    release: mockRelease,
+    tracks: [
+      { ...mockTrack, id: 't1', trackNumber: 1 },
+      { ...mockTrack, id: 't2', trackNumber: 2 },
+      { ...mockTrack, id: 't3', trackNumber: 3 },
+    ],
+  };
+
+  it('reorders when ids match release tracks exactly', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo({
+      findById: vi.fn().mockResolvedValue(mockRelease),
+      findWithTracks: vi.fn().mockResolvedValue(withTracks),
+    });
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+
+    const result = await service.reorderTracks({
+      releaseId: 'release-1',
+      artistProfileId: 'artist-1',
+      orderedIds: ['t3', 't1', 't2'],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(trackRepo.reorder).toHaveBeenCalledWith('release-1', ['t3', 't1', 't2']);
+  });
+
+  it('returns NotFoundError when release does not exist', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(null) });
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+
+    const result = await service.reorderTracks({
+      releaseId: 'release-1',
+      artistProfileId: 'artist-1',
+      orderedIds: ['t1'],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(trackRepo.reorder).not.toHaveBeenCalled();
+  });
+
+  it('forbids reordering tracks of another artist', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo({
+      findById: vi.fn().mockResolvedValue({ ...mockRelease, artistProfileId: 'other' }),
+    });
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+
+    const result = await service.reorderTracks({
+      releaseId: 'release-1',
+      artistProfileId: 'artist-1',
+      orderedIds: ['t1'],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+    expect(trackRepo.reorder).not.toHaveBeenCalled();
+  });
+
+  it('rejects when ids do not match release tracks (missing/extra/dupes)', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo({
+      findById: vi.fn().mockResolvedValue(mockRelease),
+      findWithTracks: vi.fn().mockResolvedValue(withTracks),
+    });
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+
+    const missing = await service.reorderTracks({
+      releaseId: 'release-1',
+      artistProfileId: 'artist-1',
+      orderedIds: ['t1', 't2'],
+    });
+    expect(missing.ok).toBe(false);
+
+    const dupes = await service.reorderTracks({
+      releaseId: 'release-1',
+      artistProfileId: 'artist-1',
+      orderedIds: ['t1', 't1', 't2'],
+    });
+    expect(dupes.ok).toBe(false);
+
+    expect(trackRepo.reorder).not.toHaveBeenCalled();
   });
 });

@@ -70,13 +70,13 @@ export function PostsManager({
       <Composer onSubmit={create} />
 
       {posts.length === 0 ? (
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-foreground/40">
           Пока нет анонсов. Первая запись появится у подписчиков на странице{' '}
           <a
             href={`/artists/${artistSlug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-white/70"
+            className="underline underline-offset-2 hover:text-foreground/70"
           >
             @{artistSlug}
           </a>
@@ -154,12 +154,12 @@ function Composer({
   }
 
   return (
-    <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col gap-3">
+    <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 flex flex-col gap-3">
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))}
         placeholder="Заголовок (необязательно)"
-        className="bg-transparent text-sm font-medium placeholder:text-white/30 focus:outline-none"
+        className="bg-transparent text-sm font-medium placeholder:text-foreground/30 focus:outline-none"
       />
       <textarea
         value={body}
@@ -169,12 +169,12 @@ function Composer({
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
         }}
-        className="bg-transparent text-sm leading-relaxed placeholder:text-white/30 focus:outline-none resize-y min-h-[72px]"
+        className="bg-transparent text-sm leading-relaxed placeholder:text-foreground/30 focus:outline-none resize-y min-h-[72px]"
       />
       <div className="flex items-center justify-between gap-3">
         <span
           className={`text-xs font-mono tabular-nums ${
-            trimmed.length > BODY_MAX ? 'text-red-400' : 'text-white/25'
+            trimmed.length > BODY_MAX ? 'text-red-400' : 'text-foreground/25'
           }`}
         >
           {trimmed.length}/{BODY_MAX}
@@ -183,7 +183,7 @@ function Composer({
           {onCancel && (
             <button
               onClick={onCancel}
-              className="text-sm px-3 py-1.5 rounded-md text-white/50 hover:text-white/80 transition-colors"
+              className="text-sm px-3 py-1.5 rounded-md text-foreground/50 hover:text-foreground/80 transition-colors"
             >
               Отмена
             </button>
@@ -193,7 +193,7 @@ function Composer({
             disabled={!canSubmit}
             whileTap={canSubmit ? { scale: 0.96 } : undefined}
             transition={spring.snappy}
-            className="text-sm px-4 py-1.5 rounded-md bg-white/10 hover:bg-white/15 disabled:opacity-30 disabled:hover:bg-white/10 transition-colors"
+            className="text-sm px-4 py-1.5 rounded-md bg-foreground/10 hover:bg-foreground/15 disabled:opacity-30 disabled:hover:bg-foreground/10 transition-colors"
           >
             {busy ? '…' : submitLabel}
           </motion.button>
@@ -215,16 +215,16 @@ function PostCard({
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col gap-2 group">
+    <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 flex flex-col gap-2 group">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {post.title && <p className="font-medium leading-snug">{post.title}</p>}
-          <p className="text-[11px] font-mono text-white/30 mt-0.5">{relativeDate(post.createdAt)}</p>
+          <p className="text-[11px] font-mono text-foreground/30 mt-0.5">{relativeDate(post.createdAt)}</p>
         </div>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={onEdit}
-            className="text-xs px-2 py-1 rounded text-white/50 hover:text-white/90 hover:bg-white/5 transition-colors"
+            className="text-xs px-2 py-1 rounded text-foreground/50 hover:text-foreground/90 hover:bg-foreground/5 transition-colors"
           >
             Изменить
           </button>
@@ -241,14 +241,14 @@ function PostCard({
                 setConfirming(true);
                 setTimeout(() => setConfirming(false), 2500);
               }}
-              className="text-xs px-2 py-1 rounded text-white/50 hover:text-red-400 hover:bg-white/5 transition-colors"
+              className="text-xs px-2 py-1 rounded text-foreground/50 hover:text-red-400 hover:bg-foreground/5 transition-colors"
             >
               Удалить
             </button>
           )}
         </div>
       </div>
-      <p className="text-sm leading-relaxed text-white/75 whitespace-pre-line">{post.body}</p>
+      <p className="text-sm leading-relaxed text-foreground/75 whitespace-pre-line">{post.body}</p>
     </div>
   );
 }

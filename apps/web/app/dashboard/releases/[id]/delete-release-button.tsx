@@ -62,9 +62,9 @@ export function DeleteReleaseButton({
             transition={spring.smooth}
             className="flex flex-wrap items-center gap-3"
           >
-            <span className="text-sm text-white/60">
+            <span className="text-sm text-foreground/60">
               Удалить{' '}
-              <span className="text-white/90 font-medium">«{title}»</span>
+              <span className="text-foreground/90 font-medium">«{title}»</span>
               {' '}и все треки?{' '}
               <span className="text-red-400/70">Необратимо.</span>
             </span>
@@ -83,7 +83,7 @@ export function DeleteReleaseButton({
                 type="button"
                 onClick={() => { setConfirming(false); setError(null); }}
                 disabled={loading}
-                className="text-sm text-white/40 hover:text-white/70 transition-colors"
+                className="text-sm text-foreground/40 hover:text-foreground/70 transition-colors"
               >
                 Отмена
               </button>

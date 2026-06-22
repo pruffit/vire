@@ -154,16 +154,20 @@ export function BatchTrackUpload({
         disabled={uploading}
         className={`flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-8 text-center transition-colors disabled:opacity-60 ${
           dragOver
-            ? 'border-white/40 bg-white/10'
-            : 'border-white/15 bg-white/[0.02] hover:bg-white/5 hover:border-white/25'
+            ? 'border-foreground/40 bg-foreground/10'
+            : 'border-foreground/15 bg-foreground/[0.02] hover:bg-foreground/5 hover:border-foreground/25'
         }`}
       >
         <UploadIcon />
-        <span className="text-sm text-white/70">
+        <span className="text-sm text-foreground/70">
           {uploading ? 'Загрузка…' : 'Перетащи файлы сюда или нажми, чтобы выбрать'}
         </span>
-        <span className="text-xs text-white/40">
+        <span className="text-xs text-foreground/40">
           WAV, FLAC или MP3 · можно несколько сразу · автонумерация и исполнитель «{artistName}»
+        </span>
+        <span className="text-[11px] text-foreground/30 max-w-sm">
+          Название трека — без имени артиста: оно и так показано рядом. Имя файла
+          станет названием — переименуй ниже, если нужно.
         </span>
         <input
           ref={inputRef}
@@ -185,7 +189,7 @@ export function BatchTrackUpload({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, height: 0 }}
             transition={spring.snappy}
-            className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5"
+            className="rounded-lg border border-foreground/10 bg-foreground/[0.03] px-3 py-2.5"
           >
             <div className="flex items-center gap-3 text-sm">
               <StateDot state={it.state} />
@@ -193,7 +197,7 @@ export function BatchTrackUpload({
               <span className={`shrink-0 text-xs font-mono ${
                 it.state === 'error' ? 'text-red-400'
                 : it.state === 'processing' ? 'text-yellow-400'
-                : 'text-white/40'
+                : 'text-foreground/40'
               }`}>
                 {it.state === 'queued' ? 'в очереди'
                   : it.state === 'uploading' ? `${Math.round(it.progress * 100)}%`
@@ -204,9 +208,9 @@ export function BatchTrackUpload({
 
             {/* Прогресс-бар */}
             {(it.state === 'uploading' || it.state === 'queued') && (
-              <div className="mt-2 h-1 rounded-full bg-white/10 overflow-hidden">
+              <div className="mt-2 h-1 rounded-full bg-foreground/10 overflow-hidden">
                 <motion.div
-                  className="h-full bg-white/60"
+                  className="h-full bg-foreground/60"
                   initial={false}
                   animate={{ width: `${Math.round(it.progress * 100)}%` }}
                   transition={{ duration: 0.2 }}
@@ -228,8 +232,8 @@ function StateDot({ state }: { state: ItemState }) {
   const cls =
     state === 'error' ? 'bg-red-400'
     : state === 'processing' ? 'bg-yellow-400'
-    : state === 'uploading' ? 'bg-white/70'
-    : 'bg-white/30';
+    : state === 'uploading' ? 'bg-foreground/70'
+    : 'bg-foreground/30';
   return (
     <span className="shrink-0 relative grid place-items-center w-4 h-4">
       <span className={`w-2 h-2 rounded-full ${cls}`} />
@@ -241,5 +245,5 @@ function StateDot({ state }: { state: ItemState }) {
 }
 
 function UploadIcon() {
-  return <Icon name="upload" size={22} className="text-white/50" />;
+  return <Icon name="upload" size={22} className="text-foreground/50" />;
 }

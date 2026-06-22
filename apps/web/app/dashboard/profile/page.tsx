@@ -27,14 +27,14 @@ export default async function DashboardProfilePage() {
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
         <div className="flex flex-col gap-1">
-          <a href="/dashboard" className="text-xs text-white/30 hover:text-white/60 transition-colors mb-2 self-start">
+          <a href="/dashboard" className="text-xs text-foreground/30 hover:text-foreground/60 transition-colors mb-2 self-start">
             ← дашборд
           </a>
           <h1 className="text-2xl font-semibold">Профиль артиста</h1>
-          <p className="text-sm text-white/40">@{artist.slug}</p>
+          <p className="text-sm text-foreground/40">@{artist.slug}</p>
         </div>
 
-        <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+        <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
           <EditProfileForm artist={profile} />
         </div>
       </div>

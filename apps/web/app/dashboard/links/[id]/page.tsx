@@ -39,7 +39,7 @@ export default async function EditSmartLinkPage({ params }: Props) {
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
         <div className="flex flex-col gap-1">
-          <Link href="/dashboard/links" className="text-xs text-white/30 hover:text-white/60 transition-colors mb-2 self-start">
+          <Link href="/dashboard/links" className="text-xs text-foreground/30 hover:text-foreground/60 transition-colors mb-2 self-start">
             ← смартлинки
           </Link>
           <h1 className="text-2xl font-semibold">Редактирование</h1>
@@ -48,14 +48,14 @@ export default async function EditSmartLinkPage({ params }: Props) {
               href={`/smartlink/${artist.slug}/${smartLink.slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-white/40 hover:text-white/70 transition-colors self-start font-mono"
+              className="text-xs text-foreground/40 hover:text-foreground/70 transition-colors self-start font-mono"
             >
               /smartlink/{artist.slug}/{smartLink.slug} ↗
             </a>
           )}
         </div>
 
-        <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+        <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
           <SmartLinkForm artistSlug={artist.slug} initial={initial} releaseOptions={releaseOptions} />
         </div>
       </div>

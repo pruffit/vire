@@ -39,16 +39,17 @@ export default async function EditReleasePage({ params }: Props) {
         <div className="flex items-center gap-4">
           <a
             href="/dashboard"
-            className="text-white/40 hover:text-white/70 text-sm transition-colors"
+            className="text-foreground/40 hover:text-foreground/70 text-sm transition-colors"
           >
             ← Назад
           </a>
           <h1 className="text-2xl font-semibold">Редактировать релиз</h1>
         </div>
 
-        <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+        <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
           <EditReleaseForm
             releaseId={release.id}
+            artistName={artist.name}
             initial={{
               title: release.title,
               type: release.type,
@@ -64,12 +65,13 @@ export default async function EditReleasePage({ params }: Props) {
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-medium">
             Треки
-            <span className="ml-2 text-sm text-white/30 font-normal">{tracks.length}</span>
+            <span className="ml-2 text-sm text-foreground/30 font-normal tabular-nums">{tracks.length}</span>
           </h2>
 
           <TrackManager
             key={tracks.map((t) => t.id).join('-')}
             releaseId={release.id}
+            artistName={artist.name}
             initial={tracks.map((t) => ({
               id: t.id,
               title: t.title,
@@ -81,11 +83,13 @@ export default async function EditReleasePage({ params }: Props) {
               bpm: audioMetaMap[t.id]?.bpm ?? null,
               musicalKey: audioMetaMap[t.id]?.musicalKey ?? null,
               isExplicit: t.isExplicit,
+              isExclusive: t.isExclusive,
+              isWip: t.isWip,
               lyrics: t.lyrics,
             }))}
           />
 
-          <div className="rounded-xl bg-white/5 border border-white/10 p-5">
+          <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-5">
             <p className="text-sm font-medium mb-4">Добавить треки</p>
             <BatchTrackUpload
               releaseId={release.id}
@@ -95,7 +99,7 @@ export default async function EditReleasePage({ params }: Props) {
           </div>
         </section>
 
-        <div className="border-t border-white/5 pt-4">
+        <div className="border-t border-foreground/[0.06] pt-4">
           <DeleteReleaseButton releaseId={release.id} title={release.title} />
         </div>
       </div>

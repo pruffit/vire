@@ -28,11 +28,11 @@ export default async function DashboardLinksPage() {
     <div className="min-h-full bg-background text-foreground">
       <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
         <div className="flex flex-col gap-1">
-          <a href="/dashboard" className="text-xs text-white/30 hover:text-white/60 transition-colors mb-2 self-start">
+          <a href="/dashboard" className="text-xs text-foreground/30 hover:text-foreground/60 transition-colors mb-2 self-start">
             ← дашборд
           </a>
           <h1 className="text-2xl font-semibold">Смартлинки</h1>
-          <p className="text-sm text-white/40">
+          <p className="text-sm text-foreground/40">
             Красивые страницы релизов со ссылками на стриминги и соцсети. Работают и без публикации музыки на Vire.
           </p>
         </div>

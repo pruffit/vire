@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import {
   tracks,
   trackAudio,
@@ -95,6 +95,21 @@ export class DrizzleTrackRepository implements ITrackRepository {
     }
 
     return row ? mapRow(row) : null;
+  }
+
+  async reorder(releaseId: string, orderedIds: string[]): Promise<void> {
+    // Перенумерация в одной транзакции: id[i] → track_number i+1. Уникального
+    // индекса на (release_id, track_number) нет, поэтому промежуточных коллизий
+    // не возникает. `releaseId` в WHERE — страховка от чужих треков.
+    await this.db.transaction(async (tx) => {
+      const now = new Date();
+      for (let i = 0; i < orderedIds.length; i++) {
+        await tx
+          .update(tracks)
+          .set({ trackNumber: i + 1, updatedAt: now })
+          .where(and(eq(tracks.id, orderedIds[i]!), eq(tracks.releaseId, releaseId)));
+      }
+    });
   }
 
   async delete(id: string): Promise<void> {

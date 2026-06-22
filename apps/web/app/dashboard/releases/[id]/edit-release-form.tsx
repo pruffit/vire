@@ -4,6 +4,9 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ReleaseType } from '@vire/core';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
+import { Field, fieldClass, btnPrimary } from '@/components/ui-kit';
+import { titleRepeatsArtist } from '@/lib/title-hygiene';
+import { cn } from '@/lib/utils';
 
 interface Initial {
   title: string;
@@ -17,20 +20,20 @@ interface Initial {
 
 interface Props {
   releaseId: string;
+  artistName: string;
   initial: Initial;
 }
 
 type State = 'idle' | 'saving' | 'saved' | 'error';
 
-const input =
-  'rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50 w-full';
-
-export function EditReleaseForm({ releaseId, initial }: Props) {
+export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [state, setState] = useState<State>('idle');
   const [error, setError] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [title, setTitle] = useState(initial.title);
+  const titleWarn = titleRepeatsArtist(title, artistName);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -69,12 +72,25 @@ export function EditReleaseForm({ releaseId, initial }: Props) {
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <Field label="Название">
-        <input name="title" type="text" required disabled={busy} defaultValue={initial.title} className={input} />
+      <Field label="Название" hint="без имени артиста — оно и так рядом с обложкой">
+        <input
+          name="title"
+          type="text"
+          required
+          disabled={busy}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className={cn(fieldClass, 'w-full')}
+        />
+        {titleWarn && (
+          <span className="text-[11px] text-amber-400/90 leading-snug">
+            Имя артиста уже показано рядом — в названии его дублировать не нужно.
+          </span>
+        )}
       </Field>
 
       <Field label="Тип">
-        <select name="type" required disabled={busy} defaultValue={initial.type} className={input}>
+        <select name="type" required disabled={busy} defaultValue={initial.type} className={cn(fieldClass, 'w-full')}>
           <option value="ALBUM">Альбом</option>
           <option value="EP">EP</option>
           <option value="SINGLE">Сингл</option>
@@ -82,7 +98,7 @@ export function EditReleaseForm({ releaseId, initial }: Props) {
       </Field>
 
       <Field label="Жанр" hint="необязательно">
-        <select name="genre" disabled={busy} defaultValue={initial.genre ?? ''} className={input}>
+        <select name="genre" disabled={busy} defaultValue={initial.genre ?? ''} className={cn(fieldClass, 'w-full')}>
           <option value="">— выберите жанр</option>
           {GENRE_GROUPS.map((group) => (
             <optgroup key={group.label} label={group.label}>
@@ -95,7 +111,7 @@ export function EditReleaseForm({ releaseId, initial }: Props) {
       </Field>
 
       <Field label="Дата релиза" hint="необязательно">
-        <input name="releaseDate" type="date" disabled={busy} defaultValue={initial.releaseDate} className={`${input} w-44`} />
+        <input name="releaseDate" type="date" disabled={busy} defaultValue={initial.releaseDate} className={cn(fieldClass, 'w-44')} />
       </Field>
 
       <Field label="Обложка" hint="Квадрат 1:1, от 1400×1400 (рек. 3000×3000) · оставь пустым — без изменений">
@@ -106,7 +122,7 @@ export function EditReleaseForm({ releaseId, initial }: Props) {
             accept="image/jpeg,image/png,image/webp"
             disabled={busy}
             onChange={handleCoverChange}
-            className="min-w-0 max-w-full flex-1 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-sm file:cursor-pointer hover:file:bg-white/20 disabled:opacity-50"
+            className="min-w-0 max-w-full flex-1 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-foreground/10 file:px-3 file:py-1.5 file:text-sm file:cursor-pointer hover:file:bg-foreground/20 disabled:opacity-50"
           />
           {(coverPreview ?? initial.coverUrl) && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -120,40 +136,24 @@ export function EditReleaseForm({ releaseId, initial }: Props) {
       </Field>
 
       <Field label="Описание" hint="необязательно">
-        <textarea name="description" rows={3} disabled={busy} defaultValue={initial.description} className={`${input} resize-none`} />
+        <textarea name="description" rows={3} disabled={busy} defaultValue={initial.description} className={cn(fieldClass, 'w-full resize-none')} />
       </Field>
 
       <Field label="Liner notes" hint="необязательно · виден только купившим">
-        <textarea name="linerNotes" rows={5} disabled={busy} defaultValue={initial.linerNotes} className={`${input} resize-none font-mono text-xs`} />
+        <textarea name="linerNotes" rows={5} disabled={busy} defaultValue={initial.linerNotes} className={cn(fieldClass, 'w-full resize-none font-mono text-xs')} />
       </Field>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
-      {state === 'saved' && <p className="text-sm text-green-400">Сохранено</p>}
+      {state === 'saved' && <p className="text-sm text-emerald-400">Сохранено</p>}
 
       <div className="flex items-center gap-4 pt-1">
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-md bg-white text-black px-5 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-40"
-        >
+        <button type="submit" disabled={busy} className={btnPrimary}>
           {busy ? 'Сохраняю…' : 'Сохранить'}
         </button>
-        <a href="/dashboard" className="text-sm text-white/40 hover:text-white/70 transition-colors">
+        <a href="/dashboard" className="text-sm text-foreground/40 hover:text-foreground/70 transition-colors">
           Отмена
         </a>
       </div>
     </form>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5 min-w-0">
-      <div className="flex items-baseline gap-2 flex-wrap">
-        <span className="text-sm font-medium">{label}</span>
-        {hint && <span className="text-xs text-white/30">{hint}</span>}
-      </div>
-      {children}
-    </div>
   );
 }

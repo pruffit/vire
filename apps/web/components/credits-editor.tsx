@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from '@/components/toast';
+import { fieldClass } from '@/components/ui-kit';
+import { cn } from '@/lib/utils';
 import type { ContributorRole, TrackCredit } from '@/lib/upload';
 
 const ROLES: { value: ContributorRole; label: string }[] = [
@@ -14,11 +16,20 @@ const ROLES: { value: ContributorRole; label: string }[] = [
 
 const MAX = 20;
 
-const inp =
-  'bg-transparent border border-white/10 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-white/30 disabled:opacity-50';
-
-/** Редактор кредитов трека — имя + роль, с явным сохранением (PATCH /tracks/[id]). */
-export function CreditsEditor({ trackId, initial }: { trackId: string; initial: TrackCredit[] }) {
+/**
+ * Редактор кредитов трека — имя + роль, с явным сохранением (PATCH /tracks/[id]).
+ * Роль выбирается пилюлями (как жанры/настроения) — без нативного селекта,
+ * удобнее на телефоне. При пустом списке предлагаем добавить артиста исполнителем.
+ */
+export function CreditsEditor({
+  trackId,
+  initial,
+  artistName,
+}: {
+  trackId: string;
+  initial: TrackCredit[];
+  artistName?: string;
+}) {
   const [credits, setCredits] = useState<TrackCredit[]>(initial);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -29,9 +40,9 @@ export function CreditsEditor({ trackId, initial }: { trackId: string; initial: 
     setCredits((prev) => prev.map((c, j) => (j === i ? { ...c, ...patch } : c)));
     touch();
   }
-  function addRow() {
+  function addRow(preset?: TrackCredit) {
     if (credits.length >= MAX) return;
-    setCredits((prev) => [...prev, { name: '', role: 'PERFORMER' }]);
+    setCredits((prev) => [...prev, preset ?? { name: '', role: 'PERFORMER' }]);
     touch();
   }
   function removeRow(i: number) {
@@ -56,10 +67,16 @@ export function CreditsEditor({ trackId, initial }: { trackId: string; initial: 
     });
   }
 
+  const canSuggestSelf =
+    !!artistName &&
+    !credits.some((c) => c.name.trim().toLowerCase() === artistName.trim().toLowerCase());
+
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-mono text-white/40 uppercase tracking-widest">Кредиты</span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">
+          Кредиты
+        </span>
         <AnimatePresence mode="wait">
           {saved ? (
             <motion.span
@@ -67,7 +84,7 @@ export function CreditsEditor({ trackId, initial }: { trackId: string; initial: 
               initial={{ opacity: 0, x: 4 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0 }}
-              className="text-xs font-mono text-green-400"
+              className="text-xs font-mono text-emerald-400"
             >
               ✓ сохранено
             </motion.span>
@@ -80,7 +97,7 @@ export function CreditsEditor({ trackId, initial }: { trackId: string; initial: 
               exit={{ opacity: 0 }}
               onClick={handleSave}
               disabled={isPending}
-              className="text-xs font-mono text-white underline-offset-2 hover:underline disabled:opacity-40"
+              className="text-xs font-mono text-foreground underline-offset-2 hover:underline disabled:opacity-40"
             >
               {isPending ? 'Сохраняю…' : 'Сохранить'}
             </motion.button>
@@ -88,9 +105,14 @@ export function CreditsEditor({ trackId, initial }: { trackId: string; initial: 
         </AnimatePresence>
       </div>
 
+      <p className="text-[11px] text-foreground/35 leading-snug">
+        Кто работал над треком: вокал, текст, музыка, продакшн. Имя — без приставок;
+        роль выбери ниже.
+      </p>
+
       <div className="space-y-2">
         {credits.length === 0 && (
-          <p className="text-xs text-white/30">Кредитов пока нет.</p>
+          <p className="text-xs text-foreground/30">Кредитов пока нет.</p>
         )}
         <AnimatePresence initial={false}>
           {credits.map((c, i) => (
@@ -100,49 +122,75 @@ export function CreditsEditor({ trackId, initial }: { trackId: string; initial: 
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, height: 0 }}
-              className="flex items-center gap-2"
+              className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-2.5 space-y-2"
             >
-              <input
-                type="text"
-                placeholder="Имя"
-                value={c.name}
-                disabled={isPending}
-                onChange={(e) => setRow(i, { name: e.target.value })}
-                className={`${inp} flex-1 min-w-0`}
-              />
-              <select
-                value={c.role}
-                disabled={isPending}
-                onChange={(e) => setRow(i, { role: e.target.value as ContributorRole })}
-                className={`${inp} shrink-0`}
-              >
-                {ROLES.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={() => removeRow(i)}
-                className="shrink-0 text-white/30 hover:text-red-400 transition-colors text-lg leading-none disabled:opacity-30"
-                aria-label="Удалить кредит"
-              >
-                ×
-              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Имя"
+                  value={c.name}
+                  disabled={isPending}
+                  onChange={(e) => setRow(i, { name: e.target.value })}
+                  className={cn(fieldClass, 'flex-1 min-w-0 py-1.5 text-xs')}
+                />
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => removeRow(i)}
+                  className="grid size-7 shrink-0 place-items-center rounded-md text-foreground/30 hover:bg-red-500/10 hover:text-red-400 transition-colors disabled:opacity-30"
+                  aria-label="Удалить кредит"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {ROLES.map((r) => {
+                  const on = c.role === r.value;
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      disabled={isPending}
+                      aria-pressed={on}
+                      onClick={() => setRow(i, { role: r.value })}
+                      className={cn(
+                        'rounded-full border px-2.5 py-1 text-[11px] transition-colors active:scale-[0.97] disabled:opacity-40',
+                        on
+                          ? 'border-primary bg-primary/15 text-foreground'
+                          : 'border-foreground/10 text-foreground/45 hover:text-foreground hover:border-foreground/30',
+                      )}
+                    >
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>
 
-        {credits.length < MAX && (
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={addRow}
-            className="self-start text-xs text-white/40 hover:text-white/70 transition-colors disabled:opacity-40"
-          >
-            + добавить
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-0.5">
+          {credits.length < MAX && (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => addRow()}
+              className="text-xs text-foreground/45 hover:text-foreground transition-colors disabled:opacity-40"
+            >
+              + добавить
+            </button>
+          )}
+          {canSuggestSelf && credits.length < MAX && (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => addRow({ name: artistName!.trim(), role: 'PERFORMER' })}
+              className="text-xs text-foreground/45 hover:text-foreground transition-colors disabled:opacity-40"
+            >
+              + {artistName} — исполнитель
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import { PublishButton } from './publish-button';
 import { StatsSection } from './stats-section';
 import { LiveNow } from './live-now';
 import { ArtistSwitcher } from './artist-switcher';
+import { ReleaseStatusBadge, TrackStatusBadge, btnGhost, btnPrimary } from '@/components/ui-kit';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,47 +32,19 @@ interface DashboardRelease {
   tracks: DashboardTrack[];
 }
 
-const STATUS_LABEL: Record<TrackStatus, string> = {
-  PROCESSING: 'обрабатывается',
-  READY: 'готов',
-  BLOCKED: 'заблокирован',
-  FAILED: 'ошибка обработки',
-};
-
-const RELEASE_STATUS_LABEL: Record<ReleaseStatus, string> = {
-  DRAFT: 'черновик',
-  SCHEDULED: 'запланирован',
-  PUBLISHED: 'опубликован',
-  ARCHIVED: 'архив',
-};
-
-const RELEASE_STATUS_COLOR: Record<ReleaseStatus, string> = {
-  DRAFT: 'text-white/40',
-  SCHEDULED: 'text-blue-400',
-  PUBLISHED: 'text-green-400',
-  ARCHIVED: 'text-white/20',
-};
-
-const STATUS_COLOR: Record<TrackStatus, string> = {
-  PROCESSING: 'text-yellow-400',
-  READY: 'text-green-400',
-  BLOCKED: 'text-red-400',
-  FAILED: 'text-red-500',
-};
-
 function TrackRow({ track }: { track: DashboardTrack }) {
   const mins = track.durationSec ? Math.floor(track.durationSec / 60) : null;
   const secs = track.durationSec ? String(track.durationSec % 60).padStart(2, '0') : null;
 
   return (
-    <div className="flex items-center gap-3 py-2 text-sm border-b border-white/5 last:border-0">
-      <span className="w-6 text-right text-white/30 shrink-0">{track.trackNumber}</span>
+    <div className="flex items-center gap-3 py-2 text-sm border-b border-foreground/[0.06] last:border-0">
+      <span className="w-6 text-right text-foreground/30 shrink-0 font-mono text-xs tabular-nums">{track.trackNumber}</span>
       <span className="flex-1 truncate">{track.title}</span>
       {mins !== null && (
-        <span className="text-white/40 shrink-0">{mins}:{secs}</span>
+        <span className="text-foreground/40 shrink-0 font-mono text-xs tabular-nums">{mins}:{secs}</span>
       )}
-      <span className={`shrink-0 text-xs ${STATUS_COLOR[track.status]}`}>
-        {STATUS_LABEL[track.status]}
+      <span className="shrink-0">
+        <TrackStatusBadge status={track.status} />
       </span>
     </div>
   );
@@ -80,13 +53,13 @@ function TrackRow({ track }: { track: DashboardTrack }) {
 function ReleaseCard({ data, artistSlug }: { data: DashboardRelease; artistSlug: string }) {
   const { tracks } = data;
   return (
-    <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col gap-3">
+    <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 flex flex-col gap-3 transition-colors hover:border-foreground/20">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 min-w-0">
           <div className="flex items-center gap-2">
             <a
               href={`/dashboard/releases/${data.id}`}
-              className="font-medium hover:text-white/70 transition-colors"
+              className="font-medium hover:text-foreground/70 transition-colors"
             >
               {data.title}
             </a>
@@ -95,20 +68,23 @@ function ReleaseCard({ data, artistSlug }: { data: DashboardRelease; artistSlug:
                 href={`/artists/${artistSlug}/releases/${data.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[11px] text-white/30 hover:text-white/60 transition-colors"
+                className="text-[11px] text-foreground/30 hover:text-foreground/60 transition-colors"
                 title="Открыть публичную страницу"
               >
                 ↗
               </a>
             )}
           </div>
-          <p className={`text-sm ${RELEASE_STATUS_COLOR[data.status]}`}>
-            {data.type} · {RELEASE_STATUS_LABEL[data.status]}
+          <div className="flex flex-wrap items-center gap-2 text-sm text-foreground/45">
+            <ReleaseStatusBadge status={data.status} />
+            <span className="font-mono text-xs">{data.type}</span>
             {data.status === 'SCHEDULED' && data.releaseDate && (
-              <> · {new Date(data.releaseDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</>
+              <span className="font-mono text-xs">
+                {new Date(data.releaseDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
             )}
-            {' '}· {tracks.length} тр.
-          </p>
+            <span className="font-mono text-xs">{tracks.length} тр.</span>
+          </div>
           {data.status === 'DRAFT' && (
             <PublishButton releaseId={data.id} releaseDate={data.releaseDate} />
           )}
@@ -124,7 +100,7 @@ function ReleaseCard({ data, artistSlug }: { data: DashboardRelease; artistSlug:
         )}
       </div>
       {tracks.length === 0 ? (
-        <p className="text-sm text-white/30">Треков пока нет</p>
+        <p className="text-sm text-foreground/30">Треков пока нет</p>
       ) : (
         <div>
           {tracks.map((t) => (
@@ -178,7 +154,7 @@ export default async function DashboardPage() {
               {artist && <LiveNow />}
             </div>
             {artist && (
-              <p className="text-white/50 mt-1 text-sm">
+              <p className="text-foreground/50 mt-1 text-sm">
                 @{artist.slug} · {artist.name}
               </p>
             )}
@@ -197,26 +173,17 @@ export default async function DashboardPage() {
                 href={`/artists/${artist.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm px-3 py-1.5 rounded-md text-white/50 hover:text-white/80 border border-white/10 hover:border-white/20 transition-colors"
+                className={btnGhost}
               >
                 Страница артиста ↗
               </a>
-              <Link
-                href="/dashboard/posts"
-                className="text-sm px-3 py-1.5 rounded-md text-white/50 hover:text-white/80 border border-white/10 hover:border-white/20 transition-colors"
-              >
+              <Link href="/dashboard/posts" className={btnGhost}>
                 Анонсы
               </Link>
-              <Link
-                href="/dashboard/links"
-                className="text-sm px-3 py-1.5 rounded-md text-white/50 hover:text-white/80 border border-white/10 hover:border-white/20 transition-colors"
-              >
+              <Link href="/dashboard/links" className={btnGhost}>
                 Смартлинки
               </Link>
-              <a
-                href="/dashboard/profile"
-                className="text-sm px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/15 transition-colors"
-              >
+              <a href="/dashboard/profile" className={btnGhost}>
                 Профиль
               </a>
             </div>
@@ -224,7 +191,7 @@ export default async function DashboardPage() {
         </div>
 
         {!artist ? (
-          <p className="text-white/50">
+          <p className="text-foreground/50">
             У тебя нет профиля артиста. Обратись к администратору для создания.
           </p>
         ) : (
@@ -235,17 +202,14 @@ export default async function DashboardPage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-medium">
                   Релизы
-                  <span className="ml-2 text-sm text-white/30 font-normal">{releases.length}</span>
+                  <span className="ml-2 text-sm text-foreground/30 font-normal tabular-nums">{releases.length}</span>
                 </h2>
-                <Link
-                  href="/dashboard/releases/new"
-                  className="text-sm px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/15 transition-colors"
-                >
+                <Link href="/dashboard/releases/new" className={btnPrimary}>
                   + Создать
                 </Link>
               </div>
               {releases.length === 0 ? (
-                <p className="text-white/40 text-sm">Нет релизов</p>
+                <p className="text-foreground/40 text-sm">Нет релизов</p>
               ) : (
                 <div className="flex flex-col gap-3">
                   {releases.map((r) => (
