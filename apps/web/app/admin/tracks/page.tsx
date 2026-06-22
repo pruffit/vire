@@ -2,6 +2,7 @@ import { listTracksAdmin } from '@vire/db';
 import { TrackStatusSelect } from './track-status-select';
 import { RetranscodeButton } from './retranscode-button';
 import { BackfillAnalysisButton } from '../backfill-analysis-button';
+import { TracksLiveRefresh } from './live-refresh';
 import { formatDuration } from '@/lib/format';
 import {
   PageHeader, FilterTabs, Table, Thead, Th, Tr, Td, TrackStatusBadge, ActionLink, EmptyState,
@@ -22,10 +23,12 @@ type Props = { searchParams: Promise<{ status?: string }> };
 export default async function AdminTracksPage({ searchParams }: Props) {
   const { status } = await searchParams;
   const tracks = await listTracksAdmin({ status });
+  const processing = tracks.filter((t) => t.status === 'PROCESSING').length;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Треки" count={tracks.length}>
+        <TracksLiveRefresh processing={processing} />
         <BackfillAnalysisButton />
       </PageHeader>
 

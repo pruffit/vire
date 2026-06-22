@@ -72,8 +72,8 @@ export function SystemPanel({ initial }: { initial: SystemData }) {
         />
         <Bar
           label="CPU"
-          pct={s.loadPct}
-          detail={`load avg ${s.loadAvg1} на ${s.cores} ядр.`}
+          pct={s.cpuPct}
+          detail={`текущая · load avg ${s.loadAvg1} / ${s.loadAvg5} / ${s.loadAvg15} (1/5/15 мин) на ${s.cores} ядр.`}
         />
         {s.diskUsedPct != null ? (
           <Bar

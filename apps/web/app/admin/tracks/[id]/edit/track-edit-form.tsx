@@ -40,9 +40,12 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
     });
   }
 
-  function onGenres(e: React.ChangeEvent<HTMLSelectElement>) {
-    const sel = Array.from(e.target.selectedOptions, (o) => o.value).slice(0, 3);
-    set('genres', sel);
+  function toggleGenre(gen: string) {
+    setF((p) => {
+      if (p.genres.includes(gen)) return { ...p, genres: p.genres.filter((x) => x !== gen) };
+      if (p.genres.length >= 3) return p; // лимит 3
+      return { ...p, genres: [...p.genres, gen] };
+    });
   }
 
   function submit(e: React.FormEvent) {
@@ -86,10 +89,25 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
         </Field>
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        <Check label="Explicit (18+)" checked={f.isExplicit} onChange={(v) => set('isExplicit', v)} />
-        <Check label="Эксклюзив" checked={f.isExclusive} onChange={(v) => set('isExclusive', v)} />
-        <Check label="WIP (демо)" checked={f.isWip} onChange={(v) => set('isWip', v)} />
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-8 sm:gap-y-3">
+        <Check
+          label="Explicit (18+)"
+          hint="Мат/контент 18+ — бейдж «E» на витрине"
+          checked={f.isExplicit}
+          onChange={(v) => set('isExplicit', v)}
+        />
+        <Check
+          label="Эксклюзив"
+          hint="Метка «excl» в трек-листе релиза"
+          checked={f.isExclusive}
+          onChange={(v) => set('isExclusive', v)}
+        />
+        <Check
+          label="WIP (демо)"
+          hint="Черновик/демо — метка «wip»"
+          checked={f.isWip}
+          onChange={(v) => set('isWip', v)}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -128,16 +146,35 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
         </div>
       </Field>
 
-      <Field label={`Жанры трека (${f.genres.length}/3, Ctrl+клик — несколько)`}>
-        <select multiple value={f.genres} onChange={onGenres} className={`${inputCls} h-44`}>
+      <Field label={`Жанры трека (${f.genres.length}/3)`}>
+        <div className="flex flex-col gap-3 rounded-md border border-foreground/10 bg-foreground/[0.02] p-3 max-h-72 overflow-y-auto">
           {GENRE_GROUPS.map((g) => (
-            <optgroup key={g.label} label={g.label}>
-              {g.genres.map((gen) => (
-                <option key={gen} value={gen}>{GENRE_LABELS[gen]}</option>
-              ))}
-            </optgroup>
+            <div key={g.label} className="flex flex-col gap-1.5">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-foreground/30">{g.label}</span>
+              <div className="flex flex-wrap gap-2">
+                {g.genres.map((gen) => {
+                  const on = f.genres.includes(gen);
+                  const full = !on && f.genres.length >= 3;
+                  return (
+                    <button
+                      key={gen}
+                      type="button"
+                      onClick={() => toggleGenre(gen)}
+                      disabled={full}
+                      className={`rounded-full border px-3 py-1 text-xs transition-colors active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed ${
+                        on
+                          ? 'border-primary bg-primary/15 text-foreground'
+                          : 'border-foreground/10 text-foreground/50 hover:text-foreground hover:border-foreground/30'
+                      }`}
+                    >
+                      {GENRE_LABELS[gen]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ))}
-        </select>
+        </div>
       </Field>
 
       <Field label="Текст (LRC: [mm:ss.xx]строка — для подсветки в плеере; или простой текст)">
@@ -173,11 +210,43 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function Check({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
-    <label className="flex items-center gap-2 text-sm text-foreground/70 cursor-pointer">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="accent-primary" />
-      {label}
+    <label className="flex items-start gap-2.5 cursor-pointer select-none">
+      <span className="relative mt-0.5 inline-flex shrink-0">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className="peer size-4 appearance-none rounded border border-foreground/30 bg-foreground/5 transition-colors checked:bg-primary checked:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+        />
+        <svg
+          viewBox="0 0 12 12"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 m-auto size-3 text-primary-foreground opacity-0 peer-checked:opacity-100"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M2.5 6.5 5 9l4.5-5.5" />
+        </svg>
+      </span>
+      <span className="flex flex-col gap-0.5">
+        <span className="text-sm leading-tight text-foreground/85">{label}</span>
+        {hint && <span className="text-[11px] leading-tight text-foreground/40">{hint}</span>}
+      </span>
     </label>
   );
 }

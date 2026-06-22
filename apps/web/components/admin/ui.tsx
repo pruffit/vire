@@ -237,11 +237,14 @@ const BADGE_DOT: Record<BadgeTone, string> = {
 export function Badge({
   tone = 'neutral',
   dot = false,
+  pulse = false,
   className,
   children,
 }: {
   tone?: BadgeTone;
   dot?: boolean;
+  /** Пульсация точки — для «идёт процесс» (PROCESSING). */
+  pulse?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -253,7 +256,9 @@ export function Badge({
         className,
       )}
     >
-      {dot && <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', BADGE_DOT[tone])} />}
+      {dot && (
+        <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', BADGE_DOT[tone], pulse && 'animate-pulse')} />
+      )}
       {children}
     </span>
   );
@@ -471,7 +476,7 @@ const TRACK_STATUS: Record<string, { tone: BadgeTone; label: string }> = {
 export function TrackStatusBadge({ status }: { status: string }) {
   const s = TRACK_STATUS[status] ?? { tone: 'neutral' as BadgeTone, label: status };
   return (
-    <Badge tone={s.tone} dot>
+    <Badge tone={s.tone} dot pulse={status === 'PROCESSING'}>
       {s.label}
     </Badge>
   );
