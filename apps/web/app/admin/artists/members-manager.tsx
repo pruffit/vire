@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import {
   actionListArtistMembers,
   actionAddArtistMember,
@@ -13,27 +14,50 @@ import { toast } from '@/components/toast';
  * Управление участниками артист-профиля (несколько аккаунтов на одну карточку).
  * Поповер по кнопке: лениво грузит список участников через server action, даёт
  * добавить по email и снять (кроме OWNER). Только бэкоффис (страница под requireAdmin).
+ *
+ * Поповер рендерится в портал с position:fixed (координаты считаются от кнопки) —
+ * иначе его обрезает таблица-родитель с overflow-x/-y:auto.
  */
 export function MembersManager({ artistProfileId }: { artistProfileId: string }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const [members, setMembers] = useState<ArtistMemberRow[] | null>(null);
   const [email, setEmail] = useState('');
   const [pending, startTransition] = useTransition();
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  function place() {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    // Правый край поповера выровнен по правому краю кнопки, открывается вниз.
+    setPos({ top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) });
+  }
 
   useEffect(() => {
     if (!open) return;
     function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || popoverRef.current?.contains(t)) return;
+      setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
     }
+    function reflow() {
+      place();
+    }
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', reflow);
+    // capture: ловим скролл внутри любого контейнера (таблица, main), не только окна
+    window.addEventListener('scroll', reflow, true);
     return () => {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', reflow);
+      window.removeEventListener('scroll', reflow, true);
     };
   }, [open]);
 
@@ -46,7 +70,10 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
   function toggle() {
     const next = !open;
     setOpen(next);
-    if (next && members === null) load();
+    if (next) {
+      place();
+      if (members === null) load();
+    }
   }
 
   function add(e: React.FormEvent) {
@@ -72,8 +99,9 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={toggle}
         className="px-2.5 py-1 rounded-md bg-foreground/[0.08] hover:bg-foreground/[0.12] text-xs transition-colors active:scale-[0.98]"
@@ -81,8 +109,12 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
         Участники
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 w-72 rounded-lg border border-foreground/10 bg-popover shadow-xl p-3 flex flex-col gap-2.5 text-left">
+      {open && pos && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ position: 'fixed', top: pos.top, right: pos.right }}
+          className="z-50 w-72 rounded-lg border border-foreground/10 bg-popover shadow-xl p-3 flex flex-col gap-2.5 text-left"
+        >
           <p className="text-xs text-foreground/45">Аккаунты с доступом к дашборду артиста.</p>
 
           {members === null ? (
@@ -132,8 +164,9 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
               +
             </button>
           </form>
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
