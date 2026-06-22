@@ -3,10 +3,11 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArtistLink, ArtistVideo, ThemeTokens } from '@vire/core';
-import { btnPrimary } from '@/components/ui-kit';
+import { btnPrimary, Switch } from '@/components/ui-kit';
 import { Select } from '@/components/select';
 import { ColorField } from '@/components/color-field';
 import { LinksEditor } from '@/components/links-editor';
+import { VerifiedBadge } from '@/components/verified-badge';
 
 // Font name → CSS variable (the fonts are loaded globally in app/layout via lib/fonts).
 const SANS_VAR: Record<string, string> = {
@@ -277,7 +278,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
               />
             )}
             <div className="relative flex items-end gap-4">
-              {/* Имя + verified + follow */}
+              {/* Имя + (verified + follow) в один ряд */}
               <div className="flex-1 min-w-0 space-y-2.5">
                 <div
                   className="font-bold tracking-tight leading-[0.95] break-words"
@@ -285,21 +286,14 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
                 >
                   {artist.name}
                 </div>
-                <span
-                  className="inline-flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded-sm border"
-                  style={{
-                    fontFamily: MONO_VAR[fontMono],
-                    borderColor: `color-mix(in oklch, ${accent} 45%, transparent)`,
-                    color: accent,
-                  }}
-                >
-                  ★ verified
-                </span>
-                <div
-                  className="inline-block text-[10px] font-medium px-3 py-1 rounded-full"
-                  style={{ background: accent, color: bg }}
-                >
-                  Подписаться
+                <div className="flex items-center gap-2 flex-wrap">
+                  <VerifiedBadge color={accent} fontFamily={MONO_VAR[fontMono]} />
+                  <span
+                    className="text-[10px] font-medium px-3 py-1 rounded-full"
+                    style={{ background: accent, color: bg }}
+                  >
+                    Подписаться
+                  </span>
                 </div>
               </div>
               {/* Аватар в accent-кольце с глоу */}
@@ -404,17 +398,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
           <ColorField label="Акцент" name="accent" value={accent} onChange={setAccent} disabled={busy} />
 
           <Field label="Зерно">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={grain}
-              onClick={() => setGrain((g) => !g)}
-              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${grain ? 'bg-foreground/60' : 'bg-foreground/15'}`}
-            >
-              <span
-                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${grain ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
-              />
-            </button>
+            <Switch checked={grain} onChange={setGrain} disabled={busy} aria-label="Зерно" />
           </Field>
         </div>
 

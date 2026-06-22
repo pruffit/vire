@@ -6,6 +6,7 @@ import { actionAdminUpdateTrack } from '../../../actions';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 import { ALL_MOODS, MOOD_LABELS } from '@/lib/moods';
 import { fieldClass } from '@/components/admin/ui';
+import { NumberField } from '@/components/number-field';
 
 interface Initial {
   title: string;
@@ -79,12 +80,12 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
           <input className={inputCls} value={f.title} onChange={(e) => set('title', e.target.value)} maxLength={200} />
         </Field>
         <Field label="№">
-          <input
-            type="number"
-            min={1}
-            className={`${inputCls} w-20`}
+          <NumberField
             value={f.trackNumber}
-            onChange={(e) => set('trackNumber', Number(e.target.value))}
+            onChange={(v) => set('trackNumber', v ?? 1)}
+            min={1}
+            className="w-24"
+            aria-label="Номер трека"
           />
         </Field>
       </div>
@@ -112,13 +113,12 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="BPM">
-          <input
-            type="number"
+          <NumberField
+            value={f.bpm}
+            onChange={(v) => set('bpm', v)}
             min={20}
             max={500}
-            className={inputCls}
-            value={f.bpm ?? ''}
-            onChange={(e) => set('bpm', e.target.value ? Number(e.target.value) : null)}
+            aria-label="BPM"
           />
         </Field>
         <Field label="Тональность">

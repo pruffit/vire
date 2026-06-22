@@ -9,6 +9,7 @@ import { GenrePicker } from '@/components/genre-picker';
 import { CreditsEditor } from '@/components/credits-editor';
 import { LyricsEditor } from '@/components/lyrics-editor';
 import { Check, TrackStatusBadge, fieldClass } from '@/components/ui-kit';
+import { NumberField } from '@/components/number-field';
 import { titleRepeatsArtist } from '@/lib/title-hygiene';
 import { featLabel } from '@/lib/track-display';
 import { cn } from '@/lib/utils';
@@ -255,21 +256,15 @@ function TrackRow({
   onRemove: () => void;
 }) {
   const controls = useDragControls();
-  const [bpm, setBpm] = useState(track.bpm != null ? String(track.bpm) : '');
+  const [bpm, setBpm] = useState<number | null>(track.bpm);
   const [key, setKey] = useState(track.musicalKey ?? '');
   const [version, setVersion] = useState(track.version ?? '');
   const titleWarn = artistName ? titleRepeatsArtist(track.title, artistName) : false;
   const feat = featLabel(track.credits);
 
   function commitBpm() {
-    const raw = bpm.trim();
-    if (raw === (track.bpm != null ? String(track.bpm) : '')) return;
-    const parsed = raw === '' ? null : parseInt(raw, 10);
-    if (raw !== '' && (isNaN(parsed!) || parsed! < 20 || parsed! > 500)) {
-      setBpm(track.bpm != null ? String(track.bpm) : '');
-      return;
-    }
-    onCommitField('bpm', parsed);
+    if (bpm === track.bpm) return;
+    onCommitField('bpm', bpm);
   }
   function commitKey() {
     const raw = key.trim();
@@ -421,17 +416,17 @@ function TrackRow({
               <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-foreground/[0.06] pt-3">
                 <label className="flex items-center gap-2">
                   <span className="text-xs font-mono text-foreground/40 w-8">BPM</span>
-                  <input
-                    type="number"
-                    min="20"
-                    max="500"
-                    placeholder="—"
+                  <NumberField
                     value={bpm}
-                    onChange={(e) => setBpm(e.target.value)}
-                    onBlur={commitBpm}
-                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                    onChange={setBpm}
+                    onCommit={commitBpm}
+                    min={20}
+                    max={500}
+                    placeholder="—"
                     disabled={busy}
-                    className="w-16 bg-transparent border border-foreground/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-foreground/30 disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    size="sm"
+                    className="w-24"
+                    aria-label="BPM"
                   />
                 </label>
                 <label className="flex items-center gap-2">

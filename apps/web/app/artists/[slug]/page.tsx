@@ -24,6 +24,7 @@ import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
+import { VerifiedBadge } from '@/components/verified-badge';
 import { parseEmbed, type EmbedInfo } from '@/lib/embed';
 import { fetchVkPoster } from '@/lib/vk-api';
 import { VideoPlayer } from '@/components/video-player';
@@ -212,18 +213,7 @@ function ArtistHero({
                 >
                   {artist.name}
                 </h1>
-                {artist.verified && (
-                  <span
-                    className="inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-sm border"
-                    style={{
-                      borderColor: 'color-mix(in oklch, var(--artist-accent) 40%, transparent)',
-                      color: 'var(--artist-accent)',
-                    }}
-                  >
-                    <VerifiedStar />
-                    verified
-                  </span>
-                )}
+                {artist.verified && <VerifiedBadge />}
               </div>
 
               <div className="space-y-3">
@@ -557,10 +547,3 @@ function GuestFollowButton({
   );
 }
 
-function VerifiedStar() {
-  return (
-    <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
-      <path d="M5 0L6.18 3.32L9.76 3.09L7.1 5.27L8.09 8.82L5 6.9L1.91 8.82L2.9 5.27L0.24 3.09L3.82 3.32L5 0Z" />
-    </svg>
-  );
-}
