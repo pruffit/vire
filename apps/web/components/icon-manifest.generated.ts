@@ -141,7 +141,27 @@ export const SOCIAL_ICON_NAMES = [
 // icons/brand-glyph/*.svg. Вордмарки (icons/{social,streaming}) — отдельно, их
 // используют лендинги смартлинков.
 export const BRAND_GLYPH_NAMES = [
-
+  'amazon-music',
+  'apple-music',
+  'bandcamp',
+  'bluesky',
+  'deezer',
+  'facebook',
+  'instagram',
+  'kion-music',
+  'soundcloud',
+  'spotify',
+  'telegram',
+  'tidal',
+  'tiktok',
+  'twitch',
+  'vk',
+  'vk-music',
+  'x',
+  'yandex-music',
+  'youtube',
+  'youtube-music',
+  'zvuk',
 ] as const;
 
 export const STREAMING_ICON_NAMES = [
@@ -165,13 +185,13 @@ export const BRAND_RATIO: Record<string, number> = {
   'bandsintown': 6.57,
   'bluesky': 4.486,
   'discord': 6.256,
-  'facebook': 0.998,
+  'facebook': 1,
   'instagram': 1,
   'telegram': 1,
-  'tiktok': 1,
+  'tiktok': 4.43,
   'twitch': 1.62,
   'vk': 1,
-  'x': 1,
+  'x': 0.979,
   'youtube': 4.633,
   'amazon-music': 5,
   'apple-music': 4.13,
