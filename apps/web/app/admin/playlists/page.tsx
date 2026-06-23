@@ -1,6 +1,6 @@
 import { listPlaylistsAdmin } from '@vire/db';
 import { PlaylistAdminRow } from './playlist-admin-row';
-import { PageHeader, Panel, EmptyState } from '@/components/admin/ui';
+import { PageHeader, Table, Thead, Th, EmptyState } from '@/components/admin/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,20 +11,33 @@ export default async function AdminPlaylistsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Плейлисты" count={playlists.length} />
 
-      {playlists.length === 0 ? (
-        <Panel>
-          <EmptyState
-            title="Плейлистов пока нет"
-            hint="Пользовательские и курируемые плейлисты появятся здесь."
-          />
-        </Panel>
-      ) : (
-        <div className="flex flex-col gap-3">
+      <Table minWidth="min-w-[900px]">
+        <Thead>
+          <Th className="w-full">Название</Th>
+          <Th>Тип</Th>
+          <Th>Видимость</Th>
+          <Th align="right">Треки</Th>
+          <Th align="right">Лайки</Th>
+          <Th>Владелец</Th>
+          <Th>Создан</Th>
+          <Th align="right">Действия</Th>
+        </Thead>
+        <tbody>
           {playlists.map((p) => (
             <PlaylistAdminRow key={p.id} playlist={p} />
           ))}
-        </div>
-      )}
+          {playlists.length === 0 && (
+            <tr>
+              <td colSpan={8}>
+                <EmptyState
+                  title="Плейлистов пока нет"
+                  hint="Пользовательские и курируемые плейлисты появятся здесь."
+                />
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </Table>
     </div>
   );
 }
