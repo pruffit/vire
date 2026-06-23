@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
+import { Textarea } from '@/components/ui-kit';
 
 export interface ClientPost {
   id: string;
@@ -161,7 +162,7 @@ function Composer({
         placeholder="Заголовок (необязательно)"
         className="bg-transparent text-sm font-medium placeholder:text-foreground/30 focus:outline-none"
       />
-      <textarea
+      <Textarea
         value={body}
         onChange={(e) => setBody(e.target.value.slice(0, BODY_MAX + 1))}
         placeholder="Что нового? Анонс, новость, мысль…"

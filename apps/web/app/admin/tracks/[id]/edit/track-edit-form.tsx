@@ -6,6 +6,7 @@ import { actionAdminUpdateTrack } from '../../../actions';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 import { ALL_MOODS, MOOD_LABELS } from '@/lib/moods';
 import { fieldClass } from '@/components/admin/ui';
+import { Textarea } from '@/components/ui-kit';
 import { NumberField } from '@/components/number-field';
 
 interface Initial {
@@ -178,7 +179,7 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
       </Field>
 
       <Field label="Текст (LRC: [mm:ss.xx]строка — для подсветки в плеере; или простой текст)">
-        <textarea
+        <Textarea
           className={`${inputCls} min-h-32 font-mono text-xs`}
           value={f.lyrics}
           onChange={(e) => set('lyrics', e.target.value)}

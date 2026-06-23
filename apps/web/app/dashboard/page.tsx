@@ -205,8 +205,8 @@ export default async function DashboardPage() {
                   Релизы
                   <span className="ml-2 text-sm text-foreground/30 font-normal tabular-nums">{releases.length}</span>
                 </h2>
-                <Link href="/dashboard/releases/new" className={btnPrimary}>
-                  + Создать
+                <Link href="/dashboard/releases/new" className={`${btnPrimary} gap-1.5`}>
+                  <Icon name="plus" size={16} /> Создать
                 </Link>
               </div>
               {releases.length === 0 ? (

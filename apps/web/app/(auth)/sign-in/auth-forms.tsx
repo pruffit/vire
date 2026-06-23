@@ -10,6 +10,7 @@ import {
   signInYandexAction,
 } from './auth-actions';
 import { YandexIcon } from './provider-icons';
+import { Icon } from '@/components/icon';
 
 type Tab = 'login' | 'register' | 'magic';
 
@@ -104,9 +105,9 @@ function LoginForm({ callbackUrl, onMagicLink }: { callbackUrl: string; onMagicL
         {pending ? 'Входим…' : 'Войти'}
       </button>
       <button type="button" onClick={onMagicLink}
-        className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center cursor-pointer"
+        className="inline-flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors text-center cursor-pointer"
       >
-        Забыл пароль? Войти по ссылке на email →
+        Забыл пароль? Войти по ссылке на email <Icon name="arrow-right" size={13} />
       </button>
     </form>
   );
@@ -190,9 +191,9 @@ function MagicLinkForm({ callbackUrl, onBack }: { callbackUrl: string; onBack: (
         {pending ? 'Отправляем…' : 'Отправить ссылку'}
       </button>
       <button type="button" onClick={onBack}
-        className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center cursor-pointer"
+        className="inline-flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors text-center cursor-pointer"
       >
-        ← Назад
+        <Icon name="arrow-left" size={13} /> Назад
       </button>
     </form>
   );

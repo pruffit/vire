@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ReleaseType } from '@vire/core';
-import { Field, fieldClass, btnPrimary } from '@/components/ui-kit';
+import { Field, fieldClass, btnPrimary, Textarea } from '@/components/ui-kit';
 import { GenreSelect } from '@/components/genre-select';
 import { Select } from '@/components/select';
 import { DateField } from '@/components/date-field';
@@ -131,11 +131,11 @@ export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
       </Field>
 
       <Field label="Описание" hint="необязательно">
-        <textarea name="description" rows={3} disabled={busy} defaultValue={initial.description} className={cn(fieldClass, 'w-full resize-none')} />
+        <Textarea name="description" rows={3} disabled={busy} defaultValue={initial.description} className={cn(fieldClass, 'w-full')} />
       </Field>
 
       <Field label="Liner notes" hint="необязательно · виден только купившим">
-        <textarea name="linerNotes" rows={5} disabled={busy} defaultValue={initial.linerNotes} className={cn(fieldClass, 'w-full resize-none font-mono text-xs')} />
+        <Textarea name="linerNotes" rows={5} disabled={busy} defaultValue={initial.linerNotes} className={cn(fieldClass, 'w-full font-mono text-xs')} />
       </Field>
 
       {error && <p className="text-sm text-red-400">{error}</p>}

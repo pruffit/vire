@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { Icon } from '@/components/icon';
 
 export function EditorialGenerateButton() {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
@@ -29,7 +30,9 @@ export function EditorialGenerateButton() {
       className="text-xs px-3 py-1.5 rounded-lg border border-foreground/10 hover:border-foreground/20 hover:bg-foreground/5 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-wait"
     >
       {state === 'loading' && 'Генерирую…'}
-      {state === 'done' && '✓ Готово'}
+      {state === 'done' && (
+        <span className="inline-flex items-center gap-1.5"><Icon name="check" size={13} /> Готово</span>
+      )}
       {state === 'error' && 'Ошибка'}
       {state === 'idle' && 'Обновить подборки'}
     </motion.button>

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import * as React from 'react';
 import { cn } from '@vire/ui';
+import { Icon } from '@/components/icon';
 
 /**
  * UI kit — единый словарь продуктовых поверхностей (админка + дашборд артиста).
@@ -39,6 +40,20 @@ export const selectClass =
 /** Класс текстового поля/textarea/select в формах. Ширину задаёт вызов. */
 export const fieldClass =
   'rounded-md border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm transition-colors placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring focus:border-foreground/20';
+
+/**
+ * Textarea платформы с кастомным уголком ресайза (риски вместо дефолтной
+ * ОС-насечки — см. `.vire-textarea` в globals.css). По умолчанию вертикальный
+ * ресайз. Все нативные пропсы и `ref` пробрасываются; `className` мёржится поверх
+ * базы (twMerge), поэтому при желании можно переопределить (напр. `resize-none`).
+ * Базовый стиль поля не навязывается — передавай `fieldClass`/нужный класс сам.
+ */
+export const Textarea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function Textarea({ className, ...props }, ref) {
+  return <textarea ref={ref} className={cn('vire-textarea resize-y', className)} {...props} />;
+});
 
 /** Главная кнопка действия (submit/создать). */
 export const btnPrimary =
@@ -215,7 +230,7 @@ export function DetailHeader({
         href={backHref}
         className="inline-flex items-center gap-1 text-sm text-foreground/45 hover:text-foreground transition-colors"
       >
-        ← {backLabel}
+        <Icon name="arrow-left" size={15} /> {backLabel}
       </Link>
       <h1 className="text-lg font-semibold tracking-tight mt-2">{title}</h1>
       {subtitle && <p className="mt-1 font-mono text-xs text-foreground/30">{subtitle}</p>}
@@ -251,8 +266,8 @@ export function DashboardPageHeader({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {action}
-        <Link href={backHref} className={btnGhost}>
-          ← {backLabel}
+        <Link href={backHref} className={`${btnGhost} gap-1.5`}>
+          <Icon name="arrow-left" size={15} /> {backLabel}
         </Link>
       </div>
     </div>

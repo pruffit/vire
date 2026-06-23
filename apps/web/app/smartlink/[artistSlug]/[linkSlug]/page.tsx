@@ -12,6 +12,7 @@ import { Logo } from '@/components/logo';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { JsonLd } from '@/components/json-ld';
+import { Icon } from '@/components/icon';
 import { abs } from '@/lib/structured-data';
 
 type Props = { params: Promise<{ artistSlug: string; linkSlug: string }> };
@@ -181,7 +182,7 @@ export default async function SmartLinkPage({ params }: Props) {
               <span className="flex-1 text-sm">
                 {vire.kind === 'listen' ? 'Слушать на Vire' : 'Пресейв на Vire'}
               </span>
-              <span className="text-sm transition-transform group-hover:translate-x-0.5" aria-hidden="true">→</span>
+              <Icon name="arrow-right" size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </FadeUp>
         )}
@@ -216,13 +217,12 @@ export default async function SmartLinkPage({ params }: Props) {
                       <PlatformIcon platform={key} size={22} className="shrink-0 opacity-90" />
                     )}
                     <span className="flex-1 text-sm font-medium">{name}</span>
-                    <span
-                      className="text-sm transition-transform group-hover:translate-x-0.5"
+                    <Icon
+                      name="arrow-right"
+                      size={16}
+                      className="shrink-0 transition-transform group-hover:translate-x-0.5"
                       style={{ color: 'var(--artist-accent)' }}
-                      aria-hidden="true"
-                    >
-                      →
-                    </span>
+                    />
                   </a>
                 </StaggerItem>
               );
@@ -233,10 +233,10 @@ export default async function SmartLinkPage({ params }: Props) {
         {/* Назад к артисту */}
         <Link
           href={`/artists/${artist.slug}`}
-          className="mt-10 text-xs transition-opacity hover:opacity-100"
+          className="mt-10 inline-flex items-center gap-1 text-xs transition-opacity hover:opacity-100"
           style={{ color: 'color-mix(in oklch, var(--artist-text) 45%, transparent)' }}
         >
-          ← Все релизы {artist.name}
+          <Icon name="arrow-left" size={13} /> Все релизы {artist.name}
         </Link>
       </main>
     </div>

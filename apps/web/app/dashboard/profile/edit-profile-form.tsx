@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArtistLink, ArtistVideo, ThemeTokens } from '@vire/core';
-import { btnPrimary, Switch } from '@/components/ui-kit';
+import { btnPrimary, Switch, Textarea } from '@/components/ui-kit';
 import { Select } from '@/components/select';
 import { ColorField } from '@/components/color-field';
 import { LinksEditor } from '@/components/links-editor';
@@ -131,10 +131,10 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
 
       {/* Bio */}
       <Field label="Биография" hint="необязательно">
-        <textarea name="bio" rows={4} disabled={busy}
+        <Textarea name="bio" rows={4} disabled={busy}
           defaultValue={artist.bio ?? ''}
           placeholder="Расскажи о себе…"
-          className={`${inp} w-full resize-none`} />
+          className={`${inp} w-full`} />
       </Field>
 
       {/* Links */}

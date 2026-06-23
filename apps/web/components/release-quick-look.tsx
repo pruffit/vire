@@ -292,8 +292,8 @@ export function ReleaseQuickLook({
                   {isThisReleasePlaying && isPlaying ? <PauseIcon size={13} /> : <PlayIcon size={15} className="translate-x-[1px]" />}
                   {isThisReleasePlaying ? (isPlaying ? 'Пауза' : 'Продолжить') : 'Слушать'}
                 </motion.button>
-                <Link href={releaseHref} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  К релизу →
+                <Link href={releaseHref} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  К релизу <Icon name="arrow-right" size={14} />
                 </Link>
               </div>
 

@@ -333,9 +333,9 @@ function TrackRow({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={spring.snappy}
-            className="text-xs shrink-0 text-emerald-400"
+            className="inline-flex shrink-0 text-emerald-400"
           >
-            ✓
+            <Icon name="check" size={14} />
           </motion.span>
         ) : (
           <span className="shrink-0">

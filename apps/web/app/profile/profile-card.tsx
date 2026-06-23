@@ -240,9 +240,9 @@ export function ProfileCard({ user, stats }: Props) {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0 }}
                         transition={spring.snappy}
-                        className="text-xs text-primary font-mono shrink-0"
+                        className="inline-flex text-primary shrink-0"
                       >
-                        ✓
+                        <Icon name="check" size={13} />
                       </motion.span>
                     )}
                   </AnimatePresence>
@@ -271,9 +271,9 @@ export function ProfileCard({ user, stats }: Props) {
       <div className="pt-2 border-t border-border">
         <button
           onClick={() => signOut({ callbackUrl: '/' })}
-          className="text-sm text-muted-foreground hover:text-destructive transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive transition-colors"
         >
-          Выйти из аккаунта →
+          Выйти из аккаунта <Icon name="log-out" size={14} />
         </button>
       </div>
     </div>

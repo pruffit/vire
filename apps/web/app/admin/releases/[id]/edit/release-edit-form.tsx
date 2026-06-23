@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { actionAdminUpdateRelease } from '../../../actions';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 import { fieldClass } from '@/components/admin/ui';
+import { Textarea } from '@/components/ui-kit';
 import { Select, type SelectGroup } from '@/components/select';
 import { DateField } from '@/components/date-field';
 
@@ -89,11 +90,11 @@ export function ReleaseEditForm({ releaseId, initial }: { releaseId: string; ini
       </Field>
 
       <Field label="Описание">
-        <textarea className={`${inputCls} min-h-20`} value={f.description} onChange={(e) => set('description', e.target.value)} maxLength={5000} />
+        <Textarea className={`${inputCls} min-h-20`} value={f.description} onChange={(e) => set('description', e.target.value)} maxLength={5000} />
       </Field>
 
       <Field label="Liner notes">
-        <textarea className={`${inputCls} min-h-24`} value={f.linerNotes} onChange={(e) => set('linerNotes', e.target.value)} maxLength={10000} />
+        <Textarea className={`${inputCls} min-h-24`} value={f.linerNotes} onChange={(e) => set('linerNotes', e.target.value)} maxLength={10000} />
       </Field>
 
       <div className="flex items-center gap-3 pt-1">

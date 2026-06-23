@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
+import { Icon } from '@/components/icon';
 
 interface Props {
   releaseId: string;
@@ -55,9 +56,9 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={spring.snappy}
-            className="text-xs text-emerald-400"
+            className="inline-flex items-center gap-1 text-xs text-emerald-400"
           >
-            {isFuture ? 'Запланирован ✓' : 'Опубликован ✓'}
+            {isFuture ? 'Запланирован' : 'Опубликован'} <Icon name="check" size={13} />
           </motion.span>
         ) : (
           <motion.button

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Icon } from '@/components/icon';
 import {
   getAdminStats, getAdminAttention, getRecentPublishedReleases, getAdminPlatformMetrics,
 } from '@vire/db';
@@ -210,8 +211,8 @@ function EngagementPanel({ metrics }: { metrics: AdminPlatformMetrics }) {
     <Section
       label="Вовлечённость"
       action={
-        <Link href="/admin/analytics" className="text-xs text-foreground/45 hover:text-foreground transition-colors">
-          Аналитика →
+        <Link href="/admin/analytics" className="inline-flex items-center gap-1 text-xs text-foreground/45 hover:text-foreground transition-colors">
+          Аналитика <Icon name="arrow-right" size={13} />
         </Link>
       }
     >
@@ -275,9 +276,9 @@ function AttentionPanel({ attention }: { attention: AdminAttention }) {
             </div>
             <Link
               href="/admin/artists"
-              className="shrink-0 text-xs text-sky-400/70 hover:text-sky-300 transition-colors"
+              className="shrink-0 inline-flex items-center gap-1 text-xs text-sky-400/70 hover:text-sky-300 transition-colors"
             >
-              К артистам →
+              К артистам <Icon name="arrow-right" size={13} />
             </Link>
           </div>
           <div className="border-t border-sky-500/15 divide-y divide-sky-500/10">
@@ -324,7 +325,7 @@ function AlertRow({
         <span className="text-sm font-medium">{label}</span>
         {sub && <span className="ml-2 text-xs opacity-60 hidden sm:inline">{sub}</span>}
       </div>
-      <span className="shrink-0 text-xs opacity-50">→</span>
+      <Icon name="arrow-right" size={14} className="shrink-0 opacity-50" />
     </Link>
   );
 }

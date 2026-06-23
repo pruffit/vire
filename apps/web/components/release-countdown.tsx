@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { PresaveButton } from '@/components/presave-button';
+import { Icon } from '@/components/icon';
 
 interface TimeLeft {
   days: number;
@@ -75,7 +76,7 @@ export function ReleaseCountdown({
         href={`/artists/${artistSlug}`}
         className="self-start mb-10 inline-flex items-center gap-1.5 text-xs font-mono opacity-40 hover:opacity-70 transition-opacity"
       >
-        ← {artistName}
+        <Icon name="arrow-left" size={13} /> {artistName}
       </Link>
 
       <motion.div

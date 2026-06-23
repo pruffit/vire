@@ -316,7 +316,7 @@ function YouTubeFallback({ posterUrl, videoId }: { posterUrl: string; videoId: s
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 rounded-full bg-white text-black px-4 py-2 text-sm font-medium hover:opacity-80 transition-opacity"
         >
-          Смотреть на YouTube →
+          Смотреть на YouTube <Icon name="external-link" size={14} />
         </a>
       </div>
     </div>

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring, ease } from '@vire/ui/motion';
 import { SearchIcon } from '@/components/icons';
+import { Icon } from '@/components/icon';
 import type { SearchResults } from '@vire/db';
 import { resolveAvatarUrl } from '@/lib/avatar';
 
@@ -204,9 +205,9 @@ export function NavSearch() {
               <span className="text-[11px] text-muted-foreground">Enter — все результаты</span>
               <button
                 onMouseDown={(e) => { e.preventDefault(); goAll(); }}
-                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
               >
-                Показать все →
+                Показать все <Icon name="arrow-right" size={12} />
               </button>
             </div>
           </motion.div>

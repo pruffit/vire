@@ -9,6 +9,7 @@ import {
 } from '../actions';
 import type { ArtistMemberRow } from '@vire/db';
 import { toast } from '@/components/toast';
+import { Icon } from '@/components/icon';
 
 /**
  * Управление участниками артист-профиля (несколько аккаунтов на одну карточку).
@@ -136,10 +137,10 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
                       type="button"
                       onClick={() => remove(m.userId)}
                       disabled={pending}
-                      className="shrink-0 text-foreground/30 hover:text-red-400 transition-colors disabled:opacity-40"
+                      className="inline-flex shrink-0 text-foreground/30 hover:text-red-400 transition-colors disabled:opacity-40"
                       aria-label="Снять участника"
                     >
-                      ×
+                      <Icon name="x" size={16} />
                     </button>
                   )}
                 </li>

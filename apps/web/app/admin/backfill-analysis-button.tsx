@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { Icon } from '@/components/icon';
 
 export function BackfillAnalysisButton() {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
@@ -36,7 +37,11 @@ export function BackfillAnalysisButton() {
       className="text-xs px-3 py-1.5 rounded-lg border border-foreground/10 hover:border-foreground/20 hover:bg-foreground/5 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-wait"
     >
       {state === 'loading' && 'Ставлю в очередь…'}
-      {state === 'done' && (queued > 0 ? `✓ ${queued} треков в очереди` : '✓ Все треки проанализированы')}
+      {state === 'done' && (
+        <span className="inline-flex items-center gap-1.5">
+          <Icon name="check" size={13} /> {queued > 0 ? `${queued} треков в очереди` : 'Все треки проанализированы'}
+        </span>
+      )}
       {state === 'error' && 'Ошибка'}
       {state === 'idle' && 'Заполнить BPM / Key'}
     </motion.button>

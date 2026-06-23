@@ -75,8 +75,12 @@ export function ArtistHoverChip({ artist }: { artist: ArtistListItem }) {
                 {artist.name}
                 {artist.verified && <Icon name="check" size={12} className="text-muted-foreground shrink-0" />}
               </span>
-              <span className="block text-xs text-muted-foreground">
-                {artist.releaseCount > 0 ? `${artist.releaseCount} ${pluralReleases(artist.releaseCount)}` : 'Открыть →'}
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                {artist.releaseCount > 0 ? (
+                  `${artist.releaseCount} ${pluralReleases(artist.releaseCount)}`
+                ) : (
+                  <>Открыть <Icon name="arrow-right" size={11} /></>
+                )}
               </span>
             </span>
           </motion.div>

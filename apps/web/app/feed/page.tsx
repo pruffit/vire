@@ -58,9 +58,9 @@ function EmptyState() {
       </p>
       <Link
         href="/artists"
-        className="text-sm underline underline-offset-2 hover:text-foreground text-muted-foreground transition-colors"
+        className="inline-flex items-center gap-1 text-sm underline underline-offset-2 hover:text-foreground text-muted-foreground transition-colors"
       >
-        Найти артистов →
+        Найти артистов <Icon name="arrow-right" size={14} />
       </Link>
     </div>
   );

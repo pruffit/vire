@@ -83,9 +83,9 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
           />
           <Link
             href={href}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            К релизу →
+            К релизу <Icon name="arrow-right" size={14} />
           </Link>
         </div>
       </div>

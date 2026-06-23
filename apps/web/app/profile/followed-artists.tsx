@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Icon } from '@/components/icon';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
@@ -35,8 +36,8 @@ export function FollowedArtists({ initial }: { initial: FollowedArtist[] }) {
     return (
       <p className="text-sm text-muted-foreground py-6 text-center">
         Ты ни на кого не подписан.{' '}
-        <Link href="/artists" className="underline underline-offset-2 hover:text-foreground transition-colors">
-          Найти артистов →
+        <Link href="/artists" className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground transition-colors">
+          Найти артистов <Icon name="arrow-right" size={13} />
         </Link>
       </p>
     );

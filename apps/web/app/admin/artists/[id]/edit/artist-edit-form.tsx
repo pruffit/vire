@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { actionAdminUpdateArtist } from '../../../actions';
 import { fieldClass } from '@/components/admin/ui';
+import { Textarea } from '@/components/ui-kit';
 
 interface Initial {
   name: string;
@@ -53,7 +54,7 @@ export function ArtistEditForm({ artistProfileId, initial }: { artistProfileId: 
       </Field>
 
       <Field label="Bio">
-        <textarea className={`${inputCls} min-h-28`} value={f.bio} onChange={(e) => set('bio', e.target.value)} maxLength={2000} />
+        <Textarea className={`${inputCls} min-h-28`} value={f.bio} onChange={(e) => set('bio', e.target.value)} maxLength={2000} />
       </Field>
 
       <Field label="Avatar URL">

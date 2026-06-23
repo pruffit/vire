@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
+import { Icon } from '@/components/icon';
 
 export interface SmartLinkRow {
   id: string;
@@ -45,9 +46,9 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
     <div className="flex flex-col gap-3">
       <Link
         href="/dashboard/links/new"
-        className="self-start rounded-lg bg-foreground text-background px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
+        className="self-start inline-flex items-center gap-1.5 rounded-lg bg-foreground text-background px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
       >
-        + Создать лендинг
+        <Icon name="plus" size={16} /> Создать лендинг
       </Link>
 
       {rows.length === 0 ? (

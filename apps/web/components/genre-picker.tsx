@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS, type Genre } from '@/lib/genres';
+import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
 
 const MAX = 3;
@@ -92,7 +93,7 @@ export function GenrePicker({ trackId, initial }: Props) {
               className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono bg-white text-black"
             >
               {GENRE_LABELS[g]}
-              <span className="opacity-50 group-hover:opacity-100" aria-hidden="true">×</span>
+              <Icon name="x" size={12} className="opacity-50 group-hover:opacity-100" />
             </button>
           ))}
         </div>

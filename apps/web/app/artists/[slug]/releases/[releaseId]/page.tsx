@@ -141,7 +141,7 @@ export default async function ReleasePage({ params }: Props) {
             href={`/artists/${slug}`}
             className="inline-flex items-center gap-1.5 text-xs font-mono opacity-40 hover:opacity-70 transition-opacity mb-10"
           >
-            ← {artist.name}
+            <Icon name="arrow-left" size={13} /> {artist.name}
           </Link>
 
           <div className="flex flex-col sm:flex-row gap-8 sm:gap-10 items-start">

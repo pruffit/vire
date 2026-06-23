@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { actionCreateArtist } from '../actions';
 import { fieldClass } from '@/components/admin/ui';
+import { Icon } from '@/components/icon';
 
 function toSlug(value: string): string {
   return value
@@ -51,9 +52,9 @@ export function CreateArtistForm() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="self-start px-4 py-2 rounded-md bg-foreground/10 hover:bg-foreground/15 text-sm transition-colors active:scale-[0.98]"
+        className="self-start inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-foreground/10 hover:bg-foreground/15 text-sm transition-colors active:scale-[0.98]"
       >
-        + Создать артиста
+        <Icon name="plus" size={16} /> Создать артиста
       </button>
     );
   }
@@ -69,9 +70,9 @@ export function CreateArtistForm() {
           type="button"
           onClick={() => { setOpen(false); setResult(null); }}
           aria-label="Закрыть"
-          className="text-foreground/30 hover:text-foreground/60 text-lg leading-none transition-colors"
+          className="text-foreground/30 hover:text-foreground/60 transition-colors"
         >
-          ×
+          <Icon name="x" size={18} />
         </button>
       </div>
       <p className="text-xs text-foreground/45 -mt-1 leading-relaxed">

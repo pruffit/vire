@@ -216,7 +216,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
                   onClick={() => setCreating(true)}
                   className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                 >
-                  <span className="text-base leading-none">+</span>
+                  <Icon name="plus" size={14} />
                   Новый плейлист
                 </button>
               )}

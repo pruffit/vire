@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from '@/components/toast';
 import { fieldClass } from '@/components/ui-kit';
+import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
 import type { ContributorRole, TrackCredit } from '@/lib/upload';
 
@@ -85,9 +86,9 @@ export function CreditsEditor({
               initial={{ opacity: 0, x: 4 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0 }}
-              className="text-xs font-mono text-emerald-400"
+              className="inline-flex items-center gap-1 text-xs font-mono text-emerald-400"
             >
-              ✓ сохранено
+              <Icon name="check" size={13} /> сохранено
             </motion.span>
           ) : (
             <motion.button
@@ -142,7 +143,7 @@ export function CreditsEditor({
                   className="grid size-7 shrink-0 place-items-center rounded-md text-foreground/30 hover:bg-red-500/10 hover:text-red-400 transition-colors disabled:opacity-30"
                   aria-label="Удалить кредит"
                 >
-                  ×
+                  <Icon name="x" size={16} />
                 </button>
               </div>
               <div className="flex flex-wrap gap-1.5">

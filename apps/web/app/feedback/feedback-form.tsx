@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { Textarea } from '@/components/ui-kit';
 
 export type FeedbackType = 'bug' | 'idea' | 'artist' | 'other';
 
@@ -102,7 +103,7 @@ export function FeedbackForm({ initialType = 'bug' }: { initialType?: FeedbackTy
           Сообщение
           <span className="text-muted-foreground font-normal ml-1">(мин. 10 символов)</span>
         </label>
-        <textarea
+        <Textarea
           id="fb-message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -119,7 +120,7 @@ export function FeedbackForm({ initialType = 'bug' }: { initialType?: FeedbackTy
               ? 'Расскажи о себе: имя/проект, ссылки на музыку (стриминги, соцсети), пару слов о том, что играешь...'
               : 'Напиши что хочешь...'
           }
-          className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+          className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
         <p className="text-xs text-muted-foreground text-right tabular-nums">
           {message.length} / 2000

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { actionAdminUpdatePost, actionAdminDeletePost } from '../actions';
 import { fieldClass } from '@/components/admin/ui';
+import { Textarea } from '@/components/ui-kit';
 
 interface Post {
   id: string;
@@ -65,7 +66,7 @@ export function PostAdminRow({ post }: { post: Post }) {
       {open && (
         <div className="mt-3 flex flex-col gap-2">
           <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Заголовок (необязательно)" maxLength={200} />
-          <textarea className={`${inputCls} min-h-24`} value={body} onChange={(e) => setBody(e.target.value)} maxLength={10000} />
+          <Textarea className={`${inputCls} min-h-24`} value={body} onChange={(e) => setBody(e.target.value)} maxLength={10000} />
           <div className="flex items-center gap-3">
             <button onClick={save} disabled={pending} className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40">
               {pending ? 'Сохраняю…' : 'Сохранить'}

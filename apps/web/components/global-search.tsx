@@ -4,6 +4,7 @@ import { useRef, useState, useEffect, useCallback, type KeyboardEvent } from 're
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { SearchIcon } from '@/components/icons';
+import { Icon } from '@/components/icon';
 import type { SearchResults } from '@vire/db';
 import { resolveAvatarUrl } from '@/lib/avatar';
 
@@ -170,9 +171,9 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
             <span className="text-[11px] text-muted-foreground">Enter — все результаты</span>
             <button
               onMouseDown={(e) => { e.preventDefault(); router.push(`/search?q=${encodeURIComponent(query.trim())}`); setOpen(false); }}
-              className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
             >
-              Показать все →
+              Показать все <Icon name="arrow-right" size={12} />
             </button>
           </div>
         </div>

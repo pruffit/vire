@@ -23,6 +23,7 @@ import { EditorialPlaylistCard } from '@/components/editorial-playlist-card';
 import { getListeningNow } from '@/lib/listening-now';
 import { Reveal } from '@vire/ui/motion';
 import { JsonLd } from '@/components/json-ld';
+import { Icon } from '@/components/icon';
 import { websiteJsonLd } from '@/lib/structured-data';
 import type { Metadata } from 'next';
 
@@ -157,7 +158,7 @@ export default async function HomePage() {
       {/* Свежие релизы */}
       {rest.length > 0 && (
         <Reveal>
-          <Section title="Свежие релизы" href="/releases" hrefLabel="Посмотреть все →">
+          <Section title="Свежие релизы" href="/releases" hrefLabel="Посмотреть все">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
               {rest.map((r) => (
                 <ReleaseQuickLook key={r.id} release={r} />
@@ -170,7 +171,7 @@ export default async function HomePage() {
       {/* Артисты */}
       {topArtists.length > 0 && (
         <Reveal>
-          <Section title="Артисты" href="/artists" hrefLabel="Все артисты →">
+          <Section title="Артисты" href="/artists" hrefLabel="Все артисты">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5">
               {topArtists.slice(0, 10).map((a) => (
                 <ArtistHoverChip key={a.id} artist={a} />
@@ -207,9 +208,10 @@ function Section({
         {href && (
           <Link
             href={href}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="group inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            {hrefLabel ?? 'Все →'}
+            {hrefLabel ?? 'Все'}
+            <Icon name="arrow-right" size={13} className="transition-transform group-hover:translate-x-0.5" />
           </Link>
         )}
       </div>

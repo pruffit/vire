@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from '@/components/toast';
+import { Textarea } from '@/components/ui-kit';
 import { parseLrc, serializeLrc, isSynced, type LyricLine } from '@/lib/lrc';
 
 /**
@@ -42,7 +43,7 @@ export function LyricsEditor({ trackId, initial }: { trackId: string; initial: L
           {synced ? 'синхронизирован' : 'без таймкодов'}
         </span>
       </div>
-      <textarea
+      <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         disabled={busy}

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Field, fieldClass, btnPrimary } from '@/components/ui-kit';
+import { Field, fieldClass, btnPrimary, Textarea } from '@/components/ui-kit';
 import { GenreSelect } from '@/components/genre-select';
 import { Select } from '@/components/select';
 import { DateField } from '@/components/date-field';
@@ -124,12 +124,12 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
 
       {/* Description */}
       <Field label="Описание" hint="необязательно">
-        <textarea
+        <Textarea
           name="description"
           rows={3}
           disabled={busy}
           placeholder="Пара слов о релизе…"
-          className={cn(fieldClass, 'w-full resize-none')}
+          className={cn(fieldClass, 'w-full')}
         />
       </Field>
 
