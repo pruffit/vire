@@ -1,1 +1,1 @@
-export type UserRole = 'LISTENER' | 'ARTIST' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
+export type UserRole = 'LISTENER' | 'ARTIST' | 'VIEWER' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';

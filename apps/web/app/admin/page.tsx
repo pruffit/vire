@@ -143,6 +143,7 @@ function HealthPanel({ health }: { health: AdminHealth }) {
 const ROLE_LABEL: Record<string, string> = {
   LISTENER: 'слушатели',
   ARTIST: 'артисты',
+  VIEWER: 'наблюдатели',
   MODERATOR: 'модераторы',
   ADMIN: 'админы',
   SUPERADMIN: 'суперадмины',

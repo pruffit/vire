@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { auth, signOut } from '@/auth';
+import { listUserArtists } from '@/lib/active-artist';
 import { NavSearch } from './nav-search';
 import { NavLink } from './nav-link';
 import { Logo } from './logo';
@@ -9,7 +10,12 @@ export async function Nav() {
   const session = await auth();
   const user = session?.user;
   const isArtist = user?.role === 'ARTIST' || user?.role === 'MODERATOR' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
-  const isAdmin = user?.role === 'MODERATOR' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
+  const isAdmin = user?.role === 'VIEWER' || user?.role === 'MODERATOR' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
+
+  // «Дашборд» обычно совпадает с ролью артиста; read-only VIEWER может быть участником
+  // артиста (artist_members) — для него (и только для него) проверяем членство, чтобы
+  // не вешать запрос на каждого слушателя.
+  const showDashboard = isArtist || (user?.role === 'VIEWER' && (await listUserArtists(user.id)).length > 0);
 
   const displayName = user?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'Профиль';
 
@@ -37,7 +43,7 @@ export async function Nav() {
           <NavSearch />
           {user ? (
             <>
-              {isArtist && (
+              {showDashboard && (
                 <NavLink href="/dashboard">
                   <span className="hidden sm:inline">Дашборд</span>
                   <span className="sm:hidden" aria-label="Дашборд"><DashboardIcon /></span>

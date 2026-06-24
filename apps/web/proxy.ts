@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { NextResponse } from 'next/server';
 
-const ADMIN_ROLES = new Set(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
+const ADMIN_ROLES = new Set(['VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN']);
 const PROTECTED_PREFIXES = ['/dashboard', '/settings', '/upload'];
 
 export default auth((req) => {

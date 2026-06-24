@@ -6,6 +6,9 @@ export const roleEnum = pgEnum('role', [
   'MODERATOR',
   'ADMIN',
   'SUPERADMIN',
+  // Read-only бэкофис: пускает в /admin, листает все табы, но любые мутации
+  // на сервере молча игнорируются (для дизайнера/наблюдателя).
+  'VIEWER',
 ]);
 
 export const users = pgTable('users', {

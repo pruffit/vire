@@ -2,7 +2,22 @@
 
 ## Что делает
 
-Панель администратора. Доступна пользователям с ролью `MODERATOR`+.
+Панель администратора. Доступна пользователям с ролью `VIEWER`, `MODERATOR`, `ADMIN`, `SUPERADMIN`.
+
+### Роли и права
+
+| Роль | Вход в `/admin` | Менять данные |
+|------|:---:|:---:|
+| `VIEWER` | ✅ | ❌ — read-only |
+| `MODERATOR` | ✅ | ✅ (кроме backfill BPM/Key и генерации подборок — только `ADMIN`+) |
+| `ADMIN` / `SUPERADMIN` | ✅ | ✅ всё |
+
+`VIEWER` — read-only бэкофис (для дизайнера/наблюдателя): листает все табы и видит
+данные, но управляющие элементы выглядят как обычно, а сервер **молча** игнорирует любую
+мутацию (клик не меняет данные и не показывает ошибку). Гейт: `VIEWER` входит в view-роли
+(`proxy.ts`, `app/admin/layout.tsx`, `nav.tsx`), но не в mutate-роли — `requireAdmin()` в
+`app/admin/actions.ts` возвращает `canMutate=false`, и каждый экшен делает no-op. Эндпоинты
+`backfill-analysis` и `editorial` для `VIEWER` возвращают тихий no-op-успех.
 
 ### Разделы
 
@@ -19,7 +34,7 @@
 
 **Пользователи** (`/admin/users`)
 - Список всех пользователей
-- Смена роли (LISTENER/ARTIST/MODERATOR/ADMIN)
+- Смена роли (LISTENER/ARTIST/VIEWER/MODERATOR/ADMIN/SUPERADMIN)
 - Верификация аккаунта
 
 **Артисты** (`/admin/artists`)
@@ -40,7 +55,7 @@
 - **Страницы:** `apps/web/app/admin/`
 - **Health-утилиты:** `apps/web/lib/admin-health.ts`
 - **API admin:** `apps/web/app/api/v1/admin/` — users, artists, tracks, releases, stats
-- **Middleware:** `apps/web/middleware.ts` — проверяет роль MODERATOR+
+- **Middleware:** `apps/web/proxy.ts` — пускает в `/admin` роли `VIEWER`+
 
 ## Env-переменные
 

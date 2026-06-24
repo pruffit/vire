@@ -3,7 +3,7 @@ import { auth } from '@/auth';
 import { AdminNav } from './admin-nav';
 import { RoleBadge } from '@/components/admin/ui';
 
-const ADMIN_ROLES = new Set(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
+const ADMIN_ROLES = new Set(['VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN']);
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();

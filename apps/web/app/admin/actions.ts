@@ -11,31 +11,38 @@ import { parseLrc } from '@/lib/lrc';
 
 const RELEASE_TYPES: ReleaseType[] = ['ALBUM', 'EP', 'SINGLE'];
 
-const ADMIN_ROLES = new Set<UserRole>(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
+// View-роли пускаются в бэкофис; mutate-роли могут менять данные. VIEWER —
+// read-only: проходит гейт (чтобы экшены не падали ошибкой), но `canMutate=false`,
+// и каждый мутирующий экшен делает тихий no-op.
+const ADMIN_VIEW_ROLES = new Set<UserRole>(['VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN']);
+const ADMIN_MUTATE_ROLES = new Set<UserRole>(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user?.id || !ADMIN_ROLES.has(session.user.role)) {
+  if (!session?.user?.id || !ADMIN_VIEW_ROLES.has(session.user.role)) {
     throw new Error('Forbidden');
   }
-  return session;
+  return { session, canMutate: ADMIN_MUTATE_ROLES.has(session.user.role) };
 }
 
 export async function actionSetUserRole(userId: string, role: UserRole) {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return;
   await setUserRole(userId, role);
   revalidatePath('/admin/users');
 }
 
 export async function actionVerifyArtist(artistProfileId: string, verified: boolean) {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return;
   await verifyArtist(artistProfileId, verified);
   revalidatePath('/admin/users');
   revalidatePath('/admin/artists');
 }
 
 export async function actionSetArtistActive(artistProfileId: string, isActive: boolean) {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return;
   await setArtistActive(artistProfileId, isActive);
   revalidatePath('/admin/artists');
 }
@@ -45,21 +52,24 @@ function assertManagedQueue(name: string) {
 }
 
 export async function actionRetryQueueFailed(queueName: string) {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return;
   assertManagedQueue(queueName);
   await retryFailedJobs(queueName);
   revalidatePath('/admin');
 }
 
 export async function actionCleanQueueFailed(queueName: string) {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return;
   assertManagedQueue(queueName);
   await cleanFailedJobs(queueName);
   revalidatePath('/admin');
 }
 
 export async function actionSetTrackStatus(trackId: string, status: 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED') {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return;
   await setTrackStatus(trackId, status);
   revalidatePath('/admin/tracks');
 }
@@ -71,7 +81,8 @@ export async function actionSetTrackStatus(trackId: string, status: 'READY' | 'B
  * Сбрасываем статус в PROCESSING, иначе воркер пропустит READY-трек (идемпотентность).
  */
 export async function actionRetranscodeTrack(trackId: string): Promise<{ error?: string; ok?: boolean }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   const sourceKey = await getTrackSourceKey(trackId);
   if (!sourceKey) return { error: 'Нет исходника в vault — пересобрать нечем' };
   await setTrackStatus(trackId, 'PROCESSING');
@@ -86,7 +97,8 @@ export async function actionRetranscodeTrack(trackId: string): Promise<{ error?:
  * не жать ⟳ HLS по каждому треку вручную.
  */
 export async function actionRetranscodeArtist(artistProfileId: string): Promise<{ error?: string; queued?: number }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   const sources = await getArtistTrackSources(artistProfileId);
   if (sources.length === 0) return { error: 'Нет треков с исходником в vault' };
   for (const s of sources) {
@@ -102,7 +114,8 @@ export async function actionSetReleaseStatus(
   releaseId: string,
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED',
 ) {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return;
   await setReleaseStatus(releaseId, status);
   revalidatePath('/admin/releases');
 }
@@ -114,7 +127,8 @@ export async function actionAdminUpdatePost(
   id: string,
   input: { title: string | null; body: string },
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   const body = (input.body ?? '').trim();
   if (!body || body.length > 10000) return { error: 'Текст: 1–10000 символов' };
   const title = input.title?.trim() ? input.title.trim().slice(0, 200) : null;
@@ -124,7 +138,8 @@ export async function actionAdminUpdatePost(
 }
 
 export async function actionAdminDeletePost(id: string): Promise<{ ok?: boolean }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   await deleteArtistPost(id);
   revalidatePath('/admin/posts');
   return { ok: true };
@@ -134,7 +149,8 @@ export async function actionAdminUpdatePlaylist(
   id: string,
   input: { title: string; visibility: string },
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   const title = (input.title ?? '').trim();
   if (!title || title.length > 200) return { error: 'Название: 1–200 символов' };
   if (input.visibility !== 'PRIVATE' && input.visibility !== 'PUBLIC') return { error: 'Неверная видимость' };
@@ -144,7 +160,8 @@ export async function actionAdminUpdatePlaylist(
 }
 
 export async function actionAdminDeletePlaylist(id: string): Promise<{ ok?: boolean }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   await adminDeletePlaylist(id);
   revalidatePath('/admin/playlists');
   return { ok: true };
@@ -154,7 +171,8 @@ export async function actionAdminUpdateArtist(
   artistProfileId: string,
   input: { name: string; slug: string; bio: string | null; avatarUrl: string | null },
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   const name = (input.name ?? '').trim();
   if (!name || name.length > 120) return { error: 'Имя: 1–120 символов' };
   const slug = (input.slug ?? '').trim().toLowerCase();
@@ -174,7 +192,8 @@ export async function actionAdminUpdateRelease(
   releaseId: string,
   input: { title: string; type: string; genre: string | null; releaseDate: string | null; description: string | null; linerNotes: string | null },
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   const title = (input.title ?? '').trim();
   if (!title || title.length > 200) return { error: 'Название: 1–200 символов' };
   if (!RELEASE_TYPES.includes(input.type as ReleaseType)) return { error: 'Неверный тип' };
@@ -206,7 +225,8 @@ export async function actionAdminUpdateTrack(
     lyrics: string | null;
   },
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   const title = (input.title ?? '').trim();
   if (!title || title.length > 200) return { error: 'Название: 1–200 символов' };
   if (!Number.isInteger(input.trackNumber) || input.trackNumber < 1) return { error: 'Неверный номер' };
@@ -237,7 +257,8 @@ export async function actionCreateArtist(
   name: string,
   slug: string,
 ): Promise<{ error?: string; slug?: string }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   const result = await createArtistForUser({ email, name, slug });
   if (!result.ok) return { error: result.error };
   revalidatePath('/admin/users');
@@ -254,7 +275,8 @@ export async function actionAddArtistMember(
   artistProfileId: string,
   email: string,
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   const result = await addArtistMember(artistProfileId, email);
   if (!result.ok) return { error: result.error };
   revalidatePath('/admin/artists');
@@ -265,7 +287,8 @@ export async function actionRemoveArtistMember(
   artistProfileId: string,
   userId: string,
 ): Promise<{ error?: string; ok?: boolean }> {
-  await requireAdmin();
+  const { canMutate } = await requireAdmin();
+  if (!canMutate) return {};
   const result = await removeArtistMember(artistProfileId, userId);
   if (!result.ok) return { error: result.error };
   revalidatePath('/admin/artists');

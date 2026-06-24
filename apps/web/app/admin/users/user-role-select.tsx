@@ -4,7 +4,7 @@ import { actionSetUserRole } from '../actions';
 import type { UserRole } from '@vire/db';
 import { ActionSelect } from '@/components/action-select';
 
-const ROLES: UserRole[] = ['LISTENER', 'ARTIST', 'MODERATOR', 'ADMIN', 'SUPERADMIN'];
+const ROLES: UserRole[] = ['LISTENER', 'ARTIST', 'VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN'];
 const ROLE_OPTIONS = ROLES.map((r) => ({ value: r, label: r }));
 
 interface Props {

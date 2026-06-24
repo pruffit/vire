@@ -7,8 +7,8 @@ import * as schema from './schema';
 // Grant a role to an existing user by email — bootstraps the first admin
 // without hand-editing the DB.
 //   pnpm --filter @vire/db db:make-admin <email> [role]
-type Role = 'LISTENER' | 'ARTIST' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
-const ROLES: Role[] = ['LISTENER', 'ARTIST', 'MODERATOR', 'ADMIN', 'SUPERADMIN'];
+type Role = 'LISTENER' | 'ARTIST' | 'VIEWER' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
+const ROLES: Role[] = ['LISTENER', 'ARTIST', 'VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN'];
 
 async function main() {
   const email = process.argv[2];

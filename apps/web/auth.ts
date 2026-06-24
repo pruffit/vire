@@ -9,7 +9,7 @@ import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db, findUserByEmail, tryClaimOAuthAccount } from '@vire/db';
 import { accounts, sessions, verificationTokens, users } from '@vire/db/schema';
 
-export type UserRole = 'LISTENER' | 'ARTIST' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
+export type UserRole = 'LISTENER' | 'ARTIST' | 'VIEWER' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
 
 declare module 'next-auth' {
   interface Session {

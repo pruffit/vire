@@ -643,6 +643,7 @@ const ROLE_TONE: Record<string, BadgeTone> = {
   SUPERADMIN: 'error',
   ADMIN: 'accent',
   MODERATOR: 'warn',
+  VIEWER: 'info',
   ARTIST: 'info',
   LISTENER: 'neutral',
 };

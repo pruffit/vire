@@ -4,7 +4,7 @@ import { getSystemMetrics } from '@/lib/system-metrics';
 import { getAdminHealth } from '@/lib/admin-health';
 import { countSiteOnline } from '@/lib/presence';
 
-const ADMIN_ROLES = new Set<string>(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
+const ADMIN_ROLES = new Set<string>(['VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN']);
 
 /** Живой снимок состояния платформы для админ-панели «Система». Поллится клиентом. */
 export async function GET() {
