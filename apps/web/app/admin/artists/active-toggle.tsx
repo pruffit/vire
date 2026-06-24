@@ -3,7 +3,6 @@
 import { useTransition } from 'react';
 import { actionSetArtistActive } from '../actions';
 
-/** Скрыть/показать артиста на витрине (isActive). */
 export function ActiveToggle({
   artistProfileId,
   isActive,

@@ -25,7 +25,6 @@ export interface DashboardRelease {
   tracks: DashboardTrack[];
 }
 
-/** Сводка готовности треков релиза: что требует внимания артиста. */
 function TrackHealth({ tracks }: { tracks: DashboardTrack[] }) {
   if (tracks.length === 0) {
     return <span className="text-xs text-foreground/30">Треков пока нет</span>;
@@ -137,7 +136,6 @@ function ReleaseCard({ data, artistSlug }: { data: DashboardRelease; artistSlug:
   );
 }
 
-/** Сетка релизов артиста — адаптивно заполняет рабочую область. */
 export function ReleaseList({ releases, artistSlug }: { releases: DashboardRelease[]; artistSlug: string }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

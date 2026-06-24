@@ -51,7 +51,7 @@ export function PostsManager({
       body: JSON.stringify({ title, body }),
     }).catch(() => null);
     if (!res?.ok) {
-      setPosts(prev); // откат
+      setPosts(prev);
       toast.error('Не удалось сохранить пост');
     }
   }
@@ -61,7 +61,7 @@ export function PostsManager({
     setPosts((p) => p.filter((x) => x.id !== id));
     const res = await fetch(`/api/v1/dashboard/posts/${id}`, { method: 'DELETE' }).catch(() => null);
     if (!res?.ok) {
-      setPosts(prev); // откат
+      setPosts(prev);
       toast.error('Не удалось удалить пост');
     }
   }
@@ -254,7 +254,6 @@ function PostCard({
   );
 }
 
-/** Относительная дата по-русски: «только что», «5 мин назад», «вчера», дата. */
 function relativeDate(iso: string): string {
   const then = new Date(iso).getTime();
   if (!Number.isFinite(then)) return '';

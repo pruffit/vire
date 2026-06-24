@@ -9,7 +9,6 @@ const NAV: SideNavItem[] = [
   { href: '/dashboard/profile', label: 'Профиль', icon: 'user' },
 ];
 
-/** Навигация дашборда артиста — общая оболочка `SideNav` с иконками. */
 export function DashboardNav({ hasArtist }: { hasArtist: boolean }) {
   if (!hasArtist) return null;
   return <SideNav items={NAV} className="md:py-0" />;

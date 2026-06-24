@@ -12,9 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="h-full bg-background text-foreground flex flex-col md:flex-row">
-      {/* Сайдбар на десктопе, горизонтальный топ-бар на мобилках.
-          Сайдбар — второй нейтральный слой (чуть светлее контента). */}
+    <div className="min-h-full bg-background text-foreground flex flex-col md:flex-row">
       <aside className="shrink-0 border-b border-foreground/10 md:border-b-0 md:border-r md:w-52 md:flex md:flex-col md:bg-foreground/[0.015] md:px-3 md:py-5">
         <div className="hidden md:flex items-center gap-2 px-3 mb-5">
           <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/35">
@@ -30,8 +28,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </aside>
 
-      {/* Content — на всю ширину рабочей области (админка плотная, таблицы широкие).
-          Узкие экраны (формы редактирования) ограничивают себя сами через max-w-2xl. */}
       <main data-scroll-area className="flex-1 min-w-0 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
         {children}
       </main>

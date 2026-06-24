@@ -84,8 +84,6 @@ export function SmartLinkForm({
     if (coverInputRef.current) coverInputRef.current.value = '';
   }
 
-  // Освобождаем blob-URL выбранной обложки при замене/размонтировании.
-  // (revokeObjectURL на удалённом URL из initial — безопасный no-op.)
   useEffect(() => {
     return () => {
       if (coverPreview) URL.revokeObjectURL(coverPreview);
@@ -126,9 +124,7 @@ export function SmartLinkForm({
 
   return (
     <form onSubmit={submit} className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
-      {/* Левая колонка — обложка, название, адрес, мета */}
       <div className="flex flex-col gap-6">
-      {/* Обложка + название */}
       <div className="flex gap-4">
         <button
           type="button"
@@ -176,7 +172,6 @@ export function SmartLinkForm({
         </div>
       </div>
 
-      {/* Адрес */}
       <Field label="Адрес страницы" hint="латиница, цифры, дефис">
         <div className="flex min-w-0 items-center gap-1 text-sm">
           <span className="shrink-0 max-w-[45%] truncate font-mono text-xs text-foreground/40">
@@ -228,9 +223,7 @@ export function SmartLinkForm({
       )}
       </div>
 
-      {/* Правая колонка — ссылки на площадки и публикация */}
       <div className="flex flex-col gap-6">
-      {/* Ссылки на площадки */}
       <div>
         <LinksEditor
           title="Ссылки на площадки"
@@ -242,7 +235,6 @@ export function SmartLinkForm({
         />
       </div>
 
-      {/* Публикация + submit */}
       <div className="mt-auto flex flex-col gap-4 border-t border-foreground/[0.06] pt-5">
         <Check
           label="Опубликовать"

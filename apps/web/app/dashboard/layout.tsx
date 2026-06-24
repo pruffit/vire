@@ -18,9 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ]);
 
   return (
-    <div className="h-full bg-background text-foreground flex flex-col md:flex-row">
-      {/* Сайдбар на десктопе, горизонтальный топ-бар на мобилке. Второй
-          нейтральный слой (чуть светлее контента) — как в backoffice. */}
+    <div className="min-h-full bg-background text-foreground flex flex-col md:flex-row">
       <aside className="shrink-0 border-b border-foreground/10 md:flex md:w-60 md:flex-col md:border-b-0 md:border-r md:bg-foreground/[0.015]">
         {artist ? (
           <div className="hidden items-center gap-3 px-4 pb-4 pt-5 md:flex">
@@ -72,8 +70,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         )}
       </aside>
 
-      {/* Контент — на всю ширину рабочей области; страницы сами ограничивают
-          ширину форм. Единственная скролл-область дашборда. */}
       <main data-scroll-area className="flex-1 min-w-0 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
         {children}
       </main>

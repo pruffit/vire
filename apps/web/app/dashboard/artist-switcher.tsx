@@ -11,10 +11,6 @@ export interface SwitcherArtist {
   slug: string;
 }
 
-/**
- * Переключатель активного артиста — для аккаунтов, управляющих несколькими
- * карточками. Меняет cookie через эндпоинт и перезагружает данные дашборда.
- */
 export function ArtistSwitcher({
   artists,
   activeId,

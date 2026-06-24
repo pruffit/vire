@@ -12,7 +12,6 @@ import { VerifiedBadge } from '@/components/verified-badge';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
 
-// Font name → CSS variable (the fonts are loaded globally in app/layout via lib/fonts).
 const SANS_VAR: Record<string, string> = {
   Inter: 'var(--font-inter)',
   Montserrat: 'var(--font-montserrat)',
@@ -70,7 +69,6 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
   const [videos, setVideos] = useState<ArtistVideo[]>(artist.videos);
   const [removeAvatar, setRemoveAvatar] = useState(false);
 
-  // Theme live preview
   const t = artist.themeTokens;
   const [bg, setBg] = useState(t.bg);
   const [textColor, setTextColor] = useState(t.text);
@@ -120,8 +118,6 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
     }
   }
 
-  // Освобождаем blob-URL выбранного аватара при замене/размонтировании
-  // (удалённый URL из artist.avatarUrl не трогаем).
   useEffect(() => {
     return () => {
       if (avatarPreview && avatarPreview !== artist.avatarUrl) URL.revokeObjectURL(avatarPreview);
@@ -131,9 +127,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-8">
       <div className="grid items-start gap-x-10 gap-y-8 lg:grid-cols-2">
-      {/* Левая колонка — профиль, ссылки, видео */}
       <div className="flex flex-col gap-8">
-      {/* Профиль */}
       <section className="flex flex-col gap-5">
         <SectionLabel>Профиль</SectionLabel>
 
@@ -178,7 +172,6 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
         </Field>
       </section>
 
-      {/* Ссылки */}
       <div className="border-t border-foreground/[0.06] pt-7">
         <LinksEditor
           title="Ссылки"
@@ -190,20 +183,16 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
         />
       </div>
 
-      {/* Видео */}
       <div className="border-t border-foreground/[0.06] pt-7">
         <VideosEditor videos={videos} onChange={setVideos} max={20} disabled={busy} />
       </div>
       </div>
 
-      {/* Правая колонка — тема страницы с живым превью */}
       <section className="flex flex-col gap-4">
         <SectionLabel>Тема страницы</SectionLabel>
 
         <div className="flex flex-col gap-6">
-          {/* Контролы */}
           <div className="order-2 flex min-w-0 flex-col gap-6">
-            {/* Пресеты палитр */}
             <div className="flex flex-col gap-3">
               <span className="text-xs text-foreground/40">Пресеты палитры</span>
               <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
@@ -243,7 +232,6 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
               </p>
             </div>
 
-            {/* Цвета + зерно */}
             <div className="grid grid-cols-2 gap-4">
               <ColorField label="Фон" name="bg" value={bg} onChange={setBg} disabled={busy} />
               <ColorField label="Текст" name="text" value={textColor} onChange={setTextColor} disabled={busy} />
@@ -253,7 +241,6 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
               </Field>
             </div>
 
-            {/* Шрифты */}
             <div className="grid grid-cols-2 gap-4">
               <Field label="Шрифт текста">
                 <Select name="fontSans" value={fontSans} onValueChange={setFontSans} disabled={busy} aria-label="Шрифт текста" options={FONT_SANS.map((f) => ({ value: f, label: f }))} />
@@ -264,14 +251,12 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
             </div>
           </div>
 
-          {/* Живое превью — над контролами, сверху колонки */}
           <aside className="order-1 w-full self-start">
             <span className="mb-2 block text-xs text-foreground/40">Превью страницы</span>
             <div
               className="overflow-hidden rounded-xl ring-1 ring-foreground/10 transition-colors"
               style={{ background: bg, fontFamily: SANS_VAR[fontSans], color: textColor }}
             >
-              {/* Полоса платформенного навбара — показывает «стыковку» с фоном */}
               <div className="flex h-7 items-center gap-2 px-4" style={{ background: '#0e0d0b' }}>
                 <div className="h-2 w-12 rounded-full" style={{ background: '#ffffff18' }} />
                 <div className="ml-auto flex gap-2">

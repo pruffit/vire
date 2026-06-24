@@ -75,7 +75,6 @@ export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
     setCoverPreview(file ? URL.createObjectURL(file) : null);
   }
 
-  // Освобождаем blob-URL превью при замене и при размонтировании — иначе течёт память.
   useEffect(() => {
     return () => {
       if (coverPreview) URL.revokeObjectURL(coverPreview);

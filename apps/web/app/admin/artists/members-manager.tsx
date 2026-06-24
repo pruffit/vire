@@ -11,14 +11,8 @@ import type { ArtistMemberRow } from '@vire/db';
 import { toast } from '@/components/toast';
 import { Icon } from '@/components/icon';
 
-/**
- * Управление участниками артист-профиля (несколько аккаунтов на одну карточку).
- * Поповер по кнопке: лениво грузит список участников через server action, даёт
- * добавить по email и снять (кроме OWNER). Только бэкоффис (страница под requireAdmin).
- *
- * Поповер рендерится в портал с position:fixed (координаты считаются от кнопки) —
- * иначе его обрезает таблица-родитель с overflow-x/-y:auto.
- */
+// Поповер в портале с position:fixed — иначе его обрезает таблица-родитель
+// с overflow-x/-y:auto.
 export function MembersManager({ artistProfileId }: { artistProfileId: string }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);

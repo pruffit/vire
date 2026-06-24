@@ -287,9 +287,8 @@ function TrackRow({
       transition={spring.snappy}
       className="bg-background"
     >
-      {/* Track row */}
       <div className="flex items-center gap-2 px-2 sm:px-3 py-2.5 text-sm">
-        {/* Drag handle (тач-таргет ≥44px по высоте строки) */}
+        {/* тач-таргет ≥44px по высоте строки */}
         <button
           type="button"
           onPointerDown={(e) => { e.preventDefault(); controls.start(e); }}
@@ -304,7 +303,6 @@ function TrackRow({
           {track.trackNumber}
         </span>
 
-        {/* Название (редактируемое) */}
         <div className="flex-1 min-w-0">
           <input
             value={track.title}
@@ -343,7 +341,6 @@ function TrackRow({
           </span>
         )}
 
-        {/* Раскрыть детали */}
         <motion.button
           type="button"
           onClick={onToggleExpanded}
@@ -360,7 +357,6 @@ function TrackRow({
           <TagIcon />
         </motion.button>
 
-        {/* Удалить */}
         <motion.button
           type="button"
           onClick={onRemove}
@@ -375,7 +371,6 @@ function TrackRow({
         </motion.button>
       </div>
 
-      {/* Детали — разворачиваются по кнопке */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -387,7 +382,6 @@ function TrackRow({
             className="overflow-hidden border-t border-foreground/[0.06]"
           >
             <div className="px-3 sm:px-4 py-3 space-y-4">
-              {/* Флаги */}
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-8 sm:gap-y-2">
                 <Check
                   label={<><span className="font-mono font-semibold text-foreground/80">18+</span> Explicit</>}
@@ -412,7 +406,6 @@ function TrackRow({
                 />
               </div>
 
-              {/* BPM + Key */}
               <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-foreground/[0.06] pt-3">
                 <label className="flex items-center gap-2">
                   <span className="text-xs font-mono text-foreground/40 w-8">BPM</span>
@@ -444,7 +437,6 @@ function TrackRow({
                 </label>
               </div>
 
-              {/* Версия / ремикс */}
               <label className="flex flex-col gap-1.5">
                 <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">
                   Версия <span className="normal-case tracking-normal text-foreground/30">необязательно</span>

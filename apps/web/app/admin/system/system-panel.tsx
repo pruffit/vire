@@ -18,7 +18,6 @@ export function SystemPanel({ initial }: { initial: SystemData }) {
   // Отметку «когда обновлено» ведём по часам клиента (Date.now в рендере нельзя).
   const lastTs = useRef(0);
 
-  // Поллинг живого снимка.
   useEffect(() => {
     lastTs.current = Date.now(); // серверный снимок отрисован примерно сейчас
     let stopped = false;
@@ -36,7 +35,6 @@ export function SystemPanel({ initial }: { initial: SystemData }) {
     return () => { stopped = true; clearInterval(timer); };
   }, []);
 
-  // Счётчик «обновлено N с назад».
   useEffect(() => {
     const t = setInterval(() => setAge(Math.round((Date.now() - lastTs.current) / 1000)), 1000);
     return () => clearInterval(t);
@@ -54,7 +52,6 @@ export function SystemPanel({ initial }: { initial: SystemData }) {
         </span>
       </div>
 
-      {/* Живые счётчики */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Онлайн на сайте" value={siteOnline} accent />
         <Stat label="Слушают сейчас" value={h.liveListeners} />
@@ -62,7 +59,6 @@ export function SystemPanel({ initial }: { initial: SystemData }) {
         <Stat label="Ядра CPU" value={s.cores} />
       </div>
 
-      {/* Нагрузка ресурсов */}
       <div className="rounded-xl border border-foreground/10 bg-foreground/[0.025] p-5 flex flex-col gap-4">
         <Subhead>Нагрузка</Subhead>
         <Bar
@@ -86,7 +82,6 @@ export function SystemPanel({ initial }: { initial: SystemData }) {
         )}
       </div>
 
-      {/* Сервисы и очереди */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="rounded-xl border border-foreground/10 bg-foreground/[0.025] p-5 flex flex-col gap-3">
           <Subhead>Сервисы</Subhead>

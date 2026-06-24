@@ -11,7 +11,6 @@ import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
 import { plural } from '@/lib/format';
 
-// Единый вид иконочного действия в строке лендинга (открыть / копировать / править / удалить).
 const iconBtnBase =
   'inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors active:scale-[0.98] disabled:opacity-40';
 const iconBtnHover = 'hover:bg-foreground/10 hover:text-foreground';
@@ -61,7 +60,7 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
     if (!confirm(`Удалить «${title}»? Действие необратимо.`)) return;
     setPendingId(id);
     const prev = rows;
-    setRows((r) => r.filter((x) => x.id !== id)); // оптимистично
+    setRows((r) => r.filter((x) => x.id !== id));
     const res = await fetch(`/api/v1/dashboard/smart-links/${id}`, { method: 'DELETE' }).catch(() => null);
     setPendingId(null);
     if (!res?.ok) {

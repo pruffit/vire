@@ -64,7 +64,6 @@ export default async function EditReleasePage({ params }: Props) {
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        {/* Треки — основная рабочая область */}
         <section className="order-2 flex min-w-0 flex-col gap-3 lg:order-1">
           <SectionLabel>Треки · {tracks.length}</SectionLabel>
 
@@ -100,7 +99,6 @@ export default async function EditReleasePage({ params }: Props) {
           </Panel>
         </section>
 
-        {/* Метаданные релиза */}
         <aside className="order-1 flex flex-col gap-4 lg:order-2">
           <Panel className="p-4 sm:p-5">
             <SectionLabel>Релиз</SectionLabel>

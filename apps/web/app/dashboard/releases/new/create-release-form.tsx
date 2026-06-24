@@ -44,7 +44,6 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
         throw new Error((json as { error?: string }).error ?? `HTTP ${res.status}`);
       }
 
-      // На страницу релиза — там добавляют треки
       const releaseId = (json as { releaseId?: string }).releaseId;
       router.push(releaseId ? `/dashboard/releases/${releaseId}` : '/dashboard');
       router.refresh();
@@ -59,7 +58,6 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
     setCoverPreview(file ? URL.createObjectURL(file) : null);
   }
 
-  // Освобождаем blob-URL превью при замене и при размонтировании — иначе течёт память.
   useEffect(() => {
     return () => {
       if (coverPreview) URL.revokeObjectURL(coverPreview);
@@ -74,8 +72,6 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2"
     >
-
-      {/* Title */}
       <Field
         label="Название"
         hint="без имени артиста — оно и так рядом с обложкой"
@@ -98,22 +94,18 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
         )}
       </Field>
 
-      {/* Type */}
       <Field label="Тип">
         <Select name="type" defaultValue="ALBUM" options={RELEASE_TYPE_OPTIONS} disabled={busy} aria-label="Тип" />
       </Field>
 
-      {/* Genre */}
       <Field label="Жанр" hint="необязательно">
         <GenreSelect name="genre" disabled={busy} />
       </Field>
 
-      {/* Release date */}
       <Field label="Дата релиза" hint="необязательно">
         <DateField name="releaseDate" disabled={busy} className="w-44" aria-label="Дата релиза" />
       </Field>
 
-      {/* Cover */}
       <Field label="Обложка" hint="Квадрат 1:1, от 1400×1400 (рекомендуем 3000×3000) · JPEG/PNG/WebP · необязательно">
         <div className="flex items-start gap-4 min-w-0">
           <input
@@ -136,7 +128,6 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
         </div>
       </Field>
 
-      {/* Description */}
       <Field label="Описание" hint="необязательно" className="sm:col-span-2">
         <Textarea
           name="description"

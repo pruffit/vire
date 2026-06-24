@@ -14,7 +14,7 @@ interface QueueItem {
   file: File;
   title: string;
   state: ItemState;
-  progress: number; // 0..1 (upload)
+  progress: number;
   error?: string;
 }
 
@@ -105,7 +105,6 @@ export function BatchTrackUpload({
 
     if (ok > 0) {
       toast(`Загружено треков: ${ok}${fail ? `, с ошибкой: ${fail}` : ''}. Идёт обработка…`);
-      // Обновляем серверный список — новые треки появятся в менеджере с live-статусом.
       router.refresh();
       // Успешные строки убираем, ошибки оставляем перед глазами.
       setTimeout(() => {
@@ -144,7 +143,6 @@ export function BatchTrackUpload({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Dropzone */}
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
@@ -179,7 +177,6 @@ export function BatchTrackUpload({
         />
       </button>
 
-      {/* Очередь */}
       <AnimatePresence initial={false}>
         {items.map((it) => (
           <motion.div
@@ -206,7 +203,6 @@ export function BatchTrackUpload({
               </span>
             </div>
 
-            {/* Прогресс-бар */}
             {(it.state === 'uploading' || it.state === 'queued') && (
               <div className="mt-2 h-1 rounded-full bg-foreground/10 overflow-hidden">
                 <motion.div

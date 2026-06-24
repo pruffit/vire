@@ -37,7 +37,7 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
   function toggleMood(m: string) {
     setF((p) => {
       if (p.moods.includes(m)) return { ...p, moods: p.moods.filter((x) => x !== m) };
-      if (p.moods.length >= 5) return p; // лимит 5
+      if (p.moods.length >= 5) return p;
       return { ...p, moods: [...p.moods, m] };
     });
   }
@@ -45,7 +45,7 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
   function toggleGenre(gen: string) {
     setF((p) => {
       if (p.genres.includes(gen)) return { ...p, genres: p.genres.filter((x) => x !== gen) };
-      if (p.genres.length >= 3) return p; // лимит 3
+      if (p.genres.length >= 3) return p;
       return { ...p, genres: [...p.genres, gen] };
     });
   }

@@ -32,22 +32,16 @@ export default async function AdminPage() {
     <div className="flex flex-col gap-10">
       <PageHeader title="Обзор" />
 
-      {/* Attention panel */}
       {hasIssues && <AttentionPanel attention={attention} />}
 
-      {/* Система */}
       <HealthPanel health={health} />
 
-      {/* Аудитория и каталог */}
       <CatalogPanel stats={stats} metrics={metrics} />
 
-      {/* Вовлечённость */}
       <EngagementPanel metrics={metrics} />
 
-      {/* Recent published */}
       {recent.length > 0 && <RecentReleases releases={recent} />}
 
-      {/* Редакционные подборки */}
       <Section
         label="Подборки"
         action={<EditorialGenerateButton />}

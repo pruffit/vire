@@ -3,7 +3,6 @@
 import { useTransition } from 'react';
 import { actionRetryQueueFailed, actionCleanQueueFailed } from './actions';
 
-/** Кнопки управления упавшими задачами очереди: повторить все / очистить. */
 export function QueueFailedActions({ queueName }: { queueName: string }) {
   const [pending, startTransition] = useTransition();
 

@@ -20,7 +20,6 @@ function CardHeader({ title, meta }: { title: string; meta?: React.ReactNode }) 
   );
 }
 
-/** Топ треков артиста по прослушиваниям (с долей прослушанного времени). */
 export function TopTracksCard({ stats }: { stats: ArtistPlayStats }) {
   const { tracks } = stats;
   const maxPlays = tracks[0]?.totalPlays ?? 0;

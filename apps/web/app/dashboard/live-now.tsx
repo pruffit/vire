@@ -6,7 +6,6 @@ import { spring } from '@vire/ui/motion';
 
 const POLL_MS = 20_000;
 
-/** «Слушают сейчас» по всем трекам артиста — живой индикатор в дашборде. */
 export function LiveNow() {
   const [count, setCount] = useState(0);
 
