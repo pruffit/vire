@@ -22,11 +22,21 @@ export function formatCount(n: number): string {
   return String(n);
 }
 
+/**
+ * Russian pluralization: picks one/few/many by the count.
+ * `plural(n, ['ссылка', 'ссылки', 'ссылок'])`.
+ */
+export function plural(n: number, forms: readonly [string, string, string]): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return forms[0];
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return forms[1];
+  return forms[2];
+}
+
 /** Russian plural for "трек" (1 → "трек", 2 → "трека", 5 → "треков"). */
 export function pluralTracks(n: number): string {
-  if (n % 10 === 1 && n % 100 !== 11) return 'трек';
-  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'трека';
-  return 'треков';
+  return plural(n, ['трек', 'трека', 'треков']);
 }
 
 /** Release year from a Date or ISO string; null if absent or unparseable. */

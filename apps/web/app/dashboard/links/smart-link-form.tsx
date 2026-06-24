@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArtistLink } from '@vire/core';
 import { normalizeSlug, MAX_SMART_LINKS } from '@/lib/smart-link';
 import { toast } from '@/components/toast';
+import { Field, fieldClass, Check, btnPrimary } from '@/components/ui-kit';
 import { Select } from '@/components/select';
 import { DateField } from '@/components/date-field';
 import { LinksEditor } from '@/components/links-editor';
+import { Icon } from '@/components/icon';
+import { cn } from '@/lib/utils';
 
 export interface SmartLinkInitial {
   id: string;
@@ -81,6 +84,14 @@ export function SmartLinkForm({
     if (coverInputRef.current) coverInputRef.current.value = '';
   }
 
+  // Освобождаем blob-URL выбранной обложки при замене/размонтировании.
+  // (revokeObjectURL на удалённом URL из initial — безопасный no-op.)
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
@@ -114,19 +125,24 @@ export function SmartLinkForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6">
-      {/* Обложка + основное */}
+    <form onSubmit={submit} className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
+      {/* Левая колонка — обложка, название, адрес, мета */}
+      <div className="flex flex-col gap-6">
+      {/* Обложка + название */}
       <div className="flex gap-4">
         <button
           type="button"
           onClick={() => coverInputRef.current?.click()}
-          className="relative shrink-0 w-28 h-28 rounded-lg overflow-hidden border border-foreground/10 bg-foreground/5 grid place-items-center hover:border-foreground/25 transition-colors"
+          className="group relative grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-lg border border-foreground/10 bg-foreground/5 transition-colors hover:border-foreground/25"
         >
           {coverPreview ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverPreview} alt="" className="w-full h-full object-cover" />
+            <img src={coverPreview} alt="" className="h-full w-full object-cover" />
           ) : (
-            <span className="text-xs text-foreground/40 text-center px-2">Обложка<br />1:1</span>
+            <span className="flex flex-col items-center gap-1 text-foreground/35">
+              <Icon name="image" size={20} />
+              <span className="text-[11px]">Обложка 1:1</span>
+            </span>
           )}
         </button>
         <input
@@ -137,14 +153,24 @@ export function SmartLinkForm({
           onChange={(e) => pickCover(e.target.files?.[0] ?? null)}
         />
 
-        <div className="flex-1 flex flex-col gap-3 min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
           <Field label="Название">
-            <input value={title} onChange={(e) => onTitle(e.target.value)} disabled={busy} required
-              placeholder="Название релиза" className={inputCls} />
+            <input
+              value={title}
+              onChange={(e) => onTitle(e.target.value)}
+              disabled={busy}
+              required
+              placeholder="Название релиза"
+              className={cn(fieldClass, 'w-full')}
+            />
           </Field>
           {coverPreview && (
-            <button type="button" onClick={clearCover} className="self-start text-xs text-foreground/40 hover:text-red-400 transition-colors">
-              Убрать обложку
+            <button
+              type="button"
+              onClick={clearCover}
+              className="inline-flex items-center gap-1.5 self-start text-xs text-foreground/40 transition-colors hover:text-red-400"
+            >
+              <Icon name="trash" size={12} /> Убрать обложку
             </button>
           )}
         </div>
@@ -152,26 +178,35 @@ export function SmartLinkForm({
 
       {/* Адрес */}
       <Field label="Адрес страницы" hint="латиница, цифры, дефис">
-        <div className="flex items-center gap-1 text-sm min-w-0">
-          <span className="text-foreground/40 shrink-0 font-mono text-xs max-w-[45%] truncate">/smartlink/{artistSlug}/</span>
+        <div className="flex min-w-0 items-center gap-1 text-sm">
+          <span className="shrink-0 max-w-[45%] truncate font-mono text-xs text-foreground/40">
+            /smartlink/{artistSlug}/
+          </span>
           <input
             value={slug}
             onChange={(e) => { setSlug(normalizeSlug(e.target.value)); setSlugEdited(true); }}
             disabled={busy}
             placeholder={normalizeSlug(title) || 'moy-reliz'}
-            className={`${inputCls} font-mono min-w-0`}
+            className={cn(fieldClass, 'min-w-0 flex-1 font-mono')}
           />
         </div>
       </Field>
 
-      <Field label="Подзаголовок" hint="необязательно">
-        <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} disabled={busy}
-          placeholder="Сингл · 2026 / любой текст" className={inputCls} />
-      </Field>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Подзаголовок" hint="необязательно">
+          <input
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            disabled={busy}
+            placeholder="Сингл · 2026 / любой текст"
+            className={cn(fieldClass, 'w-full')}
+          />
+        </Field>
 
-      <Field label="Дата релиза" hint="необязательно">
-        <DateField value={releaseDate} onValueChange={setReleaseDate} disabled={busy} aria-label="Дата релиза" />
-      </Field>
+        <Field label="Дата релиза" hint="необязательно">
+          <DateField value={releaseDate} onValueChange={setReleaseDate} disabled={busy} aria-label="Дата релиза" />
+        </Field>
+      </div>
 
       {releaseOptions.length > 0 && (
         <Field label="Релиз на Vire" hint="первой кнопкой — «Слушать/Пресейв на Vire»">
@@ -191,42 +226,36 @@ export function SmartLinkForm({
           />
         </Field>
       )}
+      </div>
 
+      {/* Правая колонка — ссылки на площадки и публикация */}
+      <div className="flex flex-col gap-6">
       {/* Ссылки на площадки */}
-      <LinksEditor
-        title="Ссылки на площадки"
-        hint="Вставь ссылку — иконка и название подхватятся сами."
-        links={links}
-        onChange={setLinks}
-        max={MAX_SMART_LINKS}
-        disabled={busy}
-      />
+      <div>
+        <LinksEditor
+          title="Ссылки на площадки"
+          hint="Вставь ссылку — иконка и название подхватятся сами."
+          links={links}
+          onChange={setLinks}
+          max={MAX_SMART_LINKS}
+          disabled={busy}
+        />
+      </div>
 
       {/* Публикация + submit */}
-      <label className="flex items-center gap-2.5 text-sm cursor-pointer select-none">
-        <input type="checkbox" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} disabled={busy}
-          className="w-4 h-4 accent-foreground" />
-        Опубликовать (страница доступна по ссылке)
-      </label>
-
-      <button type="submit" disabled={busy}
-        className="self-start rounded-lg bg-foreground text-background px-5 py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity">
-        {busy ? 'Сохранение…' : editing ? 'Сохранить' : 'Создать лендинг'}
-      </button>
+      <div className="mt-auto flex flex-col gap-4 border-t border-foreground/[0.06] pt-5">
+        <Check
+          label="Опубликовать"
+          hint="Страница станет доступна по ссылке"
+          checked={isPublished}
+          disabled={busy}
+          onChange={setIsPublished}
+        />
+        <button type="submit" disabled={busy} className={cn(btnPrimary, 'self-start')}>
+          {busy ? 'Сохранение…' : editing ? 'Сохранить' : 'Создать лендинг'}
+        </button>
+      </div>
+      </div>
     </form>
-  );
-}
-
-const inputCls =
-  'w-full bg-foreground/5 border border-foreground/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-foreground/30 transition-colors disabled:opacity-50 placeholder:text-foreground/30';
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium">
-        {label} {hint && <span className="text-foreground/30 font-normal text-xs">· {hint}</span>}
-      </span>
-      {children}
-    </label>
   );
 }

@@ -26,16 +26,14 @@ export default async function DashboardLinksPage() {
   }));
 
   return (
-    <div className="min-h-full bg-background text-foreground">
-      <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
-        <DashboardPageHeader
-          backHref="/dashboard"
-          title="Смартлинки"
-          subtitle="Красивые страницы релизов со ссылками на стриминги и соцсети. Работают и без публикации музыки на Vire."
-        />
+    <div className="flex flex-col gap-8">
+      <DashboardPageHeader
+        backHref="/dashboard"
+        title="Смартлинки"
+        subtitle="Красивые страницы релизов со ссылками на стриминги и соцсети. Работают и без публикации музыки на Vire."
+      />
 
-        <SmartLinkList items={rows} artistSlug={artist.slug} />
-      </div>
+      <SmartLinkList items={rows} artistSlug={artist.slug} />
     </div>
   );
 }

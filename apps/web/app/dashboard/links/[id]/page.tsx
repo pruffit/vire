@@ -37,29 +37,27 @@ export default async function EditSmartLinkPage({ params }: Props) {
   };
 
   return (
-    <div className="min-h-full bg-background text-foreground">
-      <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
-        <DashboardPageHeader
-          backHref="/dashboard/links"
-          backLabel="Смартлинки"
-          title="Редактирование"
-          subtitle={
-            smartLink.isPublished ? (
-              <a
-                href={`/smartlink/${artist.slug}/${smartLink.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 hover:text-foreground/70 transition-colors font-mono"
-              >
-                /smartlink/{artist.slug}/{smartLink.slug} <Icon name="external-link" size={12} />
-              </a>
-            ) : undefined
-          }
-        />
+    <div className="flex flex-col gap-8">
+      <DashboardPageHeader
+        backHref="/dashboard/links"
+        backLabel="Смартлинки"
+        title="Редактирование"
+        subtitle={
+          smartLink.isPublished ? (
+            <a
+              href={`/smartlink/${artist.slug}/${smartLink.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 hover:text-foreground/70 transition-colors font-mono"
+            >
+              /smartlink/{artist.slug}/{smartLink.slug} <Icon name="external-link" size={12} />
+            </a>
+          ) : undefined
+        }
+      />
 
-        <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
-          <SmartLinkForm artistSlug={artist.slug} initial={initial} releaseOptions={releaseOptions} />
-        </div>
+      <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
+        <SmartLinkForm artistSlug={artist.slug} initial={initial} releaseOptions={releaseOptions} />
       </div>
     </div>
   );

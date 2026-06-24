@@ -14,15 +14,11 @@ export default async function NewReleasePage() {
   if (!artist) redirect('/dashboard');
 
   return (
-    <div className="min-h-full bg-background text-foreground">
-      <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
+    <div className="flex flex-col gap-8">
+      <DashboardPageHeader backHref="/dashboard" title="Новый релиз" subtitle={artist.name} />
 
-        <DashboardPageHeader backHref="/dashboard" title="Новый релиз" subtitle={artist.name} />
-
-        <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
-          <CreateReleaseForm artistName={artist.name} />
-        </div>
-
+      <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
+        <CreateReleaseForm artistName={artist.name} />
       </div>
     </div>
   );

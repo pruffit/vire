@@ -1,14 +1,16 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArtistLink, ArtistVideo, ThemeTokens } from '@vire/core';
-import { btnPrimary, Switch, Textarea } from '@/components/ui-kit';
+import { btnPrimary, Switch, Textarea, Field, fieldClass, SectionLabel } from '@/components/ui-kit';
 import { Select } from '@/components/select';
 import { ColorField } from '@/components/color-field';
 import { LinksEditor } from '@/components/links-editor';
 import { VideosEditor } from '@/components/videos-editor';
 import { VerifiedBadge } from '@/components/verified-badge';
+import { Icon } from '@/components/icon';
+import { cn } from '@/lib/utils';
 
 // Font name → CSS variable (the fonts are loaded globally in app/layout via lib/fonts).
 const SANS_VAR: Record<string, string> = {
@@ -112,290 +114,250 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (avatarPreview && avatarPreview !== artist.avatarUrl) URL.revokeObjectURL(avatarPreview);
     if (file) {
       setAvatarPreview(URL.createObjectURL(file));
       setRemoveAvatar(false);
     }
   }
 
+  // Освобождаем blob-URL выбранного аватара при замене/размонтировании
+  // (удалённый URL из artist.avatarUrl не трогаем).
+  useEffect(() => {
+    return () => {
+      if (avatarPreview && avatarPreview !== artist.avatarUrl) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview, artist.avatarUrl]);
+
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-7">
+    <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-8">
+      <div className="grid items-start gap-x-10 gap-y-8 lg:grid-cols-2">
+      {/* Левая колонка — профиль, ссылки, видео */}
+      <div className="flex flex-col gap-8">
+      {/* Профиль */}
+      <section className="flex flex-col gap-5">
+        <SectionLabel>Профиль</SectionLabel>
 
-      {/* Name */}
-      <Field label="Имя артиста">
-        <input name="name" type="text" required disabled={busy}
-          defaultValue={artist.name}
-          className={`${inp} w-full`} />
-      </Field>
+        <Field label="Имя артиста">
+          <input name="name" type="text" required disabled={busy} defaultValue={artist.name} className={cn(fieldClass, 'w-full')} />
+        </Field>
 
-      {/* Bio */}
-      <Field label="Биография" hint="необязательно">
-        <Textarea name="bio" rows={4} disabled={busy}
-          defaultValue={artist.bio ?? ''}
-          placeholder="Расскажи о себе…"
-          className={`${inp} w-full`} />
-      </Field>
+        <Field label="Биография" hint="необязательно">
+          <Textarea name="bio" rows={4} disabled={busy} defaultValue={artist.bio ?? ''} placeholder="Расскажи о себе…" className={cn(fieldClass, 'w-full')} />
+        </Field>
 
-      {/* Links */}
-      <LinksEditor
-        title="Ссылки"
-        hint="Соцсети и площадки — иконка и название подхватятся сами; для нераспознанных задай подпись. Появятся блоком на твоей странице артиста."
-        links={links}
-        onChange={setLinks}
-        max={10}
-        disabled={busy}
-      />
-
-      {/* Videos */}
-      <VideosEditor videos={videos} onChange={setVideos} max={20} disabled={busy} />
-
-      {/* Avatar */}
-      <Field label="Аватар" hint="Около-квадрат, от 400×400 · JPEG/PNG/WebP · необязательно">
-        <div className="flex items-center gap-4">
-          {avatarPreview && !removeAvatar ? (
-            // Локальное превью выбранного файла (blob:) — next/image его не оптимизирует
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarPreview} alt="avatar" className="w-16 h-16 rounded-full object-cover shrink-0" />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-foreground/10 flex items-center justify-center text-xl font-medium shrink-0">
-              {artist.name[0]?.toUpperCase()}
-            </div>
-          )}
-          <div className="flex flex-col gap-2">
-            <input name="avatar" type="file" accept="image/jpeg,image/png,image/webp"
-              disabled={busy} onChange={handleAvatarChange}
-              className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-foreground/10 file:px-3 file:py-1.5 file:text-sm file:cursor-pointer hover:file:bg-foreground/20 disabled:opacity-50" />
-            {artist.avatarUrl && !removeAvatar && (
-              <button type="button" onClick={() => { setRemoveAvatar(true); setAvatarPreview(null); }}
-                className="text-xs text-foreground/40 hover:text-red-400 transition-colors text-left">
-                Удалить аватар
-              </button>
+        <Field label="Аватар" hint="около-квадрат, от 400×400 · JPEG/PNG/WebP">
+          <div className="flex items-center gap-4">
+            {avatarPreview && !removeAvatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarPreview} alt="avatar" className="h-16 w-16 shrink-0 rounded-full object-cover" />
+            ) : (
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-xl font-medium">
+                {artist.name[0]?.toUpperCase()}
+              </div>
             )}
-          </div>
-        </div>
-      </Field>
-
-      {/* Theme tokens */}
-      <div className="flex flex-col gap-4 pt-1">
-        <p className="text-sm font-medium">Тема страницы</p>
-
-        {/* Live preview — уменьшённая копия реальной страницы артиста: тот же
-            full-bleed hero с accent-свечением, крупным именем в выбранном шрифте,
-            аватаром в accent-кольце, verified-чипом и follow-пиллом. Так превью
-            предсказывает факт, а не показывает «другой экран». */}
-        <div
-          className="rounded-xl overflow-hidden transition-colors"
-          style={{ background: bg, fontFamily: SANS_VAR[fontSans], color: textColor }}
-        >
-          {/* Тонкая полоса навбара платформы — сохраняет историю «стыковки»
-              тёмной оболочки с фоном артиста (важно для светлых тем). */}
-          <div className="h-7 px-4 flex items-center gap-2" style={{ background: '#0e0d0b' }}>
-            <div className="w-12 h-2 rounded-full" style={{ background: '#ffffff18' }} />
-            <div className="ml-auto flex gap-2">
-              <div className="w-6 h-2 rounded-full" style={{ background: '#ffffff18' }} />
-              <div className="w-6 h-2 rounded-full" style={{ background: '#ffffff18' }} />
-            </div>
-          </div>
-
-          {/* Hero: тот же радиальный accent-глоу, что и на реальной странице */}
-          <div
-            className="relative px-5 pt-6 pb-5"
-            style={{
-              background:
-                'radial-gradient(ellipse 60% 90% at 88% 45%, color-mix(in oklch, ' +
-                accent + ' 22%, ' + bg + '), ' + bg + ')',
-            }}
-          >
-            {grain && (
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  opacity: 0.05,
-                  backgroundImage:
-                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-                  backgroundRepeat: 'repeat',
-                  backgroundSize: '180px 180px',
-                }}
+            <div className="flex flex-col gap-2">
+              <input
+                name="avatar"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={busy}
+                onChange={handleAvatarChange}
+                className="text-sm file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-foreground/10 file:px-3 file:py-1.5 file:text-sm hover:file:bg-foreground/20 disabled:opacity-50"
               />
-            )}
-            <div className="relative flex items-end gap-4">
-              {/* Имя + (verified + follow) в один ряд */}
-              <div className="flex-1 min-w-0 space-y-2.5">
-                <div
-                  className="font-bold tracking-tight leading-[0.95] break-words"
-                  style={{ fontSize: `${previewNameRem}rem` }}
+              {artist.avatarUrl && !removeAvatar && (
+                <button
+                  type="button"
+                  onClick={() => { setRemoveAvatar(true); setAvatarPreview(null); }}
+                  className="inline-flex items-center gap-1.5 self-start text-xs text-foreground/40 transition-colors hover:text-red-400"
                 >
-                  {artist.name}
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <VerifiedBadge color={accent} fontFamily={MONO_VAR[fontMono]} />
-                  <span
-                    className="text-[10px] font-medium px-3 py-1 rounded-full"
-                    style={{ background: accent, color: bg }}
-                  >
-                    Подписаться
-                  </span>
-                </div>
+                  <Icon name="trash" size={12} /> Удалить аватар
+                </button>
+              )}
+            </div>
+          </div>
+        </Field>
+      </section>
+
+      {/* Ссылки */}
+      <div className="border-t border-foreground/[0.06] pt-7">
+        <LinksEditor
+          title="Ссылки"
+          hint="Соцсети и площадки — иконка и название подхватятся сами; для нераспознанных задай подпись. Появятся блоком на твоей странице артиста."
+          links={links}
+          onChange={setLinks}
+          max={10}
+          disabled={busy}
+        />
+      </div>
+
+      {/* Видео */}
+      <div className="border-t border-foreground/[0.06] pt-7">
+        <VideosEditor videos={videos} onChange={setVideos} max={20} disabled={busy} />
+      </div>
+      </div>
+
+      {/* Правая колонка — тема страницы с живым превью */}
+      <section className="flex flex-col gap-4">
+        <SectionLabel>Тема страницы</SectionLabel>
+
+        <div className="flex flex-col gap-6">
+          {/* Контролы */}
+          <div className="order-2 flex min-w-0 flex-col gap-6">
+            {/* Пресеты палитр */}
+            <div className="flex flex-col gap-3">
+              <span className="text-xs text-foreground/40">Пресеты палитры</span>
+              <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                {THEME_PRESETS.map((p) => {
+                  const active = bg === p.bg && textColor === p.text && accent === p.accent;
+                  return (
+                    <button
+                      key={p.name}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => { setBg(p.bg); setTextColor(p.text); setAccent(p.accent); }}
+                      aria-label={`Палитра ${p.name}`}
+                      aria-pressed={active}
+                      className="group relative flex flex-col items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <div
+                        className={cn(
+                          'relative w-full overflow-hidden rounded-lg transition-all',
+                          active ? 'ring-2 ring-white/60' : 'ring-1 ring-white/10 hover:ring-white/30',
+                        )}
+                        style={{ background: p.bg, paddingTop: '70%' }}
+                      >
+                        <span className="absolute left-1.5 top-1.5 h-2.5 w-2.5 rounded-full" style={{ background: p.accent }} />
+                        <span className="absolute bottom-2 left-1.5 right-1.5 h-0.5 rounded-full" style={{ background: p.text, opacity: 0.5 }} />
+                        <span className="absolute bottom-3.5 left-1.5 h-0.5 rounded-full" style={{ background: p.text, opacity: 0.25, width: '55%' }} />
+                        {p.light && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-yellow-400/70" title="Световая тема" />}
+                      </div>
+                      <span className="w-full truncate text-center text-[10px] leading-none text-foreground/40 transition-colors group-hover:text-foreground/70">
+                        {p.name}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-              {/* Аватар в accent-кольце с глоу */}
-              <div className="relative shrink-0">
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 rounded-full blur-xl opacity-40 scale-150"
-                  style={{ background: accent }}
-                />
-                {avatarPreview && !removeAvatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={avatarPreview}
-                    alt=""
-                    className="relative w-16 h-16 rounded-full object-cover"
-                    style={{ boxShadow: `0 0 0 1.5px color-mix(in oklch, ${accent} 55%, transparent)` }}
-                  />
-                ) : (
-                  <div
-                    className="relative w-16 h-16 rounded-full grid place-items-center text-xl font-bold"
-                    style={{
-                      background: `color-mix(in oklch, ${accent} 18%, ${bg})`,
-                      color: accent,
-                      boxShadow: `0 0 0 1.5px color-mix(in oklch, ${accent} 55%, transparent)`,
-                    }}
-                  >
-                    {artist.name[0]?.toUpperCase()}
-                  </div>
-                )}
-              </div>
+              <p className="text-[10px] leading-snug text-foreground/25">
+                Жёлтая точка — световая тема. Создаёт контраст при переходе с тёмного навбара.
+              </p>
+            </div>
+
+            {/* Цвета + зерно */}
+            <div className="grid grid-cols-2 gap-4">
+              <ColorField label="Фон" name="bg" value={bg} onChange={setBg} disabled={busy} />
+              <ColorField label="Текст" name="text" value={textColor} onChange={setTextColor} disabled={busy} />
+              <ColorField label="Акцент" name="accent" value={accent} onChange={setAccent} disabled={busy} />
+              <Field label="Зерно">
+                <Switch checked={grain} onChange={setGrain} disabled={busy} aria-label="Зерно" />
+              </Field>
+            </div>
+
+            {/* Шрифты */}
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Шрифт текста">
+                <Select name="fontSans" value={fontSans} onValueChange={setFontSans} disabled={busy} aria-label="Шрифт текста" options={FONT_SANS.map((f) => ({ value: f, label: f }))} />
+              </Field>
+              <Field label="Шрифт моно">
+                <Select name="fontMono" value={fontMono} onValueChange={setFontMono} disabled={busy} aria-label="Шрифт моно" options={FONT_MONO.map((f) => ({ value: f, label: f }))} />
+              </Field>
             </div>
           </div>
 
-          {/* Релизы — ровная сетка, как на реальной странице */}
-          <div className="px-5 pb-5 grid grid-cols-3 gap-2">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="space-y-1.5">
-                <div
-                  className="w-full rounded-md"
-                  style={{ paddingTop: '100%', background: i === 0 ? accent : textColor, opacity: i === 0 ? 0.18 : 0.06 }}
-                />
-                <div className="h-1.5 rounded-full" style={{ background: textColor, opacity: 0.2, width: `${70 - i * 12}%` }} />
+          {/* Живое превью — над контролами, сверху колонки */}
+          <aside className="order-1 w-full self-start">
+            <span className="mb-2 block text-xs text-foreground/40">Превью страницы</span>
+            <div
+              className="overflow-hidden rounded-xl ring-1 ring-foreground/10 transition-colors"
+              style={{ background: bg, fontFamily: SANS_VAR[fontSans], color: textColor }}
+            >
+              {/* Полоса платформенного навбара — показывает «стыковку» с фоном */}
+              <div className="flex h-7 items-center gap-2 px-4" style={{ background: '#0e0d0b' }}>
+                <div className="h-2 w-12 rounded-full" style={{ background: '#ffffff18' }} />
+                <div className="ml-auto flex gap-2">
+                  <div className="h-2 w-6 rounded-full" style={{ background: '#ffffff18' }} />
+                  <div className="h-2 w-6 rounded-full" style={{ background: '#ffffff18' }} />
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Пресеты палитр — клик применяет фон/текст/акцент разом */}
-        <div className="flex flex-col gap-3">
-          <span className="text-xs text-foreground/40">Пресеты палитры</span>
-          <div className="grid grid-cols-6 gap-2">
-            {THEME_PRESETS.map((p) => {
-              const active = bg === p.bg && textColor === p.text && accent === p.accent;
-              return (
-                <button
-                  key={p.name}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => { setBg(p.bg); setTextColor(p.text); setAccent(p.accent); }}
-                  aria-label={`Палитра ${p.name}`}
-                  aria-pressed={active}
-                  className={`group relative flex flex-col items-center gap-1.5 disabled:opacity-50`}
-                >
+              <div
+                className="relative px-5 pb-5 pt-6"
+                style={{
+                  background:
+                    'radial-gradient(ellipse 60% 90% at 88% 45%, color-mix(in oklch, ' + accent + ' 22%, ' + bg + '), ' + bg + ')',
+                }}
+              >
+                {grain && (
                   <div
-                    className={`relative w-full rounded-lg overflow-hidden transition-all ${active ? 'ring-2 ring-white/60' : 'ring-1 ring-white/10 hover:ring-white/30'}`}
-                    style={{ background: p.bg, paddingTop: '70%' }}
-                  >
-                    {/* Акцент-точка */}
-                    <span
-                      className="absolute top-1.5 left-1.5 w-2.5 h-2.5 rounded-full"
-                      style={{ background: p.accent }}
-                    />
-                    {/* Имитация текста */}
-                    <span
-                      className="absolute bottom-2 left-1.5 right-1.5 h-0.5 rounded-full"
-                      style={{ background: p.text, opacity: 0.5 }}
-                    />
-                    <span
-                      className="absolute bottom-3.5 left-1.5 h-0.5 rounded-full"
-                      style={{ background: p.text, opacity: 0.25, width: '55%' }}
-                    />
-                    {/* Световая метка */}
-                    {p.light && (
-                      <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-yellow-400/70" title="Световая тема" />
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      opacity: 0.05,
+                      backgroundImage:
+                        "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+                      backgroundRepeat: 'repeat',
+                      backgroundSize: '180px 180px',
+                    }}
+                  />
+                )}
+                <div className="relative flex items-end gap-4">
+                  <div className="min-w-0 flex-1 space-y-2.5">
+                    <div className="break-words font-bold leading-[0.95] tracking-tight" style={{ fontSize: `${previewNameRem}rem` }}>
+                      {artist.name}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <VerifiedBadge color={accent} fontFamily={MONO_VAR[fontMono]} />
+                      <span className="rounded-full px-3 py-1 text-[10px] font-medium" style={{ background: accent, color: bg }}>
+                        Подписаться
+                      </span>
+                    </div>
+                  </div>
+                  <div className="relative shrink-0">
+                    <div aria-hidden="true" className="absolute inset-0 scale-150 rounded-full opacity-40 blur-xl" style={{ background: accent }} />
+                    {avatarPreview && !removeAvatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarPreview} alt="" className="relative h-16 w-16 rounded-full object-cover" style={{ boxShadow: `0 0 0 1.5px color-mix(in oklch, ${accent} 55%, transparent)` }} />
+                    ) : (
+                      <div
+                        className="relative grid h-16 w-16 place-items-center rounded-full text-xl font-bold"
+                        style={{
+                          background: `color-mix(in oklch, ${accent} 18%, ${bg})`,
+                          color: accent,
+                          boxShadow: `0 0 0 1.5px color-mix(in oklch, ${accent} 55%, transparent)`,
+                        }}
+                      >
+                        {artist.name[0]?.toUpperCase()}
+                      </div>
                     )}
                   </div>
-                  <span className="text-[10px] text-foreground/40 leading-none text-center w-full truncate group-hover:text-foreground/70 transition-colors">
-                    {p.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[10px] text-foreground/25 leading-snug">
-            Жёлтая точка — световая тема. Создаёт контраст при переходе с тёмного навбара.
-          </p>
-        </div>
+                </div>
+              </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <ColorField label="Фон" name="bg" value={bg} onChange={setBg} disabled={busy} />
-          <ColorField label="Текст" name="text" value={textColor} onChange={setTextColor} disabled={busy} />
-          <ColorField label="Акцент" name="accent" value={accent} onChange={setAccent} disabled={busy} />
-
-          <Field label="Зерно">
-            <Switch checked={grain} onChange={setGrain} disabled={busy} aria-label="Зерно" />
-          </Field>
+              <div className="grid grid-cols-3 gap-2 px-5 pb-5">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="w-full rounded-md" style={{ paddingTop: '100%', background: i === 0 ? accent : textColor, opacity: i === 0 ? 0.18 : 0.06 }} />
+                    <div className="h-1.5 rounded-full" style={{ background: textColor, opacity: 0.2, width: `${70 - i * 12}%` }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Шрифт текста">
-            <Select
-              name="fontSans"
-              value={fontSans}
-              onValueChange={setFontSans}
-              disabled={busy}
-              aria-label="Шрифт текста"
-              options={FONT_SANS.map((f) => ({ value: f, label: f }))}
-            />
-          </Field>
-          <Field label="Шрифт моно">
-            <Select
-              name="fontMono"
-              value={fontMono}
-              onValueChange={setFontMono}
-              disabled={busy}
-              aria-label="Шрифт моно"
-              options={FONT_MONO.map((f) => ({ value: f, label: f }))}
-            />
-          </Field>
-        </div>
+      </section>
       </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
       {saved && <p className="text-sm text-emerald-400">Сохранено</p>}
 
-      <div className="flex items-center gap-4 pt-1">
+      <div className="flex items-center gap-4 border-t border-foreground/[0.06] pt-5">
         <button type="submit" disabled={busy} className={btnPrimary}>
           {busy ? 'Сохраняю…' : 'Сохранить'}
         </button>
-        <a href="/dashboard" className="text-sm text-foreground/40 hover:text-foreground/70 transition-colors">
+        <a href="/dashboard" className="text-sm text-foreground/40 transition-colors hover:text-foreground/70">
           Отмена
         </a>
       </div>
     </form>
   );
 }
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline gap-2">
-        <span className="text-sm font-medium">{label}</span>
-        {hint && <span className="text-xs text-foreground/30">{hint}</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-// Базовые стили инпута БЕЗ ширины — ширину задаёт каждое поле явно, иначе
-// `w-full` конфликтует с `w-32`/`flex-1` в строках ссылок и видео.
-const inp = 'rounded-md bg-foreground/5 border border-foreground/10 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50';

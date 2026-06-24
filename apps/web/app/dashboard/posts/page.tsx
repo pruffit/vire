@@ -14,13 +14,9 @@ export default async function DashboardPostsPage() {
   const artist = await getActiveArtistForPage(session.user.id);
   if (!artist) {
     return (
-      <div className="min-h-full bg-background text-foreground">
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          <p className="text-foreground/50">
-            У тебя нет профиля артиста. Обратись к администратору для создания.
-          </p>
-        </div>
-      </div>
+      <p className="text-foreground/50">
+        У тебя нет профиля артиста. Обратись к администратору для создания.
+      </p>
     );
   }
 
@@ -33,16 +29,14 @@ export default async function DashboardPostsPage() {
   }));
 
   return (
-    <div className="min-h-full bg-background text-foreground">
-      <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
-        <DashboardPageHeader
-          backHref="/dashboard"
-          title="Анонсы"
-          subtitle="Новости и анонсы для подписчиков — появляются на странице артиста"
-        />
+    <div className="flex flex-col gap-8">
+      <DashboardPageHeader
+        backHref="/dashboard"
+        title="Анонсы"
+        subtitle="Новости и анонсы для подписчиков — появляются на странице артиста"
+      />
 
-        <PostsManager initialPosts={initial} artistSlug={artist.slug} />
-      </div>
+      <PostsManager initialPosts={initial} artistSlug={artist.slug} />
     </div>
   );
 }

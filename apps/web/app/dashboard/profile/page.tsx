@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { getActiveArtistForPage } from '@/lib/active-artist';
 import { EditProfileForm, type EditableProfile } from './edit-profile-form';
 import { DashboardPageHeader } from '@/components/ui-kit';
+import { Icon } from '@/components/icon';
 
 export const metadata = { title: 'Профиль артиста' };
 export const dynamic = 'force-dynamic';
@@ -25,13 +26,25 @@ export default async function DashboardProfilePage() {
   };
 
   return (
-    <div className="min-h-full bg-background text-foreground">
-      <div className="max-w-xl mx-auto px-4 py-12 flex flex-col gap-8">
-        <DashboardPageHeader backHref="/dashboard" title="Профиль артиста" subtitle={`@${artist.slug}`} />
+    <div className="flex flex-col gap-8">
+      <DashboardPageHeader
+        backHref="/dashboard"
+        title="Профиль артиста"
+        subtitle={`@${artist.slug}`}
+        action={
+          <a
+            href={`/artists/${artist.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-foreground/50 transition-colors hover:text-foreground"
+          >
+            Открыть <Icon name="external-link" size={14} />
+          </a>
+        }
+      />
 
-        <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
-          <EditProfileForm artist={profile} />
-        </div>
+      <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
+        <EditProfileForm artist={profile} />
       </div>
     </div>
   );

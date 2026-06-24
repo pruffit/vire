@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Field, fieldClass, btnPrimary, Textarea } from '@/components/ui-kit';
 import { GenreSelect } from '@/components/genre-select';
@@ -56,17 +56,31 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
 
   function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (coverPreview) URL.revokeObjectURL(coverPreview);
     setCoverPreview(file ? URL.createObjectURL(file) : null);
   }
+
+  // Освобождаем blob-URL превью при замене и при размонтировании — иначе течёт память.
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
 
   const busy = state === 'submitting';
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2"
+    >
 
       {/* Title */}
-      <Field label="Название" hint="без имени артиста — оно и так рядом с обложкой">
+      <Field
+        label="Название"
+        hint="без имени артиста — оно и так рядом с обложкой"
+        className="sm:col-span-2"
+      >
         <input
           name="title"
           type="text"
@@ -123,7 +137,7 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
       </Field>
 
       {/* Description */}
-      <Field label="Описание" hint="необязательно">
+      <Field label="Описание" hint="необязательно" className="sm:col-span-2">
         <Textarea
           name="description"
           rows={3}
@@ -133,9 +147,9 @@ export function CreateReleaseForm({ artistName }: { artistName: string }) {
         />
       </Field>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-400 sm:col-span-2">{error}</p>}
 
-      <div className="flex items-center gap-4 pt-1">
+      <div className="flex items-center gap-4 pt-1 sm:col-span-2">
         <button type="submit" disabled={busy} className={btnPrimary}>
           {busy ? 'Сохраняю…' : 'Создать релиз'}
         </button>

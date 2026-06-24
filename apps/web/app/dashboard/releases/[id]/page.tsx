@@ -6,7 +6,9 @@ import { EditReleaseForm } from './edit-release-form';
 import { BatchTrackUpload } from './batch-track-upload';
 import { TrackManager } from './track-manager';
 import { DeleteReleaseButton } from './delete-release-button';
-import { DashboardPageHeader } from '@/components/ui-kit';
+import { PublishButton } from '../../publish-button';
+import { DashboardPageHeader, SectionLabel, Panel, ReleaseStatusBadge } from '@/components/ui-kit';
+import { Icon } from '@/components/icon';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,31 +37,36 @@ export default async function EditReleasePage({ params }: Props) {
   ]);
 
   return (
-    <div className="min-h-full bg-background text-foreground">
-      <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
-        <DashboardPageHeader backHref="/dashboard" title="Редактировать релиз" />
+    <div className="flex flex-col gap-8">
+      <DashboardPageHeader
+        backHref="/dashboard"
+        title={release.title}
+        action={
+          <>
+            <ReleaseStatusBadge status={release.status} />
+            {release.status === 'DRAFT' ? (
+              <PublishButton
+                releaseId={release.id}
+                releaseDate={release.releaseDate ? release.releaseDate.toISOString() : null}
+              />
+            ) : release.status === 'PUBLISHED' ? (
+              <a
+                href={`/artists/${artist.slug}/releases/${release.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-foreground/50 transition-colors hover:text-foreground"
+              >
+                Открыть <Icon name="external-link" size={14} />
+              </a>
+            ) : null}
+          </>
+        }
+      />
 
-        <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-6">
-          <EditReleaseForm
-            releaseId={release.id}
-            artistName={artist.name}
-            initial={{
-              title: release.title,
-              type: release.type,
-              genre: release.genre ?? null,
-              releaseDate: release.releaseDate?.toISOString().slice(0, 10) ?? '',
-              description: release.description ?? '',
-              linerNotes: release.linerNotes ?? '',
-              coverUrl: release.coverUrl ?? null,
-            }}
-          />
-        </div>
-
-        <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-medium">
-            Треки
-            <span className="ml-2 text-sm text-foreground/30 font-normal tabular-nums">{tracks.length}</span>
-          </h2>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        {/* Треки — основная рабочая область */}
+        <section className="order-2 flex min-w-0 flex-col gap-3 lg:order-1">
+          <SectionLabel>Треки · {tracks.length}</SectionLabel>
 
           <TrackManager
             key={tracks.map((t) => t.id).join('-')}
@@ -83,19 +90,39 @@ export default async function EditReleasePage({ params }: Props) {
             }))}
           />
 
-          <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 sm:p-5">
-            <p className="text-sm font-medium mb-4">Добавить треки</p>
+          <Panel className="p-4 sm:p-5">
+            <p className="mb-4 text-sm font-medium">Добавить треки</p>
             <BatchTrackUpload
               releaseId={release.id}
               nextTrackNumber={tracks.length + 1}
               artistName={artist.name}
             />
-          </div>
+          </Panel>
         </section>
 
-        <div className="border-t border-foreground/[0.06] pt-4">
+        {/* Метаданные релиза */}
+        <aside className="order-1 flex flex-col gap-4 lg:order-2">
+          <Panel className="p-4 sm:p-5">
+            <SectionLabel>Релиз</SectionLabel>
+            <div className="mt-4">
+              <EditReleaseForm
+                releaseId={release.id}
+                artistName={artist.name}
+                initial={{
+                  title: release.title,
+                  type: release.type,
+                  genre: release.genre ?? null,
+                  releaseDate: release.releaseDate?.toISOString().slice(0, 10) ?? '',
+                  description: release.description ?? '',
+                  linerNotes: release.linerNotes ?? '',
+                  coverUrl: release.coverUrl ?? null,
+                }}
+              />
+            </div>
+          </Panel>
+
           <DeleteReleaseButton releaseId={release.id} title={release.title} />
-        </div>
+        </aside>
       </div>
     </div>
   );

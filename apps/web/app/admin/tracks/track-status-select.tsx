@@ -1,8 +1,7 @@
 'use client';
 
-import { useTransition } from 'react';
 import { actionSetTrackStatus } from '../actions';
-import { Select } from '@/components/select';
+import { ActionSelect } from '@/components/action-select';
 
 type TrackStatus = 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED';
 
@@ -15,17 +14,12 @@ interface Props {
 }
 
 export function TrackStatusSelect({ trackId, currentStatus }: Props) {
-  const [pending, startTransition] = useTransition();
-
   return (
-    <Select
-      size="sm"
-      align="end"
+    <ActionSelect
       options={STATUS_OPTIONS}
       value={currentStatus}
-      onValueChange={(s) => startTransition(() => actionSetTrackStatus(trackId, s as TrackStatus))}
-      disabled={pending}
-      aria-label="Статус трека"
+      onChange={(s) => actionSetTrackStatus(trackId, s as TrackStatus)}
+      ariaLabel="Статус трека"
       className="w-36"
     />
   );

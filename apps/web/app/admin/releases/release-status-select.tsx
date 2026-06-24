@@ -1,8 +1,7 @@
 'use client';
 
-import { useTransition } from 'react';
 import { actionSetReleaseStatus } from '../actions';
-import { Select } from '@/components/select';
+import { ActionSelect } from '@/components/action-select';
 
 type ReleaseStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 const STATUSES: ReleaseStatus[] = ['DRAFT', 'PUBLISHED', 'ARCHIVED'];
@@ -15,17 +14,12 @@ export function ReleaseStatusSelect({
   releaseId: string;
   currentStatus: ReleaseStatus;
 }) {
-  const [pending, startTransition] = useTransition();
-
   return (
-    <Select
-      size="sm"
-      align="end"
+    <ActionSelect
       options={STATUS_OPTIONS}
       value={currentStatus}
-      onValueChange={(s) => startTransition(() => actionSetReleaseStatus(releaseId, s as ReleaseStatus))}
-      disabled={pending}
-      aria-label="Статус релиза"
+      onChange={(s) => actionSetReleaseStatus(releaseId, s as ReleaseStatus)}
+      ariaLabel="Статус релиза"
       className="w-40"
     />
   );

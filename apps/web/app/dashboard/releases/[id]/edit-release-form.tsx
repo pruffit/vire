@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ReleaseType } from '@vire/core';
 import { Field, fieldClass, btnPrimary, Textarea } from '@/components/ui-kit';
@@ -72,9 +72,15 @@ export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
 
   function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (coverPreview) URL.revokeObjectURL(coverPreview);
     setCoverPreview(file ? URL.createObjectURL(file) : null);
   }
+
+  // Освобождаем blob-URL превью при замене и при размонтировании — иначе течёт память.
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
 
   const busy = state === 'saving';
 

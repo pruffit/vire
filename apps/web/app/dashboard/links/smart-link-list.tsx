@@ -6,7 +6,15 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
+import { Badge, Panel, EmptyState, btnPrimary } from '@/components/ui-kit';
 import { Icon } from '@/components/icon';
+import { cn } from '@/lib/utils';
+import { plural } from '@/lib/format';
+
+// Единый вид иконочного действия в строке лендинга (открыть / копировать / править / удалить).
+const iconBtnBase =
+  'inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors active:scale-[0.98] disabled:opacity-40';
+const iconBtnHover = 'hover:bg-foreground/10 hover:text-foreground';
 
 export interface SmartLinkRow {
   id: string;
@@ -15,6 +23,33 @@ export interface SmartLinkRow {
   coverUrl: string | null;
   isPublished: boolean;
   linkCount: number;
+}
+
+function IconButton({
+  onClick,
+  label,
+  icon,
+  danger,
+  disabled,
+}: {
+  onClick: () => void;
+  label: string;
+  icon: 'copy' | 'edit-2' | 'trash';
+  danger?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={cn(iconBtnBase, danger ? 'hover:bg-red-500/10 hover:text-red-400' : iconBtnHover)}
+    >
+      <Icon name={icon} size={15} />
+    </button>
+  );
 }
 
 export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; artistSlug: string }) {
@@ -44,17 +79,17 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
 
   return (
     <div className="flex flex-col gap-3">
-      <Link
-        href="/dashboard/links/new"
-        className="self-start inline-flex items-center gap-1.5 rounded-lg bg-foreground text-background px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
-      >
+      <Link href="/dashboard/links/new" className={cn(btnPrimary, 'gap-1.5 self-start')}>
         <Icon name="plus" size={16} /> Создать лендинг
       </Link>
 
       {rows.length === 0 ? (
-        <p className="text-sm text-foreground/40 py-8 text-center">
-          Пока нет лендингов. Создай первый — собери ссылки на стриминги и соцсети в одну красивую страницу.
-        </p>
+        <Panel>
+          <EmptyState
+            title="Пока нет лендингов"
+            hint="Создай первый — собери ссылки на стриминги и соцсети в одну страницу."
+          />
+        </Panel>
       ) : (
         <AnimatePresence initial={false}>
           {rows.map((row) => (
@@ -63,41 +98,64 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
               layout
               exit={{ opacity: 0, height: 0 }}
               transition={spring.snappy}
-              className="flex flex-col gap-3 rounded-xl border border-foreground/10 bg-foreground/[0.03] p-3 sm:flex-row sm:items-center"
+              className="flex flex-col gap-3 rounded-xl border border-foreground/10 bg-foreground/[0.025] p-3 transition-colors hover:border-foreground/20 sm:flex-row sm:items-center"
             >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="shrink-0 w-12 h-12 rounded-md overflow-hidden bg-foreground/5 border border-foreground/10">
-                  {row.coverUrl && (
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md border border-foreground/10 bg-foreground/5 text-foreground/25">
+                  {row.coverUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={row.coverUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={row.coverUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <Icon name="image" size={18} />
                   )}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{row.title}</p>
-                  <p className="text-xs text-foreground/40 font-mono truncate">/smartlink/{artistSlug}/{row.slug}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{row.title}</p>
+                  <p className="truncate font-mono text-xs text-foreground/40">/{row.slug}</p>
                 </div>
 
-                <span className={`shrink-0 text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                  row.isPublished ? 'bg-emerald-500/15 text-emerald-300' : 'bg-foreground/10 text-foreground/40'
-                }`}>
-                  {row.isPublished ? 'опубликован' : 'черновик'}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="hidden font-mono text-xs text-foreground/35 sm:inline">
+                    {row.linkCount} {plural(row.linkCount, ['ссылка', 'ссылки', 'ссылок'])}
+                  </span>
+                  <Badge tone={row.isPublished ? 'success' : 'neutral'}>
+                    {row.isPublished ? 'опубликован' : 'черновик'}
+                  </Badge>
+                </div>
               </div>
 
-              <div className="shrink-0 flex items-center gap-1 text-xs justify-end">
+              <div className="flex shrink-0 items-center justify-end gap-1">
                 {row.isPublished && (
-                  <button onClick={() => copyLink(row.slug)} className="px-2 py-1 rounded text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-colors">
-                    Копировать
-                  </button>
+                  <>
+                    <a
+                      href={`/smartlink/${artistSlug}/${row.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Открыть страницу"
+                      title="Открыть страницу"
+                      className={cn(iconBtnBase, iconBtnHover)}
+                    >
+                      <Icon name="external-link" size={15} />
+                    </a>
+                    <IconButton onClick={() => copyLink(row.slug)} label="Скопировать ссылку" icon="copy" />
+                  </>
                 )}
-                <Link href={`/dashboard/links/${row.id}`} className="px-2 py-1 rounded text-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-colors">
-                  Изменить
+                <Link
+                  href={`/dashboard/links/${row.id}`}
+                  aria-label="Изменить"
+                  title="Изменить"
+                  className={cn(iconBtnBase, iconBtnHover)}
+                >
+                  <Icon name="edit-2" size={15} />
                 </Link>
-                <button onClick={() => remove(row.id, row.title)} disabled={pendingId === row.id}
-                  className="px-2 py-1 rounded text-foreground/40 hover:text-red-400 hover:bg-foreground/5 transition-colors disabled:opacity-50">
-                  Удалить
-                </button>
+                <IconButton
+                  onClick={() => remove(row.id, row.title)}
+                  label="Удалить"
+                  icon="trash"
+                  danger
+                  disabled={pendingId === row.id}
+                />
               </div>
             </motion.div>
           ))}
