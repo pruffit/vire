@@ -46,15 +46,15 @@ export function ArtistSwitcher({
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <span className="text-foreground/40 shrink-0">Артист</span>
+    <div className="flex min-w-0 items-center gap-2 text-sm">
+      <span className="shrink-0 text-foreground/40">Артист</span>
       <Select
         size="sm"
         value={value}
         disabled={isPending}
         onValueChange={select}
         aria-label="Активный артист"
-        className="max-w-[220px]"
+        className="min-w-0 flex-1"
         options={artists.map((a) => ({ value: a.id, label: `${a.name} (@${a.slug})` }))}
       />
     </div>
