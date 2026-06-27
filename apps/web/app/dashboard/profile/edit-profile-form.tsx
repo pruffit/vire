@@ -140,7 +140,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
         </Field>
 
         <Field label="Аватар" hint="около-квадрат, от 400×400 · JPEG/PNG/WebP">
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 items-center gap-4">
             {avatarPreview && !removeAvatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarPreview} alt="avatar" className="h-16 w-16 shrink-0 rounded-full object-cover" />
@@ -149,14 +149,14 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
                 {artist.name[0]?.toUpperCase()}
               </div>
             )}
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <input
                 name="avatar"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 disabled={busy}
                 onChange={handleAvatarChange}
-                className="text-sm file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-foreground/10 file:px-3 file:py-1.5 file:text-sm hover:file:bg-foreground/20 disabled:opacity-50"
+                className="w-full min-w-0 text-sm file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-foreground/10 file:px-3 file:py-1.5 file:text-sm hover:file:bg-foreground/20 disabled:opacity-50"
               />
               {artist.avatarUrl && !removeAvatar && (
                 <button
