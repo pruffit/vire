@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { auth, signOut } from '@/auth';
+import { auth } from '@/auth';
 import { listUserArtists } from '@/lib/active-artist';
 import { NavSearch } from './nav-search';
 import { NavLink } from './nav-link';
+import { NavSignOut } from './nav-sign-out';
 import { Logo } from './logo';
 import { Icon } from '@/components/icon';
 
@@ -59,20 +60,7 @@ export async function Nav() {
                 <span className="sm:hidden max-w-[72px] truncate block">{displayName}</span>
                 <span className="hidden sm:block max-w-[140px] truncate">{user.name ?? user.email ?? 'Профиль'}</span>
               </NavLink>
-              <form
-                action={async () => {
-                  'use server';
-                  await signOut({ redirectTo: '/' });
-                }}
-              >
-                <button
-                  type="submit"
-                  className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-                >
-                  <SignOutIcon className="sm:hidden" />
-                  <span className="hidden sm:inline">Выйти</span>
-                </button>
-              </form>
+              <NavSignOut />
             </>
           ) : (
             <NavLink href="/sign-in">Войти</NavLink>
@@ -93,8 +81,4 @@ function AdminIcon() {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
-}
-
-function SignOutIcon({ className }: { className?: string }) {
-  return <Icon name="log-out" size={15} className={className} />;
 }
