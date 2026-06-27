@@ -29,3 +29,6 @@ Thumbs.db
 *.local
 coverage/
 .ui-audit/
+
+# Локальный симлинк скилл-менеджера (абсолютный путь, не портабелен)
+.claude/skills/make-interfaces-feel-better
