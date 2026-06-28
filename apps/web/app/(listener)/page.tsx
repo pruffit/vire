@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { auth } from '@/auth';
 import {
   getLatestReleases,
@@ -21,9 +20,8 @@ import { ListeningNow } from '@/components/listening-now';
 import { MoodWaveChips } from '@/components/mood-wave-chips';
 import { EditorialPlaylistCard } from '@/components/editorial-playlist-card';
 import { getListeningNow } from '@/lib/listening-now';
-import { Reveal } from '@vire/ui/motion';
 import { JsonLd } from '@/components/json-ld';
-import { Icon } from '@/components/icon';
+import { Section } from '@/components/listener/section';
 import { websiteJsonLd } from '@/lib/structured-data';
 import type { Metadata } from 'next';
 
@@ -78,24 +76,32 @@ export default async function HomePage() {
     <main className="mx-auto max-w-5xl px-6 py-12 space-y-16">
       <JsonLd data={websiteJsonLd()} />
       <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
+
       {/* Редакционный выбор — без FadeUp: FeaturedRelease содержит LCP-изображение,
           анимация opacity:0→1 задерживает его обнаружение браузером (+1-2с на LCP) */}
       {featured && <FeaturedRelease release={featured} />}
 
-      {/* Wave — запуск потока */}
+      {/* Активность подписок — для вошедших, сразу после featured (персональный верх) */}
+      {!!userId && feed.length > 0 && (
+        <Section title="Новое у тех, на кого ты подписан">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            {feed.slice(0, 8).map((r) => (
+              <ReleaseQuickLook key={r.id} release={r} />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Сделано для тебя: запуск потока и настроение */}
       <WaveStartButton />
+      {moodCounts.length > 0 && (
+        <Section title="По настроению">
+          <MoodWaveChips moods={moodCounts} />
+        </Section>
+      )}
 
       {/* Live: кто что слушает прямо сейчас (исчезает, когда никого) */}
       <ListeningNow initial={listeningNow} />
-
-      {/* Поток по настроению */}
-      {moodCounts.length > 0 && (
-        <Reveal>
-          <Section title="По настроению">
-            <MoodWaveChips moods={moodCounts} />
-          </Section>
-        </Reveal>
-      )}
 
       {/* Редакционные подборки — без motion-обёрток: transform/will-change на
           обёртках делают блок отдельным композит-слоем, и он «дрожит» при скролле
@@ -129,56 +135,37 @@ export default async function HomePage() {
         </Section>
       )}
 
-      {/* Активность подписок (для вошедших) */}
-      {feed.length > 0 && (
-        <Reveal>
-          <Section title="Новое у тех, на кого ты подписан">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-              {feed.slice(0, 8).map((r) => (
-                <ReleaseQuickLook key={r.id} release={r} />
-              ))}
-            </div>
-          </Section>
-        </Reveal>
-      )}
-
       {/* Скоро выйдет */}
       {upcoming.length > 0 && (
-        <Reveal>
-          <Section title="Скоро выйдет">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-              {upcoming.map((r) => (
-                <ReleaseQuickLook key={r.id} release={r} upcoming />
-              ))}
-            </div>
-          </Section>
-        </Reveal>
+        <Section title="Скоро выйдет">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            {upcoming.map((r) => (
+              <ReleaseQuickLook key={r.id} release={r} upcoming />
+            ))}
+          </div>
+        </Section>
       )}
 
       {/* Свежие релизы */}
       {rest.length > 0 && (
-        <Reveal>
-          <Section title="Свежие релизы" href="/releases" hrefLabel="Посмотреть все">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-              {rest.map((r) => (
-                <ReleaseQuickLook key={r.id} release={r} />
-              ))}
-            </div>
-          </Section>
-        </Reveal>
+        <Section title="Свежие релизы" href="/releases" hrefLabel="Посмотреть все">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            {rest.map((r) => (
+              <ReleaseQuickLook key={r.id} release={r} />
+            ))}
+          </div>
+        </Section>
       )}
 
       {/* Артисты */}
       {topArtists.length > 0 && (
-        <Reveal>
-          <Section title="Артисты" href="/artists" hrefLabel="Все артисты">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5">
-              {topArtists.slice(0, 10).map((a) => (
-                <ArtistHoverChip key={a.id} artist={a} />
-              ))}
-            </div>
-          </Section>
-        </Reveal>
+        <Section title="Артисты" href="/artists" hrefLabel="Все артисты">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5">
+            {topArtists.slice(0, 10).map((a) => (
+              <ArtistHoverChip key={a.id} artist={a} />
+            ))}
+          </div>
+        </Section>
       )}
 
       {empty && (
@@ -187,35 +174,5 @@ export default async function HomePage() {
         </p>
       )}
     </main>
-  );
-}
-
-function Section({
-  title,
-  href,
-  hrefLabel,
-  children,
-}: {
-  title: string;
-  href?: string;
-  hrefLabel?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-5">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-        {href && (
-          <Link
-            href={href}
-            className="group inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {hrefLabel ?? 'Все'}
-            <Icon name="arrow-right" size={13} className="transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        )}
-      </div>
-      {children}
-    </section>
   );
 }
