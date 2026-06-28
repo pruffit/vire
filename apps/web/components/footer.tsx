@@ -26,6 +26,7 @@ export function Footer() {
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-12">
             <FooterCol title="Площадка">
               <FooterLink href="/artists">Артисты</FooterLink>
+              <FooterLink href="/releases">Релизы</FooterLink>
               <FooterLink href="/about">О платформе</FooterLink>
               <FooterLink href="/design">Дизайн</FooterLink>
               <li>
