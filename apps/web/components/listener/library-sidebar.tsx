@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
 import { pluralTracks } from '@/lib/format';
+import { CreatePlaylistButton } from './create-playlist-button';
 
 type SidebarPlaylist = { id: string; name: string; coverUrl: string | null };
 type SidebarArtist = { id: string; name: string; slug: string; avatarUrl: string | null };
@@ -28,16 +29,7 @@ export function LibrarySidebar({
           <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/35">
             Медиатека
           </span>
-          {!isGuest && (
-            <Link
-              href="/library"
-              aria-label="Вся медиатека"
-              title="Вся медиатека"
-              className="grid h-7 w-7 place-items-center rounded-md text-foreground/45 transition-colors hover:bg-foreground/5 hover:text-foreground"
-            >
-              <Icon name="plus" size={16} />
-            </Link>
-          )}
+          {!isGuest && <CreatePlaylistButton variant="icon" />}
         </div>
       )}
 

@@ -8,6 +8,7 @@ import { LikedTrackRow } from '@/components/listener/liked-track-row';
 import { FollowedArtists } from '@/components/listener/followed-artists';
 import { PlaylistCard } from '@/components/listener/playlist-card';
 import { Section } from '@/components/listener/section';
+import { CreatePlaylistButton } from '@/components/listener/create-playlist-button';
 import { EmptyState } from '@/components/ui-kit';
 
 export const metadata: Metadata = { title: 'Медиатека' };
@@ -38,9 +39,9 @@ export default async function LibraryPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Медиатека</h1>
       </FadeUp>
 
-      <Section title="Плейлисты" count={playlists.length}>
+      <Section title="Плейлисты" count={playlists.length} action={<CreatePlaylistButton variant="full" />}>
         {playlists.length === 0 ? (
-          <EmptyState title="Нет плейлистов" hint='Нажми «+» на странице трека, чтобы создать первый' />
+          <EmptyState title="Нет плейлистов" hint='Нажми «Создать плейлист», чтобы собрать первый' />
         ) : (
           <Stagger step={0.04} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {playlists.map((p) => (
