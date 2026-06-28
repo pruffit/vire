@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Icon } from '@/components/icon';
+import { pluralTracks } from '@/lib/format';
 
 type SidebarPlaylist = { id: string; name: string; coverUrl: string | null };
 type SidebarArtist = { id: string; name: string; slug: string; avatarUrl: string | null };
@@ -41,7 +43,7 @@ export function LibrarySidebar({
           <LibraryRow
             href="/library#liked"
             title="Любимые треки"
-            subtitle={`${likedCount} треков`}
+            subtitle={`${likedCount} ${pluralTracks(likedCount)}`}
             leading={
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-gradient-to-br from-violet-500/70 to-sky-400/70">
                 <Icon name="heart" size={16} className="text-white" />
@@ -103,7 +105,7 @@ function LibraryRow({
   href: string;
   title: string;
   subtitle: string;
-  leading: React.ReactNode;
+  leading: ReactNode;
 }) {
   return (
     <Link href={href} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-foreground/5">
