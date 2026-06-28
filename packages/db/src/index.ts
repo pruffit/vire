@@ -131,6 +131,10 @@ export {
   removeTrackFromPlaylist,
   getTrackPlaylistIds,
   renamePlaylist,
+  reorderPlaylistTracks,
+  updatePlaylist,
+  setPlaylistCover,
+  isPermutation,
   getEditorialPlaylists,
   getPersonalPlaylists,
   getPopularPlaylists,
@@ -142,8 +146,10 @@ export {
   unlikePlaylist,
   getPlaylistLikeState,
   getLikedPlaylistIds,
+  searchTracksForPlaylist,
+  getPlaylistSuggestions,
 } from './queries/playlists';
-export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist } from './queries/playlists';
+export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist, PlaylistAddTrack, PlaylistSuggestions } from './queries/playlists';
 export {
   generateAllEditorialPlaylists,
   generateSharedPlaylists,

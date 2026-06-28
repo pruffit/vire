@@ -1,6 +1,6 @@
-import { and, asc, count, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, notInArray, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { playlists, playlistTracks, playlistLikes, tracks, releases, artistProfiles } from '../schema';
+import { playlists, playlistTracks, playlistLikes, tracks, releases, artistProfiles, likes, playEvents } from '../schema';
 
 export interface PlaylistSummary {
   id: string;
@@ -25,6 +25,8 @@ export interface PlaylistTrackRow {
 export interface PlaylistWithTracks {
   id: string;
   title: string;
+  description: string | null;
+  coverUrl: string | null;
   visibility: 'PRIVATE' | 'PUBLIC';
   ownerUserId: string | null;
   tracks: PlaylistTrackRow[];
@@ -40,6 +42,22 @@ export interface EditorialPlaylist {
   covers: string[]; // up to 4 cover URLs for collage
 }
 
+export interface PlaylistAddTrack {
+  id: string;
+  title: string;
+  durationSec: number | null;
+  releaseId: string;
+  artistName: string;
+  artistSlug: string;
+  coverUrl: string | null;
+}
+
+export interface PlaylistSuggestions {
+  liked: PlaylistAddTrack[];
+  recent: PlaylistAddTrack[];
+  similar: PlaylistAddTrack[];
+}
+
 export async function getUserPlaylists(userId: string): Promise<PlaylistSummary[]> {
   const rows = await db
     .select({
@@ -47,6 +65,7 @@ export async function getUserPlaylists(userId: string): Promise<PlaylistSummary[
       title: playlists.title,
       visibility: playlists.visibility,
       updatedAt: playlists.updatedAt,
+      coverUrl: playlists.coverUrl,
     })
     .from(playlists)
     .where(eq(playlists.ownerUserId, userId))
@@ -74,7 +93,7 @@ export async function getUserPlaylists(userId: string): Promise<PlaylistSummary[
         visibility: p.visibility,
         updatedAt: p.updatedAt,
         trackCount: Number(countRow?.c ?? 0),
-        coverUrl: firstTrack?.coverUrl ?? null,
+        coverUrl: p.coverUrl ?? firstTrack?.coverUrl ?? null,
       };
     }),
   );
@@ -113,6 +132,8 @@ export async function getPlaylistWithTracks(
   return {
     id: playlist.id,
     title: playlist.title,
+    description: playlist.description,
+    coverUrl: playlist.coverUrl,
     visibility: playlist.visibility,
     ownerUserId: playlist.ownerUserId,
     tracks: trackRows,
@@ -151,7 +172,8 @@ export async function addTrackToPlaylist(
 
   await db
     .insert(playlistTracks)
-    .values({ playlistId, trackId, position, addedBy: userId });
+    .values({ playlistId, trackId, position, addedBy: userId })
+    .onConflictDoNothing();
 
   await db
     .update(playlists)
@@ -204,15 +226,82 @@ export async function getTrackPlaylistIds(
   return rows.map((r) => r.playlistId);
 }
 
+export function isPermutation(proposed: string[], current: string[]): boolean {
+  if (proposed.length !== current.length) return false;
+  const set = new Set(current);
+  return proposed.every((id) => set.has(id));
+}
+
+export async function reorderPlaylistTracks(
+  playlistId: string,
+  userId: string,
+  orderedTrackIds: string[],
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [pl] = await tx
+      .select({ ownerUserId: playlists.ownerUserId })
+      .from(playlists)
+      .where(eq(playlists.id, playlistId));
+    if (!pl || pl.ownerUserId !== userId) return false;
+
+    const current = await tx
+      .select({ trackId: playlistTracks.trackId })
+      .from(playlistTracks)
+      .where(eq(playlistTracks.playlistId, playlistId));
+
+    if (!isPermutation(orderedTrackIds, current.map((r) => r.trackId))) return false;
+
+    for (let i = 0; i < orderedTrackIds.length; i++) {
+      await tx
+        .update(playlistTracks)
+        .set({ position: i })
+        .where(
+          and(
+            eq(playlistTracks.playlistId, playlistId),
+            eq(playlistTracks.trackId, orderedTrackIds[i]!),
+          ),
+        );
+    }
+    await tx
+      .update(playlists)
+      .set({ updatedAt: new Date() })
+      .where(eq(playlists.id, playlistId));
+    return true;
+  });
+}
+
+export async function updatePlaylist(
+  playlistId: string,
+  userId: string,
+  patch: { title?: string; description?: string | null; visibility?: 'PRIVATE' | 'PUBLIC' },
+): Promise<void> {
+  const set: Record<string, unknown> = { updatedAt: new Date() };
+  if (patch.title !== undefined) set.title = patch.title;
+  if (patch.description !== undefined) set.description = patch.description;
+  if (patch.visibility !== undefined) set.visibility = patch.visibility;
+  await db
+    .update(playlists)
+    .set(set)
+    .where(and(eq(playlists.id, playlistId), eq(playlists.ownerUserId, userId)));
+}
+
+export async function setPlaylistCover(
+  playlistId: string,
+  userId: string,
+  coverUrl: string | null,
+): Promise<void> {
+  await db
+    .update(playlists)
+    .set({ coverUrl, updatedAt: new Date() })
+    .where(and(eq(playlists.id, playlistId), eq(playlists.ownerUserId, userId)));
+}
+
 export async function renamePlaylist(
   playlistId: string,
   userId: string,
   title: string,
 ): Promise<void> {
-  await db
-    .update(playlists)
-    .set({ title, updatedAt: new Date() })
-    .where(and(eq(playlists.id, playlistId), eq(playlists.ownerUserId, userId)));
+  await updatePlaylist(playlistId, userId, { title });
 }
 
 // ─── Редакционные и личные подборки ────────────────────────────────────────
@@ -223,6 +312,7 @@ interface PlaylistMetaRow {
   description: string | null;
   kind: string;
   likesCount: number;
+  coverUrl: string | null;
 }
 
 /** Досчитывает trackCount + до 4 обложек (коллаж). Общий хелпер всех геттеров подборок. */
@@ -264,15 +354,21 @@ async function hydratePlaylists(rows: PlaylistMetaRow[]): Promise<EditorialPlayl
   }
 
   // Сохраняем порядок входных rows (важно для приоритета показа).
-  return rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    description: r.description,
-    kind: r.kind,
-    trackCount: countByPlaylist[r.id] ?? 0,
-    likesCount: r.likesCount,
-    covers: coversByPlaylist[r.id] ?? [],
-  }));
+  return rows.map((r) => {
+    const trackCovers = coversByPlaylist[r.id] ?? [];
+    const covers = r.coverUrl
+      ? [r.coverUrl, ...trackCovers.filter((c) => c !== r.coverUrl)].slice(0, 4)
+      : trackCovers;
+    return {
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      kind: r.kind,
+      trackCount: countByPlaylist[r.id] ?? 0,
+      likesCount: r.likesCount,
+      covers,
+    };
+  });
 }
 
 const META = {
@@ -281,6 +377,7 @@ const META = {
   description: playlists.description,
   kind: playlists.kind,
   likesCount: playlists.likesCount,
+  coverUrl: playlists.coverUrl,
 };
 
 // Приоритет показа общих подборок: тренды и свежее впереди, затем настроения,
@@ -484,4 +581,121 @@ export async function getLikedPlaylistIds(userId: string): Promise<string[]> {
     .from(playlistLikes)
     .where(eq(playlistLikes.userId, userId));
   return rows.map((r) => r.playlistId);
+}
+
+// ─── Поиск треков + умные подсказки ────────────────────────────────────────
+
+export async function searchTracksForPlaylist(
+  q: string,
+  excludeTrackIds: string[],
+  limit = 20,
+): Promise<PlaylistAddTrack[]> {
+  if (!q.trim()) return [];
+  const like = `%${q.trim()}%`;
+  return db
+    .select({
+      id: tracks.id,
+      title: tracks.title,
+      durationSec: tracks.durationSec,
+      releaseId: releases.id,
+      artistName: artistProfiles.name,
+      artistSlug: artistProfiles.slug,
+      coverUrl: releases.coverUrl,
+    })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(
+      and(
+        eq(tracks.status, 'READY'),
+        ilike(tracks.title, like),
+        excludeTrackIds.length > 0 ? notInArray(tracks.id, excludeTrackIds) : sql`true`,
+      ),
+    )
+    .limit(limit);
+}
+
+export async function getPlaylistSuggestions(
+  playlistId: string,
+  userId: string,
+  perSection = 8,
+): Promise<PlaylistSuggestions> {
+  const inPlaylist = await db
+    .select({ trackId: playlistTracks.trackId })
+    .from(playlistTracks)
+    .where(eq(playlistTracks.playlistId, playlistId));
+  const exclude = new Set(inPlaylist.map((r) => r.trackId));
+
+  const cols = {
+    id: tracks.id,
+    title: tracks.title,
+    durationSec: tracks.durationSec,
+    releaseId: releases.id,
+    artistName: artistProfiles.name,
+    artistSlug: artistProfiles.slug,
+    coverUrl: releases.coverUrl,
+  };
+
+  // Liked tracks (most recent first)
+  const likedRows = await db
+    .select({ ...cols, likedAt: likes.createdAt })
+    .from(likes)
+    .innerJoin(tracks, eq(tracks.id, likes.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(and(eq(likes.userId, userId), eq(tracks.status, 'READY')))
+    .orderBy(desc(likes.createdAt))
+    .limit(perSection + exclude.size);
+
+  // Recently played by this user (order by startedAt desc, dedup in take)
+  const recentRows = await db
+    .select({ ...cols, startedAt: playEvents.startedAt })
+    .from(playEvents)
+    .innerJoin(tracks, eq(tracks.id, playEvents.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(and(eq(playEvents.userId, userId), eq(tracks.status, 'READY')))
+    .orderBy(desc(playEvents.startedAt))
+    .limit((perSection + exclude.size) * 4);
+
+  // Similar: more tracks by artists already in the playlist
+  const artistIdRows = await db
+    .selectDistinct({ artistProfileId: releases.artistProfileId })
+    .from(playlistTracks)
+    .innerJoin(tracks, eq(tracks.id, playlistTracks.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .where(eq(playlistTracks.playlistId, playlistId));
+  const artistIds = artistIdRows.map((r) => r.artistProfileId);
+
+  const similarRows = artistIds.length
+    ? await db
+        .select(cols)
+        .from(tracks)
+        .innerJoin(releases, eq(releases.id, tracks.releaseId))
+        .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+        .where(and(eq(tracks.status, 'READY'), inArray(releases.artistProfileId, artistIds)))
+        .limit(perSection + exclude.size)
+    : [];
+
+  const take = (rows: (PlaylistAddTrack & Record<string, unknown>)[], used: Set<string>): PlaylistAddTrack[] => {
+    const out: PlaylistAddTrack[] = [];
+    for (const r of rows) {
+      if (exclude.has(r.id) || used.has(r.id)) continue;
+      used.add(r.id);
+      out.push({
+        id: r.id, title: r.title, durationSec: r.durationSec,
+        releaseId: r.releaseId, artistName: r.artistName,
+        artistSlug: r.artistSlug, coverUrl: r.coverUrl,
+      });
+      if (out.length >= perSection) break;
+    }
+    return out;
+  };
+
+  const used = new Set<string>();
+  return {
+    liked: take(likedRows, used),
+    recent: take(recentRows, used),
+    similar: take(similarRows as (PlaylistAddTrack & Record<string, unknown>)[], used),
+  };
 }
