@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { MotionProvider } from '@vire/ui/motion';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
+import { MobileTabBar } from '@/components/listener/mobile-tab-bar';
 import { CommandPalette } from '@/components/command-palette';
 import { Toaster } from '@/components/toast';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
@@ -113,6 +114,7 @@ export default function RootLayout({
             </div>
           </div>
           <PlayerWrapper />
+          <MobileTabBar />
           <CommandPalette />
           <KeyboardShortcuts />
           <Toaster />
