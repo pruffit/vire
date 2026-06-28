@@ -10,7 +10,7 @@ export default function ArtistProfileLoading() {
         <Sk className="w-full h-56 sm:h-72 rounded-none" />
       </div>
 
-      <div className="mx-auto max-w-4xl px-6 py-10 space-y-10">
+      <div className="mx-auto max-w-5xl px-6 py-10 space-y-10">
         {/* Profile info */}
         <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-end -mt-16 sm:-mt-20">
           <Sk className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-background shrink-0" />

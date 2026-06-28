@@ -21,9 +21,12 @@ export interface SideNavItem {
 export function SideNav({
   items,
   className,
+  collapsed = false,
 }: {
   items: readonly SideNavItem[];
   className?: string;
+  /** Узкий рейл: только иконки по центру, подпись — в title (оболочка слушателя). */
+  collapsed?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -31,6 +34,7 @@ export function SideNav({
     <nav
       className={cn(
         'flex gap-1 overflow-x-auto px-3 py-2.5 md:flex-col md:gap-0.5 md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        collapsed && 'md:px-2',
         className,
       )}
     >
@@ -41,15 +45,17 @@ export function SideNav({
             key={item.href}
             href={item.href}
             aria-current={active ? 'page' : undefined}
+            title={collapsed ? item.label : undefined}
             className={cn(
-              'inline-flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors',
+              'inline-flex shrink-0 items-center whitespace-nowrap rounded-md text-sm transition-colors',
+              collapsed ? 'md:justify-center md:gap-0 md:px-0 md:py-2.5 gap-2.5 px-3 py-2' : 'gap-2.5 px-3 py-2',
               active
                 ? 'bg-foreground/10 font-medium text-foreground'
                 : 'text-foreground/50 hover:bg-foreground/5 hover:text-foreground',
             )}
           >
-            {item.icon && <Icon name={item.icon} size={16} className={active ? undefined : 'opacity-70'} />}
-            {item.label}
+            {item.icon && <Icon name={item.icon} size={collapsed ? 18 : 16} className={active ? undefined : 'opacity-70'} />}
+            <span className={cn(collapsed && 'md:hidden')}>{item.label}</span>
           </Link>
         );
       })}

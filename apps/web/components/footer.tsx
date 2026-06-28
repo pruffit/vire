@@ -12,7 +12,7 @@ export function Footer() {
 
   return (
     <footer className="mt-auto border-t border-border bg-background">
-      <div className="mx-auto max-w-5xl px-6 py-12">
+      <div className="px-6 lg:px-10 py-12">
         <div className="flex flex-col gap-10 sm:flex-row sm:justify-between">
           {/* Бренд */}
           <div className="max-w-xs space-y-3">

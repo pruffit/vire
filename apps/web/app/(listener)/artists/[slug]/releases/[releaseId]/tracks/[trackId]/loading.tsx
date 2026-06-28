@@ -5,7 +5,7 @@ function Sk({ className }: { className?: string }) {
 export default function TrackLoading() {
   return (
     <div className="min-h-full bg-background">
-      <div className="mx-auto max-w-3xl px-6 py-10 sm:py-14 space-y-10">
+      <div className="mx-auto max-w-4xl px-6 py-10 sm:py-14 space-y-10">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2">
           <Sk className="h-3 w-20" />

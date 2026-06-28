@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { getContentScrollArea } from '@/lib/scroll-area';
 
 /**
  * Компактная липкая полоска артиста: появляется, когда крупный hero ушёл за
@@ -25,7 +26,7 @@ export function ArtistCollapseBar({
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
-    const root = document.getElementById('main-content');
+    const root = getContentScrollArea();
     const obs = new IntersectionObserver(
       ([entry]) => setShow(!entry.isIntersecting),
       { root },
@@ -35,7 +36,7 @@ export function ArtistCollapseBar({
   }, []);
 
   function scrollTop() {
-    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+    getContentScrollArea()?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   return (
@@ -60,7 +61,7 @@ export function ArtistCollapseBar({
               type="button"
               onClick={scrollTop}
               aria-label="Наверх страницы"
-              className="mx-auto max-w-4xl px-6 h-11 flex items-center gap-3 w-full text-left text-[var(--artist-text)]"
+              className="mx-auto max-w-5xl px-6 h-11 flex items-center gap-3 w-full text-left text-[var(--artist-text)]"
             >
               {avatarUrl ? (
                 <span className="relative w-6 h-6 rounded-full overflow-hidden shrink-0">

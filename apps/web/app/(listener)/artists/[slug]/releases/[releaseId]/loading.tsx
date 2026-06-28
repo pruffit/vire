@@ -15,7 +15,7 @@ function SkTrackRow() {
 export default function ReleaseLoading() {
   return (
     <div className="min-h-full bg-background">
-      <div className="mx-auto max-w-4xl px-6 pt-10 pb-12 space-y-10">
+      <div className="mx-auto max-w-5xl px-6 pt-10 pb-12 space-y-10">
         {/* Back link */}
         <Sk className="h-3.5 w-20" />
 

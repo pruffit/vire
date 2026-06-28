@@ -73,7 +73,7 @@ export default async function HomePage() {
   const empty = latest.length === 0 && upcoming.length === 0 && topArtists.length === 0;
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12 space-y-16">
+    <main className="mx-auto w-full max-w-[1600px] px-6 lg:px-10 py-12 space-y-16">
       <JsonLd data={websiteJsonLd()} />
       <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
 
@@ -84,7 +84,7 @@ export default async function HomePage() {
       {/* Активность подписок — для вошедших, сразу после featured (персональный верх) */}
       {!!userId && feed.length > 0 && (
         <Section title="Новое у тех, на кого ты подписан">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
             {feed.slice(0, 8).map((r) => (
               <ReleaseQuickLook key={r.id} release={r} />
             ))}
@@ -108,7 +108,7 @@ export default async function HomePage() {
           относительно остального документа. Здесь только обычные div. */}
       {editorialPlaylists.length > 0 && (
         <Section title="Подборки">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5">
             {editorialPlaylists.map((p) => (
               <EditorialPlaylistCard
                 key={p.id}
@@ -123,7 +123,7 @@ export default async function HomePage() {
       {/* Публичные плейлисты слушателей — тоже без motion (см. выше). */}
       {publicPlaylists.length > 0 && (
         <Section title="Плейлисты слушателей">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5">
             {publicPlaylists.map((p) => (
               <EditorialPlaylistCard
                 key={p.id}
@@ -138,7 +138,7 @@ export default async function HomePage() {
       {/* Скоро выйдет */}
       {upcoming.length > 0 && (
         <Section title="Скоро выйдет">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
             {upcoming.map((r) => (
               <ReleaseQuickLook key={r.id} release={r} upcoming />
             ))}
@@ -149,7 +149,7 @@ export default async function HomePage() {
       {/* Свежие релизы */}
       {rest.length > 0 && (
         <Section title="Свежие релизы" href="/releases" hrefLabel="Посмотреть все">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
             {rest.map((r) => (
               <ReleaseQuickLook key={r.id} release={r} />
             ))}
@@ -160,8 +160,8 @@ export default async function HomePage() {
       {/* Артисты */}
       {topArtists.length > 0 && (
         <Section title="Артисты" href="/artists" hrefLabel="Все артисты">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5">
-            {topArtists.slice(0, 10).map((a) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-5">
+            {topArtists.slice(0, 12).map((a) => (
               <ArtistHoverChip key={a.id} artist={a} />
             ))}
           </div>

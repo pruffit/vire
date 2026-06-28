@@ -15,7 +15,7 @@ export default async function ArtistsPage() {
   const artists = await listActiveArtists();
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12 space-y-8">
+    <main className="mx-auto w-full max-w-[1600px] px-6 lg:px-10 py-12 space-y-8">
       <JsonLd data={artistsCatalogJsonLd()} />
       <JsonLd data={breadcrumbListJsonLd([
         { name: 'Главная', url: '/' },

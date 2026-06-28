@@ -123,7 +123,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
       {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
       {grain && <GrainOverlay />}
 
-      <div className="relative z-10 mx-auto max-w-3xl px-6 py-10 sm:py-14 space-y-10 sm:space-y-12">
+      <div className="relative z-10 mx-auto max-w-4xl px-6 py-10 sm:py-14 space-y-10 sm:space-y-12">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-xs font-mono opacity-50">
           <Link href={`/artists/${slug}`} className="hover:opacity-100 transition-opacity">

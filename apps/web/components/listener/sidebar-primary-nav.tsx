@@ -7,6 +7,6 @@ const NAV: SideNavItem[] = [
   { href: '/library', label: 'Медиатека', icon: 'music' },
 ];
 
-export function SidebarPrimaryNav() {
-  return <SideNav items={NAV} />;
+export function SidebarPrimaryNav({ collapsed = false }: { collapsed?: boolean }) {
+  return <SideNav items={NAV} collapsed={collapsed} />;
 }

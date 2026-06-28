@@ -17,7 +17,7 @@ function SkRow() {
 
 export default function ProfileLoading() {
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12 space-y-14">
+    <main className="mx-auto w-full max-w-4xl px-6 py-12 space-y-14">
       {/* Profile card skeleton */}
       <div className="space-y-8">
         <div className="flex items-start gap-5">

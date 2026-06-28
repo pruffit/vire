@@ -45,7 +45,7 @@ export default async function PlaylistPage({ params }: Props) {
   const coverUrl = playlist.tracks[0]?.coverUrl ?? null;
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12 space-y-10">
+    <main className="mx-auto w-full max-w-3xl px-6 py-12 space-y-10">
       <FadeUp>
         <header className="flex items-start gap-6">
           {/* Обложка — первый трек или заглушка */}

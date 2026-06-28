@@ -4,7 +4,7 @@ function Sk({ className }: { className?: string }) {
 
 export default function ArtistsLoading() {
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12 space-y-10">
+    <main className="mx-auto w-full max-w-[1600px] px-6 lg:px-10 py-12 space-y-10">
       <div className="flex items-baseline justify-between">
         <Sk className="h-7 w-24" />
         <Sk className="h-4 w-6" />
@@ -14,7 +14,7 @@ export default function ArtistsLoading() {
         <Sk className="h-8 flex-1 rounded-md" />
         <Sk className="h-8 w-48 rounded-md" />
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
         {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} className="space-y-3 text-center">
             <Sk className="w-full aspect-square rounded-full" />

@@ -110,7 +110,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
             Ничего не найдено.
           </motion.p>
         ) : (
-          <Stagger step={0.03} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+          <Stagger step={0.03} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
             {filtered.map((artist) => (
               <StaggerItem key={artist.id}>
                 <ArtistCard artist={artist} />

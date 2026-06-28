@@ -2,12 +2,14 @@
 
 import { useEffect, useLayoutEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { getContentScrollArea } from '@/lib/scroll-area';
 
 /**
  * Восстановление позиции скролла при навигации.
  *
- * Скролл живёт в персистентном `#main-content` (app-shell, см. layout.tsx), а не
- * на `window` (body — overflow-hidden). Встроенное scroll-restoration Next трогает
+ * Скролл живёт в персистентном `#main-content` ИЛИ во внутренней панели оболочки
+ * (`[data-scroll-area]` на десктопе слушателя/админки) — см. getContentScrollArea.
+ * НЕ на `window` (body — overflow-hidden). Встроенное scroll-restoration Next трогает
  * только окно, поэтому при переходе назад позиция списка терялась — например,
  * зашёл в плейлист и вышел → выкидывало наверх. Здесь чиним вручную:
  *  - на каждый скролл запоминаем позицию текущего маршрута;
@@ -25,18 +27,23 @@ const positions = new Map<string, number>();
 export function ScrollRestoration() {
   const pathname = usePathname();
 
-  // Запоминаем позицию текущего маршрута на каждый скролл.
+  // Запоминаем позицию текущего маршрута на каждый скролл. Слушаем в фазе захвата
+  // на document: активный скроллер (общий или панель оболочки) меняется между
+  // маршрутами, а scroll не всплывает — capture ловит его с любого элемента.
   useEffect(() => {
-    const el = document.getElementById('main-content');
-    if (!el) return;
-    const onScroll = () => positions.set(pathname, el.scrollTop);
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
+    const onScroll = (e: Event) => {
+      const el = e.target;
+      if (el instanceof HTMLElement && (el.id === 'main-content' || el.hasAttribute('data-scroll-area'))) {
+        positions.set(pathname, el.scrollTop);
+      }
+    };
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => document.removeEventListener('scroll', onScroll, { capture: true });
   }, [pathname]);
 
   // До отрисовки нового маршрута выставляем скролл: сохранённый (возврат) или верх.
   useIsoLayoutEffect(() => {
-    const el = document.getElementById('main-content');
+    const el = getContentScrollArea();
     if (!el || window.location.hash) return;
     el.scrollTop = positions.get(pathname) ?? 0;
   }, [pathname]);

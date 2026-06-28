@@ -35,7 +35,7 @@ export default async function ReleasesPage({ searchParams }: Props) {
   );
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12 space-y-8">
+    <main className="mx-auto w-full max-w-[1600px] px-6 lg:px-10 py-12 space-y-8">
       <JsonLd data={breadcrumbListJsonLd([
         { name: 'Главная', url: '/' },
         { name: 'Релизы', url: '/releases' },
@@ -78,7 +78,7 @@ export default async function ReleasesPage({ searchParams }: Props) {
           {tab === 'week' ? 'За эту неделю релизов пока нет.' : 'Пока нет ни одного релиза.'}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
           {releases.map((r) => (
             <ReleaseQuickLook key={r.id} release={r} />
           ))}

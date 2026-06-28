@@ -16,6 +16,11 @@ import { useEffect } from 'react';
  * На тач-устройствах hover нет, а палец держит скролл ЧЕРЕЗ контент — гасить
  * pointer-events там нельзя (жест прервётся). Поэтому на не-hover устройствах
  * вообще ничего не вешаем (двойная защита: ещё и @media (hover) в CSS).
+ *
+ * Скролл-областей несколько (общий #main-content и панель <main data-scroll-area>
+ * в оболочках слушателя/админки), и они монтируются/размонтируются при навигации.
+ * Поэтому слушаем scroll в фазе ЗАХВАТА на document (scroll не всплывает, но в
+ * capture доходит) и вешаем класс на сам проскролленный элемент — без переподписок.
  */
 export function ScrollState() {
   useEffect(() => {
@@ -23,20 +28,31 @@ export function ScrollState() {
     // Только устройства с настоящим hover (мышь/трекпад). Тач — пропускаем.
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
-    const el = document.getElementById('main-content');
-    if (!el) return;
-
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const onScroll = () => {
+    const timers = new Map<Element, ReturnType<typeof setTimeout>>();
+    const onScroll = (e: Event) => {
+      const el = e.target;
+      // Только контентные скролл-области (общий #main-content или панель оболочки),
+      // не внутренние списки вроде медиатеки в сайдбаре — иначе их элементы зря
+      // теряют hit-testing при скролле списка.
+      if (!(el instanceof HTMLElement)) return;
+      if (el.id !== 'main-content' && !el.hasAttribute('data-scroll-area')) return;
       el.classList.add('is-scrolling');
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => el.classList.remove('is-scrolling'), 120);
+      const prev = timers.get(el);
+      if (prev) clearTimeout(prev);
+      timers.set(
+        el,
+        setTimeout(() => {
+          el.classList.remove('is-scrolling');
+          timers.delete(el);
+        }, 120),
+      );
     };
 
-    el.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
     return () => {
-      el.removeEventListener('scroll', onScroll);
-      if (timer) clearTimeout(timer);
+      document.removeEventListener('scroll', onScroll, { capture: true });
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
     };
   }, []);
 

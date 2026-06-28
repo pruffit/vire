@@ -25,7 +25,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   ]);
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12 space-y-14">
+    <main className="mx-auto w-full max-w-4xl px-6 py-12 space-y-14">
       <FadeUp>
         <ProfileCard
           user={{

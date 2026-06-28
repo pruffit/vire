@@ -33,7 +33,7 @@ export default async function LibraryPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12 space-y-14">
+    <main className="mx-auto w-full max-w-[1600px] px-6 lg:px-10 py-12 space-y-14">
       <FadeUp>
         <h1 className="text-2xl font-semibold tracking-tight">Медиатека</h1>
       </FadeUp>
@@ -42,7 +42,7 @@ export default async function LibraryPage() {
         {playlists.length === 0 ? (
           <EmptyState title="Нет плейлистов" hint='Нажми «+» на странице трека, чтобы создать первый' />
         ) : (
-          <Stagger step={0.04} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <Stagger step={0.04} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {playlists.map((p) => (
               <StaggerItem key={p.id}>
                 <PlaylistCard playlist={p} />

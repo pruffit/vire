@@ -71,7 +71,7 @@
      не добавляет. На тач-устройствах правило не действует (@media hover) —
      палец, держащий скролл через контент, никогда не теряется. */
   @media (hover: hover) and (pointer: fine) {
-    #main-content.is-scrolling * {
+    .is-scrolling * {
       pointer-events: none;
     }
   }

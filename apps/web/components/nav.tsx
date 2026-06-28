@@ -22,7 +22,7 @@ export async function Nav() {
 
   return (
     <nav className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-sm">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 h-12 flex items-center justify-between gap-4">
+      <div className="px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between gap-4">
         {/* Logo */}
         <Link
           href="/"

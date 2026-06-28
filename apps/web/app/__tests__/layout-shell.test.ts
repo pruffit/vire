@@ -55,11 +55,17 @@ describe('app-shell layout invariants', () => {
     expect(layout).toMatch(/<main[^>]*className="[^"]*\boverflow-y-auto\b/);
   });
 
-  it('(listener) layout: сайдбар — sticky-рейл, не второй скроллер', () => {
+  it('(listener) layout: двухпанельный шелл — скролл во внутренней панели, не sticky в общей области', () => {
+    // Эталон — admin/layout.tsx: сайдбар закреплён (flex-панель), скроллится только
+    // <main>. Sticky-сайдбар в ОБЩЕЙ скролл-области (#main-content) давал смазывание
+    // контента при быстрой прокрутке — поэтому здесь именно внутренний скролл-пейн.
     const layout = readFileSync(path.join(APP_DIR, '(listener)', 'layout.tsx'), 'utf8');
-    expect(layout).toMatch(/<aside[^>]*className="[^"]*\bsticky\b/);
-    // у самого <aside> нет overflow-y-auto (скроллится внутренний список, не рейл)
-    expect(layout).not.toMatch(/<aside[^>]*overflow-y-auto/);
+    expect(layout).toMatch(/data-scroll-area[^>]*\boverflow-y-auto\b/);
+    expect(layout).toMatch(/<ListenerSidebar\b/);
+    // обёртка-пейн НЕ <main> (страницы рендерят собственный <main> — без вложенности)
+    expect(layout).not.toMatch(/<main\b/);
+    // на десктопе шелл занимает фиксированную высоту окна (h-full), а не распирает 100vh
+    expect(layout).toMatch(/\bmd:h-full\b/);
   });
 
   it('root layout не дублирует футер (он в (listener) layout)', () => {

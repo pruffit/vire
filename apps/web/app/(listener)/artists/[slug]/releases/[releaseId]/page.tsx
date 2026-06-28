@@ -136,7 +136,7 @@ export default async function ReleasePage({ params }: Props) {
 
       {/* Hero */}
       <div className="relative z-10">
-        <div className="mx-auto max-w-4xl px-6 pt-10 pb-12">
+        <div className="mx-auto max-w-5xl px-6 pt-10 pb-12">
           <Link
             href={`/artists/${slug}`}
             className="inline-flex items-center gap-1.5 text-xs font-mono opacity-40 hover:opacity-70 transition-opacity mb-10"
@@ -189,7 +189,7 @@ export default async function ReleasePage({ params }: Props) {
       </div>
 
       {/* Tracks + liner notes */}
-      <div className="relative z-10 mx-auto max-w-4xl px-6 pb-32 space-y-12">
+      <div className="relative z-10 mx-auto max-w-5xl px-6 pb-32 space-y-12">
         <TrackList
           tracks={clientTracks}
           artistName={artist.name}
