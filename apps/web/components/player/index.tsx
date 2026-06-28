@@ -27,6 +27,11 @@ export function Player() {
 
   const track = usePlayerStore((s) => s.track);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty('--player-h', track ? '4rem' : '0px');
+    return () => document.documentElement.style.setProperty('--player-h', '0px');
+  }, [track]);
+
   return (
     <>
       {/* Мини-бар: всплывает снизу при появлении трека, уезжает вниз при сбросе. */}
