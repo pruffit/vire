@@ -4,9 +4,9 @@ import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { getLikedTracks, getFollowedArtists, getUserPlaylists, getUserProfile } from '@vire/db';
 import type { PlayerTrack } from '@/store/player';
-import { LikedTrackRow } from './liked-track-row';
-import { FollowedArtists } from './followed-artists';
-import { PlaylistCard } from './playlist-card';
+import { LikedTrackRow } from '@/components/listener/liked-track-row';
+import { FollowedArtists } from '@/components/listener/followed-artists';
+import { PlaylistCard } from '@/components/listener/playlist-card';
 import { ProfileCard } from './profile-card';
 import { LinkedAccounts } from './linked-accounts';
 
