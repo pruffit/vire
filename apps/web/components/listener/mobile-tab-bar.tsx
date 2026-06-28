@@ -17,7 +17,7 @@ export function MobileTabBar() {
   if (!isListenerShellPath(pathname)) return null;
 
   return (
-    <nav className="shrink-0 grid grid-cols-3 border-t border-border bg-background/95 backdrop-blur-sm md:hidden">
+    <nav className="shrink-0 grid grid-cols-3 border-t border-border bg-background/95 backdrop-blur-sm md:hidden pb-[env(safe-area-inset-bottom)]">
       {TABS.map((t) => {
         const active = t.exact ? pathname === t.href : pathname.startsWith(t.href);
         return (

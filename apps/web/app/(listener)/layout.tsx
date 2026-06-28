@@ -1,5 +1,5 @@
 import { auth } from '@/auth';
-import { getUserPlaylists, getFollowedArtists, getLikedTracks } from '@vire/db';
+import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached } from '@/lib/listener-data';
 import { Footer } from '@/components/footer';
 import { SidebarPrimaryNav } from '@/components/listener/sidebar-primary-nav';
 import { LibrarySidebar } from '@/components/listener/library-sidebar';
@@ -10,9 +10,9 @@ export default async function ListenerLayout({ children }: { children: React.Rea
 
   const [playlists, artists, liked] = userId
     ? await Promise.all([
-        getUserPlaylists(userId),
-        getFollowedArtists(userId),
-        getLikedTracks(userId),
+        getUserPlaylistsCached(userId),
+        getFollowedArtistsCached(userId),
+        getLikedTracksCached(userId),
       ])
     : [[], [], []];
 

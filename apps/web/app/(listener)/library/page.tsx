@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
-import { getLikedTracks, getFollowedArtists, getUserPlaylists } from '@vire/db';
+import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached } from '@/lib/listener-data';
 import type { PlayerTrack } from '@/store/player';
 import { LikedTrackRow } from '@/components/listener/liked-track-row';
 import { FollowedArtists } from '@/components/listener/followed-artists';
@@ -18,9 +18,9 @@ export default async function LibraryPage() {
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/library');
 
   const [likedTracks, followedArtists, playlists] = await Promise.all([
-    getLikedTracks(session.user.id),
-    getFollowedArtists(session.user.id),
-    getUserPlaylists(session.user.id),
+    getLikedTracksCached(session.user.id),
+    getFollowedArtistsCached(session.user.id),
+    getUserPlaylistsCached(session.user.id),
   ]);
 
   const likedQueue: PlayerTrack[] = likedTracks.map((t) => ({

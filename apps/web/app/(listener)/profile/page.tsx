@@ -3,7 +3,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { FadeUp } from '@vire/ui/motion';
 import { auth } from '@/auth';
-import { getLikedTracks, getFollowedArtists, getUserPlaylists, getUserProfile } from '@vire/db';
+import { getUserProfile } from '@vire/db';
+import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached } from '@/lib/listener-data';
 import { ProfileCard } from './profile-card';
 import { LinkedAccounts } from './linked-accounts';
 import { Icon } from '@/components/icon';
@@ -17,9 +18,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
   const { link_error: linkError } = await searchParams;
   const [likedTracks, followedArtists, playlists, profile] = await Promise.all([
-    getLikedTracks(session.user.id),
-    getFollowedArtists(session.user.id),
-    getUserPlaylists(session.user.id),
+    getLikedTracksCached(session.user.id),
+    getFollowedArtistsCached(session.user.id),
+    getUserPlaylistsCached(session.user.id),
     getUserProfile(session.user.id),
   ]);
 

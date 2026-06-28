@@ -24,6 +24,7 @@ const ACTIONS: { label: string; sub: string; href: string }[] = [
   { label: 'Главная', sub: 'Открытие и активность', href: '/' },
   { label: 'Все артисты', sub: 'Каталог', href: '/artists' },
   { label: 'Профиль', sub: 'Лайки, подписки, покупки', href: '/profile' },
+  { label: 'Медиатека', sub: 'Треки, плейлисты, подписки', href: '/library' },
   { label: 'Дашборд', sub: 'Управление релизами', href: '/dashboard' },
 ];
 
