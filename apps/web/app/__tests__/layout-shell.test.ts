@@ -54,4 +54,16 @@ describe('app-shell layout invariants', () => {
     const layout = readFileSync(path.join(APP_DIR, 'admin', 'layout.tsx'), 'utf8');
     expect(layout).toMatch(/<main[^>]*className="[^"]*\boverflow-y-auto\b/);
   });
+
+  it('(listener) layout: сайдбар — sticky-рейл, не второй скроллер', () => {
+    const layout = readFileSync(path.join(APP_DIR, '(listener)', 'layout.tsx'), 'utf8');
+    expect(layout).toMatch(/<aside[^>]*className="[^"]*\bsticky\b/);
+    // у самого <aside> нет overflow-y-auto (скроллится внутренний список, не рейл)
+    expect(layout).not.toMatch(/<aside[^>]*overflow-y-auto/);
+  });
+
+  it('root layout не дублирует футер (он в (listener) layout)', () => {
+    const root = readFileSync(path.join(APP_DIR, 'layout.tsx'), 'utf8');
+    expect(root).not.toMatch(/<Footer\s*\/>/);
+  });
 });

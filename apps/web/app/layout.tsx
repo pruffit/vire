@@ -7,7 +7,6 @@ import { CommandPalette } from '@/components/command-palette';
 import { Toaster } from '@/components/toast';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { Nav } from '@/components/nav';
-import { Footer } from '@/components/footer';
 import { CookieBanner } from '@/components/cookie-banner';
 import { Announcements } from '@/components/announcements';
 import { EasterEggs } from '@/components/easter-eggs';
@@ -105,13 +104,7 @@ export default function RootLayout({
           <ScrollRestoration />
           <SitePresence />
           <div id="main-content" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-            {/* Flex-обёртка внутри scroll-area прибивает футер вниз на коротких страницах.
-                Сама scroll-area остаётся plain block — иначе min-h-full страниц
-                сжимается флексом и скролл ломается. */}
-            <div className="min-h-full flex flex-col">
-              <div className="flex-1">{children}</div>
-              <Footer />
-            </div>
+            {children}
           </div>
           <PlayerWrapper />
           <MobileTabBar />
