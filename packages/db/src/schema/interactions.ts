@@ -42,6 +42,7 @@ export const playlists = pgTable('playlists', {
   targetUserId: uuid('target_user_id').references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
+  coverUrl: text('cover_url'),
   kind: playlistKindEnum('kind').notNull().default('USER'),
   visibility: playlistVisibilityEnum('visibility').notNull().default('PRIVATE'),
   isCollaborative: boolean('is_collaborative').notNull().default(false),
@@ -61,7 +62,10 @@ export const playlistTracks = pgTable('playlist_tracks', {
   position: integer('position').notNull(),
   addedBy: uuid('added_by').references(() => users.id),
   addedAt: timestamp('added_at').notNull().defaultNow(),
-}, (t) => [index('playlist_tracks_playlist_id_idx').on(t.playlistId)]);
+}, (t) => [
+  index('playlist_tracks_playlist_id_idx').on(t.playlistId),
+  unique('playlist_tracks_playlist_track_unique').on(t.playlistId, t.trackId),
+]);
 
 export const playlistLikes = pgTable('playlist_likes', {
   id: uuid('id').primaryKey().defaultRandom(),
