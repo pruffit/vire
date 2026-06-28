@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { getPlaylistWithTracks, deletePlaylist, renamePlaylist } from '@vire/db';
+import { getPlaylistWithTracks, deletePlaylist, updatePlaylist } from '@vire/db';
 
 type Params = { params: Promise<{ id: string }> };
 
-const patchSchema = z.object({ title: z.string().min(1).max(100).optional() });
+const patchSchema = z.object({
+  title: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).optional(),
+  visibility: z.enum(['PRIVATE', 'PUBLIC']).optional(),
+});
 
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
@@ -14,7 +18,6 @@ export async function GET(_req: Request, { params }: Params) {
   const playlist = await getPlaylistWithTracks(id);
   if (!playlist) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Приватные плейлисты видны только владельцу
   if (playlist.visibility === 'PRIVATE' && playlist.ownerUserId !== session?.user?.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -31,9 +34,12 @@ export async function PATCH(req: Request, { params }: Params) {
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
 
-  if (parsed.data.title) {
-    await renamePlaylist(id, session.user.id, parsed.data.title);
-  }
+  const patch: { title?: string; description?: string; visibility?: 'PRIVATE' | 'PUBLIC' } = {};
+  if (parsed.data.title !== undefined) patch.title = parsed.data.title.trim();
+  if (parsed.data.description !== undefined) patch.description = parsed.data.description.trim();
+  if (parsed.data.visibility !== undefined) patch.visibility = parsed.data.visibility;
+
+  await updatePlaylist(id, session.user.id, patch);
   return NextResponse.json({ ok: true });
 }
 
