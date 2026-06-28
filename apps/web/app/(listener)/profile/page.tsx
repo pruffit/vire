@@ -1,32 +1,21 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import type { Metadata } from 'next';
-import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
+import { FadeUp } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { getLikedTracks, getFollowedArtists, getUserPlaylists, getUserProfile } from '@vire/db';
-import type { PlayerTrack } from '@/store/player';
-import { LikedTrackRow } from '@/components/listener/liked-track-row';
-import { FollowedArtists } from '@/components/listener/followed-artists';
-import { PlaylistCard } from '@/components/listener/playlist-card';
 import { ProfileCard } from './profile-card';
 import { LinkedAccounts } from './linked-accounts';
+import { Icon } from '@/components/icon';
 
-export const metadata: Metadata = {
-  title: 'Профиль',
-};
-
+export const metadata: Metadata = { title: 'Профиль' };
 export const dynamic = 'force-dynamic';
 
-export default async function ProfilePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ link_error?: string }>;
-}) {
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ link_error?: string }> }) {
   const session = await auth();
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/profile');
 
-  const params = await searchParams;
-  const linkError = params.link_error;
-
+  const { link_error: linkError } = await searchParams;
   const [likedTracks, followedArtists, playlists, profile] = await Promise.all([
     getLikedTracks(session.user.id),
     getFollowedArtists(session.user.id),
@@ -34,18 +23,8 @@ export default async function ProfilePage({
     getUserProfile(session.user.id),
   ]);
 
-  const likedQueue: PlayerTrack[] = likedTracks.map((t) => ({
-    id: t.id,
-    title: t.title,
-    artistName: t.artistName,
-    coverUrl: t.releaseCoverUrl,
-    artistSlug: t.artistSlug,
-    releaseId: t.releaseId,
-  }));
-
   return (
     <main className="mx-auto max-w-2xl px-6 py-12 space-y-14">
-      {/* Profile card */}
       <FadeUp>
         <ProfileCard
           user={{
@@ -55,96 +34,23 @@ export default async function ProfilePage({
             image: profile?.image ?? session.user.image ?? null,
             createdAt: profile?.createdAt ?? null,
           }}
-          stats={{
-            likes: likedTracks.length,
-            following: followedArtists.length,
-            playlists: playlists.length,
-          }}
+          stats={{ likes: likedTracks.length, following: followedArtists.length, playlists: playlists.length }}
         />
       </FadeUp>
 
-      {/* Linked accounts */}
       <FadeUp delay={0.05}>
-        <LinkedAccounts userId={session.user.id} linkError={linkError} />
+        <Link
+          href="/library"
+          className="group flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-foreground/[0.03]"
+        >
+          <span className="text-sm font-medium">Моя медиатека</span>
+          <Icon name="arrow-right" size={16} className="text-foreground/40 transition-transform group-hover:translate-x-0.5" />
+        </Link>
       </FadeUp>
 
-      {/* Playlists */}
-      <section className="space-y-4">
-        <SectionHeader title="Плейлисты" count={playlists.length} />
-
-        {playlists.length === 0 ? (
-          <EmptyState
-            text="Нет плейлистов"
-            hint='Нажми «+» на странице трека, чтобы создать первый'
-          />
-        ) : (
-          <Stagger step={0.04} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {playlists.map((p) => (
-              <StaggerItem key={p.id}>
-                <PlaylistCard playlist={p} />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        )}
-      </section>
-
-      {/* Liked tracks */}
-      <section className="space-y-4">
-        <SectionHeader title="Понравилось" count={likedTracks.length} />
-
-        {likedTracks.length === 0 ? (
-          <EmptyState text="Ты ещё ничего не лайкал." />
-        ) : (
-          <Stagger step={0.035} className="flex flex-col">
-            {likedTracks.map((track, i) => (
-              <StaggerItem key={track.id}>
-                <LikedTrackRow
-                  track={{
-                    id: track.id,
-                    title: track.title,
-                    artistName: track.artistName,
-                    coverUrl: track.releaseCoverUrl,
-                    artistSlug: track.artistSlug,
-                    releaseId: track.releaseId,
-                  }}
-                  queue={likedQueue}
-                  queueIndex={i}
-                  durationSec={track.durationSec}
-                  releaseCoverUrl={track.releaseCoverUrl}
-                  artistSlug={track.artistSlug}
-                  releaseId={track.releaseId}
-                />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        )}
-      </section>
-
-      {/* Followed artists */}
-      <section className="space-y-4">
-        <SectionHeader title="Подписки" count={followedArtists.length} />
-        <FollowedArtists initial={followedArtists} />
-      </section>
+      <FadeUp delay={0.1}>
+        <LinkedAccounts userId={session.user.id} linkError={linkError} />
+      </FadeUp>
     </main>
-  );
-}
-
-function SectionHeader({ title, count }: { title: string; count: number }) {
-  return (
-    <div className="flex items-baseline justify-between">
-      <h2 className="text-base font-semibold">{title}</h2>
-      {count > 0 && (
-        <span className="text-xs font-mono text-muted-foreground tabular-nums">{count}</span>
-      )}
-    </div>
-  );
-}
-
-function EmptyState({ text, hint }: { text: string; hint?: string }) {
-  return (
-    <div className="py-6 text-center space-y-1.5">
-      <p className="text-sm text-muted-foreground">{text}</p>
-      {hint && <p className="text-xs text-muted-foreground/60">{hint}</p>}
-    </div>
   );
 }
