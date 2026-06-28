@@ -17,7 +17,7 @@ export default async function ListenerLayout({ children }: { children: React.Rea
     : [[], [], []];
 
   return (
-    <div className="flex">
+    <div className="flex min-h-full">
       <aside className="sticky top-0 hidden h-[calc(100dvh-3rem-var(--player-h,0px))] w-64 shrink-0 flex-col self-start border-r border-border md:flex">
         <SidebarPrimaryNav />
         <LibrarySidebar
