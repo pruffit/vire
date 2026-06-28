@@ -1,79 +1,65 @@
 'use client';
-
-import { useState } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion } from 'motion/react';
-import { usePlayerStore } from '@/store/player';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
 import { PlayIcon, PauseIcon } from '@/components/icons';
-import { formatDuration } from '@/lib/format';
-import type { PlayerTrack } from '@/store/player';
-import type { PlaylistTrackRow as TrackData } from '@vire/db';
 import { Icon } from '@/components/icon';
+import { formatDuration } from '@/lib/format';
+import type { PlaylistTrackRow as TrackData } from '@vire/db';
 
 interface Props {
   track: TrackData;
+  index: number;
   queue: PlayerTrack[];
   queueIndex: number;
-  playlistId: string;
   isOwner: boolean;
+  onRemove: (trackId: string) => void;
 }
 
-export function PlaylistTrackRow({ track, queue, queueIndex, playlistId, isOwner }: Props) {
-  const [removing, setRemoving] = useState(false);
+export function SortablePlaylistRow({ track, index, queue, queueIndex, isOwner, onRemove }: Props) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: track.id, disabled: !isOwner });
   const currentTrackId = usePlayerStore((s) => s.track?.id);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isThisTrack = currentTrackId === track.id;
 
   const playerTrack: PlayerTrack = {
-    id: track.id,
-    title: track.title,
-    artistName: track.artistName,
-    coverUrl: track.coverUrl,
-    artistSlug: track.artistSlug,
-    releaseId: track.releaseId,
+    id: track.id, title: track.title, artistName: track.artistName,
+    coverUrl: track.coverUrl, artistSlug: track.artistSlug, releaseId: track.releaseId,
   };
 
-  function handlePlay() {
-    if (isThisTrack) controls.togglePlay();
-    else controls.play(playerTrack, queue, queueIndex);
-  }
-
-  async function handleRemove() {
-    setRemoving(true);
-    await fetch(`/api/v1/playlists/${playlistId}/tracks/${track.id}`, { method: 'DELETE' });
-    // Обновим страницу через router
-    window.location.reload();
-  }
-
   return (
-    <motion.div
-      layout
-      className="flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg hover:bg-secondary/50 group transition-colors"
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg hover:bg-secondary/50 group transition-colors ${isDragging ? 'opacity-60 z-10' : ''}`}
     >
-      {/* Play button + cover */}
+      {isOwner && (
+        <button
+          {...attributes} {...listeners}
+          aria-label="Перетащить"
+          className="touch-none cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-40 hover:!opacity-80 transition-opacity shrink-0 text-muted-foreground"
+        >
+          <GripIcon />
+        </button>
+      )}
+      <span className="w-4 text-right text-xs font-mono text-muted-foreground/40 tabular-nums shrink-0">
+        {index + 1}
+      </span>
+
       <button
-        onClick={handlePlay}
+        onClick={() => (isThisTrack ? controls.togglePlay() : controls.play(playerTrack, queue, queueIndex))}
         aria-label={isThisTrack && isPlaying ? 'Пауза' : `Играть ${track.title}`}
         className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 flex items-center justify-center bg-card"
       >
-        {track.coverUrl ? (
-          <Image
-            src={track.coverUrl}
-            alt={track.title}
-            fill
-            sizes="40px"
-            className="object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-secondary" />
-        )}
-        <div
-          className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${
-            isThisTrack ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-          }`}
-        >
+        {track.coverUrl
+          ? <Image src={track.coverUrl} alt={track.title} fill sizes="40px" className="object-cover" />
+          : <div className="w-full h-full bg-secondary" />}
+        <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isThisTrack ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
           {isThisTrack && isPlaying ? <PauseIcon size={12} className="text-white" /> : <PlayIcon size={12} className="text-white" />}
         </div>
         {isThisTrack && isPlaying && (
@@ -90,44 +76,36 @@ export function PlaylistTrackRow({ track, queue, queueIndex, playlistId, isOwner
         )}
       </button>
 
-      {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium truncate ${isThisTrack ? 'text-primary' : ''}`}>
-          {track.title}
-        </p>
+        <p className={`text-sm font-medium truncate ${isThisTrack ? 'text-primary' : ''}`}>{track.title}</p>
         <p className="text-xs text-muted-foreground truncate">
-          <Link
-            href={`/artists/${track.artistSlug}`}
-            className="hover:text-foreground transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {track.artistName}
-          </Link>
+          <Link href={`/artists/${track.artistSlug}`} className="hover:text-foreground transition-colors">{track.artistName}</Link>
         </p>
       </div>
 
-      {/* Duration */}
       {track.durationSec && (
-        <span className="text-xs font-mono text-muted-foreground tabular-nums shrink-0">
-          {formatDuration(track.durationSec)}
-        </span>
+        <span className="text-xs font-mono text-muted-foreground tabular-nums shrink-0">{formatDuration(track.durationSec)}</span>
       )}
 
-      {/* Remove (owner only) */}
       {isOwner && (
         <button
-          onClick={handleRemove}
-          disabled={removing}
+          onClick={() => onRemove(track.id)}
           aria-label="Удалить из плейлиста"
           className="opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive shrink-0"
         >
-          <RemoveIcon />
+          <Icon name="x" size={12} />
         </button>
       )}
-    </motion.div>
+    </div>
   );
 }
 
-function RemoveIcon() {
-  return <Icon name="x" size={12} />;
+function GripIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <circle cx="6" cy="4" r="1.3" /><circle cx="10" cy="4" r="1.3" />
+      <circle cx="6" cy="8" r="1.3" /><circle cx="10" cy="8" r="1.3" />
+      <circle cx="6" cy="12" r="1.3" /><circle cx="10" cy="12" r="1.3" />
+    </svg>
+  );
 }
