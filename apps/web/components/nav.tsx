@@ -32,13 +32,6 @@ export async function Nav() {
           <Logo className="h-4 w-auto" />
         </Link>
 
-        {/* Center: основная навигация */}
-        <div className="hidden sm:flex items-center gap-0.5">
-          <NavLink href="/artists">Артисты</NavLink>
-          <NavLink href="/releases">Релизы</NavLink>
-          {user && <NavLink href="/feed">Лента</NavLink>}
-        </div>
-
         {/* Right side */}
         <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           <NavSearch />
