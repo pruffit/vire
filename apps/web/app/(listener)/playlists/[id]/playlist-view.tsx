@@ -35,28 +35,27 @@ export function PlaylistView({ playlist, isOwner }: { playlist: PlaylistWithTrac
     if (!res?.ok) { setTracks(prev); toast.error('Не удалось сохранить порядок'); }
   }, [playlist.id]);
 
+  // Side-effects live outside the state updaters (updaters must stay pure —
+  // StrictMode invokes them twice, which would double-fire the network calls).
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    setTracks((prev) => {
-      const from = prev.findIndex((t) => t.id === active.id);
-      const to = prev.findIndex((t) => t.id === over.id);
-      if (from < 0 || to < 0) return prev;
-      const next = arrayMove(prev, from, to);
-      void persistOrder(next, prev);
-      return next;
-    });
+    const prev = tracks;
+    const from = prev.findIndex((t) => t.id === active.id);
+    const to = prev.findIndex((t) => t.id === over.id);
+    if (from < 0 || to < 0) return;
+    const next = arrayMove(prev, from, to);
+    setTracks(next);
+    void persistOrder(next, prev);
   }
 
   const handleRemove = useCallback((trackId: string) => {
-    setTracks((prev) => {
-      const next = prev.filter((t) => t.id !== trackId);
-      fetch(`/api/v1/playlists/${playlist.id}/tracks/${trackId}`, { method: 'DELETE' })
-        .then((r) => { if (!r.ok) { setTracks(prev); toast.error('Не удалось убрать трек'); } })
-        .catch(() => { setTracks(prev); toast.error('Не удалось убрать трек'); });
-      return next;
-    });
-  }, [playlist.id]);
+    const prev = tracks;
+    setTracks(prev.filter((t) => t.id !== trackId));
+    fetch(`/api/v1/playlists/${playlist.id}/tracks/${trackId}`, { method: 'DELETE' })
+      .then((r) => { if (!r.ok) { setTracks(prev); toast.error('Не удалось убрать трек'); } })
+      .catch(() => { setTracks(prev); toast.error('Не удалось убрать трек'); });
+  }, [playlist.id, tracks]);
 
   const handleAdded = useCallback((t: PlaylistTrackRow) => {
     setTracks((prev) => (prev.some((x) => x.id === t.id) ? prev : [...prev, t]));
