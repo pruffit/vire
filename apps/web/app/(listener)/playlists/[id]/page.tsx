@@ -3,11 +3,10 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { getPlaylistWithTracks } from '@vire/db';
-import type { PlayerTrack } from '@/store/player';
-import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
-import { PlaylistTrackRow } from './playlist-track-row';
-import { PlaylistActions } from './playlist-actions';
-import { formatDuration } from '@/lib/format';
+import { FadeUp } from '@vire/ui/motion';
+import { PlaylistView } from './playlist-view';
+import { PlaylistSettingsMenu } from './playlist-settings-menu';
+import { formatDuration, pluralTracks } from '@/lib/format';
 import { Icon } from '@/components/icon';
 
 type Props = { params: Promise<{ id: string }> };
@@ -23,102 +22,41 @@ export default async function PlaylistPage({ params }: Props) {
   const { id } = await params;
   const session = await auth();
   const playlist = await getPlaylistWithTracks(id);
-
   if (!playlist) notFound();
-
-  if (playlist.visibility === 'PRIVATE' && playlist.ownerUserId !== session?.user?.id) {
-    notFound();
-  }
+  if (playlist.visibility === 'PRIVATE' && playlist.ownerUserId !== session?.user?.id) notFound();
 
   const isOwner = session?.user?.id === playlist.ownerUserId;
-  const totalSec = playlist.tracks.reduce((sum, t) => sum + (t.durationSec ?? 0), 0);
-
-  const queue: PlayerTrack[] = playlist.tracks.map((t) => ({
-    id: t.id,
-    title: t.title,
-    artistName: t.artistName,
-    coverUrl: t.coverUrl,
-    artistSlug: t.artistSlug,
-    releaseId: t.releaseId,
-  }));
-
-  const coverUrl = playlist.tracks[0]?.coverUrl ?? null;
+  const totalSec = playlist.tracks.reduce((s, t) => s + (t.durationSec ?? 0), 0);
+  const coverUrl = playlist.coverUrl ?? playlist.tracks[0]?.coverUrl ?? null;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-12 space-y-10">
       <FadeUp>
         <header className="flex items-start gap-6">
-          {/* Обложка — первый трек или заглушка */}
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl shrink-0 overflow-hidden bg-card border border-border">
-            {coverUrl ? (
-              <Image
-                src={coverUrl}
-                alt={playlist.title}
-                width={112}
-                height={112}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center opacity-20">
-                <PlaylistIcon />
-              </div>
-            )}
+            {coverUrl
+              ? <Image src={coverUrl} alt={playlist.title} width={112} height={112} className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center opacity-20"><Icon name="list" size={32} /></div>}
           </div>
-
-          <div className="space-y-2 pt-1 min-w-0">
+          <div className="space-y-2 pt-1 min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight truncate">
-                {playlist.title}
-              </h1>
+              <h1 className="text-2xl font-semibold tracking-tight truncate">{playlist.title}</h1>
               {playlist.visibility === 'PRIVATE' && (
-                <span className="shrink-0 text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full border border-border text-muted-foreground">
-                  Приватный
-                </span>
+                <span className="shrink-0 text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full border border-border text-muted-foreground">Приватный</span>
               )}
             </div>
+            {playlist.description && <p className="text-sm text-muted-foreground/80 line-clamp-2">{playlist.description}</p>}
             <p className="text-sm text-muted-foreground">
-              {playlist.tracks.length} {pluralTracks(playlist.tracks.length)}
-              {totalSec > 0 && ` · ${formatDuration(totalSec)}`}
+              {playlist.tracks.length} {pluralTracks(playlist.tracks.length)}{totalSec > 0 && ` · ${formatDuration(totalSec)}`}
             </p>
             {isOwner && (
-              <PlaylistActions playlistId={id} title={playlist.title} />
+              <PlaylistSettingsMenu playlist={{ id, title: playlist.title, description: playlist.description, visibility: playlist.visibility, coverUrl: playlist.coverUrl }} />
             )}
           </div>
         </header>
       </FadeUp>
 
-      {playlist.tracks.length === 0 ? (
-        <div className="py-16 text-center space-y-2">
-          <p className="text-muted-foreground text-sm">Плейлист пуст</p>
-          <p className="text-xs text-muted-foreground opacity-60">
-            Добавляй треки через кнопку «+» на странице трека
-          </p>
-        </div>
-      ) : (
-        <Stagger step={0.025} className="flex flex-col">
-          {playlist.tracks.map((track, i) => (
-            <StaggerItem key={track.id}>
-              <PlaylistTrackRow
-                track={track}
-                queue={queue}
-                queueIndex={i}
-                playlistId={id}
-                isOwner={isOwner}
-              />
-            </StaggerItem>
-          ))}
-        </Stagger>
-      )}
+      <PlaylistView playlist={playlist} isOwner={isOwner} />
     </main>
   );
-}
-
-function pluralTracks(n: number): string {
-  if (n % 10 === 1 && n % 100 !== 11) return 'трек';
-  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'трека';
-  return 'треков';
-}
-
-function PlaylistIcon() {
-  return <Icon name="list" size={32} />;
 }
