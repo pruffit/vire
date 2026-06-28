@@ -23,7 +23,6 @@ interface Item {
 const ACTIONS: { label: string; sub: string; href: string }[] = [
   { label: 'Главная', sub: 'Открытие и активность', href: '/' },
   { label: 'Все артисты', sub: 'Каталог', href: '/artists' },
-  { label: 'Лента', sub: 'Новое у подписок', href: '/feed' },
   { label: 'Профиль', sub: 'Лайки, подписки, покупки', href: '/profile' },
   { label: 'Дашборд', sub: 'Управление релизами', href: '/dashboard' },
 ];
