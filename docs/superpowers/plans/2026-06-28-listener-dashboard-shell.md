@@ -285,16 +285,21 @@ git commit -m "feat(shell): мобильный нижний таб-бар (Гл�
 
 ---
 
-## Task 5: Вынести общие компоненты медиатеки
+## Task 5: Вынести общие компоненты медиатеки + единый листенер-`Section`
 
 **Files:**
 - Move: `apps/web/app/profile/liked-track-row.tsx` → `apps/web/components/listener/liked-track-row.tsx`
 - Move: `apps/web/app/profile/playlist-card.tsx` → `apps/web/components/listener/playlist-card.tsx`
 - Move: `apps/web/app/profile/followed-artists.tsx` → `apps/web/components/listener/followed-artists.tsx`
+- Create: `apps/web/components/listener/section.tsx`
 - Modify: `apps/web/app/profile/page.tsx` (импорты на новые пути)
 
 **Interfaces:**
-- Produces: `LikedTrackRow`, `PlaylistCard`, `FollowedArtists` доступны из `@/components/listener/*`. Сигнатуры пропсов не меняются.
+- Produces:
+  - `LikedTrackRow`, `PlaylistCard`, `FollowedArtists` доступны из `@/components/listener/*`. Сигнатуры пропсов не меняются.
+  - `Section({ title, count?, href?, hrefLabel?, children })` из `@/components/listener/section` — единый editorial-заголовок секции для главной/`/library`/профиля (заменяет локальные дубли `Section`/`SectionHeader`). Для пустых состояний переиспользуем существующий `EmptyState` из `@/components/ui-kit` (props `{ title, hint? }`) — нового дубля НЕ создаём.
+
+Контекст переиспользования (важно, память `feedback-decompose-reuse`): в проекте уже есть `components/ui-kit.tsx` с `Section`/`EmptyState`, но `ui-kit.Section` сделан в админ-эстетике (mono-uppercase label) и для editorial-страниц слушателя не подходит; локальные `Section`/`SectionHeader`/`EmptyState` дублируются в `app/page.tsx`, `app/profile/page.tsx`, `app/search/page.tsx`. Эта задача вводит ОДИН editorial-`Section`, который T8/T9/T11 используют вместо копий. `search` не переписываем в этом плане — его локальный helper не трогаем (вне scope, чтобы не расширять диф).
 
 - [ ] **Step 1: git mv трёх файлов**
 
@@ -324,15 +329,58 @@ import { FollowedArtists } from '@/components/listener/followed-artists';
 import { PlaylistCard } from '@/components/listener/playlist-card';
 ```
 
-- [ ] **Step 4: typecheck + test**
+- [ ] **Step 4: Создать общий `components/listener/section.tsx`:**
 
-Run: `pnpm --filter @vire/web typecheck && pnpm --filter @vire/web test` → зелёно (поведение профиля не изменилось).
+```tsx
+import Link from 'next/link';
+import { Icon } from '@/components/icon';
 
-- [ ] **Step 5: Commit**
+export function Section({
+  title,
+  count,
+  href,
+  hrefLabel,
+  children,
+}: {
+  title: string;
+  count?: number;
+  href?: string;
+  hrefLabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        {href ? (
+          <Link
+            href={href}
+            className="group inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {hrefLabel ?? 'Все'}
+            <Icon name="arrow-right" size={13} className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        ) : count != null && count > 0 ? (
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">{count}</span>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+```
+
+(Объединяет варианты: главная использовала `Section` с `href`/`hrefLabel`, профиль — `SectionHeader` с `count`. `arrow-right` — проверить в `IconName`.)
+
+- [ ] **Step 5: typecheck + test**
+
+Run: `pnpm --filter @vire/web typecheck && pnpm --filter @vire/web test` → зелёно (поведение профиля не изменилось — импорты переехали, `section.tsx` пока не подключён).
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add -A apps/web/components/listener apps/web/app/profile/page.tsx
-git commit -m "refactor(listener): вынести liked-track-row/playlist-card/followed-artists в components/listener"
+git commit -m "refactor(listener): общие компоненты медиатеки + единый Section (убрать дубли)"
 ```
 
 ---
@@ -417,49 +465,51 @@ export function LibrarySidebar({
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1.5 pb-2 [scrollbar-width:thin]">
-          <Link
+          <LibraryRow
             href="/library#liked"
-            className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-foreground/5"
-          >
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-gradient-to-br from-violet-500/70 to-sky-400/70">
-              <Icon name="heart" size={16} className="text-white" />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-sm">Любимые треки</span>
-              <span className="block truncate text-xs text-foreground/40">{likedCount} треков</span>
-            </span>
-          </Link>
+            title="Любимые треки"
+            subtitle={`${likedCount} треков`}
+            leading={
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-gradient-to-br from-violet-500/70 to-sky-400/70">
+                <Icon name="heart" size={16} className="text-white" />
+              </span>
+            }
+          />
 
           {playlists.map((p) => (
-            <Link key={p.id} href={`/playlists/${p.id}`} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-foreground/5">
-              {p.coverUrl ? (
-                <Image src={p.coverUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded object-cover" />
-              ) : (
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-foreground/10">
-                  <Icon name="music" size={16} className="text-foreground/40" />
-                </span>
-              )}
-              <span className="min-w-0">
-                <span className="block truncate text-sm">{p.name}</span>
-                <span className="block truncate text-xs text-foreground/40">Плейлист</span>
-              </span>
-            </Link>
+            <LibraryRow
+              key={p.id}
+              href={`/playlists/${p.id}`}
+              title={p.name}
+              subtitle="Плейлист"
+              leading={
+                p.coverUrl ? (
+                  <Image src={p.coverUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded object-cover" />
+                ) : (
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-foreground/10">
+                    <Icon name="music" size={16} className="text-foreground/40" />
+                  </span>
+                )
+              }
+            />
           ))}
 
           {artists.map((a) => (
-            <Link key={a.id} href={`/artists/${a.slug}`} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-foreground/5">
-              {a.avatarUrl ? (
-                <Image src={a.avatarUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover" />
-              ) : (
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground/10 font-mono text-sm">
-                  {a.name[0]?.toUpperCase() ?? '?'}
-                </span>
-              )}
-              <span className="min-w-0">
-                <span className="block truncate text-sm">{a.name}</span>
-                <span className="block truncate text-xs text-foreground/40">Артист</span>
-              </span>
-            </Link>
+            <LibraryRow
+              key={a.id}
+              href={`/artists/${a.slug}`}
+              title={a.name}
+              subtitle="Артист"
+              leading={
+                a.avatarUrl ? (
+                  <Image src={a.avatarUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                ) : (
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground/10 font-mono text-sm">
+                    {a.name[0]?.toUpperCase() ?? '?'}
+                  </span>
+                )
+              }
+            />
           ))}
 
           {playlists.length === 0 && artists.length === 0 && (
@@ -468,6 +518,28 @@ export function LibrarySidebar({
         </div>
       )}
     </div>
+  );
+}
+
+function LibraryRow({
+  href,
+  title,
+  subtitle,
+  leading,
+}: {
+  href: string;
+  title: string;
+  subtitle: string;
+  leading: React.ReactNode;
+}) {
+  return (
+    <Link href={href} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-foreground/5">
+      {leading}
+      <span className="min-w-0">
+        <span className="block truncate text-sm">{title}</span>
+        <span className="block truncate text-xs text-foreground/40">{subtitle}</span>
+      </span>
+    </Link>
   );
 }
 ```
@@ -624,6 +696,8 @@ import type { PlayerTrack } from '@/store/player';
 import { LikedTrackRow } from '@/components/listener/liked-track-row';
 import { FollowedArtists } from '@/components/listener/followed-artists';
 import { PlaylistCard } from '@/components/listener/playlist-card';
+import { Section } from '@/components/listener/section';
+import { EmptyState } from '@/components/ui-kit';
 
 export const metadata: Metadata = { title: 'Медиатека' };
 export const dynamic = 'force-dynamic';
@@ -649,67 +723,49 @@ export default async function LibraryPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Медиатека</h1>
       </FadeUp>
 
-      <section className="space-y-4">
-        <SectionHeader title="Плейлисты" count={playlists.length} />
+      <Section title="Плейлисты" count={playlists.length}>
         {playlists.length === 0 ? (
-          <EmptyState text="Нет плейлистов" hint='Нажми «+» на странице трека, чтобы создать первый' />
+          <EmptyState title="Нет плейлистов" hint='Нажми «+» на странице трека, чтобы создать первый' />
         ) : (
           <Stagger step={0.04} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {playlists.map((p) => (<StaggerItem key={p.id}><PlaylistCard playlist={p} /></StaggerItem>))}
           </Stagger>
         )}
-      </section>
+      </Section>
 
-      <section id="liked" className="space-y-4 scroll-mt-6">
-        <SectionHeader title="Любимые треки" count={likedTracks.length} />
-        {likedTracks.length === 0 ? (
-          <EmptyState text="Ты ещё ничего не лайкал." />
-        ) : (
-          <Stagger step={0.035} className="flex flex-col">
-            {likedTracks.map((track, i) => (
-              <StaggerItem key={track.id}>
-                <LikedTrackRow
-                  track={{ id: track.id, title: track.title, artistName: track.artistName, coverUrl: track.releaseCoverUrl, artistSlug: track.artistSlug, releaseId: track.releaseId }}
-                  queue={likedQueue}
-                  queueIndex={i}
-                  durationSec={track.durationSec}
-                  releaseCoverUrl={track.releaseCoverUrl}
-                  artistSlug={track.artistSlug}
-                  releaseId={track.releaseId}
-                />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        )}
-      </section>
+      <div id="liked" className="scroll-mt-6">
+        <Section title="Любимые треки" count={likedTracks.length}>
+          {likedTracks.length === 0 ? (
+            <EmptyState title="Ты ещё ничего не лайкал." />
+          ) : (
+            <Stagger step={0.035} className="flex flex-col">
+              {likedTracks.map((track, i) => (
+                <StaggerItem key={track.id}>
+                  <LikedTrackRow
+                    track={{ id: track.id, title: track.title, artistName: track.artistName, coverUrl: track.releaseCoverUrl, artistSlug: track.artistSlug, releaseId: track.releaseId }}
+                    queue={likedQueue}
+                    queueIndex={i}
+                    durationSec={track.durationSec}
+                    releaseCoverUrl={track.releaseCoverUrl}
+                    artistSlug={track.artistSlug}
+                    releaseId={track.releaseId}
+                  />
+                </StaggerItem>
+              ))}
+            </Stagger>
+          )}
+        </Section>
+      </div>
 
-      <section className="space-y-4">
-        <SectionHeader title="Подписки" count={followedArtists.length} />
+      <Section title="Подписки" count={followedArtists.length}>
         <FollowedArtists initial={followedArtists} />
-      </section>
+      </Section>
     </main>
-  );
-}
-
-function SectionHeader({ title, count }: { title: string; count: number }) {
-  return (
-    <div className="flex items-baseline justify-between">
-      <h2 className="text-base font-semibold">{title}</h2>
-      {count > 0 && <span className="text-xs font-mono text-muted-foreground tabular-nums">{count}</span>}
-    </div>
-  );
-}
-function EmptyState({ text, hint }: { text: string; hint?: string }) {
-  return (
-    <div className="py-6 text-center space-y-1.5">
-      <p className="text-sm text-muted-foreground">{text}</p>
-      {hint && <p className="text-xs text-muted-foreground/60">{hint}</p>}
-    </div>
   );
 }
 ```
 
-(Сверить пропсы `LikedTrackRow`/`PlaylistCard`/`FollowedArtists` с их реальными сигнатурами — копировать из исходного профиля 1:1.)
+(Сверить пропсы `LikedTrackRow`/`PlaylistCard`/`FollowedArtists` с их реальными сигнатурами — копировать из исходного профиля 1:1. `Section`/`EmptyState` — общие из T5, локальных дублей НЕ заводить.)
 
 - [ ] **Step 2: Гейты** — `pnpm --filter @vire/web typecheck && pnpm --filter @vire/web build && pnpm --filter @vire/web check:routes` → зелёно.
 
@@ -890,7 +946,7 @@ git commit -m "feat(feed): удалить страницу — redirect /feed �
     </main>
   );
 ```
-Убрать `Reveal`-обёртки с секций-сеток (память: scroll-jitter). `Section` helper оставить как есть.
+Убрать `Reveal`-обёртки с секций-сеток (память: scroll-jitter). Локальный `Section` в `page.tsx` **удалить**, импортировать общий `import { Section } from '@/components/listener/section'` (он покрывает прежние пропсы `title`/`href`/`hrefLabel`). Импорт `Icon`, если оставался только ради локального `Section`, — убрать.
 
 - [ ] **Step 2: Гейты** — `pnpm --filter @vire/web typecheck && pnpm --filter @vire/web lint && pnpm --filter @vire/web build` → зелёно.
 
@@ -977,4 +1033,6 @@ git commit -m "docs(features): дашборд слушателя; bump верс�
 
 **Плейсхолдеры:** код приведён для всех новых файлов; места «сверить поля с реальными типами `@vire/db`» — это не плейсхолдер логики, а явная сверка имён полей (формы возвращаемых строк нельзя выдумывать), с указанием источника истины.
 
-**Согласованность типов:** `isListenerShellPath` (T2) используется в T4. `SidebarPlaylist/SidebarArtist` (T6) маппятся в T7. `--player-h` (T3) читается в T7. `LikedTrackRow/PlaylistCard/FollowedArtists` (T5) — в T8. Имена иконок (`home/search/library/plus/heart/music/arrow-right`) помечены к сверке с `IconName` в первой задаче, где встречаются.
+**Согласованность типов:** `isListenerShellPath` (T2) используется в T4. `SidebarPlaylist/SidebarArtist` (T6) маппятся в T7. `--player-h` (T3) читается в T7. `LikedTrackRow/PlaylistCard/FollowedArtists` (T5) — в T8. Общий `Section` (T5) — в T8/T11; `EmptyState` из `ui-kit` — в T8. Имена иконок (`home/search/library/plus/heart/music/arrow-right`) помечены к сверке с `IconName` в первой задаче, где встречаются.
+
+**Декомпозиция и переиспользование (память `feedback-decompose-reuse`):** перед новыми компонентами проверено существующее. Переиспользуются: `SideNav` (primary nav, T6), `Icon`, `next/image`, `EmptyState` из `ui-kit` (T8), перенос (не копирование) `LikedTrackRow/PlaylistCard/FollowedArtists` (T5). Дубли устранены: единый editorial-`Section` вместо локальных копий в главной/профиле/library (T5→T8/T11); внутренний `LibraryRow` вместо повтора разметки строк плейлиста/артиста (T6). Новые компоненты оправданы отсутствием аналога: `MobileTabBar` (паттерн fixed-grid ≠ горизонтальные пилюли `SideNav`), `LibrarySidebar` (компактный рейл ≠ грид-карточки `PlaylistCard`). Вне scope осознанно оставлен локальный `SectionHeader` в `search` (страницу не переписываем).
