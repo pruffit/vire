@@ -135,6 +135,16 @@ export const AVATAR_POLICY: ImagePolicy = {
   maxAspect: 2,
 };
 
+// Обложка плейлиста: около-квадрат (≤ 2:1), минимум 300×300.
+export const PLAYLIST_COVER_POLICY: ImagePolicy = {
+  label: 'Обложка плейлиста',
+  maxBytes: 5 * 1024 * 1024,
+  minDimension: 300,
+  maxDimension: 4000,
+  square: false,
+  maxAspect: 2,
+};
+
 export type ImageValidation =
   | { ok: true; info: ImageInfo }
   | { ok: false; status: number; error: string };
