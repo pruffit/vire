@@ -60,7 +60,12 @@ export function PlaylistSettingsMenu({ playlist }: Props) {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const blobPreviewRef = useRef<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    return () => { if (blobPreviewRef.current) URL.revokeObjectURL(blobPreviewRef.current); };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -112,11 +117,11 @@ export function PlaylistSettingsMenu({ playlist }: Props) {
   }
 
   async function removeCover() {
-    const res = await fetch(`/api/v1/playlists/${id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ coverUrl: null }),
-    }).catch(() => null);
+    const fd = new FormData();
+    fd.append('removeCover', '1');
+    const res = await fetch(`/api/v1/playlists/${id}/cover`, { method: 'POST', body: fd }).catch(() => null);
     if (!res?.ok) { toast.error('Не удалось убрать обложку'); return; }
+    if (blobPreviewRef.current) { URL.revokeObjectURL(blobPreviewRef.current); blobPreviewRef.current = null; }
     setCoverPreview(null);
     toast('Обложка удалена');
     router.refresh();
@@ -132,7 +137,10 @@ export function PlaylistSettingsMenu({ playlist }: Props) {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setCoverPreview(URL.createObjectURL(file));
+    if (blobPreviewRef.current) URL.revokeObjectURL(blobPreviewRef.current);
+    const url = URL.createObjectURL(file);
+    blobPreviewRef.current = url;
+    setCoverPreview(url);
     void uploadCover(file);
   }
 

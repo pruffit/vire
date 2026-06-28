@@ -7,7 +7,7 @@ type Params = { params: Promise<{ id: string }> };
 
 const patchSchema = z.object({
   title: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional(),
+  description: z.string().max(500).nullish(),
   visibility: z.enum(['PRIVATE', 'PUBLIC']).optional(),
 });
 
@@ -34,9 +34,13 @@ export async function PATCH(req: Request, { params }: Params) {
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
 
-  const patch: { title?: string; description?: string; visibility?: 'PRIVATE' | 'PUBLIC' } = {};
+  const playlist = await getPlaylistWithTracks(id);
+  if (!playlist) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (playlist.ownerUserId !== session.user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const patch: { title?: string; description?: string | null; visibility?: 'PRIVATE' | 'PUBLIC' } = {};
   if (parsed.data.title !== undefined) patch.title = parsed.data.title.trim();
-  if (parsed.data.description !== undefined) patch.description = parsed.data.description.trim();
+  if (parsed.data.description !== undefined) patch.description = parsed.data.description === null ? null : parsed.data.description.trim();
   if (parsed.data.visibility !== undefined) patch.visibility = parsed.data.visibility;
 
   await updatePlaylist(id, session.user.id, patch);

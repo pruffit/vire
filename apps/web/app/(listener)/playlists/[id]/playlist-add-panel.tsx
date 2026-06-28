@@ -9,6 +9,7 @@ interface Props {
   playlistId: string;
   existingIds: string[];
   onAdded: (track: PlaylistTrackRow) => void;
+  onAddFailed: (trackId: string) => void;
 }
 
 function toRow(t: PlaylistAddTrack): PlaylistTrackRow {
@@ -58,31 +59,39 @@ function TrackSection({ title, items, added, onAdd }: SectionProps) {
   );
 }
 
-export function PlaylistAddPanel({ playlistId, existingIds, onAdded }: Props) {
+export function PlaylistAddPanel({ playlistId, existingIds, onAdded, onAddFailed }: Props) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<PlaylistAddTrack[] | null>(null);
   const [suggestions, setSuggestions] = useState<PlaylistSuggestions | null>(null);
   const [added, setAdded] = useState<Set<string>>(new Set(existingIds));
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    fetch(`/api/v1/playlists/${playlistId}/suggestions`)
+    const ac = new AbortController();
+    fetch(`/api/v1/playlists/${playlistId}/suggestions`, { signal: ac.signal })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: PlaylistSuggestions | null) => setSuggestions(d))
-      .catch(() => setSuggestions(null));
+      .catch((e) => { if (!(e instanceof Error && e.name === 'AbortError')) setSuggestions(null); });
+    return () => ac.abort();
   }, [playlistId]);
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
+    abortRef.current?.abort();
     debounce.current = setTimeout(() => {
       if (q.trim().length < 2) { setResults(null); return; }
       const ac = new AbortController();
+      abortRef.current = ac;
       fetch(`/api/v1/playlists/${playlistId}/add-search?q=${encodeURIComponent(q.trim())}`, { signal: ac.signal })
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { tracks?: PlaylistAddTrack[] } | null) => setResults(d?.tracks ?? []))
         .catch((e) => { if (!(e instanceof Error && e.name === 'AbortError')) setResults([]); });
     }, q.trim().length < 2 ? 0 : 250);
-    return () => { if (debounce.current) clearTimeout(debounce.current); };
+    return () => {
+      if (debounce.current) clearTimeout(debounce.current);
+      abortRef.current?.abort();
+    };
   }, [q, playlistId]);
 
   async function add(t: PlaylistAddTrack) {
@@ -95,6 +104,7 @@ export function PlaylistAddPanel({ playlistId, existingIds, onAdded }: Props) {
     }).catch(() => null);
     if (!res?.ok) {
       setAdded((prev) => { const n = new Set(prev); n.delete(t.id); return n; });
+      onAddFailed(t.id);
       toast.error('Не удалось добавить трек');
     }
   }

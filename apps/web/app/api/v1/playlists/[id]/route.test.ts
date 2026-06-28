@@ -34,15 +34,23 @@ describe('PATCH /api/v1/playlists/[id]', () => {
   });
   it('updates description + visibility', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1', tracks: [] });
     const res = await PATCH(makeReq({ description: '  hi  ', visibility: 'PUBLIC' }), ctx);
     expect(res.status).toBe(200);
     expect(updatePlaylist).toHaveBeenCalledWith('p1', 'u1', { description: 'hi', visibility: 'PUBLIC' });
   });
   it('updates title only', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1', tracks: [] });
     const res = await PATCH(makeReq({ title: '  New name  ' }), ctx);
     expect(res.status).toBe(200);
     expect(updatePlaylist).toHaveBeenCalledWith('p1', 'u1', { title: 'New name' });
+  });
+  it('403 when non-owner', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'other-user', tracks: [] });
+    const res = await PATCH(makeReq({ title: 'X' }), ctx);
+    expect(res.status).toBe(403);
   });
 });
 

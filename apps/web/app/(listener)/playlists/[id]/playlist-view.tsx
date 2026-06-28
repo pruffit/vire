@@ -88,7 +88,12 @@ export function PlaylistView({ playlist, isOwner }: { playlist: PlaylistWithTrac
       </div>
 
       {isOwner && adding && (
-        <PlaylistAddPanel playlistId={playlist.id} onAdded={handleAdded} existingIds={tracks.map((t) => t.id)} />
+        <PlaylistAddPanel
+          playlistId={playlist.id}
+          onAdded={handleAdded}
+          existingIds={tracks.map((t) => t.id)}
+          onAddFailed={(trackId) => setTracks((prev) => prev.filter((t) => t.id !== trackId))}
+        />
       )}
 
       {tracks.length === 0 ? (
