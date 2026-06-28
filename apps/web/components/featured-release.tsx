@@ -31,22 +31,28 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
     >
       {release.coverUrl ? (
         <>
+          {/* Обложка квадратная — на широкой полосе её детали растягиваются некрасиво.
+              Поэтому она тут только как ambient-источник цвета: сильный блюр + апскейл
+              (scale прячет края блюра в overflow), детали растворяются в цветовом фоне. */}
           <Image
             src={release.coverUrl}
-            alt={release.title}
+            alt=""
+            aria-hidden
             fill
-            className="object-cover"
+            className="object-cover scale-125 blur-2xl saturate-[1.35] brightness-[0.82]"
             priority
             // Next не проставляет fetchpriority=high при priority — нужно для LCP
             fetchPriority="high"
-            // q60: LCP-ресурс; размытие было от маленьких sizes, не от quality
-            quality={60}
-            // На десктопе полосу ужимает сайдбар (~16rem) + паддинги — без учёта
-            // браузер тянул бы картинку на ~ширину сайдбара больше нужного.
+            // Фон размывается — детали не нужны, берём пониже для веса
+            quality={45}
             sizes="(max-width: 768px) 100vw, calc(100vw - 18rem)"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
+          {/* Скримы под текст */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/15" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/65 to-transparent" />
+          {/* Стеклянный блик: верхняя кромка + мягкий радиальный хайлайт */}
+          <div className="absolute inset-x-0 top-0 h-px bg-white/15" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_15%_0%,rgba(255,255,255,0.10),transparent_55%)]" />
         </>
       ) : (
         <div className="absolute inset-0 bg-muted flex items-center justify-center">
