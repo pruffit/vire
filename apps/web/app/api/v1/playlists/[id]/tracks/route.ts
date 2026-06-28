@@ -7,7 +7,7 @@ type Params = { params: Promise<{ id: string }> };
 
 const addSchema = z.object({ trackId: z.string().uuid() });
 
-const reorderSchema = z.object({ trackIds: z.array(z.string().min(1)).min(1) });
+const reorderSchema = z.object({ trackIds: z.array(z.string().uuid()).min(1) });
 
 export async function PUT(req: Request, { params }: Params) {
   const session = await auth();

@@ -22,34 +22,41 @@ function makeReq(body: unknown): Request {
 }
 const ctx = { params: Promise.resolve({ id: 'p1' }) };
 
+const A = '11111111-1111-4111-8111-111111111111';
+const B = '22222222-2222-4222-8222-222222222222';
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('PUT /api/v1/playlists/[id]/tracks (reorder)', () => {
   it('401 unauthenticated', async () => {
     mockedAuth.mockResolvedValue(null as never);
-    expect((await PUT(makeReq({ trackIds: ['a'] }), ctx)).status).toBe(401);
+    expect((await PUT(makeReq({ trackIds: [A] }), ctx)).status).toBe(401);
   });
   it('400 on invalid body', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     expect((await PUT(makeReq({ trackIds: 'nope' }), ctx)).status).toBe(400);
   });
+  it('400 on non-uuid track ids', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    expect((await PUT(makeReq({ trackIds: ['a', 'b'] }), ctx)).status).toBe(400);
+  });
   it('403 when not owner', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'other' });
-    expect((await PUT(makeReq({ trackIds: ['a', 'b'] }), ctx)).status).toBe(403);
+    expect((await PUT(makeReq({ trackIds: [A, B] }), ctx)).status).toBe(403);
   });
   it('409 when reorder rejected (set mismatch)', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1' });
     reorderPlaylistTracks.mockResolvedValue(false);
-    expect((await PUT(makeReq({ trackIds: ['a', 'b'] }), ctx)).status).toBe(409);
+    expect((await PUT(makeReq({ trackIds: [A, B] }), ctx)).status).toBe(409);
   });
   it('200 on success', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1' });
     reorderPlaylistTracks.mockResolvedValue(true);
-    const res = await PUT(makeReq({ trackIds: ['b', 'a'] }), ctx);
+    const res = await PUT(makeReq({ trackIds: [B, A] }), ctx);
     expect(res.status).toBe(200);
-    expect(reorderPlaylistTracks).toHaveBeenCalledWith('p1', 'u1', ['b', 'a']);
+    expect(reorderPlaylistTracks).toHaveBeenCalledWith('p1', 'u1', [B, A]);
   });
 });
