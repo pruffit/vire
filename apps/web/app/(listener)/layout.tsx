@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { auth } from '@/auth';
-import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached } from '@/lib/listener-data';
+import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached, getUserProfileCached } from '@/lib/listener-data';
 import { Footer } from '@/components/footer';
 import { ListenerSidebar } from '@/components/listener/listener-sidebar';
 
@@ -9,13 +9,14 @@ export default async function ListenerLayout({ children }: { children: React.Rea
   const userId = session?.user?.id;
   const collapsed = cookieStore.get('vire_sidebar')?.value === 'rail';
 
-  const [playlists, artists, liked] = userId
+  const [playlists, artists, liked, userProfile] = userId
     ? await Promise.all([
         getUserPlaylistsCached(userId),
         getFollowedArtistsCached(userId),
         getLikedTracksCached(userId),
+        getUserProfileCached(userId),
       ])
-    : [[], [], []];
+    : [[], [], [], null];
 
   // Двухпанельная оболочка (эталон — admin/layout.tsx): на десктопе сайдбар закреплён,
   // скролл живёт ТОЛЬКО во внутренней панели (а не в общем #main-content), иначе
@@ -31,6 +32,14 @@ export default async function ListenerLayout({ children }: { children: React.Rea
         likedCount={liked.length}
         isGuest={!userId}
         initialCollapsed={collapsed}
+        user={
+          userProfile
+            ? {
+                name: userProfile.name ?? session?.user?.name ?? 'Пользователь',
+                avatarUrl: userProfile.image,
+              }
+            : undefined
+        }
       />
 
       {/* Скролл-пейн — обычный div: главный лендмарк страницы рендерят сами страницы. */}

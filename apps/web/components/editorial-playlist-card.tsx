@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import type { EditorialPlaylist } from '@vire/db';
 import { pluralTracks } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
+import { PlaylistPeekSheet } from './playlist-quick-look';
 
 const KIND_LABELS: Record<string, string | undefined> = {
   USER: undefined, // пользовательские плейлисты — бейдж не показываем
@@ -97,6 +97,7 @@ export function EditorialPlaylistCard({
   playlist: EditorialPlaylist;
   liked: boolean;
 }) {
+  const [open, setOpen] = useState(false);
   const [liked, setLiked] = useState(initialLiked);
   const [likes, setLikes] = useState(playlist.likesCount);
   const [pending, setPending] = useState(false);
@@ -128,9 +129,17 @@ export function EditorialPlaylistCard({
     // блок скроллится не в такт с документом и «дрожит». overflow-hidden держит
     // веер внутри карточки, чтобы между карточками был зазор сетки.
     <div className="group flex flex-col gap-2.5">
-      <Link
+      {/*
+        Зона веера: rounded-xl даёт чуть мягче скруглений, bg-white/[0.03] —
+        различимая подложка на тёмном фоне, ring — поднятая обводка вместо
+        «потерянного» веера на чёрном. Без transform-gpu/blur/3D (scroll-jitter).
+      */}
+      {/* href сохраняет SEO/краулинг и Ctrl/⌘-клик в новой вкладке; левый клик
+          перехватываем в peek-оверлей. */}
+      <a
         href={`/playlists/${playlist.id}`}
-        className="block relative aspect-square rounded-md overflow-hidden transition-transform duration-500 ease-soft group-hover:-translate-y-0.5"
+        onClick={(e) => { e.preventDefault(); setOpen(true); }}
+        className="block w-full relative aspect-square rounded-xl overflow-hidden bg-white/[0.03] ring-1 ring-white/10 transition-[transform,box-shadow] duration-300 ease-soft group-hover:-translate-y-0.5 group-hover:ring-white/20"
       >
         <CoverFan covers={playlist.covers} />
         {/* Тип подборки — только для редакционных */}
@@ -139,7 +148,7 @@ export function EditorialPlaylistCard({
             {kindLabel}
           </span>
         )}
-      </Link>
+      </a>
 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -161,6 +170,15 @@ export function EditorialPlaylistCard({
           {likes > 0 && <span className="font-mono text-[10px]">{likes}</span>}
         </motion.button>
       </div>
+
+      <PlaylistPeekSheet
+        playlistId={playlist.id}
+        title={playlist.title}
+        trackCount={playlist.trackCount}
+        cover={playlist.covers[0] ?? null}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
     </div>
   );
 }

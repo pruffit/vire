@@ -2,7 +2,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { DiscoveryRelease } from '@vire/db';
 import { FeaturedPlayButton } from './featured-play-button';
-import { Tilt } from './tilt';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { Icon } from '@/components/icon';
 
@@ -23,58 +22,62 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
   const yr = releaseYear(release.releaseDate);
   const href = `/artists/${release.artistSlug}/releases/${release.id}`;
   const meta = [typeLabel[release.type] ?? release.type, yr].filter(Boolean).join(' · ');
+  const hasImage = !!release.coverUrl;
 
   return (
-    <section aria-label="Редакционный выбор" className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-      {/* Обложка — лёгкий 3D-тилт за курсором */}
-      <Tilt>
-        <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/[0.07]">
-          {release.coverUrl ? (
-            <Image
-              src={release.coverUrl}
-              alt={release.title}
-              fill
-              sizes="(max-width: 768px) 100vw, 45vw"
-              className="object-cover"
-              priority
-              // Next 16 при priority не проставляет fetchpriority=high сам —
-              // без него браузер на узком 4G грузит hero-обложку (LCP) в общей
-              // очереди, после JS/прочих картинок (LCP ~8с). Форсируем явно.
-              fetchPriority="high"
-              // q60: hero — это LCP-ресурс, на медленном 4G каждые ~50 KiB =
-              // ~250мс. q60 в AVIF на обложке визуально чистый (мыло прошлый
-              // раз было от размера 96px, не от quality).
-              quality={60}
-            />
-          ) : (
-            <div className="w-full h-full bg-muted grid place-items-center">
-              <NoteIcon />
-            </div>
-          )}
+    <section
+      aria-label="Редакционный выбор"
+      className="relative h-[360px] sm:h-[400px] rounded-2xl overflow-hidden"
+    >
+      {release.coverUrl ? (
+        <>
+          <Image
+            src={release.coverUrl}
+            alt={release.title}
+            fill
+            className="object-cover"
+            priority
+            // Next не проставляет fetchpriority=high при priority — нужно для LCP
+            fetchPriority="high"
+            // q60: LCP-ресурс; размытие было от маленьких sizes, не от quality
+            quality={60}
+            // На десктопе полосу ужимает сайдбар (~16rem) + паддинги — без учёта
+            // браузер тянул бы картинку на ~ширину сайдбара больше нужного.
+            sizes="(max-width: 768px) 100vw, calc(100vw - 18rem)"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
+        </>
+      ) : (
+        <div className="absolute inset-0 bg-muted flex items-center justify-center">
+          <Icon name="music" size={48} className="opacity-20" />
         </div>
-      </Tilt>
+      )}
 
-      {/* Информация */}
-      <div className="flex flex-col gap-5">
-        {/* Артист — маленькая монолейбл-строка */}
+      <div className="absolute inset-0 z-10 flex flex-col justify-end p-6 sm:p-10 gap-3">
         <Link
           href={`/artists/${release.artistSlug}`}
-          className="text-xs font-mono uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors self-start"
+          className={`text-xs font-mono uppercase tracking-[0.18em] transition-colors self-start ${
+            hasImage ? 'text-white/70 hover:text-white' : 'text-muted-foreground hover:text-foreground'
+          }`}
         >
           {release.artistName}
         </Link>
 
-        {/* Название релиза — герой */}
-        <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter leading-[1.05] text-balance">
+        <h2
+          className={`text-4xl sm:text-5xl font-bold tracking-tighter leading-[1.05] text-balance ${
+            hasImage ? 'text-white' : 'text-foreground'
+          }`}
+        >
           {release.title}
           {release.hasExplicit && <ExplicitBadge className="ml-2 align-middle" />}
         </h2>
 
-        {/* Тип · год */}
-        <p className="text-xs font-mono text-muted-foreground/50">{meta}</p>
+        <p className={`text-xs font-mono ${hasImage ? 'text-white/70' : 'text-muted-foreground'}`}>
+          {meta}
+        </p>
 
-        {/* Кнопки */}
-        <div className="flex items-center gap-4 pt-3">
+        <div className="flex items-center gap-4 pt-1">
           <FeaturedPlayButton
             releaseId={release.id}
             artistName={release.artistName}
@@ -83,7 +86,9 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
           />
           <Link
             href={href}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className={`inline-flex items-center gap-1 text-sm transition-colors ${
+              hasImage ? 'text-white/80 hover:text-white' : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
             К релизу <Icon name="arrow-right" size={14} />
           </Link>
@@ -91,8 +96,4 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
       </div>
     </section>
   );
-}
-
-function NoteIcon() {
-  return <Icon name="music" size={48} className="opacity-20" />;
 }

@@ -150,12 +150,12 @@ export default async function ReleasePage({ params }: Props) {
                 <ZoomableCover
                   src={release.coverUrl}
                   alt={release.title}
-                  className="w-56 h-56 sm:w-[300px] sm:h-[300px] shadow-2xl rounded-xl"
-                  sizes="(max-width: 640px) 224px, 300px"
+                  className="w-56 h-56 sm:w-72 sm:h-72 shrink-0 shadow-2xl rounded-xl"
+                  sizes="(max-width: 640px) 224px, 288px"
                   priority
                 />
               ) : (
-                <div className="w-56 h-56 sm:w-[300px] sm:h-[300px] rounded-xl bg-white/5 flex items-center justify-center opacity-20">
+                <div className="w-56 h-56 sm:w-72 sm:h-72 rounded-xl bg-white/5 flex items-center justify-center opacity-20">
                   <MusicIcon />
                 </div>
               )}

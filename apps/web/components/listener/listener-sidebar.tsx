@@ -5,6 +5,7 @@ import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
 import { SidebarPrimaryNav } from './sidebar-primary-nav';
 import { LibrarySidebar } from './library-sidebar';
+import { SidebarUser } from './sidebar-user';
 
 type SidebarPlaylist = { id: string; name: string; coverUrl: string | null };
 type SidebarArtist = { id: string; name: string; slug: string; avatarUrl: string | null };
@@ -21,12 +22,14 @@ export function ListenerSidebar({
   likedCount,
   isGuest,
   initialCollapsed,
+  user,
 }: {
   playlists: SidebarPlaylist[];
   artists: SidebarArtist[];
   likedCount: number;
   isGuest: boolean;
   initialCollapsed: boolean;
+  user?: { name: string; avatarUrl: string | null };
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
 
@@ -66,6 +69,7 @@ export function ListenerSidebar({
         isGuest={isGuest}
         collapsed={collapsed}
       />
+      {user && <SidebarUser name={user.name} avatarUrl={user.avatarUrl} collapsed={collapsed} />}
     </aside>
   );
 }

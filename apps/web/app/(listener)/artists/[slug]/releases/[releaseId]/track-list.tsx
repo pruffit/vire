@@ -187,7 +187,6 @@ function PlayingBars({ animate }: { animate: boolean }) {
           }}
         />
       ))}
-      <style>{`@keyframes vire-eq { 0%,100% { height: 30%; } 50% { height: 100%; } }`}</style>
     </span>
   );
 }
