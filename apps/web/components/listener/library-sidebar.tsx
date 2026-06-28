@@ -29,7 +29,12 @@ export function LibrarySidebar({
             Медиатека
           </span>
           {!isGuest && (
-            <Link href="/library" aria-label="Все плейлисты" className="text-foreground/40 hover:text-foreground">
+            <Link
+              href="/library"
+              aria-label="Вся медиатека"
+              title="Вся медиатека"
+              className="grid h-7 w-7 place-items-center rounded-md text-foreground/45 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
               <Icon name="plus" size={16} />
             </Link>
           )}
@@ -42,12 +47,12 @@ export function LibrarySidebar({
             href="/sign-in"
             aria-label="Войти"
             title="Войти"
-            className="mx-auto mt-2 grid h-10 w-10 place-items-center rounded-md text-foreground/50 hover:bg-foreground/5 hover:text-foreground"
+            className="mx-auto mt-2 grid h-10 w-10 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
           >
             <Icon name="log-in" size={18} />
           </Link>
         ) : (
-          <div className="mx-2 rounded-lg bg-foreground/[0.04] p-4 text-sm">
+          <div className="mx-2 rounded-lg border border-border bg-foreground/[0.03] p-4 text-sm">
             <p className="text-foreground/70">Войди, чтобы собирать любимое и плейлисты.</p>
             <Link href="/sign-in" className="mt-2 inline-block text-sm font-medium text-foreground hover:underline">
               Войти →
@@ -67,8 +72,8 @@ export function LibrarySidebar({
             title="Любимые треки"
             subtitle={`${likedCount} ${pluralTracks(likedCount)}`}
             leading={
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-gradient-to-br from-violet-500/70 to-sky-400/70">
-                <Icon name="heart" size={16} className="text-white" />
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-gradient-to-br from-foreground/20 to-foreground/[0.06]">
+                <Icon name="heart" size={18} className="text-foreground" />
               </span>
             }
           />
@@ -82,10 +87,10 @@ export function LibrarySidebar({
               subtitle="Плейлист"
               leading={
                 p.coverUrl ? (
-                  <Image src={p.coverUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded object-cover" />
+                  <Image src={p.coverUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-md object-cover" />
                 ) : (
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-foreground/10">
-                    <Icon name="music" size={16} className="text-foreground/40" />
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-foreground/[0.06]">
+                    <Icon name="music" size={18} className="text-foreground/40" />
                   </span>
                 )
               }
@@ -103,7 +108,7 @@ export function LibrarySidebar({
                 a.avatarUrl ? (
                   <Image src={a.avatarUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover" />
                 ) : (
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground/10 font-mono text-sm">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground/[0.06] font-mono text-sm text-foreground/70">
                     {a.name[0]?.toUpperCase() ?? '?'}
                   </span>
                 )
@@ -139,7 +144,7 @@ function LibraryRow({
         href={href}
         title={`${title} · ${subtitle}`}
         aria-label={`${title}, ${subtitle}`}
-        className="rounded-md p-1 hover:bg-foreground/5"
+        className="rounded-md p-1 transition-colors hover:bg-foreground/5"
       >
         {leading}
       </Link>
@@ -147,10 +152,10 @@ function LibraryRow({
   }
 
   return (
-    <Link href={href} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-foreground/5">
+    <Link href={href} className="flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-foreground/5">
       {leading}
       <span className="min-w-0">
-        <span className="block truncate text-sm">{title}</span>
+        <span className="block truncate text-sm text-foreground/90">{title}</span>
         <span className="block truncate text-xs text-foreground/40">{subtitle}</span>
       </span>
     </Link>

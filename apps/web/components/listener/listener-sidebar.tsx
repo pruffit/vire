@@ -15,6 +15,10 @@ type SidebarArtist = { id: string; name: string; slug: string; avatarUrl: string
  * скролл живёт в соседнем <main>, не здесь). Сворачивается в узкий рейл с одними
  * миниатюрами/иконками. Состояние помним в cookie, чтобы сервер отрисовал нужную
  * ширину сразу (без вспышки гидрации) — начальное значение приходит пропом.
+ *
+ * Раскладка сверху вниз: навигация → медиатека (растёт и скроллится) → подвал
+ * (профиль + тумблер сворачивания). Тумблер живёт в подвале, а не отдельной
+ * строкой сверху — иначе над навигацией зияет пустая полоса с одинокой стрелкой.
  */
 export function ListenerSidebar({
   playlists,
@@ -42,6 +46,18 @@ export function ListenerSidebar({
     });
   }, []);
 
+  const toggleButton = (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={collapsed ? 'Развернуть медиатеку' : 'Свернуть медиатеку'}
+      title={collapsed ? 'Развернуть' : 'Свернуть'}
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-foreground/45 transition-colors hover:bg-foreground/5 hover:text-foreground"
+    >
+      <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={18} />
+    </button>
+  );
+
   return (
     <aside
       className={cn(
@@ -49,19 +65,10 @@ export function ListenerSidebar({
         collapsed ? 'w-[72px]' : 'w-64',
       )}
     >
-      <div className={cn('flex items-center px-3 pt-3 pb-1', collapsed ? 'justify-center' : 'justify-end')}>
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={collapsed ? 'Развернуть медиатеку' : 'Свернуть медиатеку'}
-          title={collapsed ? 'Развернуть' : 'Свернуть'}
-          className="grid place-items-center rounded-md p-1.5 text-foreground/40 transition-colors hover:bg-foreground/5 hover:text-foreground"
-        >
-          <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={18} />
-        </button>
+      <div className="pt-2">
+        <SidebarPrimaryNav collapsed={collapsed} />
       </div>
 
-      <SidebarPrimaryNav collapsed={collapsed} />
       <LibrarySidebar
         playlists={playlists}
         artists={artists}
@@ -69,7 +76,25 @@ export function ListenerSidebar({
         isGuest={isGuest}
         collapsed={collapsed}
       />
-      {user && <SidebarUser name={user.name} avatarUrl={user.avatarUrl} collapsed={collapsed} />}
+
+      <div
+        className={cn(
+          'shrink-0 border-t border-border',
+          collapsed ? 'flex flex-col items-center gap-1 px-2 py-2' : 'flex items-center gap-1 px-1.5 py-2',
+        )}
+      >
+        {user ? (
+          <SidebarUser
+            name={user.name}
+            avatarUrl={user.avatarUrl}
+            collapsed={collapsed}
+            className={collapsed ? undefined : 'min-w-0 flex-1'}
+          />
+        ) : (
+          !collapsed && <span className="flex-1" aria-hidden />
+        )}
+        {toggleButton}
+      </div>
     </aside>
   );
 }

@@ -54,7 +54,7 @@ export function SideNav({
                 : 'text-foreground/50 hover:bg-foreground/5 hover:text-foreground',
             )}
           >
-            {item.icon && <Icon name={item.icon} size={collapsed ? 18 : 16} className={active ? undefined : 'opacity-70'} />}
+            {item.icon && <Icon name={item.icon} size={collapsed ? 18 : 16} />}
             <span className={cn(collapsed && 'md:hidden')}>{item.label}</span>
           </Link>
         );
