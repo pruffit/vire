@@ -247,14 +247,12 @@ In `getUserPlaylists` and `hydratePlaylists`, prefer `playlists.coverUrl` when s
 
 In `packages/db/src/index.ts`, add to the playlists export block: `reorderPlaylistTracks, updatePlaylist, setPlaylistCover`. Remove `renamePlaylist` if deleted in Step 4. Export the type if any new one was added here.
 
-- [ ] **Step 8: Write tests for reorder permutation logic**
+- [ ] **Step 8: Extract + export the pure permutation guard**
 
-Create/extend `packages/db/src/queries/__tests__/playlists.test.ts`. Since these hit `db`, follow the repo's existing DB-test convention — if `packages/db` has no live-DB tests, instead unit-test the **pure permutation guard** by extracting it:
-
-Add an exported pure helper and test it:
+`packages/db` has NO test runner — so extract the testable logic as a pure helper, use it inside `reorderPlaylistTracks`, export it from `index.ts`, and test it from `apps/web` (which has vitest).
 
 ```ts
-// in playlists.ts
+// in playlists.ts — replace the inline permutation check in reorderPlaylistTracks
 export function isPermutation(proposed: string[], current: string[]): boolean {
   if (proposed.length !== current.length) return false;
   const set = new Set(current);
@@ -262,11 +260,18 @@ export function isPermutation(proposed: string[], current: string[]): boolean {
 }
 ```
 
-Use `isPermutation` inside `reorderPlaylistTracks`. Test:
+Inside `reorderPlaylistTracks`, replace the inline `currentSet` check with:
+`if (!isPermutation(orderedTrackIds, current.map((r) => r.trackId))) return false;`
+
+Export `isPermutation` from `packages/db/src/index.ts`.
+
+- [ ] **Step 9: Test it from apps/web**
+
+Create `apps/web/lib/__tests__/playlist-reorder.test.ts`:
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { isPermutation } from '../playlists';
+import { isPermutation } from '@vire/db';
 
 describe('isPermutation', () => {
   it('true for same set different order', () => {
@@ -281,9 +286,7 @@ describe('isPermutation', () => {
 });
 ```
 
-- [ ] **Step 9: Run tests**
-
-Run: `pnpm --filter @vire/db test` (or the repo's db test command; if none, the guard is covered by web tests later). Expected: PASS.
+Run: `pnpm --filter @vire/web test playlist-reorder`. Expected: PASS.
 
 - [ ] **Step 10: Commit**
 
@@ -872,9 +875,9 @@ export function SortablePlaylistRow({ track, index, queue, queueIndex, isOwner, 
         <button
           {...attributes} {...listeners}
           aria-label="Перетащить"
-          className="touch-none cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-40 hover:!opacity-80 transition-opacity shrink-0"
+          className="touch-none cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-40 hover:!opacity-80 transition-opacity shrink-0 text-muted-foreground"
         >
-          <Icon name="grip-vertical" size={14} />
+          <GripIcon />
         </button>
       )}
       <span className="w-4 text-right text-xs font-mono text-muted-foreground/40 tabular-nums shrink-0">
@@ -919,7 +922,19 @@ export function SortablePlaylistRow({ track, index, queue, queueIndex, isOwner, 
 }
 ```
 
-Confirm `grip-vertical` exists in the `Icon` set; if not, use an existing handle-like icon (grep `components/icon`).
+There is NO `grip-vertical` in the icon manifest — use this inline grip SVG at the bottom of the file:
+
+```tsx
+function GripIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <circle cx="6" cy="4" r="1.3" /><circle cx="10" cy="4" r="1.3" />
+      <circle cx="6" cy="8" r="1.3" /><circle cx="10" cy="8" r="1.3" />
+      <circle cx="6" cy="12" r="1.3" /><circle cx="10" cy="12" r="1.3" />
+    </svg>
+  );
+}
+```
 
 - [ ] **Step 2: Create `playlist-view.tsx` orchestrator**
 
@@ -1044,7 +1059,7 @@ export function PlaylistView({ playlist, isOwner }: { playlist: PlaylistWithTrac
 
 Note: this task imports `PlaylistAddPanel` and `PlaylistSettingsMenu` which don't exist yet. To keep the build green between tasks, either implement Tasks 9–10 before running the build, or temporarily comment the add-panel import and render. Recommended order: 8 → 9 → 10 → 11, build once at end of 11.
 
-- [ ] **Step 3: Verify icons exist** (`shuffle`, `grip-vertical`, `plus`, `x`). Grep `apps/web/components/icon`; substitute nearest existing names if missing.
+- [ ] **Step 3: Icons** — `shuffle`, `plus`, `x` all exist in the manifest; the drag handle uses the inline `GripIcon` above (no manifest icon needed).
 
 - [ ] **Step 4: Commit**
 
@@ -1206,7 +1221,7 @@ git commit -m "feat(listener): in-page track search + smart add panel"
 
 - [ ] **Step 1: Implement the menu**
 
-A `⋯` button opening a popover (reuse click-outside pattern from `add-to-playlist-button.tsx`) with: inline title edit, description textarea (≤500), a PRIVATE/PUBLIC toggle, a cover file input (`<input type="file">` → POST multipart; blob preview via `<img>`), a remove-cover action, and a destructive Delete with `confirm()`. Each control PATCHes/POSTs and on success `router.refresh()` (cover updates need refresh to re-render server header) and `toast`.
+A `⋯` button (`<Icon name="more-horizontal" />`) opening a popover (reuse click-outside pattern from `add-to-playlist-button.tsx`) with: inline title edit, description textarea (≤500), a PRIVATE/PUBLIC toggle, a cover file input (`<input type="file">` → POST multipart; blob preview via `<img>`), a remove-cover action, and a destructive Delete with `confirm()`. Each control PATCHes/POSTs and on success `router.refresh()` (cover updates need refresh to re-render server header) and `toast`.
 
 Provide the full component (title edit + visibility toggle + description + cover input + delete) following existing styling tokens. Cover upload:
 
