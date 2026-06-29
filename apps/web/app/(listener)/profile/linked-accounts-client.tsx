@@ -6,6 +6,7 @@ import { spring } from '@vire/ui/motion';
 import { YandexIcon } from '@/app/(auth)/sign-in/provider-icons';
 import { setPasswordAction, linkYandexAction } from './account-actions';
 import { Icon } from '@/components/icon';
+import { PasswordStrength } from '@/components/password-strength';
 
 interface Props {
   hasPassword: boolean;
@@ -148,7 +149,7 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
             {showPw ? 'скрыть' : 'показать'}
           </button>
         </div>
-        {password.length > 0 && <PasswordStrength password={password} />}
+        {password.length > 0 && <PasswordStrength password={password} size="sm" />}
       </div>
 
       <div className="space-y-1.5">
@@ -201,37 +202,6 @@ function StatusBadge({ ok, children }: { ok: boolean; children: React.ReactNode 
 
 function EmailIcon() {
   return <Icon name="mail" size={16} className="text-foreground/70 shrink-0" />;
-}
-
-function PasswordStrength({ password }: { password: string }) {
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (password.length >= 12) score++;
-  if (/[A-Z]/.test(password) || /[а-яА-Я]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^A-Za-z0-9а-яА-Я]/.test(password)) score++;
-
-  const levels = [
-    { label: 'слабый', color: 'bg-red-500' },
-    { label: 'слабый', color: 'bg-red-500' },
-    { label: 'средний', color: 'bg-yellow-500' },
-    { label: 'хороший', color: 'bg-green-500' },
-    { label: 'надёжный', color: 'bg-green-500' },
-    { label: 'надёжный', color: 'bg-green-500' },
-  ];
-  const { label, color } = levels[Math.min(score, 5)];
-
-  return (
-    <div className="mt-1 space-y-0.5">
-      <div className="h-0.5 w-full rounded-full bg-muted overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-300 ${color}`}
-          style={{ width: `${Math.max(20, (score / 5) * 100)}%` }}
-        />
-      </div>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
-    </div>
-  );
 }
 
 const inputCn =

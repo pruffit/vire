@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { Icon, type IconName } from '@/components/icon';
+import { GlowBackdrop } from '@/components/content-kit';
 
 // Координатор одноразовых анонсов. Главная задача — несколько важных модалок
 // (изменения входа, запуск Этапа 1, будущие) НЕ показываются одновременно:
@@ -22,6 +24,7 @@ interface Announcement {
   footerLabel: string;
   title: string;
   body: ReactNode;
+  icon?: IconName;
   cta?: { href: string; label: string };
 }
 
@@ -32,6 +35,7 @@ const ANNOUNCEMENTS: Announcement[] = [
     storageKey: 'vire_notice_stage1_v1',
     footerLabel: 'Что нового',
     title: 'Vire запущен',
+    icon: 'star',
     body: (
       <>
         <p>
@@ -52,6 +56,7 @@ const ANNOUNCEMENTS: Announcement[] = [
     storageKey: 'vire_notice_auth_v1',
     footerLabel: 'Изменения во входе',
     title: 'Изменения во входе',
+    icon: 'lock',
     body: (
       <>
         <p>
@@ -136,13 +141,16 @@ export function Announcements() {
     return () => window.removeEventListener('keydown', onKey);
   }, [active, close]);
 
+  // Фокус на основное действие при открытии — клавиатура сразу в диалоге.
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (active) confirmRef.current?.focus();
+  }, [active]);
+
   return (
     <AnimatePresence>
       {active && (
         <motion.div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="announcement-title"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -151,16 +159,28 @@ export function Announcements() {
           className="fixed inset-0 z-[80] grid place-items-center p-4 bg-black/70"
         >
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="announcement-title"
             onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, y: 12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={spring.snappy}
-            className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl shadow-black/40 p-6 space-y-4"
+            className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl shadow-black/40 p-6 space-y-4 overflow-hidden"
           >
-            <h2 id="announcement-title" className="text-lg font-semibold tracking-tight">
-              {active.title}
-            </h2>
+            <GlowBackdrop corner />
+
+            <div className="space-y-3">
+              {active.icon && (
+                <div className="grid size-10 place-items-center rounded-xl border border-primary/30 bg-primary/10">
+                  <Icon name={active.icon} size={20} className="text-primary" />
+                </div>
+              )}
+              <h2 id="announcement-title" className="text-lg font-semibold tracking-tight">
+                {active.title}
+              </h2>
+            </div>
 
             <div className="text-sm text-muted-foreground leading-relaxed space-y-3">
               {active.body}
@@ -177,9 +197,10 @@ export function Announcements() {
                 </Link>
               )}
               <button
+                ref={confirmRef}
                 type="button"
                 onClick={close}
-                className="rounded-full bg-primary text-primary-foreground px-5 py-2 text-sm font-medium hover:bg-primary/90 transition-opacity cursor-pointer"
+                className="rounded-full bg-primary text-primary-foreground px-5 py-2 text-sm font-medium hover:bg-primary/90 transition-opacity cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
               >
                 Понятно
               </button>

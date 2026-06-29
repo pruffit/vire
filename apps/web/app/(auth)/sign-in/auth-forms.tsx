@@ -11,6 +11,7 @@ import {
 } from './auth-actions';
 import { YandexIcon } from './provider-icons';
 import { Icon } from '@/components/icon';
+import { PasswordStrength } from '@/components/password-strength';
 
 type Tab = 'login' | 'register' | 'magic';
 
@@ -232,39 +233,6 @@ function OAuthButton({
         <span className="hidden sm:inline">{label}</span>
       </button>
     </form>
-  );
-}
-
-// ─── Password strength ────────────────────────────────────────────────────────
-
-function PasswordStrength({ password }: { password: string }) {
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (password.length >= 12) score++;
-  if (/[A-Z]/.test(password) || /[а-яА-Я]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^A-Za-z0-9а-яА-Я]/.test(password)) score++;
-
-  const levels = [
-    { label: 'слабый', color: 'bg-red-500' },
-    { label: 'слабый', color: 'bg-red-500' },
-    { label: 'средний', color: 'bg-yellow-500' },
-    { label: 'хороший', color: 'bg-green-500' },
-    { label: 'надёжный', color: 'bg-green-500' },
-    { label: 'надёжный', color: 'bg-green-500' },
-  ];
-  const { label, color } = levels[Math.min(score, 5)];
-
-  return (
-    <div className="mt-1.5 space-y-1">
-      <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-300 ${color}`}
-          style={{ width: `${Math.max(20, (score / 5) * 100)}%` }}
-        />
-      </div>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
-    </div>
   );
 }
 

@@ -1,29 +1,43 @@
 import Link from 'next/link';
+import { Eyebrow, GlowBackdrop, FeatureCard, PillLink } from '@/components/content-kit';
 
 export default function NotFound() {
   return (
-    <main className="min-h-full flex flex-col items-center justify-center gap-6 px-6 text-center">
-      <p className="text-8xl font-bold font-mono tabular-nums" style={{ opacity: 0.08 }}>
-        404
-      </p>
-      <div className="space-y-2 -mt-4">
-        <h1 className="text-xl font-semibold tracking-tight">Страница не найдена</h1>
-        <p className="text-sm text-muted-foreground max-w-xs">
+    <main className="min-h-full flex flex-col items-center justify-center gap-8 px-6 py-20 text-center">
+      <div className="relative flex items-center justify-center px-20 py-8 animate-fade-up">
+        <GlowBackdrop />
+        <p
+          aria-hidden="true"
+          className="font-mono font-black leading-none select-none tracking-tighter text-primary/20"
+          style={{ fontSize: 'clamp(5rem, 18vw, 10rem)' }}
+        >
+          404
+        </p>
+      </div>
+
+      <div className="space-y-3 -mt-4 animate-fade-up">
+        <Eyebrow>Ошибка 404</Eyebrow>
+        <h1 className="text-2xl font-bold tracking-tight">Страница не найдена</h1>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
           Возможно, ссылка устарела или страница была удалена.
         </p>
       </div>
-      <div className="flex items-center gap-3">
-        <Link
-          href="/"
-          className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-        >
-          На главную
+
+      <div className="flex flex-wrap justify-center gap-3 animate-fade-up">
+        <PillLink href="/" tone="primary" icon="home">На главную</PillLink>
+        <PillLink href="/search" tone="outline" icon="search">Поиск</PillLink>
+        <PillLink href="/artists" tone="outline" icon="users">Артисты</PillLink>
+      </div>
+
+      <div className="grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-3 animate-fade-up">
+        <Link href="/releases" className="block">
+          <FeatureCard icon="music" title="Релизы">Слушать новое</FeatureCard>
         </Link>
-        <Link
-          href="/artists"
-          className="px-4 py-2 rounded-full bg-white/5 text-sm font-medium hover:bg-white/10 transition-colors"
-        >
-          Артисты
+        <Link href="/artists" className="block">
+          <FeatureCard icon="users" title="Артисты">Каталог исполнителей</FeatureCard>
+        </Link>
+        <Link href="/search" className="block">
+          <FeatureCard icon="search" title="Поиск">Найти трек или артиста</FeatureCard>
         </Link>
       </div>
     </main>

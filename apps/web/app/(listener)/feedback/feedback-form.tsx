@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { Icon } from '@/components/icon';
 import { Textarea } from '@/components/ui-kit';
 
 export type FeedbackType = 'bug' | 'idea' | 'artist' | 'other';
@@ -51,20 +52,26 @@ export function FeedbackForm({ initialType = 'bug' }: { initialType?: FeedbackTy
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={spring.smooth}
-        className="rounded-xl bg-card border border-border px-6 py-10 text-center space-y-3"
+        className="rounded-xl bg-card border border-border px-6 py-10 text-center space-y-4"
       >
-        <p className="text-3xl">🙏</p>
-        <p className="font-semibold text-lg">Спасибо!</p>
-        <p className="text-sm text-muted-foreground">
-          Сообщение отправлено. Мы прочитаем и постараемся ответить.
-        </p>
-        <button
-          type="button"
-          onClick={() => { setStatus('idle'); setMessage(''); setEmail(''); setConsent(false); }}
-          className="mt-2 text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
-        >
-          Отправить ещё одно
-        </button>
+        <div className="mx-auto grid size-14 place-items-center rounded-full border border-primary/20 bg-primary/10">
+          <Icon name="check" size={24} className="text-primary" />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-lg font-semibold">Спасибо!</p>
+          <p className="mx-auto max-w-xs text-sm text-muted-foreground leading-relaxed">
+            Сообщение отправлено. Мы прочитаем и постараемся ответить.
+          </p>
+        </div>
+        <div className="border-t border-border/50 pt-4">
+          <button
+            type="button"
+            onClick={() => { setStatus('idle'); setMessage(''); setEmail(''); setConsent(false); }}
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Отправить ещё одно
+          </button>
+        </div>
       </motion.div>
     );
   }
@@ -81,14 +88,14 @@ export function FeedbackForm({ initialType = 'bug' }: { initialType?: FeedbackTy
               type="button"
               onClick={() => setType(t.value)}
               className={[
-                'rounded-lg border px-3 py-3 text-left transition-all',
+                'flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all duration-150',
                 type === t.value
                   ? 'border-primary bg-primary/5 text-foreground'
-                  : 'border-border text-muted-foreground hover:border-border/80 hover:text-foreground',
+                  : 'border-border text-muted-foreground hover:border-foreground/20 hover:bg-foreground/[0.02] hover:text-foreground',
               ].join(' ')}
             >
-              <span className="text-lg block mb-1">{t.emoji}</span>
-              <span className="text-xs font-medium block">{t.label}</span>
+              <span className="shrink-0 text-base leading-none">{t.emoji}</span>
+              <span className="text-xs font-medium leading-snug">{t.label}</span>
             </button>
           ))}
         </div>

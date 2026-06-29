@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ContentHero } from '@/components/content-kit';
 import { Button } from '@vire/ui';
 import { Input } from '@vire/ui';
 import { Card, CardHeader, CardTitle, CardContent } from '@vire/ui';
@@ -69,16 +70,13 @@ export default function DesignPage() {
       {/* Hero */}
       <div className="border-b border-border bg-card">
         <div className="mx-auto max-w-5xl px-6 py-16">
-          <FadeUp>
-            <p className="text-xs font-mono uppercase tracking-[0.25em] text-muted-foreground mb-3">
-              Vire / Design System
-            </p>
-            <h1 className="text-5xl font-bold tracking-tight mb-4">Дизайн-система</h1>
-            <p className="text-base text-muted-foreground max-w-xl">
-              Токены, компоненты и паттерны движения. Тёмная платформа, OKLCH-нейтраль с тёплой
-              подкраской, принципы Impeccable.
-            </p>
-          </FadeUp>
+          <ContentHero
+            size="lg"
+            glow
+            eyebrow="Vire / Design System"
+            title="Дизайн-система"
+            subtitle="Токены, компоненты и паттерны движения. Тёмная платформа, OKLCH-нейтраль с тёплой подкраской, принципы Impeccable."
+          />
         </div>
       </div>
 
