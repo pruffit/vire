@@ -119,6 +119,36 @@ const releaseIsAired = or(
 // Момент выхода в эфир: published_at → release_date → created_at (см. getLatestReleases).
 const releaseFreshness = sql`coalesce(${releases.publishedAt}, ${releases.releaseDate}, ${releases.createdAt})`;
 
+export interface ArtistPlayableTrack {
+  id: string;
+  title: string;
+  releaseId: string;
+  coverUrl: string | null;
+  durationSec: number | null;
+  isExplicit: boolean;
+}
+
+/**
+ * Играбельные (READY) треки слышимых релизов артиста, в порядке свежести релиза,
+ * затем по номеру трека. Для play-all и ридаута на странице артиста: один запрос
+ * вместо N fetch'ей по релизам.
+ */
+export async function getArtistPlayableTracks(artistProfileId: string): Promise<ArtistPlayableTrack[]> {
+  return db
+    .select({
+      id: tracks.id,
+      title: tracks.title,
+      releaseId: releases.id,
+      coverUrl: releases.coverUrl,
+      durationSec: tracks.durationSec,
+      isExplicit: tracks.isExplicit,
+    })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .where(and(eq(releases.artistProfileId, artistProfileId), eq(tracks.status, 'READY'), releaseIsAired))
+    .orderBy(desc(releaseFreshness), asc(tracks.trackNumber));
+}
+
 export type ReleaseSort = 'fresh' | 'popular';
 
 /**

@@ -14,7 +14,9 @@ import {
   getPresaveStates,
   listArtistPosts,
   getPublishedSmartLinks,
+  getArtistPlayableTracks,
 } from '@vire/db';
+import type { ArtistPlayableTrack } from '@vire/db';
 import type { ArtistPost } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import type { ArtistProfile, ArtistLink, ArtistVideo, Release, SmartLink } from '@vire/core';
@@ -46,16 +48,17 @@ async function getArtistData(slug: string) {
   if (!result.ok) return null;
 
   const releaseService = new ReleaseService(new DrizzleReleaseRepository(db));
-  const [releases, upcoming, posts, smartLinks] = await Promise.all([
+  const [releases, upcoming, posts, smartLinks, playableTracks] = await Promise.all([
     releaseService.getPublishedByArtist(result.value.id),
     getUpcomingByArtist(result.value.id),
     listArtistPosts(result.value.id, 5),
     getPublishedSmartLinks(result.value.id),
+    getArtistPlayableTracks(result.value.id),
   ]);
 
   const explicitReleaseIds = await getExplicitReleaseIds(releases.map((r) => r.id));
 
-  return { artist: result.value, releases, upcoming, posts, smartLinks, explicitReleaseIds };
+  return { artist: result.value, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -86,7 +89,7 @@ export default async function ArtistPage({ params }: Props) {
   const data = await getArtistData(slug);
   if (!data) notFound();
 
-  const { artist, releases, upcoming, posts, smartLinks, explicitReleaseIds } = data;
+  const { artist, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
   const displayAvatar = resolveAvatarUrl(artist.avatarUrl, releases[0]?.coverUrl ?? null);
