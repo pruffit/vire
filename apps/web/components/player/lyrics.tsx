@@ -33,21 +33,25 @@ export function Lyrics({ trackId }: { trackId: string }) {
     };
   }, [trackId]);
 
-  if (!lines || lines.length === 0) return null;
+  const loading = lines === null;
+  const hasLyrics = !loading && lines.length > 0;
+  const buttonDisabled = loading || !hasLyrics;
 
   return (
     <div className="w-full" onPointerDown={(e) => e.stopPropagation()}>
       <button
         type="button"
         onClick={() => setOpen((s) => !s)}
-        aria-expanded={open}
-        className="mx-auto flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        disabled={buttonDisabled}
+        aria-expanded={!buttonDisabled ? open : undefined}
+        title={!loading && !hasLyrics ? 'Нет текста' : undefined}
+        className="mx-auto flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"
       >
         <Icon name="align-left" size={15} />
-        {open ? 'Скрыть текст' : 'Текст'}
+        {open && hasLyrics ? 'Скрыть текст' : 'Текст'}
       </button>
       <AnimatePresence initial={false}>
-        {open && (
+        {open && hasLyrics && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}

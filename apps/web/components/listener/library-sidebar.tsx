@@ -60,7 +60,7 @@ export function LibrarySidebar({
         >
           <LibraryRow
             collapsed={collapsed}
-            href="/library#liked"
+            href="/library/liked"
             title="Любимые треки"
             subtitle={`${likedCount} ${pluralTracks(likedCount)}`}
             leading={

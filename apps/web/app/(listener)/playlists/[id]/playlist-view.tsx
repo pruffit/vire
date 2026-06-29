@@ -12,7 +12,7 @@ import { PlaylistAddPanel } from './playlist-add-panel';
 import { PlayIcon } from '@/components/icons';
 import { Icon } from '@/components/icon';
 
-export function PlaylistView({ playlist, isOwner }: { playlist: PlaylistWithTracks; isOwner: boolean }) {
+export function PlaylistView({ playlist, isOwner, emptyTitle = 'Плейлист пуст' }: { playlist: PlaylistWithTracks; isOwner: boolean; emptyTitle?: string }) {
   const [tracks, setTracks] = useState<PlaylistTrackRow[]>(playlist.tracks);
   const [adding, setAdding] = useState(false);
 
@@ -98,7 +98,7 @@ export function PlaylistView({ playlist, isOwner }: { playlist: PlaylistWithTrac
 
       {tracks.length === 0 ? (
         <div className="py-16 text-center space-y-2">
-          <p className="text-muted-foreground text-sm">Плейлист пуст</p>
+          <p className="text-muted-foreground text-sm">{emptyTitle}</p>
           {isOwner && <p className="text-xs text-muted-foreground opacity-60">Нажми «Добавить треки» и найди что-нибудь</p>}
         </div>
       ) : (

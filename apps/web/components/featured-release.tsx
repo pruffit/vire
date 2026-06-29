@@ -27,32 +27,25 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
   return (
     <section
       aria-label="Редакционный выбор"
-      className="relative h-[360px] sm:h-[400px] rounded-2xl overflow-hidden"
+      className="relative h-[360px] sm:h-[400px] rounded-2xl overflow-hidden ring-1 ring-inset ring-white/10"
     >
       {release.coverUrl ? (
         <>
-          {/* Обложка квадратная — на широкой полосе её детали растягиваются некрасиво.
-              Поэтому она тут только как ambient-источник цвета: сильный блюр + апскейл
-              (scale прячет края блюра в overflow), детали растворяются в цветовом фоне. */}
           <Image
             src={release.coverUrl}
             alt=""
             aria-hidden
             fill
-            className="object-cover scale-125 blur-2xl saturate-[1.35] brightness-[0.82]"
+            className="object-cover scale-125 blur-lg saturate-[1.25] brightness-105"
             priority
             // Next не проставляет fetchpriority=high при priority — нужно для LCP
             fetchPriority="high"
-            // Фон размывается — детали не нужны, берём пониже для веса
             quality={45}
             sizes="(max-width: 768px) 100vw, calc(100vw - 18rem)"
           />
-          {/* Скримы под текст */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/15" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/65 to-transparent" />
-          {/* Стеклянный блик: верхняя кромка + мягкий радиальный хайлайт */}
-          <div className="absolute inset-x-0 top-0 h-px bg-white/15" />
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_15%_0%,rgba(255,255,255,0.10),transparent_55%)]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_15%_0%,rgba(255,255,255,0.12),transparent_55%)]" />
         </>
       ) : (
         <div className="absolute inset-0 bg-muted flex items-center justify-center">

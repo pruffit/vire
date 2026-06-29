@@ -104,7 +104,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
   return (
     <div
       style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
-      className="relative min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans overflow-hidden"
+      className="relative min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans overflow-x-clip"
     >
       <JsonLd
         data={musicRecordingJsonLd(
@@ -123,8 +123,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
       {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
       {grain && <GrainOverlay />}
 
-      <div className="relative z-10 mx-auto max-w-4xl px-6 py-10 sm:py-14 space-y-10 sm:space-y-12">
-        {/* Breadcrumb */}
+      <div className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-14">
         <nav className="flex items-center gap-2 text-xs font-mono opacity-50">
           <Link href={`/artists/${slug}`} className="hover:opacity-100 transition-opacity">
             {artist.name}
@@ -135,138 +134,132 @@ export default async function TrackPage({ params, searchParams }: Props) {
           </Link>
         </nav>
 
-        {/* Track header — обложка крупно + информация */}
-        <header className="flex flex-col sm:flex-row gap-7 sm:gap-9 items-start sm:items-end">
-          {release.coverUrl ? (
-            <ZoomableCover
-              src={release.coverUrl}
-              alt={release.title}
-              className="w-56 h-56 sm:w-72 sm:h-72 shrink-0 shadow-2xl rounded-xl"
-              sizes="(max-width: 640px) 224px, 288px"
-              priority
-            />
-          ) : (
-            <div className="w-56 h-56 sm:w-72 sm:h-72 shrink-0 rounded-xl bg-white/5" />
-          )}
-          <div className="space-y-4 min-w-0 flex-1">
-            <p className="text-[11px] font-mono opacity-50 tracking-widest">
-              <span style={{ color: 'var(--artist-accent)' }}>{trackNo}</span>
-              <span className="opacity-60"> · {release.title}</span>
-            </p>
-            <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance flex items-center gap-3 flex-wrap">
-              {displayTrackTitle(track.title, { version: track.version, credits: track.credits })}
-              {track.isExplicit && <ExplicitBadge />}
-            </h1>
-
-            {/* Технический мета-ряд: длительность · BPM · тональность */}
-            <MetaRow
-              durationSec={track.durationSec}
-              bpm={trackAudio?.bpm ?? null}
-              musicalKey={trackAudio?.musicalKey ?? null}
-            />
-
-            {/* Действия */}
-            <div className="flex items-center gap-4 flex-wrap pt-0.5">
-              {session?.user
-                ? <LikeButton trackId={trackId} initialLiked={liked} initialCount={likeCount} />
-                : likeCount > 0 && (
-                    <span className="text-xs font-mono opacity-40 flex items-center gap-1">
-                      <HeartIcon size={12} /> {likeCount}
-                    </span>
-                  )
-              }
-              {session?.user && (
-                <AddToPlaylistButton trackId={trackId} variant="artist" />
+        <div className="lg:grid lg:grid-cols-[20rem_1fr] lg:gap-14 lg:items-start mt-10 sm:mt-12">
+          <div className="lg:sticky lg:top-8 self-start">
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-7 sm:gap-9 lg:gap-5 items-start sm:items-end lg:items-start">
+              {release.coverUrl ? (
+                <ZoomableCover
+                  src={release.coverUrl}
+                  alt={release.title}
+                  className="w-56 h-56 sm:w-72 sm:h-72 lg:w-full lg:h-auto lg:aspect-square shrink-0 shadow-2xl rounded-xl"
+                  sizes="(max-width: 640px) 224px, (max-width: 1024px) 288px, 320px"
+                  priority
+                />
+              ) : (
+                <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-full lg:h-auto lg:aspect-square shrink-0 rounded-xl bg-white/5" />
               )}
+              <div className="space-y-4 min-w-0 flex-1 lg:flex-none lg:w-full">
+                <p className="text-[11px] font-mono opacity-50 tracking-widest">
+                  <span style={{ color: 'var(--artist-accent)' }}>{trackNo}</span>
+                  <span className="opacity-60"> · {release.title}</span>
+                </p>
+                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance flex items-center gap-3 flex-wrap">
+                  {displayTrackTitle(track.title, { version: track.version, credits: track.credits })}
+                  {track.isExplicit && <ExplicitBadge />}
+                </h1>
+                <MetaRow
+                  durationSec={track.durationSec}
+                  bpm={trackAudio?.bpm ?? null}
+                  musicalKey={trackAudio?.musicalKey ?? null}
+                />
+                <div className="flex items-center gap-4 flex-wrap pt-0.5">
+                  {session?.user
+                    ? <LikeButton trackId={trackId} initialLiked={liked} initialCount={likeCount} />
+                    : likeCount > 0 && (
+                        <span className="text-xs font-mono opacity-40 flex items-center gap-1">
+                          <HeartIcon size={12} /> {likeCount}
+                        </span>
+                      )
+                  }
+                  {session?.user && (
+                    <AddToPlaylistButton trackId={trackId} variant="artist" />
+                  )}
+                </div>
+                <LiveListeners trackId={trackId} initialCount={liveCount} />
+                {moods.length > 0 && (
+                  <MoodBadges moods={moods} variant="artist" className="pt-0.5" />
+                )}
+              </div>
             </div>
+          </div>
 
-            {/* Live «слушают сейчас» */}
-            <LiveListeners trackId={trackId} initialCount={liveCount} />
-
-            {/* Mood tags */}
-            {moods.length > 0 && (
-              <MoodBadges moods={moods} variant="artist" className="pt-0.5" />
+          <div className="mt-10 lg:mt-0 space-y-10 sm:space-y-12">
+            {playerTrack && (
+              <div className="rounded-2xl p-5 sm:p-6 bg-black/15 backdrop-blur-sm ring-1 ring-white/[0.06]">
+                <TrackWaveformPlayer
+                  track={playerTrack}
+                  queue={queue}
+                  queueIndex={queue.findIndex((q) => q.id === track.id)}
+                  peaks={trackAudio?.waveformPeaks ?? null}
+                  moments={moments}
+                  trackId={trackId}
+                  seekTo={seekTo}
+                />
+              </div>
+            )}
+            {track.status === 'PROCESSING' && (
+              <div className="rounded-2xl py-10 text-center text-sm opacity-40 font-mono bg-black/15 ring-1 ring-white/[0.06]">
+                Трек обрабатывается…
+              </div>
+            )}
+            {tracks.length > 1 && (
+              <section className="space-y-3">
+                <Link
+                  href={`/artists/${slug}/releases/${releaseId}`}
+                  className="inline-flex items-center gap-2 text-xs font-mono opacity-50 hover:opacity-90 transition-opacity"
+                >
+                  Из релиза «{release.title}»
+                </Link>
+                <div className="rounded-2xl overflow-hidden bg-black/15 ring-1 ring-white/[0.06]">
+                  {tracks.map((t) => {
+                    const isCurrent = t.id === track.id;
+                    const no = t.trackNumber < 10 ? `0${t.trackNumber}` : String(t.trackNumber);
+                    const inner = (
+                      <>
+                        <span
+                          className="w-6 text-right text-xs font-mono shrink-0 tabular-nums"
+                          style={{ color: isCurrent ? 'var(--artist-accent)' : undefined, opacity: isCurrent ? 1 : 0.4 }}
+                        >
+                          {no}
+                        </span>
+                        <span
+                          className="flex-1 truncate text-sm flex items-center gap-1.5"
+                          style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
+                        >
+                          <span className="truncate">{t.title}</span>
+                          {t.isExplicit && <ExplicitBadge />}
+                        </span>
+                        {t.status === 'PROCESSING' && (
+                          <span className="text-[10px] font-mono opacity-30 shrink-0">обработка…</span>
+                        )}
+                        {t.durationSec != null && t.status === 'READY' && (
+                          <span className="text-xs font-mono opacity-35 shrink-0">{formatDuration(t.durationSec)}</span>
+                        )}
+                      </>
+                    );
+                    return isCurrent ? (
+                      <div
+                        key={t.id}
+                        className="flex items-center gap-3 px-4 py-3 bg-white/[0.04]"
+                        aria-current="true"
+                      >
+                        {inner}
+                      </div>
+                    ) : (
+                      <Link
+                        key={t.id}
+                        href={`/artists/${slug}/releases/${releaseId}/tracks/${t.id}`}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+                      >
+                        {inner}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
             )}
           </div>
-        </header>
-
-        {/* Waveform player — центральный элемент */}
-        {playerTrack && (
-          <div className="rounded-2xl p-5 sm:p-6 bg-black/15 backdrop-blur-sm ring-1 ring-white/[0.06]">
-            <TrackWaveformPlayer
-              track={playerTrack}
-              queue={queue}
-              queueIndex={queue.findIndex((q) => q.id === track.id)}
-              peaks={trackAudio?.waveformPeaks ?? null}
-              moments={moments}
-              trackId={trackId}
-              seekTo={seekTo}
-            />
-          </div>
-        )}
-        {track.status === 'PROCESSING' && (
-          <div className="rounded-2xl py-10 text-center text-sm opacity-40 font-mono bg-black/15 ring-1 ring-white/[0.06]">
-            Трек обрабатывается…
-          </div>
-        )}
-
-        {/* Контекст релиза — переход между треками, заодно заполняет полотно */}
-        {tracks.length > 1 && (
-          <section className="space-y-3">
-            <Link
-              href={`/artists/${slug}/releases/${releaseId}`}
-              className="inline-flex items-center gap-2 text-xs font-mono opacity-50 hover:opacity-90 transition-opacity"
-            >
-              Из релиза «{release.title}»
-            </Link>
-            <div className="rounded-2xl overflow-hidden bg-black/15 ring-1 ring-white/[0.06]">
-              {tracks.map((t) => {
-                const isCurrent = t.id === track.id;
-                const no = t.trackNumber < 10 ? `0${t.trackNumber}` : String(t.trackNumber);
-                const inner = (
-                  <>
-                    <span
-                      className="w-6 text-right text-xs font-mono shrink-0 tabular-nums"
-                      style={{ color: isCurrent ? 'var(--artist-accent)' : undefined, opacity: isCurrent ? 1 : 0.4 }}
-                    >
-                      {no}
-                    </span>
-                    <span
-                      className="flex-1 truncate text-sm flex items-center gap-1.5"
-                      style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
-                    >
-                      <span className="truncate">{t.title}</span>
-                      {t.isExplicit && <ExplicitBadge />}
-                    </span>
-                    {t.status === 'PROCESSING' && (
-                      <span className="text-[10px] font-mono opacity-30 shrink-0">обработка…</span>
-                    )}
-                    {t.durationSec != null && t.status === 'READY' && (
-                      <span className="text-xs font-mono opacity-35 shrink-0">{formatDuration(t.durationSec)}</span>
-                    )}
-                  </>
-                );
-                return isCurrent ? (
-                  <div
-                    key={t.id}
-                    className="flex items-center gap-3 px-4 py-3 bg-white/[0.04]"
-                    aria-current="true"
-                  >
-                    {inner}
-                  </div>
-                ) : (
-                  <Link
-                    key={t.id}
-                    href={`/artists/${slug}/releases/${releaseId}/tracks/${t.id}`}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
-                  >
-                    {inner}
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
+        </div>
       </div>
     </div>
   );

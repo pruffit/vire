@@ -286,7 +286,15 @@ export const controls = {
   },
 
   async next(): Promise<void> {
-    const { queue, queueIndex, track: currentTrack, waveMode } = usePlayerStore.getState();
+    const { queue, queueIndex, track: currentTrack, waveMode, shuffle } = usePlayerStore.getState();
+
+    if (shuffle && queue.length > 1) {
+      let nextIdx: number;
+      do { nextIdx = Math.floor(Math.random() * queue.length); } while (nextIdx === queueIndex);
+      controls.play(queue[nextIdx], queue, nextIdx);
+      return;
+    }
+
     const i = queueIndex + 1;
 
     if (i < queue.length) {
@@ -323,5 +331,10 @@ export const controls = {
 
   setWaveMode(on: boolean): void {
     usePlayerStore.getState()._setState({ waveMode: on });
+  },
+
+  toggleShuffle(): void {
+    const { shuffle } = usePlayerStore.getState();
+    usePlayerStore.getState()._setState({ shuffle: !shuffle });
   },
 };

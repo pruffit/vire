@@ -34,9 +34,7 @@ async function getPageData(slug: string, releaseId: string) {
 
   if (release.artistProfileId !== artist.id) return null;
 
-  // Релиз доступен (играбелен), если опубликован или запланирован с прошедшей
-  // датой. Считаем здесь (не в компоненте) — иначе react-hooks/purity ругается
-  // на Date.now() в рендере.
+  // Считаем здесь, не в компоненте — иначе react-hooks/purity ругается на Date.now() в рендере.
   const releaseAtMs = release.releaseDate ? new Date(release.releaseDate).getTime() : null;
   const isReleased =
     release.status === 'PUBLISHED' ||
@@ -75,18 +73,16 @@ export default async function ReleasePage({ params }: Props) {
   const { artist, release, tracks, releaseAtMs, isReleased } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
-  // Не вышел: будущая дата → обратный отсчёт (слушать нельзя); черновик/без даты →
-  // публично не показываем. (isReleased/releaseAtMs посчитаны в getPageData.)
+  // SCHEDULED с будущей датой → показываем обратный отсчёт.
+  // Черновики/архив/без даты публично не показываем.
   if (!isReleased) {
-    // Отсчёт только для запланированных (SCHEDULED ⇒ дата в будущем, раз !isReleased).
-    // Черновики/архив/без даты публично не показываем.
     if (release.status !== 'SCHEDULED' || releaseAtMs == null) notFound();
     const session = await auth();
     const presaved = session?.user?.id ? await getPresaveState(session.user.id, release.id) : false;
     return (
       <div
         style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
-        className="relative min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans overflow-hidden"
+        className="relative min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans overflow-x-clip"
       >
         {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
         {grain && <GrainOverlay />}
@@ -116,7 +112,7 @@ export default async function ReleasePage({ params }: Props) {
   return (
     <div
       style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
-      className="relative min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans overflow-hidden"
+      className="relative min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans overflow-x-clip"
     >
       <JsonLd
         data={musicAlbumJsonLd(
@@ -134,78 +130,78 @@ export default async function ReleasePage({ params }: Props) {
       {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
       {grain && <GrainOverlay />}
 
-      {/* Hero */}
-      <div className="relative z-10">
-        <div className="mx-auto max-w-5xl px-6 pt-10 pb-12">
-          <Link
-            href={`/artists/${slug}`}
-            className="inline-flex items-center gap-1.5 text-xs font-mono opacity-40 hover:opacity-70 transition-opacity mb-10"
-          >
-            <Icon name="arrow-left" size={13} /> {artist.name}
-          </Link>
+      <div className="relative z-10 mx-auto max-w-6xl px-6 pt-10 pb-32">
+        <Link
+          href={`/artists/${slug}`}
+          className="inline-flex items-center gap-1.5 text-xs font-mono opacity-40 hover:opacity-70 transition-opacity mb-10"
+        >
+          <Icon name="arrow-left" size={13} /> {artist.name}
+        </Link>
 
-          <div className="flex flex-col sm:flex-row gap-8 sm:gap-10 items-start">
-            <div className="shrink-0 mx-auto sm:mx-0">
-              {release.coverUrl ? (
-                <ZoomableCover
-                  src={release.coverUrl}
-                  alt={release.title}
-                  className="w-56 h-56 sm:w-72 sm:h-72 shrink-0 shadow-2xl rounded-xl"
-                  sizes="(max-width: 640px) 224px, 288px"
-                  priority
-                />
-              ) : (
-                <div className="w-56 h-56 sm:w-72 sm:h-72 rounded-xl bg-white/5 flex items-center justify-center opacity-20">
-                  <MusicIcon />
-                </div>
-              )}
-            </div>
+        <div className="lg:grid lg:grid-cols-[20rem_1fr] lg:gap-14 lg:items-start">
+          <div className="lg:sticky lg:top-8 self-start">
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-8 sm:gap-10 lg:gap-6 items-start">
+              <div className="shrink-0 mx-auto sm:mx-0">
+                {release.coverUrl ? (
+                  <ZoomableCover
+                    src={release.coverUrl}
+                    alt={release.title}
+                    className="w-56 h-56 sm:w-72 sm:h-72 lg:w-full lg:h-auto lg:aspect-square shrink-0 shadow-2xl rounded-xl"
+                    sizes="(max-width: 640px) 224px, (max-width: 1024px) 288px, 320px"
+                    priority
+                  />
+                ) : (
+                  <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-full lg:h-auto lg:aspect-square rounded-xl bg-white/5 flex items-center justify-center opacity-20">
+                    <MusicIcon />
+                  </div>
+                )}
+              </div>
 
-            <div className="space-y-4 pt-1 flex flex-col">
-              <p className="text-xs font-mono opacity-50 uppercase tracking-widest">
-                <span style={{ color: 'var(--artist-accent)' }}>{release.type}</span>
-                {year ? <span className="opacity-60"> · {year}</span> : null}
-                {release.genre ? <span className="opacity-60"> · {GENRE_LABELS[release.genre]}</span> : null}
-              </p>
-              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance">
-                {release.title}
-              </h1>
-              {release.description && (
-                <p className="text-sm leading-relaxed opacity-60 max-w-prose">
-                  {release.description}
+              <div className="space-y-4 pt-1 flex flex-col">
+                <p className="text-xs font-mono opacity-50 uppercase tracking-widest">
+                  <span style={{ color: 'var(--artist-accent)' }}>{release.type}</span>
+                  {year ? <span className="opacity-60"> · {year}</span> : null}
+                  {release.genre ? <span className="opacity-60"> · {GENRE_LABELS[release.genre]}</span> : null}
                 </p>
-              )}
-              <p className="text-xs font-mono opacity-40 tabular-nums">
-                {tracks.length} {pluralTracks(tracks.length)}
-                {totalDuration(tracks) && ` · ${totalDuration(tracks)}`}
-              </p>
-              <div className="pt-2 flex items-center gap-3 flex-wrap">
-                <ReleaseHeroPlay queue={readyQueue} />
-                <ReleaseShareButton title={release.title} artistName={artist.name} />
+                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance">
+                  {release.title}
+                </h1>
+                {release.description && (
+                  <p className="text-sm leading-relaxed opacity-60 max-w-prose">
+                    {release.description}
+                  </p>
+                )}
+                <p className="text-xs font-mono opacity-40 tabular-nums">
+                  {tracks.length} {pluralTracks(tracks.length)}
+                  {totalDuration(tracks) && ` · ${totalDuration(tracks)}`}
+                </p>
+                <div className="pt-2 flex items-center gap-3 flex-wrap">
+                  <ReleaseHeroPlay queue={readyQueue} />
+                  <ReleaseShareButton title={release.title} artistName={artist.name} />
+                </div>
               </div>
             </div>
           </div>
+
+          <div className="mt-10 lg:mt-0 space-y-12">
+            <TrackList
+              tracks={clientTracks}
+              artistName={artist.name}
+              artistSlug={slug}
+              releaseId={releaseId}
+              coverUrl={release.coverUrl}
+            />
+
+            {release.linerNotes && (
+              <section className="space-y-3">
+                <h2 className="text-xs font-mono uppercase tracking-widest opacity-30">Liner notes</h2>
+                <p className="text-sm leading-relaxed opacity-50 max-w-prose whitespace-pre-line">
+                  {release.linerNotes}
+                </p>
+              </section>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* Tracks + liner notes */}
-      <div className="relative z-10 mx-auto max-w-5xl px-6 pb-32 space-y-12">
-        <TrackList
-          tracks={clientTracks}
-          artistName={artist.name}
-          artistSlug={slug}
-          releaseId={releaseId}
-          coverUrl={release.coverUrl}
-        />
-
-        {release.linerNotes && (
-          <section className="space-y-3">
-            <h2 className="text-xs font-mono uppercase tracking-widest opacity-30">Liner notes</h2>
-            <p className="text-sm leading-relaxed opacity-50 max-w-prose whitespace-pre-line">
-              {release.linerNotes}
-            </p>
-          </section>
-        )}
       </div>
     </div>
   );
@@ -214,4 +210,3 @@ export default async function ReleasePage({ params }: Props) {
 function MusicIcon() {
   return <Icon name="music" size={48} />;
 }
-

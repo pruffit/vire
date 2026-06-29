@@ -228,7 +228,7 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Управление (без кнопки потока — она перенесена в строку названия) */}
-        <Controls showWaveMode={false} />
+        <Controls showWaveMode={false} showShuffle />
 
         {/* Синхронизированный текст (если есть) */}
         <Lyrics key={track.id} trackId={track.id} />
@@ -396,7 +396,7 @@ function TimeLabel({ which }: { which: 'current' | 'duration' }) {
   );
 }
 
-function Controls({ showWaveMode = true }: { showWaveMode?: boolean }) {
+function Controls({ showWaveMode = true, showShuffle = false }: { showWaveMode?: boolean; showShuffle?: boolean }) {
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isLoading = usePlayerStore((s) => s.isLoading);
   const hasAudio = usePlayerStore((s) => s.hasAudio);
@@ -407,6 +407,7 @@ function Controls({ showWaveMode = true }: { showWaveMode?: boolean }) {
 
   return (
     <div className="flex items-center gap-5 justify-center flex-1">
+      {showShuffle && <ShuffleButton />}
       <motion.button
         onClick={() => controls.prev()}
         aria-label="Предыдущий трек"
@@ -458,33 +459,45 @@ function Controls({ showWaveMode = true }: { showWaveMode?: boolean }) {
         <SkipForwardIcon />
       </motion.button>
 
-      {showWaveMode && <WaveModeButton />}
+      {showWaveMode ? (
+        <WaveModeButton />
+      ) : showShuffle ? (
+        <span aria-hidden="true" className="p-2 -m-1">
+          <span className="block h-[18px] w-[18px]" />
+        </span>
+      ) : null}
     </div>
   );
 }
 
-/** Кнопка «Волны» (поток). Вынесена из Controls, чтобы в фуллскрине её можно
- *  было поставить отдельно — зеркально кнопке лайка в строке названия. */
-function WaveModeButton() {
-  const waveMode = usePlayerStore((s) => s.waveMode);
-
+/** Переиспользуемая кнопка-тоггл: иконка + accent-glow при активном состоянии. */
+function PlayerToggleButton({
+  icon,
+  active,
+  disabled,
+  onClick,
+  label,
+}: {
+  icon: React.ReactNode;
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  label: string;
+}) {
   return (
     <motion.button
-      onClick={() => controls.setWaveMode(!waveMode)}
-      aria-label={waveMode ? 'Режим волны включён' : 'Режим волны выключен'}
-      aria-pressed={waveMode}
-      whileTap={{ scale: 0.88 }}
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      aria-pressed={active}
+      whileTap={!disabled ? { scale: 0.88 } : undefined}
       transition={spring.snappy}
-      className="relative p-2 -m-1 transition-colors"
-      style={
-        waveMode
-          ? { color: 'var(--artist-accent, oklch(72% 0.19 145))' }
-          : { opacity: 0.3 }
-      }
+      className="relative p-2 -m-1 transition-colors disabled:pointer-events-none"
+      style={active && !disabled ? { color: 'var(--artist-accent, oklch(72% 0.19 145))' } : { opacity: 0.3 }}
     >
-      <WaveIcon />
+      {icon}
       <AnimatePresence>
-        {waveMode && (
+        {active && !disabled && (
           <motion.span
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 0.22, scale: 1.9 }}
@@ -497,6 +510,32 @@ function WaveModeButton() {
         )}
       </AnimatePresence>
     </motion.button>
+  );
+}
+
+/** Кнопка «Волны» (поток). Вынесена из Controls, чтобы в фуллскрине её можно
+ *  было поставить отдельно — зеркально кнопке лайка в строке названия. */
+function WaveModeButton() {
+  const waveMode = usePlayerStore((s) => s.waveMode);
+  return (
+    <PlayerToggleButton
+      icon={<WaveIcon />}
+      active={waveMode}
+      onClick={() => controls.setWaveMode(!waveMode)}
+      label={waveMode ? 'Режим волны включён' : 'Режим волны выключен'}
+    />
+  );
+}
+
+function ShuffleButton() {
+  const shuffle = usePlayerStore((s) => s.shuffle);
+  return (
+    <PlayerToggleButton
+      icon={<Icon name="shuffle" size={18} />}
+      active={shuffle}
+      onClick={() => controls.toggleShuffle()}
+      label={shuffle ? 'Случайный порядок включён' : 'Случайный порядок'}
+    />
   );
 }
 

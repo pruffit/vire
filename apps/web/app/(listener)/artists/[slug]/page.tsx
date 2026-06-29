@@ -150,7 +150,7 @@ export default async function ArtistPage({ params }: Props) {
       <ArtistCollapseBar name={artist.name} avatarUrl={displayAvatar} verified={artist.verified} />
 
       {/* Content below hero */}
-      <div className="mx-auto max-w-5xl px-5 sm:px-6 pb-16 space-y-14">
+      <div className="mx-auto max-w-6xl px-5 sm:px-6 pb-16 space-y-14">
         {upcoming.length > 0 && (
           <UpcomingSection
             upcoming={upcoming}
@@ -201,7 +201,7 @@ function ArtistHero({
             'radial-gradient(ellipse 55% 85% at 88% 50%, color-mix(in oklch, var(--artist-accent) 20%, var(--artist-bg)), var(--artist-bg))',
         }}
       >
-        <div className="relative z-10 mx-auto max-w-5xl px-5 sm:px-6 h-full flex items-end pb-10 pt-14 sm:pb-14 sm:pt-16">
+        <div className="relative z-10 mx-auto max-w-6xl px-5 sm:px-6 h-full flex items-end pb-10 pt-14 sm:pb-14 sm:pt-16">
           <div className="w-full grid grid-cols-1 sm:grid-cols-5 gap-5 sm:gap-10 items-end">
 
             {/* Left: name + bio + actions */}
@@ -362,7 +362,7 @@ function SmartLinksSection({ smartLinks, artistSlug }: { smartLinks: SmartLink[]
     <Reveal>
       <section className="space-y-5">
         <h2 className="text-lg font-semibold tracking-tight">Слушать на площадках</h2>
-        <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+        <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
           {smartLinks.map((sl) => (
             <StaggerItem key={sl.id}>
               <a href={`/smartlink/${artistSlug}/${sl.slug}`} className="group flex flex-col gap-2.5">
@@ -431,7 +431,7 @@ function ReleasesSection({
         ) : (
           // Ровная сетка без «героя» на 2 колонки: квадратная обложка в col-span-2
           // становилась вдвое выше соседей и оставляла пустоту рядом с ними.
-          <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+          <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
             {releases.map((r, i) => (
               <StaggerItem key={r.id}>
                 <ReleaseQuickLook showArtist={false} release={toQL(r)} priority={i === 0} />

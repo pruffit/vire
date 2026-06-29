@@ -28,6 +28,8 @@ interface State {
   waveformPeaks: number[] | null;
   /** Режим волны — автоплей похожих треков когда очередь исчерпана */
   waveMode: boolean;
+  /** Случайный порядок внутри очереди */
+  shuffle: boolean;
   /** Ошибка загрузки HLS-манифеста или сети */
   audioError: boolean;
 }
@@ -48,6 +50,7 @@ export const usePlayerStore = create<Store>((set) => ({
   volume: 0.8,
   waveformPeaks: null,
   waveMode: false,
+  shuffle: false,
   audioError: false,
   _setState: (patch) => set(patch),
 }));
