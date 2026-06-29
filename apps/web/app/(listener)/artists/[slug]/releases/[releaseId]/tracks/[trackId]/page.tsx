@@ -141,12 +141,12 @@ export default async function TrackPage({ params, searchParams }: Props) {
                 <ZoomableCover
                   src={release.coverUrl}
                   alt={release.title}
-                  className="w-56 h-56 sm:w-72 sm:h-72 lg:w-full lg:h-auto lg:aspect-square shrink-0 shadow-2xl rounded-xl"
+                  className="w-56 h-56 sm:w-72 sm:h-72 lg:h-80 lg:w-80 shrink-0 shadow-2xl rounded-xl"
                   sizes="(max-width: 640px) 224px, (max-width: 1024px) 288px, 320px"
                   priority
                 />
               ) : (
-                <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-full lg:h-auto lg:aspect-square shrink-0 rounded-xl bg-white/5" />
+                <div className="w-56 h-56 sm:w-72 sm:h-72 lg:h-80 lg:w-80 shrink-0 rounded-xl bg-white/5" />
               )}
               <div className="space-y-4 min-w-0 flex-1 lg:flex-none lg:w-full">
                 <p className="text-[11px] font-mono opacity-50 tracking-widest">

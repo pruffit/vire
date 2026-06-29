@@ -227,17 +227,15 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
           <TimeLabel which="duration" />
         </div>
 
-        {/* Управление (без кнопки потока — она перенесена в строку названия) */}
-        <Controls showWaveMode={false} showShuffle />
+        {/* Управление: шафл слева зеркалит «поделиться» справа, поток — в строке названия */}
+        <Controls showWaveMode={false} showShuffle trailing={<FullscreenShareButton track={track} />} />
 
         {/* Синхронизированный текст (если есть) */}
         <Lyrics key={track.id} trackId={track.id} />
 
-        {/* Нижняя панель: громкость (десктоп) + поделиться + очередь — одной строкой,
-            список очереди раскрывается под ней (а не отдельным центрированным блоком). */}
+        {/* Нижняя панель: громкость (десктоп) + очередь; список очереди раскрывается под ней. */}
         <div className="w-full flex flex-col items-center gap-3">
           <FullscreenExtras
-            track={track}
             queueLength={queueLength}
             showQueue={showQueue}
             onToggleQueue={() => setShowQueue((s) => !s)}
@@ -315,34 +313,31 @@ function QueuePanel({ onJump }: { onJump: () => void }) {
 // Тип указателя (десктоп/тач) в рамках сессии считаем стабильным — подписка-пустышка.
 const subscribeNoop = () => () => {};
 
+function FullscreenShareButton({ track }: { track: PlayerTrack }) {
+  const currentTime = usePlayerStore((s) => s.currentTime);
+  if (!track.artistSlug || !track.releaseId) return null;
+  const trackUrl = `${window.location.origin}/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`;
+  return <TrackShare trackUrl={trackUrl} currentTime={currentTime} align="right" />;
+}
+
 function FullscreenExtras({
-  track,
   queueLength,
   showQueue,
   onToggleQueue,
 }: {
-  track: PlayerTrack;
   queueLength: number;
   showQueue: boolean;
   onToggleQueue: () => void;
 }) {
   const volume = usePlayerStore((s) => s.volume);
-  const currentTime = usePlayerStore((s) => s.currentTime);
 
   // Ползунок громкости — только на десктопе (мышь/трекпад). На планшетах/телефонах
   // прячем: там громкостью рулят хардварные кнопки. useSyncExternalStore: на сервере
   // true (показываем), на клиенте — реальный детект, без рассинхрона гидрации.
   const showVolume = useSyncExternalStore(subscribeNoop, isDesktopPointer, () => true);
 
-  const shareUrl =
-    track.artistSlug && track.releaseId
-      ? `${window.location.origin}/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`
-      : undefined;
-
   return (
-    // stopPropagation, чтобы взаимодействие с громкостью/share/очередью не закрывало плеер свайпом.
-    // Десктоп: ползунок (flex-1) раздвигает строку, share+очередь уходят вправо.
-    // Тач (без громкости): share и «Очередь» стоят рядом одной центрированной группой.
+    // stopPropagation, чтобы взаимодействие с громкостью/очередью не закрывало плеер свайпом.
     <div
       className={showVolume ? 'w-full flex items-center gap-4' : 'flex items-center gap-6'}
       onPointerDown={(e) => e.stopPropagation()}
@@ -370,7 +365,6 @@ function FullscreenExtras({
           />
         </>
       )}
-      {shareUrl && <TrackShare trackUrl={shareUrl} currentTime={currentTime} align="right" />}
       {queueLength > 1 && (
         <button
           type="button"
@@ -396,7 +390,7 @@ function TimeLabel({ which }: { which: 'current' | 'duration' }) {
   );
 }
 
-function Controls({ showWaveMode = true, showShuffle = false }: { showWaveMode?: boolean; showShuffle?: boolean }) {
+function Controls({ showWaveMode = true, showShuffle = false, trailing }: { showWaveMode?: boolean; showShuffle?: boolean; trailing?: React.ReactNode }) {
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isLoading = usePlayerStore((s) => s.isLoading);
   const hasAudio = usePlayerStore((s) => s.hasAudio);
@@ -407,7 +401,11 @@ function Controls({ showWaveMode = true, showShuffle = false }: { showWaveMode?:
 
   return (
     <div className="flex items-center gap-5 justify-center flex-1">
-      {showShuffle && <ShuffleButton />}
+      {showShuffle && (
+        <span className="flex w-9 justify-center">
+          <ShuffleButton />
+        </span>
+      )}
       <motion.button
         onClick={() => controls.prev()}
         aria-label="Предыдущий трек"
@@ -462,8 +460,8 @@ function Controls({ showWaveMode = true, showShuffle = false }: { showWaveMode?:
       {showWaveMode ? (
         <WaveModeButton />
       ) : showShuffle ? (
-        <span aria-hidden="true" className="p-2 -m-1">
-          <span className="block h-[18px] w-[18px]" />
+        <span className="flex w-9 justify-center" onPointerDown={(e) => e.stopPropagation()}>
+          {trailing}
         </span>
       ) : null}
     </div>
