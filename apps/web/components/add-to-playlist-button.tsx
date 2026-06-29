@@ -30,12 +30,16 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
   useEffect(() => {
     if (!open) return;
 
-    Promise.all([
-      fetch('/api/v1/playlists').then((r) => r.json()),
-    ]).then(([data]) => {
-      if (data.playlists) setPlaylists(data.playlists);
-    });
-  }, [open]);
+    const ctrl = new AbortController();
+    fetch(`/api/v1/playlists?trackId=${trackId}`, { signal: ctrl.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.playlists) setPlaylists(data.playlists);
+        if (data.inPlaylists) setInPlaylists(new Set<string>(data.inPlaylists));
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [open, trackId]);
 
   useEffect(() => {
     if (!open) return;

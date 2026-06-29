@@ -25,6 +25,9 @@
 - **Воспроизведение** — «Слушать» (по порядку) и «Перемешать».
 - **Удаление трека** — оптимистично из локального состояния (без перезагрузки страницы).
 - Защита от **дублей** треков на уровне БД (уникальный индекс + `onConflictDoNothing`).
+- **Быстрое добавление** (`add-to-playlist-button.tsx` в трек-строках/плеере) показывает
+  галочками, в каких плейлистах трек уже есть: меню грузит `GET /api/v1/playlists?trackId=<uuid>`
+  (`getTrackPlaylistIds`) и тоглит членство оптимистично.
 
 ## Где код
 
@@ -41,6 +44,8 @@
   - `tracks` — `POST` добавить (dedup), `PUT` переупорядочить (`{ trackIds }`),
     `tracks/[trackId]` `DELETE` убрать.
   - `route.ts` — `PATCH` (title/description/visibility, owner-gated), `DELETE`.
+  - `../playlists/route.ts` — `GET` список плейлистов; опц. `?trackId=<uuid>` добавляет
+    в ответ `inPlaylists` (id плейлистов, где трек уже есть) для галочек быстрого добавления.
   - `cover` — `POST` (multipart `cover` | `removeCover=1`).
   - `suggestions` — `GET` умные подсказки (владелец).
   - `add-search` — `GET ?q=` поиск треков для добавления (владелец).

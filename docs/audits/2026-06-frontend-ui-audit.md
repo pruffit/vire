@@ -20,7 +20,7 @@
 | 10 | `components/listener/liked-track-row.tsx` | `<div onClick>` без клавиатуры | a11y MED | ✅ `role`/`tabIndex`/`onKeyDown`/`aria-label` |
 | 11 | `components/links-editor.tsx` | `key={i}` в мутируемом списке | rerenders MED | ⏸ контролируется родителем, нет AnimatePresence |
 | 12 | `components/videos-editor.tsx` | `key={i}` | rerenders MED | ⏸ то же |
-| 13 | `components/add-to-playlist-button.tsx` | `inPlaylists` всегда пуст — нет статуса «уже в плейлисте» | functional MED | ⏸ фича (нужен эндпоинт) |
+| 13 | `components/add-to-playlist-button.tsx` | `inPlaylists` всегда пуст — нет статуса «уже в плейлисте» | functional MED | ✅ `GET /api/v1/playlists?trackId=` → `inPlaylists` |
 | 14 | `components/easter-eggs.tsx` | `setTimeout` без cleanup | memory LOW | ✅ `useRef` + cleanup |
 | 15 | `components/global-search.tsx` | мёртвый `onMouseEnter={() => {}}` | dead code LOW | ✅ удалён |
 
@@ -51,5 +51,8 @@ app-shell соблюдён (см. [[feedback-no-prod-down-runtime-gates]]). Та
 ## Бэклог (следующие заходы)
 
 - links/videos-editor: стабильные ключи, если будет дёргаться фокус/анимации.
-- add-to-playlist: загрузка «в каких плейлистах уже есть трек».
 - Поэкранная UX-доводка остальных страниц (аудит дал карту, объём отдельных сессий).
+
+> #13 (add-to-playlist: «в каких плейлистах уже есть трек») закрыт после первой сессии:
+> `GET /api/v1/playlists?trackId=<uuid>` отдаёт `inPlaylists` через `getTrackPlaylistIds`,
+> кнопка грузит членство и тоглит галочки оптимистично (AbortController на refetch).
