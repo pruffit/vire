@@ -64,7 +64,7 @@ export function LibrarySidebar({
             title="Любимые треки"
             subtitle={`${likedCount} ${pluralTracks(likedCount)}`}
             leading={
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-gradient-to-br from-foreground/20 to-foreground/[0.06]">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
                 <Icon name="heart" size={18} className="text-foreground" />
               </span>
             }

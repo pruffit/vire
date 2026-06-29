@@ -27,7 +27,6 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
   const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
 
-  // Загружаем плейлисты и статус при открытии
   useEffect(() => {
     if (!open) return;
 
@@ -38,7 +37,6 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
     });
   }, [open]);
 
-  // Закрыть по клику вне
   useEffect(() => {
     if (!open) return;
     function onOutside(e: MouseEvent) {

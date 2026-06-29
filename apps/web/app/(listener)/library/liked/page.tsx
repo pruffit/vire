@@ -41,7 +41,7 @@ export default async function LikedTracksPage() {
     <main className="mx-auto w-full max-w-3xl px-6 py-12 space-y-10">
       <FadeUp>
         <header className="flex items-start gap-6">
-          <div className="grid h-24 w-24 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-foreground/20 to-foreground/[0.06] sm:h-28 sm:w-28">
+          <div className="grid h-24 w-24 shrink-0 place-items-center rounded-xl bg-linear-to-br from-foreground/20 to-foreground/[0.06] sm:h-28 sm:w-28">
             <Icon name="heart" size={36} className="text-foreground" />
           </div>
           <div className="min-w-0 flex-1 space-y-2 pt-1">

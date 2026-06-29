@@ -80,7 +80,6 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query, fetchResults]);
 
-  // Close on outside click
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
       if (
@@ -222,7 +221,6 @@ function DropdownSections({ results, flat, activeIdx, onSelect }: SectionsProps)
               <button
                 key={item.href}
                 onMouseDown={(e) => { e.preventDefault(); onSelect(item.href); }}
-                onMouseEnter={() => {}}
                 className={[
                   'w-full flex items-center gap-3 px-3 py-2 text-left transition-colors',
                   isActive ? 'bg-accent/20' : 'hover:bg-accent/10',

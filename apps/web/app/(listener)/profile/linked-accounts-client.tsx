@@ -135,9 +135,10 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
   return (
     <form action={action} className="pt-2 flex flex-col gap-3">
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">Новый пароль</label>
+        <label htmlFor="set-password-new" className="text-xs font-medium text-muted-foreground">Новый пароль</label>
         <div className="relative">
           <input
+            id="set-password-new"
             type={showPw ? 'text' : 'password'} name="password" required minLength={8}
             autoComplete="new-password" placeholder="Минимум 8 символов"
             value={password} onChange={(e) => setPassword(e.target.value)}
@@ -153,8 +154,9 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">Повтори пароль</label>
+        <label htmlFor="set-password-confirm" className="text-xs font-medium text-muted-foreground">Повтори пароль</label>
         <input
+          id="set-password-confirm"
           type={showPw ? 'text' : 'password'} name="confirmPassword" required
           autoComplete="new-password" placeholder="Повтори пароль" className={inputCn}
         />

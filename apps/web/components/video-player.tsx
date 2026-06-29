@@ -343,7 +343,7 @@ function ControlsBar({
       initial={false}
       animate={{ opacity: shown ? 1 : 0, y: shown ? 0 : 8 }}
       transition={spring.snappy}
-      className="absolute inset-x-0 bottom-0 z-[3] px-3 pb-2.5 pt-8 bg-gradient-to-t from-black/70 via-black/30 to-transparent"
+      className="absolute inset-x-0 bottom-0 z-[3] px-3 pb-2.5 pt-8 bg-linear-to-t from-black/70 via-black/30 to-transparent"
     >
       {/* перемотка */}
       <input
@@ -450,7 +450,7 @@ function Facade({ posterUrl, title, onPlay }: { posterUrl: string | null; title?
           </svg>
         </span>
       )}
-      <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+      <span className="absolute inset-0 bg-linear-to-t from-black/45 via-transparent to-transparent" />
       <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-16 h-16 rounded-full bg-black/45 backdrop-blur-md ring-1 ring-white/40 text-white transition-transform duration-300 ease-soft group-hover/f:scale-110">
         <PlayIcon size={26} className="translate-x-[1px]" />
       </span>

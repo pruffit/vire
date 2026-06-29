@@ -10,6 +10,7 @@ import { EditorialGenerateButton } from './editorial-generate-button';
 import {
   PageHeader, Section, MetricGrid, StatCard, Table, Thead, Th, Tr, Td,
 } from '@/components/admin/ui';
+import { plural } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -236,7 +237,7 @@ function AttentionPanel({ attention }: { attention: AdminAttention }) {
         <AlertRow
           variant="error"
           href="/admin/tracks?status=PROCESSING"
-          label={`${attention.stuckTracks.length} ${plural(attention.stuckTracks.length, 'трек', 'трека', 'треков')} зависл${attention.stuckTracks.length === 1 ? '' : 'о'} в обработке`}
+          label={`${attention.stuckTracks.length} ${plural(attention.stuckTracks.length, ['трек', 'трека', 'треков'])} зависл${attention.stuckTracks.length === 1 ? '' : 'о'} в обработке`}
           sub="не двигается более 2 часов — возможная ошибка ffmpeg"
         />
       )}
@@ -245,7 +246,7 @@ function AttentionPanel({ attention }: { attention: AdminAttention }) {
         <AlertRow
           variant="error"
           href="/admin/tracks?status=FAILED"
-          label={`${attention.failedTracks.length} ${plural(attention.failedTracks.length, 'трек', 'трека', 'треков')} с ошибкой транскодинга`}
+          label={`${attention.failedTracks.length} ${plural(attention.failedTracks.length, ['трек', 'трека', 'треков'])} с ошибкой транскодинга`}
           sub="транскодинг упал после всех попыток — артист уведомлён письмом"
         />
       )}
@@ -254,7 +255,7 @@ function AttentionPanel({ attention }: { attention: AdminAttention }) {
         <AlertRow
           variant="warn"
           href="/admin/tracks?status=BLOCKED"
-          label={`${attention.blockedTracksCount} ${plural(attention.blockedTracksCount, 'трек', 'трека', 'треков')} заблокировано`}
+          label={`${attention.blockedTracksCount} ${plural(attention.blockedTracksCount, ['трек', 'трека', 'треков'])} заблокировано`}
           sub="ожидают ручной проверки или разблокировки"
         />
       )}
@@ -265,7 +266,7 @@ function AttentionPanel({ attention }: { attention: AdminAttention }) {
             <div className="min-w-0">
               <span className="text-sm font-medium text-sky-300">
                 {attention.unverifiedArtists.length}{' '}
-                {plural(attention.unverifiedArtists.length, 'артист', 'артиста', 'артистов')} без верификации
+                {plural(attention.unverifiedArtists.length, ['артист', 'артиста', 'артистов'])} без верификации
               </span>
               <span className="ml-2 text-xs text-sky-400/60">с опубликованными релизами</span>
             </div>
@@ -284,7 +285,7 @@ function AttentionPanel({ attention }: { attention: AdminAttention }) {
                   <span className="shrink-0 font-mono text-xs text-foreground/30">@{a.slug}</span>
                 </div>
                 <span className="shrink-0 text-xs text-foreground/35 tabular-nums">
-                  {a.publishedCount} {plural(a.publishedCount, 'релиз', 'релиза', 'релизов')}
+                  {a.publishedCount} {plural(a.publishedCount, ['релиз', 'релиза', 'релизов'])}
                 </span>
               </div>
             ))}
@@ -364,12 +365,3 @@ function RecentReleases({ releases }: { releases: AdminRecentRelease[] }) {
   );
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
-function plural(n: number, one: string, few: string, many: string) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return one;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
-  return many;
-}

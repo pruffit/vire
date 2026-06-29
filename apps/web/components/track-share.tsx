@@ -38,6 +38,9 @@ export function TrackShare({
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<null | 'link' | 'moment'>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   const moment = currentTime && currentTime > 2 ? Math.round(currentTime) : null;
 
@@ -63,7 +66,8 @@ export function TrackShare({
     try {
       await navigator.clipboard.writeText(url);
       setCopied(kind);
-      setTimeout(() => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
         setCopied(null);
         setOpen(false);
       }, 1100);

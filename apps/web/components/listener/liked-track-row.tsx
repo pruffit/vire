@@ -38,7 +38,14 @@ export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCo
 
   return (
     <div className="group flex items-center gap-3 py-2.5 -mx-3 px-3 rounded-sm hover:bg-accent/5 transition-colors">
-      <div className="w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted relative cursor-pointer" onClick={handlePlay}>
+      <div
+        className="w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted relative cursor-pointer"
+        role="button"
+        tabIndex={0}
+        aria-label={`Воспроизвести ${track.title}`}
+        onClick={handlePlay}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePlay(); } }}
+      >
         {releaseCoverUrl ? (
           <Image src={releaseCoverUrl} alt={track.title} fill quality={60} sizes="36px" className="object-cover" />
         ) : (
@@ -49,7 +56,14 @@ export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCo
         </span>
       </div>
 
-      <div className="flex-1 min-w-0 cursor-pointer" onClick={handlePlay}>
+      <div
+        className="flex-1 min-w-0 cursor-pointer"
+        role="button"
+        tabIndex={0}
+        aria-label={`Воспроизвести ${track.title}`}
+        onClick={handlePlay}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePlay(); } }}
+      >
         <p
           className="text-sm font-medium truncate"
           style={isThisTrack ? { color: 'var(--primary)' } : undefined}

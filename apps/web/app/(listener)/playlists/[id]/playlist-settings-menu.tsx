@@ -164,14 +164,15 @@ export function PlaylistSettingsMenu({ playlist }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.97 }}
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute left-0 top-full mt-2 w-72 bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
           >
             <div className="p-3 space-y-3">
               {/* Название */}
               <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Название</label>
+                <label htmlFor="playlist-title" className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Название</label>
                 <div className="flex items-center gap-1">
                   <input
+                    id="playlist-title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') void saveTitle(); }}
@@ -189,8 +190,9 @@ export function PlaylistSettingsMenu({ playlist }: Props) {
 
               {/* Описание */}
               <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Описание</label>
+                <label htmlFor="playlist-description" className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Описание</label>
                 <textarea
+                  id="playlist-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value.slice(0, 500))}
                   onBlur={() => void saveDescription()}

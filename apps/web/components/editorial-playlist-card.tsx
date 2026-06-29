@@ -50,7 +50,7 @@ function CoverFan({ covers }: { covers: string[] }) {
 
   if (stack.length === 0) {
     return (
-      <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-white/[0.07] to-white/[0.01]">
+      <div className="absolute inset-0 grid place-items-center bg-linear-to-br from-white/[0.07] to-white/[0.01]">
         <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="opacity-20">
           <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6zm0 16a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
         </svg>

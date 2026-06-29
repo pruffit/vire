@@ -192,7 +192,6 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
       <div className="fixed top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/15" />
 
       <div className="my-auto w-full max-w-md flex flex-col items-center gap-8">
-        {/* Большая обложка — тот же layoutId, что у мини-бара */}
         <motion.div
           layoutId="player-cover"
           transition={spring.smooth}

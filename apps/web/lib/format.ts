@@ -39,6 +39,11 @@ export function pluralTracks(n: number): string {
   return plural(n, ['трек', 'трека', 'треков']);
 }
 
+/** Russian plural for "релиз" (1 → "релиз", 2 → "релиза", 5 → "релизов"). */
+export function pluralReleases(n: number): string {
+  return plural(n, ['релиз', 'релиза', 'релизов']);
+}
+
 /** Release year from a Date or ISO string; null if absent or unparseable. */
 export function releaseYear(date: Date | string | null | undefined): number | null {
   if (!date) return null;

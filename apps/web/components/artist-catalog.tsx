@@ -9,6 +9,7 @@ import type { ArtistListItem } from '@vire/db';
 import { ALL_GENRES, GENRE_LABELS, type Genre } from '@/lib/genres';
 import { resolveAvatarUrl } from '@/lib/avatar';
 import { Icon } from '@/components/icon';
+import { pluralReleases } from '@/lib/format';
 
 type Sort = 'default' | 'name' | 'releases';
 
@@ -172,10 +173,3 @@ function ArtistCard({ artist }: { artist: ArtistListItem }) {
   );
 }
 
-function pluralReleases(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'релиз';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'релиза';
-  return 'релизов';
-}

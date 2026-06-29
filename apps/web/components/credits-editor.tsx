@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from '@/components/toast';
 import { fieldClass } from '@/components/ui-kit';
@@ -32,7 +32,10 @@ export function CreditsEditor({
   initial: TrackCredit[];
   artistName?: string;
 }) {
-  const [credits, setCredits] = useState<TrackCredit[]>(initial);
+  const nextId = useRef(initial.length);
+  const [credits, setCredits] = useState<(TrackCredit & { _id: number })[]>(() =>
+    initial.map((c, i) => ({ ...c, _id: i })),
+  );
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -44,7 +47,8 @@ export function CreditsEditor({
   }
   function addRow(preset?: TrackCredit) {
     if (credits.length >= MAX) return;
-    setCredits((prev) => [...prev, preset ?? { name: '', role: 'PERFORMER' }]);
+    const base = preset ?? { name: '', role: 'PERFORMER' as const };
+    setCredits((prev) => [...prev, { ...base, _id: nextId.current++ }]);
     touch();
   }
   function removeRow(i: number) {
@@ -53,15 +57,17 @@ export function CreditsEditor({
   }
 
   function handleSave() {
-    const cleaned = credits.map((c) => ({ ...c, name: c.name.trim() })).filter((c) => c.name.length > 0);
+    const toSave = credits
+      .map((c) => ({ name: c.name.trim(), role: c.role }))
+      .filter((c) => c.name.length > 0);
     startTransition(async () => {
       const res = await fetch(`/api/v1/dashboard/tracks/${trackId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credits: cleaned }),
+        body: JSON.stringify({ credits: toSave }),
       }).catch(() => null);
       if (res?.ok) {
-        setCredits(cleaned.length ? cleaned : []);
+        setCredits(toSave.map((c) => ({ ...c, _id: nextId.current++ })));
         setSaved(true);
       } else {
         toast.error('Не удалось сохранить кредиты');
@@ -120,7 +126,7 @@ export function CreditsEditor({
         <AnimatePresence initial={false}>
           {credits.map((c, i) => (
             <motion.div
-              key={i}
+              key={c._id}
               layout
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}

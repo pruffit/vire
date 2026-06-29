@@ -6,6 +6,7 @@ import { signOut } from 'next-auth/react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
+import { plural } from '@/lib/format';
 
 interface Stats {
   likes: number;
@@ -33,12 +34,6 @@ function formatJoined(date: Date): string {
   return `с ${MONTHS_RU[date.getMonth()]} ${date.getFullYear()}`;
 }
 
-function plural(n: number, one: string, few: string, many: string): string {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return one;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
-  return many;
-}
 
 export function ProfileCard({ user, stats }: Props) {
   const displayName = user.name ?? user.email?.split('@')[0] ?? 'Слушатель';
@@ -260,11 +255,11 @@ export function ProfileCard({ user, stats }: Props) {
 
       {/* Stats */}
       <div className="flex items-center gap-6">
-        <StatItem value={stats.likes} label={plural(stats.likes, 'лайк', 'лайка', 'лайков')} />
+        <StatItem value={stats.likes} label={plural(stats.likes, ['лайк', 'лайка', 'лайков'])} />
         <div className="w-px h-6 bg-border" aria-hidden="true" />
-        <StatItem value={stats.following} label={plural(stats.following, 'артист', 'артиста', 'артистов')} />
+        <StatItem value={stats.following} label={plural(stats.following, ['артист', 'артиста', 'артистов'])} />
         <div className="w-px h-6 bg-border" aria-hidden="true" />
-        <StatItem value={stats.playlists} label={plural(stats.playlists, 'плейлист', 'плейлиста', 'плейлистов')} />
+        <StatItem value={stats.playlists} label={plural(stats.playlists, ['плейлист', 'плейлиста', 'плейлистов'])} />
       </div>
 
       {/* Sign out */}

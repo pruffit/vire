@@ -22,10 +22,14 @@ const KONAMI = [
 export function EasterEggs() {
   const [party, setParty] = useState(false);
   const [secret, setSecret] = useState(false);
+  const partyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (partyTimerRef.current) clearTimeout(partyTimerRef.current); }, []);
 
   const startParty = () => {
+    if (partyTimerRef.current) clearTimeout(partyTimerRef.current);
     setParty(true);
-    window.setTimeout(() => setParty(false), 3400);
+    partyTimerRef.current = setTimeout(() => setParty(false), 3400);
   };
 
   // Приветствие для тех, кто заглянул в devtools.

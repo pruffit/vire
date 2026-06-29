@@ -8,13 +8,7 @@ import { spring } from '@vire/ui/motion';
 import type { ArtistListItem } from '@vire/db';
 import { resolveAvatarUrl } from '@/lib/avatar';
 import { Icon } from '@/components/icon';
-
-function pluralReleases(n: number): string {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'релиз';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'релиза';
-  return 'релизов';
-}
+import { pluralReleases } from '@/lib/format';
 
 /**
  * Карточка артиста с hover-превью: при наведении (desktop) всплывает мини-карточка

@@ -103,7 +103,9 @@ export default function RootLayout({
           <ScrollState />
           <ScrollRestoration />
           <SitePresence />
-          <div id="main-content" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+          {/* suppressHydrationWarning: ScrollState вешает класс `is-scrolling` через
+              classList напрямую — без этого scroll до гидрации даёт mismatch (см. (listener)/layout). */}
+          <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             {children}
           </div>
           <PlayerWrapper />
