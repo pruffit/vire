@@ -10,7 +10,7 @@ import { ExplicitBadge } from '@/components/explicit-badge';
 import type { TrackStatus, TrackCredit } from '@vire/core';
 import { formatDuration } from '@/lib/format';
 import { displayTrackTitle } from '@/lib/track-display';
-import { Icon } from '@/components/icon';
+import { PlayIcon, PauseIcon } from '@/components/icons';
 import { PlayingBars } from '@/components/playing-bars';
 
 export interface ClientTrack {
@@ -82,34 +82,42 @@ function TrackRow({
   const isPlaying = usePlayerStore((s) => s.isPlaying);
 
   return (
-    <motion.div
-      role={ready ? 'button' : undefined}
-      tabIndex={ready ? 0 : undefined}
-      onClick={ready ? (isActive ? () => controls.togglePlay() : onPlay) : undefined}
-      onKeyDown={ready ? (e) => e.key === 'Enter' && (isActive ? controls.togglePlay() : onPlay()) : undefined}
-      whileTap={ready ? { scale: 0.99 } : undefined}
-      transition={spring.snappy}
-      className={`group flex items-center gap-4 px-3 py-2.5 min-h-11 rounded-sm transition-colors select-none ${
-        ready
-          ? 'hover:bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)] cursor-pointer'
-          : 'opacity-40 cursor-default'
+    <div
+      className={`group flex items-center gap-3 px-3 py-2.5 min-h-11 rounded-sm transition-colors ${
+        ready || processing
+          ? 'hover:bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)]'
+          : 'opacity-40'
       } ${isActive ? 'bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)]' : ''}`}
     >
-      <span
-        className={`w-6 flex justify-end text-xs font-mono shrink-0 ${
-          isActive ? '' : 'text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)]'
-        }`}
+      {/* Лидирующая кнопка — играть/пауза. Номер трека, по ховеру (десктоп) — иконка play. */}
+      <motion.button
+        type="button"
+        disabled={!ready}
+        onClick={isActive ? () => controls.togglePlay() : onPlay}
+        aria-label={isActive && isPlaying ? 'Пауза' : `Играть «${track.title}»`}
+        whileTap={ready ? { scale: 0.9 } : undefined}
+        transition={spring.snappy}
+        className={`w-7 h-7 flex items-center justify-center text-xs font-mono shrink-0 rounded-sm ${
+          ready ? 'cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--artist-accent)] outline-none' : 'cursor-default'
+        } ${isActive ? '' : 'text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)]'}`}
+        style={isActive ? { color: 'var(--artist-accent)' } : undefined}
       >
         {isActive ? (
-          <PlayingBars animate={isPlaying} />
+          isPlaying ? <PauseIcon size={13} /> : <PlayIcon size={13} className="translate-x-px" />
+        ) : ready ? (
+          <>
+            <span className="tabular-nums group-hover:hidden">{track.trackNumber}</span>
+            <PlayIcon size={13} className="hidden group-hover:block translate-x-px text-[var(--artist-text)]" />
+          </>
         ) : (
-          track.trackNumber
+          <span className="tabular-nums">{track.trackNumber}</span>
         )}
-      </span>
+      </motion.button>
 
-      <div className="flex-1 min-w-0">
+      {/* Клик по названию/строке — открыть страницу трека (основное действие). */}
+      <Link href={href} className="flex-1 min-w-0 group/link">
         <span
-          className="text-sm truncate flex items-center gap-1.5"
+          className="text-sm truncate flex items-center gap-1.5 transition-colors group-hover/link:text-[var(--artist-accent)]"
           style={isActive ? { color: 'var(--artist-accent)' } : undefined}
         >
           <span className="truncate">
@@ -126,9 +134,10 @@ function TrackRow({
             </span>
           ) : null;
         })()}
-      </div>
+      </Link>
 
       <div className="flex items-center gap-2 shrink-0">
+        {isActive && <PlayingBars animate={isPlaying} />}
         {track.isExclusive && (
           <span
             className="text-[10px] font-mono px-1.5 py-0.5 rounded-sm"
@@ -152,29 +161,12 @@ function TrackRow({
           </span>
         )}
         {ready && (
-          <span
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <span className="opacity-40 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
             <PlayerLikeButton trackId={track.id} size="sm" />
           </span>
         )}
-        {/* Переход на страницу трека: клик по строке играет, стрелка — открывает.
-            На тач-устройствах ховера нет, поэтому стрелка видна всегда. */}
-        <Link
-          href={href}
-          aria-label={`Страница трека «${track.title}»`}
-          onClick={(e) => e.stopPropagation()}
-          className="p-1 -m-1 opacity-40 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-        >
-          <ArrowIcon />
-        </Link>
       </div>
-    </motion.div>
+    </div>
   );
-}
-
-function ArrowIcon() {
-  return <Icon name="chevron-right" size={14} />;
 }
 
