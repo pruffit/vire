@@ -6,9 +6,11 @@
 вида через `theme_tokens` JSONB.
 
 **Макет (редизайн v2, §2.7):** полноширинный двухколоночный (не узкое центрирование).
-- **Ambient-баннер** (`ArtistBanner`) — полноширинная атмосферная полоса сверху: размытая
-  обложка первого релиза + радиальный accent-градиент, fade в `--artist-bg`. Статичный
-  (не sticky), grain-aware.
+- **Баннер сверху** (`ArtistBanner`) — полноширинный. Если у артиста загружена **широкая
+  обложка** (`header_url`) — показывается резко, edge-to-edge, с нижним fade в `--artist-bg`.
+  Иначе — ambient-фолбэк: размытая обложка первого релиза + радиальный accent-градиент.
+  Статичный (не sticky), grain-aware. Загрузка обложки — в дашборде профиля (multipart,
+  S3 `headers/{artistId}.{ext}`, политика `HEADER_POLICY`: пейзаж, до 10 МБ, рекомендация ~3:1).
 - **Левая колонка — «карточка артиста»** (`ArtistIdentity`), `lg:sticky` (внутри
   app-shell-скроллера `#main-content` — инвариант не нарушается): аватар (accent-glow,
   фолбэк — моно-инициал), имя (кламп кегля по длине слова), `VerifiedBadge`, bio
@@ -61,11 +63,13 @@ motion-`Reveal`, оставлявшего висящий композит-сло
 - **API профиля:** `apps/web/app/api/v1/dashboard/profile/route.ts`
 - **Сервис:** `packages/core/src/services/artist.service.ts`
 - **Репозиторий:** `packages/core/src/repositories/artist.repository.ts`
+- **Загрузка обложки/аватара:** `apps/web/app/api/v1/dashboard/profile/route.ts`
+  (multipart; `header`/`removeHeader`, `avatar`/`removeAvatar`); политики — `apps/web/lib/image.ts`
+  (`HEADER_POLICY`, `AVATAR_POLICY`); форма — `apps/web/app/dashboard/profile/edit-profile-form.tsx`
 - **DB таблицы:** `artist_profiles` (`packages/db/src/schema/artists.ts`)
-  - `slug`, `display_name`, `bio`, `avatar_url`, `header_url`
-  - `theme_tokens` JSONB
-  - `is_verified`, `is_active` (активен на витрине)
-  - `social_links` JSONB
+  - `slug`, `name`, `bio`, `avatar_url`, `header_url` (широкая обложка, миграция 0028)
+  - `theme_tokens` JSONB, `links`/`videos` JSONB
+  - `verified`, `is_active` (активен на витрине)
 
 ## Env-переменные
 
