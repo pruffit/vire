@@ -89,13 +89,17 @@ function TrackRow({
       onKeyDown={ready ? (e) => e.key === 'Enter' && (isActive ? controls.togglePlay() : onPlay()) : undefined}
       whileTap={ready ? { scale: 0.99 } : undefined}
       transition={spring.snappy}
-      className={`group flex items-center gap-4 px-3 py-2.5 rounded-sm transition-colors select-none ${
+      className={`group flex items-center gap-4 px-3 py-2.5 min-h-11 rounded-sm transition-colors select-none ${
         ready
-          ? 'hover:bg-white/5 cursor-pointer'
+          ? 'hover:bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)] cursor-pointer'
           : 'opacity-40 cursor-default'
-      } ${isActive ? 'bg-white/5' : ''}`}
+      } ${isActive ? 'bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)]' : ''}`}
     >
-      <span className={`w-6 flex justify-end text-xs font-mono shrink-0 ${isActive ? '' : 'opacity-30'}`}>
+      <span
+        className={`w-6 flex justify-end text-xs font-mono shrink-0 ${
+          isActive ? '' : 'text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)]'
+        }`}
+      >
         {isActive ? (
           <PlayingBars animate={isPlaying} />
         ) : (
@@ -117,7 +121,7 @@ function TrackRow({
           // feat-имена уже в названии — в строке кредитов показываем остальных
           const rest = track.credits.filter((c) => c.role !== 'FEATURED').map((c) => c.name);
           return rest.length > 0 ? (
-            <span className="text-[10px] font-mono opacity-30 truncate block">
+            <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)] truncate block">
               {rest.join(', ')}
             </span>
           ) : null;
@@ -137,13 +141,13 @@ function TrackRow({
           </span>
         )}
         {track.isWip && (
-          <span className="text-[10px] font-mono opacity-40">wip</span>
+          <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)]">wip</span>
         )}
         {processing && (
-          <span className="text-[10px] font-mono opacity-30">обработка…</span>
+          <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)]">обработка…</span>
         )}
         {track.durationSec != null && ready && (
-          <span className="text-xs font-mono opacity-30 w-10 text-right">
+          <span className="text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)] w-10 text-right">
             {formatDuration(track.durationSec)}
           </span>
         )}

@@ -19,6 +19,7 @@ import {
 import type { ArtistPost } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import type { ArtistProfile, ArtistLink, ArtistVideo, Release, SmartLink } from '@vire/core';
+import { SectionHeader } from '@/components/section-header';
 import { PlatformIcon } from '@/components/platform-icon';
 import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
@@ -628,24 +629,6 @@ async function VideosSection({ videos }: { videos: ArtistVideo[] }) {
 }
 
 // ─── Utilities ─────────────────────────────────────────────────────────────
-
-// Кандидат на вынос в общий темизированный kit, когда дойдём до релиза/трека.
-function SectionHeader({ label }: { label: string }) {
-  return (
-    <div className="mb-5 flex items-center gap-3">
-      <span
-        className="font-mono text-xs uppercase tracking-[0.25em]"
-        style={{ color: 'var(--artist-accent)' }}
-      >
-        {label}
-      </span>
-      <span
-        className="h-px flex-1"
-        style={{ background: 'color-mix(in oklch, var(--artist-text) 14%, transparent)' }}
-      />
-    </div>
-  );
-}
 
 function GuestFollowButton({
   slug,

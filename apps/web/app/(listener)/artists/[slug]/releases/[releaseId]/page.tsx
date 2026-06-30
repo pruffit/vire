@@ -18,6 +18,7 @@ import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
 import { GENRE_LABELS } from '@/lib/genres';
 import { Icon } from '@/components/icon';
+import { SectionHeader } from '@/components/section-header';
 
 type Props = { params: Promise<{ slug: string; releaseId: string }> };
 
@@ -84,7 +85,7 @@ export default async function ReleasePage({ params }: Props) {
         style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
         className="relative min-h-full bg-[var(--artist-bg)] text-[var(--artist-text)] font-sans overflow-x-clip"
       >
-        {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
+        <AmbientBackdrop src={release.coverUrl} />
         {grain && <GrainOverlay />}
         <ReleaseCountdown
           releaseId={release.id}
@@ -108,6 +109,8 @@ export default async function ReleasePage({ params }: Props) {
     .filter((t) => t.status === 'READY')
     .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, accentColor: accent ?? undefined, isExplicit: t.isExplicit }));
   const year = releaseYear(release.releaseDate);
+  const longestWord = Math.max(1, ...release.title.split(/\s+/).map((w) => w.length));
+  const titleMaxRem = Math.max(2, Math.min(3.4, 20 / longestWord));
 
   return (
     <div
@@ -127,13 +130,13 @@ export default async function ReleasePage({ params }: Props) {
         { name: artist.name, url: `/artists/${slug}` },
         { name: release.title, url: `/artists/${slug}/releases/${releaseId}` },
       ])} />
-      {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
+      <AmbientBackdrop src={release.coverUrl} />
       {grain && <GrainOverlay />}
 
       <div className="relative z-10 mx-auto max-w-6xl px-6 pt-10 pb-32">
         <Link
           href={`/artists/${slug}`}
-          className="inline-flex items-center gap-1.5 text-xs font-mono opacity-40 hover:opacity-70 transition-opacity mb-10"
+          className="inline-flex items-center gap-1.5 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)] hover:text-[color-mix(in_oklch,var(--artist-text)_70%,transparent)] transition-colors mb-10"
         >
           <Icon name="arrow-left" size={13} /> {artist.name}
         </Link>
@@ -151,27 +154,30 @@ export default async function ReleasePage({ params }: Props) {
                     priority
                   />
                 ) : (
-                  <div className="w-56 h-56 sm:w-72 sm:h-72 lg:h-80 lg:w-80 rounded-xl bg-white/5 flex items-center justify-center opacity-20">
+                  <div className="w-56 h-56 sm:w-72 sm:h-72 lg:h-80 lg:w-80 rounded-xl bg-[color-mix(in_oklch,var(--artist-text)_5%,transparent)] flex items-center justify-center text-[color-mix(in_oklch,var(--artist-text)_20%,transparent)]">
                     <MusicIcon />
                   </div>
                 )}
               </div>
 
               <div className="space-y-4 pt-1 flex flex-col">
-                <p className="text-xs font-mono opacity-50 uppercase tracking-widest">
+                <p className="text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)] uppercase tracking-widest">
                   <span style={{ color: 'var(--artist-accent)' }}>{release.type}</span>
-                  {year ? <span className="opacity-60"> · {year}</span> : null}
-                  {release.genre ? <span className="opacity-60"> · {GENRE_LABELS[release.genre]}</span> : null}
+                  {year ? <span className="text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)]"> · {year}</span> : null}
+                  {release.genre ? <span className="text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)]"> · {GENRE_LABELS[release.genre]}</span> : null}
                 </p>
-                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance">
+                <h1
+                  className="font-bold tracking-tight leading-[0.95] text-balance break-words"
+                  style={{ fontSize: `clamp(1.9rem, 6vw, ${titleMaxRem}rem)` }}
+                >
                   {release.title}
                 </h1>
                 {release.description && (
-                  <p className="text-sm leading-relaxed opacity-60 max-w-prose">
+                  <p className="text-sm leading-relaxed text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)] max-w-prose">
                     {release.description}
                   </p>
                 )}
-                <p className="text-xs font-mono opacity-40 tabular-nums">
+                <p className="text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)] tabular-nums">
                   {tracks.length} {pluralTracks(tracks.length)}
                   {totalDuration(tracks) && ` · ${totalDuration(tracks)}`}
                 </p>
@@ -184,18 +190,21 @@ export default async function ReleasePage({ params }: Props) {
           </div>
 
           <div className="mt-10 lg:mt-0 space-y-12">
-            <TrackList
-              tracks={clientTracks}
-              artistName={artist.name}
-              artistSlug={slug}
-              releaseId={releaseId}
-              coverUrl={release.coverUrl}
-            />
+            <section>
+              <SectionHeader label="Треки" />
+              <TrackList
+                tracks={clientTracks}
+                artistName={artist.name}
+                artistSlug={slug}
+                releaseId={releaseId}
+                coverUrl={release.coverUrl}
+              />
+            </section>
 
             {release.linerNotes && (
-              <section className="space-y-3">
-                <h2 className="text-xs font-mono uppercase tracking-widest opacity-30">Liner notes</h2>
-                <p className="text-sm leading-relaxed opacity-50 max-w-prose whitespace-pre-line">
+              <section>
+                <SectionHeader label="Liner notes" />
+                <p className="text-sm leading-relaxed text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)] max-w-prose whitespace-pre-line">
                   {release.linerNotes}
                 </p>
               </section>

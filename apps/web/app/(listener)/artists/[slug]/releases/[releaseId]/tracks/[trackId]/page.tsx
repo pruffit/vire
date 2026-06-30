@@ -24,6 +24,8 @@ import { AmbientBackdrop } from '@/components/ambient-backdrop';
 import { countListening } from '@/lib/presence';
 import { formatDuration } from '@/lib/format';
 import { artistFontStyle } from '@/lib/fonts';
+import { SectionHeader } from '@/components/section-header';
+import { TrackLyrics } from './track-lyrics';
 
 type Props = { params: Promise<{ slug: string; releaseId: string; trackId: string }>; searchParams: Promise<{ t?: string }> };
 
@@ -100,6 +102,8 @@ export default async function TrackPage({ params, searchParams }: Props) {
     : null;
 
   const trackNo = track.trackNumber < 10 ? `0${track.trackNumber}` : String(track.trackNumber);
+  const longestWord = Math.max(1, ...track.title.split(/\s+/).map((w) => w.length));
+  const titleMaxRem = Math.max(2, Math.min(3.4, 20 / longestWord));
 
   return (
     <div
@@ -120,16 +124,16 @@ export default async function TrackPage({ params, searchParams }: Props) {
         { name: release.title, url: `/artists/${slug}/releases/${releaseId}` },
         { name: track.title, url: `/artists/${slug}/releases/${releaseId}/tracks/${track.id}` },
       ])} />
-      {release.coverUrl && <AmbientBackdrop src={release.coverUrl} />}
+      <AmbientBackdrop src={release.coverUrl} />
       {grain && <GrainOverlay />}
 
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-14">
-        <nav className="flex items-center gap-2 text-xs font-mono opacity-50">
-          <Link href={`/artists/${slug}`} className="hover:opacity-100 transition-opacity">
+        <nav className="flex items-center gap-2 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)]">
+          <Link href={`/artists/${slug}`} className="hover:text-[var(--artist-text)] transition-colors">
             {artist.name}
           </Link>
-          <span className="opacity-50">·</span>
-          <Link href={`/artists/${slug}/releases/${releaseId}`} className="hover:opacity-100 transition-opacity">
+          <span>·</span>
+          <Link href={`/artists/${slug}/releases/${releaseId}`} className="hover:text-[var(--artist-text)] transition-colors">
             {release.title}
           </Link>
         </nav>
@@ -146,14 +150,17 @@ export default async function TrackPage({ params, searchParams }: Props) {
                   priority
                 />
               ) : (
-                <div className="w-56 h-56 sm:w-72 sm:h-72 lg:h-80 lg:w-80 shrink-0 rounded-xl bg-white/5" />
+                <div className="w-56 h-56 sm:w-72 sm:h-72 lg:h-80 lg:w-80 shrink-0 rounded-xl bg-[color-mix(in_oklch,var(--artist-text)_5%,transparent)]" />
               )}
               <div className="space-y-4 min-w-0 flex-1 lg:flex-none lg:w-full">
-                <p className="text-[11px] font-mono opacity-50 tracking-widest">
+                <p className="text-[11px] font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)] tracking-widest">
                   <span style={{ color: 'var(--artist-accent)' }}>{trackNo}</span>
-                  <span className="opacity-60"> · {release.title}</span>
+                  <span className="text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)]"> · {release.title}</span>
                 </p>
-                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-balance flex items-center gap-3 flex-wrap">
+                <h1
+                  className="font-bold tracking-tight leading-[0.95] text-balance break-words flex items-center gap-3 flex-wrap"
+                  style={{ fontSize: `clamp(1.9rem, 6vw, ${titleMaxRem}rem)` }}
+                >
                   {displayTrackTitle(track.title, { version: track.version, credits: track.credits })}
                   {track.isExplicit && <ExplicitBadge />}
                 </h1>
@@ -166,7 +173,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
                   {session?.user
                     ? <LikeButton trackId={trackId} initialLiked={liked} initialCount={likeCount} />
                     : likeCount > 0 && (
-                        <span className="text-xs font-mono opacity-40 flex items-center gap-1">
+                        <span className="text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)] flex items-center gap-1">
                           <HeartIcon size={12} /> {likeCount}
                         </span>
                       )
@@ -185,7 +192,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
 
           <div className="mt-10 lg:mt-0 space-y-10 sm:space-y-12">
             {playerTrack && (
-              <div className="rounded-2xl p-5 sm:p-6 bg-black/15 backdrop-blur-sm ring-1 ring-white/[0.06]">
+              <div className="rounded-2xl p-5 sm:p-6 bg-[color-mix(in_oklch,var(--artist-text)_4%,transparent)] backdrop-blur-sm ring-1 ring-[color-mix(in_oklch,var(--artist-text)_8%,transparent)]">
                 <TrackWaveformPlayer
                   track={playerTrack}
                   queue={queue}
@@ -198,27 +205,43 @@ export default async function TrackPage({ params, searchParams }: Props) {
               </div>
             )}
             {track.status === 'PROCESSING' && (
-              <div className="rounded-2xl py-10 text-center text-sm opacity-40 font-mono bg-black/15 ring-1 ring-white/[0.06]">
+              <div className="rounded-2xl py-10 text-center text-sm font-mono text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)] bg-[color-mix(in_oklch,var(--artist-text)_4%,transparent)] ring-1 ring-[color-mix(in_oklch,var(--artist-text)_8%,transparent)]">
                 Трек обрабатывается…
               </div>
+            )}
+            {track.lyrics && track.lyrics.length > 0 && (
+              <section className="space-y-3">
+                <SectionHeader label="Текст" />
+                <div className="rounded-2xl p-5 sm:p-6 bg-[color-mix(in_oklch,var(--artist-text)_4%,transparent)] ring-1 ring-[color-mix(in_oklch,var(--artist-text)_8%,transparent)]">
+                  <TrackLyrics
+                    lines={track.lyrics}
+                    track={playerTrack}
+                    queue={queue}
+                    queueIndex={queue.findIndex((q) => q.id === track.id)}
+                    trackId={trackId}
+                  />
+                </div>
+              </section>
             )}
             {tracks.length > 1 && (
               <section className="space-y-3">
                 <Link
                   href={`/artists/${slug}/releases/${releaseId}`}
-                  className="inline-flex items-center gap-2 text-xs font-mono opacity-50 hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center gap-2 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)] hover:text-[color-mix(in_oklch,var(--artist-text)_90%,transparent)] transition-colors"
                 >
                   Из релиза «{release.title}»
                 </Link>
-                <div className="rounded-2xl overflow-hidden bg-black/15 ring-1 ring-white/[0.06]">
+                <div className="rounded-2xl overflow-hidden bg-[color-mix(in_oklch,var(--artist-text)_4%,transparent)] ring-1 ring-[color-mix(in_oklch,var(--artist-text)_8%,transparent)]">
                   {tracks.map((t) => {
                     const isCurrent = t.id === track.id;
                     const no = t.trackNumber < 10 ? `0${t.trackNumber}` : String(t.trackNumber);
                     const inner = (
                       <>
                         <span
-                          className="w-6 text-right text-xs font-mono shrink-0 tabular-nums"
-                          style={{ color: isCurrent ? 'var(--artist-accent)' : undefined, opacity: isCurrent ? 1 : 0.4 }}
+                          className={`w-6 text-right text-xs font-mono shrink-0 tabular-nums ${
+                            isCurrent ? '' : 'text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)]'
+                          }`}
+                          style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
                         >
                           {no}
                         </span>
@@ -230,17 +253,17 @@ export default async function TrackPage({ params, searchParams }: Props) {
                           {t.isExplicit && <ExplicitBadge />}
                         </span>
                         {t.status === 'PROCESSING' && (
-                          <span className="text-[10px] font-mono opacity-30 shrink-0">обработка…</span>
+                          <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)] shrink-0">обработка…</span>
                         )}
                         {t.durationSec != null && t.status === 'READY' && (
-                          <span className="text-xs font-mono opacity-35 shrink-0">{formatDuration(t.durationSec)}</span>
+                          <span className="text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_35%,transparent)] shrink-0">{formatDuration(t.durationSec)}</span>
                         )}
                       </>
                     );
                     return isCurrent ? (
                       <div
                         key={t.id}
-                        className="flex items-center gap-3 px-4 py-3 bg-white/[0.04]"
+                        className="flex items-center gap-3 px-4 py-3 bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)]"
                         aria-current="true"
                       >
                         {inner}
@@ -249,7 +272,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
                       <Link
                         key={t.id}
                         href={`/artists/${slug}/releases/${releaseId}/tracks/${t.id}`}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)] transition-colors"
                       >
                         {inner}
                       </Link>
@@ -282,7 +305,7 @@ function MetaRow({
   if (items.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-2.5 text-xs font-mono opacity-60 tabular-nums">
+    <div className="flex items-center gap-2.5 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)] tabular-nums">
       {items.map((it, i) => (
         <span key={i} className="flex items-center gap-2.5">
           {i > 0 && (

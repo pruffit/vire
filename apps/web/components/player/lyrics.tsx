@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { usePlayerStore } from '@/store/player';
-import { controls } from './audio-engine';
 import { Icon } from '@/components/icon';
+import { LyricsScroll } from '@/components/lyrics-scroll';
 import type { LyricLine } from '@/lib/lrc';
 
 /**
@@ -59,62 +58,10 @@ export function Lyrics({ trackId }: { trackId: string }) {
             transition={spring.smooth}
             className="overflow-hidden"
           >
-            <LyricsScroll lines={lines} />
+            <LyricsScroll lines={lines} variant="player" />
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-function LyricsScroll({ lines }: { lines: LyricLine[] }) {
-  const currentTime = usePlayerStore((s) => s.currentTime);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const activeRef = useRef<HTMLButtonElement>(null);
-
-  const synced = lines.some((l) => l.t != null);
-  // Активная строка — последняя, чей таймкод уже наступил.
-  let active = -1;
-  if (synced) {
-    for (let i = 0; i < lines.length; i++) {
-      if ((lines[i].t ?? Infinity) <= currentTime + 0.15) active = i;
-    }
-  }
-
-  // Доскролл к активной строке — внутри контейнера, не трогая внешний скролл.
-  useEffect(() => {
-    const c = containerRef.current;
-    const a = activeRef.current;
-    if (!c || !a) return;
-    c.scrollTo({ top: a.offsetTop - c.clientHeight / 2 + a.clientHeight / 2, behavior: 'smooth' });
-  }, [active]);
-
-  return (
-    <div ref={containerRef} className="mt-3 max-h-64 overflow-y-auto py-2 text-center space-y-2.5">
-      {lines.map((l, i) => {
-        const isActive = i === active;
-        const seekable = l.t != null;
-        return (
-          <button
-            key={i}
-            ref={isActive ? activeRef : null}
-            type="button"
-            disabled={!seekable}
-            onClick={() => seekable && controls.seek(l.t as number)}
-            className={`block w-full px-2 leading-snug transition-all duration-300 ${
-              seekable ? 'cursor-pointer' : 'cursor-default'
-            } ${
-              isActive
-                ? 'text-base font-medium text-foreground'
-                : synced
-                  ? 'text-sm text-muted-foreground/45 hover:text-muted-foreground'
-                  : 'text-sm text-muted-foreground'
-            }`}
-          >
-            {l.text || '♪'}
-          </button>
-        );
-      })}
     </div>
   );
 }

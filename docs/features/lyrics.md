@@ -12,6 +12,12 @@
   трека есть текст). Синхронизированный — активная строка подсвечивается по времени,
   панель доскролливает к ней, клик по строке перематывает на её таймкод. Текст без
   таймкодов показывается статично.
+- **Страница трека** (`/artists/[slug]/releases/[releaseId]/tracks/[trackId]`):
+  секция «Текст» под волной — рендерится серверно из `track.lyrics` (если есть),
+  поэтому индексируется (SEO). Подсветка строки синхронна с плеером-волной (тот же
+  глобальный стор). Клик по строке: если трек уже играет — перемотка на таймкод;
+  если нет — запуск трека с этого таймкода (play-or-seek). Темизированный вариант
+  (`--artist-accent`), в отличие от нейтрального плеер-оверлея.
 
 ## Где код
 
@@ -24,7 +30,11 @@
 - **Чтение (публичное):** GET `/api/v1/tracks/[id]/lyrics` → `getPublicTrackLyrics`
   (`packages/db/src/queries/lyrics.ts`) — отдаёт только для **опубликованных** релизов.
 - **Редактор:** `apps/web/components/lyrics-editor.tsx` (в `track-manager.tsx`).
-- **Просмотр:** `apps/web/components/player/lyrics.tsx` (в фуллскрин-плеере).
+- **Просмотр (плеер):** `apps/web/components/player/lyrics.tsx` (фуллскрин-плеер,
+  ленивый fetch + тоггл) → общий `apps/web/components/lyrics-scroll.tsx`.
+- **Просмотр (страница трека):** `apps/web/app/(listener)/artists/[slug]/releases/
+  [releaseId]/tracks/[trackId]/track-lyrics.tsx` (play-or-seek) → тот же
+  `lyrics-scroll.tsx` (`variant="artist"`, гард синхрона по `trackId`).
 
 ## Env
 
