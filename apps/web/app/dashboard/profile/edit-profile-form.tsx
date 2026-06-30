@@ -52,6 +52,7 @@ export interface EditableProfile {
   name: string;
   bio: string | null;
   avatarUrl: string | null;
+  headerUrl: string | null;
   themeTokens: ThemeTokens;
   links: ArtistLink[];
   videos: ArtistVideo[];
@@ -65,9 +66,11 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
   const [saved, setSaved] = useState(false);
 
   const [avatarPreview, setAvatarPreview] = useState<string | null>(artist.avatarUrl);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
+  const [headerPreview, setHeaderPreview] = useState<string | null>(artist.headerUrl);
+  const [removeHeader, setRemoveHeader] = useState(false);
   const [links, setLinks] = useState<ArtistLink[]>(artist.links);
   const [videos, setVideos] = useState<ArtistVideo[]>(artist.videos);
-  const [removeAvatar, setRemoveAvatar] = useState(false);
 
   const t = artist.themeTokens;
   const [bg, setBg] = useState(t.bg);
@@ -95,6 +98,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       fd.set('links', JSON.stringify(links));
       fd.set('videos', JSON.stringify(videos));
       if (removeAvatar) fd.set('removeAvatar', '1');
+      if (removeHeader) fd.set('removeHeader', '1');
 
       const res = await fetch('/api/v1/dashboard/profile', { method: 'POST', body: fd });
       if (!res.ok) {
@@ -123,6 +127,20 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       if (avatarPreview && avatarPreview !== artist.avatarUrl) URL.revokeObjectURL(avatarPreview);
     };
   }, [avatarPreview, artist.avatarUrl]);
+
+  function handleHeaderChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setHeaderPreview(URL.createObjectURL(file));
+      setRemoveHeader(false);
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (headerPreview && headerPreview !== artist.headerUrl) URL.revokeObjectURL(headerPreview);
+    };
+  }, [headerPreview, artist.headerUrl]);
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-8">
@@ -165,6 +183,35 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
                   className="inline-flex items-center gap-1.5 self-start text-xs text-foreground/40 transition-colors hover:text-red-400"
                 >
                   <Icon name="trash" size={12} /> Удалить аватар
+                </button>
+              )}
+            </div>
+          </div>
+        </Field>
+        <Field label="Широкая обложка" hint="рекомендуется ~3:1 · 1500×500 · JPEG/PNG/WebP">
+          <div className="flex flex-col gap-3">
+            {headerPreview && !removeHeader ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={headerPreview} alt="header" className="aspect-[3/1] w-full rounded-lg object-cover" />
+            ) : (
+              <div className="aspect-[3/1] w-full rounded-lg border border-foreground/10 bg-foreground/5" />
+            )}
+            <div className="flex flex-col gap-2">
+              <input
+                name="header"
+                type="file"
+                accept="image/*"
+                disabled={busy}
+                onChange={handleHeaderChange}
+                className="w-full min-w-0 text-sm file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-foreground/10 file:px-3 file:py-1.5 file:text-sm hover:file:bg-foreground/20 disabled:opacity-50"
+              />
+              {artist.headerUrl && !removeHeader && (
+                <button
+                  type="button"
+                  onClick={() => { setRemoveHeader(true); setHeaderPreview(null); }}
+                  className="inline-flex items-center gap-1.5 self-start text-xs text-foreground/40 transition-colors hover:text-red-400"
+                >
+                  <Icon name="trash" size={12} /> Удалить обложку
                 </button>
               )}
             </div>

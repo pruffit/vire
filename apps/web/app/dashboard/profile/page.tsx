@@ -20,6 +20,7 @@ export default async function DashboardProfilePage() {
     name: artist.name,
     bio: artist.bio,
     avatarUrl: artist.avatarUrl,
+    headerUrl: artist.headerUrl,
     themeTokens: artist.themeTokens,
     links: artist.links,
     videos: artist.videos,
