@@ -61,21 +61,36 @@ function Row({
   onPlay: () => void;
 }) {
   const isActive = usePlayerStore((s) => s.track?.id) === track.id;
-  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  // Гасим ложные ререндеры: неактивные строки не зависят от isPlaying (false===false),
+  // важно при раскрытом списке в сотни треков.
+  const isPlaying = usePlayerStore((s) => isActive && s.isPlaying);
+
+  function activate() {
+    if (isActive) controls.togglePlay();
+    else onPlay();
+  }
 
   return (
     <motion.div
       role="button"
       tabIndex={0}
-      onClick={isActive ? () => controls.togglePlay() : onPlay}
-      onKeyDown={(e) => e.key === 'Enter' && (isActive ? controls.togglePlay() : onPlay())}
+      onClick={activate}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          activate();
+        }
+      }}
       whileTap={{ scale: 0.99 }}
       transition={spring.snappy}
-      className={`group flex items-center gap-4 px-3 py-2.5 rounded-sm cursor-pointer select-none transition-colors hover:bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)] ${
+      className={`group flex min-h-11 items-center gap-4 px-3 py-2.5 rounded-sm cursor-pointer select-none transition-colors hover:bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)] ${
         isActive ? 'bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)]' : ''
       }`}
     >
-      <span className={`w-6 flex justify-end text-xs font-mono tabular-nums shrink-0 ${isActive ? '' : 'opacity-40'}`}>
+      <span
+        className="w-6 flex justify-end text-xs font-mono tabular-nums shrink-0"
+        style={isActive ? undefined : { color: 'color-mix(in oklch, var(--artist-text) 40%, transparent)' }}
+      >
         {isActive ? <PlayingBars animate={isPlaying} /> : rank}
       </span>
 

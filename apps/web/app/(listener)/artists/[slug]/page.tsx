@@ -176,11 +176,6 @@ export default async function ArtistPage({ params }: Props) {
       {/* Ambient banner — размытая обложка + accent во всю ширину, fade в bg */}
       <ArtistBanner coverUrl={releases[0]?.coverUrl ?? displayAvatar} />
 
-      {/* Компактная полоска при скролле — только мобилка (на lg карточка sticky) */}
-      <div className="lg:hidden">
-        <ArtistCollapseBar name={artist.name} avatarUrl={displayAvatar} verified={artist.verified} />
-      </div>
-
       <div className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-[clamp(280px,26%,360px)_1fr] gap-8 lg:gap-12">
           {/* Левая колонка — личность артиста (sticky на lg) */}
@@ -194,6 +189,12 @@ export default async function ArtistPage({ params }: Props) {
               trackCount={playableTracks.length}
               runtime={runtime}
             />
+            {/* Компактная полоска при скролле — только мобилка (на lg карточка
+                sticky). Сентинел внутри бара стоит здесь, после всей карточки,
+                поэтому полоска всплывает, когда карточка ушла из вида, а не баннер. */}
+            <div className="lg:hidden">
+              <ArtistCollapseBar name={artist.name} avatarUrl={displayAvatar} verified={artist.verified} />
+            </div>
           </div>
 
           {/* Правая колонка — лента контента */}
@@ -305,7 +306,7 @@ function ArtistIdentity({
             style={{
               fontSize: 'clamp(2.5rem, 8vw, 3.5rem)',
               background: 'color-mix(in oklch, var(--artist-text) 6%, transparent)',
-              opacity: 0.4,
+              color: 'color-mix(in oklch, var(--artist-text) 40%, transparent)',
               boxShadow: '0 0 0 1.5px color-mix(in oklch, var(--artist-accent) 50%, transparent)',
             }}
           >
