@@ -173,8 +173,8 @@ export default async function ArtistPage({ params }: Props) {
       ))}
       {grain && <GrainOverlay />}
 
-      {/* Ambient banner — размытая обложка + accent во всю ширину, fade в bg */}
-      <ArtistBanner coverUrl={releases[0]?.coverUrl ?? displayAvatar} />
+      {/* Banner — при наличии headerUrl показывает его резко; иначе — ambient-фолбэк по обложке */}
+      <ArtistBanner coverUrl={releases[0]?.coverUrl ?? displayAvatar} headerUrl={artist.headerUrl} />
 
       <div className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-[clamp(280px,26%,360px)_1fr] gap-8 lg:gap-12">
@@ -231,26 +231,48 @@ export default async function ArtistPage({ params }: Props) {
 
 // ─── Banner ────────────────────────────────────────────────────────────────
 
-function ArtistBanner({ coverUrl }: { coverUrl: string | null }) {
+function ArtistBanner({ coverUrl, headerUrl }: { coverUrl: string | null; headerUrl?: string | null }) {
   return (
     <div className="relative w-full overflow-hidden" style={{ height: 'clamp(180px, 26vh, 320px)' }} aria-hidden="true">
-      {coverUrl && (
-        <Image
-          src={coverUrl}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover scale-110 blur-2xl opacity-40"
-        />
+      {headerUrl ? (
+        <>
+          <Image
+            src={headerUrl}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(to bottom, transparent 40%, var(--artist-bg))',
+            }}
+          />
+        </>
+      ) : (
+        <>
+          {coverUrl && (
+            <Image
+              src={coverUrl}
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover scale-110 blur-2xl opacity-40"
+            />
+          )}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(ellipse 70% 100% at 50% 0%, color-mix(in oklch, var(--artist-accent) 28%, transparent), transparent 70%), linear-gradient(to bottom, transparent, var(--artist-bg))',
+            }}
+          />
+        </>
       )}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(ellipse 70% 100% at 50% 0%, color-mix(in oklch, var(--artist-accent) 28%, transparent), transparent 70%), linear-gradient(to bottom, transparent, var(--artist-bg))',
-        }}
-      />
     </div>
   );
 }
