@@ -89,6 +89,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
 
+  // Ключ S3 стабильный (перезапись по тому же пути), поэтому к URL добавляем
+  // ?v=timestamp — иначе браузер/CDN/next-image отдают старое закэшированное фото.
+  const bust = (url: string) => `${url}?v=${Date.now()}`;
+
   // Avatar upload
   let avatarUrl = artist.avatarUrl;
   if (removeAvatar) {
@@ -97,7 +101,7 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(await avatar.arrayBuffer());
     const v = validateImageUpload(avatar.size, buffer, AVATAR_POLICY);
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
-    avatarUrl = await uploadToStream(`avatars/${artist.id}.${v.info.ext}`, buffer, v.info.mime);
+    avatarUrl = bust(await uploadToStream(`avatars/${artist.id}.${v.info.ext}`, buffer, v.info.mime));
   }
 
   // Header upload
@@ -108,7 +112,7 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(await header.arrayBuffer());
     const v = validateImageUpload(header.size, buffer, HEADER_POLICY);
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
-    headerUrl = await uploadToStream(`headers/${artist.id}.${v.info.ext}`, buffer, v.info.mime);
+    headerUrl = bust(await uploadToStream(`headers/${artist.id}.${v.info.ext}`, buffer, v.info.mime));
   }
 
   const themeTokens: ThemeTokens = {

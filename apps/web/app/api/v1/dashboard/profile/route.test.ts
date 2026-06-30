@@ -111,6 +111,10 @@ describe('POST /api/v1/dashboard/profile', () => {
     );
     expect(res.status).toBe(200);
     expect(uploadToStream).toHaveBeenCalledWith('headers/artist1.png', expect.any(Buffer), 'image/png');
-    expect(update).toHaveBeenCalledWith('artist1', expect.objectContaining({ headerUrl: 'https://cdn.example.com/headers/artist1.png' }));
+    // ?v=timestamp сбивает кэш при стабильном ключе S3
+    expect(update).toHaveBeenCalledWith(
+      'artist1',
+      expect.objectContaining({ headerUrl: expect.stringMatching(/^https:\/\/cdn\.example\.com\/headers\/artist1\.png\?v=\d+$/) }),
+    );
   });
 });
