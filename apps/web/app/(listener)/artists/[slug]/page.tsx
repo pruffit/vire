@@ -40,7 +40,7 @@ import { GrainOverlay } from '@/components/grain-overlay';
 import { ArtistCollapseBar } from './artist-collapse-bar';
 import { ReleaseHeroPlay } from '@/components/release-hero-play';
 import type { PlayerTrack } from '@/store/player';
-import { formatCount, plural, pluralTracks, pluralReleases, totalDuration } from '@/lib/format';
+import { pluralTracks, pluralReleases, totalDuration } from '@/lib/format';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -168,7 +168,6 @@ export default async function ArtistPage({ params }: Props) {
         displayAvatar={displayAvatar}
         followButton={followButton}
         playQueue={playQueue}
-        followerCount={followerCount}
         releaseCount={releases.length}
         trackCount={playableTracks.length}
         runtime={runtime}
@@ -208,7 +207,6 @@ function ArtistHero({
   displayAvatar,
   followButton,
   playQueue,
-  followerCount,
   releaseCount,
   trackCount,
   runtime,
@@ -217,15 +215,13 @@ function ArtistHero({
   displayAvatar: string | null;
   followButton: ReactNode;
   playQueue: PlayerTrack[];
-  followerCount: number;
   releaseCount: number;
   trackCount: number;
   runtime: string | null;
 }) {
+  // Подписчики не дублируем в ридаут — их живой (оптимистичный) счётчик живёт на
+  // кнопке Follow; здесь только статичные агрегаты каталога.
   const readout = [
-    followerCount > 0
-      ? `${formatCount(followerCount)} ${plural(followerCount, ['подписчик', 'подписчика', 'подписчиков'])}`
-      : null,
     releaseCount > 0 ? `${releaseCount} ${pluralReleases(releaseCount)}` : null,
     trackCount > 0 ? `${trackCount} ${pluralTracks(trackCount)}` : null,
     runtime,
@@ -273,7 +269,6 @@ function ArtistHero({
                 )}
 
                 <div className="flex flex-col gap-5">
-                  {/* Transport: запуск каталога артиста + подписка */}
                   <div className="flex flex-wrap items-center gap-3">
                     <ReleaseHeroPlay queue={playQueue} />
                     {followButton}
@@ -290,14 +285,14 @@ function ArtistHero({
 
                   {artist.links.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2">
-                      {artist.links.map((link: ArtistLink, i: number) => {
+                      {artist.links.map((link: ArtistLink) => {
                         const key = detectPlatform(link.url).key;
                         const name = linkLabel(link.url, link.label);
                         const brand = PLATFORM_BRAND[key];
                         const wordmark = brand ? isBrandWordmark(brand) : false;
                         return (
                           <a
-                            key={i}
+                            key={link.url}
                             href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -533,11 +528,19 @@ function PostsSection({ posts }: { posts: ArtistPost[] }) {
               ) : (
                 <span />
               )}
-              <time className="text-[11px] font-mono opacity-40 shrink-0">
+              <time
+                className="text-[11px] font-mono shrink-0"
+                style={{ color: 'color-mix(in oklch, var(--artist-text) 40%, transparent)' }}
+              >
                 {postDate(post.createdAt)}
               </time>
             </div>
-            <p className="text-sm leading-relaxed opacity-75 whitespace-pre-line">{post.body}</p>
+            <p
+              className="text-sm leading-relaxed whitespace-pre-line"
+              style={{ color: 'color-mix(in oklch, var(--artist-text) 75%, transparent)' }}
+            >
+              {post.body}
+            </p>
           </article>
         ))}
       </div>
@@ -575,10 +578,17 @@ async function VideosSection({ videos }: { videos: ArtistVideo[] }) {
     <section className="animate-fade-up">
       <SectionHeader label="Видео" />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {embeds.map((v, i) => (
-          <div key={i} className="space-y-2">
+        {embeds.map((v) => (
+          <div key={`${v.embed.platform}:${v.embed.id}`} className="space-y-2">
             <VideoPlayer embed={v.embed} title={v.title} />
-            {v.title && <p className="text-sm opacity-55 leading-snug">{v.title}</p>}
+            {v.title && (
+              <p
+                className="text-sm leading-snug"
+                style={{ color: 'color-mix(in oklch, var(--artist-text) 55%, transparent)' }}
+              >
+                {v.title}
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -588,7 +598,6 @@ async function VideosSection({ videos }: { videos: ArtistVideo[] }) {
 
 // ─── Utilities ─────────────────────────────────────────────────────────────
 
-// Единый темизированный заголовок секции: mono-eyebrow акцентом + волосяная линия.
 // Кандидат на вынос в общий темизированный kit, когда дойдём до релиза/трека.
 function SectionHeader({ label }: { label: string }) {
   return (
@@ -618,7 +627,7 @@ function GuestFollowButton({
     <div className="flex items-center gap-3">
       <a
         href={`/sign-in?callbackUrl=/artists/${slug}`}
-        className="px-4 py-1.5 rounded-full text-sm font-medium transition-opacity hover:opacity-80"
+        className="inline-flex min-h-11 items-center justify-center px-4 rounded-full text-sm font-medium transition-opacity hover:opacity-80"
         style={{ background: 'var(--artist-accent)', color: 'var(--artist-bg, var(--background))' }}
       >
         Подписаться

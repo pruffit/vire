@@ -19,7 +19,7 @@ export function ReleaseHeroPlay({ queue }: { queue: PlayerTrack[] }) {
       onClick={play}
       whileTap={{ scale: 0.96 }}
       transition={spring.snappy}
-      className="inline-flex items-center gap-2.5 rounded-full px-5 py-2.5 text-sm font-medium transition-opacity hover:opacity-80"
+      className="inline-flex min-h-11 items-center gap-2.5 rounded-full px-5 py-2.5 text-sm font-medium transition-opacity hover:opacity-80"
       style={{
         background: 'color-mix(in oklch, var(--artist-text) 90%, transparent)',
         color: 'var(--artist-bg)',

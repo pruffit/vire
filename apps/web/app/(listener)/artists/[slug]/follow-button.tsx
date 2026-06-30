@@ -42,7 +42,7 @@ export function FollowButton({ slug, initialFollowing, initialCount }: Props) {
         disabled={pending}
         whileTap={{ scale: 0.95 }}
         transition={spring.snappy}
-        className={`relative px-4 py-1.5 rounded-full text-sm font-medium overflow-hidden transition-colors duration-300 disabled:opacity-50 ${
+        className={`relative inline-flex min-h-11 items-center justify-center px-4 rounded-full text-sm font-medium overflow-hidden transition-colors duration-300 disabled:opacity-50 ${
           following
             ? 'bg-white/10 hover:bg-white/15 border border-white/20'
             : 'bg-[var(--artist-accent)] hover:opacity-80 border border-transparent'

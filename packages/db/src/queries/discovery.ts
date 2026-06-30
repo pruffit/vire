@@ -146,7 +146,8 @@ export async function getArtistPlayableTracks(artistProfileId: string): Promise<
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
     .where(and(eq(releases.artistProfileId, artistProfileId), eq(tracks.status, 'READY'), releaseIsAired))
-    .orderBy(desc(releaseFreshness), asc(tracks.trackNumber));
+    .orderBy(desc(releaseFreshness), asc(tracks.trackNumber))
+    .limit(300);
 }
 
 export type ReleaseSort = 'fresh' | 'popular';
