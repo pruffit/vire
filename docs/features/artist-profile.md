@@ -2,22 +2,38 @@
 
 ## Что делает
 
-Публичная страница артиста со slug-адресом, hero-блоком, дискографией, анонсами и видео. Поддерживает полную кастомизацию внешнего вида через `theme_tokens` JSONB.
+Публичная страница артиста со slug-адресом. Поддерживает полную кастомизацию внешнего
+вида через `theme_tokens` JSONB.
 
-**Hero (редизайн §2.7):**
-- **Transport** — кнопка «Слушать» запускает весь играбельный каталог артиста (READY-треки
-  слышимых релизов, порядок: свежесть релиза → номер трека) в глобальный плеер. Рядом —
-  Follow. Кнопка не рендерится, если у артиста нет READY-треков.
-- **Mono-ридаут** — строка данных моноширинным: `подписчики · релизы · треки · хронометраж`
-  (пустые поля скрываются).
-- **Ссылки площадок** — единый габарит (таблетки h-11, тач-таргет 44px); бренд-логотипы
-  на белой подложке внутри общей таблетки для читаемости.
-- **bio** — цвет через `color-mix(var(--artist-text) …)`, не `opacity` поверх темы (контраст).
+**Макет (редизайн v2, §2.7):** полноширинный двухколоночный (не узкое центрирование).
+- **Ambient-баннер** (`ArtistBanner`) — полноширинная атмосферная полоса сверху: размытая
+  обложка первого релиза + радиальный accent-градиент, fade в `--artist-bg`. Статичный
+  (не sticky), grain-aware.
+- **Левая колонка — «карточка артиста»** (`ArtistIdentity`), `lg:sticky` (внутри
+  app-shell-скроллера `#main-content` — инвариант не нарушается): аватар (accent-glow,
+  фолбэк — моно-инициал), имя (кламп кегля по длине слова), `VerifiedBadge`, bio
+  (через `color-mix(var(--artist-text) …)`, не `opacity`), **transport** (`ReleaseHeroPlay`
+  = play-all каталога: READY-треки слышимых релизов, порядок свежесть → номер; не
+  рендерится без READY-треков) + Follow, mono-ридаут (`релизы · треки · хронометраж`),
+  ряд ссылок (таблетки h-11, тач-таргет 44px; бренд-логотипы на белой подложке).
+  На мобилке колонка становится верхним блоком; `ArtistCollapseBar` (компактная полоска
+  при скролле) показывается только <lg, сентинел стоит после карточки.
+- **Правая колонка — лента контента**, порядок под вовлечение:
+  `Скоро → Популярное → Релизы → Площадки → Анонсы → Видео` (пустые секции скрыты).
 
-**Секции** (`Скоро · Релизы · Площадки · Анонсы · Видео`) — единый темизированный заголовок
-`SectionHeader` (mono-eyebrow акцентом + волосяная линия). Вход — CSS `animate-fade-up`
-(де-промоутится после анимации; вместо motion-`Reveal`, который оставлял висящий
-композит-слой / scroll-jitter). Каскад карточек (релизы/площадки) — `Stagger`.
+**Блок «Популярное»** (`ArtistPopularTracks`, `'use client'`) — играбельный трек-лист
+артиста по числу прослушиваний: top-5 + тоггл «Все треки (N)». Клик по строке играет
+(`controls.play`), повторный по активной — pause/resume; лайк на строке (`PlayerLikeButton`).
+Сортировка — чистый `topByPlays` (стабильна: при равных plays — порядок каталога, поэтому
+у нового артиста = каталог). Источник — `getArtistPlayableTracks`, обогащённый агрегатом
+`plays`; один запрос обслуживает и play-all (порядок каталога), и «Популярное» (копия
+массива, отсортированная по plays).
+
+**Секции** — единый темизированный заголовок `SectionHeader` (mono-eyebrow акцентом +
+волосяная линия). Вход — CSS `animate-fade-up` (де-промоутится после анимации; вместо
+motion-`Reveal`, оставлявшего висящий композит-слой / scroll-jitter). Каскад карточек —
+`Stagger`. Индикатор «сейчас играет» — общий `PlayingBars` (переиспользуется трек-листом
+релиза).
 
 Темизация:
 - `artist_profiles.theme_tokens` — JSONB с CSS-переменными (`--artist-bg`, `--artist-text`, `--artist-accent` и др.)
@@ -29,11 +45,17 @@
 ## Где код
 
 - **Страница:** `apps/web/app/(listener)/artists/[slug]/page.tsx` — SSR, `generateMetadata`,
-  инжекция CSS-переменных темы, hero + секции (`ArtistHero`, `SectionHeader`, `*Section`)
+  инжекция CSS-переменных темы, двухколоночный макет (`ArtistBanner`, `ArtistIdentity`,
+  `SectionHeader`, `*Section`)
+- **Блок «Популярное»:** `apps/web/app/(listener)/artists/[slug]/artist-popular-tracks.tsx`
+  (`'use client'`); сортировка — `apps/web/lib/artist-tracks.ts` (`topByPlays`, покрыт тестом)
 - **Запрос каталога:** `getArtistPlayableTracks(artistProfileId)` в
-  `packages/db/src/queries/discovery.ts` — READY-треки слышимых релизов для play-all и ридаута
+  `packages/db/src/queries/discovery.ts` — READY-треки слышимых релизов + агрегат `plays`
+  (для play-all, ридаута и «Популярного»)
 - **Кнопка play:** переиспользуется `apps/web/components/release-hero-play.tsx`
   (`ReleaseHeroPlay`, темизирована, `controls.play` из `player/audio-engine`)
+- **Индикатор «играет»:** `apps/web/components/playing-bars.tsx` (`PlayingBars`, общий
+  с трек-листом релиза)
 - **Форматтеры ридаута:** `apps/web/lib/format.ts` (`formatCount`, `plural*`, `totalDuration`)
 - **Виджет темизации (дашборд):** `apps/web/app/dashboard/profile/_components/ThemePicker.tsx` — live color picker + пресеты
 - **API профиля:** `apps/web/app/api/v1/dashboard/profile/route.ts`
