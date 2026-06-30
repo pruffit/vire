@@ -22,7 +22,7 @@ import type { ArtistProfile, ArtistLink, ArtistVideo, Release, SmartLink } from 
 import { PlatformIcon } from '@/components/platform-icon';
 import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
-import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
+import { Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
 import { VerifiedBadge } from '@/components/verified-badge';
@@ -41,6 +41,8 @@ import { ArtistCollapseBar } from './artist-collapse-bar';
 import { ReleaseHeroPlay } from '@/components/release-hero-play';
 import type { PlayerTrack } from '@/store/player';
 import { pluralTracks, pluralReleases, totalDuration } from '@/lib/format';
+import { ArtistPopularTracks, type ArtistPopularTrack } from './artist-popular-tracks';
+import { topByPlays } from '@/lib/artist-tracks';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -127,6 +129,18 @@ export default async function ArtistPage({ params }: Props) {
     playableTracks.map((t) => ({ status: 'READY', durationSec: t.durationSec })),
   );
 
+  const popularTracks: ArtistPopularTrack[] = topByPlays(playableTracks).map((t) => ({
+    id: t.id,
+    title: t.title,
+    artistName: artist.name,
+    coverUrl: t.coverUrl,
+    artistSlug: artist.slug,
+    releaseId: t.releaseId,
+    accentColor: accent ?? undefined,
+    isExplicit: t.isExplicit,
+    durationSec: t.durationSec,
+  }));
+
   return (
     <div
       style={
@@ -155,54 +169,94 @@ export default async function ArtistPage({ params }: Props) {
         { name: artist.name, url: `/artists/${artist.slug}` },
       ])} />
       {posts.map((post) => (
-        <JsonLd
-          key={post.id}
-          data={artistPostJsonLd(post, { name: artist.name, slug: artist.slug })}
-        />
+        <JsonLd key={post.id} data={artistPostJsonLd(post, { name: artist.name, slug: artist.slug })} />
       ))}
       {grain && <GrainOverlay />}
 
-      {/* Full-bleed hero — breaks out of any container */}
-      <ArtistHero
-        artist={artist}
-        displayAvatar={displayAvatar}
-        followButton={followButton}
-        playQueue={playQueue}
-        releaseCount={releases.length}
-        trackCount={playableTracks.length}
-        runtime={runtime}
-      />
+      {/* Ambient banner — размытая обложка + accent во всю ширину, fade в bg */}
+      <ArtistBanner coverUrl={releases[0]?.coverUrl ?? displayAvatar} />
 
-      {/* Компактная полоска при скролле за hero */}
-      <ArtistCollapseBar name={artist.name} avatarUrl={displayAvatar} verified={artist.verified} />
+      {/* Компактная полоска при скролле — только мобилка (на lg карточка sticky) */}
+      <div className="lg:hidden">
+        <ArtistCollapseBar name={artist.name} avatarUrl={displayAvatar} verified={artist.verified} />
+      </div>
 
-      {/* Content below hero */}
-      <div className="mx-auto max-w-6xl px-5 sm:px-6 pb-16 space-y-14">
-        {upcoming.length > 0 && (
-          <UpcomingSection
-            upcoming={upcoming}
-            artistSlug={artist.slug}
-            presavedIds={presavedIds}
-            isAuthed={isAuthed}
-          />
-        )}
-        <ReleasesSection
-          releases={releases}
-          explicitReleaseIds={explicitReleaseIds}
-          artistSlug={artist.slug}
-          artistName={artist.name}
-        />
-        {smartLinks.length > 0 && <SmartLinksSection smartLinks={smartLinks} artistSlug={artist.slug} />}
-        {posts.length > 0 && <PostsSection posts={posts} />}
-        {artist.videos.length > 0 && <VideosSection videos={artist.videos} />}
+      <div className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[clamp(280px,26%,360px)_1fr] gap-8 lg:gap-12">
+          {/* Левая колонка — личность артиста (sticky на lg) */}
+          <div className="lg:sticky lg:top-6 lg:self-start">
+            <ArtistIdentity
+              artist={artist}
+              displayAvatar={displayAvatar}
+              followButton={followButton}
+              playQueue={playQueue}
+              releaseCount={releases.length}
+              trackCount={playableTracks.length}
+              runtime={runtime}
+            />
+          </div>
+
+          {/* Правая колонка — лента контента */}
+          <div className="min-w-0 flex flex-col gap-14 pt-2 lg:pt-8">
+            {upcoming.length > 0 && (
+              <UpcomingSection
+                upcoming={upcoming}
+                artistSlug={artist.slug}
+                presavedIds={presavedIds}
+                isAuthed={isAuthed}
+              />
+            )}
+            {popularTracks.length > 0 && (
+              <section className="animate-fade-up">
+                <SectionHeader label="Популярное" />
+                <ArtistPopularTracks tracks={popularTracks} />
+              </section>
+            )}
+            <ReleasesSection
+              releases={releases}
+              explicitReleaseIds={explicitReleaseIds}
+              artistSlug={artist.slug}
+              artistName={artist.name}
+            />
+            {smartLinks.length > 0 && <SmartLinksSection smartLinks={smartLinks} artistSlug={artist.slug} />}
+            {posts.length > 0 && <PostsSection posts={posts} />}
+            {artist.videos.length > 0 && <VideosSection videos={artist.videos} />}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Hero ──────────────────────────────────────────────────────────────────
+// ─── Banner ────────────────────────────────────────────────────────────────
 
-function ArtistHero({
+function ArtistBanner({ coverUrl }: { coverUrl: string | null }) {
+  return (
+    <div className="relative w-full overflow-hidden" style={{ height: 'clamp(180px, 26vh, 320px)' }} aria-hidden="true">
+      {coverUrl && (
+        <Image
+          src={coverUrl}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover scale-110 blur-2xl opacity-40"
+        />
+      )}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 70% 100% at 50% 0%, color-mix(in oklch, var(--artist-accent) 28%, transparent), transparent 70%), linear-gradient(to bottom, transparent, var(--artist-bg))',
+        }}
+      />
+    </div>
+  );
+}
+
+// ─── Identity (левая колонка) ────────────────────────────────────────────────
+
+function ArtistIdentity({
   artist,
   displayAvatar,
   followButton,
@@ -219,162 +273,116 @@ function ArtistHero({
   trackCount: number;
   runtime: string | null;
 }) {
-  // Подписчики не дублируем в ридаут — их живой (оптимистичный) счётчик живёт на
-  // кнопке Follow; здесь только статичные агрегаты каталога.
   const readout = [
     releaseCount > 0 ? `${releaseCount} ${pluralReleases(releaseCount)}` : null,
     trackCount > 0 ? `${trackCount} ${pluralTracks(trackCount)}` : null,
     runtime,
   ].filter(Boolean);
-  // Имя живёт в узкой колонке (≈31rem на десктопе). Длинное слово на максимальном
-  // кегле не влезает и `break-words` рвёт его посреди (было: AVOCADIC|K). Поэтому
-  // верхнюю границу клампа выводим из длины самого длинного слова: крупно для
-  // коротких имён, но достаточно мелко, чтобы длинное слово осталось на строке.
   const longestWord = Math.max(1, ...artist.name.split(/\s+/).map((w) => w.length));
-  const maxRem = Math.max(2.4, Math.min(5.5, 28 / longestWord));
+  const maxRem = Math.max(2.2, Math.min(4, 22 / longestWord));
+
   return (
-    <FadeUp>
-      <header
-        className="relative overflow-hidden"
-        style={{
-          minHeight: 'clamp(320px, 50vh, 580px)',
-          // Glow radiates from the right where the avatar lives
-          background:
-            'radial-gradient(ellipse 55% 85% at 88% 50%, color-mix(in oklch, var(--artist-accent) 20%, var(--artist-bg)), var(--artist-bg))',
-        }}
-      >
-        <div className="relative z-10 mx-auto max-w-6xl px-5 sm:px-6 h-full flex items-end pb-10 pt-14 sm:pb-14 sm:pt-16">
-          <div className="w-full grid grid-cols-1 sm:grid-cols-5 gap-5 sm:gap-10 items-end">
-
-            {/* Left: name + bio + actions */}
-            <div className="sm:col-span-3 space-y-5">
-              <div className="space-y-3">
-                <h1
-                  className="font-bold tracking-tight leading-[0.92] text-balance break-words"
-                  style={{ fontSize: `clamp(2.2rem, 8vw, ${maxRem}rem)` }}
-                >
-                  {artist.name}
-                </h1>
-                {artist.verified && <VerifiedBadge />}
-              </div>
-
-              <div className="space-y-3">
-                {artist.bio && (
-                  <p
-                    className="text-sm leading-relaxed max-w-[44ch]"
-                    style={{ color: 'color-mix(in oklch, var(--artist-text) 62%, transparent)' }}
-                  >
-                    {artist.bio}
-                  </p>
-                )}
-
-                <div className="flex flex-col gap-5">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <ReleaseHeroPlay queue={playQueue} />
-                    {followButton}
-                  </div>
-
-                  {readout.length > 0 && (
-                    <p
-                      className="font-mono text-xs tabular-nums"
-                      style={{ color: 'color-mix(in oklch, var(--artist-text) 45%, transparent)' }}
-                    >
-                      {readout.join('  ·  ')}
-                    </p>
-                  )}
-
-                  {artist.links.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      {artist.links.map((link: ArtistLink) => {
-                        const key = detectPlatform(link.url).key;
-                        const name = linkLabel(link.url, link.label);
-                        const brand = PLATFORM_BRAND[key];
-                        const wordmark = brand ? isBrandWordmark(brand) : false;
-                        return (
-                          <a
-                            key={link.url}
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title={name}
-                            aria-label={name}
-                            className="inline-flex h-11 min-w-11 items-center justify-center rounded-lg px-3 transition-opacity hover:opacity-80"
-                            // Бренд-логотипы рассчитаны на белый фон — им оставляем белую
-                            // подложку внутри общей таблетки; остальные иконки берут акцент.
-                            style={
-                              brand
-                                ? { background: '#fff' }
-                                : {
-                                    background: 'color-mix(in oklch, var(--artist-text) 8%, transparent)',
-                                    color: 'var(--artist-accent)',
-                                  }
-                            }
-                          >
-                            {brand ? (
-                              <BrandIcon name={brand} size={wordmark ? 12 : 16} />
-                            ) : (
-                              <PlatformIcon platform={key} size={16} />
-                            )}
-                          </a>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right: avatar with atmospheric glow (на мобилке — сверху, слева) */}
-            <div className="order-first sm:order-none sm:col-span-2 flex justify-start sm:justify-end items-center sm:items-end">
-              <div className="relative">
-                {/* Glow blob — fills the right side of hero */}
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 rounded-full blur-3xl opacity-30 scale-[1.8]"
-                  style={{ background: 'var(--artist-accent)' }}
-                />
-                {displayAvatar ? (
-                  <Image
-                    src={displayAvatar}
-                    alt={artist.name}
-                    width={280}
-                    height={280}
-                    priority
-                    className="relative z-10 w-28 h-28 sm:w-64 sm:h-64 rounded-full object-cover"
-                    style={{
-                      boxShadow:
-                        '0 0 0 1.5px color-mix(in oklch, var(--artist-accent) 50%, transparent)',
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="relative z-10 w-28 h-28 sm:w-64 sm:h-64 rounded-full bg-white/5 flex items-center justify-center font-mono"
-                    style={{
-                      fontSize: 'clamp(3rem, 8vw, 5rem)',
-                      opacity: 0.2,
-                      boxShadow:
-                        '0 0 0 1.5px color-mix(in oklch, var(--artist-accent) 50%, transparent)',
-                    }}
-                  >
-                    {artist.name[0]}
-                  </div>
-                )}
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Bottom fade — hero bleeds into content below */}
+    <div className="flex flex-col gap-5 animate-fade-up">
+      <div className="relative w-28 h-28 sm:w-36 sm:h-36">
         <div
           aria-hidden="true"
-          className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
-          style={{
-            background: 'linear-gradient(to bottom, transparent, var(--artist-bg))',
-          }}
+          className="absolute inset-0 rounded-full blur-2xl opacity-30 scale-150"
+          style={{ background: 'var(--artist-accent)' }}
         />
-      </header>
-    </FadeUp>
+        {displayAvatar ? (
+          <Image
+            src={displayAvatar}
+            alt={artist.name}
+            width={280}
+            height={280}
+            priority
+            className="relative z-10 w-full h-full rounded-full object-cover"
+            style={{ boxShadow: '0 0 0 1.5px color-mix(in oklch, var(--artist-accent) 50%, transparent)' }}
+          />
+        ) : (
+          <div
+            className="relative z-10 w-full h-full rounded-full flex items-center justify-center font-mono"
+            style={{
+              fontSize: 'clamp(2.5rem, 8vw, 3.5rem)',
+              background: 'color-mix(in oklch, var(--artist-text) 6%, transparent)',
+              opacity: 0.4,
+              boxShadow: '0 0 0 1.5px color-mix(in oklch, var(--artist-accent) 50%, transparent)',
+            }}
+          >
+            {artist.name[0]}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <h1
+          className="font-bold tracking-tight leading-[0.95] text-balance break-words"
+          style={{ fontSize: `clamp(2rem, 6vw, ${maxRem}rem)` }}
+        >
+          {artist.name}
+        </h1>
+        {artist.verified && <VerifiedBadge />}
+      </div>
+
+      {artist.bio && (
+        <p
+          className="text-sm leading-relaxed"
+          style={{ color: 'color-mix(in oklch, var(--artist-text) 62%, transparent)' }}
+        >
+          {artist.bio}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <ReleaseHeroPlay queue={playQueue} />
+        {followButton}
+      </div>
+
+      {readout.length > 0 && (
+        <p
+          className="font-mono text-xs tabular-nums"
+          style={{ color: 'color-mix(in oklch, var(--artist-text) 45%, transparent)' }}
+        >
+          {readout.join('  ·  ')}
+        </p>
+      )}
+
+      {artist.links.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {artist.links.map((link: ArtistLink, i: number) => {
+            const key = detectPlatform(link.url).key;
+            const name = linkLabel(link.url, link.label);
+            const brand = PLATFORM_BRAND[key];
+            const wordmark = brand ? isBrandWordmark(brand) : false;
+            return (
+              <a
+                key={`${link.url}-${i}`}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={name}
+                aria-label={name}
+                className="inline-flex h-11 min-w-11 items-center justify-center rounded-lg px-3 transition-opacity hover:opacity-80"
+                style={
+                  brand
+                    ? { background: '#fff' }
+                    : {
+                        background: 'color-mix(in oklch, var(--artist-text) 8%, transparent)',
+                        color: 'var(--artist-accent)',
+                      }
+                }
+              >
+                {brand ? (
+                  <BrandIcon name={brand} size={wordmark ? 12 : 16} />
+                ) : (
+                  <PlatformIcon platform={key} size={16} />
+                )}
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
