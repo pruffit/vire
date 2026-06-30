@@ -371,7 +371,7 @@ function ArtistIdentity({
       )}
 
       {artist.links.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {artist.links.map((link: ArtistLink, i: number) => {
             const key = detectPlatform(link.url).key;
             const name = linkLabel(link.url, link.label);
@@ -385,7 +385,7 @@ function ArtistIdentity({
                 rel="noopener noreferrer"
                 title={name}
                 aria-label={name}
-                className="inline-flex h-11 min-w-11 items-center justify-center rounded-lg px-3 transition-opacity hover:opacity-80"
+                className="inline-flex h-7 min-w-7 items-center justify-center rounded-lg px-2 transition-opacity hover:opacity-80 sm:h-9 sm:min-w-9 sm:px-2.5"
                 style={
                   brand
                     ? { background: '#fff' }
@@ -396,9 +396,9 @@ function ArtistIdentity({
                 }
               >
                 {brand ? (
-                  <BrandIcon name={brand} size={wordmark ? 12 : 16} />
+                  <BrandIcon name={brand} size={null} className={wordmark ? 'h-[9px] sm:h-[11px]' : 'h-3 sm:h-3.5'} />
                 ) : (
-                  <PlatformIcon platform={key} size={16} />
+                  <PlatformIcon platform={key} size={14} className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 )}
               </a>
             );

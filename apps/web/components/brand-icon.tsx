@@ -93,8 +93,8 @@ export function BrandIcon({
   style,
 }: {
   name: BrandName;
-  /** Высота в px. Ширина — auto по viewBox. */
-  size?: number;
+  /** Высота в px. Ширина — auto по viewBox. `null` — высоту задаёт className (адаптив). */
+  size?: number | null;
   /** alt: '' (декор) если не задан; иначе название бренда. */
   label?: boolean | string;
   className?: string;
@@ -108,7 +108,7 @@ export function BrandIcon({
       src={src}
       alt={alt}
       className={className}
-      style={{ height: size, width: 'auto', ...style }}
+      style={{ height: size ?? undefined, width: 'auto', ...style }}
       loading="lazy"
       decoding="async"
       draggable={false}
