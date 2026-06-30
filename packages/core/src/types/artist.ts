@@ -55,6 +55,7 @@ export interface ArtistProfile {
   name: string;
   bio: string | null;
   avatarUrl: string | null;
+  headerUrl: string | null;
   themeTokens: ThemeTokens;
   links: ArtistLink[];
   videos: ArtistVideo[];

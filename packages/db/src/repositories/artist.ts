@@ -74,6 +74,7 @@ function mapToArtistProfile(row: typeof artistProfiles.$inferSelect): ArtistProf
     name: row.name,
     bio: row.bio,
     avatarUrl: row.avatarUrl,
+    headerUrl: row.headerUrl,
     themeTokens: (row.themeTokens as ThemeTokens) ?? defaultThemeTokens,
     links: Array.isArray(row.links) ? (row.links as ArtistLink[]) : [],
     videos: Array.isArray(row.videos) ? (row.videos as ArtistVideo[]) : [],

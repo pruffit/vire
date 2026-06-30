@@ -11,6 +11,7 @@ const mockArtist: ArtistProfile = {
   name: 'Test Artist',
   bio: null,
   avatarUrl: null,
+  headerUrl: null,
   themeTokens: {
     bg: '#121110',
     text: '#f5f2eb',
