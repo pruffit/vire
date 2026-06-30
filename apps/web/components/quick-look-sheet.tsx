@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
@@ -34,7 +35,10 @@ export function QuickLookSheet({ open, onClose, children }: Props) {
     if (info.offset.y > 120 || info.velocity.y > 600) onClose();
   }
 
-  return (
+  // Портал в body: оверлей должен крепиться к вьюпорту. Без портала `fixed inset-0`
+  // ловит ближайшего трансформированного предка (карточки в Stagger оседают с
+  // inline `transform: translateY(0px)`) и модалка позиционируется внутри ячейки.
+  const overlay = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -64,6 +68,9 @@ export function QuickLookSheet({ open, onClose, children }: Props) {
       )}
     </AnimatePresence>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(overlay, document.body);
 }
 
 /** Анимированные полоски эквалайзера — индикатор текущего трека в трек-листе. */
