@@ -24,10 +24,23 @@ const mockedAuth = vi.mocked(auth);
 const ARTIST = {
   id: 'artist1',
   avatarUrl: null,
+  headerUrl: null,
   links: [],
   videos: [],
   themeTokens: { bg: '#000000', text: '#ffffff', accent: '#ff0000', grain: false, fontSans: 'Inter', fontMono: 'Fira Code' },
 };
+
+// Minimal valid PNG bytes with configurable dimensions (for validateImageUpload probing)
+function makePng(width: number, height: number): Uint8Array<ArrayBuffer> {
+  const buf = new Uint8Array(new ArrayBuffer(24));
+  buf.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]); // PNG signature
+  buf.set([0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52], 8); // IHDR chunk
+  buf[16] = (width >> 24) & 0xff; buf[17] = (width >> 16) & 0xff;
+  buf[18] = (width >> 8) & 0xff;  buf[19] = width & 0xff;
+  buf[20] = (height >> 24) & 0xff; buf[21] = (height >> 16) & 0xff;
+  buf[22] = (height >> 8) & 0xff;  buf[23] = height & 0xff;
+  return buf;
+}
 
 function makeReq(fields: Record<string, string | File>): Request {
   const fd = new FormData();
@@ -75,5 +88,29 @@ describe('POST /api/v1/dashboard/profile', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ ok: true });
     expect(update).toHaveBeenCalledWith('artist1', expect.objectContaining({ name: 'Danya' }));
+  });
+
+  it('400 when the header has invalid format', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    findByUserId.mockResolvedValue(ARTIST);
+    const res = await POST(
+      makeReq({ name: 'A', header: new File([new Uint8Array([1])], 'h.gif', { type: 'image/gif' }) }),
+    );
+    expect(res.status).toBe(400);
+    expect(uploadToStream).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('uploads header and saves headerUrl', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    findByUserId.mockResolvedValue(ARTIST);
+    uploadToStream.mockResolvedValue('https://cdn.example.com/headers/artist1.png');
+    const pngBytes = makePng(1500, 500);
+    const res = await POST(
+      makeReq({ name: 'A', header: new File([pngBytes], 'banner.png', { type: 'image/png' }) }),
+    );
+    expect(res.status).toBe(200);
+    expect(uploadToStream).toHaveBeenCalledWith('headers/artist1.png', expect.any(Buffer), 'image/png');
+    expect(update).toHaveBeenCalledWith('artist1', expect.objectContaining({ headerUrl: 'https://cdn.example.com/headers/artist1.png' }));
   });
 });

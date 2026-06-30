@@ -3,7 +3,7 @@ import { auth } from '@/auth';
 import { db, DrizzleArtistRepository } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
 import { getActiveArtist } from '@/lib/active-artist';
-import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
+import { validateImageUpload, AVATAR_POLICY, HEADER_POLICY } from '@/lib/image';
 import { resolveVideoTitle } from '@/lib/video-meta';
 import type { ThemeTokens, ArtistLink, ArtistVideo } from '@vire/core';
 
@@ -33,6 +33,8 @@ export async function POST(req: Request) {
   const bio = formData.get('bio');
   const avatar = formData.get('avatar');
   const removeAvatar = formData.get('removeAvatar') === '1';
+  const header = formData.get('header');
+  const removeHeader = formData.get('removeHeader') === '1';
 
   const linksRaw = formData.get('links');
   let links: ArtistLink[] = artist.links;
@@ -98,6 +100,17 @@ export async function POST(req: Request) {
     avatarUrl = await uploadToStream(`avatars/${artist.id}.${v.info.ext}`, buffer, v.info.mime);
   }
 
+  // Header upload
+  let headerUrl = artist.headerUrl;
+  if (removeHeader) {
+    headerUrl = null;
+  } else if (header instanceof File && header.size > 0) {
+    const buffer = Buffer.from(await header.arrayBuffer());
+    const v = validateImageUpload(header.size, buffer, HEADER_POLICY);
+    if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
+    headerUrl = await uploadToStream(`headers/${artist.id}.${v.info.ext}`, buffer, v.info.mime);
+  }
+
   const themeTokens: ThemeTokens = {
     bg: isHex(bg) ? bg : artist.themeTokens.bg,
     text: isHex(text) ? text : artist.themeTokens.text,
@@ -111,6 +124,7 @@ export async function POST(req: Request) {
     name: name.trim(),
     bio: typeof bio === 'string' && bio.trim() ? bio.trim() : null,
     avatarUrl,
+    headerUrl,
     themeTokens,
     links,
     videos,

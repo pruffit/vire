@@ -125,6 +125,16 @@ export const COVER_POLICY: ImagePolicy = {
   maxAspect: 1,
 };
 
+// Широкая обложка профиля артиста: пейзажный формат (~3:1), минимум 400px по меньшей стороне.
+export const HEADER_POLICY: ImagePolicy = {
+  label: 'Шапка профиля',
+  maxBytes: 10 * 1024 * 1024,
+  minDimension: 400,
+  maxDimension: 6000,
+  square: false,
+  maxAspect: 6,
+};
+
 // Аватар (артист и слушатель): около-квадрат (≤ 2:1), минимум 400×400.
 export const AVATAR_POLICY: ImagePolicy = {
   label: 'Аватар',
