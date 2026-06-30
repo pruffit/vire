@@ -133,7 +133,7 @@ export default async function ReleasePage({ params }: Props) {
       <AmbientBackdrop src={release.coverUrl} />
       {grain && <GrainOverlay />}
 
-      <div className="relative z-10 mx-auto max-w-6xl px-6 pt-10 pb-32">
+      <div className="relative z-10 w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 pt-10 pb-32">
         <Link
           href={`/artists/${slug}`}
           className="inline-flex items-center gap-1.5 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)] hover:text-[color-mix(in_oklch,var(--artist-text)_70%,transparent)] transition-colors mb-10"
@@ -141,7 +141,7 @@ export default async function ReleasePage({ params }: Props) {
           <Icon name="arrow-left" size={13} /> {artist.name}
         </Link>
 
-        <div className="lg:grid lg:grid-cols-[20rem_1fr] lg:gap-14 lg:items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[clamp(300px,24%,380px)_1fr] gap-10 lg:gap-12 lg:items-start">
           <div className="lg:sticky lg:top-8 self-start">
             <div className="flex flex-col sm:flex-row lg:flex-col gap-8 sm:gap-10 lg:gap-6 items-start">
               <div className="shrink-0 mx-auto sm:mx-0">
@@ -189,7 +189,7 @@ export default async function ReleasePage({ params }: Props) {
             </div>
           </div>
 
-          <div className="mt-10 lg:mt-0 space-y-12">
+          <div className="min-w-0 space-y-12">
             <section>
               <SectionHeader label="Треки" />
               <TrackList

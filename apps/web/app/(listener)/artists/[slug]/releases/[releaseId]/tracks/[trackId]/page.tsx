@@ -127,7 +127,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
       <AmbientBackdrop src={release.coverUrl} />
       {grain && <GrainOverlay />}
 
-      <div className="relative z-10 mx-auto max-w-6xl px-6 py-10 sm:py-14">
+      <div className="relative z-10 w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-10 sm:py-14">
         <nav className="flex items-center gap-2 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)]">
           <Link href={`/artists/${slug}`} className="hover:text-[var(--artist-text)] transition-colors">
             {artist.name}
@@ -138,7 +138,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
           </Link>
         </nav>
 
-        <div className="lg:grid lg:grid-cols-[20rem_1fr] lg:gap-14 lg:items-start mt-10 sm:mt-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[clamp(300px,24%,380px)_1fr] gap-10 lg:gap-12 lg:items-start mt-10 sm:mt-12">
           <div className="lg:sticky lg:top-8 self-start">
             <div className="flex flex-col sm:flex-row lg:flex-col gap-7 sm:gap-9 lg:gap-5 items-start sm:items-end lg:items-start">
               {release.coverUrl ? (
@@ -190,7 +190,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
             </div>
           </div>
 
-          <div className="mt-10 lg:mt-0 space-y-10 sm:space-y-12">
+          <div className="min-w-0 space-y-10 sm:space-y-12">
             {playerTrack && (
               <div className="rounded-2xl p-5 sm:p-6 bg-[color-mix(in_oklch,var(--artist-text)_4%,transparent)] backdrop-blur-sm ring-1 ring-[color-mix(in_oklch,var(--artist-text)_8%,transparent)]">
                 <TrackWaveformPlayer
