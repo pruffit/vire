@@ -4,7 +4,7 @@ function Sk({ className }: { className?: string }) {
 
 export default function ArtistsLoading() {
   return (
-    <main className="mx-auto w-full max-w-[1600px] px-6 lg:px-10 py-12 space-y-10">
+    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-10">
       <div className="flex items-baseline justify-between">
         <Sk className="h-7 w-24" />
         <Sk className="h-4 w-6" />

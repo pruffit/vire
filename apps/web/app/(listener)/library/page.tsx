@@ -34,7 +34,7 @@ export default async function LibraryPage() {
   }));
 
   return (
-    <main className="mx-auto w-full max-w-[1600px] px-6 lg:px-10 py-12 space-y-14">
+    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-14">
       <FadeUp>
         <h1 className="text-2xl font-semibold tracking-tight">Медиатека</h1>
       </FadeUp>

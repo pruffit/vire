@@ -73,7 +73,7 @@ export default async function HomePage() {
   const empty = latest.length === 0 && upcoming.length === 0 && topArtists.length === 0;
 
   return (
-    <main className="mx-auto w-full max-w-[1600px] px-6 lg:px-10 py-12 space-y-16">
+    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-16">
       <JsonLd data={websiteJsonLd()} />
       <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
 
