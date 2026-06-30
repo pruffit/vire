@@ -125,12 +125,14 @@ export const COVER_POLICY: ImagePolicy = {
   maxAspect: 1,
 };
 
-// Широкая обложка профиля артиста: пейзажный формат (~3:1), минимум 400px по меньшей стороне.
+// Широкая обложка профиля артиста: пейзажный формат (~3:1), минимум 400px по меньшей
+// стороне. Потолок стороны 4000px — баннер рендерится высотой ≤320px во всю ширину,
+// этого с запасом хватает на retina; выше — лишний вес в хранилище.
 export const HEADER_POLICY: ImagePolicy = {
   label: 'Шапка профиля',
-  maxBytes: 10 * 1024 * 1024,
+  maxBytes: 8 * 1024 * 1024,
   minDimension: 400,
-  maxDimension: 6000,
+  maxDimension: 4000,
   square: false,
   maxAspect: 6,
 };
@@ -169,11 +171,14 @@ export function validateImageUpload(size: number, buf: Uint8Array, p: ImagePolic
   }
 
   const { width, height } = info;
+  // Для квадратной обложки осмысленно «N×N»; для непрямоугольных (шапка/аватар) —
+  // «N px по стороне», иначе «6000×6000» сбивает с толку у широкого баннера.
+  const dim = (n: number) => (p.square ? `${n}×${n} px` : `${n} px по стороне`);
   if (width < p.minDimension || height < p.minDimension) {
-    return { ok: false, status: 400, error: `${p.label}: минимум ${p.minDimension}×${p.minDimension} px` };
+    return { ok: false, status: 400, error: `${p.label}: минимум ${dim(p.minDimension)}` };
   }
   if (width > p.maxDimension || height > p.maxDimension) {
-    return { ok: false, status: 400, error: `${p.label}: максимум ${p.maxDimension}×${p.maxDimension} px` };
+    return { ok: false, status: 400, error: `${p.label}: максимум ${dim(p.maxDimension)}` };
   }
 
   if (p.square) {
