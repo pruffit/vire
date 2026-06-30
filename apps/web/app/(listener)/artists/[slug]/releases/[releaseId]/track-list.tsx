@@ -11,6 +11,7 @@ import type { TrackStatus, TrackCredit } from '@vire/core';
 import { formatDuration } from '@/lib/format';
 import { displayTrackTitle } from '@/lib/track-display';
 import { Icon } from '@/components/icon';
+import { PlayingBars } from '@/components/playing-bars';
 
 export interface ClientTrack {
   id: string;
@@ -173,20 +174,3 @@ function ArrowIcon() {
   return <Icon name="chevron-right" size={14} />;
 }
 
-/** Маленький эквалайзер: три полоски, анимируются пока трек играет. */
-function PlayingBars({ animate }: { animate: boolean }) {
-  return (
-    <span className="flex items-end gap-[2px] h-3" style={{ color: 'var(--artist-accent)' }} aria-label="Сейчас играет">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="w-[2px] bg-current rounded-full"
-          style={{
-            height: animate ? undefined : '40%',
-            animation: animate ? `vire-eq 0.9s ease-in-out ${i * 0.15}s infinite` : undefined,
-          }}
-        />
-      ))}
-    </span>
-  );
-}
