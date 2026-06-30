@@ -26,7 +26,9 @@ function getTimeLeft(target: Date): TimeLeft | null {
 }
 
 export function CountdownBadge({ releaseDate, title }: Props) {
-  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(releaseDate));
+  // null на сервере: время-зависимый рендер (Date.now()) даёт SSR/client-расхождение
+  // секунд/минут → hydration mismatch. Считаем только после маунта, useEffect тикает сразу.
+  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
 
   useEffect(() => {
     const tick = () => setTimeLeft(getTimeLeft(releaseDate));
