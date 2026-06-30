@@ -16,14 +16,13 @@ import {
   getPublishedSmartLinks,
   getArtistPlayableTracks,
 } from '@vire/db';
-import type { ArtistPlayableTrack } from '@vire/db';
 import type { ArtistPost } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import type { ArtistProfile, ArtistLink, ArtistVideo, Release, SmartLink } from '@vire/core';
 import { PlatformIcon } from '@/components/platform-icon';
 import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
-import { FadeUp, Reveal, Stagger, StaggerItem } from '@vire/ui/motion';
+import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { FollowButton } from './follow-button';
 import { VerifiedBadge } from '@/components/verified-badge';
@@ -39,6 +38,9 @@ import { resolveAvatarUrl } from '@/lib/avatar';
 import { artistFontStyle } from '@/lib/fonts';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { ArtistCollapseBar } from './artist-collapse-bar';
+import { ReleaseHeroPlay } from '@/components/release-hero-play';
+import type { PlayerTrack } from '@/store/player';
+import { formatCount, plural, pluralTracks, pluralReleases, totalDuration } from '@/lib/format';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -111,6 +113,20 @@ export default async function ArtistPage({ params }: Props) {
     <GuestFollowButton slug={artist.slug} followerCount={followerCount} />
   );
 
+  const playQueue: PlayerTrack[] = playableTracks.map((t) => ({
+    id: t.id,
+    title: t.title,
+    artistName: artist.name,
+    coverUrl: t.coverUrl,
+    artistSlug: artist.slug,
+    releaseId: t.releaseId,
+    accentColor: accent ?? undefined,
+    isExplicit: t.isExplicit,
+  }));
+  const runtime = totalDuration(
+    playableTracks.map((t) => ({ status: 'READY', durationSec: t.durationSec })),
+  );
+
   return (
     <div
       style={
@@ -147,7 +163,16 @@ export default async function ArtistPage({ params }: Props) {
       {grain && <GrainOverlay />}
 
       {/* Full-bleed hero — breaks out of any container */}
-      <ArtistHero artist={artist} displayAvatar={displayAvatar} followButton={followButton} />
+      <ArtistHero
+        artist={artist}
+        displayAvatar={displayAvatar}
+        followButton={followButton}
+        playQueue={playQueue}
+        followerCount={followerCount}
+        releaseCount={releases.length}
+        trackCount={playableTracks.length}
+        runtime={runtime}
+      />
 
       {/* Компактная полоска при скролле за hero */}
       <ArtistCollapseBar name={artist.name} avatarUrl={displayAvatar} verified={artist.verified} />
@@ -182,11 +207,29 @@ function ArtistHero({
   artist,
   displayAvatar,
   followButton,
+  playQueue,
+  followerCount,
+  releaseCount,
+  trackCount,
+  runtime,
 }: {
   artist: ArtistProfile;
   displayAvatar: string | null;
   followButton: ReactNode;
+  playQueue: PlayerTrack[];
+  followerCount: number;
+  releaseCount: number;
+  trackCount: number;
+  runtime: string | null;
 }) {
+  const readout = [
+    followerCount > 0
+      ? `${formatCount(followerCount)} ${plural(followerCount, ['подписчик', 'подписчика', 'подписчиков'])}`
+      : null,
+    releaseCount > 0 ? `${releaseCount} ${pluralReleases(releaseCount)}` : null,
+    trackCount > 0 ? `${trackCount} ${pluralTracks(trackCount)}` : null,
+    runtime,
+  ].filter(Boolean);
   // Имя живёт в узкой колонке (≈31rem на десктопе). Длинное слово на максимальном
   // кегле не влезает и `break-words` рвёт его посреди (было: AVOCADIC|K). Поэтому
   // верхнюю границу клампа выводим из длины самого длинного слова: крупно для
@@ -221,45 +264,67 @@ function ArtistHero({
 
               <div className="space-y-3">
                 {artist.bio && (
-                  <p className="text-sm leading-relaxed opacity-60 max-w-[44ch]">
+                  <p
+                    className="text-sm leading-relaxed max-w-[44ch]"
+                    style={{ color: 'color-mix(in oklch, var(--artist-text) 62%, transparent)' }}
+                  >
                     {artist.bio}
                   </p>
                 )}
 
-                {/* Follow + links (иконки площадок/соцсетей) на разных строках */}
-                <div className="flex flex-col gap-6">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                  {artist.links.map((link: ArtistLink, i: number) => {
-                    const key = detectPlatform(link.url).key;
-                    const name = linkLabel(link.url, link.label);
-                    const brand = PLATFORM_BRAND[key];
-                    const wordmark = brand ? isBrandWordmark(brand) : false;
-                    return (
-                      <a
-                        key={i}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={name}
-                        aria-label={name}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-100"
-                        style={{ color: 'var(--artist-accent)', opacity: 0.85 }}
-                      >
-                        {brand ? (
-                          <span className="inline-flex items-center rounded-md bg-white px-1.5 py-1">
-                            <BrandIcon name={brand} size={wordmark ? 10 : 16} />
-                          </span>
-                        ) : (
-                          <>
-                            <PlatformIcon platform={key} size={16} />
-                            <span>{name}</span>
-                          </>
-                        )}
-                      </a>
-                    );
-                  })}
+                <div className="flex flex-col gap-5">
+                  {/* Transport: запуск каталога артиста + подписка */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <ReleaseHeroPlay queue={playQueue} />
+                    {followButton}
                   </div>
-                  {followButton}
+
+                  {readout.length > 0 && (
+                    <p
+                      className="font-mono text-xs tabular-nums"
+                      style={{ color: 'color-mix(in oklch, var(--artist-text) 45%, transparent)' }}
+                    >
+                      {readout.join('  ·  ')}
+                    </p>
+                  )}
+
+                  {artist.links.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {artist.links.map((link: ArtistLink, i: number) => {
+                        const key = detectPlatform(link.url).key;
+                        const name = linkLabel(link.url, link.label);
+                        const brand = PLATFORM_BRAND[key];
+                        const wordmark = brand ? isBrandWordmark(brand) : false;
+                        return (
+                          <a
+                            key={i}
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={name}
+                            aria-label={name}
+                            className="inline-flex h-11 min-w-11 items-center justify-center rounded-lg px-3 transition-opacity hover:opacity-80"
+                            // Бренд-логотипы рассчитаны на белый фон — им оставляем белую
+                            // подложку внутри общей таблетки; остальные иконки берут акцент.
+                            style={
+                              brand
+                                ? { background: '#fff' }
+                                : {
+                                    background: 'color-mix(in oklch, var(--artist-text) 8%, transparent)',
+                                    color: 'var(--artist-accent)',
+                                  }
+                            }
+                          >
+                            {brand ? (
+                              <BrandIcon name={brand} size={wordmark ? 12 : 16} />
+                            ) : (
+                              <PlatformIcon platform={key} size={16} />
+                            )}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -335,8 +400,9 @@ function UpcomingSection({
   if (withDate.length === 0) return null;
 
   return (
-    <Reveal>
-      <section className="flex flex-col gap-3">
+    <section className="animate-fade-up">
+      <SectionHeader label="Скоро" />
+      <div className="flex flex-col gap-3">
         {withDate.map((r) => {
           const href = `/artists/${artistSlug}/releases/${r.id}`;
           return (
@@ -353,8 +419,8 @@ function UpcomingSection({
             </div>
           );
         })}
-      </section>
-    </Reveal>
+      </div>
+    </section>
   );
 }
 
@@ -362,37 +428,35 @@ function UpcomingSection({
 
 function SmartLinksSection({ smartLinks, artistSlug }: { smartLinks: SmartLink[]; artistSlug: string }) {
   return (
-    <Reveal>
-      <section className="space-y-5">
-        <h2 className="text-lg font-semibold tracking-tight">Слушать на площадках</h2>
-        <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
-          {smartLinks.map((sl) => (
-            <StaggerItem key={sl.id}>
-              <a href={`/smartlink/${artistSlug}/${sl.slug}`} className="group flex flex-col gap-2.5">
-                <div
-                  className="relative aspect-square rounded-md overflow-hidden ring-1 transition-all duration-300 ease-soft group-hover:scale-[1.02]"
-                  style={{ '--tw-ring-color': 'color-mix(in oklch, var(--artist-text) 12%, transparent)' } as React.CSSProperties}
-                >
-                  {sl.coverUrl ? (
-                    <Image src={sl.coverUrl} alt={sl.title} fill sizes="(max-width: 640px) 50vw, 200px" className="object-cover" />
-                  ) : (
-                    <div className="w-full h-full grid place-items-center bg-[color-mix(in_oklch,var(--artist-accent)_22%,var(--artist-bg))]">
-                      <PlatformIcon platform="website" size={28} className="opacity-30" />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium leading-snug truncate">{sl.title}</p>
-                  <p className="text-xs truncate" style={{ color: 'color-mix(in oklch, var(--artist-text) 50%, transparent)' }}>
-                    {sl.links.length > 0 ? `${sl.links.length} площадок` : 'ссылки'}
-                  </p>
-                </div>
-              </a>
-            </StaggerItem>
-          ))}
-        </Stagger>
-      </section>
-    </Reveal>
+    <section className="animate-fade-up">
+      <SectionHeader label="Площадки" />
+      <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
+        {smartLinks.map((sl) => (
+          <StaggerItem key={sl.id}>
+            <a href={`/smartlink/${artistSlug}/${sl.slug}`} className="group flex flex-col gap-2.5">
+              <div
+                className="relative aspect-square rounded-md overflow-hidden ring-1 transition-all duration-300 ease-soft group-hover:scale-[1.02]"
+                style={{ '--tw-ring-color': 'color-mix(in oklch, var(--artist-text) 12%, transparent)' } as React.CSSProperties}
+              >
+                {sl.coverUrl ? (
+                  <Image src={sl.coverUrl} alt={sl.title} fill sizes="(max-width: 640px) 50vw, 200px" className="object-cover" />
+                ) : (
+                  <div className="w-full h-full grid place-items-center bg-[color-mix(in_oklch,var(--artist-accent)_22%,var(--artist-bg))]">
+                    <PlatformIcon platform="website" size={28} className="opacity-30" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-snug truncate">{sl.title}</p>
+                <p className="text-xs truncate" style={{ color: 'color-mix(in oklch, var(--artist-text) 50%, transparent)' }}>
+                  {sl.links.length > 0 ? `${sl.links.length} площадок` : 'ссылки'}
+                </p>
+              </div>
+            </a>
+          </StaggerItem>
+        ))}
+      </Stagger>
+    </section>
   );
 }
 
@@ -425,25 +489,24 @@ function ReleasesSection({
   }
 
   return (
-    <Reveal>
-      <section>
-        {releases.length === 1 ? (
-          <div className="max-w-[200px]">
-            <ReleaseQuickLook showArtist={false} release={toQL(releases[0])} priority />
-          </div>
-        ) : (
-          // Ровная сетка без «героя» на 2 колонки: квадратная обложка в col-span-2
-          // становилась вдвое выше соседей и оставляла пустоту рядом с ними.
-          <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
-            {releases.map((r, i) => (
-              <StaggerItem key={r.id}>
-                <ReleaseQuickLook showArtist={false} release={toQL(r)} priority={i === 0} />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        )}
-      </section>
-    </Reveal>
+    <section className="animate-fade-up">
+      <SectionHeader label="Релизы" />
+      {releases.length === 1 ? (
+        <div className="max-w-[200px]">
+          <ReleaseQuickLook showArtist={false} release={toQL(releases[0])} priority />
+        </div>
+      ) : (
+        // Ровная сетка без «героя» на 2 колонки: квадратная обложка в col-span-2
+        // становилась вдвое выше соседей и оставляла пустоту рядом с ними.
+        <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
+          {releases.map((r, i) => (
+            <StaggerItem key={r.id}>
+              <ReleaseQuickLook showArtist={false} release={toQL(r)} priority={i === 0} />
+            </StaggerItem>
+          ))}
+        </Stagger>
+      )}
+    </section>
   );
 }
 
@@ -451,8 +514,9 @@ function ReleasesSection({
 
 function PostsSection({ posts }: { posts: ArtistPost[] }) {
   return (
-    <Reveal>
-      <section className="space-y-4">
+    <section className="animate-fade-up">
+      <SectionHeader label="Анонсы" />
+      <div className="space-y-4">
         {posts.map((post) => (
           <article
             key={post.id}
@@ -476,8 +540,8 @@ function PostsSection({ posts }: { posts: ArtistPost[] }) {
             <p className="text-sm leading-relaxed opacity-75 whitespace-pre-line">{post.body}</p>
           </article>
         ))}
-      </section>
-    </Reveal>
+      </div>
+    </section>
   );
 }
 
@@ -508,22 +572,40 @@ async function VideosSection({ videos }: { videos: ArtistVideo[] }) {
   if (embeds.length === 0) return null;
 
   return (
-    <Reveal>
-      <section>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {embeds.map((v, i) => (
-            <div key={i} className="space-y-2">
-              <VideoPlayer embed={v.embed} title={v.title} />
-              {v.title && <p className="text-sm opacity-55 leading-snug">{v.title}</p>}
-            </div>
-          ))}
-        </div>
-      </section>
-    </Reveal>
+    <section className="animate-fade-up">
+      <SectionHeader label="Видео" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {embeds.map((v, i) => (
+          <div key={i} className="space-y-2">
+            <VideoPlayer embed={v.embed} title={v.title} />
+            {v.title && <p className="text-sm opacity-55 leading-snug">{v.title}</p>}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
 // ─── Utilities ─────────────────────────────────────────────────────────────
+
+// Единый темизированный заголовок секции: mono-eyebrow акцентом + волосяная линия.
+// Кандидат на вынос в общий темизированный kit, когда дойдём до релиза/трека.
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <div className="mb-5 flex items-center gap-3">
+      <span
+        className="font-mono text-xs uppercase tracking-[0.25em]"
+        style={{ color: 'var(--artist-accent)' }}
+      >
+        {label}
+      </span>
+      <span
+        className="h-px flex-1"
+        style={{ background: 'color-mix(in oklch, var(--artist-text) 14%, transparent)' }}
+      />
+    </div>
+  );
+}
 
 function GuestFollowButton({
   slug,
