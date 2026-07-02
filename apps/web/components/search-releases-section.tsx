@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
+import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { GENRE_LABELS, type Genre } from '@/lib/genres';
 import type { SearchRelease } from '@vire/db';
 
@@ -57,43 +56,15 @@ export function SearchReleasesSection({ releases }: Props) {
           exit={{ opacity: 0 }}
           transition={spring.snappy}
         >
-          <Stagger step={0.035} className="flex flex-col divide-y divide-border">
+          <Stagger step={0.035} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
             {filtered.map((r) => (
               <StaggerItem key={r.id}>
-                <ReleaseRow release={r} />
+                <ReleaseQuickLook release={{ ...r, releaseDate: null }} />
               </StaggerItem>
             ))}
           </Stagger>
         </motion.div>
       </AnimatePresence>
     </div>
-  );
-}
-
-function ReleaseRow({ release }: { release: SearchRelease }) {
-  return (
-    <Link
-      href={`/artists/${release.artistSlug}/releases/${release.id}`}
-      className="group flex items-center gap-3 py-3 hover:bg-accent/5 -mx-2 px-2 rounded-sm transition-colors"
-    >
-      <div className="relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
-        {release.coverUrl
-          ? <Image src={release.coverUrl} alt={release.title} fill quality={60} sizes="36px" className="object-cover" />
-          : <div className="w-full h-full bg-white/5" />
-        }
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate group-hover:text-foreground transition-colors">{release.title}</p>
-        <p className="text-xs text-muted-foreground truncate">{release.artistName}</p>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {release.genre && (
-          <span className="text-[10px] font-mono text-muted-foreground/60">
-            {GENRE_LABELS[release.genre as Genre] ?? release.genre}
-          </span>
-        )}
-        <span className="text-xs font-mono text-muted-foreground">{release.type}</span>
-      </div>
-    </Link>
   );
 }

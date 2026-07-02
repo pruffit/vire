@@ -6,6 +6,7 @@ import { searchAll } from '@vire/db';
 import type { SearchArtist } from '@vire/db';
 import { GlobalSearch } from '@/components/global-search';
 import { Icon } from '@/components/icon';
+import { resolveAvatarUrl } from '@/lib/avatar';
 import { SearchTracksSection } from '@/components/search-tracks-section';
 import { SearchReleasesSection } from '@/components/search-releases-section';
 
@@ -29,7 +30,7 @@ export default async function SearchPage({ searchParams }: Props) {
     : 0;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-6 py-10 space-y-8">
+    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-8">
       <div className="max-w-2xl">
         <GlobalSearch variant="page" defaultValue={query} autoFocus={!query} />
       </div>
@@ -57,7 +58,7 @@ export default async function SearchPage({ searchParams }: Props) {
           {results.artists.length > 0 && (
             <section className="space-y-3">
               <SectionHeader label="Артисты" count={results.artists.length} />
-              <Stagger step={0.035} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <Stagger step={0.035} className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-x-5 gap-y-6">
                 {results.artists.map((a) => (
                   <StaggerItem key={a.id}><ArtistCard artist={a} /></StaggerItem>
                 ))}
@@ -94,24 +95,22 @@ function SectionHeader({ label, count }: { label: string; count: number }) {
 }
 
 function ArtistCard({ artist }: { artist: SearchArtist }) {
+  const avatar = resolveAvatarUrl(artist.avatarUrl, artist.firstReleaseCoverUrl);
   return (
-    <Link
-      href={`/artists/${artist.slug}`}
-      className="group flex items-center gap-3 p-3 rounded-md bg-card border border-border/40 hover:bg-accent/5 transition-colors"
-    >
-      {artist.avatarUrl ? (
-        <Image src={artist.avatarUrl} alt={artist.name} width={36} height={36} className="w-9 h-9 rounded-full object-cover shrink-0" />
-      ) : (
-        <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground shrink-0">
-          {artist.name[0]?.toUpperCase()}
-        </div>
-      )}
-      <div className="min-w-0">
-        <p className="text-sm font-medium truncate group-hover:text-foreground transition-colors">
-          {artist.name}
-          {artist.verified && <Icon name="check" size={12} className="ml-1 inline-block align-middle text-muted-foreground" />}
-        </p>
+    <Link href={`/artists/${artist.slug}`} className="block group text-center">
+      <div className="relative mx-auto w-full aspect-square rounded-full overflow-hidden bg-muted ring-1 ring-white/5 transition-shadow duration-300 ease-soft group-hover:ring-white/20">
+        {avatar ? (
+          <Image src={avatar} alt={artist.name} fill sizes="(max-width: 640px) 30vw, 128px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
+        ) : (
+          <div className="w-full h-full grid place-items-center text-xl font-mono text-muted-foreground">
+            {artist.name[0]?.toUpperCase()}
+          </div>
+        )}
       </div>
+      <p className="mt-2 flex items-center justify-center gap-1 text-xs font-medium leading-snug group-hover:text-foreground transition-colors">
+        <span className="truncate">{artist.name}</span>
+        {artist.verified && <Icon name="check" size={11} className="text-muted-foreground shrink-0" />}
+      </p>
     </Link>
   );
 }

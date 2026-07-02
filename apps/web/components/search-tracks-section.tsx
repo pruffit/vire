@@ -24,7 +24,7 @@ export function SearchTracksSection({ tracks }: { tracks: SearchTrack[] }) {
   }));
 
   return (
-    <Stagger step={0.035} className="flex flex-col divide-y divide-border">
+    <Stagger step={0.035} className="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-8">
       {tracks.map((t, i) => (
         <StaggerItem key={t.id}>
           <SearchTrackRow track={t} queue={queue} queueIndex={i} />
@@ -59,7 +59,7 @@ function SearchTrackRow({
       onKeyDown={(e) => e.key === 'Enter' && handleClick()}
       whileTap={{ scale: 0.99 }}
       transition={spring.snappy}
-      className="group flex items-center gap-3 py-3 hover:bg-accent/5 -mx-2 px-2 rounded-sm transition-colors cursor-pointer select-none"
+      className="group flex items-center gap-3 py-3 border-b border-border/60 hover:bg-accent/5 -mx-2 px-2 rounded-sm transition-colors cursor-pointer select-none"
     >
       <div className="relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
         {track.coverUrl ? (
