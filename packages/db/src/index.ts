@@ -116,8 +116,10 @@ export {
   getTrackMoods, setTrackMoods, getMoodsForTracks, getMoodCounts, ALL_MOODS, MOOD_LABELS,
 } from './queries/track-moods';
 export type { Mood, MoodCount } from './queries/track-moods';
-export { getTrackGenres, setTrackGenres, getGenresForTracks, ALL_TRACK_GENRES } from './queries/track-genres';
-export type { TrackGenre } from './queries/track-genres';
+export { getTrackGenres, setTrackGenres, getGenresForTracks, getGenreCounts, ALL_TRACK_GENRES } from './queries/track-genres';
+export type { TrackGenre, GenreCount } from './queries/track-genres';
+export { getTasteProfile } from './queries/taste';
+export type { TasteProfile } from './queries/taste';
 export {
   getAggregateMoments, addFavoriteMoment, getMomentCount,
 } from './queries/favorite-moments';

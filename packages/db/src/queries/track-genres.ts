@@ -1,6 +1,6 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, lte, or, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { trackGenres, genreEnum } from '../schema';
+import { trackGenres, genreEnum, tracks, releases, artistProfiles } from '../schema';
 
 export type TrackGenre = typeof genreEnum.enumValues[number];
 
@@ -37,4 +37,31 @@ export async function getGenresForTracks(trackIds: string[]): Promise<Record<str
     result[row.trackId].push(row.genre);
   }
   return result;
+}
+
+export interface GenreCount {
+  genre: TrackGenre;
+  count: number;
+}
+
+/** Зеркало getMoodCounts: счётчик по жанрам только READY-треков вышедших релизов активных артистов. */
+export async function getGenreCounts(): Promise<GenreCount[]> {
+  return db
+    .select({ genre: trackGenres.genre, count: sql<number>`count(*)::int` })
+    .from(trackGenres)
+    .innerJoin(tracks, eq(tracks.id, trackGenres.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(
+      and(
+        eq(tracks.status, 'READY'),
+        eq(artistProfiles.isActive, true),
+        or(
+          eq(releases.status, 'PUBLISHED'),
+          and(eq(releases.status, 'SCHEDULED'), isNotNull(releases.releaseDate), lte(releases.releaseDate, sql`now()`)),
+        ),
+      ),
+    )
+    .groupBy(trackGenres.genre)
+    .orderBy(sql`count(*) DESC`);
 }
