@@ -344,7 +344,7 @@ export async function getPersonalTrackPicks(userId: string, limit = 12): Promise
         inArray(releases.artistProfileId, followedArtists),
       ),
     ))
-    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, sql`coalesce(${releases.publishedAt}, ${releases.releaseDate}, ${releases.createdAt})`)
+    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, releaseFreshness)
     .orderBy(desc(releaseFreshness), desc(count(playEvents.id)))
     .limit(limit);
   return rows.map((r) => ({ ...r, plays: Number(r.plays) }));
