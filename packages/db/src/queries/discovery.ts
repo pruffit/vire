@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, lte, or, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { artistProfiles, playEvents, releases, tracks } from '../schema';
+import { artistProfiles, playEvents, releases, tracks, likes, follows } from '../schema';
 
 export interface DiscoveryRelease {
   id: string;
@@ -12,6 +12,7 @@ export interface DiscoveryRelease {
   artistSlug: string;
   artistAvatarUrl: string | null;
   hasExplicit: boolean;
+  accentColor: string | null;
 }
 
 const releaseCardColumns = {
@@ -28,6 +29,7 @@ const releaseCardColumns = {
   // рендерит интерполированную колонку без квалификации, что в подзапросе дало бы
   // ambiguity/0 (см. предупреждение в CLAUDE.md). Внутренний tracks под алиасом t.
   hasExplicit: sql<boolean>`exists (select 1 from "tracks" t where t.release_id = "releases".id and t.is_explicit)`,
+  accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
 };
 
 export interface DiscoveryTrack {
@@ -239,4 +241,111 @@ export async function getUpcomingReleases(limit = 8): Promise<DiscoveryRelease[]
     )
     .orderBy(asc(releases.releaseDate))
     .limit(limit);
+}
+
+export interface PlayableChartTrack {
+  id: string;
+  title: string;
+  artistName: string;
+  artistSlug: string;
+  releaseId: string;
+  coverUrl: string | null;
+  accentColor: string | null;
+  isExplicit: boolean;
+  plays: number;
+}
+
+const playableTrackColumns = {
+  id: tracks.id,
+  title: tracks.title,
+  artistName: artistProfiles.name,
+  artistSlug: artistProfiles.slug,
+  releaseId: releases.id,
+  coverUrl: releases.coverUrl,
+  accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
+  isExplicit: tracks.isExplicit,
+};
+
+/** Публичный чарт: самые слушаемые READY-треки за N дней. */
+export async function getPopularTracks(days = 30, limit = 20): Promise<PlayableChartTrack[]> {
+  const rows = await db
+    .select({ ...playableTrackColumns, plays: count(playEvents.id) })
+    .from(playEvents)
+    .innerJoin(tracks, eq(tracks.id, playEvents.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(and(
+      sql`${playEvents.startedAt} >= now() - make_interval(days => ${days})`,
+      eq(tracks.status, 'READY'),
+      eq(artistProfiles.isActive, true),
+      releaseIsAired,
+    ))
+    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit)
+    .orderBy(desc(count(playEvents.id)))
+    .limit(limit);
+  return rows.map((r) => ({ ...r, plays: Number(r.plays) }));
+}
+
+/** «Продолжить слушать»: недавно игранные юзером READY-треки, без повторов, свежие сверху. */
+export async function getRecentlyPlayed(userId: string, limit = 12): Promise<PlayableChartTrack[]> {
+  const rows = await db
+    .select({ ...playableTrackColumns, lastAt: sql<string>`max(${playEvents.startedAt})` })
+    .from(playEvents)
+    .innerJoin(tracks, eq(tracks.id, playEvents.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(and(
+      eq(playEvents.userId, userId),
+      eq(tracks.status, 'READY'),
+      eq(artistProfiles.isActive, true),
+      releaseIsAired,
+    ))
+    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit)
+    .orderBy(desc(sql`max(${playEvents.startedAt})`))
+    .limit(limit);
+  return rows.map((r) => ({
+    id: r.id, title: r.title, artistName: r.artistName, artistSlug: r.artistSlug,
+    releaseId: r.releaseId, coverUrl: r.coverUrl, accentColor: r.accentColor,
+    isExplicit: r.isExplicit, plays: 0,
+  }));
+}
+
+/**
+ * «Для тебя»: READY-треки артистов, которых юзер лайкал (артисты его лайкнутых
+ * треков) или на кого подписан. Порядок — свежесть релиза + прослушивания.
+ * Cold-start (нет лайков и подписок) → пустой массив (модуль скрывается).
+ * Без ML — прагматичная выборка по имеющимся сигналам.
+ */
+export async function getPersonalTrackPicks(userId: string, limit = 12): Promise<PlayableChartTrack[]> {
+  // Артисты интереса: из лайкнутых треков ∪ из подписок.
+  const likedArtists = db
+    .select({ artistProfileId: releases.artistProfileId })
+    .from(likes)
+    .innerJoin(tracks, eq(tracks.id, likes.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .where(eq(likes.userId, userId));
+  const followedArtists = db
+    .select({ artistProfileId: follows.artistProfileId })
+    .from(follows)
+    .where(eq(follows.userId, userId));
+
+  const rows = await db
+    .select({ ...playableTrackColumns, plays: count(playEvents.id) })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .leftJoin(playEvents, eq(playEvents.trackId, tracks.id))
+    .where(and(
+      eq(tracks.status, 'READY'),
+      eq(artistProfiles.isActive, true),
+      releaseIsAired,
+      or(
+        inArray(releases.artistProfileId, likedArtists),
+        inArray(releases.artistProfileId, followedArtists),
+      ),
+    ))
+    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, sql`coalesce(${releases.publishedAt}, ${releases.releaseDate}, ${releases.createdAt})`)
+    .orderBy(desc(releaseFreshness), desc(count(playEvents.id)))
+    .limit(limit);
+  return rows.map((r) => ({ ...r, plays: Number(r.plays) }));
 }
