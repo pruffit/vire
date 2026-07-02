@@ -8,6 +8,7 @@ export interface PlaylistSummary {
   visibility: 'PRIVATE' | 'PUBLIC';
   trackCount: number;
   coverUrl: string | null;
+  createdAt: Date;
   updatedAt: Date;
 }
 
@@ -64,6 +65,7 @@ export async function getUserPlaylists(userId: string): Promise<PlaylistSummary[
       id: playlists.id,
       title: playlists.title,
       visibility: playlists.visibility,
+      createdAt: playlists.createdAt,
       updatedAt: playlists.updatedAt,
       coverUrl: playlists.coverUrl,
     })
@@ -92,6 +94,7 @@ export async function getUserPlaylists(userId: string): Promise<PlaylistSummary[
         title: p.title,
         visibility: p.visibility,
         updatedAt: p.updatedAt,
+        createdAt: p.createdAt,
         trackCount: Number(countRow?.c ?? 0),
         coverUrl: p.coverUrl ?? firstTrack?.coverUrl ?? null,
       };

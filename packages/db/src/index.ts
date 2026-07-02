@@ -36,6 +36,8 @@ export { insertPlayEvent } from './queries/play-events';
 export type { InsertPlayEventData } from './queries/play-events';
 export { getLikedTracks, getFollowedArtists, getUserCreatedAt, getUserProfile, updateUserName, updateUserImage } from './queries/profile';
 export type { LikedTrack, FollowedArtist } from './queries/profile';
+export { getListenerTaste } from './queries/listener-taste';
+export type { ListenerTaste } from './queries/listener-taste';
 export { searchAll } from './queries/search';
 export type { SearchResults, SearchArtist, SearchRelease, SearchTrack } from './queries/search';
 export { getArtistPlayStats, getArtistTrackIds } from './queries/artist-analytics';

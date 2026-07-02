@@ -1,13 +1,22 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import type { Metadata } from 'next';
-import { FadeUp } from '@vire/ui/motion';
+import {
+  getLikedTracksCached,
+  getFollowedArtistsCached,
+  getUserPlaylistsCached,
+  getUserProfileCached,
+  getListenerTasteCached,
+} from '@/lib/listener-data';
+import { mergeActivity } from '@/lib/activity';
 import { auth } from '@/auth';
-import { getUserProfile } from '@vire/db';
-import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached } from '@/lib/listener-data';
-import { ProfileCard } from './profile-card';
-import { LinkedAccounts } from './linked-accounts';
-import { Icon } from '@/components/icon';
+import { ProfileBanner } from '@/components/listener/profile/profile-banner';
+import { ProfileHero } from '@/components/listener/profile/profile-hero';
+import { TasteSection } from '@/components/listener/profile/taste-section';
+import { ActivityFeed } from '@/components/listener/profile/activity-feed';
+import { LibraryPreviews } from '@/components/listener/profile/library-previews';
+import { AccountSection } from '@/components/listener/profile/account-section';
+import { Section } from '@/components/listener/section';
+import { FollowedArtists } from '@/components/listener/followed-artists';
 
 export const metadata: Metadata = { title: 'Профиль' };
 export const dynamic = 'force-dynamic';
@@ -17,17 +26,23 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/profile');
 
   const { link_error: linkError } = await searchParams;
-  const [likedTracks, followedArtists, playlists, profile] = await Promise.all([
+  const [likedTracks, followedArtists, playlists, profile, taste] = await Promise.all([
     getLikedTracksCached(session.user.id),
     getFollowedArtistsCached(session.user.id),
     getUserPlaylistsCached(session.user.id),
-    getUserProfile(session.user.id),
+    getUserProfileCached(session.user.id),
+    getListenerTasteCached(session.user.id),
   ]);
 
+  const stats = { likes: likedTracks.length, following: followedArtists.length, playlists: playlists.length };
+  const likedMinutes = Math.round(likedTracks.reduce((s, t) => s + (t.durationSec ?? 0), 0) / 60);
+  const activity = mergeActivity(likedTracks, followedArtists, playlists);
+
   return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-12 space-y-14">
-      <FadeUp>
-        <ProfileCard
+    <main className="min-h-full">
+      <ProfileBanner />
+      <div className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10 space-y-14">
+        <ProfileHero
           user={{
             id: session.user.id,
             name: profile?.name ?? session.user.name ?? null,
@@ -35,23 +50,26 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             image: profile?.image ?? session.user.image ?? null,
             createdAt: profile?.createdAt ?? null,
           }}
-          stats={{ likes: likedTracks.length, following: followedArtists.length, playlists: playlists.length }}
+          stats={stats}
+          likedMinutes={likedMinutes}
         />
-      </FadeUp>
 
-      <FadeUp delay={0.05}>
-        <Link
-          href="/library"
-          className="group flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-foreground/[0.03]"
-        >
-          <span className="text-sm font-medium">Моя медиатека</span>
-          <Icon name="arrow-right" size={16} className="text-foreground/40 transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      </FadeUp>
+        <TasteSection genres={taste.topGenres} artists={taste.topArtists} />
 
-      <FadeUp delay={0.1}>
-        <LinkedAccounts userId={session.user.id} linkError={linkError} />
-      </FadeUp>
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_1fr] gap-8 lg:gap-12 items-start">
+          <div className="flex flex-col gap-10">
+            <ActivityFeed items={activity} />
+            <section className="animate-fade-up">
+              <Section title="Подписки" href="/library" hrefLabel="Все">
+                <FollowedArtists initial={followedArtists.slice(0, 6)} />
+              </Section>
+            </section>
+          </div>
+          <LibraryPreviews playlists={playlists} likedTracks={likedTracks} />
+        </div>
+
+        <AccountSection userId={session.user.id} linkError={linkError} />
+      </div>
     </main>
   );
 }

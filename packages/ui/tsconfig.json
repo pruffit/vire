@@ -4,7 +4,8 @@
     "jsx": "react-jsx",
     "declaration": true,
     "declarationMap": true,
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
   "include": ["src"]
 }

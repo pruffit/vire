@@ -163,3 +163,14 @@ textarea.vire-textarea:focus::-webkit-resizer {
     scroll-behavior: auto !important;
   }
 }
+
+/* Same as prefers-reduced-motion: reduce above, but driven by an explicit user
+   toggle (см. AppearanceSettings) instead of the OS setting. */
+html.vire-reduce-motion *,
+html.vire-reduce-motion ::before,
+html.vire-reduce-motion ::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { MotionProvider } from '@vire/ui/motion';
+import { MotionProvider, REDUCE_MOTION_INIT_SCRIPT } from '@vire/ui/motion';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
 import { MobileTabBar } from '@/components/listener/mobile-tab-bar';
 import { CommandPalette } from '@/components/command-palette';
@@ -81,6 +81,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${fontVariables} h-full antialiased`}
     >
       {/*
@@ -92,6 +93,9 @@ export default function RootLayout({
         Nav давала бы лишний скролл).
       */}
       <body className="h-full flex flex-col bg-background text-foreground font-sans overflow-hidden">
+        {/* До пейнта: ставит vire-reduce-motion на <html>, чтобы CSS-анимации не
+            мигнули у выбравших приглушение (см. MotionProvider/AppearanceSettings). */}
+        <script dangerouslySetInnerHTML={{ __html: REDUCE_MOTION_INIT_SCRIPT }} />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-3 focus:left-3 focus:rounded-md focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
