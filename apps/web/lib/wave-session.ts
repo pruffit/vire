@@ -27,6 +27,8 @@ const seedKey = (sessionId: string) => `wave:seed:${sessionId}`;
 
 export interface WaveSession {
   servedIds: string[];
+  /** Истинно последние 5 выданных треков (по recency в ZSET), для recentArtistIds. */
+  recentServedIds: string[];
   mood: string | null;
   genre: string | null;
 }
@@ -35,24 +37,32 @@ export interface WaveSession {
 export async function getWaveSession(sessionId: string): Promise<WaveSession> {
   try {
     const redis = getRedis();
-    const [servedIds, seed] = await Promise.all([
-      redis.smembers(servedKey(sessionId)),
+    const key = servedKey(sessionId);
+    const [servedIds, recentServedIds, seed] = await Promise.all([
+      redis.zrange(key, 0, -1),
+      redis.zrange(key, -5, -1),
       redis.hgetall(seedKey(sessionId)),
     ]);
-    return { servedIds, mood: seed.mood ?? null, genre: seed.genre ?? null };
+    return { servedIds, recentServedIds, mood: seed.mood ?? null, genre: seed.genre ?? null };
   } catch {
-    return { servedIds: [], mood: null, genre: null };
+    return { servedIds: [], recentServedIds: [], mood: null, genre: null };
   }
 }
 
-/** Отмечает треки как выданные в сессии (анти-повтор), продлевает TTL. */
+/** Отмечает треки как выданные в сессии (анти-повтор + recency), продлевает TTL. */
 export async function appendWaveServed(sessionId: string, trackIds: string[]): Promise<void> {
   if (trackIds.length === 0) return;
   try {
     const redis = getRedis();
     const key = servedKey(sessionId);
-    await redis.sadd(key, ...trackIds);
-    await redis.expire(key, TTL_SEC);
+    const now = Date.now();
+    const pipeline = redis.multi();
+    // +index сохраняет порядок выдачи внутри одного батча (иначе одинаковый score рвёт recency).
+    trackIds.forEach((trackId, index) => {
+      pipeline.zadd(key, now + index, trackId);
+    });
+    pipeline.expire(key, TTL_SEC);
+    await pipeline.exec();
   } catch {
     // Недоступность Redis не должна ронять выдачу волны.
   }

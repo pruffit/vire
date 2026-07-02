@@ -61,7 +61,7 @@ function req(query: string): Request {
 beforeEach(() => {
   vi.clearAllMocks();
   mockedAuth.mockResolvedValue(null as never);
-  getWaveSession.mockResolvedValue({ servedIds: [], mood: null, genre: null });
+  getWaveSession.mockResolvedValue({ servedIds: [], recentServedIds: [], mood: null, genre: null });
   appendWaveServed.mockResolvedValue(undefined);
   setWaveSessionSeed.mockResolvedValue(undefined);
   getWaveTracks.mockResolvedValue([TRACK]);
@@ -90,7 +90,12 @@ describe('GET /api/v1/wave', () => {
   });
 
   it('happy path: excludeIds contains served ∪ played, response is a track array', async () => {
-    getWaveSession.mockResolvedValue({ servedIds: ['served-1', 'served-2'], mood: null, genre: null });
+    getWaveSession.mockResolvedValue({
+      servedIds: ['served-1', 'served-2'],
+      recentServedIds: ['served-1', 'served-2'],
+      mood: null,
+      genre: null,
+    });
 
     const res = await GET(req('?sessionId=session-abc123&played=played-1,played-2'));
     expect(res.status).toBe(200);
@@ -124,5 +129,26 @@ describe('GET /api/v1/wave', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { tracks: unknown[] };
     expect(body.tracks).toEqual([TRACK]);
+  });
+
+  it('seed уже закреплён в сессии → setWaveSessionSeed не вызывается повторно', async () => {
+    getWaveSession.mockResolvedValue({
+      servedIds: [],
+      recentServedIds: [],
+      mood: 'HYPE',
+      genre: null,
+    });
+
+    const res = await GET(req('?sessionId=session-abc123&mood=CHILL'));
+    expect(res.status).toBe(200);
+    expect(setWaveSessionSeed).not.toHaveBeenCalled();
+  });
+
+  it('сессия пустая + mood в запросе → setWaveSessionSeed вызывается (первый запрос сессии)', async () => {
+    getWaveSession.mockResolvedValue({ servedIds: [], recentServedIds: [], mood: null, genre: null });
+
+    const res = await GET(req('?sessionId=session-abc123&mood=HYPE'));
+    expect(res.status).toBe(200);
+    expect(setWaveSessionSeed).toHaveBeenCalledWith('session-abc123', { mood: 'HYPE', genre: undefined });
   });
 });

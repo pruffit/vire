@@ -15,7 +15,12 @@ import { auth } from '@/auth';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { getWaveSession, appendWaveServed, setWaveSessionSeed } from '@/lib/wave-session';
 
-const EMPTY_SESSION = { servedIds: [] as string[], mood: null as string | null, genre: null as string | null };
+const EMPTY_SESSION = {
+  servedIds: [] as string[],
+  recentServedIds: [] as string[],
+  mood: null as string | null,
+  genre: null as string | null,
+};
 
 export async function GET(req: Request) {
   // Rate limit: 120 requests per minute per IP (player calls this continuously)
@@ -68,8 +73,8 @@ export async function GET(req: Request) {
     new Set([...waveSession.servedIds, ...playedIds, currentTrackId].filter((v): v is string => Boolean(v))),
   );
 
-  const recentServedIds = waveSession.servedIds.slice(-5);
-  const recentArtistIds = recentServedIds.length > 0 ? await getArtistIdsForTracks(recentServedIds) : [];
+  const recentArtistIds =
+    waveSession.recentServedIds.length > 0 ? await getArtistIdsForTracks(waveSession.recentServedIds) : [];
 
   // Слушатель (для профиля вкуса и анти-усталости); аноним → только глобальные сигналы
   const authSession = await auth();
