@@ -41,7 +41,7 @@ function Cell({ track, queue, index }: { track: PlayableChartTrack; queue: Playe
             <Image src={track.coverUrl} alt={track.title} fill quality={60} sizes="128px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
           )}
           <span className="absolute inset-0 grid place-items-center bg-black/0 group-hover:bg-black/25 transition-colors">
-            <span className="opacity-0 group-hover:opacity-100 grid place-items-center w-10 h-10 rounded-full bg-black/55 backdrop-blur-md ring-1 ring-white/30 text-white transition-opacity">
+            <span className="opacity-0 group-hover:opacity-100 grid place-items-center w-10 h-10 rounded-full bg-black/70 ring-1 ring-white/30 text-white transition-opacity">
               {isActive && isPlaying ? <PauseIcon size={12} /> : <PlayIcon size={13} className="translate-x-px" />}
             </span>
           </span>
