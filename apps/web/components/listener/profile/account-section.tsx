@@ -10,13 +10,15 @@ interface Props {
 
 export function AccountSection({ userId, linkError }: Props) {
   return (
-    <section className="animate-fade-up max-w-2xl space-y-8">
+    <section className="animate-fade-up grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
       <LinkedAccounts userId={userId} linkError={linkError} />
-      <Section title="Оформление">
-        <AppearanceSettings />
-      </Section>
-      <div className="pt-2 border-t border-border">
-        <SignOutButton />
+      <div className="space-y-8">
+        <Section title="Оформление">
+          <AppearanceSettings />
+        </Section>
+        <div className="pt-2 border-t border-border">
+          <SignOutButton />
+        </div>
       </div>
     </section>
   );

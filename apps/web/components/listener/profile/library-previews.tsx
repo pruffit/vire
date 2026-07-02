@@ -29,7 +29,7 @@ export function LibraryPreviews({ playlists, likedTracks }: Props) {
           title="Плейлисты"
           href="/library"
           hrefLabel="Вся медиатека"
-          action={<CreatePlaylistButton variant="full" />}
+          action={<CreatePlaylistButton variant="icon" />}
         >
           {playlists.length === 0 ? (
             <EmptyState title="Нет плейлистов" hint='Нажми «Создать плейлист», чтобы собрать первый' />
