@@ -31,7 +31,9 @@ const mockTrack: Track = {
   status: 'PROCESSING',
   isExclusive: false,
   isWip: false,
+  isExplicit: false,
   credits: [],
+  lyrics: null,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
@@ -56,6 +58,7 @@ function makeReleaseRepo(overrides?: Partial<IReleaseRepository>): IReleaseRepos
     create: vi.fn(),
     update: vi.fn(),
     updateStatus: vi.fn(),
+    delete: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
