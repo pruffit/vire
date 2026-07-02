@@ -289,7 +289,7 @@ export async function getPopularTracks(days = 30, limit = 20): Promise<PlayableC
 /** «Продолжить слушать»: недавно игранные юзером READY-треки, без повторов, свежие сверху. */
 export async function getRecentlyPlayed(userId: string, limit = 12): Promise<PlayableChartTrack[]> {
   const rows = await db
-    .select({ ...playableTrackColumns, lastAt: sql<string>`max(${playEvents.startedAt})` })
+    .select(playableTrackColumns)
     .from(playEvents)
     .innerJoin(tracks, eq(tracks.id, playEvents.trackId))
     .innerJoin(releases, eq(releases.id, tracks.releaseId))

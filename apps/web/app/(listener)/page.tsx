@@ -66,7 +66,7 @@ export default async function HomePage() {
   let personalPlaylists = personalRaw;
   if (personalPlaylists.length < 4) {
     const exclude = [...sharedPlaylists, ...personalPlaylists].map((p) => p.id);
-    const fill = await getPopularPlaylists(4 - personalPlaylists.length, exclude);
+    const fill = await getPopularPlaylists(4 - personalPlaylists.length, exclude).catch(() => []);
     personalPlaylists = [...personalPlaylists, ...fill];
   }
   const seen = new Set<string>();
