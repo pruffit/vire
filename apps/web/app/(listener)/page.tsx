@@ -91,6 +91,9 @@ export default async function HomePage() {
           анимация opacity:0→1 задерживает его обнаружение браузером (+1-2с на LCP) */}
       {featured && <FeaturedRelease release={featured} />}
 
+      {/* «Включи и слушай» — сразу под баннером, всем */}
+      <FlowBlock moods={moodCounts} />
+
       {/* Персональный верх (вошедшим, самоскрывается) */}
       {!!userId && <RecentRail tracks={recent} />}
 
@@ -114,7 +117,6 @@ export default async function HomePage() {
 
       {/* Открытия (всем) */}
       <HotTracks tracks={hotTracks} />
-      <FlowBlock moods={moodCounts} />
 
       {/* Каталог (всем) */}
       {rest.length > 0 && (
