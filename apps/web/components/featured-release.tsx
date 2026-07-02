@@ -52,7 +52,7 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
       <div aria-hidden className="absolute inset-0 bg-linear-to-r from-black/70 via-black/20 to-transparent" />
 
       <div className="absolute inset-0 z-10 grid grid-cols-1 items-end gap-6 p-6 sm:grid-cols-[1fr_auto] sm:items-center sm:p-10">
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className="order-2 flex min-w-0 flex-col gap-3 sm:order-1">
           <Link
             href={`/artists/${release.artistSlug}`}
             className="self-start text-xs font-mono uppercase tracking-[0.18em] text-white/70 hover:text-white transition-colors"
@@ -81,9 +81,9 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
           <Link
             href={href}
             aria-label={`${release.title} — к релизу`}
-            className="group hidden shrink-0 self-center sm:block"
+            className="group order-1 mx-auto shrink-0 self-start sm:order-2 sm:mx-0 sm:self-center"
           >
-            <span className="block aspect-square w-44 lg:w-56 overflow-hidden rounded-xl ring-1 ring-white/15 shadow-2xl shadow-black/60 transition-transform duration-300 ease-out group-hover:-translate-y-1">
+            <span className="block aspect-square w-36 overflow-hidden rounded-xl ring-1 ring-white/15 shadow-2xl shadow-black/60 transition-transform duration-300 ease-out group-hover:-translate-y-1 sm:w-44 lg:w-56">
               <Image
                 src={release.coverUrl!}
                 alt={`Обложка «${release.title}»`}
@@ -99,7 +99,10 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
         )}
 
         {!hasImage && (
-          <div aria-hidden className="hidden sm:grid place-items-center w-44 h-44 rounded-xl bg-white/5 ring-1 ring-white/10">
+          <div
+            aria-hidden
+            className="order-1 mx-auto grid h-36 w-36 place-items-center rounded-xl bg-white/5 ring-1 ring-white/10 sm:order-2 sm:mx-0 sm:h-44 sm:w-44"
+          >
             <Icon name="music" size={40} className="opacity-30" />
           </div>
         )}
