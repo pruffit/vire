@@ -1,4 +1,4 @@
-import { and, eq, notInArray, sql, isNotNull, or, lte, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, notInArray, sql, isNotNull, or, lte, type SQL } from 'drizzle-orm';
 import { db } from '../client';
 import { trackMoods, trackAudio, tracks, releases, artistProfiles, trackGenres } from '../schema';
 import type { Mood } from './track-moods';
@@ -98,6 +98,18 @@ export async function getTrackMusicalKey(trackId: string): Promise<string | null
     .from(trackAudio)
     .where(eq(trackAudio.trackId, trackId));
   return rows[0]?.musicalKey ?? null;
+}
+
+/** Артисты (дедуплицированные id) владеющие переданными треками — для анти-усталости по разнообразию. */
+export async function getArtistIdsForTracks(trackIds: string[]): Promise<string[]> {
+  if (trackIds.length === 0) return [];
+  const rows = await db
+    .select({ artistId: artistProfiles.id })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(inArray(tracks.id, trackIds));
+  return Array.from(new Set(rows.map((r) => r.artistId)));
 }
 
 /**
@@ -331,31 +343,4 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
     .limit(limit);
 
   return rows.map(toWaveTrack);
-}
-
-/**
- * Временный адаптер над старой сигнатурой — удаляется в задаче A5, когда роут
- * `/api/v1/wave` перейдёт на `getWaveTracks` напрямую.
- */
-export async function getWaveNextTrack(
-  currentTrackId: string | null,
-  playedIds: string[] = [],
-  limit = 1,
-  seedMood: Mood | null = null,
-  userId: string | null = null,
-): Promise<WaveTrack | null> {
-  const results = await getWaveTracks({
-    currentTrackId,
-    excludeIds: playedIds,
-    limit,
-    seedMood,
-    seedGenre: null,
-    sessionMood: null,
-    sessionGenre: null,
-    taste: null,
-    keySets: null,
-    recentArtistIds: [],
-    userId,
-  });
-  return results[0] ?? null;
 }

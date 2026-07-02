@@ -124,7 +124,7 @@ export {
   getAggregateMoments, addFavoriteMoment, getMomentCount,
 } from './queries/favorite-moments';
 export type { MomentBucket } from './queries/favorite-moments';
-export { getWaveTracks, getWaveNextTrack, getTrackMusicalKey } from './queries/wave';
+export { getWaveTracks, getTrackMusicalKey, getArtistIdsForTracks } from './queries/wave';
 export type { WaveTrack, WaveParams } from './queries/wave';
 export {
   getUserPlaylists,
