@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
 import { useAudioTime } from '@/lib/player/use-audio-time';
-import type { LyricLine } from '@/lib/lrc';
+import { findActiveLrcLine, type LyricLine } from '@/lib/lrc';
 
 interface LyricsScrollProps {
   lines: LyricLine[];
@@ -17,8 +17,9 @@ export function LyricsScroll({ lines, variant = 'player', trackId, onSeekTo = co
   // Гард в селекторе: если играет не этот трек — тик -1 (не совпадёт ни с одним
   // таймкодом). Само время — из useAudioTime, не store.currentTime (тот теперь
   // пишется редко: seek/смена трека/5с-персист, для подсветки строк не годится).
+  // enabled=isThisTrack — хук не тикает вовсе, пока играет чужой трек.
   const isThisTrack = usePlayerStore((s) => trackId == null || s.track?.id === trackId);
-  const liveTime = useAudioTime();
+  const liveTime = useAudioTime(4, isThisTrack);
   const tick = isThisTrack ? liveTime : -1;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -26,17 +27,9 @@ export function LyricsScroll({ lines, variant = 'player', trackId, onSeekTo = co
 
   const synced = useMemo(() => lines.some((l) => l.t != null), [lines]);
 
-  // Поиск активной строки мемоизирован от целой секунды — не бинарный поиск на
-  // каждый тик (~4/с), а один линейный проход раз в секунду.
-  const activeSecond = tick >= 0 ? Math.floor(tick) : -1;
-  const active = useMemo(() => {
-    if (!synced || activeSecond < 0) return -1;
-    let idx = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if ((lines[i].t ?? Infinity) <= activeSecond) idx = i;
-    }
-    return idx;
-  }, [lines, synced, activeSecond]);
+  // Пересчёт на каждый тик (4/с) — линейный проход по строкам дешёвый, а допуск
+  // ±0.15с (findActiveLrcLine) важнее троттлинга до целой секунды.
+  const active = useMemo(() => (synced ? findActiveLrcLine(lines, tick) : -1), [lines, synced, tick]);
 
   // Доскролл к активной строке — внутри контейнера, не трогая внешний скролл.
   useEffect(() => {

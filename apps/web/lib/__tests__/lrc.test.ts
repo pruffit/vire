@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseLrc, serializeLrc, isSynced } from '../lrc';
+import { parseLrc, serializeLrc, isSynced, findActiveLrcLine } from '../lrc';
 
 describe('parseLrc', () => {
   it('парсит синхронизированные строки', () => {
@@ -66,5 +66,49 @@ describe('serializeLrc / isSynced', () => {
     expect(isSynced([{ t: null, text: 'a' }])).toBe(false);
     expect(isSynced([])).toBe(false);
     expect(isSynced(null)).toBe(false);
+  });
+});
+
+describe('findActiveLrcLine', () => {
+  const lines = [
+    { t: 1, text: 'A' },
+    { t: 12.05, text: 'B' },
+    { t: 25, text: 'C' },
+  ];
+
+  it('строка с дробным таймкодом сразу после начала секунды активируется без ~1с задержки', () => {
+    // Регрессия B4: сравнение с Math.floor(tick) без допуска активировало
+    // строку t=12.05 только при tick>=13 — здесь она должна быть активна
+    // уже на tick=12.0 (допуск +0.15 покрывает разницу).
+    expect(findActiveLrcLine(lines, 12.0)).toBe(1);
+  });
+
+  it('до наступления таймкода (с учётом допуска) строка ещё не активна', () => {
+    expect(findActiveLrcLine(lines, 11.8)).toBe(0);
+  });
+
+  it('ровно на таймкоде строка активна', () => {
+    expect(findActiveLrcLine(lines, 12.05)).toBe(1);
+  });
+
+  it('между строками — активна последняя наступившая', () => {
+    expect(findActiveLrcLine(lines, 20)).toBe(1);
+  });
+
+  it('после всех строк — активна последняя', () => {
+    expect(findActiveLrcLine(lines, 100)).toBe(2);
+  });
+
+  it('до первой строки — нет активной', () => {
+    expect(findActiveLrcLine(lines, 0)).toBe(-1);
+  });
+
+  it('отрицательное время (чужой трек/не играет) — нет активной', () => {
+    expect(findActiveLrcLine(lines, -1)).toBe(-1);
+  });
+
+  it('кастомный допуск учитывается', () => {
+    expect(findActiveLrcLine(lines, 11.5, 0)).toBe(0);
+    expect(findActiveLrcLine(lines, 11.5, 0.6)).toBe(1);
   });
 });

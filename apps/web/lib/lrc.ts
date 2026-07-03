@@ -58,3 +58,19 @@ export function serializeLrc(lines: LyricLine[] | null | undefined): string {
 export function isSynced(lines: LyricLine[] | null | undefined): boolean {
   return !!lines && lines.some((l) => l.t != null);
 }
+
+/** Систематический допуск между тиком времени и таймкодом строки — timeupdate/rAF
+ *  не гарантирует попадание ровно на границу таймкода, чуть более ранняя активация
+ *  выглядит естественнее задержки. */
+export const ACTIVE_LINE_TOLERANCE = 0.15;
+
+/** Индекс последней строки, чей таймкод уже наступил (с допуском). -1 — рано
+ *  или время неизвестно (трек не играет / не этот трек в списке). */
+export function findActiveLrcLine(lines: LyricLine[], time: number, tolerance = ACTIVE_LINE_TOLERANCE): number {
+  if (time < 0) return -1;
+  let idx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if ((lines[i].t ?? Infinity) <= time + tolerance) idx = i;
+  }
+  return idx;
+}

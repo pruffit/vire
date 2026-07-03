@@ -49,7 +49,7 @@ export function WaveformScrubber({
   onActivate,
   hoverAccent = false,
 }: WaveformScrubberProps) {
-  const liveTime = useAudioTime();
+  const liveTime = useAudioTime(4, active);
   const svgRef = useRef<SVGSVGElement>(null);
   const [scrub, setScrub] = useState<number | null>(null);
 
