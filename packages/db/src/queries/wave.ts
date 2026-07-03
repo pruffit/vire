@@ -32,12 +32,12 @@ export interface WaveParams {
 
 // Параметризованный текстовый массив для ANY(...) — значения биндятся как параметры,
 // в SQL-текст попадает только структура ARRAY[$1, $2, ...]::text[].
-function textArrayParam(values: readonly string[]): SQL {
+export function textArrayParam(values: readonly string[]): SQL {
   if (values.length === 0) return sql`ARRAY[]::text[]`;
   return sql`ARRAY[${sql.join(values.map((v) => sql`${v}`), sql`, `)}]::text[]`;
 }
 
-const visibleTrackWhere = and(
+export const visibleTrackWhere = and(
   eq(tracks.status, 'READY'),
   or(
     eq(releases.status, 'PUBLISHED'),

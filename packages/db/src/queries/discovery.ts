@@ -1,6 +1,7 @@
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, lte, notInArray, or, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { artistProfiles, playEvents, releases, tracks, likes, follows } from '../schema';
+import { getTasteProfile } from './taste';
 
 export interface DiscoveryRelease {
   id: string;
@@ -312,12 +313,16 @@ export async function getRecentlyPlayed(userId: string, limit = 12): Promise<Pla
 
 /**
  * «Для тебя»: READY-треки артистов, которых юзер лайкал (артисты его лайкнутых
- * треков) или на кого подписан. Порядок — свежесть релиза + прослушивания.
- * Cold-start (нет лайков и подписок) → пустой массив (модуль скрывается).
- * Без ML — прагматичная выборка по имеющимся сигналам.
+ * треков), на кого подписан, или из его профиля вкуса (topArtistIds по лайкам ∪
+ * прослушиваниям за 90 дней). Исключены треки, которые юзер уже лайкнул или слушал
+ * за последние 14 дней — это «открой новое», а не повтор уже знакомого.
+ * Порядок — свежесть релиза + прослушивания. Cold-start (нет сигнала) → пустой
+ * массив (модуль скрывается). Без ML — прагматичная выборка по имеющимся сигналам.
  */
 export async function getPersonalTrackPicks(userId: string, limit = 12): Promise<PlayableChartTrack[]> {
-  // Артисты интереса: из лайкнутых треков ∪ из подписок.
+  const taste = await getTasteProfile(userId);
+
+  // Артисты интереса: из лайкнутых треков ∪ из подписок ∪ из профиля вкуса.
   const likedArtists = db
     .select({ artistProfileId: releases.artistProfileId })
     .from(likes)
@@ -329,6 +334,23 @@ export async function getPersonalTrackPicks(userId: string, limit = 12): Promise
     .from(follows)
     .where(eq(follows.userId, userId));
 
+  const likedTrackIds = db
+    .select({ trackId: likes.trackId })
+    .from(likes)
+    .where(eq(likes.userId, userId));
+  const recentlyPlayedTrackIds = db
+    .select({ trackId: playEvents.trackId })
+    .from(playEvents)
+    .where(and(eq(playEvents.userId, userId), sql`${playEvents.startedAt} >= now() - interval '14 days'`));
+
+  const artistOfInterest = [
+    inArray(releases.artistProfileId, likedArtists),
+    inArray(releases.artistProfileId, followedArtists),
+  ];
+  if (taste.topArtistIds.length > 0) {
+    artistOfInterest.push(inArray(releases.artistProfileId, taste.topArtistIds));
+  }
+
   const rows = await db
     .select({ ...playableTrackColumns, plays: count(playEvents.id) })
     .from(tracks)
@@ -339,10 +361,9 @@ export async function getPersonalTrackPicks(userId: string, limit = 12): Promise
       eq(tracks.status, 'READY'),
       eq(artistProfiles.isActive, true),
       releaseIsAired,
-      or(
-        inArray(releases.artistProfileId, likedArtists),
-        inArray(releases.artistProfileId, followedArtists),
-      ),
+      or(...artistOfInterest),
+      notInArray(tracks.id, likedTrackIds),
+      notInArray(tracks.id, recentlyPlayedTrackIds),
     ))
     .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, releaseFreshness)
     .orderBy(desc(releaseFreshness), desc(count(playEvents.id)))

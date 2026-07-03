@@ -1,8 +1,12 @@
 import { desc, eq, gte, lte, or, sql, and, count, inArray, notInArray, isNotNull } from 'drizzle-orm';
 import { db } from '../client';
-import { tracks, releases, trackMoods, playEvents, likes, playlists, playlistTracks } from '../schema';
+import { tracks, releases, artistProfiles, trackMoods, playEvents, likes, playlists, playlistTracks } from '../schema';
 import { upsertEditorialPlaylist, createPersonalPlaylist, deletePersonalPlaylists } from './playlists';
 import { MOOD_LABELS, type Mood } from './track-moods';
+import type { TrackGenre } from './track-genres';
+import { getTasteProfile } from './taste';
+import { textArrayParam, visibleTrackWhere } from './wave';
+import { popularityScoreSql, topTrackIdsByPlays } from './popularity';
 
 // Релиз доступен (треки можно слушать): опубликован или запланирован с прошедшей
 // датой. Не пускаем невышедшие релизы в подборки — иначе их можно слушать с главной.
@@ -40,21 +44,15 @@ export async function generateSharedPlaylists(): Promise<void> {
 
 /** «Сейчас набирает» — треки с наибольшим числом прослушиваний за 7 дней. */
 async function generateTrendingPlaylist(): Promise<void> {
-  const rows = await db
-    .select({ trackId: playEvents.trackId, plays: count() })
-    .from(playEvents)
-    .where(gte(playEvents.startedAt, sql`now() - interval '7 days'`))
-    .groupBy(playEvents.trackId)
-    .orderBy(desc(count()))
-    .limit(LIST_LIMIT);
+  const trackIds = await topTrackIdsByPlays(7, LIST_LIMIT);
 
-  if (rows.length < MIN_TRACKS) return;
+  if (trackIds.length < MIN_TRACKS) return;
 
   await upsertEditorialPlaylist({
     kind: 'TRENDING',
     title: 'Сейчас набирает',
     description: 'Треки с наибольшим числом прослушиваний за последнюю неделю',
-    trackIds: rows.map((r) => r.trackId),
+    trackIds,
   });
 }
 
@@ -142,14 +140,40 @@ async function generateTopMoodPlaylists(): Promise<void> {
   await deleteStaleMoodPlaylists(keepTitles);
 }
 
-/** READY-треки в данном настроении (id, до LIST_LIMIT). */
+/** READY-треки в данном настроении, ранжированные по популярности (id, до LIST_LIMIT). */
 async function moodTrackIds(mood: Mood): Promise<string[]> {
+  const score = popularityScoreSql(30);
   const rows = await db
     .select({ trackId: trackMoods.trackId })
     .from(trackMoods)
     .innerJoin(tracks, eq(tracks.id, trackMoods.trackId))
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
-    .where(and(eq(trackMoods.mood, mood), eq(tracks.status, 'READY'), releaseIsPublic))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(and(eq(trackMoods.mood, mood), visibleTrackWhere))
+    .orderBy(desc(score), desc(releases.releaseDate))
+    .limit(LIST_LIMIT);
+  return rows.map((r) => r.trackId);
+}
+
+/** Видимые треки в топ-настроениях ИЛИ топ-жанрах профиля вкуса, ранжированные по популярности. */
+async function personalMixTrackIds(moods: Mood[], genres: TrackGenre[]): Promise<string[]> {
+  if (moods.length === 0 && genres.length === 0) return [];
+
+  const moodMatch = moods.length > 0
+    ? sql`EXISTS (SELECT 1 FROM track_moods tm WHERE tm.track_id = tracks.id AND tm.mood::text = ANY(${textArrayParam(moods)}))`
+    : sql`false`;
+  const genreMatch = genres.length > 0
+    ? sql`EXISTS (SELECT 1 FROM track_genres tg WHERE tg.track_id = tracks.id AND tg.genre::text = ANY(${textArrayParam(genres)}))`
+    : sql`false`;
+
+  const score = popularityScoreSql(30);
+  const rows = await db
+    .select({ trackId: tracks.id })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(and(visibleTrackWhere, sql`(${moodMatch} OR ${genreMatch})`))
+    .orderBy(desc(score), desc(releases.releaseDate))
     .limit(LIST_LIMIT);
   return rows.map((r) => r.trackId);
 }
@@ -195,68 +219,39 @@ export async function generatePersonalPlaylistsForAllUsers(): Promise<void> {
 }
 
 /**
- * Личные подборки одного юзера на основе лайков + истории прослушиваний +
- * настроений этих треков. Пересобираются целиком. Нет сигнала → подборки
- * удаляются, на главной личную половину закрывает фолбэк на популярное.
+ * Личные подборки одного юзера на основе единого профиля вкуса (getTasteProfile:
+ * лайки + история прослушиваний за 90 дней). Пересобираются целиком. Нет сигнала →
+ * подборки удаляются, на главной личную половину закрывает фолбэк на популярное.
  */
 export async function generatePersonalPlaylists(userId: string): Promise<void> {
-  const likedRows = await db
-    .select({ trackId: likes.trackId })
-    .from(likes)
-    .where(eq(likes.userId, userId));
-  const playedRows = await db
-    .selectDistinct({ trackId: playEvents.trackId })
-    .from(playEvents)
-    .where(and(eq(playEvents.userId, userId), gte(playEvents.startedAt, sql.raw(TASTE_WINDOW))));
-
-  const tasteTrackIds = [
-    ...new Set([...likedRows.map((r) => r.trackId), ...playedRows.map((r) => r.trackId)]),
-  ];
-
-  if (tasteTrackIds.length < MIN_TRACKS) {
-    await deletePersonalPlaylists(userId);
-    return;
-  }
-
-  // Топ-настроения юзера по его трекам.
-  const moodRows = await db
-    .select({ mood: trackMoods.mood, c: count() })
-    .from(trackMoods)
-    .where(inArray(trackMoods.trackId, tasteTrackIds))
-    .groupBy(trackMoods.mood)
-    .orderBy(desc(count()));
-  const topMoods = moodRows.map((r) => r.mood as Mood);
+  const taste = await getTasteProfile(userId);
 
   // Полный пересбор: проще upsert по меняющимся заголовкам.
   await deletePersonalPlaylists(userId);
-  if (topMoods.length === 0) return; // фолбэк на популярное покроет
+  if (taste.topMoods.length === 0 && taste.topGenres.length === 0) return; // фолбэк на популярное покроет
 
+  const exclude = new Set<string>();
   let made = 0;
 
-  // 1) «Для тебя» — публичные READY треки в топ-настроениях юзера.
-  const mixMoods = topMoods.slice(0, 3);
-  const mixRows = await db
-    .selectDistinct({ trackId: trackMoods.trackId })
-    .from(trackMoods)
-    .innerJoin(tracks, eq(tracks.id, trackMoods.trackId))
-    .innerJoin(releases, eq(releases.id, tracks.releaseId))
-    .where(and(inArray(trackMoods.mood, mixMoods), eq(tracks.status, 'READY'), releaseIsPublic))
-    .limit(LIST_LIMIT);
-  if (mixRows.length >= MIN_TRACKS) {
+  // 1) «Для тебя» — микс по топ-настроениям И топ-жанрам профиля вкуса.
+  const mixTrackIds = await personalMixTrackIds(taste.topMoods, taste.topGenres);
+  if (mixTrackIds.length >= MIN_TRACKS) {
     await createPersonalPlaylist({
       userId,
       title: 'Для тебя',
       description: 'Подобрано по твоим лайкам и прослушиваниям',
-      trackIds: mixRows.map((r) => r.trackId),
+      trackIds: mixTrackIds,
     });
+    mixTrackIds.forEach((id) => exclude.add(id));
     made += 1;
   }
 
-  // 2) До PERSONAL_MAX всего — mood-подборки под топ-настроения юзера.
-  for (const mood of topMoods) {
+  // 2) До PERSONAL_MAX всего — mood-подборки под топ-настроения юзера, без
+  // пересечения с «Для тебя» (накопленный exclusion set внутри прогона).
+  for (const mood of taste.topMoods) {
     if (made >= PERSONAL_MAX) break;
     const label = MOOD_LABELS[mood];
-    const trackIds = await moodTrackIds(mood);
+    const trackIds = (await moodTrackIds(mood)).filter((id) => !exclude.has(id));
     if (trackIds.length < MIN_TRACKS) continue;
     await createPersonalPlaylist({
       userId,
@@ -264,6 +259,7 @@ export async function generatePersonalPlaylists(userId: string): Promise<void> {
       description: `Тебе заходит «${label}»`,
       trackIds,
     });
+    trackIds.forEach((id) => exclude.add(id));
     made += 1;
   }
 }
