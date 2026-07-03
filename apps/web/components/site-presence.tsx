@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { getSessionId } from '@/lib/session-id';
 
 /**
  * Heartbeat присутствия на сайте — монтируется один раз в корневом layout, шлёт
@@ -9,16 +10,6 @@ import { useEffect } from 'react';
  * на сервере 45с (см. lib/presence.ts), поэтому шлём раз в 20с.
  */
 const HEARTBEAT_MS = 20_000;
-
-function getSessionId(): string {
-  const key = 'vire_sid';
-  let sid = sessionStorage.getItem(key);
-  if (!sid) {
-    sid = crypto.randomUUID();
-    sessionStorage.setItem(key, sid);
-  }
-  return sid;
-}
 
 export function SitePresence() {
   useEffect(() => {

@@ -1,5 +1,6 @@
 import type HlsType from 'hls.js';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
+import { getSessionId } from '@/lib/session-id';
 
 let audio: HTMLAudioElement | null = null;
 let hls: HlsType | null = null;
@@ -34,16 +35,6 @@ function armLoadWatchdog(): void {
       if (hls) { hls.destroy(); hls = null; }
     }
   }, LOAD_TIMEOUT_MS);
-}
-
-function getSessionId(): string {
-  const key = 'vire_sid';
-  let sid = sessionStorage.getItem(key);
-  if (!sid) {
-    sid = crypto.randomUUID();
-    sessionStorage.setItem(key, sid);
-  }
-  return sid;
 }
 
 let playStartedAt: number | null = null;
