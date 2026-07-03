@@ -5,7 +5,6 @@ import { PlayerWrapper } from '@/components/player/player-wrapper';
 import { MobileTabBar } from '@/components/listener/mobile-tab-bar';
 import { CommandPalette } from '@/components/command-palette';
 import { Toaster } from '@/components/toast';
-import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { Nav } from '@/components/nav';
 import { CookieBanner } from '@/components/cookie-banner';
 import { Announcements } from '@/components/announcements';
@@ -115,7 +114,6 @@ export default function RootLayout({
           <PlayerWrapper />
           <MobileTabBar />
           <CommandPalette />
-          <KeyboardShortcuts />
           <Toaster />
           <CookieBanner />
           <Announcements />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
@@ -16,10 +16,8 @@ import { WaveformScrubber } from './waveform-scrubber';
 import { QueuePanel } from './queue-panel';
 import { ChevronDownIcon, QueueIcon, VolumeIcon } from './player-icons';
 import { formatDuration } from '@/lib/format';
-import { isDesktopPointer } from '@/lib/is-desktop-pointer';
+import { useIsDesktopPointer } from '@/lib/is-desktop-pointer';
 import { useAudioTime } from '@/lib/player/use-audio-time';
-
-const subscribeNoop = () => () => {};
 
 /**
  * Фуллскрин-плеер: обложка разворачивается из мини-бара (shared layoutId
@@ -36,6 +34,7 @@ export function FullscreenPlayer({
   const track = usePlayerStore((s) => s.track);
   const queueLength = usePlayerStore((s) => s.queue.length);
   const [showQueue, setShowQueue] = useState(initialShowQueue);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -58,8 +57,8 @@ export function FullscreenPlayer({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-      // Очередь использует свой drag-reorder + скролл — отключаем dismiss-свайп при ней.
-      drag={showQueue ? false : 'y'}
+      // Очередь и раскрытый текст используют свой скролл — отключаем dismiss-свайп при них.
+      drag={showQueue || lyricsOpen ? false : 'y'}
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0, bottom: 0.7 }}
       onDragEnd={handleDragEnd}
@@ -132,7 +131,7 @@ export function FullscreenPlayer({
         <Controls showWaveMode={false} showShuffle trailing={<FullscreenShareButton track={track} />} />
 
         {/* Синхронизированный текст (если есть) */}
-        <Lyrics key={track.id} trackId={track.id} />
+        <Lyrics key={track.id} trackId={track.id} onOpenChange={setLyricsOpen} />
 
         {/* Нижняя панель: громкость (десктоп) + очередь; список очереди раскрывается под ней. */}
         <div className="w-full flex flex-col items-center gap-3">
@@ -179,9 +178,8 @@ function FullscreenExtras({
   const volume = usePlayerStore((s) => s.volume);
 
   // Ползунок громкости — только на десктопе (мышь/трекпад). На планшетах/телефонах
-  // прячем: там громкостью рулят хардварные кнопки. useSyncExternalStore: на сервере
-  // true (показываем), на клиенте — реальный детект, без рассинхрона гидрации.
-  const showVolume = useSyncExternalStore(subscribeNoop, isDesktopPointer, () => true);
+  // прячем: там громкостью рулят хардварные кнопки.
+  const showVolume = useIsDesktopPointer();
 
   return (
     // stopPropagation, чтобы взаимодействие с громкостью/очередью не закрывало плеер свайпом.

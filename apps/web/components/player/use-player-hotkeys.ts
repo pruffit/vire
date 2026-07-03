@@ -16,8 +16,9 @@ function isInteractive(target: EventTarget | null): boolean {
 }
 
 /**
- * Глобальные клавиши плеера: пробел = play/pause, ←/→ = перемотка ±5с.
- * Работают только когда трек загружен и фокус не на интерактивном элементе.
+ * Глобальные клавиши плеера: пробел = play/pause, ←/→ = перемотка ±5с,
+ * Shift+←/→ = пред./след. трек, M = мьют. Работают только когда трек
+ * загружен и фокус не на интерактивном элементе.
  */
 export function usePlayerHotkeys(): void {
   useEffect(() => {
@@ -39,11 +40,16 @@ export function usePlayerHotkeys(): void {
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          controls.seek(Math.max(0, currentTime - SEEK_STEP_SEC));
+          if (e.shiftKey) controls.prev();
+          else controls.seek(Math.max(0, currentTime - SEEK_STEP_SEC));
           break;
         case 'ArrowRight':
           e.preventDefault();
-          controls.seek(duration > 0 ? Math.min(duration, currentTime + SEEK_STEP_SEC) : currentTime + SEEK_STEP_SEC);
+          if (e.shiftKey) void controls.next();
+          else controls.seek(duration > 0 ? Math.min(duration, currentTime + SEEK_STEP_SEC) : currentTime + SEEK_STEP_SEC);
+          break;
+        case 'KeyM':
+          controls.toggleMute();
           break;
       }
     }
