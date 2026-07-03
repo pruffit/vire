@@ -235,7 +235,9 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] `.../tracks/[trackId]` — waveform-плеер, BPM/key, like, live-счётчик
 - [x] `/feed` — лента подписок, `/profile` — карточка профиля (смена имени, загрузка своего
   аватара в S3, «Способы входа»: пароль + привязка OAuth/Telegram), лайки, подписки, покупки
-- [x] Глобальный плеер — Zustand + HLS.js + SVG waveform scrubber, wave-режим
+- [x] Глобальный плеер — Zustand (persist `vire-player`, переживает перезагрузку) +
+  HLS.js + единый waveform scrubber + LRC, wave-режим; редизайн UI на
+  mini-bar/fullscreen/controls/queue-panel (`docs/features/player.md`)
 - [x] `/releases` — каталог релизов (сортировка свежесть/популярность); explicit-бейдж (E)
   на карточках релизов везде, где видна обложка (`hasExplicit` агрегат, `docs/features/...`)
 - [x] Смартлинки (bandlink-лендинги) `/smartlink/{artist}/{slug}` + хаб на странице артиста;
@@ -243,13 +245,16 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   (`docs/features/smart-links.md`)
 - [x] Пресейвы релизов (Фаза A+B): нативный пресейв на экране отсчёта, авто-выход
   SCHEDULED по дате, авто-лайк + письмо, инлайн в «Скоро выйдет» (`docs/features/presaves.md`)
-- [x] Курируемые/алгоритмические + пользовательские плейлисты на главной (`docs/features/curated-playlists.md`)
+- [x] Курируемые/алгоритмические + пользовательские плейлисты на главной — личные
+  ранжированы по единому профилю вкуса (mood+genre) и популярности (`docs/features/curated-playlists.md`)
 
 ### Взаимодействие слушателя (концепт «Взаимодействие слушателя» — закрыто)
 - [x] Лайк трека (плеер + трек-лист + страница трека, синхронизация состояния)
 - [x] Плейлисты — `/playlists/[id]`, добавление трека, приватность, переименование/удаление
-- [x] Теги настроения (`track_moods`) + mood-picker; **Волна** ступени 1 (теги+BPM+тональность),
-  seed-режим, автоплей при исчерпании очереди
+- [x] Теги настроения (`track_moods`) + mood-picker; **Волна** ступень 2 — теги+жанры
+  (`track_genres`)+BPM+Camelot-тональность+профиль вкуса, Redis-сессия анти-повтора
+  (`wave:served` ZSET) + закреплённый seed mood/genre, пачки 1–5 треков, автоплей
+  при исчерпании очереди (`docs/features/wave.md`)
 - [x] Любимые моменты — анонимные маркеры на волне (`favorite_moments`), агрегат на странице трека
 - [x] Шеринг с таймкодом — `TrackShare` поповер (ссылка / «с момента M:SS») в плеере и на треке
 - [x] Live «слушают сейчас» — Redis-присутствие (ZSET + окно 45с), heartbeat из плеера;

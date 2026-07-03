@@ -1,46 +1,88 @@
 # Волна (алгоритм рекомендаций)
 
+«Волна» — персональный бесконечный поток треков. Запускается с главной (чипы
+настроений/жанров) или автоматически в плеере, когда очередь подходит к концу.
+
 ## Что делает
 
-«Волна» — персональный бесконечный поток треков. Запрашивается плеером в seed-режиме и со страницы `/` (кнопка запуска потока).
+### Два режима запроса
 
-### Алгоритм (взвешенный SQL)
+- **Seed-режим** (`trackId` не передан — старт волны/пустая очередь без текущего трека):
+  - Есть `mood`/`genre` в запросе — фильтр по тегу настроения (`track_moods`) и/или
+    жанру (`track_genres`, фолбэк на `releases.genre`, если у трека нет своих тегов).
+  - Вошедший слушатель без явного mood/genre — ранжирование по профилю вкуса
+    (`getTasteProfile`: топ-5 настроений/жанров/артистов по лайкам ∪ прослушиваниям
+    за 90 дней) + качество дослушивания + шум.
+  - Аноним без сигнала — популярность за 30 дней (`ln(plays+1) * random()`), ротация.
+- **Режим похожести** (`trackId` передан — очередь исчерпывается во время волны):
+  взвешенный скоринг похожести с текущим треком + поведенческие сигналы:
+  mood-совпадение, BPM (±5/±15/±30), тональность (см. ниже), жанр (приоритет —
+  `track_genres` кандидата, до 0.4; фолбэк на `releases.genre`, до 0.3), вкус
+  (mood/genre профиля, до 0.25 каждый), качество дослушивания (до 0.3), вовлечённость
+  по «любимым моментам» (до 0.2), анти-усталость (-0.6 за трек, слышанный за 7 дней),
+  разнообразие артистов (-0.4 за артиста из последних 5 выданных), сессионный буст
+  (+0.35 за mood/genre, закреплённые в начале сессии), шум (`random() * 0.15`).
 
-1. Берётся seed-трек (текущий или случайный)
-2. SQL-запрос выбирает треки с весами:
-   - **Mood** — совпадение mood-тегов seed-трека
-   - **BPM** — близость темпа (±20 BPM)
-   - **Key** — тональность (quint circle: совпадение = +вес, параллельная тональность = меньший вес)
-   - **Genre** — совпадение жанра (поле `genre` в `tracks`)
-   - **Шум** — случайный множитель для разнообразия
-3. Анти-повтор: исключаются треки из `recently_played` (последние N в сессии)
-4. Возвращает постраничный список с `cursor`
+### Тональность (Camelot)
 
-### Seed-режим в плеере
+`packages/core/src/services/musical-key.ts` парсит `track_audio.musical_key` (буквенная
+запись `C#m`/`Dbmin` или Camelot `8B`), строит колесо квинт и возвращает
+`keyMatchSets(raw)` → `{ exact: string[], neighbor: string[] }` — все написания точной
+и соседних (параллельная/квинта вверх/вниз) тональностей. Кандидат сравнивается по
+нормализованной строке (`lower`, без пробелов/дефисов) через `ANY(...)`.
 
-- Плеер следит за размером очереди
-- При ≤1 треке в очереди — запрос `GET /api/v1/wave?seedTrackId=...`
-- Полученные треки добавляются в конец очереди
-- Первый запуск без seed → случайный трек как seed
+### Redis-сессия волны
+
+`apps/web/lib/wave-session.ts` — ключи `wave:served:{sessionId}` (ZSET, честный
+анти-повтор за всю сессию — не только последние 5) и `wave:seed:{sessionId}` (hash,
+mood/genre, закреплённые первым запросом с явным seed). TTL 6ч, как presence;
+любая ошибка Redis → пустая сессия (волна не роняется, просто без анти-повтора).
+`recentServedIds` (последние 5 из ZSET) используются для разнообразия артистов.
+`sessionId` генерируется в браузере (`vire_wave_sid` в `sessionStorage`, не путать с
+общим `vire_sid` из `lib/session-id.ts`, который используется для play-events/presence).
+
+### Пачки и анти-повтор
+
+Запрос возвращает 1–5 треков (`count`, по умолчанию 3) за раз. Плеер дозапрашивает
+буфер, когда в очереди волны остаётся ≤2 трека после текущего (`needsWaveFetch`,
+не считая уже дозапрошенное), и передаёт `played` (последние ≤100 id очереди) вместе
+с серверным `wave:served` — двойная защита от повтора.
 
 ## Где код
 
-- **API:** `apps/web/app/api/v1/wave/route.ts`
-- **Сервис:** `packages/core/src/services/wave.service.ts`
-- **Репозиторий:** `packages/core/src/repositories/wave.repository.ts`
-- **Интеграция в плеер:** `apps/web/lib/player-store.ts` — `fetchWave()`
-- **DB таблицы:**
-  - `tracks` — `bpm`, `key`, `genre`
-  - `track_moods` — mood-теги треков
-  - `track_audio` — `status = 'READY'` (только готовые треки)
+- **Zod-схемы:** `packages/api-contracts/src/wave.ts` (`waveQuerySchema`,
+  `waveTrackSchema`, `waveResponseSchema`, `PLAY_SOURCES`)
+- **API:** `apps/web/app/api/v1/wave/route.ts` — rate limit 120 req/мин на IP
+  (`lib/rate-limit.ts`), валидирует mood/genre по `ALL_MOODS`/`ALL_TRACK_GENRES`
+- **SQL-подбор:** `packages/db/src/queries/wave.ts` (`getWaveTracks`, `visibleTrackWhere`,
+  `getTrackMusicalKey`, `getArtistIdsForTracks`, `textArrayParam`)
+- **Профиль вкуса:** `packages/db/src/queries/taste.ts` (`getTasteProfile`)
+- **Тональность:** `packages/core/src/services/musical-key.ts` (`parseMusicalKey`,
+  `keySpellings`, `neighborKeys`, `keyMatchSets`)
+- **Redis-сессия:** `apps/web/lib/wave-session.ts` (`getWaveSession`,
+  `appendWaveServed`, `setWaveSessionSeed`)
+- **Интеграция в плеер:** `apps/web/components/player/audio-engine.ts`
+  (`growWaveBuffer`, `maybeFetchWaveBuffer`, `controls.startWave`/`stopWave`),
+  `apps/web/lib/player/wave-buffer.ts` (`needsWaveFetch`, `fetchWaveTracks`)
+- **UI запуска:** `apps/web/components/home/flow-block.tsx` +
+  `components/home/wave-chips.tsx` (клиент) + `wave-chip-items.ts` (server-safe
+  маппинг в чипы), `components/wave-start-button.tsx`
+- **DB таблицы:** `tracks.status='READY'`, `track_audio` (`bpm`, `musical_key`),
+  `track_moods`, `track_genres`, `releases.genre` (фолбэк, если у трека нет своих
+  `track_genres`)
 
 ## Env-переменные
 
-Не требуют отдельных переменных.
+Не требуют отдельных переменных (использует общий `REDIS_URL`).
 
 ## Известные ограничения
 
-- Алгоритм работает только с треками в статусе `READY`
-- Жанр (`genre`) — строковое поле, без таксономии; похожесть жанров не вычисляется
-- BPM и Key заполняются вручную артистом (автоанализ в роадмапе — после v1.0.0)
-- Анти-повтор хранится в памяти (стор плеера), сбрасывается при перезагрузке
+- Алгоритм работает только с треками в статусе `READY` и вышедшими релизами
+  (`visibleTrackWhere`: `PUBLISHED` либо `SCHEDULED` с прошедшей датой), активный артист.
+- BPM и тональность заполняются вручную артистом или автоанализом воркера
+  (`apps/worker`, см. `docs/features/tracks-and-releases.md`); без них соответствующий
+  вес просто не участвует в скоринге.
+- Анти-повтор — Redis (ZSET на сессию), не персистентная история; при недоступности
+  Redis деградирует до stateless-выдачи (может повторить трек в рамках сессии).
+- Разнообразие артистов считается только по последним 5 выданным трекам сессии, не
+  по всей истории.
