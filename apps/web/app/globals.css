@@ -139,11 +139,27 @@ textarea.vire-textarea:focus::-webkit-resizer {
   }
 }
 
+/* Приглашающее «дыхание» — restored-плеер (тапни play, чтобы продолжить) и
+   похожие точечные подсказки. Только opacity/scale — дёшево для GPU. */
+@keyframes vire-breathe {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.08);
+  }
+}
+
 @utility animate-fade-up {
   animation: vire-fade-up 0.5s var(--ease-soft) both;
 }
 @utility animate-fade-in {
   animation: vire-fade-in 0.4s var(--ease-soft) both;
+}
+@utility animate-breathe {
+  animation: vire-breathe 2.2s var(--ease-soft) infinite;
 }
 
 @media (prefers-reduced-motion: no-preference) {
