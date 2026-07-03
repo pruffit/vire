@@ -42,7 +42,9 @@ export function fetchManifest(trackId: string): Promise<ManifestData | null> {
     const res = await fetch(`/api/v1/tracks/${trackId}/manifest`).catch(() => null);
     if (!res?.ok) return null;
 
-    const data = (await res.json()) as ManifestData;
+    // Битый JSON при 200 идёт по тому же error-пути (null), не unhandled rejection.
+    const data = (await res.json().catch(() => null)) as ManifestData | null;
+    if (!data) return null;
     putCachedManifest(trackId, data);
     return data;
   })().finally(() => {

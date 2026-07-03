@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react';
+
 /**
  * Десктоп ли это (мышь/трекпад), а не планшет/телефон. Используется, чтобы
  * показывать ползунок громкости ТОЛЬКО на компьютере: на тач-устройствах
@@ -13,4 +15,12 @@ export function isDesktopPointer(): boolean {
   // SSR: window нет — по умолчанию показываем, на клиенте перепроверим.
   if (typeof window === 'undefined' || !window.matchMedia) return true;
   return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+}
+
+const subscribeNoop = () => () => {};
+
+/** useSyncExternalStore-обёртка над isDesktopPointer: на сервере true (показываем),
+ *  на клиенте — реальный детект, без рассинхрона гидрации. */
+export function useIsDesktopPointer(): boolean {
+  return useSyncExternalStore(subscribeNoop, isDesktopPointer, () => true);
 }

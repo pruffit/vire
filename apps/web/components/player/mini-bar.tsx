@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useSyncExternalStore } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
@@ -12,11 +12,9 @@ import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { QueueIcon, ExpandIcon } from './player-icons';
 import { formatDuration } from '@/lib/format';
-import { isDesktopPointer } from '@/lib/is-desktop-pointer';
+import { useIsDesktopPointer } from '@/lib/is-desktop-pointer';
 import { useAudioTime } from '@/lib/player/use-audio-time';
 import { ratioFromX } from '@/lib/player/waveform-math';
-
-const subscribeNoop = () => () => {};
 
 /**
  * Мини-бар: закреплён над плеером в потоке app-shell. `ticking=false` —
@@ -119,8 +117,7 @@ function MiniBarTrailing({ active, onOpenQueue }: { active: boolean; onOpenQueue
   const queueLength = usePlayerStore((s) => s.queue.length);
 
   // Ползунок громкости — только на десктопе (мышь/трекпад), см. is-desktop-pointer.
-  // useSyncExternalStore: на сервере true (показываем), на клиенте — реальный детект.
-  const showVolume = useSyncExternalStore(subscribeNoop, isDesktopPointer, () => true);
+  const showVolume = useIsDesktopPointer();
 
   return (
     <div className="hidden sm:flex items-center gap-3 w-1/3 justify-end">

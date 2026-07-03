@@ -5,6 +5,7 @@ import Image from 'next/image';
 import type { PlayerTrack } from '@/store/player';
 import { usePlay } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
+import { ExplicitBadge } from '@/components/explicit-badge';
 import { formatDuration } from '@/lib/format';
 
 interface Props {
@@ -58,9 +59,10 @@ export function PurchasedTrackRow({
       <div className="flex-1 min-w-0">
         <Link
           href={`/artists/${artistSlug}/releases/${releaseId}/tracks/${trackId}`}
-          className="text-sm font-medium truncate block hover:underline"
+          className="text-sm font-medium truncate flex items-center gap-1.5 hover:underline"
         >
-          {track.title}
+          <span className="truncate">{track.title}</span>
+          {track.isExplicit && <ExplicitBadge />}
         </Link>
         <p className="text-xs text-muted-foreground truncate">{track.artistName}</p>
       </div>

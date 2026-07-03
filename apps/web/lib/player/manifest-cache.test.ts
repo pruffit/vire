@@ -127,4 +127,14 @@ describe('manifest-cache', () => {
     const result = await fetchManifest('not-found-track');
     expect(result).toBeNull();
   });
+
+  it('fetchManifest: битый JSON при 200 → null, не unhandled rejection', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.reject(new SyntaxError('Unexpected token')) }),
+    );
+    const result = await fetchManifest('bad-json-track');
+    expect(result).toBeNull();
+    expect(getCachedManifest('bad-json-track')).toBeUndefined();
+  });
 });

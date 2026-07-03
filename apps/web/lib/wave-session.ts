@@ -8,6 +8,7 @@ import Redis from 'ioredis';
  */
 
 const TTL_SEC = 6 * 60 * 60;
+const MAX_SERVED_IDS = 300;
 
 const globalForRedis = globalThis as unknown as { _waveRedis?: Redis };
 
@@ -39,7 +40,7 @@ export async function getWaveSession(sessionId: string): Promise<WaveSession> {
     const redis = getRedis();
     const key = servedKey(sessionId);
     const [servedIds, recentServedIds, seed] = await Promise.all([
-      redis.zrange(key, 0, -1),
+      redis.zrange(key, -MAX_SERVED_IDS, -1),
       redis.zrange(key, -5, -1),
       redis.hgetall(seedKey(sessionId)),
     ]);

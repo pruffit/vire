@@ -5,6 +5,7 @@ import type { PlayerTrack } from '@/store/player';
 import { useLikesStore } from '@/store/likes';
 import { usePlay } from '@/lib/player/use-play';
 import { PlayerLikeButton } from '@/components/player-like-button';
+import { ExplicitBadge } from '@/components/explicit-badge';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 
@@ -61,10 +62,11 @@ export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCo
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePlay(); } }}
       >
         <p
-          className="text-sm font-medium truncate"
+          className="text-sm font-medium truncate flex items-center gap-1.5"
           style={isThisTrack ? { color: 'var(--primary)' } : undefined}
         >
-          {track.title}
+          <span className="truncate">{track.title}</span>
+          {track.isExplicit && <ExplicitBadge />}
         </p>
         <p className="text-xs text-muted-foreground truncate">{track.artistName}</p>
       </div>
