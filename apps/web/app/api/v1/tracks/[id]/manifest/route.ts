@@ -1,16 +1,39 @@
 import { NextResponse } from 'next/server';
-import { getTrackAudio } from '@vire/db';
+import { db, getPlayableTrackAudio, getTrackAudio, getTrackArtistProfileId, DrizzleArtistRepository, type TrackAudioData } from '@vire/db';
+import { auth } from '@/auth';
+import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+const STAFF_ROLES = new Set(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
+
+type Params = { params: Promise<{ id: string }> };
+
+export async function GET(req: Request, { params }: Params) {
+  const rl = await rateLimit(clientKey(req, 'manifest'), 60, 60);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
+
   const { id } = await params;
 
-  const audio = await getTrackAudio(id);
+  let audio: TrackAudioData | null = await getPlayableTrackAudio(id);
 
   if (!audio) {
-    return NextResponse.json({ error: 'No audio available' }, { status: 404 });
+    const session = await auth();
+    const userId = session?.user?.id;
+    const role = session?.user?.role;
+
+    let allowed = !!role && STAFF_ROLES.has(role);
+    if (!allowed && userId) {
+      const artistProfileId = await getTrackArtistProfileId(id);
+      allowed = artistProfileId != null && !!(await new DrizzleArtistRepository(db).findByIdForUser(artistProfileId, userId));
+    }
+
+    if (!allowed) {
+      return NextResponse.json({ error: 'No audio available' }, { status: 404 });
+    }
+
+    audio = await getTrackAudio(id);
+    if (!audio) {
+      return NextResponse.json({ error: 'No audio available' }, { status: 404 });
+    }
   }
 
   const base = `${process.env.S3_PUBLIC_ENDPOINT}/${process.env.S3_BUCKET_STREAM}`;

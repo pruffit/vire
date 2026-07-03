@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { recordSitePresence } from '@/lib/presence';
+import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 /**
  * Heartbeat присутствия на сайте (шлёт SitePresence из layout с любой страницы).
  * Анонимно — авторизация не требуется. Деградирует тихо при сбое Redis.
  */
 export async function POST(req: Request) {
+  const rl = await rateLimit(clientKey(req, 'presence'), 12, 60);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
+
   let sessionId: unknown;
   try {
     ({ sessionId } = await req.json());

@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
+import { PLAY_SOURCES } from '@vire/api-contracts';
 import { auth } from '@/auth';
 import { playEventQueue } from '@/lib/queue';
+import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
-const VALID_SOURCES = new Set(['direct', 'playlist', 'feed', 'search']);
+const VALID_SOURCES = new Set<string>(PLAY_SOURCES);
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, { params }: Params) {
+  const rl = await rateLimit(clientKey(req, 'play'), 40, 60);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
+
   const { id: trackId } = await params;
 
   const body = await req.json().catch(() => null);

@@ -1,11 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { recordListening, countListening } = vi.hoisted(() => ({
+const { recordListening, countListening, rateLimit } = vi.hoisted(() => ({
   recordListening: vi.fn(),
   countListening: vi.fn(),
+  rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
 }));
 
 vi.mock('@/lib/presence', () => ({ recordListening, countListening }));
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit,
+  clientKey: vi.fn(() => 'listening:test'),
+  tooManyRequests: vi.fn(() => new Response(null, { status: 429 })),
+}));
 
 import { POST, GET } from './route';
 
@@ -20,9 +26,19 @@ function postReq(body: unknown): Request {
   });
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  rateLimit.mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 });
+});
 
 describe('POST /api/v1/tracks/[id]/listening', () => {
+  it('429 when rate-limited', async () => {
+    rateLimit.mockResolvedValue({ ok: false, remaining: 0, retryAfter: 60 });
+    const res = await POST(postReq({ sessionId: 'sess-1' }), ctx);
+    expect(res.status).toBe(429);
+    expect(recordListening).not.toHaveBeenCalled();
+  });
+
   it('400 when sessionId missing or invalid', async () => {
     expect((await POST(postReq({}), ctx)).status).toBe(400);
     expect((await POST(postReq({ sessionId: '' }), ctx)).status).toBe(400);
@@ -47,6 +63,13 @@ describe('POST /api/v1/tracks/[id]/listening', () => {
 });
 
 describe('GET /api/v1/tracks/[id]/listening', () => {
+  it('429 when rate-limited', async () => {
+    rateLimit.mockResolvedValue({ ok: false, remaining: 0, retryAfter: 60 });
+    const res = await GET(new Request('http://localhost'), ctx);
+    expect(res.status).toBe(429);
+    expect(countListening).not.toHaveBeenCalled();
+  });
+
   it('returns the current count without recording', async () => {
     countListening.mockResolvedValue(5);
     const res = await GET(new Request('http://localhost'), ctx);

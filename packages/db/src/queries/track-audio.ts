@@ -1,6 +1,6 @@
-import { eq, inArray, isNull, or, and, isNotNull } from 'drizzle-orm';
+import { eq, inArray, isNull, or, and, isNotNull, lte, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { trackAudio, tracks, releases } from '../schema';
+import { trackAudio, tracks, releases, artistProfiles } from '../schema';
 
 export interface TrackAudioData {
   hlsManifestKey: string;
@@ -31,6 +31,65 @@ export async function getTrackAudio(trackId: string): Promise<TrackAudioData | n
     musicalKey: row.musicalKey ?? null,
     flacKey: row.flacKey ?? null,
   };
+}
+
+export interface PlayableTrackAudioData extends TrackAudioData {
+  artistProfileId: string;
+}
+
+/**
+ * Как getTrackAudio, но только для действительно проигрываемого трека: READY,
+ * релиз вышел (PUBLISHED или SCHEDULED с прошедшей датой), артист не скрыт.
+ * null для всего остального (PROCESSING/BLOCKED/FAILED, DRAFT/ARCHIVED, isActive=false) —
+ * защита manifest-роута от стрима непубличных треков по UUID.
+ */
+export async function getPlayableTrackAudio(trackId: string): Promise<PlayableTrackAudioData | null> {
+  const [row] = await db
+    .select({
+      hlsManifestKey: trackAudio.hlsManifestKey,
+      waveformPeaks: trackAudio.waveformPeaks,
+      bpm: trackAudio.bpm,
+      musicalKey: trackAudio.musicalKey,
+      flacKey: trackAudio.flacKey,
+      artistProfileId: releases.artistProfileId,
+    })
+    .from(trackAudio)
+    .innerJoin(tracks, eq(tracks.id, trackAudio.trackId))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(
+      and(
+        eq(trackAudio.trackId, trackId),
+        eq(tracks.status, 'READY'),
+        eq(artistProfiles.isActive, true),
+        or(
+          eq(releases.status, 'PUBLISHED'),
+          and(eq(releases.status, 'SCHEDULED'), lte(releases.releaseDate, sql`now()`)),
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (!row?.hlsManifestKey) return null;
+  return {
+    hlsManifestKey: row.hlsManifestKey,
+    waveformPeaks: Array.isArray(row.waveformPeaks) ? (row.waveformPeaks as number[]) : null,
+    bpm: row.bpm ?? null,
+    musicalKey: row.musicalKey ?? null,
+    flacKey: row.flacKey ?? null,
+    artistProfileId: row.artistProfileId,
+  };
+}
+
+/** Артист-владелец трека (через релиз) — для owner-проверки, независимо от статусов. */
+export async function getTrackArtistProfileId(trackId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ artistProfileId: releases.artistProfileId })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .where(eq(tracks.id, trackId))
+    .limit(1);
+  return row?.artistProfileId ?? null;
 }
 
 /**
