@@ -4,16 +4,27 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { cn } from '@vire/ui';
+import { MOOD_LABELS, type Mood } from '@/lib/moods';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
 import { PlayIcon } from '@/components/icons';
 import { toast } from '@/components/toast';
+
+export interface MoodChip {
+  mood: Mood;
+  count: number;
+}
 
 export interface WaveChipItem {
   key: string;
   label: string;
   count: number;
   kind: 'mood' | 'genre';
+}
+
+/** Настроения → элементы общего чип-рейла волны (см. WaveChips). */
+export function moodChipItems(moods: MoodChip[]): WaveChipItem[] {
+  return moods.map(({ mood, count }) => ({ key: mood, label: MOOD_LABELS[mood], count, kind: 'mood' }));
 }
 
 const ERROR_TEXT: Record<WaveChipItem['kind'], string> = {

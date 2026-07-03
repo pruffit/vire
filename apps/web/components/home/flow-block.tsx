@@ -1,8 +1,6 @@
 import type { GenreCount } from '@vire/db';
-import type { MoodChip } from '@/components/mood-wave-chips';
-import { moodChipItems } from '@/components/mood-wave-chips';
 import { WaveStartButton } from '@/components/wave-start-button';
-import { WaveChipRow, type WaveChipItem } from '@/components/home/wave-chips';
+import { WaveChipRow, type MoodChip, moodChipItems, type WaveChipItem } from '@/components/home/wave-chips';
 import { GENRE_LABELS } from '@/lib/genres';
 
 function genreChipItems(genres: GenreCount[]): WaveChipItem[] {
