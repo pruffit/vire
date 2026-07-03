@@ -73,6 +73,9 @@ export default async function HomePage() {
   const allPlaylists = [...sharedPlaylists, ...personalPlaylists, ...publicPlaylists]
     .filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
 
+  const recentIds = new Set(recent.map((t) => t.id));
+  const personalPicksDeduped = personalPicks.filter((t) => !recentIds.has(t.id));
+
   const featured = latest[0] ?? null;
   // «Свежие релизы» = вышедшие за последние 7 дней (без редакционного featured).
   // На маленьком каталоге неделя бывает пустой/скудной — тогда добиваем общим
@@ -97,9 +100,9 @@ export default async function HomePage() {
       {/* Персональный верх (вошедшим, самоскрывается) */}
       {!!userId && <RecentRail tracks={recent} />}
 
-      {!!userId && personalPicks.length > 0 && (
+      {!!userId && personalPicksDeduped.length >= 4 && (
         <Section title="Для тебя">
-          <PlayableTrackList variant="plain" columns={2} tracks={personalPicks} context={{ source: 'home' }} />
+          <PlayableTrackList variant="plain" columns={2} tracks={personalPicksDeduped} context={{ source: 'home' }} />
         </Section>
       )}
 
