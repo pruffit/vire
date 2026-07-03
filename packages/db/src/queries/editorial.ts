@@ -218,16 +218,36 @@ export async function generatePersonalPlaylistsForAllUsers(): Promise<void> {
   }
 }
 
+/** Число уникальных треков сигнала юзера (лайки ∪ прослушивания за 90 дней). */
+async function tasteSignalTrackCount(userId: string): Promise<number> {
+  const [likedRows, playedRows] = await Promise.all([
+    db.select({ trackId: likes.trackId }).from(likes).where(eq(likes.userId, userId)),
+    db
+      .selectDistinct({ trackId: playEvents.trackId })
+      .from(playEvents)
+      .where(and(eq(playEvents.userId, userId), gte(playEvents.startedAt, sql.raw(TASTE_WINDOW)))),
+  ]);
+  return new Set([...likedRows.map((r) => r.trackId), ...playedRows.map((r) => r.trackId)]).size;
+}
+
 /**
  * Личные подборки одного юзера на основе единого профиля вкуса (getTasteProfile:
  * лайки + история прослушиваний за 90 дней). Пересобираются целиком. Нет сигнала →
  * подборки удаляются, на главной личную половину закрывает фолбэк на популярное.
+ *
+ * Порог минимального сигнала (MIN_TRACKS уникальных лайкнутых/прослушанных треков)
+ * восстановлен — иначе одного лайка с настроением/жанром достаточно, чтобы
+ * getTasteProfile вернул непустой topMoods/topGenres и собрал «Для тебя» из всего
+ * каталога.
  */
 export async function generatePersonalPlaylists(userId: string): Promise<void> {
-  const taste = await getTasteProfile(userId);
+  const signalCount = await tasteSignalTrackCount(userId);
 
   // Полный пересбор: проще upsert по меняющимся заголовкам.
   await deletePersonalPlaylists(userId);
+  if (signalCount < MIN_TRACKS) return; // недостаточно сигнала для персонализации
+
+  const taste = await getTasteProfile(userId);
   if (taste.topMoods.length === 0 && taste.topGenres.length === 0) return; // фолбэк на популярное покроет
 
   const exclude = new Set<string>();
