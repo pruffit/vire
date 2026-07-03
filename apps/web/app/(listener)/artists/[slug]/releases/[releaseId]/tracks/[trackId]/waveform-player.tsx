@@ -1,19 +1,17 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useState, type PointerEvent, type KeyboardEvent } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
 import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
-import { controls } from '@/components/player/audio-engine';
+import { controls, getAudioTime } from '@/components/player/audio-engine';
+import { WaveformScrubber } from '@/components/player/waveform-scrubber';
+import { useAudioTime } from '@/lib/player/use-audio-time';
 import { TrackShare } from '@/components/track-share';
 import { PlayIcon, PauseIcon, HeartIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 import type { MomentBucket } from '@vire/db';
 
 const BAR_COUNT = 120;
-const SVG_H = 100;
-const BAR_W = 2;
-const BAR_GAP = 1;
-const SVG_W = BAR_COUNT * (BAR_W + BAR_GAP);
 
 interface Props {
   track: PlayerTrack;
@@ -42,16 +40,9 @@ export function TrackWaveformPlayer({
   const currentTrackId = usePlayerStore((s) => s.track?.id);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isLoading = usePlayerStore((s) => s.isLoading);
-  const currentTime = usePlayerStore((s) => s.currentTime);
   const duration = usePlayerStore((s) => s.duration);
 
-  const svgRef = useRef<SVGSVGElement>(null);
-  // Скраб (0..1) при перетаскивании активного трека: визуал мгновенно, seek —
-  // на отпускании. Когда трек не играет, волна работает как «play» по тапу.
-  const [scrub, setScrub] = useState<number | null>(null);
-
   const isThisTrack = currentTrackId === track.id;
-  const progress = scrub ?? (isThisTrack && duration > 0 ? currentTime / duration : 0);
 
   // Seek to ?t= param after track loads
   useEffect(() => {
@@ -60,42 +51,10 @@ export function TrackWaveformPlayer({
     controls.seek(Math.min(seekTo, duration - 1));
   }, [seekTo, isThisTrack, duration]);
 
-  function ratioFromX(clientX: number): number {
-    const el = svgRef.current;
-    if (!el) return 0;
-    const r = el.getBoundingClientRect();
-    return Math.min(1, Math.max(0, (clientX - r.left) / r.width));
-  }
-  function onPointerDown(e: PointerEvent<SVGSVGElement>) {
-    // Не этот трек → не скраббим: тап запустит воспроизведение через onClick.
-    if (!isThisTrack || !duration) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setScrub(ratioFromX(e.clientX));
-  }
-  function onPointerMove(e: PointerEvent<SVGSVGElement>) {
-    if (scrub === null || !duration) return;
-    setScrub(ratioFromX(e.clientX));
-  }
-  function commitScrub() {
-    if (scrub === null || !duration) return;
-    controls.seek(scrub * duration);
-    setScrub(null);
-  }
-  function onKeyDown(e: KeyboardEvent<SVGSVGElement>) {
-    if (!isThisTrack || !duration) return;
-    if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      controls.seek(Math.min(duration, currentTime + 5));
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      controls.seek(Math.max(0, currentTime - 5));
-    }
-  }
-
   // Клик нужен только чтобы запустить трек, который сейчас не играет: перемотку
-  // активного трека целиком ведёт pointer-скраб (тап = down+up на одной точке).
+  // активного трека целиком ведёт pointer-скраб внутри WaveformScrubber.
   function handleWaveformClick() {
-    if (!isThisTrack) controls.playQueue(queue, { startIndex: queueIndex, context });
+    controls.playQueue(queue, { startIndex: queueIndex, context });
   }
 
   function handlePlayPause() {
@@ -103,110 +62,38 @@ export function TrackWaveformPlayer({
     else controls.playQueue(queue, { startIndex: queueIndex, context });
   }
 
-  /** Добавить любимый момент в текущей позиции */
+  /** Добавить любимый момент в текущей позиции — время читаем напрямую из
+   *  движка (не подписываемся на тик ради разового значения на клик). */
   const handleMarkMoment = useCallback(() => {
     if (!isThisTrack || !duration) return;
-    const positionSec = Math.round(currentTime);
+    const positionSec = Math.round(getAudioTime());
     fetch(`/api/v1/tracks/${trackId}/moments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ positionSec }),
     }).catch(() => {});
-  }, [isThisTrack, duration, currentTime, trackId]);
+  }, [isThisTrack, duration, trackId]);
 
-  const bars = buildBars(peaks);
-
-  // Нормализуем моменты для отрисовки поверх волны
-  const maxMoment = moments.reduce((m, b) => Math.max(m, b.count), 0);
+  const markers = useMemo(
+    () => (duration > 0 ? moments.map((b) => ({ ratio: b.positionSec / duration, count: b.count })) : []),
+    [moments, duration],
+  );
 
   return (
     <div className="space-y-3">
       {/* Waveform + момент-маркеры */}
       <div className="relative group">
-        <svg
-          ref={svgRef}
-          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-          preserveAspectRatio="none"
-          onClick={handleWaveformClick}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={commitScrub}
-          onPointerCancel={() => setScrub(null)}
-          onKeyDown={onKeyDown}
-          tabIndex={isThisTrack ? 0 : undefined}
-          aria-label={isThisTrack ? 'Перемотка' : 'Воспроизвести'}
-          role={isThisTrack ? 'slider' : 'button'}
-          aria-valuenow={isThisTrack ? Math.round(progress * duration) : undefined}
-          aria-valuemin={isThisTrack ? 0 : undefined}
-          aria-valuemax={isThisTrack ? Math.round(duration) : undefined}
-          // touch-none только для активного трека (режим скраба) — иначе на
-          // мобилке палец не сможет проскроллить страницу мимо большой волны.
-          className={`w-full h-24 sm:h-28 select-none focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30 rounded ${
-            isThisTrack ? 'touch-none' : ''
-          } ${scrub !== null ? 'cursor-grabbing' : 'cursor-pointer'}`}
-        >
-          {bars.map((peak, i) => {
-            const h = Math.max(2, peak * (SVG_H - 8));
-            const x = i * (BAR_W + BAR_GAP);
-            const played = i / BAR_COUNT < progress;
-            return (
-              <rect
-                key={i}
-                x={x}
-                y={(SVG_H - h) / 2}
-                width={BAR_W}
-                height={h}
-                rx={1}
-                fill={
-                  played
-                    ? 'var(--artist-accent, rgba(255,255,255,0.8))'
-                    : 'rgba(255,255,255,0.15)'
-                }
-              />
-            );
-          })}
-
-          {/* Агрегированные моменты — точки снизу */}
-          {duration > 0 && moments.map((bucket) => {
-            const frac = bucket.positionSec / duration;
-            const x = frac * SVG_W;
-            const intensity = maxMoment > 0 ? bucket.count / maxMoment : 0;
-            const radius = 2 + intensity * 3.5;
-            const opacity = 0.4 + intensity * 0.55;
-            return (
-              <circle
-                key={bucket.positionSec}
-                cx={x}
-                cy={SVG_H - 4}
-                r={radius}
-                fill="var(--artist-accent, rgba(255,255,255,0.7))"
-                opacity={opacity}
-              />
-            );
-          })}
-
-          {/* Playhead активного трека — позиция/скраб */}
-          {isThisTrack && duration > 0 && (
-            <rect
-              x={Math.min(SVG_W - 1.5, Math.max(0, progress * SVG_W - 0.75))}
-              y={0}
-              width={1.5}
-              height={SVG_H}
-              style={{ fill: 'var(--artist-accent, rgba(255,255,255,0.9))', opacity: scrub !== null ? 0.95 : 0.55 }}
-            />
-          )}
-        </svg>
-
-        {/* Тултип — время под курсором */}
-        <div
-          className="absolute bottom-0 left-0 right-0 h-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-          aria-hidden="true"
-        >
-          <div
-            className="absolute bottom-1 w-px h-full bg-[var(--artist-accent)] opacity-40"
-            style={{ left: `${progress * 100}%` }}
-          />
-        </div>
+        <WaveformScrubber
+          peaks={peaks}
+          barCount={BAR_COUNT}
+          markers={markers}
+          duration={duration}
+          active={isThisTrack}
+          onActivate={handleWaveformClick}
+          onSeek={(t) => controls.seek(t)}
+          hoverAccent
+          className="w-full h-24 sm:h-28 rounded"
+        />
       </div>
 
       {/* Controls */}
@@ -233,11 +120,7 @@ export function TrackWaveformPlayer({
         </button>
 
         {/* Time */}
-        {isThisTrack && (
-          <span className="text-xs font-mono opacity-40 tabular-nums shrink-0">
-            {formatDuration(currentTime)} / {formatDuration(duration)}
-          </span>
-        )}
+        {isThisTrack && <ActiveTimeLabel duration={duration} />}
 
         <div className="flex-1" />
 
@@ -258,28 +141,30 @@ export function TrackWaveformPlayer({
         )}
 
         {/* Share с таймкодом — поповер: ссылка на трек или с момента */}
-        <TrackShare
-          currentTime={isThisTrack ? currentTime : undefined}
-          size="sm"
-          variant="bordered"
-          align="right"
-        />
+        <WaveformTrackShare isThisTrack={isThisTrack} />
       </div>
     </div>
   );
 }
 
-function buildBars(peaks: number[] | null): number[] {
-  if (!peaks || peaks.length === 0) {
-    return Array.from({ length: BAR_COUNT }, (_, i) =>
-      0.3 + 0.4 * Math.abs(Math.sin(i * 0.4)),
-    );
-  }
-  const step = peaks.length / BAR_COUNT;
-  return Array.from({ length: BAR_COUNT }, (_, i) => {
-    const from = Math.floor(i * step);
-    const to = Math.min(Math.ceil((i + 1) * step), peaks.length);
-    const slice = peaks.slice(from, to);
-    return slice.length > 0 ? slice.reduce((a, b) => a + b, 0) / slice.length : 0;
-  });
+/** Живое «сейчас / всего» — изолированный лист, тикает только пока открыт. */
+function ActiveTimeLabel({ duration }: { duration: number }) {
+  const currentTime = useAudioTime();
+  return (
+    <span className="text-xs font-mono opacity-40 tabular-nums shrink-0">
+      {formatDuration(currentTime)} / {formatDuration(duration)}
+    </span>
+  );
+}
+
+function WaveformTrackShare({ isThisTrack }: { isThisTrack: boolean }) {
+  const currentTime = useAudioTime();
+  return (
+    <TrackShare
+      currentTime={isThisTrack ? currentTime : undefined}
+      size="sm"
+      variant="bordered"
+      align="right"
+    />
+  );
 }

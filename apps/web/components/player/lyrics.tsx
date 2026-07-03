@@ -7,6 +7,20 @@ import { Icon } from '@/components/icon';
 import { LyricsScroll } from '@/components/lyrics-scroll';
 import type { LyricLine } from '@/lib/lrc';
 
+// Модульный кэш текста по trackId: фуллскрин размонтирует/монтирует Lyrics на
+// каждый показ (key={trackId} на родителе), без кэша это дважды фетчило один
+// и тот же текст. LRU не нужен — простой предел размера (FIFO-вытеснение).
+const LYRICS_CACHE_LIMIT = 20;
+const lyricsCache = new Map<string, LyricLine[] | null>();
+
+function cacheLyrics(trackId: string, lines: LyricLine[] | null): void {
+  if (lyricsCache.size >= LYRICS_CACHE_LIMIT && !lyricsCache.has(trackId)) {
+    const oldest = lyricsCache.keys().next().value;
+    if (oldest !== undefined) lyricsCache.delete(oldest);
+  }
+  lyricsCache.set(trackId, lines);
+}
+
 /**
  * Текст трека в фуллскрин-плеере. Тянется лениво (по trackId), показывается
  * тоглом «Текст». Синхронизированный — подсвечивает активную строку по времени
@@ -14,15 +28,18 @@ import type { LyricLine } from '@/lib/lrc';
  * Родитель должен ставить key={trackId}, чтобы состояние сбрасывалось на новый трек.
  */
 export function Lyrics({ trackId }: { trackId: string }) {
-  const [lines, setLines] = useState<LyricLine[] | null>(null);
+  const [lines, setLines] = useState<LyricLine[] | null>(() => lyricsCache.get(trackId) ?? null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    if (lyricsCache.has(trackId)) return;
     let cancelled = false;
     fetch(`/api/v1/tracks/${trackId}/lyrics`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { lyrics?: LyricLine[] | null } | null) => {
-        if (!cancelled) setLines(d?.lyrics ?? []);
+        const value = d?.lyrics ?? [];
+        cacheLyrics(trackId, value);
+        if (!cancelled) setLines(value);
       })
       .catch(() => {
         if (!cancelled) setLines([]);

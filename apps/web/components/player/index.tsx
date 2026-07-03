@@ -13,9 +13,12 @@ import { ExplicitBadge } from '@/components/explicit-badge';
 import { Icon } from '@/components/icon';
 import { TrackShare } from '@/components/track-share';
 import { Lyrics } from './lyrics';
+import { WaveformScrubber } from './waveform-scrubber';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 import { isDesktopPointer } from '@/lib/is-desktop-pointer';
+import { useAudioTime } from '@/lib/player/use-audio-time';
+import { ratioFromX } from '@/lib/player/waveform-math';
 
 export function Player() {
   const [expanded, setExpanded] = useState(false);
@@ -222,7 +225,7 @@ function FullscreenPlayer({ onClose }: { onClose: () => void }) {
         {/* Прогресс */}
         <div className="w-full flex items-center gap-3">
           <TimeLabel which="current" />
-          <Waveform large />
+          <PlayerWaveform large />
           <TimeLabel which="duration" />
         </div>
 
@@ -313,7 +316,7 @@ function QueuePanel({ onJump }: { onJump: () => void }) {
 const subscribeNoop = () => () => {};
 
 function FullscreenShareButton({ track }: { track: PlayerTrack }) {
-  const currentTime = usePlayerStore((s) => s.currentTime);
+  const currentTime = useAudioTime();
   if (!track.artistSlug || !track.releaseId) return null;
   const trackUrl = `${window.location.origin}/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`;
   return <TrackShare trackUrl={trackUrl} currentTime={currentTime} align="right" />;
@@ -379,14 +382,22 @@ function FullscreenExtras({
   );
 }
 
+const timeLabelClass = 'text-xs font-mono text-muted-foreground tabular-nums w-9 text-center shrink-0';
+
+// Раздельные листья: подписка на живой тик нужна только текущему времени —
+// длительность меняется редко (durationchange), тикать вместе с ним незачем.
 function TimeLabel({ which }: { which: 'current' | 'duration' }) {
-  const currentTime = usePlayerStore((s) => s.currentTime);
+  return which === 'current' ? <CurrentTimeLabel /> : <DurationLabel />;
+}
+
+function CurrentTimeLabel() {
+  const currentTime = useAudioTime();
+  return <span className={timeLabelClass}>{formatDuration(currentTime)}</span>;
+}
+
+function DurationLabel() {
   const duration = usePlayerStore((s) => s.duration);
-  return (
-    <span className="text-xs font-mono text-muted-foreground tabular-nums w-9 text-center shrink-0">
-      {formatDuration(which === 'current' ? currentTime : duration)}
-    </span>
-  );
+  return <span className={timeLabelClass}>{formatDuration(duration)}</span>;
 }
 
 function Controls({ showWaveMode = true, showShuffle = false, trailing }: { showWaveMode?: boolean; showShuffle?: boolean; trailing?: React.ReactNode }) {
@@ -537,26 +548,20 @@ function ShuffleButton() {
 }
 
 function MiniProgressBar() {
-  const currentTime = usePlayerStore((s) => s.currentTime);
+  const currentTime = useAudioTime();
   const duration = usePlayerStore((s) => s.duration);
   const ref = useRef<HTMLDivElement>(null);
   const [scrub, setScrub] = useState<number | null>(null);
   const shown = scrub ?? (duration > 0 ? currentTime / duration : 0);
 
-  function ratioFromX(clientX: number): number {
-    const el = ref.current;
-    if (!el) return 0;
-    const r = el.getBoundingClientRect();
-    return Math.min(1, Math.max(0, (clientX - r.left) / r.width));
-  }
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (!duration) return;
+    if (!duration || !ref.current) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    setScrub(ratioFromX(e.clientX));
+    setScrub(ratioFromX(e.clientX, ref.current.getBoundingClientRect()));
   }
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (scrub === null || !duration) return;
-    setScrub(ratioFromX(e.clientX));
+    if (scrub === null || !duration || !ref.current) return;
+    setScrub(ratioFromX(e.clientX, ref.current.getBoundingClientRect()));
   }
   function commit() {
     if (scrub === null || !duration) return;
@@ -597,7 +602,6 @@ function MiniProgressBar() {
 }
 
 function ProgressSection() {
-  const currentTime = usePlayerStore((s) => s.currentTime);
   const duration = usePlayerStore((s) => s.duration);
   const volume = usePlayerStore((s) => s.volume);
 
@@ -607,11 +611,9 @@ function ProgressSection() {
 
   return (
     <div className="hidden sm:flex items-center gap-2 w-1/3 justify-end">
-      <span className="text-xs font-mono text-muted-foreground tabular-nums w-8 text-right">
-        {formatDuration(currentTime)}
-      </span>
+      <MiniCurrentTimeLabel />
 
-      <Waveform />
+      <PlayerWaveform />
 
       <span className="text-xs font-mono text-muted-foreground tabular-nums w-8">
         {formatDuration(duration)}
@@ -633,135 +635,29 @@ function ProgressSection() {
   );
 }
 
-function Waveform({ large = false }: { large?: boolean }) {
+function MiniCurrentTimeLabel() {
+  const currentTime = useAudioTime();
+  return (
+    <span className="text-xs font-mono text-muted-foreground tabular-nums w-8 text-right">
+      {formatDuration(currentTime)}
+    </span>
+  );
+}
+
+/** Обёртка над общим скраббером: подставляет пики/длительность/seek из стора плеера.
+ *  `large` только меняет высоту зоны касания (фуллскрин) — бары/скраб те же. */
+function PlayerWaveform({ large = false }: { large?: boolean }) {
   const peaks = usePlayerStore((s) => s.waveformPeaks);
-  const currentTime = usePlayerStore((s) => s.currentTime);
   const duration = usePlayerStore((s) => s.duration);
 
-  const svgRef = useRef<SVGSVGElement>(null);
-  // Локальный скраб (0..1) во время перетаскивания: ведёт визуал мгновенно,
-  // seek в аудио — только на отпускании (без рывков HLS при каждом движении).
-  const [scrub, setScrub] = useState<number | null>(null);
-  const progress = scrub ?? (duration > 0 ? currentTime / duration : 0);
-
-  function ratioFromX(clientX: number): number {
-    const el = svgRef.current;
-    if (!el) return 0;
-    const r = el.getBoundingClientRect();
-    return Math.min(1, Math.max(0, (clientX - r.left) / r.width));
-  }
-  function onPointerDown(e: React.PointerEvent<SVGSVGElement>) {
-    if (!duration) return;
-    e.stopPropagation(); // не запускать dismiss-свайп фуллскрина
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setScrub(ratioFromX(e.clientX));
-  }
-  function onPointerMove(e: React.PointerEvent<SVGSVGElement>) {
-    if (scrub === null || !duration) return;
-    setScrub(ratioFromX(e.clientX));
-  }
-  function commit() {
-    if (scrub === null || !duration) return;
-    controls.seek(scrub * duration);
-    setScrub(null);
-  }
-  function onKeyDown(e: React.KeyboardEvent<SVGSVGElement>) {
-    if (!duration) return;
-    if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      controls.seek(Math.min(duration, currentTime + 5));
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      controls.seek(Math.max(0, currentTime - 5));
-    }
-  }
-
-  // Нет пиков — нативный range (тач/драг из коробки). stopPropagation, чтобы
-  // перетаскивание не закрывало фуллскрин; touch-none — без скролла страницы.
-  if (!peaks || peaks.length === 0) {
-    return (
-      <input
-        type="range"
-        min={0}
-        max={duration || 100}
-        value={currentTime}
-        step={0.5}
-        onChange={(e) => controls.seek(Number(e.target.value))}
-        onPointerDown={(e) => e.stopPropagation()}
-        aria-label="Перемотка"
-        className={`flex-1 accent-primary cursor-pointer touch-none ${large ? 'h-1.5' : 'h-1'}`}
-      />
-    );
-  }
-
-  const BAR_COUNT = 80;
-  const step = peaks.length / BAR_COUNT;
-  const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
-    const from = Math.floor(i * step);
-    const to = Math.min(Math.ceil((i + 1) * step), peaks.length);
-    const slice = peaks.slice(from, to);
-    return slice.length > 0 ? slice.reduce((a, b) => a + b, 0) / slice.length : 0;
-  });
-
-  const SVG_H = 24;
-  const BAR_W = 2;
-  const BAR_GAP = 1;
-  const SVG_W = BAR_COUNT * (BAR_W + BAR_GAP);
-  const playheadX = progress * SVG_W;
-  const dragging = scrub !== null;
-
   return (
-    <svg
-      ref={svgRef}
-      viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-      preserveAspectRatio="none"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={commit}
-      onPointerCancel={() => setScrub(null)}
-      onKeyDown={onKeyDown}
-      tabIndex={0}
-      aria-label="Перемотка"
-      role="slider"
-      aria-valuenow={Math.round(progress * duration)}
-      aria-valuemin={0}
-      aria-valuemax={Math.round(duration)}
-      // touch-none — палец скраббит, а не скроллит страницу; крупнее зона на
-      // фуллскрине (мобилка). На драге явно растим высоту для точности.
-      className={`flex-1 touch-none select-none focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded-sm transition-[height] ${
-        large ? 'h-9' : 'h-6'
-      } ${dragging ? 'cursor-grabbing' : 'cursor-pointer'}`}
-    >
-      {bars.map((peak, i) => {
-        const h = Math.max(2, peak * (SVG_H - 4));
-        const x = i * (BAR_W + BAR_GAP);
-        const played = i / BAR_COUNT < progress;
-        return (
-          <rect
-            key={i}
-            x={x}
-            y={(SVG_H - h) / 2}
-            width={BAR_W}
-            height={h}
-            rx={0.5}
-            style={{
-              fill: played ? 'var(--artist-accent, rgba(255,255,255,0.75))' : 'rgba(255,255,255,0.18)',
-              transition: dragging ? 'none' : 'fill 0.12s linear',
-            }}
-          />
-        );
-      })}
-      {/* Playhead — тонкая линия позиции; ярче во время перетаскивания */}
-      {duration > 0 && (
-        <rect
-          x={Math.min(SVG_W - 1, Math.max(0, playheadX - 0.5))}
-          y={0}
-          width={1}
-          height={SVG_H}
-          style={{ fill: 'var(--artist-accent, rgba(255,255,255,0.9))', opacity: dragging ? 0.9 : 0.5 }}
-        />
-      )}
-    </svg>
+    <WaveformScrubber
+      peaks={peaks}
+      duration={duration}
+      onSeek={controls.seek}
+      ariaLabel="Перемотка"
+      className={`flex-1 transition-[height] ${large ? 'h-9' : 'h-6'}`}
+    />
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePlayerStore } from '@/store/player';
-import { controls } from './audio-engine';
+import { controls, getAudioTime } from './audio-engine';
 
 const SEEK_STEP_SEC = 5;
 
@@ -25,8 +25,12 @@ export function usePlayerHotkeys(): void {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
       if (isInteractive(e.target)) return;
 
-      const { track, hasAudio, currentTime, duration } = usePlayerStore.getState();
+      const { track, hasAudio, duration } = usePlayerStore.getState();
       if (!track || !hasAudio) return;
+
+      // Стор пишет currentTime редко (seek/смена трека/5с-тик) — для расчёта
+      // нового таймкода читаем актуальную позицию напрямую из audio-движка.
+      const currentTime = getAudioTime();
 
       switch (e.code) {
         case 'Space':

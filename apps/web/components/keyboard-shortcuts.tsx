@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { controls } from './player/audio-engine';
+import { controls, getAudioTime } from './player/audio-engine';
 import { usePlayerStore } from '@/store/player';
 
 export function KeyboardShortcuts() {
@@ -14,7 +14,7 @@ export function KeyboardShortcuts() {
         target.isContentEditable
       ) return;
 
-      const { track, currentTime, duration } = usePlayerStore.getState();
+      const { track, duration } = usePlayerStore.getState();
 
       switch (e.code) {
         case 'Space':
@@ -26,13 +26,13 @@ export function KeyboardShortcuts() {
           if (!track || e.metaKey || e.ctrlKey || e.altKey) return;
           e.preventDefault();
           if (e.shiftKey) controls.next();
-          else controls.seek(Math.min(duration, currentTime + 5));
+          else controls.seek(Math.min(duration, getAudioTime() + 5));
           break;
         case 'ArrowLeft':
           if (!track || e.metaKey || e.ctrlKey || e.altKey) return;
           e.preventDefault();
           if (e.shiftKey) controls.prev();
-          else controls.seek(Math.max(0, currentTime - 5));
+          else controls.seek(Math.max(0, getAudioTime() - 5));
           break;
         case 'KeyM':
           if (!track) return;

@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
+import { useAudioTime } from '@/lib/player/use-audio-time';
 import type { LyricLine } from '@/lib/lrc';
 
 interface LyricsScrollProps {
@@ -13,22 +14,29 @@ interface LyricsScrollProps {
 }
 
 export function LyricsScroll({ lines, variant = 'player', trackId, onSeekTo = controls.seek }: LyricsScrollProps) {
-  // Гард синхрона в селекторе: если играет не этот трек — отдаём -1, и Zustand не
-  // дёргает ре-рендер на каждый тик чужого трека. -1 не совпадёт ни с одним таймкодом.
-  const tick = usePlayerStore((s) =>
-    trackId == null || s.track?.id === trackId ? s.currentTime : -1,
-  );
+  // Гард в селекторе: если играет не этот трек — тик -1 (не совпадёт ни с одним
+  // таймкодом). Само время — из useAudioTime, не store.currentTime (тот теперь
+  // пишется редко: seek/смена трека/5с-персист, для подсветки строк не годится).
+  const isThisTrack = usePlayerStore((s) => trackId == null || s.track?.id === trackId);
+  const liveTime = useAudioTime();
+  const tick = isThisTrack ? liveTime : -1;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
 
-  const synced = lines.some((l) => l.t != null);
-  // Активная строка — последняя, чей таймкод уже наступил.
-  let active = -1;
-  if (synced && tick >= 0) {
+  const synced = useMemo(() => lines.some((l) => l.t != null), [lines]);
+
+  // Поиск активной строки мемоизирован от целой секунды — не бинарный поиск на
+  // каждый тик (~4/с), а один линейный проход раз в секунду.
+  const activeSecond = tick >= 0 ? Math.floor(tick) : -1;
+  const active = useMemo(() => {
+    if (!synced || activeSecond < 0) return -1;
+    let idx = -1;
     for (let i = 0; i < lines.length; i++) {
-      if ((lines[i].t ?? Infinity) <= tick + 0.15) active = i;
+      if ((lines[i].t ?? Infinity) <= activeSecond) idx = i;
     }
-  }
+    return idx;
+  }, [lines, synced, activeSecond]);
 
   // Доскролл к активной строке — внутри контейнера, не трогая внешний скролл.
   useEffect(() => {

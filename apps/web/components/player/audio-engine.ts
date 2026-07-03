@@ -191,10 +191,9 @@ function maybePrefetchNextManifest(): void {
 
 // ─── Тик раз в ~5с при воспроизведении ──────────────────────────────────────
 // Общий редкий throttle для проверок, которым не нужна покадровая частота
-// timeupdate: буфер волны и префетч манифеста. currentTime для живого UI
-// (прогресс-бар/waveform) обновляется отдельно на каждом timeupdate — иначе
-// текущие потребители стора (Player, waveform-player, track-lyrics) будут
-// видеть прогресс, дёргающийся раз в 5с.
+// timeupdate: буфер волны, префетч манифеста и персист currentTime в стор.
+// Живой UI (прогресс-бар/waveform/тексты) читает время мимо стора через
+// useAudioTime — стор нужен только для восстановления позиции после reload.
 const TICK_INTERVAL_MS = 5_000;
 let lastTickAt = 0;
 
@@ -204,6 +203,7 @@ function runThrottledTick(): void {
   lastTickAt = now;
 
   if (!usePlayerStore.getState().isPlaying) return;
+  usePlayerStore.getState()._setState({ currentTime: audio?.currentTime ?? 0 });
   void maybeFetchWaveBuffer();
   maybePrefetchNextManifest();
 }
@@ -214,10 +214,7 @@ export function initAudioEngine(): void {
   audio = new Audio();
   audio.volume = usePlayerStore.getState().volume;
 
-  audio.addEventListener('timeupdate', () => {
-    usePlayerStore.getState()._setState({ currentTime: audio!.currentTime });
-    runThrottledTick();
-  });
+  audio.addEventListener('timeupdate', runThrottledTick);
 
   audio.addEventListener('durationchange', () => {
     if (isFinite(audio!.duration)) {
