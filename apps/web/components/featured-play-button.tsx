@@ -5,6 +5,7 @@ import { spring } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
 import { useLazyQueue } from '@/lib/player/use-play';
 import { PlayIcon } from '@/components/icons';
+import { toast } from '@/components/toast';
 
 export function FeaturedPlayButton({
   releaseId,
@@ -23,7 +24,11 @@ export function FeaturedPlayButton({
 
   async function play() {
     const queue = await load();
-    if (queue?.[0]) controls.playQueue(queue, { context: { source: 'release', sourceId: releaseId } });
+    if (queue === null) {
+      toast.error('Не удалось загрузить треки');
+      return;
+    }
+    if (queue[0]) controls.playQueue(queue, { context: { source: 'release', sourceId: releaseId } });
   }
 
   return (

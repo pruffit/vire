@@ -5,6 +5,9 @@ import type { PlaylistTrackRow } from '@vire/db';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
 import { toPlayerTracks } from './to-player-track';
+import { fetchReleaseTracks, fetchPlaylistTracks, type LazyReleaseTrack } from './lazy-queue-fetchers';
+
+export type { LazyReleaseTrack } from './lazy-queue-fetchers';
 
 /** Единый вход воспроизведения для компонентов: очередь, toggle, состояние текущего трека. */
 export function usePlay() {
@@ -26,35 +29,12 @@ export interface ReleaseQueueMeta {
   accentColor?: string | null;
 }
 
-export interface LazyReleaseTrack {
-  id: string;
-  title: string;
-  trackNumber: number;
-  durationSec: number | null;
-  status: 'PROCESSING' | 'READY' | 'BLOCKED';
-  isExplicit?: boolean;
-}
-
 interface LazyQueueResult<T> {
-  /** Фетчит (единожды, дальше из кэша) и возвращает готовую к playQueue очередь READY-треков. */
+  /** Фетчит (успех кэшируется, сбой — нет) и возвращает очередь READY-треков; null — сбой загрузки. */
   load: () => Promise<PlayerTrack[] | null>;
   loading: boolean;
   /** Сырые строки для рендера трек-листа (все статусы) — тот же фетч, что и load(). */
   items: T[] | null;
-}
-
-async function fetchReleaseTracks(releaseId: string): Promise<LazyReleaseTrack[]> {
-  const res = await fetch(`/api/v1/releases/${releaseId}`).catch(() => null);
-  if (!res?.ok) return [];
-  const data = (await res.json()) as { tracks?: LazyReleaseTrack[] };
-  return data.tracks ?? [];
-}
-
-async function fetchPlaylistTracks(playlistId: string): Promise<PlaylistTrackRow[]> {
-  const res = await fetch(`/api/v1/playlists/${playlistId}`).catch(() => null);
-  if (!res?.ok) return [];
-  const data = (await res.json()) as { playlist?: { tracks?: PlaylistTrackRow[] } };
-  return data.playlist?.tracks ?? [];
 }
 
 type LazyRow = LazyReleaseTrack | PlaylistTrackRow;
@@ -68,7 +48,8 @@ export function useLazyQueue(
   meta?: ReleaseQueueMeta,
 ): LazyQueueResult<LazyRow> {
   const cacheRef = useRef<LazyRow[] | null>(null);
-  const fetchingRef = useRef(false);
+  // Общий in-flight-промис: параллельные вызовы load() ждут один fetch, а не получают ложный null.
+  const inflightRef = useRef<Promise<LazyRow[] | null> | null>(null);
   const [items, setItems] = useState<LazyRow[] | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -97,18 +78,22 @@ export function useLazyQueue(
     }
 
     if (cacheRef.current) return toQueue(cacheRef.current);
-    if (fetchingRef.current) return null;
-    fetchingRef.current = true;
-    setLoading(true);
-    try {
-      const rows: LazyRow[] = kind === 'release' ? await fetchReleaseTracks(id) : await fetchPlaylistTracks(id);
-      cacheRef.current = rows;
-      setItems(rows);
-      return toQueue(rows);
-    } finally {
-      fetchingRef.current = false;
-      setLoading(false);
+
+    if (!inflightRef.current) {
+      setLoading(true);
+      inflightRef.current = (kind === 'release' ? fetchReleaseTracks(id) : fetchPlaylistTracks(id))
+        .finally(() => {
+          inflightRef.current = null;
+          setLoading(false);
+        });
     }
+
+    const rows = await inflightRef.current;
+    // Сбой не кэшируем — следующий load() перезапросит; кэшируем только успех (включая пустой []).
+    if (rows === null) return null;
+    cacheRef.current = rows;
+    setItems(rows);
+    return toQueue(rows);
   }, [kind, id, artistName, artistSlug, coverUrl, accentColor]);
 
   return { load, loading, items };

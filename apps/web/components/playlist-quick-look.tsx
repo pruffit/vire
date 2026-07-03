@@ -12,6 +12,7 @@ import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { formatDuration, pluralTracks } from '@/lib/format';
 import { Icon } from '@/components/icon';
+import { toast } from '@/components/toast';
 import { QuickLookSheet, MiniEq } from './quick-look-sheet';
 
 interface Props {
@@ -34,12 +35,16 @@ interface Props {
 export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, onClose }: Props) {
   const activeTrack = usePlayerStore((s) => s.track);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
-  const { load, items: tracks } = useLazyQueue('playlist', playlistId);
+  const { load, loading, items: tracks } = useLazyQueue('playlist', playlistId);
   const context = { source: 'playlist' as const, sourceId: playlistId };
 
   useEffect(() => {
-    // load() кэширует после первого успешного фетча — повторное открытие не дублирует запрос.
-    if (open) void load();
+    // Успех кэшируется, сбой — нет: повторное открытие после ошибки перезапросит.
+    if (open) {
+      void load().then((queue) => {
+        if (queue === null) toast.error('Не удалось загрузить треки');
+      });
+    }
   }, [open, load]);
 
   const isThisPlaying =
@@ -47,12 +52,19 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
 
   async function playAll() {
     const queue = await load();
-    if (queue?.[0]) controls.playQueue(queue, { context });
+    if (queue === null) {
+      toast.error('Не удалось загрузить треки');
+      return;
+    }
+    if (queue[0]) controls.playQueue(queue, { context });
   }
 
   async function playFrom(trackId: string) {
     const queue = await load();
-    if (!queue) return;
+    if (queue === null) {
+      toast.error('Не удалось загрузить треки');
+      return;
+    }
     const idx = Math.max(0, queue.findIndex((q) => q.id === trackId));
     if (queue[idx]) controls.playQueue(queue, { startIndex: idx, context });
   }
@@ -106,10 +118,13 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
 
       {/* Трек-лист */}
       <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-3" data-scroll-area>
-        {tracks === null && (
+        {tracks === null && loading && (
           <div className="py-8 grid place-items-center">
             <span className="w-6 h-6 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />
           </div>
+        )}
+        {tracks === null && !loading && (
+          <p className="py-6 text-center text-sm text-muted-foreground">Не удалось загрузить треки.</p>
         )}
         {tracks && tracks.length === 0 && (
           <p className="py-6 text-center text-sm text-muted-foreground">Плейлист пуст.</p>

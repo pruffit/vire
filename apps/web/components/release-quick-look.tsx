@@ -12,6 +12,7 @@ import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { formatDuration } from '@/lib/format';
 import { Icon } from '@/components/icon';
+import { toast } from '@/components/toast';
 import { QuickLookSheet, MiniEq } from './quick-look-sheet';
 
 export interface QuickLookRelease {
@@ -122,19 +123,28 @@ export function ReleaseQuickLook({
 
   function openQuickLook() {
     setOpen(true);
-    void load();
+    void load().then((queue) => {
+      if (queue === null) toast.error('Не удалось загрузить треки');
+    });
   }
 
   async function playFrom(trackId: string) {
     const queue = await load();
-    if (!queue) return;
+    if (queue === null) {
+      toast.error('Не удалось загрузить треки');
+      return;
+    }
     const idx = Math.max(0, queue.findIndex((q) => q.id === trackId));
     if (queue[idx]) controls.playQueue(queue, { startIndex: idx, context });
   }
 
   async function playAll() {
     const queue = await load();
-    if (queue?.[0]) controls.playQueue(queue, { context });
+    if (queue === null) {
+      toast.error('Не удалось загрузить треки');
+      return;
+    }
+    if (queue[0]) controls.playQueue(queue, { context });
   }
 
   const hasReadyTrack = (tracks ?? []).some((t) => t.status === 'READY');
@@ -239,6 +249,9 @@ export function ReleaseQuickLook({
             <div className="py-8 grid place-items-center">
               <span className="w-6 h-6 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />
             </div>
+          )}
+          {!loading && !tracks && (
+            <p className="py-6 text-center text-sm text-muted-foreground">Не удалось загрузить треки.</p>
           )}
           {tracks && tracks.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">Пока нет треков.</p>
