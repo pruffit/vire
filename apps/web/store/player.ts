@@ -87,7 +87,7 @@ export const usePlayerStore = create<Store>()(
       partialize: (state): PersistedState => ({
         track: state.track,
         queue: state.queue.slice(0, PERSISTED_QUEUE_LIMIT),
-        queueIndex: state.queueIndex,
+        queueIndex: Math.max(0, Math.min(state.queueIndex, PERSISTED_QUEUE_LIMIT - 1)),
         volume: state.volume,
         waveMode: state.waveMode,
         shuffle: state.shuffle,
@@ -95,12 +95,10 @@ export const usePlayerStore = create<Store>()(
         originalQueue: state.originalQueue,
         currentTime: state.currentTime,
       }),
+      // Через _setState (не мутацией) — иначе подписчики не узнают о restored.
       onRehydrateStorage: () => (state) => {
         if (state?.track) {
-          state.restored = true;
-          state.isPlaying = false;
-          state.hasAudio = false;
-          state.isLoading = false;
+          state._setState({ restored: true, isPlaying: false, hasAudio: false, isLoading: false });
         }
       },
     },
