@@ -55,11 +55,28 @@ interface Store extends State {
 }
 
 const PERSISTED_QUEUE_LIMIT = 100;
+// Сколько уже проигранных треков перед текущим сохраняем в окне — так prev()
+// после F5 ещё работает на несколько шагов назад, а не только вперёд.
+const PERSISTED_QUEUE_WINDOW_BEFORE = 20;
 
 type PersistedState = Pick<
   State,
   'track' | 'queue' | 'queueIndex' | 'volume' | 'waveMode' | 'shuffle' | 'context' | 'originalQueue' | 'currentTime'
 >;
+
+/** Длинную очередь (волна) режем окном вокруг текущего трека — иначе
+ *  slice(0,100) на queueIndex>99 персистит хвост без текущего трека, и после
+ *  restore clampRestoredQueueIndex не находит его (queueIndex улетает на 0). */
+function sliceQueueForPersist(
+  queue: PlayerTrack[],
+  queueIndex: number,
+): { queue: PlayerTrack[]; queueIndex: number } {
+  if (queue.length <= PERSISTED_QUEUE_LIMIT) {
+    return { queue, queueIndex: Math.max(0, queueIndex) };
+  }
+  const start = Math.max(0, queueIndex - PERSISTED_QUEUE_WINDOW_BEFORE);
+  return { queue: queue.slice(start, start + PERSISTED_QUEUE_LIMIT), queueIndex: queueIndex - start };
+}
 
 export const usePlayerStore = create<Store>()(
   persist(
@@ -87,17 +104,20 @@ export const usePlayerStore = create<Store>()(
       name: 'vire-player',
       version: 1,
       storage: createJSONStorage(() => localStorage),
-      partialize: (state): PersistedState => ({
-        track: state.track,
-        queue: state.queue.slice(0, PERSISTED_QUEUE_LIMIT),
-        queueIndex: Math.max(0, Math.min(state.queueIndex, PERSISTED_QUEUE_LIMIT - 1)),
-        volume: state.volume,
-        waveMode: state.waveMode,
-        shuffle: state.shuffle,
-        context: state.context,
-        originalQueue: state.originalQueue,
-        currentTime: state.currentTime,
-      }),
+      partialize: (state): PersistedState => {
+        const { queue, queueIndex } = sliceQueueForPersist(state.queue, state.queueIndex);
+        return {
+          track: state.track,
+          queue,
+          queueIndex,
+          volume: state.volume,
+          waveMode: state.waveMode,
+          shuffle: state.shuffle,
+          context: state.context,
+          originalQueue: state.originalQueue,
+          currentTime: state.currentTime,
+        };
+      },
       // Через _setState (не мутацией) — иначе подписчики не узнают о restored.
       onRehydrateStorage: () => (state) => {
         if (state?.track) {

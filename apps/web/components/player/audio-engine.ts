@@ -117,6 +117,14 @@ function getWaveSessionId(): string {
   return sid;
 }
 
+/** Новая сессия волны — новый sid. Иначе явный повторный startWave (другой
+ *  mood/genre) наследует сессионный буст и served-исключения прошлой волны. */
+function mintWaveSessionId(): string {
+  const sid = crypto.randomUUID();
+  sessionStorage.setItem(WAVE_SID_KEY, sid);
+  return sid;
+}
+
 /** «Проигранное» для анти-повтора волны — id очереди до текущего трека включительно. */
 function playedIdsForWaveRequest(): string[] {
   const { queue, queueIndex } = usePlayerStore.getState();
@@ -382,20 +390,29 @@ export const controls = {
 
     let queue = deduped;
     let index = startIndex;
-    const patch: { context: PlayContext; shuffle?: boolean; originalQueue?: PlayerTrack[] | null } = {
+    // Каждый playQueue — новая, конечная очередь: волна и шаффл предыдущего
+    // проигрывания к ней не относятся (иначе волна навсегда дозаписывает
+    // конец любой очереди, а шаффл остаётся включённым со стухшим originalQueue).
+    const patch: {
+      context: PlayContext;
+      waveMode: false;
+      waveSeed: null;
+      shuffle: boolean;
+      originalQueue: PlayerTrack[] | null;
+    } = {
       context: opts.context,
+      waveMode: false,
+      waveSeed: null,
+      shuffle: false,
+      originalQueue: null,
     };
 
-    if (opts.shuffle !== undefined) {
-      patch.shuffle = opts.shuffle;
-      if (opts.shuffle) {
-        const result = shuffleOn(deduped, startIndex);
-        queue = result.queue;
-        index = result.index;
-        patch.originalQueue = deduped;
-      } else {
-        patch.originalQueue = null;
-      }
+    if (opts.shuffle) {
+      const result = shuffleOn(deduped, startIndex);
+      queue = result.queue;
+      index = result.index;
+      patch.shuffle = true;
+      patch.originalQueue = deduped;
     }
 
     usePlayerStore.getState()._setState(patch);
@@ -502,10 +519,12 @@ export const controls = {
     }
   },
 
-  /** Запускает волну как новую очередь: сессия волны — sessionStorage 'vire_wave_sid'. */
+  /** Запускает волну как новую очередь: каждый явный запуск минтит свежий sid
+   *  (sessionStorage 'vire_wave_sid'), чтобы новый seed не наследовал сессионный
+   *  буст и served-исключения предыдущей волны. */
   async startWave(seed: { mood?: string; genre?: string } | null): Promise<boolean> {
     const tracks = await fetchWaveTracks({
-      sessionId: getWaveSessionId(),
+      sessionId: mintWaveSessionId(),
       mood: seed?.mood,
       genre: seed?.genre,
       played: [],

@@ -64,7 +64,7 @@ describe('persist: регидрация', () => {
 });
 
 describe('persist: partialize', () => {
-  it('режет queue до 100 и клампит queueIndex в границы среза', () => {
+  it('длинную очередь режет окном в 100 вокруг текущего трека — текущий трек попадает в срез', () => {
     const partialize = usePlayerStore.persist.getOptions().partialize;
     expect(partialize).toBeDefined();
 
@@ -75,8 +75,21 @@ describe('persist: partialize', () => {
       queueIndex: 120,
     }) as { queue: PlayerTrack[]; queueIndex: number };
 
-    expect(persisted.queue).toHaveLength(100);
-    expect(persisted.queueIndex).toBe(99);
+    expect(persisted.queue.length).toBeLessThanOrEqual(100);
+    expect(persisted.queue[persisted.queueIndex]?.id).toBe('t120');
+  });
+
+  it('короткая очередь (<=100) — не режется, индекс не меняется', () => {
+    const partialize = usePlayerStore.persist.getOptions().partialize;
+    const shortQueue = Array.from({ length: 50 }, (_, i) => track(`t${i}`));
+    const persisted = partialize!({
+      ...usePlayerStore.getState(),
+      queue: shortQueue,
+      queueIndex: 30,
+    }) as { queue: PlayerTrack[]; queueIndex: number };
+
+    expect(persisted.queue).toEqual(shortQueue);
+    expect(persisted.queueIndex).toBe(30);
   });
 
   it('queueIndex не бывает отрицательным', () => {
