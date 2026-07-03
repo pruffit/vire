@@ -6,6 +6,7 @@ import {
   listActiveArtists,
   getFeed,
   getMoodCounts,
+  getGenreCounts,
   getEditorialPlaylists,
   getPersonalPlaylists,
   getPopularPlaylists,
@@ -41,7 +42,7 @@ export default async function HomePage() {
   const userId = session?.user?.id;
 
   const [
-    latest, freshWeek, upcoming, artists, feed, listeningNow, moodCounts,
+    latest, freshWeek, upcoming, artists, feed, listeningNow, moodCounts, genreCounts,
     sharedPlaylists, personalRaw, publicPlaylists, likedPlaylistIds,
     hotTracks, recent, personalPicks,
   ] = await Promise.all([
@@ -53,6 +54,7 @@ export default async function HomePage() {
     userId ? getFeed(userId).catch(() => []) : Promise.resolve([]),
     getListeningNow(6).catch(() => []),
     getMoodCounts().catch(() => []),
+    getGenreCounts().catch(() => []),
     getEditorialPlaylists(4).catch(() => []),
     userId ? getPersonalPlaylists(userId, 4).catch(() => []) : Promise.resolve([]),
     getPublicUserPlaylists(8).catch(() => []),
@@ -95,7 +97,7 @@ export default async function HomePage() {
       {featured && <FeaturedRelease release={featured} />}
 
       {/* «Включи и слушай» — сразу под баннером, всем */}
-      <FlowBlock moods={moodCounts} />
+      <FlowBlock moods={moodCounts} genres={genreCounts} />
 
       {/* Персональный верх (вошедшим, самоскрывается) */}
       {!!userId && <RecentRail tracks={recent} />}

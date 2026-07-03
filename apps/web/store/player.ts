@@ -36,6 +36,8 @@ interface State {
   waveformPeaks: number[] | null;
   /** Режим волны — автоплей похожих треков когда очередь исчерпана */
   waveMode: boolean;
+  /** Seed, с которым запущена текущая волна (для подсветки активного чипа) — сессионный, не persist */
+  waveSeed: { mood?: string; genre?: string } | null;
   /** Случайный порядок внутри очереди */
   shuffle: boolean;
   /** Ошибка загрузки HLS-манифеста или сети */
@@ -73,6 +75,7 @@ export const usePlayerStore = create<Store>()(
       volume: 0.8,
       waveformPeaks: null,
       waveMode: false,
+      waveSeed: null,
       shuffle: false,
       audioError: false,
       context: null,

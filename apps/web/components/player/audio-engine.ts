@@ -477,7 +477,7 @@ export const controls = {
 
   /** Оставлено для WaveModeButton — продолжить волну для уже играющей очереди без перезапуска. */
   setWaveMode(on: boolean): void {
-    usePlayerStore.getState()._setState({ waveMode: on });
+    usePlayerStore.getState()._setState(on ? { waveMode: true } : { waveMode: false, waveSeed: null });
   },
 
   toggleShuffle(): void {
@@ -514,12 +514,12 @@ export const controls = {
     if (tracks.length === 0) return false;
 
     controls.playQueue(tracks, { context: { source: 'wave' } });
-    usePlayerStore.getState()._setState({ waveMode: true });
+    usePlayerStore.getState()._setState({ waveMode: true, waveSeed: seed });
     return true;
   },
 
   stopWave(): void {
-    usePlayerStore.getState()._setState({ waveMode: false });
+    usePlayerStore.getState()._setState({ waveMode: false, waveSeed: null });
   },
 
   /** Первый play после гидрации persist: подгружает манифест текущего трека,
