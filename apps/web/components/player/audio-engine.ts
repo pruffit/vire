@@ -42,6 +42,10 @@ function armLoadWatchdog(): void {
 
 let playStartedAt: number | null = null;
 let playStartedTrackId: string | null = null;
+// source захватывается в момент СТАРТА воспроизведения: playQueue пишет новый
+// context в стор ДО flushPlayEvent предыдущего трека, поэтому живой store.context
+// в момент flush уже принадлежит следующему клику.
+let playStartedSource = 'direct';
 let _savedVolume = 1;
 
 // ─── Live-присутствие «слушают сейчас» ──────────────────────────────────────
@@ -75,12 +79,13 @@ function stopHeartbeat(): void {
   heartbeatTrackId = null;
 }
 
-function flushPlayEvent(source: string): void {
+function flushPlayEvent(): void {
   if (!playStartedTrackId || playStartedAt === null) return;
 
   const durationPlayedSec = Math.round((Date.now() - playStartedAt) / 1000);
   const trackId = playStartedTrackId;
   const startedAt = new Date(playStartedAt).toISOString();
+  const source = playStartedSource;
 
   playStartedAt = null;
   playStartedTrackId = null;
@@ -221,7 +226,7 @@ export function initAudioEngine(): void {
   });
 
   audio.addEventListener('ended', () => {
-    flushPlayEvent(usePlayerStore.getState().context?.source ?? 'direct');
+    flushPlayEvent();
     stopHeartbeat();
     void controls.next();
   });
@@ -229,10 +234,11 @@ export function initAudioEngine(): void {
     clearLoadWatchdog();
     consecutiveWaveErrors = 0;
     usePlayerStore.getState()._setState({ isPlaying: true, isLoading: false });
-    const { track } = usePlayerStore.getState();
+    const { track, context } = usePlayerStore.getState();
     if (track && track.id !== playStartedTrackId) {
       playStartedAt = Date.now();
       playStartedTrackId = track.id;
+      playStartedSource = context?.source ?? 'direct';
     }
     if (track) startHeartbeat(track.id);
     void maybeFetchWaveBuffer();
@@ -253,7 +259,7 @@ export function initAudioEngine(): void {
 async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {}): Promise<void> {
   if (!audio) return;
 
-  flushPlayEvent(usePlayerStore.getState().context?.source ?? 'direct');
+  flushPlayEvent();
 
   prefetchedAheadFor = null;
   usePlayerStore.getState()._setState({
@@ -268,6 +274,11 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
 
   const manifest = await fetchManifest(track.id);
 
+  // Staleness guard: пока ждали сеть, playAt/resumeRestored могли переключить
+  // loadedTrackId на другой трек — его attachAndPlay уже владеет hls/audio/стором,
+  // наш вызов молча выходит (иначе побеждает тот, чей fetch завершился ПОЗЖЕ).
+  if (loadedTrackId !== track.id) return;
+
   if (!manifest) {
     clearLoadWatchdog();
     usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
@@ -280,6 +291,7 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
   if (hls) { hls.destroy(); hls = null; }
 
   const Hls = await getHls();
+  if (loadedTrackId !== track.id) return;
   if (Hls.isSupported()) {
     // Часть исходников даёт «дыру» в медиа-буфере (gap в таймстампах, обычно в
     // начале) → bufferStalledError/bufferSeekOverHole, плеер залипает на 0:00.

@@ -85,6 +85,36 @@ describe('manifest-cache', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('fetchManifest: два конкурентных вызова одного id → один fetch', async () => {
+    const data = manifest(3);
+    let release: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const fetchMock = vi.fn().mockImplementation(async () => {
+      await gate;
+      return { ok: true, json: () => Promise.resolve(data) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const p1 = fetchManifest('concurrent-track');
+    const p2 = fetchManifest('concurrent-track');
+    release!();
+
+    expect(await Promise.all([p1, p2])).toEqual([data, data]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetchManifest: после провала inflight-запись очищена — повторный вызов фетчит заново', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('down'))
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(manifest(5)) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await fetchManifest('retry-track')).toBeNull();
+    expect(await fetchManifest('retry-track')).toEqual(manifest(5));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('fetchManifest: сетевая ошибка → null, не кэшируется', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
     const result = await fetchManifest('broken-track');

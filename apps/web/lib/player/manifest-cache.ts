@@ -26,15 +26,29 @@ export function putCachedManifest(trackId: string, data: ManifestData): void {
   cache.set(trackId, data);
 }
 
+// In-flight дедуп: префетч и attachAndPlay могут спросить один trackId одновременно —
+// второй вызов присоединяется к летящему промису вместо второго сетевого запроса.
+const inFlight = new Map<string, Promise<ManifestData | null>>();
+
 /** Манифест текущего/префетчимого трека — через LRU-кэш, без повторных сетевых запросов. */
-export async function fetchManifest(trackId: string): Promise<ManifestData | null> {
+export function fetchManifest(trackId: string): Promise<ManifestData | null> {
   const cached = getCachedManifest(trackId);
-  if (cached) return cached;
+  if (cached) return Promise.resolve(cached);
 
-  const res = await fetch(`/api/v1/tracks/${trackId}/manifest`).catch(() => null);
-  if (!res?.ok) return null;
+  const pending = inFlight.get(trackId);
+  if (pending) return pending;
 
-  const data = (await res.json()) as ManifestData;
-  putCachedManifest(trackId, data);
-  return data;
+  const request = (async (): Promise<ManifestData | null> => {
+    const res = await fetch(`/api/v1/tracks/${trackId}/manifest`).catch(() => null);
+    if (!res?.ok) return null;
+
+    const data = (await res.json()) as ManifestData;
+    putCachedManifest(trackId, data);
+    return data;
+  })().finally(() => {
+    inFlight.delete(trackId);
+  });
+
+  inFlight.set(trackId, request);
+  return request;
 }
