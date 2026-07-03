@@ -99,7 +99,7 @@ export default async function HomePage() {
 
       {!!userId && personalPicks.length > 0 && (
         <Section title="Для тебя">
-          <PlayableTrackList variant="plain" columns={2} tracks={personalPicks} />
+          <PlayableTrackList variant="plain" columns={2} tracks={personalPicks} context={{ source: 'home' }} />
         </Section>
       )}
 

@@ -5,8 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { usePlayerStore } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
+import { useLazyQueue } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { formatDuration } from '@/lib/format';
@@ -23,15 +24,7 @@ export interface QuickLookRelease {
   releaseDate: Date | string | null;
   /** Любой трек релиза explicit — показываем бейдж (E) у названия. */
   hasExplicit?: boolean;
-}
-
-interface QLTrack {
-  id: string;
-  title: string;
-  trackNumber: number;
-  durationSec: number | null;
-  status: 'PROCESSING' | 'READY' | 'BLOCKED';
-  isExplicit?: boolean;
+  accentColor?: string | null;
 }
 
 function year(d: Date | string | null): string | null {
@@ -81,8 +74,6 @@ export function ReleaseQuickLook({
   priority?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [tracks, setTracks] = useState<QLTrack[] | null>(null);
-  const [loading, setLoading] = useState(false);
   const layoutId = useId();
   const yr = year(release.releaseDate);
   const releaseHref = `/artists/${release.artistSlug}/releases/${release.id}`;
@@ -90,6 +81,13 @@ export function ReleaseQuickLook({
   const activeTrack = usePlayerStore((s) => s.track);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isThisReleasePlaying = activeTrack?.releaseId === release.id;
+  const { load, loading, items: tracks } = useLazyQueue('release', release.id, {
+    artistName: release.artistName,
+    artistSlug: release.artistSlug,
+    coverUrl: release.coverUrl,
+    accentColor: release.accentColor,
+  });
+  const context = { source: 'release' as const, sourceId: release.id };
 
   // Невышедший релиз нельзя слушать: карточка ведёт на страницу с обратным
   // отсчётом, без peek-оверлея и плеера. (Возврат после всех хуков — правило hooks.)
@@ -122,45 +120,24 @@ export function ReleaseQuickLook({
     );
   }
 
-  function loadTracks() {
-    if (tracks || loading) return;
-    setLoading(true);
-    fetch(`/api/v1/releases/${release.id}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { tracks?: QLTrack[] } | null) => setTracks(d?.tracks ?? []))
-      .catch(() => setTracks([]))
-      .finally(() => setLoading(false));
-  }
-
   function openQuickLook() {
     setOpen(true);
-    loadTracks();
+    void load();
   }
 
-  function readyQueue(): PlayerTrack[] {
-    return (tracks ?? [])
-      .filter((t) => t.status === 'READY')
-      .map((t) => ({
-        id: t.id,
-        title: t.title,
-        artistName: release.artistName,
-        coverUrl: release.coverUrl,
-        artistSlug: release.artistSlug,
-        releaseId: release.id,
-        isExplicit: t.isExplicit,
-      }));
-  }
-
-  function playFrom(trackId: string) {
-    const queue = readyQueue();
+  async function playFrom(trackId: string) {
+    const queue = await load();
+    if (!queue) return;
     const idx = Math.max(0, queue.findIndex((q) => q.id === trackId));
-    if (queue[idx]) controls.play(queue[idx], queue, idx);
+    if (queue[idx]) controls.playQueue(queue, { startIndex: idx, context });
   }
 
-  function playAll() {
-    const queue = readyQueue();
-    if (queue[0]) controls.play(queue[0], queue, 0);
+  async function playAll() {
+    const queue = await load();
+    if (queue?.[0]) controls.playQueue(queue, { context });
   }
+
+  const hasReadyTrack = (tracks ?? []).some((t) => t.status === 'READY');
 
   return (
     <>
@@ -242,10 +219,10 @@ export function ReleaseQuickLook({
         <div className="px-5 pb-3 flex items-center gap-3">
           <motion.button
             type="button"
-            onClick={isThisReleasePlaying ? () => controls.togglePlay() : playAll}
+            onClick={() => { if (isThisReleasePlaying) controls.togglePlay(); else void playAll(); }}
             whileTap={{ scale: 0.96 }}
             transition={spring.snappy}
-            disabled={!tracks || readyQueue().length === 0}
+            disabled={!tracks || !hasReadyTrack}
             className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-30 transition-opacity"
           >
             {isThisReleasePlaying && isPlaying ? <PauseIcon size={13} /> : <PlayIcon size={15} className="translate-x-[1px]" />}
@@ -273,7 +250,7 @@ export function ReleaseQuickLook({
               <button
                 key={t.id}
                 type="button"
-                onClick={() => ready && (isCurrent ? controls.togglePlay() : playFrom(t.id))}
+                onClick={() => ready && (isCurrent ? controls.togglePlay() : void playFrom(t.id))}
                 disabled={!ready}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${ready ? 'hover:bg-white/5 cursor-pointer' : 'opacity-40 cursor-default'} ${isCurrent ? 'bg-white/5' : ''}`}
               >

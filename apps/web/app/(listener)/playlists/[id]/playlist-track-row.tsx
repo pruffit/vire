@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
-import { controls } from '@/components/player/audio-engine';
+import type { PlayerTrack, PlayContext } from '@/store/player';
+import { usePlay } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
+import { ExplicitBadge } from '@/components/explicit-badge';
 import { Icon } from '@/components/icon';
 import { formatDuration } from '@/lib/format';
 import type { PlaylistTrackRow as TrackData } from '@vire/db';
@@ -16,21 +17,16 @@ interface Props {
   index: number;
   queue: PlayerTrack[];
   queueIndex: number;
+  context: PlayContext;
   isOwner: boolean;
   onRemove: (trackId: string) => void;
 }
 
-export function SortablePlaylistRow({ track, index, queue, queueIndex, isOwner, onRemove }: Props) {
+export function SortablePlaylistRow({ track, index, queue, queueIndex, context, isOwner, onRemove }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: track.id, disabled: !isOwner });
-  const currentTrackId = usePlayerStore((s) => s.track?.id);
-  const isPlaying = usePlayerStore((s) => s.isPlaying);
-  const isThisTrack = currentTrackId === track.id;
-
-  const playerTrack: PlayerTrack = {
-    id: track.id, title: track.title, artistName: track.artistName,
-    coverUrl: track.coverUrl, artistSlug: track.artistSlug, releaseId: track.releaseId,
-  };
+  const { playQueue, toggle, isCurrent, isPlaying } = usePlay();
+  const isThisTrack = isCurrent(track.id);
 
   return (
     <div
@@ -52,7 +48,7 @@ export function SortablePlaylistRow({ track, index, queue, queueIndex, isOwner, 
       </span>
 
       <button
-        onClick={() => (isThisTrack ? controls.togglePlay() : controls.play(playerTrack, queue, queueIndex))}
+        onClick={() => (isThisTrack ? toggle(track.id) : playQueue(queue, { startIndex: queueIndex, context }))}
         aria-label={isThisTrack && isPlaying ? 'Пауза' : `Играть ${track.title}`}
         className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 flex items-center justify-center bg-card"
       >
@@ -77,7 +73,10 @@ export function SortablePlaylistRow({ track, index, queue, queueIndex, isOwner, 
       </button>
 
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium truncate ${isThisTrack ? 'text-primary' : ''}`}>{track.title}</p>
+        <p className={`text-sm font-medium truncate flex items-center gap-1.5 ${isThisTrack ? 'text-primary' : ''}`}>
+          <span className="truncate">{track.title}</span>
+          {track.isExplicit && <ExplicitBadge />}
+        </p>
         <p className="text-xs text-muted-foreground truncate">
           <Link href={`/artists/${track.artistSlug}`} className="hover:text-foreground transition-colors">{track.artistName}</Link>
         </p>

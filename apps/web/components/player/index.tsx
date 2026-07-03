@@ -268,9 +268,9 @@ function QueuePanel({ onJump }: { onJump: () => void }) {
   }
 
   function jump(t: PlayerTrack) {
-    const q = usePlayerStore.getState().queue;
+    const { queue: q, context } = usePlayerStore.getState();
     const idx = q.findIndex((x) => x.id === t.id);
-    if (idx >= 0) controls.play(q[idx], q, idx);
+    if (idx >= 0) controls.playQueue(q, { startIndex: idx, context: context ?? { source: 'direct' } });
     onJump();
   }
 

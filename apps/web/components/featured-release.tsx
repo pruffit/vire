@@ -70,6 +70,7 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
               artistName={release.artistName}
               coverUrl={release.coverUrl}
               artistSlug={release.artistSlug}
+              accentColor={release.accentColor}
             />
             <Link href={href} className="inline-flex items-center gap-1 text-sm text-white/80 hover:text-white transition-colors">
               К релизу <Icon name="arrow-right" size={14} />

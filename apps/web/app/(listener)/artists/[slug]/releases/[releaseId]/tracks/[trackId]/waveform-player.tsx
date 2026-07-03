@@ -2,8 +2,8 @@
 
 import { useEffect, useCallback, useRef, useState, type PointerEvent, type KeyboardEvent } from 'react';
 import { motion } from 'motion/react';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
-import { controls, initAudioEngine } from '@/components/player/audio-engine';
+import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
+import { controls } from '@/components/player/audio-engine';
 import { TrackShare } from '@/components/track-share';
 import { PlayIcon, PauseIcon, HeartIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
@@ -22,6 +22,7 @@ interface Props {
   peaks: number[] | null;
   moments: MomentBucket[];
   trackId: string;
+  context: PlayContext;
   /** Автоматически перемотать к этой секунде при загрузке */
   seekTo?: number;
 }
@@ -33,13 +34,10 @@ export function TrackWaveformPlayer({
   peaks,
   moments,
   trackId,
+  context,
   seekTo,
 }: Props) {
   const didSeek = useRef(false);
-
-  useEffect(() => {
-    initAudioEngine();
-  }, []);
 
   const currentTrackId = usePlayerStore((s) => s.track?.id);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
@@ -97,12 +95,12 @@ export function TrackWaveformPlayer({
   // Клик нужен только чтобы запустить трек, который сейчас не играет: перемотку
   // активного трека целиком ведёт pointer-скраб (тап = down+up на одной точке).
   function handleWaveformClick() {
-    if (!isThisTrack) controls.play(track, queue, queueIndex);
+    if (!isThisTrack) controls.playQueue(queue, { startIndex: queueIndex, context });
   }
 
   function handlePlayPause() {
     if (isThisTrack) controls.togglePlay();
-    else controls.play(track, queue, queueIndex);
+    else controls.playQueue(queue, { startIndex: queueIndex, context });
   }
 
   /** Добавить любимый момент в текущей позиции */

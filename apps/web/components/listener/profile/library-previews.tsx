@@ -1,5 +1,6 @@
 import type { PlaylistSummary, LikedTrack } from '@vire/db';
 import type { PlayerTrack } from '@/store/player';
+import { likedToPlayerTrack } from '@/lib/player/liked-to-player-track';
 import { Section } from '@/components/listener/section';
 import { EmptyState } from '@/components/ui-kit';
 import { PlaylistCard } from '@/components/listener/playlist-card';
@@ -13,14 +14,7 @@ interface Props {
 
 export function LibraryPreviews({ playlists, likedTracks }: Props) {
   const previewLiked = likedTracks.slice(0, 5);
-  const likedQueue: PlayerTrack[] = previewLiked.map((t) => ({
-    id: t.id,
-    title: t.title,
-    artistName: t.artistName,
-    coverUrl: t.releaseCoverUrl,
-    artistSlug: t.artistSlug,
-    releaseId: t.releaseId,
-  }));
+  const likedQueue: PlayerTrack[] = previewLiked.map(likedToPlayerTrack);
 
   return (
     <div className="flex flex-col gap-10">
@@ -52,14 +46,7 @@ export function LibraryPreviews({ playlists, likedTracks }: Props) {
               {previewLiked.map((track, i) => (
                 <LikedTrackRow
                   key={track.id}
-                  track={{
-                    id: track.id,
-                    title: track.title,
-                    artistName: track.artistName,
-                    coverUrl: track.releaseCoverUrl,
-                    artistSlug: track.artistSlug,
-                    releaseId: track.releaseId,
-                  }}
+                  track={likedQueue[i]}
                   queue={likedQueue}
                   queueIndex={i}
                   durationSec={track.durationSec}

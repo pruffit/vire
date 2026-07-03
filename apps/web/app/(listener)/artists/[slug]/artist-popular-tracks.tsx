@@ -24,10 +24,11 @@ export function ArtistPopularTracks({
 
   const shown = expanded ? tracks : tracks.slice(0, initialCount);
   const queue: PlayerTrack[] = shown.map(({ durationSec: _d, ...t }) => t);
+  const artistSlug = tracks[0]?.artistSlug;
 
   function handlePlay(i: number) {
     const track = queue[i];
-    if (track) controls.play(track, queue, i);
+    if (track) controls.playQueue(queue, { startIndex: i, context: { source: 'artist', sourceId: artistSlug } });
   }
 
   return (

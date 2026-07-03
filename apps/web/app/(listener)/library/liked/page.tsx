@@ -34,6 +34,8 @@ export default async function LikedTracksPage() {
       artistSlug: t.artistSlug,
       releaseId: t.releaseId,
       coverUrl: t.releaseCoverUrl,
+      accentColor: t.accentColor,
+      isExplicit: t.isExplicit,
     })),
   };
 

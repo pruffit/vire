@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
-import { controls, initAudioEngine } from '@/components/player/audio-engine';
+import type { PlayerTrack } from '@/store/player';
+import { usePlay } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
 
@@ -29,20 +28,12 @@ export function PurchasedTrackRow({
   releaseId,
   trackId,
 }: Props) {
-  useEffect(() => {
-    initAudioEngine();
-  }, []);
-
-  const currentTrackId = usePlayerStore((s) => s.track?.id);
-  const isPlaying = usePlayerStore((s) => s.isPlaying);
-  const isThisTrack = currentTrackId === track.id;
+  const { playQueue, toggle, isCurrent, isPlaying } = usePlay();
+  const isThisTrack = isCurrent(track.id);
 
   function handlePlay() {
-    if (isThisTrack) {
-      controls.togglePlay();
-    } else {
-      controls.play(track, queue, queueIndex);
-    }
+    if (isThisTrack) toggle(track.id);
+    else playQueue(queue, { startIndex: queueIndex, context: { source: 'purchased' } });
   }
 
   return (

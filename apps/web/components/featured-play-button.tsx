@@ -1,53 +1,29 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
+import { useLazyQueue } from '@/lib/player/use-play';
 import { PlayIcon } from '@/components/icons';
-import type { PlayerTrack } from '@/store/player';
-
-interface QLTrack {
-  id: string;
-  title: string;
-  trackNumber: number;
-  durationSec: number | null;
-  status: 'PROCESSING' | 'READY' | 'BLOCKED';
-}
 
 export function FeaturedPlayButton({
   releaseId,
   artistName,
   coverUrl,
   artistSlug,
+  accentColor,
 }: {
   releaseId: string;
   artistName: string;
   coverUrl: string | null;
   artistSlug: string;
+  accentColor?: string | null;
 }) {
-  const [loading, setLoading] = useState(false);
+  const { load, loading } = useLazyQueue('release', releaseId, { artistName, artistSlug, coverUrl, accentColor });
 
   async function play() {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/v1/releases/${releaseId}`);
-      if (!res.ok) return;
-      const data: { tracks?: QLTrack[] } = await res.json() as { tracks?: QLTrack[] };
-      const queue: PlayerTrack[] = (data.tracks ?? [])
-        .filter((t) => t.status === 'READY')
-        .map((t) => ({
-          id: t.id,
-          title: t.title,
-          artistName,
-          coverUrl,
-          artistSlug,
-          releaseId,
-        }));
-      if (queue[0]) controls.play(queue[0], queue, 0);
-    } finally {
-      setLoading(false);
-    }
+    const queue = await load();
+    if (queue?.[0]) controls.playQueue(queue, { context: { source: 'release', sourceId: releaseId } });
   }
 
   return (

@@ -405,14 +405,6 @@ export const controls = {
     playAt(queue, index);
   },
 
-  /** @deprecated временный алиас поверх playQueue для непереехавших точек вызова, удалить в B3 */
-  play(track: PlayerTrack, queue: PlayerTrack[] = [], index = 0): void {
-    controls.playQueue(queue.length > 0 ? queue : [track], {
-      startIndex: index,
-      context: { source: 'direct' },
-    });
-  },
-
   /** Toggle-if-current: пауза/плей у уже загруженного трека; для чужого id — no-op. */
   toggle(trackId?: string): void {
     const { track } = usePlayerStore.getState();
@@ -486,8 +478,7 @@ export const controls = {
     else controls.seek(0);
   },
 
-  /** Оставлено для WaveModeButton (продолжить волну для уже играющей очереди
-   *  без перезапуска) и wave-start-button/mood-wave-chips до их миграции на startWave в B3. */
+  /** Оставлено для WaveModeButton — продолжить волну для уже играющей очереди без перезапуска. */
   setWaveMode(on: boolean): void {
     usePlayerStore.getState()._setState({ waveMode: on });
   },

@@ -6,13 +6,7 @@ import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
 import { PlayIcon } from '@/components/icons';
-import type { PlayerTrack } from '@/store/player';
-
-type WaveApiTrack = {
-  id: string; title: string; artistName: string;
-  artistSlug: string; releaseId: string;
-  coverUrl: string | null; accentColor: string | null;
-};
+import { toast } from '@/components/toast';
 
 export function WaveStartButton() {
   const waveMode = usePlayerStore((s) => s.waveMode);
@@ -24,28 +18,15 @@ export function WaveStartButton() {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/wave');
-      const data = (await res.json()) as { track: WaveApiTrack | null };
-      if (data.track) {
-        const track: PlayerTrack = {
-          id: data.track.id,
-          title: data.track.title,
-          artistName: data.track.artistName,
-          artistSlug: data.track.artistSlug,
-          releaseId: data.track.releaseId,
-          coverUrl: data.track.coverUrl,
-          accentColor: data.track.accentColor ?? undefined,
-        };
-        controls.play(track, [track], 0);
-        controls.setWaveMode(true);
-      }
+      const started = await controls.startWave(null);
+      if (!started) toast.error('Не удалось запустить поток');
     } finally {
       setLoading(false);
     }
   }
 
   function handleStop() {
-    controls.setWaveMode(false);
+    controls.stopWave();
   }
 
   return (

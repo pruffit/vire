@@ -4,6 +4,7 @@ import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached } from '@/lib/listener-data';
 import type { PlayerTrack } from '@/store/player';
+import { likedToPlayerTrack } from '@/lib/player/liked-to-player-track';
 import { LikedTrackRow } from '@/components/listener/liked-track-row';
 import { FollowedArtists } from '@/components/listener/followed-artists';
 import { PlaylistCard } from '@/components/listener/playlist-card';
@@ -24,14 +25,7 @@ export default async function LibraryPage() {
     getUserPlaylistsCached(session.user.id),
   ]);
 
-  const likedQueue: PlayerTrack[] = likedTracks.map((t) => ({
-    id: t.id,
-    title: t.title,
-    artistName: t.artistName,
-    coverUrl: t.releaseCoverUrl,
-    artistSlug: t.artistSlug,
-    releaseId: t.releaseId,
-  }));
+  const likedQueue: PlayerTrack[] = likedTracks.map(likedToPlayerTrack);
 
   return (
     <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-14">
@@ -62,14 +56,7 @@ export default async function LibraryPage() {
               {likedTracks.map((track, i) => (
                 <StaggerItem key={track.id}>
                   <LikedTrackRow
-                    track={{
-                      id: track.id,
-                      title: track.title,
-                      artistName: track.artistName,
-                      coverUrl: track.releaseCoverUrl,
-                      artistSlug: track.artistSlug,
-                      releaseId: track.releaseId,
-                    }}
+                    track={likedQueue[i]}
                     queue={likedQueue}
                     queueIndex={i}
                     durationSec={track.durationSec}

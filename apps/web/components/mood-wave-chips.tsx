@@ -6,19 +6,12 @@ import { spring } from '@vire/ui/motion';
 import { MOOD_LABELS, type Mood } from '@/lib/moods';
 import { controls } from '@/components/player/audio-engine';
 import { PlayIcon } from '@/components/icons';
-import type { PlayerTrack } from '@/store/player';
 import { toast } from '@/components/toast';
 
 export interface MoodChip {
   mood: Mood;
   count: number;
 }
-
-type WaveApiTrack = {
-  id: string; title: string; artistName: string;
-  artistSlug: string; releaseId: string;
-  coverUrl: string | null; accentColor: string | null;
-};
 
 /**
  * Чипы тегов настроения на главной: клик запускает волну с трека с этим тегом
@@ -36,23 +29,8 @@ export function MoodWaveChips({ moods }: { moods: MoodChip[] }) {
     if (loading) return;
     setLoading(mood);
     try {
-      const res = await fetch(`/api/v1/wave?mood=${mood}`).catch(() => null);
-      const data = res?.ok ? ((await res.json()) as { track: WaveApiTrack | null }) : null;
-      if (!data?.track) {
-        toast.error('Не удалось запустить поток по настроению');
-        return;
-      }
-      const track: PlayerTrack = {
-        id: data.track.id,
-        title: data.track.title,
-        artistName: data.track.artistName,
-        artistSlug: data.track.artistSlug,
-        releaseId: data.track.releaseId,
-        coverUrl: data.track.coverUrl,
-        accentColor: data.track.accentColor ?? undefined,
-      };
-      controls.play(track, [track], 0);
-      controls.setWaveMode(true);
+      const started = await controls.startWave({ mood });
+      if (!started) toast.error('Не удалось запустить поток по настроению');
     } finally {
       setLoading(null);
     }

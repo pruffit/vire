@@ -100,9 +100,8 @@ describe('GET /api/v1/wave', () => {
     const res = await GET(req('?sessionId=session-abc123&played=played-1,played-2'));
     expect(res.status).toBe(200);
 
-    const body = (await res.json()) as { tracks: unknown[]; track: unknown };
+    const body = (await res.json()) as { tracks: unknown[] };
     expect(body.tracks).toEqual([TRACK]);
-    expect(body.track).toEqual(TRACK); // совместимость до B2
 
     expect(getWaveSession).toHaveBeenCalledWith('session-abc123');
     const call = getWaveTracks.mock.calls[0][0] as { excludeIds: string[] };

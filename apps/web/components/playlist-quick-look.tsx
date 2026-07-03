@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { usePlayerStore } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
+import { useLazyQueue } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
+import { ExplicitBadge } from '@/components/explicit-badge';
 import { formatDuration, pluralTracks } from '@/lib/format';
 import { Icon } from '@/components/icon';
 import { QuickLookSheet, MiniEq } from './quick-look-sheet';
-import type { PlaylistTrackRow } from '@vire/db';
 
 interface Props {
   playlistId: string;
@@ -31,68 +32,33 @@ interface Props {
  * и свой визуальный триггер, а этот компонент переиспользуется обоими.
  */
 export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, onClose }: Props) {
-  const [tracks, setTracks] = useState<PlaylistTrackRow[] | null>(null);
-  // Ref-флаг предотвращает повторный fetch при смене зависимостей эффекта
-  // без setLoading(true) в теле эффекта (избегаем cascading setState).
-  const fetchingRef = useRef(false);
-
   const activeTrack = usePlayerStore((s) => s.track);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const { load, items: tracks } = useLazyQueue('playlist', playlistId);
+  const context = { source: 'playlist' as const, sourceId: playlistId };
 
   useEffect(() => {
-    if (!open || tracks !== null || fetchingRef.current) return;
-    fetchingRef.current = true;
-    const ac = new AbortController();
-    fetch(`/api/v1/playlists/${playlistId}`, { signal: ac.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { playlist?: { tracks?: PlaylistTrackRow[] } } | null) =>
-        setTracks(d?.playlist?.tracks ?? []),
-      )
-      .catch((e: unknown) => {
-        // abort при быстром закрытии — не трогаем state, сброс делает эффект ниже
-        if (e instanceof Error && e.name === 'AbortError') return;
-        setTracks([]);
-      });
-    return () => ac.abort();
-  }, [open, tracks, playlistId]);
-
-  // Сброс в обработчике закрытия (не в эффекте — иначе cascading-render лог).
-  // Повторное открытие перезапросит, иначе после сетевой ошибки лист залипал бы
-  // пустым на сессию (tracks=[] !== null). Все пути закрытия (фон/esc/drag) идут
-  // через onClose, который мы оборачиваем.
-  function handleClose() {
-    setTracks(null);
-    fetchingRef.current = false;
-    onClose();
-  }
-
-  function buildQueue(): PlayerTrack[] {
-    return (tracks ?? []).map((t) => ({
-      id: t.id,
-      title: t.title,
-      artistName: t.artistName,
-      coverUrl: t.coverUrl,
-      artistSlug: t.artistSlug,
-      releaseId: t.releaseId,
-    }));
-  }
+    // load() кэширует после первого успешного фетча — повторное открытие не дублирует запрос.
+    if (open) void load();
+  }, [open, load]);
 
   const isThisPlaying =
     !!activeTrack && !!(tracks ?? []).find((t) => t.id === activeTrack.id);
 
-  function playAll() {
-    const queue = buildQueue();
-    if (queue[0]) controls.play(queue[0], queue, 0);
+  async function playAll() {
+    const queue = await load();
+    if (queue?.[0]) controls.playQueue(queue, { context });
   }
 
-  function playFrom(trackId: string) {
-    const queue = buildQueue();
+  async function playFrom(trackId: string) {
+    const queue = await load();
+    if (!queue) return;
     const idx = Math.max(0, queue.findIndex((q) => q.id === trackId));
-    if (queue[idx]) controls.play(queue[idx], queue, idx);
+    if (queue[idx]) controls.playQueue(queue, { startIndex: idx, context });
   }
 
   return (
-    <QuickLookSheet open={open} onClose={handleClose}>
+    <QuickLookSheet open={open} onClose={onClose}>
       {/* Хедер */}
       <div className="px-5 pb-3 flex items-center gap-4">
         <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-muted">
@@ -116,7 +82,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
       <div className="px-5 pb-3 flex items-center gap-3">
         <motion.button
           type="button"
-          onClick={isThisPlaying ? () => controls.togglePlay() : playAll}
+          onClick={() => { if (isThisPlaying) controls.togglePlay(); else void playAll(); }}
           whileTap={{ scale: 0.96 }}
           transition={spring.snappy}
           disabled={!tracks || tracks.length === 0}
@@ -156,7 +122,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
                 key={t.id}
                 type="button"
                 onClick={() =>
-                  isCurrent ? controls.togglePlay() : playFrom(t.id)
+                  isCurrent ? controls.togglePlay() : void playFrom(t.id)
                 }
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors hover:bg-white/5 cursor-pointer ${isCurrent ? 'bg-white/5' : ''}`}
               >
@@ -164,14 +130,15 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
                   {isCurrent ? <MiniEq animate={isPlaying} /> : i + 1}
                 </span>
                 <span
-                  className="flex-1 truncate text-sm"
+                  className="flex-1 truncate text-sm flex items-center gap-1.5"
                   style={
                     isCurrent
                       ? { color: 'var(--artist-accent, hsl(200 80% 65%))' }
                       : undefined
                   }
                 >
-                  {t.title}
+                  <span className="truncate">{t.title}</span>
+                  {t.isExplicit && <ExplicitBadge />}
                 </span>
                 {t.durationSec != null && (
                   <span className="text-xs font-mono opacity-30 shrink-0">

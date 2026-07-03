@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { controls } from '@/components/player/audio-engine';
+import { usePlay } from '@/lib/player/use-play';
+import { toPlayerTrack } from '@/lib/player/to-player-track';
 import { PlayIcon } from '@/components/icons';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
 
 export interface ListeningNowTrack {
   id: string;
@@ -77,23 +77,15 @@ export function ListeningNow({ initial }: { initial: ListeningNowTrack[] }) {
 }
 
 function TrackRow({ track }: { track: ListeningNowTrack }) {
-  const isActive = usePlayerStore((s) => s.track?.id) === track.id;
+  const { playQueue, toggle, isCurrent } = usePlay();
+  const isActive = isCurrent(track.id);
 
   function play() {
     if (isActive) {
-      controls.togglePlay();
+      toggle(track.id);
       return;
     }
-    const pt: PlayerTrack = {
-      id: track.id,
-      title: track.title,
-      artistName: track.artistName,
-      coverUrl: track.coverUrl,
-      artistSlug: track.artistSlug,
-      releaseId: track.releaseId,
-      accentColor: track.accentColor ?? undefined,
-    };
-    controls.play(pt, [pt], 0);
+    playQueue([toPlayerTrack(track)], { context: { source: 'home' } });
   }
 
   return (

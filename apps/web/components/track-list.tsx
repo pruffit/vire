@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
-import { usePlayerStore } from '@/store/player';
-import { controls, initAudioEngine } from '@/components/player/audio-engine';
-import type { PlayerTrack } from '@/store/player';
+import type { PlayerTrack, PlayContext } from '@/store/player';
+import { toPlayerTracks } from '@/lib/player/to-player-track';
+import { usePlay } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { formatCount } from '@/lib/format';
@@ -19,6 +18,7 @@ export interface PlayableTrackItem {
   artistSlug: string;
   releaseId: string;
   coverUrl: string | null;
+  accentColor?: string | null;
   isExplicit?: boolean;
   plays?: number;
 }
@@ -27,18 +27,14 @@ export function PlayableTrackList({
   tracks,
   variant = 'plain',
   columns = 2,
+  context,
 }: {
   tracks: PlayableTrackItem[];
   variant?: 'plain' | 'ranked';
   columns?: 1 | 2;
+  context: PlayContext;
 }) {
-  useEffect(() => { initAudioEngine(); }, []);
-
-  const queue: PlayerTrack[] = tracks.map((t) => ({
-    id: t.id, title: t.title, artistName: t.artistName,
-    coverUrl: t.coverUrl, artistSlug: t.artistSlug, releaseId: t.releaseId,
-    isExplicit: t.isExplicit,
-  }));
+  const queue: PlayerTrack[] = toPlayerTracks(tracks);
 
   const grid = columns === 2 ? 'grid grid-cols-1 lg:grid-cols-2 lg:gap-x-8' : 'grid grid-cols-1';
 
@@ -46,7 +42,7 @@ export function PlayableTrackList({
     <Stagger step={0.03} className={grid}>
       {tracks.map((t, i) => (
         <StaggerItem key={t.id}>
-          <Row track={t} queue={queue} index={i} rank={variant === 'ranked' ? i + 1 : null} />
+          <Row track={t} queue={queue} index={i} rank={variant === 'ranked' ? i + 1 : null} context={context} />
         </StaggerItem>
       ))}
     </Stagger>
@@ -54,19 +50,20 @@ export function PlayableTrackList({
 }
 
 function Row({
-  track, queue, index, rank,
+  track, queue, index, rank, context,
 }: {
   track: PlayableTrackItem;
   queue: PlayerTrack[];
   index: number;
   rank: number | null;
+  context: PlayContext;
 }) {
-  const isActive = usePlayerStore((s) => s.track?.id === track.id);
-  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const { playQueue, toggle, isCurrent, isPlaying } = usePlay();
+  const isActive = isCurrent(track.id);
 
   function handleClick() {
-    if (isActive) controls.togglePlay();
-    else controls.play(queue[index], queue, index);
+    if (isActive) toggle(track.id);
+    else playQueue(queue, { startIndex: index, context });
   }
 
   return (

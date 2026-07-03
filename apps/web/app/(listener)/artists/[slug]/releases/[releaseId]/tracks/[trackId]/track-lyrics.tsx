@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { LyricsScroll } from '@/components/lyrics-scroll';
 import { controls } from '@/components/player/audio-engine';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
+import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
 import type { LyricLine } from '@/lib/lrc';
 
 interface Props {
@@ -12,9 +12,10 @@ interface Props {
   queue: PlayerTrack[];
   queueIndex: number;
   trackId: string;
+  context: PlayContext;
 }
 
-export function TrackLyrics({ lines, track, queue, queueIndex, trackId }: Props) {
+export function TrackLyrics({ lines, track, queue, queueIndex, trackId, context }: Props) {
   const isThisTrack = usePlayerStore((s) => s.track?.id) === trackId;
   const duration = usePlayerStore((s) => s.duration);
   // Клик по строке для ещё не загруженного трека: play() грузит асинхронно и
@@ -34,7 +35,7 @@ export function TrackLyrics({ lines, track, queue, queueIndex, trackId }: Props)
       controls.seek(t);
     } else {
       pendingSeek.current = t;
-      controls.play(track, queue, queueIndex);
+      controls.playQueue(queue, { startIndex: queueIndex, context });
     }
   }
 

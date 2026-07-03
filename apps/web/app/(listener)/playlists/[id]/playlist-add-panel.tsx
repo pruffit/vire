@@ -14,7 +14,8 @@ interface Props {
 
 function toRow(t: PlaylistAddTrack): PlaylistTrackRow {
   return { id: t.id, title: t.title, durationSec: t.durationSec, position: 0,
-    artistName: t.artistName, artistSlug: t.artistSlug, releaseId: t.releaseId, coverUrl: t.coverUrl };
+    artistName: t.artistName, artistSlug: t.artistSlug, releaseId: t.releaseId, coverUrl: t.coverUrl,
+    accentColor: t.accentColor, isExplicit: t.isExplicit };
 }
 
 interface TrackRowProps {

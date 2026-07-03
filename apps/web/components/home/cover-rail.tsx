@@ -1,19 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
-import { controls, initAudioEngine } from '@/components/player/audio-engine';
+import type { PlayerTrack } from '@/store/player';
+import { toPlayerTracks } from '@/lib/player/to-player-track';
+import { usePlay } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import type { PlayableChartTrack } from '@vire/db';
 
+const CONTEXT = { source: 'home' as const };
+
 export function CoverRail({ tracks }: { tracks: PlayableChartTrack[] }) {
-  useEffect(() => { initAudioEngine(); }, []);
-  const queue: PlayerTrack[] = tracks.map((t) => ({
-    id: t.id, title: t.title, artistName: t.artistName,
-    coverUrl: t.coverUrl, artistSlug: t.artistSlug, releaseId: t.releaseId, isExplicit: t.isExplicit,
-  }));
+  const queue: PlayerTrack[] = toPlayerTracks(tracks);
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
@@ -25,12 +23,12 @@ export function CoverRail({ tracks }: { tracks: PlayableChartTrack[] }) {
 }
 
 function Cell({ track, queue, index }: { track: PlayableChartTrack; queue: PlayerTrack[]; index: number }) {
-  const isActive = usePlayerStore((s) => s.track?.id === track.id);
-  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const { playQueue, toggle, isCurrent, isPlaying } = usePlay();
+  const isActive = isCurrent(track.id);
 
   function play() {
-    if (isActive) controls.togglePlay();
-    else controls.play(queue[index], queue, index);
+    if (isActive) toggle(track.id);
+    else playQueue(queue, { startIndex: index, context: CONTEXT });
   }
 
   return (

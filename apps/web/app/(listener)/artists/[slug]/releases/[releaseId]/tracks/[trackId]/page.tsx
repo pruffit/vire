@@ -95,11 +95,13 @@ export default async function TrackPage({ params, searchParams }: Props) {
 
   const queue = tracks
     .filter((t) => t.status === 'READY')
-    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, isExplicit: t.isExplicit }));
+    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, accentColor: accent, isExplicit: t.isExplicit }));
 
   const playerTrack = track.status === 'READY'
-    ? { id: track.id, title: track.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, isExplicit: track.isExplicit }
+    ? { id: track.id, title: track.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, accentColor: accent, isExplicit: track.isExplicit }
     : null;
+
+  const playContext = { source: 'release' as const, sourceId: releaseId };
 
   const trackNo = track.trackNumber < 10 ? `0${track.trackNumber}` : String(track.trackNumber);
   const longestWord = Math.max(1, ...track.title.split(/\s+/).map((w) => w.length));
@@ -200,6 +202,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
                   peaks={trackAudio?.waveformPeaks ?? null}
                   moments={moments}
                   trackId={trackId}
+                  context={playContext}
                   seekTo={seekTo}
                 />
               </div>
@@ -219,6 +222,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
                     queue={queue}
                     queueIndex={queue.findIndex((q) => q.id === track.id)}
                     trackId={trackId}
+                    context={playContext}
                   />
                 </div>
               </section>

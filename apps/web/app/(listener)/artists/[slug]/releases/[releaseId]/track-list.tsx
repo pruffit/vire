@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
+import type { PlayerTrack } from '@/store/player';
+import { toPlayerTracks } from '@/lib/player/to-player-track';
 import { controls } from '@/components/player/audio-engine';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
+import { usePlay } from '@/lib/player/use-play';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import type { TrackStatus, TrackCredit } from '@vire/core';
@@ -32,23 +34,23 @@ interface Props {
   artistSlug: string;
   releaseId: string;
   coverUrl: string | null;
+  accentColor?: string | null;
 }
 
-export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl }: Props) {
+export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl, accentColor }: Props) {
   if (tracks.length === 0) return null;
 
-  const queue: PlayerTrack[] = tracks
-    .filter((t) => t.status === 'READY')
-    .map((t) => ({ id: t.id, title: t.title, artistName, coverUrl, artistSlug, releaseId, isExplicit: t.isExplicit }));
+  const queue: PlayerTrack[] = toPlayerTracks(
+    tracks
+      .filter((t) => t.status === 'READY')
+      .map((t) => ({ id: t.id, title: t.title, artistName, coverUrl, artistSlug, releaseId, accentColor, isExplicit: t.isExplicit })),
+  );
 
   function handlePlay(track: ClientTrack) {
     if (track.status !== 'READY') return;
     const idx = queue.findIndex((q) => q.id === track.id);
-    controls.play(
-      queue[idx] ?? { id: track.id, title: track.title, artistName, coverUrl, artistSlug, releaseId, isExplicit: track.isExplicit },
-      queue,
-      idx,
-    );
+    if (idx < 0) return;
+    controls.playQueue(queue, { startIndex: idx, context: { source: 'release', sourceId: releaseId } });
   }
 
   return (
@@ -78,8 +80,8 @@ function TrackRow({
   const ready = track.status === 'READY';
   const processing = track.status === 'PROCESSING';
 
-  const isActive = usePlayerStore((s) => s.track?.id) === track.id;
-  const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const { toggle, isCurrent, isPlaying } = usePlay();
+  const isActive = isCurrent(track.id);
 
   return (
     <div
@@ -93,7 +95,7 @@ function TrackRow({
       <motion.button
         type="button"
         disabled={!ready}
-        onClick={isActive ? () => controls.togglePlay() : onPlay}
+        onClick={isActive ? () => toggle(track.id) : onPlay}
         aria-label={isActive && isPlaying ? 'Пауза' : `Играть «${track.title}»`}
         whileTap={ready ? { scale: 0.9 } : undefined}
         transition={spring.snappy}

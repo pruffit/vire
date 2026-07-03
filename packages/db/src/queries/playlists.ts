@@ -21,6 +21,8 @@ export interface PlaylistTrackRow {
   artistSlug: string;
   releaseId: string;
   coverUrl: string | null;
+  accentColor: string | null;
+  isExplicit: boolean;
 }
 
 export interface PlaylistWithTracks {
@@ -51,6 +53,8 @@ export interface PlaylistAddTrack {
   artistName: string;
   artistSlug: string;
   coverUrl: string | null;
+  accentColor: string | null;
+  isExplicit: boolean;
 }
 
 export interface PlaylistSuggestions {
@@ -124,6 +128,8 @@ export async function getPlaylistWithTracks(
       artistSlug: artistProfiles.slug,
       releaseId: releases.id,
       coverUrl: releases.coverUrl,
+      accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
+      isExplicit: tracks.isExplicit,
     })
     .from(playlistTracks)
     .innerJoin(tracks, eq(tracks.id, playlistTracks.trackId))
@@ -604,6 +610,8 @@ export async function searchTracksForPlaylist(
       artistName: artistProfiles.name,
       artistSlug: artistProfiles.slug,
       coverUrl: releases.coverUrl,
+      accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
+      isExplicit: tracks.isExplicit,
     })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
@@ -637,6 +645,8 @@ export async function getPlaylistSuggestions(
     artistName: artistProfiles.name,
     artistSlug: artistProfiles.slug,
     coverUrl: releases.coverUrl,
+    accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
+    isExplicit: tracks.isExplicit,
   };
 
   // Liked tracks (most recent first)
@@ -689,6 +699,7 @@ export async function getPlaylistSuggestions(
         id: r.id, title: r.title, durationSec: r.durationSec,
         releaseId: r.releaseId, artistName: r.artistName,
         artistSlug: r.artistSlug, coverUrl: r.coverUrl,
+        accentColor: r.accentColor, isExplicit: r.isExplicit,
       });
       if (out.length >= perSection) break;
     }

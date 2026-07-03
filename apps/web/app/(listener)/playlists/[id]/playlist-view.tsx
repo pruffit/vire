@@ -4,6 +4,7 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, TouchSensor, 
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
 import { controls } from '@/components/player/audio-engine';
+import { toPlayerTracks } from '@/lib/player/to-player-track';
 import { toast } from '@/components/toast';
 import type { PlayerTrack } from '@/store/player';
 import type { PlaylistWithTracks, PlaylistTrackRow } from '@vire/db';
@@ -22,10 +23,8 @@ export function PlaylistView({ playlist, isOwner, emptyTitle = 'Плейлист
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const queue: PlayerTrack[] = tracks.map((t) => ({
-    id: t.id, title: t.title, artistName: t.artistName,
-    coverUrl: t.coverUrl, artistSlug: t.artistSlug, releaseId: t.releaseId,
-  }));
+  const context = { source: 'playlist' as const, sourceId: playlist.id };
+  const queue: PlayerTrack[] = toPlayerTracks(tracks);
 
   const persistOrder = useCallback(async (ordered: PlaylistTrackRow[], prev: PlaylistTrackRow[]) => {
     const res = await fetch(`/api/v1/playlists/${playlist.id}/tracks`, {
@@ -61,12 +60,8 @@ export function PlaylistView({ playlist, isOwner, emptyTitle = 'Плейлист
     setTracks((prev) => (prev.some((x) => x.id === t.id) ? prev : [...prev, t]));
   }, []);
 
-  function playAll() { if (queue[0]) controls.play(queue[0], queue, 0); }
-  function shuffle() {
-    if (!queue.length) return;
-    const order = [...queue].sort(() => Math.random() - 0.5);
-    controls.play(order[0]!, order, 0);
-  }
+  function playAll() { if (queue.length) controls.playQueue(queue, { context }); }
+  function shuffle() { if (queue.length) controls.playQueue(queue, { context, shuffle: true }); }
 
   return (
     <div className="space-y-6">
@@ -106,7 +101,7 @@ export function PlaylistView({ playlist, isOwner, emptyTitle = 'Плейлист
           <SortableContext items={tracks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
             <div className="flex flex-col">
               {tracks.map((track, i) => (
-                <SortablePlaylistRow key={track.id} track={track} index={i} queue={queue} queueIndex={i} isOwner={isOwner} onRemove={handleRemove} />
+                <SortablePlaylistRow key={track.id} track={track} index={i} queue={queue} queueIndex={i} context={context} isOwner={isOwner} onRemove={handleRemove} />
               ))}
             </div>
           </SortableContext>

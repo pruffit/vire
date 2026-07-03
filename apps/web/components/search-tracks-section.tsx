@@ -12,6 +12,7 @@ export function SearchTracksSection({ tracks }: { tracks: SearchTrack[] }) {
         id: t.id, title: t.title, artistName: t.artistName,
         artistSlug: t.artistSlug, releaseId: t.releaseId, coverUrl: t.coverUrl,
       }))}
+      context={{ source: 'search' }}
     />
   );
 }

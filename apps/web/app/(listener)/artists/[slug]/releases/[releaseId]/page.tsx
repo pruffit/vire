@@ -182,7 +182,7 @@ export default async function ReleasePage({ params }: Props) {
                   {totalDuration(tracks) && ` · ${totalDuration(tracks)}`}
                 </p>
                 <div className="pt-2 flex items-center gap-3 flex-wrap">
-                  <ReleaseHeroPlay queue={readyQueue} />
+                  <ReleaseHeroPlay queue={readyQueue} context={{ source: 'release', sourceId: releaseId }} />
                   <ReleaseShareButton title={release.title} artistName={artist.name} />
                 </div>
               </div>
@@ -198,6 +198,7 @@ export default async function ReleasePage({ params }: Props) {
                 artistSlug={slug}
                 releaseId={releaseId}
                 coverUrl={release.coverUrl}
+                accentColor={accent}
               />
             </section>
 

@@ -219,6 +219,7 @@ export default async function ArtistPage({ params }: Props) {
               explicitReleaseIds={explicitReleaseIds}
               artistSlug={artist.slug}
               artistName={artist.name}
+              accentColor={accent}
             />
             {smartLinks.length > 0 && <SmartLinksSection smartLinks={smartLinks} artistSlug={artist.slug} />}
             {posts.length > 0 && <PostsSection posts={posts} />}
@@ -358,7 +359,7 @@ function ArtistIdentity({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <ReleaseHeroPlay queue={playQueue} />
+        <ReleaseHeroPlay queue={playQueue} context={{ source: 'artist', sourceId: artist.slug }} />
         {followButton}
       </div>
 
@@ -494,11 +495,13 @@ function ReleasesSection({
   explicitReleaseIds,
   artistSlug,
   artistName,
+  accentColor,
 }: {
   releases: Release[];
   explicitReleaseIds: Set<string>;
   artistSlug: string;
   artistName: string;
+  accentColor: string | null;
 }) {
   if (releases.length === 0) return null;
 
@@ -512,6 +515,7 @@ function ReleasesSection({
       artistSlug,
       releaseDate: r.releaseDate,
       hasExplicit: explicitReleaseIds.has(r.id),
+      accentColor,
     };
   }
 

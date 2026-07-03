@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { likes, follows, tracks, releases, artistProfiles, users } from '../schema';
 
@@ -38,6 +38,8 @@ export interface LikedTrack {
   releaseCoverUrl: string | null;
   artistName: string;
   artistSlug: string;
+  accentColor: string | null;
+  isExplicit: boolean;
   likedAt: Date;
 }
 
@@ -60,6 +62,8 @@ export async function getLikedTracks(userId: string): Promise<LikedTrack[]> {
       releaseCoverUrl: releases.coverUrl,
       artistName: artistProfiles.name,
       artistSlug: artistProfiles.slug,
+      accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
+      isExplicit: tracks.isExplicit,
       likedAt: likes.createdAt,
     })
     .from(likes)

@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
 import Image from 'next/image';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
+import type { PlayerTrack } from '@/store/player';
 import { useLikesStore } from '@/store/likes';
-import { controls, initAudioEngine } from '@/components/player/audio-engine';
+import { usePlay } from '@/lib/player/use-play';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { formatDuration } from '@/lib/format';
@@ -20,11 +19,8 @@ interface Props {
 }
 
 export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCoverUrl }: Props) {
-  useEffect(() => { initAudioEngine(); }, []);
-
-  const currentTrackId = usePlayerStore((s) => s.track?.id);
-  const isPlaying = usePlayerStore((s) => s.isPlaying);
-  const isThisTrack = currentTrackId === track.id;
+  const { playQueue, toggle, isCurrent, isPlaying } = usePlay();
+  const isThisTrack = isCurrent(track.id);
 
   const likeState = useLikesStore((s) => s.state[track.id]);
 
@@ -32,8 +28,8 @@ export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCo
   if (likeState === false) return null;
 
   function handlePlay() {
-    if (isThisTrack) controls.togglePlay();
-    else controls.play(track, queue, queueIndex);
+    if (isThisTrack) toggle(track.id);
+    else playQueue(queue, { startIndex: queueIndex, context: { source: 'liked' } });
   }
 
   return (

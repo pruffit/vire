@@ -102,10 +102,5 @@ export async function GET(req: Request) {
     await appendWaveServed(sessionId, tracks.map((t) => t.id)).catch(() => {});
   }
 
-  return NextResponse.json({
-    tracks,
-    // совместимость до B3: wave-start-button/mood-wave-chips ещё читают data.track,
-    // мигрируют на startWave() вместе с этим полем в B3
-    track: tracks[0] ?? null,
-  });
+  return NextResponse.json({ tracks });
 }

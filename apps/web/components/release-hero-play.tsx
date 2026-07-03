@@ -4,13 +4,13 @@ import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
 import { PlayIcon } from '@/components/icons';
-import type { PlayerTrack } from '@/store/player';
+import type { PlayerTrack, PlayContext } from '@/store/player';
 
-export function ReleaseHeroPlay({ queue }: { queue: PlayerTrack[] }) {
+export function ReleaseHeroPlay({ queue, context }: { queue: PlayerTrack[]; context: PlayContext }) {
   if (queue.length === 0) return null;
 
   function play() {
-    if (queue[0]) controls.play(queue[0], queue, 0);
+    controls.playQueue(queue, { context });
   }
 
   return (
