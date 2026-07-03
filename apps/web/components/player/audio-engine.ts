@@ -1,6 +1,9 @@
 import type HlsType from 'hls.js';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
+import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
 import { getSessionId } from '@/lib/session-id';
+import { dedupeQueue, shuffleOn, shuffleOff } from '@/lib/player/queue';
+import { fetchManifest } from '@/lib/player/manifest-cache';
+import { needsWaveFetch, fetchWaveTracks } from '@/lib/player/wave-buffer';
 
 let audio: HTMLAudioElement | null = null;
 let hls: HlsType | null = null;
@@ -72,10 +75,7 @@ function stopHeartbeat(): void {
   heartbeatTrackId = null;
 }
 
-// История треков в текущей сессии — для wave (не повторяем уже сыгранное)
-const waveHistory: string[] = [];
-
-function flushPlayEvent(source: string = 'direct'): void {
+function flushPlayEvent(source: string): void {
   if (!playStartedTrackId || playStartedAt === null) return;
 
   const durationPlayedSec = Math.round((Date.now() - playStartedAt) / 1000);
@@ -92,27 +92,115 @@ function flushPlayEvent(source: string = 'direct'): void {
   }).catch(() => {});
 }
 
-/** Запрашивает следующий трек у волны когда очередь исчерпана. */
-async function fetchWaveNext(currentTrackId: string): Promise<PlayerTrack | null> {
-  const played = waveHistory.slice(-30).join(',');
-  const url = `/api/v1/wave?trackId=${currentTrackId}${played ? `&played=${played}` : ''}`;
+// ─── Буфер волны ─────────────────────────────────────────────────────────
+// Дозапрос следующей партии треков волны — общая точка для проактивного триггера
+// (needsWaveFetch на 'playing'/тике) и реактивного фолбэка (next() при пустой очереди).
+// waveFetchInFlight — единственный in-flight-guard на оба пути; awaitingNextFromBuffer
+// подхватывает результат, если next() встал в очередь, пока фетч уже летел.
+let waveFetchInFlight = false;
+let awaitingNextFromBuffer = false;
+let consecutiveWaveErrors = 0;
 
-  const res = await fetch(url).catch(() => null);
-  if (!res?.ok) return null;
+const WAVE_SID_KEY = 'vire_wave_sid';
 
-  const data = await res.json() as { track: { id: string; title: string; artistName: string; artistSlug: string; releaseId: string; coverUrl: string | null; accentColor: string | null; isExplicit?: boolean } | null };
-  if (!data.track) return null;
+function getWaveSessionId(): string {
+  let sid = sessionStorage.getItem(WAVE_SID_KEY);
+  if (!sid) {
+    sid = crypto.randomUUID();
+    sessionStorage.setItem(WAVE_SID_KEY, sid);
+  }
+  return sid;
+}
 
-  return {
-    id: data.track.id,
-    title: data.track.title,
-    artistName: data.track.artistName,
-    coverUrl: data.track.coverUrl,
-    artistSlug: data.track.artistSlug,
-    releaseId: data.track.releaseId,
-    accentColor: data.track.accentColor ?? undefined,
-    isExplicit: data.track.isExplicit,
-  };
+/** «Проигранное» для анти-повтора волны — id очереди до текущего трека включительно. */
+function playedIdsForWaveRequest(): string[] {
+  const { queue, queueIndex } = usePlayerStore.getState();
+  return queue.slice(0, queueIndex + 1).map((t) => t.id).slice(-100);
+}
+
+async function growWaveBuffer(): Promise<PlayerTrack[]> {
+  const { track } = usePlayerStore.getState();
+  if (!track) return usePlayerStore.getState().queue;
+
+  waveFetchInFlight = true;
+  try {
+    const tracks = await fetchWaveTracks({
+      sessionId: getWaveSessionId(),
+      trackId: track.id,
+      played: playedIdsForWaveRequest(),
+      count: 3,
+    });
+    if (tracks.length === 0) return usePlayerStore.getState().queue;
+
+    const current = usePlayerStore.getState();
+    const mergedQueue = dedupeQueue([...current.queue, ...tracks]);
+    const patch: { queue: PlayerTrack[]; originalQueue?: PlayerTrack[] | null } = { queue: mergedQueue };
+    // Шаффл активен — новые треки дозаписываем и в originalQueue, иначе выключение
+    // шаффла (shuffleOff) их потеряет.
+    if (current.shuffle && current.originalQueue) {
+      patch.originalQueue = dedupeQueue([...current.originalQueue, ...tracks]);
+    }
+    usePlayerStore.getState()._setState(patch);
+    return mergedQueue;
+  } finally {
+    waveFetchInFlight = false;
+    if (awaitingNextFromBuffer) {
+      awaitingNextFromBuffer = false;
+      const s = usePlayerStore.getState();
+      const idx = s.queueIndex + 1;
+      if (idx < s.queue.length) playAt(s.queue, idx);
+      else usePlayerStore.getState()._setState({ isLoading: false });
+    }
+  }
+}
+
+async function maybeFetchWaveBuffer(): Promise<void> {
+  const { queue, queueIndex, waveMode } = usePlayerStore.getState();
+  if (!needsWaveFetch(queue.length, queueIndex, waveMode, waveFetchInFlight)) return;
+  await growWaveBuffer();
+}
+
+function handleWaveLoadError(): void {
+  consecutiveWaveErrors += 1;
+  if (consecutiveWaveErrors >= 3) {
+    consecutiveWaveErrors = 0;
+    usePlayerStore.getState()._setState({ audioError: true, isLoading: false });
+    return;
+  }
+  void controls.next();
+}
+
+// ─── Префетч манифеста следующего трека ────────────────────────────────────
+let prefetchedAheadFor: string | null = null;
+
+function maybePrefetchNextManifest(): void {
+  const { queue, queueIndex, duration, currentTime, track } = usePlayerStore.getState();
+  if (!track || duration <= 0) return;
+  if (duration - currentTime >= 15) return;
+  if (prefetchedAheadFor === track.id) return;
+  const next = queue[queueIndex + 1];
+  if (!next) return;
+  prefetchedAheadFor = track.id;
+  void fetchManifest(next.id);
+}
+
+// ─── Тик раз в ~5с при воспроизведении ──────────────────────────────────────
+// Общий редкий throttle для проверок, которым не нужна покадровая частота
+// timeupdate: буфер волны и префетч манифеста. currentTime для живого UI
+// (прогресс-бар/waveform) обновляется отдельно на каждом timeupdate — иначе
+// текущие потребители стора (Player, waveform-player, track-lyrics) будут
+// видеть прогресс, дёргающийся раз в 5с.
+const TICK_INTERVAL_MS = 5_000;
+let lastTickAt = 0;
+
+function runThrottledTick(): void {
+  const now = Date.now();
+  if (now - lastTickAt < TICK_INTERVAL_MS) return;
+  lastTickAt = now;
+
+  if (!usePlayerStore.getState().isPlaying) return;
+  void maybeFetchWaveBuffer();
+  maybePrefetchNextManifest();
 }
 
 export function initAudioEngine(): void {
@@ -123,6 +211,7 @@ export function initAudioEngine(): void {
 
   audio.addEventListener('timeupdate', () => {
     usePlayerStore.getState()._setState({ currentTime: audio!.currentTime });
+    runThrottledTick();
   });
 
   audio.addEventListener('durationchange', () => {
@@ -132,12 +221,13 @@ export function initAudioEngine(): void {
   });
 
   audio.addEventListener('ended', () => {
-    flushPlayEvent('direct');
+    flushPlayEvent(usePlayerStore.getState().context?.source ?? 'direct');
     stopHeartbeat();
-    controls.next();
+    void controls.next();
   });
   audio.addEventListener('playing', () => {
     clearLoadWatchdog();
+    consecutiveWaveErrors = 0;
     usePlayerStore.getState()._setState({ isPlaying: true, isLoading: false });
     const { track } = usePlayerStore.getState();
     if (track && track.id !== playStartedTrackId) {
@@ -145,6 +235,7 @@ export function initAudioEngine(): void {
       playStartedTrackId = track.id;
     }
     if (track) startHeartbeat(track.id);
+    void maybeFetchWaveBuffer();
   });
   audio.addEventListener('pause', () => {
     clearLoadWatchdog();
@@ -159,28 +250,34 @@ export function initAudioEngine(): void {
   );
 }
 
-async function loadAndPlay(track: PlayerTrack): Promise<void> {
+async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {}): Promise<void> {
   if (!audio) return;
 
-  flushPlayEvent('direct');
+  flushPlayEvent(usePlayerStore.getState().context?.source ?? 'direct');
 
-  usePlayerStore.getState()._setState({ isLoading: true, hasAudio: false, audioError: false, currentTime: 0, duration: 0, waveformPeaks: null });
+  prefetchedAheadFor = null;
+  usePlayerStore.getState()._setState({
+    isLoading: true,
+    hasAudio: false,
+    audioError: false,
+    currentTime: opts.seekTo ?? 0,
+    duration: 0,
+    waveformPeaks: null,
+  });
   armLoadWatchdog();
 
-  const res = await fetch(`/api/v1/tracks/${track.id}/manifest`).catch(() => null);
+  const manifest = await fetchManifest(track.id);
 
-  if (!res?.ok) {
+  if (!manifest) {
     clearLoadWatchdog();
     usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
+    if (usePlayerStore.getState().waveMode) handleWaveLoadError();
     return;
   }
 
-  const { hlsUrl, waveformPeaks } = (await res.json()) as { hlsUrl: string; waveformPeaks: number[] | null };
-  usePlayerStore.getState()._setState({ waveformPeaks: waveformPeaks ?? null });
+  usePlayerStore.getState()._setState({ waveformPeaks: manifest.waveformPeaks ?? null, hasAudio: true });
 
   if (hls) { hls.destroy(); hls = null; }
-
-  usePlayerStore.getState()._setState({ hasAudio: true });
 
   const Hls = await getHls();
   if (Hls.isSupported()) {
@@ -188,9 +285,10 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
     // начале) → bufferStalledError/bufferSeekOverHole, плеер залипает на 0:00.
     // Повышаем терпимость к дырам и число попыток перепрыгнуть их.
     hls = new Hls({ maxBufferHole: 0.5, nudgeOffset: 0.2, nudgeMaxRetry: 8 });
-    hls.loadSource(hlsUrl);
+    hls.loadSource(manifest.hlsUrl);
     hls.attachMedia(audio);
     hls.once(Hls.Events.MANIFEST_PARSED, () => {
+      if (opts.seekTo) audio!.currentTime = opts.seekTo;
       audio?.play().catch(() => {});
     });
     hls.on(Hls.Events.ERROR, (_evt, data) => {
@@ -219,35 +317,96 @@ async function loadAndPlay(track: PlayerTrack): Promise<void> {
         usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
         hls?.destroy();
         hls = null;
+        if (usePlayerStore.getState().waveMode) handleWaveLoadError();
       }
     });
   } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
-    audio.src = hlsUrl;
+    audio.src = manifest.hlsUrl;
+    if (opts.seekTo) audio.currentTime = opts.seekTo;
     audio.play().catch(() => {});
   } else {
     usePlayerStore.getState()._setState({ hasAudio: false, isLoading: false });
   }
 }
 
+function playAt(queue: PlayerTrack[], index: number): void {
+  const track = queue[index];
+  if (!track) return;
+
+  usePlayerStore.getState()._setState({ track, queue, queueIndex: index });
+
+  if (track.id !== loadedTrackId) {
+    loadedTrackId = track.id;
+    void attachAndPlay(track);
+  } else if (audio) {
+    audio.play().catch(() => {});
+  }
+}
+
+/** После регидрации persist queue[queueIndex] может не совпадать с track (очередь
+ *  усечена до 100 при сохранении) — чиним индекс по фактической позиции трека. */
+function clampRestoredQueueIndex(): void {
+  const { track, queue, queueIndex } = usePlayerStore.getState();
+  if (!track) return;
+  const atIndex = queue[queueIndex];
+  if (atIndex && atIndex.id === track.id) return;
+  const found = queue.findIndex((t) => t.id === track.id);
+  usePlayerStore.getState()._setState({ queueIndex: found >= 0 ? found : 0 });
+}
+
+export function getAudioTime(): number {
+  return audio?.currentTime ?? 0;
+}
+
 export const controls = {
+  playQueue(tracks: PlayerTrack[], opts: { startIndex?: number; context: PlayContext; shuffle?: boolean }): void {
+    initAudioEngine();
+    if (tracks.length === 0) return;
+    // Индекс резолвим по id ДО дедупа: если исходная очередь содержит дубликаты
+    // раньше нужной позиции, dedupeQueue сдвинет индексы — позиционный startIndex
+    // после дедупа указал бы уже на другой трек.
+    const rawStart = Math.min(Math.max(opts.startIndex ?? 0, 0), tracks.length - 1);
+    const startTrackId = tracks[rawStart].id;
+    const deduped = dedupeQueue(tracks);
+    if (deduped.length === 0) return;
+    const startIndex = Math.max(0, deduped.findIndex((t) => t.id === startTrackId));
+
+    let queue = deduped;
+    let index = startIndex;
+    const patch: { context: PlayContext; shuffle?: boolean; originalQueue?: PlayerTrack[] | null } = {
+      context: opts.context,
+    };
+
+    if (opts.shuffle !== undefined) {
+      patch.shuffle = opts.shuffle;
+      if (opts.shuffle) {
+        const result = shuffleOn(deduped, startIndex);
+        queue = result.queue;
+        index = result.index;
+        patch.originalQueue = deduped;
+      } else {
+        patch.originalQueue = null;
+      }
+    }
+
+    usePlayerStore.getState()._setState(patch);
+    playAt(queue, index);
+  },
+
+  /** @deprecated временный алиас поверх playQueue для непереехавших точек вызова, удалить в B3 */
   play(track: PlayerTrack, queue: PlayerTrack[] = [], index = 0): void {
-    usePlayerStore.getState()._setState({
-      track,
-      queue: queue.length > 0 ? queue : [track],
-      queueIndex: index,
+    controls.playQueue(queue.length > 0 ? queue : [track], {
+      startIndex: index,
+      context: { source: 'direct' },
     });
+  },
 
-    // Добавляем в историю волны
-    if (!waveHistory.includes(track.id)) {
-      waveHistory.push(track.id);
-    }
-
-    if (track.id !== loadedTrackId) {
-      loadedTrackId = track.id;
-      loadAndPlay(track);
-    } else if (audio) {
-      audio.play().catch(() => {});
-    }
+  /** Toggle-if-current: пауза/плей у уже загруженного трека; для чужого id — no-op. */
+  toggle(trackId?: string): void {
+    const { track } = usePlayerStore.getState();
+    if (!track) return;
+    if (trackId !== undefined && trackId !== track.id) return;
+    controls.togglePlay();
   },
 
   togglePlay(): void {
@@ -277,34 +436,29 @@ export const controls = {
   },
 
   async next(): Promise<void> {
-    const { queue, queueIndex, track: currentTrack, waveMode, shuffle } = usePlayerStore.getState();
-
-    if (shuffle && queue.length > 1) {
-      let nextIdx: number;
-      do { nextIdx = Math.floor(Math.random() * queue.length); } while (nextIdx === queueIndex);
-      controls.play(queue[nextIdx], queue, nextIdx);
-      return;
-    }
-
+    const { queue, queueIndex, waveMode, track } = usePlayerStore.getState();
     const i = queueIndex + 1;
 
     if (i < queue.length) {
-      controls.play(queue[i], queue, i);
+      playAt(queue, i);
       return;
     }
 
-    // Очередь исчерпана — если wave mode включён, запрашиваем следующий
-    if (waveMode && currentTrack) {
+    if (!waveMode || !track) return;
+
+    if (waveFetchInFlight) {
+      awaitingNextFromBuffer = true;
       usePlayerStore.getState()._setState({ isLoading: true });
-      const next = await fetchWaveNext(currentTrack.id);
-      if (next) {
-        // Добавляем в очередь и играем
-        const newQueue = [...queue, next];
-        usePlayerStore.getState()._setState({ queue: newQueue, queueIndex: newQueue.length - 1 });
-        controls.play(next, newQueue, newQueue.length - 1);
-      } else {
-        usePlayerStore.getState()._setState({ isLoading: false });
-      }
+      return;
+    }
+
+    usePlayerStore.getState()._setState({ isLoading: true });
+    const mergedQueue = await growWaveBuffer();
+    const idx = queueIndex + 1;
+    if (idx < mergedQueue.length) {
+      playAt(mergedQueue, idx);
+    } else {
+      usePlayerStore.getState()._setState({ isLoading: false });
     }
   },
 
@@ -312,20 +466,72 @@ export const controls = {
     if (audio && audio.currentTime > 3) {
       controls.seek(0);
       audio.play().catch(() => {});
-    } else {
-      const { queue, queueIndex } = usePlayerStore.getState();
-      const i = queueIndex - 1;
-      if (i >= 0) controls.play(queue[i], queue, i);
-      else controls.seek(0);
+      return;
     }
+    const { queue, queueIndex } = usePlayerStore.getState();
+    const i = queueIndex - 1;
+    if (i >= 0) playAt(queue, i);
+    else controls.seek(0);
   },
 
+  /** Оставлено для WaveModeButton (продолжить волну для уже играющей очереди
+   *  без перезапуска) и wave-start-button/mood-wave-chips до их миграции на startWave в B3. */
   setWaveMode(on: boolean): void {
     usePlayerStore.getState()._setState({ waveMode: on });
   },
 
   toggleShuffle(): void {
-    const { shuffle } = usePlayerStore.getState();
-    usePlayerStore.getState()._setState({ shuffle: !shuffle });
+    const { shuffle, queue, queueIndex, track, originalQueue } = usePlayerStore.getState();
+    if (shuffle) {
+      const base = originalQueue ?? queue;
+      const result = shuffleOff(base, track?.id ?? '');
+      usePlayerStore.getState()._setState({
+        shuffle: false,
+        queue: result.queue,
+        queueIndex: result.index,
+        originalQueue: null,
+      });
+    } else {
+      const result = shuffleOn(queue, queueIndex);
+      usePlayerStore.getState()._setState({
+        shuffle: true,
+        queue: result.queue,
+        queueIndex: result.index,
+        originalQueue: queue,
+      });
+    }
+  },
+
+  /** Запускает волну как новую очередь: сессия волны — sessionStorage 'vire_wave_sid'. */
+  async startWave(seed: { mood?: string; genre?: string } | null): Promise<boolean> {
+    const tracks = await fetchWaveTracks({
+      sessionId: getWaveSessionId(),
+      mood: seed?.mood,
+      genre: seed?.genre,
+      played: [],
+      count: 3,
+    });
+    if (tracks.length === 0) return false;
+
+    controls.playQueue(tracks, { context: { source: 'wave' } });
+    usePlayerStore.getState()._setState({ waveMode: true });
+    return true;
+  },
+
+  stopWave(): void {
+    usePlayerStore.getState()._setState({ waveMode: false });
+  },
+
+  /** Первый play после гидрации persist: подгружает манифест текущего трека,
+   *  восстанавливает позицию и играет. Вызывается UI (B4/D2). */
+  resumeRestored(): void {
+    const { track, currentTime } = usePlayerStore.getState();
+    if (!track || track.id === loadedTrackId) return;
+
+    clampRestoredQueueIndex();
+    initAudioEngine();
+    loadedTrackId = track.id;
+    usePlayerStore.getState()._setState({ restored: false });
+    void attachAndPlay(track, { seekTo: currentTime });
   },
 };

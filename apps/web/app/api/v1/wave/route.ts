@@ -104,7 +104,8 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     tracks,
-    // совместимость до B2: старые клиенты (wave-start-button/mood-wave-chips/audio-engine) читают data.track
+    // совместимость до B3: wave-start-button/mood-wave-chips ещё читают data.track,
+    // мигрируют на startWave() вместе с этим полем в B3
     track: tracks[0] ?? null,
   });
 }
