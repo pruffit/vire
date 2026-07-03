@@ -1,11 +1,7 @@
 import type { GenreCount } from '@vire/db';
 import { WaveStartButton } from '@/components/wave-start-button';
-import { WaveChipRow, type MoodChip, moodChipItems, type WaveChipItem } from '@/components/home/wave-chips';
-import { GENRE_LABELS } from '@/lib/genres';
-
-function genreChipItems(genres: GenreCount[]): WaveChipItem[] {
-  return genres.map(({ genre, count }) => ({ key: genre, label: GENRE_LABELS[genre], count, kind: 'genre' }));
-}
+import { WaveChipRow } from '@/components/home/wave-chips';
+import { type MoodChip, moodChipItems, genreChipItems } from '@/components/home/wave-chip-items';
 
 export function FlowBlock({ moods, genres }: { moods: MoodChip[]; genres: GenreCount[] }) {
   return (
