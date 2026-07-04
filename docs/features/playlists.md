@@ -29,6 +29,27 @@
   галочками, в каких плейлистах трек уже есть: меню грузит `GET /api/v1/playlists?trackId=<uuid>`
   (`getTrackPlaylistIds`) и тоглит членство оптимистично.
 
+## Лайки плейлистов
+
+Слушатель может лайкнуть не только свои, но и чужие публичные подборки — они
+попадают в отдельную секцию медиатеки. Данные: таблица `playlist_likes`
+(`user_id`, `playlist_id`, `created_at`) + денормализованный счётчик
+`playlists.likes_count`, инкремент/декремент которого делают `likePlaylist`/
+`unlikePlaylist` (`packages/db/src/queries/playlists.ts`).
+
+- **API:** `apps/web/app/api/v1/playlists/[id]/like/route.ts` — `GET` текущее
+  состояние (`{ liked }` из `getPlaylistLikeState`), `POST`/`DELETE` ставят/снимают
+  лайк (`likePlaylist`/`unlikePlaylist`, ответ `{ liked }`); rate-limit 60
+  запросов/мин на пользователя.
+- **UI:** карточка плейлиста на главной (`components/editorial-playlist-card.tsx`),
+  кнопка в шапке `/playlists/[id]` (`playlist-like-button.tsx`) — обе на общем
+  оптимистичном хуке `components/use-playlist-like.ts` (мгновенный флип лайка и
+  счётчика, откат в catch); секция «Лайкнутые подборки» в медиатеке (`/library`,
+  `getLikedPlaylists` + переиспользование `EditorialPlaylistCard`).
+- **Видимость:** `getLikedPlaylists` отбирает только `visibility = 'PUBLIC'` —
+  если лайкнутый плейлист стал приватным, он выпадает из секции «Лайкнутые
+  подборки» (сам лайк в БД остаётся, просто не показывается).
+
 ## Где код
 
 - **Страница:** `apps/web/app/(listener)/playlists/[id]/page.tsx` — server-shell
