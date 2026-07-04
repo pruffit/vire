@@ -140,4 +140,17 @@ describe('persist: partialize', () => {
     };
     expect(persisted.originalQueue).toBeNull();
   });
+
+  it('текущий трек отсутствует в originalQueue — фолбэк на позицию 0, не падает', () => {
+    const partialize = usePlayerStore.persist.getOptions().partialize;
+    const bigOriginal = Array.from({ length: 300 }, (_, i) => track(`o${i}`));
+    const persisted = partialize!({
+      ...usePlayerStore.getState(),
+      track: track('missing-from-original'),
+      originalQueue: bigOriginal,
+    }) as { originalQueue: PlayerTrack[] };
+
+    expect(persisted.originalQueue.length).toBeLessThanOrEqual(100);
+    expect(persisted.originalQueue[0]?.id).toBe('o0');
+  });
 });

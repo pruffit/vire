@@ -272,12 +272,17 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
   flushPlayEvent();
 
   prefetchedAheadFor = null;
+  // Резюм восстановленного трека (opts.seekTo передаётся только из resumeRestored):
+  // duration уже персистится в сторе с прошлой сессии — не сбрасываем в 0, иначе
+  // мини-бар на кадр покажет 0:00/0:00 до реального durationchange (ждём сеть).
+  // currentTime сбрасывать не нужно — сюда же приходит опция seekTo.
+  const isResume = opts.seekTo !== undefined;
   usePlayerStore.getState()._setState({
     isLoading: true,
     hasAudio: false,
     audioError: false,
     currentTime: opts.seekTo ?? 0,
-    duration: 0,
+    ...(isResume ? {} : { duration: 0 }),
     waveformPeaks: null,
   });
   armLoadWatchdog();
@@ -361,10 +366,10 @@ function playAt(queue: PlayerTrack[], index: number): void {
     loadedTrackId = track.id;
     void attachAndPlay(track);
   } else if (audio) {
-    // Единственный случай сюда попасть — repeat='all' с очередью из одного
-    // трека (nextQueueIndex зацикливает на тот же index): явный seek(0), не
-    // полагаемся на неявный рестарт ended-элемента браузером.
-    controls.seek(0);
+    // Уже загруженный трек: playQueue/повторный клик «Играть» по той же очереди
+    // резюмит с текущей позиции, а не рестартит с 0:00 (playAt вызывается не
+    // только из repeat-обёртки next(), но и напрямую из UI — release-hero-play,
+    // featured-play-button, playlist playAll и т.п.). Рестарт с 0 — точечно в next().
     audio.play().catch(() => {});
   }
 }
@@ -468,7 +473,16 @@ export const controls = {
     // Волна главнее repeat='all' — она сама дозапрашивает буфер вместо зацикливания.
     if (!waveMode) {
       const idx = nextQueueIndex(queueIndex, queue.length, repeat);
-      if (idx !== null) playAt(queue, idx);
+      if (idx === null) return;
+      if (idx === queueIndex) {
+        // repeat='all' с очередью из одного трека — nextQueueIndex зацикливает на
+        // тот же index, playAt по уже загруженному треку просто резюмит (не
+        // рестартит), поэтому явный рестарт с 0 нужен именно здесь.
+        controls.seek(0);
+        audio?.play().catch(() => {});
+        return;
+      }
+      playAt(queue, idx);
       return;
     }
 

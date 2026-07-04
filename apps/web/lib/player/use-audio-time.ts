@@ -26,16 +26,18 @@ export function shouldRunTicker(enabled: boolean, isPlaying: boolean): boolean {
  * плюс досинхронизация на любую запись currentTime в стор (seek/смена трека/
  * редкий персист-тик) — так скраб при паузе тоже подхватывается сразу.
  *
- * Restored-фолбэк: сразу после F5 движок ещё не подключен к треку (`hasAudio`
- * false), `getAudioTime()` читает пустой `<audio>` и врёт 0 — пока восстановленный
- * трек ждёт первый play (`restored` true), берём время из стора (персистится там же).
- * Один комбинированный селектор вместо двух отдельных подписок на hasAudio/restored —
- * не-restored (обычный) путь всегда получает null и не переренднивается лишний раз.
+ * hasAudio-фолбэк: пока движок не подключен к треку (`hasAudio` false — сразу
+ * после F5 до первого play, а также в окне attachAndPlay между кликом и реальным
+ * durationchange/playing), `getAudioTime()` читает пустой/чужой `<audio>` и врёт
+ * 0 — вместо этого берём время из стора. На обычной смене трека attachAndPlay
+ * тем же батчем патчит store.currentTime в 0 (новый трек), так что поведение не
+ * меняется — фолбэк просто перестаёт зависеть от `restored`, которое было true
+ * только для restored-случая и упускало окно attachAndPlay резюма.
  */
 export function useAudioTime(fps = 4, enabled = true): number {
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const storeTime = usePlayerStore((s) => s.currentTime);
-  const restoredFallback = usePlayerStore((s) => (enabled && !s.hasAudio && s.restored ? s.currentTime : null));
+  const hasAudioFallback = usePlayerStore((s) => (enabled && !s.hasAudio ? s.currentTime : null));
   const [time, setTime] = useState(getAudioTime);
 
   // Пересинхронизация на isPlaying (вкл. финальный sync при уходе в паузу) и на
@@ -64,5 +66,5 @@ export function useAudioTime(fps = 4, enabled = true): number {
     return () => cancelAnimationFrame(raf);
   }, [isPlaying, fps, enabled]);
 
-  return restoredFallback ?? time;
+  return hasAudioFallback ?? time;
 }

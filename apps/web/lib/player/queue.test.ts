@@ -167,4 +167,19 @@ describe('capLiveQueue', () => {
     expect(result.originalQueue!.length).toBeLessThanOrEqual(LIVE_QUEUE_LIMIT);
     expect(result.originalQueue!.some((t) => t.id === 't305')).toBe(true);
   });
+
+  it('текущий трек отсутствует в originalQueue — фолбэк на позицию 0, не падает, queue/queueIndex согласованы', () => {
+    const queue = Array.from({ length: 310 }, (_, i) => track(`t${i}`));
+    // originalQueue не содержит t305 (рассинхрон данных) — findIndex вернёт -1
+    const originalQueue = Array.from({ length: 310 }, (_, i) => track(`o${i}`));
+
+    const result = capLiveQueue(queue, 305, originalQueue);
+
+    expect(result.queue.length).toBeLessThanOrEqual(LIVE_QUEUE_LIMIT);
+    expect(result.queue[result.queueIndex]?.id).toBe('t305');
+    expect(result.originalQueue).not.toBeNull();
+    expect(result.originalQueue!.length).toBeLessThanOrEqual(LIVE_QUEUE_LIMIT);
+    // Фолбэк на index 0 — окно original начинается с его начала.
+    expect(result.originalQueue![0]?.id).toBe('o0');
+  });
 });
