@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment } from 'react';
-import { Reorder } from 'motion/react';
+import { Reorder, useDragControls } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls } from './audio-engine';
 import { ExplicitBadge } from '@/components/explicit-badge';
@@ -34,7 +34,7 @@ export function QueuePanel({ onJump }: { onJump: () => void }) {
   }
 
   return (
-    <div className="w-full max-h-[46vh] overflow-y-auto min-h-0 -mx-1 px-1">
+    <div className="w-full max-h-[46vh] overflow-y-auto overscroll-contain min-h-0 -mx-1 px-1">
       <Reorder.Group
         as="div"
         axis="y"
@@ -47,31 +47,59 @@ export function QueuePanel({ onJump }: { onJump: () => void }) {
           return (
             <Fragment key={t.id}>
               {waveMode && i === queueIndex + 1 && <WaveDivider />}
-              <Reorder.Item
-                as="div"
-                value={t}
-                className={`flex items-center gap-2 px-2 py-2 rounded-md select-none ${isCurrent ? 'bg-white/10' : 'hover:bg-white/5'}`}
-              >
-                <span className="text-white/25 cursor-grab active:cursor-grabbing shrink-0" aria-hidden="true">
-                  <GripIcon />
-                </span>
-                <button type="button" onClick={() => jump(t)} className="flex-1 min-w-0 text-left">
-                  <span
-                    className="text-sm truncate flex items-center gap-1.5"
-                    style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
-                  >
-                    <span className="truncate">{t.title}</span>
-                    {t.isExplicit && <ExplicitBadge />}
-                  </span>
-                  <span className="text-xs text-muted-foreground truncate block">{t.artistName}</span>
-                </button>
-                {isCurrent && <PlayingDot />}
-              </Reorder.Item>
+              <QueueRow track={t} isCurrent={isCurrent} onJump={jump} />
             </Fragment>
           );
         })}
       </Reorder.Group>
     </div>
+  );
+}
+
+/**
+ * Строка очереди — свой `useDragControls` на элемент: `dragListener={false}`
+ * снимает touch-action:none со всей строки (иначе список нельзя было
+ * проскроллить на телефоне — тач сразу становился drag-жестом), драг стартует
+ * только с ручки-грипа через `onPointerDown` → `dragControls.start`.
+ */
+function QueueRow({
+  track: t,
+  isCurrent,
+  onJump,
+}: {
+  track: PlayerTrack;
+  isCurrent: boolean;
+  onJump: (t: PlayerTrack) => void;
+}) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      as="div"
+      value={t}
+      dragListener={false}
+      dragControls={dragControls}
+      className={`flex items-center gap-2 px-2 py-2 rounded-md select-none ${isCurrent ? 'bg-white/10' : 'hover:bg-white/5'}`}
+    >
+      <span
+        onPointerDown={(e) => dragControls.start(e)}
+        className="text-white/25 cursor-grab active:cursor-grabbing shrink-0 touch-none p-2.5 -m-1"
+        aria-hidden="true"
+      >
+        <GripIcon />
+      </span>
+      <button type="button" onClick={() => onJump(t)} className="flex-1 min-w-0 text-left">
+        <span
+          className="text-sm truncate flex items-center gap-1.5"
+          style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
+        >
+          <span className="truncate">{t.title}</span>
+          {t.isExplicit && <ExplicitBadge />}
+        </span>
+        <span className="text-xs text-muted-foreground truncate block">{t.artistName}</span>
+      </button>
+      {isCurrent && <PlayingDot />}
+    </Reorder.Item>
   );
 }
 

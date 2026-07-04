@@ -13,7 +13,7 @@ import { ExplicitBadge } from '@/components/explicit-badge';
 import { formatDuration } from '@/lib/format';
 import { Icon } from '@/components/icon';
 import { toast } from '@/components/toast';
-import { QuickLookSheet, MiniEq } from './quick-look-sheet';
+import { QuickLookSheet, QuickLookDragHandle, MiniEq } from './quick-look-sheet';
 
 export interface QuickLookRelease {
   id: string;
@@ -211,7 +211,7 @@ export function ReleaseQuickLook({
 
       {/* Оверлей */}
       <QuickLookSheet open={open} onClose={() => setOpen(false)}>
-        <div className="px-5 pb-3 flex items-center gap-4">
+        <QuickLookDragHandle className="px-5 pb-3 flex items-center gap-4">
           <motion.div layoutId={layoutId} transition={spring.smooth} className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-muted">
             {release.coverUrl && (
               <Image src={release.coverUrl} alt={release.title} fill sizes="80px" className="object-cover" />
@@ -219,12 +219,18 @@ export function ReleaseQuickLook({
           </motion.div>
           <div className="min-w-0 flex-1">
             <h3 className="text-base font-semibold leading-tight truncate">{release.title}</h3>
-            <Link href={`/artists/${release.artistSlug}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors truncate block">
+            {/* stopPropagation — иначе тап по ссылке ловится QuickLookDragHandle
+                (onPointerDown на всю зону) и стартует drag шторки вместо перехода */}
+            <Link
+              href={`/artists/${release.artistSlug}`}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors truncate block"
+            >
               {release.artistName}
             </Link>
             <p className="text-[11px] font-mono opacity-40 mt-0.5">{release.type}{yr ? ` · ${yr}` : ''}</p>
           </div>
-        </div>
+        </QuickLookDragHandle>
 
         <div className="px-5 pb-3 flex items-center gap-3">
           <motion.button
@@ -244,7 +250,7 @@ export function ReleaseQuickLook({
         </div>
 
         {/* Трек-лист */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-3" data-scroll-area>
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 pb-3" data-scroll-area>
           {loading && !tracks && (
             <div className="py-8 grid place-items-center">
               <span className="w-6 h-6 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />

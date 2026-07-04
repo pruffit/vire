@@ -40,25 +40,33 @@ export function LyricsScroll({ lines, variant = 'player', trackId, onSeekTo = co
   }, [active]);
 
   return (
-    <div ref={containerRef} className="mt-3 max-h-64 overflow-y-auto py-2 text-center space-y-2.5">
-      {lines.map((l, i) => {
-        const isActive = i === active;
-        const seekable = l.t != null;
-        return (
-          <button
-            key={i}
-            ref={isActive ? activeRef : null}
-            type="button"
-            disabled={!seekable}
-            onClick={() => seekable && onSeekTo(l.t as number)}
-            className={`block w-full px-2 leading-snug transition-all duration-300 ${
-              seekable ? 'cursor-pointer' : 'cursor-default'
-            } ${lineClassName(variant, isActive, synced)}`}
-          >
-            {l.text || '♪'}
-          </button>
-        );
-      })}
+    <div
+      ref={containerRef}
+      className="mt-3 max-h-[40vh] md:max-h-64 overflow-y-auto overscroll-contain touch-pan-y no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)]"
+    >
+      {/* Паддинг на внутреннем спейсере, не на скролл-контейнере — иначе первая/
+          последняя активная строка не может доскроллиться в центр видимой области
+          и всегда попадает в 12%-фейд маски сверху/снизу. */}
+      <div className="py-[20vh] md:py-24 text-center space-y-2.5">
+        {lines.map((l, i) => {
+          const isActive = i === active;
+          const seekable = l.t != null;
+          return (
+            <button
+              key={i}
+              ref={isActive ? activeRef : null}
+              type="button"
+              disabled={!seekable}
+              onClick={() => seekable && onSeekTo(l.t as number)}
+              className={`block w-full px-2 leading-snug transition-all duration-300 ${
+                seekable ? 'cursor-pointer' : 'cursor-default'
+              } ${lineClassName(variant, isActive, synced)}`}
+            >
+              {l.text || '♪'}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

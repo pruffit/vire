@@ -13,7 +13,7 @@ import { ExplicitBadge } from '@/components/explicit-badge';
 import { formatDuration, pluralTracks } from '@/lib/format';
 import { Icon } from '@/components/icon';
 import { toast } from '@/components/toast';
-import { QuickLookSheet, MiniEq } from './quick-look-sheet';
+import { QuickLookSheet, QuickLookDragHandle, MiniEq } from './quick-look-sheet';
 
 interface Props {
   playlistId: string;
@@ -71,8 +71,8 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
 
   return (
     <QuickLookSheet open={open} onClose={onClose}>
-      {/* Хедер */}
-      <div className="px-5 pb-3 flex items-center gap-4">
+      {/* Хедер — тоже стартует свайп-закрытие (см. QuickLookDragHandle) */}
+      <QuickLookDragHandle className="px-5 pb-3 flex items-center gap-4">
         <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-muted">
           {cover ? (
             <Image src={cover} alt={title} fill sizes="80px" className="object-cover" />
@@ -88,7 +88,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
             {trackCount} {pluralTracks(trackCount)}
           </p>
         </div>
-      </div>
+      </QuickLookDragHandle>
 
       {/* Кнопки действий */}
       <div className="px-5 pb-3 flex items-center gap-3">
@@ -117,7 +117,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
       </div>
 
       {/* Трек-лист */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-3" data-scroll-area>
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 pb-3" data-scroll-area>
         {tracks === null && loading && (
           <div className="py-8 grid place-items-center">
             <span className="w-6 h-6 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion, type PanInfo } from 'motion/react';
+import { AnimatePresence, motion, useDragControls, type DragControls, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
 
@@ -12,8 +12,15 @@ interface Props {
   children: React.ReactNode;
 }
 
+// Даёт заголовку (шапке), который рисуют потребители шторки (playlist/release
+// quick-look), доступ к тем же dragControls, что и грабберу — свайп-закрытие
+// стартует с любой из этих зон, а не со всей шторки, иначе тач-скролл
+// трек-листа внутри был бы мёртв (drag="y" ставит touch-action:none на весь элемент).
+const DragHandleContext = createContext<DragControls | null>(null);
+
 export function QuickLookSheet({ open, onClose, children }: Props) {
   const activeTrack = usePlayerStore((s) => s.track);
+  const dragControls = useDragControls();
 
   // Потребители передают onClose как новую стрелку на каждый рендер; держим в ref,
   // чтобы esc-listener не переподписывался при ре-рендерах родителя (напр. лайк).
@@ -52,6 +59,8 @@ export function QuickLookSheet({ open, onClose, children }: Props) {
         >
           <motion.div
             drag="y"
+            dragListener={false}
+            dragControls={dragControls}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.6 }}
             onDragEnd={onDragEnd}
@@ -59,10 +68,15 @@ export function QuickLookSheet({ open, onClose, children }: Props) {
             transition={spring.smooth}
             className="w-full max-w-md max-h-[88vh] flex flex-col rounded-2xl bg-card border border-border shadow-2xl overflow-hidden cursor-default"
           >
-            <div className="pt-2.5 pb-1 flex justify-center cursor-grab active:cursor-grabbing">
-              <span className="w-10 h-1 rounded-full bg-white/15" />
-            </div>
-            {children}
+            <DragHandleContext.Provider value={dragControls}>
+              <div
+                onPointerDown={(e) => dragControls.start(e)}
+                className="pt-2.5 pb-1 flex justify-center touch-none cursor-grab active:cursor-grabbing"
+              >
+                <span className="w-10 h-1 rounded-full bg-white/15" />
+              </div>
+              {children}
+            </DragHandleContext.Provider>
           </motion.div>
         </motion.div>
       )}
@@ -71,6 +85,29 @@ export function QuickLookSheet({ open, onClose, children }: Props) {
 
   if (typeof document === 'undefined') return null;
   return createPortal(overlay, document.body);
+}
+
+/**
+ * Оборачивает шапку (обложка+название) peek-контента — тоже стартует
+ * свайп-закрытие, как и грабёр, чтобы не заставлять пользователя целиться
+ * в узкую полоску. Список ниже шапки в drag-зону не входит — он скроллится сам.
+ */
+export function QuickLookDragHandle({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const dragControls = useContext(DragHandleContext);
+  return (
+    <div
+      onPointerDown={(e) => dragControls?.start(e)}
+      className={`touch-none${className ? ` ${className}` : ''}`}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** Анимированные полоски эквалайзера — индикатор текущего трека в трек-листе. */
