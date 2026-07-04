@@ -1,13 +1,10 @@
 'use client';
 
-import Image from 'next/image';
-import { motion } from 'motion/react';
-import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
+import { Stagger, StaggerItem } from '@vire/ui/motion';
 import type { PlayerTrack, PlayContext } from '@/store/player';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
 import { usePlay } from '@/lib/player/use-play';
-import { PlayIcon, PauseIcon } from '@/components/icons';
-import { ExplicitBadge } from '@/components/explicit-badge';
+import { TrackRow } from '@/components/track-row';
 import { formatCount } from '@/lib/format';
 import { PlayerLikeButton } from './player-like-button';
 
@@ -67,45 +64,30 @@ function Row({
   }
 
   return (
-    <motion.div
-      role="button"
-      tabIndex={0}
-      onClick={handleClick}
-      onKeyDown={(e) => e.key === 'Enter' && handleClick()}
-      whileTap={{ scale: 0.99 }}
-      transition={spring.snappy}
-      className="group flex items-center gap-3 py-3 border-b border-border/60 hover:bg-accent/5 -mx-2 px-2 rounded-sm transition-colors cursor-pointer select-none"
-    >
-      {rank != null && (
+    <TrackRow
+      track={track}
+      isActive={isActive}
+      isPlaying={isPlaying}
+      onPlay={handleClick}
+      clickableRow
+      className="border-b border-border/60"
+      leading={rank != null && (
         <span className="w-6 shrink-0 text-center font-mono text-sm tabular-nums text-muted-foreground group-hover:text-foreground transition-colors">
           {rank}
         </span>
       )}
-      <div className="relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted">
-        {track.coverUrl ? (
-          <Image src={track.coverUrl} alt={track.title} fill quality={60} sizes="36px" className="object-cover" />
-        ) : (
-          <div className="w-full h-full bg-white/5" />
-        )}
-        <span className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-          {isActive && isPlaying ? <PauseIcon size={12} className="text-white" /> : <PlayIcon size={12} className="text-white" />}
-        </span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate flex items-center gap-1.5" style={isActive ? { color: 'var(--primary)' } : undefined}>
-          <span className="truncate">{track.title}</span>
-          {track.isExplicit && <ExplicitBadge />}
-        </p>
-        <p className="text-xs text-muted-foreground truncate">{track.artistName}</p>
-      </div>
-      {track.plays != null && track.plays > 0 && (
-        <span className="shrink-0 text-xs font-mono tabular-nums text-muted-foreground hidden sm:block group-hover:opacity-0 transition-opacity">
-          {formatCount(track.plays)}
-        </span>
-      )}
-      <span className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-        <PlayerLikeButton trackId={track.id} size="sm" />
-      </span>
-    </motion.div>
+      trailing={
+        <>
+          {track.plays != null && track.plays > 0 && (
+            <span className="shrink-0 text-xs font-mono tabular-nums text-muted-foreground hidden sm:block group-hover:opacity-0 transition-opacity">
+              {formatCount(track.plays)}
+            </span>
+          )}
+          <span className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+            <PlayerLikeButton trackId={track.id} size="sm" />
+          </span>
+        </>
+      }
+    />
   );
 }

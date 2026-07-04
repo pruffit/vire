@@ -1,11 +1,8 @@
 'use client';
 
-import Link from 'next/link';
-import Image from 'next/image';
 import type { PlayerTrack } from '@/store/player';
 import { usePlay } from '@/lib/player/use-play';
-import { PlayIcon, PauseIcon } from '@/components/icons';
-import { ExplicitBadge } from '@/components/explicit-badge';
+import { TrackRow } from '@/components/track-row';
 import { formatDuration } from '@/lib/format';
 
 interface Props {
@@ -38,53 +35,31 @@ export function PurchasedTrackRow({
   }
 
   return (
-    <div className="group flex items-center gap-3 py-2.5 -mx-3 px-3 rounded-sm hover:bg-accent/5 transition-colors">
-      {/* Cover */}
-      <div className="w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted relative">
-        {releaseCoverUrl ? (
-          <Image src={releaseCoverUrl} alt={track.title} fill quality={60} sizes="36px" className="object-cover" />
-        ) : (
-          <div className="w-full h-full bg-white/5" />
-        )}
-        <button
-          onClick={handlePlay}
-          aria-label={isThisTrack && isPlaying ? 'Пауза' : 'Играть'}
-          className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          {isThisTrack && isPlaying ? <PauseIcon size={12} className="text-white" /> : <PlayIcon size={12} className="text-white" />}
-        </button>
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <Link
-          href={`/artists/${artistSlug}/releases/${releaseId}/tracks/${trackId}`}
-          className="text-sm font-medium truncate flex items-center gap-1.5 hover:underline"
-        >
-          <span className="truncate">{track.title}</span>
-          {track.isExplicit && <ExplicitBadge />}
-        </Link>
-        <p className="text-xs text-muted-foreground truncate">{track.artistName}</p>
-      </div>
-
-      {/* Duration */}
-      {durationSec != null && (
-        <span className="text-xs font-mono text-muted-foreground tabular-nums shrink-0">
-          {formatDuration(durationSec)}
-        </span>
-      )}
-
-      {/* Download */}
-      <a
-        href={`/api/v1/tracks/${trackId}/download`}
-        download
-        title="Скачать FLAC"
-        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-        aria-label="Скачать FLAC"
-      >
-        <DownloadIcon />
-      </a>
-    </div>
+    <TrackRow
+      track={{ id: track.id, title: track.title, artistName: track.artistName, isExplicit: track.isExplicit, coverUrl: releaseCoverUrl }}
+      isActive={isThisTrack}
+      isPlaying={isPlaying}
+      onPlay={handlePlay}
+      titleHref={`/artists/${artistSlug}/releases/${releaseId}/tracks/${trackId}`}
+      trailing={
+        <>
+          {durationSec != null && (
+            <span className="text-xs font-mono text-muted-foreground tabular-nums shrink-0">
+              {formatDuration(durationSec)}
+            </span>
+          )}
+          <a
+            href={`/api/v1/tracks/${trackId}/download`}
+            download
+            title="Скачать FLAC"
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            aria-label="Скачать FLAC"
+          >
+            <DownloadIcon />
+          </a>
+        </>
+      }
+    />
   );
 }
 
