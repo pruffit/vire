@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
-import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached } from '@/lib/listener-data';
+import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached, getLikedPlaylistsCached } from '@/lib/listener-data';
 import type { PlayerTrack } from '@/store/player';
 import { likedToPlayerTrack } from '@/lib/player/liked-to-player-track';
 import { LikedTrackRow } from '@/components/listener/liked-track-row';
@@ -11,6 +11,7 @@ import { PlaylistCard } from '@/components/listener/playlist-card';
 import { Section } from '@/components/listener/section';
 import { CreatePlaylistButton } from '@/components/listener/create-playlist-button';
 import { EmptyState } from '@/components/ui-kit';
+import { EditorialPlaylistCard } from '@/components/editorial-playlist-card';
 
 export const metadata: Metadata = { title: 'Медиатека' };
 export const dynamic = 'force-dynamic';
@@ -19,10 +20,11 @@ export default async function LibraryPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/library');
 
-  const [likedTracks, followedArtists, playlists] = await Promise.all([
+  const [likedTracks, followedArtists, playlists, likedPlaylists] = await Promise.all([
     getLikedTracksCached(session.user.id),
     getFollowedArtistsCached(session.user.id),
     getUserPlaylistsCached(session.user.id),
+    getLikedPlaylistsCached(session.user.id),
   ]);
 
   const likedQueue: PlayerTrack[] = likedTracks.map(likedToPlayerTrack);
@@ -46,6 +48,18 @@ export default async function LibraryPage() {
           </Stagger>
         )}
       </Section>
+
+      {likedPlaylists.length > 0 && (
+        <Section title="Лайкнутые подборки" count={likedPlaylists.length}>
+          <Stagger step={0.04} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+            {likedPlaylists.map((p) => (
+              <StaggerItem key={p.id}>
+                <EditorialPlaylistCard playlist={p} liked />
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </Section>
+      )}
 
       <div id="liked" className="scroll-mt-6">
         <Section title="Любимые треки" count={likedTracks.length}>

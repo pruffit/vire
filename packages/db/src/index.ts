@@ -149,6 +149,7 @@ export {
   likePlaylist,
   unlikePlaylist,
   getPlaylistLikeState,
+  getLikedPlaylists,
   getLikedPlaylistIds,
   searchTracksForPlaylist,
   getPlaylistSuggestions,

@@ -585,6 +585,17 @@ export async function unlikePlaylist(userId: string, playlistId: string): Promis
   }
 }
 
+/** Плейлисты, лайкнутые пользователем (публичные — ставший приватным лайкнутый плейлист скрывается). */
+export async function getLikedPlaylists(userId: string): Promise<EditorialPlaylist[]> {
+  const rows = await db
+    .select(META)
+    .from(playlistLikes)
+    .innerJoin(playlists, eq(playlists.id, playlistLikes.playlistId))
+    .where(and(eq(playlistLikes.userId, userId), eq(playlists.visibility, 'PUBLIC')))
+    .orderBy(desc(playlistLikes.createdAt));
+  return hydratePlaylists(rows);
+}
+
 /** Возвращает id редакционных плейлистов, лайкнутых пользователем. */
 export async function getLikedPlaylistIds(userId: string): Promise<string[]> {
   const rows = await db
