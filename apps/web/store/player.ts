@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { PlaySource } from '@vire/api-contracts';
-import type { Repeat } from '@/lib/player/queue';
+import { sliceWindowAroundIndex, type Repeat } from '@/lib/player/queue';
 
 export interface PlayerTrack {
   id: string;
@@ -74,6 +74,7 @@ type PersistedState = Pick<
   | 'context'
   | 'originalQueue'
   | 'currentTime'
+  | 'duration'
 >;
 
 /** Длинную очередь (волна) режем окном вокруг текущего трека — иначе
@@ -83,11 +84,29 @@ function sliceQueueForPersist(
   queue: PlayerTrack[],
   queueIndex: number,
 ): { queue: PlayerTrack[]; queueIndex: number } {
-  if (queue.length <= PERSISTED_QUEUE_LIMIT) {
-    return { queue, queueIndex: Math.max(0, queueIndex) };
-  }
-  const start = Math.max(0, queueIndex - PERSISTED_QUEUE_WINDOW_BEFORE);
-  return { queue: queue.slice(start, start + PERSISTED_QUEUE_LIMIT), queueIndex: queueIndex - start };
+  const { items, index } = sliceWindowAroundIndex(
+    queue,
+    queueIndex,
+    PERSISTED_QUEUE_LIMIT,
+    PERSISTED_QUEUE_WINDOW_BEFORE,
+  );
+  return { queue: items, queueIndex: index };
+}
+
+/** originalQueue (шаффл) режем тем же окном, но по позиции текущего трека В НЕЙ —
+ *  queueIndex указывает на позицию в `queue` (перемешанной), не в originalQueue. */
+function sliceOriginalQueueForPersist(
+  originalQueue: PlayerTrack[] | null,
+  currentTrackId: string | undefined,
+): PlayerTrack[] | null {
+  if (!originalQueue) return null;
+  const index = currentTrackId ? originalQueue.findIndex((t) => t.id === currentTrackId) : -1;
+  return sliceWindowAroundIndex(
+    originalQueue,
+    index >= 0 ? index : 0,
+    PERSISTED_QUEUE_LIMIT,
+    PERSISTED_QUEUE_WINDOW_BEFORE,
+  ).items;
 }
 
 export const usePlayerStore = create<Store>()(
@@ -128,8 +147,9 @@ export const usePlayerStore = create<Store>()(
           shuffle: state.shuffle,
           repeat: state.repeat,
           context: state.context,
-          originalQueue: state.originalQueue,
+          originalQueue: sliceOriginalQueueForPersist(state.originalQueue, state.track?.id),
           currentTime: state.currentTime,
+          duration: state.duration,
         };
       },
       // Через _setState (не мутацией) — иначе подписчики не узнают о restored.

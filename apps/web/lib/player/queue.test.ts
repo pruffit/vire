@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fisherYates, shuffleOn, shuffleOff, dedupeQueue, nextQueueIndex } from './queue';
+import { fisherYates, shuffleOn, shuffleOff, dedupeQueue, nextQueueIndex, capLiveQueue, LIVE_QUEUE_LIMIT } from './queue';
 import type { PlayerTrack } from '@/store/player';
 
 function track(id: string): PlayerTrack {
@@ -131,5 +131,40 @@ describe('nextQueueIndex', () => {
 
   it('конец очереди + one → null (повтор трека не влияет на переход между треками)', () => {
     expect(nextQueueIndex(4, 5, 'one')).toBeNull();
+  });
+});
+
+describe('capLiveQueue', () => {
+  it('короткая очередь (<=LIVE_QUEUE_LIMIT) — не трогается', () => {
+    const queue = Array.from({ length: 50 }, (_, i) => track(`t${i}`));
+    const result = capLiveQueue(queue, 30, null);
+    expect(result.queue).toEqual(queue);
+    expect(result.queueIndex).toBe(30);
+    expect(result.originalQueue).toBeNull();
+  });
+
+  it('длинная очередь режется, текущий трек остаётся на месте, index скорректирован', () => {
+    const queue = Array.from({ length: 310 }, (_, i) => track(`t${i}`));
+    const result = capLiveQueue(queue, 305, null);
+
+    expect(result.queue.length).toBeLessThanOrEqual(LIVE_QUEUE_LIMIT);
+    expect(result.queue[result.queueIndex]?.id).toBe('t305');
+  });
+
+  it('originalQueue (шаффл) режется согласованно по позиции текущего трека', () => {
+    const queue = Array.from({ length: 310 }, (_, i) => track(`t${i}`));
+    // originalQueue — тот же состав в другом порядке (шаффл), текущий трек t305 на позиции 10
+    const originalQueue = [
+      ...Array.from({ length: 10 }, (_, i) => track(`o${i}`)),
+      track('t305'),
+      ...Array.from({ length: 299 }, (_, i) => track(`o${i + 10}`)),
+    ];
+
+    const result = capLiveQueue(queue, 305, originalQueue);
+
+    expect(result.queue.length).toBeLessThanOrEqual(LIVE_QUEUE_LIMIT);
+    expect(result.originalQueue).not.toBeNull();
+    expect(result.originalQueue!.length).toBeLessThanOrEqual(LIVE_QUEUE_LIMIT);
+    expect(result.originalQueue!.some((t) => t.id === 't305')).toBe(true);
   });
 });

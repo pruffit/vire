@@ -25,10 +25,17 @@ export function shouldRunTicker(enabled: boolean, isPlaying: boolean): boolean {
  * На паузе rAF не крутится: один финальный sync при переходе isPlaying→false,
  * плюс досинхронизация на любую запись currentTime в стор (seek/смена трека/
  * редкий персист-тик) — так скраб при паузе тоже подхватывается сразу.
+ *
+ * Restored-фолбэк: сразу после F5 движок ещё не подключен к треку (`hasAudio`
+ * false), `getAudioTime()` читает пустой `<audio>` и врёт 0 — пока восстановленный
+ * трек ждёт первый play (`restored` true), берём время из стора (персистится там же).
+ * Один комбинированный селектор вместо двух отдельных подписок на hasAudio/restored —
+ * не-restored (обычный) путь всегда получает null и не переренднивается лишний раз.
  */
 export function useAudioTime(fps = 4, enabled = true): number {
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const storeTime = usePlayerStore((s) => s.currentTime);
+  const restoredFallback = usePlayerStore((s) => (enabled && !s.hasAudio && s.restored ? s.currentTime : null));
   const [time, setTime] = useState(getAudioTime);
 
   // Пересинхронизация на isPlaying (вкл. финальный sync при уходе в паузу) и на
@@ -57,5 +64,5 @@ export function useAudioTime(fps = 4, enabled = true): number {
     return () => cancelAnimationFrame(raf);
   }, [isPlaying, fps, enabled]);
 
-  return time;
+  return restoredFallback ?? time;
 }

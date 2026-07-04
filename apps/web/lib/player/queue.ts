@@ -2,6 +2,61 @@ import type { PlayerTrack } from '@/store/player';
 
 export type Repeat = 'off' | 'all' | 'one';
 
+/** Режет `items` окном `limit` вокруг `index`, оставляя `windowBefore` элементов
+ *  перед ним — общий алгоритм для persist-окна очереди (store/player.ts) и капа
+ *  live-очереди волны (`capLiveQueue` ниже). Не режет, если length <= limit. */
+export function sliceWindowAroundIndex<T>(
+  items: T[],
+  index: number,
+  limit: number,
+  windowBefore: number,
+): { items: T[]; index: number } {
+  if (items.length <= limit) {
+    return { items, index: Math.max(0, index) };
+  }
+  const start = Math.max(0, index - windowBefore);
+  return { items: items.slice(start, start + limit), index: index - start };
+}
+
+export const LIVE_QUEUE_LIMIT = 300;
+const LIVE_QUEUE_WINDOW_BEFORE = 20;
+
+/** Волна дозаписывает очередь в памяти без ограничений — на очень долгой сессии
+ *  она бы росла бесконечно. Отрезаем голову, когда length > LIVE_QUEUE_LIMIT,
+ *  оставляя >=LIVE_QUEUE_WINDOW_BEFORE треков перед текущим (чтобы prev() ещё
+ *  работал). originalQueue (шаффл активен) режем той же логикой по позиции
+ *  текущего трека — иначе shuffleOff() после обрезки терял бы согласованность. */
+export function capLiveQueue(
+  queue: PlayerTrack[],
+  queueIndex: number,
+  originalQueue: PlayerTrack[] | null,
+): { queue: PlayerTrack[]; queueIndex: number; originalQueue: PlayerTrack[] | null } {
+  if (queue.length <= LIVE_QUEUE_LIMIT) {
+    return { queue, queueIndex, originalQueue };
+  }
+
+  const currentId = queue[queueIndex]?.id;
+  const { items: cappedQueue, index: cappedIndex } = sliceWindowAroundIndex(
+    queue,
+    queueIndex,
+    LIVE_QUEUE_LIMIT,
+    LIVE_QUEUE_WINDOW_BEFORE,
+  );
+
+  let cappedOriginal = originalQueue;
+  if (originalQueue && originalQueue.length > LIVE_QUEUE_LIMIT) {
+    const originalIndex = currentId ? originalQueue.findIndex((t) => t.id === currentId) : -1;
+    cappedOriginal = sliceWindowAroundIndex(
+      originalQueue,
+      originalIndex >= 0 ? originalIndex : 0,
+      LIVE_QUEUE_LIMIT,
+      LIVE_QUEUE_WINDOW_BEFORE,
+    ).items;
+  }
+
+  return { queue: cappedQueue, queueIndex: cappedIndex, originalQueue: cappedOriginal };
+}
+
 /** Следующий индекс очереди с учётом повтора. null — очередь кончилась (repeat='one'
  *  сюда не попадает: залипание на одном треке обрабатывается отдельно в audio-engine). */
 export function nextQueueIndex(queueIndex: number, queueLength: number, repeat: Repeat): number | null {

@@ -1,7 +1,7 @@
 import type HlsType from 'hls.js';
 import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
 import { getSessionId } from '@/lib/session-id';
-import { dedupeQueue, shuffleOn, shuffleOff, nextQueueIndex } from '@/lib/player/queue';
+import { dedupeQueue, shuffleOn, shuffleOff, nextQueueIndex, capLiveQueue } from '@/lib/player/queue';
 import { fetchManifest } from '@/lib/player/manifest-cache';
 import { needsWaveFetch, fetchWaveTracks } from '@/lib/player/wave-buffer';
 
@@ -117,14 +117,6 @@ function getWaveSessionId(): string {
   return sid;
 }
 
-/** Новая сессия волны — новый sid. Иначе явный повторный startWave (другой
- *  mood/genre) наследует сессионный буст и served-исключения прошлой волны. */
-function mintWaveSessionId(): string {
-  const sid = crypto.randomUUID();
-  sessionStorage.setItem(WAVE_SID_KEY, sid);
-  return sid;
-}
-
 /** «Проигранное» для анти-повтора волны — id очереди до текущего трека включительно. */
 function playedIdsForWaveRequest(): string[] {
   const { queue, queueIndex } = usePlayerStore.getState();
@@ -147,14 +139,20 @@ async function growWaveBuffer(): Promise<PlayerTrack[]> {
 
     const current = usePlayerStore.getState();
     const mergedQueue = dedupeQueue([...current.queue, ...tracks]);
-    const patch: { queue: PlayerTrack[]; originalQueue?: PlayerTrack[] | null } = { queue: mergedQueue };
     // Шаффл активен — новые треки дозаписываем и в originalQueue, иначе выключение
     // шаффла (shuffleOff) их потеряет.
-    if (current.shuffle && current.originalQueue) {
-      patch.originalQueue = dedupeQueue([...current.originalQueue, ...tracks]);
-    }
+    const mergedOriginal =
+      current.shuffle && current.originalQueue ? dedupeQueue([...current.originalQueue, ...tracks]) : null;
+    // Волна дозаписывает бесконечно — капаем длину в памяти, иначе долгая сессия
+    // растит очередь без предела.
+    const capped = capLiveQueue(mergedQueue, current.queueIndex, mergedOriginal);
+    const patch: { queue: PlayerTrack[]; queueIndex: number; originalQueue?: PlayerTrack[] | null } = {
+      queue: capped.queue,
+      queueIndex: capped.queueIndex,
+    };
+    if (mergedOriginal) patch.originalQueue = capped.originalQueue;
     usePlayerStore.getState()._setState(patch);
-    return mergedQueue;
+    return capped.queue;
   } finally {
     waveFetchInFlight = false;
     if (awaitingNextFromBuffer) {
@@ -363,6 +361,10 @@ function playAt(queue: PlayerTrack[], index: number): void {
     loadedTrackId = track.id;
     void attachAndPlay(track);
   } else if (audio) {
+    // Единственный случай сюда попасть — repeat='all' с очередью из одного
+    // трека (nextQueueIndex зацикливает на тот же index): явный seek(0), не
+    // полагаемся на неявный рестарт ended-элемента браузером.
+    controls.seek(0);
     audio.play().catch(() => {});
   }
 }
@@ -539,12 +541,14 @@ export const controls = {
     }
   },
 
-  /** Запускает волну как новую очередь: каждый явный запуск минтит свежий sid
-   *  (sessionStorage 'vire_wave_sid'), чтобы новый seed не наследовал сессионный
-   *  буст и served-исключения предыдущей волны. */
+  /** Запускает волну как новую очередь: каждый явный запуск пробует свежий
+   *  кандидат-sid, но записывает его в sessionStorage ('vire_wave_sid') только
+   *  при успешном старте (tracks.length>0) — неудачный фетч не должен оставить
+   *  играющую волну (старую очередь) без серверного анти-повтора нового sid. */
   async startWave(seed: { mood?: string; genre?: string } | null): Promise<boolean> {
+    const candidateSid = crypto.randomUUID();
     const tracks = await fetchWaveTracks({
-      sessionId: mintWaveSessionId(),
+      sessionId: candidateSid,
       mood: seed?.mood,
       genre: seed?.genre,
       played: [],
@@ -552,6 +556,7 @@ export const controls = {
     });
     if (tracks.length === 0) return false;
 
+    sessionStorage.setItem(WAVE_SID_KEY, candidateSid);
     controls.playQueue(tracks, { context: { source: 'wave' } });
     usePlayerStore.getState()._setState({ waveMode: true, waveSeed: seed });
     return true;

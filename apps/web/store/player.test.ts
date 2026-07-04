@@ -113,4 +113,31 @@ describe('persist: partialize', () => {
     const persisted = partialize!({ ...usePlayerStore.getState(), queueIndex: -5 }) as { queueIndex: number };
     expect(persisted.queueIndex).toBe(0);
   });
+
+  it('duration входит в персист', () => {
+    const partialize = usePlayerStore.persist.getOptions().partialize;
+    const persisted = partialize!({ ...usePlayerStore.getState(), duration: 187.5 }) as { duration: number };
+    expect(persisted.duration).toBe(187.5);
+  });
+
+  it('длинную originalQueue режет тем же окном, текущий трек попадает в срез', () => {
+    const partialize = usePlayerStore.persist.getOptions().partialize;
+    const bigOriginal = Array.from({ length: 300 }, (_, i) => track(`o${i}`));
+    const persisted = partialize!({
+      ...usePlayerStore.getState(),
+      track: track('o200'),
+      originalQueue: bigOriginal,
+    }) as { originalQueue: PlayerTrack[] };
+
+    expect(persisted.originalQueue.length).toBeLessThanOrEqual(100);
+    expect(persisted.originalQueue.some((t) => t.id === 'o200')).toBe(true);
+  });
+
+  it('originalQueue=null — персистится как null', () => {
+    const partialize = usePlayerStore.persist.getOptions().partialize;
+    const persisted = partialize!({ ...usePlayerStore.getState(), originalQueue: null }) as {
+      originalQueue: PlayerTrack[] | null;
+    };
+    expect(persisted.originalQueue).toBeNull();
+  });
 });
