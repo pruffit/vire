@@ -1,6 +1,7 @@
 export * from './errors';
 export * from './jobs';
 export * from './util/uuid';
+export * from './util/ttl-cache';
 export * from './types/artist';
 export * from './types/release';
 export * from './repositories/artist';

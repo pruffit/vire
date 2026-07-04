@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { createTtlCache } from '@vire/core';
 import { db } from '../client';
 import { likes, playEvents, trackMoods, trackGenres, tracks, releases, artistProfiles } from '../schema';
 import type { Mood } from './track-moods';
@@ -8,6 +9,12 @@ export interface TasteProfile {
   topMoods: Mood[];
   topGenres: TrackGenre[];
   topArtistIds: string[];
+}
+
+const tasteProfileCache = createTtlCache<string, TasteProfile>({ ttlMs: 60_000, maxSize: 500 });
+
+export function clearTasteProfileCache(): void {
+  tasteProfileCache.clear();
 }
 
 // Свежий подзапрос под каждый вызов — один и тот же query builder нельзя
@@ -26,8 +33,14 @@ function recentlyPlayedTrackIds(userId: string) {
 /**
  * Профиль вкуса слушателя: лайки ∪ прослушивания за 90 дней, топ-5 в каждой
  * категории (настроения/жанры/артисты). Пусто = нет сигнала (новый юзер).
+ * Кэшируется на 60с (`tasteProfileCache`) — волна и главная зовут это часто,
+ * а лаг вкуса в минуту незаметен.
  */
-export async function getTasteProfile(userId: string): Promise<TasteProfile> {
+export function getTasteProfile(userId: string): Promise<TasteProfile> {
+  return tasteProfileCache.get(userId, () => fetchTasteProfile(userId));
+}
+
+async function fetchTasteProfile(userId: string): Promise<TasteProfile> {
   const [moodRows, genreRows, artistRows] = await Promise.all([
     db
       .select({ mood: trackMoods.mood, count: sql<number>`count(*)::int` })
