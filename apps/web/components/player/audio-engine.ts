@@ -502,7 +502,7 @@ export const controls = {
 
     usePlayerStore.getState()._setState({ isLoading: true });
     const mergedQueue = await growWaveBuffer();
-    const idx = queueIndex + 1;
+    const idx = usePlayerStore.getState().queueIndex + 1;
     if (idx < mergedQueue.length) {
       playAt(mergedQueue, idx);
     } else {
