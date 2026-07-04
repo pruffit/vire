@@ -127,8 +127,8 @@ export function FullscreenPlayer({
           <DurationLabel />
         </div>
 
-        {/* Управление: шафл слева зеркалит «поделиться» справа, поток — в строке названия */}
-        <Controls showWaveMode={false} showShuffle trailing={<FullscreenShareButton track={track} />} />
+        {/* Управление: шафл слева зеркалит повтор справа, поток — в строке названия */}
+        <Controls showWaveMode={false} showShuffle showRepeat />
 
         {/* Синхронизированный текст (если есть) */}
         <Lyrics key={track.id} trackId={track.id} onOpenChange={setLyricsOpen} />
@@ -136,6 +136,7 @@ export function FullscreenPlayer({
         {/* Нижняя панель: громкость (десктоп) + очередь; список очереди раскрывается под ней. */}
         <div className="w-full flex flex-col items-center gap-3">
           <FullscreenExtras
+            track={track}
             queueLength={queueLength}
             showQueue={showQueue}
             onToggleQueue={() => setShowQueue((s) => !s)}
@@ -167,10 +168,12 @@ function FullscreenShareButton({ track }: { track: PlayerTrack }) {
 }
 
 function FullscreenExtras({
+  track,
   queueLength,
   showQueue,
   onToggleQueue,
 }: {
+  track: PlayerTrack;
   queueLength: number;
   showQueue: boolean;
   onToggleQueue: () => void;
@@ -221,6 +224,7 @@ function FullscreenExtras({
           {showQueue ? 'Скрыть очередь' : `Очередь · ${queueLength}`}
         </button>
       )}
+      <FullscreenShareButton track={track} />
     </div>
   );
 }

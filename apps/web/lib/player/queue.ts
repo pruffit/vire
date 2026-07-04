@@ -1,5 +1,15 @@
 import type { PlayerTrack } from '@/store/player';
 
+export type Repeat = 'off' | 'all' | 'one';
+
+/** Следующий индекс очереди с учётом повтора. null — очередь кончилась (repeat='one'
+ *  сюда не попадает: залипание на одном треке обрабатывается отдельно в audio-engine). */
+export function nextQueueIndex(queueIndex: number, queueLength: number, repeat: Repeat): number | null {
+  if (queueIndex + 1 < queueLength) return queueIndex + 1;
+  if (repeat === 'all' && queueLength > 0) return 0;
+  return null;
+}
+
 /** Перестановка Фишера — Йетса. rand переопределим в тестах для детерминизма. */
 export function fisherYates<T>(arr: T[], rand: () => number = Math.random): T[] {
   const result = arr.slice();

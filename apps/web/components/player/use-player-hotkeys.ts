@@ -17,8 +17,8 @@ function isInteractive(target: EventTarget | null): boolean {
 
 /**
  * Глобальные клавиши плеера: пробел = play/pause, ←/→ = перемотка ±5с,
- * Shift+←/→ = пред./след. трек, M = мьют. Работают только когда трек
- * загружен и фокус не на интерактивном элементе.
+ * Shift+←/→ = пред./след. трек, M = мьют, R = режим повтора. Работают только
+ * когда трек загружен и фокус не на интерактивном элементе.
  */
 export function usePlayerHotkeys(): void {
   useEffect(() => {
@@ -50,6 +50,9 @@ export function usePlayerHotkeys(): void {
           break;
         case 'KeyM':
           controls.toggleMute();
+          break;
+        case 'KeyR':
+          controls.cycleRepeat();
           break;
       }
     }

@@ -26,6 +26,7 @@ beforeAll(async () => {
         volume: 0.5,
         waveMode: false,
         shuffle: false,
+        repeat: 'off',
         context: null,
         originalQueue: null,
         currentTime: 42,
@@ -60,6 +61,21 @@ describe('persist: регидрация', () => {
     expect(seenRestored).toContain(true);
     expect(usePlayerStore.getState().restored).toBe(true);
     expect(usePlayerStore.getState().isPlaying).toBe(false);
+  });
+});
+
+describe('repeat', () => {
+  it('дефолт — off', () => {
+    // persisted fixture в beforeAll уже задаёт repeat явно; проверяем на свежем срезе стора.
+    expect(usePlayerStore.getState().repeat).toBe('off');
+  });
+
+  it('входит в partialize', () => {
+    const partialize = usePlayerStore.persist.getOptions().partialize;
+    usePlayerStore.getState()._setState({ repeat: 'one' });
+    const persisted = partialize!(usePlayerStore.getState()) as { repeat: string };
+    expect(persisted.repeat).toBe('one');
+    usePlayerStore.getState()._setState({ repeat: 'off' });
   });
 });
 

@@ -6,7 +6,7 @@ import { usePlayerStore } from '@/store/player';
 import { controls } from './audio-engine';
 import { Icon } from '@/components/icon';
 import { PlayIcon, PauseIcon } from '@/components/icons';
-import { ErrorIcon, SkipBackIcon, SkipForwardIcon, WaveIcon } from './player-icons';
+import { ErrorIcon, RepeatIcon, SkipBackIcon, SkipForwardIcon, WaveIcon } from './player-icons';
 
 /** Переиспользуемая кнопка-тоггл: иконка + accent-glow при активном состоянии. */
 function PlayerToggleButton({
@@ -15,12 +15,14 @@ function PlayerToggleButton({
   disabled,
   onClick,
   label,
+  badge,
 }: {
   icon: React.ReactNode;
   active: boolean;
   disabled?: boolean;
   onClick: () => void;
   label: string;
+  badge?: React.ReactNode;
 }) {
   return (
     <motion.button
@@ -34,6 +36,7 @@ function PlayerToggleButton({
       style={active && !disabled ? { color: 'var(--artist-accent, oklch(72% 0.19 145))' } : { opacity: 0.3 }}
     >
       {icon}
+      {badge}
       <AnimatePresence>
         {active && !disabled && (
           <motion.span
@@ -73,6 +76,35 @@ export function ShuffleButton() {
       active={shuffle}
       onClick={() => controls.toggleShuffle()}
       label={shuffle ? 'Случайный порядок включён' : 'Случайный порядок'}
+    />
+  );
+}
+
+const REPEAT_LABELS = {
+  off: 'Повтор выключен',
+  all: 'Повтор очереди',
+  one: 'Повтор трека',
+} as const;
+
+export function RepeatButton() {
+  const repeat = usePlayerStore((s) => s.repeat);
+  return (
+    <PlayerToggleButton
+      icon={<RepeatIcon />}
+      active={repeat !== 'off'}
+      onClick={() => controls.cycleRepeat()}
+      label={REPEAT_LABELS[repeat]}
+      badge={
+        repeat === 'one' ? (
+          <span
+            aria-hidden="true"
+            className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-3 h-3 rounded-full text-[8px] font-bold leading-none"
+            style={{ background: 'var(--artist-accent, oklch(72% 0.19 145))', color: 'var(--background)' }}
+          >
+            1
+          </span>
+        ) : null
+      }
     />
   );
 }
@@ -132,21 +164,27 @@ function PlayPauseButton() {
   );
 }
 
-/** Блок транспорта: prev/play/next + опционально wave-toggle/shuffle/произвольный trailing.
- *  Используется и в мини-баре (showWaveMode), и в фуллскрине (showShuffle + trailing). */
+/** Блок транспорта: prev/play/next + опционально shuffle/wave/repeat по краям.
+ *  Используется и в мини-баре ([Shuffle] prev play next [Wave] [Repeat] на sm+,
+ *  Shuffle/Repeat скрыты на мобилке через `hideExtrasBelowSm`), и в фуллскрине
+ *  ([Shuffle] prev play next [Repeat], всегда видимые). */
 export function Controls({
   showWaveMode = true,
   showShuffle = false,
-  trailing,
+  showRepeat = false,
+  hideExtrasBelowSm = false,
 }: {
   showWaveMode?: boolean;
   showShuffle?: boolean;
-  trailing?: React.ReactNode;
+  showRepeat?: boolean;
+  hideExtrasBelowSm?: boolean;
 }) {
+  const extraClass = `${hideExtrasBelowSm ? 'hidden sm:flex' : 'flex'} w-9 justify-center`;
+
   return (
     <div className="flex items-center gap-5 justify-center flex-1">
       {showShuffle && (
-        <span className="flex w-9 justify-center">
+        <span className={extraClass}>
           <ShuffleButton />
         </span>
       )}
@@ -172,13 +210,13 @@ export function Controls({
         <SkipForwardIcon />
       </motion.button>
 
-      {showWaveMode ? (
-        <WaveModeButton />
-      ) : showShuffle ? (
-        <span className="flex w-9 justify-center" onPointerDown={(e) => e.stopPropagation()}>
-          {trailing}
+      {showWaveMode && <WaveModeButton />}
+
+      {showRepeat && (
+        <span className={extraClass}>
+          <RepeatButton />
         </span>
-      ) : null}
+      )}
     </div>
   );
 }

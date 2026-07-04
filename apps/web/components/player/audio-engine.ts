@@ -1,7 +1,7 @@
 import type HlsType from 'hls.js';
 import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
 import { getSessionId } from '@/lib/session-id';
-import { dedupeQueue, shuffleOn, shuffleOff } from '@/lib/player/queue';
+import { dedupeQueue, shuffleOn, shuffleOff, nextQueueIndex } from '@/lib/player/queue';
 import { fetchManifest } from '@/lib/player/manifest-cache';
 import { needsWaveFetch, fetchWaveTracks } from '@/lib/player/wave-buffer';
 
@@ -233,6 +233,13 @@ export function initAudioEngine(): void {
   audio.addEventListener('ended', () => {
     flushPlayEvent();
     stopHeartbeat();
+    // repeat='one': не переход по очереди, а перезапуск того же трека — flushPlayEvent
+    // уже сбросил playStartedTrackId, поэтому 'playing' заново взведёт play-event/heartbeat.
+    if (usePlayerStore.getState().repeat === 'one') {
+      controls.seek(0);
+      audio?.play().catch(() => {});
+      return;
+    }
     void controls.next();
   });
   audio.addEventListener('playing', () => {
@@ -454,15 +461,22 @@ export const controls = {
   },
 
   async next(): Promise<void> {
-    const { queue, queueIndex, waveMode, track } = usePlayerStore.getState();
-    const i = queueIndex + 1;
+    const { queue, queueIndex, waveMode, track, repeat } = usePlayerStore.getState();
 
+    // Волна главнее repeat='all' — она сама дозапрашивает буфер вместо зацикливания.
+    if (!waveMode) {
+      const idx = nextQueueIndex(queueIndex, queue.length, repeat);
+      if (idx !== null) playAt(queue, idx);
+      return;
+    }
+
+    const i = queueIndex + 1;
     if (i < queue.length) {
       playAt(queue, i);
       return;
     }
 
-    if (!waveMode || !track) return;
+    if (!track) return;
 
     if (waveFetchInFlight) {
       awaitingNextFromBuffer = true;
@@ -495,6 +509,12 @@ export const controls = {
   /** Оставлено для WaveModeButton — продолжить волну для уже играющей очереди без перезапуска. */
   setWaveMode(on: boolean): void {
     usePlayerStore.getState()._setState(on ? { waveMode: true } : { waveMode: false, waveSeed: null });
+  },
+
+  cycleRepeat(): void {
+    const { repeat } = usePlayerStore.getState();
+    const next = repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off';
+    usePlayerStore.getState()._setState({ repeat: next });
   },
 
   toggleShuffle(): void {

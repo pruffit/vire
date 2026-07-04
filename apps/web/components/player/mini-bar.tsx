@@ -61,7 +61,8 @@ export function MiniBar({
 
       <div className="relative z-10 flex items-center h-full pl-3 pr-2 sm:px-4 gap-2 sm:gap-4">
         <TrackInfo onExpandCover={onExpandCover} />
-        <Controls />
+        <Controls showShuffle showRepeat hideExtrasBelowSm />
+        <MobileQueueButton onOpenQueue={onOpenQueue} />
         <MiniBarTrailing active={ticking} onOpenQueue={onOpenQueue} />
       </div>
 
@@ -108,6 +109,23 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
         </span>
       </div>
     </div>
+  );
+}
+
+/** Компактный вход в очередь на мобилке — `MiniBarTrailing` с очередью там скрыт целиком. */
+function MobileQueueButton({ onOpenQueue }: { onOpenQueue: () => void }) {
+  const queueLength = usePlayerStore((s) => s.queue.length);
+  if (queueLength <= 1) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpenQueue}
+      aria-label={`Очередь, ${queueLength} треков`}
+      className="sm:hidden shrink-0 w-10 h-10 -m-1 flex items-center justify-center opacity-60 active:opacity-100 transition-opacity"
+    >
+      <QueueIcon />
+    </button>
   );
 }
 
@@ -169,6 +187,9 @@ function TopProgressLine({ active }: { active: boolean }) {
   const duration = usePlayerStore((s) => s.duration);
   const ref = useRef<HTMLDivElement>(null);
   const [scrub, setScrub] = useState<number | null>(null);
+  // Утолщение по hover — только на десктопе: на таче нет реального hover, и
+  // залипающий :hover после тапа выглядел бы как забытая полоска.
+  const isDesktop = useIsDesktopPointer();
   const shown = scrub ?? (duration > 0 ? currentTime / duration : 0);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
@@ -201,9 +222,13 @@ function TopProgressLine({ active }: { active: boolean }) {
       onPointerMove={onPointerMove}
       onPointerUp={commit}
       onPointerCancel={() => setScrub(null)}
-      className="absolute top-0 left-0 right-0 h-3 flex items-start touch-none cursor-pointer group"
+      className="absolute z-20 top-0 left-0 right-0 h-3 flex items-start touch-none cursor-pointer group"
     >
-      <div className={`relative w-full bg-white/5 transition-[height] ${dragging ? 'h-[3px]' : 'h-[2px]'}`}>
+      <div
+        className={`relative w-full bg-white/5 transition-[height] ${
+          dragging ? 'h-[3px]' : isDesktop ? 'h-[2px] group-hover:h-[3px]' : 'h-[2px]'
+        }`}
+      >
         <div
           className={dragging ? 'h-full' : 'h-full transition-[width] duration-100 ease-linear'}
           style={{
@@ -211,7 +236,15 @@ function TopProgressLine({ active }: { active: boolean }) {
             background: 'var(--artist-accent, oklch(72% 0.19 145))',
             opacity: dragging ? 1 : 0.85,
           }}
-        />
+        >
+          {isDesktop && !dragging && (
+            <span
+              aria-hidden="true"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ background: 'var(--artist-accent, oklch(72% 0.19 145))' }}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

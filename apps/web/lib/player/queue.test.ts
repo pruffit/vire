@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fisherYates, shuffleOn, shuffleOff, dedupeQueue } from './queue';
+import { fisherYates, shuffleOn, shuffleOff, dedupeQueue, nextQueueIndex } from './queue';
 import type { PlayerTrack } from '@/store/player';
 
 function track(id: string): PlayerTrack {
@@ -109,5 +109,27 @@ describe('dedupeQueue', () => {
 
   it('пустой список → пустой список', () => {
     expect(dedupeQueue([])).toEqual([]);
+  });
+});
+
+describe('nextQueueIndex', () => {
+  it('середина очереди — просто следующий индекс', () => {
+    expect(nextQueueIndex(1, 5, 'off')).toBe(2);
+  });
+
+  it('конец очереди + off → null', () => {
+    expect(nextQueueIndex(4, 5, 'off')).toBeNull();
+  });
+
+  it('конец очереди + all → 0', () => {
+    expect(nextQueueIndex(4, 5, 'all')).toBe(0);
+  });
+
+  it('пустая очередь → null', () => {
+    expect(nextQueueIndex(0, 0, 'all')).toBeNull();
+  });
+
+  it('конец очереди + one → null (повтор трека не влияет на переход между треками)', () => {
+    expect(nextQueueIndex(4, 5, 'one')).toBeNull();
   });
 });

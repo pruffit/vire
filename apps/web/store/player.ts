@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { PlaySource } from '@vire/api-contracts';
+import type { Repeat } from '@/lib/player/queue';
 
 export interface PlayerTrack {
   id: string;
@@ -40,6 +41,8 @@ interface State {
   waveSeed: { mood?: string; genre?: string } | null;
   /** Случайный порядок внутри очереди */
   shuffle: boolean;
+  /** Повтор: off — обычная очередь, all — очередь зацикливается, one — зацикливается трек */
+  repeat: Repeat;
   /** Ошибка загрузки HLS-манифеста или сети */
   audioError: boolean;
   /** Источник текущего воспроизведения (релиз/плейлист/волна/...) */
@@ -61,7 +64,16 @@ const PERSISTED_QUEUE_WINDOW_BEFORE = 20;
 
 type PersistedState = Pick<
   State,
-  'track' | 'queue' | 'queueIndex' | 'volume' | 'waveMode' | 'shuffle' | 'context' | 'originalQueue' | 'currentTime'
+  | 'track'
+  | 'queue'
+  | 'queueIndex'
+  | 'volume'
+  | 'waveMode'
+  | 'shuffle'
+  | 'repeat'
+  | 'context'
+  | 'originalQueue'
+  | 'currentTime'
 >;
 
 /** Длинную очередь (волна) режем окном вокруг текущего трека — иначе
@@ -94,6 +106,7 @@ export const usePlayerStore = create<Store>()(
       waveMode: false,
       waveSeed: null,
       shuffle: false,
+      repeat: 'off',
       audioError: false,
       context: null,
       originalQueue: null,
@@ -113,6 +126,7 @@ export const usePlayerStore = create<Store>()(
           volume: state.volume,
           waveMode: state.waveMode,
           shuffle: state.shuffle,
+          repeat: state.repeat,
           context: state.context,
           originalQueue: state.originalQueue,
           currentTime: state.currentTime,
