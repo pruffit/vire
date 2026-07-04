@@ -2,12 +2,14 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
-import { getPlaylistWithTracks } from '@vire/db';
+import { getPlaylistWithTracks, getPlaylistLikeState } from '@vire/db';
 import { FadeUp } from '@vire/ui/motion';
 import { PlaylistView } from './playlist-view';
 import { PlaylistSettingsMenu } from './playlist-settings-menu';
+import { PlaylistLikeButton } from './playlist-like-button';
 import { formatDuration, pluralTracks } from '@/lib/format';
 import { Icon } from '@/components/icon';
+import { HeartIcon } from '@/components/icons';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -26,6 +28,10 @@ export default async function PlaylistPage({ params }: Props) {
   if (playlist.visibility === 'PRIVATE' && playlist.ownerUserId !== session?.user?.id) notFound();
 
   const isOwner = session?.user?.id === playlist.ownerUserId;
+  const showLikeButton = Boolean(session?.user?.id) && !isOwner;
+  const liked = session?.user?.id && !isOwner
+    ? await getPlaylistLikeState(session.user.id, id)
+    : false;
   const totalSec = playlist.tracks.reduce((s, t) => s + (t.durationSec ?? 0), 0);
   const coverUrl = playlist.coverUrl ?? playlist.tracks[0]?.coverUrl ?? null;
 
@@ -46,9 +52,19 @@ export default async function PlaylistPage({ params }: Props) {
               )}
             </div>
             {playlist.description && <p className="text-sm text-muted-foreground/80 line-clamp-2">{playlist.description}</p>}
-            <p className="text-sm text-muted-foreground">
-              {playlist.tracks.length} {pluralTracks(playlist.tracks.length)}{totalSec > 0 && ` · ${formatDuration(totalSec)}`}
+            <p className="text-sm text-muted-foreground flex items-center gap-1 flex-wrap">
+              <span>
+                {playlist.tracks.length} {pluralTracks(playlist.tracks.length)}{totalSec > 0 && ` · ${formatDuration(totalSec)}`}
+              </span>
+              {!showLikeButton && playlist.likesCount > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  · <HeartIcon size={13} className="opacity-70" /> {playlist.likesCount}
+                </span>
+              )}
             </p>
+            {showLikeButton && (
+              <PlaylistLikeButton playlistId={id} initialLiked={liked} initialCount={playlist.likesCount} />
+            )}
             {isOwner && (
               <PlaylistSettingsMenu playlist={{ id, title: playlist.title, description: playlist.description, visibility: playlist.visibility, coverUrl: playlist.coverUrl }} />
             )}

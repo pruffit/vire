@@ -7,6 +7,7 @@ import { spring } from '@vire/ui/motion';
 import type { EditorialPlaylist } from '@vire/db';
 import { pluralTracks } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
+import { usePlaylistLike } from './use-playlist-like';
 import { PlaylistPeekSheet } from './playlist-quick-look';
 
 const KIND_LABELS: Record<string, string | undefined> = {
@@ -98,28 +99,11 @@ export function EditorialPlaylistCard({
   liked: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [liked, setLiked] = useState(initialLiked);
-  const [likes, setLikes] = useState(playlist.likesCount);
-  const [pending, setPending] = useState(false);
+  const { liked, likes, toggle } = usePlaylistLike(playlist.id, initialLiked, playlist.likesCount);
 
-  async function toggleLike(e: React.MouseEvent) {
+  function toggleLike(e: React.MouseEvent) {
     e.preventDefault();
-    if (pending) return;
-    setPending(true);
-    const willLike = !liked;
-    setLiked(willLike);
-    setLikes((n) => n + (willLike ? 1 : -1));
-    try {
-      await fetch(`/api/v1/playlists/${playlist.id}/like`, {
-        method: willLike ? 'POST' : 'DELETE',
-      });
-    } catch {
-      // откат
-      setLiked(!willLike);
-      setLikes((n) => n + (willLike ? -1 : 1));
-    } finally {
-      setPending(false);
-    }
+    void toggle();
   }
 
   const kindLabel = KIND_LABELS[playlist.kind];

@@ -32,6 +32,7 @@ export interface PlaylistWithTracks {
   coverUrl: string | null;
   visibility: 'PRIVATE' | 'PUBLIC';
   ownerUserId: string | null;
+  likesCount: number;
   tracks: PlaylistTrackRow[];
 }
 
@@ -145,6 +146,7 @@ export async function getPlaylistWithTracks(
     coverUrl: playlist.coverUrl,
     visibility: playlist.visibility,
     ownerUserId: playlist.ownerUserId,
+    likesCount: playlist.likesCount,
     tracks: trackRows,
   };
 }

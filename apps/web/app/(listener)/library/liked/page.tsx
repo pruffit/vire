@@ -25,6 +25,7 @@ export default async function LikedTracksPage() {
     coverUrl: null,
     visibility: 'PUBLIC',
     ownerUserId: session.user.id,
+    likesCount: 0,
     tracks: liked.map((t, i) => ({
       id: t.id,
       title: t.title,
