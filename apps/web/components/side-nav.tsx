@@ -33,7 +33,7 @@ export function SideNav({
   return (
     <nav
       className={cn(
-        'flex gap-1 overflow-x-auto px-3 py-2.5 md:flex-col md:gap-0.5 md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        'flex gap-1 overflow-x-auto no-scrollbar px-3 py-2.5 md:flex-col md:gap-0.5 md:overflow-visible',
         collapsed && 'md:px-2',
         className,
       )}

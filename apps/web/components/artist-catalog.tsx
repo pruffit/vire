@@ -72,7 +72,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
 
       {/* Фильтр по жанрам — только встречающиеся в каталоге */}
       {availableGenres.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setGenre(null)}
             className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-mono border transition-all duration-150 ${

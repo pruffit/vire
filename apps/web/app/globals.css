@@ -77,10 +77,27 @@
   }
 }
 
+/* Горизонтальные ленты карточек/пилюль (волна, обложки, подборки, фильтры):
+   прокрутка есть (тач/трекпад/shift+wheel), полоса скролла визуально не нужна. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* WebKit/Chromium: overlay-подобный тонкий скроллбар. */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
+}
+/* Стрелки в конце полосы скроллбара (Windows Chrome/Edge) — визуальный мусор
+   поверх кастомного тонкого скроллбара, убираем везде. */
+::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
 }
 ::-webkit-scrollbar-track {
   background: transparent;

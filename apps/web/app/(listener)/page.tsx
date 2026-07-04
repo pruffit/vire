@@ -46,9 +46,9 @@ export default async function HomePage() {
     sharedPlaylists, personalRaw, publicPlaylists, likedPlaylistIds,
     hotTracks, recent, personalPicks,
   ] = await Promise.all([
-    getLatestReleases(13).catch(() => []),
+    getLatestReleases(19).catch(() => []),
     // .catch — главная не должна падать целиком из-за одной секции.
-    listReleases({ sort: 'fresh', sinceDays: 7, limit: 12 }).catch(() => []),
+    listReleases({ sort: 'fresh', sinceDays: 7, limit: 18 }).catch(() => []),
     getUpcomingReleases(8).catch(() => []),
     listActiveArtists().catch(() => []),
     userId ? getFeed(userId).catch(() => []) : Promise.resolve([]),
@@ -57,7 +57,7 @@ export default async function HomePage() {
     getGenreCounts().catch(() => []),
     getEditorialPlaylists(4).catch(() => []),
     userId ? getPersonalPlaylists(userId, 4).catch(() => []) : Promise.resolve([]),
-    getPublicUserPlaylists(8).catch(() => []),
+    getPublicUserPlaylists(12).catch(() => []),
     userId ? getLikedPlaylistIds(userId).catch(() => []) : Promise.resolve([] as string[]),
     getPopularTracks(30, 20).catch(() => []),
     userId ? getRecentlyPlayed(userId, 12).catch(() => []) : Promise.resolve([]),
@@ -83,7 +83,7 @@ export default async function HomePage() {
   // На маленьком каталоге неделя бывает пустой/скудной — тогда добиваем общим
   // списком свежего, чтобы секция не выглядела поломанной.
   const weekFresh = freshWeek.filter((r) => r.id !== featured?.id);
-  const rest = (weekFresh.length >= 4 ? weekFresh : latest.slice(1)).slice(0, 8);
+  const rest = (weekFresh.length >= 4 ? weekFresh : latest.slice(1)).slice(0, 18);
   const topArtists = artists.slice(0, 12);
   const empty = latest.length === 0 && upcoming.length === 0 && topArtists.length === 0;
 
@@ -110,7 +110,7 @@ export default async function HomePage() {
 
       {!!userId && feed.length > 0 && (
         <Section title="Новое у подписок">
-          <div className="flex gap-5 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+          <div className="flex gap-5 overflow-x-auto no-scrollbar -mx-1 px-1 snap-x">
             {feed.slice(0, 12).map((r) => (
               <div key={r.id} className="shrink-0 w-40 snap-start">
                 <ReleaseQuickLook release={r} />

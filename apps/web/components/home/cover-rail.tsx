@@ -14,7 +14,7 @@ export function CoverRail({ tracks }: { tracks: PlayableChartTrack[] }) {
   const queue: PlayerTrack[] = toPlayerTracks(tracks);
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+    <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-1 px-1 snap-x">
       {tracks.map((t, i) => (
         <Cell key={t.id} track={t} queue={queue} index={i} />
       ))}
