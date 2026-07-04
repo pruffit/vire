@@ -50,6 +50,9 @@ export function useLazyQueue(
   const cacheRef = useRef<LazyRow[] | null>(null);
   // Общий in-flight-промис: параллельные вызовы load() ждут один fetch, а не получают ложный null.
   const inflightRef = useRef<Promise<LazyRow[] | null> | null>(null);
+  // React может переиспользовать этот инстанс хука при смене id (тот же компонент,
+  // новые пропсы) — кэш/inflight держат данные СТАРОГО релиза/плейлиста, сверяем ключ.
+  const keyRef = useRef(`${kind}:${id}`);
   const [items, setItems] = useState<LazyRow[] | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -77,18 +80,35 @@ export function useLazyQueue(
       return toPlayerTracks(rows as PlaylistTrackRow[]);
     }
 
+    // Сброс синхронно при чтении (не в useEffect) — иначе на первый клик после смены id
+    // ещё виден кэш/inflight старого ключа и play() успевает отдать старую очередь.
+    const key = `${kind}:${id}`;
+    if (keyRef.current !== key) {
+      keyRef.current = key;
+      cacheRef.current = null;
+      inflightRef.current = null;
+      setItems(null);
+    }
+
     if (cacheRef.current) return toQueue(cacheRef.current);
 
     if (!inflightRef.current) {
       setLoading(true);
-      inflightRef.current = (kind === 'release' ? fetchReleaseTracks(id) : fetchPlaylistTracks(id))
+      const promise: Promise<LazyRow[] | null> = (kind === 'release' ? fetchReleaseTracks(id) : fetchPlaylistTracks(id))
         .finally(() => {
-          inflightRef.current = null;
-          setLoading(false);
+          // Сравниваем по ссылке на промис, а не просто зануляем — иначе .finally
+          // старого (уже брошенного) запроса мог бы затереть inflight нового ключа.
+          if (inflightRef.current === promise) inflightRef.current = null;
+          if (keyRef.current === key) setLoading(false);
         });
+      inflightRef.current = promise;
     }
 
     const rows = await inflightRef.current;
+    // Пока этот fetch летел, ключ сменился — результат чужого релиза/плейлиста
+    // не кэшируем, не пишем в state и не отдаём вызвавшему: иначе обогнанный
+    // load() мог бы вернуть валидную очередь СТАРОГО id, и её можно было бы проиграть.
+    if (keyRef.current !== key) return null;
     // Сбой не кэшируем — следующий load() перезапросит; кэшируем только успех (включая пустой []).
     if (rows === null) return null;
     cacheRef.current = rows;
