@@ -14,11 +14,13 @@ export function usePlaylistLike(playlistId: string, initialLiked: boolean, initi
     setLiked(willLike);
     setLikes((n) => n + (willLike ? 1 : -1));
     try {
-      await fetch(`/api/v1/playlists/${playlistId}/like`, {
+      const res = await fetch(`/api/v1/playlists/${playlistId}/like`, {
         method: willLike ? 'POST' : 'DELETE',
       });
+      // fetch реджектится только на сетевом сбое — HTTP-ошибку (401/429/5xx)
+      // ловим сами, иначе оптимистичный флип рассинхронит UI с БД.
+      if (!res.ok) throw new Error(String(res.status));
     } catch {
-      // откат
       setLiked(!willLike);
       setLikes((n) => n + (willLike ? -1 : 1));
     } finally {
