@@ -97,6 +97,7 @@ export const TrackRow = forwardRef<HTMLDivElement, TrackRowProps>(function Track
       style={style}
       role={clickableRow ? 'button' : undefined}
       tabIndex={clickableRow ? 0 : undefined}
+      aria-label={clickableRow ? `Воспроизвести ${track.title}` : undefined}
       onClick={clickableRow ? onPlay : undefined}
       onKeyDown={clickableRow ? handleRowKeyDown : undefined}
       className={`group flex items-center gap-3 py-2.5 -mx-3 px-3 rounded-sm hover:bg-accent/5 transition-colors ${clickableRow ? 'cursor-pointer select-none' : ''} ${className}`}

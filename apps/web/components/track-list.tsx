@@ -1,6 +1,7 @@
 'use client';
 
-import { Stagger, StaggerItem } from '@vire/ui/motion';
+import { motion } from 'motion/react';
+import { Stagger, StaggerItem, spring } from '@vire/ui/motion';
 import type { PlayerTrack, PlayContext } from '@/store/player';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
 import { usePlay } from '@/lib/player/use-play';
@@ -64,30 +65,32 @@ function Row({
   }
 
   return (
-    <TrackRow
-      track={track}
-      isActive={isActive}
-      isPlaying={isPlaying}
-      onPlay={handleClick}
-      clickableRow
-      className="border-b border-border/60"
-      leading={rank != null && (
-        <span className="w-6 shrink-0 text-center font-mono text-sm tabular-nums text-muted-foreground group-hover:text-foreground transition-colors">
-          {rank}
-        </span>
-      )}
-      trailing={
-        <>
-          {track.plays != null && track.plays > 0 && (
-            <span className="shrink-0 text-xs font-mono tabular-nums text-muted-foreground hidden sm:block group-hover:opacity-0 transition-opacity">
-              {formatCount(track.plays)}
-            </span>
-          )}
-          <span className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-            <PlayerLikeButton trackId={track.id} size="sm" />
+    <motion.div whileTap={{ scale: 0.99 }} transition={spring.snappy}>
+      <TrackRow
+        track={track}
+        isActive={isActive}
+        isPlaying={isPlaying}
+        onPlay={handleClick}
+        clickableRow
+        className="border-b border-border/60"
+        leading={rank != null && (
+          <span className="w-6 shrink-0 text-center font-mono text-sm tabular-nums text-muted-foreground group-hover:text-foreground transition-colors">
+            {rank}
           </span>
-        </>
-      }
-    />
+        )}
+        trailing={
+          <>
+            {track.plays != null && track.plays > 0 && (
+              <span className="shrink-0 text-xs font-mono tabular-nums text-muted-foreground hidden sm:block group-hover:opacity-0 transition-opacity">
+                {formatCount(track.plays)}
+              </span>
+            )}
+            <span className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+              <PlayerLikeButton trackId={track.id} size="sm" />
+            </span>
+          </>
+        }
+      />
+    </motion.div>
   );
 }
