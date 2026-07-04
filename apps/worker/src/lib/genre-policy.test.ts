@@ -1,0 +1,40 @@
+import { describe, it, expect } from 'vitest';
+import { decideAutoApplyGenres } from './genre-policy.js';
+import type { GenreSuggestion } from './discogs-genre-map.js';
+
+const suggestions: GenreSuggestion[] = [
+  { genre: 'TECHNO', confidence: 0.5 },
+  { genre: 'HOUSE', confidence: 0.3 },
+  { genre: 'TRANCE', confidence: 0.05 }, // ниже порога 0.1
+];
+
+describe('decideAutoApplyGenres', () => {
+  it('без жанров у трека — берёт топ-2 предложения с confidence >= 0.1', () => {
+    expect(decideAutoApplyGenres([], suggestions)).toEqual(['TECHNO', 'HOUSE']);
+  });
+
+  it('если у трека уже есть жанры — ничего не применяет', () => {
+    expect(decideAutoApplyGenres(['ROCK'], suggestions)).toEqual([]);
+  });
+
+  it('отфильтровывает предложения ниже порога confidence', () => {
+    const lowConfidence: GenreSuggestion[] = [
+      { genre: 'TECHNO', confidence: 0.05 },
+      { genre: 'HOUSE', confidence: 0.02 },
+    ];
+    expect(decideAutoApplyGenres([], lowConfidence)).toEqual([]);
+  });
+
+  it('никогда не берёт больше 2 жанров, даже если прошло больше порог', () => {
+    const many: GenreSuggestion[] = [
+      { genre: 'TECHNO', confidence: 0.4 },
+      { genre: 'HOUSE', confidence: 0.3 },
+      { genre: 'TRANCE', confidence: 0.2 },
+    ];
+    expect(decideAutoApplyGenres([], many)).toEqual(['TECHNO', 'HOUSE']);
+  });
+
+  it('пустые предложения — пустой результат', () => {
+    expect(decideAutoApplyGenres([], [])).toEqual([]);
+  });
+});

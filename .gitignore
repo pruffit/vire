@@ -30,5 +30,9 @@ Thumbs.db
 coverage/
 .ui-audit/
 
+# Модели автоопределения жанра (Essentia discogs-effnet, ~18МБ) — скачиваются
+# `pnpm --filter @vire/worker models:download`, не в git.
+apps/worker/models/
+
 # Локальный симлинк скилл-менеджера (абсолютный путь, не портабелен)
 .claude/skills/make-interfaces-feel-better

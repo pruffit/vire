@@ -113,6 +113,9 @@ export const trackAudio = pgTable('track_audio', {
   // Аудио-метаданные для волны (ступень 1 — по тегам)
   bpm: integer('bpm'),
   musicalKey: text('musical_key'),
+  // Автоопределение жанра (Essentia discogs-effnet) — топ-5 [{ genre, confidence }],
+  // всегда сохраняется независимо от автоприменения в track_genres. См. docs/features/auto-genre.md.
+  genreSuggestions: jsonb('genre_suggestions'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

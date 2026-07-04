@@ -3,12 +3,15 @@ import { and, eq } from 'drizzle-orm';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { db, tracks, trackAudio, getTrackOwnerContact, type TrackOwnerContact } from '@vire/db';
+import { db, tracks, trackAudio, getTrackOwnerContact, getTrackGenres, setTrackGenres, type TrackOwnerContact } from '@vire/db';
 import { QUEUE_TRANSCODE, type TranscodeJobData } from '@vire/core';
 import { VAULT, STREAM, downloadToFile, uploadFile } from '../lib/s3.js';
 import { transcodeToHls, computeWaveformPeaks, probeDuration } from '../lib/ffmpeg.js';
 import { readAudioMetadata } from '../lib/metadata.js';
 import { analyzeAudioFeatures } from '../lib/audio-analysis.js';
+import { classifyTrackGenre } from '../lib/genre-classifier.js';
+import { decideAutoApplyGenres } from '../lib/genre-policy.js';
+import type { GenreSuggestion } from '../lib/discogs-genre-map.js';
 import { connection } from '../queues/connection.js';
 import { sendMail } from '../lib/mailer.js';
 
@@ -53,6 +56,20 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
     const musicalKey = analyzed.musicalKey ?? metadata.musicalKey;
     await job.updateProgress(45);
 
+    // 3.5. Автоопределение жанра (Essentia discogs-effnet, за флагом AUTO_GENRE).
+    // Никогда не блокирует переход в READY — ошибка только логируется.
+    let genreSuggestions: GenreSuggestion[] | null = null;
+    try {
+      genreSuggestions = await classifyTrackGenre(sourcePath);
+      if (genreSuggestions && genreSuggestions.length > 0) {
+        const existingGenres = await getTrackGenres(trackId);
+        const autoApply = decideAutoApplyGenres(existingGenres, genreSuggestions);
+        if (autoApply.length > 0) await setTrackGenres(trackId, autoApply);
+      }
+    } catch (e) {
+      console.error('[transcode] genre classification failed', e);
+    }
+
     // 4. HLS-транскодинг
     const hlsDir = path.join(tmpDir, 'hls');
     mkdirSync(hlsDir);
@@ -95,6 +112,7 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
           flacKey: sourceVaultKey,
           bpm,
           musicalKey,
+          genreSuggestions,
         })
         .onConflictDoUpdate({
           target: trackAudio.trackId,
@@ -104,6 +122,7 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
             flacKey: sourceVaultKey,
             bpm,
             musicalKey,
+            genreSuggestions,
             updatedAt: new Date(),
           },
         });

@@ -7,13 +7,19 @@ export interface AudioFeatures {
 
 const SR = 22050; // sample rate for analysis (Hz)
 
-// Decode audio to mono float32 PCM at SR (first maxSec seconds).
-function decodeMono(inputPath: string, maxSec = 180): Promise<Float32Array> {
+// Decode audio to mono float32 PCM at заданной частоте (первые maxSec секунд).
+// Общий декодер поверх fluent-ffmpeg — переиспользуется классификатором жанра
+// (там нужно 16кГц под discogs-effnet, здесь — 22050 под BPM/key).
+export function decodeMonoPcm(
+  inputPath: string,
+  sampleRate: number,
+  maxSec: number,
+): Promise<Float32Array> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     const proc = ffmpeg(inputPath)
       .audioChannels(1)
-      .audioFrequency(SR)
+      .audioFrequency(sampleRate)
       .duration(maxSec)
       .format('f32le');
     proc.on('error', reject);
@@ -24,6 +30,10 @@ function decodeMono(inputPath: string, maxSec = 180): Promise<Float32Array> {
     const stream = proc.pipe();
     stream.on('data', (chunk: Buffer) => chunks.push(chunk));
   });
+}
+
+function decodeMono(inputPath: string, maxSec = 180): Promise<Float32Array> {
+  return decodeMonoPcm(inputPath, SR, maxSec);
 }
 
 // ─── BPM detection (energy onset + autocorrelation) ──────────────────────────

@@ -8,18 +8,25 @@ import { cn } from '@/lib/utils';
 
 const MAX = 3;
 
+interface GenreSuggestion {
+  genre: Genre;
+  confidence: number;
+}
+
 interface Props {
   trackId: string;
   initial: Genre[];
+  suggestions?: GenreSuggestion[];
 }
 
-export function GenrePicker({ trackId, initial }: Props) {
+export function GenrePicker({ trackId, initial, suggestions = [] }: Props) {
   const [selected, setSelected] = useState<Set<Genre>>(new Set(initial));
   const [query, setQuery] = useState('');
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const atMax = selected.size >= MAX;
+  const pendingSuggestions = suggestions.filter((s) => !selected.has(s.genre));
 
   // Результаты поиска — плоский список по подписи (регистронезависимо).
   const matches = useMemo(() => {
@@ -94,6 +101,26 @@ export function GenrePicker({ trackId, initial }: Props) {
             >
               {GENRE_LABELS[g]}
               <Icon name="x" size={12} className="opacity-50 group-hover:opacity-100" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Автоопределённые жанры — клик добавляет (уважая MAX) */}
+      {pendingSuggestions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-mono text-white/25 uppercase tracking-widest">
+            Предложено
+          </span>
+          {pendingSuggestions.map((s) => (
+            <button
+              key={s.genre}
+              onClick={() => toggle(s.genre)}
+              disabled={atMax}
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-white/15 px-2.5 py-1 text-xs font-mono text-white/40 transition-colors hover:border-white/30 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <Icon name="plus" size={11} className="opacity-60" />
+              {GENRE_LABELS[s.genre]}
             </button>
           ))}
         </div>

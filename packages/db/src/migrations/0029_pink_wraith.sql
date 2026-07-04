@@ -1,0 +1,1 @@
+ALTER TABLE "track_audio" ADD COLUMN "genre_suggestions" jsonb;

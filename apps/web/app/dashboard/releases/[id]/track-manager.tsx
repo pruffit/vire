@@ -19,6 +19,11 @@ import type { TrackCredit } from '@/lib/upload';
 import type { LyricLine } from '@/lib/lrc';
 import { Icon } from '@/components/icon';
 
+export interface GenreSuggestion {
+  genre: Genre;
+  confidence: number;
+}
+
 export interface ManagedTrack {
   id: string;
   title: string;
@@ -27,6 +32,7 @@ export interface ManagedTrack {
   status: 'PROCESSING' | 'READY' | 'BLOCKED' | 'FAILED';
   moods: Mood[];
   genres: Genre[];
+  genreSuggestions: GenreSuggestion[];
   credits: TrackCredit[];
   bpm: number | null;
   musicalKey: string | null;
@@ -455,7 +461,7 @@ function TrackRow({
               </label>
 
               <div className="border-t border-foreground/[0.06] pt-3">
-                <GenrePicker trackId={track.id} initial={track.genres} />
+                <GenrePicker trackId={track.id} initial={track.genres} suggestions={track.genreSuggestions} />
               </div>
 
               <div className="border-t border-foreground/[0.06] pt-3">

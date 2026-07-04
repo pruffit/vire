@@ -21,7 +21,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "ffmpeg-static",
-      "ffprobe-static"
+      "ffprobe-static",
+      "onnxruntime-node"
     ],
     "overrides": {
       "postcss": ">=8.5.10",

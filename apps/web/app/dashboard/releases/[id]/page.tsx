@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, DrizzleReleaseRepository, getMoodsForTracks, getTrackAudioMeta, getGenresForTracks } from '@vire/db';
+import { db, DrizzleReleaseRepository, getMoodsForTracks, getTrackAudioMeta, getGenresForTracks, getGenreSuggestionsForTracks } from '@vire/db';
+import type { Genre } from '@/lib/genres';
 import { getActiveArtistForPage } from '@/lib/active-artist';
 import { EditReleaseForm } from './edit-release-form';
 import { BatchTrackUpload } from './batch-track-upload';
@@ -30,10 +31,11 @@ export default async function EditReleasePage({ params }: Props) {
 
   const { release, tracks } = data;
   const trackIds = tracks.map((t) => t.id);
-  const [moodsMap, audioMetaMap, genresMap] = await Promise.all([
+  const [moodsMap, audioMetaMap, genresMap, genreSuggestionsMap] = await Promise.all([
     getMoodsForTracks(trackIds),
     getTrackAudioMeta(trackIds),
     getGenresForTracks(trackIds),
+    getGenreSuggestionsForTracks(trackIds),
   ]);
 
   return (
@@ -79,6 +81,7 @@ export default async function EditReleasePage({ params }: Props) {
               status: t.status,
               moods: moodsMap[t.id] ?? [],
               genres: genresMap[t.id] ?? [],
+              genreSuggestions: (genreSuggestionsMap[t.id] ?? []) as { genre: Genre; confidence: number }[],
               credits: t.credits,
               bpm: audioMetaMap[t.id]?.bpm ?? null,
               musicalKey: audioMetaMap[t.id]?.musicalKey ?? null,

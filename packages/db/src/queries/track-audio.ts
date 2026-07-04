@@ -167,6 +167,29 @@ export async function updateTrackAnalysis(
     .where(eq(trackAudio.trackId, trackId));
 }
 
+export interface GenreSuggestionRow {
+  genre: string;
+  confidence: number;
+}
+
+/** Предложенные автоопределением жанры (топ-5) — для подсказки в GenrePicker. */
+export async function getGenreSuggestionsForTracks(
+  trackIds: string[],
+): Promise<Record<string, GenreSuggestionRow[]>> {
+  if (trackIds.length === 0) return {};
+  const rows = await db
+    .select({ trackId: trackAudio.trackId, genreSuggestions: trackAudio.genreSuggestions })
+    .from(trackAudio)
+    .where(inArray(trackAudio.trackId, trackIds));
+  const result: Record<string, GenreSuggestionRow[]> = {};
+  for (const row of rows) {
+    if (Array.isArray(row.genreSuggestions)) {
+      result[row.trackId] = row.genreSuggestions as GenreSuggestionRow[];
+    }
+  }
+  return result;
+}
+
 export async function trackExists(trackId: string): Promise<boolean> {
   const [row] = await db
     .select({ id: tracks.id })
