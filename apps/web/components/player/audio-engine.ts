@@ -255,7 +255,9 @@ export function initAudioEngine(): void {
   });
   audio.addEventListener('pause', () => {
     clearLoadWatchdog();
-    usePlayerStore.getState()._setState({ isPlaying: false });
+    // isLoading тоже сбрасываем: пауза во время буферизации иначе оставляет
+    // вечный спиннер (canplay на стоящем аудио может не прийти).
+    usePlayerStore.getState()._setState({ isPlaying: false, isLoading: false });
     stopHeartbeat();
   });
   audio.addEventListener('waiting', () =>

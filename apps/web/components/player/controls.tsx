@@ -121,7 +121,9 @@ function PlayPauseButton() {
   const restored = usePlayerStore((s) => s.restored);
 
   const iconKey = audioError ? 'error' : isLoading ? 'loading' : isPlaying ? 'pause' : 'play';
-  const disabled = (!hasAudio && !restored) || isLoading || audioError;
+  // Буферизация УЖЕ играющего трека кнопку не блокирует: на медленной сети
+  // 'waiting' приходит постоянно, и дизейбл на isLoading делал паузу недоступной.
+  const disabled = audioError || (!hasAudio && !restored) || (isLoading && !isPlaying);
 
   return (
     <motion.button
