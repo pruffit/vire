@@ -7,6 +7,7 @@ import { cn } from '@vire/ui';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
 import { PlayIcon } from '@/components/icons';
+import { ScrollRow } from '@/components/scroll-row';
 import { toast } from '@/components/toast';
 import type { WaveChipItem } from '@/components/home/wave-chip-items';
 
@@ -44,7 +45,7 @@ export function WaveChips({ items }: { items: WaveChipItem[] }) {
   }
 
   return (
-    <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+    <ScrollRow className="flex gap-2 -mx-1 px-1">
       {items.map((item) => {
         const isActive =
           !!waveSeed && (item.kind === 'mood' ? waveSeed.mood === item.key : waveSeed.genre === item.key);
@@ -78,6 +79,6 @@ export function WaveChips({ items }: { items: WaveChipItem[] }) {
           </motion.button>
         );
       })}
-    </div>
+    </ScrollRow>
   );
 }

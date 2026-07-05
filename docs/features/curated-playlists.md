@@ -26,11 +26,21 @@
 - Генерим до 4: «Для тебя» (микс по топ-настроениям **и** топ-жанрам, трек попадает,
   если совпал хотя бы один mood ИЛИ жанр) + mood-подборки под вкус, каждая без
   пересечения с уже собранными (exclusion set внутри одного прогона).
+- **Дедуп с общими MOOD-подборками**: перед генерацией личных mood-подборок читаем
+  настроения текущих общих MOOD-подборок (обратный маппинг заголовка через
+  `MOOD_LABELS`) и пропускаем их — `pickPersonalMoods` (`editorial-policy.ts`) берёт
+  следующие по значимости настроения из профиля вкуса. Иначе на главной одно и то же
+  настроение показывается дважды («Для дороги» и «Для дороги — для тебя»).
+- **Порог размера**: ни микс «Для тебя», ни mood-подборка не создаются, если треков
+  меньше `MIN_PERSONAL_PLAYLIST_TRACKS` (5, `editorial-policy.ts`) — короче выглядит
+  как мусорная карточка на главной.
 - Нет сигнала (< 3 уникальных лайкнутых/прослушанных треков за 90 дней, порог
   проверяется отдельно до вызова `getTasteProfile`) → личные подборки удаляются.
 - Треки внутри каждой подборки ранжированы по популярности за 30 дней + свежести
   релиза (`popularityScoreSql`, `packages/db/src/queries/popularity.ts`) — не просто ID
-  в произвольном порядке.
+  в произвольном порядке. Выбор по mood/genre для микса и mood-подборок — одна
+  функция (`selectTrackIdsByTaste`, `editorial.ts`), раньше это были два раздельных
+  запроса (`moodTrackIds`/`personalMixTrackIds`).
 - Хранятся как `playlists` с `kind='PERSONAL'`, `target_user_id=<юзер>`, `is_curated=true`.
   В личный список юзера не попадают (там фильтр по `owner_user_id`).
 
@@ -38,6 +48,9 @@
 - **Генерация:** `packages/db/src/queries/editorial.ts`
   (`generateSharedPlaylists`, `generatePersonalPlaylists`,
   `generatePersonalPlaylistsForAllUsers`, `generateAllEditorialPlaylists`).
+- **Политика (чистые функции, юнит-тесты):** `packages/db/src/queries/editorial-policy.ts`
+  (`MIN_PERSONAL_PLAYLIST_TRACKS`, `hasEnoughTracksForPersonalPlaylist`, `pickPersonalMoods`) —
+  без БД, `pnpm --filter @vire/db test`.
 - **Запросы для главной:** `packages/db/src/queries/playlists.ts`
   (`getEditorialPlaylists` — общие, `getPersonalPlaylists`, `getPopularPlaylists` — фолбэк).
 - **Расписание:** воркер `apps/worker/src/workers/editorial.worker.ts` + планировщики

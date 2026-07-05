@@ -17,6 +17,7 @@ import {
   getPersonalTrackPicks,
 } from '@vire/db';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
+import { ScrollRow } from '@/components/scroll-row';
 import { ArtistHoverChip } from '@/components/artist-hover-chip';
 import { FeaturedRelease } from '@/components/featured-release';
 import { ListeningNow } from '@/components/listening-now';
@@ -110,13 +111,13 @@ export default async function HomePage() {
 
       {!!userId && feed.length > 0 && (
         <Section title="Новое у подписок">
-          <div className="flex gap-5 overflow-x-auto no-scrollbar -mx-1 px-1 snap-x">
+          <ScrollRow className="flex gap-5 -mx-1 px-1 snap-x">
             {feed.slice(0, 12).map((r) => (
               <div key={r.id} className="shrink-0 w-40 snap-start">
                 <ReleaseQuickLook release={r} />
               </div>
             ))}
-          </div>
+          </ScrollRow>
         </Section>
       )}
 

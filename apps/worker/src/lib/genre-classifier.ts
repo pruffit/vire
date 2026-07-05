@@ -123,6 +123,39 @@ async function runBatch(model: InferenceSession, data: Float32Array, numPatches:
   return pickOutputByLastDim(results, NUM_CLASSES);
 }
 
+// Декод → мел-спектрограмма → инференс → маппинг. Общее ядро для best-effort
+// classifyTrackGenre (транскодинг, флаг AUTO_GENRE) и явного по-требованию
+// classifyTrackGenreOnDemand — отличаются только тем, что делают с ошибкой.
+async function classify(filePath: string): Promise<GenreSuggestion[] | null> {
+  if (!(await getLabelsOk())) return null;
+
+  const pcm = await decodeMonoPcm(filePath, MEL_SAMPLE_RATE, MAX_ANALYSIS_SEC);
+  const frames = await computeLogMelFrames(pcm);
+  const patchBatches = chunkIntoPatchBatches(frames);
+  if (patchBatches.length === 0) return null;
+
+  const model = await getSession();
+
+  // Усредняем sigmoid-предсказания по всем патчам трека — простая и устойчивая
+  // агрегация по времени.
+  const accumulated = new Float64Array(NUM_CLASSES);
+  let totalPatches = 0;
+
+  for (const { data, numPatches } of patchBatches) {
+    const predictions = await runBatch(model, data, numPatches);
+    for (let p = 0; p < numPatches; p++) {
+      for (let c = 0; c < NUM_CLASSES; c++) accumulated[c] += predictions[p * NUM_CLASSES + c];
+    }
+    totalPatches += numPatches;
+  }
+
+  if (totalPatches === 0) return null;
+  const averaged = new Float64Array(NUM_CLASSES);
+  for (let c = 0; c < NUM_CLASSES; c++) averaged[c] = accumulated[c] / totalPatches;
+
+  return mapDiscogsPredictionsToGenres(averaged);
+}
+
 /**
  * Классифицирует жанр трека по аудиофайлу. Возвращает топ-5 предложений
  * (наши genreEnum-значения с нормализованным confidence) либо null, если
@@ -137,36 +170,28 @@ export async function classifyTrackGenre(filePath: string): Promise<GenreSuggest
   }
 
   try {
-    // Проверяем метки до тяжёлого декода/FFT — при расхождении нет смысла тратить CPU.
-    if (!(await getLabelsOk())) return null;
-
-    const pcm = await decodeMonoPcm(filePath, MEL_SAMPLE_RATE, MAX_ANALYSIS_SEC);
-    const frames = await computeLogMelFrames(pcm);
-    const patchBatches = chunkIntoPatchBatches(frames);
-    if (patchBatches.length === 0) return null;
-
-    const model = await getSession();
-
-    // Усредняем sigmoid-предсказания по всем патчам трека — простая и устойчивая
-    // агрегация по времени.
-    const accumulated = new Float64Array(NUM_CLASSES);
-    let totalPatches = 0;
-
-    for (const { data, numPatches } of patchBatches) {
-      const predictions = await runBatch(model, data, numPatches);
-      for (let p = 0; p < numPatches; p++) {
-        for (let c = 0; c < NUM_CLASSES; c++) accumulated[c] += predictions[p * NUM_CLASSES + c];
-      }
-      totalPatches += numPatches;
-    }
-
-    if (totalPatches === 0) return null;
-    const averaged = new Float64Array(NUM_CLASSES);
-    for (let c = 0; c < NUM_CLASSES; c++) averaged[c] = accumulated[c] / totalPatches;
-
-    return mapDiscogsPredictionsToGenres(averaged);
+    return await classify(filePath);
   } catch (e) {
     console.error('[genre-classifier]', e);
     return null;
   }
+}
+
+/**
+ * Как classifyTrackGenre, но для анализа ПО ТРЕБОВАНИЮ (кнопка в дашборде/
+ * админке, BullMQ-очередь analyze-genre): AUTO_GENRE не проверяется — это явный
+ * запрос пользователя, а не фоновый шаг транскодинга. Ошибки не глотаются —
+ * отсутствие модели/сбой инференса логируется и бросается, чтобы джоба
+ * упала штатно (пользователь увидит ошибку через поллинг, а не тишину).
+ */
+export async function classifyTrackGenreOnDemand(filePath: string): Promise<GenreSuggestion[]> {
+  if (!modelsAvailable()) {
+    const message = `[genre-classifier] модель не найдена в ${modelsDir()} — pnpm --filter @vire/worker models:download`;
+    console.error(message);
+    throw new Error(message);
+  }
+
+  const result = await classify(filePath);
+  if (!result) throw new Error('genre-classifier: не удалось классифицировать трек (метки модели/декодирование)');
+  return result;
 }

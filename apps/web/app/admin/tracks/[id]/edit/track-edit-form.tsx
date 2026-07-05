@@ -3,11 +3,14 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { actionAdminUpdateTrack } from '../../../actions';
-import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
+import { GENRE_GROUPS, GENRE_LABELS, MAX_TRACK_GENRES, type Genre } from '@/lib/genres';
 import { ALL_MOODS, MOOD_LABELS } from '@/lib/moods';
 import { fieldClass } from '@/components/admin/ui';
 import { Textarea } from '@/components/ui-kit';
 import { NumberField } from '@/components/number-field';
+import { Icon } from '@/components/icon';
+import { useGenreAnalysis, type GenreSuggestion } from '@/lib/use-genre-analysis';
+import { cn } from '@/lib/utils';
 
 interface Initial {
   title: string;
@@ -24,11 +27,28 @@ interface Initial {
 
 const inputCls = `w-full ${fieldClass}`;
 
-export function TrackEditForm({ trackId, initial }: { trackId: string; initial: Initial }) {
+export function TrackEditForm({
+  trackId,
+  initial,
+  genreSuggestions: initialGenreSuggestions = [],
+}: {
+  trackId: string;
+  initial: Initial;
+  genreSuggestions?: GenreSuggestion[];
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [f, setF] = useState(initial);
+  const [genreSuggestions, setGenreSuggestions] = useState(initialGenreSuggestions);
+  const { status: analysisStatus, start: startAnalysis } = useGenreAnalysis(
+    {
+      analyze: `/api/v1/admin/tracks/${trackId}/analyze-genre`,
+      suggestions: `/api/v1/admin/tracks/${trackId}/genre-suggestions`,
+    },
+    setGenreSuggestions,
+  );
+  const analyzing = analysisStatus === 'running';
 
   function set<K extends keyof Initial>(k: K, v: Initial[K]) {
     setF((p) => ({ ...p, [k]: v }));
@@ -45,7 +65,14 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
   function toggleGenre(gen: string) {
     setF((p) => {
       if (p.genres.includes(gen)) return { ...p, genres: p.genres.filter((x) => x !== gen) };
-      if (p.genres.length >= 3) return p;
+      if (p.genres.length >= MAX_TRACK_GENRES) return p;
+      return { ...p, genres: [...p.genres, gen] };
+    });
+  }
+
+  function addSuggestedGenre(gen: Genre) {
+    setF((p) => {
+      if (p.genres.includes(gen) || p.genres.length >= MAX_TRACK_GENRES) return p;
       return { ...p, genres: [...p.genres, gen] };
     });
   }
@@ -147,7 +174,7 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
         </div>
       </Field>
 
-      <Field label={`Жанры трека (${f.genres.length}/3)`}>
+      <Field label={`Жанры трека (${f.genres.length}/${MAX_TRACK_GENRES})`}>
         <div className="flex flex-col gap-3 rounded-md border border-foreground/10 bg-foreground/[0.02] p-3 max-h-72 overflow-y-auto">
           {GENRE_GROUPS.map((g) => (
             <div key={g.label} className="flex flex-col gap-1.5">
@@ -155,7 +182,7 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
               <div className="flex flex-wrap gap-2">
                 {g.genres.map((gen) => {
                   const on = f.genres.includes(gen);
-                  const full = !on && f.genres.length >= 3;
+                  const full = !on && f.genres.length >= MAX_TRACK_GENRES;
                   return (
                     <button
                       key={gen}
@@ -177,6 +204,46 @@ export function TrackEditForm({ trackId, initial }: { trackId: string; initial: 
           ))}
         </div>
       </Field>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">
+            Предложено моделью
+          </span>
+          <button
+            type="button"
+            onClick={startAnalysis}
+            disabled={analyzing}
+            className="inline-flex items-center gap-1.5 text-xs text-foreground/50 transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Icon name="refresh-cw" size={12} className={cn(analyzing && 'animate-spin')} />
+            {analyzing ? 'Анализирую…' : 'Проанализировать'}
+          </button>
+        </div>
+        {genreSuggestions.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {genreSuggestions.map((s) => {
+              const added = f.genres.includes(s.genre);
+              const full = !added && f.genres.length >= MAX_TRACK_GENRES;
+              return (
+                <button
+                  key={s.genre}
+                  type="button"
+                  onClick={() => addSuggestedGenre(s.genre)}
+                  disabled={added || full}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-foreground/15 px-3 py-1 text-xs text-foreground/50 transition-colors hover:border-foreground/30 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  {!added && <Icon name="plus" size={11} className="opacity-60" />}
+                  {GENRE_LABELS[s.genre]}
+                  <span className="font-mono text-[10px] text-foreground/35">{Math.round(s.confidence * 100)}%</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-foreground/30">Пока нет предсказаний — нажми «Проанализировать».</p>
+        )}
+      </div>
 
       <Field label="Текст (LRC: [mm:ss.xx]строка — для подсветки в плеере; или простой текст)">
         <Textarea

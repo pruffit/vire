@@ -3,6 +3,7 @@ export const QUEUE_TRANSCODE = 'transcode' as const;
 export const QUEUE_PLAY_EVENTS = 'play-events' as const;
 export const QUEUE_NOTIFY_RELEASE = 'notify-release' as const;
 export const QUEUE_ANALYZE = 'analyze-audio' as const;
+export const QUEUE_ANALYZE_GENRE = 'analyze-genre' as const;
 export const QUEUE_EDITORIAL = 'editorial' as const;
 // Планировщик авто-выхода SCHEDULED-релизов по дате + исполнение пресейвов.
 export const QUEUE_SCHEDULED_PUBLISH = 'scheduled-publish' as const;
@@ -32,6 +33,12 @@ export interface NotifyReleaseJobData {
 export interface AnalyzeJobData {
   trackId: string;
   flacKey: string;
+}
+
+// Анализ жанра по требованию (кнопка в дашборде/админке) — в отличие от
+// AnalyzeJobData, флаг AUTO_GENRE не проверяется: это явный запрос пользователя.
+export interface AnalyzeGenreJobData {
+  trackId: string;
 }
 
 export interface PlayEventJobData {

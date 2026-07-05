@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { db, DrizzleTrackRepository, getTrackAudioMeta, getTrackMoods, getTrackGenres } from '@vire/db';
+import { db, DrizzleTrackRepository, getTrackAudioMeta, getTrackMoods, getTrackGenres, getGenreSuggestionsForTracks } from '@vire/db';
+import type { Genre } from '@/lib/genres';
 import { serializeLrc } from '@/lib/lrc';
 import { TrackEditForm } from './track-edit-form';
 import { DetailHeader } from '@/components/admin/ui';
@@ -9,11 +10,12 @@ export const dynamic = 'force-dynamic';
 export default async function AdminTrackEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const repo = new DrizzleTrackRepository(db);
-  const [track, meta, moods, genres] = await Promise.all([
+  const [track, meta, moods, genres, genreSuggestionsMap] = await Promise.all([
     repo.findById(id),
     getTrackAudioMeta([id]),
     getTrackMoods(id),
     getTrackGenres(id),
+    getGenreSuggestionsForTracks([id]),
   ]);
   if (!track) notFound();
   const m = meta[id] ?? { bpm: null, musicalKey: null };
@@ -35,6 +37,7 @@ export default async function AdminTrackEditPage({ params }: { params: Promise<{
           genres: genres as string[],
           lyrics: serializeLrc(track.lyrics),
         }}
+        genreSuggestions={(genreSuggestionsMap[id] ?? []) as { genre: Genre; confidence: number }[]}
       />
     </div>
   );

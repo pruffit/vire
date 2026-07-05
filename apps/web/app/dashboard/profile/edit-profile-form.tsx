@@ -4,28 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArtistLink, ArtistVideo, ThemeTokens } from '@vire/core';
 import { btnPrimary, Switch, Textarea, Field, fieldClass, SectionLabel } from '@/components/ui-kit';
-import { Select } from '@/components/select';
 import { ColorField } from '@/components/color-field';
 import { LinksEditor } from '@/components/links-editor';
 import { VideosEditor } from '@/components/videos-editor';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
-
-const SANS_VAR: Record<string, string> = {
-  Inter: 'var(--font-inter)',
-  Montserrat: 'var(--font-montserrat)',
-  Unbounded: 'var(--font-unbounded)',
-  Manrope: 'var(--font-manrope)',
-  Geologica: 'var(--font-geologica)',
-};
-const MONO_VAR: Record<string, string> = {
-  'JetBrains Mono': 'var(--font-jetbrains-mono)',
-  'Fira Code': 'var(--font-fira-code)',
-  'IBM Plex Mono': 'var(--font-ibm-plex-mono)',
-};
-const FONT_SANS = Object.keys(SANS_VAR);
-const FONT_MONO = Object.keys(MONO_VAR);
+import { SANS_FONT_VARS as SANS_VAR, MONO_FONT_VARS as MONO_VAR } from '@/lib/font-catalog';
 
 // Готовые палитры темы: клик применяет фон/текст/акцент разом. Ручной ввод остаётся.
 // Тёмные темы переходят в платформенный шелл (nav + player) без резкого контраста.
@@ -46,6 +31,55 @@ const THEME_PRESETS: { name: string; bg: string; text: string; accent: string; l
   { name: 'Кремовый',     bg: '#f4f1ea', text: '#1c1a17', accent: '#b5532f', light: true },
   { name: 'Бумага',       bg: '#eeead9', text: '#23201b', accent: '#3a6b5f', light: true },
 ];
+
+/**
+ * Сетка кнопок выбора шрифта — каждое имя рендерится своим `font-family`, поэтому
+ * выбор виден без превью. Нативный `<select>` тут не годится: список рисует ОС,
+ * применить произвольный шрифт к каждому `<option>` браузеры не позволяют.
+ */
+function FontGrid({
+  name,
+  value,
+  onChange,
+  fonts,
+  disabled,
+  ariaLabel,
+}: {
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+  fonts: Record<string, string>;
+  disabled?: boolean;
+  ariaLabel: string;
+}) {
+  return (
+    <div role="listbox" aria-label={ariaLabel} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <input type="hidden" name={name} value={value} />
+      {Object.entries(fonts).map(([label, cssVar]) => {
+        const active = value === label;
+        return (
+          <button
+            key={label}
+            type="button"
+            role="option"
+            aria-selected={active}
+            disabled={disabled}
+            onClick={() => onChange(label)}
+            className={cn(
+              'truncate rounded-lg border px-3 py-2.5 text-sm transition-colors disabled:opacity-50',
+              active
+                ? 'border-foreground/30 bg-foreground/10 text-foreground'
+                : 'border-foreground/10 bg-foreground/[0.03] text-foreground/65 hover:border-foreground/20 hover:bg-foreground/[0.06] hover:text-foreground',
+            )}
+            style={{ fontFamily: cssVar }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // Date-free subset of ArtistProfile — RSC can't serialize Date props to a client component
 export interface EditableProfile {
@@ -288,12 +322,12 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
               </Field>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Шрифт текста">
-                <Select name="fontSans" value={fontSans} onValueChange={setFontSans} disabled={busy} aria-label="Шрифт текста" options={FONT_SANS.map((f) => ({ value: f, label: f }))} />
+            <div className="flex flex-col gap-4">
+              <Field label="Основной">
+                <FontGrid name="fontSans" value={fontSans} onChange={setFontSans} fonts={SANS_VAR} disabled={busy} ariaLabel="Шрифт текста" />
               </Field>
-              <Field label="Шрифт моно">
-                <Select name="fontMono" value={fontMono} onValueChange={setFontMono} disabled={busy} aria-label="Шрифт моно" options={FONT_MONO.map((f) => ({ value: f, label: f }))} />
+              <Field label="Моно">
+                <FontGrid name="fontMono" value={fontMono} onChange={setFontMono} fonts={MONO_VAR} disabled={busy} ariaLabel="Шрифт моно" />
               </Field>
             </div>
           </div>

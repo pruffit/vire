@@ -190,6 +190,40 @@ export async function getGenreSuggestionsForTracks(
   return result;
 }
 
+export interface GenreSuggestionsSnapshot {
+  suggestions: GenreSuggestionRow[];
+  updatedAt: string | null;
+}
+
+/**
+ * Снимок suggestions + updatedAt для одного трека — используется поллингом
+ * анализа по требованию (`use-genre-analysis`): updatedAt меняется даже если
+ * новые suggestions совпали с предыдущими (детерминированная модель), а само
+ * появление данных — нет, если трек уже анализировался раньше.
+ */
+export async function getGenreSuggestionsSnapshot(trackId: string): Promise<GenreSuggestionsSnapshot> {
+  const [row] = await db
+    .select({ genreSuggestions: trackAudio.genreSuggestions, updatedAt: trackAudio.updatedAt })
+    .from(trackAudio)
+    .where(eq(trackAudio.trackId, trackId))
+    .limit(1);
+  return {
+    suggestions: Array.isArray(row?.genreSuggestions) ? (row.genreSuggestions as GenreSuggestionRow[]) : [],
+    updatedAt: row?.updatedAt ? row.updatedAt.toISOString() : null,
+  };
+}
+
+/** Сохраняет топ-5 предложений жанра для анализа по требованию (не трогает остальные поля trackAudio). */
+export async function saveGenreSuggestions(
+  trackId: string,
+  suggestions: GenreSuggestionRow[],
+): Promise<void> {
+  await db
+    .update(trackAudio)
+    .set({ genreSuggestions: suggestions, updatedAt: new Date() })
+    .where(eq(trackAudio.trackId, trackId));
+}
+
 export async function trackExists(trackId: string): Promise<boolean> {
   const [row] = await db
     .select({ id: tracks.id })

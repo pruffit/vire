@@ -75,10 +75,10 @@ app/ → pages/ → widgets/ → features/ → entities/ → shared/
 ### Лейаут и скролл (app-shell)
 
 Корневой `app/layout.tsx` — это app-shell фиксированной высоты: `<html h-full>`,
-`<body h-full overflow-hidden>`. Скролла на уровне документа нет. Внутри:
+`<body h-full overflow-clip>`. Скролла на уровне документа нет. Внутри:
 
 ```
-body (h-full, overflow-hidden, flex flex-col)
+body (h-full, overflow-clip, flex flex-col)
   Nav                                  — закреплён сверху
   div (flex-1, min-h-0, overflow-y-auto)  — единственная скролл-область (обычный блок!)
     {children}
@@ -98,6 +98,12 @@ body (h-full, overflow-hidden, flex flex-col)
   длинный список, сайдбарный лейаут) может переполниться — вешай `overflow-y-auto` +
   `min-h-0` на него, а не на страницу. Пример: `app/admin/layout.tsx` — сайдбар
   закреплён, скроллится только `<main>`.
+- **На body и обёртках — `overflow-clip`, не `overflow-hidden`.** `hidden` оставляет
+  элемент программно-скроллируемым: `scrollIntoView`/фокус за краем сдвигает весь документ,
+  а скроллбара вернуть его нет («дыра» слева, v1.11). `clip` не создаёт скролл-контейнер.
+  Нюанс спеки: `clip` по одной оси + `visible` по другой → `visible` вычисляется как `auto`
+  (появляется лишний скроллер), поэтому на скролл-пейнах ось X клипается только там, где
+  ось Y уже `auto` (см. `(listener)/layout.tsx` — `md:overflow-x-clip`).
 - Инвариант защищён тестом `app/__tests__/layout-shell.test.ts`.
 
 ### Чистота кода
@@ -238,15 +244,19 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Глобальный плеер — Zustand (persist `vire-player`, переживает перезагрузку) +
   HLS.js + единый waveform scrubber + LRC, wave-режим; редизайн UI на
   mini-bar/fullscreen/controls/queue-panel (`docs/features/player.md`)
-- [x] `/releases` — каталог релизов (сортировка свежесть/популярность); explicit-бейдж (E)
-  на карточках релизов везде, где видна обложка (`hasExplicit` агрегат, `docs/features/...`)
+- [x] `/releases` — каталог релизов (сортировка свежесть/популярность, прогрессивный
+  показ по 24 «Показать ещё»); explicit-бейдж (E) на карточках релизов везде, где видна
+  обложка (`hasExplicit` агрегат, `docs/features/...`)
 - [x] Смартлинки (bandlink-лендинги) `/smartlink/{artist}/{slug}` + хаб на странице артиста;
   **Фаза B**: привязка к релизу Vire (`release_id`) → кнопка «Слушать/Пресейв на Vire»
   (`docs/features/smart-links.md`)
 - [x] Пресейвы релизов (Фаза A+B): нативный пресейв на экране отсчёта, авто-выход
   SCHEDULED по дате, авто-лайк + письмо, инлайн в «Скоро выйдет» (`docs/features/presaves.md`)
 - [x] Курируемые/алгоритмические + пользовательские плейлисты на главной — личные
-  ранжированы по единому профилю вкуса (mood+genre) и популярности (`docs/features/curated-playlists.md`)
+  ранжированы по единому профилю вкуса (mood+genre) и популярности; личные mood-подборки
+  не дублируют общие дневные, порог наполнения 5 треков (`docs/features/curated-playlists.md`)
+- [x] `ScrollRow` (`components/scroll-row.tsx`) — горизонтальные ленты (чипы «Потока» и др.):
+  свайп на таче + кнопки-шевроны на hover-устройствах (`pointer-fine:`)
 
 ### Взаимодействие слушателя (концепт «Взаимодействие слушателя» — закрыто)
 - [x] Лайк трека (плеер + трек-лист + страница трека, синхронизация состояния)
@@ -265,7 +275,13 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 ### Dashboard артиста (`/dashboard`)
 - [x] Список релизов со статусами + статистика прослушиваний + live «слушают сейчас» в шапке
 - [x] `/dashboard/releases/new` — создание релиза; `/dashboard/releases/[id]` — редактирование
-- [x] `/dashboard/profile` — имя, bio, аватар, тема (live color picker, расширенные пресеты), grain, шрифты
+- [x] `/dashboard/profile` — имя, bio, аватар, тема (live color picker, расширенные пресеты),
+  grain, шрифты (13 sans + 5 mono, каталог `lib/font-catalog.ts` отдельно от загрузчиков
+  `lib/fonts.ts` — next/font не выполняется в Vitest)
+- [x] Анализ жанра on-demand — кнопка «Определить жанр» в редакторе трека (дашборд и
+  `/admin/tracks/[id]/edit`): очередь `analyze-genre` (BullMQ `deduplication`, НЕ фикс. jobId),
+  воркер качает source из S3 и гонит discogs-effnet ONNX, топ-5 с уверенностью в
+  `track_audio.genre_suggestions`, поллинг по `updatedAt` (`docs/features/auto-genre.md`)
 - [x] `/dashboard/posts` — анонсы/новости: композер + инлайн-редактирование + оптимистичное удаление
 - [x] Загрузка треков (FLAC → S3 → BullMQ), PublishButton (DRAFT→PUBLISHED/SCHEDULED)
 - [x] Аналитика переслушиваний — возвраты к треку (2+ разных дня) в `StatsSection`

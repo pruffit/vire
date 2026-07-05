@@ -48,7 +48,7 @@ export default async function ListenerLayout({ children }: { children: React.Rea
           гидрируется позже корня — если scroll прилетает в окне между привязкой
           листенера и гидрацией, DOM получает класс, которого нет в клиентском рендере,
           и mismatch запускает recovery-перерисовку, ломающую soft-навигацию роутера. */}
-      <div data-scroll-area suppressHydrationWarning className="flex min-w-0 flex-1 flex-col md:min-h-0 md:overflow-y-auto">
+      <div data-scroll-area suppressHydrationWarning className="flex min-w-0 flex-1 flex-col md:min-h-0 md:overflow-x-clip md:overflow-y-auto">
         <div className="flex-1">{children}</div>
         <Footer />
       </div>

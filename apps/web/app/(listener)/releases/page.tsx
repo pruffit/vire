@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { listReleases } from '@vire/db';
 import { FadeUp } from '@vire/ui/motion';
-import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { JsonLd } from '@/components/json-ld';
+import { ReleasesGrid } from './releases-grid';
 import { breadcrumbListJsonLd } from '@/lib/structured-data';
 
 export const metadata: Metadata = {
@@ -78,11 +78,7 @@ export default async function ReleasesPage({ searchParams }: Props) {
           {tab === 'week' ? 'За эту неделю релизов пока нет.' : 'Пока нет ни одного релиза.'}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
-          {releases.map((r) => (
-            <ReleaseQuickLook key={r.id} release={r} />
-          ))}
-        </div>
+        <ReleasesGrid key={tab} releases={releases} />
       )}
     </main>
   );

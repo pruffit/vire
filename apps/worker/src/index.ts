@@ -5,6 +5,7 @@ import { createTranscodeWorker, handleTerminalTranscodeFailure } from './workers
 import { createPlayEventsWorker } from './workers/play-events.worker.js';
 import { createNotifyReleaseWorker } from './workers/notify-release.worker.js';
 import { createAnalyzeWorker } from './workers/analyze.worker.js';
+import { createAnalyzeGenreWorker } from './workers/analyze-genre.worker.js';
 import { createEditorialWorker } from './workers/editorial.worker.js';
 import { createScheduledPublishWorker } from './workers/scheduled-publish.worker.js';
 import { createFulfillPresaveWorker } from './workers/fulfill-presave.worker.js';
@@ -15,6 +16,7 @@ const transcodeWorker = createTranscodeWorker();
 const playEventsWorker = createPlayEventsWorker();
 const notifyReleaseWorker = createNotifyReleaseWorker();
 const analyzeWorker = createAnalyzeWorker();
+const analyzeGenreWorker = createAnalyzeGenreWorker();
 const editorialWorker = createEditorialWorker();
 const scheduledPublishWorker = createScheduledPublishWorker();
 const fulfillPresaveWorker = createFulfillPresaveWorker();
@@ -99,7 +101,7 @@ fulfillPresaveWorker.on('error', (err) => {
   void alertWorkerError('fulfill-presave', err);
 });
 
-console.log('[worker] transcode + analyze + play-events + notify-release + editorial + scheduled-publish + fulfill-presave workers started');
+console.log('[worker] transcode + analyze + analyze-genre + play-events + notify-release + editorial + scheduled-publish + fulfill-presave workers started');
 
 analyzeWorker.on('completed', (job) => {
   console.log(`[analyze] ✓ job=${job.id} track=${job.data.trackId}`);
@@ -109,6 +111,16 @@ analyzeWorker.on('failed', (job, err) => {
 });
 analyzeWorker.on('error', (err) => {
   void alertWorkerError('analyze', err);
+});
+
+analyzeGenreWorker.on('completed', (job) => {
+  console.log(`[analyze-genre] ✓ job=${job.id} track=${job.data.trackId}`);
+});
+analyzeGenreWorker.on('failed', (job, err) => {
+  void alertJobFailure('analyze-genre', job?.id, err, { trackId: job?.data.trackId });
+});
+analyzeGenreWorker.on('error', (err) => {
+  void alertWorkerError('analyze-genre', err);
 });
 
 // Падение процесса целиком: алертим (дождавшись доставки) и выходим с кодом 1,
@@ -128,6 +140,7 @@ async function shutdown() {
     playEventsWorker.close(),
     notifyReleaseWorker.close(),
     analyzeWorker.close(),
+    analyzeGenreWorker.close(),
     editorialWorker.close(),
     editorialQueue.close(),
     scheduledPublishWorker.close(),

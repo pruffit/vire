@@ -28,6 +28,9 @@ export interface GenreGroup {
   genres: Genre[];
 }
 
+// Общий лимит жанров на трек — используется пикером артиста и формой админки.
+export const MAX_TRACK_GENRES = 3;
+
 // Группировка для UI. Порядок здесь же определяет порядок в пикерах и <optgroup>.
 export const GENRE_GROUPS: GenreGroup[] = [
   {

@@ -5,10 +5,8 @@ import { uploadToStream } from '@/lib/s3';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, AVATAR_POLICY, HEADER_POLICY } from '@/lib/image';
 import { resolveVideoTitle } from '@/lib/video-meta';
+import { SANS_FONTS as FONT_SANS, MONO_FONTS as FONT_MONO } from '@/lib/font-catalog';
 import type { ThemeTokens, ArtistLink, ArtistVideo } from '@vire/core';
-
-const FONT_SANS = ['Inter', 'Montserrat', 'Unbounded', 'Manrope', 'Geologica'];
-const FONT_MONO = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono'];
 
 export async function POST(req: Request) {
   const session = await auth();

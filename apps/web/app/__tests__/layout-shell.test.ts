@@ -43,9 +43,15 @@ describe('app-shell layout invariants', () => {
     const layout = readFileSync(path.join(APP_DIR, 'layout.tsx'), 'utf8');
     // <body> фиксированной высоты без скролла документа
     expect(layout).toMatch(/<body[^>]*className="[^"]*\bh-full\b/);
-    expect(layout).toMatch(/<body[^>]*className="[^"]*\boverflow-hidden\b/);
-    // единственная вертикальная скролл-область для контента
+    // overflow-clip, не overflow-hidden: hidden остаётся программно скроллируемым
+    // контейнером (scrollIntoView/фокус за краем сдвигает весь UI без возможности
+    // вернуть — скроллбара нет), clip не создаёт скролл-контейнер вовсе.
+    expect(layout).toMatch(/<body[^>]*className="[^"]*\boverflow-clip\b/);
+    expect(stripComments(layout)).not.toMatch(/<body[^>]*className="[^"]*\boverflow-hidden\b/);
+    // единственная вертикальная скролл-область для контента, без горизонтального
+    // программного скролла (см. #main-content)
     expect(layout).toMatch(/overflow-y-auto/);
+    expect(layout).toMatch(/id="main-content"[^>]*className="[^"]*\boverflow-x-clip\b/);
     // плеер — элемент потока (занимает место только когда играет), без постоянного резерва
     expect(layout).toMatch(/<PlayerWrapper\s*\/>/);
   });
@@ -53,6 +59,7 @@ describe('app-shell layout invariants', () => {
   it('admin layout скроллит контент внутри, а не страницей целиком', () => {
     const layout = readFileSync(path.join(APP_DIR, 'admin', 'layout.tsx'), 'utf8');
     expect(layout).toMatch(/<main[^>]*className="[^"]*\boverflow-y-auto\b/);
+    expect(layout).toMatch(/<main[^>]*className="[^"]*\boverflow-x-clip\b/);
   });
 
   it('(listener) layout: двухпанельный шелл — скролл во внутренней панели, не sticky в общей области', () => {
@@ -61,6 +68,7 @@ describe('app-shell layout invariants', () => {
     // контента при быстрой прокрутке — поэтому здесь именно внутренний скролл-пейн.
     const layout = readFileSync(path.join(APP_DIR, '(listener)', 'layout.tsx'), 'utf8');
     expect(layout).toMatch(/data-scroll-area[^>]*\boverflow-y-auto\b/);
+    expect(layout).toMatch(/data-scroll-area[^>]*\bmd:overflow-x-clip\b/);
     expect(layout).toMatch(/<ListenerSidebar\b/);
     // обёртка-пейн НЕ <main> (страницы рендерят собственный <main> — без вложенности)
     expect(layout).not.toMatch(/<main\b/);

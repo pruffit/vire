@@ -4,10 +4,21 @@ import {
   Unbounded,
   Manrope,
   Geologica,
+  Rubik,
+  Golos_Text,
+  Onest,
+  Oswald,
+  Comfortaa,
+  Russo_One,
+  Playfair_Display,
+  Cormorant,
   JetBrains_Mono,
   Fira_Code,
   IBM_Plex_Mono,
+  PT_Mono,
+  Ubuntu_Mono,
 } from 'next/font/google';
+import { SANS_FONT_VARS, MONO_FONT_VARS, SANS_FONTS, MONO_FONTS } from '@/lib/font-catalog';
 
 // All fonts offered in the artist theme editor. Loaded once, exposed as CSS
 // variables so an artist's chosen font can be applied per-page.
@@ -20,6 +31,19 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin', 'cyrillic'], variable:
 const firaCode = Fira_Code({ subsets: ['latin', 'cyrillic'], variable: '--font-fira-code', display: 'swap' });
 const ibmPlexMono = IBM_Plex_Mono({ subsets: ['latin', 'cyrillic'], weight: ['400', '500', '600'], variable: '--font-ibm-plex-mono', display: 'swap' });
 
+// Опциональные шрифты — не грузятся на каждой странице (preload: false), только
+// когда артист выбрал их в теме и они реально попадают в CSS страницы.
+const rubik = Rubik({ subsets: ['latin', 'cyrillic'], variable: '--font-rubik', display: 'swap', preload: false });
+const golosText = Golos_Text({ subsets: ['latin', 'cyrillic'], variable: '--font-golos-text', display: 'swap', preload: false });
+const onest = Onest({ subsets: ['latin', 'cyrillic'], variable: '--font-onest', display: 'swap', preload: false });
+const oswald = Oswald({ subsets: ['latin', 'cyrillic'], variable: '--font-oswald', display: 'swap', preload: false });
+const comfortaa = Comfortaa({ subsets: ['latin', 'cyrillic'], variable: '--font-comfortaa', display: 'swap', preload: false });
+const russoOne = Russo_One({ subsets: ['latin', 'cyrillic'], weight: '400', variable: '--font-russo-one', display: 'swap', preload: false });
+const playfairDisplay = Playfair_Display({ subsets: ['latin', 'cyrillic'], variable: '--font-playfair-display', display: 'swap', preload: false });
+const cormorant = Cormorant({ subsets: ['latin', 'cyrillic'], variable: '--font-cormorant', display: 'swap', preload: false });
+const ptMono = PT_Mono({ subsets: ['latin', 'cyrillic'], weight: '400', variable: '--font-pt-mono', display: 'swap', preload: false });
+const ubuntuMono = Ubuntu_Mono({ subsets: ['latin', 'cyrillic'], weight: ['400', '700'], variable: '--font-ubuntu-mono', display: 'swap', preload: false });
+
 /** Space-separated className with every font variable — attach to <html>. */
 export const fontVariables = [
   inter,
@@ -27,29 +51,24 @@ export const fontVariables = [
   unbounded,
   manrope,
   geologica,
+  rubik,
+  golosText,
+  onest,
+  oswald,
+  comfortaa,
+  russoOne,
+  playfairDisplay,
+  cormorant,
   jetbrainsMono,
   firaCode,
   ibmPlexMono,
+  ptMono,
+  ubuntuMono,
 ]
   .map((f) => f.variable)
   .join(' ');
 
-const SANS_VARS: Record<string, string> = {
-  Inter: 'var(--font-inter)',
-  Montserrat: 'var(--font-montserrat)',
-  Unbounded: 'var(--font-unbounded)',
-  Manrope: 'var(--font-manrope)',
-  Geologica: 'var(--font-geologica)',
-};
-
-const MONO_VARS: Record<string, string> = {
-  'JetBrains Mono': 'var(--font-jetbrains-mono)',
-  'Fira Code': 'var(--font-fira-code)',
-  'IBM Plex Mono': 'var(--font-ibm-plex-mono)',
-};
-
-export const SANS_FONTS = Object.keys(SANS_VARS);
-export const MONO_FONTS = Object.keys(MONO_VARS);
+export { SANS_FONTS, MONO_FONTS };
 
 /**
  * CSS-variable overrides for an artist's chosen fonts. Spread into the root
@@ -64,8 +83,8 @@ export const MONO_FONTS = Object.keys(MONO_VARS);
  */
 export function artistFontStyle(tokens: { fontSans?: string; fontMono?: string }): Record<string, string> {
   const style: Record<string, string> = {};
-  const sans = tokens.fontSans ? SANS_VARS[tokens.fontSans] : undefined;
-  const mono = tokens.fontMono ? MONO_VARS[tokens.fontMono] : undefined;
+  const sans = tokens.fontSans ? SANS_FONT_VARS[tokens.fontSans] : undefined;
+  const mono = tokens.fontMono ? MONO_FONT_VARS[tokens.fontMono] : undefined;
   if (sans) {
     style['--font-geist-sans'] = sans;
     style['--font-sans'] = sans;

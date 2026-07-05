@@ -84,14 +84,17 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${fontVariables} h-full antialiased`}
     >
       {/*
-        App-shell: окно фиксированной высоты (h-full + overflow-hidden), скролла
-        на уровне документа нет. Nav закреплён сверху, контент скроллится внутри
-        единой области ниже. Плеер (элемент потока, см. PlayerWrapper) занимает
-        место только когда играет трек, поэтому постоянной «полосы» под плеер нет.
+        App-shell: окно фиксированной высоты (h-full + overflow-clip), скролла
+        на уровне документа нет. overflow-clip, не overflow-hidden: hidden остаётся
+        программно скроллируемым контейнером (scrollIntoView/фокус за краем сдвигает
+        весь UI без возможности вернуть (скроллбара нет), clip не создаёт скролл-
+        контейнер вовсе. Nav закреплён сверху, контент скроллится внутри единой
+        области ниже. Плеер (элемент потока, см. PlayerWrapper) занимает место
+        только когда играет трек, поэтому постоянной «полосы» под плеер нет.
         Страницы заполняют область через min-h-full (НЕ min-h-screen: иначе высота
         Nav давала бы лишний скролл).
       */}
-      <body className="h-full flex flex-col bg-background text-foreground font-sans overflow-hidden">
+      <body className="h-full flex flex-col bg-background text-foreground font-sans overflow-clip">
         {/* До пейнта: ставит vire-reduce-motion на <html>, чтобы CSS-анимации не
             мигнули у выбравших приглушение (см. MotionProvider/AppearanceSettings). */}
         <script dangerouslySetInnerHTML={{ __html: REDUCE_MOTION_INIT_SCRIPT }} />
@@ -108,7 +111,7 @@ export default function RootLayout({
           <SitePresence />
           {/* suppressHydrationWarning: ScrollState вешает класс `is-scrolling` через
               classList напрямую — без этого scroll до гидрации даёт mismatch (см. (listener)/layout). */}
-          <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+          <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-clip">
             {children}
           </div>
           <PlayerWrapper />

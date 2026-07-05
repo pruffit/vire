@@ -73,21 +73,78 @@ sigmoid) — она обучалась на этой же задаче. Поэт
 - **Маппинг Discogs → наш enum + агрегация:** `apps/worker/src/lib/discogs-genre-map.ts`
 - **Политика автоприменения:** `apps/worker/src/lib/genre-policy.ts` (`decideAutoApplyGenres`)
 - **Интеграция в пайплайн:** `apps/worker/src/workers/transcode.worker.ts` (шаг после BPM/key-анализа)
+- **Анализ по требованию:** `apps/worker/src/workers/analyze-genre.worker.ts`
+  (consumer очереди `analyze-genre`), producer — `apps/web/lib/queue.ts`
+  (`analyzeGenreQueue`), job-тип — `packages/core/src/jobs.ts` (`AnalyzeGenreJobData`)
 - **Скачивание модели:** `apps/worker/scripts/download-models.mjs` (`pnpm --filter @vire/worker models:download`)
-- **UI-подсказка:** `apps/web/components/genre-picker.tsx` (строка «Предложено»)
+- **UI-подсказка + запуск анализа:** `apps/web/components/genre-picker.tsx` (дашборд),
+  `apps/web/app/admin/tracks/[id]/edit/track-edit-form.tsx` (админка), общий хук —
+  `apps/web/lib/use-genre-analysis.ts`
+- **API анализа по требованию:**
+  `apps/web/app/api/v1/dashboard/tracks/[id]/analyze-genre|genre-suggestions/route.ts`,
+  `apps/web/app/api/v1/admin/tracks/[id]/analyze-genre|genre-suggestions/route.ts`
 - **Данные:**
   - `packages/db/src/schema/releases.ts` — `track_audio.genre_suggestions` (JSONB,
     `[{ genre, confidence }]`, топ-5)
-  - `packages/db/src/queries/track-audio.ts` — `getGenreSuggestionsForTracks`
+  - `packages/db/src/queries/track-audio.ts` — `getGenreSuggestionsForTracks`,
+    `getGenreSuggestionsSnapshot` (+ `updatedAt`, для поллинга), `saveGenreSuggestions`
   - `packages/db/src/queries/track-genres.ts` — `getTrackGenres`/`setTrackGenres`
     (используются и автоприменением, и ручным UI)
   - Миграция: `packages/db/src/migrations/0029_pink_wraith.sql`
 
+## Анализ по требованию
+
+Треки, залитые до фичи или без флага `AUTO_GENRE`, остаются без предсказаний
+навсегда — транскодинг уже прошёл и не перезапускается. Кнопка «Определить
+жанр»/«Проанализировать» (дашборд артиста и админка) запускает тот же классификатор
+отдельно от транскодинга, **не глядя на флаг `AUTO_GENRE`** — это явный запрос
+пользователя, а не фоновый шаг пайплайна.
+
+- **Очередь** `analyze-genre` (`QUEUE_ANALYZE_GENRE`, `packages/core/src/jobs.ts`):
+  джоба `{ trackId }`, `deduplication.id = analyze-genre:{trackId}` — дедуп повторных
+  кликов, пока предыдущая джоба ещё не завершена (ключ дедупликации снимается на
+  completed/failed; фиксированный `jobId` для этого не подходит — джоба остаётся
+  в completed/failed до срабатывания `removeOnComplete`/`removeOnFail`, и повторный
+  `.add()` с тем же `jobId` молча вернул бы старую джобу вместо новой). Producer —
+  `apps/web/lib/queue.ts` (`analyzeGenreQueue`), consumer —
+  `apps/worker/src/workers/analyze-genre.worker.ts` (concurrency 1, зарегистрирован
+  в `apps/worker/src/index.ts`).
+- **Пайплайн джобы**: ключ исходника берётся из БД (`getTrackSourceKey` —
+  `trackAudio.flacKey`, тот же vault-ключ `tracks/{id}/source.{ext}`, что и при
+  транскодинге), скачивается во временный файл, прогоняется через
+  `classifyTrackGenreOnDemand` (вариант `classifyTrackGenre` для явного запроса —
+  `apps/worker/src/lib/genre-classifier.ts`), результат сохраняется
+  (`saveGenreSuggestions`) и прогоняется через ту же `decideAutoApplyGenres`
+  (жанры автопроставляются только если у трека их ещё нет). Временный файл
+  чистится в `finally` независимо от исхода.
+- **Отличие от best-effort `classifyTrackGenre`**: если модель не скачана —
+  `classifyTrackGenreOnDemand` логирует ошибку и **бросает** (джоба падает штатно,
+  видно в BullMQ/алертах), вместо тихого `null`. Явный запрос пользователя не должен
+  молча остаться без результата.
+- **API артиста**: `POST /api/v1/dashboard/tracks/[id]/analyze-genre` (auth + ownership
+  через артиста-владельца релиза, 202 + enqueue), `GET .../genre-suggestions`
+  (текущий снимок — `getGenreSuggestionsSnapshot`, поле `updatedAt` для поллинга).
+- **API админки**: `POST /api/v1/admin/tracks/[id]/analyze-genre` + `GET
+  .../genre-suggestions`, доступ MODERATOR/ADMIN/SUPERADMIN (без VIEWER — это
+  мутирующее действие даже для GET-эндпоинта видимости, по паттерну соседних admin-роутов).
+- **UI**: общий хук `apps/web/lib/use-genre-analysis.ts` — POST запускает анализ,
+  дальше поллинг `GET .../genre-suggestions` каждые 4с до 2 минут. Готовность
+  определяется по смене `updatedAt`, а не по появлению suggestions — при повторном
+  анализе трек может получить те же топ-5 жанров (модель детерминирована на том же
+  аудио), сравнение по значению ложно решило бы, что анализ не завершился. Таймаут/
+  сетевая ошибка — тост (`components/toast`). В `GenrePicker` (дашборд) — кнопка
+  «Определить жанр» когда suggestions пусты, иконка повторного анализа рядом со
+  строкой «Предложено» когда есть. В админке (`app/admin/tracks/[id]/edit/track-edit-form.tsx`)
+  — блок «Предложено моделью»: пилюли топ-5 с процентом уверенности, клик добавляет
+  жанр в выбранные (лимит 3), кнопка «Проанализировать».
+
 ## Env
 
-- `AUTO_GENRE` — `true`/`1` включает классификацию; по умолчанию выключено.
+- `AUTO_GENRE` — `true`/`1` включает классификацию **при транскодинге**; по
+  умолчанию выключено. Анализ по требованию (см. выше) этот флаг не проверяет.
 - `AUTO_GENRE_MODELS_DIR` — куда скачана модель (`models:download`); по умолчанию
-  `apps/worker/models` (относительно cwd воркера).
+  `apps/worker/models` (относительно cwd воркера). Общий и для транскодинга, и для
+  анализа по требованию.
 
 ## Ограничения / на будущее
 
@@ -98,7 +155,8 @@ sigmoid) — она обучалась на этой же задаче. Поэт
   с активными продажами без лицензии нельзя.
 - Модель не в git (`apps/worker/models/` в `.gitignore`) — без
   `pnpm --filter @vire/worker models:download` и `AUTO_GENRE=true` шаг тихо
-  пропускается (warn-лог), трек всё равно уходит в `READY`.
+  пропускается (warn-лог), трек всё равно уходит в `READY`. Для анализа по
+  требованию отсутствие модели — не warn, а падение джобы (см. выше).
 - Маппинг Discogs → наш enum — эвристика по жанровой близости, не наука; часть
   Discogs-стилей (Latin, большинство Non-Music, Children's, Brass & Military)
   осознанно не имеют аналога и отбрасываются.

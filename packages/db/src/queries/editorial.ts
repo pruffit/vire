@@ -7,6 +7,7 @@ import type { TrackGenre } from './track-genres';
 import { getTasteProfile } from './taste';
 import { textArrayParam, visibleTrackWhere } from './wave';
 import { popularityScoreSql, topTrackIdsByPlays } from './popularity';
+import { hasEnoughTracksForPersonalPlaylist, pickPersonalMoods } from './editorial-policy';
 
 // Релиз доступен (треки можно слушать): опубликован или запланирован с прошедшей
 // датой. Не пускаем невышедшие релизы в подборки — иначе их можно слушать с главной.
@@ -126,7 +127,7 @@ async function generateTopMoodPlaylists(): Promise<void> {
   const keepTitles: string[] = [];
   for (const { mood } of moodRows) {
     const title = MOOD_LABELS[mood as Mood];
-    const trackIds = await moodTrackIds(mood as Mood);
+    const trackIds = await selectTrackIdsByTaste([mood as Mood], []);
     if (trackIds.length < MIN_TRACKS) continue;
     await upsertEditorialPlaylist({
       kind: 'MOOD',
@@ -140,23 +141,13 @@ async function generateTopMoodPlaylists(): Promise<void> {
   await deleteStaleMoodPlaylists(keepTitles);
 }
 
-/** READY-треки в данном настроении, ранжированные по популярности (id, до LIST_LIMIT). */
-async function moodTrackIds(mood: Mood): Promise<string[]> {
-  const score = popularityScoreSql(30);
-  const rows = await db
-    .select({ trackId: trackMoods.trackId })
-    .from(trackMoods)
-    .innerJoin(tracks, eq(tracks.id, trackMoods.trackId))
-    .innerJoin(releases, eq(releases.id, tracks.releaseId))
-    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
-    .where(and(eq(trackMoods.mood, mood), visibleTrackWhere))
-    .orderBy(desc(score), desc(releases.releaseDate))
-    .limit(LIST_LIMIT);
-  return rows.map((r) => r.trackId);
-}
-
-/** Видимые треки в топ-настроениях ИЛИ топ-жанрах профиля вкуса, ранжированные по популярности. */
-async function personalMixTrackIds(moods: Mood[], genres: TrackGenre[]): Promise<string[]> {
+/**
+ * Видимые треки, помеченные любым из заданных настроений и/или жанров,
+ * ранжированные по популярности (id, до LIST_LIMIT). Общий выбор и для
+ * mood-подборок (один mood, пустые genres), и для микса «Для тебя»
+ * (несколько moods и/или genres) — раньше это были два раздельных запроса.
+ */
+async function selectTrackIdsByTaste(moods: Mood[], genres: TrackGenre[]): Promise<string[]> {
   if (moods.length === 0 && genres.length === 0) return [];
 
   const moodMatch = moods.length > 0
@@ -193,6 +184,36 @@ async function deleteStaleMoodPlaylists(keepTitles: string[]): Promise<void> {
   const ids = stale.map((r) => r.id);
   await db.delete(playlistTracks).where(inArray(playlistTracks.playlistId, ids));
   await db.delete(playlists).where(inArray(playlists.id, ids));
+}
+
+const MOOD_BY_LABEL: Partial<Record<string, Mood>> = Object.fromEntries(
+  (Object.keys(MOOD_LABELS) as Mood[]).map((mood) => [MOOD_LABELS[mood], mood]),
+);
+
+/**
+ * Настроения, уже занятые общими MOOD-подборками (target_user_id IS NULL) —
+ * обратный маппинг заголовка через MOOD_LABELS. Личные mood-подборки их
+ * пропускают, иначе одно настроение дублируется общей и личной карточкой.
+ */
+async function sharedMoodPlaylistMoods(): Promise<Mood[]> {
+  const rows = await db
+    .select({ title: playlists.title })
+    .from(playlists)
+    .where(and(
+      eq(playlists.isCurated, true),
+      eq(playlists.kind, 'MOOD'),
+      sql`${playlists.targetUserId} IS NULL`,
+    ));
+  const moods: Mood[] = [];
+  for (const { title } of rows) {
+    const mood = MOOD_BY_LABEL[title];
+    if (mood === undefined) {
+      console.warn(`sharedMoodPlaylistMoods: не найдено настроение для заголовка «${title}»`);
+      continue;
+    }
+    moods.push(mood);
+  }
+  return moods;
 }
 
 // ─── Личные подборки (под каждого юзера, обновляются раз в 4 часа) ───────────
@@ -238,7 +259,8 @@ async function tasteSignalTrackCount(userId: string): Promise<number> {
  * Порог минимального сигнала (MIN_TRACKS уникальных лайкнутых/прослушанных треков)
  * восстановлен — иначе одного лайка с настроением/жанром достаточно, чтобы
  * getTasteProfile вернул непустой topMoods/topGenres и собрал «Для тебя» из всего
- * каталога.
+ * каталога. Отдельно — MIN_PERSONAL_PLAYLIST_TRACKS: сама подборка не создаётся
+ * короче этого, иначе получаются мусорные карточки на 3 трека.
  */
 export async function generatePersonalPlaylists(userId: string): Promise<void> {
   const signalCount = await tasteSignalTrackCount(userId);
@@ -254,8 +276,8 @@ export async function generatePersonalPlaylists(userId: string): Promise<void> {
   let made = 0;
 
   // 1) «Для тебя» — микс по топ-настроениям И топ-жанрам профиля вкуса.
-  const mixTrackIds = await personalMixTrackIds(taste.topMoods, taste.topGenres);
-  if (mixTrackIds.length >= MIN_TRACKS) {
+  const mixTrackIds = await selectTrackIdsByTaste(taste.topMoods, taste.topGenres);
+  if (hasEnoughTracksForPersonalPlaylist(mixTrackIds.length)) {
     await createPersonalPlaylist({
       userId,
       title: 'Для тебя',
@@ -267,12 +289,16 @@ export async function generatePersonalPlaylists(userId: string): Promise<void> {
   }
 
   // 2) До PERSONAL_MAX всего — mood-подборки под топ-настроения юзера, без
-  // пересечения с «Для тебя» (накопленный exclusion set внутри прогона).
-  for (const mood of taste.topMoods) {
+  // пересечения с «Для тебя» (exclusion set) и без настроений, уже занятых
+  // общими MOOD-подборками текущего прогона (pickPersonalMoods).
+  const sharedMoods = await sharedMoodPlaylistMoods();
+  const personalMoods = pickPersonalMoods(taste.topMoods, sharedMoods, taste.topMoods.length);
+
+  for (const mood of personalMoods) {
     if (made >= PERSONAL_MAX) break;
     const label = MOOD_LABELS[mood];
-    const trackIds = (await moodTrackIds(mood)).filter((id) => !exclude.has(id));
-    if (trackIds.length < MIN_TRACKS) continue;
+    const trackIds = (await selectTrackIdsByTaste([mood], [])).filter((id) => !exclude.has(id));
+    if (!hasEnoughTracksForPersonalPlaylist(trackIds.length)) continue;
     await createPersonalPlaylist({
       userId,
       title: `${label} — для тебя`,

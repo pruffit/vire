@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { QUEUE_TRANSCODE, QUEUE_PLAY_EVENTS, QUEUE_NOTIFY_RELEASE, QUEUE_ANALYZE, type TranscodeJobData, type PlayEventJobData, type NotifyReleaseJobData, type AnalyzeJobData } from '@vire/core';
+import { QUEUE_TRANSCODE, QUEUE_PLAY_EVENTS, QUEUE_NOTIFY_RELEASE, QUEUE_ANALYZE, QUEUE_ANALYZE_GENRE, type TranscodeJobData, type PlayEventJobData, type NotifyReleaseJobData, type AnalyzeJobData, type AnalyzeGenreJobData } from '@vire/core';
 
 // Синглтон — переиспользуется между запросами в рамках процесса Next.js
 const globalForQueue = globalThis as unknown as { _transcodeQueue?: TranscodeQueue };
@@ -113,4 +113,37 @@ export const analyzeQueue: AnalyzeQueue =
 
 if (process.env.NODE_ENV !== 'production') {
   globalForAnalyze._analyzeQueue = analyzeQueue;
+}
+
+const globalForAnalyzeGenre = globalThis as unknown as { _analyzeGenreQueue?: AnalyzeGenreQueue };
+
+class AnalyzeGenreQueue {
+  private q = new Queue<AnalyzeGenreJobData>(QUEUE_ANALYZE_GENRE, {
+    connection: {
+      url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+      maxRetriesPerRequest: null as unknown as number,
+    },
+    defaultJobOptions: {
+      attempts: 2,
+      backoff: { type: 'exponential', delay: 5_000 },
+      removeOnComplete: { count: 100 },
+      removeOnFail: { count: 50 },
+    },
+  });
+
+  // deduplication.id = trackId — дедупликация повторного нажатия кнопки «Определить
+  // жанр», пока предыдущая джоба не завершена. В отличие от фиксированного jobId,
+  // ключ дедупликации снимается по завершении/провале джобы — фиксированный jobId
+  // остаётся занят и в completed/failed (removeOnComplete/Fail — по количеству, не
+  // сразу), поэтому повторный .add() молча возвращал бы старую джобу и не запускал новую.
+  async add(data: AnalyzeGenreJobData): Promise<void> {
+    await this.q.add('analyze-genre', data, { deduplication: { id: `analyze-genre:${data.trackId}` } });
+  }
+}
+
+export const analyzeGenreQueue: AnalyzeGenreQueue =
+  globalForAnalyzeGenre._analyzeGenreQueue ?? new AnalyzeGenreQueue();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForAnalyzeGenre._analyzeGenreQueue = analyzeGenreQueue;
 }

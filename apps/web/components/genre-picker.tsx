@@ -2,16 +2,10 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS, type Genre } from '@/lib/genres';
+import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS, MAX_TRACK_GENRES, type Genre } from '@/lib/genres';
+import { useGenreAnalysis, type GenreSuggestion } from '@/lib/use-genre-analysis';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
-
-const MAX = 3;
-
-interface GenreSuggestion {
-  genre: Genre;
-  confidence: number;
-}
 
 interface Props {
   trackId: string;
@@ -19,13 +13,22 @@ interface Props {
   suggestions?: GenreSuggestion[];
 }
 
-export function GenrePicker({ trackId, initial, suggestions = [] }: Props) {
+export function GenrePicker({ trackId, initial, suggestions: initialSuggestions = [] }: Props) {
   const [selected, setSelected] = useState<Set<Genre>>(new Set(initial));
+  const [suggestions, setSuggestions] = useState(initialSuggestions);
   const [query, setQuery] = useState('');
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const { status: analysisStatus, start: startAnalysis } = useGenreAnalysis(
+    {
+      analyze: `/api/v1/dashboard/tracks/${trackId}/analyze-genre`,
+      suggestions: `/api/v1/dashboard/tracks/${trackId}/genre-suggestions`,
+    },
+    setSuggestions,
+  );
+  const analyzing = analysisStatus === 'running';
 
-  const atMax = selected.size >= MAX;
+  const atMax = selected.size >= MAX_TRACK_GENRES;
   const pendingSuggestions = suggestions.filter((s) => !selected.has(s.genre));
 
   // Результаты поиска — плоский список по подписи (регистронезависимо).
@@ -39,7 +42,7 @@ export function GenrePicker({ trackId, initial, suggestions = [] }: Props) {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(genre)) next.delete(genre);
-      else if (next.size < MAX) next.add(genre);
+      else if (next.size < MAX_TRACK_GENRES) next.add(genre);
       return next;
     });
     setSaved(false);
@@ -61,7 +64,7 @@ export function GenrePicker({ trackId, initial, suggestions = [] }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-mono text-white/40 uppercase tracking-widest">
-          Жанры <span className="opacity-50">({selected.size}/{MAX})</span>
+          Жанры <span className="opacity-50">({selected.size}/{MAX_TRACK_GENRES})</span>
         </span>
         <AnimatePresence mode="wait">
           {saved ? (
@@ -106,8 +109,8 @@ export function GenrePicker({ trackId, initial, suggestions = [] }: Props) {
         </div>
       )}
 
-      {/* Автоопределённые жанры — клик добавляет (уважая MAX) */}
-      {pendingSuggestions.length > 0 && (
+      {/* Автоопределённые жанры — клик добавляет (уважая MAX_TRACK_GENRES); повторный анализ рядом */}
+      {suggestions.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[10px] font-mono text-white/25 uppercase tracking-widest">
             Предложено
@@ -123,7 +126,25 @@ export function GenrePicker({ trackId, initial, suggestions = [] }: Props) {
               {GENRE_LABELS[s.genre]}
             </button>
           ))}
+          <button
+            onClick={startAnalysis}
+            disabled={analyzing}
+            aria-label="Определить жанр заново"
+            title="Определить жанр заново"
+            className="inline-flex items-center justify-center size-6 rounded-full text-foreground/30 transition-colors hover:bg-foreground/10 hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Icon name="refresh-cw" size={12} className={cn(analyzing && 'animate-spin')} />
+          </button>
         </div>
+      ) : (
+        <button
+          onClick={startAnalysis}
+          disabled={analyzing}
+          className="inline-flex items-center gap-1.5 text-xs font-mono text-foreground/50 transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Icon name="refresh-cw" size={12} className={cn(analyzing && 'animate-spin')} />
+          {analyzing ? 'Определяю жанр…' : 'Определить жанр'}
+        </button>
       )}
 
       {/* Поиск по всему списку */}
