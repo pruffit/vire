@@ -21,3 +21,7 @@ docker-compose.yml
 **/coverage
 **/*.test.ts
 **/__tests__
+
+# ONNX-модель автожанра качается RUN-слоем в apps/worker/Dockerfile —
+# локальная копия не должна перетирать её через COPY . .
+apps/worker/models

@@ -9,6 +9,11 @@ RUN corepack enable && corepack prepare pnpm@10.17.1 --activate
 
 WORKDIR /app
 
+# ONNX-модель автожанра: models/ в .gitignore и в контекст сборки не попадает —
+# качаем отдельным слоем ДО COPY . ., чтобы кэшировался, пока скрипт не менялся.
+COPY apps/worker/scripts/download-models.mjs apps/worker/scripts/download-models.mjs
+RUN node apps/worker/scripts/download-models.mjs
+
 # Весь монорепо (node_modules отрезаны .dockerignore).
 COPY . .
 

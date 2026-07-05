@@ -12,14 +12,33 @@ interface ErrorContext {
 const lastSent = new Map<string, number>();
 const THROTTLE_MS = 60_000;
 
+// Известный апстрим-шум: в stderr-лог пишем, но в Telegram/webhook не шлём.
+// - kState.transformAlgorithm — спорадический баг Node ≥20.16 webstreams при
+//   обрыве стриминга SSR (vercel/next.js#68319, #75994), фикса нет, на юзеров
+//   не влияет (клиент уже отвалился);
+// - Failed to find Server Action — вкладка со старым деплоем шлёт action-id,
+//   которого нет в новом билде; штатно после каждого релиза.
+const KNOWN_NOISE = [
+  /transformAlgorithm is not a function/,
+  /Failed to find Server Action/,
+];
+
+export function isKnownNoise(message: string): boolean {
+  return KNOWN_NOISE.some((re) => re.test(message));
+}
+
 export async function captureError(error: unknown, ctx: ErrorContext = {}): Promise<void> {
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
   const service = ctx.service ?? 'web';
+  const knownNoise = isKnownNoise(message);
 
   console.error(JSON.stringify({
-    level: 'error', service, message, ...stripService(ctx), ts: new Date().toISOString(),
+    level: knownNoise ? 'warn' : 'error', service, message, knownNoise: knownNoise || undefined,
+    ...stripService(ctx), ts: new Date().toISOString(),
   }));
+
+  if (knownNoise) return;
 
   const text = `🔴 [${service}] ${ctx.where ?? 'error'}: ${message}`;
   const now = Date.now();

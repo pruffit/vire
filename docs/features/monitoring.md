@@ -14,6 +14,13 @@ Telegram/webhook) + **health-эндпоинт** + структурированн
   недоступны. Отдаёт версию. Подключается к внешнему uptime-чеку (UptimeRobot и т.п.).
 - **Трекинг ошибок web** — `instrumentation.ts → onRequestError` ловит
   необработанные ошибки серверных роутов и передаёт в `captureError`.
+  **Фильтр известного шума** (`isKnownNoise`): два паттерна апстрим-ошибок не
+  алертятся (в stderr пишутся как `level:warn` + `knownNoise:true`):
+  - `…transformAlgorithm is not a function` — спорадический баг Node ≥20.16
+    webstreams при обрыве SSR-стрима (vercel/next.js#68319, #75994), фикса
+    нет, на пользователей не влияет;
+  - `Failed to find Server Action …` — вкладка со старым деплоем шлёт
+    action-id, которого нет в новом билде; штатно после каждого релиза.
 - **Алерты воркера** — три уровня:
   - `failed` всех очередей (transcode, analyze, play-events, notify-release) →
     `alertJobFailure` (🔴 упавший джоб);
