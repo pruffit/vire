@@ -192,7 +192,7 @@ export function ReleaseQuickLook({
           </AnimatePresence>
           {/* Play/pause-подсказка на ховере */}
           <span className="absolute inset-0 grid place-items-center bg-black/0 group-hover:bg-black/15 transition-colors">
-            <span className="opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300 ease-soft grid place-items-center w-11 h-11 rounded-full bg-black/55 backdrop-blur-md ring-1 ring-white/30 text-white">
+            <span className="opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300 ease-soft grid place-items-center w-11 h-11 rounded-full bg-black/55 ring-1 ring-white/30 text-white">
               {isThisReleasePlaying && isPlaying ? <PauseIcon size={13} /> : <PlayIcon size={15} className="translate-x-[1px]" />}
             </span>
           </span>

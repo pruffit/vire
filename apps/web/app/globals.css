@@ -156,6 +156,13 @@ textarea.vire-textarea:focus::-webkit-resizer {
   }
 }
 
+/* Живой пульс live-индикаторов. box-shadow вместо transform (animate-ping):
+   не промоутится в композит-слой → не дрожит при скролле. */
+@keyframes vire-live-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 60%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 5px transparent; }
+}
+
 /* Приглашающее «дыхание» — restored-плеер (тапни play, чтобы продолжить) и
    похожие точечные подсказки. Только opacity/scale — дёшево для GPU. */
 @keyframes vire-breathe {
@@ -174,6 +181,9 @@ textarea.vire-textarea:focus::-webkit-resizer {
 }
 @utility animate-fade-in {
   animation: vire-fade-in 0.4s var(--ease-soft) both;
+}
+@utility animate-live-pulse {
+  animation: vire-live-pulse 1.8s var(--ease-soft) infinite;
 }
 @utility animate-breathe {
   animation: vire-breathe 2.2s var(--ease-soft) infinite;

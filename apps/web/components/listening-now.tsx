@@ -7,6 +7,7 @@ import { spring } from '@vire/ui/motion';
 import { usePlay } from '@/lib/player/use-play';
 import { toPlayerTrack } from '@/lib/player/to-player-track';
 import { PlayIcon } from '@/components/icons';
+import { LivePulse } from '@/components/live-pulse';
 
 export interface ListeningNowTrack {
   id: string;
@@ -60,7 +61,7 @@ export function ListeningNow({ initial }: { initial: ListeningNowTrack[] }) {
           <div className="space-y-5">
             <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2.5">
               Сейчас слушают
-              <LivePulse />
+              <LivePulse className="text-green-400" />
             </h2>
             <div className="grid sm:grid-cols-2 gap-1">
               <AnimatePresence initial={false}>
@@ -118,20 +119,10 @@ function TrackRow({ track }: { track: ListeningNowTrack }) {
         <span className="block text-xs text-muted-foreground truncate">{track.artistName}</span>
       </span>
       <span className="shrink-0 flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
-        <LivePulse small />
+        <LivePulse small className="text-green-400" />
         {track.listeners.toLocaleString('ru-RU')}
       </span>
     </motion.button>
-  );
-}
-
-function LivePulse({ small = false }: { small?: boolean }) {
-  const sz = small ? 'w-1.5 h-1.5' : 'w-2 h-2';
-  return (
-    <span className={`relative flex ${sz} shrink-0`} aria-hidden="true">
-      <span className={`absolute inline-flex w-full h-full rounded-full opacity-60 animate-ping bg-green-400`} />
-      <span className={`relative inline-flex ${sz} rounded-full bg-green-400`} />
-    </span>
   );
 }
 

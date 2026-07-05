@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { LivePulse } from '@/components/live-pulse';
 
 const POLL_MS = 20_000;
 
@@ -36,10 +37,7 @@ export function LiveNow() {
           className="inline-flex items-center gap-2 text-sm text-emerald-400"
           aria-live="polite"
         >
-          <span className="relative flex w-2 h-2 shrink-0" aria-hidden="true">
-            <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
-            <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-400" />
-          </span>
+          <LivePulse />
           <span className="tabular-nums">
             {count.toLocaleString('ru-RU')} {count === 1 ? 'слушает' : 'слушают'} сейчас
           </span>

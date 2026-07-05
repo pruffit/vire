@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { LivePulse } from '@/components/live-pulse';
 
 const POLL_MS = 25_000;
 
@@ -50,16 +51,7 @@ export function LiveListeners({
           style={{ color: 'var(--artist-accent)' }}
           aria-live="polite"
         >
-          <span className="relative flex w-2 h-2 shrink-0" aria-hidden="true">
-            <span
-              className="absolute inline-flex w-full h-full rounded-full opacity-60 animate-ping"
-              style={{ background: 'var(--artist-accent)' }}
-            />
-            <span
-              className="relative inline-flex w-2 h-2 rounded-full"
-              style={{ background: 'var(--artist-accent)' }}
-            />
-          </span>
+          <LivePulse />
           <span className="tabular-nums">
             {count.toLocaleString('ru-RU')} {count === 1 ? 'слушает' : 'слушают'} сейчас
           </span>

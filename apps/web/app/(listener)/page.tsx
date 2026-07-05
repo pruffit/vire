@@ -127,9 +127,15 @@ export default async function HomePage() {
       {/* Каталог (всем) */}
       {rest.length > 0 && (
         <Section title="Свежие релизы" href="/releases" hrefLabel="Посмотреть все">
-          <div className={GRID}>
-            {rest.map((r) => <ReleaseQuickLook key={r.id} release={r} />)}
-          </div>
+          {/* -my/py — вертикальный выпуск: overflow-x-auto клипает и по Y,
+              иначе hover-тень/подъём карточек срезаются по кромке */}
+          <ScrollRow className="flex gap-5 -mx-1 px-1 -my-2 py-2 snap-x">
+            {rest.map((r) => (
+              <div key={r.id} className="shrink-0 w-40 snap-start">
+                <ReleaseQuickLook release={r} />
+              </div>
+            ))}
+          </ScrollRow>
         </Section>
       )}
 
@@ -145,11 +151,13 @@ export default async function HomePage() {
 
       {allPlaylists.length > 0 && (
         <Section title="Подборки">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5">
+          <ScrollRow className="flex gap-5 -mx-1 px-1 -my-2 py-2 snap-x">
             {allPlaylists.map((p) => (
-              <EditorialPlaylistCard key={p.id} playlist={p} liked={likedPlaylistIds.includes(p.id)} />
+              <div key={p.id} className="shrink-0 w-40 snap-start">
+                <EditorialPlaylistCard playlist={p} liked={likedPlaylistIds.includes(p.id)} />
+              </div>
             ))}
-          </div>
+          </ScrollRow>
         </Section>
       )}
 

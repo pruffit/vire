@@ -4,6 +4,7 @@ import type { TrackStatus, ReleaseStatus, ReleaseType } from '@vire/core';
 import { PublishButton } from './publish-button';
 import { Panel, ReleaseStatusBadge } from '@/components/ui-kit';
 import { Icon } from '@/components/icon';
+import { LivePulse } from '@/components/live-pulse';
 import { pluralTracks } from '@/lib/format';
 
 // Date-free типы для безопасной RSC-сериализации
@@ -36,10 +37,7 @@ function TrackHealth({ tracks }: { tracks: DashboardTrack[] }) {
   if (processing > 0) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-amber-300">
-        <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-400" />
-        </span>
+        <LivePulse small className="text-amber-400" />
         {processing} {pluralTracks(processing)} обрабатыва{processing === 1 ? 'ется' : 'ются'}
       </span>
     );
