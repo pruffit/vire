@@ -5,8 +5,12 @@ import { cn } from '@vire/ui';
 import { useReduceMotionPref } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
 
+// Без композит-промоутеров (transform/backdrop-blur/постоянный opacity<1):
+// слой внутри вертикальной скролл-области дрожит и перерастеризуется на каждый
+// кадр скролла (см. память проекта scroll-jitter). Центрирование — top-калькой,
+// фон непрозрачный, скрытие — display, не opacity.
 const EDGE_BUTTON =
-  'absolute top-1/2 z-10 hidden -translate-y-1/2 pointer-fine:grid place-items-center w-8 h-8 rounded-full border border-border bg-card/90 text-foreground/70 shadow-sm backdrop-blur transition-[opacity,color] hover:text-foreground disabled:opacity-0 disabled:pointer-events-none';
+  'absolute top-[calc(50%-1rem)] z-10 hidden pointer-fine:grid place-items-center w-8 h-8 rounded-full border border-border bg-card text-foreground/70 shadow-sm transition-colors hover:text-foreground disabled:hidden';
 
 /**
  * Горизонтальная лента с прокруткой — обёртка над `overflow-x-auto no-scrollbar`.
