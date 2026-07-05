@@ -133,13 +133,6 @@ function PlayPauseButton() {
       transition={spring.snappy}
       className="relative w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:bg-primary/90"
     >
-      {restored && (
-        <span
-          aria-hidden="true"
-          className="absolute -inset-1.5 rounded-full animate-breathe pointer-events-none"
-          style={{ border: '1px solid var(--artist-accent, var(--primary))' }}
-        />
-      )}
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
           key={iconKey}

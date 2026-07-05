@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { AnimatePresence, motion, type PanInfo } from 'motion/react';
+import { AnimatePresence, motion, useDragControls, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls } from './audio-engine';
@@ -34,7 +34,7 @@ export function FullscreenPlayer({
   const track = usePlayerStore((s) => s.track);
   const queueLength = usePlayerStore((s) => s.queue.length);
   const [showQueue, setShowQueue] = useState(initialShowQueue);
-  const [lyricsOpen, setLyricsOpen] = useState(false);
+  const dragControls = useDragControls();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -57,8 +57,9 @@ export function FullscreenPlayer({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-      // Очередь и раскрытый текст используют свой скролл — отключаем dismiss-свайп при них.
-      drag={showQueue || lyricsOpen ? false : 'y'}
+      drag="y"
+      dragListener={false}
+      dragControls={dragControls}
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0, bottom: 0.7 }}
       onDragEnd={handleDragEnd}
@@ -76,13 +77,19 @@ export function FullscreenPlayer({
       <button
         onClick={onClose}
         aria-label="Свернуть плеер"
-        className="fixed top-5 right-5 z-10 w-9 h-9 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity"
+        className="fixed top-5 right-5 z-20 w-9 h-9 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity"
       >
         <ChevronDownIcon />
       </button>
 
-      {/* Подсказка-«хваталка» для свайпа вниз */}
-      <div className="fixed top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/15" />
+      {/* Зона свайпа-закрытия: вся ширина верха — легко попасть пальцем; шеврон
+          выше по z-index, тап по нему не стартует drag. */}
+      <div
+        onPointerDown={(e) => dragControls.start(e)}
+        className="fixed top-0 left-0 right-0 h-10 z-10 flex items-start justify-center pt-3 touch-none cursor-grab active:cursor-grabbing"
+      >
+        <span className="w-12 h-1 rounded-full bg-white/20" />
+      </div>
 
       <div className="my-auto w-full max-w-md flex flex-col items-center gap-8">
         <div className="relative">
@@ -95,7 +102,8 @@ export function FullscreenPlayer({
           <motion.div
             layoutId="player-cover"
             transition={spring.smooth}
-            className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-lg overflow-hidden shadow-2xl shadow-black/50 bg-white/5 cursor-grab active:cursor-grabbing"
+            onPointerDown={(e) => dragControls.start(e)}
+            className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-lg overflow-hidden shadow-2xl shadow-black/50 bg-white/5 cursor-grab active:cursor-grabbing touch-none"
           >
             {track.coverUrl && (
               <Image src={track.coverUrl} alt={track.title} fill sizes="320px" className="object-cover" />
@@ -131,7 +139,7 @@ export function FullscreenPlayer({
         <Controls showWaveMode={false} showShuffle showRepeat />
 
         {/* Синхронизированный текст (если есть) */}
-        <Lyrics key={track.id} trackId={track.id} onOpenChange={setLyricsOpen} />
+        <Lyrics key={track.id} trackId={track.id} />
 
         {/* Нижняя панель: громкость (десктоп) + очередь; список очереди раскрывается под ней. */}
         <div className="w-full flex flex-col items-center gap-3">
@@ -185,11 +193,7 @@ function FullscreenExtras({
   const showVolume = useIsDesktopPointer();
 
   return (
-    // stopPropagation, чтобы взаимодействие с громкостью/очередью не закрывало плеер свайпом.
-    <div
-      className={showVolume ? 'w-full flex items-center gap-4' : 'flex items-center gap-6'}
-      onPointerDown={(e) => e.stopPropagation()}
-    >
+    <div className={showVolume ? 'w-full flex items-center gap-4' : 'flex items-center gap-6'}>
       {showVolume && (
         <>
           <motion.button

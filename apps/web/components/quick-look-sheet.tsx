@@ -66,7 +66,7 @@ export function QuickLookSheet({ open, onClose, children }: Props) {
             onDragEnd={onDragEnd}
             onClick={(e) => e.stopPropagation()}
             transition={spring.smooth}
-            className="w-full max-w-md max-h-[88vh] flex flex-col rounded-2xl bg-card border border-border shadow-2xl overflow-hidden cursor-default"
+            className="w-full max-w-md max-h-full flex flex-col rounded-2xl bg-card border border-border shadow-2xl overflow-hidden cursor-default"
           >
             <DragHandleContext.Provider value={dragControls}>
               <div

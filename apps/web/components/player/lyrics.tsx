@@ -27,24 +27,9 @@ function cacheLyrics(trackId: string, lines: LyricLine[] | null): void {
  * и доскролливает к ней; клик по строке перематывает на её таймкод.
  * Родитель должен ставить key={trackId}, чтобы состояние сбрасывалось на новый трек.
  */
-export function Lyrics({
-  trackId,
-  onOpenChange,
-}: {
-  trackId: string;
-  /** Уведомляет родителя об открытии/закрытии текста — фуллскрин отключает
-   *  свайп-dismiss, пока текст раскрыт (иначе тач-скролл длинного текста
-   *  конфликтует с drag-жестом закрытия). */
-  onOpenChange?: (open: boolean) => void;
-}) {
+export function Lyrics({ trackId }: { trackId: string }) {
   const [lines, setLines] = useState<LyricLine[] | null>(() => lyricsCache.get(trackId) ?? null);
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    onOpenChange?.(open);
-  }, [open, onOpenChange]);
-
-  useEffect(() => () => onOpenChange?.(false), [onOpenChange]);
 
   useEffect(() => {
     if (lyricsCache.has(trackId)) return;
@@ -69,7 +54,7 @@ export function Lyrics({
   const buttonDisabled = loading || !hasLyrics;
 
   return (
-    <div className="w-full" onPointerDown={(e) => e.stopPropagation()}>
+    <div className="w-full">
       <button
         type="button"
         onClick={() => setOpen((s) => !s)}

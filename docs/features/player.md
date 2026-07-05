@@ -61,7 +61,11 @@
   кнопка очереди в мини-баре (`MobileQueueButton`, `sm:hidden`) — раньше очередь на
   мобилке открывалась только через фуллскрин.
 - `fullscreen.tsx` — полноэкранный плеер: OKLCH-градиент фона из акцентного цвета
-  трека, лирика, waveform-скраббер, `Controls` с шаффлом.
+  трека, лирика, waveform-скраббер, `Controls` с шаффлом. Свайп-закрытие — только
+  с явных drag-зон (`useDragControls` + `dragListener={false}`, как в
+  `quick-look-sheet.tsx`): полноширинная ручка сверху и обложка. Контейнерного
+  drag нет намеренно: он вешал `touch-action: pan-x` на весь фуллскрин и убивал
+  тач-скролл контента на невысоких экранах.
 - `controls.tsx` — транспорт (prev/play-pause/next) + `WaveModeButton`/`ShuffleButton`;
   `PlayPauseButton` в `restored`-состоянии не дёргает несуществующий `<audio>` — жмёт
   `resumeRestored()`.
