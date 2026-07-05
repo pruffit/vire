@@ -45,7 +45,7 @@ export function WaveChips({ items }: { items: WaveChipItem[] }) {
   }
 
   return (
-    <ScrollRow className="flex gap-2 -mx-1 px-1">
+    <ScrollRow className="flex gap-2 -mx-1 px-1" edgeZone="sm">
       {items.map((item) => {
         const isActive =
           !!waveSeed && (item.kind === 'mood' ? waveSeed.mood === item.key : waveSeed.genre === item.key);

@@ -7,10 +7,14 @@ import { Icon } from '@/components/icon';
 
 // Без композит-промоутеров (transform/backdrop-blur/постоянный opacity<1):
 // слой внутри вертикальной скролл-области дрожит и перерастеризуется на каждый
-// кадр скролла (см. память проекта scroll-jitter). Центрирование — top-калькой,
-// фон непрозрачный, скрытие — display, не opacity.
+// кадр скролла (см. память проекта scroll-jitter). Скрытие — display, не opacity.
+// Кнопка — полновысотная краевая зона с градиентом-шторкой от фона страницы,
+// видна при наведении на ленту или фокусе внутри неё (hover-устройства).
 const EDGE_BUTTON =
-  'absolute top-[calc(50%-1rem)] z-10 hidden pointer-fine:grid place-items-center w-8 h-8 rounded-full border border-border bg-card text-foreground/70 shadow-sm transition-colors hover:text-foreground disabled:hidden';
+  'absolute inset-y-0 z-10 hidden items-center text-foreground/60 transition-colors hover:text-foreground pointer-fine:group-hover/scroll-row:flex pointer-fine:group-focus-within/scroll-row:flex';
+
+// Ширина зоны: узким пилюлям (чипы) w-14 закрывал бы целый элемент.
+const EDGE_WIDTH = { sm: 'w-10', md: 'w-14' } as const;
 
 /**
  * Горизонтальная лента с прокруткой — обёртка над `overflow-x-auto no-scrollbar`.
@@ -20,9 +24,11 @@ const EDGE_BUTTON =
 export function ScrollRow({
   children,
   className,
+  edgeZone = 'md',
 }: {
   children: React.ReactNode;
   className?: string;
+  edgeZone?: keyof typeof EDGE_WIDTH;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState(false);
@@ -58,30 +64,28 @@ export function ScrollRow({
   }
 
   return (
-    <div className="relative">
-      {overflow && (
+    <div className="group/scroll-row relative">
+      {overflow && !atStart && (
         <button
           type="button"
           onClick={() => scroll(-1)}
-          disabled={atStart}
           aria-label="Прокрутить влево"
-          className={cn(EDGE_BUTTON, 'left-0')}
+          className={cn(EDGE_BUTTON, EDGE_WIDTH[edgeZone], 'left-0 justify-start bg-linear-to-r from-background via-background/70 to-transparent')}
         >
-          <Icon name="chevron-left" size={16} />
+          <Icon name="chevron-left" size={20} />
         </button>
       )}
       <div ref={scrollRef} className={cn('overflow-x-auto no-scrollbar', className)}>
         {children}
       </div>
-      {overflow && (
+      {overflow && !atEnd && (
         <button
           type="button"
           onClick={() => scroll(1)}
-          disabled={atEnd}
           aria-label="Прокрутить вправо"
-          className={cn(EDGE_BUTTON, 'right-0')}
+          className={cn(EDGE_BUTTON, EDGE_WIDTH[edgeZone], 'right-0 justify-end bg-linear-to-l from-background via-background/70 to-transparent')}
         >
-          <Icon name="chevron-right" size={16} />
+          <Icon name="chevron-right" size={20} />
         </button>
       )}
     </div>
