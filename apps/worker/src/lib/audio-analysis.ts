@@ -47,7 +47,11 @@ function corrAt(signal: Float32Array, lag: number): number {
   return c;
 }
 
-function detectBPM(pcm: Float32Array): number | null {
+// Порог для октавной коррекции: удвоенный темп предпочитаем, только если его
+// корреляция не сильно уступает лучшей (эмпирически подобрано на бэкбит-кейсах).
+const OCTAVE_CORRECTION_RATIO = 0.7;
+
+export function detectBPM(pcm: Float32Array): number | null {
   const n = Math.floor(pcm.length / WIN);
   if (n < 40) return null;
 
@@ -74,6 +78,22 @@ function detectBPM(pcm: Float32Array): number | null {
 
   let bestIdx = 0;
   for (let i = 1; i < numLags; i++) if (corrs[i] > corrs[bestIdx]) bestIdx = i;
+  // Нулевая (или отрицательная) автокорреляция — сигнал без периодичности (тишина/шум).
+  if (corrs[bestIdx] <= 0) return null;
+
+  // Октавная коррекция: сильный бэкбит (акцент на 2/4) даёт максимум автокорреляции
+  // на удвоенном периоде — детектор берёт половинный темп. Проверяем кандидата
+  // на удвоенном BPM (вдвое короче лаг); пик от него может съехать на соседний бин,
+  // поэтому берём максимум в окне ±1 вокруг ожидаемой позиции.
+  const halfLag = Math.round((lagMin + bestIdx) / 2);
+  if (halfLag >= lagMin) {
+    let halfIdx = halfLag - lagMin;
+    for (const d of [-1, 1]) {
+      const cand = halfIdx + d;
+      if (cand >= 0 && cand < numLags && corrs[cand] > corrs[halfIdx]) halfIdx = cand;
+    }
+    if (corrs[halfIdx] >= OCTAVE_CORRECTION_RATIO * corrs[bestIdx]) bestIdx = halfIdx;
+  }
 
   const y0 = bestIdx > 0 ? corrs[bestIdx - 1] : corrs[bestIdx];
   const y1 = corrs[bestIdx];
