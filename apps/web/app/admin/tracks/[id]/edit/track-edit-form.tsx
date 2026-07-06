@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui-kit';
 import { NumberField } from '@/components/number-field';
 import { Icon } from '@/components/icon';
 import { useGenreAnalysis, type GenreSuggestion } from '@/lib/use-genre-analysis';
+import { useTrackAnalysis } from '@/lib/use-track-analysis';
+import { toast } from '@/components/toast';
 import { cn } from '@/lib/utils';
 
 interface Initial {
@@ -53,6 +55,27 @@ export function TrackEditForm({
   function set<K extends keyof Initial>(k: K, v: Initial[K]) {
     setF((p) => ({ ...p, [k]: v }));
   }
+
+  const { status: audioAnalysisStatus, start: startAudioAnalysis } = useTrackAnalysis<{
+    bpm: number | null;
+    musicalKey: string | null;
+    updatedAt: string | null;
+  }>(
+    {
+      analyze: `/api/v1/admin/tracks/${trackId}/analyze`,
+      snapshot: `/api/v1/admin/tracks/${trackId}/audio-features`,
+    },
+    (snapshot) => {
+      set('bpm', snapshot.bpm);
+      set('musicalKey', snapshot.musicalKey ?? '');
+      toast('BPM и тональность обновлены');
+    },
+    {
+      start: 'Не удалось запустить анализ BPM/тональности',
+      timeout: 'Анализ BPM/тональности занял слишком много времени — попробуй позже',
+    },
+  );
+  const analyzingAudio = audioAnalysisStatus === 'running';
 
   function toggleMood(m: string) {
     setF((p) => {
@@ -153,6 +176,15 @@ export function TrackEditForm({
           <input className={inputCls} value={f.musicalKey} onChange={(e) => set('musicalKey', e.target.value)} maxLength={20} placeholder="напр. Am" />
         </Field>
       </div>
+      <button
+        type="button"
+        onClick={startAudioAnalysis}
+        disabled={analyzingAudio || pending}
+        className="inline-flex items-center gap-1.5 self-start text-xs text-foreground/50 transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <Icon name="refresh-cw" size={12} className={cn(analyzingAudio && 'animate-spin')} />
+        {analyzingAudio ? 'Анализирую…' : 'Переанализировать BPM/тональность'}
+      </button>
 
       <Field label={`Настроения (${f.moods.length}/5)`}>
         <div className="flex flex-wrap gap-2">

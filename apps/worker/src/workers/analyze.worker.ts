@@ -22,7 +22,7 @@ export async function processAnalyzeJob(job: Job<AnalyzeJobData>): Promise<void>
 
     await db
       .update(trackAudio)
-      .set({ bpm, musicalKey, updatedAt: new Date() })
+      .set({ bpm, musicalKey, bpmKeyAnalyzedAt: new Date(), updatedAt: new Date() })
       .where(eq(trackAudio.trackId, trackId));
 
     await job.log(`bpm=${bpm ?? 'null'} key=${musicalKey ?? 'null'}`);

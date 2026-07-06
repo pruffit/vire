@@ -103,7 +103,9 @@ sigmoid) — она обучалась на этой же задаче. Поэт
   - `packages/db/src/schema/releases.ts` — `track_audio.genre_suggestions` (JSONB,
     `[{ genre, confidence }]`, топ-5)
   - `packages/db/src/queries/track-audio.ts` — `getGenreSuggestionsForTracks`,
-    `getGenreSuggestionsSnapshot` (+ `updatedAt`, для поллинга), `saveGenreSuggestions`
+    `getGenreSuggestionsSnapshot` (`updatedAt` — из `track_audio.genre_analyzed_at`,
+    отдельного от общего `updated_at`; см. «Раздельные таймстемпы готовности» ниже),
+    `saveGenreSuggestions`
   - `packages/db/src/queries/track-genres.ts` — `getTrackGenres`/`setTrackGenres`
     (используются и автоприменением, и ручным UI)
   - Миграция: `packages/db/src/migrations/0029_pink_wraith.sql`
@@ -139,7 +141,8 @@ sigmoid) — она обучалась на этой же задаче. Поэт
   молча остаться без результата.
 - **API артиста**: `POST /api/v1/dashboard/tracks/[id]/analyze-genre` (auth + ownership
   через артиста-владельца релиза, 202 + enqueue), `GET .../genre-suggestions`
-  (текущий снимок — `getGenreSuggestionsSnapshot`, поле `updatedAt` для поллинга).
+  (текущий снимок — `getGenreSuggestionsSnapshot`, поле `updatedAt` для поллинга,
+  источник — `genre_analyzed_at`).
 - **API админки**: `POST /api/v1/admin/tracks/[id]/analyze-genre` + `GET
   .../genre-suggestions`, доступ MODERATOR/ADMIN/SUPERADMIN (без VIEWER — это
   мутирующее действие даже для GET-эндпоинта видимости, по паттерну соседних admin-роутов).
@@ -147,7 +150,13 @@ sigmoid) — она обучалась на этой же задаче. Поэт
   дальше поллинг `GET .../genre-suggestions` каждые 4с до 2 минут. Готовность
   определяется по смене `updatedAt`, а не по появлению suggestions — при повторном
   анализе трек может получить те же топ-5 жанров (модель детерминирована на том же
-  аудио), сравнение по значению ложно решило бы, что анализ не завершился. Таймаут/
+  аудио), сравнение по значению ложно решило бы, что анализ не завершился.
+  `updatedAt` снимка — это `genre_analyzed_at`, отдельная колонка от общего
+  `track_audio.updated_at`: если бы поллинг жанра и поллинг BPM/тональности
+  (`docs/features/audio-analysis.md`) ориентировались на один и тот же
+  `updated_at`, завершение любой из двух джоб триггерило бы «готово» у обоих
+  поллингов разом — при нажатии обеих кнопок подряд один из результатов терялся бы
+  (поллинг уже остановлен). Таймаут/
   сетевая ошибка — тост (`components/toast`). В `GenrePicker` (дашборд) — кнопка
   «Определить жанр» когда suggestions пусты, иконка повторного анализа рядом со
   строкой «Предложено» когда есть. В админке (`app/admin/tracks/[id]/edit/track-edit-form.tsx`)

@@ -163,7 +163,7 @@ export async function updateTrackAnalysis(
 ): Promise<void> {
   await db
     .update(trackAudio)
-    .set({ bpm, musicalKey, updatedAt: new Date() })
+    .set({ bpm, musicalKey, bpmKeyAnalyzedAt: new Date(), updatedAt: new Date() })
     .where(eq(trackAudio.trackId, trackId));
 }
 
@@ -197,19 +197,21 @@ export interface GenreSuggestionsSnapshot {
 
 /**
  * Снимок suggestions + updatedAt для одного трека — используется поллингом
- * анализа по требованию (`use-genre-analysis`): updatedAt меняется даже если
- * новые suggestions совпали с предыдущими (детерминированная модель), а само
- * появление данных — нет, если трек уже анализировался раньше.
+ * анализа по требованию (`use-genre-analysis`): updatedAt (из `genreAnalyzedAt`,
+ * не из общего `trackAudio.updatedAt` — тот же бампает и джоба BPM/тональности,
+ * см. `getAudioFeaturesSnapshot`) меняется даже если новые suggestions совпали
+ * с предыдущими (детерминированная модель), а само появление данных — нет, если
+ * трек уже анализировался раньше.
  */
 export async function getGenreSuggestionsSnapshot(trackId: string): Promise<GenreSuggestionsSnapshot> {
   const [row] = await db
-    .select({ genreSuggestions: trackAudio.genreSuggestions, updatedAt: trackAudio.updatedAt })
+    .select({ genreSuggestions: trackAudio.genreSuggestions, genreAnalyzedAt: trackAudio.genreAnalyzedAt })
     .from(trackAudio)
     .where(eq(trackAudio.trackId, trackId))
     .limit(1);
   return {
     suggestions: Array.isArray(row?.genreSuggestions) ? (row.genreSuggestions as GenreSuggestionRow[]) : [],
-    updatedAt: row?.updatedAt ? row.updatedAt.toISOString() : null,
+    updatedAt: row?.genreAnalyzedAt ? row.genreAnalyzedAt.toISOString() : null,
   };
 }
 
@@ -220,8 +222,36 @@ export async function saveGenreSuggestions(
 ): Promise<void> {
   await db
     .update(trackAudio)
-    .set({ genreSuggestions: suggestions, updatedAt: new Date() })
+    .set({ genreSuggestions: suggestions, genreAnalyzedAt: new Date(), updatedAt: new Date() })
     .where(eq(trackAudio.trackId, trackId));
+}
+
+export interface AudioFeaturesSnapshot {
+  bpm: number | null;
+  musicalKey: string | null;
+  updatedAt: string | null;
+}
+
+/**
+ * Снимок bpm/тональности + updatedAt для одного трека — используется поллингом
+ * ре-анализа по требованию (`use-track-analysis`), по образцу `getGenreSuggestionsSnapshot`:
+ * готовность определяется по смене `updatedAt` (из `bpmKeyAnalyzedAt`, не из общего
+ * `trackAudio.updatedAt` — тот же бампает и джоба анализа жанра, что дало бы ложное
+ * «готово» у обоих поллингов при нажатии обеих кнопок подряд), а не по значению
+ * bpm/key (повторный анализ того же аудио детерминированным алгоритмом может дать
+ * тот же результат).
+ */
+export async function getAudioFeaturesSnapshot(trackId: string): Promise<AudioFeaturesSnapshot> {
+  const [row] = await db
+    .select({ bpm: trackAudio.bpm, musicalKey: trackAudio.musicalKey, bpmKeyAnalyzedAt: trackAudio.bpmKeyAnalyzedAt })
+    .from(trackAudio)
+    .where(eq(trackAudio.trackId, trackId))
+    .limit(1);
+  return {
+    bpm: row?.bpm ?? null,
+    musicalKey: row?.musicalKey ?? null,
+    updatedAt: row?.bpmKeyAnalyzedAt ? row.bpmKeyAnalyzedAt.toISOString() : null,
+  };
 }
 
 export async function trackExists(trackId: string): Promise<boolean> {

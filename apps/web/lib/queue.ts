@@ -102,9 +102,12 @@ class AnalyzeQueue {
     },
   });
 
-  // jobId = trackId — дедупликация при повторном нажатии кнопки
+  // deduplication.id = trackId — как у AnalyzeGenreQueue: фиксированный jobId
+  // остаётся занят и в completed/failed (removeOnComplete/Fail — по количеству,
+  // не сразу), повторный .add() с ним молча вернул бы старую джобу вместо новой.
+  // deduplication.id снимается по завершении/провале джобы.
   async add(data: AnalyzeJobData): Promise<void> {
-    await this.q.add('analyze-audio', data, { jobId: `analyze-${data.trackId}` });
+    await this.q.add('analyze-audio', data, { deduplication: { id: `analyze:${data.trackId}` } });
   }
 }
 

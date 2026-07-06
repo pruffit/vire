@@ -116,6 +116,11 @@ export const trackAudio = pgTable('track_audio', {
   // Автоопределение жанра (Essentia discogs-effnet) — топ-5 [{ genre, confidence }],
   // всегда сохраняется независимо от автоприменения в track_genres. См. docs/features/auto-genre.md.
   genreSuggestions: jsonb('genre_suggestions'),
+  // Раздельные метки готовности анализа по требованию (не общий updatedAt) — иначе
+  // поллинг BPM/key и поллинг жанра не различают, чья джоба завершилась, если обе
+  // кнопки нажаты подряд. См. docs/features/audio-analysis.md.
+  bpmKeyAnalyzedAt: timestamp('bpm_key_analyzed_at'),
+  genreAnalyzedAt: timestamp('genre_analyzed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

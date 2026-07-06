@@ -10,6 +10,7 @@ import { CreditsEditor } from '@/components/credits-editor';
 import { LyricsEditor } from '@/components/lyrics-editor';
 import { Check, TrackStatusBadge, fieldClass } from '@/components/ui-kit';
 import { NumberField } from '@/components/number-field';
+import { useTrackAnalysis } from '@/lib/use-track-analysis';
 import { titleRepeatsArtist } from '@/lib/title-hygiene';
 import { featLabel } from '@/lib/track-display';
 import { cn } from '@/lib/utils';
@@ -175,6 +176,14 @@ export function TrackManager({
     }
   }
 
+  // Результат ре-анализа BPM/тональности уже сохранён воркером в БД — только
+  // синхронизируем локальный стейт, PATCH не нужен.
+  function applyAnalysisResult(id: string, bpm: number | null, musicalKey: string | null) {
+    setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, bpm, musicalKey } : t)));
+    committed.current = committed.current.map((t) => (t.id === id ? { ...t, bpm, musicalKey } : t));
+    flashSaved(id);
+  }
+
   async function toggleFlag(id: string, flag: 'isExplicit' | 'isExclusive' | 'isWip', next: boolean) {
     setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, [flag]: next } : t)));
     markBusy(id, true);
@@ -227,6 +236,7 @@ export function TrackManager({
           onToggleExpanded={() => toggleExpanded(track.id)}
           onToggleFlag={(flag, next) => toggleFlag(track.id, flag, next)}
           onCommitField={(field, value) => commitField(track.id, field, value)}
+          onAnalysisResult={(bpm, musicalKey) => applyAnalysisResult(track.id, bpm, musicalKey)}
           onRemove={() => remove(track.id)}
         />
       ))}
@@ -246,6 +256,7 @@ function TrackRow({
   onToggleExpanded,
   onToggleFlag,
   onCommitField,
+  onAnalysisResult,
   onRemove,
 }: {
   track: ManagedTrack;
@@ -259,6 +270,7 @@ function TrackRow({
   onToggleExpanded: () => void;
   onToggleFlag: (flag: 'isExplicit' | 'isExclusive' | 'isWip', next: boolean) => void;
   onCommitField: (field: 'bpm' | 'musicalKey' | 'version', value: number | string | null) => void;
+  onAnalysisResult: (bpm: number | null, musicalKey: string | null) => void;
   onRemove: () => void;
 }) {
   const controls = useDragControls();
@@ -267,6 +279,28 @@ function TrackRow({
   const [version, setVersion] = useState(track.version ?? '');
   const titleWarn = artistName ? titleRepeatsArtist(track.title, artistName) : false;
   const feat = featLabel(track.credits);
+
+  const { status: audioAnalysisStatus, start: startAudioAnalysis } = useTrackAnalysis<{
+    bpm: number | null;
+    musicalKey: string | null;
+    updatedAt: string | null;
+  }>(
+    {
+      analyze: `/api/v1/dashboard/tracks/${track.id}/analyze`,
+      snapshot: `/api/v1/dashboard/tracks/${track.id}/audio-features`,
+    },
+    (snapshot) => {
+      setBpm(snapshot.bpm);
+      setKey(snapshot.musicalKey ?? '');
+      onAnalysisResult(snapshot.bpm, snapshot.musicalKey);
+      toast('BPM и тональность обновлены');
+    },
+    {
+      start: 'Не удалось запустить анализ BPM/тональности',
+      timeout: 'Анализ BPM/тональности занял слишком много времени — попробуй позже',
+    },
+  );
+  const analyzingAudio = audioAnalysisStatus === 'running';
 
   function commitBpm() {
     if (bpm === track.bpm) return;
@@ -441,6 +475,16 @@ function TrackRow({
                     className="w-20 bg-transparent border border-foreground/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-foreground/30 disabled:opacity-50"
                   />
                 </label>
+                <button
+                  type="button"
+                  onClick={startAudioAnalysis}
+                  disabled={busy || analyzingAudio}
+                  aria-label="Переанализировать BPM/тональность"
+                  title="Переанализировать BPM/тональность"
+                  className="inline-flex items-center justify-center size-6 rounded-full text-foreground/30 transition-colors hover:bg-foreground/10 hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Icon name="refresh-cw" size={12} className={cn(analyzingAudio && 'animate-spin')} />
+                </button>
               </div>
 
               <label className="flex flex-col gap-1.5">
