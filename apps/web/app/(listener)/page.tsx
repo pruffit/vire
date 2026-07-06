@@ -111,7 +111,7 @@ export default async function HomePage() {
 
       {!!userId && feed.length > 0 && (
         <Section title="Новое у подписок">
-          <ScrollRow className="flex gap-5 -mx-1 px-1 snap-x">
+          <ScrollRow bleedClassName="-mx-1" className="flex gap-5 px-1 snap-x">
             {feed.slice(0, 12).map((r) => (
               <div key={r.id} className="shrink-0 w-40 snap-start">
                 <ReleaseQuickLook release={r} />
@@ -129,7 +129,7 @@ export default async function HomePage() {
         <Section title="Свежие релизы" href="/releases" hrefLabel="Посмотреть все">
           {/* -my/py — вертикальный выпуск: overflow-x-auto клипает и по Y,
               иначе hover-тень/подъём карточек срезаются по кромке */}
-          <ScrollRow className="flex gap-5 -mx-1 px-1 -my-2 py-2 snap-x">
+          <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
             {rest.map((r) => (
               <div key={r.id} className="shrink-0 w-40 snap-start">
                 <ReleaseQuickLook release={r} />
@@ -151,7 +151,7 @@ export default async function HomePage() {
 
       {allPlaylists.length > 0 && (
         <Section title="Подборки">
-          <ScrollRow className="flex gap-5 -mx-1 px-1 -my-2 py-2 snap-x">
+          <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
             {allPlaylists.map((p) => (
               <div key={p.id} className="shrink-0 w-40 snap-start">
                 <EditorialPlaylistCard playlist={p} liked={likedPlaylistIds.includes(p.id)} />

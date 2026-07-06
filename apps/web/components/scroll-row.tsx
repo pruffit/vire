@@ -9,13 +9,13 @@ import { Icon } from '@/components/icon';
 // слой внутри вертикальной скролл-области дрожит и перерастеризуется на каждый
 // кадр скролла (см. память проекта scroll-jitter). Скрытие — display, не opacity.
 // Кнопка — полновысотная краевая зона с градиентом-шторкой от фона страницы,
-// видна при наведении на ленту или фокусе внутри неё (hover-устройства).
+// на hover-устройствах видна всегда, пока в её сторону есть куда листать.
 // z-50 + isolate на обёртке: у карточек внутри лент есть свои z-индексы (бейджи
 // до z-40) — зона обязана рисоваться поверх них, а isolate не выпускает z-50 наружу.
 // Непортальные абсолютные поповеры (add-to-playlist и т.п.) внутрь ленты не класть:
 // isolate запрёт их под зонами, а overflow контейнера обрежет — только портал в body.
 const EDGE_BUTTON =
-  'absolute inset-y-0 z-50 hidden items-center text-foreground/70 transition-colors hover:text-foreground pointer-fine:group-hover/scroll-row:flex pointer-fine:group-focus-within/scroll-row:flex';
+  'absolute inset-y-0 z-50 hidden items-center text-foreground/70 transition-colors hover:text-foreground pointer-fine:flex';
 
 // Ширина зоны: узким пилюлям (чипы) w-14 закрывал бы целый элемент.
 const EDGE_WIDTH = { sm: 'w-10', md: 'w-14' } as const;
@@ -33,14 +33,20 @@ function syncSnapPadding(el: HTMLDivElement) {
  * Горизонтальная лента с прокруткой — обёртка над `overflow-x-auto no-scrollbar`.
  * Добавляет кнопки-шевроны (только hover-устройства, скрыты когда переполнения
  * в эту сторону нет) — на тач лента и так листается свайпом.
+ *
+ * Отрицательные маргины (выпуск под hover-тени/фокус-кольца) передавай в
+ * `bleedClassName` — они должны жить на обёртке, чтобы краевые зоны стояли
+ * по настоящему визуальному краю ленты, а не внутри него.
  */
 export function ScrollRow({
   children,
   className,
+  bleedClassName,
   edgeZone = 'md',
 }: {
   children: React.ReactNode;
   className?: string;
+  bleedClassName?: string;
   edgeZone?: keyof typeof EDGE_WIDTH;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -103,7 +109,7 @@ export function ScrollRow({
   }
 
   return (
-    <div className="group/scroll-row relative isolate">
+    <div className={cn('relative isolate', bleedClassName)}>
       {overflow && !atStart && (
         <button
           type="button"

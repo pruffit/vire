@@ -45,7 +45,7 @@ export function WaveChips({ items }: { items: WaveChipItem[] }) {
   }
 
   return (
-    <ScrollRow className="flex gap-2 -mx-1 px-1" edgeZone="sm">
+    <ScrollRow bleedClassName="-mx-1" className="flex gap-2 px-1" edgeZone="sm">
       {items.map((item) => {
         const isActive =
           !!waveSeed && (item.kind === 'mood' ? waveSeed.mood === item.key : waveSeed.genre === item.key);
@@ -57,14 +57,15 @@ export function WaveChips({ items }: { items: WaveChipItem[] }) {
             onClick={() => start(item)}
             disabled={loading !== null}
             whileTap={{ scale: 0.94 }}
-            whileHover={{ scale: 1.04 }}
             transition={spring.snappy}
             aria-pressed={isActive}
             className={cn(
+              // hover-scale здесь запрещён: transform растеризует слой и 1px-бордер
+              // пилюли даёт светлые вертикали на торцах — подсвечиваем цветом
               'shrink-0 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-sm transition-colors disabled:opacity-50',
               isActive
                 ? 'border-primary bg-primary/15 text-primary'
-                : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30',
+                : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:bg-foreground/5',
             )}
           >
             {isLoading ? (
