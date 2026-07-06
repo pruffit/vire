@@ -48,6 +48,7 @@ export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
   'Electronic---Acid Jazz': 'FUNK',
   'Electronic---Ambient': 'AMBIENT',
   'Electronic---Bassline': 'GARAGE',
+  'Electronic---Beatdown': 'HOUSE',
   'Electronic---Berlin-School': 'AMBIENT',
   'Electronic---Big Beat': 'BREAKBEAT',
   'Electronic---Bleep': 'TECHNO',
@@ -56,12 +57,15 @@ export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
   'Electronic---Breaks': 'BREAKBEAT',
   'Electronic---Broken Beat': 'BREAKBEAT',
   'Electronic---Chillwave': 'DOWNTEMPO',
+  'Electronic---Chiptune': 'ELECTRONIC',
   'Electronic---Dance-pop': 'POP',
   'Electronic---Dark Ambient': 'AMBIENT',
   'Electronic---Darkwave': 'SYNTHPOP',
   'Electronic---Deep House': 'HOUSE',
   'Electronic---Deep Techno': 'TECHNO',
   'Electronic---Disco': 'FUNK',
+  'Electronic---Disco Polo': 'POP',
+  'Electronic---Donk': 'HARDSTYLE',
   'Electronic---Downtempo': 'DOWNTEMPO',
   'Electronic---Drone': 'DRONE',
   'Electronic---Drum n Bass': 'DNB',
@@ -82,6 +86,7 @@ export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
   'Electronic---Future Jazz': 'FUSION',
   'Electronic---Gabber': 'HARDSTYLE',
   'Electronic---Garage House': 'HOUSE',
+  'Electronic---Ghetto': 'HOUSE',
   'Electronic---Ghetto House': 'HOUSE',
   'Electronic---Glitch': 'IDM',
   'Electronic---Goa Trance': 'TRANCE',
@@ -189,6 +194,7 @@ export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
   'Funk / Soul---UK Street Soul': 'SOUL',
 
   // Hip Hop
+  'Hip Hop---Bass Music': 'HIPHOP',
   'Hip Hop---Boom Bap': 'BOOMBAP',
   'Hip Hop---Bounce': 'HIPHOP',
   'Hip Hop---Britcore': 'HIPHOP',
@@ -238,6 +244,7 @@ export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
   'Jazz---Ragtime': 'JAZZ',
   'Jazz---Smooth Jazz': 'JAZZ',
   'Jazz---Soul-Jazz': 'JAZZ',
+  'Jazz---Space-Age': 'JAZZ',
   'Jazz---Swing': 'SWING',
 
   // Latin — сведены к WORLD (нет отдельного бакета в нашем enum)
@@ -381,7 +388,7 @@ export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
 
   // Stage & Screen
   'Stage & Screen---Musical': 'SOUNDTRACK',
-  'Stage & Screen---Score': 'SOUNDTRACK',
+  'Stage & Screen---Score': 'CINEMATIC',
   'Stage & Screen---Soundtrack': 'SOUNDTRACK',
   'Stage & Screen---Theme': 'SOUNDTRACK',
 };
@@ -397,17 +404,25 @@ for (const label of Object.keys(DISCOGS_TO_GENRE)) {
   }
 }
 
+// Зонтичные жанры (WORLD, POP, HIPHOP…) собирают по 20-55 меток Discogs, точные
+// (TRAP, SHOEGAZE, LOFI…) — по одной-две. При чистой сумме вероятностей диффузная
+// масса зонтика перевешивает один уверенный точный лейбл. Смешиваем max (сила
+// лучшей метки жанра) с остатком суммы, взятым с весом ниже единицы — остаток
+// всё ещё повышает жанр, но не позволяет числу меток решать исход.
+const SUM_TAIL_WEIGHT = 0.3;
+
 /**
  * Агрегирует сырые предсказания модели (400 меток Discogs) в топ-5 наших жанров.
- * Confidence суммируется по всем discogs-меткам, попавшим в один наш жанр, затем
- * нормализуется на сумму по ВСЕМ замэпленным меткам (не по всем 400) — так остаток
- * массы, ушедший в отброшенные метки, не занижает уверенность искусственно.
+ * Score жанра = max его меток + SUM_TAIL_WEIGHT * (сумма остальных меток).
+ * Confidence — score жанра, нормализованный на сумму score по ВСЕМ замэпленным
+ * жанрам (не по всем 400 меток) — так остаток массы, ушедший в отброшенные
+ * метки, не занижает уверенность искусственно.
  */
 export function mapDiscogsPredictionsToGenres(
   probabilities: ArrayLike<number>,
 ): GenreSuggestion[] {
   const sums = new Map<TrackGenre, number>();
-  let total = 0;
+  const maxes = new Map<TrackGenre, number>();
 
   for (let i = 0; i < DISCOGS_400_LABELS.length && i < probabilities.length; i++) {
     const genre = DISCOGS_TO_GENRE[DISCOGS_400_LABELS[i]];
@@ -415,13 +430,22 @@ export function mapDiscogsPredictionsToGenres(
     const p = probabilities[i];
     if (p <= 0) continue;
     sums.set(genre, (sums.get(genre) ?? 0) + p);
-    total += p;
+    if (p > (maxes.get(genre) ?? 0)) maxes.set(genre, p);
   }
 
-  if (total <= 0) return [];
+  const scores = new Map<TrackGenre, number>();
+  let totalScore = 0;
+  for (const [genre, sum] of sums) {
+    const max = maxes.get(genre) ?? 0;
+    const score = max + SUM_TAIL_WEIGHT * (sum - max);
+    scores.set(genre, score);
+    totalScore += score;
+  }
 
-  return Array.from(sums.entries())
-    .map(([genre, sum]) => ({ genre, confidence: sum / total }))
+  if (totalScore <= 0) return [];
+
+  return Array.from(scores.entries())
+    .map(([genre, score]) => ({ genre, confidence: score / totalScore }))
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 5);
 }
