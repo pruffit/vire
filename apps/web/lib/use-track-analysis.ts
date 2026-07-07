@@ -16,6 +16,7 @@ interface Endpoints {
 interface ErrorMessages {
   start: string;
   timeout: string;
+  pending?: string;
   success?: string;
 }
 
@@ -27,6 +28,12 @@ interface ErrorMessages {
  * Готовность определяем по смене `updatedAt` в снимке (не по значению): при повторном
  * анализе результат может совпасть с предыдущим (детерминированная модель) —
  * сравнение по значению ложно решило бы, что анализ не завершился.
+ *
+ * Единый дедлайн + AbortController покрывают ВЕСЬ прогон (baseline-GET → POST →
+ * поллинг). Раньше таймаут стоял только вокруг поллинга, а начальные запросы висели
+ * без границы: зависший POST/GET (холодная компиляция роута, недоступный сервер)
+ * крутил спиннер бесконечно без ошибки. Теперь любой стопор упирается в дедлайн и
+ * честно завершается ошибкой.
  */
 export function useTrackAnalysis<TSnapshot extends { updatedAt: string | null }>(
   endpoints: Endpoints,
@@ -49,57 +56,55 @@ export function useTrackAnalysis<TSnapshot extends { updatedAt: string | null }>
     if (runningRef.current) return;
     runningRef.current = true;
     setStatus('running');
+    if (errorMessages.pending) toast(errorMessages.pending);
 
-    const baseline = await fetchSnapshot<TSnapshot>(endpoints.snapshot);
-    if (disposedRef.current) return;
+    const controller = new AbortController();
+    // const-холдер вместо `let interval` — finish() ссылается на таймер до его
+    // создания (forward-ref из дедлайна, который может сработать в фазе baseline).
+    const timers: { poll?: ReturnType<typeof setInterval> } = {};
+    let finished = false;
 
-    const res = await fetch(endpoints.analyze, { method: 'POST' }).catch(() => null);
-    if (disposedRef.current) return;
-    if (!res?.ok) {
+    // Идемпотентное завершение прогона: чистит интервал+дедлайн, снимает running,
+    // отменяет висящие fetch'и. setState/onResult — только если компонент жив.
+    const finish = (next: 'done' | 'error', snapshot?: TSnapshot, message?: string) => {
+      if (finished) return;
+      finished = true;
       runningRef.current = false;
-      setStatus('error');
-      toast.error(errorMessages.start);
-      return;
-    }
+      controller.abort();
+      if (timers.poll) clearInterval(timers.poll);
+      clearTimeout(deadline);
+      if (disposedRef.current) return;
+      setStatus(next);
+      if (next === 'done' && snapshot) onResult(snapshot);
+      if (message) (next === 'error' ? toast.error : toast)(message);
+    };
 
-    let stopped = false;
-    const interval = setInterval(async () => {
-      if (stopped) return;
-      const snapshot = await fetchSnapshot<TSnapshot>(endpoints.snapshot);
-      if (stopped) return;
-      if (!snapshot || snapshot.updatedAt === (baseline?.updatedAt ?? null)) return;
-      stop();
-      setStatus('done');
-      onResult(snapshot);
-      if (errorMessages.success) toast(errorMessages.success);
+    const deadline = setTimeout(() => finish('error', undefined, errorMessages.timeout), TIMEOUT_MS);
+    stopRef.current = () => finish('error');
+
+    const baseline = await fetchSnapshot<TSnapshot>(endpoints.snapshot, controller.signal);
+    if (finished) return;
+    if (disposedRef.current) return finish('error');
+
+    const res = await fetch(endpoints.analyze, { method: 'POST', signal: controller.signal }).catch(() => null);
+    if (finished) return;
+    if (disposedRef.current) return finish('error');
+    if (!res?.ok) return finish('error', undefined, errorMessages.start);
+
+    const baselineUpdatedAt = baseline?.updatedAt ?? null;
+    timers.poll = setInterval(async () => {
+      const snapshot = await fetchSnapshot<TSnapshot>(endpoints.snapshot, controller.signal);
+      if (finished) return;
+      if (!snapshot || snapshot.updatedAt === baselineUpdatedAt) return;
+      finish('done', snapshot, errorMessages.success);
     }, POLL_INTERVAL_MS);
-
-    const timeout = setTimeout(() => {
-      if (stopped) return;
-      stop();
-      setStatus('error');
-      toast.error(errorMessages.timeout);
-    }, TIMEOUT_MS);
-
-    function stop() {
-      stopped = true;
-      runningRef.current = false;
-      clearInterval(interval);
-      clearTimeout(timeout);
-    }
-    stopRef.current = stop;
-
-    // Гонка анмаунта: компонент мог размонтироваться во время await'ов выше, до того
-    // как stopRef успел указать на этот stop() — интервал/таймаут иначе осиротеют
-    // на весь TIMEOUT_MS (2 мин), продолжая дёргать fetch с размонтированного хука.
-    if (disposedRef.current) stop();
   }, [endpoints, onResult, errorMessages]);
 
   return { status, start };
 }
 
-async function fetchSnapshot<T>(url: string): Promise<T | null> {
-  const res = await fetch(url).catch(() => null);
+async function fetchSnapshot<T>(url: string, signal?: AbortSignal): Promise<T | null> {
+  const res = await fetch(url, { signal }).catch(() => null);
   if (!res?.ok) return null;
   return (await res.json().catch(() => null)) as T | null;
 }

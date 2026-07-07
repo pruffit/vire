@@ -20,6 +20,7 @@ interface Snapshot extends GenreAnalysisResult {
 }
 
 const ERROR_MESSAGES = {
+  pending: 'Определяю жанр…',
   start: 'Не удалось запустить анализ жанра',
   timeout: 'Анализ жанра занял слишком много времени — попробуй позже',
   success: 'Жанр определён',
