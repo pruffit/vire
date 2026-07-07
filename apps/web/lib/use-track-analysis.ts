@@ -5,7 +5,7 @@ import { toast } from '@/components/toast';
 
 export type TrackAnalysisStatus = 'idle' | 'running' | 'done' | 'error';
 
-const POLL_INTERVAL_MS = 4_000;
+const POLL_INTERVAL_MS = 2_000;
 const TIMEOUT_MS = 2 * 60 * 1_000;
 
 interface Endpoints {
@@ -16,6 +16,7 @@ interface Endpoints {
 interface ErrorMessages {
   start: string;
   timeout: string;
+  success?: string;
 }
 
 /**
@@ -70,6 +71,7 @@ export function useTrackAnalysis<TSnapshot extends { updatedAt: string | null }>
       stop();
       setStatus('done');
       onResult(snapshot);
+      if (errorMessages.success) toast(errorMessages.success);
     }, POLL_INTERVAL_MS);
 
     const timeout = setTimeout(() => {

@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS, MAX_TRACK_GENRES, type Genre } from '@/lib/genres';
-import { useGenreAnalysis, type GenreSuggestion } from '@/lib/use-genre-analysis';
+import { useGenreAnalysis, type GenreAnalysisResult, type GenreSuggestion } from '@/lib/use-genre-analysis';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
 
@@ -19,12 +19,27 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
   const [query, setQuery] = useState('');
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
+  // Воркер автопроставляет топ-2 жанра, если у трека их не было — синхронизируем
+  // выбор с проставленным в БД, чтобы результат был виден и не затёрся при «Сохранить».
+  const handleAnalysis = useCallback((result: GenreAnalysisResult) => {
+    setSuggestions(result.suggestions);
+    if (result.appliedGenres.length === 0) return;
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const g of result.appliedGenres) {
+        if (next.size >= MAX_TRACK_GENRES) break;
+        next.add(g);
+      }
+      return next;
+    });
+    setSaved(false);
+  }, []);
   const { status: analysisStatus, start: startAnalysis } = useGenreAnalysis(
     {
       analyze: `/api/v1/dashboard/tracks/${trackId}/analyze-genre`,
       suggestions: `/api/v1/dashboard/tracks/${trackId}/genre-suggestions`,
     },
-    setSuggestions,
+    handleAnalysis,
   );
   const analyzing = analysisStatus === 'running';
 

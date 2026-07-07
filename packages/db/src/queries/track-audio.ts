@@ -1,6 +1,7 @@
 import { eq, inArray, isNull, or, and, isNotNull, lte, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { trackAudio, tracks, releases, artistProfiles } from '../schema';
+import { trackAudio, tracks, releases, artistProfiles, trackGenres } from '../schema';
+import type { TrackGenre } from './track-genres';
 
 export interface TrackAudioData {
   hlsManifestKey: string;
@@ -193,25 +194,35 @@ export async function getGenreSuggestionsForTracks(
 export interface GenreSuggestionsSnapshot {
   suggestions: GenreSuggestionRow[];
   updatedAt: string | null;
+  // Жанры, реально проставленные треку (track_genres) на момент снимка. Воркер
+  // автопроставляет топ-2 предложения, если у трека их не было (decideAutoApplyGenres),
+  // — поллинг возвращает их, чтобы UI отразил результат «Определить жанр» в
+  // выбранных жанрах, а не только в подсказках (иначе автопростановка невидима, а
+  // последующее сохранение формы затирает её). См. docs/features/auto-genre.md.
+  appliedGenres: TrackGenre[];
 }
 
 /**
- * Снимок suggestions + updatedAt для одного трека — используется поллингом
- * анализа по требованию (`use-genre-analysis`): updatedAt (из `genreAnalyzedAt`,
- * не из общего `trackAudio.updatedAt` — тот же бампает и джоба BPM/тональности,
- * см. `getAudioFeaturesSnapshot`) меняется даже если новые suggestions совпали
- * с предыдущими (детерминированная модель), а само появление данных — нет, если
- * трек уже анализировался раньше.
+ * Снимок suggestions + appliedGenres + updatedAt для одного трека — используется
+ * поллингом анализа по требованию (`use-genre-analysis`): updatedAt (из
+ * `genreAnalyzedAt`, не из общего `trackAudio.updatedAt` — тот же бампает и джоба
+ * BPM/тональности, см. `getAudioFeaturesSnapshot`) меняется даже если новые
+ * suggestions совпали с предыдущими (детерминированная модель), а само появление
+ * данных — нет, если трек уже анализировался раньше.
  */
 export async function getGenreSuggestionsSnapshot(trackId: string): Promise<GenreSuggestionsSnapshot> {
-  const [row] = await db
-    .select({ genreSuggestions: trackAudio.genreSuggestions, genreAnalyzedAt: trackAudio.genreAnalyzedAt })
-    .from(trackAudio)
-    .where(eq(trackAudio.trackId, trackId))
-    .limit(1);
+  const [[row], genreRows] = await Promise.all([
+    db
+      .select({ genreSuggestions: trackAudio.genreSuggestions, genreAnalyzedAt: trackAudio.genreAnalyzedAt })
+      .from(trackAudio)
+      .where(eq(trackAudio.trackId, trackId))
+      .limit(1),
+    db.select({ genre: trackGenres.genre }).from(trackGenres).where(eq(trackGenres.trackId, trackId)),
+  ]);
   return {
     suggestions: Array.isArray(row?.genreSuggestions) ? (row.genreSuggestions as GenreSuggestionRow[]) : [],
     updatedAt: row?.genreAnalyzedAt ? row.genreAnalyzedAt.toISOString() : null,
+    appliedGenres: genreRows.map((r) => r.genre),
   };
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { actionAdminUpdateTrack } from '../../../actions';
 import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS, MAX_TRACK_GENRES, type Genre } from '@/lib/genres';
@@ -9,7 +9,7 @@ import { fieldClass } from '@/components/admin/ui';
 import { Textarea } from '@/components/ui-kit';
 import { NumberField } from '@/components/number-field';
 import { Icon } from '@/components/icon';
-import { useGenreAnalysis, type GenreSuggestion } from '@/lib/use-genre-analysis';
+import { useGenreAnalysis, type GenreAnalysisResult, type GenreSuggestion } from '@/lib/use-genre-analysis';
 import { useTrackAnalysis } from '@/lib/use-track-analysis';
 import { toast } from '@/components/toast';
 import { cn } from '@/lib/utils';
@@ -43,12 +43,26 @@ export function TrackEditForm({
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [f, setF] = useState(initial);
   const [genreSuggestions, setGenreSuggestions] = useState(initialGenreSuggestions);
+  // Воркер автопроставляет топ-2 жанра, если у трека их не было — отражаем это в
+  // f.genres, чтобы результат был виден и не затёрся при сохранении формы.
+  const handleGenreAnalysis = useCallback((result: GenreAnalysisResult) => {
+    setGenreSuggestions(result.suggestions);
+    if (result.appliedGenres.length === 0) return;
+    setF((p) => {
+      const next = [...p.genres];
+      for (const g of result.appliedGenres) {
+        if (next.length >= MAX_TRACK_GENRES) break;
+        if (!next.includes(g)) next.push(g);
+      }
+      return { ...p, genres: next };
+    });
+  }, []);
   const { status: analysisStatus, start: startAnalysis } = useGenreAnalysis(
     {
       analyze: `/api/v1/admin/tracks/${trackId}/analyze-genre`,
       suggestions: `/api/v1/admin/tracks/${trackId}/genre-suggestions`,
     },
-    setGenreSuggestions,
+    handleGenreAnalysis,
   );
   const analyzing = analysisStatus === 'running';
 
