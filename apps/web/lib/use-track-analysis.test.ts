@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
@@ -68,6 +69,42 @@ describe('useTrackAnalysis', () => {
     expect(result.current.status).toBe('done');
     expect(onResult).toHaveBeenCalledWith({ updatedAt: '2026-01-01T00:00:00.000Z' });
     expect(toast).toHaveBeenCalledWith('ok');
+  });
+
+  it('под StrictMode (mount→unmount→remount) POST всё равно уходит и анализ доходит до done', async () => {
+    // Регрессия: cleanup эффекта ставит disposedRef=true; без сброса в setup после
+    // strict-mode ремаунта он залипает true, start() молча не шлёт POST — вечный
+    // спиннер без ошибки (ровно баг прода). renderHook с StrictMode-обёрткой даёт
+    // тот же mount→unmount→remount, что и dev.
+    let getCount = 0;
+    let postCount = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, opts?: { method?: string }) => {
+        if (opts?.method === 'POST') {
+          postCount += 1;
+          return Promise.resolve({ ok: true });
+        }
+        getCount += 1;
+        const updatedAt = getCount === 1 ? null : '2026-01-01T00:00:00.000Z';
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ updatedAt }) });
+      }),
+    );
+    const onResult = vi.fn();
+    const { result } = renderHook(() => useTrackAnalysis(ENDPOINTS, onResult, MESSAGES), {
+      wrapper: StrictMode,
+    });
+
+    act(() => {
+      void result.current.start();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(postCount).toBeGreaterThan(0);
+    expect(result.current.status).toBe('done');
+    expect(onResult).toHaveBeenCalledWith({ updatedAt: '2026-01-01T00:00:00.000Z' });
   });
 
   it('ошибка запуска, если POST вернул не-ok', async () => {

@@ -45,9 +45,22 @@ export function useTrackAnalysis<TSnapshot extends { updatedAt: string | null }>
   const runningRef = useRef(false);
   const disposedRef = useRef(false);
 
-  useEffect(() => () => {
-    disposedRef.current = true;
-    stopRef.current();
+  // disposedRef сбрасываем в setup, не только ставим в cleanup: в dev React
+  // StrictMode/Fast Refresh монтирует mount→unmount→remount, cleanup выставляет
+  // disposedRef=true, и без сброса на ремаунте он таким и остаётся — тогда start()
+  // после baseline-GET уходит в `if (disposedRef.current) return finish(...)` и
+  // молча не шлёт POST (спиннер навсегда, без ошибки). Сброс в setup это чинит.
+  // disposedRef сбрасываем в setup, не только ставим в cleanup: в dev React
+  // StrictMode/Fast Refresh монтирует mount→unmount→remount, cleanup выставляет
+  // disposedRef=true, и без сброса на ремаунте он таким и остаётся — тогда start()
+  // после baseline-GET уходит в `if (disposedRef.current) return finish(...)` и
+  // молча не шлёт POST (спиннер навсегда, без ошибки). Сброс в setup это чинит.
+  useEffect(() => {
+    disposedRef.current = false;
+    return () => {
+      disposedRef.current = true;
+      stopRef.current();
+    };
   }, []);
 
   const start = useCallback(async () => {
