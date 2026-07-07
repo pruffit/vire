@@ -1,3 +1,4 @@
+import './ffmpeg-config.js'; // side-effect: гарантирует путь к ffmpeg до декода (не зависим от порядка импортов)
 import ffmpeg from 'fluent-ffmpeg';
 
 export interface AudioFeatures {
