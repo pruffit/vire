@@ -8,6 +8,7 @@ import { ALL_GENRES, type ReleaseType, type Genre, type UpdateReleaseInput, type
 import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
 import { transcodeQueue } from '@/lib/queue';
 import { parseLrc } from '@/lib/lrc';
+import { sanitizeCredits, type TrackCredit } from '@/lib/upload';
 
 const RELEASE_TYPES: ReleaseType[] = ['ALBUM', 'EP', 'SINGLE'];
 
@@ -220,9 +221,9 @@ export async function actionAdminUpdateRelease(
 export async function actionAdminUpdateTrack(
   trackId: string,
   input: {
-    title: string; trackNumber: number; isExplicit: boolean; isExclusive: boolean;
+    title: string; version: string | null; trackNumber: number; isExplicit: boolean; isExclusive: boolean;
     isWip: boolean; bpm: number | null; musicalKey: string | null; moods: string[]; genres: string[];
-    lyrics: string | null;
+    credits: TrackCredit[]; lyrics: string | null;
   },
 ): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
@@ -232,17 +233,20 @@ export async function actionAdminUpdateTrack(
   if (!Number.isInteger(input.trackNumber) || input.trackNumber < 1) return { error: 'Неверный номер' };
   if (input.bpm != null && (!Number.isInteger(input.bpm) || input.bpm < 20 || input.bpm > 500)) return { error: 'BPM: 20–500' };
   if (typeof input.lyrics === 'string' && input.lyrics.length > 20000) return { error: 'Текст слишком длинный' };
+  const version = input.version?.trim() ? input.version.trim().slice(0, 80) : null;
   const moods = (input.moods ?? []).filter((m) => (ALL_MOODS as string[]).includes(m)).slice(0, 5);
   const genres = (input.genres ?? []).filter((g) => (ALL_TRACK_GENRES as string[]).includes(g)).slice(0, 3);
   const parsedLyrics = typeof input.lyrics === 'string' && input.lyrics.trim() ? parseLrc(input.lyrics) : null;
   const patch: UpdateTrackParams = {
     title,
+    version,
     trackNumber: input.trackNumber,
     isExplicit: !!input.isExplicit,
     isExclusive: !!input.isExclusive,
     isWip: !!input.isWip,
     bpm: input.bpm,
     musicalKey: input.musicalKey?.trim() ? input.musicalKey.trim().slice(0, 20) : null,
+    credits: sanitizeCredits(input.credits),
     lyrics: parsedLyrics && parsedLyrics.length > 0 ? parsedLyrics : null,
   };
   await new DrizzleTrackRepository(db).update(trackId, patch);

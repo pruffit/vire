@@ -27,6 +27,7 @@ export default async function AdminTrackEditPage({ params }: { params: Promise<{
         trackId={track.id}
         initial={{
           title: track.title,
+          version: track.version ?? '',
           trackNumber: track.trackNumber,
           isExplicit: track.isExplicit,
           isExclusive: track.isExclusive,
@@ -35,6 +36,7 @@ export default async function AdminTrackEditPage({ params }: { params: Promise<{
           musicalKey: m.musicalKey ?? '',
           moods: moods as string[],
           genres: genres as string[],
+          credits: track.credits,
           lyrics: serializeLrc(track.lyrics),
         }}
         genreSuggestions={(genreSuggestionsMap[id] ?? []) as { genre: Genre; confidence: number }[]}

@@ -8,6 +8,8 @@ import { ALL_MOODS, MOOD_LABELS } from '@/lib/moods';
 import { fieldClass } from '@/components/admin/ui';
 import { Textarea } from '@/components/ui-kit';
 import { NumberField } from '@/components/number-field';
+import { CreditsEditor } from '@/components/credits-editor';
+import type { TrackCredit } from '@/lib/upload';
 import { Icon } from '@/components/icon';
 import { useGenreAnalysis, type GenreAnalysisResult, type GenreSuggestion } from '@/lib/use-genre-analysis';
 import { useTrackAnalysis } from '@/lib/use-track-analysis';
@@ -16,6 +18,7 @@ import { cn } from '@/lib/utils';
 
 interface Initial {
   title: string;
+  version: string;
   trackNumber: number;
   isExplicit: boolean;
   isExclusive: boolean;
@@ -24,6 +27,7 @@ interface Initial {
   musicalKey: string;
   moods: string[];
   genres: string[];
+  credits: TrackCredit[];
   lyrics: string; // LRC-текст (`[mm:ss.xx]строка`) или простой текст
 }
 
@@ -148,6 +152,7 @@ export function TrackEditForm({
     start(async () => {
       const res = await actionAdminUpdateTrack(trackId, {
         title: f.title,
+        version: f.version || null,
         trackNumber: f.trackNumber,
         isExplicit: f.isExplicit,
         isExclusive: f.isExclusive,
@@ -156,6 +161,7 @@ export function TrackEditForm({
         musicalKey: f.musicalKey || null,
         moods: f.moods,
         genres: f.genres,
+        credits: f.credits,
         lyrics: f.lyrics || null,
       });
       if (res.error) setMsg({ text: res.error, ok: false });
@@ -227,6 +233,16 @@ export function TrackEditForm({
         <Icon name="refresh-cw" size={12} className={cn(analyzingAudio && 'animate-spin')} />
         {analyzingAudio ? 'Анализирую…' : 'Переанализировать BPM/тональность'}
       </button>
+
+      <Field label="Версия (необязательно)">
+        <input
+          className={inputCls}
+          value={f.version}
+          onChange={(e) => set('version', e.target.value)}
+          maxLength={80}
+          placeholder="Radio Edit · Slowed + Reverb · Sped Up · Acoustic…"
+        />
+      </Field>
 
       <Field label={`Настроения (${f.moods.length}/5)`}>
         <div className="flex flex-wrap gap-2">
@@ -314,6 +330,10 @@ export function TrackEditForm({
         ) : (
           <p className="text-xs text-foreground/30">Пока нет предсказаний — нажми «Проанализировать».</p>
         )}
+      </div>
+
+      <div className="border-t border-foreground/[0.06] pt-4">
+        <CreditsEditor initial={initial.credits} onChange={(c) => set('credits', c)} />
       </div>
 
       <Field label="Текст (LRC: [mm:ss.xx]строка — для подсветки в плеере; или простой текст)">

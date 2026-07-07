@@ -19,19 +19,24 @@ const ROLES: { value: ContributorRole; label: string }[] = [
 const MAX = 20;
 
 /**
- * Редактор кредитов трека — имя + роль, с явным сохранением (PATCH /tracks/[id]).
+ * Редактор кредитов трека — имя + роль. Два режима:
+ *   • неуправляемый (`trackId`) — своя кнопка «Сохранить» → PATCH /tracks/[id]
+ *     (дашборд артиста, каждое поле персистится отдельно);
+ *   • управляемый (`onChange`) — состояние поднимается наверх, кнопки нет:
+ *     родитель сам сохраняет батчем (админ-форма трека, один общий «Сохранить»).
  * Роль выбирается пилюлями (как жанры/настроения) — без нативного селекта,
  * удобнее на телефоне. При пустом списке предлагаем добавить артиста исполнителем.
  */
-export function CreditsEditor({
-  trackId,
-  initial,
-  artistName,
-}: {
-  trackId: string;
+type CreditsEditorProps = {
   initial: TrackCredit[];
   artistName?: string;
-}) {
+} & (
+  | { trackId: string; onChange?: undefined }
+  | { onChange: (credits: TrackCredit[]) => void; trackId?: undefined }
+);
+
+export function CreditsEditor({ trackId, initial, artistName, onChange }: CreditsEditorProps) {
+  const controlled = onChange !== undefined;
   const nextId = useRef(initial.length);
   const [credits, setCredits] = useState<(TrackCredit & { _id: number })[]>(() =>
     initial.map((c, i) => ({ ...c, _id: i })),
@@ -39,24 +44,28 @@ export function CreditsEditor({
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  function touch() { setSaved(false); }
+  // Управляемый режим — лифтим состояние наверх сразу; неуправляемый — гасим
+  // отметку «сохранено» (изменения ещё не отправлены).
+  function apply(next: (TrackCredit & { _id: number })[]) {
+    setCredits(next);
+    if (controlled) onChange!(next.map((c) => ({ name: c.name, role: c.role })));
+    else setSaved(false);
+  }
 
   function setRow(i: number, patch: Partial<TrackCredit>) {
-    setCredits((prev) => prev.map((c, j) => (j === i ? { ...c, ...patch } : c)));
-    touch();
+    apply(credits.map((c, j) => (j === i ? { ...c, ...patch } : c)));
   }
   function addRow(preset?: TrackCredit) {
     if (credits.length >= MAX) return;
     const base = preset ?? { name: '', role: 'PERFORMER' as const };
-    setCredits((prev) => [...prev, { ...base, _id: nextId.current++ }]);
-    touch();
+    apply([...credits, { ...base, _id: nextId.current++ }]);
   }
   function removeRow(i: number) {
-    setCredits((prev) => prev.filter((_, j) => j !== i));
-    touch();
+    apply(credits.filter((_, j) => j !== i));
   }
 
   function handleSave() {
+    if (!trackId) return;
     const toSave = credits
       .map((c) => ({ name: c.name.trim(), role: c.role }))
       .filter((c) => c.name.length > 0);
@@ -85,6 +94,7 @@ export function CreditsEditor({
         <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">
           Кредиты
         </span>
+        {!controlled && (
         <AnimatePresence mode="wait">
           {saved ? (
             <motion.span
@@ -111,6 +121,7 @@ export function CreditsEditor({
             </motion.button>
           )}
         </AnimatePresence>
+        )}
       </div>
 
       <p className="text-[11px] text-foreground/35 leading-snug">
