@@ -1,7 +1,9 @@
 import type { TrackGenre } from '@vire/db';
 import type { GenreSuggestion } from './discogs-genre-map.js';
 
-const AUTO_APPLY_THRESHOLD = 0.1;
+// Порог снижен 0.1 → 0.05 с переходом на покрытие Discogs-400 ~1:1: confidence
+// нормализуется по ~370 корзинам вместо 65, доля топ-жанра упала примерно вдвое.
+const AUTO_APPLY_THRESHOLD = 0.05;
 const AUTO_APPLY_COUNT = 2;
 
 /**

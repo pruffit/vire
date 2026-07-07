@@ -1,6 +1,7 @@
 import { and, eq, inArray, notInArray, sql, isNotNull, or, lte, type SQL } from 'drizzle-orm';
 import { db } from '../client';
 import { trackMoods, trackAudio, tracks, releases, artistProfiles, trackGenres } from '../schema';
+import { expandGenresToFamilies } from '../genre-families';
 import type { Mood } from './track-moods';
 import type { TrackGenre } from './track-genres';
 import type { TasteProfile } from './taste';
@@ -35,6 +36,35 @@ export interface WaveParams {
 export function textArrayParam(values: readonly string[]): SQL {
   if (values.length === 0) return sql`ARRAY[]::text[]`;
   return sql`ARRAY[${sql.join(values.map((v) => sql`${v}`), sql`, `)}]::text[]`;
+}
+
+// Жанровый терм скоринга: градуированное точное пересечение (доля совпавших из набора
+// × exactWeight) ИЛИ, если точного нет, флэт-бонус за принадлежность тому же семейству
+// (familyWeight). GREATEST, а не сумма — точный жанр входит и в своё семейство, сложить
+// оба = двойной счёт одного сигнала. Семейный терм — булев EXISTS, НЕ доля от размера
+// семьи: семьи по 4–36 жанров схлопнули бы вес почти в ноль; нужен факт «того же
+// семейства», а не насыщение по числу совпавших. Веса — SQL-литералы (sql.raw), не
+// bind-параметры: `CASE … THEN $n ELSE 0` Postgres вывел бы как integer и округлил бы
+// 0.2 → 0. exactValues всегда ⊆ familyValues (семья включает сами исходные жанры).
+function genreOverlapTerm(
+  exactValues: readonly string[],
+  familyValues: readonly string[],
+  exactWeight: number,
+  familyWeight: number,
+): SQL<number> {
+  if (exactValues.length === 0) return sql<number>`0`;
+  const ew = sql.raw(exactWeight.toString());
+  const fw = sql.raw(familyWeight.toString());
+  return sql<number>`GREATEST(
+      (
+        SELECT COUNT(*)::float FROM track_genres tg_exact
+        WHERE tg_exact.track_id = tracks.id AND tg_exact.genre::text = ANY(${textArrayParam(exactValues)})
+      ) / ${exactValues.length} * ${ew},
+      CASE WHEN EXISTS (
+        SELECT 1 FROM track_genres tg_fam
+        WHERE tg_fam.track_id = tracks.id AND tg_fam.genre::text = ANY(${textArrayParam(familyValues)})
+      ) THEN ${fw} ELSE 0 END
+    )`;
 }
 
 export const visibleTrackWhere = and(
@@ -129,12 +159,20 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
     ? sql`EXISTS (SELECT 1 FROM track_moods tmf WHERE tmf.track_id = tracks.id AND tmf.mood = ${p.seedMood})`
     : undefined;
 
+  // Seed-жанр расширяется до всего семейства: слушатель выбрал чип «Dub Techno» —
+  // едет всё техно-семейство, а не только точный подшанр (иначе узкие жанры после
+  // расширения enum сильно разрежают выдачу).
+  const seedGenreFamily = p.seedGenre ? expandGenresToFamilies([p.seedGenre]) : [];
+
   const seedGenreFilter = p.seedGenre
     ? sql`(
-        EXISTS (SELECT 1 FROM track_genres tgf WHERE tgf.track_id = tracks.id AND tgf.genre = ${p.seedGenre})
+        EXISTS (
+          SELECT 1 FROM track_genres tgf
+          WHERE tgf.track_id = tracks.id AND tgf.genre::text = ANY(${textArrayParam(seedGenreFamily)})
+        )
         OR (
           NOT EXISTS (SELECT 1 FROM track_genres tgf2 WHERE tgf2.track_id = tracks.id)
-          AND ${releases.genre} = ${p.seedGenre}
+          AND ${releases.genre}::text = ANY(${textArrayParam(seedGenreFamily)})
         )
       )`
     : undefined;
@@ -161,14 +199,14 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
           ) / ${tasteMoodValues.length} * 0.25`
         : sql<number>`0`;
 
-      const tasteGenreScoreSeed = tasteGenreValues.length > 0
-        ? sql<number>`(
-            SELECT COUNT(*)::float
-            FROM track_genres tgt
-            WHERE tgt.track_id = tracks.id
-              AND tgt.genre::text = ANY(${textArrayParam(tasteGenreValues)})
-          ) / ${tasteGenreValues.length} * 0.4`
-        : sql<number>`0`;
+      // Точный вкус (доля из топ-жанров × 0.4) и семейный вкус (флэт 0.2, половина) —
+      // см. genreOverlapTerm: GREATEST, семейный терм булев (не доля от размера семьи).
+      const tasteGenreScoreSeed = genreOverlapTerm(
+        tasteGenreValues,
+        expandGenresToFamilies(tasteGenreValues),
+        0.4,
+        0.2,
+      );
 
       const totalScore = sql<number>`${tasteMoodScore} + ${tasteGenreScoreSeed} + ${qualityScore} + random() * 0.3`;
 
@@ -261,14 +299,13 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
 
   // Единый жанровый сигнал: приоритет — жанры трека (track_genres), доля совпавших,
   // вес до 0.4; фолбэк на жанр релиза (0.3) — только если у кандидата нет track_genres.
-  const trackGenreOverlap = trackGenreValues.length > 0
-    ? sql<number>`(
-        SELECT COUNT(*)::float
-        FROM track_genres tg2
-        WHERE tg2.track_id = tracks.id
-          AND tg2.genre::text = ANY(${textArrayParam(trackGenreValues)})
-      ) / ${trackGenreValues.length} * 0.4`
-    : sql<number>`0`;
+  // Плюс семейный уровень (флэт 0.2, половина) от текущего трека — см. genreOverlapTerm.
+  const trackGenreOverlap = genreOverlapTerm(
+    trackGenreValues,
+    expandGenresToFamilies(trackGenreValues),
+    0.4,
+    0.2,
+  );
 
   const releaseGenreFallback = currentGenre
     ? sql<number>`CASE WHEN ${releases.genre} = ${currentGenre} THEN 0.3 ELSE 0 END`
@@ -289,15 +326,14 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       ) / ${tasteMoodValues.length} * 0.25`
     : sql<number>`0`;
 
-  // Профиль вкуса по жанрам — аналог tasteMoodScore, вес до 0.25
-  const tasteGenreScore = tasteGenreValues.length > 0
-    ? sql<number>`(
-        SELECT COUNT(*)::float
-        FROM track_genres tg3
-        WHERE tg3.track_id = tracks.id
-          AND tg3.genre::text = ANY(${textArrayParam(tasteGenreValues)})
-      ) / ${tasteGenreValues.length} * 0.25`
-    : sql<number>`0`;
+  // Профиль вкуса по жанрам — аналог tasteMoodScore, точный вес до 0.25; плюс семейный
+  // уровень (флэт 0.125, половина) — см. genreOverlapTerm.
+  const tasteGenreScore = genreOverlapTerm(
+    tasteGenreValues,
+    expandGenresToFamilies(tasteGenreValues),
+    0.25,
+    0.125,
+  );
 
   // Анти-усталость: штраф за треки, что слушатель слышал за последние 7 дней
   const fatiguePenalty = p.userId
@@ -321,10 +357,19 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       ) THEN 0.35 ELSE 0 END`
     : sql<number>`0`;
 
+  // Точное совпадение — полный буст (0.35), совпадение только по семейству — половина
+  // (0.175). CASE с приоритетом точного условия — не суммируем оба за один и тот же жанр.
+  const sessionGenreFamily = p.sessionGenre ? expandGenresToFamilies([p.sessionGenre]) : [];
+
   const sessionGenreBoost = p.sessionGenre
-    ? sql<number>`CASE WHEN EXISTS (
-        SELECT 1 FROM track_genres tgs WHERE tgs.track_id = tracks.id AND tgs.genre = ${p.sessionGenre}
-      ) THEN 0.35 ELSE 0 END`
+    ? sql<number>`CASE
+        WHEN EXISTS (SELECT 1 FROM track_genres tgs WHERE tgs.track_id = tracks.id AND tgs.genre = ${p.sessionGenre}) THEN 0.35
+        WHEN EXISTS (
+          SELECT 1 FROM track_genres tgsf
+          WHERE tgsf.track_id = tracks.id AND tgsf.genre::text = ANY(${textArrayParam(sessionGenreFamily)})
+        ) THEN 0.175
+        ELSE 0
+      END`
     : sql<number>`0`;
 
   const totalScore = sql<number>`${moodScore} + ${bpmScore} + ${keyScore} + ${genreScore}

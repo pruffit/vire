@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { actionAdminUpdateTrack } from '../../../actions';
-import { GENRE_GROUPS, GENRE_LABELS, MAX_TRACK_GENRES, type Genre } from '@/lib/genres';
+import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS, MAX_TRACK_GENRES, type Genre } from '@/lib/genres';
 import { ALL_MOODS, MOOD_LABELS } from '@/lib/moods';
 import { fieldClass } from '@/components/admin/ui';
 import { Textarea } from '@/components/ui-kit';
@@ -92,6 +92,33 @@ export function TrackEditForm({
       return { ...p, genres: [...p.genres, gen] };
     });
   }
+
+  const [genreQuery, setGenreQuery] = useState('');
+  const genreMatches = useMemo(() => {
+    const q = genreQuery.trim().toLowerCase();
+    if (!q) return null;
+    return ALL_GENRES.filter((g) => GENRE_LABELS[g].toLowerCase().includes(q));
+  }, [genreQuery]);
+
+  const renderGenrePill = (gen: Genre) => {
+    const on = f.genres.includes(gen);
+    const full = !on && f.genres.length >= MAX_TRACK_GENRES;
+    return (
+      <button
+        key={gen}
+        type="button"
+        onClick={() => toggleGenre(gen)}
+        disabled={full}
+        className={`rounded-full border px-3 py-1 text-xs transition-colors active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed ${
+          on
+            ? 'border-primary bg-primary/15 text-foreground'
+            : 'border-foreground/10 text-foreground/50 hover:text-foreground hover:border-foreground/30'
+        }`}
+      >
+        {GENRE_LABELS[gen]}
+      </button>
+    );
+  };
 
   function addSuggestedGenre(gen: Genre) {
     setF((p) => {
@@ -207,33 +234,30 @@ export function TrackEditForm({
       </Field>
 
       <Field label={`Жанры трека (${f.genres.length}/${MAX_TRACK_GENRES})`}>
-        <div className="flex flex-col gap-3 rounded-md border border-foreground/10 bg-foreground/[0.02] p-3 max-h-72 overflow-y-auto">
-          {GENRE_GROUPS.map((g) => (
-            <div key={g.label} className="flex flex-col gap-1.5">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-foreground/30">{g.label}</span>
-              <div className="flex flex-wrap gap-2">
-                {g.genres.map((gen) => {
-                  const on = f.genres.includes(gen);
-                  const full = !on && f.genres.length >= MAX_TRACK_GENRES;
-                  return (
-                    <button
-                      key={gen}
-                      type="button"
-                      onClick={() => toggleGenre(gen)}
-                      disabled={full}
-                      className={`rounded-full border px-3 py-1 text-xs transition-colors active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed ${
-                        on
-                          ? 'border-primary bg-primary/15 text-foreground'
-                          : 'border-foreground/10 text-foreground/50 hover:text-foreground hover:border-foreground/30'
-                      }`}
-                    >
-                      {GENRE_LABELS[gen]}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-col gap-3 rounded-md border border-foreground/10 bg-foreground/[0.02] p-3">
+          <input
+            type="text"
+            value={genreQuery}
+            onChange={(e) => setGenreQuery(e.target.value)}
+            placeholder="Поиск жанра…"
+            className={inputCls}
+          />
+          <div className="flex flex-col gap-3 max-h-72 overflow-y-auto">
+            {genreMatches ? (
+              genreMatches.length === 0 ? (
+                <span className="font-mono text-xs text-foreground/30 py-2">Ничего не найдено</span>
+              ) : (
+                <div className="flex flex-wrap gap-2">{genreMatches.map(renderGenrePill)}</div>
+              )
+            ) : (
+              GENRE_GROUPS.map((g) => (
+                <div key={g.label} className="flex flex-col gap-1.5">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-foreground/30">{g.label}</span>
+                  <div className="flex flex-wrap gap-2">{g.genres.map(renderGenrePill)}</div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </Field>
 

@@ -5,11 +5,11 @@ import type { GenreSuggestion } from './discogs-genre-map.js';
 const suggestions: GenreSuggestion[] = [
   { genre: 'TECHNO', confidence: 0.5 },
   { genre: 'HOUSE', confidence: 0.3 },
-  { genre: 'TRANCE', confidence: 0.05 }, // ниже порога 0.1
+  { genre: 'TRANCE', confidence: 0.04 }, // ниже порога 0.05
 ];
 
 describe('decideAutoApplyGenres', () => {
-  it('без жанров у трека — берёт топ-2 предложения с confidence >= 0.1', () => {
+  it('без жанров у трека — берёт топ-2 предложения с confidence >= 0.05', () => {
     expect(decideAutoApplyGenres([], suggestions)).toEqual(['TECHNO', 'HOUSE']);
   });
 
@@ -19,7 +19,7 @@ describe('decideAutoApplyGenres', () => {
 
   it('отфильтровывает предложения ниже порога confidence', () => {
     const lowConfidence: GenreSuggestion[] = [
-      { genre: 'TECHNO', confidence: 0.05 },
+      { genre: 'TECHNO', confidence: 0.04 },
       { genre: 'HOUSE', confidence: 0.02 },
     ];
     expect(decideAutoApplyGenres([], lowConfidence)).toEqual([]);

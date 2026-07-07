@@ -118,6 +118,8 @@ export {
 export type { Mood, MoodCount } from './queries/track-moods';
 export { getTrackGenres, setTrackGenres, getGenresForTracks, getGenreCounts, ALL_TRACK_GENRES } from './queries/track-genres';
 export type { TrackGenre, GenreCount } from './queries/track-genres';
+export { GENRE_FAMILY, expandGenresToFamilies } from './genre-families';
+export type { GenreFamily } from './genre-families';
 export { getTasteProfile, clearTasteProfileCache } from './queries/taste';
 export type { TasteProfile } from './queries/taste';
 export {
