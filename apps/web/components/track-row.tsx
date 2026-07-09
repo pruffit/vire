@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
+import { TrackTitleText } from '@/components/track-title';
 
 export interface TrackRowTrack {
   id: string;
@@ -12,6 +13,8 @@ export interface TrackRowTrack {
   artistName: string;
   isExplicit?: boolean;
   coverUrl: string | null;
+  version?: string | null;
+  feat?: string[];
 }
 
 export interface TrackRowProps {
@@ -86,7 +89,9 @@ export const TrackRow = forwardRef<HTMLDivElement, TrackRowProps>(function Track
   const titleStyle = isActive ? { color: 'var(--primary)' } : undefined;
   const titleContent = (
     <>
-      <span className="truncate">{track.title}</span>
+      <span className="truncate">
+        <TrackTitleText title={track.title} version={track.version} feat={track.feat} />
+      </span>
       {track.isExplicit && <ExplicitBadge />}
     </>
   );

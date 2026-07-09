@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { PlayerTrack } from '@/store/player';
+import { TrackTitleText } from '@/components/track-title';
 
 /** Имя артиста → страница артиста, название → страница трека. Если слаг/releaseId
  *  не известны источнику, показываем простой текст без ссылки. */
@@ -31,14 +32,15 @@ export function TitleLink({
   className?: string;
   onClick?: () => void;
 }) {
-  if (!track.artistSlug || !track.releaseId) return <span className={className}>{track.title}</span>;
+  const label = <TrackTitleText title={track.title} version={track.version} feat={track.feat} />;
+  if (!track.artistSlug || !track.releaseId) return <span className={className}>{label}</span>;
   return (
     <Link
       href={`/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`}
       onClick={onClick}
       className={`${className ?? ''} hover:underline`}
     >
-      {track.title}
+      {label}
     </Link>
   );
 }

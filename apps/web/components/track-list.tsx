@@ -19,6 +19,8 @@ export interface PlayableTrackItem {
   accentColor?: string | null;
   isExplicit?: boolean;
   plays?: number;
+  version?: string | null;
+  feat?: string[];
 }
 
 export function PlayableTrackList({

@@ -10,6 +10,8 @@ export interface PlayerTrackSource {
   releaseId?: string;
   accentColor?: string | null;
   isExplicit?: boolean | null;
+  version?: string | null;
+  feat?: string[];
 }
 
 /** Единая точка нормализации серверных шейпов трека в PlayerTrack для очереди плеера. */
@@ -23,6 +25,8 @@ export function toPlayerTrack(row: PlayerTrackSource): PlayerTrack {
     releaseId: row.releaseId,
     accentColor: row.accentColor ?? undefined,
     isExplicit: row.isExplicit ?? undefined,
+    version: row.version ?? undefined,
+    feat: row.feat,
   };
 }
 

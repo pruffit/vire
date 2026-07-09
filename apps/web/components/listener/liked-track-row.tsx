@@ -33,7 +33,10 @@ export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCo
 
   return (
     <TrackRow
-      track={{ id: track.id, title: track.title, artistName: track.artistName, isExplicit: track.isExplicit, coverUrl: releaseCoverUrl }}
+      track={{
+        id: track.id, title: track.title, artistName: track.artistName, isExplicit: track.isExplicit,
+        coverUrl: releaseCoverUrl, version: track.version, feat: track.feat,
+      }}
       isActive={isThisTrack}
       isPlaying={isPlaying}
       onPlay={handlePlay}

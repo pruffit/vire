@@ -10,6 +10,7 @@ import { controls } from '@/components/player/audio-engine';
 import { useLazyQueue } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
+import { TrackTitleText } from '@/components/track-title';
 import { formatDuration, pluralTracks } from '@/lib/format';
 import { Icon } from '@/components/icon';
 import { toast } from '@/components/toast';
@@ -152,7 +153,9 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
                       : undefined
                   }
                 >
-                  <span className="truncate">{t.title}</span>
+                  <span className="truncate">
+                    <TrackTitleText title={t.title} version={t.version} feat={t.feat} />
+                  </span>
                   {t.isExplicit && <ExplicitBadge />}
                 </span>
                 {t.durationSec != null && (

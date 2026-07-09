@@ -8,6 +8,7 @@ import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { PlayingBars } from '@/components/playing-bars';
+import { TrackTitleText } from '@/components/track-title';
 import { formatDuration } from '@/lib/format';
 
 export type ArtistPopularTrack = PlayerTrack & { durationSec: number | null };
@@ -100,7 +101,9 @@ function Row({
           className="text-sm truncate flex items-center gap-1.5"
           style={isActive ? { color: 'var(--artist-accent)' } : undefined}
         >
-          <span className="truncate">{track.title}</span>
+          <span className="truncate">
+            <TrackTitleText title={track.title} version={track.version} feat={track.feat} />
+          </span>
           {track.isExplicit && <ExplicitBadge />}
         </span>
       </div>

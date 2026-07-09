@@ -1,12 +1,15 @@
 import type { PlaylistTrackRow } from '@vire/db';
+import type { TrackCredit } from '@vire/core';
 
 export interface LazyReleaseTrack {
   id: string;
   title: string;
+  version: string | null;
   trackNumber: number;
   durationSec: number | null;
   status: 'PROCESSING' | 'READY' | 'BLOCKED';
   isExplicit?: boolean;
+  credits: TrackCredit[];
 }
 
 /** null — сбой (сеть/не-2xx/битый JSON), кэшировать нельзя; [] — честно пустой список из 200-ответа. */

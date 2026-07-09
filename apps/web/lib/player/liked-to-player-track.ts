@@ -13,5 +13,7 @@ export function likedToPlayerTrack(t: LikedTrack): PlayerTrack {
     coverUrl: t.releaseCoverUrl,
     accentColor: t.accentColor,
     isExplicit: t.isExplicit,
+    version: t.version,
+    feat: t.feat,
   });
 }

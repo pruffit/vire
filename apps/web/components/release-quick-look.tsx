@@ -11,6 +11,8 @@ import { useLazyQueue } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { formatDuration } from '@/lib/format';
+import { featuredNames } from '@/lib/track-display';
+import { TrackTitleText } from '@/components/track-title';
 import { Icon } from '@/components/icon';
 import { toast } from '@/components/toast';
 import { QuickLookSheet, QuickLookDragHandle, MiniEq } from './quick-look-sheet';
@@ -277,7 +279,9 @@ export function ReleaseQuickLook({
                   {isCurrent ? <MiniEq animate={isPlaying} /> : t.trackNumber}
                 </span>
                 <span className="flex-1 truncate text-sm flex items-center gap-1.5" style={isCurrent ? { color: 'var(--artist-accent, hsl(200 80% 65%))' } : undefined}>
-                  <span className="truncate">{t.title}</span>
+                  <span className="truncate">
+                    <TrackTitleText title={t.title} version={t.version} feat={featuredNames(t.credits)} />
+                  </span>
                   {t.isExplicit && <ExplicitBadge />}
                 </span>
                 {t.durationSec != null && ready && (

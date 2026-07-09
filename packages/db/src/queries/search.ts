@@ -1,6 +1,7 @@
 import { and, eq, ilike, or, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { artistProfiles, releases, tracks } from '../schema';
+import { featFromCredits } from './track-credits';
 
 export interface SearchArtist {
   id: string;
@@ -28,6 +29,8 @@ export interface SearchTrack {
   artistSlug: string;
   artistName: string;
   coverUrl: string | null;
+  version: string | null;
+  feat: string[];
 }
 
 export interface SearchResults {
@@ -103,6 +106,8 @@ export async function searchAll(query: string, limit = 5): Promise<SearchResults
         artistSlug: artistProfiles.slug,
         artistName: artistProfiles.name,
         coverUrl: releases.coverUrl,
+        version: tracks.version,
+        credits: tracks.credits,
       })
       .from(tracks)
       .innerJoin(releases, eq(releases.id, tracks.releaseId))
@@ -111,5 +116,9 @@ export async function searchAll(query: string, limit = 5): Promise<SearchResults
       .limit(limit),
   ]);
 
-  return { artists: artistRows, releases: releaseRows, tracks: trackRows };
+  return {
+    artists: artistRows,
+    releases: releaseRows,
+    tracks: trackRows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) })),
+  };
 }

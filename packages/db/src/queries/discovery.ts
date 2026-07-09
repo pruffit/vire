@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, gt, inArray, isNotNull, lte, notInArray, or,
 import { db } from '../client';
 import { artistProfiles, playEvents, releases, tracks, likes, follows } from '../schema';
 import { getTasteProfile } from './taste';
+import { featFromCredits } from './track-credits';
 
 export interface DiscoveryRelease {
   id: string;
@@ -41,6 +42,8 @@ export interface DiscoveryTrack {
   releaseId: string;
   coverUrl: string | null;
   accentColor: string | null;
+  version: string | null;
+  feat: string[];
 }
 
 /**
@@ -60,7 +63,7 @@ export async function getExplicitReleaseIds(releaseIds: string[]): Promise<Set<s
 /** Публично слышимые треки по списку id (для секции «Сейчас слушают»). */
 export async function getTracksByIds(ids: string[]): Promise<DiscoveryTrack[]> {
   if (ids.length === 0) return [];
-  return db
+  const rows = await db
     .select({
       id: tracks.id,
       title: tracks.title,
@@ -69,6 +72,8 @@ export async function getTracksByIds(ids: string[]): Promise<DiscoveryTrack[]> {
       releaseId: releases.id,
       coverUrl: releases.coverUrl,
       accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
+      version: tracks.version,
+      credits: tracks.credits,
     })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
@@ -84,6 +89,7 @@ export async function getTracksByIds(ids: string[]): Promise<DiscoveryTrack[]> {
         ),
       ),
     );
+  return rows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) }));
 }
 
 /** Свежие релизы по всей платформе (опубликованные / запланированные с прошедшей датой). */
@@ -130,6 +136,8 @@ export interface ArtistPlayableTrack {
   durationSec: number | null;
   isExplicit: boolean;
   plays: number;
+  version: string | null;
+  feat: string[];
 }
 
 /**
@@ -147,6 +155,8 @@ export async function getArtistPlayableTracks(artistProfileId: string): Promise<
       durationSec: tracks.durationSec,
       isExplicit: tracks.isExplicit,
       plays: count(playEvents.id),
+      version: tracks.version,
+      credits: tracks.credits,
     })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
@@ -155,7 +165,7 @@ export async function getArtistPlayableTracks(artistProfileId: string): Promise<
     .groupBy(tracks.id, releases.id)
     .orderBy(desc(releaseFreshness), asc(tracks.trackNumber))
     .limit(300);
-  return rows.map((r) => ({ ...r, plays: Number(r.plays) }));
+  return rows.map(({ credits, ...r }) => ({ ...r, plays: Number(r.plays), feat: featFromCredits(credits) }));
 }
 
 export type ReleaseSort = 'fresh' | 'popular';
@@ -254,6 +264,8 @@ export interface PlayableChartTrack {
   accentColor: string | null;
   isExplicit: boolean;
   plays: number;
+  version: string | null;
+  feat: string[];
 }
 
 const playableTrackColumns = {
@@ -265,6 +277,8 @@ const playableTrackColumns = {
   coverUrl: releases.coverUrl,
   accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
   isExplicit: tracks.isExplicit,
+  version: tracks.version,
+  credits: tracks.credits,
 };
 
 /** Публичный чарт: самые слушаемые READY-треки за N дней. */
@@ -281,10 +295,10 @@ export async function getPopularTracks(days = 30, limit = 20): Promise<PlayableC
       eq(artistProfiles.isActive, true),
       releaseIsAired,
     ))
-    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit)
+    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, tracks.version, tracks.credits)
     .orderBy(desc(count(playEvents.id)))
     .limit(limit);
-  return rows.map((r) => ({ ...r, plays: Number(r.plays) }));
+  return rows.map(({ credits, ...r }) => ({ ...r, plays: Number(r.plays), feat: featFromCredits(credits) }));
 }
 
 /** «Продолжить слушать»: недавно игранные юзером READY-треки, без повторов, свежие сверху. */
@@ -301,13 +315,13 @@ export async function getRecentlyPlayed(userId: string, limit = 12): Promise<Pla
       eq(artistProfiles.isActive, true),
       releaseIsAired,
     ))
-    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit)
+    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, tracks.version, tracks.credits)
     .orderBy(desc(sql`max(${playEvents.startedAt})`))
     .limit(limit);
   return rows.map((r) => ({
     id: r.id, title: r.title, artistName: r.artistName, artistSlug: r.artistSlug,
     releaseId: r.releaseId, coverUrl: r.coverUrl, accentColor: r.accentColor,
-    isExplicit: r.isExplicit, plays: 0,
+    isExplicit: r.isExplicit, plays: 0, version: r.version, feat: featFromCredits(r.credits),
   }));
 }
 
@@ -365,8 +379,8 @@ export async function getPersonalTrackPicks(userId: string, limit = 12): Promise
       notInArray(tracks.id, likedTrackIds),
       notInArray(tracks.id, recentlyPlayedTrackIds),
     ))
-    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, releaseFreshness)
+    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, tracks.version, tracks.credits, releaseFreshness)
     .orderBy(desc(releaseFreshness), desc(count(playEvents.id)))
     .limit(limit);
-  return rows.map((r) => ({ ...r, plays: Number(r.plays) }));
+  return rows.map(({ credits, ...r }) => ({ ...r, plays: Number(r.plays), feat: featFromCredits(credits) }));
 }

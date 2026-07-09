@@ -13,6 +13,8 @@ export const waveTrackSchema = z.object({
   coverUrl: z.string().nullable(),
   accentColor: z.string().nullable(),
   isExplicit: z.boolean(),
+  version: z.string().nullable().default(null),
+  feat: z.array(z.string()).default([]),
 });
 export type WaveTrackDTO = z.infer<typeof waveTrackSchema>;
 

@@ -6,14 +6,15 @@ import {
   getTrackAudio, getLikeState, getLikeCount,
   getTrackMoods, getAggregateMoments,
 } from '@vire/db';
-import { ArtistService, ReleaseService } from '@vire/core';
+import { ArtistService, ReleaseService, type TrackCredit } from '@vire/core';
 import { auth } from '@/auth';
 import { ZoomableCover } from '@/components/zoomable-cover';
 import { LikeButton } from './like-button';
 import { TrackWaveformPlayer } from './waveform-player';
 import { MoodBadges } from '@/components/mood-badges';
 import { ExplicitBadge } from '@/components/explicit-badge';
-import { displayTrackTitle } from '@/lib/track-display';
+import { displayTrackTitle, featLabel, featuredNames } from '@/lib/track-display';
+import { TrackTitleText } from '@/components/track-title';
 import { AddToPlaylistButton } from '@/components/add-to-playlist-button';
 import { JsonLd } from '@/components/json-ld';
 import { HeartIcon } from '@/components/icons';
@@ -55,15 +56,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { artist, release, track } = data;
   const url = `/artists/${slug}/releases/${releaseId}/tracks/${trackId}`;
-  const description = `${track.title} · ${release.title} — ${artist.name} на Vire.`;
+  const fullTitle = displayTrackTitle(track.title, { version: track.version, credits: track.credits });
+  const description = `${fullTitle} · ${release.title} — ${artist.name} на Vire.`;
   return {
-    title: `${track.title} — ${artist.name}`,
+    title: `${fullTitle} — ${artist.name}`,
     description,
     alternates: { canonical: url },
     openGraph: {
       type: 'music.song',
       url,
-      title: `${track.title} — ${artist.name}`,
+      title: `${fullTitle} — ${artist.name}`,
       description,
       images: release.coverUrl ? [{ url: release.coverUrl }] : undefined,
     },
@@ -95,10 +97,16 @@ export default async function TrackPage({ params, searchParams }: Props) {
 
   const queue = tracks
     .filter((t) => t.status === 'READY')
-    .map((t) => ({ id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, accentColor: accent, isExplicit: t.isExplicit }));
+    .map((t) => ({
+      id: t.id, title: t.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug,
+      releaseId, accentColor: accent, isExplicit: t.isExplicit, version: t.version, feat: featuredNames(t.credits),
+    }));
 
   const playerTrack = track.status === 'READY'
-    ? { id: track.id, title: track.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug, releaseId, accentColor: accent, isExplicit: track.isExplicit }
+    ? {
+        id: track.id, title: track.title, artistName: artist.name, coverUrl: release.coverUrl, artistSlug: slug,
+        releaseId, accentColor: accent, isExplicit: track.isExplicit, version: track.version, feat: featuredNames(track.credits),
+      }
     : null;
 
   const playContext = { source: 'release' as const, sourceId: releaseId };
@@ -114,7 +122,12 @@ export default async function TrackPage({ params, searchParams }: Props) {
     >
       <JsonLd
         data={musicRecordingJsonLd(
-          { id: track.id, title: track.title, trackNumber: track.trackNumber, durationSec: track.durationSec },
+          {
+            id: track.id,
+            title: displayTrackTitle(track.title, { version: track.version, credits: track.credits }),
+            trackNumber: track.trackNumber,
+            durationSec: track.durationSec,
+          },
           { id: release.id, title: release.title, coverUrl: release.coverUrl, releaseDate: release.releaseDate },
           { name: artist.name, slug },
         )}
@@ -163,9 +176,10 @@ export default async function TrackPage({ params, searchParams }: Props) {
                   className="font-bold tracking-tight leading-[0.95] text-balance break-words flex items-center gap-3 flex-wrap"
                   style={{ fontSize: `clamp(1.9rem, 6vw, ${titleMaxRem}rem)` }}
                 >
-                  {displayTrackTitle(track.title, { version: track.version, credits: track.credits })}
+                  {track.title}
                   {track.isExplicit && <ExplicitBadge />}
                 </h1>
+                <TrackMetaLine credits={track.credits} version={track.version} />
                 <MetaRow
                   durationSec={track.durationSec}
                   bpm={trackAudio?.bpm ?? null}
@@ -253,7 +267,9 @@ export default async function TrackPage({ params, searchParams }: Props) {
                           className="flex-1 truncate text-sm flex items-center gap-1.5"
                           style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
                         >
-                          <span className="truncate">{t.title}</span>
+                          <span className="truncate">
+                            <TrackTitleText title={t.title} version={t.version} feat={featuredNames(t.credits)} />
+                          </span>
                           {t.isExplicit && <ExplicitBadge />}
                         </span>
                         {t.status === 'PROCESSING' && (
@@ -289,6 +305,15 @@ export default async function TrackPage({ params, searchParams }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Фит + версия отдельной приглушённой строкой под h1 — не в display-шрифте заголовка. */
+function TrackMetaLine({ credits, version }: { credits: TrackCredit[]; version: string | null }) {
+  const line = [featLabel(credits), version?.trim()].filter(Boolean).join(' · ');
+  if (!line) return null;
+  return (
+    <p className="text-sm text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)]">{line}</p>
   );
 }
 

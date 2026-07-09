@@ -37,6 +37,8 @@ export default async function LikedTracksPage() {
       coverUrl: t.releaseCoverUrl,
       accentColor: t.accentColor,
       isExplicit: t.isExplicit,
+      version: t.version,
+      feat: t.feat,
     })),
   };
 

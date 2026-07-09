@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, ilike, inArray, notInArray, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { playlists, playlistTracks, playlistLikes, tracks, releases, artistProfiles, likes, playEvents } from '../schema';
+import { featFromCredits } from './track-credits';
 
 export interface PlaylistSummary {
   id: string;
@@ -23,6 +24,8 @@ export interface PlaylistTrackRow {
   coverUrl: string | null;
   accentColor: string | null;
   isExplicit: boolean;
+  version: string | null;
+  feat: string[];
 }
 
 export interface PlaylistWithTracks {
@@ -56,6 +59,8 @@ export interface PlaylistAddTrack {
   coverUrl: string | null;
   accentColor: string | null;
   isExplicit: boolean;
+  version: string | null;
+  feat: string[];
 }
 
 export interface PlaylistSuggestions {
@@ -131,6 +136,8 @@ export async function getPlaylistWithTracks(
       coverUrl: releases.coverUrl,
       accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
       isExplicit: tracks.isExplicit,
+      version: tracks.version,
+      credits: tracks.credits,
     })
     .from(playlistTracks)
     .innerJoin(tracks, eq(tracks.id, playlistTracks.trackId))
@@ -147,7 +154,7 @@ export async function getPlaylistWithTracks(
     visibility: playlist.visibility,
     ownerUserId: playlist.ownerUserId,
     likesCount: playlist.likesCount,
-    tracks: trackRows,
+    tracks: trackRows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) })),
   };
 }
 
@@ -614,7 +621,7 @@ export async function searchTracksForPlaylist(
 ): Promise<PlaylistAddTrack[]> {
   if (!q.trim()) return [];
   const like = `%${q.trim()}%`;
-  return db
+  const rows = await db
     .select({
       id: tracks.id,
       title: tracks.title,
@@ -625,6 +632,8 @@ export async function searchTracksForPlaylist(
       coverUrl: releases.coverUrl,
       accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
       isExplicit: tracks.isExplicit,
+      version: tracks.version,
+      credits: tracks.credits,
     })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
@@ -637,6 +646,7 @@ export async function searchTracksForPlaylist(
       ),
     )
     .limit(limit);
+  return rows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) }));
 }
 
 export async function getPlaylistSuggestions(
@@ -660,6 +670,8 @@ export async function getPlaylistSuggestions(
     coverUrl: releases.coverUrl,
     accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
     isExplicit: tracks.isExplicit,
+    version: tracks.version,
+    credits: tracks.credits,
   };
 
   // Liked tracks (most recent first)
@@ -703,7 +715,9 @@ export async function getPlaylistSuggestions(
         .limit(perSection + exclude.size)
     : [];
 
-  const take = (rows: (PlaylistAddTrack & Record<string, unknown>)[], used: Set<string>): PlaylistAddTrack[] => {
+  type SuggestionRow = Omit<PlaylistAddTrack, 'feat'> & { credits: unknown };
+
+  const take = (rows: SuggestionRow[], used: Set<string>): PlaylistAddTrack[] => {
     const out: PlaylistAddTrack[] = [];
     for (const r of rows) {
       if (exclude.has(r.id) || used.has(r.id)) continue;
@@ -713,6 +727,7 @@ export async function getPlaylistSuggestions(
         releaseId: r.releaseId, artistName: r.artistName,
         artistSlug: r.artistSlug, coverUrl: r.coverUrl,
         accentColor: r.accentColor, isExplicit: r.isExplicit,
+        version: r.version, feat: featFromCredits(r.credits),
       });
       if (out.length >= perSection) break;
     }
@@ -723,6 +738,6 @@ export async function getPlaylistSuggestions(
   return {
     liked: take(likedRows, used),
     recent: take(recentRows, used),
-    similar: take(similarRows as (PlaylistAddTrack & Record<string, unknown>)[], used),
+    similar: take(similarRows as SuggestionRow[], used),
   };
 }

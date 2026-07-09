@@ -7,6 +7,7 @@ import { toPlayerTracks } from '@/lib/player/to-player-track';
 import { usePlay } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import type { PlayableChartTrack } from '@vire/db';
+import { TrackTitleText } from '@/components/track-title';
 
 const CONTEXT = { source: 'home' as const };
 
@@ -44,7 +45,9 @@ function Cell({ track, queue, index }: { track: PlayableChartTrack; queue: Playe
             </span>
           </span>
         </span>
-        <span className="mt-2 block text-sm font-medium truncate">{track.title}</span>
+        <span className="mt-2 block text-sm font-medium truncate">
+          <TrackTitleText title={track.title} version={track.version} feat={track.feat} />
+        </span>
       </button>
       <Link href={`/artists/${track.artistSlug}`} className="block text-xs text-muted-foreground truncate hover:text-foreground transition-colors">
         {track.artistName}

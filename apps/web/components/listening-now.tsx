@@ -8,6 +8,7 @@ import { usePlay } from '@/lib/player/use-play';
 import { toPlayerTrack } from '@/lib/player/to-player-track';
 import { PlayIcon } from '@/components/icons';
 import { LivePulse } from '@/components/live-pulse';
+import { TrackTitleText } from '@/components/track-title';
 
 export interface ListeningNowTrack {
   id: string;
@@ -18,6 +19,8 @@ export interface ListeningNowTrack {
   coverUrl: string | null;
   accentColor: string | null;
   listeners: number;
+  version?: string | null;
+  feat?: string[];
 }
 
 const POLL_MS = 30_000;
@@ -114,7 +117,7 @@ function TrackRow({ track }: { track: ListeningNowTrack }) {
       </span>
       <span className="flex-1 min-w-0">
         <span className={`block text-sm font-medium truncate ${isActive ? 'text-primary' : ''}`}>
-          {track.title}
+          <TrackTitleText title={track.title} version={track.version} feat={track.feat} />
         </span>
         <span className="block text-xs text-muted-foreground truncate">{track.artistName}</span>
       </span>

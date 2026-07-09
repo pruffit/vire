@@ -1,15 +1,15 @@
 import type { TrackCredit } from '@/lib/upload';
+import { featuredNames } from '@vire/core';
 
 /**
  * Отображение трека: фиты (кредиты с ролью FEATURED) и версия («Radio Edit»,
- * «Slowed + Reverb») держатся отдельно от названия и приклеиваются на витрине —
- * чтобы артист не засорял title. Чистые функции, покрыты тестами.
+ * «Slowed + Reverb») держатся отдельно от названия. `displayTrackTitle` — ТОЛЬКО
+ * для metadata/SEO/JSON-LD (единая строка). Весь остальной UI — через
+ * `TrackTitleText` (`components/track-title.tsx`), не через эту склейку.
  */
 
-/** Имена приглашённых артистов (роль FEATURED), без пустых. */
-export function featuredNames(credits: TrackCredit[]): string[] {
-  return credits.filter((c) => c.role === 'FEATURED').map((c) => c.name.trim()).filter(Boolean);
-}
+// Единый источник правды — @vire/core (используется и БД-запросами для DTO).
+export { featuredNames } from '@vire/core';
 
 /** Подпись «feat. A, B» из FEATURED-кредитов, либо '' если фитов нет. */
 export function featLabel(credits: TrackCredit[]): string {

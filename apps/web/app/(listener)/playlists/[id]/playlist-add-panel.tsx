@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { toast } from '@/components/toast';
 import { Icon } from '@/components/icon';
+import { TrackTitleText } from '@/components/track-title';
 import type { PlaylistAddTrack, PlaylistSuggestions, PlaylistTrackRow } from '@vire/db';
 
 interface Props {
@@ -15,7 +16,7 @@ interface Props {
 function toRow(t: PlaylistAddTrack): PlaylistTrackRow {
   return { id: t.id, title: t.title, durationSec: t.durationSec, position: 0,
     artistName: t.artistName, artistSlug: t.artistSlug, releaseId: t.releaseId, coverUrl: t.coverUrl,
-    accentColor: t.accentColor, isExplicit: t.isExplicit };
+    accentColor: t.accentColor, isExplicit: t.isExplicit, version: t.version, feat: t.feat };
 }
 
 interface TrackRowProps {
@@ -33,7 +34,9 @@ function TrackRow({ track, added, onAdd }: TrackRowProps) {
         {track.coverUrl && <Image src={track.coverUrl} alt="" fill sizes="36px" className="object-cover" />}
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block text-sm truncate">{track.title}</span>
+        <span className="block text-sm truncate">
+          <TrackTitleText title={track.title} version={track.version} feat={track.feat} />
+        </span>
         <span className="block text-xs text-muted-foreground truncate">{track.artistName}</span>
       </span>
       <span className={`w-6 h-6 grid place-items-center rounded-full shrink-0 ${inIt ? 'text-primary' : 'text-muted-foreground'}`}>

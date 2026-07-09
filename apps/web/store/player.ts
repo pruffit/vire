@@ -16,6 +16,11 @@ export interface PlayerTrack {
   accentColor?: string;
   // Возрастная маркировка 18+ (explicit) — плеер показывает бейдж.
   isExplicit?: boolean;
+  // Версия/ремикс («Radio Edit», «Slowed + Reverb») и имена FEATURED-кредитов —
+  // рендерятся приглушённо рядом с title через TrackTitleText. Опциональны:
+  // старые persisted-стейты `vire-player` до этого поля не ломаются.
+  version?: string | null;
+  feat?: string[];
 }
 
 /** Откуда запущено воспроизведение — для аналитики и «вернуться к источнику». */

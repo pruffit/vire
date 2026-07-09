@@ -11,7 +11,8 @@ import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import type { TrackStatus, TrackCredit } from '@vire/core';
 import { formatDuration } from '@/lib/format';
-import { displayTrackTitle } from '@/lib/track-display';
+import { featuredNames } from '@/lib/track-display';
+import { TrackTitleText } from '@/components/track-title';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { PlayingBars } from '@/components/playing-bars';
 
@@ -43,7 +44,10 @@ export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl,
   const queue: PlayerTrack[] = toPlayerTracks(
     tracks
       .filter((t) => t.status === 'READY')
-      .map((t) => ({ id: t.id, title: t.title, artistName, coverUrl, artistSlug, releaseId, accentColor, isExplicit: t.isExplicit })),
+      .map((t) => ({
+        id: t.id, title: t.title, artistName, coverUrl, artistSlug, releaseId, accentColor,
+        isExplicit: t.isExplicit, version: t.version, feat: featuredNames(t.credits),
+      })),
   );
 
   function handlePlay(track: ClientTrack) {
@@ -123,7 +127,7 @@ function TrackRow({
           style={isActive ? { color: 'var(--artist-accent)' } : undefined}
         >
           <span className="truncate">
-            {displayTrackTitle(track.title, { version: track.version, credits: track.credits })}
+            <TrackTitleText title={track.title} version={track.version} feat={featuredNames(track.credits)} />
           </span>
           {track.isExplicit && <ExplicitBadge />}
         </span>

@@ -49,5 +49,7 @@ export async function fetchWaveTracks(params: FetchWaveTracksParams): Promise<Pl
     coverUrl: t.coverUrl,
     accentColor: t.accentColor ?? undefined,
     isExplicit: t.isExplicit,
+    version: t.version,
+    feat: t.feat,
   }));
 }

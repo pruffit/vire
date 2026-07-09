@@ -2,6 +2,7 @@ import { and, eq, inArray, notInArray, sql, isNotNull, or, lte, type SQL } from 
 import { db } from '../client';
 import { trackMoods, trackAudio, tracks, releases, artistProfiles, trackGenres } from '../schema';
 import { expandGenresToFamilies } from '../genre-families';
+import { featFromCredits } from './track-credits';
 import type { Mood } from './track-moods';
 import type { TrackGenre } from './track-genres';
 import type { TasteProfile } from './taste';
@@ -15,6 +16,8 @@ export interface WaveTrack {
   coverUrl: string | null;
   accentColor: string | null;
   isExplicit: boolean;
+  version: string | null;
+  feat: string[];
 }
 
 export interface WaveParams {
@@ -85,6 +88,8 @@ const selectShape = {
   coverUrl: releases.coverUrl,
   accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
   isExplicit: tracks.isExplicit,
+  version: tracks.version,
+  credits: tracks.credits,
 };
 
 function toWaveTrack(r: {
@@ -96,6 +101,8 @@ function toWaveTrack(r: {
   coverUrl: string | null;
   accentColor: string | null;
   isExplicit: boolean;
+  version: string | null;
+  credits: unknown;
 }): WaveTrack {
   return {
     id: r.id,
@@ -106,6 +113,8 @@ function toWaveTrack(r: {
     coverUrl: r.coverUrl,
     accentColor: r.accentColor,
     isExplicit: r.isExplicit,
+    version: r.version,
+    feat: featFromCredits(r.credits),
   };
 }
 

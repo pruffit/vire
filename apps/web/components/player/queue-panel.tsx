@@ -5,6 +5,7 @@ import { Reorder, useDragControls } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls } from './audio-engine';
 import { ExplicitBadge } from '@/components/explicit-badge';
+import { TrackTitleText } from '@/components/track-title';
 import { GripIcon, WaveIcon } from './player-icons';
 
 /**
@@ -93,7 +94,9 @@ function QueueRow({
           className="text-sm truncate flex items-center gap-1.5"
           style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
         >
-          <span className="truncate">{t.title}</span>
+          <span className="truncate">
+            <TrackTitleText title={t.title} version={t.version} feat={t.feat} />
+          </span>
           {t.isExplicit && <ExplicitBadge />}
         </span>
         <span className="text-xs text-muted-foreground truncate block">{t.artistName}</span>

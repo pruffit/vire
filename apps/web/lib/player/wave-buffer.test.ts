@@ -63,8 +63,23 @@ describe('fetchWaveTracks', () => {
         coverUrl: validTrack.coverUrl,
         accentColor: undefined,
         isExplicit: false,
+        version: null,
+        feat: [],
       },
     ]);
+  });
+
+  it('пробрасывает непустые version и feat в PlayerTrack', async () => {
+    const withFeat = { ...validTrack, version: 'Remix', feat: ['Guest A', 'Guest B'] };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ tracks: [withFeat] }) }),
+    );
+
+    const result = await fetchWaveTracks({ sessionId: 'sess-1', played: [] });
+
+    expect(result[0].version).toBe('Remix');
+    expect(result[0].feat).toEqual(['Guest A', 'Guest B']);
   });
 
   it('сохраняет accentColor, когда сервер его прислал', async () => {

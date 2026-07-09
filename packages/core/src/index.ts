@@ -4,6 +4,7 @@ export * from './util/uuid';
 export * from './util/ttl-cache';
 export * from './types/artist';
 export * from './types/release';
+export * from './track-display';
 export * from './repositories/artist';
 export * from './repositories/release';
 export * from './repositories/track';

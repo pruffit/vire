@@ -125,6 +125,8 @@ export default async function ArtistPage({ params }: Props) {
     releaseId: t.releaseId,
     accentColor: accent ?? undefined,
     isExplicit: t.isExplicit,
+    version: t.version,
+    feat: t.feat,
   }));
   const runtime = totalDuration(
     playableTracks.map((t) => ({ status: 'READY', durationSec: t.durationSec })),
@@ -140,6 +142,8 @@ export default async function ArtistPage({ params }: Props) {
     accentColor: accent ?? undefined,
     isExplicit: t.isExplicit,
     durationSec: t.durationSec,
+    version: t.version,
+    feat: t.feat,
   }));
 
   return (

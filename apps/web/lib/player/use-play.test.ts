@@ -17,8 +17,8 @@ describe('useLazyQueue', () => {
   });
 
   it('после смены id грузит и отдаёт очередь нового релиза, а не закэшированную старую', async () => {
-    const trackA: LazyReleaseTrack = { id: 'track-a', title: 'A', trackNumber: 1, durationSec: 100, status: 'READY' };
-    const trackB: LazyReleaseTrack = { id: 'track-b', title: 'B', trackNumber: 1, durationSec: 120, status: 'READY' };
+    const trackA: LazyReleaseTrack = { id: 'track-a', title: 'A', version: null, trackNumber: 1, durationSec: 100, status: 'READY', credits: [] };
+    const trackB: LazyReleaseTrack = { id: 'track-b', title: 'B', version: null, trackNumber: 1, durationSec: 120, status: 'READY', credits: [] };
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(releaseResponse([trackA]))
@@ -41,8 +41,8 @@ describe('useLazyQueue', () => {
   });
 
   it('гонка: медленный fetch старого id резолвится после смены id — очередь остаётся новой', async () => {
-    const trackA: LazyReleaseTrack = { id: 'track-a', title: 'A', trackNumber: 1, durationSec: 100, status: 'READY' };
-    const trackB: LazyReleaseTrack = { id: 'track-b', title: 'B', trackNumber: 1, durationSec: 120, status: 'READY' };
+    const trackA: LazyReleaseTrack = { id: 'track-a', title: 'A', version: null, trackNumber: 1, durationSec: 100, status: 'READY', credits: [] };
+    const trackB: LazyReleaseTrack = { id: 'track-b', title: 'B', version: null, trackNumber: 1, durationSec: 120, status: 'READY', credits: [] };
 
     let resolveA!: (res: Response) => void;
     const slowA = new Promise<Response>((resolve) => {

@@ -1,6 +1,7 @@
 import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { likes, follows, tracks, releases, artistProfiles, users } from '../schema';
+import { featFromCredits } from './track-credits';
 
 export async function getUserCreatedAt(userId: string): Promise<Date | null> {
   const rows = await db.select({ createdAt: users.createdAt }).from(users).where(eq(users.id, userId)).limit(1);
@@ -41,6 +42,8 @@ export interface LikedTrack {
   accentColor: string | null;
   isExplicit: boolean;
   likedAt: Date;
+  version: string | null;
+  feat: string[];
 }
 
 export interface FollowedArtist {
@@ -65,6 +68,8 @@ export async function getLikedTracks(userId: string): Promise<LikedTrack[]> {
       accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
       isExplicit: tracks.isExplicit,
       likedAt: likes.createdAt,
+      version: tracks.version,
+      credits: tracks.credits,
     })
     .from(likes)
     .innerJoin(tracks, eq(tracks.id, likes.trackId))
@@ -74,7 +79,7 @@ export async function getLikedTracks(userId: string): Promise<LikedTrack[]> {
     .orderBy(desc(likes.createdAt))
     .limit(100);
 
-  return rows;
+  return rows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) }));
 }
 
 export async function getFollowedArtists(userId: string): Promise<FollowedArtist[]> {
