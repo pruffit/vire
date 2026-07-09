@@ -45,7 +45,15 @@ export function WaveChips({ items }: { items: WaveChipItem[] }) {
   }
 
   return (
-    <ScrollRow bleedClassName="-mx-1" className="flex gap-2 px-1" edgeZone="sm">
+    <ScrollRow
+      bleedClassName="-mx-1"
+      className="flex gap-2 px-1"
+      edgeZone="sm"
+      // Шторка гасит в цвет панели «Поток» (flow-block: bg-white/[0.03] на фоне),
+      // а не в фон страницы — иначе тёмная полоса поверх серой панели.
+      edgeFrom="from-[color-mix(in_oklab,white_3%,var(--background))]"
+    >
+
       {items.map((item) => {
         const isActive =
           !!waveSeed && (item.kind === 'mood' ? waveSeed.mood === item.key : waveSeed.genre === item.key);

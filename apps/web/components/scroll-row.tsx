@@ -43,11 +43,17 @@ export function ScrollRow({
   className,
   bleedClassName,
   edgeZone = 'md',
+  edgeFrom = 'from-background',
 }: {
   children: React.ReactNode;
   className?: string;
   bleedClassName?: string;
   edgeZone?: keyof typeof EDGE_WIDTH;
+  /** Цвет-шторка краевой зоны. По умолчанию `from-background` (лента на фоне
+   *  страницы). Если лента лежит на приподнятой поверхности (карточка/панель) —
+   *  передай сюда её эффективный цвет, иначе шторка гасит в более тёмный фон
+   *  страницы и читается тёмной полосой поверх панели. */
+  edgeFrom?: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState(false);
@@ -115,7 +121,7 @@ export function ScrollRow({
           type="button"
           onClick={() => scroll(-1)}
           aria-label="Прокрутить влево"
-          className={cn(EDGE_BUTTON, EDGE_WIDTH[edgeZone], 'left-0 justify-start bg-linear-to-r from-background from-25% to-transparent')}
+          className={cn(EDGE_BUTTON, EDGE_WIDTH[edgeZone], 'left-0 justify-start bg-linear-to-r from-25% to-transparent', edgeFrom)}
         >
           <Icon name="chevron-left" size={22} />
         </button>
@@ -128,7 +134,7 @@ export function ScrollRow({
           type="button"
           onClick={() => scroll(1)}
           aria-label="Прокрутить вправо"
-          className={cn(EDGE_BUTTON, EDGE_WIDTH[edgeZone], 'right-0 justify-end bg-linear-to-l from-background from-25% to-transparent')}
+          className={cn(EDGE_BUTTON, EDGE_WIDTH[edgeZone], 'right-0 justify-end bg-linear-to-l from-25% to-transparent', edgeFrom)}
         >
           <Icon name="chevron-right" size={22} />
         </button>
