@@ -362,7 +362,12 @@ function playAt(queue: PlayerTrack[], index: number): void {
   const track = queue[index];
   if (!track) return;
 
-  usePlayerStore.getState()._setState({ track, queue, queueIndex: index });
+  // restored сбрасываем здесь, а не только в resumeRestored: если после регидрации
+  // persist (restored=true) пользователь запускает воспроизведение через UI
+  // (playQueue → playAt, а не тап «продолжить»), флаг оставался бы true, и кнопка
+  // play/pause продолжала бы звать resumeRestored() — тот выходит no-op на уже
+  // загруженном треке, и пауза «не реагирует» до перезагрузки.
+  usePlayerStore.getState()._setState({ track, queue, queueIndex: index, restored: false });
 
   if (track.id !== loadedTrackId) {
     loadedTrackId = track.id;
