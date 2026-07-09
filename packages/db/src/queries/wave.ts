@@ -155,35 +155,38 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
   const limit = Math.max(1, Math.min(5, p.limit));
   const excludeIds = Array.from(new Set([p.currentTrackId, ...p.excludeIds].filter((v): v is string => Boolean(v))));
 
-  const seedMoodFilter = p.seedMood
-    ? sql`EXISTS (SELECT 1 FROM track_moods tmf WHERE tmf.track_id = tracks.id AND tmf.mood = ${p.seedMood})`
-    : undefined;
+  // Фильтр по настроению: трек обязан иметь этот mood-тег.
+  const moodFilterFor = (m: Mood | null): SQL | undefined =>
+    m
+      ? sql`EXISTS (SELECT 1 FROM track_moods tmf WHERE tmf.track_id = tracks.id AND tmf.mood = ${m})`
+      : undefined;
 
-  // Seed-жанр расширяется до всего семейства: слушатель выбрал чип «Dub Techno» —
+  // Фильтр по жанру, расширенному до всего семейства: слушатель выбрал чип «Dub Techno» —
   // едет всё техно-семейство, а не только точный подшанр (иначе узкие жанры после
-  // расширения enum сильно разрежают выдачу).
-  const seedGenreFamily = p.seedGenre ? expandGenresToFamilies([p.seedGenre]) : [];
-
-  const seedGenreFilter = p.seedGenre
-    ? sql`(
+  // расширения enum сильно разрежают выдачу). Фолбэк на releases.genre — только если
+  // у трека нет собственных track_genres.
+  const genreFamilyFilterFor = (g: TrackGenre | null): SQL | undefined => {
+    if (!g) return undefined;
+    const family = expandGenresToFamilies([g]);
+    return sql`(
         EXISTS (
           SELECT 1 FROM track_genres tgf
-          WHERE tgf.track_id = tracks.id AND tgf.genre::text = ANY(${textArrayParam(seedGenreFamily)})
+          WHERE tgf.track_id = tracks.id AND tgf.genre::text = ANY(${textArrayParam(family)})
         )
         OR (
           NOT EXISTS (SELECT 1 FROM track_genres tgf2 WHERE tgf2.track_id = tracks.id)
-          AND ${releases.genre}::text = ANY(${textArrayParam(seedGenreFamily)})
+          AND ${releases.genre}::text = ANY(${textArrayParam(family)})
         )
-      )`
-    : undefined;
+      )`;
+  };
 
   // ── Seed-режим: без текущего трека — нет сигналов похожести ───────────────
   if (!p.currentTrackId) {
     const where = and(
       visibleTrackWhere,
       excludeIds.length > 0 ? notInArray(tracks.id, excludeIds) : undefined,
-      seedMoodFilter,
-      seedGenreFilter,
+      moodFilterFor(p.seedMood),
+      genreFamilyFilterFor(p.seedGenre),
     );
 
     if (p.taste) {
@@ -377,13 +380,25 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
     + ${fatiguePenalty} + ${diversityPenalty} + ${sessionMoodBoost} + ${sessionGenreBoost}
     + random() * 0.15`;
 
+  // Закреплённый seed сессии — жёсткий фильтр, а не только буст: волна, запущенная
+  // по чипу жанра/настроения, должна держаться внутри него всю сессию. Без этого
+  // дозапрос буфера (режим похожести) ранжировал по BPM/тональности/вкусу и легко
+  // выдавал трек чужого жанра — sessionGenreBoost (≤0.35) перебивался остальными
+  // термами. Незасидённая волна (кнопка без чипа) — sessionMood/Genre=null, фильтра нет.
   const rows = await db
     .select({ ...selectShape, score: totalScore })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
     .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
     .leftJoin(trackAudio, eq(trackAudio.trackId, tracks.id))
-    .where(and(visibleTrackWhere, excludeIds.length > 0 ? notInArray(tracks.id, excludeIds) : undefined))
+    .where(
+      and(
+        visibleTrackWhere,
+        excludeIds.length > 0 ? notInArray(tracks.id, excludeIds) : undefined,
+        moodFilterFor(p.sessionMood),
+        genreFamilyFilterFor(p.sessionGenre),
+      ),
+    )
     .orderBy(sql`${totalScore} DESC`)
     .limit(limit);
 
