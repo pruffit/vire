@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/components/player/audio-engine';
 import { useAudioTime } from '@/lib/player/use-audio-time';
@@ -31,18 +31,32 @@ export function LyricsScroll({ lines, variant = 'player', trackId, onSeekTo = co
   // ±0.15с (findActiveLrcLine) важнее троттлинга до целой секунды.
   const active = useMemo(() => (synced ? findActiveLrcLine(lines, tick) : -1), [lines, synced, tick]);
 
-  // Доскролл к активной строке — внутри контейнера, не трогая внешний скролл.
-  useEffect(() => {
+  const recenter = useCallback((behavior: ScrollBehavior) => {
     const c = containerRef.current;
     const a = activeRef.current;
     if (!c || !a) return;
-    c.scrollTo({ top: a.offsetTop - c.clientHeight / 2 + a.clientHeight / 2, behavior: 'smooth' });
-  }, [active]);
+    c.scrollTo({ top: a.offsetTop - c.clientHeight / 2 + a.clientHeight / 2, behavior });
+  }, []);
+
+  // Доскролл к активной строке — внутри контейнера, не трогая внешний скролл.
+  useEffect(() => {
+    recenter('smooth');
+  }, [active, recenter]);
+
+  // Раскрытие блока «Текст» анимирует высоту контейнера (motion, height 0→auto) —
+  // пока она переходная, центр съезжает; довскролливаем без анимации на каждый ресайз.
+  useEffect(() => {
+    const c = containerRef.current;
+    if (!c) return;
+    const ro = new ResizeObserver(() => recenter('instant'));
+    ro.observe(c);
+    return () => ro.disconnect();
+  }, [recenter]);
 
   return (
     <div
       ref={containerRef}
-      className="mt-3 max-h-[40vh] md:max-h-64 overflow-y-auto overscroll-contain touch-pan-y no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)]"
+      className="relative mt-3 max-h-[40vh] md:max-h-64 overflow-y-auto overscroll-contain touch-pan-y no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)]"
     >
       {/* Паддинг на внутреннем спейсере, не на скролл-контейнере — иначе первая/
           последняя активная строка не может доскроллиться в центр видимой области
