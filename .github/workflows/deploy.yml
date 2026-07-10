@@ -140,7 +140,10 @@ jobs:
             set -e
             cd /opt/vire
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-            docker compose -f docker-compose.prod.yml --env-file .env pull
+            # Пуллим только свои образы из GHCR: полный pull ходит на Docker Hub
+            # за неизменными postgres/redis/minio/mc/caddy и ловит анонимный
+            # рейт-лимит 429 (уронил деплой v1.17.2). Инфра-образы уже на VPS.
+            docker compose -f docker-compose.prod.yml --env-file .env pull web worker
             # Миграции ДО up -d: аддитивные изменения схемы (новые enum-значения,
             # nullable-колонки) должны существовать к моменту старта нового кода,
             # иначе он падает на отсутствующем значении. Старый код переживает
