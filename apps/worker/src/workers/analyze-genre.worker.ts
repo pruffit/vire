@@ -2,7 +2,7 @@ import { Worker, type Job } from 'bullmq';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { getTrackSourceKey, getTrackGenres, setTrackGenres, saveGenreSuggestions } from '@vire/db';
+import { getTrackSourceKey, setTrackGenresIfEmpty, saveGenreSuggestions } from '@vire/db';
 import { QUEUE_ANALYZE_GENRE, type AnalyzeGenreJobData } from '@vire/core';
 import { VAULT, downloadToFile } from '../lib/s3.js';
 import { classifyTrackGenreOnDemand } from '../lib/genre-classifier.js';
@@ -24,9 +24,8 @@ export async function processAnalyzeGenreJob(job: Job<AnalyzeGenreJobData>): Pro
     const suggestions = await classifyTrackGenreOnDemand(sourcePath);
     await saveGenreSuggestions(trackId, suggestions);
 
-    const existingGenres = await getTrackGenres(trackId);
-    const autoApply = decideAutoApplyGenres(existingGenres, suggestions);
-    if (autoApply.length > 0) await setTrackGenres(trackId, autoApply);
+    const autoApply = decideAutoApplyGenres(suggestions);
+    if (autoApply.length > 0) await setTrackGenresIfEmpty(trackId, autoApply);
 
     await job.log(`suggestions=${suggestions.map((s) => s.genre).join(',')} autoApplied=${autoApply.join(',')}`);
   } finally {

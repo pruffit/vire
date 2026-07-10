@@ -193,6 +193,13 @@ export const GENRE_GROUPS: GenreGroup[] = [
 
 export const ALL_GENRES: Genre[] = GENRE_GROUPS.flatMap((g) => g.genres);
 
+// Runtime-гард для строк из jsonb (genre_suggestions), где enum не гарантирован
+// на уровне типов. hasOwn, а не `in` — `in` смотрит и по цепочке прототипов,
+// чем пропустил бы мусор вроде 'toString'.
+export function isGenre(v: string): v is Genre {
+  return Object.hasOwn(GENRE_LABELS, v);
+}
+
 // Подписи: русские для общеизвестных названий, английские — для сценовых имён.
 export const GENRE_LABELS: Record<Genre, string> = {
   // Хаус

@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { db, tracks, trackAudio, getTrackOwnerContact, getTrackGenres, setTrackGenres, type TrackOwnerContact } from '@vire/db';
+import { db, tracks, trackAudio, getTrackOwnerContact, setTrackGenresIfEmpty, type TrackOwnerContact } from '@vire/db';
 import { QUEUE_TRANSCODE, type TranscodeJobData } from '@vire/core';
 import { VAULT, STREAM, downloadToFile, uploadFile } from '../lib/s3.js';
 import { transcodeToHls, computeWaveformPeaks, probeDuration } from '../lib/ffmpeg.js';
@@ -62,9 +62,11 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
     try {
       genreSuggestions = await classifyTrackGenre(sourcePath);
       if (genreSuggestions && genreSuggestions.length > 0) {
-        const existingGenres = await getTrackGenres(trackId);
-        const autoApply = decideAutoApplyGenres(existingGenres, genreSuggestions);
-        if (autoApply.length > 0) await setTrackGenres(trackId, autoApply);
+        const autoApply = decideAutoApplyGenres(genreSuggestions);
+        if (autoApply.length > 0) {
+          const applied = await setTrackGenresIfEmpty(trackId, autoApply);
+          if (applied) await job.log(`Auto-applied genres: ${autoApply.join(', ')}`);
+        }
       }
     } catch (e) {
       console.error('[transcode] genre classification failed', e);

@@ -117,7 +117,7 @@ export {
   getTrackMoods, setTrackMoods, getMoodsForTracks, getMoodCounts, ALL_MOODS, MOOD_LABELS,
 } from './queries/track-moods';
 export type { Mood, MoodCount } from './queries/track-moods';
-export { getTrackGenres, setTrackGenres, getGenresForTracks, getGenreCounts, ALL_TRACK_GENRES } from './queries/track-genres';
+export { getTrackGenres, setTrackGenres, setTrackGenresIfEmpty, getGenresForTracks, getGenreCounts, ALL_TRACK_GENRES } from './queries/track-genres';
 export type { TrackGenre, GenreCount } from './queries/track-genres';
 export { GENRE_FAMILY, expandGenresToFamilies } from './genre-families';
 export type { GenreFamily } from './genre-families';

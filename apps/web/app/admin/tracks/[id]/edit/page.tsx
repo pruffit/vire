@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { db, DrizzleTrackRepository, getTrackAudioMeta, getTrackMoods, getTrackGenres, getGenreSuggestionsForTracks } from '@vire/db';
-import type { Genre } from '@/lib/genres';
+import { isGenre, type Genre } from '@/lib/genres';
 import { serializeLrc } from '@/lib/lrc';
 import { TrackEditForm } from './track-edit-form';
 import { DetailHeader } from '@/components/admin/ui';
@@ -39,7 +39,9 @@ export default async function AdminTrackEditPage({ params }: { params: Promise<{
           credits: track.credits,
           lyrics: serializeLrc(track.lyrics),
         }}
-        genreSuggestions={(genreSuggestionsMap[id] ?? []) as { genre: Genre; confidence: number }[]}
+        genreSuggestions={(genreSuggestionsMap[id] ?? []).filter(
+          (s): s is { genre: Genre; confidence: number } => isGenre(s.genre),
+        )}
       />
     </div>
   );

@@ -8,6 +8,7 @@ import { BrandGlyph, hasBrandGlyph } from '@/components/brand-glyph';
 import { Icon } from '@/components/icon';
 import { fieldClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
+import { useStableListKeys } from '@/lib/use-stable-list-keys';
 
 /**
  * Единый редактор списка ссылок на площадки/соцсети — общий для смартлинка и
@@ -33,10 +34,18 @@ export function LinksEditor({
   disabled?: boolean;
   addLabel?: string;
 }) {
+  const { keys, add: addKey, remove: removeKey } = useStableListKeys(links.length);
+
   const update = (i: number, patch: Partial<ArtistLink>) =>
     onChange(links.map((l, j) => (j === i ? { ...l, ...patch } : l)));
-  const remove = (i: number) => onChange(links.filter((_, j) => j !== i));
-  const add = () => onChange([...links, { url: '' }]);
+  const remove = (i: number) => {
+    removeKey(i);
+    onChange(links.filter((_, j) => j !== i));
+  };
+  const add = () => {
+    addKey();
+    onChange([...links, { url: '' }]);
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -48,7 +57,7 @@ export function LinksEditor({
 
       {links.map((link, i) => (
         <LinkRow
-          key={i}
+          key={keys[i]}
           link={link}
           disabled={disabled}
           onUrl={(url) => update(i, { url })}

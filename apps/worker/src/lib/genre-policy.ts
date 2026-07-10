@@ -7,17 +7,17 @@ const AUTO_APPLY_THRESHOLD = 0.05;
 const AUTO_APPLY_COUNT = 2;
 
 /**
- * Решает, какие жанры автоприменить к треку по итогам классификации.
- * Артист ничего не проставлял (existingGenres пуст) → берём топ-2 предложения
- * с confidence >= порога. Если у трека уже есть жанры — ничего не трогаем,
- * артист расставил их осознанно. Suggestions сохраняются в БД в любом случае —
- * это решение только про АВТО-простановку в track_genres.
+ * Отбирает кандидатов на автоприменение из предложений классификатора: топ-2
+ * с confidence >= порога. Защита «применять, только если у трека ещё нет
+ * жанров» — не здесь, а атомарно на уровне SQL (`setTrackGenresIfEmpty`):
+ * так исключён TOCTOU-зазор между чтением текущих жанров и записью, в
+ * который раньше мог провалиться ручной выбор артиста. Suggestions
+ * сохраняются в БД в любом случае — это решение только про АВТО-простановку
+ * в track_genres.
  */
 export function decideAutoApplyGenres(
-  existingGenres: readonly TrackGenre[],
   suggestions: readonly GenreSuggestion[],
 ): TrackGenre[] {
-  if (existingGenres.length > 0) return [];
   return suggestions
     .filter((s) => s.confidence >= AUTO_APPLY_THRESHOLD)
     .slice(0, AUTO_APPLY_COUNT)

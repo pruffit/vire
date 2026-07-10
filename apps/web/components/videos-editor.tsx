@@ -7,6 +7,7 @@ import { BrandGlyph, hasBrandGlyph } from '@/components/brand-glyph';
 import { Icon } from '@/components/icon';
 import { fieldClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
+import { useStableListKeys } from '@/lib/use-stable-list-keys';
 
 /**
  * Редактор видео (YouTube/VK) — только ссылка. Название ролика подтягивается с
@@ -24,11 +25,19 @@ export function VideosEditor({
   max: number;
   disabled?: boolean;
 }) {
+  const { keys, add: addKey, remove: removeKey } = useStableListKeys(videos.length);
+
   // При правке ссылки сбрасываем тайтл — он подтянется заново на сервере.
   const update = (i: number, url: string) =>
     onChange(videos.map((v, j) => (j === i ? { url, title: '' } : v)));
-  const remove = (i: number) => onChange(videos.filter((_, j) => j !== i));
-  const add = () => onChange([...videos, { url: '', title: '' }]);
+  const remove = (i: number) => {
+    removeKey(i);
+    onChange(videos.filter((_, j) => j !== i));
+  };
+  const add = () => {
+    addKey();
+    onChange([...videos, { url: '', title: '' }]);
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -44,7 +53,7 @@ export function VideosEditor({
         const { key } = detectPlatform(video.url);
         const glyph = !!video.url && hasBrandGlyph(key);
         return (
-          <div key={i} className="flex items-start gap-2">
+          <div key={keys[i]} className="flex items-start gap-2">
             {glyph ? (
               <span className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md bg-white">
                 <BrandGlyph platform={key} size={20} />

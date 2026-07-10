@@ -1,6 +1,8 @@
 // Pure validation helpers for the track-upload route handler. Kept framework-free
 // so they can be unit-tested without mocking Next/DB/S3.
 
+import { isUuid, ALL_CONTRIBUTOR_ROLES, type TrackCredit, type ContributorRole } from '@vire/core';
+
 /** Maximum accepted source-audio file size (matches proxyClientMaxBodySize). */
 export const MAX_AUDIO_FILE_SIZE = 300 * 1024 * 1024; // 300 MB
 
@@ -28,17 +30,10 @@ export function validateMagicBytes(header: Uint8Array, ext: AudioExt): boolean {
     header[8] === 0x57 && header[9] === 0x41 && header[10] === 0x56 && header[11] === 0x45;
 }
 
-export type ContributorRole = 'PERFORMER' | 'FEATURED' | 'LYRICIST' | 'COMPOSER' | 'PRODUCER';
-export interface TrackCredit {
-  name: string;
-  role: ContributorRole;
-}
-
-const VALID_ROLES: ContributorRole[] = ['PERFORMER', 'FEATURED', 'LYRICIST', 'COMPOSER', 'PRODUCER'];
-
 // Единый источник правды — @vire/core; реэкспорт сохраняет существующие импорты
 // `import { isUuid } from '@/lib/upload'` в роутах.
-export { isUuid } from '@vire/core';
+export { isUuid, ALL_CONTRIBUTOR_ROLES };
+export type { TrackCredit, ContributorRole };
 
 /** Detect the master audio extension from a filename. WAV/FLAC/MP3 accepted. */
 export function parseAudioExt(filename: string): AudioExt | null {
@@ -59,7 +54,7 @@ export function sanitizeCredits(parsed: unknown, max = 20): TrackCredit[] {
         typeof c === 'object' &&
         typeof (c as TrackCredit).name === 'string' &&
         (c as TrackCredit).name.trim().length > 0 &&
-        VALID_ROLES.includes((c as TrackCredit).role),
+        ALL_CONTRIBUTOR_ROLES.includes((c as TrackCredit).role),
     )
     .map((c) => ({ name: c.name.trim(), role: c.role }))
     .slice(0, max);

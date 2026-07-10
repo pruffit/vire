@@ -94,7 +94,9 @@ export const ALL_GENRES = [
   'MUSICAL', 'BRASS', 'FIELD_RECORDING',
 ] as const;
 export type Genre = (typeof ALL_GENRES)[number];
-export type ContributorRole = 'PERFORMER' | 'FEATURED' | 'LYRICIST' | 'COMPOSER' | 'PRODUCER';
+
+export const ALL_CONTRIBUTOR_ROLES = ['PERFORMER', 'FEATURED', 'LYRICIST', 'COMPOSER', 'PRODUCER'] as const;
+export type ContributorRole = (typeof ALL_CONTRIBUTOR_ROLES)[number];
 
 export interface TrackCredit {
   name: string;

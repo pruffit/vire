@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ALL_GENRES as CORE_GENRES } from '@vire/core';
-import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS } from '../genres';
+import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS, isGenre } from '../genres';
 
 describe('genres (web) — зеркало @vire/core', () => {
   it('состав жанров совпадает с ALL_GENRES из core', () => {
@@ -25,5 +25,23 @@ describe('genres (web) — зеркало @vire/core', () => {
     for (const genre of CORE_GENRES) {
       expect(GENRE_LABELS[genre]?.trim().length, genre).toBeGreaterThan(0);
     }
+  });
+
+  describe('isGenre', () => {
+    it('true для валидного жанра', () => {
+      expect(isGenre('HOUSE')).toBe(true);
+      expect(isGenre('TECHNO')).toBe(true);
+    });
+
+    it('false для мусорной строки', () => {
+      expect(isGenre('NOT_A_GENRE')).toBe(false);
+      expect(isGenre('')).toBe(false);
+    });
+
+    it('false для ключей из цепочки прототипов (не собственные свойства)', () => {
+      expect(isGenre('toString')).toBe(false);
+      expect(isGenre('constructor')).toBe(false);
+      expect(isGenre('hasOwnProperty')).toBe(false);
+    });
   });
 });

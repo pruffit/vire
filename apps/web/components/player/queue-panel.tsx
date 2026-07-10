@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, type KeyboardEvent } from 'react';
 import { Reorder, useDragControls } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls } from './audio-engine';
@@ -27,6 +27,16 @@ export function QueuePanel({ onJump }: { onJump: () => void }) {
     usePlayerStore.getState()._setState({ queue: order, queueIndex: Math.max(0, idx) });
   }
 
+  function moveTrack(trackId: string, dir: -1 | 1) {
+    const { queue: current } = usePlayerStore.getState();
+    const i = current.findIndex((t) => t.id === trackId);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= current.length) return;
+    const order = current.slice();
+    [order[i], order[j]] = [order[j], order[i]];
+    handleReorder(order);
+  }
+
   function jump(t: PlayerTrack) {
     const { queue: q, context } = usePlayerStore.getState();
     const idx = q.findIndex((x) => x.id === t.id);
@@ -48,7 +58,7 @@ export function QueuePanel({ onJump }: { onJump: () => void }) {
           return (
             <Fragment key={t.id}>
               {waveMode && i === queueIndex + 1 && <WaveDivider />}
-              <QueueRow track={t} isCurrent={isCurrent} onJump={jump} />
+              <QueueRow track={t} isCurrent={isCurrent} onJump={jump} onMove={moveTrack} />
             </Fragment>
           );
         })}
@@ -67,12 +77,24 @@ function QueueRow({
   track: t,
   isCurrent,
   onJump,
+  onMove,
 }: {
   track: PlayerTrack;
   isCurrent: boolean;
   onJump: (t: PlayerTrack) => void;
+  onMove: (trackId: string, dir: -1 | 1) => void;
 }) {
   const dragControls = useDragControls();
+
+  function handleGripKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      onMove(t.id, -1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      onMove(t.id, 1);
+    }
+  }
 
   return (
     <Reorder.Item
@@ -82,13 +104,15 @@ function QueueRow({
       dragControls={dragControls}
       className={`flex items-center gap-2 px-2 py-2 rounded-md select-none ${isCurrent ? 'bg-white/10' : 'hover:bg-white/5'}`}
     >
-      <span
+      <button
+        type="button"
         onPointerDown={(e) => dragControls.start(e)}
-        className="text-white/25 cursor-grab active:cursor-grabbing shrink-0 touch-none p-2.5 -m-1"
-        aria-hidden="true"
+        onKeyDown={handleGripKeyDown}
+        aria-label={`Переместить «${t.title}»: стрелки вверх/вниз`}
+        className="text-white/25 cursor-grab active:cursor-grabbing shrink-0 touch-none p-2.5 -m-1 rounded"
       >
         <GripIcon />
-      </span>
+      </button>
       <button type="button" onClick={() => onJump(t)} className="flex-1 min-w-0 text-left">
         <span
           className="text-sm truncate flex items-center gap-1.5"

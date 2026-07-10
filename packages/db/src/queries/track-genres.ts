@@ -25,6 +25,33 @@ export async function setTrackGenres(trackId: string, genres: TrackGenre[]): Pro
   });
 }
 
+/**
+ * Атомарно проставляет жанры треку, только если у него их ещё нет — один
+ * SQL-стейтмент (INSERT ... SELECT ... WHERE NOT EXISTS), без промежуточного
+ * чтения. Защищает от TOCTOU: ручной выбор артиста между чтением и записью
+ * не перезаписывается (в отличие от read-then-write через getTrackGenres +
+ * setTrackGenres). Возвращает true, если жанры были вставлены.
+ */
+export async function setTrackGenresIfEmpty(
+  trackId: string,
+  genres: TrackGenre[],
+): Promise<boolean> {
+  if (genres.length === 0) return false;
+
+  const genreArray = sql.join(genres.map((genre) => sql`${genre}`), sql`, `);
+
+  const rows = await db.execute(sql`
+    INSERT INTO track_genres (track_id, genre)
+    SELECT ${trackId}::uuid, g FROM unnest(ARRAY[${genreArray}]::genre[]) AS g
+    WHERE NOT EXISTS (
+      SELECT 1 FROM track_genres WHERE track_id = ${trackId}::uuid
+    )
+    RETURNING track_id
+  `);
+
+  return rows.length > 0;
+}
+
 export async function getGenresForTracks(trackIds: string[]): Promise<Record<string, TrackGenre[]>> {
   if (trackIds.length === 0) return {};
   const rows = await db

@@ -4,8 +4,7 @@ import type { AnalyzeGenreJobData } from '@vire/core';
 
 const h = vi.hoisted(() => ({
   getTrackSourceKey: vi.fn(),
-  getTrackGenres: vi.fn(),
-  setTrackGenres: vi.fn(),
+  setTrackGenresIfEmpty: vi.fn(),
   saveGenreSuggestions: vi.fn(),
   downloadToFile: vi.fn(),
   classifyTrackGenreOnDemand: vi.fn(),
@@ -13,8 +12,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock('@vire/db', () => ({
   getTrackSourceKey: h.getTrackSourceKey,
-  getTrackGenres: h.getTrackGenres,
-  setTrackGenres: h.setTrackGenres,
+  setTrackGenresIfEmpty: h.setTrackGenresIfEmpty,
   saveGenreSuggestions: h.saveGenreSuggestions,
 }));
 vi.mock('@vire/core', () => ({ QUEUE_ANALYZE_GENRE: 'analyze-genre' }));
@@ -41,14 +39,13 @@ function makeJob(): Job<AnalyzeGenreJobData> {
 beforeEach(() => {
   vi.clearAllMocks();
   h.getTrackSourceKey.mockResolvedValue(`tracks/${TRACK_ID}/source.flac`);
-  h.getTrackGenres.mockResolvedValue([]);
   h.classifyTrackGenreOnDemand.mockResolvedValue([
     { genre: 'TECHNO', confidence: 0.8 },
     { genre: 'HOUSE', confidence: 0.3 },
   ]);
   h.downloadToFile.mockResolvedValue(undefined);
   h.saveGenreSuggestions.mockResolvedValue(undefined);
-  h.setTrackGenres.mockResolvedValue(undefined);
+  h.setTrackGenresIfEmpty.mockResolvedValue(true);
 });
 
 describe('processAnalyzeGenreJob', () => {
@@ -73,16 +70,18 @@ describe('processAnalyzeGenreJob', () => {
     ]);
   });
 
-  it('auto-applies top suggestions when the track has no genres yet', async () => {
-    h.getTrackGenres.mockResolvedValue([]);
+  it('auto-applies top suggestions through the atomic empty-genres guard', async () => {
     await processAnalyzeGenreJob(makeJob());
-    expect(h.setTrackGenres).toHaveBeenCalledWith(TRACK_ID, ['TECHNO', 'HOUSE']);
+    expect(h.setTrackGenresIfEmpty).toHaveBeenCalledWith(TRACK_ID, ['TECHNO', 'HOUSE']);
   });
 
-  it('does not touch genres when the track already has some', async () => {
-    h.getTrackGenres.mockResolvedValue(['AMBIENT']);
+  // "Уже есть жанры — не трогаем" теперь проверяется атомарно в setTrackGenresIfEmpty
+  // (INSERT ... WHERE NOT EXISTS), не в этом воркере — здесь только политика отбора
+  // кандидатов по confidence.
+  it('does not call the atomic guard when the policy picks no candidates', async () => {
+    h.classifyTrackGenreOnDemand.mockResolvedValue([{ genre: 'TECHNO', confidence: 0.01 }]);
     await processAnalyzeGenreJob(makeJob());
-    expect(h.setTrackGenres).not.toHaveBeenCalled();
+    expect(h.setTrackGenresIfEmpty).not.toHaveBeenCalled();
   });
 
   it('propagates classifier errors (e.g. missing model) so the job fails', async () => {

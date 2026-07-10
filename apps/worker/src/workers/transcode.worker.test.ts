@@ -18,6 +18,9 @@ const h = vi.hoisted(() => ({
   dbUpdate: vi.fn(),
   getTrackOwnerContact: vi.fn(),
   sendMail: vi.fn(),
+  classifyTrackGenre: vi.fn(),
+  decideAutoApplyGenres: vi.fn(),
+  setTrackGenresIfEmpty: vi.fn(),
 }));
 
 vi.mock('@vire/db', () => ({
@@ -32,9 +35,12 @@ vi.mock('@vire/db', () => ({
   tracks: { id: 'tracks.id', status: 'tracks.status' },
   trackAudio: { trackId: 'trackAudio.trackId' },
   getTrackOwnerContact: h.getTrackOwnerContact,
+  setTrackGenresIfEmpty: h.setTrackGenresIfEmpty,
 }));
 vi.mock('@vire/core', () => ({ QUEUE_TRANSCODE: 'transcode' }));
 vi.mock('../lib/mailer.js', () => ({ sendMail: h.sendMail }));
+vi.mock('../lib/genre-classifier.js', () => ({ classifyTrackGenre: h.classifyTrackGenre }));
+vi.mock('../lib/genre-policy.js', () => ({ decideAutoApplyGenres: h.decideAutoApplyGenres }));
 vi.mock('../lib/s3.js', () => ({
   VAULT: 'vire-vault',
   STREAM: 'vire-stream',
@@ -97,6 +103,11 @@ beforeEach(() => {
     artistSlug: 'artist',
   });
   h.sendMail.mockResolvedValue(undefined);
+
+  // По умолчанию — как при выключенном AUTO_GENRE: классификатор ничего не даёт.
+  h.classifyTrackGenre.mockResolvedValue(null);
+  h.decideAutoApplyGenres.mockReturnValue([]);
+  h.setTrackGenresIfEmpty.mockResolvedValue(false);
 });
 
 function makeFailJob(over?: { attemptsMade?: number; attempts?: number }): Job<TranscodeJobData> {
@@ -219,5 +230,35 @@ describe('processTranscodeJob', () => {
     const job = makeJob();
     await processTranscodeJob(job);
     expect(job.updateProgress).toHaveBeenCalledWith(100);
+  });
+
+  it('applies auto-genre atomically when the policy picks candidates', async () => {
+    h.classifyTrackGenre.mockResolvedValue([{ genre: 'TECHNO', confidence: 0.5 }]);
+    h.decideAutoApplyGenres.mockReturnValue(['TECHNO']);
+    h.setTrackGenresIfEmpty.mockResolvedValue(true);
+
+    const job = makeJob();
+    await processTranscodeJob(job);
+
+    expect(h.decideAutoApplyGenres).toHaveBeenCalledWith([{ genre: 'TECHNO', confidence: 0.5 }]);
+    expect(h.setTrackGenresIfEmpty).toHaveBeenCalledWith(TRACK_ID, ['TECHNO']);
+  });
+
+  it('does not touch track_genres when the policy returns no candidates', async () => {
+    h.classifyTrackGenre.mockResolvedValue([{ genre: 'TECHNO', confidence: 0.5 }]);
+    h.decideAutoApplyGenres.mockReturnValue([]);
+
+    await processTranscodeJob(makeJob());
+
+    expect(h.setTrackGenresIfEmpty).not.toHaveBeenCalled();
+  });
+
+  it('skips genre policy entirely when the classifier returns no suggestions', async () => {
+    h.classifyTrackGenre.mockResolvedValue(null);
+
+    await processTranscodeJob(makeJob());
+
+    expect(h.decideAutoApplyGenres).not.toHaveBeenCalled();
+    expect(h.setTrackGenresIfEmpty).not.toHaveBeenCalled();
   });
 });
