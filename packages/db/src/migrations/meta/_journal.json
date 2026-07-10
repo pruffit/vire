@@ -232,6 +232,13 @@
       "when": 1783678898477,
       "tag": "0032_daily_impossible_man",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783698845328,
+      "tag": "0033_play_events_covering_index",
+      "breakpoints": true
     }
   ]
 }

@@ -233,6 +233,43 @@ export interface AdminArtist {
   plays30d: number;
 }
 
+// Раньше — 4 коррелированных подзапроса, пересчитываемых на каждую из 50 строк
+// (200 сканов на страницу). Теперь — 4 предагрегированных LEFT JOIN: каждая
+// таблица (follows/releases/tracks/play_events) агрегируется по artist_profile_id
+// ОДИН раз (GROUP BY, использует существующие индексы *_artist_profile_id_idx /
+// *_release_id_idx / play_events_track_started_covering_idx), затем хеш-джойнится со
+// страницей артистов — один проход по каждой таблице вместо N.
+// Разные имена count-колонки в каждом подзапросе (не переиспользуем «cnt») —
+// иначе interpolated-колонка в sql-шаблоне ниже рендерится без квалификации
+// таблицы и Postgres не может выбрать между четырьмя одноимёнными «cnt».
+const artistFollowerAgg = db
+  .select({ artistProfileId: follows.artistProfileId, followerCnt: sql<number>`count(*)`.as('follower_cnt') })
+  .from(follows)
+  .groupBy(follows.artistProfileId)
+  .as('artist_follower_agg');
+
+const artistReleaseAgg = db
+  .select({ artistProfileId: releases.artistProfileId, releaseCnt: sql<number>`count(*)`.as('release_cnt') })
+  .from(releases)
+  .groupBy(releases.artistProfileId)
+  .as('artist_release_agg');
+
+const artistTrackAgg = db
+  .select({ artistProfileId: releases.artistProfileId, trackCnt: sql<number>`count(*)`.as('track_cnt') })
+  .from(tracks)
+  .innerJoin(releases, eq(releases.id, tracks.releaseId))
+  .groupBy(releases.artistProfileId)
+  .as('artist_track_agg');
+
+const artistPlays30dAgg = db
+  .select({ artistProfileId: releases.artistProfileId, playsCnt: sql<number>`count(*)`.as('plays_cnt') })
+  .from(playEvents)
+  .innerJoin(tracks, eq(tracks.id, playEvents.trackId))
+  .innerJoin(releases, eq(releases.id, tracks.releaseId))
+  .where(sql`${playEvents.startedAt} >= now() - interval '30 days'`)
+  .groupBy(releases.artistProfileId)
+  .as('artist_plays30d_agg');
+
 export async function listArtistsAdmin(opts: { search?: string; limit?: number; offset?: number } = {}): Promise<AdminArtist[]> {
   const { search, limit = 50, offset = 0 } = opts;
   const rows = await db
@@ -243,21 +280,16 @@ export async function listArtistsAdmin(opts: { search?: string; limit?: number; 
       verified: artistProfiles.verified,
       isActive: artistProfiles.isActive,
       createdAt: artistProfiles.createdAt,
-      // Внешняя таблица в подзапросах указана литералом: drizzle рендерит
-      // интерполированную колонку без квалификации («id»), и внутри подзапроса
-      // с другими таблицами она становится неоднозначной.
-      followerCount: sql<number>`(select count(*) from follows f where f.artist_profile_id = artist_profiles.id)::int`,
-      releaseCount: sql<number>`(select count(*) from releases r where r.artist_profile_id = artist_profiles.id)::int`,
-      trackCount: sql<number>`(select count(*) from tracks t join releases r on r.id = t.release_id where r.artist_profile_id = artist_profiles.id)::int`,
-      plays30d: sql<number>`(
-        select count(*) from play_events pe
-        join tracks t on t.id = pe.track_id
-        join releases r on r.id = t.release_id
-        where r.artist_profile_id = artist_profiles.id
-          and pe.started_at >= now() - interval '30 days'
-      )::int`,
+      followerCount: sql<number>`coalesce(${artistFollowerAgg.followerCnt}, 0)::int`,
+      releaseCount: sql<number>`coalesce(${artistReleaseAgg.releaseCnt}, 0)::int`,
+      trackCount: sql<number>`coalesce(${artistTrackAgg.trackCnt}, 0)::int`,
+      plays30d: sql<number>`coalesce(${artistPlays30dAgg.playsCnt}, 0)::int`,
     })
     .from(artistProfiles)
+    .leftJoin(artistFollowerAgg, eq(artistFollowerAgg.artistProfileId, artistProfiles.id))
+    .leftJoin(artistReleaseAgg, eq(artistReleaseAgg.artistProfileId, artistProfiles.id))
+    .leftJoin(artistTrackAgg, eq(artistTrackAgg.artistProfileId, artistProfiles.id))
+    .leftJoin(artistPlays30dAgg, eq(artistPlays30dAgg.artistProfileId, artistProfiles.id))
     .where(
       search
         ? or(ilike(artistProfiles.name, `%${search}%`), ilike(artistProfiles.slug, `%${search}%`))

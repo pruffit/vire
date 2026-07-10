@@ -16,11 +16,19 @@ export const playEvents = pgTable('play_events', {
   startedAt: timestamp('started_at').notNull().defaultNow(),
 }, (t) => [
   // Самая быстрорастущая таблица — без индексов вся аналитика идёт seq-scan'ом.
-  // Композит вместо одиночного track_id: горячие запросы (популярность, волна)
-  // всегда фильтруют "track_id = X AND started_at >= now() - interval" — одиночный
-  // индекс обслуживал бы только часть предиката. Ведущая колонка та же, поэтому
-  // равенство по track_id без диапазона (напр. admin.ts playsTotal) тоже покрыто.
-  index('play_events_track_started_idx').on(t.trackId, t.startedAt),
+  // ЕДИНСТВЕННЫЙ композит по (track_id, started_at) — play_events_track_started_covering_idx,
+  // с INCLUDE (duration_played_sec). Горячие запросы (популярность, волна) всегда фильтруют
+  // "track_id = X AND started_at >= now() - interval" — композит обслуживает это, а INCLUDE
+  // вдобавок даёт index-only scan для qualityScore в wave.ts (AVG(duration_played_sec) без
+  // похода в heap). Ведущая колонка та же, поэтому равенство по track_id без диапазона
+  // (напр. admin.ts playsTotal) тоже покрыто. Заменил обычный play_events_track_started_idx
+  // (0032) — держать оба btree на самой горячей на вставку таблице расточительно, покрывающий
+  // — надмножество по обслуживаемым чтениям. Добавлен вручную в миграции 0033 (DROP старого +
+  // CREATE покрывающего): drizzle-orm 0.45.2 не выражает INCLUDE декларативно (нет поля в
+  // IndexConfig), поэтому здесь не объявлен — снапшот 0033 отражает его отсутствие в схеме.
+  // Замер (10.07.2026, синтетика 1500 треков/220k play_events/60д): getWaveTracks
+  // (режим похожести) медиана 5818мс → 302мс (19.3×), qualityScore-подзапрос по всем
+  // кандидатам Bitmap Heap Scan → Index Only Scan (Heap Fetches: 0). См. docs/roadmap/TODO.md.
   index('play_events_started_at_idx').on(t.startedAt),
   index('play_events_user_id_idx').on(t.userId),
 ]);
