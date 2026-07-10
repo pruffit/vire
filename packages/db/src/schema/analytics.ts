@@ -16,7 +16,11 @@ export const playEvents = pgTable('play_events', {
   startedAt: timestamp('started_at').notNull().defaultNow(),
 }, (t) => [
   // Самая быстрорастущая таблица — без индексов вся аналитика идёт seq-scan'ом.
-  index('play_events_track_id_idx').on(t.trackId),
+  // Композит вместо одиночного track_id: горячие запросы (популярность, волна)
+  // всегда фильтруют "track_id = X AND started_at >= now() - interval" — одиночный
+  // индекс обслуживал бы только часть предиката. Ведущая колонка та же, поэтому
+  // равенство по track_id без диапазона (напр. admin.ts playsTotal) тоже покрыто.
+  index('play_events_track_started_idx').on(t.trackId, t.startedAt),
   index('play_events_started_at_idx').on(t.startedAt),
   index('play_events_user_id_idx').on(t.userId),
 ]);

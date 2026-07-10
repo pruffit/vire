@@ -1,4 +1,5 @@
 import { pgTable, uuid, text, timestamp, integer, boolean, jsonb, pgEnum, primaryKey, index } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { artistProfiles } from './artists';
 
 export const releaseTypeEnum = pgEnum('release_type', ['ALBUM', 'EP', 'SINGLE']);
@@ -118,7 +119,11 @@ export const releases = pgTable('releases', {
   linerNotes: text('liner_notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (t) => [index('releases_artist_profile_id_idx').on(t.artistProfileId)]);
+}, (t) => [
+  index('releases_artist_profile_id_idx').on(t.artistProfileId),
+  // Триграммный GIN — ILIKE '%q%' по названию релиза (поиск) без seq-scan.
+  index('releases_title_trgm_idx').using('gin', sql`${t.title} gin_trgm_ops`),
+]);
 
 export const tracks = pgTable('tracks', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -142,7 +147,11 @@ export const tracks = pgTable('tracks', {
   lyrics: jsonb('lyrics'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (t) => [index('tracks_release_id_idx').on(t.releaseId)]);
+}, (t) => [
+  index('tracks_release_id_idx').on(t.releaseId),
+  // Триграммный GIN — ILIKE '%q%' по названию трека (поиск) без seq-scan.
+  index('tracks_title_trgm_idx').using('gin', sql`${t.title} gin_trgm_ops`),
+]);
 
 export const moodEnum = pgEnum('mood', [
   'MELANCHOLY',

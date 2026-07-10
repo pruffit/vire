@@ -1,4 +1,5 @@
 import { pgTable, uuid, text, timestamp, boolean, jsonb, index, unique } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { users } from './users';
 import { releases } from './releases';
 
@@ -25,7 +26,11 @@ export const artistProfiles = pgTable('artist_profiles', {
   verified: boolean('verified').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (t) => [index('artist_profiles_user_id_idx').on(t.userId)]);
+}, (t) => [
+  index('artist_profiles_user_id_idx').on(t.userId),
+  // Триграммный GIN — ILIKE '%q%' по имени (поиск) без seq-scan.
+  index('artist_profiles_name_trgm_idx').using('gin', sql`${t.name} gin_trgm_ops`),
+]);
 
 // Smart-link лендинги (bandlink): красивая страница релиза со ссылками на
 // стриминги и соцсети. Самостоятельный маркетинг-инструмент — НЕ требует
