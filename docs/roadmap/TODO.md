@@ -163,21 +163,35 @@
   сессию многократно). Направление: сузить кандидатов грубым top-N по популярности
   до полного скоринга, либо материализовать агрегаты по треку. **Не трогать без
   нагрузочного теста** — риск изменить выдачу волны.
-- [ ] **Композитный индекс `play_events(track_id, started_at)`** — паттерн
-  `WHERE track_id = X AND started_at >= now() - interval` в `wave.ts` (qualityScore,
-  fatigue), `popularity.ts`, `admin.ts` (plays30d). Сейчас два раздельных индекса.
-  Одна миграция, код не меняется.
-- [ ] **GIN + pg_trgm на `artist_profiles.name`/`releases.title`/`tracks.title`** —
-  поиск идёт через `ILIKE '%…%'` (`search.ts`), ведущий `%` исключает btree →
-  seq scan на каждый запрос.
+  **Замер (10.07.2026, синтетика 1500 треков / 220k `play_events` за 60 дней):**
+  композитный индекс `play_events(track_id, started_at)` волну не ускорил —
+  медиана 23.1с → 23.0с (1.005×). Причина: `qualityScore` усредняет
+  `duration_played_sec` — колонку, которой нет в индексе, поэтому index-only scan
+  невозможен и планировщик берёт `Seq Scan … loops=1500`. Тот же индекс на
+  подзапросе популярности (только `COUNT`) даёт **21.9с → 0.49с (44.8×)** через
+  `Index Only Scan`, `Heap Fetches: 0`. Вывод: индексы задачу не закрывают,
+  рефактор остаётся узким местом №1. Третий кандидат-подход к фиксу — покрывающий
+  индекс `(track_id, started_at) INCLUDE (duration_played_sec)`.
+- [x] **Композитный индекс `play_events(track_id, started_at)`** — заменил
+  `play_events_track_id_idx` (не добавлен рядом: композит служит левым префиксом,
+  а `play_events` — самая горячая на вставку таблица). Миграция `0032`. (v1.17.1)
+- [x] **GIN + pg_trgm на `artist_profiles.name`/`releases.title`/`tracks.title`** —
+  миграция `0032`. На текущем объёме планировщик всё ещё выбирает seq scan (при
+  `enable_seqscan=off` индексы подхватываются через `Bitmap Index Scan`) — это
+  страховка на рост каталога, а не сиюминутный выигрыш. (v1.17.1)
 - [ ] **Тяжёлые счётчики в `/admin/artists`** (`admin.ts:249-258`) — 4 коррелированных
   подзапроса × 50 строк, самый дорогой `plays30d` (двойной join + фильтр по дате).
-- [ ] **`useOptimisticToggle`** — паттерн «оптимистичный toggle + rollback + toast»
-  скопирован в 5 файлов (follow-button, presave-button, upcoming-presave-button,
-  like-button, use-playlist-like), причём обработка сетевого сбоя уже разъехалась
-  (`.catch(()=>null)` vs `try/catch`). `packages/api-client` при этом пустой
-  (`.gitkeep`), хотя CLAUDE.md описывает его как типизированный fetch-клиент:
-  62 сырых `fetch` в 41 файле.
+- [x] **`useOptimisticToggle`** — общий хук (`apps/web/lib/use-optimistic-toggle.ts`)
+  поверх оживлённого `@vire/api-client`; 5 дублей переведены на него, разъехавшаяся
+  обработка сетевого сбоя сведена к одной ветке (лайк плейлиста при этом перестал
+  падать молча). Остальные ~57 сырых `fetch` — по мере надобности.
+  Фича: `docs/features/api-client.md`. (v1.17.1)
+- [ ] **`player-like-button.tsx` — шестой дубль тоггла без guard'а** — лайк из плеера
+  и трек-листов ходит через zustand-стор (`store/likes.ts`) сырым `fetch`, поэтому под
+  общий хук не подошёл. В отличие от пяти переведённых, у него **нет** защиты от
+  повторного клика: два быстрых клика шлют POST и DELETE, ответы могут прийти в обратном
+  порядке и оставить стор рассинхронизированным с БД. Направление: guard по trackId
+  в сторе + `likeTrack` из `@vire/api-client`.
 - [ ] **Sitemap** — `force-dynamic` + последовательный `await` по релизам внутри
   артиста (`app/sitemap.ts:32-60`): полный N+1 по каталогу на каждый заход краулера.
 - [ ] **CSP `'unsafe-inline'` в `script-src` на проде** (`next.config.ts:46`) —
