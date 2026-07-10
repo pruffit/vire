@@ -194,11 +194,18 @@ export async function handleTerminalTranscodeFailure(
   }
 }
 
+// lockDuration поднят с дефолтных 30с: шаги 3/3.5 (BPM/key — синхронные JS-циклы,
+// genre — ONNX-инференс) блокируют event loop так же, как в analyze/analyze-genre
+// (см. их createXWorker) — тот же риск потери лока на 1ГБ VPS. HLS-энкод сам по себе
+// не блокирует (ffmpeg — child process), но джоба держит лок весь свой жизненный цикл.
+const LOCK_DURATION_MS = 10 * 60 * 1000;
+
 export function createTranscodeWorker() {
   // defaultJobOptions — опция Queue, не Worker; retry задаётся при постановке задачи в очередь
   const worker = new Worker<TranscodeJobData>(QUEUE_TRANSCODE, processTranscodeJob, {
     connection,
     concurrency: 2,
+    lockDuration: LOCK_DURATION_MS,
   });
 
   return worker;

@@ -31,9 +31,17 @@ export async function processAnalyzeJob(job: Job<AnalyzeJobData>): Promise<void>
   }
 }
 
+// lockDuration поднят с дефолтных 30с: detectBPM/detectKey — чистые синхронные JS-циклы
+// (Goertzel по каждому кадру × 12 тонов × ~5 октав) без единого await, блокируют event
+// loop на весь анализ трека. На 1ГБ VPS под нагрузкой/свопом это может занять больше
+// дефолтного окна лока → «could not renew lock» / «Missing lock ... moveToFinished»
+// (см. прод-алерты analyze/analyze-genre). 10 минут — запас над реальным временем.
+const LOCK_DURATION_MS = 10 * 60 * 1000;
+
 export function createAnalyzeWorker() {
   return new Worker<AnalyzeJobData>(QUEUE_ANALYZE, processAnalyzeJob, {
     connection,
     concurrency: 1, // анализ тяжёлый, не параллелим
+    lockDuration: LOCK_DURATION_MS,
   });
 }
