@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { toast } from '@/components/toast';
 import { HeartIcon } from '@/components/icons';
+import { likeTrack } from '@vire/api-client';
+import { useOptimisticToggle } from '@/lib/use-optimistic-toggle';
 
 interface Props {
   trackId: string;
@@ -13,26 +13,18 @@ interface Props {
 }
 
 export function LikeButton({ trackId, initialLiked, initialCount }: Props) {
-  const [liked, setLiked] = useState(initialLiked);
-  const [count, setCount] = useState(initialCount);
-  const [pending, startTransition] = useTransition();
-
-  function toggle() {
-    const next = !liked;
-    setLiked(next);
-    setCount((c) => c + (next ? 1 : -1));
-
-    startTransition(async () => {
-      const res = await fetch(`/api/v1/tracks/${trackId}/like`, {
-        method: next ? 'POST' : 'DELETE',
-      }).catch(() => null);
-      if (!res?.ok) {
-        setLiked(!next);
-        setCount((c) => c + (next ? -1 : 1));
-        toast.error('Не удалось сохранить лайк');
-      }
-    });
-  }
+  const {
+    on: liked,
+    count,
+    pending,
+    toggle,
+  } = useOptimisticToggle({
+    id: trackId,
+    initial: initialLiked,
+    initialCount,
+    request: (next) => likeTrack(trackId, next),
+    errorMessage: 'Не удалось сохранить лайк',
+  });
 
   return (
     <motion.button

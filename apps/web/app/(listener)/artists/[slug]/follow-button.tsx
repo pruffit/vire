@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { formatCount } from '@/lib/format';
-import { toast } from '@/components/toast';
+import { followArtist } from '@vire/api-client';
+import { useOptimisticToggle } from '@/lib/use-optimistic-toggle';
 
 interface Props {
   slug: string;
@@ -13,27 +13,18 @@ interface Props {
 }
 
 export function FollowButton({ slug, initialFollowing, initialCount }: Props) {
-  const [following, setFollowing] = useState(initialFollowing);
-  const [count, setCount] = useState(initialCount);
-  const [pending, startTransition] = useTransition();
-
-  function toggle() {
-    const next = !following;
-    setFollowing(next);
-    setCount((c) => c + (next ? 1 : -1));
-
-    startTransition(async () => {
-      const res = await fetch(`/api/v1/artists/${slug}/follow`, {
-        method: next ? 'POST' : 'DELETE',
-      }).catch(() => null);
-      if (!res?.ok) {
-        // rollback on error
-        setFollowing(!next);
-        setCount((c) => c + (next ? -1 : 1));
-        toast.error('Не удалось обновить подписку');
-      }
-    });
-  }
+  const {
+    on: following,
+    count,
+    pending,
+    toggle,
+  } = useOptimisticToggle({
+    id: slug,
+    initial: initialFollowing,
+    initialCount,
+    request: (next) => followArtist(slug, next),
+    errorMessage: 'Не удалось обновить подписку',
+  });
 
   return (
     <div className="flex items-center gap-3">

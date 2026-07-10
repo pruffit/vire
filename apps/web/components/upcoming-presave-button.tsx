@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { toast } from '@/components/toast';
 import { Icon } from '@/components/icon';
+import { presaveRelease } from '@vire/api-client';
+import { useOptimisticToggle } from '@/lib/use-optimistic-toggle';
 
 /**
  * Компактный пресейв для секции «Скоро выйдет» на странице артиста. Залогиненный
@@ -24,26 +24,16 @@ export function UpcomingPresaveButton({
   isAuthed: boolean;
   releaseHref: string;
 }) {
-  const [presaved, setPresaved] = useState(initialPresaved);
-  const [busy, setBusy] = useState(false);
-
-  async function toggle() {
-    if (busy) return;
-    const next = !presaved;
-    setPresaved(next); // оптимистично
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/v1/releases/${releaseId}/presave`, {
-        method: next ? 'POST' : 'DELETE',
-      });
-      if (!res.ok) throw new Error();
-    } catch {
-      setPresaved(!next); // откат
-      toast.error('Не удалось сохранить. Попробуй ещё раз');
-    } finally {
-      setBusy(false);
-    }
-  }
+  const {
+    on: presaved,
+    pending: busy,
+    toggle,
+  } = useOptimisticToggle({
+    id: releaseId,
+    initial: initialPresaved,
+    request: (next) => presaveRelease(releaseId, next),
+    errorMessage: 'Не удалось сохранить. Попробуй ещё раз',
+  });
 
   const base =
     'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors';

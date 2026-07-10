@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/components/toast';
 import { Icon } from '@/components/icon';
+import { presaveRelease, presaveReleaseAsGuest } from '@vire/api-client';
+import { useOptimisticToggle } from '@/lib/use-optimistic-toggle';
 
 /**
  * Пресейв релиза. Залогиненный сохраняет в один клик (оптимистично, при выходе
@@ -20,50 +22,32 @@ export function PresaveButton({
   initialPresaved: boolean;
   isAuthed: boolean;
 }) {
-  const [presaved, setPresaved] = useState(initialPresaved);
-  const [busy, setBusy] = useState(false);
+  const {
+    on: presaved,
+    pending: busy,
+    toggle: toggleUser,
+  } = useOptimisticToggle({
+    id: releaseId,
+    initial: initialPresaved,
+    request: (next) => presaveRelease(releaseId, next),
+    errorMessage: 'Не удалось сохранить. Попробуй ещё раз',
+  });
+  const [guestBusy, setGuestBusy] = useState(false);
   const [emailMode, setEmailMode] = useState(false);
   const [email, setEmail] = useState('');
   const [guestDone, setGuestDone] = useState(false);
 
-  async function toggleUser() {
-    if (busy) return;
-    const next = !presaved;
-    setPresaved(next); // оптимистично
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/v1/releases/${releaseId}/presave`, {
-        method: next ? 'POST' : 'DELETE',
-      });
-      if (!res.ok) throw new Error();
-    } catch {
-      setPresaved(!next); // откат
-      toast.error('Не удалось сохранить. Попробуй ещё раз');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function submitGuest(e: React.FormEvent) {
     e.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/v1/releases/${releaseId}/presave`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error((json as { error?: string }).error ?? 'Ошибка');
-      }
+    if (guestBusy) return;
+    setGuestBusy(true);
+    const res = await presaveReleaseAsGuest(releaseId, email);
+    if (res.ok) {
       setGuestDone(true);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Не удалось сохранить');
-    } finally {
-      setBusy(false);
+    } else {
+      toast.error(res.error.message);
     }
+    setGuestBusy(false);
   }
 
   // ─── Залогинен ─────────────────────────────────────────────────────────────
@@ -119,19 +103,19 @@ export function PresaveButton({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="email@example.com"
-            disabled={busy}
+            disabled={guestBusy}
             className="rounded-full bg-white/10 border border-white/15 px-4 py-2 text-sm w-52 focus:outline-none focus:ring-1 focus:ring-[var(--artist-accent)] disabled:opacity-60"
             style={{ color: 'var(--artist-text)' }}
           />
           <motion.button
             type="submit"
-            disabled={busy}
+            disabled={guestBusy}
             whileTap={{ scale: 0.96 }}
             transition={spring.snappy}
             className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-60"
             style={{ background: 'var(--artist-accent)', color: 'var(--artist-bg, #000)' }}
           >
-            {busy ? 'Сохраняю…' : 'Напомнить'}
+            {guestBusy ? 'Сохраняю…' : 'Напомнить'}
           </motion.button>
         </motion.form>
       ) : (
