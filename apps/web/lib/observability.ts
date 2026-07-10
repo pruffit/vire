@@ -2,6 +2,8 @@
 // + опциональная доставка в Telegram и/или generic-webhook (Discord/Slack/
 // Sentry-webhook — любой консьюмер). Алерты не должны бросать в вызывающий код.
 
+import { createThrottleGate } from '@vire/core';
+
 interface ErrorContext {
   service?: 'web' | 'worker';
   where?: string;
@@ -9,8 +11,8 @@ interface ErrorContext {
 }
 
 // Анти-шторм: один и тот же текст алерта шлём не чаще раза в 60с на процесс.
-const lastSent = new Map<string, number>();
-const THROTTLE_MS = 60_000;
+// Потолок записей обязателен — текст содержит уникальные сообщения ошибок.
+const alertGate = createThrottleGate({ ttlMs: 60_000, maxSize: 500 });
 
 // Известный апстрим-шум: в stderr-лог пишем, но в Telegram/webhook не шлём.
 // - kState.transformAlgorithm — спорадический баг Node ≥20.16 webstreams при
@@ -42,9 +44,7 @@ export async function captureError(error: unknown, ctx: ErrorContext = {}): Prom
 
   const text = `🔴 [${service}] ${ctx.where ?? 'error'}: ${message}`;
   const now = Date.now();
-  const prev = lastSent.get(text);
-  if (prev && now - prev < THROTTLE_MS) return;
-  lastSent.set(text, now);
+  if (!alertGate.shouldPass(text, now)) return;
 
   await Promise.all([
     sendTelegram(text),

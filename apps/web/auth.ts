@@ -77,6 +77,10 @@ function createAdapter() {
   };
 }
 
+// bcrypt-хэш (cost 12, как у боевых паролей) от случайной строки — ни один пароль ему
+// не соответствует. Нужен только чтобы выровнять время ответа на несуществующий email.
+const DUMMY_PASSWORD_HASH = '$2b$12$tu5tRPFAW3EkhJEzexavee92HlN.W4cCAHat.TTX5ffXk/BUMM57C';
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: createAdapter(),
   trustHost: true,
@@ -95,9 +99,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!rl.ok) return null;
         } catch { /* rate-limit недоступен — не блокируем вход */ }
         const user = await findUserByEmail(credentials.email as string);
-        if (!user?.passwordHash) return null;
-        const ok = await compare(credentials.password as string, user.passwordHash);
-        if (!ok) return null;
+        // Нет юзера (или он без пароля) → всё равно гоняем bcrypt по фиктивному хэшу той
+        // же стоимости: иначе ответ возвращается мгновенно, и по времени отличим
+        // «такого email нет» от «пароль неверный» — перечисление пользователей.
+        const ok = await compare(credentials.password as string, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+        if (!user?.passwordHash || !ok) return null;
         return { id: user.id, email: user.email, name: user.name, image: user.image, role: user.role as UserRole };
       },
     }),

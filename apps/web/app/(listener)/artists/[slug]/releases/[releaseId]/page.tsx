@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getPresaveState } from '@vire/db';
-import { ArtistService, ReleaseService } from '@vire/core';
+import { ArtistService, ReleaseService, isReleasePubliclyVisible, isCountdownVisible } from '@vire/core';
 import { auth } from '@/auth';
 import { ZoomableCover } from '@/components/zoomable-cover';
 import { ReleaseHeroPlay } from '@/components/release-hero-play';
@@ -36,12 +36,12 @@ async function getPageData(slug: string, releaseId: string) {
   if (release.artistProfileId !== artist.id) return null;
 
   // Считаем здесь, не в компоненте — иначе react-hooks/purity ругается на Date.now() в рендере.
+  const now = new Date();
   const releaseAtMs = release.releaseDate ? new Date(release.releaseDate).getTime() : null;
-  const isReleased =
-    release.status === 'PUBLISHED' ||
-    (release.status === 'SCHEDULED' && releaseAtMs != null && releaseAtMs <= Date.now());
+  const isReleased = isReleasePubliclyVisible(release, now);
+  const showCountdown = isCountdownVisible(release, now);
 
-  return { artist, release, tracks, releaseAtMs, isReleased };
+  return { artist, release, tracks, releaseAtMs, isReleased, showCountdown };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -71,13 +71,13 @@ export default async function ReleasePage({ params }: Props) {
   const data = await getPageData(slug, releaseId);
   if (!data) notFound();
 
-  const { artist, release, tracks, releaseAtMs, isReleased } = data;
+  const { artist, release, tracks, releaseAtMs, isReleased, showCountdown } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
   // SCHEDULED с будущей датой → показываем обратный отсчёт.
   // Черновики/архив/без даты публично не показываем.
   if (!isReleased) {
-    if (release.status !== 'SCHEDULED' || releaseAtMs == null) notFound();
+    if (!showCountdown || releaseAtMs == null) notFound();
     const session = await auth();
     const presaved = session?.user?.id ? await getPresaveState(session.user.id, release.id) : false;
     return (

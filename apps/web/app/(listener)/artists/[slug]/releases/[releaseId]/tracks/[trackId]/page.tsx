@@ -6,7 +6,7 @@ import {
   getTrackAudio, getLikeState, getLikeCount,
   getTrackMoods, getAggregateMoments,
 } from '@vire/db';
-import { ArtistService, ReleaseService, type TrackCredit } from '@vire/core';
+import { ArtistService, ReleaseService, isReleasePubliclyVisible, type TrackCredit } from '@vire/core';
 import { auth } from '@/auth';
 import { ZoomableCover } from '@/components/zoomable-cover';
 import { LikeButton } from './like-button';
@@ -42,6 +42,10 @@ async function getPageData(slug: string, releaseId: string, trackId: string) {
   const { release, tracks } = releaseResult.value;
 
   if (release.artistProfileId !== artist.id) return null;
+
+  // Трек неопубликованного релиза (черновик/архив/будущий SCHEDULED) публично не
+  // существует — иначе страница отдавала бы название, лирику и плеер до релиза.
+  if (!isReleasePubliclyVisible(release, new Date())) return null;
 
   const track = tracks.find((t) => t.id === trackId);
   if (!track) return null;

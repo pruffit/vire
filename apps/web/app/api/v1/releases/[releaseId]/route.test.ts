@@ -1,0 +1,60 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const { findWithTracks } = vi.hoisted(() => ({ findWithTracks: vi.fn() }));
+
+vi.mock('@vire/db', () => ({
+  db: {},
+  DrizzleReleaseRepository: class {
+    findWithTracks = findWithTracks;
+  },
+}));
+
+import { GET } from './route';
+
+const RELEASE_ID = '1321eb20-c9e6-4d95-b4e7-7e6a08fc8cf9';
+const ctx = { params: Promise.resolve({ releaseId: RELEASE_ID }) };
+const req = () => new Request(`http://localhost/api/v1/releases/${RELEASE_ID}`);
+
+const PAST = new Date(Date.now() - 86_400_000);
+const FUTURE = new Date(Date.now() + 86_400_000);
+
+function release(status: string, releaseDate: Date | null = null) {
+  return {
+    release: { id: RELEASE_ID, artistProfileId: 'a1', title: 'Secret', status, releaseDate },
+    tracks: [{ id: 't1', title: 'Leak', status: 'READY' }],
+  };
+}
+
+beforeEach(() => vi.clearAllMocks());
+
+describe('GET /api/v1/releases/[releaseId]', () => {
+  it('404 when the release does not exist', async () => {
+    findWithTracks.mockResolvedValue(null);
+    expect((await GET(req(), ctx)).status).toBe(404);
+  });
+
+  it('отдаёт опубликованный релиз с треками', async () => {
+    findWithTracks.mockResolvedValue(release('PUBLISHED'));
+    const res = await GET(req(), ctx);
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({ tracks: [{ id: 't1' }] });
+  });
+
+  it('отдаёт SCHEDULED-релиз, дата которого уже наступила', async () => {
+    findWithTracks.mockResolvedValue(release('SCHEDULED', PAST));
+    expect((await GET(req(), ctx)).status).toBe(200);
+  });
+
+  // Регрессия: публичный роут утекал черновики/архив/непошедшие релизы вместе с трек-листом.
+  it.each([
+    ['DRAFT', null],
+    ['ARCHIVED', null],
+    ['SCHEDULED', FUTURE],
+    ['SCHEDULED', null],
+  ] as const)('404 для %s (releaseDate=%s), а не утечка трек-листа', async (status, date) => {
+    findWithTracks.mockResolvedValue(release(status, date));
+    const res = await GET(req(), ctx);
+    expect(res.status).toBe(404);
+    await expect(res.json()).resolves.toEqual({ error: 'Release not found' });
+  });
+});

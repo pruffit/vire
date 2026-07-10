@@ -1,7 +1,10 @@
 // Алерты воркера: структурированный лог + Telegram/webhook (факт ошибки).
 // Алертинг не бросает исключений в воркер.
-const lastSent = new Map<string, number>();
-const THROTTLE_MS = 60_000;
+import { createThrottleGate } from '@vire/core';
+
+// Потолок обязателен: ключ содержит jobId и текст ошибки — почти всегда уникален,
+// а процесс воркера живёт между деплоями неделями.
+const alertGate = createThrottleGate({ ttlMs: 60_000, maxSize: 500 });
 
 /**
  * Доставляет алерт во все настроенные каналы. Анти-шторм: одинаковый текст —
@@ -14,9 +17,7 @@ const THROTTLE_MS = 60_000;
  */
 async function dispatch(text: string, fields: Record<string, unknown>): Promise<void> {
   const now = Date.now();
-  const prev = lastSent.get(text);
-  if (prev && now - prev < THROTTLE_MS) return;
-  lastSent.set(text, now);
+  if (!alertGate.shouldPass(text, now)) return;
 
   await Promise.all([sendTelegram(text), sendWebhook(text, fields, now)]);
 }
