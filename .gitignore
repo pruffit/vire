@@ -36,3 +36,6 @@ apps/worker/models/
 
 # Локальный симлинк скилл-менеджера (абсолютный путь, не портабелен)
 .claude/skills/make-interfaces-feel-better
+
+# Изолированные рабочие копии сабагентов (git worktree) — эфемерны, не в git
+.claude/worktrees/
