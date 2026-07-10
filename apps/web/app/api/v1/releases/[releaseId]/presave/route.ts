@@ -8,7 +8,7 @@ import {
   presaveForGuest,
   getPresaveState,
 } from '@vire/db';
-import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 type Params = { params: Promise<{ releaseId: string }> };
 
@@ -57,6 +57,12 @@ export async function POST(req: Request, { params }: Params) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Нужен корректный email' }, { status: 400 });
   }
+
+  // По IP отдельно от email: иначе гость может вбить чужой email раз за разом
+  // (спам чужого ящика письмами о выходе релиза) — email-лимит его не остановит,
+  // это каждый раз "новый" ключ с точки зрения rateLimit(`presave-guest:${email}`).
+  const ipRl = await rateLimit(clientKey(req, 'presave-guest-ip'), 20, 3600);
+  if (!ipRl.ok) return tooManyRequests(ipRl.retryAfter);
 
   const email = parsed.data.email.trim().toLowerCase();
   const rl = await rateLimit(`presave-guest:${email}`, 10, 60);

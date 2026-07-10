@@ -14,14 +14,20 @@ const HEARTBEAT_MS = 20_000;
 export function SitePresence() {
   useEffect(() => {
     let stopped = false;
-    const ping = () => {
+    const ping = async () => {
       if (stopped) return;
-      fetch('/api/v1/presence', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: getSessionId() }),
-        keepalive: true,
-      }).catch(() => {});
+      try {
+        const sessionId = await getSessionId();
+        if (stopped) return;
+        await fetch('/api/v1/presence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+          keepalive: true,
+        });
+      } catch {
+        // Сеть/сервер недоступны — присутствие косметическое, молча пропускаем тик.
+      }
     };
     ping(); // сразу, не дожидаясь интервала
     const timer = setInterval(ping, HEARTBEAT_MS);

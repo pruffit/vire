@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
@@ -51,6 +51,20 @@ export function BatchTrackUpload({
   const [items, setItems] = useState<QueueItem[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const activeXhrsRef = useRef<Set<XMLHttpRequest>>(new Set());
+  const cancelledRef = useRef(false);
+
+  // Анмаунт (навигация прочь со страницы редактирования релиза) не должен оставлять
+  // висящие загрузки — абортим летящий XHR И останавливаем очередь, чтобы цикл не
+  // открывал новые запросы и не дёргал router.refresh() на уже другой странице.
+  useEffect(() => {
+    const activeXhrs = activeXhrsRef.current;
+    return () => {
+      cancelledRef.current = true;
+      for (const xhr of activeXhrs) xhr.abort();
+      activeXhrs.clear();
+    };
+  }, []);
 
   const update = useCallback((key: string, patch: Partial<QueueItem>) => {
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)));
@@ -66,11 +80,13 @@ export function BatchTrackUpload({
       fd.set('file', item.file);
 
       const xhr = new XMLHttpRequest();
+      activeXhrsRef.current.add(xhr);
       xhr.open('POST', '/api/v1/dashboard/tracks/upload');
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) update(item.key, { progress: e.loaded / e.total });
       };
       xhr.onload = () => {
+        activeXhrsRef.current.delete(xhr);
         if (xhr.status >= 200 && xhr.status < 300) {
           update(item.key, { state: 'processing', progress: 1 });
           resolve(true);
@@ -82,7 +98,12 @@ export function BatchTrackUpload({
         }
       };
       xhr.onerror = () => {
+        activeXhrsRef.current.delete(xhr);
         update(item.key, { state: 'error', error: 'Сбой сети' });
+        resolve(false);
+      };
+      xhr.onabort = () => {
+        activeXhrsRef.current.delete(xhr);
         resolve(false);
       };
       update(item.key, { state: 'uploading', progress: 0 });
@@ -98,9 +119,11 @@ export function BatchTrackUpload({
     // Нумеруем последовательно от текущего «следующего» номера; неуспешные пропускаем.
     let n = nextTrackNumber;
     for (const item of queue) {
+      if (cancelledRef.current) return;
       const success = await uploadOne(item, n);
       if (success) { ok += 1; n += 1; } else { fail += 1; }
     }
+    if (cancelledRef.current) return;
     setUploading(false);
 
     if (ok > 0) {

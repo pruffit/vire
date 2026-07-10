@@ -9,6 +9,7 @@ import {
 import { QUEUE_FULFILL_PRESAVE, type FulfillPresaveJobData } from '@vire/core';
 import { connection } from '../queues/connection.js';
 import { sendMail } from '../lib/mailer.js';
+import { buildUnsubscribeUrl } from '../lib/presave-unsubscribe.js';
 
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
@@ -19,7 +20,11 @@ const RELEASE_TYPE_RU: Record<string, string> = {
   SINGLE: 'сингл',
 };
 
-function buildHtml(data: FulfillPresaveJobData, recipientName: string | null): string {
+function buildHtml(
+  data: FulfillPresaveJobData,
+  recipientName: string | null,
+  unsubscribeUrl: string | null,
+): string {
   const typeLabel = RELEASE_TYPE_RU[data.releaseType] ?? data.releaseType.toLowerCase();
   const releaseUrl = `${APP_URL}/artists/${data.artistSlug}/releases/${data.releaseId}`;
   const greeting = recipientName ? `Привет, ${recipientName}!` : 'Привет!';
@@ -47,6 +52,7 @@ function buildHtml(data: FulfillPresaveJobData, recipientName: string | null): s
 
     <p style="margin:40px 0 0;font-size:12px;color:#444">
       Ты получил это письмо, потому что сделал пресейв этого релиза на Vire.
+      ${unsubscribeUrl ? `<a href="${unsubscribeUrl}" style="color:#666">Отписаться от таких писем</a>` : ''}
     </p>
   </div>
 </body>
@@ -71,7 +77,8 @@ async function handle(job: Job<FulfillPresaveJobData>): Promise<void> {
   let sent = 0;
   for (const c of contacts) {
     try {
-      await sendMail({ to: c.email, toName: c.name, subject, html: buildHtml(data, c.name) });
+      const unsubscribeUrl = c.isGuest ? buildUnsubscribeUrl(APP_URL, c.email) : null;
+      await sendMail({ to: c.email, toName: c.name, subject, html: buildHtml(data, c.name, unsubscribeUrl) });
       sent += 1;
     } catch (err) {
       await job.log(`mail failed for ${c.email}: ${(err as Error).message}`);

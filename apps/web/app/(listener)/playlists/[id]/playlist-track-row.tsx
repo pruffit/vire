@@ -71,7 +71,7 @@ export function SortablePlaylistRow({ track, index, queue, queueIndex, context, 
       }
       trailing={
         <>
-          {track.durationSec && (
+          {typeof track.durationSec === 'number' && track.durationSec > 0 && (
             <span className="text-xs font-mono text-muted-foreground tabular-nums shrink-0">{formatDuration(track.durationSec)}</span>
           )}
           {isOwner && (

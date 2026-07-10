@@ -12,6 +12,7 @@ const { getReleasePresaveInfo, presaveForUser, unpresaveForUser, presaveForGuest
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
 vi.mock('@/lib/rate-limit', () => ({
   rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
+  clientKey: vi.fn((_req: Request, prefix: string) => `${prefix}:test`),
   tooManyRequests: vi.fn(() => new Response('rate', { status: 429 })),
 }));
 vi.mock('@vire/db', () => ({
@@ -89,6 +90,16 @@ describe('POST /api/v1/releases/[id]/presave', () => {
     mockedAuth.mockResolvedValue(null as never);
     const res = await POST(req({ email: 'not-an-email' }), ctx);
     expect(res.status).toBe(400);
+    expect(presaveForGuest).not.toHaveBeenCalled();
+  });
+
+  it('429 when the guest IP is rate-limited (before the email limit)', async () => {
+    getReleasePresaveInfo.mockResolvedValue(future());
+    mockedAuth.mockResolvedValue(null as never);
+    const { rateLimit } = await import('@/lib/rate-limit');
+    vi.mocked(rateLimit).mockResolvedValueOnce({ ok: false, remaining: 0, retryAfter: 3600 });
+    const res = await POST(req({ email: 'fan@example.com' }), ctx);
+    expect(res.status).toBe(429);
     expect(presaveForGuest).not.toHaveBeenCalled();
   });
 });

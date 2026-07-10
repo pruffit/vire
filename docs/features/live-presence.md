@@ -17,6 +17,19 @@
 При недоступности Redis все presence-эндпоинты возвращают `{ count: 0 }` без исключений.  
 Реализовано в `apps/web/lib/presence.ts` через try/catch.
 
+### Подпись sessionId (анти-накрутка)
+
+`sessionId` (общий для heartbeat присутствия, `/listening` и play-события) выдаёт
+только сервер — `POST /api/v1/session` генерит `uuid` и подписывает HMAC-SHA256
+(`apps/web/lib/session-signing.ts`, секрет — `LINK_SIGNING_SECRET` или `AUTH_SECRET`,
+см. `apps/web/lib/app-secret.ts`). Клиент (`apps/web/lib/session-id.ts`, кэш в
+`sessionStorage`) не может придумать свой id — только запросить подписанный.
+`/api/v1/presence`, `/api/v1/tracks/[id]/listening` и `/api/v1/tracks/[id]/play`
+проверяют подпись (`verifySessionId`) и отбрасывают запрос (`400`) при её отсутствии
+или несовпадении. Без секрета в env — деградация до прежнего (неподписанного)
+поведения: подпись не проверяется вообще, счётчики остаются приблизительными
+(принятый риск, косметика — см. `docs/superpowers/specs/2026-07-10-audit-tail.md`, C2).
+
 ## Где код
 
 - **Heartbeat API:** `apps/web/app/api/v1/tracks/[id]/listening/route.ts`

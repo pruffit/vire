@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { useLikesStore } from '@/store/likes';
-import { toast } from '@/components/toast';
 import { HeartIcon } from '@/components/icons';
 
 export function PlayerLikeButton({
@@ -15,23 +14,13 @@ export function PlayerLikeButton({
   size?: 'sm' | 'md';
 }) {
   const load = useLikesStore((s) => s.load);
-  const update = useLikesStore((s) => s.update);
+  const storeToggle = useLikesStore((s) => s.toggle);
   const liked = useLikesStore((s) => s.state[trackId] ?? null);
 
   useEffect(() => { load(trackId); }, [trackId, load]);
 
   function toggle() {
-    if (liked === null) return;
-    const next = !liked;
-    update(trackId, next);
-    fetch(`/api/v1/tracks/${trackId}/like`, { method: next ? 'POST' : 'DELETE' })
-      .then((r) => { if (!r.ok) rollback(); })
-      .catch(rollback);
-
-    function rollback() {
-      update(trackId, !next);
-      toast.error('Не удалось сохранить лайк');
-    }
+    storeToggle(trackId);
   }
 
   if (liked === null) return null;

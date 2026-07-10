@@ -81,4 +81,88 @@ describe('createTtlCache', () => {
     const value = await cache.get('a', () => Promise.resolve(7));
     expect(value).toBe(7);
   });
+
+  it('single-flights concurrent loads for the same key', async () => {
+    const cache = createTtlCache<string, number>({ ttlMs: 1000, maxSize: 10 });
+    let resolveLoad: (value: number) => void = () => {};
+    const load = vi.fn(
+      () =>
+        new Promise<number>((resolve) => {
+          resolveLoad = resolve;
+        }),
+    );
+
+    const first = cache.get('a', load, 0);
+    const second = cache.get('a', load, 0);
+
+    resolveLoad(42);
+    const [firstValue, secondValue] = await Promise.all([first, second]);
+
+    expect(firstValue).toBe(42);
+    expect(secondValue).toBe(42);
+    expect(load).toHaveBeenCalledTimes(1);
+
+    // resolved value is cached — a subsequent get before TTL expiry does not call load again
+    const cachedLoad = vi.fn().mockResolvedValue(99);
+    const third = await cache.get('a', cachedLoad, 100);
+    expect(third).toBe(42);
+    expect(cachedLoad).not.toHaveBeenCalled();
+  });
+
+  it('does not cache a rejected load, so a later get() retries', async () => {
+    const cache = createTtlCache<string, number>({ ttlMs: 1000, maxSize: 10 });
+    const failingLoad = vi.fn().mockRejectedValue(new Error('boom'));
+
+    const firstAttempt = cache.get('a', failingLoad, 0);
+    const secondAttempt = cache.get('a', failingLoad, 0);
+
+    await expect(firstAttempt).rejects.toThrow('boom');
+    await expect(secondAttempt).rejects.toThrow('boom');
+    expect(failingLoad).toHaveBeenCalledTimes(1);
+
+    const retryLoad = vi.fn().mockResolvedValue(7);
+    const value = await cache.get('a', retryLoad, 1);
+    expect(value).toBe(7);
+    expect(retryLoad).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a rejected promise (not a sync throw) when load throws synchronously', async () => {
+    const cache = createTtlCache<string, number>({ ttlMs: 1000, maxSize: 10 });
+    const throwingLoad = () => {
+      throw new Error('sync boom');
+    };
+
+    // Must not throw synchronously — the contract is Promise<V>.
+    const result = cache.get('a', throwingLoad, 0);
+    await expect(result).rejects.toThrow('sync boom');
+
+    // in-flight not poisoned: a later valid get() succeeds.
+    const value = await cache.get('a', () => Promise.resolve(5), 1);
+    expect(value).toBe(5);
+  });
+
+  it('clear() drops in-flight state so a concurrent get() re-invokes load', async () => {
+    const cache = createTtlCache<string, number>({ ttlMs: 1000, maxSize: 10 });
+    let resolveFirst: (value: number) => void = () => {};
+    const firstLoad = vi.fn(
+      () =>
+        new Promise<number>((resolve) => {
+          resolveFirst = resolve;
+        }),
+    );
+
+    const pending = cache.get('a', firstLoad, 0);
+    cache.clear();
+
+    // If clear() hadn't dropped the in-flight entry, this would return the
+    // still-unresolved `pending` promise instead of triggering a fresh load.
+    const secondLoad = vi.fn().mockResolvedValue(2);
+    const secondValue = await cache.get('a', secondLoad, 0);
+
+    expect(secondValue).toBe(2);
+    expect(secondLoad).toHaveBeenCalledTimes(1);
+
+    resolveFirst(1);
+    await pending;
+  });
 });

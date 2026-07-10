@@ -42,7 +42,7 @@ describe('POST /api/v1/tracks/[id]/listening', () => {
   it('400 when sessionId missing or invalid', async () => {
     expect((await POST(postReq({}), ctx)).status).toBe(400);
     expect((await POST(postReq({ sessionId: '' }), ctx)).status).toBe(400);
-    expect((await POST(postReq({ sessionId: 'x'.repeat(65) }), ctx)).status).toBe(400);
+    expect((await POST(postReq({ sessionId: 'x'.repeat(81) }), ctx)).status).toBe(400);
     expect(recordListening).not.toHaveBeenCalled();
   });
 

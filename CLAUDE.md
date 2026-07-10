@@ -192,12 +192,19 @@ DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 
 ```bash
 pnpm --filter @vire/web typecheck      # tsc --noEmit
+pnpm --filter @vire/core typecheck     # tsc --noEmit
+pnpm --filter @vire/db typecheck       # tsc --noEmit
 pnpm --filter @vire/web lint           # eslint
 pnpm --filter @vire/web check:routes   # инвариант роутинга (см. ниже)
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов
 pnpm --filter @vire/web build          # прод-сборка (prebuild сам гоняет check:routes)
 ```
+
+> CI (`gates`) гоняет typecheck единым `pnpm turbo run typecheck` — таск в `turbo.json`
+> без scope-фильтра, подхватывает любой пакет со своим script `typecheck` (сейчас
+> `@vire/web`, `@vire/core`, `@vire/db` и остальные). Добавлять отдельный CI-шаг под
+> каждый пакет не нужно — turbo уже фанаутит.
 
 > ⚠️ **Рантайм-баги старта сервера typecheck/lint/test/build НЕ ловят.** Так уже
 > один раз слёг прод (v1.0.70): два соседних динамических сегмента с разными

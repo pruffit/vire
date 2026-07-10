@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { recordListening, countListening } from '@/lib/presence';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
+import { verifySessionId, SESSION_ID_MAX_LEN } from '@/lib/session-signing';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,8 +13,12 @@ export async function POST(req: Request, { params }: Params) {
   const { id: trackId } = await params;
 
   const body = await req.json().catch(() => null);
-  const sessionId = (body as { sessionId?: unknown } | null)?.sessionId;
-  if (typeof sessionId !== 'string' || sessionId.length < 1 || sessionId.length > 64) {
+  const raw = (body as { sessionId?: unknown } | null)?.sessionId;
+  if (typeof raw !== 'string' || raw.length < 1 || raw.length > SESSION_ID_MAX_LEN) {
+    return NextResponse.json({ error: 'Bad request' }, { status: 400 });
+  }
+  const sessionId = verifySessionId(raw);
+  if (!sessionId) {
     return NextResponse.json({ error: 'Bad request' }, { status: 400 });
   }
 

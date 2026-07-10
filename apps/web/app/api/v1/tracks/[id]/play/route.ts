@@ -3,6 +3,7 @@ import { PLAY_SOURCES } from '@vire/api-contracts';
 import { auth } from '@/auth';
 import { playEventQueue } from '@/lib/queue';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
+import { verifySessionId, SESSION_ID_MAX_LEN } from '@/lib/session-signing';
 
 const VALID_SOURCES = new Set<string>(PLAY_SOURCES);
 
@@ -22,10 +23,14 @@ export async function POST(req: Request, { params }: Params) {
   const { sessionId, source, durationPlayedSec, startedAt } = body as Record<string, unknown>;
 
   if (
-    typeof sessionId !== 'string' || sessionId.length < 1 || sessionId.length > 64 ||
+    typeof sessionId !== 'string' || sessionId.length < 1 || sessionId.length > SESSION_ID_MAX_LEN ||
     typeof durationPlayedSec !== 'number' || !Number.isInteger(durationPlayedSec) || durationPlayedSec < 0 ||
     typeof startedAt !== 'string' || isNaN(Date.parse(startedAt))
   ) {
+    return NextResponse.json({ error: 'Bad request' }, { status: 400 });
+  }
+  const verifiedSessionId = verifySessionId(sessionId);
+  if (!verifiedSessionId) {
     return NextResponse.json({ error: 'Bad request' }, { status: 400 });
   }
 
@@ -35,7 +40,7 @@ export async function POST(req: Request, { params }: Params) {
 
   await playEventQueue.add({
     trackId,
-    sessionId,
+    sessionId: verifiedSessionId,
     userId: session?.user?.id ?? null,
     source: resolvedSource,
     durationPlayedSec,

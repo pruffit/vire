@@ -4,6 +4,7 @@ import {
   DrizzleReleaseRepository,
   listActiveArtists,
   getPublishedSmartLinks,
+  listTrackIdsByReleaseIds,
 } from '@vire/db';
 import { ReleaseService } from '@vire/core';
 import { SITE_URL } from '@/lib/site';
@@ -28,48 +29,52 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-    // Релизы + треки внутри каждого релиза + смартлинки артиста.
     const perArtist = await Promise.all(
       artists.map(async (a) => {
         const [releases, smartLinks] = await Promise.all([
           releaseService.getPublishedByArtist(a.id),
           getPublishedSmartLinks(a.id),
         ]);
-
-        const releaseEntries: MetadataRoute.Sitemap = [];
-        for (const r of releases) {
-          const releaseUrl = `${SITE_URL}/artists/${a.slug}/releases/${r.id}`;
-          releaseEntries.push({
-            url: releaseUrl,
-            lastModified: r.updatedAt,
-            changeFrequency: 'weekly',
-            priority: 0.6,
-          });
-
-          const withTracks = await releaseService.getWithTracks(r.id);
-          if (withTracks.ok) {
-            for (const t of withTracks.value.tracks) {
-              releaseEntries.push({
-                url: `${releaseUrl}/tracks/${t.id}`,
-                lastModified: r.updatedAt,
-                changeFrequency: 'weekly',
-                priority: 0.5,
-              });
-            }
-          }
-        }
-
-        const smartLinkEntries: MetadataRoute.Sitemap = smartLinks.map((sl) => ({
-          url: `${SITE_URL}/smartlink/${a.slug}/${sl.slug}`,
-          changeFrequency: 'weekly',
-          priority: 0.6,
-        }));
-
-        return [...releaseEntries, ...smartLinkEntries];
+        return { artist: a, releases, smartLinks };
       }),
     );
 
-    return [...staticRoutes, ...artistRoutes, ...perArtist.flat()];
+    // Один запрос на все треки всего каталога вместо getWithTracks(r.id) по
+    // каждому релизу — раньше был N+1 (по релизу на каждый await).
+    const allReleaseIds = perArtist.flatMap(({ releases }) => releases.map((r) => r.id));
+    const trackIdsByRelease = await listTrackIdsByReleaseIds(allReleaseIds);
+
+    const releaseAndSmartLinkEntries: MetadataRoute.Sitemap = perArtist.flatMap(({ artist: a, releases, smartLinks }) => {
+      const releaseEntries: MetadataRoute.Sitemap = [];
+      for (const r of releases) {
+        const releaseUrl = `${SITE_URL}/artists/${a.slug}/releases/${r.id}`;
+        releaseEntries.push({
+          url: releaseUrl,
+          lastModified: r.updatedAt,
+          changeFrequency: 'weekly',
+          priority: 0.6,
+        });
+
+        for (const trackId of trackIdsByRelease.get(r.id) ?? []) {
+          releaseEntries.push({
+            url: `${releaseUrl}/tracks/${trackId}`,
+            lastModified: r.updatedAt,
+            changeFrequency: 'weekly',
+            priority: 0.5,
+          });
+        }
+      }
+
+      const smartLinkEntries: MetadataRoute.Sitemap = smartLinks.map((sl) => ({
+        url: `${SITE_URL}/smartlink/${a.slug}/${sl.slug}`,
+        changeFrequency: 'weekly',
+        priority: 0.6,
+      }));
+
+      return [...releaseEntries, ...smartLinkEntries];
+    });
+
+    return [...staticRoutes, ...artistRoutes, ...releaseAndSmartLinkEntries];
   } catch {
     // БД недоступна — отдаём хотя бы статические маршруты, чтобы sitemap не падал.
     return staticRoutes;

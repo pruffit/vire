@@ -57,12 +57,16 @@ let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let heartbeatTrackId: string | null = null;
 
 function sendHeartbeat(trackId: string): void {
-  fetch(`/api/v1/tracks/${trackId}/listening`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId: getSessionId() }),
-    keepalive: true,
-  }).catch(() => {});
+  getSessionId()
+    .then((sessionId) =>
+      fetch(`/api/v1/tracks/${trackId}/listening`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+        keepalive: true,
+      }),
+    )
+    .catch(() => {});
 }
 
 function startHeartbeat(trackId: string): void {
@@ -90,11 +94,15 @@ function flushPlayEvent(): void {
   playStartedAt = null;
   playStartedTrackId = null;
 
-  fetch(`/api/v1/tracks/${trackId}/play`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId: getSessionId(), source, durationPlayedSec, startedAt }),
-  }).catch(() => {});
+  getSessionId()
+    .then((sessionId) =>
+      fetch(`/api/v1/tracks/${trackId}/play`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, source, durationPlayedSec, startedAt }),
+      }),
+    )
+    .catch(() => {});
 }
 
 // ─── Буфер волны ─────────────────────────────────────────────────────────
@@ -303,7 +311,16 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
     return;
   }
 
-  usePlayerStore.getState()._setState({ waveformPeaks: manifest.waveformPeaks ?? null, hasAudio: true });
+  // Резюм: currentTime уже в сторе (см. выше), но useAudioTime переключается на
+  // живой audio.currentTime сразу, как только hasAudio станет true (см. коммент
+  // hasAudio-фолбэк в use-audio-time.ts) — если выставить его здесь, окно между
+  // этим кадром и MANIFEST_PARSED (где audio.currentTime реально ставится в
+  // opts.seekTo) мелькнёт 0:00. Поэтому на резюме hasAudio уходит в true только
+  // после применения seekTo к элементу — ниже, в колбэках MANIFEST_PARSED/canPlayType.
+  usePlayerStore.getState()._setState({
+    waveformPeaks: manifest.waveformPeaks ?? null,
+    ...(isResume ? {} : { hasAudio: true }),
+  });
 
   if (hls) { hls.destroy(); hls = null; }
 
@@ -318,6 +335,7 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
     hls.attachMedia(audio);
     hls.once(Hls.Events.MANIFEST_PARSED, () => {
       if (opts.seekTo) audio!.currentTime = opts.seekTo;
+      if (isResume) usePlayerStore.getState()._setState({ hasAudio: true });
       audio?.play().catch(() => {});
     });
     hls.on(Hls.Events.ERROR, (_evt, data) => {
@@ -352,6 +370,7 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
   } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
     audio.src = manifest.hlsUrl;
     if (opts.seekTo) audio.currentTime = opts.seekTo;
+    if (isResume) usePlayerStore.getState()._setState({ hasAudio: true });
     audio.play().catch(() => {});
   } else {
     usePlayerStore.getState()._setState({ hasAudio: false, isLoading: false });

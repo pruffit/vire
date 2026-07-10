@@ -59,10 +59,15 @@
 
 ## A05:2021 — Security Misconfiguration ✅
 
-- **Заголовки** (`next.config.ts`): CSP, `X-Frame-Options: DENY`, HSTS,
-  `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`.
-- **CSP** собирается в `buildCsp()`; `img/connect` ограничены known-хостами
-  (S3/CDN, OAuth-аватары). `frame-src` — только YouTube/VK для эмбедов.
+- **Заголовки**: статичные (`X-Frame-Options: DENY`, HSTS, `Referrer-Policy`,
+  `Permissions-Policy`, COOP) **и CSP** — все в `next.config.ts headers()`.
+- **CSP** собирается в `buildCsp()` (`next.config.ts`); `img/connect` ограничены
+  known-хостами (S3/CDN, OAuth-аватары). `frame-src` — только YouTube/VK для эмбедов.
+  `script-src` содержит `'unsafe-inline'` (в dev ещё `'unsafe-eval'` для webpack) —
+  осознанный долг: Next инжектит инлайн-скрипты гидрации/RSC-стриминга без nonce, а
+  переход на per-request nonce переводит площадку в dynamic rendering (регрессия LCP
+  SEO-страниц) и требует ручного nonce для сырых инлайн-скриптов. Разбор и план возврата —
+  `docs/foundation/TECHNICAL_DEBT.md` → «`'unsafe-inline'` в CSP».
 - Стек-трейсы наружу не отдаём: API возвращает короткие сообщения об ошибке.
 - S3 разделён: `vault` приватный, `stream` публичный только для HLS/обложек/аватаров.
 - Dev-эндпоинты/Drizzle Studio на проде не публикуются.

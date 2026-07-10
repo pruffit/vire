@@ -45,6 +45,17 @@ export async function getPresaveStates(userId: string, releaseIds: string[]): Pr
   return new Set(rows.map((r) => r.releaseId));
 }
 
+/** Отписка гостя (ссылка из письма "вышло"): удаляет ещё не исполненные гостевые
+ *  пресейвы этого email по всем релизам. Уже исполненные (fulfilledAt не NULL)
+ *  не трогаем — письмо по ним уже ушло, удалять запись задним числом бессмысленно. */
+export async function deletePendingGuestPresavesByEmail(email: string): Promise<number> {
+  const res = await db
+    .delete(releasePresaves)
+    .where(and(eq(releasePresaves.email, email), isNull(releasePresaves.fulfilledAt)))
+    .returning({ id: releasePresaves.id });
+  return res.length;
+}
+
 export async function getPresaveCount(releaseId: string): Promise<number> {
   const [row] = await db
     .select({ count: count() })
@@ -145,6 +156,10 @@ export async function getPresaverUserIds(releaseId: string): Promise<string[]> {
 export interface PresaverContact {
   email: string;
   name: string | null;
+  // Гость (email-колонка, без аккаунта) vs залогиненный юзер — для ссылки
+  // «отписаться» в письме: она удаляет только гостевые пресейвы по email,
+  // юзеру её показывать не за чем (его presave живёт при userId, не при email).
+  isGuest: boolean;
 }
 
 /** Email-контакты неисполненных пресейверов: юзеры (через users) + гости (email-колонка). */
@@ -164,6 +179,7 @@ export async function getPresaverContacts(releaseId: string): Promise<PresaverCo
     .map((r) => ({
       email: r.userId ? r.userEmail : r.guestEmail,
       name: r.userName ?? null,
+      isGuest: r.userId === null,
     }))
     .filter((r): r is PresaverContact => r.email !== null);
 }
