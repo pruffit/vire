@@ -25,6 +25,9 @@ export function LiveListeners({
     let alive = true;
 
     async function poll() {
+      // В скрытой вкладке не дёргаем сеть — счётчик всё равно никто не видит
+      // (тот же приём, что в ListeningNow).
+      if (document.visibilityState !== 'visible') return;
       const res = await fetch(`/api/v1/tracks/${trackId}/listening`).catch(() => null);
       if (!res?.ok || !alive) return;
       const data = (await res.json()) as { count?: number };

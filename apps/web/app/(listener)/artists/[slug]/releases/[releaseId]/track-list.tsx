@@ -6,7 +6,7 @@ import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import type { PlayerTrack } from '@/store/player';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
 import { controls } from '@/components/player/audio-engine';
-import { usePlay } from '@/lib/player/use-play';
+import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import type { TrackStatus, TrackCredit } from '@vire/core';
@@ -84,8 +84,8 @@ function TrackRow({
   const ready = track.status === 'READY';
   const processing = track.status === 'PROCESSING';
 
-  const { toggle, isCurrent, isPlaying } = usePlay();
-  const isActive = isCurrent(track.id);
+  const { toggle } = usePlay();
+  const { isActive, isPlaying } = useTrackPlayState(track.id);
 
   return (
     <div

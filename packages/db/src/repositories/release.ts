@@ -30,20 +30,27 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
       .where(eq(releases.artistProfileId, artistProfileId))
       .orderBy(desc(releases.createdAt));
 
-    const result: ReleaseWithTracks[] = [];
-    for (const releaseRow of releaseRows) {
-      const trackRows = await this.db
-        .select()
-        .from(tracks)
-        .where(eq(tracks.releaseId, releaseRow.id))
-        .orderBy(asc(tracks.trackNumber));
+    if (releaseRows.length === 0) return [];
 
-      result.push({
-        release: mapToRelease(releaseRow),
-        tracks: trackRows.map(mapToTrack),
-      });
+    // Один запрос на все треки артиста, не по запросу на релиз: дашборд
+    // открывается каждым артистом, а релизов у него десятки.
+    const trackRows = await this.db
+      .select()
+      .from(tracks)
+      .where(inArray(tracks.releaseId, releaseRows.map((r) => r.id)))
+      .orderBy(asc(tracks.trackNumber));
+
+    const tracksByRelease = new Map<string, Track[]>();
+    for (const row of trackRows) {
+      const list = tracksByRelease.get(row.releaseId);
+      if (list) list.push(mapToTrack(row));
+      else tracksByRelease.set(row.releaseId, [mapToTrack(row)]);
     }
-    return result;
+
+    return releaseRows.map((releaseRow) => ({
+      release: mapToRelease(releaseRow),
+      tracks: tracksByRelease.get(releaseRow.id) ?? [],
+    }));
   }
 
   async findWithTracks(releaseId: string): Promise<ReleaseWithTracks | null> {

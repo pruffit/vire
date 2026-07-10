@@ -24,6 +24,23 @@ import { getContentScrollArea } from '@/lib/scroll-area';
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 const positions = new Map<string, number>();
 
+// Ключ — pathname, а он динамический (/artists/*/releases/*/tracks/*): за долгую
+// сессию карта росла бы неограниченно. Держим только последние маршруты — назад
+// пользователь ходит недалеко.
+const MAX_REMEMBERED_ROUTES = 50;
+
+function rememberPosition(pathname: string, top: number): void {
+  // delete+set поднимает ключ в конец: вытесняем не самый старый по времени
+  // создания, а реже всего используемый.
+  positions.delete(pathname);
+  positions.set(pathname, top);
+  while (positions.size > MAX_REMEMBERED_ROUTES) {
+    const oldest = positions.keys().next().value;
+    if (oldest === undefined) break;
+    positions.delete(oldest);
+  }
+}
+
 export function ScrollRestoration() {
   const pathname = usePathname();
 
@@ -34,7 +51,7 @@ export function ScrollRestoration() {
     const onScroll = (e: Event) => {
       const el = e.target;
       if (el instanceof HTMLElement && (el.id === 'main-content' || el.hasAttribute('data-scroll-area'))) {
-        positions.set(pathname, el.scrollTop);
+        rememberPosition(pathname, el.scrollTop);
       }
     };
     document.addEventListener('scroll', onScroll, { capture: true, passive: true });

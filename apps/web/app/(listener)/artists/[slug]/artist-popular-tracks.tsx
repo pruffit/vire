@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import { controls } from '@/components/player/audio-engine';
-import { usePlayerStore, type PlayerTrack } from '@/store/player';
+import { type PlayerTrack } from '@/store/player';
+import { useTrackPlayState } from '@/lib/player/use-play';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { PlayingBars } from '@/components/playing-bars';
@@ -62,10 +63,7 @@ function Row({
   rank: number;
   onPlay: () => void;
 }) {
-  const isActive = usePlayerStore((s) => s.track?.id) === track.id;
-  // Гасим ложные ререндеры: неактивные строки не зависят от isPlaying (false===false),
-  // важно при раскрытом списке в сотни треков.
-  const isPlaying = usePlayerStore((s) => isActive && s.isPlaying);
+  const { isActive, isPlaying } = useTrackPlayState(track.id);
 
   function activate() {
     if (isActive) controls.togglePlay();

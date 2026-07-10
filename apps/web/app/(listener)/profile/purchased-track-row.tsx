@@ -1,7 +1,7 @@
 'use client';
 
 import type { PlayerTrack } from '@/store/player';
-import { usePlay } from '@/lib/player/use-play';
+import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { TrackRow } from '@/components/track-row';
 import { formatDuration } from '@/lib/format';
 
@@ -26,8 +26,8 @@ export function PurchasedTrackRow({
   releaseId,
   trackId,
 }: Props) {
-  const { playQueue, toggle, isCurrent, isPlaying } = usePlay();
-  const isThisTrack = isCurrent(track.id);
+  const { playQueue, toggle } = usePlay();
+  const { isActive: isThisTrack, isPlaying } = useTrackPlayState(track.id);
 
   function handlePlay() {
     if (isThisTrack) toggle(track.id);

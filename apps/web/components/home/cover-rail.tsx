@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { PlayerTrack } from '@/store/player';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
-import { usePlay } from '@/lib/player/use-play';
+import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import type { PlayableChartTrack } from '@vire/db';
 import { TrackTitleText } from '@/components/track-title';
@@ -24,8 +24,8 @@ export function CoverRail({ tracks }: { tracks: PlayableChartTrack[] }) {
 }
 
 function Cell({ track, queue, index }: { track: PlayableChartTrack; queue: PlayerTrack[]; index: number }) {
-  const { playQueue, toggle, isCurrent, isPlaying } = usePlay();
-  const isActive = isCurrent(track.id);
+  const { playQueue, toggle } = usePlay();
+  const { isActive, isPlaying } = useTrackPlayState(track.id);
 
   function play() {
     if (isActive) toggle(track.id);

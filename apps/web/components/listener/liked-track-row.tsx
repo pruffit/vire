@@ -2,7 +2,7 @@
 
 import type { PlayerTrack } from '@/store/player';
 import { useLikesStore } from '@/store/likes';
-import { usePlay } from '@/lib/player/use-play';
+import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { TrackRow } from '@/components/track-row';
 import { formatDuration } from '@/lib/format';
@@ -18,8 +18,8 @@ interface Props {
 }
 
 export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCoverUrl }: Props) {
-  const { playQueue, toggle, isCurrent, isPlaying } = usePlay();
-  const isThisTrack = isCurrent(track.id);
+  const { playQueue, toggle } = usePlay();
+  const { isActive: isThisTrack, isPlaying } = useTrackPlayState(track.id);
 
   const likeState = useLikesStore((s) => s.state[track.id]);
 

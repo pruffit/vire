@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { Stagger, StaggerItem, spring } from '@vire/ui/motion';
 import type { PlayerTrack, PlayContext } from '@/store/player';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
-import { usePlay } from '@/lib/player/use-play';
+import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { TrackRow } from '@/components/track-row';
 import { formatCount } from '@/lib/format';
 import { PlayerLikeButton } from './player-like-button';
@@ -58,8 +58,8 @@ function Row({
   rank: number | null;
   context: PlayContext;
 }) {
-  const { playQueue, toggle, isCurrent, isPlaying } = usePlay();
-  const isActive = isCurrent(track.id);
+  const { playQueue, toggle } = usePlay();
+  const { isActive, isPlaying } = useTrackPlayState(track.id);
 
   function handleClick() {
     if (isActive) toggle(track.id);

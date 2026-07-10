@@ -16,7 +16,8 @@ interface Props {
 }
 
 export function TrackLyrics({ lines, track, queue, queueIndex, trackId, context }: Props) {
-  const isThisTrack = usePlayerStore((s) => s.track?.id) === trackId;
+  // Сравнение внутри селектора: подписка на булево, а не на меняющийся у всех id.
+  const isThisTrack = usePlayerStore((s) => s.track?.id === trackId);
   const duration = usePlayerStore((s) => s.duration);
   // Клик по строке для ещё не загруженного трека: play() грузит асинхронно и
   // стартует с 0:00 — синхронный seek не выживет. Откладываем seek до момента,

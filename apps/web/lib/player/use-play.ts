@@ -10,17 +10,29 @@ import { fetchReleaseTracks, fetchPlaylistTracks, type LazyReleaseTrack } from '
 
 export type { LazyReleaseTrack } from './lazy-queue-fetchers';
 
-/** Единый вход воспроизведения для компонентов: очередь, toggle, состояние текущего трека. */
+/**
+ * Единый вход воспроизведения: только действия, без подписки на стор — `controls`
+ * это стабильные функции модуля. Состояние строки берётся из `useTrackPlayState`.
+ */
 export function usePlay() {
-  const isPlaying = usePlayerStore((s) => s.isPlaying);
-  const currentTrackId = usePlayerStore((s) => s.track?.id);
-
   return {
     playQueue: controls.playQueue,
     toggle: (trackId: string) => controls.toggle(trackId),
-    isCurrent: (trackId: string) => currentTrackId === trackId,
-    isPlaying,
   };
+}
+
+/**
+ * Состояние конкретного трека. Сравнение — ВНУТРИ селектора: подписчик получает
+ * булево, которое флипается только у двух строк (старая активная / новая), а не
+ * сырой `track.id`, меняющийся у всех сразу и перерисовывающий каждый трек-лист.
+ *
+ * `isPlaying` тоже сужен до «играет именно этот трек» — неактивные строки не
+ * перерисовываются на play/pause (в UI везде используется `isActive && isPlaying`).
+ */
+export function useTrackPlayState(trackId: string): { isActive: boolean; isPlaying: boolean } {
+  const isActive = usePlayerStore((s) => s.track?.id === trackId);
+  const isPlaying = usePlayerStore((s) => s.isPlaying && s.track?.id === trackId);
+  return { isActive, isPlaying };
 }
 
 export interface ReleaseQueueMeta {

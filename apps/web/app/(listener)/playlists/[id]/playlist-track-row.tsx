@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { PlayerTrack, PlayContext } from '@/store/player';
-import { usePlay } from '@/lib/player/use-play';
+import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { Icon } from '@/components/icon';
 import { TrackRow } from '@/components/track-row';
 import { formatDuration } from '@/lib/format';
@@ -23,8 +23,8 @@ interface Props {
 export function SortablePlaylistRow({ track, index, queue, queueIndex, context, isOwner, onRemove }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: track.id, disabled: !isOwner });
-  const { playQueue, toggle, isCurrent, isPlaying } = usePlay();
-  const isThisTrack = isCurrent(track.id);
+  const { playQueue, toggle } = usePlay();
+  const { isActive: isThisTrack, isPlaying } = useTrackPlayState(track.id);
 
   return (
     <TrackRow

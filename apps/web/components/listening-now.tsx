@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { usePlay } from '@/lib/player/use-play';
+import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { toPlayerTrack } from '@/lib/player/to-player-track';
 import { PlayIcon } from '@/components/icons';
 import { LivePulse } from '@/components/live-pulse';
@@ -81,8 +81,8 @@ export function ListeningNow({ initial }: { initial: ListeningNowTrack[] }) {
 }
 
 function TrackRow({ track }: { track: ListeningNowTrack }) {
-  const { playQueue, toggle, isCurrent } = usePlay();
-  const isActive = isCurrent(track.id);
+  const { playQueue, toggle } = usePlay();
+  const { isActive } = useTrackPlayState(track.id);
 
   function play() {
     if (isActive) {
