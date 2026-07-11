@@ -7,7 +7,12 @@ import type { TrackGenre } from './track-genres';
 import { getTasteProfile } from './taste';
 import { textArrayParam, visibleTrackWhere } from './wave';
 import { popularityScoreSql, topTrackIdsByPlays } from './popularity';
-import { hasEnoughTracksForPersonalPlaylist, pickPersonalMoods } from './editorial-policy';
+import {
+  hasEnoughTracksForPersonalPlaylist,
+  pickPersonalMoods,
+  fillToLimit,
+  PLAYLIST_LIST_LIMIT as LIST_LIMIT,
+} from './editorial-policy';
 
 // Релиз доступен (треки можно слушать): опубликован или запланирован с прошедшей
 // датой. Не пускаем невышедшие релизы в подборки — иначе их можно слушать с главной.
@@ -18,8 +23,7 @@ const releaseIsPublic = or(
 
 const SHARED_MOOD_COUNT = 3; // сколько топ-настроений держим в общих подборках
 const PERSONAL_MAX = 4; // максимум личных подборок на юзера
-const MIN_TRACKS = 3; // не генерируем подборку короче этого
-const LIST_LIMIT = 25; // треков в подборке
+const MIN_TRACKS = 3; // не генерируем подборку при подлинном сигнале короче этого
 const TASTE_WINDOW = "now() - interval '90 days'"; // окно истории прослушиваний для вкуса
 
 /**
@@ -35,25 +39,34 @@ export async function generateAllEditorialPlaylists(): Promise<void> {
 // ─── Общие подборки (одинаковы для всех, обновляются раз в сутки) ────────────
 
 export async function generateSharedPlaylists(): Promise<void> {
-  await Promise.all([
-    generateTrendingPlaylist(),
-    generateRelistenPlaylist(),
-    generateFreshPlaylist(),
-    generateTopMoodPlaylists(),
-  ]);
+  // Последовательно с общим пулом филлера и общим набором занятых им треков —
+  // иначе хвосты всех общих карточек сходятся к одному и тому же топу популярного.
+  const pool = await getFillerPool();
+  const usedFiller = new Set<string>();
+  await generateTrendingPlaylist(pool, usedFiller);
+  await generateRelistenPlaylist(pool, usedFiller);
+  await generateFreshPlaylist(pool, usedFiller);
+  await generateTopMoodPlaylists(pool, usedFiller);
+}
+
+/** Филлерный хвост (всё после подлинных совпадений) — в набор занятого. */
+function markFiller(full: string[], genuineCount: number, usedFiller: Set<string>): void {
+  for (const id of full.slice(genuineCount)) usedFiller.add(id);
 }
 
 /** «Сейчас набирает» — треки с наибольшим числом прослушиваний за 7 дней. */
-async function generateTrendingPlaylist(): Promise<void> {
+async function generateTrendingPlaylist(pool: string[], usedFiller: Set<string>): Promise<void> {
   const trackIds = await topTrackIdsByPlays(7, LIST_LIMIT);
 
   if (trackIds.length < MIN_TRACKS) return;
 
+  const full = fillToLimit(trackIds, pool, usedFiller);
+  markFiller(full, trackIds.length, usedFiller);
   await upsertEditorialPlaylist({
     kind: 'TRENDING',
     title: 'Сейчас набирает',
     description: 'Треки с наибольшим числом прослушиваний за последнюю неделю',
-    trackIds,
+    trackIds: full,
   });
 }
 
@@ -61,7 +74,7 @@ async function generateTrendingPlaylist(): Promise<void> {
  * «Возвращаются снова» — треки, к которым слушатели возвращались
  * несколько раз (минимум 2 прослушивания от одного userId в разные дни).
  */
-async function generateRelistenPlaylist(): Promise<void> {
+async function generateRelistenPlaylist(pool: string[], usedFiller: Set<string>): Promise<void> {
   const rows = await db
     .select({
       trackId: playEvents.trackId,
@@ -81,16 +94,18 @@ async function generateRelistenPlaylist(): Promise<void> {
 
   if (rows.length < MIN_TRACKS) return;
 
+  const full = fillToLimit(rows.map((r) => r.trackId), pool, usedFiller);
+  markFiller(full, rows.length, usedFiller);
   await upsertEditorialPlaylist({
     kind: 'RELISTEN',
     title: 'Возвращаются снова',
     description: 'Треки, к которым слушатели возвращаются снова и снова',
-    trackIds: rows.map((r) => r.trackId),
+    trackIds: full,
   });
 }
 
 /** «Свежее» — последние опубликованные треки. */
-async function generateFreshPlaylist(): Promise<void> {
+async function generateFreshPlaylist(pool: string[], usedFiller: Set<string>): Promise<void> {
   const rows = await db
     .select({ id: tracks.id })
     .from(tracks)
@@ -101,11 +116,13 @@ async function generateFreshPlaylist(): Promise<void> {
 
   if (rows.length < MIN_TRACKS) return;
 
+  const full = fillToLimit(rows.map((r) => r.id), pool, usedFiller);
+  markFiller(full, rows.length, usedFiller);
   await upsertEditorialPlaylist({
     kind: 'FRESH',
     title: 'Свежее',
     description: 'Только что опубликованные треки',
-    trackIds: rows.map((r) => r.id),
+    trackIds: full,
   });
 }
 
@@ -114,7 +131,7 @@ async function generateFreshPlaylist(): Promise<void> {
  * SHARED_MOOD_COUNT самых наполненных, остальные mood-подборки удаляются
  * (личные настроения каждый получает в своей половине).
  */
-async function generateTopMoodPlaylists(): Promise<void> {
+async function generateTopMoodPlaylists(pool: string[], usedFiller: Set<string>): Promise<void> {
   const moodRows = await db
     .select({ mood: trackMoods.mood, c: count() })
     .from(trackMoods)
@@ -129,11 +146,13 @@ async function generateTopMoodPlaylists(): Promise<void> {
     const title = MOOD_LABELS[mood as Mood];
     const trackIds = await selectTrackIdsByTaste([mood as Mood], []);
     if (trackIds.length < MIN_TRACKS) continue;
+    const full = fillToLimit(trackIds, pool, usedFiller);
+    markFiller(full, trackIds.length, usedFiller);
     await upsertEditorialPlaylist({
       kind: 'MOOD',
       title,
       description: `Подборка треков в настроении «${title}»`,
-      trackIds,
+      trackIds: full,
     });
     keepTitles.push(title);
   }
@@ -167,6 +186,25 @@ async function selectTrackIdsByTaste(moods: Mood[], genres: TrackGenre[]): Promi
     .orderBy(desc(score), desc(releases.releaseDate))
     .limit(LIST_LIMIT);
   return rows.map((r) => r.trackId);
+}
+
+const FILLER_POOL_LIMIT = 500;
+
+/**
+ * Пул филлера: видимые треки по популярности за 30 дней (при равенстве — свежие).
+ * Считается ОДИН раз на прогон (популярность — тяжёлый коррелированный скан
+ * play_events) и раздаётся всем подборкам; добивка дальше — чистый JS.
+ */
+async function getFillerPool(): Promise<string[]> {
+  const rows = await db
+    .select({ id: tracks.id })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(visibleTrackWhere)
+    .orderBy(desc(popularityScoreSql(30)), desc(releases.releaseDate))
+    .limit(FILLER_POOL_LIMIT);
+  return rows.map((r) => r.id);
 }
 
 /** Удаляет общие mood-подборки, не вошедшие в текущий топ. */
@@ -234,8 +272,10 @@ export async function generatePersonalPlaylistsForAllUsers(): Promise<void> {
   ];
 
   // Последовательно — генерация фоновая, нагрузку на БД не разгоняем.
+  // Пул филлера один на весь прогон (тяжёлый скан популярности).
+  const pool = await getFillerPool();
   for (const userId of userIds) {
-    await generatePersonalPlaylists(userId);
+    await generatePersonalPlaylists(userId, pool);
   }
 }
 
@@ -262,7 +302,7 @@ async function tasteSignalTrackCount(userId: string): Promise<number> {
  * каталога. Отдельно — MIN_PERSONAL_PLAYLIST_TRACKS: сама подборка не создаётся
  * короче этого, иначе получаются мусорные карточки на 3 трека.
  */
-export async function generatePersonalPlaylists(userId: string): Promise<void> {
+export async function generatePersonalPlaylists(userId: string, sharedPool?: string[]): Promise<void> {
   const signalCount = await tasteSignalTrackCount(userId);
 
   // Полный пересбор: проще upsert по меняющимся заголовкам.
@@ -272,20 +312,26 @@ export async function generatePersonalPlaylists(userId: string): Promise<void> {
   const taste = await getTasteProfile(userId);
   if (taste.topMoods.length === 0 && taste.topGenres.length === 0) return; // фолбэк на популярное покроет
 
+  const pool = sharedPool ?? (await getFillerPool());
   const exclude = new Set<string>();
   let made = 0;
 
   // 1) «Для тебя» — микс по топ-настроениям И топ-жанрам профиля вкуса.
+  // Порог — по подлинным совпадениям, витринный размер добивает филлер; неполную
+  // (каталог меньше лимита) не публикуем — лучше меньше карточек, но все полные.
   const mixTrackIds = await selectTrackIdsByTaste(taste.topMoods, taste.topGenres);
   if (hasEnoughTracksForPersonalPlaylist(mixTrackIds.length)) {
-    await createPersonalPlaylist({
-      userId,
-      title: 'Для тебя',
-      description: 'Подобрано по твоим лайкам и прослушиваниям',
-      trackIds: mixTrackIds,
-    });
-    mixTrackIds.forEach((id) => exclude.add(id));
-    made += 1;
+    const fullMix = fillToLimit(mixTrackIds, pool);
+    if (fullMix.length === LIST_LIMIT) {
+      await createPersonalPlaylist({
+        userId,
+        title: 'Для тебя',
+        description: 'Подобрано по твоим лайкам и прослушиваниям',
+        trackIds: fullMix,
+      });
+      fullMix.forEach((id) => exclude.add(id));
+      made += 1;
+    }
   }
 
   // 2) До PERSONAL_MAX всего — mood-подборки под топ-настроения юзера, без
@@ -297,15 +343,20 @@ export async function generatePersonalPlaylists(userId: string): Promise<void> {
   for (const mood of personalMoods) {
     if (made >= PERSONAL_MAX) break;
     const label = MOOD_LABELS[mood];
-    const trackIds = (await selectTrackIdsByTaste([mood], [])).filter((id) => !exclude.has(id));
-    if (!hasEnoughTracksForPersonalPlaylist(trackIds.length)) continue;
+    // Порог сигнала — ДО фильтра эксклюзией: то, что популярные треки настроения
+    // уже разобрал филлер «Для тебя», не отменяет вкусового сигнала для карточки.
+    const genuine = await selectTrackIdsByTaste([mood], []);
+    if (!hasEnoughTracksForPersonalPlaylist(genuine.length)) continue;
+    const trackIds = genuine.filter((id) => !exclude.has(id));
+    const fullTrackIds = fillToLimit(trackIds, pool, exclude);
+    if (fullTrackIds.length < LIST_LIMIT) continue;
     await createPersonalPlaylist({
       userId,
       title: `${label} — для тебя`,
       description: `Тебе заходит «${label}»`,
-      trackIds,
+      trackIds: fullTrackIds,
     });
-    trackIds.forEach((id) => exclude.add(id));
+    fullTrackIds.forEach((id) => exclude.add(id));
     made += 1;
   }
 }
