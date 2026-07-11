@@ -7,11 +7,7 @@ import { LivePulse } from '@/components/live-pulse';
 
 const POLL_MS = 25_000;
 
-/**
- * Живой счётчик «слушают сейчас» для страницы трека. Опрашивает presence-эндпоинт
- * и показывается только когда есть хотя бы один слушатель (включая тебя, если
- * трек играет в плеере). Концепт: слушатель видит опционально.
- */
+/** Счётчик «слушают сейчас» на странице трека: поллинг presence, виден только при count > 0. */
 export function LiveListeners({
   trackId,
   initialCount = 0,
@@ -25,8 +21,7 @@ export function LiveListeners({
     let alive = true;
 
     async function poll() {
-      // В скрытой вкладке не дёргаем сеть — счётчик всё равно никто не видит
-      // (тот же приём, что в ListeningNow).
+      // в скрытой вкладке не дёргаем сеть — счётчик никто не видит
       if (document.visibilityState !== 'visible') return;
       const res = await fetch(`/api/v1/tracks/${trackId}/listening`).catch(() => null);
       if (!res?.ok || !alive) return;

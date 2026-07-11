@@ -1,7 +1,4 @@
-// Общий набор иконок. Раньше каждый компонент рисовал свои <svg> (PlayIcon был
-// продублирован 13 раз, PauseIcon — 8). Здесь — один канонический глиф на иконку.
-// Цвет наследуется (`currentColor`) — задаётся классом родителя или `className`
-// (напр. `text-white` на тёмных оверлеях). Размер — через `size`.
+// Канонические глифы плеера; цвет наследуется через currentColor.
 
 interface IconProps {
   /** Сторона квадрата в px (width=height). */
@@ -9,8 +6,7 @@ interface IconProps {
   className?: string;
 }
 
-/** Заполненный треугольник «play». Оптическое центрирование (для круглых
- *  кнопок) добавляй классом `translate-x-[1px]` на месте вызова. */
+/** Оптическое центрирование в круглых кнопках — `translate-x-[1px]` на месте вызова. */
 export function PlayIcon({ size = 14, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
@@ -19,7 +15,6 @@ export function PlayIcon({ size = 14, className }: IconProps) {
   );
 }
 
-/** Две полосы «pause». */
 export function PauseIcon({ size = 14, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
@@ -29,7 +24,6 @@ export function PauseIcon({ size = 14, className }: IconProps) {
   );
 }
 
-/** Лупа. Обводка наследует цвет (`currentColor`). */
 export function SearchIcon({ size = 16, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={className} aria-hidden="true">
@@ -39,8 +33,6 @@ export function SearchIcon({ size = 16, className }: IconProps) {
   );
 }
 
-/** Сердце (лайк/избранное). `filled` заливает текущим цветом, иначе контур.
- *  Толщину обводки можно поднять (`strokeWidth={2}`) для мелких контурных иконок. */
 export function HeartIcon({
   filled = false,
   size = 18,
@@ -65,7 +57,6 @@ export function HeartIcon({
   );
 }
 
-/** Три узла, связанные линиями — «поделиться». */
 export function ShareIcon({ size = 15, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
@@ -78,7 +69,6 @@ export function ShareIcon({ size = 15, className }: IconProps) {
   );
 }
 
-/** Галочка «готово/выбрано». */
 export function CheckIcon({ size = 13, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>

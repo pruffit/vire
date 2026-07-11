@@ -15,7 +15,6 @@ export async function POST(_req: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Rate limit: 30 follows per minute per user
   const rl = await rateLimit(`follow:${session.user.id}`, 30, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 

@@ -101,7 +101,6 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
       const newPl: PlaylistItem = { id: data.id, title, trackCount: 0 };
       setPlaylists((prev) => [newPl, ...prev]);
 
-      // Сразу добавляем трек в новый плейлист
       const added = await fetch(`/api/v1/playlists/${data.id}/tracks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,8 +144,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.97 }}
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            // Открываем вправо от кнопки (она слева в шапке трека) и не даём
-            // вылезти за вьюпорт на мобилке: max-w по ширине экрана с полями.
+            // max-w по ширине экрана — на мобилке поповер не вылезает за вьюпорт
             className="absolute left-0 top-full mt-2 w-56 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
           >
             <div className="px-3 pt-3 pb-1">

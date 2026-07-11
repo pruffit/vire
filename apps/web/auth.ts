@@ -20,16 +20,8 @@ declare module 'next-auth' {
   }
 }
 
-/**
- * Адаптер с поддержкой привязки провайдеров.
- *
- * Проблема: Auth.js бросает OAuthAccountNotLinked ещё до вызова signIn-callback,
- * если у пользователя другой email или другой провайдер.
- *
- * Решение: когда выставлена cookie `vire_link_uid`, перекрываем getUserByEmail —
- * возвращаем текущего (linking) пользователя вместо поиска по email.
- * Auth.js видит «пользователь найден по email» → вызывает linkAccount → привязывает.
- */
+// Привязка провайдеров: Auth.js бросает OAuthAccountNotLinked до signIn-callback, поэтому
+// при cookie `vire_link_uid` getUserByEmail возвращает linking-пользователя → Auth.js вызывает linkAccount.
 function createAdapter() {
   const base = DrizzleAdapter(db, {
     usersTable: users,
@@ -40,8 +32,7 @@ function createAdapter() {
 
   return {
     ...base,
-    // Если Google-аккаунт был ранее прилинкован к ghost-пользователю
-    // (предыдущая неудачная попытка привязки) — забираем его у ghost'а.
+    // OAuth-аккаунт, прилинкованный к ghost-пользователю прошлой неудачной привязкой, забираем у ghost'а.
     getUserByAccount: async (providerAccount: Parameters<NonNullable<typeof base.getUserByAccount>>[0]) => {
       const found = await base.getUserByAccount!(providerAccount);
       if (!found) return null;
@@ -99,9 +90,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!rl.ok) return null;
         } catch { /* rate-limit недоступен — не блокируем вход */ }
         const user = await findUserByEmail(credentials.email as string);
-        // Нет юзера (или он без пароля) → всё равно гоняем bcrypt по фиктивному хэшу той
-        // же стоимости: иначе ответ возвращается мгновенно, и по времени отличим
-        // «такого email нет» от «пароль неверный» — перечисление пользователей.
+        // Нет юзера — всё равно гоняем bcrypt по фиктивному хэшу, иначе по времени
+        // ответа различимы «email нет» и «пароль неверный» (перечисление пользователей).
         const ok = await compare(credentials.password as string, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
         if (!user?.passwordHash || !ok) return null;
         return { id: user.id, email: user.email, name: user.name, image: user.image, role: user.role as UserRole };
@@ -109,10 +99,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
 
     // ── OAuth ─────────────────────────────────────────────────────────────
-    // Google и Telegram убраны: 406-ФЗ запрещает росс. сайтам использовать
-    // иностранные сервисы авторизации. Остаётся email/пароль, magic-link и
-    // Яндекс ID (росс. система). allowDangerousEmailAccountLinking нужен потому
-    // что при вызове getUserByEmail мы возвращаем linking-пользователя.
+    // Google/Telegram убраны (406-ФЗ — иностранные сервисы авторизации запрещены).
+    // allowDangerousEmailAccountLinking нужен: getUserByEmail возвращает linking-пользователя.
     Yandex({ allowDangerousEmailAccountLinking: true }),
     Nodemailer({
       server: 'smtp://localhost:25', // не используется — sendVerificationRequest переопределён

@@ -12,16 +12,11 @@ const PLATFORM_ORIGIN: Record<EmbedInfo['platform'], string> = {
   vk: 'https://vk.com',
 };
 
-/**
- * Лёгкий видео-плеер: статичный постер с кнопкой play (без JS-скриптов площадок),
- * по клику — один iframe с автоплеем и РОДНЫМИ контролами YouTube/VK. Без
- * самописных контролов поверх iframe — быстрее грузится, полный набор функций
- * площадки, на паузе виден реальный кадр. Один компонент на обе платформы (EmbedInfo).
- */
+/** Статичный постер, по клику — iframe с автоплеем и родными контролами YouTube/VK. */
 export function VideoPlayer({ embed, title }: { embed: EmbedInfo; title?: string }) {
   const [started, setStarted] = useState(false);
 
-  // Прогреваем соединение с площадкой при наведении/фокусе — iframe стартует быстрее.
+  // preconnect на hover/focus — iframe стартует быстрее
   const warm = () => preconnect(PLATFORM_ORIGIN[embed.platform]);
 
   return (

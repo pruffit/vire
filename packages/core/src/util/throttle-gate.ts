@@ -11,13 +11,8 @@ export interface ThrottleGate {
   size(): number;
 }
 
-/**
- * Анти-шторм для алертов: дедуп по ключу с TTL и жёстким потолком.
- *
- * Потолок обязателен: ключ алерта содержит jobId/сообщение ошибки, то есть почти
- * всегда уникален, и обычная Map росла бы монотонно всю жизнь процесса (воркер
- * на 1ГБ VPS живёт между деплоями неделями).
- */
+// Анти-шторм для алертов: дедуп по ключу с TTL. Потолок обязателен — ключ алерта
+// почти всегда уникален (jobId/сообщение), обычная Map росла бы неделями между деплоями.
 export function createThrottleGate(options: ThrottleGateOptions): ThrottleGate {
   const { ttlMs, maxSize } = options;
   const seen = new Map<string, number>();

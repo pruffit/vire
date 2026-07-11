@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import { Eyebrow, FeatureCard, PillLink } from '@/components/content-kit';
 
-// Эквалайзер-строка как «звуковой» акцент под номером — нод к музыкальной природе
-// площадки. Высота баров анимируется keyframe-ом vire-eq, фаза разводится delay-ем.
 const EQ_BARS = [0.0, 0.22, 0.45, 0.12, 0.34, 0.06, 0.28, 0.16, 0.4];
 
 function EqualizerRule() {

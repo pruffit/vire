@@ -6,8 +6,7 @@ import { controls, getAudioTime } from './audio-engine';
 
 const SEEK_STEP_SEC = 5;
 
-/** Элементы, у которых свои клавиатурные взаимодействия — их не перехватываем
- *  (поля ввода, кнопки — пробел жмёт их, waveform-слайдер — стрелки его двигают). */
+/** Элементы со своими клавиатурными взаимодействиями — их не перехватываем. */
 function isInteractive(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return target.closest(
@@ -15,11 +14,7 @@ function isInteractive(target: EventTarget | null): boolean {
   ) !== null;
 }
 
-/**
- * Глобальные клавиши плеера: пробел = play/pause, ←/→ = перемотка ±5с,
- * Shift+←/→ = пред./след. трек, M = мьют, R = режим повтора. Работают только
- * когда трек загружен и фокус не на интерактивном элементе.
- */
+/** Глобальные клавиши плеера: Space, ←/→ (±5с), Shift+←/→ (треки), M, R. */
 export function usePlayerHotkeys(): void {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -29,8 +24,7 @@ export function usePlayerHotkeys(): void {
       const { track, hasAudio, duration } = usePlayerStore.getState();
       if (!track || !hasAudio) return;
 
-      // Стор пишет currentTime редко (seek/смена трека/5с-тик) — для расчёта
-      // нового таймкода читаем актуальную позицию напрямую из audio-движка.
+      // Стор пишет currentTime редко — актуальную позицию читаем напрямую из движка.
       const currentTime = getAudioTime();
 
       switch (e.code) {

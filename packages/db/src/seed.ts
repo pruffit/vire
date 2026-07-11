@@ -51,7 +51,7 @@ async function seed() {
 
   console.log('Artist:', artist.slug);
 
-  // Release 1 — альбом
+  // Release 1: альбом
   const [album] = await db
     .insert(schema.releases)
     .values({
@@ -93,7 +93,7 @@ async function seed() {
 
   console.log('Album tracks:', albumTracks.length);
 
-  // Release 2 — EP
+  // Release 2: EP
   const [ep] = await db
     .insert(schema.releases)
     .values({

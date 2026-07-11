@@ -2,19 +2,10 @@
 // Алертинг не бросает исключений в воркер.
 import { createThrottleGate } from '@vire/core';
 
-// Потолок обязателен: ключ содержит jobId и текст ошибки — почти всегда уникален,
-// а процесс воркера живёт между деплоями неделями.
 const alertGate = createThrottleGate({ ttlMs: 60_000, maxSize: 500 });
 
-/**
- * Доставляет алерт во все настроенные каналы. Анти-шторм: одинаковый текст —
- * не чаще раза в THROTTLE_MS на процесс (решение принимается один раз, до веера
- * по каналам). Никогда не бросает.
- *
- * Каналы (любой/оба/ни одного):
- * - Telegram — если заданы TELEGRAM_BOT_TOKEN + TELEGRAM_ALERT_CHAT_ID;
- * - generic-webhook — если задан ALERT_WEBHOOK_URL (Discord/Slack/любой консьюмер).
- */
+// Одинаковый текст — не чаще раза в TTL на процесс, решение принимается один раз,
+// до веера по каналам (Telegram/webhook, оба опциональны). Никогда не бросает.
 async function dispatch(text: string, fields: Record<string, unknown>): Promise<void> {
   const now = Date.now();
   if (!alertGate.shouldPass(text, now)) return;
@@ -35,7 +26,7 @@ async function sendTelegram(text: string): Promise<void> {
       signal: AbortSignal.timeout(5000),
     });
   } catch {
-    // алерт падать молча
+    // no-op
   }
 }
 
@@ -52,7 +43,7 @@ async function sendWebhook(text: string, fields: Record<string, unknown>, now: n
       signal: AbortSignal.timeout(5000),
     });
   } catch {
-    // алерт падать молча
+    // no-op
   }
 }
 
@@ -75,10 +66,7 @@ export async function alertJobFailure(
   });
 }
 
-/**
- * Ошибка самого воркера (событие `error`) — не привязана к джобу: обрыв Redis,
- * сбой подключения и т.п. Сигнал, что очередь могла перестать обрабатываться.
- */
+/** Ошибка воркера (событие `error`), не привязана к джобу — сигнал, что очередь могла встать. */
 export async function alertWorkerError(queue: string, err: Error): Promise<void> {
   console.error(`[${queue}] worker error`, err);
 
@@ -89,10 +77,7 @@ export async function alertWorkerError(queue: string, err: Error): Promise<void>
   });
 }
 
-/**
- * Падение процесса воркера: uncaughtException / unhandledRejection. Вызывать
- * перед `process.exit(1)` и дождаться — иначе процесс умрёт раньше доставки.
- */
+/** Вызывать перед `process.exit(1)` и дождаться — иначе процесс умрёт раньше доставки алерта. */
 export async function alertCrash(scope: string, err: Error): Promise<void> {
   console.error(JSON.stringify({
     level: 'fatal', service: 'worker', scope, message: err.message, stack: err.stack,

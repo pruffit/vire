@@ -10,7 +10,7 @@ const typeLabel: Record<string, string> = {
   ALBUM: 'Альбом', SINGLE: 'Сингл', EP: 'EP', COMPILATION: 'Сборник',
 };
 
-// Дефолтный нейтральный accent из темы — на нём одного цвета мало, подмешиваем блюр обложки.
+// Дефолтный нейтральный accent из темы: на нём одного цвета мало, подмешиваем блюр обложки.
 const NEUTRAL_ACCENT = '#4a5568';
 
 export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
@@ -35,7 +35,7 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
           background: `radial-gradient(120% 120% at 12% 10%, ${accent}66, transparent 55%), linear-gradient(120deg, ${accent}40 0%, transparent 60%)`,
         }}
       />
-      {/* Для нейтрального accent — слабый блюр обложки, чтобы не было «серо» */}
+      {/* Для нейтрального accent: слабый блюр обложки, чтобы не было «серо» */}
       {hasImage && neutral && (
         <Image
           src={release.coverUrl!}

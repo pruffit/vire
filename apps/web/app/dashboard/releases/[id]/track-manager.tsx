@@ -52,11 +52,6 @@ async function patchTrack(id: string, patch: Record<string, unknown>): Promise<b
   return res?.ok ?? false;
 }
 
-/**
- * Управление треками релиза: переименование, удаление, перетаскивание порядка
- * (drag-n-drop), флаги (18+/эксклюзив/демо), аудио-теги, кредиты, текст — всё
- * с оптимистичным UI (меняем сразу, откатываем при ошибке запроса).
- */
 export function TrackManager({
   initial,
   releaseId,
@@ -70,11 +65,9 @@ export function TrackManager({
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [justSaved, setJustSaved] = useState<Set<string>>(new Set());
-  // Снимок порядка/состава, известного серверу — для отката DnD при ошибке.
+  // снимок известного серверу состояния — для отката оптимистичных правок при ошибке
   const committed = useRef<ManagedTrack[]>(initial);
 
-  // Пока есть треки в обработке — опрашиваем статус, чтобы показать
-  // «обрабатывается → готов» вживую, без перезагрузки.
   const hasProcessing = tracks.some((t) => t.status === 'PROCESSING');
   useEffect(() => {
     if (!hasProcessing) return;
@@ -99,7 +92,6 @@ export function TrackManager({
     setBusy((p) => { const n = new Set(p); if (on) n.add(id); else n.delete(id); return n; });
   }
 
-  // Короткая отметка «✓ сохранено» у строки после успешной правки.
   function flashSaved(id: string) {
     setJustSaved((p) => new Set(p).add(id));
     setTimeout(() => setJustSaved((p) => { const n = new Set(p); n.delete(id); return n; }), 1600);
@@ -117,7 +109,7 @@ export function TrackManager({
     });
   }
 
-  // ── DnD: меняем порядок локально на каждый шаг, персистим при отпускании ──
+  // DnD: порядок меняется локально на каждый шаг, персистится при отпускании
   function handleReorder(next: ManagedTrack[]) {
     setTracks(next.map((t, i) => ({ ...t, trackNumber: i + 1 })));
   }
@@ -176,8 +168,7 @@ export function TrackManager({
     }
   }
 
-  // Результат ре-анализа BPM/тональности уже сохранён воркером в БД — только
-  // синхронизируем локальный стейт, PATCH не нужен.
+  // результат анализа уже сохранён воркером в БД — только синхронизируем стейт, PATCH не нужен
   function applyAnalysisResult(id: string, bpm: number | null, musicalKey: string | null) {
     setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, bpm, musicalKey } : t)));
     committed.current = committed.current.map((t) => (t.id === id ? { ...t, bpm, musicalKey } : t));

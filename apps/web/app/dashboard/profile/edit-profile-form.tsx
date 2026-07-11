@@ -12,11 +12,8 @@ import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
 import { SANS_FONT_VARS as SANS_VAR, MONO_FONT_VARS as MONO_VAR } from '@/lib/font-catalog';
 
-// Готовые палитры темы: клик применяет фон/текст/акцент разом. Ручной ввод остаётся.
-// Тёмные темы переходят в платформенный шелл (nav + player) без резкого контраста.
-// Световые работают, но создают переход тёмный nav → светлый фон — отмечены флагом.
+// light-темы дают переход тёмный nav → светлый фон — помечены флагом
 const THEME_PRESETS: { name: string; bg: string; text: string; accent: string; light?: true }[] = [
-  // — Тёмные —
   { name: 'Платформа',    bg: '#121210', text: '#edebe5', accent: '#9b8e7e' },
   { name: 'Тёплый',       bg: '#100f0d', text: '#e9e2d0', accent: '#6f9d92' },
   { name: 'Уголь',        bg: '#111111', text: '#ededed', accent: '#ff5c39' },
@@ -27,16 +24,11 @@ const THEME_PRESETS: { name: string; bg: string; text: string; accent: string; l
   { name: 'Аметист',      bg: '#0d0b14', text: '#dcd4f2', accent: '#a87fff' },
   { name: 'Ржавчина',     bg: '#130a08', text: '#ead3c6', accent: '#d45628' },
   { name: 'Лёд',          bg: '#080e16', text: '#cce4f6', accent: '#4bbde8' },
-  // — Световые —
   { name: 'Кремовый',     bg: '#f4f1ea', text: '#1c1a17', accent: '#b5532f', light: true },
   { name: 'Бумага',       bg: '#eeead9', text: '#23201b', accent: '#3a6b5f', light: true },
 ];
 
-/**
- * Сетка кнопок выбора шрифта — каждое имя рендерится своим `font-family`, поэтому
- * выбор виден без превью. Нативный `<select>` тут не годится: список рисует ОС,
- * применить произвольный шрифт к каждому `<option>` браузеры не позволяют.
- */
+// не <select>: браузеры не позволяют свой font-family на каждом <option>
 function FontGrid({
   name,
   value,
@@ -114,8 +106,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
   const [fontSans, setFontSans] = useState(t.fontSans);
   const [fontMono, setFontMono] = useState(t.fontMono);
 
-  // Кегль имени в превью подгоняем под длину самого длинного слова — крупно для
-  // коротких имён, мельче для длинных, чтобы оно не рвалось в узком hero превью.
+  // кегль имени под длину самого длинного слова — чтобы не рвалось в узком превью
   const longestWord = Math.max(1, ...artist.name.split(/\s+/).map((w) => w.length));
   const previewNameRem = Math.max(0.95, Math.min(1.6, 12 / longestWord));
 

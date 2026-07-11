@@ -47,8 +47,7 @@ export function TrackEditForm({
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [f, setF] = useState(initial);
   const [genreSuggestions, setGenreSuggestions] = useState(initialGenreSuggestions);
-  // Воркер автопроставляет топ-2 жанра, если у трека их не было — отражаем это в
-  // f.genres, чтобы результат был виден и не затёрся при сохранении формы.
+  // воркер автопроставляет топ-2 жанра — отражаем в f.genres, чтобы не затёрлось при сохранении формы
   const handleGenreAnalysis = useCallback((result: GenreAnalysisResult) => {
     setGenreSuggestions(result.suggestions);
     if (result.appliedGenres.length === 0) return;

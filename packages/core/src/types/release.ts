@@ -1,8 +1,6 @@
 export type ReleaseType = 'ALBUM' | 'EP' | 'SINGLE';
 
-// Жанры — фиксированный список (как mood-теги: без свободного ввода и модерации).
-// Заполняет артист при создании/редактировании релиза. Должен совпадать с genreEnum
-// в packages/db/src/schema/releases.ts. Группировку для UI см. apps/web/lib/genres.ts.
+// Фиксированный список — должен совпадать с genreEnum в packages/db/src/schema/releases.ts.
 export const ALL_GENRES = [
   // Исходные 14 — порядок как в genreEnum (append-only)
   'ELECTRONIC', 'HIPHOP', 'ROCK', 'INDIE', 'POP', 'AMBIENT', 'JAZZ',

@@ -7,7 +7,6 @@ import { needsWaveFetch, fetchWaveTracks } from '@/lib/player/wave-buffer';
 
 let audio: HTMLAudioElement | null = null;
 let hls: HlsType | null = null;
-// hls.js (~190 КиБ) подгружается только при первом воспроизведении, не в начальном бандле
 let HlsClass: typeof HlsType | null = null;
 
 async function getHls(): Promise<typeof HlsType> {
@@ -16,8 +15,6 @@ async function getHls(): Promise<typeof HlsType> {
 }
 let loadedTrackId: string | null = null;
 
-// Watchdog загрузки: если за это время трек так и не заиграл (битые/недокачанные
-// HLS-сегменты, висящий запрос), показываем ошибку вместо вечного спиннера.
 const LOAD_TIMEOUT_MS = 20_000;
 let loadWatchdog: ReturnType<typeof setTimeout> | null = null;
 
@@ -32,7 +29,6 @@ function armLoadWatchdog(): void {
   clearLoadWatchdog();
   loadWatchdog = setTimeout(() => {
     const s = usePlayerStore.getState();
-    // Сработал, а трек всё ещё грузится и не играет — значит залип.
     if (s.isLoading && !s.isPlaying) {
       usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
       if (hls) { hls.destroy(); hls = null; }
@@ -42,16 +38,11 @@ function armLoadWatchdog(): void {
 
 let playStartedAt: number | null = null;
 let playStartedTrackId: string | null = null;
-// source захватывается в момент СТАРТА воспроизведения: playQueue пишет новый
-// context в стор ДО flushPlayEvent предыдущего трека, поэтому живой store.context
-// в момент flush уже принадлежит следующему клику.
+// Захватывается на старте: store.context может смениться раньше, чем flush предыдущего трека.
 let playStartedSource = 'direct';
 let _savedVolume = 1;
 
 // ─── Live-присутствие «слушают сейчас» ──────────────────────────────────────
-// Пока трек играет, шлём heartbeat в presence-эндпоинт. Окно на сервере 45с,
-// поэтому 20с с запасом переживают один пропущенный тик. На паузе/смене/конце
-// останавливаем — присутствие истекает само.
 const HEARTBEAT_MS = 20_000;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let heartbeatTrackId: string | null = null;
@@ -73,7 +64,7 @@ function startHeartbeat(trackId: string): void {
   if (heartbeatTrackId === trackId && heartbeatTimer) return;
   stopHeartbeat();
   heartbeatTrackId = trackId;
-  sendHeartbeat(trackId); // сразу, не дожидаясь первого интервала
+  sendHeartbeat(trackId);
   heartbeatTimer = setInterval(() => sendHeartbeat(trackId), HEARTBEAT_MS);
 }
 
@@ -106,10 +97,6 @@ function flushPlayEvent(): void {
 }
 
 // ─── Буфер волны ─────────────────────────────────────────────────────────
-// Дозапрос следующей партии треков волны — общая точка для проактивного триггера
-// (needsWaveFetch на 'playing'/тике) и реактивного фолбэка (next() при пустой очереди).
-// waveFetchInFlight — единственный in-flight-guard на оба пути; awaitingNextFromBuffer
-// подхватывает результат, если next() встал в очередь, пока фетч уже летел.
 let waveFetchInFlight = false;
 let awaitingNextFromBuffer = false;
 let consecutiveWaveErrors = 0;
@@ -147,12 +134,8 @@ async function growWaveBuffer(): Promise<PlayerTrack[]> {
 
     const current = usePlayerStore.getState();
     const mergedQueue = dedupeQueue([...current.queue, ...tracks]);
-    // Шаффл активен — новые треки дозаписываем и в originalQueue, иначе выключение
-    // шаффла (shuffleOff) их потеряет.
     const mergedOriginal =
       current.shuffle && current.originalQueue ? dedupeQueue([...current.originalQueue, ...tracks]) : null;
-    // Волна дозаписывает бесконечно — капаем длину в памяти, иначе долгая сессия
-    // растит очередь без предела.
     const capped = capLiveQueue(mergedQueue, current.queueIndex, mergedOriginal);
     const patch: { queue: PlayerTrack[]; queueIndex: number; originalQueue?: PlayerTrack[] | null } = {
       queue: capped.queue,
@@ -204,10 +187,7 @@ function maybePrefetchNextManifest(): void {
 }
 
 // ─── Тик раз в ~5с при воспроизведении ──────────────────────────────────────
-// Общий редкий throttle для проверок, которым не нужна покадровая частота
-// timeupdate: буфер волны, префетч манифеста и персист currentTime в стор.
-// Живой UI (прогресс-бар/waveform/тексты) читает время мимо стора через
-// useAudioTime — стор нужен только для восстановления позиции после reload.
+// throttle для буфера волны/префетча манифеста/персиста currentTime — живой UI тикает через useAudioTime.
 const TICK_INTERVAL_MS = 5_000;
 let lastTickAt = 0;
 
@@ -239,8 +219,6 @@ export function initAudioEngine(): void {
   audio.addEventListener('ended', () => {
     flushPlayEvent();
     stopHeartbeat();
-    // repeat='one': не переход по очереди, а перезапуск того же трека — flushPlayEvent
-    // уже сбросил playStartedTrackId, поэтому 'playing' заново взведёт play-event/heartbeat.
     if (usePlayerStore.getState().repeat === 'one') {
       controls.seek(0);
       audio?.play().catch(() => {});
@@ -263,8 +241,7 @@ export function initAudioEngine(): void {
   });
   audio.addEventListener('pause', () => {
     clearLoadWatchdog();
-    // isLoading тоже сбрасываем: пауза во время буферизации иначе оставляет
-    // вечный спиннер (canplay на стоящем аудио может не прийти).
+    // isLoading тоже сбрасываем — canplay на стоящем аудио может не прийти.
     usePlayerStore.getState()._setState({ isPlaying: false, isLoading: false });
     stopHeartbeat();
   });
@@ -282,10 +259,7 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
   flushPlayEvent();
 
   prefetchedAheadFor = null;
-  // Резюм восстановленного трека (opts.seekTo передаётся только из resumeRestored):
-  // duration уже персистится в сторе с прошлой сессии — не сбрасываем в 0, иначе
-  // мини-бар на кадр покажет 0:00/0:00 до реального durationchange (ждём сеть).
-  // currentTime сбрасывать не нужно — сюда же приходит опция seekTo.
+  // На резюме duration не сбрасываем — иначе кадр 0:00/0:00 до durationchange.
   const isResume = opts.seekTo !== undefined;
   usePlayerStore.getState()._setState({
     isLoading: true,
@@ -299,9 +273,7 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
 
   const manifest = await fetchManifest(track.id);
 
-  // Staleness guard: пока ждали сеть, playAt/resumeRestored могли переключить
-  // loadedTrackId на другой трек — его attachAndPlay уже владеет hls/audio/стором,
-  // наш вызов молча выходит (иначе побеждает тот, чей fetch завершился ПОЗЖЕ).
+  // Staleness guard: пока ждали сеть, loadedTrackId мог смениться на другой трек.
   if (loadedTrackId !== track.id) return;
 
   if (!manifest) {
@@ -311,12 +283,8 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
     return;
   }
 
-  // Резюм: currentTime уже в сторе (см. выше), но useAudioTime переключается на
-  // живой audio.currentTime сразу, как только hasAudio станет true (см. коммент
-  // hasAudio-фолбэк в use-audio-time.ts) — если выставить его здесь, окно между
-  // этим кадром и MANIFEST_PARSED (где audio.currentTime реально ставится в
-  // opts.seekTo) мелькнёт 0:00. Поэтому на резюме hasAudio уходит в true только
-  // после применения seekTo к элементу — ниже, в колбэках MANIFEST_PARSED/canPlayType.
+  // На резюме hasAudio=true выставляем только после применения seekTo к элементу
+  // (ниже, в MANIFEST_PARSED/canPlayType) — иначе useAudioTime мелькнёт 0:00 раньше seek.
   usePlayerStore.getState()._setState({
     waveformPeaks: manifest.waveformPeaks ?? null,
     ...(isResume ? {} : { hasAudio: true }),
@@ -327,9 +295,7 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
   const Hls = await getHls();
   if (loadedTrackId !== track.id) return;
   if (Hls.isSupported()) {
-    // Часть исходников даёт «дыру» в медиа-буфере (gap в таймстампах, обычно в
-    // начале) → bufferStalledError/bufferSeekOverHole, плеер залипает на 0:00.
-    // Повышаем терпимость к дырам и число попыток перепрыгнуть их.
+    // Часть исходников даёт «дыру» у начала буфера — повышенная терпимость и число попыток перепрыгнуть.
     hls = new Hls({ maxBufferHole: 0.5, nudgeOffset: 0.2, nudgeMaxRetry: 8 });
     hls.loadSource(manifest.hlsUrl);
     hls.attachMedia(audio);
@@ -339,16 +305,13 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
       audio?.play().catch(() => {});
     });
     hls.on(Hls.Events.ERROR, (_evt, data) => {
-      // Логируем нефатальные ошибки для диагностики, но НЕ benign-восстановление:
-      // bufferSeekOverHole/bufferNudgeOnStall — это hls.js успешно перепрыгнул дыру,
-      // не сбой (иначе консоль «кричит» при нормальном воспроизведении).
+      // bufferSeekOverHole/bufferNudgeOnStall — hls.js успешно перепрыгнул дыру, не сбой.
       const benign = data.details === 'bufferSeekOverHole' || data.details === 'bufferNudgeOnStall';
       if (!benign) {
         console.warn('[player] HLS error', data.type, data.details, 'fatal:', data.fatal);
       }
 
-      // Залип на дыре в начале буфера: данных в текущей позиции нет, но первый
-      // буферизованный диапазон начинается позже → перепрыгиваем на его старт.
+      // Залип на дыре в начале буфера — перепрыгиваем на старт первого буферизованного диапазона.
       if (!data.fatal && data.details === 'bufferStalledError' && audio) {
         try {
           const b = audio.buffered;
@@ -381,21 +344,15 @@ function playAt(queue: PlayerTrack[], index: number): void {
   const track = queue[index];
   if (!track) return;
 
-  // restored сбрасываем здесь, а не только в resumeRestored: если после регидрации
-  // persist (restored=true) пользователь запускает воспроизведение через UI
-  // (playQueue → playAt, а не тап «продолжить»), флаг оставался бы true, и кнопка
-  // play/pause продолжала бы звать resumeRestored() — тот выходит no-op на уже
-  // загруженном треке, и пауза «не реагирует» до перезагрузки.
+  // restored сбрасываем и здесь, не только в resumeRestored — иначе play/pause после
+  // playQueue продолжал бы звать resumeRestored() на уже загруженном треке.
   usePlayerStore.getState()._setState({ track, queue, queueIndex: index, restored: false });
 
   if (track.id !== loadedTrackId) {
     loadedTrackId = track.id;
     void attachAndPlay(track);
   } else if (audio) {
-    // Уже загруженный трек: playQueue/повторный клик «Играть» по той же очереди
-    // резюмит с текущей позиции, а не рестартит с 0:00 (playAt вызывается не
-    // только из repeat-обёртки next(), но и напрямую из UI — release-hero-play,
-    // featured-play-button, playlist playAll и т.п.). Рестарт с 0 — точечно в next().
+    // Уже загруженный трек резюмит с текущей позиции, не рестартит с 0:00 — рестарт точечно в next().
     audio.play().catch(() => {});
   }
 }
@@ -419,9 +376,7 @@ export const controls = {
   playQueue(tracks: PlayerTrack[], opts: { startIndex?: number; context: PlayContext; shuffle?: boolean }): void {
     initAudioEngine();
     if (tracks.length === 0) return;
-    // Индекс резолвим по id ДО дедупа: если исходная очередь содержит дубликаты
-    // раньше нужной позиции, dedupeQueue сдвинет индексы — позиционный startIndex
-    // после дедупа указал бы уже на другой трек.
+    // Индекс резолвим по id ДО дедупа — дедуп сдвигает позиции при дубликатах раньше startIndex.
     const rawStart = Math.min(Math.max(opts.startIndex ?? 0, 0), tracks.length - 1);
     const startTrackId = tracks[rawStart].id;
     const deduped = dedupeQueue(tracks);
@@ -430,9 +385,7 @@ export const controls = {
 
     let queue = deduped;
     let index = startIndex;
-    // Каждый playQueue — новая, конечная очередь: волна и шаффл предыдущего
-    // проигрывания к ней не относятся (иначе волна навсегда дозаписывает
-    // конец любой очереди, а шаффл остаётся включённым со стухшим originalQueue).
+    // Каждый playQueue — новая конечная очередь: волна/шаффл предыдущего проигрывания сбрасываются.
     const patch: {
       context: PlayContext;
       waveMode: false;
@@ -501,9 +454,7 @@ export const controls = {
       const idx = nextQueueIndex(queueIndex, queue.length, repeat);
       if (idx === null) return;
       if (idx === queueIndex) {
-        // repeat='all' с очередью из одного трека — nextQueueIndex зацикливает на
-        // тот же index, playAt по уже загруженному треку просто резюмит (не
-        // рестартит), поэтому явный рестарт с 0 нужен именно здесь.
+        // repeat='all' с одним треком зацикливается на тот же index — playAt резюмит, нужен явный рестарт.
         controls.seek(0);
         audio?.play().catch(() => {});
         return;
@@ -548,7 +499,7 @@ export const controls = {
     else controls.seek(0);
   },
 
-  /** Оставлено для WaveModeButton — продолжить волну для уже играющей очереди без перезапуска. */
+  /** Продолжить волну для уже играющей очереди без перезапуска. */
   setWaveMode(on: boolean): void {
     usePlayerStore.getState()._setState(on ? { waveMode: true } : { waveMode: false, waveSeed: null });
   },
@@ -581,10 +532,7 @@ export const controls = {
     }
   },
 
-  /** Запускает волну как новую очередь: каждый явный запуск пробует свежий
-   *  кандидат-sid, но записывает его в sessionStorage ('vire_wave_sid') только
-   *  при успешном старте (tracks.length>0) — неудачный фетч не должен оставить
-   *  играющую волну (старую очередь) без серверного анти-повтора нового sid. */
+  /** Запускает волну как новую очередь; sid в sessionStorage пишется только при успешном старте. */
   async startWave(seed: { mood?: string; genre?: string } | null): Promise<boolean> {
     const candidateSid = crypto.randomUUID();
     const tracks = await fetchWaveTracks({
@@ -606,8 +554,7 @@ export const controls = {
     usePlayerStore.getState()._setState({ waveMode: false, waveSeed: null });
   },
 
-  /** Первый play после гидрации persist: подгружает манифест текущего трека,
-   *  восстанавливает позицию и играет. Вызывается UI (B4/D2). */
+  /** Первый play после гидрации persist: подгружает манифест текущего трека, восстанавливает позицию и играет. */
   resumeRestored(): void {
     const { track, currentTime } = usePlayerStore.getState();
     if (!track || track.id === loadedTrackId) return;

@@ -23,7 +23,7 @@ function toSmartLink(row: SmartLinkRow): SmartLink {
   };
 }
 
-/** Один лендинг по (артист, slug) — для публичной страницы и редактора. */
+/** Один лендинг по (артист, slug): для публичной страницы и редактора. */
 export async function getSmartLinkBySlug(artistProfileId: string, slug: string): Promise<SmartLink | null> {
   const [row] = await db
     .select()
@@ -33,10 +33,6 @@ export async function getSmartLinkBySlug(artistProfileId: string, slug: string):
   return row ? toSmartLink(row) : null;
 }
 
-/**
- * Минимум о привязанном релизе для лендинга: статус/дата (для выбора CTA
- * «Слушать»/«Пресейв») + обложка/название/дата как фолбэк отображения.
- */
 export interface SmartLinkRelease {
   id: string;
   title: string;
@@ -81,7 +77,7 @@ export async function getSmartLinkById(id: string): Promise<SmartLink | null> {
   return row ? toSmartLink(row) : null;
 }
 
-/** Опубликованные лендинги артиста — для карточки-хаба. */
+/** Опубликованные лендинги артиста: для карточки-хаба. */
 export async function getPublishedSmartLinks(artistProfileId: string): Promise<SmartLink[]> {
   const rows = await db
     .select()
@@ -91,7 +87,7 @@ export async function getPublishedSmartLinks(artistProfileId: string): Promise<S
   return rows.map(toSmartLink);
 }
 
-/** Все лендинги артиста (включая черновики) — для дашборда. */
+/** Все лендинги артиста (включая черновики): для дашборда. */
 export async function listSmartLinks(artistProfileId: string): Promise<SmartLink[]> {
   const rows = await db
     .select()
@@ -101,7 +97,7 @@ export async function listSmartLinks(artistProfileId: string): Promise<SmartLink
   return rows.map(toSmartLink);
 }
 
-/** Свободен ли slug у артиста (кроме указанного id — для редактирования). */
+/** Свободен ли slug у артиста (кроме указанного id, для редактирования). */
 export async function smartLinkSlugTaken(artistProfileId: string, slug: string, exceptId?: string): Promise<boolean> {
   const rows = await db
     .select({ id: smartLinks.id })
@@ -144,7 +140,7 @@ export async function createSmartLink(artistProfileId: string, input: SmartLinkI
   return row.id;
 }
 
-/** Обновляет лендинг с проверкой владения (artistProfileId). coverUrl: undefined — не трогаем. */
+/** Обновляет лендинг с проверкой владения (artistProfileId). Поле со значением undefined не меняется. */
 export async function updateSmartLink(
   id: string,
   artistProfileId: string,

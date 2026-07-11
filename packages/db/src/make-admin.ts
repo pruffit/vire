@@ -4,9 +4,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 
-// Grant a role to an existing user by email — bootstraps the first admin
-// without hand-editing the DB.
-//   pnpm --filter @vire/db db:make-admin <email> [role]
+// Grant a role to an existing user by email: bootstraps the first admin without hand-editing the DB.
 type Role = 'LISTENER' | 'ARTIST' | 'VIEWER' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
 const ROLES: Role[] = ['LISTENER', 'ARTIST', 'VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN'];
 

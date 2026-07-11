@@ -32,8 +32,7 @@ import { Section } from '@/components/listener/section';
 import { websiteJsonLd } from '@/lib/structured-data';
 import type { Metadata } from 'next';
 
-// Главная: явный canonical (в аудите был пустой). OG-картинку наследует из
-// app/opengraph-image.tsx, title/description — из layout.
+// OG-картинка наследуется из app/opengraph-image.tsx, title/description — из layout
 export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 const GRID = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6';
@@ -80,9 +79,7 @@ export default async function HomePage() {
   const personalPicksDeduped = personalPicks.filter((t) => !recentIds.has(t.id));
 
   const featured = latest[0] ?? null;
-  // «Свежие релизы» = вышедшие за последние 7 дней (без редакционного featured).
-  // На маленьком каталоге неделя бывает пустой/скудной — тогда добиваем общим
-  // списком свежего, чтобы секция не выглядела поломанной.
+  // на маленьком каталоге неделя бывает пустой — добиваем общим списком свежего
   const weekFresh = freshWeek.filter((r) => r.id !== featured?.id);
   const rest = (weekFresh.length >= 4 ? weekFresh : latest.slice(1)).slice(0, 18);
   const topArtists = artists.slice(0, 12);
@@ -93,8 +90,7 @@ export default async function HomePage() {
       <JsonLd data={websiteJsonLd()} />
       <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
 
-      {/* Редакционный выбор — без FadeUp: FeaturedRelease содержит LCP-изображение,
-          анимация opacity:0→1 задерживает его обнаружение браузером (+1-2с на LCP) */}
+      {/* без FadeUp — FeaturedRelease содержит LCP-изображение, opacity-анимация задержала бы LCP */}
       {featured && <FeaturedRelease release={featured} />}
 
       {/* «Включи и слушай» — сразу под баннером, всем */}
@@ -127,8 +123,7 @@ export default async function HomePage() {
       {/* Каталог (всем) */}
       {rest.length > 0 && (
         <Section title="Свежие релизы" href="/releases" hrefLabel="Посмотреть все">
-          {/* -my/py — вертикальный выпуск: overflow-x-auto клипает и по Y,
-              иначе hover-тень/подъём карточек срезаются по кромке */}
+          {/* -my/py: overflow-x-auto клипает и по Y — иначе hover-тень карточек срезается */}
           <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
             {rest.map((r) => (
               <div key={r.id} className="shrink-0 w-40 snap-start">

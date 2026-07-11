@@ -10,7 +10,7 @@ interface LikesState {
 }
 
 const _pending = new Set<string>();
-// In-flight guard для toggle — вне стора, чтобы читаться синхронно (ре-клик по
+// In-flight guard для toggle: вне стора, чтобы читаться синхронно (ре-клик по
 // тому же треку до ответа сети должен быть no-op, а не гонкой POST/DELETE).
 const _toggling = new Set<string>();
 

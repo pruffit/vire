@@ -39,8 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }),
     );
 
-    // Один запрос на все треки всего каталога вместо getWithTracks(r.id) по
-    // каждому релизу — раньше был N+1 (по релизу на каждый await).
+    // один запрос на все треки каталога вместо N+1 по каждому релизу
     const allReleaseIds = perArtist.flatMap(({ releases }) => releases.map((r) => r.id));
     const trackIdsByRelease = await listTrackIdsByReleaseIds(allReleaseIds);
 

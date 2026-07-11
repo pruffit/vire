@@ -12,9 +12,7 @@ import { sanitizeCredits, type TrackCredit } from '@/lib/upload';
 
 const RELEASE_TYPES: ReleaseType[] = ['ALBUM', 'EP', 'SINGLE'];
 
-// View-роли пускаются в бэкофис; mutate-роли могут менять данные. VIEWER —
-// read-only: проходит гейт (чтобы экшены не падали ошибкой), но `canMutate=false`,
-// и каждый мутирующий экшен делает тихий no-op.
+// VIEWER проходит гейт (canMutate=false), но каждый мутирующий экшен — тихий no-op
 const ADMIN_VIEW_ROLES = new Set<UserRole>(['VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN']);
 const ADMIN_MUTATE_ROLES = new Set<UserRole>(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
 
@@ -75,12 +73,7 @@ export async function actionSetTrackStatus(trackId: string, status: 'READY' | 'B
   revalidatePath('/admin/tracks');
 }
 
-/**
- * Повторный транскод трека: пересобирает HLS из исходного мастера в vault.
- * Нужен, когда трек READY и манифест в БД есть (маркера `!hls` нет), но реальные
- * HLS-файлы в stream-бакете отсутствуют/битые — плеер бесконечно грузится.
- * Сбрасываем статус в PROCESSING, иначе воркер пропустит READY-трек (идемпотентность).
- */
+// сбрасываем статус в PROCESSING — иначе воркер по идемпотентности пропустит READY-трек
 export async function actionRetranscodeTrack(trackId: string): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
@@ -92,11 +85,7 @@ export async function actionRetranscodeTrack(trackId: string): Promise<{ error?:
   return { ok: true };
 }
 
-/**
- * Массовый пере-транскод всех треков артиста (у кого есть исходник в vault).
- * Нужен, когда у артиста системно битый HLS (напр. вшитая обложка-видео) — чтобы
- * не жать ⟳ HLS по каждому треку вручную.
- */
+// массовый пере-транскод — при системно битом HLS у артиста, чтобы не жать ⟳ по каждому треку
 export async function actionRetranscodeArtist(artistProfileId: string): Promise<{ error?: string; queued?: number }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
@@ -121,8 +110,7 @@ export async function actionSetReleaseStatus(
   revalidatePath('/admin/releases');
 }
 
-// ─── Полная редактура контента из админки (§9.1) — минуя ownership-гард сервиса:
-// репозитории update(id,…) принимают id напрямую, проверка владения живёт в сервисе.
+// ─── Редактура контента из админки — репозитории update(id,…) принимают id напрямую, ownership-проверка живёт в сервисе ───
 
 export async function actionAdminUpdatePost(
   id: string,

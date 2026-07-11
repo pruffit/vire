@@ -1,10 +1,8 @@
 import { cn } from '@vire/ui';
 
 /**
- * Точка «живого» индикатора. Пульс — box-shadow-keyframes вместо animate-ping:
- * ping (бесконечная transform-анимация) промоутит элемент в композит-слой,
- * который дрожит при скролле; box-shadow не компоузится, перерисовка крошечная.
- * Цвет — currentColor (задаётся className, напр. `text-green-400`).
+ * Live-точка. Пульс — box-shadow-keyframes, не animate-ping: ping промоутит
+ * композит-слой, который дрожит при скролле. Цвет — currentColor через className.
  */
 export function LivePulse({ small = false, className }: { small?: boolean; className?: string }) {
   return (

@@ -7,10 +7,6 @@ export const ICON_NAMES = SYSTEM_ICON_NAMES;
 
 export type IconName = (typeof ICON_NAMES)[number];
 
-/**
- * Системная иконка из общего пака (единый стиль по всему приложению).
- * Монохром через currentColor — подхватывает цвет текста. Размер в px/любой ед.
- */
 export function Icon({
   name,
   size = 20,

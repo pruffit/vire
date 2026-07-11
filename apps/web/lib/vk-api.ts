@@ -1,8 +1,4 @@
-/**
- * VK REST API (server-only): постеры видео через video.get.
- * Требует VK_SERVICE_TOKEN (сервисный ключ приложения VK) в env.
- * Любой сбой деградирует до null — фасад просто останется без постера.
- */
+// VK REST API (server-only), нужен VK_SERVICE_TOKEN в env; любой сбой деградирует до null.
 
 interface VkImage {
   url: string;

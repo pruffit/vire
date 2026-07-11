@@ -70,7 +70,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
         </div>
       </div>
 
-      {/* Фильтр по жанрам — только встречающиеся в каталоге */}
+      {/* Фильтр по жанрам: только встречающиеся в каталоге */}
       {availableGenres.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           <button

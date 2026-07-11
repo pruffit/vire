@@ -10,10 +10,7 @@ import { fetchReleaseTracks, fetchPlaylistTracks, type LazyReleaseTrack } from '
 
 export type { LazyReleaseTrack } from './lazy-queue-fetchers';
 
-/**
- * Единый вход воспроизведения: только действия, без подписки на стор — `controls`
- * это стабильные функции модуля. Состояние строки берётся из `useTrackPlayState`.
- */
+/** Единый вход воспроизведения: только действия, без подписки на стор. */
 export function usePlay() {
   return {
     playQueue: controls.playQueue,
@@ -21,14 +18,8 @@ export function usePlay() {
   };
 }
 
-/**
- * Состояние конкретного трека. Сравнение — ВНУТРИ селектора: подписчик получает
- * булево, которое флипается только у двух строк (старая активная / новая), а не
- * сырой `track.id`, меняющийся у всех сразу и перерисовывающий каждый трек-лист.
- *
- * `isPlaying` тоже сужен до «играет именно этот трек» — неактивные строки не
- * перерисовываются на play/pause (в UI везде используется `isActive && isPlaying`).
- */
+/** Состояние конкретного трека. Сравнение внутри селектора — ререндерятся только
+ *  две затронутые строки, а не каждый трек-лист на любую смену track.id/play-pause. */
 export function useTrackPlayState(trackId: string): { isActive: boolean; isPlaying: boolean } {
   const isActive = usePlayerStore((s) => s.track?.id === trackId);
   const isPlaying = usePlayerStore((s) => s.isPlaying && s.track?.id === trackId);
@@ -61,16 +52,14 @@ export function useLazyQueue(
   meta?: ReleaseQueueMeta,
 ): LazyQueueResult<LazyRow> {
   const cacheRef = useRef<LazyRow[] | null>(null);
-  // Общий in-flight-промис: параллельные вызовы load() ждут один fetch, а не получают ложный null.
+  // Общий in-flight-промис: параллельные load() ждут один fetch, а не получают ложный null.
   const inflightRef = useRef<Promise<LazyRow[] | null> | null>(null);
-  // React может переиспользовать этот инстанс хука при смене id (тот же компонент,
-  // новые пропсы) — кэш/inflight держат данные СТАРОГО релиза/плейлиста, сверяем ключ.
+  // React переиспользует инстанс хука при смене id — кэш/inflight могут держать старый ключ.
   const keyRef = useRef(`${kind}:${id}`);
   const [items, setItems] = useState<LazyRow[] | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Депсы — примитивы meta, а не сам объект: вызывающие передают литерал,
-  // и на объекте load() пересоздавался бы каждый рендер.
+  // Депсы — примитивы meta, не сам объект: вызывающие передают литерал, load() пересоздавался бы каждый рендер.
   const { artistName, artistSlug, coverUrl, accentColor } = meta ?? {};
 
   const load = useCallback(async (): Promise<PlayerTrack[] | null> => {
@@ -95,8 +84,7 @@ export function useLazyQueue(
       return toPlayerTracks(rows as PlaylistTrackRow[]);
     }
 
-    // Сброс синхронно при чтении (не в useEffect) — иначе на первый клик после смены id
-    // ещё виден кэш/inflight старого ключа и play() успевает отдать старую очередь.
+    // Сброс синхронно (не в useEffect) — иначе первый клик после смены id отдаёт старую очередь.
     const key = `${kind}:${id}`;
     if (keyRef.current !== key) {
       keyRef.current = key;
@@ -111,8 +99,7 @@ export function useLazyQueue(
       setLoading(true);
       const promise: Promise<LazyRow[] | null> = (kind === 'release' ? fetchReleaseTracks(id) : fetchPlaylistTracks(id))
         .finally(() => {
-          // Сравниваем по ссылке на промис, а не просто зануляем — иначе .finally
-          // старого (уже брошенного) запроса мог бы затереть inflight нового ключа.
+          // По ссылке, не занулением — .finally брошенного запроса не должен затереть inflight нового ключа.
           if (inflightRef.current === promise) inflightRef.current = null;
           if (keyRef.current === key) setLoading(false);
         });
@@ -120,9 +107,7 @@ export function useLazyQueue(
     }
 
     const rows = await inflightRef.current;
-    // Пока этот fetch летел, ключ сменился — результат чужого релиза/плейлиста
-    // не кэшируем, не пишем в state и не отдаём вызвавшему: иначе обогнанный
-    // load() мог бы вернуть валидную очередь СТАРОГО id, и её можно было бы проиграть.
+    // Ключ сменился, пока fetch летел — результат чужого id не кэшируем и не отдаём.
     if (keyRef.current !== key) return null;
     // Сбой не кэшируем — следующий load() перезапросит; кэшируем только успех (включая пустой []).
     if (rows === null) return null;

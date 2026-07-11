@@ -13,9 +13,7 @@ export async function Nav() {
   const isArtist = user?.role === 'ARTIST' || user?.role === 'MODERATOR' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
   const isAdmin = user?.role === 'VIEWER' || user?.role === 'MODERATOR' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
 
-  // «Дашборд» обычно совпадает с ролью артиста; read-only VIEWER может быть участником
-  // артиста (artist_members) — для него (и только для него) проверяем членство, чтобы
-  // не вешать запрос на каждого слушателя.
+  // членство (artist_members) проверяем только для VIEWER — не вешать запрос на каждого слушателя
   const showDashboard = isArtist || (user?.role === 'VIEWER' && (await listUserArtists(user.id)).length > 0);
 
   const displayName = user?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'Профиль';

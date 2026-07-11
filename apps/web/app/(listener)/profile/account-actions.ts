@@ -38,9 +38,7 @@ export async function setPasswordAction(
   return 'ok';
 }
 
-// ── OAuth linking ──────────────────────────────────────────────────────────────
-// Перед началом OAuth кладём userId в httpOnly-cookie.
-// Auth.js signIn-callback читает его и переназначает аккаунт нужному пользователю.
+// ── OAuth linking: userId в httpOnly-cookie, signIn-callback Auth.js читает его и переназначает аккаунт ──
 
 async function linkOAuthProvider(provider: string) {
   const session = await auth();

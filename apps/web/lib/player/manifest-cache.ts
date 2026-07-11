@@ -5,7 +5,7 @@ export interface ManifestData {
 
 const CACHE_LIMIT = 10;
 
-// Map сохраняет порядок вставки — используем это для LRU (перестановка ключа в
+// Map сохраняет порядок вставки: используем это для LRU (перестановка ключа в
 // конец при чтении, вытеснение первого ключа при переполнении).
 const cache = new Map<string, ManifestData>();
 
@@ -26,11 +26,11 @@ export function putCachedManifest(trackId: string, data: ManifestData): void {
   cache.set(trackId, data);
 }
 
-// In-flight дедуп: префетч и attachAndPlay могут спросить один trackId одновременно —
+// In-flight дедуп: префетч и attachAndPlay могут спросить один trackId одновременно,
 // второй вызов присоединяется к летящему промису вместо второго сетевого запроса.
 const inFlight = new Map<string, Promise<ManifestData | null>>();
 
-/** Манифест текущего/префетчимого трека — через LRU-кэш, без повторных сетевых запросов. */
+/** Манифест текущего/префетчимого трека: через LRU-кэш, без повторных сетевых запросов. */
 export function fetchManifest(trackId: string): Promise<ManifestData | null> {
   const cached = getCachedManifest(trackId);
   if (cached) return Promise.resolve(cached);

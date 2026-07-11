@@ -53,8 +53,7 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   alternates: { canonical: '/' },
-  // Явные иконки, чтобы Яндекс/Google гарантированно подхватили favicon в выдаче
-  // (в поиске иконка не показывалась). Файлы лежат в app/ и public/.
+  // явные icons, иначе Яндекс/Google не всегда подхватывают favicon в выдаче
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -66,8 +65,7 @@ export const metadata: Metadata = {
   },
   verification: {
     yandex: '6fdc9d6fa3807d7b',
-    // Google Search Console: задаётся через env, чтобы подтвердить сайт и начать
-    // индексацию в Google (сейчас сайт там не индексируется).
+    // подтверждение для Google Search Console
     ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
       ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
       : {}),
@@ -83,20 +81,9 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${fontVariables} h-full antialiased`}
     >
-      {/*
-        App-shell: окно фиксированной высоты (h-full + overflow-clip), скролла
-        на уровне документа нет. overflow-clip, не overflow-hidden: hidden остаётся
-        программно скроллируемым контейнером (scrollIntoView/фокус за краем сдвигает
-        весь UI без возможности вернуть (скроллбара нет), clip не создаёт скролл-
-        контейнер вовсе. Nav закреплён сверху, контент скроллится внутри единой
-        области ниже. Плеер (элемент потока, см. PlayerWrapper) занимает место
-        только когда играет трек, поэтому постоянной «полосы» под плеер нет.
-        Страницы заполняют область через min-h-full (НЕ min-h-screen: иначе высота
-        Nav давала бы лишний скролл).
-      */}
+      {/* App-shell фиксированной высоты, единственная скролл-область (см. CLAUDE.md) */}
       <body className="h-full flex flex-col bg-background text-foreground font-sans overflow-clip">
-        {/* До пейнта: ставит vire-reduce-motion на <html>, чтобы CSS-анимации не
-            мигнули у выбравших приглушение (см. MotionProvider/AppearanceSettings). */}
+        {/* ставит vire-reduce-motion на <html> до пейнта, чтобы CSS-анимации не мигнули */}
         <script dangerouslySetInnerHTML={{ __html: REDUCE_MOTION_INIT_SCRIPT }} />
         <a
           href="#main-content"
@@ -109,8 +96,7 @@ export default function RootLayout({
           <ScrollState />
           <ScrollRestoration />
           <SitePresence />
-          {/* suppressHydrationWarning: ScrollState вешает класс `is-scrolling` через
-              classList напрямую — без этого scroll до гидрации даёт mismatch (см. (listener)/layout). */}
+          {/* suppressHydrationWarning: ScrollState вешает is-scrolling через classList напрямую */}
           <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-clip">
             {children}
           </div>

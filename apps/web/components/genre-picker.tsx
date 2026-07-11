@@ -19,7 +19,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
   const [query, setQuery] = useState('');
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
-  // Воркер автопроставляет топ-2 жанра, если у трека их не было — синхронизируем
+  // Воркер автопроставляет топ-2 жанра, если у трека их не было: синхронизируем
   // выбор с проставленным в БД, чтобы результат был виден и не затёрся при «Сохранить».
   const handleAnalysis = useCallback((result: GenreAnalysisResult) => {
     setSuggestions(result.suggestions);
@@ -46,7 +46,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
   const atMax = selected.size >= MAX_TRACK_GENRES;
   const pendingSuggestions = suggestions.filter((s) => !selected.has(s.genre));
 
-  // Результаты поиска — плоский список по подписи (регистронезависимо).
+  // Результаты поиска: плоский список по подписи (регистронезависимо).
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return null;
@@ -108,7 +108,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         </AnimatePresence>
       </div>
 
-      {/* Выбранное — всегда на виду, клик снимает */}
+      {/* Выбранное: всегда на виду, клик снимает */}
       {selected.size > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {Array.from(selected).map((g) => (
@@ -124,7 +124,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         </div>
       )}
 
-      {/* Автоопределённые жанры — клик добавляет (уважая MAX_TRACK_GENRES); повторный анализ рядом */}
+      {/* Автоопределённые жанры: клик добавляет (уважая MAX_TRACK_GENRES); повторный анализ рядом */}
       {suggestions.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[10px] font-mono text-white/25 uppercase tracking-widest">

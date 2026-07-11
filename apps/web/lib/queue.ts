@@ -102,10 +102,8 @@ class AnalyzeQueue {
     },
   });
 
-  // deduplication.id = trackId — как у AnalyzeGenreQueue: фиксированный jobId
-  // остаётся занят и в completed/failed (removeOnComplete/Fail — по количеству,
-  // не сразу), повторный .add() с ним молча вернул бы старую джобу вместо новой.
-  // deduplication.id снимается по завершении/провале джобы.
+  // deduplication.id (не фиксированный jobId) — снимается по завершении/провалу джобы;
+  // jobId остался бы занят в completed/failed, и повторный .add() тихо вернул бы старую джобу.
   async add(data: AnalyzeJobData): Promise<void> {
     await this.q.add('analyze-audio', data, { deduplication: { id: `analyze:${data.trackId}` } });
   }
@@ -134,11 +132,8 @@ class AnalyzeGenreQueue {
     },
   });
 
-  // deduplication.id = trackId — дедупликация повторного нажатия кнопки «Определить
-  // жанр», пока предыдущая джоба не завершена. В отличие от фиксированного jobId,
-  // ключ дедупликации снимается по завершении/провале джобы — фиксированный jobId
-  // остаётся занят и в completed/failed (removeOnComplete/Fail — по количеству, не
-  // сразу), поэтому повторный .add() молча возвращал бы старую джобу и не запускал новую.
+  // deduplication.id — дедуп повторного клика «Определить жанр» до завершения джобы;
+  // в отличие от фиксированного jobId, снимается по завершении/провалу (иначе остался бы занят в completed/failed).
   async add(data: AnalyzeGenreJobData): Promise<void> {
     await this.q.add('analyze-genre', data, { deduplication: { id: `analyze-genre:${data.trackId}` } });
   }

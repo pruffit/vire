@@ -23,7 +23,7 @@ const EMPTY_SESSION = {
 };
 
 export async function GET(req: Request) {
-  // Rate limit: 120 requests per minute per IP (player calls this continuously)
+  // Лимит выше обычного: плеер дёргает волну непрерывно.
   const rl = await rateLimit(clientKey(req, 'wave'), 120, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
@@ -47,7 +47,7 @@ export async function GET(req: Request) {
     ? await getWaveSession(sessionId).catch(() => EMPTY_SESSION)
     : EMPTY_SESSION;
 
-  // Тег настроения/жанра в seed-режиме фильтрует старт волны; в режиме похожести —
+  // Тег настроения/жанра в seed-режиме фильтрует старт волны; в режиме похожести это
   // сессионный буст, закреплённый на первом запросе с mood/genre в этой сессии.
   let seedMood: Mood | null = null;
   let seedGenre: TrackGenre | null = null;

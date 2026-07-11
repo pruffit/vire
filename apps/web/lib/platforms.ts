@@ -1,6 +1,5 @@
-// Распознавание площадки/соцсети по URL — чистая функция, без зависимостей.
-// Иконку по ключу рисует components/platform-icon.tsx. Если не распознали —
-// 'website' (обычная ссылка), название берётся из подписи или хоста.
+// Распознавание площадки/соцсети по URL — чистая функция. Иконку рисует
+// components/platform-icon.tsx; нераспознанное → 'website', имя из подписи/хоста.
 
 export type PlatformKey =
   | 'spotify'
@@ -80,9 +79,8 @@ export function detectPlatform(url: string): DetectedPlatform {
     if (host === 'music.youtube.com') return 'youtube_music';
     if (is('youtube.com') || host === 'youtu.be') return 'youtube';
     if (host.startsWith('music.yandex')) return 'yandex_music';
-    // VK Музыка: /artist/<slug> (страница артиста — именно с «/», чтобы не ловить
-    // профиль типа /artistpage), /music*, /audio* (треки/альбомы/плейлисты), либо
-    // отдельный домен vkmusic.ru. Иначе vk.com — обычный профиль/сообщество.
+    // VK Музыка: /artist/ с завершающим слэшем (не ловит /artistpage), /music*,
+    // /audio*, либо домен vkmusic.ru; иначе vk.com — обычный профиль.
     if (
       is('vk.com', 'vkmusic.ru') &&
       (path === '/artist' || path.startsWith('/artist/') || path.startsWith('/music') || path.startsWith('/audio') || host === 'vkmusic.ru')

@@ -1,8 +1,7 @@
 import { genreEnum } from './schema/releases';
 
-// Тип дублируется из queries/track-genres, но берётся напрямую из схемы:
-// этот модуль не должен тянуть client.ts (подключение к БД) — его импортирует
-// в том числе код, где БД недоступна (тесты, edge).
+// Тип дублируется из queries/track-genres: модуль не должен тянуть client.ts,
+// его импортирует и код без доступа к БД (тесты, edge).
 type TrackGenre = (typeof genreEnum.enumValues)[number];
 
 export type GenreFamily =
@@ -36,9 +35,6 @@ export type GenreFamily =
   | 'experimental'
   | 'spoken';
 
-// Семейства по музыкальной близости — сырьё для family-подматчинга «Волны»:
-// жанр слушателя расширяется до соседей по семейству. Полнота (каждый жанр имеет
-// семейство) гарантируется типом Record<TrackGenre, GenreFamily>.
 export const GENRE_FAMILY: Record<TrackGenre, GenreFamily> = {
   // house
   HOUSE: 'house', ACID: 'house', ACID_HOUSE: 'house', BEATDOWN: 'house',
@@ -178,10 +174,7 @@ export const GENRE_FAMILY: Record<TrackGenre, GenreFamily> = {
   SPOKENWORD: 'spoken',
 };
 
-/**
- * Расширяет список жанров до всех жанров тех же семейств (порядок — как в enum,
- * без дублей). Нужно «Волне»: seed-жанр слушателя матчится и на соседей по семейству.
- */
+// Порядок: как в enum, без дублей.
 export function expandGenresToFamilies(genres: TrackGenre[]): TrackGenre[] {
   const families = new Set<GenreFamily>();
   for (const genre of genres) families.add(GENRE_FAMILY[genre]);

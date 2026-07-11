@@ -29,7 +29,7 @@ export function SystemPanel({ initial }: { initial: SystemData }) {
           setData(d);
           lastTs.current = Date.now();
         }
-      } catch { /* оставляем прошлые данные */ }
+      } catch { /* keep */ }
     };
     const timer = setInterval(tick, POLL_MS);
     return () => { stopped = true; clearInterval(timer); };

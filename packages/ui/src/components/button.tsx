@@ -42,8 +42,7 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
-    // asChild (например, Button оборачивает <Link>): motion не оборачивает Slot,
-    // поэтому отклик нажатия даём CSS-классом active:scale.
+    // motion не оборачивает Slot, поэтому отклик нажатия — CSS-классом active:scale
     if (asChild) {
       return (
         <Slot
@@ -54,7 +53,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       );
     }
 
-    // Обычная кнопка — пружинный отклик на ховер/нажатие вместо CSS-scale.
     return (
       <motion.button
         className={cn(buttonVariants({ variant, size, className }))}

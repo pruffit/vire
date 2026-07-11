@@ -8,17 +8,11 @@ export interface PlayerTrack {
   title: string;
   artistName: string;
   coverUrl: string | null;
-  // Опциональны: нужны плееру для переходов на страницы артиста и релиза.
-  // Если источник не знает их (например, дашборд) — ссылки просто не рендерятся.
+  // Опциональные поля: если источник их не знает (например, дашборд) — соответствующий UI не рендерится.
   artistSlug?: string;
   releaseId?: string;
-  // Акцент-цвет артиста — инжектируется в плеер как --artist-accent.
   accentColor?: string;
-  // Возрастная маркировка 18+ (explicit) — плеер показывает бейдж.
   isExplicit?: boolean;
-  // Версия/ремикс («Radio Edit», «Slowed + Reverb») и имена FEATURED-кредитов —
-  // рендерятся приглушённо рядом с title через TrackTitleText. Опциональны:
-  // старые persisted-стейты `vire-player` до этого поля не ломаются.
   version?: string | null;
   feat?: string[];
 }
@@ -63,8 +57,7 @@ interface Store extends State {
 }
 
 const PERSISTED_QUEUE_LIMIT = 100;
-// Сколько уже проигранных треков перед текущим сохраняем в окне — так prev()
-// после F5 ещё работает на несколько шагов назад, а не только вперёд.
+// Окно сохраняет треки и перед текущим — prev() после F5 работает на несколько шагов назад.
 const PERSISTED_QUEUE_WINDOW_BEFORE = 20;
 
 type PersistedState = Pick<
@@ -82,9 +75,7 @@ type PersistedState = Pick<
   | 'duration'
 >;
 
-/** Длинную очередь (волна) режем окном вокруг текущего трека — иначе
- *  slice(0,100) на queueIndex>99 персистит хвост без текущего трека, и после
- *  restore clampRestoredQueueIndex не находит его (queueIndex улетает на 0). */
+/** Окно вокруг текущего трека, не slice(0,100) — иначе на queueIndex>99 персист теряет текущий трек. */
 function sliceQueueForPersist(
   queue: PlayerTrack[],
   queueIndex: number,
@@ -98,8 +89,7 @@ function sliceQueueForPersist(
   return { queue: items, queueIndex: index };
 }
 
-/** originalQueue (шаффл) режем тем же окном, но по позиции текущего трека В НЕЙ —
- *  queueIndex указывает на позицию в `queue` (перемешанной), не в originalQueue. */
+/** То же окно, но по позиции текущего трека В originalQueue — queueIndex указывает на перемешанную queue. */
 function sliceOriginalQueueForPersist(
   originalQueue: PlayerTrack[] | null,
   currentTrackId: string | undefined,

@@ -3,10 +3,8 @@ import { sql } from 'drizzle-orm';
 import { artistProfiles } from './artists';
 
 export const releaseTypeEnum = pgEnum('release_type', ['ALBUM', 'EP', 'SINGLE']);
-// Жанры — фиксированный список, заполняет артист (зеркало ALL_GENRES в @vire/core).
-// ПОРЯДОК append-only: исходные 14 первыми (в историческом порядке), новые дописаны
-// в конец — так миграция остаётся чистым ALTER TYPE ADD VALUE, без пересоздания enum.
-// Группировку для UI см. apps/web/lib/genres.ts (от порядка enum не зависит).
+// Зеркало ALL_GENRES в @vire/core. ПОРЯДОК append-only — иначе миграция пересоздаёт
+// enum вместо ALTER TYPE ADD VALUE. UI-группировка — apps/web/lib/genres.ts.
 export const genreEnum = pgEnum('genre', [
   // Исходные 14 — не трогать порядок
   'ELECTRONIC', 'HIPHOP', 'ROCK', 'INDIE', 'POP', 'AMBIENT', 'JAZZ',
@@ -98,8 +96,7 @@ export const genreEnum = pgEnum('genre', [
   'MUSICAL', 'BRASS', 'FIELD_RECORDING',
 ]);
 export const releaseStatusEnum = pgEnum('release_status', ['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED']);
-// FAILED — транскодинг исчерпал все попытки; трек не воспроизводится, артист
-// уведомлён письмом, в админке помечен в «требует внимания».
+// FAILED — транскодинг исчерпал попытки: трек не играет, артист уведомлён, в админке «требует внимания»
 export const trackStatusEnum = pgEnum('track_status', ['PROCESSING', 'READY', 'BLOCKED', 'FAILED']);
 
 export const releases = pgTable('releases', {
@@ -110,9 +107,7 @@ export const releases = pgTable('releases', {
   genre: genreEnum('genre'),
   coverUrl: text('cover_url'),
   releaseDate: timestamp('release_date'),
-  // Момент реального выхода в эфир (DRAFT/SCHEDULED → PUBLISHED). В отличие от
-  // release_date (задаёт артист) и created_at (создание черновика) — это честная
-  // отметка «когда релиз стал публичным». Источник правды для сортировки «свежее».
+  // момент реального перехода в PUBLISHED — не release_date (его задаёт артист); источник правды для «свежее»
   publishedAt: timestamp('published_at'),
   status: releaseStatusEnum('status').notNull().default('DRAFT'),
   description: text('description'),
@@ -130,13 +125,10 @@ export const tracks = pgTable('tracks', {
   releaseId: uuid('release_id').notNull().references(() => releases.id),
   title: text('title').notNull(),
   trackNumber: integer('track_number').notNull(),
-  // Версия/ремикс: «Radio Edit», «Slowed + Reverb», «Sped Up» и т.п. Отдельно от
-  // названия (его не засоряем) — показывается бейджем/суффиксом рядом с треком.
+  // версия/ремикс («Radio Edit» и т.п.) — отдельно от title, не засоряем название
   version: text('version'),
   durationSec: integer('duration_sec'),
   status: trackStatusEnum('status').notNull().default('PROCESSING'),
-  // Файл в хранилище всегда по track_id, не по артисту
-  // /vault/tracks/{id}/source.flac — политика ухода артиста работает автоматически
   isExclusive: boolean('is_exclusive').notNull().default(false),
   isWip: boolean('is_wip').notNull().default(false),
   // Возрастная маркировка 18+ (explicit): мат/откровенный контент. 436-ФЗ.
@@ -181,8 +173,7 @@ export const trackGenres = pgTable('track_genres', {
   genre: genreEnum('genre').notNull(),
 }, (t) => [primaryKey({ columns: [t.trackId, t.genre] })]);
 
-// Теги настроения — фиксированный список, не свободный ввод (нет UGC/модерации)
-// Сырьё для волны ступени 1
+// фиксированный список, не свободный ввод (нет UGC/модерации); сырьё для волны ступени 1
 export const trackMoods = pgTable('track_moods', {
   trackId: uuid('track_id').notNull().references(() => tracks.id, { onDelete: 'cascade' }),
   mood: moodEnum('mood').notNull(),
@@ -192,18 +183,14 @@ export const trackMoods = pgTable('track_moods', {
 export const trackAudio = pgTable('track_audio', {
   trackId: uuid('track_id').primaryKey().references(() => tracks.id),
   hlsManifestKey: text('hls_manifest_key'),
-  // Предрассчитанные пики для waveform — без Web Audio API
   waveformPeaks: jsonb('waveform_peaks'),
   flacKey: text('flac_key'),
-  // Аудио-метаданные для волны (ступень 1 — по тегам)
+  // аудио-метаданные для волны (ступень 1 — по тегам)
   bpm: integer('bpm'),
   musicalKey: text('musical_key'),
-  // Автоопределение жанра (Essentia discogs-effnet) — топ-5 [{ genre, confidence }],
-  // всегда сохраняется независимо от автоприменения в track_genres. См. docs/features/auto-genre.md.
+  // топ-5 [{genre, confidence}], сохраняется независимо от автоприменения — см. docs/features/auto-genre.md
   genreSuggestions: jsonb('genre_suggestions'),
-  // Раздельные метки готовности анализа по требованию (не общий updatedAt) — иначе
-  // поллинг BPM/key и поллинг жанра не различают, чья джоба завершилась, если обе
-  // кнопки нажаты подряд. См. docs/features/audio-analysis.md.
+  // раздельные метки, не общий updatedAt — иначе поллинг не различает, какая джоба завершилась; см. docs/features/audio-analysis.md
   bpmKeyAnalyzedAt: timestamp('bpm_key_analyzed_at'),
   genreAnalyzedAt: timestamp('genre_analyzed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),

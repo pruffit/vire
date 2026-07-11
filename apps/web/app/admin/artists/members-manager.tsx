@@ -11,8 +11,7 @@ import type { ArtistMemberRow } from '@vire/db';
 import { toast } from '@/components/toast';
 import { Icon } from '@/components/icon';
 
-// Поповер в портале с position:fixed — иначе его обрезает таблица-родитель
-// с overflow-x/-y:auto.
+// поповер в портале с position:fixed — иначе его обрезает таблица-родитель с overflow:auto
 export function MembersManager({ artistProfileId }: { artistProfileId: string }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);

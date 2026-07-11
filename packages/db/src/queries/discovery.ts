@@ -26,10 +26,6 @@ const releaseCardColumns = {
   artistName: artistProfiles.name,
   artistSlug: artistProfiles.slug,
   artistAvatarUrl: artistProfiles.avatarUrl,
-  // Explicit-флаг релиза = любой его трек explicit. Коррелированный EXISTS:
-  // внешняя таблица квалифицирована литералом ("releases".id) — Drizzle в .select()
-  // рендерит интерполированную колонку без квалификации, что в подзапросе дало бы
-  // ambiguity/0 (см. предупреждение в CLAUDE.md). Внутренний tracks под алиасом t.
   hasExplicit: sql<boolean>`exists (select 1 from "tracks" t where t.release_id = "releases".id and t.is_explicit)`,
   accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
 };
@@ -49,7 +45,7 @@ export interface DiscoveryTrack {
 /**
  * Множество id релизов (из переданного списка), у которых есть хотя бы один
  * explicit-трек. Для поверхностей, что отдают доменный Release без explicit-данных
- * (страница артиста): один запрос вместо N. Пустой вход → пустое множество.
+ * (страница артиста): один запрос вместо N.
  */
 export async function getExplicitReleaseIds(releaseIds: string[]): Promise<Set<string>> {
   if (releaseIds.length === 0) return new Set();
@@ -62,7 +58,7 @@ export async function getExplicitReleaseIds(releaseIds: string[]): Promise<Set<s
 
 /**
  * Id треков, сгруппированные по релизу (sitemap: генерация ссылок на треки
- * внутри релиза без N+1 по каждому релизу отдельно). Пустой вход → пустая карта.
+ * внутри релиза без N+1 по каждому релизу отдельно).
  */
 export async function listTrackIdsByReleaseIds(releaseIds: string[]): Promise<Map<string, string[]>> {
   if (releaseIds.length === 0) return new Map();
@@ -131,15 +127,14 @@ export async function getLatestReleases(limit = 12): Promise<DiscoveryRelease[]>
         ),
       ),
     )
-    // Свежесть = момент выхода в эфир. published_at для прямой публикации; для
-    // запланированных, открывшихся по дате (published_at ещё null) — release_date;
-    // created_at — запасной вариант для легаси-строк без обоих.
+    // Свежесть = момент выхода в эфир: published_at, иначе release_date (план,
+    // открывшийся по дате), иначе created_at (легаси-строки без обоих).
     .orderBy(desc(sql`coalesce(${releases.publishedAt}, ${releases.releaseDate}, ${releases.createdAt})`))
     .limit(limit);
 }
 
-// Релиз слышен (опубликован / запланирован с прошедшей датой) — тот же предикат,
-// что в getLatestReleases. Вынесен, чтобы переиспользовать в каталоге.
+// Релиз слышен (опубликован / запланирован с прошедшей датой), тот же предикат,
+// что в getLatestReleases; вынесен для переиспользования в каталоге.
 const releaseIsAired = or(
   eq(releases.status, 'PUBLISHED'),
   and(eq(releases.status, 'SCHEDULED'), isNotNull(releases.releaseDate), lte(releases.releaseDate, sql`now()`)),
@@ -192,7 +187,7 @@ export type ReleaseSort = 'fresh' | 'popular';
 
 /**
  * Каталог релизов с сортировкой и опциональным окном по дате выхода.
- * `fresh` — по свежести, `popular` — по числу прослушиваний (треки релиза).
+ * `fresh`: по свежести, `popular`: по числу прослушиваний (треки релиза).
  * `sinceDays` ограничивает витрину релизами за последние N дней.
  */
 export async function listReleases({
@@ -206,18 +201,15 @@ export async function listReleases({
 } = {}): Promise<DiscoveryRelease[]> {
   const conds = [eq(artistProfiles.isActive, true), releaseIsAired];
   if (sinceDays) {
-    // sinceDays — внутреннее число (не пользовательский ввод). Бинд-параметр
-    // внутри make_interval/умножения на interval Postgres не может типизировать
-    // («could not determine data type of parameter») и запрос падает в рантайме.
-    // Поэтому санитизируем в целое и вставляем литералом: now() - interval 'N days'.
+    // sinceDays - внутреннее число, не пользовательский ввод; бинд-параметр в interval
+    // Postgres не типизирует, поэтому вставляем литералом: now() - interval 'N days'.
     const days = Math.max(0, Math.floor(sinceDays));
     conds.push(sql`${releaseFreshness} >= now() - ${sql.raw(`interval '${days} days'`)}`);
   }
 
   if (sort === 'popular') {
-    // Прослушивания релиза = play-events его треков. left join — релизы без
-    // прослушиваний остаются в выдаче с нулём. group by по PK (releases.id,
-    // artist_profiles.id) — остальные колонки функционально зависят от них.
+    // Прослушивания релиза = play-events его треков; left join оставляет в выдаче
+    // релизы без прослушиваний (с нулём); group by по PK, остальные колонки зависят от него.
     return db
       .select(releaseCardColumns)
       .from(releases)
@@ -345,14 +337,7 @@ export async function getRecentlyPlayed(userId: string, limit = 12): Promise<Pla
   }));
 }
 
-/**
- * «Для тебя»: READY-треки артистов, которых юзер лайкал (артисты его лайкнутых
- * треков), на кого подписан, или из его профиля вкуса (topArtistIds по лайкам ∪
- * прослушиваниям за 90 дней). Исключены треки, которые юзер уже лайкнул или слушал
- * за последние 14 дней — это «открой новое», а не повтор уже знакомого.
- * Порядок — свежесть релиза + прослушивания. Cold-start (нет сигнала) → пустой
- * массив (модуль скрывается). Без ML — прагматичная выборка по имеющимся сигналам.
- */
+/** «Для тебя», подробности алгоритма: docs/features/home-feed.md. */
 export async function getPersonalTrackPicks(userId: string, limit = 12): Promise<PlayableChartTrack[]> {
   const taste = await getTasteProfile(userId);
 

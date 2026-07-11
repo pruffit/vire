@@ -34,8 +34,7 @@ export function PlaylistView({ playlist, isOwner, emptyTitle = 'Плейлист
     if (!res?.ok) { setTracks(prev); toast.error('Не удалось сохранить порядок'); }
   }, [playlist.id]);
 
-  // Side-effects live outside the state updaters (updaters must stay pure —
-  // StrictMode invokes them twice, which would double-fire the network calls).
+  // updaters must stay pure — StrictMode invokes them twice, double-firing network calls
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over || active.id === over.id) return;

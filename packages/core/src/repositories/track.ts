@@ -26,9 +26,6 @@ export interface ITrackRepository {
   findById(id: string): Promise<Track | null>;
   update(id: string, patch: UpdateTrackParams): Promise<Track | null>;
   delete(id: string): Promise<void>;
-  /**
-   * Перенумеровать треки релиза по новому порядку (id[i] → trackNumber i+1).
-   * Атомарно (одна транзакция). Затрагивает только треки этого релиза.
-   */
+  /** Перенумеровать треки релиза по новому порядку (id[i] → trackNumber i+1). Атомарно. */
   reorder(releaseId: string, orderedIds: string[]): Promise<void>;
 }

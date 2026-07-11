@@ -4,7 +4,7 @@ import { trackGenres, genreEnum, tracks, releases, artistProfiles } from '../sch
 
 export type TrackGenre = typeof genreEnum.enumValues[number];
 
-// Источник правды — сам enum: список не дублируем, чтобы не расходился со схемой.
+// Источник правды: сам enum, список не дублируем, чтобы не разошёлся со схемой.
 // Человеко-читаемые подписи живут в apps/web/lib/genres.ts (клиентский слой).
 export const ALL_TRACK_GENRES: TrackGenre[] = [...genreEnum.enumValues];
 
@@ -25,13 +25,8 @@ export async function setTrackGenres(trackId: string, genres: TrackGenre[]): Pro
   });
 }
 
-/**
- * Атомарно проставляет жанры треку, только если у него их ещё нет — один
- * SQL-стейтмент (INSERT ... SELECT ... WHERE NOT EXISTS), без промежуточного
- * чтения. Защищает от TOCTOU: ручной выбор артиста между чтением и записью
- * не перезаписывается (в отличие от read-then-write через getTrackGenres +
- * setTrackGenres). Возвращает true, если жанры были вставлены.
- */
+// Один SQL-стейтмент (WHERE NOT EXISTS), не read-then-write: защищает от TOCTOU
+// между автопростановкой жанров и ручным выбором артиста.
 export async function setTrackGenresIfEmpty(
   trackId: string,
   genres: TrackGenre[],

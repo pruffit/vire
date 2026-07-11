@@ -27,11 +27,8 @@ interface Props {
 }
 
 /**
- * Контент peek-оверлея для плейлиста. Хром (фон, грабёр, ESC, drag)
- * предоставляет QuickLookSheet — здесь только данные и трек-лист.
- *
- * Карточки (EditorialPlaylistCard, PlaylistCard) держат open-state
- * и свой визуальный триггер, а этот компонент переиспользуется обоими.
+ * Контент peek-оверлея плейлиста; хром (фон, грабёр, ESC, drag) — QuickLookSheet.
+ * open-state держат карточки-триггеры (EditorialPlaylistCard, PlaylistCard).
  */
 export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, onClose }: Props) {
   const activeTrack = usePlayerStore((s) => s.track);
@@ -40,7 +37,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
   const context = { source: 'playlist' as const, sourceId: playlistId };
 
   useEffect(() => {
-    // Успех кэшируется, сбой — нет: повторное открытие после ошибки перезапросит.
+    // успех кэшируется, сбой нет — повторное открытие после ошибки перезапросит
     if (open) {
       void load().then((queue) => {
         if (queue === null) toast.error('Не удалось загрузить треки');
@@ -72,7 +69,6 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
 
   return (
     <QuickLookSheet open={open} onClose={onClose}>
-      {/* Хедер — тоже стартует свайп-закрытие (см. QuickLookDragHandle) */}
       <QuickLookDragHandle className="px-5 pb-3 flex items-center gap-4">
         <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-muted">
           {cover ? (
@@ -91,7 +87,6 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
         </div>
       </QuickLookDragHandle>
 
-      {/* Кнопки действий */}
       <div className="px-5 pb-3 flex items-center gap-3">
         <motion.button
           type="button"
@@ -117,7 +112,6 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
         </Link>
       </div>
 
-      {/* Трек-лист */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 pb-3" data-scroll-area>
         {tracks === null && loading && (
           <div className="py-8 grid place-items-center">

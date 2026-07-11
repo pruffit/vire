@@ -4,8 +4,7 @@ import { db, DrizzleArtistRepository } from '@vire/db';
 import { ACTIVE_ARTIST_COOKIE } from '@/lib/active-artist';
 import { isUuid } from '@/lib/upload';
 
-// Выбор активного артиста в дашборде. Проверяем владение, кладём id в cookie —
-// дальше все dashboard-операции резолвятся на него.
+// Проверяем владение артистом, кладём id в cookie: дальше все dashboard-операции резолвятся на него.
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

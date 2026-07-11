@@ -21,9 +21,7 @@ const editorialWorker = createEditorialWorker();
 const scheduledPublishWorker = createScheduledPublishWorker();
 const fulfillPresaveWorker = createFulfillPresaveWorker();
 
-// Планировщики регенерации подборок (cron в МСК): общие — ежедневно в 00:00,
-// личные — каждые 4 часа. upsertJobScheduler идемпотентен: повторный запуск
-// воркера не плодит дубли, а обновляет расписание.
+// upsertJobScheduler идемпотентен: повторный запуск воркера не плодит дубли, обновляет расписание.
 const editorialQueue = new Queue(QUEUE_EDITORIAL, { connection });
 editorialQueue
   .upsertJobScheduler('shared-daily', { pattern: '0 0 * * *', tz: 'Europe/Moscow' }, { name: 'shared', data: { scope: 'shared' } })
@@ -123,9 +121,8 @@ analyzeGenreWorker.on('error', (err) => {
   void alertWorkerError('analyze-genre', err);
 });
 
-// Падение процесса целиком: алертим (дождавшись доставки) и выходим с кодом 1,
-// сохраняя crash-семантику Node. Иначе воркер умирал бы молча, а загрузки
-// застревали бы в PROCESSING без единого уведомления.
+// Алертим (дождавшись доставки) и выходим с кодом 1 — иначе воркер умирал бы молча,
+// а загрузки застревали бы в PROCESSING без уведомления.
 process.on('uncaughtException', (err) => {
   void alertCrash('uncaughtException', err).finally(() => process.exit(1));
 });

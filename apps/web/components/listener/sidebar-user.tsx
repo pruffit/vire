@@ -2,11 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-/**
- * Строка пользователя в подвале сайдбара. Рендерит ТОЛЬКО ссылку на профиль —
- * рамку/раскладку подвала (вместе с тумблером сворачивания) задаёт родитель
- * (listener-sidebar.tsx), чтобы тумблер жил рядом и для гостя (без юзера) тоже.
- */
+/** Ссылка на профиль в подвале сайдбара; раскладку подвала задаёт listener-sidebar. */
 export function SidebarUser({
   name,
   avatarUrl,

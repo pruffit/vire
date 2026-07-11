@@ -33,15 +33,26 @@ track_audio.status: PROCESSING → READY (или BLOCKED при ошибке)
 - **Создание/редактирование релиза (API):** `apps/web/app/api/v1/dashboard/releases/route.ts` и `[id]/route.ts`
 - **Смена статуса релиза:** `apps/web/app/api/v1/dashboard/releases/[id]/status/route.ts`
 - **Кнопка публикации:** `apps/web/app/dashboard/releases/[id]/_components/PublishButton.tsx`
-- **Воркер транскодинга:** `apps/worker/src/jobs/transcode.ts`
-- **Пайплайн HLS:** `packages/media/src/hls.ts`
-- **Waveform peaks:** `packages/media/src/waveform.ts` — `peaksFromPcm`
+- **Воркер транскодинга:** `apps/worker/src/workers/transcode.worker.ts`
+- **Пайплайн HLS:** `apps/worker/src/lib/ffmpeg.ts`
+- **Waveform peaks:** `apps/worker/src/lib/waveform.ts` — `peaksFromPcm`
 - **Сервисы:** `packages/core/src/services/release.service.ts`, `track.service.ts`
 - **DB таблицы:**
   - `releases` — `status`, `published_at`, `artist_profile_id`
   - `tracks` — метаданные
   - `track_audio` — `status`, `hls_manifest_key`, `waveform_peaks` JSONB, `duration_ms`
   - `track_contributors` — `payout_share numeric(5,2)`
+
+## Нюансы ffmpeg-пайплайна
+
+Флаги в `apps/worker/src/lib/ffmpeg.ts`, без которых HLS у части исходников ломается:
+
+- `+genpts` — у некоторых FLAC/WAV битые PTS, без регенерации сегменты получают
+  рваные таймстемпы
+- `-vn` — встроенная обложка (FLAC/MP3 attached picture) декодируется как
+  фейковая видеодорожка и подвешивает транскод
+- `aresample=async=1:first_pts=0` — дыры в аудио-таймстемпах дают
+  `bufferStalledError` в hls.js на воспроизведении
 
 ## Env-переменные
 

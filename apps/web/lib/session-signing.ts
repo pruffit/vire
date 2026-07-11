@@ -6,23 +6,14 @@ const PURPOSE = 'session';
 /** Верхняя граница длины: uuid (36) + '.' + 32-символьная hex-подпись. */
 export const SESSION_ID_MAX_LEN = 80;
 
-/**
- * Подписывает id присутствия HMAC'ом: `${id}.${sig}`. Без секрета в env
- * возвращает id как есть — деградация до текущего (неподписанного) поведения,
- * счётчики остаются косметикой, ничего не ломается.
- */
+/** Подписывает id HMAC'ом: `${id}.${sig}`. Без секрета в env — id как есть (деградация до неподписанного поведения, ничего не ломается). */
 export function signSessionId(id: string): string {
   const secret = getSigningSecret();
   if (!secret) return id;
   return `${id}.${hmacSign(secret, `${PURPOSE}:${id}`)}`;
 }
 
-/**
- * Проверяет подписанный id и возвращает исходный id, либо null если подпись
- * не сошлась. Без секрета в env — пропускает вход как есть (та же деградация,
- * что и в signSessionId): в этом режиме sessionId не подписывается нигде,
- * так что здесь просто нечего проверять.
- */
+/** Проверяет подпись, возвращает исходный id или null. Без секрета в env — пропускает как есть: та же деградация, что в signSessionId (нечего проверять). */
 export function verifySessionId(raw: string): string | null {
   const secret = getSigningSecret();
   if (!secret) return raw;

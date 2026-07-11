@@ -4,7 +4,7 @@ import { trackMoods, tracks, releases, artistProfiles, moodEnum } from '../schem
 
 export type Mood = typeof moodEnum.enumValues[number];
 
-// Источник правды — сам enum, чтобы список не расходился со схемой.
+// Источник правды: сам enum, чтобы список не расходился со схемой.
 export const ALL_MOODS: Mood[] = [...moodEnum.enumValues];
 
 export const MOOD_LABELS: Record<Mood, string> = {

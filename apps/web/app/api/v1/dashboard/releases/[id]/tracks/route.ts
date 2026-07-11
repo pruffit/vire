@@ -33,8 +33,8 @@ export async function GET(
   });
 }
 
-// Перестановка порядка треков релиза (drag-n-drop): { order: string[] } —
-// полный список id треков релиза в новом порядке. Перенумеровываем атомарно.
+// Перестановка порядка треков релиза (drag-n-drop): { order: string[] }, полный
+// список id в новом порядке; перенумеровываем атомарно.
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> },

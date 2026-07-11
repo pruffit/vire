@@ -21,7 +21,7 @@ const APP_URL =
 export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<void> {
   const { trackId, sourceKey } = job.data;
 
-  // Идемпотентность: если трек уже обработан — ничего не делаем
+  // Идемпотентность: если трек уже обработан, ничего не делаем
   const [track] = await db
     .select({ status: tracks.status })
     .from(tracks)
@@ -39,25 +39,22 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
 
   const tmpDir = mkdtempSync(path.join(tmpdir(), `vire-${trackId}-`));
   try {
-    // 1. Скачиваем мастер из vault
     const sourcePath = path.join(tmpDir, `source.${sourceExt}`);
     await downloadToFile(VAULT, sourceKey, sourcePath);
     await job.updateProgress(20);
 
-    // 2. Читаем метаданные из тегов файла
     const metadata = await readAudioMetadata(sourcePath);
-    // Если теги не содержат duration — берём из ffprobe
+    // Теги не содержат duration: берём из ffprobe.
     const durationSec = metadata.durationSec || (await probeDuration(sourcePath));
     await job.updateProgress(30);
 
-    // 3. Автоопределение BPM/тональности (всегда, перезаписывает теги)
+    // BPM/тональность: всегда, перезаписывает теги.
     const analyzed = await analyzeAudioFeatures(sourcePath, { bpm: true, key: true });
     const bpm = analyzed.bpm ?? metadata.bpm;
     const musicalKey = analyzed.musicalKey ?? metadata.musicalKey;
     await job.updateProgress(45);
 
-    // 3.5. Автоопределение жанра (Essentia discogs-effnet, за флагом AUTO_GENRE).
-    // Никогда не блокирует переход в READY — ошибка только логируется.
+    // За флагом AUTO_GENRE, ошибка не блокирует переход в READY, только логируется.
     let genreSuggestions: GenreSuggestion[] | null = null;
     try {
       genreSuggestions = await classifyTrackGenre(sourcePath);
@@ -72,21 +69,18 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
       console.error('[transcode] genre classification failed', e);
     }
 
-    // 4. HLS-транскодинг
     const hlsDir = path.join(tmpDir, 'hls');
     mkdirSync(hlsDir);
     const { manifestPath, segmentPaths } = await transcodeToHls(sourcePath, hlsDir);
     await job.updateProgress(75);
 
-    // 5. Waveform peaks
     const waveformPeaks = await computeWaveformPeaks(sourcePath);
     await job.updateProgress(88);
 
-    // 6. S3-ключи. Исходник уже на постоянном ключе (sourceKey) — отдаём его как есть.
+    // Исходник уже на постоянном ключе: отдаём sourceKey как есть.
     const hlsManifestKey = `tracks/${trackId}/hls/index.m3u8`;
     const sourceVaultKey = sourceKey;
 
-    // 7. Загружаем HLS-файлы в stream-бакет
     await uploadFile(STREAM, hlsManifestKey, manifestPath, 'application/vnd.apple.mpegurl');
     for (const seg of segmentPaths) {
       await uploadFile(
@@ -98,7 +92,7 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
     }
     await job.updateProgress(95);
 
-    // 8. Атомарно обновляем БД (flacKey хранит ключ исходного мастера — wav или flac)
+    // flacKey хранит ключ исходного мастера (wav или flac).
     await db.transaction(async (tx) => {
       await tx
         .update(tracks)
@@ -155,23 +149,20 @@ function failureEmailHtml(contact: TrackOwnerContact, dashboardUrl: string): str
 }
 
 /**
- * Обработка ОКОНЧАТЕЛЬНОГО падения транскодинга (после исчерпания всех попыток).
- * Вызывается из transcodeWorker.on('failed') в index.ts. Идемпотентна и
- * best-effort: переводит трек PROCESSING → FAILED (не затирая READY/BLOCKED при
- * гонке) и письмом уведомляет артиста. Никогда не бросает — это хвост обработки
- * ошибки, падать в нём нельзя.
+ * Финальное падение транскодинга (после исчерпания всех попыток), вызывается
+ * из transcodeWorker.on('failed'). Идемпотентна и best-effort: PROCESSING → FAILED
+ * (не затирая READY/BLOCKED при гонке) + письмо артисту. Никогда не бросает.
  */
 export async function handleTerminalTranscodeFailure(
   job: Job<TranscodeJobData> | undefined,
 ): Promise<void> {
   if (!job) return;
   const maxAttempts = job.opts.attempts ?? 1;
-  if (job.attemptsMade < maxAttempts) return; // ещё будут ретраи — не финал
+  if (job.attemptsMade < maxAttempts) return; // ещё будут ретраи, не финал
 
   const { trackId } = job.data;
   try {
-    // FAILED ставим только если трек всё ещё в PROCESSING: поздний успешный
-    // ретрай или ручное вмешательство (READY/BLOCKED) не перетираем.
+    // FAILED только если трек ещё в PROCESSING: не перетираем поздний READY/BLOCKED.
     const updated = await db
       .update(tracks)
       .set({ status: 'FAILED', updatedAt: new Date() })
@@ -191,19 +182,17 @@ export async function handleTerminalTranscodeFailure(
       await job.log(`Artist notified at ${contact.email}`);
     }
   } catch (err) {
-    // Логируем в job, но не бросаем — иначе зациклим обработку падения.
+    // Логируем в job, но не бросаем: иначе зациклим обработку падения.
     await job.log(`handleTerminalTranscodeFailure error: ${(err as Error).message}`);
   }
 }
 
-// lockDuration поднят с дефолтных 30с: шаги 3/3.5 (BPM/key — синхронные JS-циклы,
-// genre — ONNX-инференс) блокируют event loop так же, как в analyze/analyze-genre
-// (см. их createXWorker) — тот же риск потери лока на 1ГБ VPS. HLS-энкод сам по себе
-// не блокирует (ffmpeg — child process), но джоба держит лок весь свой жизненный цикл.
+// lockDuration поднят с дефолтных 30с: BPM/key и жанр (JS-циклы, ONNX-инференс)
+// блокируют event loop, тот же риск потери лока на 1ГБ VPS, что в analyze/analyze-genre.
 const LOCK_DURATION_MS = 10 * 60 * 1000;
 
 export function createTranscodeWorker() {
-  // defaultJobOptions — опция Queue, не Worker; retry задаётся при постановке задачи в очередь
+  // defaultJobOptions: опция Queue, не Worker; retry задаётся при постановке задачи в очередь
   const worker = new Worker<TranscodeJobData>(QUEUE_TRANSCODE, processTranscodeJob, {
     connection,
     concurrency: 2,

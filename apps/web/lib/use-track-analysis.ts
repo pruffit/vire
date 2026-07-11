@@ -21,19 +21,10 @@ interface ErrorMessages {
 }
 
 /**
- * Обобщённый движок «анализ по требованию» (кнопка → BullMQ джоба → поллинг снимка
- * до готовности): выделен из `use-genre-analysis` — жанр и BPM/тональность отличаются
- * только эндпоинтами, формой снимка и текстами ошибок, сама механика поллинга общая.
- *
- * Готовность определяем по смене `updatedAt` в снимке (не по значению): при повторном
- * анализе результат может совпасть с предыдущим (детерминированная модель) —
- * сравнение по значению ложно решило бы, что анализ не завершился.
- *
- * Единый дедлайн + AbortController покрывают ВЕСЬ прогон (baseline-GET → POST →
- * поллинг). Раньше таймаут стоял только вокруг поллинга, а начальные запросы висели
- * без границы: зависший POST/GET (холодная компиляция роута, недоступный сервер)
- * крутил спиннер бесконечно без ошибки. Теперь любой стопор упирается в дедлайн и
- * честно завершается ошибкой.
+ * Движок «анализ по требованию» (кнопка → BullMQ джоба → поллинг снимка).
+ * Готовность — по смене `updatedAt`, не по значению: детерминированная модель может
+ * вернуть тот же результат. Дедлайн + AbortController покрывают весь прогон
+ * (baseline-GET → POST → поллинг) — иначе зависший запрос крутит спиннер вечно.
  */
 export function useTrackAnalysis<TSnapshot extends { updatedAt: string | null }>(
   endpoints: Endpoints,
@@ -45,11 +36,8 @@ export function useTrackAnalysis<TSnapshot extends { updatedAt: string | null }>
   const runningRef = useRef(false);
   const disposedRef = useRef(false);
 
-  // disposedRef сбрасываем в setup, не только ставим в cleanup: в dev React
-  // StrictMode/Fast Refresh монтирует mount→unmount→remount, cleanup выставляет
-  // disposedRef=true, и без сброса на ремаунте он таким и остаётся — тогда start()
-  // после baseline-GET уходит в `if (disposedRef.current) return finish(...)` и
-  // молча не шлёт POST (спиннер навсегда, без ошибки). Сброс в setup это чинит.
+  // disposedRef сбрасываем и в setup: StrictMode/Fast Refresh делает mount→unmount→remount,
+  // и без сброса start() после baseline-GET молча не шлёт POST (спиннер навсегда).
   useEffect(() => {
     disposedRef.current = false;
     return () => {
@@ -59,21 +47,18 @@ export function useTrackAnalysis<TSnapshot extends { updatedAt: string | null }>
   }, []);
 
   const start = useCallback(async () => {
-    // Guard от повторного входа: не полагаемся только на disabled кнопки — двойной
-    // клик/повторный вызов до перерендера мог бы запустить два параллельных поллинга.
+    // Guard от повторного входа — двойной клик до перерендера запустил бы два поллинга.
     if (runningRef.current) return;
     runningRef.current = true;
     setStatus('running');
     if (errorMessages.pending) toast(errorMessages.pending);
 
     const controller = new AbortController();
-    // const-холдер вместо `let interval` — finish() ссылается на таймер до его
-    // создания (forward-ref из дедлайна, который может сработать в фазе baseline).
+    // const-холдер вместо `let` — finish() ссылается на таймер до его создания.
     const timers: { poll?: ReturnType<typeof setInterval> } = {};
     let finished = false;
 
-    // Идемпотентное завершение прогона: чистит интервал+дедлайн, снимает running,
-    // отменяет висящие fetch'и. setState/onResult — только если компонент жив.
+    // Идемпотентное завершение; setState/onResult — только если компонент жив.
     const finish = (next: 'done' | 'error', snapshot?: TSnapshot, message?: string) => {
       if (finished) return;
       finished = true;

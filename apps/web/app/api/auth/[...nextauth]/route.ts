@@ -4,8 +4,7 @@ import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export const GET = handlers.GET;
 
-// Wrap POST with a rate limit to protect sign-in/magic-link from brute force.
-// 10 attempts per minute per IP is generous for legitimate use.
+// rate limit protects sign-in/magic-link from brute force
 export async function POST(req: NextRequest) {
   const rl = await rateLimit(clientKey(req, 'auth'), 10, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);

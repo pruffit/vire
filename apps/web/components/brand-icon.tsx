@@ -1,7 +1,5 @@
-// Бренд-логотипы соцсетей и стримингов (цветные, как у площадки).
-// Файлы: public/icons/brands/<name>.svg. Перегенерация: node scripts/build-icons.mjs.
-// В отличие от Icon (монохром, currentColor через спрайт), бренд-логотипы
-// рендерятся тегом картинки по файлу — у них свои цвета/градиенты, перекрашивать нельзя.
+// public/icons/brands/<name>.svg, перегенерация: node scripts/build-icons.mjs.
+// В отличие от Icon (currentColor-спрайт) рендерятся тегом картинки — свои цвета, не перекрасить.
 import type { CSSProperties } from 'react';
 import type { PlatformKey } from '@/lib/platforms';
 import { SOCIAL_ICON_NAMES, STREAMING_ICON_NAMES, BRAND_RATIO } from './icon-manifest.generated';

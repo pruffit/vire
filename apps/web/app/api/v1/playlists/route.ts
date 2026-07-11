@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   const trackIdParam = new URL(req.url).searchParams.get('trackId');
   const list = await getUserPlaylists(session.user.id);
 
-  // ?trackId=<uuid> — какие из плейлистов уже содержат этот трек (для галочек)
+  // ?trackId=<uuid>: какие из плейлистов уже содержат этот трек (для галочек)
   if (trackIdParam !== null) {
     const trackId = z.string().uuid().safeParse(trackIdParam);
     if (!trackId.success) return NextResponse.json({ error: 'Invalid trackId' }, { status: 400 });

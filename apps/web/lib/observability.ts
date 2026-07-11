@@ -1,6 +1,5 @@
-// Лёгкий трекинг ошибок без внешних зависимостей: структурированный лог в stderr
-// + опциональная доставка в Telegram и/или generic-webhook (Discord/Slack/
-// Sentry-webhook — любой консьюмер). Алерты не должны бросать в вызывающий код.
+// Трекинг ошибок без внешних зависимостей: лог в stderr + опциональная доставка в
+// Telegram/webhook. Алерты не должны бросать в вызывающий код.
 
 import { createThrottleGate } from '@vire/core';
 
@@ -14,12 +13,9 @@ interface ErrorContext {
 // Потолок записей обязателен — текст содержит уникальные сообщения ошибок.
 const alertGate = createThrottleGate({ ttlMs: 60_000, maxSize: 500 });
 
-// Известный апстрим-шум: в stderr-лог пишем, но в Telegram/webhook не шлём.
-// - kState.transformAlgorithm — спорадический баг Node ≥20.16 webstreams при
-//   обрыве стриминга SSR (vercel/next.js#68319, #75994), фикса нет, на юзеров
-//   не влияет (клиент уже отвалился);
-// - Failed to find Server Action — вкладка со старым деплоем шлёт action-id,
-//   которого нет в новом билде; штатно после каждого релиза.
+// Известный шум — логируем, но не алертим: transformAlgorithm — баг Node webstreams
+// при обрыве SSR-стрима, юзеров не задевает; Failed to find Server Action — старый
+// деплой шлёт action-id из прошлого билда, штатно после каждого релиза.
 const KNOWN_NOISE = [
   /transformAlgorithm is not a function/,
   /Failed to find Server Action/,

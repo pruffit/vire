@@ -1,5 +1,4 @@
-// Pure validation helpers for the track-upload route handler. Kept framework-free
-// so they can be unit-tested without mocking Next/DB/S3.
+// Framework-free validation helpers for the track-upload route handler.
 
 import { isUuid, ALL_CONTRIBUTOR_ROLES, type TrackCredit, type ContributorRole } from '@vire/core';
 
@@ -8,11 +7,7 @@ export const MAX_AUDIO_FILE_SIZE = 300 * 1024 * 1024; // 300 MB
 
 export type AudioExt = 'wav' | 'flac' | 'mp3';
 
-/**
- * Check that the first bytes of the file match the expected audio container.
- * FLAC: "fLaC" (4 bytes). WAV: "RIFF" at 0-3 + "WAVE" at 8-11 (12 bytes).
- * MP3: ID3v2 tag ("ID3") or a raw MPEG frame sync (0xFF Ex/Fx).
- */
+/** Magic-bytes check: FLAC "fLaC"; WAV "RIFF"+"WAVE"; MP3 — ID3v2 tag or raw MPEG frame sync. */
 export function validateMagicBytes(header: Uint8Array, ext: AudioExt): boolean {
   if (ext === 'flac') {
     return header.length >= 4 &&
@@ -30,8 +25,7 @@ export function validateMagicBytes(header: Uint8Array, ext: AudioExt): boolean {
     header[8] === 0x57 && header[9] === 0x41 && header[10] === 0x56 && header[11] === 0x45;
 }
 
-// Единый источник правды — @vire/core; реэкспорт сохраняет существующие импорты
-// `import { isUuid } from '@/lib/upload'` в роутах.
+// Реэкспорт из @vire/core сохраняет существующие импорты `@/lib/upload` в роутах.
 export { isUuid, ALL_CONTRIBUTOR_ROLES };
 export type { TrackCredit, ContributorRole };
 

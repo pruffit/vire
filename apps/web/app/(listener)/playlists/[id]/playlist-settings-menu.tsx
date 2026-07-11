@@ -30,7 +30,7 @@ function CoverPreview({ src, onPickFile, onRemove }: CoverSectionProps) {
   return (
     <div className="flex items-center gap-2">
       {isBlob ? (
-        /* blob: — next/image не оптимизирует blob: */
+        /* blob: next/image не оптимизирует blob: */
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="Обложка" className="w-10 h-10 rounded-md object-cover border border-border shrink-0" />
       ) : (

@@ -19,9 +19,6 @@ export class DrizzleArtistRepository implements IArtistRepository {
   }
 
   // Доступ к дашборду = членство в artist_members (несколько аккаунтов на профиль).
-  // Владелец заведён OWNER-строкой при создании/бэкфилом. Джойним профиль с членством
-  // текущего пользователя.
-
   async findByUserId(userId: string): Promise<ArtistProfile | null> {
     const [row] = await this.db
       .select({ profile: artistProfiles })

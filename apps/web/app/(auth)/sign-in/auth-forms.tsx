@@ -64,7 +64,7 @@ export function AuthForms({ callbackUrl }: { callbackUrl: string }) {
 
       <Divider />
 
-      {/* Вход через Яндекс ID (росс. система — допустимо по 406-ФЗ). */}
+      {/* Вход через Яндекс ID: росс. система, допустимо по 406-ФЗ. */}
       <SocialProviders callbackUrl={callbackUrl} />
     </div>
   );

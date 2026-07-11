@@ -89,11 +89,9 @@ export async function PATCH(
     if (!Array.isArray(b.credits)) {
       return NextResponse.json({ error: 'Invalid credits' }, { status: 400 });
     }
-    // Чистим вход: отбрасываем мусор, тримим имена, режем до лимита.
     patch.credits = sanitizeCredits(b.credits);
   }
   if (b.lyrics !== undefined) {
-    // Принимаем сырой LRC-текст; парсим в строки. Пусто → очищаем (null).
     if (b.lyrics !== null && typeof b.lyrics !== 'string') {
       return NextResponse.json({ error: 'Invalid lyrics' }, { status: 400 });
     }

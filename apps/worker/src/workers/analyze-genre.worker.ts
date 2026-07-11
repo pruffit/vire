@@ -33,12 +33,8 @@ export async function processAnalyzeGenreJob(job: Job<AnalyzeGenreJobData>): Pro
   }
 }
 
-// lockDuration поднят с дефолтных 30с: classify() гоняет ONNX-инференс
-// (onnxruntime-node .run() выполняется синхронно в JS-потоке, не в libuv threadpool)
-// на «тяжёлом» 1ГБ VPS — блокирует event loop дольше дефолтного окна лока, таймер
-// продления не успевает тикнуть → «could not renew lock» → job считается stalled и
-// дублируется/перезапускается. 10 минут — с большим запасом над реальным временем
-// инференса; lockRenewTime по умолчанию = lockDuration/2.
+// onnxruntime-node .run() синхронный (не в libuv threadpool) — блокирует event loop
+// дольше дефолтного 30с-лока на 1ГБ VPS, job считается stalled. 10 минут — запас.
 const LOCK_DURATION_MS = 10 * 60 * 1000;
 
 export function createAnalyzeGenreWorker() {

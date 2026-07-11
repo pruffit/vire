@@ -95,7 +95,7 @@ function TrackRow({
           : 'opacity-40'
       } ${isActive ? 'bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)]' : ''}`}
     >
-      {/* Лидирующая кнопка — играть/пауза. Номер трека, по ховеру (десктоп) — иконка play. */}
+      {/* Лидирующая кнопка: играть/пауза. Номер трека, по ховеру (десктоп) иконка play. */}
       <motion.button
         type="button"
         disabled={!ready}
@@ -120,7 +120,7 @@ function TrackRow({
         )}
       </motion.button>
 
-      {/* Клик по названию/строке — открыть страницу трека (основное действие). */}
+      {/* Клик по названию/строке: открыть страницу трека (основное действие). */}
       <Link href={href} className="flex-1 min-w-0 group/link">
         <span
           className="text-sm truncate flex items-center gap-1.5 transition-colors group-hover/link:text-[var(--artist-accent)]"
@@ -132,7 +132,7 @@ function TrackRow({
           {track.isExplicit && <ExplicitBadge />}
         </span>
         {(() => {
-          // feat-имена уже в названии — в строке кредитов показываем остальных
+          // feat-имена уже в названии: в строке кредитов показываем остальных
           const rest = track.credits.filter((c) => c.role !== 'FEATURED').map((c) => c.name);
           return rest.length > 0 ? (
             <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)] truncate block">

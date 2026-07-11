@@ -3,12 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-/**
- * Пока есть треки в статусе PROCESSING — периодически обновляет серверный список
- * (router.refresh), чтобы статус сам переходил в «готов» без перезагрузки
- * страницы. Показывает живой индикатор. Когда обработка кончилась — исчезает и
- * перестаёт опрашивать.
- */
+// пока есть PROCESSING-треки — периодически router.refresh(), чтобы статус обновился без перезагрузки
 export function TracksLiveRefresh({
   processing,
   intervalMs = 5000,

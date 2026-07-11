@@ -5,11 +5,7 @@ import { toast } from '@/components/toast';
 import { Textarea } from '@/components/ui-kit';
 import { parseLrc, serializeLrc, isSynced, type LyricLine } from '@/lib/lrc';
 
-/**
- * Редактор текста трека для дашборда. Артист вставляет LRC
- * (`[мм:сс.хх] строка`) или просто текст. Сохраняем сырой ввод через PATCH —
- * сервер парсит в строки. Синхронизированный текст плеер подсветит по времени.
- */
+/** Редактор текста трека: LRC (`[мм:сс.хх] строка`) или простой текст; парсит сервер. */
 export function LyricsEditor({ trackId, initial }: { trackId: string; initial: LyricLine[] | null }) {
   const [text, setText] = useState(() => serializeLrc(initial));
   const [saved, setSaved] = useState(() => serializeLrc(initial));

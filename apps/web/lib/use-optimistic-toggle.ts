@@ -19,15 +19,14 @@ export function useOptimisticToggle({ id, initial, initialCount = 0, request, er
   const [on, setOn] = useState(initial);
   const [count, setCount] = useState(initialCount);
   const [pending, setPending] = useState(false);
-  // pending (state) годится только для UI; guard от повторного клика должен читать
-  // актуальное значение синхронно — состояние React обновляется асинхронно.
+  // pending (state) только для UI: guard читает pendingRef синхронно, state обновляется асинхронно.
   const pendingRef = useRef(false);
 
   const [syncedId, setSyncedId] = useState(id);
   const idRef = useRef(id);
 
   // Next переиспользует инстанс при переходе между соседними динамическими
-  // сегментами (трек→трек): пропсы новые, состояние — нет. Сбрасываем в рендере.
+  // сегментами (трек→трек): пропсы новые, состояние нет, сбрасываем в рендере.
   if (id !== syncedId) {
     setSyncedId(id);
     setOn(initial);
@@ -35,8 +34,8 @@ export function useOptimisticToggle({ id, initial, initialCount = 0, request, er
     setPending(false);
   }
 
-  // React запрещает мутировать рефы во время рендера — синкаем их сразу после коммита,
-  // до пейнта, т.е. заведомо раньше, чем пользователь успеет кликнуть по новой сущности.
+  // React запрещает мутировать рефы во время рендера: синкаем их сразу после коммита,
+  // до пейнта, раньше, чем пользователь успеет кликнуть по новой сущности.
   useLayoutEffect(() => {
     if (idRef.current !== id) {
       idRef.current = id;

@@ -18,21 +18,16 @@ export async function transcodeToHls(
 
   await new Promise<void>((resolve, reject) => {
     ffmpeg(inputPath)
-      // +genpts — пересобрать презентационные таймстампы, если у исходника они
-      // битые/смещённые/отсутствуют (частая причина «дыры» и залипания плеера).
+      // +genpts: пересобрать таймстампы, если у исходника они битые/отсутствуют.
       .inputOptions(['-fflags', '+genpts'])
-      // Только аудио. У FLAC/MP3 часто встроена обложка ОТДЕЛЬНЫМ видео-потоком
-      // (не attached_pic) — без -vn ffmpeg мапит её в HLS как видео-дорожку из
-      // одного кадра, она зависает на PTS 0 и стопорит MediaSource → плеер
-      // бесконечно грузится (bufferStalledError), хотя аудио целое. -vn убирает.
+      // -vn: FLAC/MP3 иногда несут обложку отдельным видео-потоком (не attached_pic),
+      // без -vn ffmpeg мапит её как видео из одного кадра, зависающее на PTS 0
+      // и стопорящее плеер (bufferStalledError).
       .noVideo()
       .audioCodec('aac')
       .audioBitrate('192k')
-      // Непрерывная аудио-дорожка без дыр в таймстампах: часть исходников
-      // (ведущая тишина/смещение PTS, edit-list) давала gap в начале/потоке →
-      // в плеере bufferStalledError/bufferSeekOverHole, залипание на 0:00.
-      // aresample async=1 заполняет/подрезает разрывы, first_pts=0 ставит старт в ноль.
-      // Для «чистых» файлов это практически no-op.
+      // aresample async=1:first_pts=0 заполняет/подрезает разрывы таймстампов
+      // исходника (ведущая тишина, edit-list), иначе плеер залипает на 0:00.
       .audioFilters('aresample=async=1:first_pts=0')
       .addOutputOptions([
         '-hls_time', '6',

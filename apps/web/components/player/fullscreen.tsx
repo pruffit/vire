@@ -19,11 +19,7 @@ import { formatDuration } from '@/lib/format';
 import { useIsDesktopPointer } from '@/lib/is-desktop-pointer';
 import { useAudioTime } from '@/lib/player/use-audio-time';
 
-/**
- * Фуллскрин-плеер: обложка разворачивается из мини-бара (shared layoutId
- * `player-cover`). Фон — глубокий OKLCH-градиент от акцента трека, не
- * серая card-заливка: плеер визуально «принадлежит» текущему релизу.
- */
+/** Фуллскрин-плеер: обложка разворачивается из мини-бара (shared layoutId `player-cover`). */
 export function FullscreenPlayer({
   onClose,
   initialShowQueue = false,
@@ -46,7 +42,6 @@ export function FullscreenPlayer({
 
   if (!track) return null;
 
-  // Свайп вниз достаточно далеко/быстро — закрыть. Иначе пружина вернёт на место.
   function handleDragEnd(_e: unknown, info: PanInfo) {
     if (info.offset.y > 120 || info.velocity.y > 600) onClose();
   }
@@ -82,8 +77,7 @@ export function FullscreenPlayer({
         <ChevronDownIcon />
       </button>
 
-      {/* Зона свайпа-закрытия: вся ширина верха — легко попасть пальцем; шеврон
-          выше по z-index, тап по нему не стартует drag. */}
+      {/* Зона свайпа-закрытия; шеврон выше по z-index — тап по нему не стартует drag */}
       <div
         onPointerDown={(e) => dragControls.start(e)}
         className="fixed top-0 left-0 right-0 h-10 z-10 flex items-start justify-center pt-3 touch-none cursor-grab active:cursor-grabbing"
@@ -93,7 +87,6 @@ export function FullscreenPlayer({
 
       <div className="my-auto w-full max-w-md flex flex-col items-center gap-8">
         <div className="relative">
-          {/* Мягкое акцентное свечение за обложкой — глубина без серого. */}
           <div
             aria-hidden="true"
             className="absolute -inset-8 rounded-full blur-3xl animate-breathe pointer-events-none"
@@ -111,7 +104,6 @@ export function FullscreenPlayer({
           </motion.div>
         </div>
 
-        {/* Поток (слева) + название + артист + лайк (справа) — поток зеркалит лайк */}
         <div className="flex items-center gap-3 min-w-0 w-full">
           <div className="shrink-0">
             <WaveModeButton />
@@ -128,20 +120,16 @@ export function FullscreenPlayer({
           </div>
         </div>
 
-        {/* Прогресс */}
         <div className="w-full flex items-center gap-3">
           <CurrentTimeLabel />
           <PlayerWaveform />
           <DurationLabel />
         </div>
 
-        {/* Управление: шафл слева зеркалит повтор справа, поток — в строке названия */}
         <Controls showWaveMode={false} showShuffle showRepeat />
 
-        {/* Синхронизированный текст (если есть) */}
         <Lyrics key={track.id} trackId={track.id} />
 
-        {/* Нижняя панель: громкость (десктоп) + очередь; список очереди раскрывается под ней. */}
         <div className="w-full flex flex-col items-center gap-3">
           <FullscreenExtras
             track={track}
@@ -188,8 +176,6 @@ function FullscreenExtras({
 }) {
   const volume = usePlayerStore((s) => s.volume);
 
-  // Ползунок громкости — только на десктопе (мышь/трекпад). На планшетах/телефонах
-  // прячем: там громкостью рулят хардварные кнопки.
   const showVolume = useIsDesktopPointer();
 
   return (
@@ -235,8 +221,7 @@ function FullscreenExtras({
 
 const timeLabelClass = 'text-xs font-mono text-muted-foreground tabular-nums w-9 text-center shrink-0';
 
-// Раздельные листья: подписка на живой тик нужна только текущему времени —
-// длительность меняется редко (durationchange), тикать вместе с ним незачем.
+// Раздельные листья — живой тик нужен только текущему времени, не длительности.
 function CurrentTimeLabel() {
   const currentTime = useAudioTime();
   return <span className={timeLabelClass}>{formatDuration(currentTime)}</span>;

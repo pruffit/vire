@@ -28,10 +28,7 @@ const ACTIONS: { label: string; sub: string; href: string }[] = [
   { label: 'Дашборд', sub: 'Управление релизами', href: '/dashboard' },
 ];
 
-/**
- * Командная палитра (⌘K / Ctrl+K) — центр-оверлей для быстрой навигации и поиска.
- * Родственник раскрывающегося поиска в навбаре, но как модальный «прыжок куда угодно».
- */
+/** Командная палитра (⌘K / Ctrl+K) — модальный оверлей навигации и поиска. */
 export function CommandPalette() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -77,8 +74,7 @@ export function CommandPalette() {
     setActiveIdx(0);
   }, []);
 
-  // Глобальный хоткей ⌘K / Ctrl+K. По e.code (KeyK) — чтобы работало на любой
-  // раскладке (на ЙЦУКЕН физическая клавиша K даёт «л», а e.key вернул бы 'л').
+  // e.code, не e.key — на ЙЦУКЕН клавиша K даёт «л»
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && (e.code === 'KeyK' || e.code === 'KeyF')) {

@@ -51,8 +51,7 @@ export function TrackWaveformPlayer({
     controls.seek(Math.min(seekTo, duration - 1));
   }, [seekTo, isThisTrack, duration]);
 
-  // Клик нужен только чтобы запустить трек, который сейчас не играет: перемотку
-  // активного трека целиком ведёт pointer-скраб внутри WaveformScrubber.
+  // клик только запускает трек — перемотку активного ведёт pointer-скраб внутри WaveformScrubber
   function handleWaveformClick() {
     controls.playQueue(queue, { startIndex: queueIndex, context });
   }
@@ -62,8 +61,7 @@ export function TrackWaveformPlayer({
     else controls.playQueue(queue, { startIndex: queueIndex, context });
   }
 
-  /** Добавить любимый момент в текущей позиции — время читаем напрямую из
-   *  движка (не подписываемся на тик ради разового значения на клик). */
+  // время читаем напрямую из движка — не подписываемся на тик ради разового значения на клик
   const handleMarkMoment = useCallback(() => {
     if (!isThisTrack || !duration) return;
     const positionSec = Math.round(getAudioTime());

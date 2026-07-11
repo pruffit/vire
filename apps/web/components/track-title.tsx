@@ -1,10 +1,6 @@
 /**
- * Единый рендер названия трека: `title` основным начертанием, `feat. …` и
- * `— Version` — приглушённо (opacity, не цвет — тема-агностично: работает и в
- * артист-теме, и в нейтральной). Инлайновый фрагмент — встраивается в
- * существующие truncate-спаны, сам не оборачивает и не задаёт block/flex.
- * SEO/metadata/JSON-LD по-прежнему берут полную строку из `displayTrackTitle`
- * (lib/track-display.ts) — этот компонент только для UI.
+ * Название трека с приглушёнными `feat.`/`— Version` (opacity — тема-агностично).
+ * Только для UI; SEO/JSON-LD берут полную строку из `displayTrackTitle`.
  */
 export function TrackTitleText({
   title,

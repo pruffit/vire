@@ -8,14 +8,7 @@ import { ExplicitBadge } from '@/components/explicit-badge';
 import { TrackTitleText } from '@/components/track-title';
 import { GripIcon, WaveIcon } from './player-icons';
 
-/**
- * Панель «Дальше»: очередь с текущим треком, drag-to-reorder, переход по клику.
- * Скроллится сама (родитель даёт `min-h-0`) — список может быть длиннее экрана
- * (буфер волны), но панель никогда не разворачивает скролл на всю страницу.
- * В режиме волны, после исходно запущенной очереди, разделитель отмечает
- * подобранные волной треки — точного признака «этот трек добавлен волной» у
- * буфера нет, секция честнее поштучных бейджей.
- */
+/** Панель «Дальше»: очередь с текущим треком, drag-to-reorder, переход по клику. */
 export function QueuePanel({ onJump }: { onJump: () => void }) {
   const queue = usePlayerStore((s) => s.queue);
   const queueIndex = usePlayerStore((s) => s.queueIndex);
@@ -67,12 +60,7 @@ export function QueuePanel({ onJump }: { onJump: () => void }) {
   );
 }
 
-/**
- * Строка очереди — свой `useDragControls` на элемент: `dragListener={false}`
- * снимает touch-action:none со всей строки (иначе список нельзя было
- * проскроллить на телефоне — тач сразу становился drag-жестом), драг стартует
- * только с ручки-грипа через `onPointerDown` → `dragControls.start`.
- */
+/** dragListener={false} + драг только с грипа — иначе touch-action:none на строке убивал тач-скролл списка. */
 function QueueRow({
   track: t,
   isCurrent,

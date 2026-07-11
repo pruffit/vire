@@ -1,5 +1,4 @@
-// Next.js instrumentation: ловим необработанные серверные ошибки роутов и шлём
-// в captureError (лог + опциональный webhook-алерт). Без внешних зависимостей.
+// Необработанные серверные ошибки роутов → captureError (лог + опциональный алерт).
 export async function onRequestError(
   error: unknown,
   request: { path: string; method: string },

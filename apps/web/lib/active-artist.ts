@@ -1,17 +1,11 @@
 import { db, DrizzleArtistRepository } from '@vire/db';
 import type { ArtistProfile } from '@vire/core';
 
-// Один аккаунт может управлять несколькими карточками артиста. «Активный артист»
-// (выбранный в дашборде) хранится в cookie; все dashboard-операции скоупятся на него.
-// Без cookie — дефолт: первый (старейший) профиль пользователя.
+// «Активный артист» дашборда хранится в cookie; без неё — дефолт: первый профиль пользователя.
 
 export const ACTIVE_ARTIST_COOKIE = 'vire_active_artist';
 
-/**
- * Разрешает активного артиста: при заданном id сверяет владение (иначе игнорит),
- * иначе — дефолтный (первый) профиль. Возвращает только профиль, принадлежащий
- * пользователю — спуфинг cookie невозможен.
- */
+/** Сверяет id с владением, иначе — дефолт (первый профиль). Cookie не даёт доступа к чужому профилю. */
 export async function resolveActiveArtist(
   userId: string,
   activeArtistId?: string | null,
@@ -37,10 +31,7 @@ export async function getActiveArtist(userId: string, req: Request): Promise<Art
   return resolveActiveArtist(userId, readActiveArtistCookie(req));
 }
 
-/**
- * Активный артист в серверном компоненте (страницы). Динамический импорт
- * next/headers — чтобы модуль оставался безопасным для юнит-тестов route handlers.
- */
+/** Активный артист в серверном компоненте; next/headers импортируется динамически, чтобы модуль был безопасен для юнит-тестов route handlers. */
 export async function getActiveArtistForPage(userId: string): Promise<ArtistProfile | null> {
   const { cookies } = await import('next/headers');
   const value = (await cookies()).get(ACTIVE_ARTIST_COOKIE)?.value;

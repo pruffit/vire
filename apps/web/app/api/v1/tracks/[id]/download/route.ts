@@ -27,7 +27,6 @@ export async function GET(req: Request, { params }: Params) {
     return NextResponse.json({ error: 'Audio not ready' }, { status: 404 });
   }
 
-  // Extract filename from the URL params or use trackId as fallback
   const url = new URL(req.url);
   const filename = url.searchParams.get('filename') || trackId;
 

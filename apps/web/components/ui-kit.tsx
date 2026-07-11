@@ -5,20 +5,11 @@ import { Icon } from '@/components/icon';
 
 /**
  * UI kit — единый словарь продуктовых поверхностей (админка + дашборд артиста).
- *
- * Принципы (Impeccable / product-регистр):
- * - Нейтраль через `foreground`-альфу, НЕ `white/X` — сохраняет тёплую подкраску
- *   платформы (hue 75). Один масштаб прозрачностей на всё.
- * - Плотность и точность: mono для данных и меток, tabular-nums для чисел.
- * - У каждого интерактива есть hover/focus/active; статусы — бейджи, не цветной текст.
- *
- * Всё презентационное и server-совместимое (без хуков/обработчиков), кроме
- * client-only `Check` (управляемый чекбокс) — он помечен 'use client' неявно через
- * использование в client-компонентах; сам по себе хуков не держит.
+ * Нейтраль через `foreground`-альфу, не `white/X` — сохраняет тёплую подкраску
+ * платформы (hue 75).
  */
 
 // ─── Neutral scale ───────────────────────────────────────────────────────────
-// Единые роли цвета текста поверх тёмного фона.
 export const ink = {
   /** Основной текст. */
   base: 'text-foreground',
@@ -30,10 +21,7 @@ export const ink = {
   faint: 'text-foreground/30',
 } as const;
 
-/**
- * Класс для инлайн-контролов в таблицах (нативные `<select>`): единый вид для
- * смены роли/статуса. Строка, не компонент — годится и для client-компонентов.
- */
+/** Класс для инлайн-контролов в таблицах (нативные `<select>`): смена роли/статуса. */
 export const selectClass =
   'rounded-md border border-foreground/10 bg-foreground/5 px-2 py-1 font-mono text-xs transition-colors hover:border-foreground/20 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40';
 
@@ -41,13 +29,7 @@ export const selectClass =
 export const fieldClass =
   'rounded-md border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm transition-colors placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring focus:border-foreground/20';
 
-/**
- * Textarea платформы с кастомным уголком ресайза (риски вместо дефолтной
- * ОС-насечки — см. `.vire-textarea` в globals.css). По умолчанию вертикальный
- * ресайз. Все нативные пропсы и `ref` пробрасываются; `className` мёржится поверх
- * базы (twMerge), поэтому при желании можно переопределить (напр. `resize-none`).
- * Базовый стиль поля не навязывается — передавай `fieldClass`/нужный класс сам.
- */
+/** Textarea с кастомным уголком ресайза — см. `.vire-textarea` в globals.css. */
 export const Textarea = React.forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement>
@@ -65,10 +47,7 @@ export const btnGhost =
 
 // ─── Form field ──────────────────────────────────────────────────────────────
 
-/**
- * Подпись + контрол. Единая метка (mono, uppercase) для всех форм продукта.
- * `hint` — необязательная вспомогательная подпись справа от метки.
- */
+/** Подпись + контрол; `hint` — необязательная подпись справа от метки. */
 export function Field({
   label,
   hint,
@@ -97,10 +76,7 @@ export function Field({
 
 // ─── Checkbox ──────────────────────────────────────────────────────────────
 
-/**
- * Кастомный чекбокс с подписью и хинтом (как в редакторе трека админки).
- * Контролируемый — `checked` + `onChange(next)`. Тач-таргет — вся подпись.
- */
+/** Кастомный чекбокс с подписью и хинтом; тач-таргет — вся подпись. */
 export function Check({
   label,
   hint,
@@ -147,10 +123,7 @@ export function Check({
 
 // ─── Switch ──────────────────────────────────────────────────────────────────
 
-/**
- * Единый тумблер платформы (вкл/выкл). Контролируемый: `checked` + `onChange`.
- * Для подписи оборачивай в `Field`/`label` снаружи.
- */
+/** Тумблер вкл/выкл; для подписи оборачивай в `Field`/`label` снаружи. */
 export function Switch({
   checked,
   onChange,
@@ -240,11 +213,7 @@ export function DetailHeader({
 
 // ─── Dashboard page header (сабстраницы дашборда артиста) ────────────────────
 
-/**
- * Единый хедер сабстраниц дашборда: заголовок (+подзаголовок) слева, кнопка
- * «← назад» справа; на узком вьюпорте действия переносятся под заголовок. Опц.
- * `action` встаёт слева от кнопки «назад».
- */
+/** Опц. `action` встаёт слева от кнопки «назад»; на узком вьюпорте — под заголовком. */
 export function DashboardPageHeader({
   backHref,
   backLabel = 'Дашборд',
@@ -399,8 +368,7 @@ export type BadgeTone =
   | 'info'
   | 'accent';
 
-// У каждого тона — тонкий бордер чуть ярче заливки: бейдж читается как объёмный
-// чип, а не как плоское цветное пятно.
+// бордер чуть ярче заливки — бейдж читается как объёмный чип, не плоское пятно
 const BADGE_TONE: Record<BadgeTone, string> = {
   neutral: 'bg-foreground/[0.08] text-foreground/70 border border-foreground/15',
   success: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25',

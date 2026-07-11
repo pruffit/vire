@@ -32,11 +32,7 @@ interface WaveformScrubberProps {
   hoverAccent?: boolean;
 }
 
-/**
- * Единый waveform-скраббер: бары — useMemo(peaks, barCount), прогресс — live
- * через useAudioTime (изолированный ререндер внутри этого листа), скраб —
- * локальный state поверх (мгновенный визуал, commit на pointerup через onSeek).
- */
+/** Единый waveform-скраббер: live-прогресс через useAudioTime, скраб — локальный state, commit на pointerup. */
 export function WaveformScrubber({
   peaks,
   barCount = 80,

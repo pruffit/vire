@@ -12,18 +12,15 @@ interface Props {
   children: React.ReactNode;
 }
 
-// Даёт заголовку (шапке), который рисуют потребители шторки (playlist/release
-// quick-look), доступ к тем же dragControls, что и грабберу — свайп-закрытие
-// стартует с любой из этих зон, а не со всей шторки, иначе тач-скролл
-// трек-листа внутри был бы мёртв (drag="y" ставит touch-action:none на весь элемент).
+// drag стартует только с граббера/шапки, не со всей шторки — иначе drag="y"
+// ставит touch-action:none на весь элемент и убивает тач-скролл трек-листа
 const DragHandleContext = createContext<DragControls | null>(null);
 
 export function QuickLookSheet({ open, onClose, children }: Props) {
   const activeTrack = usePlayerStore((s) => s.track);
   const dragControls = useDragControls();
 
-  // Потребители передают onClose как новую стрелку на каждый рендер; держим в ref,
-  // чтобы esc-listener не переподписывался при ре-рендерах родителя (напр. лайк).
+  // onClose в ref — esc-listener не переподписывается на каждую новую стрелку родителя
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -42,9 +39,7 @@ export function QuickLookSheet({ open, onClose, children }: Props) {
     if (info.offset.y > 120 || info.velocity.y > 600) onClose();
   }
 
-  // Портал в body: оверлей должен крепиться к вьюпорту. Без портала `fixed inset-0`
-  // ловит ближайшего трансформированного предка (карточки в Stagger оседают с
-  // inline `transform: translateY(0px)`) и модалка позиционируется внутри ячейки.
+  // портал в body: без него fixed ловит трансформированного предка (Stagger-карточки)
   const overlay = (
     <AnimatePresence>
       {open && (
@@ -87,11 +82,7 @@ export function QuickLookSheet({ open, onClose, children }: Props) {
   return createPortal(overlay, document.body);
 }
 
-/**
- * Оборачивает шапку (обложка+название) peek-контента — тоже стартует
- * свайп-закрытие, как и грабёр, чтобы не заставлять пользователя целиться
- * в узкую полоску. Список ниже шапки в drag-зону не входит — он скроллится сам.
- */
+/** Шапка peek-контента тоже стартует свайп-закрытие — чтобы не целиться в узкий граббер. */
 export function QuickLookDragHandle({
   children,
   className,

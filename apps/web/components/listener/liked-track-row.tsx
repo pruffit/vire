@@ -23,7 +23,6 @@ export function LikedTrackRow({ track, queue, queueIndex, durationSec, releaseCo
 
   const likeState = useLikesStore((s) => s.state[track.id]);
 
-  // Auto-hide when explicitly unliked
   if (likeState === false) return null;
 
   function handlePlay() {

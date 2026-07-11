@@ -22,7 +22,7 @@ const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
   _push: (item) =>
     set((s) => ({
-      // Держим максимум 3 одновременно — старые уходят первыми
+      // Держим максимум 3 одновременно, старые уходят первыми
       toasts: [...s.toasts.slice(-2), item],
     })),
   _dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
@@ -31,7 +31,7 @@ const useToastStore = create<ToastStore>((set) => ({
 let nextId = 1;
 const DURATION_MS = 3500;
 
-/** Показать тост. Текст — конкретный («Не удалось сохранить лайк»), не generic. */
+/** Показать тост. Текст должен быть конкретным («Не удалось сохранить лайк»), не generic. */
 export function toast(text: string, kind: ToastKind = 'default'): void {
   const id = nextId++;
   useToastStore.getState()._push({ id, text, kind });

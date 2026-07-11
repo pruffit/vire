@@ -19,11 +19,7 @@ interface FlatResult {
   initial?: string;
 }
 
-/**
- * Поиск в навбаре: свёрнут до иконки, по клику поле аккуратно раскрывается влево,
- * под ним — быстрые результаты. Enter или «показать все» → страница /search.
- * Использует тот же эндпоинт /api/v1/search, что и глобальный поиск.
- */
+/** Поиск в навбаре: иконка → поле с быстрыми результатами; Enter → /search. */
 export function NavSearch() {
   const router = useRouter();
   const [open, setOpen] = useState(false);

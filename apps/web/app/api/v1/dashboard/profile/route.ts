@@ -40,7 +40,6 @@ export async function POST(req: Request) {
     try {
       const parsed: unknown = JSON.parse(linksRaw);
       if (Array.isArray(parsed)) {
-        // label необязателен (распознанные площадки берут название из URL).
         links = parsed
           .filter((l): l is { url: string; label?: unknown } =>
             l !== null && typeof l === 'object' && typeof (l as { url?: unknown }).url === 'string',
@@ -68,7 +67,6 @@ export async function POST(req: Request) {
           .map((v) => ({ url: v.url.trim(), title: typeof v.title === 'string' ? v.title.trim() : '' }))
           .filter((v) => v.url)
           .slice(0, 20);
-        // Тайтл подтягиваем сами от YouTube/VK, если он пуст (артист его не вводит).
         videos = await Promise.all(
           raw.map(async (v) => (v.title ? v : { url: v.url, title: await resolveVideoTitle(v.url) })),
         );
@@ -87,11 +85,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
 
-  // Ключ S3 стабильный (перезапись по тому же пути), поэтому к URL добавляем
-  // ?v=timestamp — иначе браузер/CDN/next-image отдают старое закэшированное фото.
+  // ключ S3 стабильный — без ?v=timestamp браузер/CDN отдают старое закэшированное фото
   const bust = (url: string) => `${url}?v=${Date.now()}`;
 
-  // Avatar upload
   let avatarUrl = artist.avatarUrl;
   if (removeAvatar) {
     avatarUrl = null;
@@ -102,7 +98,6 @@ export async function POST(req: Request) {
     avatarUrl = bust(await uploadToStream(`avatars/${artist.id}.${v.info.ext}`, buffer, v.info.mime));
   }
 
-  // Header upload
   let headerUrl = artist.headerUrl;
   if (removeHeader) {
     headerUrl = null;

@@ -11,7 +11,6 @@ export const artistProfiles = pgTable('artist_profiles', {
   bio: text('bio'),
   avatarUrl: text('avatar_url'),
   headerUrl: text('header_url'),
-  // Тема профиля — CSS-токены: фон, текст, акцент, зерно, шрифты
   links: jsonb('links').default([]),
   videos: jsonb('videos').default([]),
   themeTokens: jsonb('theme_tokens').default({
@@ -28,15 +27,10 @@ export const artistProfiles = pgTable('artist_profiles', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [
   index('artist_profiles_user_id_idx').on(t.userId),
-  // Триграммный GIN — ILIKE '%q%' по имени (поиск) без seq-scan.
+  // Триграммный GIN: ILIKE '%q%' по имени (поиск) без seq-scan
   index('artist_profiles_name_trgm_idx').using('gin', sql`${t.name} gin_trgm_ops`),
 ]);
 
-// Smart-link лендинги (bandlink): красивая страница релиза со ссылками на
-// стриминги и соцсети. Самостоятельный маркетинг-инструмент — НЕ требует
-// загрузки музыки в Vire, живёт отдельно от releases/tracks.
-// Публичный URL: /smartlink/{artistSlug}/{slug}. links — массив { url, label? },
-// площадка распознаётся из URL при рендере (lib/platforms).
 export const smartLinks = pgTable('smart_links', {
   id: uuid('id').primaryKey().defaultRandom(),
   artistProfileId: uuid('artist_profile_id')
@@ -47,25 +41,18 @@ export const smartLinks = pgTable('smart_links', {
   subtitle: text('subtitle'),
   coverUrl: text('cover_url'),
   releaseDate: timestamp('release_date'),
-  // Фаза B: привязка к релизу Vire. Когда задан — лендинг авто-подхватывает
-  // обложку/название/дату релиза, а первой кнопкой идёт «Слушать/Пресейв на Vire».
-  // onDelete: set null — удаление релиза не сносит маркетинговый лендинг.
+  // onDelete: set null, чтобы удаление релиза не сносило маркетинговый лендинг
   releaseId: uuid('release_id').references(() => releases.id, { onDelete: 'set null' }),
   links: jsonb('links').default([]),
   isPublished: boolean('is_published').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [
-  // slug уникален в пределах артиста — URL /smartlink/{artist}/{slug}
+  // slug уникален в пределах артиста: URL /smartlink/{artist}/{slug}
   unique('smart_links_artist_slug_unique').on(t.artistProfileId, t.slug),
   index('smart_links_artist_profile_id_idx').on(t.artistProfileId),
 ]);
 
-// Участники артист-профиля: несколько аккаунтов могут управлять одной карточкой.
-// role: OWNER (создатель, неудаляем) | MEMBER (равный доступ к дашборду в v1 — права
-// не разводим). artist_profiles.user_id остаётся указателем на владельца; членство —
-// список ВСЕХ аккаунтов с доступом (включая владельца, заведён бэкфилом). Контроль
-// доступа к /dashboard скоупится через эту таблицу. Добавляет участников админ.
 export const artistMembers = pgTable('artist_members', {
   id: uuid('id').primaryKey().defaultRandom(),
   artistProfileId: uuid('artist_profile_id')
@@ -82,8 +69,6 @@ export const artistMembers = pgTable('artist_members', {
   index('artist_members_artist_profile_id_idx').on(t.artistProfileId),
 ]);
 
-// Анонсы и новости артиста — канал коммуникации с аудиторией помимо музыки.
-// Не полноценный блог: короткие записи, хронология. title опционален.
 export const artistPosts = pgTable('artist_posts', {
   id: uuid('id').primaryKey().defaultRandom(),
   artistProfileId: uuid('artist_profile_id')
@@ -95,8 +80,6 @@ export const artistPosts = pgTable('artist_posts', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [index('artist_posts_artist_profile_id_idx').on(t.artistProfileId)]);
 
-// Правообладатель — отдельно от витрины артиста
-// Артист = бренд, правообладатель = кому идут деньги
 export const rightsHolders = pgTable('rights_holders', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').references(() => users.id),

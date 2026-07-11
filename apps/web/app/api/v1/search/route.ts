@@ -3,7 +3,6 @@ import { searchAll } from '@vire/db';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export async function GET(req: Request) {
-  // Rate limit: 60 requests per minute per IP
   const rl = await rateLimit(clientKey(req, 'search'), 60, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 

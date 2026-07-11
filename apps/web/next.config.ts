@@ -10,9 +10,7 @@ const { version } = _require('./package.json') as { version: string };
 // (@vire/core, @vire/db, @vire/ui), а не только apps/web.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../');
 
-// Обложки и аватары лежат в S3/MinIO и отдаются по S3_PUBLIC_ENDPOINT
-// (локально http://localhost:9000, на проде — Selectel). next/image должен
-// знать этот хост, иначе оптимизатор откажется их грузить.
+// Хост S3_PUBLIC_ENDPOINT для next/image — иначе оптимизатор откажется грузить обложки/аватары.
 function s3RemotePattern() {
   try {
     const u = new URL(process.env.S3_PUBLIC_ENDPOINT ?? 'http://localhost:9000');
@@ -40,19 +38,17 @@ function buildCsp(): string {
   const dev = process.env.NODE_ENV !== 'production';
   const parts = [
     `default-src 'self'`,
-    // telegram.org нужен для виджета входа; mc.yandex.ru — Метрика (если задан NEXT_PUBLIC_METRIKA_ID).
-    // youtube.com/s.ytimg.com — IFrame Player API; vk.com — VK Video Player API (videoplayer.js).
-    // 'unsafe-eval' только в dev (webpack source maps); prod-сборка не использует eval.
+    // telegram.org — виджет входа; mc.yandex — Метрика; youtube/ytimg и vk.com — плеерные API.
+    // 'unsafe-eval' только в dev (webpack source maps).
     `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://telegram.org https://mc.yandex.ru https://mc.yandex.com https://www.youtube.com https://s.ytimg.com https://vk.com`,
     `style-src 'self' 'unsafe-inline'`,
-    // аватары: Yandex, Google (lh3), Telegram (t.me); mc.yandex.ru/.com — Метрика (пиксели, gif, синк);
-    // ytimg — постеры YouTube-фасадов; userapi/mycdn — постеры VK-видео (video.get).
+    // аватары OAuth (yandex/lh3/t.me), Метрика, постеры YouTube (ytimg) и VK (userapi/mycdn).
     `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru https://mc.yandex.com https://i.ytimg.com https://*.ytimg.com https://*.userapi.com https://*.mycdn.me ${s3}`,
     `media-src 'self' blob: ${s3}`,
     `connect-src 'self' blob: ${s3} https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
     `worker-src blob:`,
-    // oauth.telegram.org — iframe виджета Telegram Login; youtube.com/vk.com/vkvideo.ru — встраиваемые плееры видео
+    // iframe виджета Telegram Login + встраиваемые видеоплееры
     `frame-src https://oauth.telegram.org https://www.youtube.com https://www.youtube-nocookie.com https://vk.com https://vkvideo.ru`,
     `frame-ancestors 'none'`,
     `object-src 'none'`,
@@ -83,8 +79,7 @@ const SECURITY_HEADERS = [
       'interest-cohort=()',
     ].join(', '),
   },
-  // same-origin-allow-popups: изолируем от cross-origin opener'ов (Spectre),
-  // но разрешаем OAuth-попапы (Google, Yandex, Telegram) открывать нас обратно.
+  // same-origin-allow-popups: изоляция от cross-origin opener'ов, но OAuth-попапы могут открывать нас обратно.
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
   { key: 'Content-Security-Policy', value: buildCsp() },
 ];
@@ -98,17 +93,12 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: repoRoot,
   transpilePackages: ['@vire/core', '@vire/db', '@vire/ui'],
   images: {
-    // AVIF даёт ~50% экономии vs JPEG при том же качестве; WebP — fallback.
     formats: ['image/avif', 'image/webp'],
     // Только нужные брейкпоинты — меньше вариантов кешируется на сервере.
     deviceSizes: [640, 828, 1080, 1200, 1920],
     imageSizes: [24, 36, 48, 64, 96, 128, 180, 256, 320],
-    // Холодная AVIF-кодировка крупной обложки на слабом VPS = ~2–3с и бьёт
-    // прямо в LCP (PSI ловил 9с сразу после деплоя). Держим оптимизированные
-    // варианты в кэше сутки вместо дефолтных 4ч — меньше повторных кодирований.
-    // Дольше не ставим: ключ обложки стабилен (covers/{releaseId}) — при замене
-    // URL тот же, нужен разумный запас на инвалидацию. Сам кэш переживает
-    // деплой через том web_image_cache (docker-compose.prod.yml).
+    // Сутки вместо дефолтных 4ч: холодная AVIF-кодировка на слабом VPS ~2–3с и бьёт в LCP.
+    // Дольше нельзя — ключ обложки стабилен (covers/{releaseId}), нужен запас на инвалидацию.
     minimumCacheTTL: 86400,
     remotePatterns: [
       s3RemotePattern(),
@@ -116,19 +106,15 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com', pathname: '/**' },
       { protocol: 'https', hostname: 't.me', pathname: '/**' },
     ],
-    // Next 16 блокирует оптимизацию картинок с приватных/loopback IP (SSRF-защита).
-    // Локально MinIO живёт на localhost → разрешаем только в dev. На проде хранилище
-    // (Selectel) публичное, поэтому флаг не нужен и остаётся выключенным.
+    // Next 16 блокирует оптимизацию с loopback IP (SSRF-защита); локальному MinIO нужен обход только в dev.
     dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
   },
   async headers() {
     return [{ source: '/(.*)', headers: SECURITY_HEADERS }];
   },
   experimental: {
-    // proxy.ts (Auth.js) заставляет Next 16 буферизовать тело запроса. Лимит по
-    // умолчанию — 10MB: WAV-мастер крупнее обрезается, multipart-граница рвётся,
-    // и req.formData() падает с "Invalid multipart form data". Поднимаем под
-    // размер аудио-мастеров (WAV ~10–17MB/мин).
+    // proxy.ts заставляет Next буферизовать тело запроса; дефолтные 10MB рвут multipart
+    // у WAV-мастеров (formData() падает) — поднимаем под размер аудио (~10–17MB/мин).
     proxyClientMaxBodySize: '300mb',
   },
 };

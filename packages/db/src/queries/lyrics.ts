@@ -3,10 +3,7 @@ import { db } from '../client';
 import { tracks, releases } from '../schema';
 import type { LyricLine } from '@vire/core';
 
-/**
- * Текст трека для публичного просмотра в плеере. Отдаём только если релиз
- * опубликован (черновики не светим). null — нет текста / трек не публичный.
- */
+// Текст только если релиз опубликован (черновики не светим); null иначе.
 export async function getPublicTrackLyrics(trackId: string): Promise<LyricLine[] | null> {
   const [row] = await db
     .select({ lyrics: tracks.lyrics, status: releases.status })

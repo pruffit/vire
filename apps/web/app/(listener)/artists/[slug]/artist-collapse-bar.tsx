@@ -6,11 +6,6 @@ import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { getContentScrollArea } from '@/lib/scroll-area';
 
-/**
- * Компактная липкая полоска артиста: появляется, когда крупный hero ушёл за
- * верх скролл-области (сентинел + IntersectionObserver), въезжает пружиной
- * под навбар. Клик — плавный скролл к началу страницы.
- */
 export function ArtistCollapseBar({
   name,
   avatarUrl,

@@ -17,7 +17,7 @@ export interface LinkedProvider {
   providerAccountId: string;
 }
 
-/** Найти пользователя по email — включает passwordHash для Credentials auth. */
+/** Найти пользователя по email, включает passwordHash для Credentials auth. */
 export async function findUserByEmail(email: string): Promise<UserWithPassword | null> {
   const [row] = await db
     .select({
@@ -54,7 +54,6 @@ export async function createUserWithPassword(opts: {
   return row;
 }
 
-/** Установить пароль для существующего пользователя. */
 export async function setUserPasswordHash(userId: string, hash: string): Promise<void> {
   await db
     .update(users)
@@ -62,7 +61,6 @@ export async function setUserPasswordHash(userId: string, hash: string): Promise
     .where(eq(users.id, userId));
 }
 
-/** Получить список привязанных OAuth-провайдеров для пользователя. */
 export async function getUserLinkedProviders(userId: string): Promise<LinkedProvider[]> {
   const rows = await db
     .select({ provider: accounts.provider, providerAccountId: accounts.providerAccountId })
@@ -83,7 +81,7 @@ export interface UserAuthInfo {
 
 /**
  * Найти существующего Telegram-пользователя по telegramId или создать нового.
- * Если передан linkUserId — привязать Telegram к существующему пользователю
+ * Если передан linkUserId, привязать Telegram к существующему пользователю
  * вместо создания нового. Возвращает null при конфликте (уже занят другим юзером).
  */
 export async function findOrCreateTelegramUser(
@@ -102,7 +100,7 @@ export async function findOrCreateTelegramUser(
     .limit(1);
 
   if (existing) {
-    // Telegram уже привязан к другому пользователю — конфликт при линковке
+    // Telegram уже привязан к другому пользователю: конфликт при линковке
     if (linkUserId && existing.userId !== linkUserId) return null;
     const [user] = await db
       .select(userCols)
@@ -112,7 +110,7 @@ export async function findOrCreateTelegramUser(
     return user ?? null;
   }
 
-  // Привязать Telegram к уже существующему пользователю — не трогаем его имя/аватар
+  // Привязать Telegram к уже существующему пользователю, не трогаем его имя/аватар
   if (linkUserId) {
     const [user] = await db
       .select(userCols)
@@ -160,13 +158,8 @@ export interface OAuthAccountData {
 }
 
 /**
- * Привязать OAuth-аккаунт к существующему пользователю.
- * Вызывается из Auth.js signIn callback когда пользователь хочет добавить
- * второй провайдер к уже существующему аккаунту.
- *
- * @param targetUserId  ID пользователя, к которому привязываем
- * @param oauthUserId   ID пользователя, которого создал DrizzleAdapter для OAuth
- * @param account       OAuth account data
+ * Привязать OAuth-аккаунт к существующему пользователю. Вызывается из Auth.js
+ * signIn callback; oauthUserId - пользователь, которого уже создал DrizzleAdapter для OAuth.
  */
 export async function linkOAuthAccount(
   targetUserId: string,
@@ -183,15 +176,15 @@ export async function linkOAuthAccount(
     .limit(1);
 
   if (existing?.userId === targetUserId) {
-    return 'ok'; // Уже привязан к нужному пользователю
+    return 'ok';
   }
 
   if (existing && existing.userId !== oauthUserId) {
-    return 'already_linked_to_other'; // Принадлежит стороннему пользователю
+    return 'already_linked_to_other';
   }
 
   if (existing) {
-    // DrizzleAdapter создал аккаунт для OAuth-пользователя — переназначаем
+    // DrizzleAdapter создал аккаунт для OAuth-пользователя, переназначаем владельца
     await db
       .update(accounts)
       .set({ userId: targetUserId })
@@ -214,7 +207,7 @@ export async function linkOAuthAccount(
     });
   }
 
-  // Если Auth.js создал временного пользователя только для этого OAuth — удаляем
+  // Если Auth.js создал временного пользователя только для этого OAuth, удаляем его
   if (oauthUserId && oauthUserId !== targetUserId) {
     const [{ total }] = await db
       .select({ total: count() })
@@ -229,20 +222,10 @@ export async function linkOAuthAccount(
 }
 
 /**
- * Забрать OAuth-аккаунт у ghost-пользователя (без email и пароля,
- * созданного Auth.js в предыдущей неудачной попытке привязки) и отдать
- * его targeting-пользователю.
- *
- * Возвращает true если перенос выполнен, false если владелец — настоящий юзер.
- */
-/**
- * Забрать OAuth-аккаунт у другого пользователя и отдать targeting-пользователю.
- *
- * Безопасно вызывать только из OAuth-callback: факт успешного Google-редиректа
- * означает, что текущий пользователь является реальным владельцем этого аккаунта.
- * «Другой пользователь» (currentOwnerId) — артефакт предыдущей неудачной попытки
- * привязки. Если после передачи у него не остаётся других аккаунтов и нет пароля
- * — удаляем его.
+ * Забрать OAuth-аккаунт у другого пользователя (артефакт неудачной попытки привязки)
+ * и отдать targeting-пользователю. Безопасно только из OAuth-callback: успешный
+ * редирект провайдера подтверждает реальное владение. Прежнего владельца без
+ * остальных аккаунтов и без пароля удаляем.
  */
 export async function tryClaimOAuthAccount(
   provider: string,
@@ -275,7 +258,7 @@ export async function tryClaimOAuthAccount(
   return true;
 }
 
-/** Найти пользователя по ID — для jwt callback при привязке аккаунта. */
+/** Найти пользователя по ID, для jwt callback при привязке аккаунта. */
 export async function getUserById(
   userId: string,
 ): Promise<{ id: string; role: string } | null> {

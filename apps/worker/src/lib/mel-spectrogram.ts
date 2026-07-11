@@ -1,12 +1,7 @@
-// Мел-спектрограмма в стиле Essentia TensorflowInputMusiCNN — препроцессинг под
-// discogs-effnet (и MusiCNN-совместимые модели вообще). Параметры зафиксированы
-// под обучающий сетап моделей (essentia.upf.edu/models), менять нельзя:
-// frameSize=512, hopSize=256, 96 мел-полос, sampleRate=16кГц, Slaney-мел-шкала,
-// unit-area нормализация фильтров, лог-компрессия log10(1 + 10000*energy).
-// Источник параметров — essentia src/algorithms/spectral/tensorflowinputmusicnn.cpp
-// и melbands.h (warpingFormula=slaneyMel, weighting=linear, normalize=unit_tri,
-// type=power). Это переиспользование СПЕЦИФИКАЦИИ, не кода Essentia — своя
-// реализация на чистом TS (без WASM-зависимости essentia.js).
+// Мел-спектрограмма в стиле Essentia TensorflowInputMusiCNN, препроцессинг под
+// discogs-effnet. Параметры (frameSize=512, hopSize=256, 96 полос, 16кГц,
+// Slaney-шкала) фиксированы под обучающий сетап модели, менять нельзя: детали
+// и источник спецификации, docs/features/auto-genre.md.
 
 export const MEL_SAMPLE_RATE = 16000;
 export const MEL_FRAME_SIZE = 512;
@@ -87,7 +82,7 @@ function melToHzSlaney(mel: number): number {
 // ─── Треугольный мел-фильтрбанк (unit-area нормализация, как librosa norm='slaney') ─
 
 interface MelFilterbank {
-  // Для каждой полосы — [начальный бин, окончание) и веса на этом диапазоне.
+  // Для каждой полосы: [начальный бин, окончание) и веса на этом диапазоне.
   bands: Array<{ start: number; weights: Float64Array }>;
 }
 
@@ -111,7 +106,7 @@ function getMelFilterbank(): MelFilterbank {
     const fCenter = hzPoints[b + 1];
     const fRight = hzPoints[b + 2];
 
-    // unit-area (slaney) нормализация — высота треугольника обратна его ширине по Hz
+    // unit-area (slaney) нормализация: высота треугольника обратна его ширине по Hz
     const norm = 2 / (fRight - fLeft);
 
     let start = -1;
@@ -128,7 +123,7 @@ function getMelFilterbank(): MelFilterbank {
         if (start === -1) start = k;
         weights.push(w);
       } else if (start !== -1) {
-        break; // треугольник закончился — веса дальше нулевые
+        break; // треугольник закончился, веса дальше нулевые
       }
     }
     bands.push({ start: Math.max(start, 0), weights: new Float64Array(weights) });
@@ -138,17 +133,14 @@ function getMelFilterbank(): MelFilterbank {
   return cachedFilterbank;
 }
 
-// Каждые столько кадров отдаём event loop — без этого ~7500 кадров FFT512 на
-// длинном треке считаются синхронно одним куском и блокируют весь Node-процесс
-// воркера (в нём же крутятся play-events и другие очереди с concurrency 10).
+// Уступаем event loop каждые N кадров: без этого ~7500 кадров FFT512 на длинном
+// треке блокируют весь Node-процесс воркера (в нём же play-events и другие очереди).
 const YIELD_EVERY_FRAMES = 256;
 
 /**
- * Лог-мел-спектрограмма кадр за кадром: STFT (Hann, 512/256) → степенной
- * мел-фильтрбанк (96 полос, Slaney) → log10(1 + 10000*energy).
- * Первый кадр центрируется на сэмпле 0 (паддинг нулями спереди, как FrameCutter
- * у Essentia по умолчанию). Хвост короче кадра отбрасывается.
- * Async — периодически уступает event loop (см. YIELD_EVERY_FRAMES).
+ * Лог-мел-спектрограмма кадр за кадром: STFT (Hann, 512/256) в мел-фильтрбанк
+ * (96 полос, Slaney) в log10(1 + 10000*energy). Первый кадр центрирован на
+ * сэмпле 0 (паддинг спереди). Async: периодически уступает event loop.
  */
 export async function computeLogMelFrames(pcm: Float32Array): Promise<Float32Array[]> {
   const window = hannWindow(MEL_FRAME_SIZE);
@@ -201,11 +193,9 @@ export interface PatchBatch {
 
 /**
  * Режет фреймы на патчи по MEL_PATCH_SIZE без перекрытия (упрощение относительно
- * Essentia patchHopSize=62 — для «подсказки жанра» точное перекрытие не критично)
- * и группирует патчи в батчи по MEL_BATCH_SIZE — так инференс одного длинного
- * трека не выделяет один гигантский тензор целиком (RAM-бюджет VPS 1ГБ).
- * Модель discogs-effnet-bsdynamic поддерживает произвольный batch size, поэтому
- * последний батч просто короче — паддинг не нужен.
+ * Essentia patchHopSize=62, для «подсказки жанра» не критично) и группирует в
+ * батчи по MEL_BATCH_SIZE, чтобы длинный трек не выделял один гигантский тензор
+ * целиком (RAM-бюджет VPS 1ГБ). Модель поддерживает произвольный batch, паддинг не нужен.
  */
 export function chunkIntoPatchBatches(frames: Float32Array[]): PatchBatch[] {
   const patches: Float32Array[] = [];

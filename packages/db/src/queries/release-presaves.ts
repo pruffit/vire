@@ -35,7 +35,7 @@ export async function getPresaveState(userId: string, releaseId: string): Promis
   return !!row;
 }
 
-/** Множество releaseId (из списка), которые юзер уже пресейвнул — один запрос. */
+/** Множество releaseId (из списка), которые юзер уже пресейвнул: один запрос. */
 export async function getPresaveStates(userId: string, releaseIds: string[]): Promise<Set<string>> {
   if (releaseIds.length === 0) return new Set();
   const rows = await db
@@ -45,9 +45,8 @@ export async function getPresaveStates(userId: string, releaseIds: string[]): Pr
   return new Set(rows.map((r) => r.releaseId));
 }
 
-/** Отписка гостя (ссылка из письма "вышло"): удаляет ещё не исполненные гостевые
- *  пресейвы этого email по всем релизам. Уже исполненные (fulfilledAt не NULL)
- *  не трогаем — письмо по ним уже ушло, удалять запись задним числом бессмысленно. */
+/** Отписка гостя: удаляет ещё не исполненные гостевые пресейвы этого email по всем
+ *  релизам. Уже исполненные (fulfilledAt не NULL) не трогаем: письмо по ним уже ушло. */
 export async function deletePendingGuestPresavesByEmail(email: string): Promise<number> {
   const res = await db
     .delete(releasePresaves)
@@ -71,7 +70,7 @@ export interface ReleasePresaveInfo {
   releaseDate: Date | null;
 }
 
-/** Статус и дата релиза — чтобы решить, можно ли пресейвить (SCHEDULED + будущее). */
+/** Статус и дата релиза: чтобы решить, можно ли пресейвить (SCHEDULED + будущее). */
 export async function getReleasePresaveInfo(releaseId: string): Promise<ReleasePresaveInfo | null> {
   const [row] = await db
     .select({
@@ -99,7 +98,7 @@ export interface DueRelease {
   artistSlug: string;
 }
 
-/** SCHEDULED-релизы, у которых наступила дата выхода — кандидаты на публикацию. */
+/** SCHEDULED-релизы, у которых наступила дата выхода: кандидаты на публикацию. */
 export async function findDueScheduledReleases(): Promise<DueRelease[]> {
   return db
     .select({
@@ -123,10 +122,8 @@ export async function findDueScheduledReleases(): Promise<DueRelease[]> {
     );
 }
 
-/**
- * Атомарно публикует релиз только если он ещё SCHEDULED — гонка двух прогонов
- * планировщика приведёт лишь к одному true (второй апдейт не заматчит строку).
- */
+/** Атомарно публикует релиз только если он ещё SCHEDULED: гонка двух прогонов
+ *  планировщика приведёт лишь к одному true (второй апдейт не заматчит строку). */
 export async function publishScheduledRelease(releaseId: string): Promise<boolean> {
   const res = await db
     .update(releases)
@@ -138,7 +135,7 @@ export async function publishScheduledRelease(releaseId: string): Promise<boolea
 
 // ─── Исполнение пресейвов при выходе релиза ──────────────────────────────────
 
-/** userId всех неисполненных пресейверов релиза — для авто-лайка. */
+/** userId всех неисполненных пресейверов релиза: для авто-лайка. */
 export async function getPresaverUserIds(releaseId: string): Promise<string[]> {
   const rows = await db
     .select({ userId: releasePresaves.userId })
@@ -156,9 +153,8 @@ export async function getPresaverUserIds(releaseId: string): Promise<string[]> {
 export interface PresaverContact {
   email: string;
   name: string | null;
-  // Гость (email-колонка, без аккаунта) vs залогиненный юзер — для ссылки
-  // «отписаться» в письме: она удаляет только гостевые пресейвы по email,
-  // юзеру её показывать не за чем (его presave живёт при userId, не при email).
+  // Ссылка «отписаться» в письме удаляет только гостевые пресейвы по email:
+  // юзеру её не показываем, его presave живёт при userId, а не при email.
   isGuest: boolean;
 }
 
@@ -184,7 +180,7 @@ export async function getPresaverContacts(releaseId: string): Promise<PresaverCo
     .filter((r): r is PresaverContact => r.email !== null);
 }
 
-/** READY-треки релиза — для авто-лайка пресейверам. */
+/** READY-треки релиза: для авто-лайка пресейверам. */
 export async function getReadyTrackIds(releaseId: string): Promise<string[]> {
   const rows = await db
     .select({ id: tracks.id })
@@ -193,7 +189,7 @@ export async function getReadyTrackIds(releaseId: string): Promise<string[]> {
   return rows.map((r) => r.id);
 }
 
-/** Массовый лайк (юзеры × треки), идемпотентно — авто-добавление в «Лайки». */
+/** Массовый лайк (юзеры × треки), идемпотентно: авто-добавление в «Лайки». */
 export async function bulkLikeTracks(userIds: string[], trackIds: string[]): Promise<void> {
   if (userIds.length === 0 || trackIds.length === 0) return;
   const values = userIds.flatMap((userId) => trackIds.map((trackId) => ({ userId, trackId })));

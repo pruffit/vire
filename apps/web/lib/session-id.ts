@@ -10,11 +10,9 @@ async function requestSignedSessionId(): Promise<string> {
 }
 
 /**
- * Общий идентификатор сессии (heartbeat присутствия, play-events) — держится в
- * sessionStorage. Сервер генерит и HMAC-подписывает id (см. lib/session-signing.ts,
- * /api/v1/session) — свой id клиент придумать не может, только запросить у сервера,
- * иначе подпись не мешала бы накрутке. Первый вызов на вкладке делает round-trip;
- * дальше — из кэша.
+ * Id сессии (heartbeat присутствия, play-events) в sessionStorage. Сервер генерит и
+ * HMAC-подписывает (lib/session-signing.ts) — клиент не может придумать свой, иначе
+ * подпись не мешала бы накрутке. Первый вызов — round-trip, дальше из кэша.
  */
 export async function getSessionId(): Promise<string> {
   const cached = sessionStorage.getItem(SESSION_KEY);

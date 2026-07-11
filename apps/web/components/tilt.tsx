@@ -3,10 +3,8 @@
 import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
 
 /**
- * Лёгкий 3D-тилт за курсором (desktop): контент наклоняется к указателю и
- * пружинно возвращается. Слегка масштабирует контент, чтобы при наклоне
- * внутри overflow-hidden не открывались края. На тач и при reduced motion
- * не делает ничего.
+ * 3D-тилт за курсором (desktop); лёгкий scale, чтобы при наклоне внутри
+ * overflow-hidden не открывались края. На тач и reduced motion — noop.
  */
 export function Tilt({
   children,

@@ -2,10 +2,8 @@ import os from 'node:os';
 import { statfs } from 'node:fs/promises';
 
 /**
- * Метрики хоста для админ-панели «Система». Берутся из Node (`os`, `fs.statfs`)
- * — это процесс web-контейнера на VPS. В Docker `os.totalmem/freemem` обычно
- * отражают ХОСТ (а не лимит контейнера), что для выделенного VPS как раз и нужно.
- * Любой сбой деградирует до null — панель не падает.
+ * Метрики хоста для админ-панели: Node `os`/`fs.statfs`. В Docker `os.totalmem/freemem`
+ * отражают ХОСТ, не лимит контейнера — на выделенном VPS это и нужно. Сбой деградирует до null.
  */
 export interface SystemMetrics {
   memTotalMb: number;

@@ -7,12 +7,8 @@ import { spring } from '@vire/ui/motion';
 import { Icon, type IconName } from '@/components/icon';
 import { GlowBackdrop } from '@/components/content-kit';
 
-// Координатор одноразовых анонсов. Главная задача — несколько важных модалок
-// (изменения входа, запуск Этапа 1, будущие) НЕ показываются одновременно:
-// они выстраиваются в очередь и всплывают по одной. Каждая помнит свой показ
-// через localStorage и переоткрывается из футера (кнопка AnnouncementReopenLink).
-//
-// Версионируй storageKey (…_v1 → _v2), если нужно показать анонс заново всем.
+// Координатор одноразовых анонсов — показываются по одному из очереди, не разом.
+// Версионируй storageKey (…_v1 → _v2), чтобы показать анонс заново всем.
 
 export const OPEN_ANNOUNCEMENT_EVENT = 'vire:open-announcement';
 
@@ -28,7 +24,7 @@ interface Announcement {
   cta?: { href: string; label: string };
 }
 
-// Порядок = очередь авто-показа. Сначала — приветствие запуска, затем про вход.
+// порядок = очередь авто-показа
 const ANNOUNCEMENTS: Announcement[] = [
   {
     id: 'stage1',
@@ -97,21 +93,17 @@ function markSeen(key: string): void {
 }
 
 export function Announcements() {
-  // Первый непросмотренный анонс из очереди. useSyncExternalStore читает
-  // localStorage без setState-в-эффекте и без рассинхрона с SSR (сервер → null).
+  // useSyncExternalStore читает localStorage без setState-в-эффекте и рассинхрона с SSR
   const autoActiveId = useSyncExternalStore(
     () => () => {},
     () => ANNOUNCEMENTS.find((a) => !isSeen(a.storageKey))?.id ?? null,
     () => null,
   );
-  // Ручное открытие из футера (перебивает авто-очередь).
   const [manualId, setManualId] = useState<string | null>(null);
-  // Тик для перечитывания localStorage после markSeen (переход к следующему).
   const [, bump] = useState(0);
 
   const active = ANNOUNCEMENTS.find((a) => a.id === (manualId ?? autoActiveId)) ?? null;
 
-  // Переоткрытие из футера.
   useEffect(() => {
     const onOpen = (e: Event) => {
       const id = (e as CustomEvent<{ id: string }>).detail?.id;
@@ -131,7 +123,6 @@ export function Announcements() {
     }
   }, [active, manualId]);
 
-  // Esc закрывает.
   useEffect(() => {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
@@ -141,7 +132,6 @@ export function Announcements() {
     return () => window.removeEventListener('keydown', onKey);
   }, [active, close]);
 
-  // Фокус на основное действие при открытии — клавиатура сразу в диалоге.
   const confirmRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (active) confirmRef.current?.focus();

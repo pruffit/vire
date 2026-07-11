@@ -51,16 +51,14 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ presaved: true });
   }
 
-  // Гость — пресейв по email.
+  // Гость: пресейв по email.
   const body = await req.json().catch(() => ({}));
   const parsed = guestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: 'Нужен корректный email' }, { status: 400 });
   }
 
-  // По IP отдельно от email: иначе гость может вбить чужой email раз за разом
-  // (спам чужого ящика письмами о выходе релиза) — email-лимит его не остановит,
-  // это каждый раз "новый" ключ с точки зрения rateLimit(`presave-guest:${email}`).
+  // По IP отдельно от email-лимита: иначе гость спамит чужой ящик, каждый раз указывая новый email.
   const ipRl = await rateLimit(clientKey(req, 'presave-guest-ip'), 20, 3600);
   if (!ipRl.ok) return tooManyRequests(ipRl.retryAfter);
 

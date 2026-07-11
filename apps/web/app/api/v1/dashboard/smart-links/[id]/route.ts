@@ -56,7 +56,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const releaseDateRaw = formData.get('releaseDate');
   if (typeof releaseDateRaw === 'string') patch.releaseDate = releaseDateRaw ? new Date(releaseDateRaw) : null;
 
-  // Привязка к релизу: пусто — отвязать; иначе только собственный релиз артиста.
+  // Привязка к релизу: пусто отвязывает, иначе только собственный релиз артиста.
   const releaseIdRaw = formData.get('releaseId');
   if (typeof releaseIdRaw === 'string') {
     if (!releaseIdRaw.trim()) {

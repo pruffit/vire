@@ -10,8 +10,7 @@ export interface GenreSuggestion {
 
 export interface GenreAnalysisResult {
   suggestions: GenreSuggestion[];
-  // Жанры, реально проставленные треку (воркер автопроставляет топ-2, если их не
-  // было) — UI синхронизирует ими выбор, чтобы результат «Определить жанр» был виден.
+  // Жанры, реально проставленные воркером (автотоп-2) — UI синхронизирует ими выбор.
   appliedGenres: Genre[];
 }
 
@@ -26,14 +25,7 @@ const ERROR_MESSAGES = {
   success: 'Жанр определён',
 };
 
-/**
- * Запуск анализа жанра по требованию (кнопка в дашборде/админке) + поллинг до
- * результата. Общий для GenrePicker (артист) и TrackEditForm (админка) —
- * эндпоинты у них разные базовые пути, отличие только в этом пропе.
- * Тонкая обёртка над обобщённым `useTrackAnalysis` (см. там про поллинг/гонки).
- * onResult получает и suggestions, и appliedGenres — вызывающий сам решает, как
- * свести их с текущим выбором.
- */
+/** Анализ жанра по требованию + поллинг: обёртка над `useTrackAnalysis`, общая для GenrePicker и админского TrackEditForm (различаются только эндпоинтами). */
 export function useGenreAnalysis(
   endpoints: { analyze: string; suggestions: string },
   onResult: (result: GenreAnalysisResult) => void,

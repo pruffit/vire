@@ -25,11 +25,7 @@ export interface ListeningNowTrack {
 
 const POLL_MS = 30_000;
 
-/**
- * Секция «Сейчас слушают» на главной: треки с живыми слушателями прямо сейчас.
- * Обновляется опросом /api/v1/listening-now; исчезает целиком, когда никто
- * не слушает. Клик по треку — играет его.
- */
+/** «Сейчас слушают» на главной: поллинг /api/v1/listening-now, исчезает когда пусто. */
 export function ListeningNow({ initial }: { initial: ListeningNowTrack[] }) {
   const [items, setItems] = useState(initial);
 
@@ -93,10 +89,7 @@ function TrackRow({ track }: { track: ListeningNowTrack }) {
   }
 
   return (
-    // Без motion `layout`: скролл-контейнер (#main-content) — обычный div, motion
-    // не знает про его scroll-offset, поэтому layout-проекция «плыла» за скроллом
-    // и дёргала строку (обложку/кружки) на каждом кадре прокрутки. Enter/exit
-    // по-прежнему анимируются через initial/animate/exit.
+    // без motion `layout`: он не знает про scroll-offset #main-content, проекция плывёт за скроллом
     <motion.button
       type="button"
       onClick={play}

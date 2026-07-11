@@ -3,9 +3,7 @@
 import { signOut } from 'next-auth/react';
 import { Icon } from '@/components/icon';
 
-// Клиентский signOut (POST на стабильный /api/auth/signout) вместо инлайн
-// server action: ID server action хэшируется от сборки и протухает у открытой
-// вкладки после деплоя → «Failed to find Server Action». REST-эндпоинт иммунен.
+// клиентский signOut, не server action: ID экшена протухает у открытой вкладки после деплоя
 export function NavSignOut() {
   return (
     <button

@@ -19,11 +19,7 @@ interface RateLimitResult {
   retryAfter: number;
 }
 
-/**
- * Fixed-window rate limiter: increments a Redis counter and returns ok=false
- * when it exceeds `limit` within the `windowSec` window.
- * Degrades gracefully (ok=true) when Redis is unavailable.
- */
+/** Fixed-window rate limiter via Redis counter; degrades to ok=true when Redis is unavailable. */
 export async function rateLimit(
   key: string,
   limit: number,

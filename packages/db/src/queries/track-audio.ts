@@ -39,10 +39,8 @@ export interface PlayableTrackAudioData extends TrackAudioData {
 }
 
 /**
- * Как getTrackAudio, но только для действительно проигрываемого трека: READY,
- * релиз вышел (PUBLISHED или SCHEDULED с прошедшей датой), артист не скрыт.
- * null для всего остального (PROCESSING/BLOCKED/FAILED, DRAFT/ARCHIVED, isActive=false) —
- * защита manifest-роута от стрима непубличных треков по UUID.
+ * Как getTrackAudio, но только для проигрываемого трека: READY, релиз вышел, артист
+ * не скрыт. null иначе, защита manifest-роута от стрима непубличных треков по UUID.
  */
 export async function getPlayableTrackAudio(trackId: string): Promise<PlayableTrackAudioData | null> {
   const [row] = await db
@@ -82,7 +80,7 @@ export async function getPlayableTrackAudio(trackId: string): Promise<PlayableTr
   };
 }
 
-/** Артист-владелец трека (через релиз) — для owner-проверки, независимо от статусов. */
+/** Артист-владелец трека (через релиз), для owner-проверки, независимо от статусов. */
 export async function getTrackArtistProfileId(trackId: string): Promise<string | null> {
   const [row] = await db
     .select({ artistProfileId: releases.artistProfileId })
@@ -94,9 +92,8 @@ export async function getTrackArtistProfileId(trackId: string): Promise<string |
 }
 
 /**
- * Ключ исходного мастера (wav/flac) в vault — для повторного транскода. В отличие
- * от getTrackAudio, отдаёт flacKey даже если HLS-манифест отсутствует/битый
- * (тогда как раз и нужен ре-транскод). null — исходника нет, пересобрать нечем.
+ * Ключ исходного мастера (vault), для ре-транскода. В отличие от getTrackAudio,
+ * отдаёт flacKey даже при отсутствующем/битом HLS-манифесте, именно тогда он нужен.
  */
 export async function getTrackSourceKey(trackId: string): Promise<string | null> {
   const [row] = await db
@@ -108,9 +105,8 @@ export async function getTrackSourceKey(trackId: string): Promise<string | null>
 }
 
 /**
- * Все треки артиста, у которых есть исходник в vault — для МАССОВОГО пере-транскода
- * (когда у артиста системно битый HLS, напр. вшитая обложка-видео). Возвращает пары
- * {trackId, sourceKey=flacKey}. Треки без исходника пропускаются.
+ * Все треки артиста с исходником в vault, для массового пере-транскода (когда у
+ * артиста системно битый HLS, напр. вшитая обложка-видео).
  */
 export async function getArtistTrackSources(
   artistProfileId: string,
@@ -173,7 +169,7 @@ export interface GenreSuggestionRow {
   confidence: number;
 }
 
-/** Предложенные автоопределением жанры (топ-5) — для подсказки в GenrePicker. */
+/** Предложенные автоопределением жанры (топ-5), для подсказки в GenrePicker. */
 export async function getGenreSuggestionsForTracks(
   trackIds: string[],
 ): Promise<Record<string, GenreSuggestionRow[]>> {
@@ -194,21 +190,13 @@ export async function getGenreSuggestionsForTracks(
 export interface GenreSuggestionsSnapshot {
   suggestions: GenreSuggestionRow[];
   updatedAt: string | null;
-  // Жанры, реально проставленные треку (track_genres) на момент снимка. Воркер
-  // автопроставляет топ-2 предложения, если у трека их не было (decideAutoApplyGenres),
-  // — поллинг возвращает их, чтобы UI отразил результат «Определить жанр» в
-  // выбранных жанрах, а не только в подсказках (иначе автопростановка невидима, а
-  // последующее сохранение формы затирает её). См. docs/features/auto-genre.md.
+  // Жанры, реально проставленные треку на момент снимка; см. docs/features/auto-genre.md.
   appliedGenres: TrackGenre[];
 }
 
 /**
- * Снимок suggestions + appliedGenres + updatedAt для одного трека — используется
- * поллингом анализа по требованию (`use-genre-analysis`): updatedAt (из
- * `genreAnalyzedAt`, не из общего `trackAudio.updatedAt` — тот же бампает и джоба
- * BPM/тональности, см. `getAudioFeaturesSnapshot`) меняется даже если новые
- * suggestions совпали с предыдущими (детерминированная модель), а само появление
- * данных — нет, если трек уже анализировался раньше.
+ * Снимок suggestions + appliedGenres + updatedAt для поллинга (`use-genre-analysis`);
+ * раздельные таймстемпы готовности: см. docs/features/audio-analysis.md.
  */
 export async function getGenreSuggestionsSnapshot(trackId: string): Promise<GenreSuggestionsSnapshot> {
   const [[row], genreRows] = await Promise.all([
@@ -244,13 +232,8 @@ export interface AudioFeaturesSnapshot {
 }
 
 /**
- * Снимок bpm/тональности + updatedAt для одного трека — используется поллингом
- * ре-анализа по требованию (`use-track-analysis`), по образцу `getGenreSuggestionsSnapshot`:
- * готовность определяется по смене `updatedAt` (из `bpmKeyAnalyzedAt`, не из общего
- * `trackAudio.updatedAt` — тот же бампает и джоба анализа жанра, что дало бы ложное
- * «готово» у обоих поллингов при нажатии обеих кнопок подряд), а не по значению
- * bpm/key (повторный анализ того же аудио детерминированным алгоритмом может дать
- * тот же результат).
+ * Снимок bpm/тональности + updatedAt для поллинга (`use-track-analysis`);
+ * раздельные таймстемпы готовности: см. docs/features/audio-analysis.md.
  */
 export async function getAudioFeaturesSnapshot(trackId: string): Promise<AudioFeaturesSnapshot> {
   const [row] = await db

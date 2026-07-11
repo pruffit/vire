@@ -17,8 +17,8 @@ export function clearTasteProfileCache(): void {
   tasteProfileCache.clear();
 }
 
-// Свежий подзапрос под каждый вызов — один и тот же query builder нельзя
-// переиспользовать в трёх параллельных внешних запросах ниже.
+// Новый подзапрос на каждый вызов: один query builder нельзя переиспользовать
+// в трёх параллельных запросах ниже.
 function likedTrackIds(userId: string) {
   return db.select({ trackId: likes.trackId }).from(likes).where(eq(likes.userId, userId));
 }
@@ -30,12 +30,6 @@ function recentlyPlayedTrackIds(userId: string) {
     .where(and(eq(playEvents.userId, userId), sql`${playEvents.startedAt} >= now() - interval '90 days'`));
 }
 
-/**
- * Профиль вкуса слушателя: лайки ∪ прослушивания за 90 дней, топ-5 в каждой
- * категории (настроения/жанры/артисты). Пусто = нет сигнала (новый юзер).
- * Кэшируется на 60с (`tasteProfileCache`) — волна и главная зовут это часто,
- * а лаг вкуса в минуту незаметен.
- */
 export function getTasteProfile(userId: string): Promise<TasteProfile> {
   return tasteProfileCache.get(userId, () => fetchTasteProfile(userId));
 }

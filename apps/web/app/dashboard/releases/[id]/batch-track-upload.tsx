@@ -21,7 +21,6 @@ interface QueueItem {
 const ACCEPT_EXT = ['.wav', '.flac', '.mp3'];
 const ACCEPT_ATTR = '.wav,.flac,.mp3,audio/wav,audio/x-wav,audio/flac,audio/x-flac,audio/mpeg';
 
-/** «my_track 01.wav» → «my track 01» (без расширения, подчёркивания → пробелы). */
 function titleFromFilename(name: string): string {
   return name
     .replace(/\.[^.]+$/, '')
@@ -54,9 +53,7 @@ export function BatchTrackUpload({
   const activeXhrsRef = useRef<Set<XMLHttpRequest>>(new Set());
   const cancelledRef = useRef(false);
 
-  // Анмаунт (навигация прочь со страницы редактирования релиза) не должен оставлять
-  // висящие загрузки — абортим летящий XHR И останавливаем очередь, чтобы цикл не
-  // открывал новые запросы и не дёргал router.refresh() на уже другой странице.
+  // на анмаунте абортим XHR и стопим очередь — иначе цикл дёргает router.refresh() на другой странице
   useEffect(() => {
     const activeXhrs = activeXhrsRef.current;
     return () => {
@@ -116,7 +113,6 @@ export function BatchTrackUpload({
     setUploading(true);
     let ok = 0;
     let fail = 0;
-    // Нумеруем последовательно от текущего «следующего» номера; неуспешные пропускаем.
     let n = nextTrackNumber;
     for (const item of queue) {
       if (cancelledRef.current) return;
@@ -129,7 +125,6 @@ export function BatchTrackUpload({
     if (ok > 0) {
       toast(`Загружено треков: ${ok}${fail ? `, с ошибкой: ${fail}` : ''}. Идёт обработка…`);
       router.refresh();
-      // Успешные строки убираем, ошибки оставляем перед глазами.
       setTimeout(() => {
         setItems((prev) => prev.filter((it) => it.state === 'error'));
       }, 1400);

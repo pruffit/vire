@@ -1,7 +1,4 @@
-/**
- * Pure formatting helpers shared across server and client components.
- * No side effects, no client-only APIs — safe to import from either side.
- */
+// Pure formatting helpers — no side effects or client-only APIs, safe on server and client.
 
 /** Seconds → `m:ss` (e.g. 75 → "1:15"). Floors fractional seconds. */
 export function formatDuration(sec: number): string {
@@ -22,10 +19,7 @@ export function formatCount(n: number): string {
   return String(n);
 }
 
-/**
- * Russian pluralization: picks one/few/many by the count.
- * `plural(n, ['ссылка', 'ссылки', 'ссылок'])`.
- */
+/** Russian pluralization: `plural(n, ['ссылка', 'ссылки', 'ссылок'])`. */
 export function plural(n: number, forms: readonly [string, string, string]): string {
   const mod10 = n % 10;
   const mod100 = n % 100;

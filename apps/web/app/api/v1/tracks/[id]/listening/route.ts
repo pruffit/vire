@@ -26,7 +26,7 @@ export async function POST(req: Request, { params }: Params) {
     const count = await recordListening(trackId, sessionId);
     return NextResponse.json({ count });
   } catch {
-    // Redis недоступен — не роняем воспроизведение, просто 0.
+    // Redis недоступен: не роняем воспроизведение, просто 0.
     return NextResponse.json({ count: 0 });
   }
 }

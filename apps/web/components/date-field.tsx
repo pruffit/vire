@@ -7,15 +7,9 @@ import { fieldClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
 
 /**
- * Единый date picker платформы — замена нативному `<input type=date>`, чей попап
- * рисует браузер. Здесь календарь свой: тёмная тема, RU-локаль, неделя с
- * понедельника.
- *
- * Контракт значения — строка `yyyy-MM-dd` (как у нативного date) или ''. Все
- * вычисления на целых y/m/d, без `Date`-арифметики с таймзонами.
- *
- * Режимы: form (`name` → скрытый input, сабмит через FormData) и controlled
- * (`value` + `onValueChange`).
+ * Date picker — замена нативному `<input type=date>` (попап рисует браузер, мимо темы).
+ * Значение — `yyyy-MM-dd` или ''; вычисления на целых y/m/d, без Date-арифметики с TZ.
+ * Режимы: form (`name` → скрытый input) и controlled (`value`+`onValueChange`).
  */
 
 const MONTHS = [
@@ -66,7 +60,6 @@ export function DateField({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // Месяц, открытый в сетке: из значения, иначе текущий.
   const now = useMemo(() => new Date(), []);
   const initial = parseISO(current);
   const [view, setView] = useState({
@@ -74,8 +67,6 @@ export function DateField({
     m: initial?.m ?? now.getMonth(),
   });
 
-  // Открыть/закрыть. При открытии — перепрыгнуть на месяц выбранной даты
-  // (setState в обработчике, не в эффекте).
   function toggle() {
     if (!open) {
       const p = parseISO(current);
@@ -117,7 +108,6 @@ export function DateField({
     });
   }
 
-  // Сетка месяца: ведущие пустые ячейки (неделя с Пн) + дни.
   const firstWeekday = (new Date(view.y, view.m, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
   const cells: (number | null)[] = [

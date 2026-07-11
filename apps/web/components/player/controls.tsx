@@ -54,8 +54,7 @@ function PlayerToggleButton({
   );
 }
 
-/** Кнопка «Волны» (поток). Вынесена из Controls, чтобы в фуллскрине её можно
- *  было поставить отдельно — зеркально кнопке лайка в строке названия. */
+/** Кнопка «Волны». Вынесена из Controls — в фуллскрине стоит отдельно, зеркально кнопке лайка. */
 export function WaveModeButton() {
   const waveMode = usePlayerStore((s) => s.waveMode);
   return (
@@ -109,10 +108,7 @@ export function RepeatButton() {
   );
 }
 
-/** Кнопка play/pause. Пока плеер в restored-состоянии (трек/позиция
- *  восстановлены из persist, но ещё не подключены к движку), клик не жмёт
- *  паузу у несуществующего audio — он запускает `resumeRestored()`, который
- *  подгрузит манифест и продолжит с сохранённой позиции. */
+/** Play/pause; в restored-состоянии клик зовёт resumeRestored(), а не паузу несуществующего audio. */
 function PlayPauseButton() {
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isLoading = usePlayerStore((s) => s.isLoading);
@@ -121,8 +117,7 @@ function PlayPauseButton() {
   const restored = usePlayerStore((s) => s.restored);
 
   const iconKey = audioError ? 'error' : isLoading ? 'loading' : isPlaying ? 'pause' : 'play';
-  // Буферизация УЖЕ играющего трека кнопку не блокирует: на медленной сети
-  // 'waiting' приходит постоянно, и дизейбл на isLoading делал паузу недоступной.
+  // Буферизация уже играющего трека кнопку не блокирует — на медленной сети 'waiting' приходит постоянно.
   const disabled = audioError || (!hasAudio && !restored) || (isLoading && !isPlaying);
 
   return (
@@ -159,10 +154,7 @@ function PlayPauseButton() {
   );
 }
 
-/** Блок транспорта: prev/play/next + опционально shuffle/wave/repeat по краям.
- *  Используется и в мини-баре ([Shuffle] prev play next [Wave] [Repeat] на sm+,
- *  Shuffle/Repeat скрыты на мобилке через `hideExtrasBelowSm`), и в фуллскрине
- *  ([Shuffle] prev play next [Repeat], всегда видимые). */
+/** Блок транспорта: prev/play/next + опционально shuffle/wave/repeat по краям. */
 export function Controls({
   showWaveMode = true,
   showShuffle = false,

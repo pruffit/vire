@@ -4,11 +4,7 @@ import { useMemo } from 'react';
 import { Select, type SelectGroup } from '@/components/select';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 
-/**
- * Селект жанра — тонкая обёртка над общим `Select`: группы из `GENRE_GROUPS`,
- * поиск, ведущая опция «Без жанра» для сброса. Значение кладётся в скрытый input
- * (`name`), чтобы форма сабмитилась через FormData.
- */
+/** Селект жанра — обёртка над `Select`: группы GENRE_GROUPS, поиск, опция «Без жанра». */
 export function GenreSelect({
   name,
   defaultValue = '',

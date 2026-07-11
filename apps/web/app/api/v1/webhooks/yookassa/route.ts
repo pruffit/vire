@@ -3,11 +3,9 @@ import { confirmPurchaseByExternalId, failPurchaseByExternalId } from '@vire/db'
 import { getPayment } from '@/lib/yookassa';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
-// YooKassa sends webhooks for payment.succeeded and payment.canceled events.
-// We verify each event by re-fetching the payment from the API before acting.
+// каждое событие верифицируется re-fetch'ем платежа из API перед действием
 export async function POST(req: Request) {
-  // Каждый принятый вебхук порождает внешний вызов getPayment — без лимита эндпоинт
-  // флудится произвольными paymentId. Порог с запасом над реальным трафиком ЮKassa.
+  // без лимита эндпоинт флудится произвольными paymentId (каждый = внешний вызов getPayment)
   const rl = await rateLimit(clientKey(req, 'yookassa-webhook'), 120, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
@@ -30,14 +28,13 @@ export async function POST(req: Request) {
       await confirmPurchaseByExternalId(paymentId);
     }
   } else if (event === 'payment.canceled') {
-    // Re-fetch перед действием — иначе подделанный canceled-вебхук мог бы
-    // пометить чужую ожидающую покупку FAILED.
+    // re-fetch — иначе подделанный canceled-вебхук пометил бы чужую покупку FAILED
     const payment = await getPayment(paymentId).catch(() => null);
     if (payment?.status === 'canceled') {
       await failPurchaseByExternalId(paymentId);
     }
   }
 
-  // Always return 200 so YooKassa doesn't retry on unknown events
+  // всегда 200 — чтобы ЮKassa не ретраила неизвестные события
   return NextResponse.json({ ok: true });
 }

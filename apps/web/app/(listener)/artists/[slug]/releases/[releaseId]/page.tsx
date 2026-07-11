@@ -74,8 +74,7 @@ export default async function ReleasePage({ params }: Props) {
   const { artist, release, tracks, releaseAtMs, isReleased, showCountdown } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
-  // SCHEDULED с будущей датой → показываем обратный отсчёт.
-  // Черновики/архив/без даты публично не показываем.
+  // SCHEDULED в будущем — обратный отсчёт; черновик/архив/без даты — 404
   if (!isReleased) {
     if (!showCountdown || releaseAtMs == null) notFound();
     const session = await auth();

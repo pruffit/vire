@@ -1,6 +1,5 @@
-// Прод-миграции: программный мигратор drizzle-orm (без drizzle-kit).
-// Запуск из ops-образа: docker compose run --rm worker \
-//   pnpm --filter @vire/db exec tsx src/migrate.ts
+// Прод-миграции: программный мигратор drizzle-orm (без drizzle-kit), запуск из
+// ops-образа: docker compose run --rm worker pnpm --filter @vire/db exec tsx src/migrate.ts
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';

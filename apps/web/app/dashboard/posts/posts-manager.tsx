@@ -148,7 +148,6 @@ function Composer({
     const ok = await onSubmit(title.trim() || null, trimmed);
     setBusy(false);
     if (ok && !onCancel) {
-      // режим создания — очищаем форму
       setTitle('');
       setBody('');
     }

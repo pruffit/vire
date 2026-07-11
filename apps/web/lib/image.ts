@@ -1,7 +1,5 @@
-// Pure image-header parsing + upload-policy validation. No dependencies,
-// framework-free, unit-testable. We read the real bytes (not the client-provided
-// Content-Type), so a spoofed MIME can't smuggle a non-image — or a wrong format —
-// past validation. Covers the three formats we accept: JPEG, PNG, WebP.
+// Image-header parsing + upload-policy validation (JPEG/PNG/WebP). Reads real bytes,
+// not client-provided Content-Type — a spoofed MIME can't smuggle a wrong format past validation.
 
 export type ImageExt = 'jpg' | 'png' | 'webp';
 
@@ -125,9 +123,8 @@ export const COVER_POLICY: ImagePolicy = {
   maxAspect: 1,
 };
 
-// Широкая обложка профиля артиста: пейзажный формат (~3:1), минимум 400px по меньшей
-// стороне. Потолок стороны 4000px — баннер рендерится высотой ≤320px во всю ширину,
-// этого с запасом хватает на retina; выше — лишний вес в хранилище.
+// Широкая обложка профиля: пейзаж ~3:1, минимум 400px по меньшей стороне; потолок
+// 4000px — с запасом на retina при рендере высотой ≤320px.
 export const HEADER_POLICY: ImagePolicy = {
   label: 'Шапка профиля',
   maxBytes: 8 * 1024 * 1024,

@@ -34,21 +34,14 @@ export interface WaveParams {
   userId: string | null;
 }
 
-// Параметризованный текстовый массив для ANY(...) — значения биндятся как параметры,
-// в SQL-текст попадает только структура ARRAY[$1, $2, ...]::text[].
+// значения биндятся как параметры — в SQL-текст попадает только ARRAY[$1, $2, ...]::text[]
 export function textArrayParam(values: readonly string[]): SQL {
   if (values.length === 0) return sql`ARRAY[]::text[]`;
   return sql`ARRAY[${sql.join(values.map((v) => sql`${v}`), sql`, `)}]::text[]`;
 }
 
-// Жанровый терм скоринга: градуированное точное пересечение (доля совпавших из набора
-// × exactWeight) ИЛИ, если точного нет, флэт-бонус за принадлежность тому же семейству
-// (familyWeight). GREATEST, а не сумма — точный жанр входит и в своё семейство, сложить
-// оба = двойной счёт одного сигнала. Семейный терм — булев EXISTS, НЕ доля от размера
-// семьи: семьи по 4–36 жанров схлопнули бы вес почти в ноль; нужен факт «того же
-// семейства», а не насыщение по числу совпавших. Веса — SQL-литералы (sql.raw), не
-// bind-параметры: `CASE … THEN $n ELSE 0` Postgres вывел бы как integer и округлил бы
-// 0.2 → 0. exactValues всегда ⊆ familyValues (семья включает сами исходные жанры).
+// GREATEST(точный, семейный), не сумма — точный жанр входит в свою семью, иначе двойной счёт.
+// Веса — sql.raw, не bind-параметры: CASE...THEN $n Postgres вывел бы как integer, округлив 0.2 → 0.
 function genreOverlapTerm(
   exactValues: readonly string[],
   familyValues: readonly string[],
@@ -151,15 +144,7 @@ export async function getArtistIdsForTracks(trackIds: string[]): Promise<string[
   return Array.from(new Set(rows.map((r) => r.artistId)));
 }
 
-/**
- * Волна: подбирает следующие треки взвешенным SQL-скорингом (без ML).
- *
- * Seed-режим (currentTrackId=null): вошедшие ранжируются по вкусу (настроения/жанры
- * + качество), анонимы — по популярности за 30 дней со случайной ротацией.
- * Иначе — похожесть с текущим треком (mood/bpm/тональность/жанр) + поведенческие
- * сигналы (качество, вовлечённость, вкус, анти-усталость) + разнообразие артистов
- * + сессионный буст по выбранному в начале сессии mood/genre.
- */
+/** Подбирает следующие треки взвешенным SQL-скорингом (без ML) — алгоритм см. docs/features/wave.md. */
 export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
   const limit = Math.max(1, Math.min(5, p.limit));
   const excludeIds = Array.from(new Set([p.currentTrackId, ...p.excludeIds].filter((v): v is string => Boolean(v))));
@@ -170,10 +155,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       ? sql`EXISTS (SELECT 1 FROM track_moods tmf WHERE tmf.track_id = tracks.id AND tmf.mood = ${m})`
       : undefined;
 
-  // Фильтр по жанру, расширенному до всего семейства: слушатель выбрал чип «Dub Techno» —
-  // едет всё техно-семейство, а не только точный подшанр (иначе узкие жанры после
-  // расширения enum сильно разрежают выдачу). Фолбэк на releases.genre — только если
-  // у трека нет собственных track_genres.
+  // расширяем до всего семейства (не только точный подшанр) — иначе узкие жанры разрежают выдачу
   const genreFamilyFilterFor = (g: TrackGenre | null): SQL | undefined => {
     if (!g) return undefined;
     const family = expandGenresToFamilies([g]);
@@ -189,10 +171,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       )`;
   };
 
-  // Точный жанр — верхний ярус сортировки (поверх family-фильтра): волна по чипу
-  // сначала исчерпывает треки с самим жанром (вкл. фолбэк на releases.genre у
-  // бестеговых) и только потом доливает соседей по семейству. Без яруса вкус/шум
-  // топили точный жанр — волна по «Boom Bap» стартовала с трэпа.
+  // верхний ярус сортировки — точный жанр исчерпывается раньше соседей по семейству
   const genreExactTierFor = (g: TrackGenre | null): SQL<number> =>
     g
       ? sql<number>`CASE
@@ -225,8 +204,6 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
           ) / ${tasteMoodValues.length} * 0.25`
         : sql<number>`0`;
 
-      // Точный вкус (доля из топ-жанров × 0.4) и семейный вкус (флэт 0.2, половина) —
-      // см. genreOverlapTerm: GREATEST, семейный терм булев (не доля от размера семьи).
       const tasteGenreScoreSeed = genreOverlapTerm(
         tasteGenreValues,
         expandGenresToFamilies(tasteGenreValues),
@@ -313,8 +290,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       END`
     : sql<number>`0`;
 
-  // Тональность: нормализованный musical_key кандидата против наборов совместимых
-  // написаний (точные/соседние по кругу квинт), посчитанных на стороне вызова.
+  // musical_key кандидата против наборов совместимых написаний (точные/соседние по кругу квинт)
   const keyScore = p.keySets && (p.keySets.exact.length > 0 || p.keySets.neighbor.length > 0)
     ? sql<number>`CASE
         WHEN lower(regexp_replace(${trackAudio.musicalKey}, '[\\s-]', '', 'g')) = ANY(${textArrayParam(p.keySets.exact)}) THEN 0.5
@@ -323,9 +299,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       END`
     : sql<number>`0`;
 
-  // Единый жанровый сигнал: приоритет — жанры трека (track_genres), доля совпавших,
-  // вес до 0.4; фолбэк на жанр релиза (0.3) — только если у кандидата нет track_genres.
-  // Плюс семейный уровень (флэт 0.2, половина) от текущего трека — см. genreOverlapTerm.
+  // приоритет track_genres кандидата; фолбэк на releases.genre только если своих тегов нет
   const trackGenreOverlap = genreOverlapTerm(
     trackGenreValues,
     expandGenresToFamilies(trackGenreValues),
@@ -352,8 +326,6 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       ) / ${tasteMoodValues.length} * 0.25`
     : sql<number>`0`;
 
-  // Профиль вкуса по жанрам — аналог tasteMoodScore, точный вес до 0.25; плюс семейный
-  // уровень (флэт 0.125, половина) — см. genreOverlapTerm.
   const tasteGenreScore = genreOverlapTerm(
     tasteGenreValues,
     expandGenresToFamilies(tasteGenreValues),
@@ -376,19 +348,12 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
     ? sql<number>`CASE WHEN ${artistProfiles.id}::text = ANY(${textArrayParam(p.recentArtistIds)}) THEN -0.4 ELSE 0 END`
     : sql<number>`0`;
 
-  // Сессионных mood/genre-бустов больше нет: закреплённый seed — жёсткий фильтр
-  // (WHERE ниже), внутри пула буст был бы константой; точный жанр над семейством
-  // ранжирует ярус genreExactTierFor в ORDER BY.
   const totalScore = sql<number>`${moodScore} + ${bpmScore} + ${keyScore} + ${genreScore}
     + ${tasteMoodScore} + ${tasteGenreScore} + ${qualityScore} + ${momentScore}
     + ${fatiguePenalty} + ${diversityPenalty}
     + random() * 0.15`;
 
-  // Закреплённый seed сессии — жёсткий фильтр, а не только буст: волна, запущенная
-  // по чипу жанра/настроения, должна держаться внутри него всю сессию. Без этого
-  // дозапрос буфера (режим похожести) ранжировал по BPM/тональности/вкусу и легко
-  // выдавал трек чужого жанра — sessionGenreBoost (≤0.35) перебивался остальными
-  // термами. Незасидённая волна (кнопка без чипа) — sessionMood/Genre=null, фильтра нет.
+  // закреплённый seed сессии — жёсткий фильтр, не буст: волна держится внутри жанра/настроения всю сессию
   const rows = await db
     .select({ ...selectShape, score: totalScore })
     .from(tracks)

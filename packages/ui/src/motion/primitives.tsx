@@ -4,15 +4,8 @@ import * as React from 'react';
 import { motion, type HTMLMotionProps, type Variants } from 'motion/react';
 import { spring, stagger as staggerTokens } from './tokens';
 
-/**
- * Переиспользуемые motion-обёртки — публичный «язык движения» Vire.
- *
- * Все компоненты клиентские, но контент передаётся через `children`, который
- * приходит уже отрендеренным на сервере. Поэтому текст и разметка остаются в
- * исходном HTML (важно для SEO) — анимируется только обёртка.
- *
- * Reduced-motion соблюдается глобально через <MotionProvider reducedMotion="user">.
- */
+// Компоненты клиентские, но children приходит уже отрендеренным сервером —
+// анимируется только обёртка, разметка остаётся в исходном HTML (SEO).
 
 type DivProps = HTMLMotionProps<'div'>;
 

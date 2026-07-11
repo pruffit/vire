@@ -22,7 +22,7 @@ export function CookieBanner() {
   const [dismissed, setDismissed] = useState(false);
   // useSyncExternalStore: сервер → false (пустой снепшот), клиент → читает localStorage
   const storageNotDismissed = useSyncExternalStore(
-    () => () => {}, // подписка не нужна — значение не меняется извне
+    () => () => {}, // подписка не нужна: значение не меняется извне
     getStorageSnapshot,
     getServerSnapshot,
   );

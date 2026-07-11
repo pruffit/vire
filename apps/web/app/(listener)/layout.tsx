@@ -18,12 +18,8 @@ export default async function ListenerLayout({ children }: { children: React.Rea
       ])
     : [[], [], [], null];
 
-  // Двухпанельная оболочка (эталон — admin/layout.tsx): на десктопе сайдбар закреплён,
-  // скролл живёт ТОЛЬКО во внутренней панели (а не в общем #main-content), иначе
-  // sticky-сайдбар в общей скролл-области даёт смазывание контента при быстрой
-  // прокрутке. На мобиле сайдбар скрыт, панель без overflow — скроллит внешняя область
-  // как раньше. У панели нет горизонтального паддинга: full-bleed герои тянутся на
-  // её ширину, отступы дают сами страницы.
+  // desktop: сайдбар закреплён, скролл только во внутренней панели — иначе sticky-сайдбар
+  // в общем #main-content смазывает контент при быстрой прокрутке
   return (
     <div className="flex min-h-full flex-col md:h-full md:flex-row">
       <ListenerSidebar
@@ -42,12 +38,8 @@ export default async function ListenerLayout({ children }: { children: React.Rea
         }
       />
 
-      {/* Скролл-пейн — обычный div: главный лендмарк страницы рендерят сами страницы.
-          suppressHydrationWarning: ScrollState (capture-листенер на document) вешает
-          класс `is-scrolling` напрямую через classList. Это поддерево за <Suspense>
-          гидрируется позже корня — если scroll прилетает в окне между привязкой
-          листенера и гидрацией, DOM получает класс, которого нет в клиентском рендере,
-          и mismatch запускает recovery-перерисовку, ломающую soft-навигацию роутера. */}
+      {/* suppressHydrationWarning: ScrollState вешает is-scrolling через classList — это поддерево
+          гидрируется позже корня, ранний scroll даёт mismatch и ломает soft-навигацию роутера */}
       <div data-scroll-area suppressHydrationWarning className="flex min-w-0 flex-1 flex-col md:min-h-0 md:overflow-x-clip md:overflow-y-auto">
         <div className="flex-1">{children}</div>
         <Footer />

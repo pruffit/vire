@@ -14,7 +14,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Rate limit: 20 uploads per hour per IP
   const rl = await rateLimit(clientKey(req, 'upload'), 20, 3600);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
@@ -55,7 +54,6 @@ export async function POST(req: Request) {
 
   const credits = parseCredits(formData.get('credits'));
 
-  // Мастер принимаем в WAV / FLAC / MP3 — определяем по расширению.
   const ext = parseAudioExt(file.name);
   if (!ext) {
     return NextResponse.json({ error: 'Файл должен быть WAV, FLAC или MP3' }, { status: 400 });
@@ -65,16 +63,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Файл слишком большой (макс. 300 МБ)' }, { status: 413 });
   }
 
-  // Читаем только начало файла (хватает для magic bytes и WAV-заголовка fmt),
-  // не буферизуя весь файл ради валидации.
   const header = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
   if (!validateMagicBytes(header, ext)) {
     return NextResponse.json({ error: 'Формат файла не соответствует расширению' }, { status: 400 });
   }
 
-  // Кодек WAV не ограничиваем: воркер всё равно прогоняет мастер через ffmpeg
-  // (как MP3/FLAC), а он декодирует и сжатый, и 32-бит float — типичный экспорт DAW.
-  // Раньше тут стоял жёсткий PCM-гейт; он зря отбивал валидные мастера.
+  // кодек WAV не ограничиваем — ffmpeg в воркере декодирует и сжатый, и 32-бит float (типичный экспорт DAW)
 
   const trackId = crypto.randomUUID();
   const sourceKey = `tracks/${trackId}/source.${ext}`;
@@ -85,7 +79,6 @@ export async function POST(req: Request) {
   };
   const contentType = CONTENT_TYPE[ext];
 
-  // Загружаем мастер в vault перед созданием записи в БД
   const buffer = Buffer.from(await file.arrayBuffer());
   await uploadBuffer(sourceKey, buffer, contentType);
 

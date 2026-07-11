@@ -2,10 +2,7 @@ import { desc, eq } from 'drizzle-orm';
 import { db } from '../client';
 import { artistPosts } from '../schema';
 
-/**
- * Анонсы/новости артиста — канал коммуникации с аудиторией помимо музыки.
- * CRUD-функции; проверка владения (пост принадлежит профилю) — в роут-хендлере.
- */
+// Владение (пост принадлежит профилю) проверяется в роут-хендлере, не здесь.
 
 export interface ArtistPost {
   id: string;
@@ -27,7 +24,6 @@ function mapPost(row: typeof artistPosts.$inferSelect): ArtistPost {
   };
 }
 
-/** Записи артиста, свежие сверху. */
 export async function listArtistPosts(
   artistProfileId: string,
   limit = 50,

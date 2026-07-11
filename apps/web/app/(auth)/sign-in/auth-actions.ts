@@ -16,7 +16,7 @@ const registerSchema = z.object({
   name: z.string().min(2).max(60),
   email: z.string().email(),
   password: z.string().min(8).max(100),
-  // Явное согласие на обработку ПДн — обязательно (152-ФЗ).
+  // Явное согласие на обработку ПДн: обязательно (152-ФЗ).
   consent: z.literal('on'),
   callbackUrl: z.string().optional(),
 });
@@ -45,7 +45,7 @@ export async function loginAction(
       if (error.type === 'CredentialsSignin') return 'Неверный email или пароль.';
       return 'Ошибка входа. Попробуй ещё раз.';
     }
-    throw error; // NEXT_REDIRECT — пробрасываем, Next.js сам обработает
+    throw error; // NEXT_REDIRECT: пробрасываем, Next.js сам обработает
   }
   return null;
 }

@@ -8,11 +8,7 @@ import { spring } from '@vire/ui/motion';
 import { Tilt } from './tilt';
 import { Icon } from '@/components/icon';
 
-/**
- * Обложка, которая разворачивается в полноэкранный просмотр — тем же приёмом, что
- * и плеер: shared-element (layoutId) морфит маленькую обложку в большую, фон
- * blur-затемняется, закрытие свайпом/кликом/Esc. cursor-zoom-in подсказывает.
- */
+/** Обложка с разворотом в полноэкранный просмотр: shared-element (layoutId), закрытие свайп/клик/Esc. */
 export function ZoomableCover({
   src,
   alt,

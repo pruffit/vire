@@ -22,11 +22,7 @@ export interface ArtistLink {
   label?: string;
 }
 
-/**
- * Smart-link лендинг (bandlink) — самостоятельная страница релиза со ссылками на
- * стриминги/соцсети. Не требует загрузки музыки в Vire.
- * Публичный URL: /smartlink/{artistSlug}/{slug}.
- */
+/** Smart-link лендинг (bandlink): страница релиза со ссылками на стриминги/соцсети, без загрузки в Vire. */
 export interface SmartLink {
   id: string;
   artistProfileId: string;
@@ -35,7 +31,7 @@ export interface SmartLink {
   subtitle: string | null;
   coverUrl: string | null;
   releaseDate: Date | null;
-  /** Фаза B: привязка к релизу Vire (опц.) — даёт кнопку «Слушать/Пресейв на Vire». */
+  /** Привязка к релизу Vire (опц.) — даёт кнопку «Слушать/Пресейв на Vire». */
   releaseId: string | null;
   links: ArtistLink[];
   isPublished: boolean;

@@ -9,11 +9,7 @@ import { usePlayerHotkeys } from './use-player-hotkeys';
 import { MiniBar } from './mini-bar';
 import { FullscreenPlayer } from './fullscreen';
 
-/**
- * Координатор глобального плеера: мини-бар (поток app-shell, h-16) + фуллскрин
- * (fixed-оверлей). Сам не рисует ничего — раскладка/дизайн внутри mini-bar.tsx
- * и fullscreen.tsx, очередь — в queue-panel.tsx.
- */
+/** Координатор глобального плеера: мини-бар (поток app-shell) + фуллскрин (fixed-оверлей). */
 export function Player() {
   const [expanded, setExpanded] = useState(false);
   const [queueOnOpen, setQueueOnOpen] = useState(false);
@@ -37,7 +33,6 @@ export function Player() {
 
   return (
     <>
-      {/* Мини-бар: всплывает снизу при появлении трека, уезжает вниз при сбросе. */}
       <AnimatePresence>
         {track && (
           <motion.div
@@ -58,7 +53,6 @@ export function Player() {
         )}
       </AnimatePresence>
 
-      {/* Фуллскрин: обложка разворачивается из мини-бара (shared layoutId). */}
       <AnimatePresence>
         {expanded && track && (
           <FullscreenPlayer onClose={() => setExpanded(false)} initialShowQueue={queueOnOpen} />

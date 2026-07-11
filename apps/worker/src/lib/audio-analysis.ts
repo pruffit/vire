@@ -6,11 +6,10 @@ export interface AudioFeatures {
   musicalKey: string | null;
 }
 
-const SR = 22050; // sample rate for analysis (Hz)
+const SR = 22050;
 
-// Decode audio to mono float32 PCM at заданной частоте (первые maxSec секунд).
 // Общий декодер поверх fluent-ffmpeg — переиспользуется классификатором жанра
-// (там нужно 16кГц под discogs-effnet, здесь — 22050 под BPM/key).
+// (там 16кГц под discogs-effnet, здесь 22050 под BPM/key).
 export function decodeMonoPcm(
   inputPath: string,
   sampleRate: number,

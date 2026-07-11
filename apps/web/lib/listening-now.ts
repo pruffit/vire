@@ -5,10 +5,7 @@ export interface ListeningNowItem extends DiscoveryTrack {
   listeners: number;
 }
 
-/**
- * Треки, которые слушают прямо сейчас: live-счётчики из Redis + публичные
- * данные треков из БД. Деградирует до пустого списка при сбое Redis.
- */
+/** Треки «слушают сейчас»: live-счётчики из Redis + данные из БД; сбой Redis → пустой список. */
 export async function getListeningNow(limit = 6): Promise<ListeningNowItem[]> {
   const live = await listListening(limit * 2).catch(() => []);
   if (live.length === 0) return [];

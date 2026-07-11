@@ -9,11 +9,7 @@ import { fieldClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
 import { useStableListKeys } from '@/lib/use-stable-list-keys';
 
-/**
- * Редактор видео (YouTube/VK) — только ссылка. Название ролика подтягивается с
- * площадки на сервере при сохранении (см. lib/video-meta), поэтому текстового
- * поля тайтла нет. Известный тайтл показываем подписью под ссылкой.
- */
+/** Редактор видео (YouTube/VK) — только ссылка; тайтл подтягивает сервер (lib/video-meta). */
 export function VideosEditor({
   videos,
   onChange,

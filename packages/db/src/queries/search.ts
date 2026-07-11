@@ -62,8 +62,7 @@ export async function searchAll(query: string, limit = 5): Promise<SearchResults
         verified: artistProfiles.verified,
       })
       .from(artistProfiles)
-      // Только артисты с хотя бы одним треком в опубликованном релизе — пустые
-      // профили в поиске не показываем. Внешняя таблица литералом (см. CLAUDE.md).
+      // Только артисты с треком в опубликованном релизе: пустые профили в поиске не показываем.
       .where(
         and(
           eq(artistProfiles.isActive, true),

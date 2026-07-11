@@ -1,11 +1,7 @@
 import { parseEmbed } from '@/lib/embed';
 import { fetchVkTitle } from '@/lib/vk-api';
 
-/**
- * Название ролика по ссылке (server-only): YouTube — через keyless oEmbed,
- * VK — через video.get (нужен VK_SERVICE_TOKEN). Любой сбой → '' (подпись
- * просто останется пустой). Так артисту не нужно вводить тайтл руками.
- */
+/** Название ролика по ссылке (server-only): YouTube — keyless oEmbed, VK — video.get (VK_SERVICE_TOKEN). Любой сбой → '' (подпись останется пустой). */
 export async function resolveVideoTitle(url: string): Promise<string> {
   const embed = parseEmbed(url);
   if (!embed) return '';

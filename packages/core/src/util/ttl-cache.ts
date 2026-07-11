@@ -8,11 +8,7 @@ export interface TtlCache<K, V> {
   clear(): void;
 }
 
-/**
- * In-memory TTL-кэш на процесс (не для мульти-инстанс деплоя — состояние не
- * шарится). При переполнении выбрасывает протухшие записи, затем самые
- * старые (порядок вставки Map).
- */
+// In-memory TTL-кэш на процесс (не для мульти-инстанс — состояние не шарится)
 export function createTtlCache<K, V>(options: TtlCacheOptions): TtlCache<K, V> {
   const { ttlMs, maxSize } = options;
   const store = new Map<K, { value: V; expiresAt: number }>();

@@ -4,13 +4,8 @@ import { fieldClass, selectClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
 
 /**
- * Единое числовое поле платформы — вместо нативного `<input type=number>` с
- * браузерным спиннером (стрелки мимо темы). Нативный спиннер скрыт, рядом —
- * аккуратные кнопки +/− в теме. Стрелки ↑/↓ с клавиатуры тоже работают.
- *
- * `value: number | null` (null = пусто). `onChange` — на каждый ввод;
- * `onCommit` — на blur/Enter/шаг (для коммита на сервер). Значение зажимается в
- * [min, max] при шаге и на blur.
+ * Числовое поле со своими кнопками +/− (нативный спиннер мимо темы, скрыт).
+ * `value: null` = пусто; `onChange` на каждый ввод, `onCommit` на blur/Enter/шаг.
  */
 
 interface Props {

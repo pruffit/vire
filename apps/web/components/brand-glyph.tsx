@@ -3,10 +3,8 @@ import { PLATFORM_BRAND } from '@/components/brand-icon';
 import { BRAND_GLYPH_NAMES } from './icon-manifest.generated';
 
 /**
- * Компактный квадратный глиф бренда для мелких строк редактора (профиль,
- * смартлинк-форма). Файлы: public/icons/brands-glyph/<name>.svg (источник —
- * icons/brand-glyph). Это НЕ вордмарки из BrandIcon — те шире и нужны на
- * лендингах смартлинков.
+ * Компактный квадратный глиф бренда (public/icons/brands-glyph/<name>.svg) —
+ * не вордмарки из BrandIcon, те шире и нужны на лендингах смартлинков.
  */
 const GLYPH_SET = new Set<string>(BRAND_GLYPH_NAMES);
 

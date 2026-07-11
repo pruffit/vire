@@ -7,13 +7,10 @@ import { spring } from '@vire/ui/motion';
 import { Icon, type IconName } from './icon';
 import { BrandIcon, type BrandName } from './brand-icon';
 
-// Пасхалки. Безвредные, выключаются сами, не мешают UI и доступности
-// (декоративный слой pointer-events-none). Без вывода в консоль.
-
 /** Событие запуска «праздника» (нотный дождь) — можно слать из любого места. */
 export const PARTY_EVENT = 'vire:party';
 
-// e.code (а не e.key) — чтобы код работал на любой раскладке клавиатуры.
+// e.code, не e.key — работает на любой раскладке
 const KONAMI = [
   'ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown',
   'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA',
@@ -32,7 +29,6 @@ export function EasterEggs() {
     partyTimerRef.current = setTimeout(() => setParty(false), 3400);
   };
 
-  // Приветствие для тех, кто заглянул в devtools.
   useEffect(() => {
     console.log('%cVire ♪', 'font:800 30px/1 system-ui;letter-spacing:1px');
     console.log(
@@ -42,7 +38,6 @@ export function EasterEggs() {
     console.log('%c↑ ↑ ↓ ↓ ← → ← → B A', 'font-family:monospace;color:#7c7c7c');
   }, []);
 
-  // Konami-код → секретный попап.
   useEffect(() => {
     let buf: string[] = [];
     const onKey = (e: KeyboardEvent) => {
@@ -58,7 +53,6 @@ export function EasterEggs() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Внешний триггер (тройной клик по «© Vire» в футере) → нотный дождь.
   useEffect(() => {
     const onParty = () => startParty();
     window.addEventListener(PARTY_EVENT, onParty);
@@ -183,10 +177,7 @@ function NoteRain() {
   );
 }
 
-/**
- * Обёртка-триггер: тройной клик по содержимому запускает нотный дождь.
- * Используется для «© Vire» в футере — скрытый интерактивный прикол.
- */
+/** Тройной клик по содержимому запускает нотный дождь («© Vire» в футере). */
 export function PartyText({ children, className }: { children: ReactNode; className?: string }) {
   const clicks = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

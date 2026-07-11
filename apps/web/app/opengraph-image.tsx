@@ -1,9 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { SITE_NAME, SITE_DESCRIPTION } from '@/lib/site';
 
-// Дефолтная OG-картинка платформы. Применяется как fallback ко всем маршрутам,
-// которые не задают свою openGraph.images (главная, /artists, артисты без аватара).
-// Раньше у этих страниц ogImage был пустым → seoStatus: error в аудите.
+// fallback OG-картинка для маршрутов без своей openGraph.images
 export const runtime = 'nodejs';
 export const alt = `${SITE_NAME} — независимая музыкальная площадка`;
 export const size = { width: 1200, height: 630 };

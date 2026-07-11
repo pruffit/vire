@@ -41,9 +41,7 @@ function DailyChart({ daily }: { daily: AdminDailyPlays[] }) {
       }
     >
       <Panel className="p-5">
-        {/* Столбцы: каждый — h-full в ряду фиксированной высоты, иначе height:%
-            схлопывается (родитель flex-элемент без явной высоты). Даты — отдельным
-            рядом ниже, выровнены по тем же flex-1 колонкам. */}
+        {/* h-36 задаёт явную высоту ряда — иначе height:% столбцов схлопывается */}
         <div className="flex items-end gap-1.5 h-36">
           {daily.map((d) => {
             const h = d.plays === 0 ? 2 : Math.max(6, Math.round((d.plays / max) * 100));

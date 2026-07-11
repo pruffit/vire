@@ -14,7 +14,7 @@ export async function getFollowerEmails(artistProfileId: string): Promise<Follow
     .innerJoin(users, eq(users.id, follows.userId))
     .where(eq(follows.artistProfileId, artistProfileId));
 
-  // Telegram-пользователи не имеют email — их пропускаем для рассылок
+  // Telegram-пользователи не имеют email, их пропускаем для рассылок
   return rows.filter((r): r is FollowerEmail => r.email !== null);
 }
 
@@ -26,12 +26,7 @@ export interface TrackOwnerContact {
   artistSlug: string;
 }
 
-/**
- * Контакт владельца трека (артиста) для сервисных уведомлений — например, о
- * падении транскодинга. Путь: track → release → artist_profile → user.
- * Возвращает null, если у владельца нет email (теоретически невозможно для
- * артиста, но защищаемся).
- */
+// null, если у владельца нет email (теоретически невозможно для артиста, но защищаемся)
 export async function getTrackOwnerContact(trackId: string): Promise<TrackOwnerContact | null> {
   const [row] = await db
     .select({

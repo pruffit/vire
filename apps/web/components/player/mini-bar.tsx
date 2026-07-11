@@ -16,11 +16,7 @@ import { useIsDesktopPointer } from '@/lib/is-desktop-pointer';
 import { useAudioTime } from '@/lib/player/use-audio-time';
 import { ratioFromX } from '@/lib/player/waveform-math';
 
-/**
- * Мини-бар: закреплён над плеером в потоке app-shell. `ticking=false` —
- * фуллскрин открыт, живые части (прогресс/тайминги) замирают на последнем
- * значении вместо параллельного rAF-цикла со своим в фуллскрине (B4).
- */
+/** Мини-бар. `ticking=false` (фуллскрин открыт) замораживает живые части — не крутить два rAF-цикла. */
 export function MiniBar({
   onExpandCover,
   onOpenQueue,
@@ -35,7 +31,7 @@ export function MiniBar({
 
   return (
     <div className="relative h-full">
-      {/* Ambient — размытая обложка создаёт цветовой ореол без JS-извлечения цвета */}
+      {/* Размытая обложка даёт цветовой ореол без JS-извлечения цвета */}
       {track.coverUrl && (
         <div
           aria-hidden="true"
@@ -50,7 +46,6 @@ export function MiniBar({
         />
       )}
       <div className="absolute inset-0 bg-card/88" />
-      {/* Акцентный подсвет снизу — мини-бар видимо «принадлежит» текущему треку */}
       <div
         aria-hidden="true"
         className="absolute inset-0"
@@ -134,7 +129,6 @@ function MiniBarTrailing({ active, onOpenQueue }: { active: boolean; onOpenQueue
   const volume = usePlayerStore((s) => s.volume);
   const queueLength = usePlayerStore((s) => s.queue.length);
 
-  // Ползунок громкости — только на десктопе (мышь/трекпад), см. is-desktop-pointer.
   const showVolume = useIsDesktopPointer();
 
   return (
@@ -180,15 +174,13 @@ function MiniCurrentTimeLabel({ active }: { active: boolean }) {
   );
 }
 
-/** Тонкая линия прогресса по верхней кромке бара — единственная перемотка на
- *  мобилке, но работает одинаково и на десктопе (клик/драг по всей ширине). */
+/** Линия прогресса по верхней кромке бара — единственная перемотка на мобилке. */
 function TopProgressLine({ active }: { active: boolean }) {
   const currentTime = useAudioTime(4, active);
   const duration = usePlayerStore((s) => s.duration);
   const ref = useRef<HTMLDivElement>(null);
   const [scrub, setScrub] = useState<number | null>(null);
-  // Утолщение по hover — только на десктопе: на таче нет реального hover, и
-  // залипающий :hover после тапа выглядел бы как забытая полоска.
+  // Hover-утолщение только на десктопе — на таче :hover залипает после тапа.
   const isDesktop = useIsDesktopPointer();
   const shown = scrub ?? (duration > 0 ? currentTime / duration : 0);
 
@@ -210,7 +202,7 @@ function TopProgressLine({ active }: { active: boolean }) {
   const dragging = scrub !== null;
 
   return (
-    // Зона касания 12px по высоте (видимая полоска — 2px у самой кромки).
+    // Зона касания 12px, видимая полоска — 2px у кромки.
     <div
       ref={ref}
       role="slider"

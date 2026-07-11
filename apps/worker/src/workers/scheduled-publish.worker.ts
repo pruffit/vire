@@ -9,19 +9,14 @@ import {
 } from '@vire/core';
 import { connection } from '../queues/connection.js';
 
-// Планировщик прогоняется по cron (см. index.ts). Находит SCHEDULED-релизы с
-// наступившей датой, атомарно публикует их и ставит уведомление подписчикам
-// (notify-release) + исполнение пресейвов (fulfill-presave). До этого
-// запланированные релизы становились «в эфире» по дате неявно (через предикаты
-// запросов), но писем подписчикам при авто-выходе не уходило вовсе — это чинит.
+// Cron (см. index.ts): находит SCHEDULED-релизы с наступившей датой, атомарно
+// публикует и ставит уведомление подписчикам + исполнение пресейвов.
 const notifyQueue = new Queue<NotifyReleaseJobData>(QUEUE_NOTIFY_RELEASE, { connection });
 const presaveQueue = new Queue<FulfillPresaveJobData>(QUEUE_FULFILL_PRESAVE, { connection });
 
-// Уведомляем (письма подписчикам + пресейверам) только если релиз вышел недавно.
-// Здоровый воркер ловит дату в пределах минуты, так что окна с запасом хватает.
-// Защита от спама на первом прогоне/после простоя: легаси SCHEDULED-релизы с
-// давно прошедшей датой публикуются «тихо», без рассылки задним числом.
-const NOTIFY_WINDOW_MS = 60 * 60 * 1000; // 1 час
+// Уведомляем только если релиз вышел недавно — защита от спама на первом прогоне/после
+// простоя: легаси SCHEDULED-релизы с давно прошедшей датой публикуются тихо.
+const NOTIFY_WINDOW_MS = 60 * 60 * 1000;
 
 async function handle(job: Job): Promise<void> {
   const due = await findDueScheduledReleases();

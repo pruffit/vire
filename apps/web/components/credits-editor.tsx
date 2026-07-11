@@ -19,13 +19,8 @@ const ROLES: { value: ContributorRole; label: string }[] = [
 const MAX = 20;
 
 /**
- * Редактор кредитов трека — имя + роль. Два режима:
- *   • неуправляемый (`trackId`) — своя кнопка «Сохранить» → PATCH /tracks/[id]
- *     (дашборд артиста, каждое поле персистится отдельно);
- *   • управляемый (`onChange`) — состояние поднимается наверх, кнопки нет:
- *     родитель сам сохраняет батчем (админ-форма трека, один общий «Сохранить»).
- * Роль выбирается пилюлями (как жанры/настроения) — без нативного селекта,
- * удобнее на телефоне. При пустом списке предлагаем добавить артиста исполнителем.
+ * Редактор кредитов трека (имя + роль). Режимы: неуправляемый (`trackId`) — своя
+ * кнопка «Сохранить» → PATCH; управляемый (`onChange`) — родитель сохраняет батчем.
  */
 type CreditsEditorProps = {
   initial: TrackCredit[];
@@ -44,8 +39,6 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Управляемый режим — лифтим состояние наверх сразу; неуправляемый — гасим
-  // отметку «сохранено» (изменения ещё не отправлены).
   function apply(next: (TrackCredit & { _id: number })[]) {
     setCredits(next);
     if (controlled) onChange!(next.map((c) => ({ name: c.name, role: c.role })));

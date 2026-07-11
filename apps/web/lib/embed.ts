@@ -10,11 +10,7 @@ export interface EmbedInfo {
   thumbnailUrl: string | null;
 }
 
-/**
- * Разбирает ссылку на видео в структуру для кастомного плеера-фасада:
- * платформа, id, embed-URL и постер. Поддержка YouTube (watch/youtu.be/shorts)
- * и VK (video{oid}_{id} в пути или ?z=).
- */
+/** Разбирает ссылку на видео (YouTube watch/youtu.be/shorts, VK video{oid}_{id} в пути или ?z=) в платформу/id/embed-URL/постер для плеера-фасада. */
 export function parseEmbed(url: string): EmbedInfo | null {
   try {
     const u = new URL(url);

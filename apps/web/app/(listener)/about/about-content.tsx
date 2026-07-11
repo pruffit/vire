@@ -213,13 +213,10 @@ function DemoCard({ icon, title, children }: { icon: IconName; title: string; ch
 }
 
 function Equalizer() {
-  // Рендерим только после маунта: motion по-разному сериализует transform на
-  // сервере и клиенте → иначе рассинхрон гидрации. SSR отдаёт плейсхолдер той же
-  // высоты (useSyncExternalStore: сервер → false, клиент → true, без warning).
+  // motion сериализует transform по-разному на сервере и клиенте — рендерим бары только после маунта
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
   if (!mounted) return <div className="h-12" />;
 
-  // Детерминированные высоты (формула от индекса), «живость» — зацикленная анимация.
   const bars = Array.from({ length: 28 }, (_, i) => 0.25 + 0.7 * Math.abs(Math.sin((i + 1) * 1.27)));
   return (
     <div className="flex h-12 items-end gap-1">

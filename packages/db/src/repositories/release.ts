@@ -99,7 +99,7 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
       .set({
         status,
         updatedAt: new Date(),
-        // Штампуем момент выхода один раз — coalesce не даёт перезаписать его при
+        // Штампуем момент выхода один раз: coalesce не даёт перезаписать его при
         // повторной публикации (PUBLISHED → ARCHIVED → PUBLISHED).
         ...(status === 'PUBLISHED' && {
           publishedAt: sql`coalesce(${releases.publishedAt}, now())`,
@@ -135,7 +135,7 @@ export class DrizzleReleaseRepository implements IReleaseRepository {
 
       if (trackRows.length > 0) {
         const ids = trackRows.map((r) => r.id);
-        // FK без ON DELETE CASCADE — чистим зависимые строки вручную.
+        // FK без ON DELETE CASCADE: чистим зависимые строки вручную.
         // play_events и purchases намеренно не трогаем: аналитика и история покупок.
         await tx.delete(trackAudio).where(inArray(trackAudio.trackId, ids));
         await tx.delete(trackContributors).where(inArray(trackContributors.trackId, ids));

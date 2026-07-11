@@ -8,10 +8,6 @@ export async function getUserCreatedAt(userId: string): Promise<Date | null> {
   return rows[0]?.createdAt ?? null;
 }
 
-/**
- * Актуальные имя/аватар/дата из БД. Нужно потому что при JWT-стратегии сессия
- * не перечитывает users — после смены имени/фото токен остаётся устаревшим.
- */
 export async function getUserProfile(
   userId: string,
 ): Promise<{ name: string | null; image: string | null; createdAt: Date | null } | null> {

@@ -1,7 +1,6 @@
 import type { FaqItem } from './structured-data';
 
-// Единый источник для видимого FAQ-блока и FAQPage JSON-LD. Google требует, чтобы
-// разметка совпадала с видимым на странице текстом — поэтому один массив на оба.
+// Единый источник для FAQ-блока и FAQPage JSON-LD — разметка должна совпадать с видимым текстом (требование Google).
 export const SITE_FAQ: FaqItem[] = [
   {
     question: 'Что такое Vire?',

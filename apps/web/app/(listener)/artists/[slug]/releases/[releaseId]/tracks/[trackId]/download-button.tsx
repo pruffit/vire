@@ -52,7 +52,7 @@ export function DownloadButton({ trackId, trackTitle, initialOwned, initialPendi
     setBusy(false);
   }
 
-  // Текущее состояние — ключ для кроссфейда между вариантами кнопки.
+  // Текущее состояние: ключ для кроссфейда между вариантами кнопки.
   const state = owned ? 'owned' : pending ? 'pending' : 'buy';
 
   return (

@@ -14,10 +14,8 @@ interface LyricsScrollProps {
 }
 
 export function LyricsScroll({ lines, variant = 'player', trackId, onSeekTo = controls.seek }: LyricsScrollProps) {
-  // Гард в селекторе: если играет не этот трек — тик -1 (не совпадёт ни с одним
-  // таймкодом). Само время — из useAudioTime, не store.currentTime (тот теперь
-  // пишется редко: seek/смена трека/5с-персист, для подсветки строк не годится).
-  // enabled=isThisTrack — хук не тикает вовсе, пока играет чужой трек.
+  // время из useAudioTime, не store.currentTime (тот пишется редко — для подсветки не годится);
+  // чужой трек → тик -1 и хук не тикает вовсе
   const isThisTrack = usePlayerStore((s) => trackId == null || s.track?.id === trackId);
   const liveTime = useAudioTime(4, isThisTrack);
   const tick = isThisTrack ? liveTime : -1;
@@ -27,8 +25,6 @@ export function LyricsScroll({ lines, variant = 'player', trackId, onSeekTo = co
 
   const synced = useMemo(() => lines.some((l) => l.t != null), [lines]);
 
-  // Пересчёт на каждый тик (4/с) — линейный проход по строкам дешёвый, а допуск
-  // ±0.15с (findActiveLrcLine) важнее троттлинга до целой секунды.
   const active = useMemo(() => (synced ? findActiveLrcLine(lines, tick) : -1), [lines, synced, tick]);
 
   const recenter = useCallback((behavior: ScrollBehavior) => {
@@ -38,13 +34,11 @@ export function LyricsScroll({ lines, variant = 'player', trackId, onSeekTo = co
     c.scrollTo({ top: a.offsetTop - c.clientHeight / 2 + a.clientHeight / 2, behavior });
   }, []);
 
-  // Доскролл к активной строке — внутри контейнера, не трогая внешний скролл.
   useEffect(() => {
     recenter('smooth');
   }, [active, recenter]);
 
-  // Раскрытие блока «Текст» анимирует высоту контейнера (motion, height 0→auto) —
-  // пока она переходная, центр съезжает; довскролливаем без анимации на каждый ресайз.
+  // при анимации высоты контейнера (height 0→auto) центр съезжает — довскролливаем на ресайз
   useEffect(() => {
     const c = containerRef.current;
     if (!c) return;
@@ -58,9 +52,8 @@ export function LyricsScroll({ lines, variant = 'player', trackId, onSeekTo = co
       ref={containerRef}
       className="relative mt-3 max-h-[40vh] md:max-h-64 overflow-y-auto overscroll-contain touch-pan-y no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)]"
     >
-      {/* Паддинг на внутреннем спейсере, не на скролл-контейнере — иначе первая/
-          последняя активная строка не может доскроллиться в центр видимой области
-          и всегда попадает в 12%-фейд маски сверху/снизу. */}
+      {/* паддинг на спейсере, не на контейнере — иначе крайние строки не доскролливаются
+          в центр и попадают в фейд маски */}
       <div className="py-[20vh] md:py-24 text-center space-y-2.5">
         {lines.map((l, i) => {
           const isActive = i === active;

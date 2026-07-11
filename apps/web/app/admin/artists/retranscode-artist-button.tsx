@@ -7,10 +7,7 @@ interface Props {
   artistProfileId: string;
 }
 
-/**
- * Массовый пере-транскод HLS всех треков артиста (полезно при системно битом HLS,
- * напр. вшитая обложка-видео у всех файлов артиста).
- */
+// массовый пере-транскод HLS всех треков артиста — при системно битом HLS (напр. вшитая обложка-видео)
 export function RetranscodeArtistButton({ artistProfileId }: Props) {
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);

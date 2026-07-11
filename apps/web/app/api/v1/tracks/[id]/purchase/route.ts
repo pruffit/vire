@@ -37,7 +37,7 @@ export async function POST(req: Request, { params }: Params) {
   const body = await req.json().catch(() => ({})) as { returnUrl?: string };
   const returnUrl = body.returnUrl ?? `${APP_URL}/`;
 
-  // Если уже есть незакрытый платёж — переиспользуем его
+  // Если уже есть незакрытый платёж, переиспользуем его
   const existing = await getPendingPurchase(session.user.id, trackId);
   if (existing) {
     const payment = await getPayment(existing.externalPaymentId).catch(() => null);

@@ -7,27 +7,14 @@ import { MEL_SAMPLE_RATE, MEL_NUM_BANDS, MEL_PATCH_SIZE, computeLogMelFrames, ch
 import { mapDiscogsPredictionsToGenres, type GenreSuggestion } from './discogs-genre-map.js';
 import { DISCOGS_400_LABELS } from './discogs-genre-labels.js';
 
-// Классификация жанра по треку через Essentia discogs-effnet.
-//
-// Модели essentia.upf.edu публикуют отдельно embedding-модель (discogs-effnet) и
-// лёгкую "классификационную голову" genre_discogs400 поверх неё — так задумано
-// изначально этой фичи. На практике голова genre_discogs400-discogs-effnet-1
-// экспортирована ТОЛЬКО в TensorFlow (.pb), ONNX-версии у неё нет (проверено по
-// essentia.upf.edu/models.html — model_types головы не включает onnx). Зато сама
-// embedding-модель в ONNX-варианте с динамическим батчем (discogs-effnet-bsdynamic-1.onnx)
-// уже отдаёт top-400 предсказания genre_discogs400 вторым выходом (PartitionedCall:0) —
-// она обучалась на той же 400-классовой Discogs-задаче. Поэтому используем ОДНУ эту
-// модель и её "родной" выход предсказаний, отдельная голова не нужна.
-//
-// Модель не в git — скачивается apps/worker/scripts/download-models.mjs (AUTO_GENRE_MODELS_DIR).
-// За фичефлагом AUTO_GENRE: выключен или модель не скачана → classifyTrackGenre
-// возвращает null (не бросает), пайплайн транскодинга это молча пропускает.
+// Классификация жанра через Essentia discogs-effnet (ONNX): устройство и маппинг,
+// см. docs/features/auto-genre.md. Модель не в git, качается
+// apps/worker/scripts/download-models.mjs (AUTO_GENRE_MODELS_DIR). Выключено
+// (AUTO_GENRE) или модель не скачана: classifyTrackGenre возвращает null, не бросает.
 
 const MODEL_FILE = 'discogs-effnet-bsdynamic-1.onnx';
-// Сайдкар-JSON модели (скачивается вместе с .onnx в download-models.mjs) — его
-// поле "classes" содержит те же 400 меток в том же порядке, что и наш захардкоженный
-// DISCOGS_400_LABELS. Сверяем при инициализации: расхождение (смещение порядка)
-// тихо даёт неверные жанры, а не падение.
+// Сайдкар-JSON модели: поле "classes", те же 400 меток в том же порядке, что и
+// DISCOGS_400_LABELS. Сверяем при инициализации, расхождение тихо даёт неверные жанры.
 const LABELS_FILE = 'discogs-effnet-bsdynamic-1.json';
 const MAX_ANALYSIS_SEC = 120;
 const NUM_CLASSES = 400;
@@ -45,8 +32,8 @@ export function modelsAvailable(): boolean {
   return existsSync(path.join(modelsDir(), MODEL_FILE));
 }
 
-/** Сверяет метки из сайдкар-JSON модели с DISCOGS_400_LABELS: длина и поэлементно
- * по порядку. Чистая функция — принимает уже распарсенное значение поля "classes". */
+/** Сверяет метки сайдкар-JSON с DISCOGS_400_LABELS поэлементно. Чистая функция,
+ * принимает уже распарсенное значение поля "classes". */
 export function labelsMatchModel(modelClasses: unknown, expected: readonly string[]): boolean {
   if (!Array.isArray(modelClasses) || modelClasses.length !== expected.length) return false;
   for (let i = 0; i < expected.length; i++) {
@@ -74,10 +61,8 @@ async function verifyLabels(): Promise<boolean> {
   }
 }
 
-// Кэшируем сам промис (не итоговое значение) — concurrency воркера 2, без этого
-// два джоба, стартовавшие до резолва, создали бы по своей ONNX-сессии (~2x RAM
-// на 18МБ модели на VPS с 1ГБ). На ошибку init сбрасываем, чтобы следующая
-// джоба могла повторить попытку, а не виснуть на отклонённом промисе навсегда.
+// Кэшируем промис, не значение: иначе два джоба, стартовавшие до резолва, создали
+// бы по своей ONNX-сессии (2x RAM на 1ГБ VPS). На ошибку init сбрасываем для повтора.
 let sessionPromise: Promise<InferenceSession> | null = null;
 let labelsOkPromise: Promise<boolean> | null = null;
 
@@ -99,9 +84,8 @@ function getLabelsOk(): Promise<boolean> {
   return labelsOkPromise;
 }
 
-// Модель отдаёт два выхода (400-классовые предсказания + 1280-мерный эмбеддинг);
-// матчим нужный по последней размерности тензора, а не по имени узла — имена
-// ONNX-экспорта (PartitionedCall:0/1) не документированы как стабильный контракт.
+// Модель отдаёт 2 выхода (предсказания + эмбеддинг), матчим по размерности тензора,
+// не по имени узла (имена ONNX-экспорта не документированы как стабильный контракт).
 function pickOutputByLastDim(
   results: InferenceSession.OnnxValueMapType,
   expectedDim: number,
@@ -123,9 +107,7 @@ async function runBatch(model: InferenceSession, data: Float32Array, numPatches:
   return pickOutputByLastDim(results, NUM_CLASSES);
 }
 
-// Декод → мел-спектрограмма → инференс → маппинг. Общее ядро для best-effort
-// classifyTrackGenre (транскодинг, флаг AUTO_GENRE) и явного по-требованию
-// classifyTrackGenreOnDemand — отличаются только тем, что делают с ошибкой.
+// Общее ядро classifyTrackGenre/classifyTrackGenreOnDemand, отличаются обработкой ошибки.
 async function classify(filePath: string): Promise<GenreSuggestion[] | null> {
   if (!(await getLabelsOk())) return null;
 
@@ -136,8 +118,7 @@ async function classify(filePath: string): Promise<GenreSuggestion[] | null> {
 
   const model = await getSession();
 
-  // Усредняем sigmoid-предсказания по всем патчам трека — простая и устойчивая
-  // агрегация по времени.
+  // Усредняем sigmoid-предсказания по всем патчам трека (агрегация по времени).
   const accumulated = new Float64Array(NUM_CLASSES);
   let totalPatches = 0;
 
@@ -156,12 +137,8 @@ async function classify(filePath: string): Promise<GenreSuggestion[] | null> {
   return mapDiscogsPredictionsToGenres(averaged);
 }
 
-/**
- * Классифицирует жанр трека по аудиофайлу. Возвращает топ-5 предложений
- * (наши genreEnum-значения с нормализованным confidence) либо null, если
- * фича выключена, модель не скачана или что-то пошло не так — ошибка НЕ
- * блокирует переход трека в READY, только логируется.
- */
+/** Топ-5 жанров (genreEnum + confidence) либо null (выключено/нет модели/ошибка):
+ *  никогда не блокирует переход трека в READY, ошибка только логируется. */
 export async function classifyTrackGenre(filePath: string): Promise<GenreSuggestion[] | null> {
   if (!isAutoGenreEnabled()) return null;
   if (!modelsAvailable()) {
@@ -177,13 +154,8 @@ export async function classifyTrackGenre(filePath: string): Promise<GenreSuggest
   }
 }
 
-/**
- * Как classifyTrackGenre, но для анализа ПО ТРЕБОВАНИЮ (кнопка в дашборде/
- * админке, BullMQ-очередь analyze-genre): AUTO_GENRE не проверяется — это явный
- * запрос пользователя, а не фоновый шаг транскодинга. Ошибки не глотаются —
- * отсутствие модели/сбой инференса логируется и бросается, чтобы джоба
- * упала штатно (пользователь увидит ошибку через поллинг, а не тишину).
- */
+/** Как classifyTrackGenre, но по требованию: AUTO_GENRE не проверяется, ошибки
+ *  не глотаются, бросает, чтобы джоба упала штатно и пользователь её увидел. */
 export async function classifyTrackGenreOnDemand(filePath: string): Promise<GenreSuggestion[]> {
   if (!modelsAvailable()) {
     const message = `[genre-classifier] модель не найдена в ${modelsDir()} — pnpm --filter @vire/worker models:download`;

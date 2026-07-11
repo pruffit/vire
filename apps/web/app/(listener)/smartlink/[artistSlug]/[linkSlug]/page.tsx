@@ -24,9 +24,7 @@ async function getData(artistSlug: string, linkSlug: string) {
   const smartLink = await getSmartLinkBySlug(artist.id, linkSlug);
   if (!smartLink || !smartLink.isPublished) return null;
 
-  // Привязанный релиз Vire (Фаза B): даёт первую кнопку «Слушать/Пресейв на Vire»
-  // и фолбэк обложки/названия/даты. Показываем CTA только когда релиз публичен
-  // (вышел) или запланирован на будущее (пресейв) — черновик/архив не светим.
+  // CTA только когда релиз опубликован или запланирован на будущее — черновик/архив не светим
   const release = smartLink.releaseId ? await getSmartLinkRelease(smartLink.releaseId) : null;
   let vire: { kind: 'listen' | 'presave'; href: string } | null = null;
   if (release) {

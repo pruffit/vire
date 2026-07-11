@@ -399,14 +399,11 @@ const META = {
 };
 
 // Приоритет показа общих подборок: тренды и свежее впереди, затем настроения,
-// «возвращаются снова» — как фолбэк-наполнитель.
+// «возвращаются снова» как фолбэк-наполнитель.
 const SHARED_PRIORITY = sql`CASE ${playlists.kind}
   WHEN 'TRENDING' THEN 0 WHEN 'FRESH' THEN 1 WHEN 'MOOD' THEN 2 ELSE 3 END`;
 
-/**
- * Общие (одинаковые для всех) редакционные подборки. Без личных
- * (`target_user_id IS NULL`) и без пользовательских (`kind <> 'USER'`).
- */
+/** Общие редакционные подборки: без личных (target_user_id IS NULL) и пользовательских (kind <> 'USER'). */
 export async function getEditorialPlaylists(limit = 4): Promise<EditorialPlaylist[]> {
   const rows = await db
     .select(META)
@@ -432,10 +429,7 @@ export async function getPersonalPlaylists(userId: string, limit = 4): Promise<E
   return hydratePlaylists(rows);
 }
 
-/**
- * Популярные общие подборки — фолбэк для личной половины (гость / новый юзер
- * без сигнала). Исключает уже показанные id.
- */
+/** Популярные общие подборки: фолбэк для личной половины (гость/новый юзер без сигнала). Исключает уже показанные id. */
 export async function getPopularPlaylists(limit: number, excludeIds: string[] = []): Promise<EditorialPlaylist[]> {
   if (limit <= 0) return [];
   const rows = await db
@@ -478,7 +472,6 @@ export async function upsertEditorialPlaylist(opts: {
       .update(playlists)
       .set({ description: description ?? null, updatedAt: new Date() })
       .where(eq(playlists.id, playlistId));
-    // Заменяем треки полностью
     await db.delete(playlistTracks).where(eq(playlistTracks.playlistId, playlistId));
   } else {
     const [row] = await db
@@ -501,8 +494,8 @@ export async function upsertEditorialPlaylist(opts: {
   }
 }
 
-/** Создаёт личную подборку (kind=PERSONAL) для юзера. Личные пересобираются целиком,
- *  поэтому это insert, а не upsert — перед партией вызывай deletePersonalPlaylists. */
+/** Создаёт личную подборку (kind=PERSONAL). Личные пересобираются целиком: это insert,
+ *  не upsert, перед партией вызывай deletePersonalPlaylists. */
 export async function createPersonalPlaylist(opts: {
   userId: string;
   title: string;
@@ -536,7 +529,7 @@ export async function deletePersonalPlaylists(userId: string): Promise<void> {
   if (rows.length === 0) return;
   const ids = rows.map((r) => r.id);
   await db.delete(playlistTracks).where(inArray(playlistTracks.playlistId, ids));
-  await db.delete(playlists).where(inArray(playlists.id, ids)); // playlist_likes — onDelete cascade
+  await db.delete(playlists).where(inArray(playlists.id, ids)); // playlist_likes: onDelete cascade
 }
 
 /** Публичные пользовательские плейлисты для секции на главной. */
@@ -592,7 +585,7 @@ export async function unlikePlaylist(userId: string, playlistId: string): Promis
   }
 }
 
-/** Плейлисты, лайкнутые пользователем (публичные — ставший приватным лайкнутый плейлист скрывается). */
+/** Плейлисты, лайкнутые пользователем (публичные: ставший приватным лайкнутый плейлист скрывается). */
 export async function getLikedPlaylists(userId: string): Promise<EditorialPlaylist[]> {
   const rows = await db
     .select(META)
@@ -674,7 +667,6 @@ export async function getPlaylistSuggestions(
     credits: tracks.credits,
   };
 
-  // Liked tracks (most recent first)
   const likedRows = await db
     .select({ ...cols, likedAt: likes.createdAt })
     .from(likes)
@@ -685,7 +677,7 @@ export async function getPlaylistSuggestions(
     .orderBy(desc(likes.createdAt))
     .limit(perSection + exclude.size);
 
-  // Recently played by this user (order by startedAt desc, dedup in take)
+  // dedup происходит в take() ниже
   const recentRows = await db
     .select({ ...cols, startedAt: playEvents.startedAt })
     .from(playEvents)
@@ -696,7 +688,6 @@ export async function getPlaylistSuggestions(
     .orderBy(desc(playEvents.startedAt))
     .limit((perSection + exclude.size) * 4);
 
-  // Similar: more tracks by artists already in the playlist
   const artistIdRows = await db
     .selectDistinct({ artistProfileId: releases.artistProfileId })
     .from(playlistTracks)

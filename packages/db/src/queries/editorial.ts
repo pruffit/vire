@@ -14,8 +14,7 @@ import {
   PLAYLIST_LIST_LIMIT as LIST_LIMIT,
 } from './editorial-policy';
 
-// Релиз доступен (треки можно слушать): опубликован или запланирован с прошедшей
-// датой. Не пускаем невышедшие релизы в подборки — иначе их можно слушать с главной.
+// PUBLISHED или SCHEDULED с прошедшей датой — невышедшие релизы в подборки не пускаем
 const releaseIsPublic = or(
   eq(releases.status, 'PUBLISHED'),
   and(eq(releases.status, 'SCHEDULED'), isNotNull(releases.releaseDate), lte(releases.releaseDate, sql`now()`)),
@@ -26,11 +25,7 @@ const PERSONAL_MAX = 4; // максимум личных подборок на �
 const MIN_TRACKS = 3; // не генерируем подборку при подлинном сигнале короче этого
 const TASTE_WINDOW = "now() - interval '90 days'"; // окно истории прослушиваний для вкуса
 
-/**
- * Полный прогон генерации: общие + личные. Ручной вызов из /api/v1/admin/editorial.
- * По расписанию воркер зовёт generateSharedPlaylists (00:00) и
- * generatePersonalPlaylistsForAllUsers (раз в 4 часа) раздельно.
- */
+/** Общие + личные подборки. По расписанию воркер зовёт их раздельно (00:00 / раз в 4ч). */
 export async function generateAllEditorialPlaylists(): Promise<void> {
   await generateSharedPlaylists();
   await generatePersonalPlaylistsForAllUsers();
@@ -39,8 +34,7 @@ export async function generateAllEditorialPlaylists(): Promise<void> {
 // ─── Общие подборки (одинаковы для всех, обновляются раз в сутки) ────────────
 
 export async function generateSharedPlaylists(): Promise<void> {
-  // Последовательно с общим пулом филлера и общим набором занятых им треков —
-  // иначе хвосты всех общих карточек сходятся к одному и тому же топу популярного.
+  // общий пул + набор занятых треков — иначе хвосты карточек сходятся к одному топу
   const pool = await getFillerPool();
   const usedFiller = new Set<string>();
   await generateTrendingPlaylist(pool, usedFiller);
@@ -126,11 +120,7 @@ async function generateFreshPlaylist(pool: string[], usedFiller: Set<string>): P
   });
 }
 
-/**
- * Подборки по топ-настроениям. Раньше генерились все 18 — теперь только
- * SHARED_MOOD_COUNT самых наполненных, остальные mood-подборки удаляются
- * (личные настроения каждый получает в своей половине).
- */
+/** Только SHARED_MOOD_COUNT самых наполненных настроений; остальные mood-подборки удаляются. */
 async function generateTopMoodPlaylists(pool: string[], usedFiller: Set<string>): Promise<void> {
   const moodRows = await db
     .select({ mood: trackMoods.mood, c: count() })
@@ -160,12 +150,7 @@ async function generateTopMoodPlaylists(pool: string[], usedFiller: Set<string>)
   await deleteStaleMoodPlaylists(keepTitles);
 }
 
-/**
- * Видимые треки, помеченные любым из заданных настроений и/или жанров,
- * ранжированные по популярности (id, до LIST_LIMIT). Общий выбор и для
- * mood-подборок (один mood, пустые genres), и для микса «Для тебя»
- * (несколько moods и/или genres) — раньше это были два раздельных запроса.
- */
+/** Видимые треки с любым из заданных настроений/жанров, по популярности (id, до LIST_LIMIT). */
 async function selectTrackIdsByTaste(moods: Mood[], genres: TrackGenre[]): Promise<string[]> {
   if (moods.length === 0 && genres.length === 0) return [];
 
@@ -190,11 +175,7 @@ async function selectTrackIdsByTaste(moods: Mood[], genres: TrackGenre[]): Promi
 
 const FILLER_POOL_LIMIT = 500;
 
-/**
- * Пул филлера: видимые треки по популярности за 30 дней (при равенстве — свежие).
- * Считается ОДИН раз на прогон (популярность — тяжёлый коррелированный скан
- * play_events) и раздаётся всем подборкам; добивка дальше — чистый JS.
- */
+/** Пул филлера по популярности за 30 дней. Считается один раз на прогон (тяжёлый скан play_events). */
 async function getFillerPool(): Promise<string[]> {
   const rows = await db
     .select({ id: tracks.id })
@@ -228,11 +209,7 @@ const MOOD_BY_LABEL: Partial<Record<string, Mood>> = Object.fromEntries(
   (Object.keys(MOOD_LABELS) as Mood[]).map((mood) => [MOOD_LABELS[mood], mood]),
 );
 
-/**
- * Настроения, уже занятые общими MOOD-подборками (target_user_id IS NULL) —
- * обратный маппинг заголовка через MOOD_LABELS. Личные mood-подборки их
- * пропускают, иначе одно настроение дублируется общей и личной карточкой.
- */
+/** Настроения общих MOOD-подборок — личные их пропускают, иначе дубль общей/личной карточки. */
 async function sharedMoodPlaylistMoods(): Promise<Mood[]> {
   const rows = await db
     .select({ title: playlists.title })
@@ -271,8 +248,7 @@ export async function generatePersonalPlaylistsForAllUsers(): Promise<void> {
     ]),
   ];
 
-  // Последовательно — генерация фоновая, нагрузку на БД не разгоняем.
-  // Пул филлера один на весь прогон (тяжёлый скан популярности).
+  // последовательно — фоновая генерация, нагрузку на БД не разгоняем
   const pool = await getFillerPool();
   for (const userId of userIds) {
     await generatePersonalPlaylists(userId, pool);
@@ -292,33 +268,24 @@ async function tasteSignalTrackCount(userId: string): Promise<number> {
 }
 
 /**
- * Личные подборки одного юзера на основе единого профиля вкуса (getTasteProfile:
- * лайки + история прослушиваний за 90 дней). Пересобираются целиком. Нет сигнала →
- * подборки удаляются, на главной личную половину закрывает фолбэк на популярное.
- *
- * Порог минимального сигнала (MIN_TRACKS уникальных лайкнутых/прослушанных треков)
- * восстановлен — иначе одного лайка с настроением/жанром достаточно, чтобы
- * getTasteProfile вернул непустой topMoods/topGenres и собрал «Для тебя» из всего
- * каталога. Отдельно — MIN_PERSONAL_PLAYLIST_TRACKS: сама подборка не создаётся
- * короче этого, иначе получаются мусорные карточки на 3 трека.
+ * Личные подборки на основе getTasteProfile (лайки + прослушивания за 90 дней).
+ * Пересобираются целиком; ниже MIN_TRACKS сигнала — удаляются, фолбэк на популярное.
  */
 export async function generatePersonalPlaylists(userId: string, sharedPool?: string[]): Promise<void> {
   const signalCount = await tasteSignalTrackCount(userId);
 
-  // Полный пересбор: проще upsert по меняющимся заголовкам.
+  // полный пересбор: проще upsert по меняющимся заголовкам
   await deletePersonalPlaylists(userId);
-  if (signalCount < MIN_TRACKS) return; // недостаточно сигнала для персонализации
+  if (signalCount < MIN_TRACKS) return;
 
   const taste = await getTasteProfile(userId);
-  if (taste.topMoods.length === 0 && taste.topGenres.length === 0) return; // фолбэк на популярное покроет
+  if (taste.topMoods.length === 0 && taste.topGenres.length === 0) return;
 
   const pool = sharedPool ?? (await getFillerPool());
   const exclude = new Set<string>();
   let made = 0;
 
-  // 1) «Для тебя» — микс по топ-настроениям И топ-жанрам профиля вкуса.
-  // Порог — по подлинным совпадениям, витринный размер добивает филлер; неполную
-  // (каталог меньше лимита) не публикуем — лучше меньше карточек, но все полные.
+  // «Для тебя»: неполную подборку (каталог меньше лимита) не публикуем
   const mixTrackIds = await selectTrackIdsByTaste(taste.topMoods, taste.topGenres);
   if (hasEnoughTracksForPersonalPlaylist(mixTrackIds.length)) {
     const fullMix = fillToLimit(mixTrackIds, pool);
@@ -334,17 +301,14 @@ export async function generatePersonalPlaylists(userId: string, sharedPool?: str
     }
   }
 
-  // 2) До PERSONAL_MAX всего — mood-подборки под топ-настроения юзера, без
-  // пересечения с «Для тебя» (exclusion set) и без настроений, уже занятых
-  // общими MOOD-подборками текущего прогона (pickPersonalMoods).
+  // до PERSONAL_MAX mood-подборок, без пересечения с «Для тебя» и с общими MOOD-подборками
   const sharedMoods = await sharedMoodPlaylistMoods();
   const personalMoods = pickPersonalMoods(taste.topMoods, sharedMoods, taste.topMoods.length);
 
   for (const mood of personalMoods) {
     if (made >= PERSONAL_MAX) break;
     const label = MOOD_LABELS[mood];
-    // Порог сигнала — ДО фильтра эксклюзией: то, что популярные треки настроения
-    // уже разобрал филлер «Для тебя», не отменяет вкусового сигнала для карточки.
+    // порог сигнала проверяем до фильтра эксклюзией — иначе разбор «Для тебя» занижает сигнал
     const genuine = await selectTrackIdsByTaste([mood], []);
     if (!hasEnoughTracksForPersonalPlaylist(genuine.length)) continue;
     const trackIds = genuine.filter((id) => !exclude.has(id));

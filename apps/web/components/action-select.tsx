@@ -3,11 +3,7 @@
 import { useTransition } from 'react';
 import { Select } from '@/components/select';
 
-/**
- * Инлайн-селект, меняющий значение через серверный экшен внутри `useTransition`:
- * на время запроса селект блокируется. Общая обвязка для смены статуса трека/
- * релиза и роли пользователя в админке — сам экшен передаётся через `onChange`.
- */
+/** Инлайн-селект с серверным экшеном в `useTransition` (смена статуса/роли в админке). */
 export function ActionSelect({
   options,
   value,

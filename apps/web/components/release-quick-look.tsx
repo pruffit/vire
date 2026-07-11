@@ -32,9 +32,7 @@ export interface QuickLookRelease {
 
 function year(d: Date | string | null): string | null {
   if (!d) return null;
-  // UTC — это клиентский компонент: getFullYear() в локальной TZ браузера мог бы
-  // разойтись с серверным рендером (UTC) у дат на границе года → ошибка
-  // гидрации React #418. Считаем год в UTC, как и дни в untilLabel ниже.
+  // UTC — иначе локальная TZ браузера расходится с серверным рендером на границе года (гидрация #418)
   const y = new Date(d).getUTCFullYear();
   return Number.isFinite(y) ? String(y) : null;
 }
@@ -52,18 +50,11 @@ function untilLabel(d: Date | string | null): string | null {
   if (days <= 0) return 'сегодня';
   if (days === 1) return 'завтра';
   if (days < 7) return `через ${days} дн.`;
-  // timeZone:'UTC' обязателен — без него день/месяц форматируются в локальной TZ
-  // рантайма, и серверный рендер (UTC) расходится с браузером юзера у дат возле
-  // границы суток → ошибка гидрации React #418 («1 июл» vs «30 июн»).
+  // timeZone:'UTC' обязателен — иначе расходится с сервером у дат возле границы суток (гидрация #418)
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
-/**
- * Карточка релиза, которая по клику разворачивается в оверлей-«peek» с трек-листом
- * и кнопкой play — без перехода на страницу. Эталонный приём: shared-element
- * обложки (layoutId), blur-фон, drag/click/Esc для закрытия. Трек-лист
- * подгружается лениво из /api/v1/releases/[id].
- */
+/** Карточка релиза, которая по клику разворачивается в оверлей-«peek» с трек-листом и play. */
 export function ReleaseQuickLook({
   release,
   showArtist = true,
@@ -153,7 +144,6 @@ export function ReleaseQuickLook({
 
   return (
     <>
-      {/* Карточка */}
       <motion.button
         type="button"
         layoutId={layoutId}
@@ -168,7 +158,6 @@ export function ReleaseQuickLook({
           ) : (
             <div className="w-full h-full grid place-items-center opacity-20"><NoteIcon /></div>
           )}
-          {/* Now-playing индикатор поверх обложки */}
           <AnimatePresence>
             {isThisReleasePlaying && (
               <motion.span
@@ -192,7 +181,6 @@ export function ReleaseQuickLook({
               </motion.span>
             )}
           </AnimatePresence>
-          {/* Play/pause-подсказка на ховере */}
           <span className="absolute inset-0 grid place-items-center bg-black/0 group-hover:bg-black/15 transition-colors">
             <span className="opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300 ease-soft grid place-items-center w-11 h-11 rounded-full bg-black/55 ring-1 ring-white/30 text-white">
               {isThisReleasePlaying && isPlaying ? <PauseIcon size={13} /> : <PlayIcon size={15} className="translate-x-[1px]" />}
@@ -211,7 +199,6 @@ export function ReleaseQuickLook({
         </div>
       </motion.button>
 
-      {/* Оверлей */}
       <QuickLookSheet open={open} onClose={() => setOpen(false)}>
         <QuickLookDragHandle className="px-5 pb-3 flex items-center gap-4">
           <motion.div layoutId={layoutId} transition={spring.smooth} className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-muted">
@@ -221,8 +208,7 @@ export function ReleaseQuickLook({
           </motion.div>
           <div className="min-w-0 flex-1">
             <h3 className="text-base font-semibold leading-tight truncate">{release.title}</h3>
-            {/* stopPropagation — иначе тап по ссылке ловится QuickLookDragHandle
-                (onPointerDown на всю зону) и стартует drag шторки вместо перехода */}
+            {/* stopPropagation — иначе тап ловит onPointerDown QuickLookDragHandle и стартует drag */}
             <Link
               href={`/artists/${release.artistSlug}`}
               onPointerDown={(e) => e.stopPropagation()}
@@ -251,7 +237,6 @@ export function ReleaseQuickLook({
           </Link>
         </div>
 
-        {/* Трек-лист */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 pb-3" data-scroll-area>
           {loading && !tracks && (
             <div className="py-8 grid place-items-center">

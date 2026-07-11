@@ -17,7 +17,6 @@ export async function POST(_req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Rate limit: 60 likes per minute per user
   const rl = await rateLimit(`like:${session.user.id}`, 60, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 

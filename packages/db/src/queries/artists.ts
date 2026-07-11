@@ -8,19 +8,16 @@ export interface ArtistListItem {
   name: string;
   bio: string | null;
   avatarUrl: string | null;
-  /** Обложка первого опубликованного релиза — fallback-аватар когда avatarUrl null. */
+  /** Обложка первого опубликованного релиза: fallback-аватар когда avatarUrl null. */
   firstReleaseCoverUrl: string | null;
   verified: boolean;
   releaseCount: number;
-  // Жанры артиста — distinct по жанрам его опубликованных релизов (для фильтра в каталоге)
+  // Жанры артиста: distinct по жанрам его опубликованных релизов (для фильтра в каталоге)
   genres: string[];
 }
 
 // Артист виден слушателям только если у него есть хотя бы один трек в
-// опубликованном релизе. Пустые профили (зарегистрировался, но ничего не залил)
-// скрываем из каталога, поиска и sitemap. Внешнюю таблицу адресуем ЛИТЕРАЛОМ
-// `artist_profiles.id`, а не `${artistProfiles.id}`: интерполяция колонки в
-// коррелированный sql-подзапрос даёт неквалифицированное имя (см. CLAUDE.md).
+// опубликованном релизе. Пустые профили скрываем из каталога, поиска и sitemap.
 const artistHasPublishedTrack = sql`exists (
   select 1 from tracks t
   join releases r on r.id = t.release_id

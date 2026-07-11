@@ -100,9 +100,8 @@ export class DrizzleTrackRepository implements ITrackRepository {
   }
 
   async reorder(releaseId: string, orderedIds: string[]): Promise<void> {
-    // Перенумерация в одной транзакции: id[i] → track_number i+1. Уникального
-    // индекса на (release_id, track_number) нет, поэтому промежуточных коллизий
-    // не возникает. `releaseId` в WHERE — страховка от чужих треков.
+    // Перенумерация в одной транзакции: id[i] → track_number i+1, коллизий не
+    // возникает (нет уникального индекса). `releaseId` в WHERE: страховка от чужих треков.
     await this.db.transaction(async (tx) => {
       const now = new Date();
       for (let i = 0; i < orderedIds.length; i++) {
@@ -115,9 +114,8 @@ export class DrizzleTrackRepository implements ITrackRepository {
   }
 
   async delete(id: string): Promise<void> {
-    // FK на tracks.id без ON DELETE CASCADE — чистим зависимые строки в одной
-    // транзакции, затем сам трек. Покупки (purchases) полиморфны и без FK —
-    // их намеренно не трогаем (купленное остаётся в истории).
+    // FK на tracks.id без ON DELETE CASCADE: чистим зависимые строки в одной
+    // транзакции, затем сам трек. Покупки полиморфны и без FK, их не трогаем.
     await this.db.transaction(async (tx) => {
       await tx.delete(trackAudio).where(eq(trackAudio.trackId, id));
       await tx.delete(trackContributors).where(eq(trackContributors.trackId, id));

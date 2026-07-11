@@ -1,5 +1,3 @@
-/** Брендовые SVG-иконки провайдеров входа. */
-
 export function YandexIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="none">

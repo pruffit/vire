@@ -5,35 +5,23 @@ import { cn } from '@vire/ui';
 import { useReduceMotionPref } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
 
-// Без композит-промоутеров (transform/backdrop-blur/постоянный opacity<1):
-// слой внутри вертикальной скролл-области дрожит и перерастеризуется на каждый
-// кадр скролла (см. память проекта scroll-jitter). Скрытие — display, не opacity.
-// Кнопка — полновысотная краевая зона с градиентом-шторкой от фона страницы,
-// на hover-устройствах видна всегда, пока в её сторону есть куда листать.
-// z-50 + isolate на обёртке: у карточек внутри лент есть свои z-индексы (бейджи
-// до z-40) — зона обязана рисоваться поверх них, а isolate не выпускает z-50 наружу.
-// Непортальные абсолютные поповеры (add-to-playlist и т.п.) внутрь ленты не класть:
-// isolate запрёт их под зонами, а overflow контейнера обрежет — только портал в body.
+// display, не opacity/transform: композит-слой внутри скролл-области дрожит на кадрах скролла
 const EDGE_BUTTON = 'absolute inset-y-0 z-50 hidden items-center pointer-fine:flex';
 
-// Вариант `zone` — голый шеврон в полновысотной зоне, для высоких карточных лент.
-// Вариант `chip` — круглая кнопка-диск в языке пилюль: в низкой чип-ленте голый
-// шеврон ложится прямо на текст пилюли и выглядит сломанным.
+// isolate + z-50 держит зону поверх бейджей карточек (z-40); непортальные поповеры
+// (add-to-playlist и т.п.) внутрь ленты не класть — окажутся под зоной и обрежутся overflow
 const EDGE_VARIANT = {
   zone: 'w-14 from-25% text-foreground/70 transition-colors hover:text-foreground',
-  // from-55% на w-14: диск (28px) целиком лежит на глухой части шторки — иначе
-  // сквозь него читается обрезанная пилюля и контрол сливается с её бордером.
+  // chip: диск (28px) на from-55%, чтобы лежать на глухой части шторки, не на пилюле
   chip: 'group w-14 from-55%',
 } as const;
 
-// Заливка вместо бордера: контурный диск сливается с контурными пилюлями чипов
-// в одну кашу линий, заполненный кружок читается как отдельный контрол.
+// заливка, не бордер — контурный диск иначе сливается с контурными пилюлями чипов
 const EDGE_DISC =
   'flex size-7 items-center justify-center rounded-full bg-foreground/10 text-foreground/80 transition-colors group-hover:bg-foreground/20 group-hover:text-foreground';
 
-// scroll-padding контейнера должен совпадать с его собственным padding — иначе
-// снап первого элемента ложится не на 0, а на паддинг, и браузер сам доснапливает
-// ленту к нему при простое (кнопка «влево» ошибочно видна на старте).
+// scroll-padding должен совпадать с padding контейнера — иначе браузер доснапливает
+// ленту к паддингу и кнопка «влево» ошибочно видна на старте
 function syncSnapPadding(el: HTMLDivElement) {
   const style = getComputedStyle(el);
   el.style.scrollPaddingLeft = style.paddingLeft;
@@ -41,13 +29,9 @@ function syncSnapPadding(el: HTMLDivElement) {
 }
 
 /**
- * Горизонтальная лента с прокруткой — обёртка над `overflow-x-auto no-scrollbar`.
- * Добавляет кнопки-шевроны (только hover-устройства, скрыты когда переполнения
- * в эту сторону нет) — на тач лента и так листается свайпом.
- *
- * Отрицательные маргины (выпуск под hover-тени/фокус-кольца) передавай в
- * `bleedClassName` — они должны жить на обёртке, чтобы краевые зоны стояли
- * по настоящему визуальному краю ленты, а не внутри него.
+ * Горизонтальная лента с прокруткой + краевые кнопки-шевроны (hover-устройства).
+ * Отрицательные маргины-выпуски передавай в `bleedClassName`, не в `className` —
+ * иначе краевые зоны встанут не по настоящему визуальному краю ленты.
  */
 export function ScrollRow({
   children,
@@ -60,10 +44,7 @@ export function ScrollRow({
   className?: string;
   bleedClassName?: string;
   edgeVariant?: keyof typeof EDGE_VARIANT;
-  /** Цвет-шторка краевой зоны. По умолчанию `from-background` (лента на фоне
-   *  страницы). Если лента лежит на приподнятой поверхности (карточка/панель) —
-   *  передай сюда её эффективный цвет, иначе шторка гасит в более тёмный фон
-   *  страницы и читается тёмной полосой поверх панели. */
+  /** Цвет-шторка краевой зоны; если лента на приподнятой поверхности — передай её цвет. */
   edgeFrom?: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -102,9 +83,7 @@ export function ScrollRow({
     if (!el) return;
     const elRect = el.getBoundingClientRect();
     const pad = parseFloat(getComputedStyle(el).paddingLeft) || 0;
-    // Координаты краёв детей в системе контента (не зависят от текущего scrollLeft
-    // при чтении, но переводятся в него через + el.scrollLeft — getBoundingClientRect
-    // даёт вьюпортные координаты, offsetLeft тут не годится для inline/flex-детей с гэпами).
+    // offsetLeft не годится для inline/flex-детей с гэпами — берём boundingClientRect
     const edges = Array.from(el.children).map((child) => {
       const rect = child.getBoundingClientRect();
       return { left: rect.left - elRect.left + el.scrollLeft, right: rect.right - elRect.left + el.scrollLeft };
@@ -114,8 +93,7 @@ export function ScrollRow({
     if (dir === 1) {
       const next = edges.find((edge) => edge.right > el.scrollLeft + el.clientWidth + 1);
       target = next ? next.left - pad : el.scrollWidth;
-      // Вырожденный случай (единственный ребёнок шире вьюпорта): якорь по границе
-      // элемента не двигает скролл — листаем на вьюпорт.
+      // единственный ребёнок шире вьюпорта — якорь по его границе не двигает скролл
       if (target <= el.scrollLeft) target = el.scrollLeft + el.clientWidth;
     } else {
       const next = edges.find((edge) => edge.left >= el.scrollLeft - el.clientWidth - 1);

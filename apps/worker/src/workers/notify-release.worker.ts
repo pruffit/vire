@@ -3,9 +3,8 @@ import { getFollowerEmails } from '@vire/db';
 import { QUEUE_NOTIFY_RELEASE, type NotifyReleaseJobData } from '@vire/core';
 import { connection } from '../queues/connection.js';
 
-// Почта идёт через Brevo HTTP API (как apps/web/lib/mailer.ts) — SMTP на проде
-// заблокирован хостингом. `messageVersions` — батч: каждый адресат получает
-// отдельное письмо (без CC), с персональным приветствием.
+// Brevo HTTP API — SMTP на проде заблокирован хостингом. messageVersions — батч:
+// каждый адресат получает отдельное письмо с персональным приветствием.
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 

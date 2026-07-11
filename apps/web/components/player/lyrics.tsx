@@ -7,9 +7,7 @@ import { Icon } from '@/components/icon';
 import { LyricsScroll } from '@/components/lyrics-scroll';
 import type { LyricLine } from '@/lib/lrc';
 
-// Модульный кэш текста по trackId: фуллскрин размонтирует/монтирует Lyrics на
-// каждый показ (key={trackId} на родителе), без кэша это дважды фетчило один
-// и тот же текст. LRU не нужен — простой предел размера (FIFO-вытеснение).
+// Модульный FIFO-кэш: фуллскрин ремонтирует Lyrics на каждый показ, без кэша фетч дублировался.
 const LYRICS_CACHE_LIMIT = 20;
 const lyricsCache = new Map<string, LyricLine[] | null>();
 
@@ -21,12 +19,7 @@ function cacheLyrics(trackId: string, lines: LyricLine[] | null): void {
   lyricsCache.set(trackId, lines);
 }
 
-/**
- * Текст трека в фуллскрин-плеере. Тянется лениво (по trackId), показывается
- * тоглом «Текст». Синхронизированный — подсвечивает активную строку по времени
- * и доскролливает к ней; клик по строке перематывает на её таймкод.
- * Родитель должен ставить key={trackId}, чтобы состояние сбрасывалось на новый трек.
- */
+/** Текст трека в фуллскрин-плеере. Родитель должен ставить key={trackId} — сброс состояния на новый трек. */
 export function Lyrics({ trackId }: { trackId: string }) {
   const [lines, setLines] = useState<LyricLine[] | null>(() => lyricsCache.get(trackId) ?? null);
   const [open, setOpen] = useState(false);

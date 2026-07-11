@@ -11,8 +11,8 @@ import { usePlaylistLike } from './use-playlist-like';
 import { PlaylistPeekSheet } from './playlist-quick-look';
 
 const KIND_LABELS: Record<string, string | undefined> = {
-  USER: undefined, // пользовательские плейлисты — бейдж не показываем
-  PERSONAL: undefined, // личные — заголовок уже говорит «для тебя», бейдж лишний
+  USER: undefined,
+  PERSONAL: undefined,
   MOOD: 'Настроение',
   TRENDING: 'В тренде',
   RELISTEN: 'Снова и снова',
@@ -21,14 +21,12 @@ const KIND_LABELS: Record<string, string | undefined> = {
 
 interface FanLayer {
   src: string;
-  rot: number; // наклон, deg
-  dx: number; // сдвиг по X, % ширины
+  rot: number;
+  dx: number;
   z: number;
 }
 
-// Веер обложек: первая — лицевая по центру, остальные выглядывают сзади под
-// наклоном. Только плоские 2D-трансформы (никаких 3D/blur/will-change) — поэтому
-// ничего не дёргается при скролле.
+// только плоские 2D-трансформы (без 3D/blur/will-change) — иначе дрожит при скролле
 function buildFan(stack: string[]): FanLayer[] {
   if (stack.length === 1) {
     return [{ src: stack[0], rot: 0, dx: 0, z: 30 }];
@@ -64,8 +62,7 @@ function CoverFan({ covers }: { covers: string[] }) {
       {buildFan(stack).map((l, i) => (
         <div
           key={i}
-          // Тень — только у лицевой (z>=30) и лёгкая: большие box-shadow на
-          // повёрнутых обложках дорого перерисовываются при скролле (лаг секции).
+          // тень только у лицевой: box-shadow на повёрнутых обложках дорог при скролле
           className={`absolute left-1/2 top-1/2 w-[62%] aspect-square rounded-[4px] overflow-hidden bg-muted ring-1 ring-black/40 ${
             l.z >= 30 ? 'shadow-md shadow-black/40' : ''
           }`}
@@ -79,9 +76,7 @@ function CoverFan({ covers }: { covers: string[] }) {
             alt=""
             fill
             quality={60}
-            // Обложка веера = 62% карточки. На десктопе (4 кол.) это ~150–180px
-            // CSS → на ретине нужно ~320px исходника. Не занижать (было 96px →
-            // мыло/блочность на зернистой текстуре).
+            // sizes не занижать: на ретине нужен ~320px исходник, иначе мыло на зернистой текстуре
             sizes="(max-width: 640px) 33vw, (max-width: 768px) 20vw, 180px"
             className="object-cover"
           />
@@ -109,24 +104,14 @@ export function EditorialPlaylistCard({
   const kindLabel = KIND_LABELS[playlist.kind];
 
   return (
-    // Никаких промоутеров композит-слоя (transform-gpu/will-change/3D) — иначе
-    // блок скроллится не в такт с документом и «дрожит». overflow-hidden держит
-    // веер внутри карточки, чтобы между карточками был зазор сетки.
     <div className="group flex flex-col gap-2.5">
-      {/*
-        Зона веера: rounded-xl даёт чуть мягче скруглений, bg-white/[0.03] —
-        различимая подложка на тёмном фоне, ring — поднятая обводка вместо
-        «потерянного» веера на чёрном. Без transform-gpu/blur/3D (scroll-jitter).
-      */}
-      {/* href сохраняет SEO/краулинг и Ctrl/⌘-клик в новой вкладке; левый клик
-          перехватываем в peek-оверлей. */}
+      {/* href сохраняет SEO и Ctrl/⌘-клик; левый клик перехватываем в peek-оверлей */}
       <a
         href={`/playlists/${playlist.id}`}
         onClick={(e) => { e.preventDefault(); setOpen(true); }}
         className="block w-full relative aspect-square rounded-xl overflow-hidden bg-white/[0.03] ring-1 ring-white/10 transition-[transform,box-shadow] duration-300 ease-soft group-hover:-translate-y-0.5 group-hover:ring-white/20"
       >
         <CoverFan covers={playlist.covers} />
-        {/* Тип подборки — только для редакционных */}
         {kindLabel && (
           <span className="absolute top-1 left-1 z-40 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-mono text-white/80 pointer-events-none">
             {kindLabel}

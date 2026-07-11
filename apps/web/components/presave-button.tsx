@@ -8,11 +8,7 @@ import { Icon } from '@/components/icon';
 import { presaveRelease, presaveReleaseAsGuest } from '@vire/api-client';
 import { useOptimisticToggle } from '@/lib/use-optimistic-toggle';
 
-/**
- * Пресейв релиза. Залогиненный сохраняет в один клик (оптимистично, при выходе
- * треки авто-лайкаются и приходит письмо). Гость оставляет email и получает
- * письмо при выходе. Цвета берёт из темы артиста (--artist-accent/text).
- */
+/** Пресейв релиза: залогиненный — оптимистичный клик, гость — оставляет email. */
 export function PresaveButton({
   releaseId,
   initialPresaved,

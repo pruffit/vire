@@ -8,21 +8,10 @@ import { fieldClass, selectClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
 
 /**
- * Единый кастомный селект платформы — замена нативному `<select>`, у которого
- * выпадающий список рисует ОС (синий хайлайт, светлый фон, мимо темы). Здесь
- * список рисуем сами: единый дизайн с китом, поиск, группы, click-outside, Esc.
- *
- * Список рендерится в портал с `position: fixed` — чтобы не обрезался скролл-
- * контейнерами (напр. таблицы админки с `overflow-x-auto`). Позиция
- * пересчитывается при скролле/ресайзе.
- *
- * Два режима значения:
- * - controlled: передан `value` + `onValueChange`;
- * - form: передан `name` — значение кладётся в скрытый input, форма сабмитится
- *   через FormData как раньше (`defaultValue` задаёт стартовое).
- *
- * Размеры: `md` — поле формы (как `fieldClass`), `sm` — инлайн-контрол в таблицах
- * (как `selectClass`, mono).
+ * Кастомный селект — замена нативному `<select>` (его список рисует ОС, мимо темы).
+ * Портал с `position: fixed`, чтобы не обрезался скролл-контейнерами (таблицы админки).
+ * Два режима значения: controlled (`value`+`onValueChange`) или form (`name` — значение
+ * в скрытый input, сабмит через FormData).
  */
 
 export type SelectOption = { value: string; label: string; disabled?: boolean };
@@ -88,7 +77,6 @@ export function Select({
     setCoords({ top: r.bottom + 4, left: r.left, right: window.innerWidth - r.right, width: r.width });
   };
 
-  // Позиция в портале: измерить при открытии, держать актуальной при скролле/ресайзе.
   useLayoutEffect(() => {
     if (!open) return;
     measure();
@@ -101,7 +89,6 @@ export function Select({
     };
   }, [open]);
 
-  // Закрытие по клику вне (триггер + поповер) и по Esc.
   useEffect(() => {
     if (!open) return;
     function onDown(e: PointerEvent) {

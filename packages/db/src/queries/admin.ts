@@ -233,15 +233,9 @@ export interface AdminArtist {
   plays30d: number;
 }
 
-// Раньше — 4 коррелированных подзапроса, пересчитываемых на каждую из 50 строк
-// (200 сканов на страницу). Теперь — 4 предагрегированных LEFT JOIN: каждая
-// таблица (follows/releases/tracks/play_events) агрегируется по artist_profile_id
-// ОДИН раз (GROUP BY, использует существующие индексы *_artist_profile_id_idx /
-// *_release_id_idx / play_events_track_started_covering_idx), затем хеш-джойнится со
-// страницей артистов — один проход по каждой таблице вместо N.
-// Разные имена count-колонки в каждом подзапросе (не переиспользуем «cnt») —
-// иначе interpolated-колонка в sql-шаблоне ниже рендерится без квалификации
-// таблицы и Postgres не может выбрать между четырьмя одноимёнными «cnt».
+// 4 предагрегированных LEFT JOIN вместо N коррелированных подзапросов на N строк.
+// Имена count-колонок разные в каждом (не «cnt» везде): иначе interpolated-колонка
+// в sql-шаблоне ниже теряет квалификацию таблицы, и Postgres не различает четыре «cnt».
 const artistFollowerAgg = db
   .select({ artistProfileId: follows.artistProfileId, followerCnt: sql<number>`count(*)`.as('follower_cnt') })
   .from(follows)
@@ -316,7 +310,6 @@ export async function setArtistActive(artistProfileId: string, isActive: boolean
     .where(eq(artistProfiles.id, artistProfileId));
 }
 
-/** Базовые поля профиля артиста для админ-редактуры (§9.1). */
 export async function getArtistCore(
   id: string,
 ): Promise<{ id: string; name: string; slug: string; bio: string | null; avatarUrl: string | null } | null> {
@@ -420,7 +413,7 @@ export async function adminUpdatePlaylist(
     .where(eq(playlists.id, id));
 }
 
-/** Удаление плейлиста админом. playlist_tracks не каскадит — чистим в транзакции;
+/** Удаление плейлиста админом. playlist_tracks не каскадит, чистим в транзакции;
  *  playlist_likes удалятся каскадом по FK. */
 export async function adminDeletePlaylist(id: string): Promise<void> {
   await db.transaction(async (tx) => {
@@ -456,7 +449,6 @@ export interface AdminAttention {
 
 export async function getAdminAttention(): Promise<AdminAttention> {
   const [stuckRows, failedRows, [blockedRow], unverifiedRows] = await Promise.all([
-    // Треки, которые зависли в PROCESSING больше 2 часов
     db
       .select({
         id: tracks.id,
@@ -478,8 +470,7 @@ export async function getAdminAttention(): Promise<AdminAttention> {
       .orderBy(asc(tracks.updatedAt))
       .limit(10),
 
-    // Треки, у которых транскодинг окончательно упал (FAILED) — артист уже
-    // уведомлён письмом, но админу стоит видеть для разбора.
+    // Артист уже уведомлён о FAILED письмом, но админу стоит видеть для разбора.
     db
       .select({
         id: tracks.id,
@@ -496,10 +487,8 @@ export async function getAdminAttention(): Promise<AdminAttention> {
       .orderBy(desc(tracks.updatedAt))
       .limit(10),
 
-    // Количество заблокированных треков
     db.select({ n: count() }).from(tracks).where(eq(tracks.status, 'BLOCKED')),
 
-    // Артисты с опубликованными релизами, но без верификации
     db
       .select({
         profileId: artistProfiles.id,
@@ -661,8 +650,6 @@ export async function listTracksAdmin(opts: {
       bpm: trackAudio.bpm,
       musicalKey: trackAudio.musicalKey,
       hasHls: sql<boolean>`${trackAudio.hlsManifestKey} is not null`,
-      // tracks.id литералом: интерполяция в select-контексте рендерится как «id»
-      // и внутри подзапроса резолвится в id его собственной таблицы (pe.id/l.id)
       playsTotal: sql<number>`(select count(*) from play_events pe where pe.track_id = tracks.id)::int`,
       likesCount: sql<number>`(select count(*) from likes l where l.track_id = tracks.id)::int`,
     })
@@ -756,7 +743,7 @@ export async function createArtistForUser(data: {
   const [user] = await db.select().from(users).where(eq(users.email, data.email)).limit(1);
   if (!user) return { ok: false, error: 'Пользователь не найден' };
 
-  // Несколько артистов на один аккаунт разрешены — один человек может управлять
+  // Несколько артистов на один аккаунт разрешены: один человек может управлять
   // несколькими карточками. Уникален только slug (глобально).
   const [slugTaken] = await db.select({ id: artistProfiles.id })
     .from(artistProfiles).where(eq(artistProfiles.slug, data.slug)).limit(1);
@@ -771,14 +758,12 @@ export async function createArtistForUser(data: {
       isActive: true,
       verified: false,
     }).returning({ id: artistProfiles.id });
-    // Создатель — OWNER-участник: контроль доступа к дашборду идёт через artist_members.
+    // Создатель добавляется как OWNER-участник: контроль доступа к дашборду идёт через artist_members.
     await tx.insert(artistMembers).values({
       artistProfileId: profile.id,
       userId: user.id,
       role: 'OWNER',
     });
-    // Повышаем до ARTIST только обычного слушателя — модератора/админа/суперадмина
-    // не понижаем (иначе создание артиста на своём же email отбирает доступ к админке).
     if (user.role === 'LISTENER') {
       await tx.update(users).set({ role: 'ARTIST', updatedAt: new Date() }).where(eq(users.id, user.id));
     }

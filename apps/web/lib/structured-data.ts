@@ -1,12 +1,9 @@
 import { SITE_URL } from './site';
 
 /**
- * Билдеры Schema.org JSON-LD для страниц артиста, релиза и трека.
- *
- * Цель из концепта: страница `/artists/[slug]` должна перебивать в выдаче
- * стриминги — для этого помимо OG-тегов поисковикам отдаются структурированные
- * данные (MusicGroup / MusicAlbum / MusicRecording). Чистые функции без эффектов,
- * чтобы покрыть тестами; рендерятся серверным компонентом <JsonLd>.
+ * Билдеры Schema.org JSON-LD (MusicGroup/MusicAlbum/MusicRecording) для страниц артиста,
+ * релиза и трека — чтобы `/artists/[slug]` перебивал стриминги в выдаче. Чистые функции,
+ * рендерятся серверным компонентом `<JsonLd>`.
  */
 
 export const abs = (path: string): string =>
@@ -53,11 +50,7 @@ export interface TrackLd {
   durationSec?: number | null;
 }
 
-/**
- * Издатель страниц платформы — Organization Vire. Добавляется как `publisher`
- * в Music-схемы, чтобы у страниц был явный источник публикации (GEO/AI-движки
- * ищут author/publisher; раньше hasAuthorInfo: no).
- */
+/** Organization Vire как `publisher` в Music-схемах — GEO/AI-движки ищут явный источник публикации. */
 const VIRE_PUBLISHER = {
   '@type': 'Organization',
   name: 'Vire',
@@ -222,10 +215,7 @@ export interface ArtistPostLd {
   createdAt: Date | string;
 }
 
-/**
- * Article для анонса артиста — чтобы посты попадали в индекс как датированный
- * контент (раньше hasArticleSchema: no). headline обязателен для Article.
- */
+/** Article для анонса артиста — попадает в индекс как датированный контент; headline обязателен для Article. */
 export function artistPostJsonLd(post: ArtistPostLd, artist: ArtistLd): Record<string, unknown> {
   const datePublished =
     post.createdAt instanceof Date ? post.createdAt.toISOString() : post.createdAt;

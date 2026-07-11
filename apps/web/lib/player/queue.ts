@@ -2,9 +2,7 @@ import type { PlayerTrack } from '@/store/player';
 
 export type Repeat = 'off' | 'all' | 'one';
 
-/** Режет `items` окном `limit` вокруг `index`, оставляя `windowBefore` элементов
- *  перед ним — общий алгоритм для persist-окна очереди (store/player.ts) и капа
- *  live-очереди волны (`capLiveQueue` ниже). Не режет, если length <= limit. */
+/** Режет `items` окном `limit` вокруг `index`, оставляя `windowBefore` элементов перед ним. */
 export function sliceWindowAroundIndex<T>(
   items: T[],
   index: number,
@@ -21,11 +19,8 @@ export function sliceWindowAroundIndex<T>(
 export const LIVE_QUEUE_LIMIT = 300;
 const LIVE_QUEUE_WINDOW_BEFORE = 20;
 
-/** Волна дозаписывает очередь в памяти без ограничений — на очень долгой сессии
- *  она бы росла бесконечно. Отрезаем голову, когда length > LIVE_QUEUE_LIMIT,
- *  оставляя >=LIVE_QUEUE_WINDOW_BEFORE треков перед текущим (чтобы prev() ещё
- *  работал). originalQueue (шаффл активен) режем той же логикой по позиции
- *  текущего трека — иначе shuffleOff() после обрезки терял бы согласованность. */
+/** Кап бесконечно растущей live-очереди волны; originalQueue режем той же логикой
+ *  по позиции текущего трека — иначе shuffleOff() после обрезки терял бы согласованность. */
 export function capLiveQueue(
   queue: PlayerTrack[],
   queueIndex: number,

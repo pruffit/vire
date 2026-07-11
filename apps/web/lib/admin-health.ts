@@ -91,7 +91,7 @@ export async function retryFailedJobs(queueName: string): Promise<number> {
       await job.retry();
       n++;
     } catch {
-      // задача могла уже уйти — пропускаем
+      // задача могла уже уйти, пропускаем
     }
   }
   return n;

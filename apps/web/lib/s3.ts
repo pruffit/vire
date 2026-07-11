@@ -11,9 +11,8 @@ export const s3 = new S3Client({
   forcePathStyle: true,
 });
 
-// Отдельный клиент для подписи СКАЧИВАЕМЫХ ссылок: подпись SigV4 привязана к хосту,
-// а на проде S3_ENDPOINT внутренний (minio:9000) и из браузера недоступен. Подписываем
-// под публичным хостом (через Caddy → MinIO). Локально оба совпадают.
+// Отдельный клиент для подписи скачиваемых ссылок: SigV4 привязана к хосту, а на проде
+// S3_ENDPOINT внутренний — подписываем публичным (Caddy → MinIO); локально оба совпадают.
 const s3Signer = new S3Client({
   endpoint: process.env.S3_PUBLIC_ENDPOINT ?? process.env.S3_ENDPOINT ?? 'http://localhost:9000',
   region: process.env.S3_REGION ?? 'us-east-1',

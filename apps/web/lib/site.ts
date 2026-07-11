@@ -1,6 +1,5 @@
-// Single source of truth for site-wide constants used by metadata, robots,
-// sitemap and OpenGraph. SITE_URL drives metadataBase, so relative OG/canonical
-// URLs resolve to absolute ones.
+// Site-wide constants for metadata/robots/sitemap/OG. SITE_URL drives metadataBase,
+// so relative OG/canonical URLs resolve to absolute ones.
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ??
   process.env.AUTH_URL ??

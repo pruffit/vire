@@ -5,12 +5,9 @@ import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 
 /**
- * Единый color picker платформы — замена нативному `<input type=color>`, чей
- * попап светлый и мимо темы. Здесь: SV-квадрат + hue-слайдер + hex, тёмная тема.
- *
- * Контракт (совместим с прежним ad-hoc ColorField профиля): `value` — hex
- * `#rrggbb`, `onChange(hex)`. `name` рендерит скрытый input для сабмита формы
- * через FormData.
+ * Color picker — замена нативному `<input type=color>` (попап светлый, мимо темы).
+ * SV-квадрат + hue-слайдер + hex; `value`/`onChange` — hex `#rrggbb`, `name` —
+ * скрытый input для сабмита формы через FormData.
  */
 
 interface Props {
@@ -85,10 +82,8 @@ export function ColorField({ label, name, value, onChange, disabled }: Props) {
   const hsvRgb = hsvToRgb(hsv.h, hsv.s, hsv.v);
   const hsvHex = rgbToHex(hsvRgb.r, hsvRgb.g, hsvRgb.b);
 
-  // Синхронизация из value, когда оно изменилось извне (пресеты) и расходится с
-  // нашим hsv. Сравнение с `hsvHex` (а не с ref) даёт условие без чтения ref в
-  // рендере и не теряет hue при значениях, которые отдали мы сами. setState в
-  // фазе рендера для подгонки под пропсы React поддерживает.
+  // синхронизация при внешнем изменении value (пресеты); сравнение с hsvHex не теряет hue,
+  // который мы сами и отдали; setState в фазе рендера для подгонки под пропсы React поддерживает
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);

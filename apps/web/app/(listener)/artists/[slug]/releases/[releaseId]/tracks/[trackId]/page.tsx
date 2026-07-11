@@ -43,8 +43,7 @@ async function getPageData(slug: string, releaseId: string, trackId: string) {
 
   if (release.artistProfileId !== artist.id) return null;
 
-  // Трек неопубликованного релиза (черновик/архив/будущий SCHEDULED) публично не
-  // существует — иначе страница отдавала бы название, лирику и плеер до релиза.
+  // трек неопубликованного релиза публично не существует — иначе страница отдаст лирику и плеер до релиза
   if (!isReleasePubliclyVisible(release, new Date())) return null;
 
   const track = tracks.find((t) => t.id === trackId);

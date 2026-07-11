@@ -18,10 +18,7 @@ export function isValidSlug(slug: string): boolean {
   return slug.length >= 1 && slug.length <= 60 && SLUG_RE.test(slug);
 }
 
-/**
- * Парсит и чистит массив ссылок из JSON-строки формы: оставляет только записи
- * с валидным http(s)-URL, обрезает подписи, ограничивает количество.
- */
+/** Парсит массив ссылок из JSON-строки формы: валидный http(s)-URL, обрезанные подписи, ограничение количества. */
 export function parseSmartLinkLinks(raw: unknown, max = MAX_SMART_LINKS): ArtistLink[] {
   if (typeof raw !== 'string') return [];
   let parsed: unknown;

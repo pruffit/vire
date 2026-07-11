@@ -5,8 +5,7 @@ import { SITE_VERSION } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
 
-// Публичный health-эндпоинт для внешнего uptime-чека (UptimeRobot и т.п.).
-// 200 — всё живо; 503 — деградация (БД или Redis недоступны).
+// публичный health для внешнего uptime-чека — 200 всё живо, 503 БД/Redis недоступны
 export async function GET() {
   // pingDb/pingRedis возвращают number|null (null = недоступно).
   const [dbPing, redisPing] = await Promise.all([

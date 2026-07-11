@@ -1,8 +1,5 @@
-// Клиентский модуль жанров. Тип — type-only импорт из @vire/core (стирается при
-// компиляции, runtime-код core в клиентский бандл не попадает). Здесь — группировка
-// и подписи для UI: список большой, пикеры показывают его по категориям + поиск.
-// Полнота GENRE_LABELS гарантируется типом Record<Genre, string>; равенство состава
-// групп зеркалам core/db — тестом lib/__tests__/genres.test.ts.
+// Клиентский модуль жанров: type-only импорт из @vire/core (runtime-код core в
+// клиентский бандл не попадает) + группировка/подписи для UI-пикеров.
 
 import type { Genre } from '@vire/core';
 
@@ -16,8 +13,7 @@ export interface GenreGroup {
 // Общий лимит жанров на трек — используется пикером артиста и формой админки.
 export const MAX_TRACK_GENRES = 3;
 
-// Группировка для UI. Порядок здесь же определяет порядок в пикерах и <optgroup>.
-// Каждый жанр ровно в одной группе (разбиение — проверяется тестом).
+// Порядок групп = порядок в пикерах/<optgroup>; каждый жанр ровно в одной группе.
 export const GENRE_GROUPS: GenreGroup[] = [
   {
     label: 'Хаус',
@@ -193,9 +189,8 @@ export const GENRE_GROUPS: GenreGroup[] = [
 
 export const ALL_GENRES: Genre[] = GENRE_GROUPS.flatMap((g) => g.genres);
 
-// Runtime-гард для строк из jsonb (genre_suggestions), где enum не гарантирован
-// на уровне типов. hasOwn, а не `in` — `in` смотрит и по цепочке прототипов,
-// чем пропустил бы мусор вроде 'toString'.
+// Runtime-гард для строк из jsonb (genre_suggestions). hasOwn, а не `in` — `in`
+// смотрит и по цепочке прототипов, пропустил бы мусор вроде 'toString'.
 export function isGenre(v: string): v is Genre {
   return Object.hasOwn(GENRE_LABELS, v);
 }

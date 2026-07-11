@@ -20,7 +20,7 @@ export async function GET(_req: Request, { params }: Params) {
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params;
 
-  // Анонимный INSERT без дедупликации — без лимита агрегат «любимых моментов»
+  // Анонимный INSERT без дедупликации: без лимита агрегат «любимых моментов»
   // накручивается скриптом, а таблица раздувается.
   const rl = await rateLimit(clientKey(req, 'moments'), 30, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);

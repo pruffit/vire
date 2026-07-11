@@ -7,10 +7,7 @@ interface Props {
   trackId: string;
 }
 
-/**
- * Пере-транскод трека: пересобирает HLS из исходника. Полезно когда трек READY,
- * но HLS-файлы в бакете битые/отсутствуют (плеер бесконечно грузится).
- */
+// пересобрать HLS из исходника — когда трек READY, но HLS-файлы в бакете битые/отсутствуют
 export function RetranscodeButton({ trackId }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);

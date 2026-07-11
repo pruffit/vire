@@ -7,7 +7,7 @@ export interface GenreSuggestion {
 }
 
 // Немузыкальные метки: осознанно не мапятся ни во что (озвучка, детский контент,
-// пародии). Инвариант: каждая из 400 меток модели — либо здесь, либо в DISCOGS_TO_GENRE.
+// пародии). Инвариант: каждая из 400 меток модели либо здесь, либо в DISCOGS_TO_GENRE.
 export const DROPPED_LABELS: ReadonlySet<string> = new Set([
   'Non-Music---Audiobook',
   'Non-Music---Comedy',
@@ -26,12 +26,9 @@ export const DROPPED_LABELS: ReadonlySet<string> = new Set([
   'Rock---Parody',
 ]);
 
-// Маппинг genre_discogs400 (таксономия Discogs "Parent---Subgenre") → наш genreEnum.
-// Покрытие ~1:1: каждый музыкальный сабжанр Discogs имеет точный аналог в enum.
-// Одноимённые стили под разными родителями сведены в один жанр, если это один жанр
-// по сути (Grime, Trip Hop, Disco, Gospel, Afrobeat, New Wave, Electro…), и разведены,
-// если смысл разный (Electronic---Hardcore → HARDCORE_EDM vs Rock---Hardcore →
-// HARDCORE_PUNK). Единичные своды «размытый стиль → зонтик» помечены комментарием.
+// Маппинг genre_discogs400 (таксономия Discogs "Parent---Subgenre") в наш genreEnum,
+// покрытие ~1:1 (детали и обоснование сводов: docs/features/auto-genre.md). Единичные
+// своды «размытый стиль в зонтик» помечены комментарием у строки.
 export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
   // Blues
   'Blues---Boogie Woogie': 'BOOGIE_WOOGIE',
@@ -47,7 +44,7 @@ export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
   'Blues---Rhythm & Blues': 'RNB',
   'Blues---Texas Blues': 'TEXAS_BLUES',
 
-  // Brass & Military — духовые оркестры и марши, один жанр
+  // Brass & Military: духовые оркестры и марши, один жанр
   'Brass & Military---Brass Band': 'BRASS',
   'Brass & Military---Marches': 'BRASS',
   'Brass & Military---Military': 'BRASS',
@@ -230,7 +227,7 @@ export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
   'Hip Hop---Conscious': 'CONSCIOUS',
   'Hip Hop---Crunk': 'CRUNK',
   'Hip Hop---Cut-up/DJ': 'CUT_UP_DJ',
-  'Hip Hop---DJ Battle Tool': 'TURNTABLISM', // свод: скретч-болванки — материал тёрнтейблизма
+  'Hip Hop---DJ Battle Tool': 'TURNTABLISM', // свод: скретч-болванки, материал тёрнтейблизма
   'Hip Hop---Electro': 'ELECTRO',
   'Hip Hop---G-Funk': 'G_FUNK',
   'Hip Hop---Gangsta': 'GANGSTA',
@@ -313,7 +310,7 @@ export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
   'Latin---Tejano': 'TEJANO',
   'Latin---Vallenato': 'VALLENATO',
 
-  // Non-Music — музыкально осмысленное; остальное в DROPPED_LABELS
+  // Non-Music: музыкально осмысленное, остальное в DROPPED_LABELS
   'Non-Music---Field Recording': 'FIELD_RECORDING',
   'Non-Music---Poetry': 'SPOKENWORD',
   'Non-Music---Spoken Word': 'SPOKENWORD',
@@ -381,7 +378,7 @@ export const DISCOGS_TO_GENRE: Readonly<Record<string, TrackGenre>> = {
   'Rock---Funk Metal': 'FUNK_METAL',
   'Rock---Garage Rock': 'GARAGE_ROCK',
   'Rock---Glam': 'GLAM',
-  'Rock---Goregrind': 'GRINDCORE', // гор/порно-нейминг не тащим в пикер — общий GRINDCORE
+  'Rock---Goregrind': 'GRINDCORE', // гор/порно-нейминг не тащим в пикер, общий GRINDCORE
   'Rock---Goth Rock': 'GOTH_ROCK',
   'Rock---Gothic Metal': 'GOTHIC_METAL',
   'Rock---Grindcore': 'GRINDCORE',
@@ -464,24 +461,17 @@ for (const label of DISCOGS_400_LABELS) {
   }
 }
 
-// Жанры, собирающие 2+ метки (GRINDCORE, BRASS, RNB, GOSPEL, TRIP_HOP, SPOKENWORD…),
-// при чистой сумме вероятностей перевешивали бы один уверенный точный лейбл
-// диффузной массой. Смешиваем max (сила лучшей метки жанра) с остатком суммы,
-// взятым с весом ниже единицы — остаток всё ещё повышает жанр, но не позволяет
-// числу меток решать исход.
+// Жанры с 2+ метками (GRINDCORE, BRASS, RNB…) при чистой сумме вероятностей
+// перевешивали бы один уверенный лейбл диффузной массой. Смешиваем max с
+// остатком суммы, взятым с весом ниже единицы, чтобы число меток не решало исход.
 const SUM_TAIL_WEIGHT = 0.3;
 
 /**
- * Агрегирует сырые предсказания модели (400 меток Discogs) в топ-5 наших жанров.
- * Score жанра = max его меток + SUM_TAIL_WEIGHT * (сумма остальных меток).
- * Confidence — score жанра, нормализованный на сумму score по ВСЕМ замэпленным
- * жанрам (не по всем 400 меток) — так остаток массы, ушедший в отброшенные
- * метки, не занижает уверенность искусственно.
- *
- * Принципиально недостижимые для модели жанры (в Discogs-400 нет аналога):
- * PHONK, DRILL, HYPERPOP, ORCHESTRAL, PIANO, SINGER_SONGWRITER — только ручной
- * выбор. Зонтики (ELECTRONIC, ROCK, POP, JAZZ, METAL, WORLD…) после перехода на
- * покрытие 1:1 тоже не предлагаются автоматически — модель бьёт точнее.
+ * Топ-5 наших жанров из 400 сырых предсказаний. Score = max метки жанра +
+ * SUM_TAIL_WEIGHT × остаток суммы; confidence нормализован по сумме score
+ * замэпленных жанров (не всех 400 меток). Жанры без аналога в Discogs-400
+ * (PHONK, DRILL, HYPERPOP, ORCHESTRAL, PIANO, SINGER_SONGWRITER) сюда не попадают,
+ * см. docs/features/auto-genre.md.
  */
 export function mapDiscogsPredictionsToGenres(
   probabilities: ArrayLike<number>,

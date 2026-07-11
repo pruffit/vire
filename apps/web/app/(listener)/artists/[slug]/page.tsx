@@ -101,8 +101,7 @@ export default async function ArtistPage({ params }: Props) {
 
   const session = await auth();
   const isAuthed = !!session?.user;
-  // Пресейв-состояние для секции «Скоро выйдет»: для вошедшего — какие уже сохранены
-  // (батч-запрос); гостю кнопка ведёт на страницу релиза (там email-флоу).
+  // гостю кнопка ведёт на страницу релиза (там email-флоу) — presave-состояние нужно только вошедшим
   const upcomingIds = upcoming.filter((r) => r.releaseDate).map((r) => r.id);
   const [following, followerCount, presavedIds] = await Promise.all([
     session?.user?.id ? getFollowState(session.user.id, artist.id) : Promise.resolve(false),
@@ -194,9 +193,7 @@ export default async function ArtistPage({ params }: Props) {
               trackCount={playableTracks.length}
               runtime={runtime}
             />
-            {/* Компактная полоска при скролле — только мобилка (на lg карточка
-                sticky). Сентинел внутри бара стоит здесь, после всей карточки,
-                поэтому полоска всплывает, когда карточка ушла из вида, а не баннер. */}
+            {/* только мобилка — на lg карточка identity уже sticky */}
             <div className="lg:hidden">
               <ArtistCollapseBar name={artist.name} avatarUrl={displayAvatar} verified={artist.verified} />
             </div>
@@ -531,8 +528,7 @@ function ReleasesSection({
           <ReleaseQuickLook showArtist={false} release={toQL(releases[0])} priority />
         </div>
       ) : (
-        // Ровная сетка без «героя» на 2 колонки: квадратная обложка в col-span-2
-        // становилась вдвое выше соседей и оставляла пустоту рядом с ними.
+        // без «героя» на 2 колонки: col-span-2 делал обложку вдвое выше соседей
         <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
           {releases.map((r, i) => (
             <StaggerItem key={r.id}>

@@ -20,8 +20,7 @@ import {
 } from 'next/font/google';
 import { SANS_FONT_VARS, MONO_FONT_VARS, SANS_FONTS, MONO_FONTS } from '@/lib/font-catalog';
 
-// All fonts offered in the artist theme editor. Loaded once, exposed as CSS
-// variables so an artist's chosen font can be applied per-page.
+// All fonts offered in the artist theme editor, exposed as CSS variables.
 const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-inter', display: 'swap' });
 const montserrat = Montserrat({ subsets: ['latin', 'cyrillic'], variable: '--font-montserrat', display: 'swap' });
 const unbounded = Unbounded({ subsets: ['latin', 'cyrillic'], variable: '--font-unbounded', display: 'swap' });
@@ -31,8 +30,7 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin', 'cyrillic'], variable:
 const firaCode = Fira_Code({ subsets: ['latin', 'cyrillic'], variable: '--font-fira-code', display: 'swap' });
 const ibmPlexMono = IBM_Plex_Mono({ subsets: ['latin', 'cyrillic'], weight: ['400', '500', '600'], variable: '--font-ibm-plex-mono', display: 'swap' });
 
-// Опциональные шрифты — не грузятся на каждой странице (preload: false), только
-// когда артист выбрал их в теме и они реально попадают в CSS страницы.
+// Опциональные шрифты — preload: false, грузятся только когда попадают в CSS страницы.
 const rubik = Rubik({ subsets: ['latin', 'cyrillic'], variable: '--font-rubik', display: 'swap', preload: false });
 const golosText = Golos_Text({ subsets: ['latin', 'cyrillic'], variable: '--font-golos-text', display: 'swap', preload: false });
 const onest = Onest({ subsets: ['latin', 'cyrillic'], variable: '--font-onest', display: 'swap', preload: false });
@@ -71,15 +69,9 @@ export const fontVariables = [
 export { SANS_FONTS, MONO_FONTS };
 
 /**
- * CSS-variable overrides for an artist's chosen fonts. Spread into the root
- * element's `style` on a themed page; descendants using `font-sans`/`font-mono`
- * (or inheriting from it) then resolve to the artist's fonts.
- *
- * NB: globals.css declares the font tokens with `@theme inline`, so Tailwind
- * compiles `.font-sans` → `font-family: var(--font-geist-sans)` (the value is
- * inlined, not `var(--font-sans)`). Overriding `--font-sans` here would do
- * nothing — we must override the variable the utility actually reads,
- * `--font-geist-sans` / `--font-geist-mono`.
+ * CSS-var overrides for an artist's fonts, spread into the root element's style.
+ * Must override `--font-geist-sans`/`--font-geist-mono`, not `--font-sans`/`--font-mono` —
+ * Tailwind's `@theme inline` bakes the geist var name into `.font-sans` at compile time.
  */
 export function artistFontStyle(tokens: { fontSans?: string; fontMono?: string }): Record<string, string> {
   const style: Record<string, string> = {};
