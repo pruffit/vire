@@ -14,11 +14,22 @@ import { Icon } from '@/components/icon';
 // до z-40) — зона обязана рисоваться поверх них, а isolate не выпускает z-50 наружу.
 // Непортальные абсолютные поповеры (add-to-playlist и т.п.) внутрь ленты не класть:
 // isolate запрёт их под зонами, а overflow контейнера обрежет — только портал в body.
-const EDGE_BUTTON =
-  'absolute inset-y-0 z-50 hidden items-center text-foreground/70 transition-colors hover:text-foreground pointer-fine:flex';
+const EDGE_BUTTON = 'absolute inset-y-0 z-50 hidden items-center pointer-fine:flex';
 
-// Ширина зоны: узким пилюлям (чипы) w-14 закрывал бы целый элемент.
-const EDGE_WIDTH = { sm: 'w-10', md: 'w-14' } as const;
+// Вариант `zone` — голый шеврон в полновысотной зоне, для высоких карточных лент.
+// Вариант `chip` — круглая кнопка-диск в языке пилюль: в низкой чип-ленте голый
+// шеврон ложится прямо на текст пилюли и выглядит сломанным.
+const EDGE_VARIANT = {
+  zone: 'w-14 from-25% text-foreground/70 transition-colors hover:text-foreground',
+  // from-55% на w-14: диск (28px) целиком лежит на глухой части шторки — иначе
+  // сквозь него читается обрезанная пилюля и контрол сливается с её бордером.
+  chip: 'group w-14 from-55%',
+} as const;
+
+// Заливка вместо бордера: контурный диск сливается с контурными пилюлями чипов
+// в одну кашу линий, заполненный кружок читается как отдельный контрол.
+const EDGE_DISC =
+  'flex size-7 items-center justify-center rounded-full bg-foreground/10 text-foreground/80 transition-colors group-hover:bg-foreground/20 group-hover:text-foreground';
 
 // scroll-padding контейнера должен совпадать с его собственным padding — иначе
 // снап первого элемента ложится не на 0, а на паддинг, и браузер сам доснапливает
@@ -42,13 +53,13 @@ export function ScrollRow({
   children,
   className,
   bleedClassName,
-  edgeZone = 'md',
+  edgeVariant = 'zone',
   edgeFrom = 'from-background',
 }: {
   children: React.ReactNode;
   className?: string;
   bleedClassName?: string;
-  edgeZone?: keyof typeof EDGE_WIDTH;
+  edgeVariant?: keyof typeof EDGE_VARIANT;
   /** Цвет-шторка краевой зоны. По умолчанию `from-background` (лента на фоне
    *  страницы). Если лента лежит на приподнятой поверхности (карточка/панель) —
    *  передай сюда её эффективный цвет, иначе шторка гасит в более тёмный фон
@@ -121,9 +132,15 @@ export function ScrollRow({
           type="button"
           onClick={() => scroll(-1)}
           aria-label="Прокрутить влево"
-          className={cn(EDGE_BUTTON, EDGE_WIDTH[edgeZone], 'left-0 justify-start bg-linear-to-r from-25% to-transparent', edgeFrom)}
+          className={cn(EDGE_BUTTON, EDGE_VARIANT[edgeVariant], 'left-0 justify-start bg-linear-to-r to-transparent', edgeFrom)}
         >
-          <Icon name="chevron-left" size={22} />
+          {edgeVariant === 'chip' ? (
+            <span className={EDGE_DISC}>
+              <Icon name="chevron-left" size={15} />
+            </span>
+          ) : (
+            <Icon name="chevron-left" size={22} />
+          )}
         </button>
       )}
       <div ref={scrollRef} className={cn('overflow-x-auto no-scrollbar', className)}>
@@ -134,9 +151,15 @@ export function ScrollRow({
           type="button"
           onClick={() => scroll(1)}
           aria-label="Прокрутить вправо"
-          className={cn(EDGE_BUTTON, EDGE_WIDTH[edgeZone], 'right-0 justify-end bg-linear-to-l from-25% to-transparent', edgeFrom)}
+          className={cn(EDGE_BUTTON, EDGE_VARIANT[edgeVariant], 'right-0 justify-end bg-linear-to-l to-transparent', edgeFrom)}
         >
-          <Icon name="chevron-right" size={22} />
+          {edgeVariant === 'chip' ? (
+            <span className={EDGE_DISC}>
+              <Icon name="chevron-right" size={15} />
+            </span>
+          ) : (
+            <Icon name="chevron-right" size={22} />
+          )}
         </button>
       )}
     </div>

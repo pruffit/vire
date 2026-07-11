@@ -48,7 +48,7 @@ export function WaveChips({ items }: { items: WaveChipItem[] }) {
     <ScrollRow
       bleedClassName="-mx-1"
       className="flex gap-2 px-1"
-      edgeZone="sm"
+      edgeVariant="chip"
       // Шторка гасит в цвет панели «Поток» (flow-block: bg-white/[0.03] на фоне),
       // а не в фон страницы — иначе тёмная полоса поверх серой панели.
       edgeFrom="from-[color-mix(in_oklab,white_3%,var(--background))]"
