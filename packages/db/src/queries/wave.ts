@@ -189,6 +189,20 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       )`;
   };
 
+  // Точный жанр — верхний ярус сортировки (поверх family-фильтра): волна по чипу
+  // сначала исчерпывает треки с самим жанром (вкл. фолбэк на releases.genre у
+  // бестеговых) и только потом доливает соседей по семейству. Без яруса вкус/шум
+  // топили точный жанр — волна по «Boom Bap» стартовала с трэпа.
+  const genreExactTierFor = (g: TrackGenre | null): SQL<number> =>
+    g
+      ? sql<number>`CASE
+          WHEN EXISTS (SELECT 1 FROM track_genres tge WHERE tge.track_id = tracks.id AND tge.genre = ${g}) THEN 1
+          WHEN NOT EXISTS (SELECT 1 FROM track_genres tge2 WHERE tge2.track_id = tracks.id)
+            AND ${releases.genre} = ${g} THEN 1
+          ELSE 0
+        END`
+      : sql<number>`0`;
+
   // ── Seed-режим: без текущего трека — нет сигналов похожести ───────────────
   if (!p.currentTrackId) {
     const where = and(
@@ -228,7 +242,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
         .innerJoin(releases, eq(releases.id, tracks.releaseId))
         .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
         .where(where)
-        .orderBy(sql`${totalScore} DESC`)
+        .orderBy(sql`${genreExactTierFor(p.seedGenre)} DESC`, sql`${totalScore} DESC`)
         .limit(limit);
 
       return rows.map(toWaveTrack);
@@ -246,7 +260,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       .innerJoin(releases, eq(releases.id, tracks.releaseId))
       .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
       .where(where)
-      .orderBy(sql`ln(${plays30} + 1) * random() DESC`)
+      .orderBy(sql`${genreExactTierFor(p.seedGenre)} DESC`, sql`ln(${plays30} + 1) * random() DESC`)
       .limit(limit);
 
     return rows.map(toWaveTrack);
@@ -362,31 +376,12 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
     ? sql<number>`CASE WHEN ${artistProfiles.id}::text = ANY(${textArrayParam(p.recentArtistIds)}) THEN -0.4 ELSE 0 END`
     : sql<number>`0`;
 
-  // Сессионный буст: mood/genre, выбранные слушателем в начале сессии волны
-  const sessionMoodBoost = p.sessionMood
-    ? sql<number>`CASE WHEN EXISTS (
-        SELECT 1 FROM track_moods tms WHERE tms.track_id = tracks.id AND tms.mood = ${p.sessionMood}
-      ) THEN 0.35 ELSE 0 END`
-    : sql<number>`0`;
-
-  // Точное совпадение — полный буст (0.35), совпадение только по семейству — половина
-  // (0.175). CASE с приоритетом точного условия — не суммируем оба за один и тот же жанр.
-  const sessionGenreFamily = p.sessionGenre ? expandGenresToFamilies([p.sessionGenre]) : [];
-
-  const sessionGenreBoost = p.sessionGenre
-    ? sql<number>`CASE
-        WHEN EXISTS (SELECT 1 FROM track_genres tgs WHERE tgs.track_id = tracks.id AND tgs.genre = ${p.sessionGenre}) THEN 0.35
-        WHEN EXISTS (
-          SELECT 1 FROM track_genres tgsf
-          WHERE tgsf.track_id = tracks.id AND tgsf.genre::text = ANY(${textArrayParam(sessionGenreFamily)})
-        ) THEN 0.175
-        ELSE 0
-      END`
-    : sql<number>`0`;
-
+  // Сессионных mood/genre-бустов больше нет: закреплённый seed — жёсткий фильтр
+  // (WHERE ниже), внутри пула буст был бы константой; точный жанр над семейством
+  // ранжирует ярус genreExactTierFor в ORDER BY.
   const totalScore = sql<number>`${moodScore} + ${bpmScore} + ${keyScore} + ${genreScore}
     + ${tasteMoodScore} + ${tasteGenreScore} + ${qualityScore} + ${momentScore}
-    + ${fatiguePenalty} + ${diversityPenalty} + ${sessionMoodBoost} + ${sessionGenreBoost}
+    + ${fatiguePenalty} + ${diversityPenalty}
     + random() * 0.15`;
 
   // Закреплённый seed сессии — жёсткий фильтр, а не только буст: волна, запущенная
@@ -408,7 +403,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
         genreFamilyFilterFor(p.sessionGenre),
       ),
     )
-    .orderBy(sql`${totalScore} DESC`)
+    .orderBy(sql`${genreExactTierFor(p.sessionGenre)} DESC`, sql`${totalScore} DESC`)
     .limit(limit);
 
   return rows.map(toWaveTrack);
