@@ -7,7 +7,7 @@ export * from './repositories/track';
 export { getTrackAudio, getPlayableTrackAudio, getTrackArtistProfileId, getTrackSourceKey, getArtistTrackSources, getTrackAudioMeta, trackExists, getTrackTitle, listTracksNeedingAnalysis, updateTrackAnalysis, getGenreSuggestionsForTracks, saveGenreSuggestions, getGenreSuggestionsSnapshot, getAudioFeaturesSnapshot } from './queries/track-audio';
 export type { TrackAudioData, PlayableTrackAudioData, GenreSuggestionRow, GenreSuggestionsSnapshot, AudioFeaturesSnapshot } from './queries/track-audio';
 export { getPublicTrackLyrics } from './queries/lyrics';
-export { listActiveArtists } from './queries/artists';
+export { listActiveArtists, artistHasPublishedTrackById, isArtistMember } from './queries/artists';
 export type { ArtistListItem } from './queries/artists';
 export { getLikeState, getLikeCount, likeTrack, unlikeTrack } from './queries/likes';
 export {

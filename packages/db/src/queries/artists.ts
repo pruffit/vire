@@ -1,6 +1,6 @@
 import { count, eq, ilike, and, sql } from 'drizzle-orm';
 import { db } from '../client';
-import { artistProfiles, releases } from '../schema';
+import { artistProfiles, releases, artistMembers } from '../schema';
 
 export interface ArtistListItem {
   id: string;
@@ -74,4 +74,22 @@ export async function listActiveArtists(query?: string): Promise<ArtistListItem[
     releaseCount: Number(r.releaseCount),
     genres: r.genres ?? [],
   }));
+}
+
+export async function artistHasPublishedTrackById(artistProfileId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ has: sql<boolean>`${artistHasPublishedTrack}` })
+    .from(artistProfiles)
+    .where(eq(artistProfiles.id, artistProfileId))
+    .limit(1);
+  return row?.has ?? false;
+}
+
+export async function isArtistMember(artistProfileId: string, userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: artistMembers.id })
+    .from(artistMembers)
+    .where(and(eq(artistMembers.artistProfileId, artistProfileId), eq(artistMembers.userId, userId)))
+    .limit(1);
+  return Boolean(row);
 }
