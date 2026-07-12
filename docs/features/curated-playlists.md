@@ -80,9 +80,12 @@
   числа юзеров можно оптимизировать.
 - Персонализация учитывает и настроения, и жанры (`track_genres`) — общий
   профиль вкуса `getTasteProfile`, тот же, что использует волна (см. [wave](wave.md)).
-  Результат кэшируется на 60с на процесс (`createTtlCache`, потолок 500 записей,
-  `packages/db/src/queries/taste.ts`) — волна и главная зовут его часто (3 group-by
-  на вызов), лаг вкуса в минуту незаметен; `clearTasteProfileCache()` для тестов.
+  Профиль материализован в таблице `taste_profiles` (point-lookup по PK), пересчёт —
+  первым шагом `generatePersonalPlaylistsForAllUsers` (до самой генерации подборок,
+  тем же прогоном); поверх — L1 TTL-кэш на 60с на процесс (`createTtlCache`, потолок
+  500 записей, `packages/db/src/queries/taste.ts`), `clearTasteProfileCache()` для
+  тестов. Живой расчёт (3 group-by) — только фолбэк для юзера без материализованной
+  строки.
 - Личные подборки `visibility=PUBLIC` (доступны по прямой ссылке) — id не
   раскрывается, но строгой приватности нет.
 - Планировщик — per-process; при нескольких репликах воркера `upsertJobScheduler`

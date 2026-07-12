@@ -25,8 +25,9 @@
   скоринг похожести с текущим треком: mood-совпадение, BPM (±5/±15/±30), тональность
   (см. ниже), жанр (приоритет — `track_genres` кандидата, точное + семейное совпадение,
   см. ниже; фолбэк на `releases.genre`, до 0.3), вкус (mood до 0.25; genre — точное +
-  семейное), качество дослушивания (до 0.3), вовлечённость по «любимым моментам» (до 0.2),
-  анти-усталость (-0.6 за трек, слышанный за 7 дней), разнообразие артистов (-0.4 за
+  семейное), качество дослушивания (до 0.3, взвешенное по источнику запуска — см. ниже),
+  вовлечённость по «любимым моментам» (до 0.2), анти-усталость (-0.6 за трек, слышанный
+  за 7 дней), штраф wave-скипа (-0.4, см. ниже), разнообразие артистов (-0.4 за
   артиста из последних 5 выданных), шум (`random() * 0.15`). Сессионных mood/genre-бустов
   нет: seed — жёсткий фильтр, внутри пула буст был бы константой; приоритет точного
   жанра над семейством даёт ярус сортировки (см. ниже).
@@ -71,6 +72,23 @@ hiphop, rock, metal…):
 
 Настроения (`mood`) семейств не имеют — только жанры.
 
+### Вес источника запуска
+
+`play_events.source` весит по-разному в `qualityScore`: скип трека, предложенного
+самой волной, — сильный сигнал «не понравилось»; скип собственного выбора слушателя
+(плейлист/лайк/покупка) говорит о треке меньше. Константы —
+`packages/core/src/services/wave-scoring.ts` (`sourceQualityWeight`,
+`PLAY_SOURCE_QUALITY_WEIGHTS`): `wave` → 1.0, `playlist`/`liked`/`purchased` → 0.6,
+остальные источники → дефолт 0.8. `qualityScore` в `wave.ts` — взвешенное среднее
+`SUM(w·ratio)/SUM(w)` вместо простого `AVG`, веса вшиваются CASE через `sql.raw`
+(bind-параметр внутри CASE Postgres вывел бы как integer).
+
+Отдельный терм `waveSkipPenaltyFor` — штраф **-0.4**, если у слушателя есть
+`play_events` по этому треку с `source='wave'` и дослушиванием < 30% за последние
+30 дней («волна уже предлагала — не понравилось, не возвращать так скоро»).
+Складывается с `fatiguePenalty`, не заменяет его. Действует в режиме похожести и
+seed-режиме вошедшего слушателя; анонимный режим (популярность×random) не трогает.
+
 ### Тональность (Camelot)
 
 `packages/core/src/services/musical-key.ts` парсит `track_audio.musical_key` (буквенная
@@ -113,7 +131,11 @@ sid; раньше sid ротировался до фетча и при неуд�
   `getTrackMusicalKey`, `getArtistIdsForTracks`, `textArrayParam`)
 - **Семейства жанров:** `packages/db/src/genre-families.ts` (`GENRE_FAMILY`,
   `expandGenresToFamilies`) — используется для семейного подматчинга жанрового сигнала
-- **Профиль вкуса:** `packages/db/src/queries/taste.ts` (`getTasteProfile`)
+- **Профиль вкуса:** `packages/db/src/queries/taste.ts` (`getTasteProfile`,
+  `materializeTasteProfiles`) — читает таблицу `taste_profiles` (point-lookup по
+  PK), пересчитанную первым шагом editorial-крона `personal-4h`; L1 TTL-кэш (60с)
+  сверху, живой расчёт (`fetchTasteProfile`) — только фолбэк для юзера без строки
+  (новый, до ближайшего крона), с write-through upsert'ом
 - **Тональность:** `packages/core/src/services/musical-key.ts` (`parseMusicalKey`,
   `keySpellings`, `neighborKeys`, `keyMatchSets`)
 - **Redis-сессия:** `apps/web/lib/wave-session.ts` (`getWaveSession`,

@@ -121,7 +121,7 @@ export { getTrackGenres, setTrackGenres, setTrackGenresIfEmpty, getGenresForTrac
 export type { TrackGenre, GenreCount } from './queries/track-genres';
 export { GENRE_FAMILY, expandGenresToFamilies } from './genre-families';
 export type { GenreFamily } from './genre-families';
-export { getTasteProfile, clearTasteProfileCache } from './queries/taste';
+export { getTasteProfile, clearTasteProfileCache, materializeTasteProfiles } from './queries/taste';
 export type { TasteProfile } from './queries/taste';
 export {
   getAggregateMoments, addFavoriteMoment, getMomentCount,

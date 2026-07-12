@@ -4,7 +4,7 @@ import { tracks, releases, artistProfiles, trackMoods, playEvents, likes, playli
 import { upsertEditorialPlaylist, createPersonalPlaylist, deletePersonalPlaylists } from './playlists';
 import { MOOD_LABELS, type Mood } from './track-moods';
 import type { TrackGenre } from './track-genres';
-import { getTasteProfile } from './taste';
+import { getTasteProfile, materializeTasteProfiles, clearTasteProfileCache } from './taste';
 import { textArrayParam, visibleTrackWhere } from './wave';
 import { popularityScoreSql, topTrackIdsByPlays } from './popularity';
 import {
@@ -247,6 +247,9 @@ export async function generatePersonalPlaylistsForAllUsers(): Promise<void> {
       ...playUsers.map((u) => u.userId).filter((id): id is string => id !== null),
     ]),
   ];
+
+  await materializeTasteProfiles(userIds);
+  clearTasteProfileCache();
 
   // последовательно — фоновая генерация, нагрузку на БД не разгоняем
   const pool = await getFillerPool();
