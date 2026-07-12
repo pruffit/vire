@@ -246,6 +246,13 @@
       "when": 1783841293655,
       "tag": "0034_milky_falcon",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1783841583695,
+      "tag": "0035_play_events_covering_source",
+      "breakpoints": true
     }
   ]
 }
