@@ -5,3 +5,4 @@ export * from './releases';
 export * from './contributors';
 export * from './interactions';
 export * from './analytics';
+export * from './taste';
