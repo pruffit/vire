@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { cache, type ReactNode } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
@@ -50,7 +50,8 @@ import { topByPlays } from '@/lib/artist-tracks';
 
 type Props = { params: Promise<{ slug: string }> };
 
-async function getArtistData(slug: string) {
+// cache(): generateMetadata и page читают одно и то же на одном рендере
+const getArtistData = cache(async (slug: string) => {
   const artistService = new ArtistService(new DrizzleArtistRepository(db));
   const result = await artistService.getBySlug(slug);
   if (!result.ok) return null;
@@ -67,16 +68,16 @@ async function getArtistData(slug: string) {
   const explicitReleaseIds = await getExplicitReleaseIds(releases.map((r) => r.id));
 
   return { artist: result.value, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks };
-}
+});
 
 // пустой артист скрыт с витрины (каталог/поиск/sitemap) — прямой заход должен отвечать так же
-async function assertArtistVisible(artistProfileId: string): Promise<void> {
+const assertArtistVisible = cache(async (artistProfileId: string): Promise<void> => {
   if (await artistHasPublishedTrackById(artistProfileId)) return;
   const session = await auth();
   const userId = session?.user?.id;
   const isMember = userId ? await isArtistMember(artistProfileId, userId) : false;
   if (!canViewEmptyArtist({ isMember, role: session?.user?.role })) notFound();
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

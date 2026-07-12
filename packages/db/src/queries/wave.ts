@@ -141,7 +141,7 @@ const sourceWeightCase = sql.raw(
 
 // Качество: взвешенная по источнику доля дослушивания за 90 дней — скип рекомендации
 // волны тянет вниз сильнее, чем скип собственного выбора. Вес терма до 0.3.
-const qualityScore = sql<number>`COALESCE((
+export const qualityScore = sql<number>`COALESCE((
     SELECT SUM(${sourceWeightCase} * LEAST(1.0, pe.duration_played_sec::float / NULLIF(tracks.duration_sec, 0)))
          / NULLIF(SUM(${sourceWeightCase}), 0)
     FROM play_events pe

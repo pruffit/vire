@@ -13,7 +13,7 @@ export const playEvents = pgTable('play_events', {
   durationPlayedSec: integer('duration_played_sec').notNull().default(0),
   startedAt: timestamp('started_at').notNull().defaultNow(),
 }, (t) => [
-  // Есть ещё покрывающий индекс play_events(track_id, started_at) INCLUDE (duration_played_sec)
+  // Есть ещё покрывающий индекс play_events(track_id, started_at) INCLUDE (duration_played_sec, source)
   // для волны/популярности: добавлен вручную SQL-миграцией, drizzle-orm не умеет объявлять
   // INCLUDE в схеме, поэтому здесь он не отражён.
   index('play_events_started_at_idx').on(t.startedAt),
