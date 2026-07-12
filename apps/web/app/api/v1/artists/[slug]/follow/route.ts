@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzleArtistRepository, followArtist, unfollowArtist } from '@vire/db';
+import { db, DrizzleArtistRepository, DrizzleFollowRepository } from '@vire/db';
+import { FollowService, NotFoundError } from '@vire/core';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 type Ctx = { params: Promise<{ slug: string }> };
 
-async function resolveArtist(slug: string) {
-  return new DrizzleArtistRepository(db).findBySlug(slug);
+function followService() {
+  return new FollowService(new DrizzleArtistRepository(db), new DrizzleFollowRepository(db));
 }
 
 export async function POST(_req: Request, { params }: Ctx) {
@@ -19,10 +20,11 @@ export async function POST(_req: Request, { params }: Ctx) {
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const { slug } = await params;
-  const artist = await resolveArtist(slug);
-  if (!artist) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-  await followArtist(session.user.id, artist.id);
+  const result = await followService().follow(session.user.id, slug);
+  if (!result.ok) {
+    const status = result.error instanceof NotFoundError ? 404 : 403;
+    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+  }
   return NextResponse.json({ following: true });
 }
 
@@ -33,9 +35,10 @@ export async function DELETE(_req: Request, { params }: Ctx) {
   }
 
   const { slug } = await params;
-  const artist = await resolveArtist(slug);
-  if (!artist) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-  await unfollowArtist(session.user.id, artist.id);
+  const result = await followService().unfollow(session.user.id, slug);
+  if (!result.ok) {
+    const status = result.error instanceof NotFoundError ? 404 : 403;
+    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+  }
   return NextResponse.json({ following: false });
 }

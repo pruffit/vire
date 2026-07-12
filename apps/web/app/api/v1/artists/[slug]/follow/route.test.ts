@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { findBySlug, followArtist, unfollowArtist } = vi.hoisted(() => ({
+const { findBySlug, follow, unfollow } = vi.hoisted(() => ({
   findBySlug: vi.fn(),
-  followArtist: vi.fn(),
-  unfollowArtist: vi.fn(),
+  follow: vi.fn(),
+  unfollow: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
@@ -16,8 +16,10 @@ vi.mock('@vire/db', () => ({
   DrizzleArtistRepository: class {
     findBySlug = findBySlug;
   },
-  followArtist,
-  unfollowArtist,
+  DrizzleFollowRepository: class {
+    follow = follow;
+    unfollow = unfollow;
+  },
 }));
 
 import { auth } from '@/auth';
@@ -34,7 +36,7 @@ describe('POST /api/v1/artists/[slug]/follow', () => {
     mockedAuth.mockResolvedValue(null as never);
     const res = await POST(req(), ctx);
     expect(res.status).toBe(401);
-    expect(followArtist).not.toHaveBeenCalled();
+    expect(follow).not.toHaveBeenCalled();
   });
 
   it('404 when the artist does not exist', async () => {
@@ -42,7 +44,7 @@ describe('POST /api/v1/artists/[slug]/follow', () => {
     findBySlug.mockResolvedValue(null);
     const res = await POST(req(), ctx);
     expect(res.status).toBe(404);
-    expect(followArtist).not.toHaveBeenCalled();
+    expect(follow).not.toHaveBeenCalled();
   });
 
   it('follows the artist', async () => {
@@ -51,7 +53,7 @@ describe('POST /api/v1/artists/[slug]/follow', () => {
     const res = await POST(req(), ctx);
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ following: true });
-    expect(followArtist).toHaveBeenCalledWith('u1', 'artist1');
+    expect(follow).toHaveBeenCalledWith('u1', 'artist1');
   });
 });
 
@@ -60,7 +62,7 @@ describe('DELETE /api/v1/artists/[slug]/follow', () => {
     mockedAuth.mockResolvedValue(null as never);
     const res = await DELETE(req(), ctx);
     expect(res.status).toBe(401);
-    expect(unfollowArtist).not.toHaveBeenCalled();
+    expect(unfollow).not.toHaveBeenCalled();
   });
 
   it('unfollows the artist', async () => {
@@ -69,6 +71,6 @@ describe('DELETE /api/v1/artists/[slug]/follow', () => {
     const res = await DELETE(req(), ctx);
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ following: false });
-    expect(unfollowArtist).toHaveBeenCalledWith('u1', 'artist1');
+    expect(unfollow).toHaveBeenCalledWith('u1', 'artist1');
   });
 });

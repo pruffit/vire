@@ -2,20 +2,29 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import {
-  getTrackMoods, setTrackMoods, trackExists, ALL_MOODS, db,
-  DrizzleTrackRepository, DrizzleReleaseRepository,
+  ALL_MOODS, db,
+  DrizzleTrackRepository, DrizzleReleaseRepository, DrizzleTrackMoodsRepository,
 } from '@vire/db';
+import { TrackMoodsService, NotFoundError } from '@vire/core';
 import { getActiveArtist } from '@/lib/active-artist';
 
 type Params = { params: Promise<{ id: string }> };
 
 const moodSchema = z.array(z.enum(ALL_MOODS)).max(5);
 
+function trackMoodsService() {
+  return new TrackMoodsService(
+    new DrizzleTrackRepository(db),
+    new DrizzleReleaseRepository(db),
+    new DrizzleTrackMoodsRepository(db),
+  );
+}
+
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
-  if (!(await trackExists(id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  const moods = await getTrackMoods(id);
-  return NextResponse.json({ moods });
+  const result = await trackMoodsService().getMoods(id);
+  if (!result.ok) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json({ moods: result.value });
 }
 
 export async function PUT(req: Request, { params }: Params) {
@@ -27,18 +36,14 @@ export async function PUT(req: Request, { params }: Params) {
   const artist = await getActiveArtist(session.user.id, req);
   if (!artist) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const track = await new DrizzleTrackRepository(db).findById(id);
-  if (!track) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-  const release = await new DrizzleReleaseRepository(db).findById(track.releaseId);
-  if (!release || release.artistProfileId !== artist.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
   const body = await req.json().catch(() => null);
   const parsed = moodSchema.safeParse(body?.moods);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid moods' }, { status: 400 });
 
-  await setTrackMoods(id, parsed.data);
+  const result = await trackMoodsService().setMoods(id, artist.id, parsed.data);
+  if (!result.ok) {
+    const status = result.error instanceof NotFoundError ? 404 : 403;
+    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+  }
   return NextResponse.json({ moods: parsed.data });
 }

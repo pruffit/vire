@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { likePlaylist, unlikePlaylist, getPlaylistLikeState } = vi.hoisted(() => ({
-  likePlaylist: vi.fn(),
-  unlikePlaylist: vi.fn(),
-  getPlaylistLikeState: vi.fn(),
+const { like, unlike, getLikeState } = vi.hoisted(() => ({
+  like: vi.fn(),
+  unlike: vi.fn(),
+  getLikeState: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
@@ -11,7 +11,15 @@ vi.mock('@/lib/rate-limit', () => ({
   rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
   tooManyRequests: vi.fn(),
 }));
-vi.mock('@vire/db', () => ({ likePlaylist, unlikePlaylist, getPlaylistLikeState }));
+vi.mock('@/lib/playlist-cover-storage', () => ({ playlistCoverStorage: { upload: vi.fn() } }));
+vi.mock('@vire/db', () => ({
+  db: {},
+  DrizzlePlaylistRepository: class {
+    like = like;
+    unlike = unlike;
+    getLikeState = getLikeState;
+  },
+}));
 
 import { auth } from '@/auth';
 import { GET, POST, DELETE } from './route';
@@ -28,16 +36,16 @@ describe('GET /api/v1/playlists/[id]/like', () => {
     mockedAuth.mockResolvedValue(null as never);
     const res = await GET(req('GET'), ctx);
     expect(res.status).toBe(401);
-    expect(getPlaylistLikeState).not.toHaveBeenCalled();
+    expect(getLikeState).not.toHaveBeenCalled();
   });
 
   it('returns liked state', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistLikeState.mockResolvedValue(true);
+    getLikeState.mockResolvedValue(true);
     const res = await GET(req('GET'), ctx);
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ liked: true });
-    expect(getPlaylistLikeState).toHaveBeenCalledWith('u1', PLAYLIST_ID);
+    expect(getLikeState).toHaveBeenCalledWith('u1', PLAYLIST_ID);
   });
 });
 
@@ -46,7 +54,7 @@ describe('POST /api/v1/playlists/[id]/like', () => {
     mockedAuth.mockResolvedValue(null as never);
     const res = await POST(req('POST'), ctx);
     expect(res.status).toBe(401);
-    expect(likePlaylist).not.toHaveBeenCalled();
+    expect(like).not.toHaveBeenCalled();
   });
 
   it('likes the playlist', async () => {
@@ -54,7 +62,7 @@ describe('POST /api/v1/playlists/[id]/like', () => {
     const res = await POST(req('POST'), ctx);
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ liked: true });
-    expect(likePlaylist).toHaveBeenCalledWith('u1', PLAYLIST_ID);
+    expect(like).toHaveBeenCalledWith('u1', PLAYLIST_ID);
   });
 });
 
@@ -63,7 +71,7 @@ describe('DELETE /api/v1/playlists/[id]/like', () => {
     mockedAuth.mockResolvedValue(null as never);
     const res = await DELETE(req('DELETE'), ctx);
     expect(res.status).toBe(401);
-    expect(unlikePlaylist).not.toHaveBeenCalled();
+    expect(unlike).not.toHaveBeenCalled();
   });
 
   it('unlikes the playlist', async () => {
@@ -71,6 +79,6 @@ describe('DELETE /api/v1/playlists/[id]/like', () => {
     const res = await DELETE(req('DELETE'), ctx);
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ liked: false });
-    expect(unlikePlaylist).toHaveBeenCalledWith('u1', PLAYLIST_ID);
+    expect(unlike).toHaveBeenCalledWith('u1', PLAYLIST_ID);
   });
 });

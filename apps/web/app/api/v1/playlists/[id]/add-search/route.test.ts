@@ -1,12 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { getPlaylistWithTracks, searchTracksForPlaylist } = vi.hoisted(() => ({
-  getPlaylistWithTracks: vi.fn(),
-  searchTracksForPlaylist: vi.fn(),
+const { getWithTracks, searchTracks } = vi.hoisted(() => ({
+  getWithTracks: vi.fn(),
+  searchTracks: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
-vi.mock('@vire/db', () => ({ getPlaylistWithTracks, searchTracksForPlaylist }));
+vi.mock('@/lib/playlist-cover-storage', () => ({ playlistCoverStorage: { upload: vi.fn() } }));
+vi.mock('@vire/db', () => ({
+  db: {},
+  DrizzlePlaylistRepository: class {
+    getWithTracks = getWithTracks;
+    searchTracks = searchTracks;
+  },
+}));
 
 import { auth } from '@/auth';
 import { GET } from './route';
@@ -29,38 +36,38 @@ describe('GET /api/v1/playlists/[id]/add-search', () => {
   });
   it('404 when playlist not found', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue(null);
+    getWithTracks.mockResolvedValue(null);
     expect((await GET(makeReq('rock'), ctx)).status).toBe(404);
   });
   it('403 when not owner', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'other', tracks: [] });
+    getWithTracks.mockResolvedValue({ ownerUserId: 'other', tracks: [] });
     expect((await GET(makeReq('rock'), ctx)).status).toBe(403);
   });
   it('200 returns empty when q < 2 chars', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1', tracks: [] });
+    getWithTracks.mockResolvedValue({ ownerUserId: 'u1', tracks: [] });
     const res = await GET(makeReq('r'), ctx);
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ tracks: [] });
-    expect(searchTracksForPlaylist).not.toHaveBeenCalled();
+    expect(searchTracks).not.toHaveBeenCalled();
   });
   it('200 returns empty when no q', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1', tracks: [] });
+    getWithTracks.mockResolvedValue({ ownerUserId: 'u1', tracks: [] });
     const res = await GET(makeReq(), ctx);
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ tracks: [] });
-    expect(searchTracksForPlaylist).not.toHaveBeenCalled();
+    expect(searchTracks).not.toHaveBeenCalled();
   });
   it('200 searches and returns tracks', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1', tracks: [{ id: 'track1' }] });
+    getWithTracks.mockResolvedValue({ ownerUserId: 'u1', tracks: [{ id: 'track1' }] });
     const mockTracks = [{ id: 'track2', title: 'Rock Song' }];
-    searchTracksForPlaylist.mockResolvedValue(mockTracks);
+    searchTracks.mockResolvedValue(mockTracks);
     const res = await GET(makeReq('rock'), ctx);
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ tracks: mockTracks });
-    expect(searchTracksForPlaylist).toHaveBeenCalledWith('rock', ['track1'], 20);
+    expect(searchTracks).toHaveBeenCalledWith('rock', ['track1'], 20);
   });
 });

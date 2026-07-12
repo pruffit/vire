@@ -1,15 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { getPlaylistWithTracks, setPlaylistCover } = vi.hoisted(() => ({
-  getPlaylistWithTracks: vi.fn(),
-  setPlaylistCover: vi.fn(),
+const { getWithTracks, setCover } = vi.hoisted(() => ({
+  getWithTracks: vi.fn(),
+  setCover: vi.fn(),
 }));
-const { uploadToStream } = vi.hoisted(() => ({ uploadToStream: vi.fn() }));
+const { upload } = vi.hoisted(() => ({ upload: vi.fn() }));
 const { validateImageUpload } = vi.hoisted(() => ({ validateImageUpload: vi.fn() }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
-vi.mock('@vire/db', () => ({ getPlaylistWithTracks, setPlaylistCover }));
-vi.mock('@/lib/s3', () => ({ uploadToStream }));
+vi.mock('@vire/db', () => ({
+  db: {},
+  DrizzlePlaylistRepository: class {
+    getWithTracks = getWithTracks;
+    setCover = setCover;
+  },
+}));
+vi.mock('@/lib/playlist-cover-storage', () => ({ playlistCoverStorage: { upload } }));
 vi.mock('@/lib/image', () => ({
   validateImageUpload,
   PLAYLIST_COVER_POLICY: {
@@ -42,48 +48,48 @@ describe('POST /api/v1/playlists/[id]/cover', () => {
   });
   it('404 when playlist not found', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue(null);
+    getWithTracks.mockResolvedValue(null);
     expect((await POST(makeFormReq({ removeCover: '1' }), ctx)).status).toBe(404);
   });
   it('403 when not owner', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'other' });
+    getWithTracks.mockResolvedValue({ ownerUserId: 'other' });
     expect((await POST(makeFormReq({ removeCover: '1' }), ctx)).status).toBe(403);
   });
-  it('200 remove cover calls setPlaylistCover with null', async () => {
+  it('200 remove cover calls setCover with null', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1' });
+    getWithTracks.mockResolvedValue({ ownerUserId: 'u1' });
     const res = await POST(makeFormReq({ removeCover: '1' }), ctx);
     expect(res.status).toBe(200);
-    expect(setPlaylistCover).toHaveBeenCalledWith('p1', 'u1', null);
+    expect(setCover).toHaveBeenCalledWith('p1', 'u1', null);
     await expect(res.json()).resolves.toEqual({ ok: true, coverUrl: null });
   });
   it('400 when no file provided', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1' });
+    getWithTracks.mockResolvedValue({ ownerUserId: 'u1' });
     expect((await POST(makeFormReq({}), ctx)).status).toBe(400);
   });
   it('400 when validateImageUpload rejects', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1' });
+    getWithTracks.mockResolvedValue({ ownerUserId: 'u1' });
     validateImageUpload.mockReturnValue({ ok: false, status: 400, error: 'Только JPEG, PNG или WebP' });
     const file = new File([new Uint8Array([1, 2, 3])], 'cover.gif', { type: 'image/gif' });
     const res = await POST(makeFormReq({ cover: file }), ctx);
     expect(res.status).toBe(400);
-    expect(uploadToStream).not.toHaveBeenCalled();
+    expect(upload).not.toHaveBeenCalled();
   });
-  it('200 uploads file and calls setPlaylistCover with ?v= URL', async () => {
+  it('200 uploads file and calls setCover with ?v= URL', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    getPlaylistWithTracks.mockResolvedValue({ ownerUserId: 'u1' });
+    getWithTracks.mockResolvedValue({ ownerUserId: 'u1' });
     validateImageUpload.mockReturnValue({ ok: true, info: { ext: 'png', mime: 'image/png', width: 500, height: 500 } });
-    uploadToStream.mockResolvedValue('https://cdn.example.com/stream/playlists/p1.png');
+    upload.mockResolvedValue('https://cdn.example.com/stream/playlists/p1.png');
     const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'cover.png', { type: 'image/png' });
     const res = await POST(makeFormReq({ cover: file }), ctx);
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.coverUrl).toMatch(/\?v=\d+$/);
-    expect(setPlaylistCover).toHaveBeenCalledWith('p1', 'u1', expect.stringMatching(/\?v=\d+$/));
-    expect(uploadToStream).toHaveBeenCalledWith('playlists/p1.png', expect.any(Buffer), 'image/png');
+    expect(setCover).toHaveBeenCalledWith('p1', 'u1', expect.stringMatching(/\?v=\d+$/));
+    expect(upload).toHaveBeenCalledWith('playlists/p1.png', expect.any(Buffer), 'image/png');
   });
 });

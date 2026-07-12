@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { getPlaylistWithTracks, deletePlaylist, updatePlaylist } from '@vire/db';
+import { db, DrizzlePlaylistRepository } from '@vire/db';
+import { PlaylistService, NotFoundError, type PlaylistUpdatePatch } from '@vire/core';
+import { playlistCoverStorage } from '@/lib/playlist-cover-storage';
 
 type Params = { params: Promise<{ id: string }> };
+
+function playlistService() {
+  return new PlaylistService(new DrizzlePlaylistRepository(db), playlistCoverStorage, Date.now);
+}
 
 const patchSchema = z.object({
   title: z.string().min(1).max(100).optional(),
@@ -15,14 +21,12 @@ export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
   const session = await auth();
 
-  const playlist = await getPlaylistWithTracks(id);
-  if (!playlist) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-  if (playlist.visibility === 'PRIVATE' && playlist.ownerUserId !== session?.user?.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const result = await playlistService().getForViewer(id, session?.user?.id ?? null);
+  if (!result.ok) {
+    const status = result.error instanceof NotFoundError ? 404 : 403;
+    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
   }
-
-  return NextResponse.json({ playlist });
+  return NextResponse.json({ playlist: result.value });
 }
 
 export async function PATCH(req: Request, { params }: Params) {
@@ -34,16 +38,16 @@ export async function PATCH(req: Request, { params }: Params) {
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
 
-  const playlist = await getPlaylistWithTracks(id);
-  if (!playlist) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (playlist.ownerUserId !== session.user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-
-  const patch: { title?: string; description?: string | null; visibility?: 'PRIVATE' | 'PUBLIC' } = {};
-  if (parsed.data.title !== undefined) patch.title = parsed.data.title.trim();
-  if (parsed.data.description !== undefined) patch.description = parsed.data.description === null ? null : parsed.data.description.trim();
+  const patch: PlaylistUpdatePatch = {};
+  if (parsed.data.title !== undefined) patch.title = parsed.data.title;
+  if (parsed.data.description !== undefined) patch.description = parsed.data.description;
   if (parsed.data.visibility !== undefined) patch.visibility = parsed.data.visibility;
 
-  await updatePlaylist(id, session.user.id, patch);
+  const result = await playlistService().update(id, session.user.id, patch);
+  if (!result.ok) {
+    const status = result.error instanceof NotFoundError ? 404 : 403;
+    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -52,7 +56,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const deleted = await deletePlaylist(id, session.user.id);
-  if (!deleted) return NextResponse.json({ error: 'Not found or forbidden' }, { status: 404 });
+  const result = await playlistService().delete(id, session.user.id);
+  if (!result.ok) return NextResponse.json({ error: 'Not found or forbidden' }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
