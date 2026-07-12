@@ -3,14 +3,14 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import {
   db, DrizzleTrackRepository, DrizzleReleaseRepository,
-  setTrackGenres, ALL_TRACK_GENRES,
+  setTrackGenres, ALL_TRACK_GENRES, type TrackGenre,
 } from '@vire/db';
 import { isUuid } from '@/lib/upload';
 import { getActiveArtist } from '@/lib/active-artist';
 
 type Params = { params: Promise<{ id: string }> };
 
-const genreSchema = z.array(z.enum(ALL_TRACK_GENRES as [string, ...string[]])).max(3);
+const genreSchema = z.array(z.enum(ALL_TRACK_GENRES as [TrackGenre, ...TrackGenre[]])).max(3);
 
 export async function PUT(req: Request, { params }: Params) {
   const session = await auth();
@@ -34,7 +34,6 @@ export async function PUT(req: Request, { params }: Params) {
   const parsed = genreSchema.safeParse(body?.genres);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid genres' }, { status: 400 });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await setTrackGenres(id, parsed.data as any);
+  await setTrackGenres(id, parsed.data);
   return NextResponse.json({ genres: parsed.data });
 }

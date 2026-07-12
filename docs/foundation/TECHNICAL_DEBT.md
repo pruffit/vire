@@ -33,10 +33,8 @@ CSP содержит `script-src 'unsafe-inline'`, что ослабляет з�
 
 ## Надёжность воркера
 
-### Нет retry / exponential backoff / DLQ
-`apps/worker` обрабатывает BullMQ-задачи на транскодинг без настроенного backoff. При падении ffmpeg задача уходит в failed без повторных попыток. Артист не получает уведомления.
-
-**Нужно:** `attempts: 3, backoff: { type: 'exponential', delay: 5000 }` в настройках очереди, dead letter queue для перманентных сбоев, email/push артисту при ошибке.
+### ✅ Retry / exponential backoff — закрыто
+Все очереди BullMQ (`apps/web/lib/queue.ts`) настроены с `attempts` + `backoff: { type: 'exponential', ... }`. DLQ и email/push артисту при перманентном сбое транскодинга — не сделаны, остаются открытым хвостом.
 
 ---
 
@@ -49,11 +47,11 @@ API-роуты логируют через `console.error` без контекс
 
 ## Модель данных
 
-### Один владелец артиста
-`artist_profiles.userId` — один FK на пользователя. Нет возможности привязать нескольких участников группы или менеджера. Для Этапа 1 достаточно, для Этапа 2+ нужна таблица `artist_members` с ролями (owner / collaborator / manager).
+### ✅ Один владелец артиста — закрыто
+Таблица `artist_members` с ролями (owner / collaborator / manager) реализована (`packages/db/src/schema/artists.ts`, `queries/artists.ts`, `repositories/artist.ts`) — несколько аккаунтов на артиста работают, см. `docs/features/multi-artist.md`.
 
-### `play_events` — прямые инсерты
-Схема предполагает буферизацию через промежуточный слой, но реализована запись напрямую в таблицу при каждом `POST /api/v1/tracks/:id/play`. При нагрузке это создаст hot spot на таблице. Решение: запись в Redis-буфер + batch-флаш по крону.
+### ✅ `play_events` — прямые инсерты — закрыто
+Запись идёт через BullMQ-очередь (`QUEUE_PLAY_EVENTS`, продюсер `apps/web/lib/queue.ts`) и воркер `apps/worker/src/workers/play-events.worker.ts`, который вызывает `insertPlayEvent` — не прямым инсертом из хендлера.
 
 ---
 

@@ -3,13 +3,13 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import {
   getTrackMoods, setTrackMoods, trackExists, ALL_MOODS, db,
-  DrizzleTrackRepository, DrizzleReleaseRepository,
+  DrizzleTrackRepository, DrizzleReleaseRepository, type Mood,
 } from '@vire/db';
 import { getActiveArtist } from '@/lib/active-artist';
 
 type Params = { params: Promise<{ id: string }> };
 
-const moodSchema = z.array(z.enum(ALL_MOODS as [string, ...string[]])).max(5);
+const moodSchema = z.array(z.enum(ALL_MOODS as [Mood, ...Mood[]])).max(5);
 
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
@@ -39,7 +39,6 @@ export async function PUT(req: Request, { params }: Params) {
   const parsed = moodSchema.safeParse(body?.moods);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid moods' }, { status: 400 });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await setTrackMoods(id, parsed.data as any);
+  await setTrackMoods(id, parsed.data);
   return NextResponse.json({ moods: parsed.data });
 }
