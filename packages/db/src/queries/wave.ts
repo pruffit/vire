@@ -63,6 +63,20 @@ function genreOverlapTerm(
     )`;
 }
 
+// верхний ярус сортировки — точный жанр исчерпывается раньше соседей по семейству;
+// без жанра ярус вообще не входит в ORDER BY (голая integer-константа там — позиция колонки)
+export function waveOrderBy(g: TrackGenre | null, score: SQL): SQL[] {
+  const tier = g
+    ? sql<number>`CASE
+        WHEN EXISTS (SELECT 1 FROM track_genres tge WHERE tge.track_id = tracks.id AND tge.genre = ${g}) THEN 1
+        WHEN NOT EXISTS (SELECT 1 FROM track_genres tge2 WHERE tge2.track_id = tracks.id)
+          AND ${releases.genre} = ${g} THEN 1
+        ELSE 0
+      END`
+    : null;
+  return tier ? [sql`${tier} DESC`, sql`${score} DESC`] : [sql`${score} DESC`];
+}
+
 export const visibleTrackWhere = and(
   eq(tracks.status, 'READY'),
   or(
@@ -171,17 +185,6 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       )`;
   };
 
-  // верхний ярус сортировки — точный жанр исчерпывается раньше соседей по семейству
-  const genreExactTierFor = (g: TrackGenre | null): SQL<number> =>
-    g
-      ? sql<number>`CASE
-          WHEN EXISTS (SELECT 1 FROM track_genres tge WHERE tge.track_id = tracks.id AND tge.genre = ${g}) THEN 1
-          WHEN NOT EXISTS (SELECT 1 FROM track_genres tge2 WHERE tge2.track_id = tracks.id)
-            AND ${releases.genre} = ${g} THEN 1
-          ELSE 0
-        END`
-      : sql<number>`0`;
-
   // ── Seed-режим: без текущего трека — нет сигналов похожести ───────────────
   if (!p.currentTrackId) {
     const where = and(
@@ -219,7 +222,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
         .innerJoin(releases, eq(releases.id, tracks.releaseId))
         .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
         .where(where)
-        .orderBy(sql`${genreExactTierFor(p.seedGenre)} DESC`, sql`${totalScore} DESC`)
+        .orderBy(...waveOrderBy(p.seedGenre, totalScore))
         .limit(limit);
 
       return rows.map(toWaveTrack);
@@ -237,7 +240,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
       .innerJoin(releases, eq(releases.id, tracks.releaseId))
       .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
       .where(where)
-      .orderBy(sql`${genreExactTierFor(p.seedGenre)} DESC`, sql`ln(${plays30} + 1) * random() DESC`)
+      .orderBy(...waveOrderBy(p.seedGenre, sql`ln(${plays30} + 1) * random()`))
       .limit(limit);
 
     return rows.map(toWaveTrack);
@@ -368,7 +371,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
         genreFamilyFilterFor(p.sessionGenre),
       ),
     )
-    .orderBy(sql`${genreExactTierFor(p.sessionGenre)} DESC`, sql`${totalScore} DESC`)
+    .orderBy(...waveOrderBy(p.sessionGenre, totalScore))
     .limit(limit);
 
   return rows.map(toWaveTrack);
