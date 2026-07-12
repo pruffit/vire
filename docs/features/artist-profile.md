@@ -82,3 +82,13 @@ S3_PUBLIC_ENDPOINT=             # для отображения аватаров
 - Grain и шрифты рендерятся только на публичной странице, не в плеере
 - Смена slug приведёт к 404 на старых ссылках — slug не меняется после создания
 - `is_active=false` скрывает артиста с каталога, но прямая ссылка работает
+
+## Видимость пустого артиста
+
+Артист без ни одного трека в PUBLISHED-релизе (предикат `artistHasPublishedTrack`,
+`packages/db/src/queries/artists.ts`) скрыт из каталога, поиска и sitemap — тот же
+предикат отдаёт 404 при прямом заходе на `/artists/[slug]`. Исключения: участник
+профиля (`artist_members`) и роли `MODERATOR`/`ADMIN`/`SUPERADMIN`. Проверка —
+`assertArtistVisible` в `page.tsx`, вызывается и из `ArtistPage`, и из `generateMetadata`
+(чтобы title/OG пустого артиста не утекали в превью); решение — чистая функция
+`canViewEmptyArtist` в `apps/web/lib/artist-visibility.ts`.
