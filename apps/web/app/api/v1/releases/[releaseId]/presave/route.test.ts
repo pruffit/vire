@@ -16,15 +16,18 @@ vi.mock('@/lib/rate-limit', () => ({
   tooManyRequests: vi.fn(() => new Response('rate', { status: 429 })),
 }));
 vi.mock('@vire/db', () => ({
-  getReleasePresaveInfo,
-  presaveForUser,
-  unpresaveForUser,
-  presaveForGuest,
-  getPresaveState,
+  db: {},
+  DrizzlePresaveRepository: class {
+    getReleaseInfo = getReleasePresaveInfo;
+    presaveForUser = presaveForUser;
+    unpresaveForUser = unpresaveForUser;
+    presaveForGuest = presaveForGuest;
+    getState = getPresaveState;
+  },
 }));
 
 import { auth } from '@/auth';
-import { POST, DELETE } from './route';
+import { GET, POST, DELETE } from './route';
 
 const mockedAuth = vi.mocked(auth);
 const RELEASE_ID = 'rel-1';
@@ -33,7 +36,6 @@ const ctx = { params: Promise.resolve({ releaseId: RELEASE_ID }) };
 // Релиз пресейвабелен: запланирован на будущее.
 const future = () => ({
   id: RELEASE_ID,
-  artistProfileId: 'a1',
   status: 'SCHEDULED' as const,
   releaseDate: new Date(Date.now() + 86_400_000),
 });
@@ -47,22 +49,45 @@ function req(body?: unknown) {
 
 beforeEach(() => vi.clearAllMocks());
 
+describe('GET /api/v1/releases/[id]/presave', () => {
+  it('returns presaved: false when not authenticated', async () => {
+    mockedAuth.mockResolvedValue(null as never);
+    const res = await GET(req(), ctx);
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ presaved: false });
+    expect(getPresaveState).not.toHaveBeenCalled();
+  });
+
+  it('reads the presave state for a logged-in user', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    getPresaveState.mockResolvedValue(true);
+    const res = await GET(req(), ctx);
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ presaved: true });
+    expect(getPresaveState).toHaveBeenCalledWith('u1', RELEASE_ID);
+  });
+});
+
 describe('POST /api/v1/releases/[id]/presave', () => {
   it('404 when the release does not exist', async () => {
     getReleasePresaveInfo.mockResolvedValue(null);
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     const res = await POST(req(), ctx);
     expect(res.status).toBe(404);
+    await expect(res.json()).resolves.toEqual({ error: 'Not found' });
     expect(presaveForUser).not.toHaveBeenCalled();
   });
 
   it('400 when the release already came out', async () => {
     getReleasePresaveInfo.mockResolvedValue({
-      id: RELEASE_ID, artistProfileId: 'a1', status: 'PUBLISHED', releaseDate: new Date(Date.now() - 1000),
+      id: RELEASE_ID, status: 'PUBLISHED', releaseDate: new Date(Date.now() - 1000),
     });
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     const res = await POST(req(), ctx);
     expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({
+      error: 'Пресейв недоступен: релиз уже вышел или не запланирован',
+    });
     expect(presaveForUser).not.toHaveBeenCalled();
   });
 

@@ -5,6 +5,7 @@ import {
   WAVE_SKIP_PENALTY,
   WAVE_SKIP_COMPLETION_THRESHOLD,
   WAVE_SKIP_WINDOW_DAYS,
+  type WaveTrack,
 } from '@vire/core';
 import { db } from '../client';
 import { trackMoods, trackAudio, tracks, releases, artistProfiles, trackGenres } from '../schema';
@@ -14,20 +15,11 @@ import type { Mood } from './track-moods';
 import type { TrackGenre } from './track-genres';
 import type { TasteProfile } from './taste';
 
-export interface WaveTrack {
-  id: string;
-  title: string;
-  artistName: string;
-  artistSlug: string;
-  releaseId: string;
-  coverUrl: string | null;
-  accentColor: string | null;
-  isExplicit: boolean;
-  version: string | null;
-  feat: string[];
-}
+export type { WaveTrack };
 
-export interface WaveParams {
+// Mood/TrackGenre-типизированный, для SQL-скоринга внутри этого файла. Публичный
+// порт-тип (общая строка) — WaveParams из @vire/core; DrizzleWaveRepository мапит одно в другое.
+export interface WaveScoringParams {
   currentTrackId: string | null;
   excludeIds: string[];
   limit: number;
@@ -191,7 +183,7 @@ export async function getArtistIdsForTracks(trackIds: string[]): Promise<string[
 }
 
 /** Подбирает следующие треки взвешенным SQL-скорингом (без ML) — алгоритм см. docs/features/wave.md. */
-export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
+export async function getWaveTracks(p: WaveScoringParams): Promise<WaveTrack[]> {
   const limit = Math.max(1, Math.min(5, p.limit));
   const excludeIds = Array.from(new Set([p.currentTrackId, ...p.excludeIds].filter((v): v is string => Boolean(v))));
 

@@ -1,53 +1,43 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import {
-  getReleasePresaveInfo,
-  presaveForUser,
-  unpresaveForUser,
-  presaveForGuest,
-  getPresaveState,
-} from '@vire/db';
+import { db, DrizzlePresaveRepository } from '@vire/db';
+import { PresaveService, NotFoundError } from '@vire/core';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 type Params = { params: Promise<{ releaseId: string }> };
 
 const guestSchema = z.object({ email: z.string().email().max(254) });
 
-/** Пресейв доступен только для запланированного релиза с будущей датой выхода. */
-function isPresavable(info: { status: string; releaseDate: Date | null }): boolean {
-  return (
-    info.status === 'SCHEDULED' &&
-    info.releaseDate != null &&
-    new Date(info.releaseDate).getTime() > Date.now()
-  );
+function presaveService() {
+  return new PresaveService(new DrizzlePresaveRepository(db));
+}
+
+function presaveErrorResponse(error: NotFoundError | Error): NextResponse {
+  if (error instanceof NotFoundError) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+  return NextResponse.json({ error: error.message }, { status: 400 });
 }
 
 export async function GET(_req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ presaved: false });
   const { releaseId } = await params;
-  const presaved = await getPresaveState(session.user.id, releaseId);
-  return NextResponse.json({ presaved });
+  const result = await presaveService().getState(session.user.id, releaseId);
+  return NextResponse.json({ presaved: result.ok ? result.value.presaved : false });
 }
 
 export async function POST(req: Request, { params }: Params) {
   const { releaseId } = await params;
-  const info = await getReleasePresaveInfo(releaseId);
-  if (!info) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (!isPresavable(info)) {
-    return NextResponse.json(
-      { error: 'Пресейв недоступен: релиз уже вышел или не запланирован' },
-      { status: 400 },
-    );
-  }
-
+  const service = presaveService();
   const session = await auth();
 
   if (session?.user?.id) {
     const rl = await rateLimit(`presave:${session.user.id}`, 30, 60);
     if (!rl.ok) return tooManyRequests(rl.retryAfter);
-    await presaveForUser(session.user.id, releaseId);
+    const result = await service.presaveUser(session.user.id, releaseId);
+    if (!result.ok) return presaveErrorResponse(result.error);
     return NextResponse.json({ presaved: true });
   }
 
@@ -65,7 +55,8 @@ export async function POST(req: Request, { params }: Params) {
   const email = parsed.data.email.trim().toLowerCase();
   const rl = await rateLimit(`presave-guest:${email}`, 10, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
-  await presaveForGuest(email, releaseId);
+  const result = await service.presaveGuest(email, releaseId);
+  if (!result.ok) return presaveErrorResponse(result.error);
   return NextResponse.json({ presaved: true, guest: true });
 }
 
@@ -73,6 +64,6 @@ export async function DELETE(_req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { releaseId } = await params;
-  await unpresaveForUser(session.user.id, releaseId);
+  await presaveService().unpresave(session.user.id, releaseId);
   return NextResponse.json({ presaved: false });
 }

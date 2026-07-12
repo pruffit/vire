@@ -2,8 +2,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { Stagger, StaggerItem } from '@vire/ui/motion';
-import { searchAll } from '@vire/db';
+import { db, DrizzleSearchRepository } from '@vire/db';
 import type { SearchArtist } from '@vire/db';
+import { SearchService } from '@vire/core';
 import { GlobalSearch } from '@/components/global-search';
 import { Icon } from '@/components/icon';
 import { resolveAvatarUrl } from '@/lib/avatar';
@@ -23,7 +24,9 @@ export default async function SearchPage({ searchParams }: Props) {
   const { q } = await searchParams;
   const query = q?.trim() ?? '';
 
-  const results = query.length >= 2 ? await searchAll(query, 20) : null;
+  const searchResult =
+    query.length >= 2 ? await new SearchService(new DrizzleSearchRepository(db)).search(query, 20) : null;
+  const results = searchResult?.ok ? searchResult.value : null;
 
   const total = results
     ? results.artists.length + results.releases.length + results.tracks.length

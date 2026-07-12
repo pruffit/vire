@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const { deletePendingGuestPresavesByEmail, rateLimit } = vi.hoisted(() => ({
-  deletePendingGuestPresavesByEmail: vi.fn(),
+const { deletePendingGuestByEmail, rateLimit } = vi.hoisted(() => ({
+  deletePendingGuestByEmail: vi.fn(),
   rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
 }));
 
-vi.mock('@vire/db', () => ({ deletePendingGuestPresavesByEmail }));
+vi.mock('@vire/db', () => ({
+  db: {},
+  DrizzlePresaveRepository: class {
+    deletePendingGuestByEmail = deletePendingGuestByEmail;
+  },
+}));
 vi.mock('@/lib/rate-limit', () => ({
   rateLimit,
   clientKey: vi.fn(() => 'presave-unsub:test'),
@@ -41,37 +46,37 @@ describe('GET /api/v1/presave/unsubscribe', () => {
     rateLimit.mockResolvedValue({ ok: false, remaining: 0, retryAfter: 60 });
     const res = await GET(reqFor(EMAIL, 'whatever'));
     expect(res.status).toBe(429);
-    expect(deletePendingGuestPresavesByEmail).not.toHaveBeenCalled();
+    expect(deletePendingGuestByEmail).not.toHaveBeenCalled();
   });
 
   it('redirects to the bad-link page on a malformed request (bad email / missing sig)', async () => {
     const res = await GET(reqFor('not-an-email', 'whatever'));
     expect(res.status).toBe(303);
     expect(res.headers.get('location')).toContain('/presave/unsubscribed?status=bad');
-    expect(deletePendingGuestPresavesByEmail).not.toHaveBeenCalled();
+    expect(deletePendingGuestByEmail).not.toHaveBeenCalled();
   });
 
   it('redirects to the bad-link page on an invalid signature', async () => {
     const res = await GET(reqFor(EMAIL, 'deadbeef'.repeat(4)));
     expect(res.status).toBe(303);
     expect(res.headers.get('location')).toContain('/presave/unsubscribed?status=bad');
-    expect(deletePendingGuestPresavesByEmail).not.toHaveBeenCalled();
+    expect(deletePendingGuestByEmail).not.toHaveBeenCalled();
   });
 
   it('deletes pending guest presaves and redirects to the ok page on a valid signature', async () => {
     const sig = signUnsubscribeToken(EMAIL)!;
-    deletePendingGuestPresavesByEmail.mockResolvedValue(2);
+    deletePendingGuestByEmail.mockResolvedValue(2);
     const res = await GET(reqFor(EMAIL, sig));
     expect(res.status).toBe(303);
     expect(res.headers.get('location')).toContain('/presave/unsubscribed?status=ok');
-    expect(deletePendingGuestPresavesByEmail).toHaveBeenCalledWith(EMAIL);
+    expect(deletePendingGuestByEmail).toHaveBeenCalledWith(EMAIL);
   });
 
   it('lowercases the email before verifying and deleting', async () => {
     const sig = signUnsubscribeToken(EMAIL)!;
-    deletePendingGuestPresavesByEmail.mockResolvedValue(1);
+    deletePendingGuestByEmail.mockResolvedValue(1);
     const res = await GET(reqFor('Fan@Example.com', sig));
     expect(res.status).toBe(303);
-    expect(deletePendingGuestPresavesByEmail).toHaveBeenCalledWith(EMAIL);
+    expect(deletePendingGuestByEmail).toHaveBeenCalledWith(EMAIL);
   });
 });

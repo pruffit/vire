@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { deletePendingGuestPresavesByEmail } from '@vire/db';
+import { db, DrizzlePresaveRepository } from '@vire/db';
+import { PresaveService } from '@vire/core';
 import { verifyUnsubscribeToken } from '@/lib/presave-unsubscribe';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
@@ -24,6 +25,7 @@ export async function GET(req: Request) {
   const email = parsed.data.email.trim().toLowerCase();
   if (!verifyUnsubscribeToken(email, parsed.data.sig)) return done(req, 'bad');
 
-  await deletePendingGuestPresavesByEmail(email);
+  const service = new PresaveService(new DrizzlePresaveRepository(db));
+  await service.unsubscribeGuest(email);
   return done(req, 'ok');
 }

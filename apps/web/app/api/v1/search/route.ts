@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { searchAll } from '@vire/db';
+import { db, DrizzleSearchRepository } from '@vire/db';
+import { SearchService } from '@vire/core';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export async function GET(req: Request) {
@@ -7,12 +8,9 @@ export async function GET(req: Request) {
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const { searchParams } = new URL(req.url);
-  const q = searchParams.get('q')?.trim() ?? '';
+  const q = searchParams.get('q') ?? '';
 
-  if (q.length < 2) {
-    return NextResponse.json({ artists: [], releases: [], tracks: [] });
-  }
-
-  const results = await searchAll(q, 4);
-  return NextResponse.json(results);
+  const service = new SearchService(new DrizzleSearchRepository(db));
+  const result = await service.search(q, 4);
+  return NextResponse.json(result.ok ? result.value : { artists: [], releases: [], tracks: [] });
 }

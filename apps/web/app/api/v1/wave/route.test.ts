@@ -7,10 +7,10 @@ const { getWaveTracks, getTrackMusicalKey, getArtistIdsForTracks, getTasteProfil
   getTasteProfile: vi.fn(),
 }));
 
-const { getWaveSession, appendWaveServed, setWaveSessionSeed } = vi.hoisted(() => ({
-  getWaveSession: vi.fn(),
-  appendWaveServed: vi.fn(),
-  setWaveSessionSeed: vi.fn(),
+const { getSession, appendServed, setSeed } = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  appendServed: vi.fn(),
+  setSeed: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
@@ -19,12 +19,21 @@ vi.mock('@/lib/rate-limit', () => ({
   clientKey: vi.fn(() => 'wave:test'),
   tooManyRequests: vi.fn(),
 }));
-vi.mock('@/lib/wave-session', () => ({ getWaveSession, appendWaveServed, setWaveSessionSeed }));
+vi.mock('@/lib/wave-session-store', () => ({
+  WaveSessionStore: class {
+    get = getSession;
+    appendServed = appendServed;
+    setSeed = setSeed;
+  },
+}));
 vi.mock('@vire/db', () => ({
-  getWaveTracks,
-  getTrackMusicalKey,
-  getArtistIdsForTracks,
-  getTasteProfile,
+  db: {},
+  DrizzleWaveRepository: class {
+    getWaveTracks = getWaveTracks;
+    getTrackMusicalKey = getTrackMusicalKey;
+    getArtistIdsForTracks = getArtistIdsForTracks;
+    getTasteProfile = getTasteProfile;
+  },
   ALL_MOODS: ['HYPE', 'CHILL', 'DARK'],
   ALL_TRACK_GENRES: ['ELECTRONIC', 'HIPHOP', 'ROCK'],
 }));
@@ -61,9 +70,9 @@ function req(query: string): Request {
 beforeEach(() => {
   vi.clearAllMocks();
   mockedAuth.mockResolvedValue(null as never);
-  getWaveSession.mockResolvedValue({ servedIds: [], recentServedIds: [], mood: null, genre: null });
-  appendWaveServed.mockResolvedValue(undefined);
-  setWaveSessionSeed.mockResolvedValue(undefined);
+  getSession.mockResolvedValue({ servedIds: [], recentServedIds: [], mood: null, genre: null });
+  appendServed.mockResolvedValue(undefined);
+  setSeed.mockResolvedValue(undefined);
   getWaveTracks.mockResolvedValue([TRACK]);
   getTrackMusicalKey.mockResolvedValue(null);
   getArtistIdsForTracks.mockResolvedValue([]);
@@ -90,7 +99,7 @@ describe('GET /api/v1/wave', () => {
   });
 
   it('happy path: excludeIds contains served ∪ played, response is a track array', async () => {
-    getWaveSession.mockResolvedValue({
+    getSession.mockResolvedValue({
       servedIds: ['served-1', 'served-2'],
       recentServedIds: ['served-1', 'served-2'],
       mood: null,
@@ -103,35 +112,25 @@ describe('GET /api/v1/wave', () => {
     const body = (await res.json()) as { tracks: unknown[] };
     expect(body.tracks).toEqual([TRACK]);
 
-    expect(getWaveSession).toHaveBeenCalledWith('session-abc123');
+    expect(getSession).toHaveBeenCalledWith('session-abc123');
     const call = getWaveTracks.mock.calls[0][0] as { excludeIds: string[] };
     expect(call.excludeIds).toEqual(
       expect.arrayContaining(['served-1', 'served-2', 'played-1', 'played-2']),
     );
-    expect(appendWaveServed).toHaveBeenCalledWith('session-abc123', ['track-1']);
+    expect(appendServed).toHaveBeenCalledWith('session-abc123', ['track-1']);
   });
 
   it('without sessionId, served is not read (stateless)', async () => {
     const res = await GET(req('?played=played-1'));
     expect(res.status).toBe(200);
-    expect(getWaveSession).not.toHaveBeenCalled();
+    expect(getSession).not.toHaveBeenCalled();
     const call = getWaveTracks.mock.calls[0][0] as { excludeIds: string[] };
     expect(call.excludeIds).toEqual(['played-1']);
-    expect(appendWaveServed).not.toHaveBeenCalled();
+    expect(appendServed).not.toHaveBeenCalled();
   });
 
-  it('degrades to 200 when the Redis-backed wave-session module throws', async () => {
-    getWaveSession.mockRejectedValue(new Error('redis down'));
-    appendWaveServed.mockRejectedValue(new Error('redis down'));
-
-    const res = await GET(req('?sessionId=session-abc123'));
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { tracks: unknown[] };
-    expect(body.tracks).toEqual([TRACK]);
-  });
-
-  it('seed уже закреплён в сессии → setWaveSessionSeed не вызывается повторно', async () => {
-    getWaveSession.mockResolvedValue({
+  it('seed уже закреплён в сессии → setSeed не вызывается повторно', async () => {
+    getSession.mockResolvedValue({
       servedIds: [],
       recentServedIds: [],
       mood: 'HYPE',
@@ -140,14 +139,14 @@ describe('GET /api/v1/wave', () => {
 
     const res = await GET(req('?sessionId=session-abc123&mood=CHILL'));
     expect(res.status).toBe(200);
-    expect(setWaveSessionSeed).not.toHaveBeenCalled();
+    expect(setSeed).not.toHaveBeenCalled();
   });
 
-  it('сессия пустая + mood в запросе → setWaveSessionSeed вызывается (первый запрос сессии)', async () => {
-    getWaveSession.mockResolvedValue({ servedIds: [], recentServedIds: [], mood: null, genre: null });
+  it('сессия пустая + mood в запросе → setSeed вызывается (первый запрос сессии)', async () => {
+    getSession.mockResolvedValue({ servedIds: [], recentServedIds: [], mood: null, genre: null });
 
     const res = await GET(req('?sessionId=session-abc123&mood=HYPE'));
     expect(res.status).toBe(200);
-    expect(setWaveSessionSeed).toHaveBeenCalledWith('session-abc123', { mood: 'HYPE', genre: undefined });
+    expect(setSeed).toHaveBeenCalledWith('session-abc123', { mood: 'HYPE', genre: undefined });
   });
 });

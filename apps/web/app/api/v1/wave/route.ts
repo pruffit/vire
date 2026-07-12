@@ -1,26 +1,10 @@
 import { NextResponse } from 'next/server';
 import { waveQuerySchema } from '@vire/api-contracts';
-import {
-  getWaveTracks,
-  getTrackMusicalKey,
-  getArtistIdsForTracks,
-  getTasteProfile,
-  ALL_MOODS,
-  ALL_TRACK_GENRES,
-  type Mood,
-  type TrackGenre,
-} from '@vire/db';
-import { keyMatchSets } from '@vire/core';
+import { db, DrizzleWaveRepository, ALL_MOODS, ALL_TRACK_GENRES } from '@vire/db';
+import { WaveService } from '@vire/core';
 import { auth } from '@/auth';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
-import { getWaveSession, appendWaveServed, setWaveSessionSeed } from '@/lib/wave-session';
-
-const EMPTY_SESSION = {
-  servedIds: [] as string[],
-  recentServedIds: [] as string[],
-  mood: null as string | null,
-  genre: null as string | null,
-};
+import { WaveSessionStore } from '@/lib/wave-session-store';
 
 export async function GET(req: Request) {
   // Лимит выше обычного: плеер дёргает волну непрерывно.
@@ -38,69 +22,22 @@ export async function GET(req: Request) {
   if (genre && !(ALL_TRACK_GENRES as string[]).includes(genre)) {
     return NextResponse.json({ error: 'Invalid genre' }, { status: 400 });
   }
-  const queryMood = (mood ?? null) as Mood | null;
-  const queryGenre = (genre ?? null) as TrackGenre | null;
-  const currentTrackId = trackId ?? null;
-
-  // sessionId нет → клиент старый/анонимный вызов вне сессии волны: работаем stateless.
-  const waveSession = sessionId
-    ? await getWaveSession(sessionId).catch(() => EMPTY_SESSION)
-    : EMPTY_SESSION;
-
-  // Тег настроения/жанра в seed-режиме фильтрует старт волны; в режиме похожести это
-  // сессионный буст, закреплённый на первом запросе с mood/genre в этой сессии.
-  let seedMood: Mood | null = null;
-  let seedGenre: TrackGenre | null = null;
-  let sessionMood: Mood | null = null;
-  let sessionGenre: TrackGenre | null = null;
-  if (!currentTrackId) {
-    seedMood = queryMood ?? (waveSession.mood as Mood | null);
-    seedGenre = queryGenre ?? (waveSession.genre as TrackGenre | null);
-  } else {
-    sessionMood = queryMood ?? (waveSession.mood as Mood | null);
-    sessionGenre = queryGenre ?? (waveSession.genre as TrackGenre | null);
-  }
-
-  if (sessionId && !waveSession.mood && !waveSession.genre && (queryMood || queryGenre)) {
-    await setWaveSessionSeed(sessionId, {
-      mood: queryMood ?? undefined,
-      genre: queryGenre ?? undefined,
-    }).catch(() => {});
-  }
 
   const playedIds = (played?.split(',').filter(Boolean) ?? []).slice(0, 100);
-  const excludeIds = Array.from(
-    new Set([...waveSession.servedIds, ...playedIds, currentTrackId].filter((v): v is string => Boolean(v))),
-  );
 
-  const recentArtistIds =
-    waveSession.recentServedIds.length > 0 ? await getArtistIdsForTracks(waveSession.recentServedIds) : [];
-
-  // Слушатель (для профиля вкуса и анти-усталости); аноним → только глобальные сигналы
   const authSession = await auth();
   const userId = authSession?.user?.id ?? null;
-  const taste = userId ? await getTasteProfile(userId) : null;
 
-  const musicalKey = currentTrackId ? await getTrackMusicalKey(currentTrackId) : null;
-  const keySets = musicalKey ? keyMatchSets(musicalKey) : null;
-
-  const tracks = await getWaveTracks({
-    currentTrackId,
-    excludeIds,
-    limit: count,
-    seedMood,
-    seedGenre,
-    sessionMood,
-    sessionGenre,
-    taste,
-    keySets,
-    recentArtistIds,
+  const service = new WaveService(new DrizzleWaveRepository(db), new WaveSessionStore());
+  const result = await service.next({
+    sessionId: sessionId ?? null,
     userId,
+    mood: mood ?? null,
+    genre: genre ?? null,
+    currentTrackId: trackId ?? null,
+    playedIds,
+    limit: count,
   });
 
-  if (sessionId && tracks.length > 0) {
-    await appendWaveServed(sessionId, tracks.map((t) => t.id)).catch(() => {});
-  }
-
-  return NextResponse.json({ tracks });
+  return NextResponse.json({ tracks: result.ok ? result.value.tracks : [] });
 }

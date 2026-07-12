@@ -10,6 +10,9 @@ export * from './repositories/follow';
 export * from './repositories/listener-track';
 export * from './repositories/track-moods';
 export * from './repositories/playlist';
+export * from './repositories/wave';
+export * from './repositories/search';
+export * from './repositories/presave';
 export { getTrackAudio, getPlayableTrackAudio, getTrackArtistProfileId, getTrackSourceKey, getArtistTrackSources, getTrackAudioMeta, trackExists, getTrackTitle, listTracksNeedingAnalysis, updateTrackAnalysis, getGenreSuggestionsForTracks, saveGenreSuggestions, getGenreSuggestionsSnapshot, getAudioFeaturesSnapshot } from './queries/track-audio';
 export type { TrackAudioData, PlayableTrackAudioData, GenreSuggestionRow, GenreSuggestionsSnapshot, AudioFeaturesSnapshot } from './queries/track-audio';
 export { getPublicTrackLyrics } from './queries/lyrics';
@@ -134,7 +137,8 @@ export {
 } from './queries/favorite-moments';
 export type { MomentBucket } from './queries/favorite-moments';
 export { getWaveTracks, getTrackMusicalKey, getArtistIdsForTracks } from './queries/wave';
-export type { WaveTrack, WaveParams } from './queries/wave';
+export type { WaveTrack } from './queries/wave';
+export type { WaveParams } from '@vire/core';
 export {
   getUserPlaylists,
   getPlaylistWithTracks,
