@@ -91,6 +91,13 @@ PostgreSQL
 - Внешние интеграции (платёжные вебхуки, S3, email) — за интерфейсами в `core`, реализации инъектятся. Так их легко мокать в тестах и менять провайдера.
 - Генерация Signed URL, проверка «купил ли юзер трек», расчёт что показать в волне — всё это сервисы `core`, доступные любому клиенту через API.
 
+По факту (07.2026): каталог/владение — `ArtistService`/`ReleaseService`/`TrackService`;
+интерактивы слушателя — `FollowService`, `ListenerTrackService` (лайк/моменты/lyrics
+трека), `TrackMoodsService`, `PlaylistService`. Порты (`I*Repository`,
+`IPlaylistCoverStorage`) объявлены в `core`, Drizzle-реализации — в
+`packages/db/src/repositories`, S3-адаптер обложек плейлиста —
+`apps/web/lib/playlist-cover-storage.ts` (тот же паттерн, что у очереди).
+
 ---
 
 ## Потоки данных — ключевые сценарии

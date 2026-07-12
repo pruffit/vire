@@ -55,6 +55,22 @@ API-роуты логируют через `console.error` без контекс
 
 ---
 
+## Сервисный слой — интерактивы слушателя (1-C)
+
+### `getPlaylistSuggestions` и `position=max+1` — в query-слое
+`PlaylistService.suggestions`/`addTrack` (`packages/core`) делегируют use-case и
+атомарную вставку query-функциям `@vire/db` вместо переноса логики в сервис —
+атомарность транзакции и цельность read-use-case дороже слойности. Перенос в core —
+когда понадобится переиспользование вне HTTP-слоя.
+
+### Асимметрии поведения интерактивов
+Сохранены 1:1 при выносе в core (`docs/superpowers/specs/2026-07-12-listener-interactions-core-design.md`), кандидаты на отдельный продуктовый фикс:
+- `DELETE /api/v1/tracks/[id]/like` не проверяет существование трека (`ListenerTrackService.unlike`)
+- rate-limit стоит на `DELETE /api/v1/playlists/[id]/like`, на `DELETE /api/v1/tracks/[id]/like` — нет
+- `PlaylistService.like`/`unlike` не проверяют существование плейлиста
+
+---
+
 ## Этап 2 (продажи) — отложено намеренно
 
 Purchase-UI (`download-button.tsx`, `purchased-track-row.tsx`) отвязан от витрины. API-роуты (`purchase`, `webhooks/yookassa`) сохранены, YooKassa не настроена в боевом режиме. Подключать только по команде.

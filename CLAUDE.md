@@ -237,7 +237,8 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 ### Фундамент
 - [x] Монорепо (Turborepo + pnpm), docker-compose (postgres/redis/minio)
 - [x] `packages/db` — Drizzle схема + миграции 0000–0033
-- [x] `packages/core` — Result<T,E>, domain types, сервисы, репозитории
+- [x] `packages/core` — Result<T,E>, domain types, сервисы (Artist/Release/Track,
+  Follow/ListenerTrack/TrackMoods/Playlist), репозитории
 - [x] `packages/ui` — OKLCH-токены, Button, Card, Input
 - [x] `packages/config` — tsconfig/eslint/tailwind пресеты
 - [x] Auth.js v5 — провайдеры: email/пароль (Credentials), magic link, Yandex; JWT,
@@ -338,8 +339,8 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Скачивание FLAC по presigned S3 URL
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
-### Тесты (apps/web — 503, гонять `pnpm --filter @vire/web test`)
-- [x] `packages/core` — сервисы artist/release/track, Result/errors (Vitest)
+### Тесты (apps/web — 551, гонять `pnpm --filter @vire/web test`)
+- [x] `packages/core` — сервисы artist/release/track, follow/listener-track/track-moods/playlist, Result/errors (Vitest)
 - [x] `apps/web/lib` — `embed` (YouTube/VK), `upload` (валидация), `format`, `structured-data` (JSON-LD билдеры)
 - [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),
   dashboard profile, dashboard posts (create/edit/delete), follow, like, play, download,
