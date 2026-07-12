@@ -93,10 +93,16 @@ PostgreSQL
 
 По факту (07.2026): каталог/владение — `ArtistService`/`ReleaseService`/`TrackService`;
 интерактивы слушателя — `FollowService`, `ListenerTrackService` (лайк/моменты/lyrics
-трека), `TrackMoodsService`, `PlaylistService`. Порты (`I*Repository`,
-`IPlaylistCoverStorage`) объявлены в `core`, Drizzle-реализации — в
-`packages/db/src/repositories`, S3-адаптер обложек плейлиста —
-`apps/web/lib/playlist-cover-storage.ts` (тот же паттерн, что у очереди).
+трека), `TrackMoodsService`, `PlaylistService`; дашборд артиста — `ArtistPostService`
+(посты/анонсы), `SmartLinkService` (bandlink-лендинги). Расширения: `ReleaseService`
+(`create`/`update`/`changeStatus` — обложка через `IFileStorage`, уведомление о
+публикации через `INotifyReleaseQueue`), `ArtistService.updateProfile` (тема/шрифты/
+аватар, тайтлы видео через `IVideoTitleResolver`, каталоги шрифтов инъектируются
+деп-объектом), `TrackService` (загрузка исходника в `IFileStorage`, `uuid` инъектируется).
+Порты (`I*Repository`, `IFileStorage` — общий порт файлового хранилища, `IPlaylistCoverStorage`
+теперь его алиас) объявлены в `core`, Drizzle-реализации — в `packages/db/src/repositories`,
+S3-адаптеры (обложки релиза/смартлинка/плейлиста, аудио-исходник) — в `apps/web/lib/*`
+(тот же паттерн, что у очереди).
 
 ---
 
