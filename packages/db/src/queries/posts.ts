@@ -5,7 +5,7 @@ import type { ArtistPost } from '@vire/core';
 
 export type { ArtistPost };
 
-// Владение (пост принадлежит профилю) проверяется в роут-хендлере, не здесь.
+// Владение (пост принадлежит профилю) проверяется в ArtistPostService, не здесь.
 
 function mapPost(row: typeof artistPosts.$inferSelect): ArtistPost {
   return {

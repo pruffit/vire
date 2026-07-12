@@ -101,6 +101,36 @@ describe('POST /api/v1/dashboard/profile', () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it('removeAvatar wins over an attached invalid file: 200, avatar removed', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    findByUserId.mockResolvedValue({ ...ARTIST, avatarUrl: 'https://cdn.example.com/avatars/artist1.png' });
+    const res = await POST(
+      makeReq({
+        name: 'A',
+        removeAvatar: '1',
+        avatar: new File([new Uint8Array([1])], 'a.gif', { type: 'image/gif' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(uploadToStream).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith('artist1', expect.objectContaining({ avatarUrl: null }));
+  });
+
+  it('removeHeader wins over an attached invalid file: 200, header removed', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    findByUserId.mockResolvedValue({ ...ARTIST, headerUrl: 'https://cdn.example.com/headers/artist1.png' });
+    const res = await POST(
+      makeReq({
+        name: 'A',
+        removeHeader: '1',
+        header: new File([new Uint8Array([1])], 'h.gif', { type: 'image/gif' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(uploadToStream).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith('artist1', expect.objectContaining({ headerUrl: null }));
+  });
+
   it('uploads header and saves headerUrl', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     findByUserId.mockResolvedValue(ARTIST);

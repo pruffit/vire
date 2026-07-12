@@ -26,18 +26,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
   }
 
+  // remove-флаг выигрывает у приложенного файла (как до рефакторинга) — файл не валидируем
+  const removeAvatar = formData.get('removeAvatar') === '1';
   const avatar = formData.get('avatar');
   let avatarInput: { buffer: Buffer; ext: string; mime: string } | null = null;
-  if (avatar instanceof File && avatar.size > 0) {
+  if (!removeAvatar && avatar instanceof File && avatar.size > 0) {
     const buffer = Buffer.from(await avatar.arrayBuffer());
     const v = validateImageUpload(avatar.size, buffer, AVATAR_POLICY);
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
     avatarInput = { buffer, ext: v.info.ext, mime: v.info.mime };
   }
 
+  const removeHeader = formData.get('removeHeader') === '1';
   const header = formData.get('header');
   let headerInput: { buffer: Buffer; ext: string; mime: string } | null = null;
-  if (header instanceof File && header.size > 0) {
+  if (!removeHeader && header instanceof File && header.size > 0) {
     const buffer = Buffer.from(await header.arrayBuffer());
     const v = validateImageUpload(header.size, buffer, HEADER_POLICY);
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
@@ -54,9 +57,9 @@ export async function POST(req: Request) {
     name: formData.get('name'),
     bio: formData.get('bio'),
     avatar: avatarInput,
-    removeAvatar: formData.get('removeAvatar') === '1',
+    removeAvatar,
     header: headerInput,
-    removeHeader: formData.get('removeHeader') === '1',
+    removeHeader,
     linksRaw: formData.get('links'),
     videosRaw: formData.get('videos'),
     bg: formData.get('bg'),

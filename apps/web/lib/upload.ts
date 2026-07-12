@@ -1,11 +1,11 @@
 // Framework-free validation helpers for the track-upload route handler.
 
-import { isUuid, ALL_CONTRIBUTOR_ROLES, type TrackCredit, type ContributorRole } from '@vire/core';
+import { isUuid, ALL_CONTRIBUTOR_ROLES, type AudioExt, type TrackCredit, type ContributorRole } from '@vire/core';
 
 /** Maximum accepted source-audio file size (matches proxyClientMaxBodySize). */
 export const MAX_AUDIO_FILE_SIZE = 300 * 1024 * 1024; // 300 MB
 
-export type AudioExt = 'wav' | 'flac' | 'mp3';
+export type { AudioExt };
 
 /** Magic-bytes check: FLAC "fLaC"; WAV "RIFF"+"WAVE"; MP3 — ID3v2 tag or raw MPEG frame sync. */
 export function validateMagicBytes(header: Uint8Array, ext: AudioExt): boolean {
