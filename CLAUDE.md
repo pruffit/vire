@@ -236,13 +236,14 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 
 ### Фундамент
 - [x] Монорепо (Turborepo + pnpm), docker-compose (postgres/redis/minio)
-- [x] `packages/db` — Drizzle схема + миграции 0000–0014
+- [x] `packages/db` — Drizzle схема + миграции 0000–0033
 - [x] `packages/core` — Result<T,E>, domain types, сервисы, репозитории
 - [x] `packages/ui` — OKLCH-токены, Button, Card, Input
 - [x] `packages/config` — tsconfig/eslint/tailwind пресеты
-- [x] Auth.js v5 — провайдеры: email/пароль (Credentials), magic link, Yandex, Google,
-  Telegram Login Widget; JWT, `proxy.ts`. Привязка нескольких провайдеров к одному
-  аккаунту через cookie `vire_link_uid` (см. `auth.ts`, `/profile` → «Способы входа»).
+- [x] Auth.js v5 — провайдеры: email/пароль (Credentials), magic link, Yandex; JWT,
+  `proxy.ts`. Google/Telegram вырезаны (406-ФЗ — иностранные сервисы авторизации
+  запрещены). Привязка нескольких провайдеров к одному аккаунту через cookie
+  `vire_link_uid` (см. `auth.ts`, `/profile` → «Способы входа»).
   Письма шлёт Brevo HTTP API (`lib/mailer.ts`) — SMTP не используется (Timeweb блокирует порты).
 - [x] `apps/worker` — BullMQ + ffmpeg → HLS + waveform peaks → S3 → DB; play-events; notify-release
 
@@ -337,7 +338,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Скачивание FLAC по presigned S3 URL
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
-### Тесты (apps/web — 200, гонять `pnpm --filter @vire/web test`)
+### Тесты (apps/web — 503, гонять `pnpm --filter @vire/web test`)
 - [x] `packages/core` — сервисы artist/release/track, Result/errors (Vitest)
 - [x] `apps/web/lib` — `embed` (YouTube/VK), `upload` (валидация), `format`, `structured-data` (JSON-LD билдеры)
 - [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),
@@ -350,11 +351,12 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 
 ## Что делать дальше (следующий шаг)
 
-Этап 1 закрыт, включая все взаимодействия слушателя из концепта, смартлинки и
-пресейвы (Фаза A+B). Открытый бэклог — в `docs/roadmap/TODO.md` (Observability/Sentry, контент-SEO,
-несколько аккаунтов на артиста) и Этап 2:
+Этап 1 закрыт, включая все взаимодействия слушателя из концепта, смартлинки,
+пресейвы (Фаза A+B) и несколько аккаунтов на артиста (`docs/features/multi-artist.md`).
+Открытый бэклог — в `docs/roadmap/TODO.md` (Observability/Sentry — отложено до апгрейда
+VPS, контент-SEO) и `docs/roadmap/stage-2.md` (второй виток); Этап 2 — только по команде:
 1. **Тесты Этап-2 роутов** (purchase/webhook) и **YooKassa боевая настройка** — по команде
-2. **Observability** (Sentry + метрики) и **несколько аккаунтов на артиста** — см. `docs/roadmap/TODO.md`
+2. Открытые хвосты stage-2: §3.4 (404 пустого артиста), §7.1 (доводка волны), §9.1 (тема артиста в админке)
 
 Сделано в доводке:
 - Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)
