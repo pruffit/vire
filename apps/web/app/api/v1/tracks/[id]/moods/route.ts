@@ -3,13 +3,13 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import {
   getTrackMoods, setTrackMoods, trackExists, ALL_MOODS, db,
-  DrizzleTrackRepository, DrizzleReleaseRepository, type Mood,
+  DrizzleTrackRepository, DrizzleReleaseRepository,
 } from '@vire/db';
 import { getActiveArtist } from '@/lib/active-artist';
 
 type Params = { params: Promise<{ id: string }> };
 
-const moodSchema = z.array(z.enum(ALL_MOODS as [Mood, ...Mood[]])).max(5);
+const moodSchema = z.array(z.enum(ALL_MOODS)).max(5);
 
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;

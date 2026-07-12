@@ -3,6 +3,7 @@ import type { ITrackRepository, UpdateTrackParams } from '../repositories/track'
 import type { IReleaseRepository } from '../repositories/release';
 import type { TranscodeJobData } from '../jobs';
 import type { Track, TrackCredit } from '../types/release';
+import { authorizeTrackOwnership } from './authorize-track';
 
 export interface ITranscodeQueue {
   add(data: TranscodeJobData): Promise<void>;
@@ -44,28 +45,14 @@ export class TrackService {
     return ok(track);
   }
 
-  /** Трек существует и принадлежит артисту (через релиз). */
-  private async authorizeTrack(
-    trackId: string,
-    artistProfileId: string,
-  ): Promise<Result<Track, NotFoundError | Error>> {
-    const track = await this.trackRepo.findById(trackId);
-    if (!track) return err(new NotFoundError('Track', trackId));
-
-    const release = await this.releaseRepo.findById(track.releaseId);
-    if (!release) return err(new NotFoundError('Release', track.releaseId));
-    if (release.artistProfileId !== artistProfileId) {
-      return err(new Error('Forbidden: track does not belong to this artist'));
-    }
-    return ok(track);
-  }
-
   async updateTrack(params: {
     trackId: string;
     artistProfileId: string;
     patch: UpdateTrackParams;
   }): Promise<Result<Track, NotFoundError | Error>> {
-    const authorized = await this.authorizeTrack(params.trackId, params.artistProfileId);
+    const authorized = await authorizeTrackOwnership(
+      this.trackRepo, this.releaseRepo, params.trackId, params.artistProfileId,
+    );
     if (!authorized.ok) return authorized;
 
     const updated = await this.trackRepo.update(params.trackId, params.patch);
@@ -77,7 +64,9 @@ export class TrackService {
     trackId: string;
     artistProfileId: string;
   }): Promise<Result<void, NotFoundError | Error>> {
-    const authorized = await this.authorizeTrack(params.trackId, params.artistProfileId);
+    const authorized = await authorizeTrackOwnership(
+      this.trackRepo, this.releaseRepo, params.trackId, params.artistProfileId,
+    );
     if (!authorized.ok) return authorized;
 
     await this.trackRepo.delete(params.trackId);

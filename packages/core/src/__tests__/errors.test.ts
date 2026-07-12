@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ok, err, NotFoundError } from '../errors';
+import { ok, err, NotFoundError, ConflictError } from '../errors';
 
 describe('ok', () => {
   it('returns ok result with value', () => {
@@ -55,6 +55,28 @@ describe('NotFoundError', () => {
 
   it('is instanceof Error', () => {
     const error = new NotFoundError('X', 'y');
+    expect(error).toBeInstanceOf(Error);
+  });
+});
+
+describe('ConflictError', () => {
+  it('sets correct message', () => {
+    const error = new ConflictError('Playlist reorder', 'p1');
+    expect(error.message).toBe('Playlist reorder conflict: p1');
+  });
+
+  it('has _tag discriminant', () => {
+    const error = new ConflictError('Playlist reorder', 'p1');
+    expect(error._tag).toBe('ConflictError');
+  });
+
+  it('has correct name', () => {
+    const error = new ConflictError('Playlist reorder', 'p1');
+    expect(error.name).toBe('ConflictError');
+  });
+
+  it('is instanceof Error', () => {
+    const error = new ConflictError('X', 'y');
     expect(error).toBeInstanceOf(Error);
   });
 });

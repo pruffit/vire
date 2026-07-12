@@ -12,3 +12,11 @@ export class NotFoundError extends Error {
     this.name = 'NotFoundError';
   }
 }
+
+export class ConflictError extends Error {
+  readonly _tag = 'ConflictError' as const;
+  constructor(resource: string, id: string) {
+    super(`${resource} conflict: ${id}`);
+    this.name = 'ConflictError';
+  }
+}

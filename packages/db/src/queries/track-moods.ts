@@ -4,8 +4,9 @@ import { trackMoods, tracks, releases, artistProfiles, moodEnum } from '../schem
 
 export type Mood = typeof moodEnum.enumValues[number];
 
-// Источник правды: сам enum, чтобы список не расходился со схемой.
-export const ALL_MOODS: Mood[] = [...moodEnum.enumValues];
+// Источник правды: сам enum, чтобы список не расходился со схемой. Без spread — copy
+// теряет tuple-тип enumValues, а он нужен z.enum() без каста в потребителях.
+export const ALL_MOODS = moodEnum.enumValues;
 
 export const MOOD_LABELS: Record<Mood, string> = {
   MELANCHOLY: 'Меланхолия',

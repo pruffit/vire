@@ -3,14 +3,14 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import {
   db, DrizzleTrackRepository, DrizzleReleaseRepository,
-  setTrackGenres, ALL_TRACK_GENRES, type TrackGenre,
+  setTrackGenres, ALL_TRACK_GENRES,
 } from '@vire/db';
 import { isUuid } from '@/lib/upload';
 import { getActiveArtist } from '@/lib/active-artist';
 
 type Params = { params: Promise<{ id: string }> };
 
-const genreSchema = z.array(z.enum(ALL_TRACK_GENRES as [TrackGenre, ...TrackGenre[]])).max(3);
+const genreSchema = z.array(z.enum(ALL_TRACK_GENRES)).max(3);
 
 export async function PUT(req: Request, { params }: Params) {
   const session = await auth();

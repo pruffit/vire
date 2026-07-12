@@ -6,7 +6,8 @@ export type TrackGenre = typeof genreEnum.enumValues[number];
 
 // Источник правды: сам enum, список не дублируем, чтобы не разошёлся со схемой.
 // Человеко-читаемые подписи живут в apps/web/lib/genres.ts (клиентский слой).
-export const ALL_TRACK_GENRES: TrackGenre[] = [...genreEnum.enumValues];
+// Без spread — copy теряет tuple-тип enumValues, а он нужен z.enum() без каста.
+export const ALL_TRACK_GENRES = genreEnum.enumValues;
 
 export async function getTrackGenres(trackId: string): Promise<TrackGenre[]> {
   const rows = await db
