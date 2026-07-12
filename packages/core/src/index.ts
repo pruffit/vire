@@ -16,3 +16,4 @@ export * from './services/artist';
 export * from './services/release';
 export * from './services/track';
 export * from './services/musical-key';
+export * from './services/wave-scoring';
