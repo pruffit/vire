@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository } from '@vire/db';
-import { uploadToStream } from '@/lib/s3';
+import { ArtistService } from '@vire/core';
+import { fileStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, AVATAR_POLICY, HEADER_POLICY } from '@/lib/image';
-import { resolveVideoTitle } from '@/lib/video-meta';
-import { SANS_FONTS as FONT_SANS, MONO_FONTS as FONT_MONO } from '@/lib/font-catalog';
-import type { ThemeTokens, ArtistLink, ArtistVideo } from '@vire/core';
+import { videoTitleResolver } from '@/lib/video-meta';
+import { SANS_FONTS, MONO_FONTS } from '@/lib/font-catalog';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -14,7 +14,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const artistRepo = new DrizzleArtistRepository(db);
   const artist = await getActiveArtist(session.user.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
@@ -27,109 +26,50 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
   }
 
-  const name = formData.get('name');
-  const bio = formData.get('bio');
   const avatar = formData.get('avatar');
-  const removeAvatar = formData.get('removeAvatar') === '1';
-  const header = formData.get('header');
-  const removeHeader = formData.get('removeHeader') === '1';
-
-  const linksRaw = formData.get('links');
-  let links: ArtistLink[] = artist.links;
-  if (typeof linksRaw === 'string') {
-    try {
-      const parsed: unknown = JSON.parse(linksRaw);
-      if (Array.isArray(parsed)) {
-        links = parsed
-          .filter((l): l is { url: string; label?: unknown } =>
-            l !== null && typeof l === 'object' && typeof (l as { url?: unknown }).url === 'string',
-          )
-          .map((l) => {
-            const label = typeof l.label === 'string' ? l.label.trim() : '';
-            return label ? { url: l.url, label } : { url: l.url };
-          })
-          .filter((l) => l.url.trim())
-          .slice(0, 10);
-      }
-    } catch { /* keep existing links */ }
-  }
-
-  const videosRaw = formData.get('videos');
-  let videos: ArtistVideo[] = artist.videos;
-  if (typeof videosRaw === 'string') {
-    try {
-      const parsed: unknown = JSON.parse(videosRaw);
-      if (Array.isArray(parsed)) {
-        const raw = parsed
-          .filter((v): v is { url: string; title?: unknown } =>
-            v !== null && typeof v === 'object' && typeof (v as { url?: unknown }).url === 'string',
-          )
-          .map((v) => ({ url: v.url.trim(), title: typeof v.title === 'string' ? v.title.trim() : '' }))
-          .filter((v) => v.url)
-          .slice(0, 20);
-        videos = await Promise.all(
-          raw.map(async (v) => (v.title ? v : { url: v.url, title: await resolveVideoTitle(v.url) })),
-        );
-      }
-    } catch { /* keep existing */ }
-  }
-
-  const bg = formData.get('bg');
-  const text = formData.get('text');
-  const accent = formData.get('accent');
-  const grain = formData.get('grain') === '1';
-  const fontSans = formData.get('fontSans');
-  const fontMono = formData.get('fontMono');
-
-  if (typeof name !== 'string' || !name.trim()) {
-    return NextResponse.json({ error: 'Name is required' }, { status: 400 });
-  }
-
-  // ключ S3 стабильный — без ?v=timestamp браузер/CDN отдают старое закэшированное фото
-  const bust = (url: string) => `${url}?v=${Date.now()}`;
-
-  let avatarUrl = artist.avatarUrl;
-  if (removeAvatar) {
-    avatarUrl = null;
-  } else if (avatar instanceof File && avatar.size > 0) {
+  let avatarInput: { buffer: Buffer; ext: string; mime: string } | null = null;
+  if (avatar instanceof File && avatar.size > 0) {
     const buffer = Buffer.from(await avatar.arrayBuffer());
     const v = validateImageUpload(avatar.size, buffer, AVATAR_POLICY);
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
-    avatarUrl = bust(await uploadToStream(`avatars/${artist.id}.${v.info.ext}`, buffer, v.info.mime));
+    avatarInput = { buffer, ext: v.info.ext, mime: v.info.mime };
   }
 
-  let headerUrl = artist.headerUrl;
-  if (removeHeader) {
-    headerUrl = null;
-  } else if (header instanceof File && header.size > 0) {
+  const header = formData.get('header');
+  let headerInput: { buffer: Buffer; ext: string; mime: string } | null = null;
+  if (header instanceof File && header.size > 0) {
     const buffer = Buffer.from(await header.arrayBuffer());
     const v = validateImageUpload(header.size, buffer, HEADER_POLICY);
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
-    headerUrl = bust(await uploadToStream(`headers/${artist.id}.${v.info.ext}`, buffer, v.info.mime));
+    headerInput = { buffer, ext: v.info.ext, mime: v.info.mime };
   }
 
-  const themeTokens: ThemeTokens = {
-    bg: isHex(bg) ? bg : artist.themeTokens.bg,
-    text: isHex(text) ? text : artist.themeTokens.text,
-    accent: isHex(accent) ? accent : artist.themeTokens.accent,
-    grain,
-    fontSans: typeof fontSans === 'string' && FONT_SANS.includes(fontSans) ? fontSans : artist.themeTokens.fontSans,
-    fontMono: typeof fontMono === 'string' && FONT_MONO.includes(fontMono) ? fontMono : artist.themeTokens.fontMono,
-  };
-
-  await artistRepo.update(artist.id, {
-    name: name.trim(),
-    bio: typeof bio === 'string' && bio.trim() ? bio.trim() : null,
-    avatarUrl,
-    headerUrl,
-    themeTokens,
-    links,
-    videos,
+  const service = new ArtistService(new DrizzleArtistRepository(db), {
+    fonts: { sans: SANS_FONTS, mono: MONO_FONTS },
+    videoTitleResolver,
+    imageStorage: fileStorage,
   });
 
-  return NextResponse.json({ ok: true });
-}
+  const result = await service.updateProfile(artist, {
+    name: formData.get('name'),
+    bio: formData.get('bio'),
+    avatar: avatarInput,
+    removeAvatar: formData.get('removeAvatar') === '1',
+    header: headerInput,
+    removeHeader: formData.get('removeHeader') === '1',
+    linksRaw: formData.get('links'),
+    videosRaw: formData.get('videos'),
+    bg: formData.get('bg'),
+    text: formData.get('text'),
+    accent: formData.get('accent'),
+    grain: formData.get('grain') === '1',
+    fontSans: formData.get('fontSans'),
+    fontMono: formData.get('fontMono'),
+  });
 
-function isHex(value: unknown): value is string {
-  return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value);
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true });
 }

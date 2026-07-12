@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
 import { TrackService, NotFoundError } from '@vire/core';
-import { uploadBuffer } from '@/lib/s3';
+import { audioStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
 import { transcodeQueue } from '@/lib/queue';
-import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, MAX_AUDIO_FILE_SIZE, validateMagicBytes, type AudioExt } from '@/lib/upload';
+import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, MAX_AUDIO_FILE_SIZE, validateMagicBytes } from '@/lib/upload';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
@@ -70,31 +70,22 @@ export async function POST(req: Request) {
 
   // кодек WAV не ограничиваем — ffmpeg в воркере декодирует и сжатый, и 32-бит float (типичный экспорт DAW)
 
-  const trackId = crypto.randomUUID();
-  const sourceKey = `tracks/${trackId}/source.${ext}`;
-  const CONTENT_TYPE: Record<AudioExt, string> = {
-    wav: 'audio/wav',
-    flac: 'audio/flac',
-    mp3: 'audio/mpeg',
-  };
-  const contentType = CONTENT_TYPE[ext];
-
   const buffer = Buffer.from(await file.arrayBuffer());
-  await uploadBuffer(sourceKey, buffer, contentType);
 
   const service = new TrackService(
     new DrizzleTrackRepository(db),
     new DrizzleReleaseRepository(db),
     transcodeQueue,
+    { audioStorage },
   );
 
   const result = await service.createUpload({
-    trackId,
     releaseId,
     artistProfileId: artist.id,
     title,
     trackNumber: trackNum,
-    sourceKey,
+    ext,
+    buffer,
     credits,
   });
 
@@ -105,5 +96,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error.message }, { status: 403 });
   }
 
-  return NextResponse.json({ trackId, status: 'PROCESSING' }, { status: 201 });
+  return NextResponse.json({ trackId: result.value.id, status: 'PROCESSING' }, { status: 201 });
 }

@@ -1,3 +1,4 @@
+import type { IVideoTitleResolver } from '@vire/core';
 import { parseEmbed } from '@/lib/embed';
 import { fetchVkTitle } from '@/lib/vk-api';
 
@@ -23,3 +24,11 @@ export async function resolveVideoTitle(url: string): Promise<string> {
   }
   return '';
 }
+
+export class VideoTitleResolver implements IVideoTitleResolver {
+  resolve(url: string): Promise<string> {
+    return resolveVideoTitle(url);
+  }
+}
+
+export const videoTitleResolver: IVideoTitleResolver = new VideoTitleResolver();

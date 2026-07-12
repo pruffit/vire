@@ -11,7 +11,9 @@ vi.mock('@vire/db', () => ({
   DrizzleArtistRepository: class {
     findByUserId = findByUserId;
   },
-  createArtistPost,
+  DrizzleArtistPostRepository: class {
+    create = createArtistPost;
+  },
 }));
 
 import { auth } from '@/auth';

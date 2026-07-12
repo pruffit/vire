@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleReleaseRepository } from '@vire/db';
-import { uploadToStream } from '@/lib/s3';
+import { fileStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, COVER_POLICY } from '@/lib/image';
 import { ReleaseService, NotFoundError, ALL_GENRES, type Genre, type ReleaseType } from '@vire/core';
@@ -23,15 +23,6 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 
   const { id } = await params;
-  const releaseRepo = new DrizzleReleaseRepository(db);
-  const release = await releaseRepo.findById(id);
-
-  if (!release) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  }
-  if (release.artistProfileId !== artist.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
 
   let formData: FormData;
   try {
@@ -64,25 +55,33 @@ export async function PATCH(req: Request, { params }: Params) {
       ? new Date(releaseDateRaw)
       : null;
 
-  let coverUrl = release.coverUrl;
+  let coverInput: { buffer: Buffer; ext: string; mime: string } | undefined;
   if (cover instanceof File && cover.size > 0) {
     const buffer = Buffer.from(await cover.arrayBuffer());
     const v = validateImageUpload(cover.size, buffer, COVER_POLICY);
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
-    coverUrl = await uploadToStream(`covers/${id}.${v.info.ext}`, buffer, v.info.mime);
+    coverInput = { buffer, ext: v.info.ext, mime: v.info.mime };
   }
 
-  const updated = await releaseRepo.update(id, {
-    title: title.trim(),
+  const service = new ReleaseService(new DrizzleReleaseRepository(db), { coverStorage: fileStorage });
+  const result = await service.update(id, artist.id, {
+    title,
     type: type as ReleaseType,
     genre,
     releaseDate,
-    coverUrl,
-    description: typeof description === 'string' && description.trim() ? description.trim() : null,
-    linerNotes: typeof linerNotes === 'string' && linerNotes.trim() ? linerNotes.trim() : null,
+    description: typeof description === 'string' ? description : null,
+    linerNotes: typeof linerNotes === 'string' ? linerNotes : null,
+    cover: coverInput,
   });
 
-  return NextResponse.json({ releaseId: updated.id });
+  if (!result.ok) {
+    if (result.error instanceof NotFoundError) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  return NextResponse.json({ releaseId: result.value.releaseId });
 }
 
 export async function DELETE(

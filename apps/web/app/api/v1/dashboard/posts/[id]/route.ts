@@ -1,36 +1,23 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import {
-  getArtistPostById,
-  updateArtistPost,
-  deleteArtistPost,
-} from '@vire/db';
+import { db, DrizzleArtistPostRepository } from '@vire/db';
+import { ArtistPostService, NotFoundError, ValidationError } from '@vire/core';
 import { getActiveArtist } from '@/lib/active-artist';
-
-const TITLE_MAX = 120;
-const BODY_MAX = 2000;
 
 type Params = { params: Promise<{ id: string }> };
 
-/** Проверяет вход (auth + владение постом), возвращает либо ошибку, либо ok. */
-async function authorize(id: string, req: Request) {
+export async function PATCH(req: Request, { params }: Params) {
   const session = await auth();
-  if (!session?.user?.id) return { error: 'Unauthorized', status: 401 } as const;
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const artist = await getActiveArtist(session.user.id, req);
-  if (!artist) return { error: 'Artist profile not found', status: 403 } as const;
+  if (!artist) {
+    return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
+  }
 
-  const post = await getArtistPostById(id);
-  if (!post) return { error: 'Not found', status: 404 } as const;
-  if (post.artistProfileId !== artist.id) return { error: 'Forbidden', status: 403 } as const;
-
-  return { ok: true as const };
-}
-
-export async function PATCH(req: Request, { params }: Params) {
   const { id } = await params;
-  const gate = await authorize(id, req);
-  if (!('ok' in gate)) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
   let payload: unknown;
   try {
@@ -39,26 +26,43 @@ export async function PATCH(req: Request, { params }: Params) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const obj = (payload ?? {}) as Record<string, unknown>;
-  const title = typeof obj.title === 'string' && obj.title.trim() ? obj.title.trim() : null;
-  const body = typeof obj.body === 'string' ? obj.body.trim() : '';
+  const service = new ArtistPostService(new DrizzleArtistPostRepository(db));
+  const result = await service.update(id, artist.id, payload);
 
-  if (!body) {
-    return NextResponse.json({ error: 'Body is required' }, { status: 400 });
-  }
-  if (body.length > BODY_MAX || (title && title.length > TITLE_MAX)) {
-    return NextResponse.json({ error: 'Too long' }, { status: 400 });
+  if (!result.ok) {
+    if (result.error instanceof NotFoundError) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (result.error instanceof ValidationError) {
+      return NextResponse.json({ error: result.error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await updateArtistPost(id, { title, body });
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: Request, { params }: Params) {
-  const { id } = await params;
-  const gate = await authorize(id, req);
-  if (!('ok' in gate)) return NextResponse.json({ error: gate.error }, { status: gate.status });
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-  await deleteArtistPost(id);
+  const artist = await getActiveArtist(session.user.id, req);
+  if (!artist) {
+    return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const service = new ArtistPostService(new DrizzleArtistPostRepository(db));
+  const result = await service.delete(id, artist.id);
+
+  if (!result.ok) {
+    if (result.error instanceof NotFoundError) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   return NextResponse.json({ ok: true });
 }

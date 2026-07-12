@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { createArtistPost } from '@vire/db';
+import { db, DrizzleArtistPostRepository } from '@vire/db';
+import { ArtistPostService } from '@vire/core';
 import { getActiveArtist } from '@/lib/active-artist';
-
-const TITLE_MAX = 120;
-const BODY_MAX = 2000;
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -24,22 +22,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { title, body } = normalize(payload);
-  if (!body) {
-    return NextResponse.json({ error: 'Body is required' }, { status: 400 });
-  }
-  if (body.length > BODY_MAX || (title && title.length > TITLE_MAX)) {
-    return NextResponse.json({ error: 'Too long' }, { status: 400 });
+  const service = new ArtistPostService(new DrizzleArtistPostRepository(db));
+  const result = await service.create(artist.id, payload);
+
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
   }
 
-  const post = await createArtistPost({ artistProfileId: artist.id, title, body });
-  return NextResponse.json({ post }, { status: 201 });
-}
-
-/** Достаёт и тримит title/body из произвольного JSON. */
-export function normalize(payload: unknown): { title: string | null; body: string } {
-  const obj = (payload ?? {}) as Record<string, unknown>;
-  const title = typeof obj.title === 'string' && obj.title.trim() ? obj.title.trim() : null;
-  const body = typeof obj.body === 'string' ? obj.body.trim() : '';
-  return { title, body };
+  return NextResponse.json({ post: result.value.post }, { status: 201 });
 }

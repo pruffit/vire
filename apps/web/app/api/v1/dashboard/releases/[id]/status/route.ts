@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleReleaseRepository } from '@vire/db';
-import type { ReleaseStatus } from '@vire/core';
+import { ReleaseService, NotFoundError, type ReleaseStatus } from '@vire/core';
 import { notifyReleaseQueue } from '@/lib/queue';
 import { getActiveArtist } from '@/lib/active-artist';
 
@@ -22,15 +22,6 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const releaseRepo = new DrizzleReleaseRepository(db);
-  const release = await releaseRepo.findById(id);
-
-  if (!release) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  }
-  if (release.artistProfileId !== artist.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
 
   const body = await req.json().catch(() => ({})) as { status?: string };
   if (!body.status || !ALLOWED.includes(body.status as ReleaseStatus)) {
@@ -40,20 +31,18 @@ export async function PATCH(
     );
   }
 
-  const wasPublished = release.status !== 'PUBLISHED' && body.status === 'PUBLISHED';
-  await releaseRepo.updateStatus(id, body.status as ReleaseStatus);
+  const service = new ReleaseService(new DrizzleReleaseRepository(db), { notifyQueue: notifyReleaseQueue });
+  const result = await service.changeStatus(id, artist.id, body.status as ReleaseStatus, {
+    name: artist.name,
+    slug: artist.slug,
+  });
 
-  if (wasPublished) {
-    await notifyReleaseQueue.add({
-      releaseId: release.id,
-      releaseTitle: release.title,
-      releaseType: release.type,
-      coverUrl: release.coverUrl ?? null,
-      artistProfileId: artist.id,
-      artistName: artist.name,
-      artistSlug: artist.slug,
-    });
+  if (!result.ok) {
+    if (result.error instanceof NotFoundError) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  return NextResponse.json({ status: body.status });
+  return NextResponse.json({ status: result.value.status });
 }

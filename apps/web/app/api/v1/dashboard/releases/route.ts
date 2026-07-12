@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleReleaseRepository } from '@vire/db';
-import { uploadToStream } from '@/lib/s3';
+import { fileStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, COVER_POLICY } from '@/lib/image';
-import { ALL_GENRES, type Genre, type ReleaseType } from '@vire/core';
+import { ReleaseService, ALL_GENRES, type Genre, type ReleaseType } from '@vire/core';
 
 const VALID_TYPES = new Set<ReleaseType>(['ALBUM', 'EP', 'SINGLE']);
 const VALID_GENRES = new Set<string>(ALL_GENRES);
@@ -50,30 +50,27 @@ export async function POST(req: Request) {
       ? new Date(releaseDateRaw)
       : null;
 
-  const releaseId = crypto.randomUUID();
-  let coverUrl: string | null = null;
-
+  let coverInput: { buffer: Buffer; ext: string; mime: string } | undefined;
   if (cover instanceof File && cover.size > 0) {
     const buffer = Buffer.from(await cover.arrayBuffer());
     const v = validateImageUpload(cover.size, buffer, COVER_POLICY);
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
-    coverUrl = await uploadToStream(`covers/${releaseId}.${v.info.ext}`, buffer, v.info.mime);
+    coverInput = { buffer, ext: v.info.ext, mime: v.info.mime };
   }
 
-  const releaseRepo = new DrizzleReleaseRepository(db);
-  const release = await releaseRepo.create({
-    id: releaseId,
-    artistProfileId: artist.id,
-    title: title.trim(),
+  const service = new ReleaseService(new DrizzleReleaseRepository(db), { coverStorage: fileStorage });
+  const result = await service.create(artist.id, {
+    title,
     type: type as ReleaseType,
     genre,
     releaseDate,
-    coverUrl,
-    description:
-      typeof description === 'string' && description.trim()
-        ? description.trim()
-        : null,
+    description: typeof description === 'string' ? description : null,
+    cover: coverInput,
   });
 
-  return NextResponse.json({ releaseId: release.id }, { status: 201 });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error.message }, { status: 403 });
+  }
+
+  return NextResponse.json({ releaseId: result.value.releaseId }, { status: 201 });
 }
