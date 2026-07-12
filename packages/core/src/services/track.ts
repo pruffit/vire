@@ -1,6 +1,7 @@
 import { err, ok, NotFoundError, type Result } from '../errors';
 import type { ITrackRepository, UpdateTrackParams } from '../repositories/track';
 import type { IReleaseRepository } from '../repositories/release';
+import type { IFileStorage } from '../repositories/storage';
 import type { TranscodeJobData } from '../jobs';
 import type { Track, TrackCredit } from '../types/release';
 import { authorizeTrackOwnership } from './authorize-track';
@@ -9,20 +10,34 @@ export interface ITranscodeQueue {
   add(data: TranscodeJobData): Promise<void>;
 }
 
+export type AudioExt = 'wav' | 'flac' | 'mp3';
+
+const AUDIO_CONTENT_TYPE: Record<AudioExt, string> = {
+  wav: 'audio/wav',
+  flac: 'audio/flac',
+  mp3: 'audio/mpeg',
+};
+
+export interface TrackServiceDeps {
+  audioStorage?: IFileStorage;
+  uuid?: () => string;
+}
+
 export class TrackService {
   constructor(
     private readonly trackRepo: ITrackRepository,
     private readonly releaseRepo: IReleaseRepository,
     private readonly queue: ITranscodeQueue,
+    private readonly deps: TrackServiceDeps = {},
   ) {}
 
   async createUpload(params: {
-    trackId: string;
     releaseId: string;
     artistProfileId: string;
     title: string;
     trackNumber: number;
-    sourceKey: string;
+    ext: AudioExt;
+    buffer: Uint8Array;
     credits?: TrackCredit[];
   }): Promise<Result<Track, NotFoundError | Error>> {
     const release = await this.releaseRepo.findById(params.releaseId);
@@ -32,15 +47,21 @@ export class TrackService {
       return err(new Error('Forbidden: release does not belong to this artist'));
     }
 
+    // S3-загрузка после проверки владения релизом — при 403/404 осиротевший объект не создаётся.
+    if (!this.deps.audioStorage) throw new Error('TrackService: deps.audioStorage is required to upload audio');
+    const trackId = this.deps.uuid ? this.deps.uuid() : crypto.randomUUID();
+    const sourceKey = `tracks/${trackId}/source.${params.ext}`;
+    await this.deps.audioStorage.upload(sourceKey, params.buffer, AUDIO_CONTENT_TYPE[params.ext]);
+
     const track = await this.trackRepo.create({
-      id: params.trackId,
+      id: trackId,
       releaseId: params.releaseId,
       title: params.title,
       trackNumber: params.trackNumber,
       credits: params.credits,
     });
 
-    await this.queue.add({ trackId: params.trackId, sourceKey: params.sourceKey });
+    await this.queue.add({ trackId, sourceKey });
 
     return ok(track);
   }

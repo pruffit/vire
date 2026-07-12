@@ -1,4 +1,5 @@
 import type { PlaylistSummary, PlaylistWithTracks, TrackSearchResult, PlaylistSuggestions } from '../types/playlist';
+import type { IFileStorage } from './storage';
 
 export interface PlaylistUpdatePatch {
   title?: string;
@@ -29,6 +30,4 @@ export interface IPlaylistRepository {
   trackExists(trackId: string): Promise<boolean>;
 }
 
-export interface IPlaylistCoverStorage {
-  upload(key: string, body: Buffer, contentType: string): Promise<string>;
-}
+export type IPlaylistCoverStorage = IFileStorage;

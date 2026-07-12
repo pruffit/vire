@@ -39,6 +39,17 @@ export interface SmartLink {
   updatedAt: Date;
 }
 
+export interface SmartLinkInput {
+  slug: string;
+  title: string;
+  subtitle?: string | null;
+  coverUrl?: string | null;
+  releaseDate?: Date | null;
+  releaseId?: string | null;
+  links: ArtistLink[];
+  isPublished: boolean;
+}
+
 export interface ArtistVideo {
   url: string;
   title: string;

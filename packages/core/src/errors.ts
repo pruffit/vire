@@ -15,8 +15,18 @@ export class NotFoundError extends Error {
 
 export class ConflictError extends Error {
   readonly _tag = 'ConflictError' as const;
-  constructor(resource: string, id: string) {
-    super(`${resource} conflict: ${id}`);
+  // Без id — resource используется как готовый текст ошибки (напр. занятый slug);
+  // с id — стандартный формат "<resource> conflict: <id>".
+  constructor(resource: string, id?: string) {
+    super(id !== undefined ? `${resource} conflict: ${id}` : resource);
     this.name = 'ConflictError';
+  }
+}
+
+export class ValidationError extends Error {
+  readonly _tag = 'ValidationError' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'ValidationError';
   }
 }

@@ -1,17 +1,11 @@
 import { desc, eq } from 'drizzle-orm';
 import { db } from '../client';
 import { artistPosts } from '../schema';
+import type { ArtistPost } from '@vire/core';
+
+export type { ArtistPost };
 
 // Владение (пост принадлежит профилю) проверяется в роут-хендлере, не здесь.
-
-export interface ArtistPost {
-  id: string;
-  artistProfileId: string;
-  title: string | null;
-  body: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 function mapPost(row: typeof artistPosts.$inferSelect): ArtistPost {
   return {

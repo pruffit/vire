@@ -2,7 +2,9 @@ import { and, desc, eq, ne } from 'drizzle-orm';
 import { db } from '../client';
 import { smartLinks, releases } from '../schema';
 import { isUuid } from '@vire/core';
-import type { SmartLink, ArtistLink } from '@vire/core';
+import type { SmartLink, ArtistLink, SmartLinkInput } from '@vire/core';
+
+export type { SmartLinkInput };
 
 type SmartLinkRow = typeof smartLinks.$inferSelect;
 
@@ -109,17 +111,6 @@ export async function smartLinkSlugTaken(artistProfileId: string, slug: string, 
     ))
     .limit(1);
   return rows.length > 0;
-}
-
-export interface SmartLinkInput {
-  slug: string;
-  title: string;
-  subtitle?: string | null;
-  coverUrl?: string | null;
-  releaseDate?: Date | null;
-  releaseId?: string | null;
-  links: ArtistLink[];
-  isPublished: boolean;
 }
 
 export async function createSmartLink(artistProfileId: string, input: SmartLinkInput): Promise<string> {

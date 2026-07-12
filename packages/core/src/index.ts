@@ -6,12 +6,16 @@ export * from './util/throttle-gate';
 // util/signing НЕ реэкспортим: баррель тянется в Edge-runtime, где node:crypto не
 // поддержан. Импорт — через подпуть '@vire/core/signing' (только серверные потребители).
 export * from './types/artist';
+export * from './types/artist-post';
 export * from './types/release';
 export * from './types/playlist';
 export * from './types/moment';
 export * from './release-visibility';
 export * from './track-display';
 export * from './repositories/artist';
+export * from './repositories/artist-post';
+export * from './repositories/smart-link';
+export * from './repositories/storage';
 export * from './repositories/release';
 export * from './repositories/track';
 export * from './repositories/follow';
@@ -19,6 +23,8 @@ export * from './repositories/listener-track';
 export * from './repositories/track-moods';
 export * from './repositories/playlist';
 export * from './services/artist';
+export * from './services/artist-post';
+export * from './services/smart-link';
 export * from './services/release';
 export * from './services/track';
 export * from './services/authorize-track';

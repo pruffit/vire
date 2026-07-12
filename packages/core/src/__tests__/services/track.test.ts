@@ -3,7 +3,8 @@ import { TrackService } from '../../services/track';
 import { NotFoundError } from '../../errors';
 import type { ITrackRepository } from '../../repositories/track';
 import type { IReleaseRepository } from '../../repositories/release';
-import type { ITranscodeQueue } from '../../services/track';
+import type { IFileStorage } from '../../repositories/storage';
+import type { ITranscodeQueue, TrackServiceDeps } from '../../services/track';
 import type { Release, Track } from '../../types/release';
 
 const mockRelease: Release = {
@@ -67,13 +68,21 @@ function makeQueue(): ITranscodeQueue {
   return { add: vi.fn().mockResolvedValue(undefined) };
 }
 
+function makeAudioStorage(overrides?: Partial<IFileStorage>): IFileStorage {
+  return { upload: vi.fn().mockResolvedValue('s3://vault/tracks/track-1/source.flac'), ...overrides };
+}
+
+function makeDeps(overrides?: Partial<TrackServiceDeps>): TrackServiceDeps {
+  return { audioStorage: makeAudioStorage(), uuid: () => 'track-1', ...overrides };
+}
+
 const uploadParams = {
-  trackId: 'track-1',
   releaseId: 'release-1',
   artistProfileId: 'artist-1',
   title: 'Track One',
   trackNumber: 1,
-  sourceKey: 'vault/tracks/track-1/source.flac',
+  ext: 'flac' as const,
+  buffer: new Uint8Array([1, 2, 3]),
 };
 
 describe('TrackService.createUpload', () => {
@@ -81,7 +90,7 @@ describe('TrackService.createUpload', () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
 
     const result = await service.createUpload(uploadParams);
 
@@ -89,18 +98,21 @@ describe('TrackService.createUpload', () => {
     if (result.ok) expect(result.value).toBe(mockTrack);
   });
 
-  it('enqueues transcode job after creating track', async () => {
+  it('uploads to audioStorage with the generated key, then creates the track, then enqueues', async () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const audioStorage = makeAudioStorage();
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps({ audioStorage }));
 
     await service.createUpload(uploadParams);
 
+    expect(audioStorage.upload).toHaveBeenCalledWith('tracks/track-1/source.flac', uploadParams.buffer, 'audio/flac');
+    expect(trackRepo.create).toHaveBeenCalledWith(expect.objectContaining({ id: 'track-1' }));
     expect(queue.add).toHaveBeenCalledOnce();
     expect(queue.add).toHaveBeenCalledWith({
       trackId: 'track-1',
-      sourceKey: 'vault/tracks/track-1/source.flac',
+      sourceKey: 'tracks/track-1/source.flac',
     });
   });
 
@@ -108,7 +120,7 @@ describe('TrackService.createUpload', () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(null) });
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
 
     const result = await service.createUpload(uploadParams);
 
@@ -121,7 +133,7 @@ describe('TrackService.createUpload', () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(differentArtistRelease) });
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
 
     const result = await service.createUpload(uploadParams);
 
@@ -133,18 +145,52 @@ describe('TrackService.createUpload', () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(null) });
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
 
     await service.createUpload(uploadParams);
 
     expect(queue.add).not.toHaveBeenCalled();
   });
 
-  it('passes credits to trackRepo.create', async () => {
+  it('does not touch audioStorage when release is not found (S3 upload after ownership check)', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(null) });
+    const queue = makeQueue();
+    const audioStorage = makeAudioStorage();
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps({ audioStorage }));
+
+    await service.createUpload(uploadParams);
+
+    expect(audioStorage.upload).not.toHaveBeenCalled();
+  });
+
+  it('does not touch audioStorage when artist is unauthorized (S3 upload after ownership check)', async () => {
+    const differentArtistRelease: Release = { ...mockRelease, artistProfileId: 'other-artist' };
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(differentArtistRelease) });
+    const queue = makeQueue();
+    const audioStorage = makeAudioStorage();
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps({ audioStorage }));
+
+    await service.createUpload(uploadParams);
+
+    expect(audioStorage.upload).not.toHaveBeenCalled();
+  });
+
+  it('throws when audioStorage dependency is missing', async () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
     const queue = makeQueue();
     const service = new TrackService(trackRepo, releaseRepo, queue);
+
+    await expect(service.createUpload(uploadParams)).rejects.toThrow('deps.audioStorage');
+  });
+
+  it('passes credits to trackRepo.create', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
+    const queue = makeQueue();
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
     const credits = [{ name: 'Danila', role: 'PERFORMER' as const }];
 
     await service.createUpload({ ...uploadParams, credits });
@@ -158,7 +204,7 @@ describe('TrackService.createUpload', () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
 
     await service.createUpload(uploadParams);
 
@@ -172,7 +218,7 @@ describe('TrackService.createUpload', () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(differentArtistRelease) });
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
 
     await service.createUpload(uploadParams);
 
