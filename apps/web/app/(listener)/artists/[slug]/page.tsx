@@ -15,6 +15,8 @@ import {
   listArtistPosts,
   getPublishedSmartLinks,
   getArtistPlayableTracks,
+  artistHasPublishedTrackById,
+  isArtistMember,
 } from '@vire/db';
 import type { ArtistPost } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
@@ -25,6 +27,7 @@ import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-i
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
+import { canViewEmptyArtist } from '@/lib/artist-visibility';
 import { FollowButton } from './follow-button';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { parseEmbed, type EmbedInfo } from '@/lib/embed';
@@ -66,10 +69,20 @@ async function getArtistData(slug: string) {
   return { artist: result.value, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks };
 }
 
+// пустой артист скрыт с витрины (каталог/поиск/sitemap) — прямой заход должен отвечать так же
+async function assertArtistVisible(artistProfileId: string): Promise<void> {
+  if (await artistHasPublishedTrackById(artistProfileId)) return;
+  const session = await auth();
+  const userId = session?.user?.id;
+  const isMember = userId ? await isArtistMember(artistProfileId, userId) : false;
+  if (!canViewEmptyArtist({ isMember, role: session?.user?.role })) notFound();
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const data = await getArtistData(slug);
   if (!data) return { title: 'Не найдено' };
+  await assertArtistVisible(data.artist.id);
 
   const { artist, releases } = data;
   const url = `/artists/${slug}`;
@@ -93,6 +106,7 @@ export default async function ArtistPage({ params }: Props) {
   const { slug } = await params;
   const data = await getArtistData(slug);
   if (!data) notFound();
+  await assertArtistVisible(data.artist.id);
 
   const { artist, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
