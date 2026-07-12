@@ -1,4 +1,11 @@
 import { and, eq, inArray, notInArray, sql, isNotNull, or, lte, type SQL } from 'drizzle-orm';
+import {
+  PLAY_SOURCE_QUALITY_WEIGHTS,
+  DEFAULT_SOURCE_QUALITY_WEIGHT,
+  WAVE_SKIP_PENALTY,
+  WAVE_SKIP_COMPLETION_THRESHOLD,
+  WAVE_SKIP_WINDOW_DAYS,
+} from '@vire/core';
 import { db } from '../client';
 import { trackMoods, trackAudio, tracks, releases, artistProfiles, trackGenres } from '../schema';
 import { expandGenresToFamilies } from '../genre-families';
@@ -125,13 +132,38 @@ function toWaveTrack(r: {
   };
 }
 
-// Качество: средняя доля дослушивания за 90 дней (скипы тянут вниз), вес до 0.3
+// веса — sql.raw: bind-параметры внутри CASE Postgres выводит как integer (см. genreOverlapTerm)
+const sourceWeightCase = sql.raw(
+  `CASE pe.source ${Object.entries(PLAY_SOURCE_QUALITY_WEIGHTS)
+    .map(([s, w]) => `WHEN '${s}' THEN ${w}`)
+    .join(' ')} ELSE ${DEFAULT_SOURCE_QUALITY_WEIGHT} END`,
+);
+
+// Качество: взвешенная по источнику доля дослушивания за 90 дней — скип рекомендации
+// волны тянет вниз сильнее, чем скип собственного выбора. Вес терма до 0.3.
 const qualityScore = sql<number>`COALESCE((
-    SELECT AVG(LEAST(1.0, pe.duration_played_sec::float / NULLIF(tracks.duration_sec, 0)))
+    SELECT SUM(${sourceWeightCase} * LEAST(1.0, pe.duration_played_sec::float / NULLIF(tracks.duration_sec, 0)))
+         / NULLIF(SUM(${sourceWeightCase}), 0)
     FROM play_events pe
     WHERE pe.track_id = tracks.id
       AND pe.started_at >= now() - interval '90 days'
   ), 0) * 0.3`;
+
+// «волна уже предлагала, слушатель проскипал» — не возвращать трек так скоро
+export function waveSkipPenaltyFor(userId: string | null): SQL<number> {
+  if (!userId) return sql<number>`0`;
+  const penalty = sql.raw(`-${WAVE_SKIP_PENALTY}`);
+  const threshold = sql.raw(WAVE_SKIP_COMPLETION_THRESHOLD.toString());
+  const windowDays = sql.raw(`'${WAVE_SKIP_WINDOW_DAYS} days'`);
+  return sql<number>`CASE WHEN EXISTS (
+      SELECT 1 FROM play_events pw
+      WHERE pw.track_id = tracks.id
+        AND pw.user_id = ${userId}::uuid
+        AND pw.source = 'wave'
+        AND pw.started_at >= now() - interval ${windowDays}
+        AND pw.duration_played_sec::float / NULLIF(tracks.duration_sec, 0) < ${threshold}
+    ) THEN ${penalty} ELSE 0 END`;
+}
 
 // Вовлечённость: число «любимых моментов», насыщается к 5, вес до 0.2
 const momentScore = sql<number>`LEAST(1.0, (
@@ -214,7 +246,7 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
         0.2,
       );
 
-      const totalScore = sql<number>`${tasteMoodScore} + ${tasteGenreScoreSeed} + ${qualityScore} + random() * 0.3`;
+      const totalScore = sql<number>`${tasteMoodScore} + ${tasteGenreScoreSeed} + ${qualityScore} + ${waveSkipPenaltyFor(p.userId)} + random() * 0.3`;
 
       const rows = await db
         .select(selectShape)
@@ -351,9 +383,10 @@ export async function getWaveTracks(p: WaveParams): Promise<WaveTrack[]> {
     ? sql<number>`CASE WHEN ${artistProfiles.id}::text = ANY(${textArrayParam(p.recentArtistIds)}) THEN -0.4 ELSE 0 END`
     : sql<number>`0`;
 
+  const waveSkipPenalty = waveSkipPenaltyFor(p.userId);
   const totalScore = sql<number>`${moodScore} + ${bpmScore} + ${keyScore} + ${genreScore}
     + ${tasteMoodScore} + ${tasteGenreScore} + ${qualityScore} + ${momentScore}
-    + ${fatiguePenalty} + ${diversityPenalty}
+    + ${fatiguePenalty} + ${diversityPenalty} + ${waveSkipPenalty}
     + random() * 0.15`;
 
   // закреплённый seed сессии — жёсткий фильтр, не буст: волна держится внутри жанра/настроения всю сессию
