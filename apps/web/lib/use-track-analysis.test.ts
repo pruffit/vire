@@ -3,10 +3,10 @@ import { StrictMode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
-vi.mock('@/components/toast', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
+vi.mock('@/lib/toast', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
 
 import { useTrackAnalysis } from './use-track-analysis';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 
 const MESSAGES = { pending: 'pending', start: 'start-err', timeout: 'timeout-err', success: 'ok' };
 const ENDPOINTS = { analyze: '/api/analyze', snapshot: '/api/snapshot' };

@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
 import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
-import { controls, getAudioTime } from '@/components/player/audio-engine';
+import { controls, getAudioTime } from '@/lib/player/audio-engine';
 import { WaveformScrubber } from '@/components/player/waveform-scrubber';
 import { useAudioTime } from '@/lib/player/use-audio-time';
 import { TrackShare } from '@/components/track-share';

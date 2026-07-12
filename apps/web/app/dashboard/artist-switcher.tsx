@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { Select } from '@/components/select';
 
 export interface SwitcherArtist {

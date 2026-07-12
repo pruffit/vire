@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, Reorder, useDragControls } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { MoodPicker } from '@/components/mood-picker';
 import { GenrePicker } from '@/components/genre-picker';
 import { CreditsEditor } from '@/components/credits-editor';

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { LyricsScroll } from '@/components/lyrics-scroll';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
 import type { LyricLine } from '@/lib/lrc';
 

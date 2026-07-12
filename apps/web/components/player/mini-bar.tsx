@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
-import { controls } from './audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { Controls } from './controls';
 import { ArtistLink, TitleLink } from './track-links';
 import { PlayerLikeButton } from '@/components/player-like-button';

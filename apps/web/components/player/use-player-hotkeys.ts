@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePlayerStore } from '@/store/player';
-import { controls, getAudioTime } from './audio-engine';
+import { controls, getAudioTime } from '@/lib/player/audio-engine';
 
 const SEEK_STEP_SEC = 5;
 

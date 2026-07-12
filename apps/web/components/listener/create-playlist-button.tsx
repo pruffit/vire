@@ -3,7 +3,7 @@
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icon';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_TITLE = 'Мой плейлист';

@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { PlayIcon } from '@/components/icons';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 
 export function WaveStartButton() {
   const waveMode = usePlayerStore((s) => s.waveMode);

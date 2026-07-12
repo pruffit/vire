@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { Badge, Panel, EmptyState, btnPrimary } from '@/components/ui-kit';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';

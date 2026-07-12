@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
 
 interface PlaylistItem {

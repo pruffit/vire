@@ -2,10 +2,10 @@
 
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { useLazyQueue } from '@/lib/player/use-play';
 import { PlayIcon } from '@/components/icons';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 
 export function FeaturedPlayButton({
   releaseId,

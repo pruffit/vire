@@ -3,7 +3,7 @@
 import { Fragment, type KeyboardEvent } from 'react';
 import { Reorder, useDragControls } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
-import { controls } from './audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { TrackTitleText } from '@/components/track-title';
 import { GripIcon, WaveIcon } from './player-icons';

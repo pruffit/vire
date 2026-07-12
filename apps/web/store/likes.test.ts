@@ -2,10 +2,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@vire/api-client', () => ({ likeTrack: vi.fn() }));
-vi.mock('@/components/toast', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
+vi.mock('@/lib/toast', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
 
 import { likeTrack } from '@vire/api-client';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { useLikesStore } from './likes';
 
 function deferred<T>() {

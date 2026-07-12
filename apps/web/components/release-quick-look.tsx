@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { useLazyQueue } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
@@ -14,7 +14,7 @@ import { formatDuration } from '@/lib/format';
 import { featuredNames } from '@/lib/track-display';
 import { TrackTitleText } from '@/components/track-title';
 import { Icon } from '@/components/icon';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { QuickLookSheet, QuickLookDragHandle, MiniEq } from './quick-look-sheet';
 
 export interface QuickLookRelease {

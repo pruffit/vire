@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { Textarea } from '@/components/ui-kit';
 
 export interface ClientPost {

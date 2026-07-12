@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePlayerStore } from '@/store/player';
-import { getAudioTime } from '@/components/player/audio-engine';
+import { getAudioTime } from './audio-engine';
 
 /** Чистая функция — тестируется без рендера хука. */
 export function shouldRunTicker(enabled: boolean, isPlaying: boolean): boolean {

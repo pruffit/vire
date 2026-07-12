@@ -19,7 +19,7 @@
   манифест и продолжает с сохранённой позиции (`clampRestoredQueueIndex` чинит индекс,
   если очередь была усечена; `attachAndPlay` при резюме не сбрасывает `duration` в 0,
   как делает при обычном старте нового трека).
-- **Движок** (`components/player/audio-engine.ts`) — модуль вне React с одним `<audio>`
+- **Движок** (`lib/player/audio-engine.ts`) — модуль вне React с одним `<audio>`
   и одним `hls.js` на вкладку; `controls.*` — единственная точка мутации стора для
   воспроизведения (`playQueue`, `toggle`, `togglePlay`, `seek`, `next`/`prev`,
   `toggleShuffle`, `startWave`/`stopWave`, `resumeRestored`). LRU-кэш HLS-манифестов
@@ -120,7 +120,7 @@
 ## Где код
 
 - **Стор:** `apps/web/store/player.ts` (Zustand + persist)
-- **Движок:** `apps/web/components/player/audio-engine.ts`
+- **Движок:** `apps/web/lib/player/audio-engine.ts`
 - **Единый вход:** `apps/web/lib/player/use-play.ts`, `lib/player/lazy-queue-fetchers.ts`
 - **Живое время:** `apps/web/lib/player/use-audio-time.ts`
 - **Манифест-кэш:** `apps/web/lib/player/manifest-cache.ts`

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { type PlayerTrack } from '@/store/player';
 import { useTrackPlayState } from '@/lib/player/use-play';
 import { PlayerLikeButton } from '@/components/player-like-button';

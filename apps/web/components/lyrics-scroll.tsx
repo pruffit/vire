@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePlayerStore } from '@/store/player';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { useAudioTime } from '@/lib/player/use-audio-time';
 import { findActiveLrcLine, type LyricLine } from '@/lib/lrc';
 

@@ -3,10 +3,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ApiResult } from '@vire/api-client';
 
-vi.mock('@/components/toast', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
+vi.mock('@/lib/toast', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
 
 import { useOptimisticToggle } from '../use-optimistic-toggle';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 
 function deferred<T>() {
   let resolve!: (v: T) => void;

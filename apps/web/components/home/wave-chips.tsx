@@ -5,10 +5,10 @@ import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { cn } from '@vire/ui';
 import { usePlayerStore } from '@/store/player';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { PlayIcon } from '@/components/icons';
 import { ScrollRow } from '@/components/scroll-row';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import type { WaveChipItem } from '@/components/home/wave-chip-items';
 
 const ERROR_TEXT: Record<WaveChipItem['kind'], string> = {

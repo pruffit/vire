@@ -6,7 +6,7 @@ import { actionAdminUpdatePlaylist, actionAdminDeletePlaylist } from '../actions
 import { Tr, Td, Badge } from '@/components/admin/ui';
 import { Select } from '@/components/select';
 import { Icon } from '@/components/icon';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 
 const VISIBILITY_OPTIONS = [
   { value: 'PRIVATE', label: 'приватный' },

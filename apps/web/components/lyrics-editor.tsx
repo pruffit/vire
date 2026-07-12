@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { Textarea } from '@/components/ui-kit';
 import { parseLrc, serializeLrc, isSynced, type LyricLine } from '@/lib/lrc';
 

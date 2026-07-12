@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion, useDragControls, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
-import { controls } from './audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { Controls, WaveModeButton } from './controls';
 import { ArtistLink, TitleLink } from './track-links';
 import { PlayerLikeButton } from '@/components/player-like-button';

@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import type { FollowedArtist } from '@vire/db';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 
 /**
  * Список подписок с оптимистичной отпиской: карточка исчезает мгновенно (с exit-

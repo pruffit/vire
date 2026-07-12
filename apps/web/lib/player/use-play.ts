@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import type { PlaylistTrackRow } from '@vire/db';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from './audio-engine';
 import { featuredNames } from '@/lib/track-display';
 import { toPlayerTracks } from './to-player-track';
 import { fetchReleaseTracks, fetchPlaylistTracks, type LazyReleaseTrack } from './lazy-queue-fetchers';

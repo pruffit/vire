@@ -1,7 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import type { ApiResult } from '@vire/api-client';
 
 interface UseOptimisticToggleOptions {

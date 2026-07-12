@@ -1,4 +1,4 @@
-import { LinkedAccounts } from '@/app/(listener)/profile/linked-accounts';
+import { LinkedAccounts } from './linked-accounts';
 import { Section } from '@/components/listener/section';
 import { AppearanceSettings } from './appearance-settings';
 import { SignOutButton } from './sign-out-button';

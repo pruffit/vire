@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
-import { initAudioEngine } from './audio-engine';
+import { initAudioEngine } from '@/lib/player/audio-engine';
 import { usePlayerHotkeys } from './use-player-hotkeys';
 import { MiniBar } from './mini-bar';
 import { FullscreenPlayer } from './fullscreen';

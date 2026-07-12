@@ -8,7 +8,7 @@ import {
   actionRemoveArtistMember,
 } from '../actions';
 import type { ArtistMemberRow } from '@vire/db';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
 
 // поповер в портале с position:fixed — иначе его обрезает таблица-родитель с overflow:auto

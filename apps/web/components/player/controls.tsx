@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
-import { controls } from './audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { Icon } from '@/components/icon';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ErrorIcon, RepeatIcon, SkipBackIcon, SkipForwardIcon, WaveIcon } from './player-icons';

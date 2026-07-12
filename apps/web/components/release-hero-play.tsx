@@ -2,7 +2,7 @@
 
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { PlayIcon } from '@/components/icons';
 import type { PlayerTrack, PlayContext } from '@/store/player';
 

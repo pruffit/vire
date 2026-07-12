@@ -13,7 +13,7 @@ import type { TrackCredit } from '@/lib/upload';
 import { Icon } from '@/components/icon';
 import { useGenreAnalysis, type GenreAnalysisResult, type GenreSuggestion } from '@/lib/use-genre-analysis';
 import { useTrackAnalysis } from '@/lib/use-track-analysis';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
 interface Initial {

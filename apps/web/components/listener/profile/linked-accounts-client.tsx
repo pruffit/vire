@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { YandexIcon } from '@/app/(auth)/sign-in/provider-icons';
+import { YandexIcon } from '@/components/provider-icons';
 import { setPasswordAction, linkYandexAction } from './account-actions';
 import { Icon } from '@/components/icon';
 import { PasswordStrength } from '@/components/password-strength';

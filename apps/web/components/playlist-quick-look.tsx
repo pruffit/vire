@@ -6,14 +6,14 @@ import Image from 'next/image';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { useLazyQueue } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { TrackTitleText } from '@/components/track-title';
 import { formatDuration, pluralTracks } from '@/lib/format';
 import { Icon } from '@/components/icon';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { QuickLookSheet, QuickLookDragHandle, MiniEq } from './quick-look-sheet';
 
 interface Props {

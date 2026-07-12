@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
 import { presaveRelease, presaveReleaseAsGuest } from '@vire/api-client';
 import { useOptimisticToggle } from '@/lib/use-optimistic-toggle';

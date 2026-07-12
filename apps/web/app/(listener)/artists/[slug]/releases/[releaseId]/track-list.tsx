@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import type { PlayerTrack } from '@/store/player';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
-import { controls } from '@/components/player/audio-engine';
+import { controls } from '@/lib/player/audio-engine';
 import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';

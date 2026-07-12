@@ -140,7 +140,7 @@ sid; раньше sid ротировался до фетча и при неуд�
   `keySpellings`, `neighborKeys`, `keyMatchSets`)
 - **Redis-сессия:** `apps/web/lib/wave-session.ts` (`getWaveSession`,
   `appendWaveServed`, `setWaveSessionSeed`)
-- **Интеграция в плеер:** `apps/web/components/player/audio-engine.ts`
+- **Интеграция в плеер:** `apps/web/lib/player/audio-engine.ts`
   (`growWaveBuffer`, `maybeFetchWaveBuffer`, `controls.startWave`/`stopWave`),
   `apps/web/lib/player/wave-buffer.ts` (`needsWaveFetch`, `fetchWaveTracks`)
 - **UI запуска:** `apps/web/components/home/flow-block.tsx` +

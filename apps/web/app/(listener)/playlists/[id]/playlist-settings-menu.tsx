@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
 
 interface PlaylistMeta {

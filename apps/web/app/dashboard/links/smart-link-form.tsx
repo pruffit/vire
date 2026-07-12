@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ArtistLink } from '@vire/core';
 import { normalizeSlug, MAX_SMART_LINKS } from '@/lib/smart-link';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { Field, fieldClass, Check, btnPrimary } from '@/components/ui-kit';
 import { Select } from '@/components/select';
 import { DateField } from '@/components/date-field';

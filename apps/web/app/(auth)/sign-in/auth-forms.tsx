@@ -9,7 +9,7 @@ import {
   signInMagicLinkAction,
   signInYandexAction,
 } from './auth-actions';
-import { YandexIcon } from './provider-icons';
+import { YandexIcon } from '@/components/provider-icons';
 import { Icon } from '@/components/icon';
 import { PasswordStrength } from '@/components/password-strength';
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { likeTrack } from '@vire/api-client';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 
 interface LikesState {
   state: Record<string, boolean>;

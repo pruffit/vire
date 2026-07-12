@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 
 export type TrackAnalysisStatus = 'idle' | 'running' | 'done' | 'error';
 

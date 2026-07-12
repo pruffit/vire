@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
 import { TrackTitleText } from '@/components/track-title';
 import type { PlaylistAddTrack, PlaylistSuggestions, PlaylistTrackRow } from '@vire/db';

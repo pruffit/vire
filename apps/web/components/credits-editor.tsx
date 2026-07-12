@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from '@/components/toast';
+import { toast } from '@/lib/toast';
 import { fieldClass } from '@/components/ui-kit';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
