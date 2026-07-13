@@ -1,10 +1,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import type { DiscoveryRelease } from '@vire/db';
+import type { DiscoveryRelease, ReleaseCardStats } from '@vire/db';
 import { FeaturedPlayButton } from './featured-play-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { Icon } from '@/components/icon';
-import { releaseYear } from '@/lib/format';
+import { releaseYear, pluralTracks, formatDuration } from '@/lib/format';
 
 const typeLabel: Record<string, string> = {
   ALBUM: 'Альбом', SINGLE: 'Сингл', EP: 'EP', COMPILATION: 'Сборник',
@@ -13,10 +13,15 @@ const typeLabel: Record<string, string> = {
 // Дефолтный нейтральный accent из темы: на нём одного цвета мало, подмешиваем блюр обложки.
 const NEUTRAL_ACCENT = '#4a5568';
 
-export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
+export function FeaturedRelease({ release, stats }: { release: DiscoveryRelease; stats?: ReleaseCardStats | null }) {
   const yr = releaseYear(release.releaseDate);
   const href = `/artists/${release.artistSlug}/releases/${release.id}`;
-  const meta = [typeLabel[release.type] ?? release.type, yr].filter(Boolean).join(' · ');
+  const meta = [
+    typeLabel[release.type] ?? release.type,
+    yr,
+    stats && stats.trackCount > 0 ? `${stats.trackCount} ${pluralTracks(stats.trackCount)}` : null,
+    stats && stats.totalDurationSec > 0 ? formatDuration(stats.totalDurationSec) : null,
+  ].filter(Boolean).join(' · ');
   const hasImage = !!release.coverUrl;
   const accent = release.accentColor ?? NEUTRAL_ACCENT;
   const neutral = accent.toLowerCase() === NEUTRAL_ACCENT;
@@ -27,7 +32,6 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
       className="relative h-96 sm:h-[26rem] rounded-2xl overflow-hidden ring-1 ring-inset ring-white/10 isolate"
       style={{ backgroundColor: '#0c0b0a' }}
     >
-      {/* Иммерсивный акцент: свечение из цвета релиза */}
       <div
         aria-hidden
         className="absolute inset-0"
@@ -47,7 +51,6 @@ export function FeaturedRelease({ release }: { release: DiscoveryRelease }) {
           sizes="(max-width: 768px) 100vw, calc(100vw - 18rem)"
         />
       )}
-      {/* Затемнение под текст (контраст) */}
       <div aria-hidden className="absolute inset-0 bg-linear-to-t from-black/85 via-black/45 to-black/15" />
       <div aria-hidden className="absolute inset-0 bg-linear-to-r from-black/70 via-black/20 to-transparent" />
 
