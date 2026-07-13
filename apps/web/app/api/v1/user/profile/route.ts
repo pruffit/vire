@@ -6,7 +6,7 @@ import { uploadToStream } from '@/lib/s3';
 import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
 
 const schema = z.object({
-  name: z.string().min(1).max(50),
+  name: z.string().trim().min(1).max(50),
 });
 
 export async function PATCH(req: Request) {

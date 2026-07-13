@@ -57,6 +57,13 @@ describe('PATCH /api/v1/user/profile', () => {
     expect(updateUserName).not.toHaveBeenCalled();
   });
 
+  it('400 when the name is whitespace-only', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ name: '   ' }));
+    expect(res.status).toBe(400);
+    expect(updateUserName).not.toHaveBeenCalled();
+  });
+
   it('400 when the name exceeds the max length', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     const res = await PATCH(patchReq({ name: 'x'.repeat(51) }));
