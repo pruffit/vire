@@ -15,6 +15,7 @@ import {
   getPopularTracks,
   getRecentlyPlayed,
   getPersonalTrackPicks,
+  getReleaseCardStats,
 } from '@vire/db';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { ScrollRow } from '@/components/scroll-row';
@@ -34,8 +35,6 @@ import type { Metadata } from 'next';
 
 // OG-картинка наследуется из app/opengraph-image.tsx, title/description — из layout
 export const metadata: Metadata = { alternates: { canonical: '/' } };
-
-const GRID = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6';
 
 export default async function HomePage() {
   const session = await auth();
@@ -79,6 +78,7 @@ export default async function HomePage() {
   const personalPicksDeduped = personalPicks.filter((t) => !recentIds.has(t.id));
 
   const featured = latest[0] ?? null;
+  const featuredStats = featured ? await getReleaseCardStats(featured.id).catch(() => null) : null;
   // на маленьком каталоге неделя бывает пустой — добиваем общим списком свежего
   const weekFresh = freshWeek.filter((r) => r.id !== featured?.id);
   const rest = (weekFresh.length >= 4 ? weekFresh : latest.slice(1)).slice(0, 18);
@@ -91,12 +91,10 @@ export default async function HomePage() {
       <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
 
       {/* без FadeUp — FeaturedRelease содержит LCP-изображение, opacity-анимация задержала бы LCP */}
-      {featured && <FeaturedRelease release={featured} />}
+      {featured && <FeaturedRelease release={featured} stats={featuredStats} />}
 
-      {/* «Включи и слушай» — сразу под баннером, всем */}
       <FlowBlock moods={moodCounts} genres={genreCounts} />
 
-      {/* Персональный верх (вошедшим, самоскрывается) */}
       {!!userId && <RecentRail tracks={recent} />}
 
       {!!userId && personalPicksDeduped.length >= 4 && (
@@ -117,16 +115,14 @@ export default async function HomePage() {
         </Section>
       )}
 
-      {/* Открытия (всем) */}
       <HotTracks tracks={hotTracks} />
 
-      {/* Каталог (всем) */}
       {rest.length > 0 && (
-        <Section title="Свежие релизы" href="/releases" hrefLabel="Посмотреть все">
+        <Section title="Свежие релизы" count={rest.length} href="/releases" hrefLabel="Посмотреть все">
           {/* -my/py: overflow-x-auto клипает и по Y — иначе hover-тень карточек срезается */}
           <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
             {rest.map((r) => (
-              <div key={r.id} className="shrink-0 w-40 snap-start">
+              <div key={r.id} className="shrink-0 w-48 snap-start">
                 <ReleaseQuickLook release={r} />
               </div>
             ))}
@@ -135,17 +131,21 @@ export default async function HomePage() {
       )}
 
       {upcoming.length > 0 && (
-        <Section title="Скоро выйдет">
-          <div className={GRID}>
-            {upcoming.map((r) => <ReleaseQuickLook key={r.id} release={r} upcoming />)}
-          </div>
+        <Section title="Скоро выйдет" count={upcoming.length}>
+          <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
+            {upcoming.map((r) => (
+              <div key={r.id} className="shrink-0 w-40 snap-start">
+                <ReleaseQuickLook release={r} upcoming />
+              </div>
+            ))}
+          </ScrollRow>
         </Section>
       )}
 
       <ListeningNow initial={listeningNow} />
 
       {allPlaylists.length > 0 && (
-        <Section title="Подборки">
+        <Section title="Подборки" count={allPlaylists.length}>
           <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
             {allPlaylists.map((p) => (
               <div key={p.id} className="shrink-0 w-40 snap-start">
@@ -157,10 +157,14 @@ export default async function HomePage() {
       )}
 
       {topArtists.length > 0 && (
-        <Section title="Артисты" href="/artists" hrefLabel="Все артисты">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-5">
-            {topArtists.map((a) => <ArtistHoverChip key={a.id} artist={a} />)}
-          </div>
+        <Section title="Артисты" count={topArtists.length} href="/artists" hrefLabel="Все артисты">
+          <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
+            {topArtists.map((a) => (
+              <div key={a.id} className="shrink-0 w-28 snap-start">
+                <ArtistHoverChip artist={a} />
+              </div>
+            ))}
+          </ScrollRow>
         </Section>
       )}
 
