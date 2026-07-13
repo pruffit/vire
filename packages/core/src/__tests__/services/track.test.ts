@@ -485,12 +485,75 @@ describe('TrackService.adminUpdate', () => {
     expect(trackRepo.update).toHaveBeenCalledWith('track-1', expect.objectContaining({ bpm: null }));
   });
 
+  it('returns err(ValidationError) when lyrics exceed 20000 chars', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps({ moodsRepo: makeMoodsRepo() }));
+
+    const result = await service.adminUpdate('track-1', { ...validInput, lyrics: 'x'.repeat(20001) });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toBe('Текст слишком длинный');
+    expect(trackRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('reports the title error first when both title and lyrics are invalid (validation order)', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps({ moodsRepo: makeMoodsRepo() }));
+
+    const result = await service.adminUpdate('track-1', { ...validInput, title: '   ', lyrics: 'x'.repeat(20001) });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toBe('Название: 1–200 символов');
+  });
+
+  it('parses lyrics through the injected parseLrc; empty parse result becomes null', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const parsed = [{ t: 1, text: 'line' }];
+    const parseLrc = vi.fn().mockReturnValue(parsed);
+    const service = new TrackService(
+      trackRepo, releaseRepo, makeQueue(), makeDeps({ moodsRepo: makeMoodsRepo(), parseLrc }),
+    );
+
+    await service.adminUpdate('track-1', { ...validInput, lyrics: '[00:01.00] line' });
+    expect(parseLrc).toHaveBeenCalledWith('[00:01.00] line');
+    expect(trackRepo.update).toHaveBeenCalledWith('track-1', expect.objectContaining({ lyrics: parsed }));
+
+    parseLrc.mockReturnValue([]);
+    await service.adminUpdate('track-1', { ...validInput, lyrics: 'no timestamps here' });
+    expect(trackRepo.update).toHaveBeenLastCalledWith('track-1', expect.objectContaining({ lyrics: null }));
+  });
+
+  it('does not call parseLrc for null or blank lyrics', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const parseLrc = vi.fn();
+    const service = new TrackService(
+      trackRepo, releaseRepo, makeQueue(), makeDeps({ moodsRepo: makeMoodsRepo(), parseLrc }),
+    );
+
+    await service.adminUpdate('track-1', { ...validInput, lyrics: '   ' });
+    expect(parseLrc).not.toHaveBeenCalled();
+    expect(trackRepo.update).toHaveBeenCalledWith('track-1', expect.objectContaining({ lyrics: null }));
+  });
+
   it('throws when moodsRepo dependency is missing', async () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo();
     const service = new TrackService(trackRepo, releaseRepo, makeQueue());
 
     await expect(service.adminUpdate('track-1', validInput)).rejects.toThrow('deps.moodsRepo');
+  });
+
+  it('throws when parseLrc dependency is missing and lyrics are present', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps({ moodsRepo: makeMoodsRepo() }));
+
+    await expect(service.adminUpdate('track-1', { ...validInput, lyrics: '[00:01.00] line' }))
+      .rejects.toThrow('deps.parseLrc');
   });
 });
 

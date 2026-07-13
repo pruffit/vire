@@ -23,6 +23,7 @@ export interface TrackServiceDeps {
   audioStorage?: IFileStorage;
   uuid?: () => string;
   moodsRepo?: ITrackMoodsRepository;
+  parseLrc?: (raw: string) => LyricLine[];
 }
 
 export class TrackService {
@@ -137,7 +138,7 @@ export class TrackService {
       moods: string[];
       genres: string[];
       credits: TrackCredit[];
-      lyrics: LyricLine[] | null;
+      lyrics: string | null;
     },
   ): Promise<Result<void, ValidationError>> {
     const title = (input.title ?? '').trim();
@@ -148,7 +149,12 @@ export class TrackService {
     if (input.bpm != null && (!Number.isInteger(input.bpm) || input.bpm < 20 || input.bpm > 500)) {
       return err(new ValidationError('BPM: 20–500'));
     }
+    if (typeof input.lyrics === 'string' && input.lyrics.length > 20000) {
+      return err(new ValidationError('Текст слишком длинный'));
+    }
 
+    const parsedLyrics =
+      typeof input.lyrics === 'string' && input.lyrics.trim() ? this.parseLrc()(input.lyrics) : null;
     const version = input.version?.trim() ? input.version.trim().slice(0, 80) : null;
     await this.trackRepo.update(trackId, {
       title,
@@ -160,7 +166,7 @@ export class TrackService {
       bpm: input.bpm,
       musicalKey: input.musicalKey?.trim() ? input.musicalKey.trim().slice(0, 20) : null,
       credits: input.credits,
-      lyrics: input.lyrics,
+      lyrics: parsedLyrics && parsedLyrics.length > 0 ? parsedLyrics : null,
     });
     await this.moodsRepo().set(trackId, [...input.moods]);
     await this.moodsRepo().setGenres(trackId, [...input.genres]);
@@ -192,5 +198,10 @@ export class TrackService {
   private moodsRepo(): ITrackMoodsRepository {
     if (!this.deps.moodsRepo) throw new Error('TrackService: deps.moodsRepo is required for admin track updates');
     return this.deps.moodsRepo;
+  }
+
+  private parseLrc(): (raw: string) => LyricLine[] {
+    if (!this.deps.parseLrc) throw new Error('TrackService: deps.parseLrc is required for admin track updates');
+    return this.deps.parseLrc;
   }
 }

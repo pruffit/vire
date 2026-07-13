@@ -172,7 +172,7 @@ export class ReleaseService {
     await this.repo.update(releaseId, {
       title,
       type: input.type as ReleaseType,
-      genre: input.genre as Genre | null,
+      genre: (input.genre as Genre | null) ?? null,
       releaseDate,
       description: input.description?.trim() ? input.description.trim().slice(0, 5000) : null,
       linerNotes: input.linerNotes?.trim() ? input.linerNotes.trim().slice(0, 10000) : null,

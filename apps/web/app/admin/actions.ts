@@ -34,7 +34,7 @@ function trackService() {
     new DrizzleTrackRepository(db),
     new DrizzleReleaseRepository(db),
     transcodeQueue,
-    { moodsRepo: new DrizzleTrackMoodsRepository(db) },
+    { moodsRepo: new DrizzleTrackMoodsRepository(db), parseLrc },
   );
 }
 
@@ -201,11 +201,9 @@ export async function actionAdminUpdateTrack(
 ): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  if (typeof input.lyrics === 'string' && input.lyrics.length > 20000) return { error: 'Текст слишком длинный' };
 
   const moods = (input.moods ?? []).filter((m) => (ALL_MOODS as string[]).includes(m)).slice(0, 5);
   const genres = (input.genres ?? []).filter((g) => (ALL_TRACK_GENRES as string[]).includes(g)).slice(0, 3);
-  const parsedLyrics = typeof input.lyrics === 'string' && input.lyrics.trim() ? parseLrc(input.lyrics) : null;
 
   const result = await trackService().adminUpdate(trackId, {
     title: input.title,
@@ -219,7 +217,7 @@ export async function actionAdminUpdateTrack(
     moods,
     genres,
     credits: sanitizeCredits(input.credits),
-    lyrics: parsedLyrics && parsedLyrics.length > 0 ? parsedLyrics : null,
+    lyrics: input.lyrics,
   });
   if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/tracks');
