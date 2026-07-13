@@ -238,7 +238,8 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Монорепо (Turborepo + pnpm), docker-compose (postgres/redis/minio)
 - [x] `packages/db` — Drizzle схема + миграции 0000–0033
 - [x] `packages/core` — Result<T,E>, domain types, сервисы (Artist/Release/Track,
-  Follow/ListenerTrack/TrackMoods/Playlist, ArtistPost/SmartLink, Wave/Search/Presave, Auth), репозитории
+  Follow/ListenerTrack/TrackMoods/Playlist, ArtistPost/SmartLink, Wave/Search/Presave,
+  Auth, Purchase), репозитории
 - [x] `packages/ui` — OKLCH-токены, Button, Card, Input
 - [x] `packages/config` — tsconfig/eslint/tailwind пресеты
 - [x] Auth.js v5 — провайдеры: email/пароль (Credentials), magic link, Yandex; JWT,
@@ -339,7 +340,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Скачивание FLAC по presigned S3 URL
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
-### Тесты (apps/web — 668, гонять `pnpm --filter @vire/web test`)
+### Тесты (apps/web — 685, гонять `pnpm --filter @vire/web test`)
 - [x] `packages/core` — сервисы artist/release/track, follow/listener-track/track-moods/playlist, Result/errors (Vitest)
 - [x] `apps/web/lib` — `embed` (YouTube/VK), `upload` (валидация), `format`, `structured-data` (JSON-LD билдеры)
 - [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),
@@ -351,7 +352,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] App-shell лейаут — инвариант `app/__tests__/layout-shell.test.ts` (нет `min-h-screen`)
 - [x] `apps/worker` — transcode-пайплайн (`processTranscodeJob`: идемпотентность, derive ext,
   HLS-загрузка, READY-транзакция, fallback на ffprobe) + waveform-пики (`peaksFromPcm`)
-- [ ] Route handlers Этап 2 (purchase, webhooks/yookassa) — не покрыты
+- [x] Route handlers Этап 2 (purchase, webhooks/yookassa) — покрыты (1-J)
 
 ## Что делать дальше (следующий шаг)
 
@@ -359,7 +360,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 пресейвы (Фаза A+B) и несколько аккаунтов на артиста (`docs/features/multi-artist.md`).
 Открытый бэклог — в `docs/roadmap/TODO.md` (Observability/Sentry — отложено до апгрейда
 VPS, контент-SEO) и `docs/roadmap/stage-2.md` (второй виток); Этап 2 — только по команде:
-1. **Тесты Этап-2 роутов** (purchase/webhook) и **YooKassa боевая настройка** — по команде
+1. **YooKassa боевая настройка** — по команде
 2. Открытые хвосты stage-2: §9.1 (тема артиста в админке)
 
 Сделано в доводке:
