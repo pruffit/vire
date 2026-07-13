@@ -21,16 +21,16 @@ import {
 import { SANS_FONT_VARS, MONO_FONT_VARS, SANS_FONTS, MONO_FONTS } from '@/lib/font-catalog';
 
 // All fonts offered in the artist theme editor, exposed as CSS variables.
-const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-inter', display: 'swap' });
-const montserrat = Montserrat({ subsets: ['latin', 'cyrillic'], variable: '--font-montserrat', display: 'swap' });
-const unbounded = Unbounded({ subsets: ['latin', 'cyrillic'], variable: '--font-unbounded', display: 'swap' });
-const manrope = Manrope({ subsets: ['latin', 'cyrillic'], variable: '--font-manrope', display: 'swap' });
-const geologica = Geologica({ subsets: ['latin', 'cyrillic'], variable: '--font-geologica', display: 'swap' });
-const jetbrainsMono = JetBrains_Mono({ subsets: ['latin', 'cyrillic'], variable: '--font-jetbrains-mono', display: 'swap' });
-const firaCode = Fira_Code({ subsets: ['latin', 'cyrillic'], variable: '--font-fira-code', display: 'swap' });
-const ibmPlexMono = IBM_Plex_Mono({ subsets: ['latin', 'cyrillic'], weight: ['400', '500', '600'], variable: '--font-ibm-plex-mono', display: 'swap' });
+// Все — preload: false, грузятся только когда попадают в CSS страницы (артист выбрал тему).
+const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-inter', display: 'swap', preload: false });
+const montserrat = Montserrat({ subsets: ['latin', 'cyrillic'], variable: '--font-montserrat', display: 'swap', preload: false });
+const unbounded = Unbounded({ subsets: ['latin', 'cyrillic'], variable: '--font-unbounded', display: 'swap', preload: false });
+const manrope = Manrope({ subsets: ['latin', 'cyrillic'], variable: '--font-manrope', display: 'swap', preload: false });
+const geologica = Geologica({ subsets: ['latin', 'cyrillic'], variable: '--font-geologica', display: 'swap', preload: false });
+const jetbrainsMono = JetBrains_Mono({ subsets: ['latin', 'cyrillic'], variable: '--font-jetbrains-mono', display: 'swap', preload: false });
+const firaCode = Fira_Code({ subsets: ['latin', 'cyrillic'], variable: '--font-fira-code', display: 'swap', preload: false });
+const ibmPlexMono = IBM_Plex_Mono({ subsets: ['latin', 'cyrillic'], weight: ['400', '500', '600'], variable: '--font-ibm-plex-mono', display: 'swap', preload: false });
 
-// Опциональные шрифты — preload: false, грузятся только когда попадают в CSS страницы.
 const rubik = Rubik({ subsets: ['latin', 'cyrillic'], variable: '--font-rubik', display: 'swap', preload: false });
 const golosText = Golos_Text({ subsets: ['latin', 'cyrillic'], variable: '--font-golos-text', display: 'swap', preload: false });
 const onest = Onest({ subsets: ['latin', 'cyrillic'], variable: '--font-onest', display: 'swap', preload: false });

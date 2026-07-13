@@ -3,12 +3,9 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { MotionProvider, REDUCE_MOTION_INIT_SCRIPT } from '@vire/ui/motion';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
 import { MobileTabBar } from '@/components/listener/mobile-tab-bar';
-import { CommandPalette } from '@/components/command-palette';
+import { DeferredWidgets } from '@/components/deferred-widgets';
 import { Toaster } from '@/components/toast';
 import { Nav } from '@/components/nav';
-import { CookieBanner } from '@/components/cookie-banner';
-import { Announcements } from '@/components/announcements';
-import { EasterEggs } from '@/components/easter-eggs';
 import { ScrollState } from '@/components/scroll-state';
 import { ScrollRestoration } from '@/components/scroll-restoration';
 import { SitePresence } from '@/components/site-presence';
@@ -102,11 +99,8 @@ export default function RootLayout({
           </div>
           <PlayerWrapper />
           <MobileTabBar />
-          <CommandPalette />
+          <DeferredWidgets />
           <Toaster />
-          <CookieBanner />
-          <Announcements />
-          <EasterEggs />
           <YandexMetrika />
         </MotionProvider>
       </body>
