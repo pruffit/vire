@@ -26,8 +26,12 @@ beforeEach(() => {
 });
 
 describe('GET /api/auth/[...nextauth]', () => {
-  it('is the raw NextAuth handler, unrated', async () => {
-    expect(GET).toBe(handlerGet);
+  it('proxies to the NextAuth handler without rate-limiting', async () => {
+    handlerGet.mockResolvedValue(new Response(null, { status: 200 }));
+    const request = req('GET');
+    const res = await GET(request);
+    expect(res.status).toBe(200);
+    expect(handlerGet).toHaveBeenCalledWith(request);
     expect(rateLimit).not.toHaveBeenCalled();
   });
 });

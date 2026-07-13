@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { rateLimit, sendMail } = vi.hoisted(() => ({
   rateLimit: vi.fn(),
@@ -29,6 +29,8 @@ beforeEach(() => {
   rateLimit.mockResolvedValue({ ok: true, remaining: 4, retryAfter: 0 });
   sendMail.mockResolvedValue(undefined);
 });
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe('POST /api/v1/feedback', () => {
   it('429 when rate-limited', async () => {
@@ -64,6 +66,7 @@ describe('POST /api/v1/feedback', () => {
   });
 
   it('happy path: sends the mail and returns ok', async () => {
+    vi.stubEnv('FEEDBACK_TO', 'feedback@test.local');
     const res = await POST(req({
       type: 'idea',
       message: 'Add dark mode please',
@@ -73,7 +76,7 @@ describe('POST /api/v1/feedback', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ ok: true });
     expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({
-      to: 'noreply@viremusic.ru',
+      to: 'feedback@test.local',
       subject: expect.stringContaining('Идея'),
       text: expect.stringContaining('Add dark mode please'),
       replyTo: 'user@example.com',

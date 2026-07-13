@@ -96,7 +96,7 @@ describe('PUT /api/v1/dashboard/tracks/[id]/genres', () => {
     findByUserId.mockResolvedValue({ id: 'artist1' });
     trackFindById.mockResolvedValue({ id: TRACK_ID, releaseId: 'rel1' });
     releaseFindById.mockResolvedValue({ id: 'rel1', artistProfileId: 'artist1' });
-    const res = await PUT(req({ genres: ['JAZZ'] }), ctx);
+    const res = await PUT(req({ genres: ['NOTAGENRE'] }), ctx);
     expect(res.status).toBe(400);
     expect(setTrackGenres).not.toHaveBeenCalled();
   });
