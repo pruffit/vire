@@ -83,10 +83,12 @@ RBAC (`requireAdmin`/`canMutate`, тихий no-op `return {}`) — остаёт
   bpm null|целое 20–500 («BPM: 20–500»), lyrics ≤20000 («Текст слишком длинный»),
   version slice(0,80), musicalKey slice(0,20), moods filter(ALL_MOODS).slice(0,5),
   genres filter(ALL_TRACK_GENRES).slice(0,3) → `repo.update` + `moodsRepo.setMoods`
-  + `moodsRepo.setGenres` (порядок 1:1). `parseLrc` и `sanitizeCredits` — **на краю**
-  (парсинг входа, как FormData в 1-D): сервис принимает уже готовые
-  `lyrics: LrcLine[] | null` и `credits: TrackCredit[]`. moodsRepo — через
-  `deps?: { moodsRepo?: ITrackMoodsRepository }`, метод без него бросает Error (DI-паттерн 1-D).
+  + `moodsRepo.setGenres` (порядок 1:1). `sanitizeCredits` — **на краю** (парсинг
+  входа, как FormData в 1-D): сервис принимает готовые `credits: TrackCredit[]`.
+  Lyrics сервис принимает **сырой строкой** и парсит сам через `deps.parseLrc` —
+  иначе edge-проверка длины ломает порядок валидаций (см. фикс b7f9d1c ниже).
+  moodsRepo/parseLrc — через `deps?`, метод без нужной зависимости бросает Error
+  (DI-паттерн 1-D).
 - **TrackService.retranscode(trackId)** → `Result<void, ValidationError>` —
   нет sourceKey → «Нет исходника в vault — пересобрать нечем»; иначе
   setStatus('PROCESSING') → queue.add (ITranscodeQueue уже в сервисе).
