@@ -61,7 +61,7 @@ export function ArtistHoverChip({ artist }: { artist: ArtistListItem }) {
           style={{ position: 'fixed', left: pos.left, top: pos.top, transform: 'translate(-50%, -100%)' }}
           className="pointer-events-none z-50"
         >
-          <AnimatePresence>
+          <AnimatePresence onExitComplete={() => { if (!preview) setPos(null); }}>
             {preview && (
               <motion.div
                 initial={{ opacity: 0, y: 6, scale: 0.95 }}
