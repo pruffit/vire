@@ -163,6 +163,18 @@ describe('PurchaseService.purchase', () => {
     });
   });
 
+  it('passes through a null confirmationUrl from a freshly created payment', async () => {
+    const repo = makeRepo();
+    const gateway = makeGateway({
+      createPayment: vi.fn().mockResolvedValue({ id: 'ext-new', confirmationUrl: null }),
+    });
+    const result = await service(repo, gateway, () => 'id-1').purchase(USER_ID, TRACK_ID, 'https://return');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toEqual({ confirmationUrl: null });
+    expect(repo.createPending).toHaveBeenCalledTimes(1);
+  });
+
   it('falls back to the track id for the description when the title is missing', async () => {
     const repo = makeRepo({ getTrackTitle: vi.fn().mockResolvedValue(null) });
     const gateway = makeGateway();

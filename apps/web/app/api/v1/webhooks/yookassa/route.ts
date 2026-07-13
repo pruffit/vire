@@ -4,6 +4,7 @@ import { PurchaseService } from '@vire/core';
 import { YookassaPaymentGateway } from '@/lib/payment-gateway';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
+// каждое событие верифицируется re-fetch'ем платежа из API перед действием
 export async function POST(req: Request) {
   // без лимита эндпоинт флудится произвольными paymentId (каждый = внешний вызов getPayment)
   const rl = await rateLimit(clientKey(req, 'yookassa-webhook'), 120, 60);
