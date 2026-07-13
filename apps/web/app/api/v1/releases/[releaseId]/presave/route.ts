@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { db, DrizzlePresaveRepository } from '@vire/db';
-import { PresaveService, NotFoundError } from '@vire/core';
+import { PresaveService, NotFoundError, type ValidationError } from '@vire/core';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 type Params = { params: Promise<{ releaseId: string }> };
@@ -13,7 +13,7 @@ function presaveService() {
   return new PresaveService(new DrizzlePresaveRepository(db));
 }
 
-function presaveErrorResponse(error: NotFoundError | Error): NextResponse {
+function presaveErrorResponse(error: NotFoundError | ValidationError): NextResponse {
   if (error instanceof NotFoundError) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
