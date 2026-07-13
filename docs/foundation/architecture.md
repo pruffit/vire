@@ -102,7 +102,10 @@ PostgreSQL
 Порты (`I*Repository`, `IFileStorage` — общий порт файлового хранилища, `IPlaylistCoverStorage`
 теперь его алиас) объявлены в `core`, Drizzle-реализации — в `packages/db/src/repositories`,
 S3-адаптеры (обложки релиза/смартлинка/плейлиста, аудио-исходник) — в `apps/web/lib/*`
-(тот же паттерн, что у очереди).
+(тот же паттерн, что у очереди). Волна/поиск/презейвы: `WaveService` (порты
+`IWaveTrackSource`, `IWaveSessionStore` — Redis-сессия волны за портом, адаптер
+`apps/web/lib/wave-session-store.ts` поверх `lib/wave-session.ts`), `SearchService`
+(`ISearchRepository`), `PresaveService` (`IPresaveRepository`, инъекция `now`).
 
 ---
 

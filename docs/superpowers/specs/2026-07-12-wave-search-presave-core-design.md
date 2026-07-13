@@ -112,3 +112,25 @@ export interface ISearchRepository { searchAll(query: string, limit: number): Pr
 - **E2** — доки (architecture.md, stage-2 §1.1, TECHNICAL_DEBT при находках,
   CLAUDE.md счётчики, отклонения — сюда).
 - Затем независимая самокритика (Sonnet) по контракту 1:1 и чистоте core.
+
+## Отклонения при реализации (приняты)
+
+1. `WaveNextInput` содержит также `playedIds: string[]` и `limit: number` — в спеке
+   был сокращённый сниппет; поведение роута не меняется (`playedIds` ≤100 парсит
+   хендлер, `count` — из zod-схемы).
+2. Presave POST: порядок проверок нормализован — auth → rate-limit → release-check
+   (раньше существование релиза проверялось до лимитов). Наблюдаемо только при
+   одновременном rate-limit И несуществующем/непресейвабельном релизе: 429 вместо
+   404/400. Та же семья нормализаций, что в 1-C/1-D.
+3. Снят route-тест «Redis бросает → волна деградирует»: защитные `.catch()` в
+   хендлере удалены как мёртвые — деградация целиком живёт в
+   `apps/web/lib/wave-session.ts` (try/catch внутри каждой операции), адаптер
+   `lib/wave-session-store.ts` тонкий, контракт порта `IWaveSessionStore` —
+   «никогда не бросает».
+4. db-тип `TasteProfile` НЕ переведён на core-тип: db-версия сужает поля до
+   `Mood[]`/`TrackGenre[]` и используется в editorial/discovery/скоринге вне
+   скоупа 1-E; core-версия — структурный эквивалент на `string[]`, ковариантно
+   совместима.
+
+По итогам самокритики уточнена сигнатура `presaveErrorResponse` в presave-роуте
+(`NotFoundError | ValidationError` вместо `| Error`) — типизация, не поведение.
