@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { confirmPurchaseByExternalId, failPurchaseByExternalId } from '@vire/db';
-import { getPayment } from '@/lib/yookassa';
+import { db, DrizzlePurchaseRepository } from '@vire/db';
+import { PurchaseService } from '@vire/core';
+import { YookassaPaymentGateway } from '@/lib/payment-gateway';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
-// каждое событие верифицируется re-fetch'ем платежа из API перед действием
 export async function POST(req: Request) {
   // без лимита эндпоинт флудится произвольными paymentId (каждый = внешний вызов getPayment)
   const rl = await rateLimit(clientKey(req, 'yookassa-webhook'), 120, 60);
@@ -22,18 +22,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  if (event === 'payment.succeeded') {
-    const payment = await getPayment(paymentId).catch(() => null);
-    if (payment?.status === 'succeeded') {
-      await confirmPurchaseByExternalId(paymentId);
-    }
-  } else if (event === 'payment.canceled') {
-    // re-fetch — иначе подделанный canceled-вебхук пометил бы чужую покупку FAILED
-    const payment = await getPayment(paymentId).catch(() => null);
-    if (payment?.status === 'canceled') {
-      await failPurchaseByExternalId(paymentId);
-    }
-  }
+  const service = new PurchaseService(new DrizzlePurchaseRepository(db), new YookassaPaymentGateway());
+  await service.handleWebhookEvent(event, paymentId);
 
   // всегда 200 — чтобы ЮKassa не ретраила неизвестные события
   return NextResponse.json({ ok: true });
