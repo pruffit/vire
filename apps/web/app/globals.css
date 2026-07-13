@@ -77,6 +77,16 @@
   }
 }
 
+/* Десктоп listener-шелла: скроллит внутренняя панель, внешняя область клипается —
+   иначе случайный overflow (+ scrollbar-gutter) даёт вторую полосу скролла у края.
+   Вне @layer: правило обязано перебивать Tailwind-утилиту overflow-y-auto. */
+@media (min-width: 48rem) {
+  #main-content:has([data-desktop-pane]) {
+    overflow-y: clip;
+    scrollbar-gutter: auto;
+  }
+}
+
 /* Горизонтальные ленты карточек/пилюль (волна, обложки, подборки, фильтры):
    прокрутка есть (тач/трекпад/shift+wheel), полоса скролла визуально не нужна. */
 @utility no-scrollbar {

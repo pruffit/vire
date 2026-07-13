@@ -40,7 +40,7 @@ export default async function ListenerLayout({ children }: { children: React.Rea
 
       {/* suppressHydrationWarning: ScrollState вешает is-scrolling через classList — это поддерево
           гидрируется позже корня, ранний scroll даёт mismatch и ломает soft-навигацию роутера */}
-      <div data-scroll-area suppressHydrationWarning className="flex min-w-0 flex-1 flex-col md:min-h-0 md:overflow-x-clip md:overflow-y-auto">
+      <div data-scroll-area data-desktop-pane suppressHydrationWarning className="flex min-w-0 flex-1 flex-col md:min-h-0 md:overflow-x-clip md:overflow-y-auto">
         <div className="flex-1">{children}</div>
         <Footer />
       </div>

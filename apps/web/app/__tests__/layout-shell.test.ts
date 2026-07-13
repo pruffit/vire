@@ -81,6 +81,25 @@ describe('app-shell layout invariants', () => {
     expect(root).not.toMatch(/<Footer\s*\/>/);
   });
 
+  // Регрессия «двойной скролл»: на десктопе listener-страниц скроллит внутренняя панель,
+  // а #main-content обязан быть заклипан — иначе любой случайный overflow (плюс
+  // scrollbar-gutter) рисует вторую полосу скролла у края окна.
+  it('десктоп listener: внешняя область клипается при наличии внутренней панели', () => {
+    const layout = readFileSync(path.join(APP_DIR, '(listener)', 'layout.tsx'), 'utf8');
+    expect(layout).toMatch(/data-desktop-pane/);
+
+    const css = readFileSync(path.join(APP_DIR, 'globals.css'), 'utf8');
+    const rule = css.match(/@media \(min-width: 48rem\)[\s\S]*?#main-content:has\(\[data-desktop-pane\]\)[\s\S]*?\{([\s\S]*?)\}/);
+    expect(rule?.[1]).toMatch(/overflow-y:\s*clip/);
+  });
+
+  // Регрессия «чёрная страница»: SSR-вывод template.tsx не должен прятать контент
+  // (инлайн opacity:0 до гидрации = чёрный экран, пока dev/медленный клиент грузит JS).
+  it('template.tsx не задаёт безусловный initial opacity 0', () => {
+    const tpl = readFileSync(path.join(APP_DIR, 'template.tsx'), 'utf8');
+    expect(tpl).not.toMatch(/initial=\{\{/);
+  });
+
   // Регрессия scroll-jitter: завершённая CSS-анимация с fill both/forwards остаётся
   // «в силе» → Chromium держит композит-слой навсегда, соседи дрожат при скролле.
   // Entrance-анимации обязаны отпускать элемент: fill backwards (или без fill).
