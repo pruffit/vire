@@ -106,6 +106,14 @@ S3-адаптеры (обложки релиза/смартлинка/плейл
 `IWaveTrackSource`, `IWaveSessionStore` — Redis-сессия волны за портом, адаптер
 `apps/web/lib/wave-session-store.ts` поверх `lib/wave-session.ts`), `SearchService`
 (`ISearchRepository`), `PresaveService` (`IPresaveRepository`, инъекция `now`).
+`AuthService` (порты `IUserAccountRepository`, `IPasswordHasher` — bcrypt за
+портом, адаптер `apps/web/lib/password-hasher.ts`). Admin-методы на существующих
+сервисах: `ArtistPostService`/`PlaylistService.adminUpdate`/`adminDelete`,
+`ArtistService`/`ReleaseService.adminUpdate`, `TrackService.adminUpdate`/
+`retranscode`/`retranscodeArtist` (deps: `moodsRepo`, `parseLrc`). Server actions
+админки/auth теперь тонкий край (RBAC/zod/`revalidatePath`) поверх сервисов;
+11 тривиальных actions (роль/верификация/статусы/участники/очереди) остались
+прямыми вызовами query-функций осознанно.
 
 ---
 
