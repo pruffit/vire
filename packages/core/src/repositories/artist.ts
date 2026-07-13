@@ -19,4 +19,9 @@ export interface IArtistRepository {
   /** Профиль по id, но только если принадлежит пользователю (проверка владения). */
   findByIdForUser(artistId: string, userId: string): Promise<ArtistProfile | null>;
   update(id: string, data: UpdateArtistProfileData): Promise<void>;
+  /** Полная админ-редактура, включая slug (уникален → конфликт возвращается как ok:false). */
+  adminUpdate(
+    id: string,
+    data: { name: string; slug: string; bio: string | null; avatarUrl: string | null },
+  ): Promise<{ ok: true } | { ok: false; error: string }>;
 }

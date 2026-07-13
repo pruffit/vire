@@ -29,6 +29,7 @@ function makeArtistRepo(overrides?: Partial<IArtistRepository>): IArtistReposito
     findAllByUserId: vi.fn(),
     findByIdForUser: vi.fn(),
     update: vi.fn(),
+    adminUpdate: vi.fn(),
     ...overrides,
   };
 }

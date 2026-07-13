@@ -2,15 +2,20 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
-import { db, setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus, createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers, getTrackSourceKey, getArtistTrackSources, DrizzleReleaseRepository, DrizzleTrackRepository, setTrackMoods, setTrackGenres, ALL_MOODS, ALL_TRACK_GENRES, adminUpdateArtist, updateArtistPost, deleteArtistPost, adminUpdatePlaylist, adminDeletePlaylist } from '@vire/db';
+import {
+  db, setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus,
+  createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers,
+  DrizzleReleaseRepository, DrizzleTrackRepository, DrizzleTrackMoodsRepository,
+  DrizzleArtistPostRepository, DrizzlePlaylistRepository, DrizzleArtistRepository,
+  ALL_MOODS, ALL_TRACK_GENRES,
+} from '@vire/db';
 import type { UserRole, ArtistMemberRow } from '@vire/db';
-import { ALL_GENRES, type ReleaseType, type Genre, type UpdateReleaseInput, type UpdateTrackParams } from '@vire/core';
+import { ArtistPostService, PlaylistService, ArtistService, ReleaseService, TrackService } from '@vire/core';
 import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
 import { transcodeQueue } from '@/lib/queue';
+import { playlistCoverStorage } from '@/lib/playlist-cover-storage';
 import { parseLrc } from '@/lib/lrc';
 import { sanitizeCredits, type TrackCredit } from '@/lib/upload';
-
-const RELEASE_TYPES: ReleaseType[] = ['ALBUM', 'EP', 'SINGLE'];
 
 // VIEWER проходит гейт (canMutate=false), но каждый мутирующий экшен — тихий no-op
 const ADMIN_VIEW_ROLES = new Set<UserRole>(['VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN']);
@@ -22,6 +27,19 @@ async function requireAdmin() {
     throw new Error('Forbidden');
   }
   return { session, canMutate: ADMIN_MUTATE_ROLES.has(session.user.role) };
+}
+
+function trackService() {
+  return new TrackService(
+    new DrizzleTrackRepository(db),
+    new DrizzleReleaseRepository(db),
+    transcodeQueue,
+    { moodsRepo: new DrizzleTrackMoodsRepository(db) },
+  );
+}
+
+function playlistService() {
+  return new PlaylistService(new DrizzlePlaylistRepository(db), playlistCoverStorage, Date.now);
 }
 
 export async function actionSetUserRole(userId: string, role: UserRole) {
@@ -73,14 +91,11 @@ export async function actionSetTrackStatus(trackId: string, status: 'READY' | 'B
   revalidatePath('/admin/tracks');
 }
 
-// сбрасываем статус в PROCESSING — иначе воркер по идемпотентности пропустит READY-трек
 export async function actionRetranscodeTrack(trackId: string): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  const sourceKey = await getTrackSourceKey(trackId);
-  if (!sourceKey) return { error: 'Нет исходника в vault — пересобрать нечем' };
-  await setTrackStatus(trackId, 'PROCESSING');
-  await transcodeQueue.add({ trackId, sourceKey });
+  const result = await trackService().retranscode(trackId);
+  if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/tracks');
   return { ok: true };
 }
@@ -89,15 +104,11 @@ export async function actionRetranscodeTrack(trackId: string): Promise<{ error?:
 export async function actionRetranscodeArtist(artistProfileId: string): Promise<{ error?: string; queued?: number }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  const sources = await getArtistTrackSources(artistProfileId);
-  if (sources.length === 0) return { error: 'Нет треков с исходником в vault' };
-  for (const s of sources) {
-    await setTrackStatus(s.trackId, 'PROCESSING');
-    await transcodeQueue.add({ trackId: s.trackId, sourceKey: s.sourceKey });
-  }
+  const result = await trackService().retranscodeArtist(artistProfileId);
+  if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/artists');
   revalidatePath('/admin/tracks');
-  return { queued: sources.length };
+  return { queued: result.value.queued };
 }
 
 export async function actionSetReleaseStatus(
@@ -110,7 +121,7 @@ export async function actionSetReleaseStatus(
   revalidatePath('/admin/releases');
 }
 
-// ─── Редактура контента из админки — репозитории update(id,…) принимают id напрямую, ownership-проверка живёт в сервисе ───
+// ─── Редактура контента из админки — сервисы core, ownership-проверка отсутствует (админ правит любой контент) ───
 
 export async function actionAdminUpdatePost(
   id: string,
@@ -118,10 +129,9 @@ export async function actionAdminUpdatePost(
 ): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  const body = (input.body ?? '').trim();
-  if (!body || body.length > 10000) return { error: 'Текст: 1–10000 символов' };
-  const title = input.title?.trim() ? input.title.trim().slice(0, 200) : null;
-  await updateArtistPost(id, { title, body });
+  const service = new ArtistPostService(new DrizzleArtistPostRepository(db));
+  const result = await service.adminUpdate(id, input);
+  if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/posts');
   return { ok: true };
 }
@@ -129,7 +139,8 @@ export async function actionAdminUpdatePost(
 export async function actionAdminDeletePost(id: string): Promise<{ ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  await deleteArtistPost(id);
+  const service = new ArtistPostService(new DrizzleArtistPostRepository(db));
+  await service.adminDelete(id);
   revalidatePath('/admin/posts');
   return { ok: true };
 }
@@ -140,10 +151,8 @@ export async function actionAdminUpdatePlaylist(
 ): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  const title = (input.title ?? '').trim();
-  if (!title || title.length > 200) return { error: 'Название: 1–200 символов' };
-  if (input.visibility !== 'PRIVATE' && input.visibility !== 'PUBLIC') return { error: 'Неверная видимость' };
-  await adminUpdatePlaylist(id, { title, visibility: input.visibility });
+  const result = await playlistService().adminUpdate(id, input);
+  if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/playlists');
   return { ok: true };
 }
@@ -151,7 +160,7 @@ export async function actionAdminUpdatePlaylist(
 export async function actionAdminDeletePlaylist(id: string): Promise<{ ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  await adminDeletePlaylist(id);
+  await playlistService().adminDelete(id);
   revalidatePath('/admin/playlists');
   return { ok: true };
 }
@@ -162,17 +171,9 @@ export async function actionAdminUpdateArtist(
 ): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  const name = (input.name ?? '').trim();
-  if (!name || name.length > 120) return { error: 'Имя: 1–120 символов' };
-  const slug = (input.slug ?? '').trim().toLowerCase();
-  if (!/^[a-z0-9-]{2,60}$/.test(slug)) return { error: 'Slug: 2–60 символов, латиница/цифры/дефис' };
-  const res = await adminUpdateArtist(artistProfileId, {
-    name,
-    slug,
-    bio: input.bio?.trim() ? input.bio.trim().slice(0, 2000) : null,
-    avatarUrl: input.avatarUrl?.trim() || null,
-  });
-  if (!res.ok) return { error: res.error };
+  const service = new ArtistService(new DrizzleArtistRepository(db));
+  const result = await service.adminUpdate(artistProfileId, input);
+  if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/artists');
   return { ok: true };
 }
@@ -183,25 +184,9 @@ export async function actionAdminUpdateRelease(
 ): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  const title = (input.title ?? '').trim();
-  if (!title || title.length > 200) return { error: 'Название: 1–200 символов' };
-  if (!RELEASE_TYPES.includes(input.type as ReleaseType)) return { error: 'Неверный тип' };
-  if (input.genre != null && !(ALL_GENRES as readonly string[]).includes(input.genre)) return { error: 'Неверный жанр' };
-  let releaseDate: Date | null = null;
-  if (input.releaseDate) {
-    const d = new Date(input.releaseDate);
-    if (isNaN(d.getTime())) return { error: 'Неверная дата' };
-    releaseDate = d;
-  }
-  const patch: UpdateReleaseInput = {
-    title,
-    type: input.type as ReleaseType,
-    genre: (input.genre as Genre | null) ?? null,
-    releaseDate,
-    description: input.description?.trim() ? input.description.trim().slice(0, 5000) : null,
-    linerNotes: input.linerNotes?.trim() ? input.linerNotes.trim().slice(0, 10000) : null,
-  };
-  await new DrizzleReleaseRepository(db).update(releaseId, patch);
+  const service = new ReleaseService(new DrizzleReleaseRepository(db));
+  const result = await service.adminUpdate(releaseId, input);
+  if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/releases');
   return { ok: true };
 }
@@ -216,30 +201,27 @@ export async function actionAdminUpdateTrack(
 ): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  const title = (input.title ?? '').trim();
-  if (!title || title.length > 200) return { error: 'Название: 1–200 символов' };
-  if (!Number.isInteger(input.trackNumber) || input.trackNumber < 1) return { error: 'Неверный номер' };
-  if (input.bpm != null && (!Number.isInteger(input.bpm) || input.bpm < 20 || input.bpm > 500)) return { error: 'BPM: 20–500' };
   if (typeof input.lyrics === 'string' && input.lyrics.length > 20000) return { error: 'Текст слишком длинный' };
-  const version = input.version?.trim() ? input.version.trim().slice(0, 80) : null;
+
   const moods = (input.moods ?? []).filter((m) => (ALL_MOODS as string[]).includes(m)).slice(0, 5);
   const genres = (input.genres ?? []).filter((g) => (ALL_TRACK_GENRES as string[]).includes(g)).slice(0, 3);
   const parsedLyrics = typeof input.lyrics === 'string' && input.lyrics.trim() ? parseLrc(input.lyrics) : null;
-  const patch: UpdateTrackParams = {
-    title,
-    version,
+
+  const result = await trackService().adminUpdate(trackId, {
+    title: input.title,
+    version: input.version,
     trackNumber: input.trackNumber,
     isExplicit: !!input.isExplicit,
     isExclusive: !!input.isExclusive,
     isWip: !!input.isWip,
     bpm: input.bpm,
-    musicalKey: input.musicalKey?.trim() ? input.musicalKey.trim().slice(0, 20) : null,
+    musicalKey: input.musicalKey,
+    moods,
+    genres,
     credits: sanitizeCredits(input.credits),
     lyrics: parsedLyrics && parsedLyrics.length > 0 ? parsedLyrics : null,
-  };
-  await new DrizzleTrackRepository(db).update(trackId, patch);
-  await setTrackMoods(trackId, moods as Parameters<typeof setTrackMoods>[1]);
-  await setTrackGenres(trackId, genres as Parameters<typeof setTrackGenres>[1]);
+  });
+  if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/tracks');
   return { ok: true };
 }

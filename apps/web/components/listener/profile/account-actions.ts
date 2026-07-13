@@ -1,10 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { hash } from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { auth, signIn } from '@/auth';
-import { setUserPasswordHash, getUserAuthInfo } from '@vire/db';
+import { db, DrizzleUserAccountRepository } from '@vire/db';
+import { AuthService, ConflictError } from '@vire/core';
+import { BcryptPasswordHasher } from '@/lib/password-hasher';
 
 const setPasswordSchema = z.object({
   password: z.string().min(8).max(100),
@@ -29,11 +30,12 @@ export async function setPasswordAction(
   const { password, confirmPassword } = parsed.data;
   if (password !== confirmPassword) return 'Пароли не совпадают.';
 
-  const info = await getUserAuthInfo(session.user.id);
-  if (info.hasPassword) return 'Пароль уже задан. Воспользуйся ссылкой для входа, чтобы изменить его.';
-
-  const passwordHash = await hash(password, 12);
-  await setUserPasswordHash(session.user.id, passwordHash);
+  const service = new AuthService(new DrizzleUserAccountRepository(db), { hasher: new BcryptPasswordHasher() });
+  const result = await service.setPassword(session.user.id, password);
+  if (!result.ok) {
+    if (result.error instanceof ConflictError) return 'Пароль уже задан. Воспользуйся ссылкой для входа, чтобы изменить его.';
+    throw result.error;
+  }
 
   return 'ok';
 }

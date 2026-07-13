@@ -58,6 +58,8 @@ function makeRepo(overrides?: Partial<IPlaylistRepository>): IPlaylistRepository
     like: vi.fn().mockResolvedValue(undefined),
     unlike: vi.fn().mockResolvedValue(undefined),
     trackExists: vi.fn().mockResolvedValue(true),
+    adminUpdate: vi.fn().mockResolvedValue(undefined),
+    adminDelete: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -452,6 +454,57 @@ describe('PlaylistService.suggestions', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.message).toContain('Forbidden');
     expect(repo.suggestions).not.toHaveBeenCalled();
+  });
+});
+
+describe('PlaylistService.adminUpdate', () => {
+  it('updates without an ownership check', async () => {
+    const repo = makeRepo();
+    const service = makeService(repo);
+
+    const result = await service.adminUpdate('p1', { title: 'New Title', visibility: 'PUBLIC' });
+
+    expect(result.ok).toBe(true);
+    expect(repo.getWithTracks).not.toHaveBeenCalled();
+    expect(repo.adminUpdate).toHaveBeenCalledWith('p1', { title: 'New Title', visibility: 'PUBLIC' });
+  });
+
+  it('returns err(ValidationError) when title is empty or exceeds 200 chars', async () => {
+    const repo = makeRepo();
+    const service = makeService(repo);
+
+    const empty = await service.adminUpdate('p1', { title: '   ', visibility: 'PUBLIC' });
+    expect(empty.ok).toBe(false);
+    if (!empty.ok) expect(empty.error.message).toBe('Название: 1–200 символов');
+
+    const tooLong = await service.adminUpdate('p1', { title: 'x'.repeat(201), visibility: 'PUBLIC' });
+    expect(tooLong.ok).toBe(false);
+
+    expect(repo.adminUpdate).not.toHaveBeenCalled();
+  });
+
+  it('returns err(ValidationError) when visibility is not PRIVATE/PUBLIC', async () => {
+    const repo = makeRepo();
+    const service = makeService(repo);
+
+    const result = await service.adminUpdate('p1', { title: 'Title', visibility: 'BOGUS' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toBe('Неверная видимость');
+    expect(repo.adminUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('PlaylistService.adminDelete', () => {
+  it('deletes without an ownership check', async () => {
+    const repo = makeRepo();
+    const service = makeService(repo);
+
+    const result = await service.adminDelete('p1');
+
+    expect(result.ok).toBe(true);
+    expect(repo.getWithTracks).not.toHaveBeenCalled();
+    expect(repo.adminDelete).toHaveBeenCalledWith('p1');
   });
 });
 

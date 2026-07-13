@@ -45,6 +45,9 @@ function makeTrackRepo(overrides?: Partial<ITrackRepository>): ITrackRepository 
     update: vi.fn(),
     delete: vi.fn(),
     reorder: vi.fn(),
+    getSourceKey: vi.fn(),
+    getArtistTrackSources: vi.fn(),
+    setStatus: vi.fn(),
     ...overrides,
   };
 }
@@ -67,6 +70,7 @@ function makeMoodsRepo(overrides?: Partial<ITrackMoodsRepository>): ITrackMoodsR
   return {
     get: vi.fn().mockResolvedValue([]),
     set: vi.fn().mockResolvedValue(undefined),
+    setGenres: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

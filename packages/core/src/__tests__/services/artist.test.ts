@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ArtistService } from '../../services/artist';
-import { NotFoundError, ValidationError } from '../../errors';
+import { NotFoundError, ValidationError, ConflictError } from '../../errors';
 import type { IArtistRepository } from '../../repositories/artist';
 import type { IFileStorage } from '../../repositories/storage';
 import type { ArtistServiceDeps, IVideoTitleResolver, UpdateArtistProfileInput } from '../../services/artist';
@@ -37,6 +37,7 @@ function makeRepo(overrides?: Partial<IArtistRepository>): IArtistRepository {
     findAllByUserId: vi.fn(),
     findByIdForUser: vi.fn(),
     update: vi.fn(),
+    adminUpdate: vi.fn().mockResolvedValue({ ok: true }),
     ...overrides,
   };
 }
@@ -252,5 +253,85 @@ describe('ArtistService.updateProfile', () => {
     await expect(
       service.updateProfile(mockArtist, { ...baseInput, fontSans: 'Inter' }),
     ).rejects.toThrow('deps.fonts');
+  });
+});
+
+describe('ArtistService.adminUpdate', () => {
+  const validInput = { name: 'New Name', slug: 'new-slug', bio: '  hi  ', avatarUrl: '  https://a.com  ' };
+
+  it('trims/normalizes and calls repo.adminUpdate', async () => {
+    const repo = makeRepo({ adminUpdate: vi.fn().mockResolvedValue({ ok: true }) });
+    const service = new ArtistService(repo);
+
+    const result = await service.adminUpdate('artist-1', validInput);
+
+    expect(result.ok).toBe(true);
+    expect(repo.adminUpdate).toHaveBeenCalledWith('artist-1', {
+      name: 'New Name',
+      slug: 'new-slug',
+      bio: 'hi',
+      avatarUrl: 'https://a.com',
+    });
+  });
+
+  it('lowercases the slug', async () => {
+    const repo = makeRepo({ adminUpdate: vi.fn().mockResolvedValue({ ok: true }) });
+    const service = new ArtistService(repo);
+
+    await service.adminUpdate('artist-1', { ...validInput, slug: 'NEW-SLUG' });
+
+    expect(repo.adminUpdate).toHaveBeenCalledWith('artist-1', expect.objectContaining({ slug: 'new-slug' }));
+  });
+
+  it('returns err(ValidationError) when name is empty or exceeds 120 chars', async () => {
+    const repo = makeRepo();
+    const service = new ArtistService(repo);
+
+    const empty = await service.adminUpdate('artist-1', { ...validInput, name: '  ' });
+    expect(empty.ok).toBe(false);
+    if (!empty.ok) {
+      expect(empty.error).toBeInstanceOf(ValidationError);
+      expect(empty.error.message).toBe('Имя: 1–120 символов');
+    }
+
+    const tooLong = await service.adminUpdate('artist-1', { ...validInput, name: 'x'.repeat(121) });
+    expect(tooLong.ok).toBe(false);
+
+    expect(repo.adminUpdate).not.toHaveBeenCalled();
+  });
+
+  it('returns err(ValidationError) for an invalid slug', async () => {
+    const repo = makeRepo();
+    const service = new ArtistService(repo);
+
+    const result = await service.adminUpdate('artist-1', { ...validInput, slug: 'a' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toBe('Slug: 2–60 символов, латиница/цифры/дефис');
+    expect(repo.adminUpdate).not.toHaveBeenCalled();
+  });
+
+  it('returns err(ConflictError) with the repo error text when slug is taken', async () => {
+    const repo = makeRepo({
+      adminUpdate: vi.fn().mockResolvedValue({ ok: false, error: 'Slug already taken' }),
+    });
+    const service = new ArtistService(repo);
+
+    const result = await service.adminUpdate('artist-1', validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(ConflictError);
+      expect(result.error.message).toBe('Slug already taken');
+    }
+  });
+
+  it('normalizes empty bio/avatarUrl to null', async () => {
+    const repo = makeRepo({ adminUpdate: vi.fn().mockResolvedValue({ ok: true }) });
+    const service = new ArtistService(repo);
+
+    await service.adminUpdate('artist-1', { ...validInput, bio: '   ', avatarUrl: '   ' });
+
+    expect(repo.adminUpdate).toHaveBeenCalledWith('artist-1', expect.objectContaining({ bio: null, avatarUrl: null }));
   });
 });

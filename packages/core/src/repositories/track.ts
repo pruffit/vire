@@ -1,4 +1,4 @@
-import type { Track, TrackCredit, LyricLine } from '../types/release';
+import type { Track, TrackCredit, LyricLine, TrackStatus } from '../types/release';
 
 export interface CreateTrackParams {
   id: string;
@@ -28,4 +28,9 @@ export interface ITrackRepository {
   delete(id: string): Promise<void>;
   /** Перенумеровать треки релиза по новому порядку (id[i] → trackNumber i+1). Атомарно. */
   reorder(releaseId: string, orderedIds: string[]): Promise<void>;
+  /** Ключ исходного мастера (vault), для ре-транскода. */
+  getSourceKey(trackId: string): Promise<string | null>;
+  /** Все треки артиста с исходником в vault, для массового пере-транскода. */
+  getArtistTrackSources(artistProfileId: string): Promise<Array<{ trackId: string; sourceKey: string }>>;
+  setStatus(trackId: string, status: TrackStatus): Promise<void>;
 }

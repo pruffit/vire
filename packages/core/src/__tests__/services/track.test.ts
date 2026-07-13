@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TrackService } from '../../services/track';
-import { NotFoundError } from '../../errors';
+import { NotFoundError, ValidationError } from '../../errors';
 import type { ITrackRepository } from '../../repositories/track';
 import type { IReleaseRepository } from '../../repositories/release';
 import type { IFileStorage } from '../../repositories/storage';
+import type { ITrackMoodsRepository } from '../../repositories/track-moods';
 import type { ITranscodeQueue, TrackServiceDeps } from '../../services/track';
 import type { Release, Track } from '../../types/release';
 
@@ -46,6 +47,9 @@ function makeTrackRepo(overrides?: Partial<ITrackRepository>): ITrackRepository 
     update: vi.fn().mockResolvedValue(mockTrack),
     delete: vi.fn().mockResolvedValue(undefined),
     reorder: vi.fn().mockResolvedValue(undefined),
+    getSourceKey: vi.fn().mockResolvedValue(null),
+    getArtistTrackSources: vi.fn().mockResolvedValue([]),
+    setStatus: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -66,6 +70,15 @@ function makeReleaseRepo(overrides?: Partial<IReleaseRepository>): IReleaseRepos
 
 function makeQueue(): ITranscodeQueue {
   return { add: vi.fn().mockResolvedValue(undefined) };
+}
+
+function makeMoodsRepo(overrides?: Partial<ITrackMoodsRepository>): ITrackMoodsRepository {
+  return {
+    get: vi.fn().mockResolvedValue([]),
+    set: vi.fn().mockResolvedValue(undefined),
+    setGenres: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
 }
 
 function makeAudioStorage(overrides?: Partial<IFileStorage>): IFileStorage {
@@ -371,5 +384,186 @@ describe('TrackService.reorderTracks', () => {
     expect(dupes.ok).toBe(false);
 
     expect(trackRepo.reorder).not.toHaveBeenCalled();
+  });
+});
+
+describe('TrackService.adminUpdate', () => {
+  const validInput = {
+    title: '  New Title  ',
+    version: '  Radio Edit  ',
+    trackNumber: 2,
+    isExplicit: true,
+    isExclusive: false,
+    isWip: false,
+    bpm: 120,
+    musicalKey: '  8A  ',
+    moods: ['CHILL'],
+    genres: ['ROCK'],
+    credits: [{ name: 'Danila', role: 'PERFORMER' as const }],
+    lyrics: null,
+  };
+
+  it('updates the track then sets moods then genres, in order, without an ownership check', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const moodsRepo = makeMoodsRepo();
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps({ moodsRepo }));
+    const calls: string[] = [];
+    (trackRepo.update as ReturnType<typeof vi.fn>).mockImplementation(async () => { calls.push('update'); return mockTrack; });
+    (moodsRepo.set as ReturnType<typeof vi.fn>).mockImplementation(async () => { calls.push('set'); });
+    (moodsRepo.setGenres as ReturnType<typeof vi.fn>).mockImplementation(async () => { calls.push('setGenres'); });
+
+    const result = await service.adminUpdate('track-1', validInput);
+
+    expect(result.ok).toBe(true);
+    expect(trackRepo.findById).not.toHaveBeenCalled();
+    expect(trackRepo.update).toHaveBeenCalledWith('track-1', {
+      title: 'New Title',
+      version: 'Radio Edit',
+      trackNumber: 2,
+      isExplicit: true,
+      isExclusive: false,
+      isWip: false,
+      bpm: 120,
+      musicalKey: '8A',
+      credits: validInput.credits,
+      lyrics: null,
+    });
+    expect(moodsRepo.set).toHaveBeenCalledWith('track-1', ['CHILL']);
+    expect(moodsRepo.setGenres).toHaveBeenCalledWith('track-1', ['ROCK']);
+    expect(calls).toEqual(['update', 'set', 'setGenres']);
+  });
+
+  it('returns err(ValidationError) when title is empty or exceeds 200 chars', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps({ moodsRepo: makeMoodsRepo() }));
+
+    const result = await service.adminUpdate('track-1', { ...validInput, title: '   ' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(ValidationError);
+      expect(result.error.message).toBe('Название: 1–200 символов');
+    }
+    expect(trackRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('returns err(ValidationError) for a non-positive/non-integer track number', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps({ moodsRepo: makeMoodsRepo() }));
+
+    const result = await service.adminUpdate('track-1', { ...validInput, trackNumber: 0 });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toBe('Неверный номер');
+    expect(trackRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('returns err(ValidationError) for bpm outside 20-500', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps({ moodsRepo: makeMoodsRepo() }));
+
+    const result = await service.adminUpdate('track-1', { ...validInput, bpm: 501 });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toBe('BPM: 20–500');
+    expect(trackRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('accepts a null bpm', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const moodsRepo = makeMoodsRepo();
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps({ moodsRepo }));
+
+    const result = await service.adminUpdate('track-1', { ...validInput, bpm: null });
+
+    expect(result.ok).toBe(true);
+    expect(trackRepo.update).toHaveBeenCalledWith('track-1', expect.objectContaining({ bpm: null }));
+  });
+
+  it('throws when moodsRepo dependency is missing', async () => {
+    const trackRepo = makeTrackRepo();
+    const releaseRepo = makeReleaseRepo();
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+
+    await expect(service.adminUpdate('track-1', validInput)).rejects.toThrow('deps.moodsRepo');
+  });
+});
+
+describe('TrackService.retranscode', () => {
+  it('returns err(ValidationError) when there is no source in the vault', async () => {
+    const trackRepo = makeTrackRepo({ getSourceKey: vi.fn().mockResolvedValue(null) });
+    const releaseRepo = makeReleaseRepo();
+    const queue = makeQueue();
+    const service = new TrackService(trackRepo, releaseRepo, queue);
+
+    const result = await service.retranscode('track-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(ValidationError);
+      expect(result.error.message).toBe('Нет исходника в vault — пересобрать нечем');
+    }
+    expect(trackRepo.setStatus).not.toHaveBeenCalled();
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it('sets status to PROCESSING then enqueues the job', async () => {
+    const trackRepo = makeTrackRepo({ getSourceKey: vi.fn().mockResolvedValue('tracks/track-1/source.flac') });
+    const releaseRepo = makeReleaseRepo();
+    const queue = makeQueue();
+    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const calls: string[] = [];
+    (trackRepo.setStatus as ReturnType<typeof vi.fn>).mockImplementation(async () => { calls.push('setStatus'); });
+    (queue.add as ReturnType<typeof vi.fn>).mockImplementation(async () => { calls.push('add'); });
+
+    const result = await service.retranscode('track-1');
+
+    expect(result.ok).toBe(true);
+    expect(trackRepo.setStatus).toHaveBeenCalledWith('track-1', 'PROCESSING');
+    expect(queue.add).toHaveBeenCalledWith({ trackId: 'track-1', sourceKey: 'tracks/track-1/source.flac' });
+    expect(calls).toEqual(['setStatus', 'add']);
+  });
+});
+
+describe('TrackService.retranscodeArtist', () => {
+  it('returns err(ValidationError) when the artist has no tracks with a vault source', async () => {
+    const trackRepo = makeTrackRepo({ getArtistTrackSources: vi.fn().mockResolvedValue([]) });
+    const releaseRepo = makeReleaseRepo();
+    const queue = makeQueue();
+    const service = new TrackService(trackRepo, releaseRepo, queue);
+
+    const result = await service.retranscodeArtist('artist-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(ValidationError);
+      expect(result.error.message).toBe('Нет треков с исходником в vault');
+    }
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it('sets status and enqueues every track, returning the queued count', async () => {
+    const sources = [
+      { trackId: 't1', sourceKey: 'tracks/t1/source.flac' },
+      { trackId: 't2', sourceKey: 'tracks/t2/source.flac' },
+    ];
+    const trackRepo = makeTrackRepo({ getArtistTrackSources: vi.fn().mockResolvedValue(sources) });
+    const releaseRepo = makeReleaseRepo();
+    const queue = makeQueue();
+    const service = new TrackService(trackRepo, releaseRepo, queue);
+
+    const result = await service.retranscodeArtist('artist-1');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toEqual({ queued: 2 });
+    expect(trackRepo.setStatus).toHaveBeenCalledWith('t1', 'PROCESSING');
+    expect(trackRepo.setStatus).toHaveBeenCalledWith('t2', 'PROCESSING');
+    expect(queue.add).toHaveBeenCalledWith({ trackId: 't1', sourceKey: 'tracks/t1/source.flac' });
+    expect(queue.add).toHaveBeenCalledWith({ trackId: 't2', sourceKey: 'tracks/t2/source.flac' });
   });
 });

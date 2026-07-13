@@ -3,6 +3,7 @@ import { artistProfiles, artistMembers } from '../schema';
 import type { DB } from '../client';
 import type { IArtistRepository, ArtistProfile, ThemeTokens, ArtistLink, ArtistVideo, UpdateArtistProfileData } from '@vire/core';
 import { defaultThemeTokens } from '@vire/core';
+import { adminUpdateArtist } from '../queries/admin';
 
 export class DrizzleArtistRepository implements IArtistRepository {
   constructor(private readonly db: DB) {}
@@ -60,6 +61,13 @@ export class DrizzleArtistRepository implements IArtistRepository {
       .update(artistProfiles)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(artistProfiles.id, id));
+  }
+
+  adminUpdate(
+    id: string,
+    data: { name: string; slug: string; bio: string | null; avatarUrl: string | null },
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    return adminUpdateArtist(id, data);
   }
 }
 

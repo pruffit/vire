@@ -28,6 +28,9 @@ export interface IPlaylistRepository {
   like(userId: string, playlistId: string): Promise<void>;
   unlike(userId: string, playlistId: string): Promise<void>;
   trackExists(trackId: string): Promise<boolean>;
+  /** Правка/удаление без owner-проверки (админ). */
+  adminUpdate(id: string, patch: { title: string; visibility: 'PRIVATE' | 'PUBLIC' }): Promise<void>;
+  adminDelete(id: string): Promise<void>;
 }
 
 export type IPlaylistCoverStorage = IFileStorage;

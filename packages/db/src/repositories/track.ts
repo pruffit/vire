@@ -17,7 +17,10 @@ import type {
   Track,
   TrackCredit,
   LyricLine,
+  TrackStatus,
 } from '@vire/core';
+import { getTrackSourceKey, getArtistTrackSources } from '../queries/track-audio';
+import { setTrackStatus } from '../queries/admin';
 
 type TrackRow = typeof tracks.$inferSelect;
 
@@ -125,5 +128,17 @@ export class DrizzleTrackRepository implements ITrackRepository {
       await tx.delete(favoriteMoments).where(eq(favoriteMoments.trackId, id));
       await tx.delete(tracks).where(eq(tracks.id, id));
     });
+  }
+
+  getSourceKey(trackId: string): Promise<string | null> {
+    return getTrackSourceKey(trackId);
+  }
+
+  getArtistTrackSources(artistProfileId: string): Promise<Array<{ trackId: string; sourceKey: string }>> {
+    return getArtistTrackSources(artistProfileId);
+  }
+
+  setStatus(trackId: string, status: TrackStatus): Promise<void> {
+    return setTrackStatus(trackId, status);
   }
 }

@@ -63,4 +63,22 @@ export class ArtistPostService {
     await this.repo.delete(postId);
     return ok(undefined);
   }
+
+  async adminUpdate(
+    id: string,
+    input: { title: string | null; body: string },
+  ): Promise<Result<void, ValidationError>> {
+    const body = (input.body ?? '').trim();
+    if (!body || body.length > 10000) return err(new ValidationError('Текст: 1–10000 символов'));
+    const title = input.title?.trim() ? input.title.trim().slice(0, 200) : null;
+
+    await this.repo.update(id, { title, body });
+    return ok(undefined);
+  }
+
+  // pass-through для симметрии с adminUpdate — админ правит/удаляет любой контент без owner-проверки
+  async adminDelete(id: string): Promise<Result<void, Error>> {
+    await this.repo.delete(id);
+    return ok(undefined);
+  }
 }

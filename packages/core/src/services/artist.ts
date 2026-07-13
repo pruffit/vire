@@ -1,4 +1,4 @@
-import { err, ok, NotFoundError, ValidationError, type Result } from '../errors';
+import { err, ok, NotFoundError, ValidationError, ConflictError, type Result } from '../errors';
 import type { IArtistRepository } from '../repositories/artist';
 import type { IFileStorage } from '../repositories/storage';
 import type { ArtistProfile, ArtistLink, ArtistVideo, ThemeTokens } from '../types/artist';
@@ -94,6 +94,27 @@ export class ArtistService {
     });
 
     return ok({ ok: true });
+  }
+
+  async adminUpdate(
+    artistProfileId: string,
+    input: { name: string; slug: string; bio: string | null; avatarUrl: string | null },
+  ): Promise<Result<void, ValidationError | ConflictError>> {
+    const name = (input.name ?? '').trim();
+    if (!name || name.length > 120) return err(new ValidationError('Имя: 1–120 символов'));
+    const slug = (input.slug ?? '').trim().toLowerCase();
+    if (!/^[a-z0-9-]{2,60}$/.test(slug)) {
+      return err(new ValidationError('Slug: 2–60 символов, латиница/цифры/дефис'));
+    }
+
+    const res = await this.repo.adminUpdate(artistProfileId, {
+      name,
+      slug,
+      bio: input.bio?.trim() ? input.bio.trim().slice(0, 2000) : null,
+      avatarUrl: input.avatarUrl?.trim() || null,
+    });
+    if (!res.ok) return err(new ConflictError(res.error));
+    return ok(undefined);
   }
 
   private async uploadImage(key: string, file: ArtistImageInput): Promise<string> {

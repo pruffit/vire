@@ -29,6 +29,7 @@ import {
   type PlaylistAddTrack,
 } from '../queries/playlists';
 import { trackExists as trackExistsQuery } from '../queries/track-audio';
+import { adminUpdatePlaylist, adminDeletePlaylist } from '../queries/admin';
 
 export class DrizzlePlaylistRepository implements IPlaylistRepository {
   constructor(private readonly db: DB) {}
@@ -104,6 +105,14 @@ export class DrizzlePlaylistRepository implements IPlaylistRepository {
 
   trackExists(trackId: string): Promise<boolean> {
     return trackExistsQuery(trackId);
+  }
+
+  adminUpdate(id: string, patch: { title: string; visibility: 'PRIVATE' | 'PUBLIC' }): Promise<void> {
+    return adminUpdatePlaylist(id, patch);
+  }
+
+  adminDelete(id: string): Promise<void> {
+    return adminDeletePlaylist(id);
   }
 }
 

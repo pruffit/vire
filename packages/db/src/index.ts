@@ -206,4 +206,5 @@ export type {
   OAuthAccountData,
   LinkAccountResult,
 } from './queries/users';
+export * from './repositories/user-account';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

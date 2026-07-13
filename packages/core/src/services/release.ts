@@ -1,8 +1,10 @@
-import { err, ok, NotFoundError, type Result } from '../errors';
+import { err, ok, NotFoundError, ValidationError, type Result } from '../errors';
 import type { IReleaseRepository } from '../repositories/release';
 import type { IFileStorage } from '../repositories/storage';
 import type { NotifyReleaseJobData } from '../jobs';
-import type { Genre, Release, ReleaseStatus, ReleaseType, ReleaseWithTracks } from '../types/release';
+import { ALL_GENRES, type Genre, type Release, type ReleaseStatus, type ReleaseType, type ReleaseWithTracks } from '../types/release';
+
+const RELEASE_TYPES: ReleaseType[] = ['ALBUM', 'EP', 'SINGLE'];
 
 export interface INotifyReleaseQueue {
   add(data: NotifyReleaseJobData): Promise<void>;
@@ -139,6 +141,42 @@ export class ReleaseService {
       return err(new Error('Forbidden: release does not belong to this artist'));
     }
     await this.repo.delete(params.releaseId);
+    return ok(undefined);
+  }
+
+  async adminUpdate(
+    releaseId: string,
+    input: {
+      title: string;
+      type: string;
+      genre: string | null;
+      releaseDate: string | null;
+      description: string | null;
+      linerNotes: string | null;
+    },
+  ): Promise<Result<void, ValidationError>> {
+    const title = (input.title ?? '').trim();
+    if (!title || title.length > 200) return err(new ValidationError('Название: 1–200 символов'));
+    if (!RELEASE_TYPES.includes(input.type as ReleaseType)) return err(new ValidationError('Неверный тип'));
+    if (input.genre != null && !(ALL_GENRES as readonly string[]).includes(input.genre)) {
+      return err(new ValidationError('Неверный жанр'));
+    }
+
+    let releaseDate: Date | null = null;
+    if (input.releaseDate) {
+      const d = new Date(input.releaseDate);
+      if (isNaN(d.getTime())) return err(new ValidationError('Неверная дата'));
+      releaseDate = d;
+    }
+
+    await this.repo.update(releaseId, {
+      title,
+      type: input.type as ReleaseType,
+      genre: input.genre as Genre | null,
+      releaseDate,
+      description: input.description?.trim() ? input.description.trim().slice(0, 5000) : null,
+      linerNotes: input.linerNotes?.trim() ? input.linerNotes.trim().slice(0, 10000) : null,
+    });
     return ok(undefined);
   }
 

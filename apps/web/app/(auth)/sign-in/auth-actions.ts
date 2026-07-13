@@ -1,10 +1,11 @@
 'use server';
 
 import { AuthError } from 'next-auth';
-import { hash } from 'bcryptjs';
 import { z } from 'zod';
 import { signIn } from '@/auth';
-import { findUserByEmail, createUserWithPassword } from '@vire/db';
+import { db, DrizzleUserAccountRepository } from '@vire/db';
+import { AuthService, ConflictError } from '@vire/core';
+import { BcryptPasswordHasher } from '@/lib/password-hasher';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -74,11 +75,12 @@ export async function registerAction(
 
   const { name, email, password, callbackUrl } = parsed.data;
 
-  const existing = await findUserByEmail(email);
-  if (existing) return 'Аккаунт с этим email уже существует. Войди вместо этого.';
-
-  const passwordHash = await hash(password, 12);
-  await createUserWithPassword({ email, name, passwordHash });
+  const service = new AuthService(new DrizzleUserAccountRepository(db), { hasher: new BcryptPasswordHasher() });
+  const result = await service.register({ email, name, password });
+  if (!result.ok) {
+    if (result.error instanceof ConflictError) return 'Аккаунт с этим email уже существует. Войди вместо этого.';
+    throw result.error;
+  }
 
   try {
     await signIn('credentials', { email, password, redirectTo: callbackUrl ?? '/' });

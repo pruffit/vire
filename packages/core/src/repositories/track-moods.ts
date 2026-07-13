@@ -3,4 +3,5 @@
 export interface ITrackMoodsRepository {
   get(trackId: string): Promise<string[]>;
   set(trackId: string, moods: string[]): Promise<void>;
+  setGenres(trackId: string, genres: string[]): Promise<void>;
 }

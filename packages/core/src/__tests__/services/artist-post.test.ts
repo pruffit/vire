@@ -163,3 +163,59 @@ describe('ArtistPostService.delete', () => {
     expect(repo.delete).not.toHaveBeenCalled();
   });
 });
+
+describe('ArtistPostService.adminUpdate', () => {
+  it('updates without an ownership check', async () => {
+    const repo = makeRepo();
+    const service = new ArtistPostService(repo);
+
+    const result = await service.adminUpdate('post-1', { title: 'New', body: 'text' });
+
+    expect(result.ok).toBe(true);
+    expect(repo.findById).not.toHaveBeenCalled();
+    expect(repo.update).toHaveBeenCalledWith('post-1', { title: 'New', body: 'text' });
+  });
+
+  it('trims and caps title at 200 chars, defaults empty title to null', async () => {
+    const repo = makeRepo();
+    const service = new ArtistPostService(repo);
+
+    await service.adminUpdate('post-1', { title: '  ' + 'x'.repeat(210), body: 'text' });
+
+    expect(repo.update).toHaveBeenCalledWith('post-1', { title: 'x'.repeat(200), body: 'text' });
+
+    await service.adminUpdate('post-1', { title: '   ', body: 'text' });
+    expect(repo.update).toHaveBeenCalledWith('post-1', { title: null, body: 'text' });
+  });
+
+  it('returns err(ValidationError) when body is empty or exceeds 10000 chars', async () => {
+    const repo = makeRepo();
+    const service = new ArtistPostService(repo);
+
+    const empty = await service.adminUpdate('post-1', { title: null, body: '   ' });
+    expect(empty.ok).toBe(false);
+    if (!empty.ok) {
+      expect(empty.error).toBeInstanceOf(ValidationError);
+      expect(empty.error.message).toBe('Текст: 1–10000 символов');
+    }
+
+    const tooLong = await service.adminUpdate('post-1', { title: null, body: 'x'.repeat(10001) });
+    expect(tooLong.ok).toBe(false);
+    if (!tooLong.ok) expect(tooLong.error.message).toBe('Текст: 1–10000 символов');
+
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('ArtistPostService.adminDelete', () => {
+  it('deletes without an ownership check', async () => {
+    const repo = makeRepo();
+    const service = new ArtistPostService(repo);
+
+    const result = await service.adminDelete('post-1');
+
+    expect(result.ok).toBe(true);
+    expect(repo.findById).not.toHaveBeenCalled();
+    expect(repo.delete).toHaveBeenCalledWith('post-1');
+  });
+});

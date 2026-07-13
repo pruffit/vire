@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ReleaseService } from '../../services/release';
-import { NotFoundError } from '../../errors';
+import { NotFoundError, ValidationError } from '../../errors';
 import type { IReleaseRepository } from '../../repositories/release';
 import type { IFileStorage } from '../../repositories/storage';
 import type { INotifyReleaseQueue } from '../../services/release';
@@ -349,5 +349,113 @@ describe('ReleaseService.changeStatus', () => {
     await expect(
       service.changeStatus('release-1', 'artist-1', 'PUBLISHED', { name: 'Artist', slug: 'artist' }),
     ).rejects.toThrow('deps.notifyQueue');
+  });
+});
+
+describe('ReleaseService.adminUpdate', () => {
+  const validInput = {
+    title: '  New Title  ',
+    type: 'EP',
+    genre: 'ROCK',
+    releaseDate: '2024-06-01',
+    description: '  desc  ',
+    linerNotes: '  notes  ',
+  };
+
+  it('trims/normalizes and calls repo.update without an ownership check', async () => {
+    const repo = makeRepo();
+    const service = new ReleaseService(repo);
+
+    const result = await service.adminUpdate('release-1', validInput);
+
+    expect(result.ok).toBe(true);
+    expect(repo.findById).not.toHaveBeenCalled();
+    expect(repo.update).toHaveBeenCalledWith('release-1', {
+      title: 'New Title',
+      type: 'EP',
+      genre: 'ROCK',
+      releaseDate: new Date('2024-06-01'),
+      description: 'desc',
+      linerNotes: 'notes',
+    });
+  });
+
+  it('returns err(ValidationError) when title is empty or exceeds 200 chars', async () => {
+    const repo = makeRepo();
+    const service = new ReleaseService(repo);
+
+    const empty = await service.adminUpdate('release-1', { ...validInput, title: '   ' });
+    expect(empty.ok).toBe(false);
+    if (!empty.ok) {
+      expect(empty.error).toBeInstanceOf(ValidationError);
+      expect(empty.error.message).toBe('Название: 1–200 символов');
+    }
+
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  it('returns err(ValidationError) for an invalid type', async () => {
+    const repo = makeRepo();
+    const service = new ReleaseService(repo);
+
+    const result = await service.adminUpdate('release-1', { ...validInput, type: 'BOGUS' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toBe('Неверный тип');
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  it('returns err(ValidationError) for an invalid genre', async () => {
+    const repo = makeRepo();
+    const service = new ReleaseService(repo);
+
+    const result = await service.adminUpdate('release-1', { ...validInput, genre: 'BOGUS' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toBe('Неверный жанр');
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  it('accepts a null genre', async () => {
+    const repo = makeRepo();
+    const service = new ReleaseService(repo);
+
+    const result = await service.adminUpdate('release-1', { ...validInput, genre: null });
+
+    expect(result.ok).toBe(true);
+    expect(repo.update).toHaveBeenCalledWith('release-1', expect.objectContaining({ genre: null }));
+  });
+
+  it('returns err(ValidationError) for an unparseable release date', async () => {
+    const repo = makeRepo();
+    const service = new ReleaseService(repo);
+
+    const result = await service.adminUpdate('release-1', { ...validInput, releaseDate: 'not-a-date' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toBe('Неверная дата');
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  it('accepts a null release date', async () => {
+    const repo = makeRepo();
+    const service = new ReleaseService(repo);
+
+    const result = await service.adminUpdate('release-1', { ...validInput, releaseDate: null });
+
+    expect(result.ok).toBe(true);
+    expect(repo.update).toHaveBeenCalledWith('release-1', expect.objectContaining({ releaseDate: null }));
+  });
+
+  it('normalizes empty description/linerNotes to null', async () => {
+    const repo = makeRepo();
+    const service = new ReleaseService(repo);
+
+    await service.adminUpdate('release-1', { ...validInput, description: '   ', linerNotes: '   ' });
+
+    expect(repo.update).toHaveBeenCalledWith(
+      'release-1',
+      expect.objectContaining({ description: null, linerNotes: null }),
+    );
   });
 });

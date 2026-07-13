@@ -1,4 +1,4 @@
-import { err, ok, NotFoundError, ConflictError, type Result } from '../errors';
+import { err, ok, NotFoundError, ConflictError, ValidationError, type Result } from '../errors';
 import type { IPlaylistRepository, IPlaylistCoverStorage, PlaylistUpdatePatch } from '../repositories/playlist';
 import type { PlaylistSummary, PlaylistWithTracks, TrackSearchResult, PlaylistSuggestions } from '../types/playlist';
 
@@ -162,6 +162,25 @@ export class PlaylistService {
 
   async unlike(userId: string, id: string): Promise<Result<void, Error>> {
     await this.repo.unlike(userId, id);
+    return ok(undefined);
+  }
+
+  async adminUpdate(
+    id: string,
+    input: { title: string; visibility: string },
+  ): Promise<Result<void, ValidationError>> {
+    const title = (input.title ?? '').trim();
+    if (!title || title.length > 200) return err(new ValidationError('Название: 1–200 символов'));
+    if (input.visibility !== 'PRIVATE' && input.visibility !== 'PUBLIC') {
+      return err(new ValidationError('Неверная видимость'));
+    }
+
+    await this.repo.adminUpdate(id, { title, visibility: input.visibility });
+    return ok(undefined);
+  }
+
+  async adminDelete(id: string): Promise<Result<void, Error>> {
+    await this.repo.adminDelete(id);
     return ok(undefined);
   }
 }
