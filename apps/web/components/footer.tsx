@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Logo } from './logo';
-import { AnnouncementReopenLink } from './announcements';
-import { PartyText } from './easter-eggs';
+import { AnnouncementReopenLink, PartyText } from './widget-triggers';
 import { SITE_VERSION } from '@/lib/site';
 
 const reopenCls =
@@ -30,7 +29,9 @@ export function Footer() {
               <FooterLink href="/about">О платформе</FooterLink>
               <FooterLink href="/design">Дизайн</FooterLink>
               <li>
-                <AnnouncementReopenLink id="stage1" className={reopenCls} />
+                <AnnouncementReopenLink id="stage1" className={reopenCls}>
+                  Что нового
+                </AnnouncementReopenLink>
               </li>
             </FooterCol>
             <FooterCol title="Поддержка">
@@ -41,7 +42,9 @@ export function Footer() {
               <FooterLink href="/terms">Условия</FooterLink>
               <FooterLink href="/privacy">Конфиденциальность</FooterLink>
               <li>
-                <AnnouncementReopenLink id="auth" className={reopenCls} />
+                <AnnouncementReopenLink id="auth" className={reopenCls}>
+                  Изменения во входе
+                </AnnouncementReopenLink>
               </li>
             </FooterCol>
           </div>

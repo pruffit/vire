@@ -6,18 +6,15 @@ import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon, type IconName } from '@/components/icon';
 import { GlowBackdrop } from '@/components/content-kit';
+import { OPEN_ANNOUNCEMENT_EVENT } from '@/components/widget-triggers';
 
 // Координатор одноразовых анонсов — показываются по одному из очереди, не разом.
 // Версионируй storageKey (…_v1 → _v2), чтобы показать анонс заново всем.
-
-export const OPEN_ANNOUNCEMENT_EVENT = 'vire:open-announcement';
 
 interface Announcement {
   id: string;
   /** Ключ localStorage — флаг «уже видел». Версионируется. */
   storageKey: string;
-  /** Подпись кнопки переоткрытия в футере. */
-  footerLabel: string;
   title: string;
   body: ReactNode;
   icon?: IconName;
@@ -29,7 +26,6 @@ const ANNOUNCEMENTS: Announcement[] = [
   {
     id: 'stage1',
     storageKey: 'vire_notice_stage1_v1',
-    footerLabel: 'Что нового',
     title: 'Vire запущен',
     icon: 'star',
     body: (
@@ -50,7 +46,6 @@ const ANNOUNCEMENTS: Announcement[] = [
   {
     id: 'auth',
     storageKey: 'vire_notice_auth_v1',
-    footerLabel: 'Изменения во входе',
     title: 'Изменения во входе',
     icon: 'lock',
     body: (
@@ -199,22 +194,5 @@ export function Announcements() {
         </motion.div>
       )}
     </AnimatePresence>
-  );
-}
-
-/** Кнопка-ссылка для футера: снова открывает конкретный анонс по id. */
-export function AnnouncementReopenLink({ id, className }: { id: string; className?: string }) {
-  const a = ANNOUNCEMENTS.find((x) => x.id === id);
-  if (!a) return null;
-  return (
-    <button
-      type="button"
-      onClick={() =>
-        window.dispatchEvent(new CustomEvent(OPEN_ANNOUNCEMENT_EVENT, { detail: { id } }))
-      }
-      className={className}
-    >
-      {a.footerLabel}
-    </button>
   );
 }

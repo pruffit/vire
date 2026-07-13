@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon, type IconName } from './icon';
 import { BrandIcon, type BrandName } from './brand-icon';
-
-/** Событие запуска «праздника» (нотный дождь) — можно слать из любого места. */
-export const PARTY_EVENT = 'vire:party';
+import { PARTY_EVENT } from './widget-triggers';
 
 // e.code, не e.key — работает на любой раскладке
 const KONAMI = [
@@ -174,27 +172,5 @@ function NoteRain() {
         </motion.span>
       ))}
     </motion.div>
-  );
-}
-
-/** Тройной клик по содержимому запускает нотный дождь («© Vire» в футере). */
-export function PartyText({ children, className }: { children: ReactNode; className?: string }) {
-  const clicks = useRef(0);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const onClick = () => {
-    clicks.current += 1;
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => (clicks.current = 0), 600);
-    if (clicks.current >= 3) {
-      clicks.current = 0;
-      window.dispatchEvent(new Event(PARTY_EVENT));
-    }
-  };
-
-  return (
-    <span onClick={onClick} className={className}>
-      {children}
-    </span>
   );
 }
