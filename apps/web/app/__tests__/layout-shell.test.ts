@@ -80,4 +80,16 @@ describe('app-shell layout invariants', () => {
     const root = readFileSync(path.join(APP_DIR, 'layout.tsx'), 'utf8');
     expect(root).not.toMatch(/<Footer\s*\/>/);
   });
+
+  // Регрессия scroll-jitter: завершённая CSS-анимация с fill both/forwards остаётся
+  // «в силе» → Chromium держит композит-слой навсегда, соседи дрожат при скролле.
+  // Entrance-анимации обязаны отпускать элемент: fill backwards (или без fill).
+  it('конечные анимации в globals.css не используют fill both/forwards', () => {
+    const css = readFileSync(path.join(APP_DIR, 'globals.css'), 'utf8');
+    const offenders = [...css.matchAll(/animation:[^;]+;/g)]
+      .map((m) => m[0])
+      .filter((decl) => !/\binfinite\b/.test(decl) && /\b(both|forwards)\b/.test(decl));
+
+    expect(offenders).toEqual([]);
+  });
 });

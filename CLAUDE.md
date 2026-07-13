@@ -104,7 +104,14 @@ body (h-full, overflow-clip, flex flex-col)
   Нюанс спеки: `clip` по одной оси + `visible` по другой → `visible` вычисляется как `auto`
   (появляется лишний скроллер), поэтому на скролл-пейнах ось X клипается только там, где
   ось Y уже `auto` (см. `(listener)/layout.tsx` — `md:overflow-x-clip`).
-- Инвариант защищён тестом `app/__tests__/layout-shell.test.ts`.
+- **Композит-слои в скролл-области = джиттер.** Конечные entrance-анимации — только
+  `fill backwards`/без fill (fill `both`/`forwards` держит завершённую анимацию «в силе» —
+  Chromium не демотирует слой, соседи каскадом промоутятся overlap'ом). Бесконечные
+  transform/opacity-анимации (`animate-ping`) на постоянно видимых элементах запрещены —
+  пульс через `animate-live-pulse` (box-shadow). После UI-прохода проверять слои CDP
+  `LayerTree` (Playwright): в скролл-области должно быть 0 слоёв.
+- Инварианты защищены тестом `app/__tests__/layout-shell.test.ts` (вкл. запрет fill
+  both/forwards на конечных анимациях в globals.css).
 
 ### Чистота кода
 

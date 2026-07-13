@@ -176,11 +176,13 @@ textarea.vire-textarea:focus::-webkit-resizer {
   }
 }
 
+/* backwards, не both/forwards: filling-анимация держит композит-слой навсегда
+   (и каскадом промоутит перекрывающихся соседей) → джиттер при скролле. */
 @utility animate-fade-up {
-  animation: vire-fade-up 0.5s var(--ease-soft) both;
+  animation: vire-fade-up 0.5s var(--ease-soft) backwards;
 }
 @utility animate-fade-in {
-  animation: vire-fade-in 0.4s var(--ease-soft) both;
+  animation: vire-fade-in 0.4s var(--ease-soft) backwards;
 }
 @utility animate-live-pulse {
   animation: vire-live-pulse 1.8s var(--ease-soft) infinite;
