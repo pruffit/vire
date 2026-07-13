@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { Stagger, StaggerItem, spring } from '@vire/ui/motion';
+import { spring } from '@vire/ui/motion';
 import type { PlayerTrack, PlayContext } from '@/store/player';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
 import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
@@ -38,14 +38,13 @@ export function PlayableTrackList({
 
   const grid = columns === 2 ? 'grid grid-cols-1 lg:grid-cols-2 lg:gap-x-8' : 'grid grid-cols-1';
 
+  // без Stagger: motion-обёртки держат transform-слой на строках → джиттер скролла; CSS-анимация демотируется по завершении
   return (
-    <Stagger step={0.03} className={grid}>
+    <div className={`${grid} animate-fade-up`}>
       {tracks.map((t, i) => (
-        <StaggerItem key={t.id}>
-          <Row track={t} queue={queue} index={i} rank={variant === 'ranked' ? i + 1 : null} context={context} />
-        </StaggerItem>
+        <Row key={t.id} track={t} queue={queue} index={i} rank={variant === 'ranked' ? i + 1 : null} context={context} />
       ))}
-    </Stagger>
+    </div>
   );
 }
 
