@@ -82,7 +82,7 @@ export function WaveStartButton() {
             transition={spring.snappy}
             onClick={handleStop}
             whileTap={{ scale: 0.94 }}
-            className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="shrink-0 py-3 -my-3 px-2 -mx-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Остановить
           </motion.button>
@@ -96,7 +96,7 @@ export function WaveStartButton() {
             onClick={handleStart}
             disabled={loading}
             whileTap={{ scale: 0.94 }}
-            className="shrink-0 flex items-center gap-1.5 text-sm font-medium text-foreground hover:opacity-70 transition-opacity disabled:opacity-40"
+            className="shrink-0 flex items-center gap-1.5 py-3 -my-3 px-2 -mx-2 text-sm font-medium text-foreground hover:opacity-70 transition-opacity disabled:opacity-40"
           >
             {loading ? (
               <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
