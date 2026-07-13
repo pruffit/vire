@@ -18,9 +18,9 @@
 | `api/auth/[...nextauth]` GET/POST | rate-limit POST → 429; проксирование в NextAuth-хендлеры (GET без лимита) |
 | `api/health` GET | 200 при живых БД+Redis; 503 degraded при падении БД / Redis / обоих; поля version/ts |
 | `api/v1/health` GET | БД критична (503), Redis сигнальный (200 с флагом) |
-| `api/v1/admin/backfill-analysis` POST | 401 аноним, 403 не-админ, VIEWER-no-op, постановка в очередь |
-| `api/v1/admin/editorial` POST | 401/403/VIEWER-no-op, вызов генерации |
-| `api/v1/admin/system` GET | 401/403 (VIEWER проходит), форма ответа |
+| `api/v1/admin/backfill-analysis` POST | 403 и для анонима, и для не-админа — отдельной 401-ветки нет; VIEWER-no-op, постановка в очередь |
+| `api/v1/admin/editorial` POST | 403 (аноним = не-админ), VIEWER-no-op, вызов генерации |
+| `api/v1/admin/system` GET | 403 (аноним = не-админ, VIEWER проходит), форма ответа |
 | `api/v1/artists/[slug]` GET | NotFoundError→404, else→500, happy |
 | `api/v1/listening-now` GET | happy, деградация при ошибке → пустой массив |
 
@@ -45,3 +45,13 @@
 - Самокритика: для тестового среза — облегчённая (ревью качества тестов: не
   smoke ли, точные ли статусы/тексты, нет ли тестов «под реализацию» вместо
   контракта), отдельным Sonnet-агентом после H2.
+
+## Итоги реализации
+
+13 `route.test.ts`, +75 тестов (592→667 в `apps/web`), прод-код не тронут.
+Самокритика: 0 MAJOR, 3 MINOR — исправлены (`be0ba9d`).
+
+Найденная контрактная дыра (не чинили молча, зафиксировано в
+`docs/foundation/TECHNICAL_DEBT.md`): `PATCH /api/v1/user/profile` — zod
+валидирует имя ДО `.trim()`, имя из одних пробелов проходит `min(1)` и
+сохраняется пустой строкой. Фикс — отдельным коммитом вне среза.

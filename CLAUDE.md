@@ -339,12 +339,15 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Скачивание FLAC по presigned S3 URL
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
-### Тесты (apps/web — 592, гонять `pnpm --filter @vire/web test`)
+### Тесты (apps/web — 667, гонять `pnpm --filter @vire/web test`)
 - [x] `packages/core` — сервисы artist/release/track, follow/listener-track/track-moods/playlist, Result/errors (Vitest)
 - [x] `apps/web/lib` — `embed` (YouTube/VK), `upload` (валидация), `format`, `structured-data` (JSON-LD билдеры)
 - [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),
   dashboard profile, dashboard posts (create/edit/delete), follow, like, play, download,
   tracks/listening (presence) — `app/api/**/route.test.ts`
+- [x] Route handlers остатка (1-H): health/v1 health, admin backfill-analysis/editorial/system,
+  artists/[slug], listening-now, dashboard live, dashboard tracks/[id]/genres + PATCH/DELETE,
+  user/profile PATCH/POST, feedback, nextauth rate-limit
 - [x] App-shell лейаут — инвариант `app/__tests__/layout-shell.test.ts` (нет `min-h-screen`)
 - [x] `apps/worker` — transcode-пайплайн (`processTranscodeJob`: идемпотентность, derive ext,
   HLS-загрузка, READY-транзакция, fallback на ffprobe) + waveform-пики (`peaksFromPcm`)
