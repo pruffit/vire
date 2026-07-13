@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { PurchaseService } from '../../services/purchase';
 import type { IPaymentGateway } from '../../services/purchase';
-import { NotFoundError } from '../../errors';
+import { NotFoundError, ValidationError } from '../../errors';
 import type { IPurchaseRepository } from '../../repositories/purchase';
 
 const USER_ID = 'user-1';
@@ -22,6 +22,7 @@ function makeRepo(overrides?: Partial<IPurchaseRepository>): IPurchaseRepository
 
 function makeGateway(overrides?: Partial<IPaymentGateway>): IPaymentGateway {
   return {
+    isConfigured: vi.fn().mockReturnValue(true),
     createPayment: vi.fn().mockResolvedValue({ id: 'pay-1', confirmationUrl: 'https://pay.example/1' }),
     getPayment: vi.fn().mockResolvedValue(null),
     ...overrides,
@@ -52,6 +53,38 @@ describe('PurchaseService.purchase', () => {
     if (result.ok) expect(result.value).toEqual({ alreadyOwned: true });
     expect(gateway.createPayment).not.toHaveBeenCalled();
     expect(repo.createPending).not.toHaveBeenCalled();
+  });
+
+  it('returns ValidationError when the gateway is not configured', async () => {
+    const repo = makeRepo();
+    const gateway = makeGateway({ isConfigured: vi.fn().mockReturnValue(false) });
+    const result = await service(repo, gateway, () => 'id-1').purchase(USER_ID, TRACK_ID, 'https://return');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(ValidationError);
+      expect(result.error.message).toBe('Платёжный сервис не настроен');
+    }
+    expect(repo.getPending).not.toHaveBeenCalled();
+    expect(gateway.createPayment).not.toHaveBeenCalled();
+  });
+
+  it('alreadyOwned wins over an unconfigured gateway (check order)', async () => {
+    const repo = makeRepo({ hasPurchased: vi.fn().mockResolvedValue(true) });
+    const gateway = makeGateway({ isConfigured: vi.fn().mockReturnValue(false) });
+    const result = await service(repo, gateway, () => 'id-1').purchase(USER_ID, TRACK_ID, 'https://return');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toEqual({ alreadyOwned: true });
+  });
+
+  it('NotFoundError wins over an unconfigured gateway (check order)', async () => {
+    const repo = makeRepo({ trackExists: vi.fn().mockResolvedValue(false) });
+    const gateway = makeGateway({ isConfigured: vi.fn().mockReturnValue(false) });
+    const result = await service(repo, gateway, () => 'id-1').purchase(USER_ID, TRACK_ID, 'https://return');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
   });
 
   it('reuses a pending purchase when the gateway returns an open confirmation URL', async () => {

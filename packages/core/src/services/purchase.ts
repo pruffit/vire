@@ -1,7 +1,8 @@
-import { err, ok, NotFoundError, type Result } from '../errors';
+import { err, ok, NotFoundError, ValidationError, type Result } from '../errors';
 import type { IPurchaseRepository } from '../repositories/purchase';
 
 export interface IPaymentGateway {
+  isConfigured(): boolean;
   createPayment(params: {
     idempotencyKey: string;
     amount: string;
@@ -27,9 +28,14 @@ export class PurchaseService {
     private readonly deps: PurchaseServiceDeps = {},
   ) {}
 
-  async purchase(userId: string, trackId: string, returnUrl: string): Promise<Result<PurchaseResult, NotFoundError>> {
+  async purchase(
+    userId: string,
+    trackId: string,
+    returnUrl: string,
+  ): Promise<Result<PurchaseResult, NotFoundError | ValidationError>> {
     if (!(await this.repo.trackExists(trackId))) return err(new NotFoundError('Track', trackId));
     if (await this.repo.hasPurchased(userId, trackId)) return ok({ alreadyOwned: true });
+    if (!this.gateway.isConfigured()) return err(new ValidationError('Платёжный сервис не настроен'));
 
     const existing = await this.repo.getPending(userId, trackId);
     if (existing) {

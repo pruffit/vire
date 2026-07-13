@@ -15,9 +15,9 @@ const {
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
-vi.mock('@/lib/yookassa', () => ({ isConfigured }));
 vi.mock('@/lib/payment-gateway', () => ({
   YookassaPaymentGateway: class {
+    isConfigured = isConfigured;
     createPayment = createPayment;
     getPayment = getPayment;
   },
@@ -72,6 +72,15 @@ describe('POST /api/v1/tracks/[id]/purchase', () => {
     expect(res.status).toBe(503);
     await expect(res.json()).resolves.toEqual({ error: 'Платёжный сервис не настроен' });
     expect(createPayment).not.toHaveBeenCalled();
+  });
+
+  it('alreadyOwned wins over an unconfigured payment service (check order)', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    isConfigured.mockReturnValue(false);
+    hasPurchased.mockResolvedValue(true);
+    const res = await POST(req(), ctx);
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true, alreadyOwned: true });
   });
 
   it('404 when the track does not exist', async () => {

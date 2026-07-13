@@ -1,7 +1,11 @@
 import type { IPaymentGateway } from '@vire/core';
-import { createPayment, getPayment } from '@/lib/yookassa';
+import { createPayment, getPayment, isConfigured } from '@/lib/yookassa';
 
 export class YookassaPaymentGateway implements IPaymentGateway {
+  isConfigured(): boolean {
+    return isConfigured();
+  }
+
   async createPayment(params: {
     idempotencyKey: string;
     amount: string;

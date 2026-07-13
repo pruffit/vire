@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzlePurchaseRepository } from '@vire/db';
-import { PurchaseService, NotFoundError } from '@vire/core';
-import { isConfigured } from '@/lib/yookassa';
+import { PurchaseService, NotFoundError, ValidationError } from '@vire/core';
 import { YookassaPaymentGateway } from '@/lib/payment-gateway';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -23,10 +22,6 @@ export async function POST(req: Request, { params }: Params) {
 
   const { id: trackId } = await params;
 
-  if (!isConfigured()) {
-    return NextResponse.json({ error: 'Платёжный сервис не настроен' }, { status: 503 });
-  }
-
   const body = await req.json().catch(() => ({})) as { returnUrl?: string };
   const returnUrl = body.returnUrl ?? `${APP_URL}/`;
 
@@ -34,6 +29,9 @@ export async function POST(req: Request, { params }: Params) {
   if (!result.ok) {
     if (result.error instanceof NotFoundError) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (result.error instanceof ValidationError) {
+      return NextResponse.json({ error: result.error.message }, { status: 503 });
     }
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
