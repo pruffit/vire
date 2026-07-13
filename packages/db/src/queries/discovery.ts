@@ -133,6 +133,22 @@ export async function getLatestReleases(limit = 12): Promise<DiscoveryRelease[]>
     .limit(limit);
 }
 
+export interface ReleaseCardStats {
+  trackCount: number;
+  totalDurationSec: number;
+}
+
+export async function getReleaseCardStats(releaseId: string): Promise<ReleaseCardStats> {
+  const [row] = await db
+    .select({
+      trackCount: sql<number>`count(*)::int`,
+      totalDurationSec: sql<number>`coalesce(sum(${tracks.durationSec}), 0)::int`,
+    })
+    .from(tracks)
+    .where(and(eq(tracks.releaseId, releaseId), eq(tracks.status, 'READY')));
+  return row ?? { trackCount: 0, totalDurationSec: 0 };
+}
+
 // Релиз слышен (опубликован / запланирован с прошедшей датой), тот же предикат,
 // что в getLatestReleases; вынесен для переиспользования в каталоге.
 const releaseIsAired = or(
