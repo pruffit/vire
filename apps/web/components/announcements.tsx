@@ -7,8 +7,9 @@ import { spring } from '@vire/ui/motion';
 import { Icon, type IconName } from '@/components/icon';
 import { GlowBackdrop } from '@/components/content-kit';
 import { OPEN_ANNOUNCEMENT_EVENT } from '@/components/widget-triggers';
+import { nextAutoAnnouncement } from '@/lib/announcements-queue';
 
-// Координатор одноразовых анонсов — показываются по одному из очереди, не разом.
+// Авто-показ: максимум один анонс за визит; остальные — в следующие заходы.
 // Версионируй storageKey (…_v1 → _v2), чтобы показать анонс заново всем.
 
 interface Announcement {
@@ -91,13 +92,14 @@ export function Announcements() {
   // useSyncExternalStore читает localStorage без setState-в-эффекте и рассинхрона с SSR
   const autoActiveId = useSyncExternalStore(
     () => () => {},
-    () => ANNOUNCEMENTS.find((a) => !isSeen(a.storageKey))?.id ?? null,
+    () => nextAutoAnnouncement(ANNOUNCEMENTS, isSeen)?.id ?? null,
     () => null,
   );
   const [manualId, setManualId] = useState<string | null>(null);
-  const [, bump] = useState(0);
+  const [autoConsumed, setAutoConsumed] = useState(false);
 
-  const active = ANNOUNCEMENTS.find((a) => a.id === (manualId ?? autoActiveId)) ?? null;
+  const active =
+    ANNOUNCEMENTS.find((a) => a.id === (manualId ?? (autoConsumed ? null : autoActiveId))) ?? null;
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -113,8 +115,8 @@ export function Announcements() {
     if (manualId) {
       setManualId(null); // ручное открытие — просто закрыть, авто-флаг не трогаем
     } else {
-      markSeen(active.storageKey); // авто — отметить и показать следующий непросмотренный
-      bump((n) => n + 1);
+      markSeen(active.storageKey);
+      setAutoConsumed(true); // максимум один авто-анонс за визит; следующий — при следующем заходе
     }
   }, [active, manualId]);
 
