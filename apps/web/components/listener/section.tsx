@@ -20,8 +20,11 @@ export function Section({
     <section className="space-y-5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-        <div className="flex items-center gap-3">
-          {href ? (
+        <div className="flex items-baseline gap-3">
+          {count != null && count > 0 && (
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">{count}</span>
+          )}
+          {href && (
             <Link
               href={href}
               className="group inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -29,9 +32,7 @@ export function Section({
               {hrefLabel ?? 'Все'}
               <Icon name="arrow-right" size={13} className="transition-transform group-hover:translate-x-0.5" />
             </Link>
-          ) : count != null && count > 0 ? (
-            <span className="font-mono text-xs tabular-nums text-muted-foreground">{count}</span>
-          ) : null}
+          )}
           {action}
         </div>
       </div>
