@@ -27,6 +27,7 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm' }: {
   size?: 'sm' | 'md';
 }) {
   const [open, setOpen] = useState(false);
+  const [dropDown, setDropDown] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,12 +49,19 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm' }: {
     void enqueueWithToast(getTracks, position, context);
   }
 
-  const dim = size === 'sm' ? 'w-8 h-8' : 'w-9 h-9';
+  function toggleOpen() {
+    // у строк под шапкой поповеру нет места сверху — открываем вниз
+    if (!open && ref.current) setDropDown(ref.current.getBoundingClientRect().top < 170);
+    setOpen((o) => !o);
+  }
+
+  // хит-зона 44px при визуальном футпринте 32/36px (тач-таргет, как в wave-start-button)
+  const dim = size === 'sm' ? 'w-11 h-11 -m-1.5' : 'w-11 h-11 -m-1';
   return (
     <div ref={ref} className="relative shrink-0">
       <motion.button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggleOpen}
         aria-label="Действия с очередью"
         aria-expanded={open}
         whileTap={{ scale: 0.9 }}
@@ -66,11 +74,13 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm' }: {
         {open && (
           <motion.div
             role="menu"
-            initial={{ opacity: 0, y: 6, scale: 0.96 }}
+            initial={{ opacity: 0, y: dropDown ? -6 : 6, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.97 }}
+            exit={{ opacity: 0, y: dropDown ? -4 : 4, scale: 0.97 }}
             transition={spring.snappy}
-            className="absolute z-50 bottom-full mb-2 right-0 min-w-[184px] rounded-xl border border-white/12 bg-card/95 backdrop-blur-xl shadow-2xl shadow-black/40 p-1"
+            className={`absolute z-50 right-0 min-w-[184px] rounded-xl border border-white/12 bg-card/95 backdrop-blur-xl shadow-2xl shadow-black/40 p-1 ${
+              dropDown ? 'top-full mt-2' : 'bottom-full mb-2'
+            }`}
           >
             <MenuItem label="Играть следующим" icon="corner-down-right" onClick={() => pick('next')} />
             <MenuItem label="Добавить в очередь" icon="list-plus" onClick={() => pick('end')} />

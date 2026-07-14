@@ -419,19 +419,25 @@ export const controls = {
       controls.playQueue(tracks, { context });
       return dedupeQueue(tracks).length;
     }
+    const currentId = s.track.id;
     const { queue, inserted } = insertIntoQueue(s.queue, s.queueIndex, tracks, position);
     if (inserted === 0) return 0;
-    const patch: { queue: PlayerTrack[]; originalQueue?: PlayerTrack[] | null } = { queue };
-    if (s.shuffle && s.originalQueue) {
-      const origIndex = s.originalQueue.findIndex((t) => t.id === s.track!.id);
-      patch.originalQueue = insertIntoQueue(
-        s.originalQueue,
-        origIndex >= 0 ? origIndex : s.originalQueue.length - 1,
+    let originalQueue = s.originalQueue;
+    if (s.shuffle && originalQueue) {
+      const origIndex = originalQueue.findIndex((t) => t.id === currentId);
+      originalQueue = insertIntoQueue(
+        originalQueue,
+        origIndex >= 0 ? origIndex : originalQueue.length - 1,
         tracks,
         position,
       ).queue;
     }
-    usePlayerStore.getState()._setState(patch);
+    const capped = capLiveQueue(queue, s.queueIndex, originalQueue);
+    usePlayerStore.getState()._setState({
+      queue: capped.queue,
+      queueIndex: capped.queueIndex,
+      ...(s.shuffle && s.originalQueue ? { originalQueue: capped.originalQueue } : {}),
+    });
     return inserted;
   },
 

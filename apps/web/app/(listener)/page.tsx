@@ -58,7 +58,8 @@ export default async function HomePage() {
         </Suspense>
       )}
 
-      <Suspense fallback={<TrackListSkeleton title="Горячие треки" href="/releases" hrefLabel="Весь каталог" />}>
+      {/* rows = лимит getPopularTracks — иначе замена скелетона сдвигает всё ниже */}
+      <Suspense fallback={<TrackListSkeleton title="Горячие треки" rows={20} href="/releases" hrefLabel="Весь каталог" />}>
         <HotTracksSection />
       </Suspense>
 
