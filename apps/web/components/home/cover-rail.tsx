@@ -33,7 +33,7 @@ function Cell({ track, queue, index }: { track: PlayableChartTrack; queue: Playe
   }
 
   return (
-    <div className="flex-[1_0_8rem] max-w-[12rem] snap-start group">
+    <div className="flex-[1_0_8rem] max-w-[12rem] min-w-0 snap-start group">
       <button type="button" onClick={play} aria-label={`Слушать ${track.title}`} className="block w-full text-left">
         <span className="relative block aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 group-hover:ring-white/20 transition-all">
           {track.coverUrl && (
