@@ -27,7 +27,9 @@ interface FanLayer {
 }
 
 // только плоские 2D-трансформы (без 3D/blur/will-change) — иначе дрожит при скролле
-function buildFan(stack: string[]): FanLayer[] {
+export function buildFan(covers: string[]): FanLayer[] {
+  const stack = Array.from(new Set(covers)).slice(0, 3);
+  if (stack.length === 0) return [];
   if (stack.length === 1) {
     return [{ src: stack[0], rot: 0, dx: 0, z: 30 }];
   }
@@ -45,9 +47,9 @@ function buildFan(stack: string[]): FanLayer[] {
 }
 
 function CoverFan({ covers }: { covers: string[] }) {
-  const stack = covers.slice(0, 3);
+  const fan = buildFan(covers);
 
-  if (stack.length === 0) {
+  if (fan.length === 0) {
     return (
       <div className="absolute inset-0 grid place-items-center bg-linear-to-br from-white/[0.07] to-white/[0.01]">
         <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="opacity-20">
@@ -59,7 +61,7 @@ function CoverFan({ covers }: { covers: string[] }) {
 
   return (
     <div className="absolute inset-0">
-      {buildFan(stack).map((l, i) => (
+      {fan.map((l, i) => (
         <div
           key={i}
           // тень только у лицевой: box-shadow на повёрнутых обложках дорог при скролле

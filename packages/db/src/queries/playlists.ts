@@ -368,7 +368,7 @@ async function hydratePlaylists(rows: PlaylistMetaRow[]): Promise<EditorialPlayl
   const coversByPlaylist: Record<string, string[]> = {};
   for (const row of coverRows) {
     const list = (coversByPlaylist[row.playlistId] ??= []);
-    if (list.length < 4 && row.coverUrl) list.push(row.coverUrl);
+    if (list.length < 4 && row.coverUrl && !list.includes(row.coverUrl)) list.push(row.coverUrl);
   }
 
   // Сохраняем порядок входных rows (важно для приоритета показа).
