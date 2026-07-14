@@ -21,10 +21,12 @@ export async function enqueueWithToast(load: Loader, position: 'next' | 'end', c
   else toast(position === 'next' ? 'Будет следующим' : 'В очереди');
 }
 
-export function TrackQueueMenu({ getTracks, context, size = 'sm' }: {
+export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto' }: {
   getTracks: Loader;
   context: PlayContext;
   size?: 'sm' | 'md';
+  /** 'down' — внутри overflow-hidden контейнеров (peek-шит), где раскрытие вверх клипается. */
+  drop?: 'auto' | 'down';
 }) {
   const [open, setOpen] = useState(false);
   const [dropDown, setDropDown] = useState(false);
@@ -51,7 +53,7 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm' }: {
 
   function toggleOpen() {
     // у строк под шапкой поповеру нет места сверху — открываем вниз
-    if (!open && ref.current) setDropDown(ref.current.getBoundingClientRect().top < 170);
+    if (!open) setDropDown(drop === 'down' || (!!ref.current && ref.current.getBoundingClientRect().top < 170));
     setOpen((o) => !o);
   }
 

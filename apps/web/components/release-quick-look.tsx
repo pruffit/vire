@@ -237,7 +237,7 @@ export function ReleaseQuickLook({
             К релизу <Icon name="arrow-right" size={14} />
           </Link>
           <span className="ml-auto">
-            <TrackQueueMenu size="md" getTracks={() => load()} context={context} />
+            <TrackQueueMenu size="md" drop="down" getTracks={() => load()} context={context} />
           </span>
         </div>
 

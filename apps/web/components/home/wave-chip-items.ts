@@ -20,5 +20,14 @@ export function topWaveChips(moods: MoodChip[], genres: GenreCount[], cap = 8): 
     ...genres.map(({ genre, count }) => ({ item: { key: genre, label: GENRE_LABELS[genre], kind: 'genre' as const }, count })),
   ];
   all.sort((a, b) => b.count - a.count || a.item.label.localeCompare(b.item.label, 'ru'));
-  return all.slice(0, cap).map((e) => e.item);
+  // лейблы mood и genre пересекаются («Эмбиент») — два одинаковых чипа выглядят дублем
+  const seenLabels = new Set<string>();
+  const result: WaveChipItem[] = [];
+  for (const { item } of all) {
+    if (seenLabels.has(item.label)) continue;
+    seenLabels.add(item.label);
+    result.push(item);
+    if (result.length === cap) break;
+  }
+  return result;
 }

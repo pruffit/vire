@@ -27,4 +27,11 @@ describe('topWaveChips', () => {
     expect(chips.find((c) => c.key === 'ROCK')?.kind).toBe('genre');
     expect(chips.find((c) => c.key === 'DARK')?.kind).toBe('mood');
   });
+
+  it('совпадающие лейблы mood/genre («Эмбиент») не дублируются — выигрывает более популярный', () => {
+    const chips = topWaveChips([m('AMBIENT', 3)], [g('AMBIENT', 9), g('ROCK', 1)], 8);
+    const ambient = chips.filter((c) => c.label === 'Эмбиент');
+    expect(ambient).toHaveLength(1);
+    expect(ambient[0].kind).toBe('genre');
+  });
 });
