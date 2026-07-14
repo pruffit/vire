@@ -95,6 +95,13 @@
 - Навигация: `prev` (после 3с — перемотка в начало текущего трека, не переход),
   `next`.
 - Панель «Дальше» — drag-to-reorder, переход по клику на трек.
+- Вставка в живую очередь — `controls.enqueue(tracks, 'next' | 'end', context)`
+  (чистая `insertIntoQueue` в `lib/player/queue.ts`): треки, уже стоящие в очереди,
+  повторно не вставляются (возврат 0 → тост «Уже в очереди»); при shuffle вставка
+  зеркалится в `originalQueue`; после вставки очередь капается `capLiveQueue`;
+  при пустом плеере ведёт себя как `playQueue`. UI-вход — `TrackQueueMenu`
+  (`components/track-queue-menu.tsx`, кебаб на строках главной и в peek-шите
+  релиза, см. [home-feed](home-feed.md)).
 
 ### Повтор
 

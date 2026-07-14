@@ -12,7 +12,9 @@
 
 1. **Featured** — редакционный выбор (последний релиз), `FeaturedRelease`.
 2. **Поток** (всем) — сразу под баннером, «включи и слушай»: кнопка запуска
-   **Волны** + чипы настроений и чипы жанров (`getGenreCounts`), `FlowBlock`
+   **Волны** + один смешанный ряд чипов настроений и жанров — топ-8 по числу
+   треков (`topWaveChips`, mood и genre вперемешку, совпадающие лейблы вроде
+   «Эмбиент» дедуплицируются — выигрывает популярнее), `FlowBlock`
    (см. [wave](wave.md)).
 3. **Продолжить слушать** (вошедшим) — недавно играные треки, горизонтальный
    рейл обложек, `RecentRail` + `CoverRail` → `getRecentlyPlayed`.
@@ -38,9 +40,14 @@
 Свежие релизы артистов, на которых подписан текущий слушатель. Требует входа.
 
 ## Где код
-- **Главная:** `apps/web/app/(listener)/page.tsx` (SSR, всё грузится одним
-  `Promise.all`, каждый источник данных — с `.catch(() => [])`, чтобы одна
-  упавшая секция не роняла всю страницу)
+- **Главная:** `apps/web/app/(listener)/page.tsx` — RSC-стриминг: блокирующая
+  часть только hero + «Поток», остальные секции — async-компоненты
+  `app/(listener)/home-sections.tsx` за `<Suspense>` (общие данные шарятся через
+  React `cache()`; каждый источник — с `.catch(() => [])`, чтобы одна упавшая
+  секция не роняла страницу). Fallback-скелетоны (`components/home/skeletons.tsx`,
+  статичные, без анимаций — анти-джиттер) только у стабильно непустых секций
+  (Горячие/Свежие/Подборки/Артисты, размеры совпадают с контентом — без сдвига);
+  условно-пустые стримятся с `fallback={null}`.
 - **Лента:** `apps/web/app/feed/page.tsx` (+ `loading.tsx`)
 - **Играбельные модули:** `components/home/recent-rail.tsx` +
   `components/home/cover-rail.tsx` («Продолжить слушать»),
@@ -49,6 +56,11 @@
   `components/home/wave-chips.tsx` + `wave-chip-items.ts`),
   `components/track-list.tsx` (`PlayableTrackList` — общий играбельный
   список, используется в «Для тебя» и «Горячих треках»)
+- **Очередь с карточек:** `components/track-queue-menu.tsx` — кебаб-меню
+  «Играть следующим»/«Добавить в очередь» на строках треков главной и в
+  peek-шите релиза (`release-quick-look.tsx`, там `drop="down"` — раскрытие
+  вверх клипается overflow-hidden шита); движок — `controls.enqueue`
+  (см. [player](player.md))
 - **Карточки:** `components/featured-release.tsx`, `release-quick-look.tsx`,
   `editorial-playlist-card.tsx`, `artist-hover-chip.tsx`, `listening-now.tsx`,
   `wave-start-button.tsx`
