@@ -1,8 +1,8 @@
 import { Section } from '@/components/listener/section';
 
-function CoverCard({ width, round }: { width: string; round?: boolean }) {
+function CoverCard({ cardWidth, round }: { cardWidth: string; round?: boolean }) {
   return (
-    <div className={`shrink-0 ${width} space-y-2.5`} aria-hidden="true">
+    <div className={`${cardWidth} space-y-2.5`} aria-hidden="true">
       <div className={`aspect-square bg-foreground/[0.04] ${round ? 'rounded-full' : 'rounded-md'}`} />
       <div className="h-3.5 w-3/4 rounded bg-foreground/[0.04]" />
       <div className="h-3 w-1/2 rounded bg-foreground/[0.04]" />
@@ -21,7 +21,7 @@ export function RailSkeleton({ title, cardWidth, count = 8, href, hrefLabel, rou
   return (
     <Section title={title} href={href} hrefLabel={hrefLabel}>
       <div className="flex gap-5 overflow-hidden">
-        {Array.from({ length: count }, (_, i) => <CoverCard key={i} width={cardWidth} round={round} />)}
+        {Array.from({ length: count }, (_, i) => <CoverCard key={i} cardWidth={cardWidth} round={round} />)}
       </div>
     </Section>
   );

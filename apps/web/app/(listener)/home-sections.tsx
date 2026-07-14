@@ -56,7 +56,7 @@ export async function FeedSection({ userId }: { userId: string }) {
     <Section title="Новое у подписок">
       <ScrollRow bleedClassName="-mx-1" className="flex gap-5 px-1 snap-x">
         {feed.slice(0, 12).map((r) => (
-          <div key={r.id} className="shrink-0 w-40 snap-start">
+          <div key={r.id} className="flex-[1_0_10rem] max-w-[14rem] snap-start">
             <ReleaseQuickLook release={r} />
           </div>
         ))}
@@ -86,7 +86,7 @@ export async function FreshReleasesSection() {
       {/* -my/py: overflow-x-auto клипает и по Y — иначе hover-тень карточек срезается */}
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {rest.map((r) => (
-          <div key={r.id} className="shrink-0 w-48 snap-start">
+          <div key={r.id} className="flex-[1_0_12rem] max-w-[14rem] snap-start">
             <ReleaseQuickLook release={r} />
           </div>
         ))}
@@ -102,7 +102,7 @@ export async function UpcomingSection() {
     <Section title="Скоро выйдет" count={upcoming.length}>
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {upcoming.map((r) => (
-          <div key={r.id} className="shrink-0 w-40 snap-start">
+          <div key={r.id} className="flex-[1_0_10rem] max-w-[14rem] snap-start">
             <ReleaseQuickLook release={r} upcoming />
           </div>
         ))}
@@ -140,7 +140,7 @@ export async function PlaylistsSection({ userId }: { userId?: string }) {
     <Section title="Подборки" count={allPlaylists.length}>
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {allPlaylists.map((p) => (
-          <div key={p.id} className="shrink-0 w-40 snap-start">
+          <div key={p.id} className="flex-[1_0_10rem] max-w-[14rem] snap-start">
             <EditorialPlaylistCard playlist={p} liked={likedPlaylistIds.includes(p.id)} />
           </div>
         ))}
@@ -157,7 +157,7 @@ export async function ArtistsSection() {
     <Section title="Артисты" count={topArtists.length} href="/artists" hrefLabel="Все артисты">
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {topArtists.map((a) => (
-          <div key={a.id} className="shrink-0 w-28 snap-start">
+          <div key={a.id} className="flex-[1_0_7rem] max-w-[11rem] snap-start">
             <ArtistHoverChip artist={a} />
           </div>
         ))}

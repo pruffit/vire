@@ -33,11 +33,11 @@ function Cell({ track, queue, index }: { track: PlayableChartTrack; queue: Playe
   }
 
   return (
-    <div className="shrink-0 w-32 snap-start group">
+    <div className="flex-[1_0_8rem] max-w-[12rem] snap-start group">
       <button type="button" onClick={play} aria-label={`Слушать ${track.title}`} className="block w-full text-left">
         <span className="relative block aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 group-hover:ring-white/20 transition-all">
           {track.coverUrl && (
-            <Image src={track.coverUrl} alt={track.title} fill quality={60} sizes="128px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
+            <Image src={track.coverUrl} alt={track.title} fill quality={60} sizes="(max-width: 640px) 33vw, 192px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
           )}
           <span className="absolute inset-0 grid place-items-center bg-black/0 group-hover:bg-black/25 transition-colors">
             <span className="opacity-0 group-hover:opacity-100 grid place-items-center w-10 h-10 rounded-full bg-black/70 ring-1 ring-white/30 text-white transition-opacity">

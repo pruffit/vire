@@ -63,7 +63,7 @@ export default async function HomePage() {
         <HotTracksSection />
       </Suspense>
 
-      <Suspense fallback={<RailSkeleton title="Свежие релизы" cardWidth="w-48" href="/releases" hrefLabel="Посмотреть все" />}>
+      <Suspense fallback={<RailSkeleton title="Свежие релизы" cardWidth="flex-[1_0_12rem] max-w-[14rem]" href="/releases" hrefLabel="Посмотреть все" />}>
         <FreshReleasesSection />
       </Suspense>
 
@@ -75,11 +75,11 @@ export default async function HomePage() {
         <ListeningNowSection />
       </Suspense>
 
-      <Suspense fallback={<RailSkeleton title="Подборки" cardWidth="w-40" />}>
+      <Suspense fallback={<RailSkeleton title="Подборки" cardWidth="flex-[1_0_10rem] max-w-[14rem]" />}>
         <PlaylistsSection userId={userId} />
       </Suspense>
 
-      <Suspense fallback={<RailSkeleton title="Артисты" cardWidth="w-28" href="/artists" hrefLabel="Все артисты" round />}>
+      <Suspense fallback={<RailSkeleton title="Артисты" cardWidth="flex-[1_0_7rem] max-w-[11rem]" href="/artists" hrefLabel="Все артисты" round />}>
         <ArtistsSection />
       </Suspense>
 
