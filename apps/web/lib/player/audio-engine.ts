@@ -1,7 +1,7 @@
 import type HlsType from 'hls.js';
 import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
 import { getSessionId } from '@/lib/session-id';
-import { dedupeQueue, shuffleOn, shuffleOff, nextQueueIndex, capLiveQueue } from '@/lib/player/queue';
+import { dedupeQueue, shuffleOn, shuffleOff, nextQueueIndex, capLiveQueue, insertIntoQueue } from '@/lib/player/queue';
 import { fetchManifest } from '@/lib/player/manifest-cache';
 import { needsWaveFetch, fetchWaveTracks } from '@/lib/player/wave-buffer';
 
@@ -410,6 +410,29 @@ export const controls = {
 
     usePlayerStore.getState()._setState(patch);
     playAt(queue, index);
+  },
+
+  /** Вставка в живую очередь; при пустом плеере ведёт себя как playQueue. */
+  enqueue(tracks: PlayerTrack[], position: 'next' | 'end', context: PlayContext): number {
+    const s = usePlayerStore.getState();
+    if (!s.track || s.queue.length === 0) {
+      controls.playQueue(tracks, { context });
+      return dedupeQueue(tracks).length;
+    }
+    const { queue, inserted } = insertIntoQueue(s.queue, s.queueIndex, tracks, position);
+    if (inserted === 0) return 0;
+    const patch: { queue: PlayerTrack[]; originalQueue?: PlayerTrack[] | null } = { queue };
+    if (s.shuffle && s.originalQueue) {
+      const origIndex = s.originalQueue.findIndex((t) => t.id === s.track!.id);
+      patch.originalQueue = insertIntoQueue(
+        s.originalQueue,
+        origIndex >= 0 ? origIndex : s.originalQueue.length - 1,
+        tracks,
+        position,
+      ).queue;
+    }
+    usePlayerStore.getState()._setState(patch);
+    return inserted;
   },
 
   /** Toggle-if-current: пауза/плей у уже загруженного трека; для чужого id — no-op. */

@@ -15,6 +15,7 @@ import { featuredNames } from '@/lib/track-display';
 import { TrackTitleText } from '@/components/track-title';
 import { Icon } from '@/components/icon';
 import { toast } from '@/lib/toast';
+import { TrackQueueMenu } from '@/components/track-queue-menu';
 import { QuickLookSheet, QuickLookDragHandle, MiniEq } from './quick-look-sheet';
 
 export interface QuickLookRelease {
@@ -235,6 +236,9 @@ export function ReleaseQuickLook({
           <Link href={releaseHref} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
             К релизу <Icon name="arrow-right" size={14} />
           </Link>
+          <span className="ml-auto">
+            <TrackQueueMenu size="md" getTracks={() => load()} context={context} />
+          </span>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 pb-3" data-scroll-area>

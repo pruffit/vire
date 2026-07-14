@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fisherYates, shuffleOn, shuffleOff, dedupeQueue, nextQueueIndex, capLiveQueue, LIVE_QUEUE_LIMIT } from './queue';
+import { fisherYates, shuffleOn, shuffleOff, dedupeQueue, nextQueueIndex, capLiveQueue, LIVE_QUEUE_LIMIT, insertIntoQueue } from './queue';
 import type { PlayerTrack } from '@/store/player';
 
 function track(id: string): PlayerTrack {
@@ -181,5 +181,40 @@ describe('capLiveQueue', () => {
     expect(result.originalQueue!.length).toBeLessThanOrEqual(LIVE_QUEUE_LIMIT);
     // Фолбэк на index 0 — окно original начинается с его начала.
     expect(result.originalQueue![0]?.id).toBe('o0');
+  });
+});
+
+describe('insertIntoQueue', () => {
+  const t = (id: string) => track(id);
+  const queue = [t('1'), t('2'), t('3')];
+
+  it('next вставляет сразу после текущего', () => {
+    const r = insertIntoQueue(queue, 0, [t('9')], 'next');
+    expect(r.queue.map((x) => x.id)).toEqual(['1', '9', '2', '3']);
+    expect(r.inserted).toBe(1);
+  });
+
+  it('end добавляет в конец', () => {
+    const r = insertIntoQueue(queue, 1, [t('9'), t('8')], 'end');
+    expect(r.queue.map((x) => x.id)).toEqual(['1', '2', '3', '9', '8']);
+    expect(r.inserted).toBe(2);
+  });
+
+  it('уже стоящие в очереди не дублируются', () => {
+    const r = insertIntoQueue(queue, 0, [t('2'), t('9')], 'next');
+    expect(r.queue.map((x) => x.id)).toEqual(['1', '9', '2', '3']);
+    expect(r.inserted).toBe(1);
+  });
+
+  it('всё уже в очереди — inserted 0, очередь та же по ссылке', () => {
+    const r = insertIntoQueue(queue, 0, [t('2')], 'next');
+    expect(r.inserted).toBe(0);
+    expect(r.queue).toBe(queue);
+  });
+
+  it('дубли внутри входа схлопываются', () => {
+    const r = insertIntoQueue(queue, 2, [t('9'), t('9')], 'next');
+    expect(r.queue.map((x) => x.id)).toEqual(['1', '2', '3', '9']);
+    expect(r.inserted).toBe(1);
   });
 });

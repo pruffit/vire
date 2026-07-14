@@ -8,6 +8,7 @@ import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { TrackRow } from '@/components/track-row';
 import { formatCount } from '@/lib/format';
 import { PlayerLikeButton } from './player-like-button';
+import { TrackQueueMenu } from './track-queue-menu';
 
 export interface PlayableTrackItem {
   id: string;
@@ -88,6 +89,9 @@ function Row({
             )}
             <span className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
               <PlayerLikeButton trackId={track.id} size="sm" />
+            </span>
+            <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+              <TrackQueueMenu getTracks={() => [queue[index]]} context={context} />
             </span>
           </>
         }

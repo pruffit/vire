@@ -95,6 +95,20 @@ export function shuffleOff(
   return { queue: original, index: index >= 0 ? index : 0 };
 }
 
+/** Вставка в очередь без дублей: треки, уже стоящие в ней, не вставляются повторно. */
+export function insertIntoQueue(
+  queue: PlayerTrack[],
+  queueIndex: number,
+  tracks: PlayerTrack[],
+  position: 'next' | 'end',
+): { queue: PlayerTrack[]; inserted: number } {
+  const existing = new Set(queue.map((t) => t.id));
+  const incoming = dedupeQueue(tracks).filter((t) => !existing.has(t.id));
+  if (incoming.length === 0) return { queue, inserted: 0 };
+  const at = position === 'next' ? Math.min(queueIndex + 1, queue.length) : queue.length;
+  return { queue: [...queue.slice(0, at), ...incoming, ...queue.slice(at)], inserted: incoming.length };
+}
+
 /** Убирает дубликаты по id, первое вхождение выигрывает. */
 export function dedupeQueue(tracks: PlayerTrack[]): PlayerTrack[] {
   const seen = new Set<string>();
