@@ -16,17 +16,6 @@ const ERROR_TEXT: Record<WaveChipItem['kind'], string> = {
   genre: 'Не удалось запустить поток по жанру',
 };
 
-/** Подписанный ряд чипов волны — используется и для настроений, и для жанров. */
-export function WaveChipRow({ title, items }: { title: string; items: WaveChipItem[] }) {
-  if (items.length === 0) return null;
-  return (
-    <div className="space-y-2.5">
-      <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground">{title}</p>
-      <WaveChips items={items} />
-    </div>
-  );
-}
-
 /** Ряд чипов: клик по чипу запускает волну с этим mood/genre как seed. */
 export function WaveChips({ items }: { items: WaveChipItem[] }) {
   const waveSeed = usePlayerStore((s) => s.waveSeed);
