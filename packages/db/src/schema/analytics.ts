@@ -20,9 +20,8 @@ export const playEvents = pgTable('play_events', {
   index('play_events_user_id_idx').on(t.userId),
 ]);
 
-// Ежедневный снапшот платформы: тоталы невосстановимы задним числом (unlike/unfollow/
-// удаление стирают строки), поэтому история переживает удаления. plays/listeners — за
-// этот день, остальное — тоталы на конец дня. Пишет apps/worker (metrics-daily, 00:10 МСК).
+// Ежедневный снапшот платформы (тоталы невосстановимы задним числом) —
+// см. docs/features/platform-metrics.md.
 export const platformMetricsDaily = pgTable('platform_metrics_daily', {
   day: date('day').primaryKey(),
   users: integer('users').notNull().default(0),

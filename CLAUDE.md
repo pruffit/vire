@@ -243,7 +243,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 
 ### Фундамент
 - [x] Монорепо (Turborepo + pnpm), docker-compose (postgres/redis/minio)
-- [x] `packages/db` — Drizzle схема + миграции 0000–0033
+- [x] `packages/db` — Drizzle схема + миграции 0000–0036
 - [x] `packages/core` — Result<T,E>, domain types, сервисы (Artist/Release/Track,
   Follow/ListenerTrack/TrackMoods/Playlist, ArtistPost/SmartLink, Wave/Search/Presave,
   Auth, Purchase), репозитории
@@ -316,7 +316,9 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   **система** (пинг Postgres/Redis, live-слушатели, BullMQ-очереди с ошибками — `lib/admin-health.ts`);
   аудитория/каталог (юзеры по ролям, артисты, релизы/треки по статусам); вовлечённость
   (прослушивания 24ч/7д/30д, уник. слушатели, лайки/подписки/плейлисты/посты/теги/моменты)
-- [x] `/admin/analytics` — динамика прослушиваний по дням (14д), топ треков/артистов за 30д
+- [x] `/admin/analytics` — динамика прослушиваний по дням (14д), топ треков/артистов за 30д;
+  история платформы из `platform_metrics_daily` (ежедневный снапшот-воркер `metrics-daily`,
+  графики роста 30/90/180д — `docs/features/platform-metrics.md`)
 - [x] `/admin/users` (смена роли + верификация, форма «Создать артиста» по email),
   `/admin/artists` (фолловеры/релизы/прослушивания, верификация + скрытие с витрины isActive),
   `/admin/tracks` (аудио-характеристики, прослушивания, лайки, маркер `!hls`),
@@ -347,7 +349,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Скачивание FLAC по presigned S3 URL
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
-### Тесты (apps/web — 689, гонять `pnpm --filter @vire/web test`)
+### Тесты (apps/web — 751, гонять `pnpm --filter @vire/web test`)
 - [x] `packages/core` — сервисы artist/release/track, follow/listener-track/track-moods/playlist, Result/errors (Vitest)
 - [x] `apps/web/lib` — `embed` (YouTube/VK), `upload` (валидация), `format`, `structured-data` (JSON-LD билдеры)
 - [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),
@@ -368,7 +370,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 Открытый бэклог — в `docs/roadmap/TODO.md` (Observability/Sentry — отложено до апгрейда
 VPS, контент-SEO) и `docs/roadmap/stage-2.md` (второй виток); Этап 2 — только по команде:
 1. **YooKassa боевая настройка** — по команде
-2. Открытые хвосты stage-2: §9.1 (тема артиста в админке)
+2. Открытые хвосты stage-2: §1.3 (импорты), §1.8 (комментарии), §7.2 (editorial)
 
 Сделано в доводке:
 - Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)

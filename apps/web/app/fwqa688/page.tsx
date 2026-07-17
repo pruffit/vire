@@ -28,11 +28,15 @@ export default function SecretPage() {
   }, []);
 
   useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
     const pulse = setInterval(() => {
       setGlitch(true);
-      setTimeout(() => setGlitch(false), 120);
+      t = setTimeout(() => setGlitch(false), 120);
     }, 4000);
-    return () => clearInterval(pulse);
+    return () => {
+      clearInterval(pulse);
+      clearTimeout(t);
+    };
   }, []);
 
   useEffect(() => {
@@ -41,12 +45,16 @@ export default function SecretPage() {
   }, [progress]);
 
   useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
     const pulse = setInterval(() => {
       const noise = String(Math.floor(Math.random() * 100)).padStart(2, '0');
       setProgressNoise(noise);
-      setTimeout(() => setProgressNoise(null), 150);
+      t = setTimeout(() => setProgressNoise(null), 150);
     }, 6200);
-    return () => clearInterval(pulse);
+    return () => {
+      clearInterval(pulse);
+      clearTimeout(t);
+    };
   }, []);
 
   const progressLabel = progressNoise

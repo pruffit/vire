@@ -43,6 +43,48 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
   );
 }
 
+// ─── Общий бар-ряд ─────────────────────────────────────────────────────────
+
+function BarRow({
+  bars,
+  max,
+  minPct,
+  valueLabel,
+  className,
+}: {
+  bars: { key: string; value: number; title: string }[];
+  max: number;
+  minPct: number;
+  valueLabel: 'each' | 'last';
+  className: string;
+}) {
+  return (
+    <div className={`flex items-end ${className}`}>
+      {bars.map((b, i) => {
+        const h = b.value === 0 ? 2 : Math.max(minPct, Math.round((b.value / max) * 100));
+        const showValue = valueLabel === 'each' || i === bars.length - 1;
+        return (
+          <div key={b.key} className="group relative flex-1 h-full flex items-end min-w-0" title={b.title}>
+            <div
+              className="w-full rounded-sm bg-foreground/30 group-hover:bg-foreground/55 transition-colors"
+              style={{ height: `${h}%` }}
+            />
+            {showValue && (
+              <span
+                className={`absolute -top-4 text-[10px] font-mono text-foreground/60 tabular-nums opacity-0 group-hover:opacity-100 transition-opacity ${
+                  valueLabel === 'each' ? 'left-1/2 -translate-x-1/2' : 'right-0'
+                }`}
+              >
+                {b.value}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Динамика по дням ──────────────────────────────────────────────────────
 
 function DailyChart({ daily }: { daily: AdminDailyPlays[] }) {
@@ -60,26 +102,17 @@ function DailyChart({ daily }: { daily: AdminDailyPlays[] }) {
     >
       <Panel className="p-5">
         {/* h-36 задаёт явную высоту ряда — иначе height:% столбцов схлопывается */}
-        <div className="flex items-end gap-1.5 h-36">
-          {daily.map((d) => {
-            const h = d.plays === 0 ? 2 : Math.max(6, Math.round((d.plays / max) * 100));
-            return (
-              <div
-                key={d.day}
-                className="group relative flex-1 h-full flex items-end min-w-0"
-                title={`${d.day}: ${d.plays} прослушиваний, ${d.listeners} слушателей`}
-              >
-                <div
-                  className="w-full rounded-sm bg-foreground/30 group-hover:bg-foreground/55 transition-colors"
-                  style={{ height: `${h}%` }}
-                />
-                <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] font-mono text-foreground/60 tabular-nums opacity-0 group-hover:opacity-100 transition-opacity">
-                  {d.plays}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        <BarRow
+          className="gap-1.5 h-36"
+          minPct={6}
+          valueLabel="each"
+          bars={daily.map((d) => ({
+            key: d.day,
+            value: d.plays,
+            title: `${d.day}: ${d.plays} прослушиваний, ${d.listeners} слушателей`,
+          }))}
+          max={max}
+        />
         <div className="flex gap-1.5 mt-1.5">
           {daily.map((d) => (
             <span key={d.day} className="flex-1 text-center text-[10px] font-mono text-foreground/30 tabular-nums">
@@ -179,7 +212,15 @@ function TopArtists({ artists }: { artists: AdminTopArtist[] }) {
 
 // ─── История платформы ─────────────────────────────────────────────────────
 
+// на 90/180д бары по дням вырождаются в ~1px на мобилке — прореживаем до недельных точек
+function thinToWeeks(history: PlatformMetricsDay[]): PlatformMetricsDay[] {
+  const out: PlatformMetricsDay[] = [];
+  for (let i = history.length - 1; i >= 0; i -= 7) out.unshift(history[i]);
+  return out;
+}
+
 function PlatformHistory({ history, days }: { history: PlatformMetricsDay[]; days: HistoryDays }) {
+  const points = days > 30 ? thinToWeeks(history) : history;
   return (
     <Section
       label="История платформы"
@@ -199,9 +240,9 @@ function PlatformHistory({ history, days }: { history: PlatformMetricsDay[]; day
         </Panel>
       ) : (
         <div className="grid lg:grid-cols-3 gap-4">
-          <GrowthChart title="Пользователи" points={history} field="users" />
-          <GrowthChart title="Лайки" points={history} field="likesTotal" />
-          <GrowthChart title="Подписки" points={history} field="followsTotal" />
+          <GrowthChart title="Пользователи" points={points} field="users" />
+          <GrowthChart title="Лайки" points={points} field="likesTotal" />
+          <GrowthChart title="Подписки" points={points} field="followsTotal" />
         </div>
       )}
     </Section>
@@ -229,28 +270,18 @@ function GrowthChart({
         <SectionLabel>{title}</SectionLabel>
         <span className="font-mono text-sm text-foreground/75 tabular-nums">{latest.toLocaleString('ru-RU')}</span>
       </div>
-      <div className="mt-3 flex items-end gap-px h-24">
-        {points.map((p, i) => {
-          const v = p[field];
-          const h = v === 0 ? 2 : Math.max(4, Math.round((v / max) * 100));
-          return (
-            <div
-              key={p.day}
-              className="group relative flex-1 h-full flex items-end min-w-0"
-              title={`${p.day}: ${v.toLocaleString('ru-RU')}`}
-            >
-              <div
-                className="w-full rounded-[1px] bg-foreground/30 group-hover:bg-foreground/55 transition-colors"
-                style={{ height: `${h}%` }}
-              />
-              {i === points.length - 1 && (
-                <span className="absolute -top-4 right-0 text-[10px] font-mono text-foreground/60 tabular-nums opacity-0 group-hover:opacity-100 transition-opacity">
-                  {v}
-                </span>
-              )}
-            </div>
-          );
-        })}
+      <div className="mt-3 h-24">
+        <BarRow
+          className="gap-px h-full"
+          minPct={4}
+          valueLabel="last"
+          bars={points.map((p) => ({
+            key: p.day,
+            value: p[field],
+            title: `${p.day}: ${p[field].toLocaleString('ru-RU')}`,
+          }))}
+          max={max}
+        />
       </div>
       {first && last && (
         <div className="mt-1.5 flex justify-between text-[10px] font-mono text-foreground/30 tabular-nums">

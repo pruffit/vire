@@ -12,10 +12,8 @@ CREATE TABLE "platform_metrics_daily" (
 	"posts_total" integer DEFAULT 0 NOT NULL
 );
 --> statement-breakpoint
--- Бэкфил истории до первого прогона снапшот-джобы: кумулятивные тоталы на конец дня
--- по created_at (releases — по published_at, tracks_ready — по текущему статусу+updated_at,
--- точной истории статусов нет), plays/listeners за день из play_events. Удалённые
--- лайки/подписки/плейлисты не восстановить — принятая погрешность (см. docs/features/platform-metrics.md).
+-- Бэкфил истории до первого прогона снапшот-джобы; погрешности источников —
+-- docs/features/platform-metrics.md.
 INSERT INTO "platform_metrics_daily" (
   "day", "users", "artists", "releases_published", "tracks_ready",
   "plays", "listeners", "likes_total", "follows_total", "playlists_total", "posts_total"
