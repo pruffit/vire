@@ -33,9 +33,8 @@ export async function PUT(req: Request, { params }: Params) {
   return NextResponse.json({ ok: true });
 }
 
-// NotFoundError сливает Playlist и Track — различаем текст по message для 1:1 с прежним API.
-function addTrackErrorText(error: Error): string {
-  return error.message.startsWith('Track') ? 'Track not found' : 'Not found';
+function addTrackErrorText(error: NotFoundError): string {
+  return error.resource === 'Track' ? 'Track not found' : 'Not found';
 }
 
 export async function POST(req: Request, { params }: Params) {
@@ -49,9 +48,10 @@ export async function POST(req: Request, { params }: Params) {
 
   const result = await playlistService().addTrack(id, session.user.id, parsed.data.trackId);
   if (!result.ok) {
-    const status = result.error instanceof NotFoundError ? 404 : 403;
-    const error = status === 404 ? addTrackErrorText(result.error) : 'Forbidden';
-    return NextResponse.json({ error }, { status });
+    if (result.error instanceof NotFoundError) {
+      return NextResponse.json({ error: addTrackErrorText(result.error) }, { status: 404 });
+    }
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   return NextResponse.json({ ok: true });
 }

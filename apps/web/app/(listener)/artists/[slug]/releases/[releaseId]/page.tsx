@@ -15,6 +15,7 @@ import { GrainOverlay } from '@/components/grain-overlay';
 import { AmbientBackdrop } from '@/components/ambient-backdrop';
 import { musicAlbumJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
 import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
+import { releaseMetaDescription } from '@/lib/meta-descriptions';
 import { artistFontStyle } from '@/lib/fonts';
 import { GENRE_LABELS } from '@/lib/genres';
 import { Icon } from '@/components/icon';
@@ -49,9 +50,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await getPageData(slug, releaseId);
   if (!data) return { title: 'Не найдено' };
 
-  const { artist, release } = data;
+  const { artist, release, tracks } = data;
   const url = `/artists/${slug}/releases/${releaseId}`;
-  const description = release.description ?? `${release.title} — релиз ${artist.name} на Vire.`;
+  const description = release.description ?? releaseMetaDescription({
+    title: release.title,
+    artistName: artist.name,
+    type: release.type,
+    year: releaseYear(release.releaseDate),
+    trackCount: tracks.length,
+  });
   return {
     title: `${release.title} — ${artist.name}`,
     description,

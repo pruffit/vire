@@ -69,10 +69,12 @@ API-роуты логируют через `console.error` без контекс
 - rate-limit стоит на `DELETE /api/v1/playlists/[id]/like`, на `DELETE /api/v1/tracks/[id]/like` — нет
 - `PlaylistService.like`/`unlike` не проверяют существование плейлиста
 
-### `addTrackErrorText` различает ошибки по тексту сообщения
-`apps/web/app/api/v1/playlists/[id]/tracks/route.ts` выбирает текст 404 по
-`error.message.startsWith('Track')` — сломается молча при смене формата сообщения.
-Фикс: структурное поле `resource` в `NotFoundError` (`packages/core/src/errors.ts`).
+### ✅ `addTrackErrorText` различал ошибки по тексту сообщения — закрыто
+Было: `apps/web/app/api/v1/playlists/[id]/tracks/route.ts` выбирал текст 404 по
+`error.message.startsWith('Track')` — хрупко при смене формата сообщения. Закрыто
+(17.07.2026): в `NotFoundError` добавлено структурное поле `resource`
+(`packages/core/src/errors.ts`), роут различает по `error.resource === 'Track'`.
+Тексты/коды ответов 1:1.
 
 ### `DrizzlePlaylistRepository.create` синтезирует поля `PlaylistSummary`
 `packages/db/src/repositories/playlist.ts` возвращает выдуманные `visibility`/`trackCount`/даты,

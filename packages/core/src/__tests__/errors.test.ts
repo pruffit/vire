@@ -57,6 +57,12 @@ describe('NotFoundError', () => {
     const error = new NotFoundError('X', 'y');
     expect(error).toBeInstanceOf(Error);
   });
+
+  it('exposes the resource it was constructed with', () => {
+    expect(new NotFoundError('Track', 't1').resource).toBe('Track');
+    expect(new NotFoundError('Playlist', 'p1').resource).toBe('Playlist');
+    expect(new NotFoundError('SomeArbitraryThing', 'x').resource).toBe('SomeArbitraryThing');
+  });
 });
 
 describe('ConflictError', () => {

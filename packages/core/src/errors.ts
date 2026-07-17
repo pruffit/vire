@@ -7,9 +7,11 @@ export const err = <E>(error: E): Err<E> => ({ ok: false, error });
 
 export class NotFoundError extends Error {
   readonly _tag = 'NotFoundError' as const;
+  readonly resource: string;
   constructor(resource: string, id: string) {
     super(`${resource} not found: ${id}`);
     this.name = 'NotFoundError';
+    this.resource = resource;
   }
 }
 

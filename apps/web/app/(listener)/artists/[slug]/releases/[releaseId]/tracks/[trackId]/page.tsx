@@ -23,7 +23,8 @@ import { LiveListeners } from '@/components/live-listeners';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { AmbientBackdrop } from '@/components/ambient-backdrop';
 import { countListening } from '@/lib/presence';
-import { formatDuration } from '@/lib/format';
+import { formatDuration, releaseYear } from '@/lib/format';
+import { trackMetaDescription } from '@/lib/meta-descriptions';
 import { artistFontStyle } from '@/lib/fonts';
 import { SectionHeader } from '@/components/section-header';
 import { TrackLyrics } from './track-lyrics';
@@ -60,7 +61,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { artist, release, track } = data;
   const url = `/artists/${slug}/releases/${releaseId}/tracks/${trackId}`;
   const fullTitle = displayTrackTitle(track.title, { version: track.version, credits: track.credits });
-  const description = `${fullTitle} · ${release.title} — ${artist.name} на Vire.`;
+  const description = trackMetaDescription({
+    trackTitle: fullTitle,
+    releaseTitle: release.title,
+    artistName: artist.name,
+    year: releaseYear(release.releaseDate),
+  });
   return {
     title: `${fullTitle} — ${artist.name}`,
     description,
