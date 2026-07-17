@@ -38,6 +38,9 @@ export async function DELETE(_req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const rl = await rateLimit(`unlike:${session.user.id}`, 60, 60);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
+
   const { id } = await params;
   await listenerTrackService().unlike(session.user.id, id);
   return NextResponse.json({ liked: false });

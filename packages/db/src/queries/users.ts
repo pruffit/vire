@@ -257,12 +257,12 @@ export async function tryClaimOAuthAccount(
   return true;
 }
 
-/** Найти пользователя по ID, для jwt callback при привязке аккаунта. */
+/** Найти пользователя по ID — для jwt callback (привязка аккаунта + refresh роли/identity). */
 export async function getUserById(
   userId: string,
-): Promise<{ id: string; role: string } | null> {
+): Promise<{ id: string; role: string; name: string | null; image: string | null } | null> {
   const [row] = await db
-    .select({ id: users.id, role: users.role })
+    .select({ id: users.id, role: users.role, name: users.name, image: users.image })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);

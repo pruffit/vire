@@ -6,7 +6,8 @@ import { sendMail } from '@/lib/mailer';
 import { compare } from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
-import { db, findUserByEmail, tryClaimOAuthAccount } from '@vire/db';
+import { db, findUserByEmail, tryClaimOAuthAccount, getUserById } from '@vire/db';
+import { applyJwt, isNodeRuntime, type JwtLike } from '@/lib/jwt-refresh';
 import { accounts, sessions, verificationTokens, users } from '@vire/db/schema';
 
 export type UserRole = 'LISTENER' | 'ARTIST' | 'VIEWER' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
@@ -135,11 +136,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true;
     },
 
-    jwt({ token, user }) {
-      if (user) {
-        token.id = user.id as string;
-        token.role = user.role as UserRole;
-      }
+    async jwt({ token, user }) {
+      await applyJwt(token as JwtLike, user ? { id: user.id as string, role: user.role as UserRole } : undefined, {
+        now: Date.now(),
+        isNode: isNodeRuntime(),
+        loadUser: getUserById,
+      });
       return token;
     },
 

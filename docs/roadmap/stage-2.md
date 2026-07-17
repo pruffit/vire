@@ -50,7 +50,12 @@
 - **1.4 Типы из zod** ✅ — `any` без причины вычищен: 2 осознанных каста в `moods`/`genres` роутах (рассинхрон zod↔сигнатура `setTrackMoods`/`setTrackGenres`) типизированы через `[Mood, ...Mood[]]`/`[TrackGenre, ...TrackGenre[]]`, `eslint-disable` снят.
 - **1.5 Тесты** `[новое]` — поднять покрытие; в т.ч. непокрытые роуты этапа 2 (purchase/webhook).
 - **1.6 Производительность и бандл** `[частично]` — продолжить линию PageSpeed (динамические импорты, кэш картинок, LCP); ревизия тяжёлых зависимостей.
-- **1.7 Техдолг** `[новое]` — разобрать [`../foundation/TECHNICAL_DEBT.md`](../foundation/TECHNICAL_DEBT.md): JWT без refresh, `'unsafe-inline'` в CSP, retry в воркере, прямые инсерты `play_events`, и т.д.
+- **1.7 Техдолг** `[частично]` — разобрать [`../foundation/TECHNICAL_DEBT.md`](../foundation/TECHNICAL_DEBT.md).
+  ✅ закрыто: прямые инсерты `play_events` (очередь), retry воркера, **JWT refresh** (bounded
+  Node-refresh роли/identity, TTL 5 мин — 17.07.2026), rate-limit на `DELETE .../like`. Идемпотентные
+  DELETE-асимметрии помечены намеренными (корректный REST). 🔜 остаётся с причиной: `'unsafe-inline'`
+  в CSP (framework-блок: nonce → dynamic rendering, регресс LCP), `request_id`-корреляция (ждёт
+  Sentry/апгрейда VPS).
 - **1.8 Чистка избыточных комментариев** ✅ — убрать комменты, пересказывающие код; оставлять только неочевидное «почему» (quirks). ✅ **дашборд и админка** (v1.5.2), ✅ **главная** (13.07.2026), ✅ **остальной фронт и пакеты** (17.07.2026): `apps/web/components/**` (55 файлов), `apps/web/lib/**`+store, `packages/db`/`core`/`ui`, `app/admin/actions.ts` — итого 76 файлов, −273 строки (декоративные `───`-разделители, JSX-лейблы секций, «что»-JSDoc). Оставлены quirks (hls.js/ioredis-грабли, scroll-jitter, RSC-сериализация, layout-shell, тач-таргеты, форматы LRC/Camelot), директивы и навигационные ярлыки в 400-элементном genre-enum.
 
 ---

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextResponse } from 'next/server';
 
 const { trackExists, getLikeState, like, unlike } = vi.hoisted(() => ({
   trackExists: vi.fn(),
@@ -23,9 +24,12 @@ vi.mock('@vire/db', () => ({
 }));
 
 import { auth } from '@/auth';
+import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { GET, POST, DELETE } from './route';
 
 const mockedAuth = vi.mocked(auth);
+const mockedRateLimit = vi.mocked(rateLimit);
+const mockedTooManyRequests = vi.mocked(tooManyRequests);
 const TRACK_ID = 'track-1';
 const ctx = { params: Promise.resolve({ id: TRACK_ID }) };
 const req = (method: string) => new Request(`http://localhost/api/v1/tracks/${TRACK_ID}/like`, { method });
@@ -90,5 +94,17 @@ describe('DELETE /api/v1/tracks/[id]/like', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ liked: false });
     expect(unlike).toHaveBeenCalledWith('u1', TRACK_ID);
+  });
+
+  it('429 when rate limited', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    mockedRateLimit.mockResolvedValueOnce({ ok: false, remaining: 0, retryAfter: 30 } as never);
+    mockedTooManyRequests.mockReturnValueOnce(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }) as never,
+    );
+    const res = await DELETE(req('DELETE'), ctx);
+    expect(res.status).toBe(429);
+    expect(mockedRateLimit).toHaveBeenCalledWith('unlike:u1', 60, 60);
+    expect(unlike).not.toHaveBeenCalled();
   });
 });
