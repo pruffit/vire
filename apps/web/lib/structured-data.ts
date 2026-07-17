@@ -243,7 +243,7 @@ export function artistPostJsonLd(post: ArtistPostLd, artist: ArtistLd): Record<s
   });
 }
 
-/** Убирает ключи со значением undefined (рекурсивно, для чистого JSON-LD). */
+/** Убирает ключи со значением undefined (только верхний уровень; вложенное — отдельными вызовами). */
 function prune<T extends Record<string, unknown>>(obj: T): T {
   for (const key of Object.keys(obj)) {
     if (obj[key] === undefined) delete obj[key];

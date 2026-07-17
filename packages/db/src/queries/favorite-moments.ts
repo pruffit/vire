@@ -7,7 +7,7 @@ export interface MomentBucket {
   count: number;
 }
 
-/** Агрегирует моменты по позиции (±2 сек бакеты). */
+/** Агрегирует моменты по позиции (3-секундные бакеты). */
 export async function getAggregateMoments(trackId: string): Promise<MomentBucket[]> {
   const rows = await db
     .select({
