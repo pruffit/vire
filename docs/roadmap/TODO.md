@@ -74,7 +74,12 @@
 ## Этап 2
 
 - [ ] **Фундамент прямых продаж** — purchase service в `packages/core`, вебхуки ЮКасса (верификация подписи, идемпотентность), Signed URL на FLAC. YooKassa боевая настройка `SHOP_ID`/`SECRET_KEY`.
-- [ ] **Тесты Этап-2 роутов** — покрыть `purchase` и `webhooks/yookassa`.
+- [x] **Тесты Этап-2 роутов** — покрыты в 1-J: `tracks/[id]/purchase/route.test.ts`
+  (8 кейсов), `webhooks/yookassa/route.test.ts` (11, вкл. анти-forge через re-fetch),
+  `packages/core` `purchase.test.ts` (18). Доведено 18.07.2026: покрыты последние
+  непротестированные звенья пути покупки — адаптеры `lib/yookassa.ts` (basic-auth,
+  Idempotency-Key, форма тела, throw на не-2xx) и `lib/payment-gateway.ts` (маппинг
+  confirmation_url, `catch → null` в getPayment).
 
 ## Фичи
 
