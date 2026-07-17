@@ -9,7 +9,6 @@ export const genreEnum = pgEnum('genre', [
   // Исходные 14 — не трогать порядок
   'ELECTRONIC', 'HIPHOP', 'ROCK', 'INDIE', 'POP', 'AMBIENT', 'JAZZ',
   'CLASSICAL', 'METAL', 'FOLK', 'RNB', 'TECHNO', 'EXPERIMENTAL', 'LOFI',
-  // Добавлены позже (append-only)
   'HOUSE', 'TRANCE', 'DNB', 'DUBSTEP', 'GARAGE', 'BREAKBEAT', 'IDM', 'SYNTHWAVE',
   'DOWNTEMPO', 'HARDSTYLE', 'BOOMBAP', 'TRAP', 'DRILL', 'CLOUDRAP', 'PHONK',
   'NEOSOUL', 'SOUL', 'FUNK', 'ALTERNATIVE', 'PUNK', 'POSTPUNK', 'PSYCHEDELIC',
@@ -18,7 +17,7 @@ export const genreEnum = pgEnum('genre', [
   'BLUES', 'BEBOP', 'FUSION', 'SWING', 'ORCHESTRAL', 'CINEMATIC', 'NEOCLASSICAL',
   'OPERA', 'PIANO', 'ACOUSTIC', 'SINGER_SONGWRITER', 'COUNTRY', 'WORLD', 'NOISE',
   'DRONE', 'INDUSTRIAL', 'REGGAE', 'DUB', 'SOUNDTRACK', 'SPOKENWORD',
-  // Расширение до покрытия Discogs-400 (append-only) — электроника: хаус
+  // электроника: хаус
   'ACID', 'ACID_HOUSE', 'BEATDOWN', 'DEEP_HOUSE', 'ELECTRO_HOUSE', 'EURO_HOUSE',
   'GARAGE_HOUSE', 'GHETTO', 'GHETTO_HOUSE', 'HARD_HOUSE', 'HIP_HOUSE', 'ITALO_HOUSE',
   'PROGRESSIVE_HOUSE', 'TECH_HOUSE', 'TRIBAL_HOUSE', 'TROPICAL_HOUSE',
@@ -156,7 +155,7 @@ export const moodEnum = pgEnum('mood', [
   'DARK',
   'ROMANTIC',
   'NOSTALGIC',
-  // Добавлены позже — порядок append-only (enum)
+  // append-only (enum)
   'DREAMY',
   'AGGRESSIVE',
   'UPLIFTING',

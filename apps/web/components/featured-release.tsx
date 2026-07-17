@@ -39,7 +39,6 @@ export function FeaturedRelease({ release, stats }: { release: DiscoveryRelease;
           background: `radial-gradient(120% 120% at 12% 10%, ${accent}66, transparent 55%), linear-gradient(120deg, ${accent}40 0%, transparent 60%)`,
         }}
       />
-      {/* Для нейтрального accent: слабый блюр обложки, чтобы не было «серо» */}
       {hasImage && neutral && (
         <Image
           src={release.coverUrl!}

@@ -14,7 +14,6 @@ interface PlaylistItem {
 
 interface Props {
   trackId: string;
-  /** Вариант: platform (нейтральный) или artist (с artist-токенами) */
   variant?: 'platform' | 'artist';
 }
 
@@ -53,7 +52,6 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
   function togglePlaylist(playlistId: string, title: string) {
     const adding = !inPlaylists.has(playlistId);
 
-    // Оптимистично: галочка меняется сразу, при ошибке откатываем
     setInPlaylists((prev) => {
       const next = new Set(prev);
       if (adding) next.add(playlistId); else next.delete(playlistId);

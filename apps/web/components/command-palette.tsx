@@ -28,7 +28,6 @@ const ACTIONS: { label: string; sub: string; href: string }[] = [
   { label: 'Дашборд', sub: 'Управление релизами', href: '/dashboard' },
 ];
 
-/** Командная палитра (⌘K / Ctrl+K) — модальный оверлей навигации и поиска. */
 export function CommandPalette() {
   const router = useRouter();
   const [open, setOpen] = useState(false);

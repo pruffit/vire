@@ -9,9 +9,7 @@ import { Icon } from '@/components/icon';
  * платформы (hue 75).
  */
 
-// ─── Neutral scale ───────────────────────────────────────────────────────────
 export const ink = {
-  /** Основной текст. */
   base: 'text-foreground',
   /** Вторичный (значения в ячейках, подписи). */
   soft: 'text-foreground/65',
@@ -37,17 +35,12 @@ export const Textarea = React.forwardRef<
   return <textarea ref={ref} className={cn('vire-textarea resize-y', className)} {...props} />;
 });
 
-/** Главная кнопка действия (submit/создать). */
 export const btnPrimary =
   'inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium transition-[background-color,opacity] hover:bg-primary/90 active:scale-[0.98] disabled:opacity-40';
 
-/** Вторичная/призрачная кнопка или ссылка-кнопка в обводке. */
 export const btnGhost =
   'inline-flex items-center justify-center rounded-md border border-foreground/10 bg-foreground/[0.04] px-3 py-1.5 text-sm text-foreground/70 transition-colors hover:bg-foreground/10 hover:text-foreground active:scale-[0.98] disabled:opacity-40';
 
-// ─── Form field ──────────────────────────────────────────────────────────────
-
-/** Подпись + контрол; `hint` — необязательная подпись справа от метки. */
 export function Field({
   label,
   hint,
@@ -73,8 +66,6 @@ export function Field({
     </label>
   );
 }
-
-// ─── Checkbox ──────────────────────────────────────────────────────────────
 
 /** Кастомный чекбокс с подписью и хинтом; тач-таргет — вся подпись. */
 export function Check({
@@ -121,8 +112,6 @@ export function Check({
   );
 }
 
-// ─── Switch ──────────────────────────────────────────────────────────────────
-
 /** Тумблер вкл/выкл; для подписи оборачивай в `Field`/`label` снаружи. */
 export function Switch({
   checked,
@@ -158,8 +147,6 @@ export function Switch({
   );
 }
 
-// ─── Page header ─────────────────────────────────────────────────────────────
-
 export function PageHeader({
   title,
   count,
@@ -183,8 +170,6 @@ export function PageHeader({
     </div>
   );
 }
-
-// ─── Detail header (страницы редактирования) ─────────────────────────────────
 
 export function DetailHeader({
   backHref,
@@ -210,8 +195,6 @@ export function DetailHeader({
     </div>
   );
 }
-
-// ─── Dashboard page header (сабстраницы дашборда артиста) ────────────────────
 
 /** Опц. `action` встаёт слева от кнопки «назад»; на узком вьюпорте — под заголовком. */
 export function DashboardPageHeader({
@@ -243,8 +226,6 @@ export function DashboardPageHeader({
   );
 }
 
-// ─── Section ─────────────────────────────────────────────────────────────────
-
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-foreground/40">
@@ -275,8 +256,6 @@ export function Section({
   );
 }
 
-// ─── Panel ───────────────────────────────────────────────────────────────────
-
 export function Panel({
   children,
   className,
@@ -290,8 +269,6 @@ export function Panel({
     </div>
   );
 }
-
-// ─── Stats ───────────────────────────────────────────────────────────────────
 
 export function MetricGrid({
   children,
@@ -358,8 +335,6 @@ export function StatCard({
   );
 }
 
-// ─── Badge ───────────────────────────────────────────────────────────────────
-
 export type BadgeTone =
   | 'neutral'
   | 'success'
@@ -416,8 +391,6 @@ export function Badge({
     </span>
   );
 }
-
-// ─── Table ───────────────────────────────────────────────────────────────────
 
 export function Table({
   minWidth = 'min-w-[640px]',
@@ -527,8 +500,6 @@ export function Td({
   );
 }
 
-// ─── Filter tabs ─────────────────────────────────────────────────────────────
-
 export function FilterTabs({
   tabs,
 }: {
@@ -554,8 +525,6 @@ export function FilterTabs({
     </div>
   );
 }
-
-// ─── Search ──────────────────────────────────────────────────────────────────
 
 export function SearchForm({
   name = 'q',
@@ -586,8 +555,6 @@ export function SearchForm({
   );
 }
 
-// ─── Empty state ─────────────────────────────────────────────────────────────
-
 export function EmptyState({
   title,
   hint,
@@ -604,8 +571,6 @@ export function EmptyState({
     </div>
   );
 }
-
-// ─── Status badges (единые для обзора/таблиц) ────────────────────────────────
 
 const ROLE_TONE: Record<string, BadgeTone> = {
   SUPERADMIN: 'error',
@@ -647,8 +612,6 @@ export function ReleaseStatusBadge({ status }: { status: string }) {
   const s = RELEASE_STATUS[status] ?? { tone: 'neutral' as BadgeTone, label: status };
   return <Badge tone={s.tone}>{s.label}</Badge>;
 }
-
-// ─── Inline action link (таблицы: «Изм.» и пр.) ──────────────────────────────
 
 export function ActionLink({
   href,

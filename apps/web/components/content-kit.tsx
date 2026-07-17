@@ -10,8 +10,6 @@ import { LegalToc } from '@/components/legal-toc';
  * продуктового `ui-kit.tsx`.
  */
 
-// ─── Glow ────────────────────────────────────────────────────────────────────
-
 /** Радиальное свечение акцентом. `corner` — из левого-верхнего угла (для hover-карточек). */
 export function GlowBackdrop({ className, corner = false }: { className?: string; corner?: boolean }) {
   return (
@@ -27,8 +25,6 @@ export function GlowBackdrop({ className, corner = false }: { className?: string
   );
 }
 
-// ─── Eyebrow / pill ──────────────────────────────────────────────────────────
-
 export function Eyebrow({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <p className={cn('font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground', className)}>
@@ -37,7 +33,6 @@ export function Eyebrow({ children, className }: { children: React.ReactNode; cl
   );
 }
 
-/** Капсула с пульсирующей точкой — «живой» статус (этап, режим). */
 export function StatusPill({ children, dot = true }: { children: React.ReactNode; dot?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-mono uppercase tracking-widest text-muted-foreground">
@@ -47,12 +42,7 @@ export function StatusPill({ children, dot = true }: { children: React.ReactNode
   );
 }
 
-// ─── Hero ────────────────────────────────────────────────────────────────────
-
-/**
- * Контентный hero: eyebrow/значок + крупный заголовок + подзаголовок, опц.
- * акцентное свечение и действия. Server-компонент (вход на CSS animate-fade-up).
- */
+/** Server-компонент (вход на CSS animate-fade-up, не motion). */
 export function ContentHero({
   eyebrow,
   badge,
@@ -110,9 +100,6 @@ export function ContentHero({
   );
 }
 
-// ─── Numbered section ──────────────────────────────────────────────────────────
-
-/** Секция с порядковым индексом и волосяной линией. Появляется при scroll. */
 export function NumberedSection({
   index,
   title,
@@ -141,9 +128,6 @@ export function NumberedSection({
   );
 }
 
-// ─── Feature card ──────────────────────────────────────────────────────────────
-
-/** Карточка возможности: значок в рамке + заголовок + текст, hover-свечение. */
 export function FeatureCard({
   icon,
   title,
@@ -174,9 +158,6 @@ export function FeatureCard({
   );
 }
 
-// ─── Pill button (контентный CTA) ──────────────────────────────────────────────
-
-/** Капсульная кнопка-ссылка. `tone`: primary (заливка) / outline (обводка). */
 export function PillLink({
   href,
   tone = 'primary',
@@ -207,8 +188,6 @@ export function PillLink({
     </Link>
   );
 }
-
-// ─── Legal document ────────────────────────────────────────────────────────────
 
 export interface LegalSection {
   /** Краткий заголовок (для TOC и шапки секции). */

@@ -14,7 +14,6 @@ function isInteractive(target: EventTarget | null): boolean {
   ) !== null;
 }
 
-/** Глобальные клавиши плеера: Space, ←/→ (±5с), Shift+←/→ (треки), M, R. */
 export function usePlayerHotkeys(): void {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

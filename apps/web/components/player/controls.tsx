@@ -8,7 +8,6 @@ import { Icon } from '@/components/icon';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ErrorIcon, RepeatIcon, SkipBackIcon, SkipForwardIcon, WaveIcon } from './player-icons';
 
-/** Переиспользуемая кнопка-тоггл: иконка + accent-glow при активном состоянии. */
 function PlayerToggleButton({
   icon,
   active,
@@ -154,7 +153,6 @@ function PlayPauseButton() {
   );
 }
 
-/** Блок транспорта: prev/play/next + опционально shuffle/wave/repeat по краям. */
 export function Controls({
   showWaveMode = true,
   showShuffle = false,

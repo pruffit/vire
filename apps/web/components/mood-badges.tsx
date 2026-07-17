@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 
 interface Props {
   moods: Mood[];
-  /** Стиль подачи: artist-page использует artist-tokens, platform — нейтральный */
   variant?: 'artist' | 'platform';
   className?: string;
 }

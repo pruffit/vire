@@ -3,7 +3,6 @@
 import { useTransition } from 'react';
 import { Select } from '@/components/select';
 
-/** Инлайн-селект с серверным экшеном в `useTransition` (смена статуса/роли в админке). */
 export function ActionSelect({
   options,
   value,

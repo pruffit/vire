@@ -56,7 +56,6 @@ export function Stagger({
   );
 }
 
-/** Элемент каскада внутри <Stagger>. */
 export function StaggerItem({ children, ...rest }: DivProps) {
   return (
     <motion.div variants={fadeUpVariants} transition={spring.gentle} {...rest}>

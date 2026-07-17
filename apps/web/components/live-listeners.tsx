@@ -7,7 +7,6 @@ import { LivePulse } from '@/components/live-pulse';
 
 const POLL_MS = 25_000;
 
-/** Счётчик «слушают сейчас» на странице трека: поллинг presence, виден только при count > 0. */
 export function LiveListeners({
   trackId,
   initialCount = 0,

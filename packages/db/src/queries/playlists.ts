@@ -310,8 +310,6 @@ export async function renamePlaylist(
   await updatePlaylist(playlistId, userId, { title });
 }
 
-// ─── Редакционные и личные подборки ────────────────────────────────────────
-
 interface PlaylistMetaRow {
   id: string;
   title: string;
@@ -560,8 +558,6 @@ export async function getPublicUserPlaylists(limit = 8): Promise<EditorialPlayli
   return hydratePlaylists(rows);
 }
 
-// ─── Лайки плейлистов ──────────────────────────────────────────────────────
-
 export async function getPlaylistLikeState(
   userId: string,
   playlistId: string,
@@ -613,7 +609,6 @@ export async function getLikedPlaylists(userId: string): Promise<EditorialPlayli
   return hydratePlaylists(rows);
 }
 
-/** Возвращает id редакционных плейлистов, лайкнутых пользователем. */
 export async function getLikedPlaylistIds(userId: string): Promise<string[]> {
   const rows = await db
     .select({ playlistId: playlistLikes.playlistId })
@@ -621,8 +616,6 @@ export async function getLikedPlaylistIds(userId: string): Promise<string[]> {
     .where(eq(playlistLikes.userId, userId));
   return rows.map((r) => r.playlistId);
 }
-
-// ─── Поиск треков + умные подсказки ────────────────────────────────────────
 
 export async function searchTracksForPlaylist(
   q: string,

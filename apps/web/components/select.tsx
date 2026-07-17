@@ -23,7 +23,6 @@ interface Props {
   value?: string;
   defaultValue?: string;
   onValueChange?: (value: string) => void;
-  /** Имя скрытого input — включает form-режим (сабмит через FormData). */
   name?: string;
   /** Текст, когда ничего не выбрано (значение не найдено среди опций). */
   placeholder?: string;
@@ -31,9 +30,7 @@ interface Props {
   disabled?: boolean;
   /** Визуальный регистр: `md` — поле формы, `sm` — инлайн в таблице. */
   size?: 'sm' | 'md';
-  /** Выравнивание выпадающего списка относительно триггера. */
   align?: 'start' | 'end';
-  /** Доп. классы обёртки (ширина и т.п.). */
   className?: string;
   'aria-label'?: string;
 }

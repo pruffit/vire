@@ -29,7 +29,6 @@ export function SearchReleasesSection({ releases }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Genre chips */}
       {genres.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {genres.map((g) => (

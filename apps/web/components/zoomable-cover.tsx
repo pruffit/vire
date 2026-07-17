@@ -8,7 +8,6 @@ import { spring } from '@vire/ui/motion';
 import { Tilt } from './tilt';
 import { Icon } from '@/components/icon';
 
-/** Обложка с разворотом в полноэкранный просмотр: shared-element (layoutId), закрытие свайп/клик/Esc. */
 export function ZoomableCover({
   src,
   alt,
@@ -18,7 +17,6 @@ export function ZoomableCover({
 }: {
   src: string;
   alt: string;
-  /** Размеры/тень маленькой обложки, напр. "w-52 h-52 shadow-2xl". */
   className?: string;
   sizes?: string;
   /** Грузить сразу (для обложки над сгибом — LCP). */

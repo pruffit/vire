@@ -21,7 +21,6 @@ export async function Nav() {
   return (
     <nav className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between gap-4">
-        {/* Logo */}
         <Link
           href="/"
           aria-label="Vire, на главную"
@@ -30,7 +29,6 @@ export async function Nav() {
           <Logo className="h-4 w-auto" />
         </Link>
 
-        {/* Right side */}
         <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           <NavSearch />
           {user ? (

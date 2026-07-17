@@ -88,7 +88,6 @@ export function ReleaseCountdown({
         ) : (
           <div className="h-full w-full bg-white/5" />
         )}
-        {/* лёгкое затемнение — релиз ещё «закрыт» */}
         <div className="absolute inset-0 bg-black/25" />
       </motion.div>
 

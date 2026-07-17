@@ -14,7 +14,6 @@ import { nextAutoAnnouncement } from '@/lib/announcements-queue';
 
 interface Announcement {
   id: string;
-  /** Ключ localStorage — флаг «уже видел». Версионируется. */
   storageKey: string;
   title: string;
   body: ReactNode;

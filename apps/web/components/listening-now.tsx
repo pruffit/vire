@@ -25,7 +25,6 @@ export interface ListeningNowTrack {
 
 const POLL_MS = 30_000;
 
-/** «Сейчас слушают» на главной: поллинг /api/v1/listening-now, исчезает когда пусто. */
 export function ListeningNow({ initial }: { initial: ListeningNowTrack[] }) {
   const [items, setItems] = useState(initial);
 

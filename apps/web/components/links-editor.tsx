@@ -10,11 +10,6 @@ import { fieldClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
 import { useStableListKeys } from '@/lib/use-stable-list-keys';
 
-/**
- * Редактор ссылок на площадки/соцсети (смартлинк + профиль артиста). Площадка
- * определяется по URL; не распознали — даём поле текстовой подписи.
- */
-
 export function LinksEditor({
   title,
   hint,

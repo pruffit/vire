@@ -41,7 +41,6 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }
       </p>
     )}
     <div className="rounded-xl border border-border bg-card/60 divide-y divide-border">
-      {/* Email / пароль */}
       <div className="px-4 py-3.5 space-y-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -81,7 +80,6 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }
         </AnimatePresence>
       </div>
 
-      {/* OAuth провайдеры */}
       {PROVIDERS.map(({ id, label, Icon }) => {
         const linked = linkedProviders.includes(id);
         const linkAction = LINK_ACTIONS[id];
@@ -116,8 +114,6 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }
     </div>
   );
 }
-
-// ─── Set password form ─────────────────────────────────────────────────────────
 
 function SetPasswordForm({ onDone }: { onDone: () => void }) {
   const [result, action, pending] = useActionState(setPasswordAction, null);
@@ -186,8 +182,6 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
     </form>
   );
 }
-
-// ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function StatusBadge({ ok, children }: { ok: boolean; children: React.ReactNode }) {
   return (

@@ -8,7 +8,6 @@ import { ExplicitBadge } from '@/components/explicit-badge';
 import { TrackTitleText } from '@/components/track-title';
 import { GripIcon, WaveIcon } from './player-icons';
 
-/** Панель «Дальше»: очередь с текущим треком, drag-to-reorder, переход по клику. */
 export function QueuePanel({ onJump }: { onJump: () => void }) {
   const queue = usePlayerStore((s) => s.queue);
   const queueIndex = usePlayerStore((s) => s.queueIndex);

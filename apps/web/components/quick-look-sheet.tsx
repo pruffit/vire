@@ -101,7 +101,6 @@ export function QuickLookDragHandle({
   );
 }
 
-/** Анимированные полоски эквалайзера — индикатор текущего трека в трек-листе. */
 export function MiniEq({ animate }: { animate: boolean }) {
   return (
     <span

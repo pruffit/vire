@@ -52,8 +52,6 @@ export async function pingDb(): Promise<number | null> {
   }
 }
 
-// ─── Platform metrics (полный обзор) ───────────────────────────────────────
-
 export interface AdminPlatformMetrics {
   usersByRole: Record<string, number>;
   newUsers7d: number;
@@ -127,8 +125,6 @@ export async function getAdminPlatformMetrics(): Promise<AdminPlatformMetrics> {
     momentsTotal: Number(moments?.n ?? 0),
   };
 }
-
-// ─── Platform analytics (топы и динамика) ──────────────────────────────────
 
 export interface AdminDailyPlays {
   day: string; // YYYY-MM-DD
@@ -218,8 +214,6 @@ export async function getAdminTopArtists(days = 30, limit = 10): Promise<AdminTo
     .limit(limit);
   return rows.map((r) => ({ ...r, plays: Number(r.plays), listeners: Number(r.listeners) }));
 }
-
-// ─── Artists (управление) ──────────────────────────────────────────────────
 
 export interface AdminArtist {
   id: string;
@@ -353,8 +347,6 @@ export async function adminUpdateArtist(
   }
 }
 
-// ─── Посты и плейлисты для админ-редактуры (§9.1) ────────────────────────────
-
 export interface AdminPost {
   id: string;
   title: string | null;
@@ -431,8 +423,6 @@ export async function adminDeletePlaylist(id: string): Promise<void> {
     await tx.delete(playlists).where(eq(playlists.id, id));
   });
 }
-
-// ─── Attention items ───────────────────────────────────────────────────────
 
 export interface StuckTrack {
   id: string;
@@ -531,8 +521,6 @@ export async function getAdminAttention(): Promise<AdminAttention> {
   };
 }
 
-// ─── Recent activity ───────────────────────────────────────────────────────
-
 export interface AdminRecentRelease {
   id: string;
   title: string;
@@ -558,8 +546,6 @@ export async function getRecentPublishedReleases(limit = 8): Promise<AdminRecent
     .orderBy(desc(releases.updatedAt))
     .limit(limit);
 }
-
-// ─── Users ─────────────────────────────────────────────────────────────────
 
 export interface AdminUser {
   id: string;
@@ -617,8 +603,6 @@ export async function verifyArtist(artistProfileId: string, verified: boolean): 
     .set({ verified, updatedAt: new Date() })
     .where(eq(artistProfiles.id, artistProfileId));
 }
-
-// ─── Tracks ────────────────────────────────────────────────────────────────
 
 export interface AdminTrack {
   id: string;
@@ -687,8 +671,6 @@ export async function setTrackStatus(
   await db.update(tracks).set({ status, updatedAt: new Date() }).where(eq(tracks.id, trackId));
 }
 
-// ─── Releases ──────────────────────────────────────────────────────────────
-
 export interface AdminRelease {
   id: string;
   title: string;
@@ -743,8 +725,6 @@ export async function setReleaseStatus(
   await db.update(releases).set({ status, updatedAt: new Date() }).where(eq(releases.id, releaseId));
 }
 
-// ─── Create Artist ──────────────────────────────────────────────────────────
-
 export async function createArtistForUser(data: {
   email: string;
   name: string;
@@ -781,8 +761,6 @@ export async function createArtistForUser(data: {
 
   return { ok: true, slug: data.slug };
 }
-
-// ─── Участники артист-профиля (несколько аккаунтов на профиль) ────────────────
 
 export interface ArtistMemberRow {
   userId: string;

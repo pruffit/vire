@@ -19,7 +19,6 @@ interface FlatResult {
   initial?: string;
 }
 
-/** Поиск в навбаре: иконка → поле с быстрыми результатами; Enter → /search. */
 export function NavSearch() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -61,7 +60,6 @@ export function NavSearch() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query, fetchResults]);
 
-  // Клик вне — свернуть
   useEffect(() => {
     function onDown(e: PointerEvent) {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
@@ -70,7 +68,6 @@ export function NavSearch() {
     return () => document.removeEventListener('pointerdown', onDown);
   }, []);
 
-  // Горячая клавиша «/» — открыть поиск (если не печатаешь в поле/textarea)
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
       if ((e.key !== '/' && e.code !== 'Slash') || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -150,7 +147,6 @@ export function NavSearch() {
         className="ml-1 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors flex items-center gap-1.5"
       >
         <SearchIcon size={15} />
-        {/* Хинт горячей клавиши — только desktop, прячется когда поле раскрыто */}
         <AnimatePresence initial={false}>
           {!open && (
             <motion.kbd

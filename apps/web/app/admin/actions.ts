@@ -122,7 +122,7 @@ export async function actionSetReleaseStatus(
   revalidatePath('/admin/releases');
 }
 
-// ─── Редактура контента из админки — сервисы core, ownership-проверка отсутствует (админ правит любой контент) ───
+// Редактура контента из админки: сервисы core, ownership-проверка отсутствует (админ правит любой контент)
 
 export async function actionAdminUpdatePost(
   id: string,

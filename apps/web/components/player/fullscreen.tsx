@@ -232,7 +232,6 @@ function DurationLabel() {
   return <span className={timeLabelClass}>{formatDuration(duration)}</span>;
 }
 
-/** Обёртка над общим скраббером: подставляет пики/длительность/seek из стора плеера. */
 function PlayerWaveform() {
   const peaks = usePlayerStore((s) => s.waveformPeaks);
   const duration = usePlayerStore((s) => s.duration);

@@ -42,7 +42,6 @@ let playStartedTrackId: string | null = null;
 let playStartedSource = 'direct';
 let _savedVolume = 1;
 
-// ─── Live-присутствие «слушают сейчас» ──────────────────────────────────────
 const HEARTBEAT_MS = 20_000;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let heartbeatTrackId: string | null = null;
@@ -96,7 +95,6 @@ function flushPlayEvent(): void {
     .catch(() => {});
 }
 
-// ─── Буфер волны ─────────────────────────────────────────────────────────
 let waveFetchInFlight = false;
 let awaitingNextFromBuffer = false;
 let consecutiveWaveErrors = 0;
@@ -172,7 +170,6 @@ function handleWaveLoadError(): void {
   void controls.next();
 }
 
-// ─── Префетч манифеста следующего трека ────────────────────────────────────
 let prefetchedAheadFor: string | null = null;
 
 function maybePrefetchNextManifest(): void {
@@ -186,7 +183,6 @@ function maybePrefetchNextManifest(): void {
   void fetchManifest(next.id);
 }
 
-// ─── Тик раз в ~5с при воспроизведении ──────────────────────────────────────
 // throttle для буфера волны/префетча манифеста/персиста currentTime — живой UI тикает через useAudioTime.
 const TICK_INTERVAL_MS = 5_000;
 let lastTickAt = 0;

@@ -8,7 +8,6 @@ import { Icon } from '@/components/icon';
 import { presaveRelease, presaveReleaseAsGuest } from '@vire/api-client';
 import { useOptimisticToggle } from '@/lib/use-optimistic-toggle';
 
-/** Пресейв релиза: залогиненный — оптимистичный клик, гость — оставляет email. */
 export function PresaveButton({
   releaseId,
   initialPresaved,
@@ -46,7 +45,6 @@ export function PresaveButton({
     setGuestBusy(false);
   }
 
-  // ─── Залогинен ─────────────────────────────────────────────────────────────
   if (isAuthed) {
     return (
       <motion.button
@@ -69,7 +67,6 @@ export function PresaveButton({
     );
   }
 
-  // ─── Гость: оставил email ──────────────────────────────────────────────────
   if (guestDone) {
     return (
       <p className="inline-flex items-center gap-2 text-sm" style={{ color: 'var(--artist-accent)' }}>
@@ -79,7 +76,6 @@ export function PresaveButton({
     );
   }
 
-  // ─── Гость ─────────────────────────────────────────────────────────────────
   return (
     <AnimatePresence mode="wait" initial={false}>
       {emailMode ? (

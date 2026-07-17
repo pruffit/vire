@@ -11,10 +11,6 @@ import { resolveAvatarUrl } from '@/lib/avatar';
 import { Icon } from '@/components/icon';
 import { pluralReleases } from '@/lib/format';
 
-/**
- * Карточка артиста с hover-превью: при наведении (desktop) всплывает мини-карточка
- * с увеличенным аватаром и инфо — peek перед переходом. На тач просто ссылка.
- */
 export function ArtistHoverChip({ artist }: { artist: ArtistListItem }) {
   const displayAvatar = resolveAvatarUrl(artist.avatarUrl, artist.firstReleaseCoverUrl);
   const [preview, setPreview] = useState(false);

@@ -2,8 +2,6 @@ import { and, count, eq, inArray, isNotNull, isNull, lte, sql } from 'drizzle-or
 import { db } from '../client';
 import { releasePresaves, releases, tracks, likes, users, artistProfiles } from '../schema';
 
-// ─── Слушатель: поставить / снять / прочитать пресейв ────────────────────────
-
 /** Пресейв залогиненного пользователя (идемпотентно). */
 export async function presaveForUser(userId: string, releaseId: string): Promise<void> {
   await db
@@ -85,8 +83,6 @@ export async function getReleasePresaveInfo(releaseId: string): Promise<ReleaseP
   return row ?? null;
 }
 
-// ─── Планировщик выхода: найти и опубликовать вышедшие по дате ────────────────
-
 export interface DueRelease {
   id: string;
   title: string;
@@ -132,8 +128,6 @@ export async function publishScheduledRelease(releaseId: string): Promise<boolea
     .returning({ id: releases.id });
   return res.length > 0;
 }
-
-// ─── Исполнение пресейвов при выходе релиза ──────────────────────────────────
 
 /** userId всех неисполненных пресейверов релиза: для авто-лайка. */
 export async function getPresaverUserIds(releaseId: string): Promise<string[]> {
@@ -196,7 +190,6 @@ export async function bulkLikeTracks(userIds: string[], trackIds: string[]): Pro
   await db.insert(likes).values(values).onConflictDoNothing();
 }
 
-/** Помечает все неисполненные пресейвы релиза исполненными. */
 export async function markPresavesFulfilled(releaseId: string): Promise<void> {
   await db
     .update(releasePresaves)

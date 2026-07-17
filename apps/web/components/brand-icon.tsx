@@ -44,9 +44,7 @@ export function isBrandWordmark(name: BrandName): boolean {
   return (BRAND_RATIO[name] ?? 1) > 2.2;
 }
 
-/** Человекочитаемые названия — для alt/подписей. */
 export const BRAND_LABELS: Record<BrandName, string> = {
-  // social
   telegram: 'Telegram',
   discord: 'Discord',
   vk: 'VK',
@@ -59,7 +57,6 @@ export const BRAND_LABELS: Record<BrandName, string> = {
   bandsintown: 'Bandsintown',
   tiktok: 'TikTok',
   twitch: 'Twitch',
-  // streaming
   spotify: 'Spotify',
   'apple-music': 'Apple Music',
   'youtube-music': 'YouTube Music',

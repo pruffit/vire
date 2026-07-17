@@ -65,8 +65,6 @@ export function EasterEggs() {
   );
 }
 
-// ─── Секретный попап (Konami) ─────────────────────────────────────────────────
-
 function SecretPopup({ onClose }: { onClose: () => void }) {
   return (
     <motion.div
@@ -117,8 +115,6 @@ function SecretPopup({ onClose }: { onClose: () => void }) {
     </motion.div>
   );
 }
-
-// ─── Нотный дождь (тройной клик по копирайту) ────────────────────────────────
 
 type RainPiece = { type: 'brand'; name: BrandName } | { type: 'icon'; name: IconName };
 

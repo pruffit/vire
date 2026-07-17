@@ -36,7 +36,6 @@ export async function findUserByEmail(email: string): Promise<UserWithPassword |
   return row ?? null;
 }
 
-/** Создать нового пользователя с хешем пароля (email/password регистрация). */
 export async function createUserWithPassword(opts: {
   email: string;
   name: string;

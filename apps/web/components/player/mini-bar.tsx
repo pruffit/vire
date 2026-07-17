@@ -107,7 +107,6 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
   );
 }
 
-/** Компактный вход в очередь на мобилке — `MiniBarTrailing` с очередью там скрыт целиком. */
 function MobileQueueButton({ onOpenQueue }: { onOpenQueue: () => void }) {
   const queueLength = usePlayerStore((s) => s.queue.length);
   if (queueLength <= 1) return null;

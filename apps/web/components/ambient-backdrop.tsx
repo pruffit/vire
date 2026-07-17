@@ -1,7 +1,4 @@
-/**
- * Размытая обложка как ambient-свет вверху страницы, плавно гаснет в фон артиста.
- * Родитель должен быть `relative overflow-hidden`, контент поверх — `relative z-10`.
- */
+/** Родитель должен быть `relative overflow-hidden`, контент поверх — `relative z-10`. */
 export function AmbientBackdrop({ src }: { src?: string | null }) {
   return (
     <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[75vh] pointer-events-none overflow-hidden">

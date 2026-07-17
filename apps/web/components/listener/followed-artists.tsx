@@ -9,10 +9,6 @@ import { spring } from '@vire/ui/motion';
 import type { FollowedArtist } from '@vire/db';
 import { toast } from '@/lib/toast';
 
-/**
- * Список подписок с оптимистичной отпиской: карточка исчезает мгновенно (с exit-
- * анимацией), запрос уходит в фоне, при ошибке — откат. Без `router.refresh()`.
- */
 export function FollowedArtists({ initial }: { initial: FollowedArtist[] }) {
   const [artists, setArtists] = useState(initial);
   const [pending, setPending] = useState<Set<string>>(new Set());

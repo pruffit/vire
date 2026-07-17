@@ -12,7 +12,6 @@ const PLATFORM_ORIGIN: Record<EmbedInfo['platform'], string> = {
   vk: 'https://vk.com',
 };
 
-/** Статичный постер, по клику — iframe с автоплеем и родными контролами YouTube/VK. */
 export function VideoPlayer({ embed, title }: { embed: EmbedInfo; title?: string }) {
   const [started, setStarted] = useState(false);
 

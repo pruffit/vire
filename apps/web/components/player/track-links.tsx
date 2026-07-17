@@ -4,8 +4,6 @@ import Link from 'next/link';
 import type { PlayerTrack } from '@/store/player';
 import { TrackTitleText } from '@/components/track-title';
 
-/** Имя артиста → страница артиста, название → страница трека. Если слаг/releaseId
- *  не известны источнику, показываем простой текст без ссылки. */
 export function ArtistLink({
   track,
   className,

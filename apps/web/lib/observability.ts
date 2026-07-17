@@ -48,7 +48,6 @@ export async function captureError(error: unknown, ctx: ErrorContext = {}): Prom
   ]);
 }
 
-// Telegram — если заданы TELEGRAM_BOT_TOKEN + TELEGRAM_ALERT_CHAT_ID.
 async function sendTelegram(text: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_ALERT_CHAT_ID;

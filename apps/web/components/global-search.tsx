@@ -159,7 +159,6 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
         </button>
       </div>
 
-      {/* Dropdown */}
       {open && hasResults && (
         <div
           ref={dropRef}

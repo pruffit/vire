@@ -95,7 +95,6 @@ export function Popover({
   );
 }
 
-/** Общий пункт меню-поповера — единый вид для share/queue-меню. */
 export function PopoverItem({
   label,
   icon,

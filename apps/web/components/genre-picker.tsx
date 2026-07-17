@@ -46,7 +46,6 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
   const atMax = selected.size >= MAX_TRACK_GENRES;
   const pendingSuggestions = suggestions.filter((s) => !selected.has(s.genre));
 
-  // Результаты поиска: плоский список по подписи (регистронезависимо).
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return null;
@@ -108,7 +107,6 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         </AnimatePresence>
       </div>
 
-      {/* Выбранное: всегда на виду, клик снимает */}
       {selected.size > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {Array.from(selected).map((g) => (
@@ -124,7 +122,6 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         </div>
       )}
 
-      {/* Автоопределённые жанры: клик добавляет (уважая MAX_TRACK_GENRES); повторный анализ рядом */}
       {suggestions.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[10px] font-mono text-white/25 uppercase tracking-widest">
@@ -162,7 +159,6 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         </button>
       )}
 
-      {/* Поиск по всему списку */}
       <input
         type="text"
         value={query}
@@ -171,7 +167,6 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         className="w-full min-w-0 px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-xs font-mono placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/30"
       />
 
-      {/* Скролл-область: либо результаты поиска плоско, либо группы */}
       <div className="max-h-64 overflow-y-auto pr-1 space-y-4 [scrollbar-width:thin]">
         {matches ? (
           matches.length === 0 ? (

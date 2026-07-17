@@ -13,7 +13,6 @@ export function Footer() {
     <footer className="mt-auto border-t border-border bg-background">
       <div className="px-6 lg:px-10 py-12">
         <div className="flex flex-col gap-10 sm:flex-row sm:justify-between">
-          {/* Бренд */}
           <div className="max-w-xs space-y-3">
             <Logo className="h-4 w-auto text-foreground/80" />
             <p className="text-xs leading-relaxed text-muted-foreground">
@@ -21,7 +20,6 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Ссылки */}
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-12">
             <FooterCol title="Площадка">
               <FooterLink href="/artists">Артисты</FooterLink>
@@ -50,7 +48,6 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Нижняя полоса */}
         <div className="mt-10 flex items-center gap-2 border-t border-border/60 pt-6">
           <PartyText className="font-mono text-xs text-muted-foreground select-none">© {year} Vire</PartyText>
           <span className="text-muted-foreground/40">·</span>

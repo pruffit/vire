@@ -174,7 +174,6 @@ export const GENRE_FAMILY: Record<TrackGenre, GenreFamily> = {
   SPOKENWORD: 'spoken',
 };
 
-// Порядок: как в enum, без дублей.
 export function expandGenresToFamilies(genres: TrackGenre[]): TrackGenre[] {
   const families = new Set<GenreFamily>();
   for (const genre of genres) families.add(GENRE_FAMILY[genre]);

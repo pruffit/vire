@@ -31,12 +31,10 @@ export function WaveStartButton() {
 
   return (
     <div className="flex items-center gap-4 py-3.5 border-y border-border">
-      {/* Wave icon — анимируется когда активен */}
       <div className="shrink-0 text-muted-foreground" aria-hidden="true">
         <WaveIcon active={isActive} />
       </div>
 
-      {/* Label */}
       <div className="flex-1 min-w-0">
         <AnimatePresence mode="wait" initial={false}>
           {isActive ? (
@@ -71,7 +69,6 @@ export function WaveStartButton() {
         </AnimatePresence>
       </div>
 
-      {/* Action button */}
       <AnimatePresence mode="wait" initial={false}>
         {isActive ? (
           <motion.button

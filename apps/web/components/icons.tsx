@@ -1,7 +1,6 @@
 // Канонические глифы плеера; цвет наследуется через currentColor.
 
 interface IconProps {
-  /** Сторона квадрата в px (width=height). */
   size?: number;
   className?: string;
 }

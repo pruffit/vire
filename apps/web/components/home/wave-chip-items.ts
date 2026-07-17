@@ -40,7 +40,6 @@ export function waveChips(moods: MoodChip[], genres: GenreCount[]): WaveChipItem
   return result;
 }
 
-/** Секции для шита «Все теги»: Настроения + жанровые группы каталога, только теги с count > 0. */
 export function groupTagsForSheet(moods: MoodChip[], genres: GenreCount[]): TagSheetSection[] {
   const byCountDesc = (a: TagSheetItem, b: TagSheetItem) => b.count - a.count || a.label.localeCompare(b.label, 'ru');
 
@@ -65,7 +64,6 @@ export function groupTagsForSheet(moods: MoodChip[], genres: GenreCount[]): TagS
   return sections;
 }
 
-/** Фильтр шита по вводу — регистронезависимо по лейблу, пустые секции отбрасываются. */
 export function filterTagSections(sections: TagSheetSection[], query: string): TagSheetSection[] {
   const q = query.trim().toLowerCase();
   if (!q) return sections;

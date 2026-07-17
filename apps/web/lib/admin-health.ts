@@ -82,7 +82,6 @@ async function queueCounts(name: string): Promise<QueueHealth> {
   }
 }
 
-/** Повторить все упавшие задачи очереди (вернуть в waiting). */
 export async function retryFailedJobs(queueName: string): Promise<number> {
   const jobs = await getQueue(queueName).getFailed(0, 99);
   let n = 0;
@@ -97,7 +96,6 @@ export async function retryFailedJobs(queueName: string): Promise<number> {
   return n;
 }
 
-/** Удалить все упавшие задачи очереди из Redis. */
 export async function cleanFailedJobs(queueName: string): Promise<number> {
   const removed = await getQueue(queueName).clean(0, 1000, 'failed');
   return removed.length;

@@ -28,11 +28,8 @@ function syncSnapPadding(el: HTMLDivElement) {
   el.style.scrollPaddingRight = style.paddingRight;
 }
 
-/**
- * Горизонтальная лента с прокруткой + краевые кнопки-шевроны (hover-устройства).
- * Отрицательные маргины-выпуски передавай в `bleedClassName`, не в `className` —
- * иначе краевые зоны встанут не по настоящему визуальному краю ленты.
- */
+/** Отрицательные маргины-выпуски передавай в `bleedClassName`, не в `className` —
+ *  иначе краевые зоны встанут не по настоящему визуальному краю ленты. */
 export function ScrollRow({
   children,
   className,

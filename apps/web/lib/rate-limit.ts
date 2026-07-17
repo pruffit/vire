@@ -39,7 +39,6 @@ export async function rateLimit(
   }
 }
 
-/** Extract client IP from request headers, falls back to 'unknown'. */
 export function clientKey(req: Request, prefix: string): string {
   const ip =
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
@@ -48,7 +47,6 @@ export function clientKey(req: Request, prefix: string): string {
   return `${prefix}:${ip}`;
 }
 
-/** Build a standard 429 response. */
 export function tooManyRequests(retryAfter: number): Response {
   return new Response(
     JSON.stringify({ error: 'Too many requests' }),

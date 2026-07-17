@@ -1,6 +1,5 @@
 import Image from 'next/image';
 
-/** Общий плейсхолдер обложки подборки — используют CoverFan и PlaylistCover. */
 export function CoverPlaceholder({ iconSize = 34 }: { iconSize?: number }) {
   return (
     <div className="absolute inset-0 grid place-items-center bg-linear-to-br from-white/[0.07] to-white/[0.01]">
@@ -20,7 +19,6 @@ interface PlaylistCoverProps {
   sizes: string;
   quality?: number;
   placeholderIconSize?: number;
-  /** Доп. классы на <Image> (напр. hover-transform карточки). */
   imageClassName?: string;
 }
 

@@ -24,7 +24,6 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
   const [sort, setSort] = useState<Sort>('default');
   const [genre, setGenre] = useState<Genre | null>(null);
 
-  // Только встречающиеся в каталоге жанры, в порядке групп (ALL_GENRES)
   const availableGenres = useMemo(() => {
     const present = new Set<string>();
     for (const a of artists) for (const g of a.genres) present.add(g);
@@ -70,7 +69,6 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
         </div>
       </div>
 
-      {/* Фильтр по жанрам: только встречающиеся в каталоге */}
       {availableGenres.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           <button

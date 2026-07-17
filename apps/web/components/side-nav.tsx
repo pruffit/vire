@@ -13,7 +13,6 @@ export interface SideNavItem {
   exact?: boolean;
 }
 
-/** Навигация оболочки (админка/дашборд): сайдбар на десктопе, скролл-бар на мобилке. */
 export function SideNav({
   items,
   className,

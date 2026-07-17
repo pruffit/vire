@@ -12,7 +12,6 @@ export function Tilt({
   className,
 }: {
   children: React.ReactNode;
-  /** Максимальный наклон в градусах. */
   max?: number;
   className?: string;
 }) {

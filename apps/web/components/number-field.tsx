@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 interface Props {
   value: number | null;
   onChange: (value: number | null) => void;
-  /** Коммит (blur/Enter/шаг) — для отправки на сервер. */
   onCommit?: (value: number | null) => void;
   min?: number;
   max?: number;

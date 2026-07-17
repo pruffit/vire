@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import { Select, type SelectGroup } from '@/components/select';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 
-/** Селект жанра — обёртка над `Select`: группы GENRE_GROUPS, поиск, опция «Без жанра». */
 export function GenreSelect({
   name,
   defaultValue = '',

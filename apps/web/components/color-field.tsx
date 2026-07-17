@@ -18,8 +18,6 @@ interface Props {
   disabled?: boolean;
 }
 
-// ─── Конверсии ───────────────────────────────────────────────────────────────
-
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return null;
@@ -63,8 +61,6 @@ function hsvToRgb(h: number, s: number, v: number): { r: number; g: number; b: n
 function clamp01(n: number) {
   return Math.min(1, Math.max(0, n));
 }
-
-// ─── Компонент ─────────────────────────────────────────────────────────────
 
 export function ColorField({ label, name, value, onChange, disabled }: Props) {
   const [open, setOpen] = useState(false);
@@ -199,7 +195,6 @@ export function ColorField({ label, name, value, onChange, disabled }: Props) {
               transition={spring.snappy}
               className="absolute left-0 top-full z-30 mt-1 w-56 rounded-lg border border-foreground/15 bg-background p-3 shadow-xl shadow-black/40"
             >
-              {/* SV-квадрат */}
               <div
                 ref={svRef}
                 onPointerDown={dragSV}
@@ -216,7 +211,6 @@ export function ColorField({ label, name, value, onChange, disabled }: Props) {
                 />
               </div>
 
-              {/* Hue-слайдер */}
               <div
                 ref={hueRef}
                 onPointerDown={dragHue}

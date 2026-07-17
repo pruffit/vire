@@ -8,7 +8,6 @@ import { BRAND_GLYPH_NAMES } from './icon-manifest.generated';
  */
 const GLYPH_SET = new Set<string>(BRAND_GLYPH_NAMES);
 
-/** Есть ли компактный глиф для этой площадки. */
 export function hasBrandGlyph(platform: PlatformKey): boolean {
   const brand = PLATFORM_BRAND[platform];
   return !!brand && GLYPH_SET.has(brand);

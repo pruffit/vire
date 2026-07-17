@@ -38,7 +38,6 @@ function year(d: Date | string | null): string | null {
   return Number.isFinite(y) ? String(y) : null;
 }
 
-/** «сегодня» / «завтра» / «через N дн.» / дата — для грядущих релизов. */
 function untilLabel(d: Date | string | null): string | null {
   if (!d) return null;
   const date = new Date(d);
@@ -55,7 +54,6 @@ function untilLabel(d: Date | string | null): string | null {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
-/** Карточка релиза, которая по клику разворачивается в оверлей-«peek» с трек-листом и play. */
 export function ReleaseQuickLook({
   release,
   showArtist = true,

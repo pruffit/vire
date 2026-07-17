@@ -15,7 +15,6 @@ export function parseEmbed(url: string): EmbedInfo | null {
   try {
     const u = new URL(url);
 
-    // YouTube
     let ytId: string | null = null;
     if (u.hostname === 'www.youtube.com' || u.hostname === 'youtube.com') {
       ytId = u.searchParams.get('v');

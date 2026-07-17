@@ -209,7 +209,7 @@ export async function getWaveTracks(p: WaveScoringParams): Promise<WaveTrack[]> 
       )`;
   };
 
-  // ── Seed-режим: без текущего трека — нет сигналов похожести ───────────────
+  // Seed-режим: без текущего трека — нет сигналов похожести
   if (!p.currentTrackId) {
     const where = and(
       visibleTrackWhere,
@@ -270,7 +270,7 @@ export async function getWaveTracks(p: WaveScoringParams): Promise<WaveTrack[]> 
     return rows.map(toWaveTrack);
   }
 
-  // ── Похожесть с текущим треком + поведенческие сигналы ────────────────────
+  // Похожесть с текущим треком + поведенческие сигналы
   const [[currentAudio], currentMoods, [currentReleaseRow], currentTrackGenreRows] = await Promise.all([
     db
       .select({ bpm: trackAudio.bpm })

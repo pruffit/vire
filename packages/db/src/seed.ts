@@ -9,7 +9,6 @@ const db = drizzle(client, { schema });
 async function seed() {
   console.log('Seeding...');
 
-  // User
   const [user] = await db
     .insert(schema.users)
     .values({ email: 'kotlaevdanilcontact@gmail.com', role: 'ARTIST' })
@@ -18,13 +17,11 @@ async function seed() {
 
   console.log('User:', user.id);
 
-  // Rights holder
   const [rh] = await db
     .insert(schema.rightsHolders)
     .values({ userId: user.id, displayName: 'Kotlaev Danil' })
     .returning();
 
-  // Artist profile
   const [artist] = await db
     .insert(schema.artistProfiles)
     .values({
@@ -51,7 +48,6 @@ async function seed() {
 
   console.log('Artist:', artist.slug);
 
-  // Release 1: альбом
   const [album] = await db
     .insert(schema.releases)
     .values({
@@ -65,7 +61,6 @@ async function seed() {
     })
     .returning();
 
-  // Tracks for album
   const albumTracks = [
     { title: 'Пролог', trackNumber: 1, durationSec: 183, status: 'READY' as const },
     { title: 'Статика', trackNumber: 2, durationSec: 247, status: 'READY' as const },
@@ -93,7 +88,6 @@ async function seed() {
 
   console.log('Album tracks:', albumTracks.length);
 
-  // Release 2: EP
   const [ep] = await db
     .insert(schema.releases)
     .values({

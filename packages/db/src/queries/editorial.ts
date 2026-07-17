@@ -31,7 +31,7 @@ export async function generateAllEditorialPlaylists(): Promise<void> {
   await generatePersonalPlaylistsForAllUsers();
 }
 
-// ─── Общие подборки (одинаковы для всех, обновляются раз в сутки) ────────────
+// Общие подборки: одинаковы для всех, обновляются раз в сутки
 
 export async function generateSharedPlaylists(): Promise<void> {
   // общий пул + набор занятых треков — иначе хвосты карточек сходятся к одному топу
@@ -64,10 +64,7 @@ async function generateTrendingPlaylist(pool: string[], usedFiller: Set<string>)
   });
 }
 
-/**
- * «Возвращаются снова» — треки, к которым слушатели возвращались
- * несколько раз (минимум 2 прослушивания от одного userId в разные дни).
- */
+/** «Возвращаются снова»: слушатели вернулись минимум дважды в разные дни. */
 async function generateRelistenPlaylist(pool: string[], usedFiller: Set<string>): Promise<void> {
   const rows = await db
     .select({
@@ -188,7 +185,6 @@ async function getFillerPool(): Promise<string[]> {
   return rows.map((r) => r.id);
 }
 
-/** Удаляет общие mood-подборки, не вошедшие в текущий топ. */
 async function deleteStaleMoodPlaylists(keepTitles: string[]): Promise<void> {
   const stale = await db
     .select({ id: playlists.id })
@@ -231,7 +227,7 @@ async function sharedMoodPlaylistMoods(): Promise<Mood[]> {
   return moods;
 }
 
-// ─── Личные подборки (под каждого юзера, обновляются раз в 4 часа) ───────────
+// Личные подборки: под каждого юзера, обновляются раз в 4 часа
 
 /** Генерирует личные подборки всем юзерам, у которых есть сигнал (лайки/прослушивания). */
 export async function generatePersonalPlaylistsForAllUsers(): Promise<void> {
@@ -258,7 +254,6 @@ export async function generatePersonalPlaylistsForAllUsers(): Promise<void> {
   }
 }
 
-/** Число уникальных треков сигнала юзера (лайки ∪ прослушивания за 90 дней). */
 async function tasteSignalTrackCount(userId: string): Promise<number> {
   const [likedRows, playedRows] = await Promise.all([
     db.select({ trackId: likes.trackId }).from(likes).where(eq(likes.userId, userId)),
@@ -270,10 +265,7 @@ async function tasteSignalTrackCount(userId: string): Promise<number> {
   return new Set([...likedRows.map((r) => r.trackId), ...playedRows.map((r) => r.trackId)]).size;
 }
 
-/**
- * Личные подборки на основе getTasteProfile (лайки + прослушивания за 90 дней).
- * Пересобираются целиком; ниже MIN_TRACKS сигнала — удаляются, фолбэк на популярное.
- */
+/** Личные подборки на основе getTasteProfile (лайки + прослушивания за 90 дней). */
 export async function generatePersonalPlaylists(userId: string, sharedPool?: string[]): Promise<void> {
   const signalCount = await tasteSignalTrackCount(userId);
 

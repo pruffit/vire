@@ -9,10 +9,6 @@ interface TocItem {
   title: string;
 }
 
-/**
- * Липкое оглавление правовой страницы с подсветкой активной секции (scroll-spy
- * через IntersectionObserver). Скрыто на мобиле — там просто читается сверху вниз.
- */
 export function LegalToc({ items }: { items: TocItem[] }) {
   const [active, setActive] = useState(items[0]?.id ?? '');
 

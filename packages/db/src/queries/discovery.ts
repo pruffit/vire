@@ -42,11 +42,7 @@ export interface DiscoveryTrack {
   feat: string[];
 }
 
-/**
- * Множество id релизов (из переданного списка), у которых есть хотя бы один
- * explicit-трек. Для поверхностей, что отдают доменный Release без explicit-данных
- * (страница артиста): один запрос вместо N.
- */
+/** Для поверхностей, что отдают доменный Release без explicit-данных (страница артиста): один запрос вместо N. */
 export async function getExplicitReleaseIds(releaseIds: string[]): Promise<Set<string>> {
   if (releaseIds.length === 0) return new Set();
   const rows = await db
@@ -56,10 +52,7 @@ export async function getExplicitReleaseIds(releaseIds: string[]): Promise<Set<s
   return new Set(rows.map((r) => r.releaseId));
 }
 
-/**
- * Id треков, сгруппированные по релизу (sitemap: генерация ссылок на треки
- * внутри релиза без N+1 по каждому релизу отдельно).
- */
+/** Для sitemap: ссылки на треки внутри релиза без N+1 по каждому релизу отдельно. */
 export async function listTrackIdsByReleaseIds(releaseIds: string[]): Promise<Map<string, string[]>> {
   if (releaseIds.length === 0) return new Map();
   const rows = await db
@@ -108,7 +101,6 @@ export async function getTracksByIds(ids: string[]): Promise<DiscoveryTrack[]> {
   return rows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) }));
 }
 
-/** Свежие релизы по всей платформе (опубликованные / запланированные с прошедшей датой). */
 export async function getLatestReleases(limit = 12): Promise<DiscoveryRelease[]> {
   return db
     .select(releaseCardColumns)
@@ -171,11 +163,7 @@ export interface ArtistPlayableTrack {
   feat: string[];
 }
 
-/**
- * Играбельные (READY) треки слышимых релизов артиста, в порядке свежести релиза,
- * затем по номеру трека. Для play-all и ридаута на странице артиста: один запрос
- * вместо N fetch'ей по релизам.
- */
+/** Для play-all и ридаута на странице артиста: один запрос вместо N fetch'ей по релизам. */
 export async function getArtistPlayableTracks(artistProfileId: string): Promise<ArtistPlayableTrack[]> {
   const rows = await db
     .select({
@@ -201,11 +189,7 @@ export async function getArtistPlayableTracks(artistProfileId: string): Promise<
 
 export type ReleaseSort = 'fresh' | 'popular';
 
-/**
- * Каталог релизов с сортировкой и опциональным окном по дате выхода.
- * `fresh`: по свежести, `popular`: по числу прослушиваний (треки релиза).
- * `sinceDays` ограничивает витрину релизами за последние N дней.
- */
+/** `popular` — сортировка по прослушиваниям треков релиза, не по популярности артиста. */
 export async function listReleases({
   sort = 'fresh',
   sinceDays,

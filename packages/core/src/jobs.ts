@@ -5,10 +5,8 @@ export const QUEUE_NOTIFY_RELEASE = 'notify-release' as const;
 export const QUEUE_ANALYZE = 'analyze-audio' as const;
 export const QUEUE_ANALYZE_GENRE = 'analyze-genre' as const;
 export const QUEUE_EDITORIAL = 'editorial' as const;
-// Планировщик авто-выхода SCHEDULED-релизов по дате + исполнение пресейвов.
 export const QUEUE_SCHEDULED_PUBLISH = 'scheduled-publish' as const;
 export const QUEUE_FULFILL_PRESAVE = 'fulfill-presave' as const;
-// Ежедневный снапшот истории метрик платформы (00:10 МСК).
 export const QUEUE_METRICS = 'metrics-daily' as const;
 
 export interface TranscodeJobData {
@@ -52,12 +50,10 @@ export interface PlayEventJobData {
   startedAt: string; // ISO string
 }
 
-// Регенерация подборок по расписанию: shared — раз в сутки, personal — раз в 4ч.
 export interface EditorialJobData {
   scope: 'shared' | 'personal';
 }
 
-// Исполнение пресейвов вышедшего релиза: авто-лайк трекам пресейверов + письмо.
 export interface FulfillPresaveJobData {
   releaseId: string;
   releaseTitle: string;

@@ -12,7 +12,6 @@ import { useWaveSeedStart } from '@/lib/use-wave-seed-start';
 import { AllTagsSheet } from '@/components/home/all-tags-sheet';
 import type { TagSheetSection, WaveChipItem } from '@/components/home/wave-chip-items';
 
-/** Ряд чипов «Поток»: первый элемент открывает шит «Все теги», остальные — клик запускает волну с этим mood/genre как seed. */
 export function WaveChips({ items, sections }: { items: WaveChipItem[]; sections: TagSheetSection[] }) {
   const waveSeed = usePlayerStore((s) => s.waveSeed);
   const { loading, start } = useWaveSeedStart();
