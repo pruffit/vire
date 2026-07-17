@@ -6,6 +6,7 @@ import {
   rightsHolders,
 } from '../schema';
 import type { UserRole } from './admin-types';
+import { defaultThemeTokens, type ThemeTokens } from '@vire/core';
 
 export type { UserRole };
 
@@ -312,7 +313,7 @@ export async function setArtistActive(artistProfileId: string, isActive: boolean
 
 export async function getArtistCore(
   id: string,
-): Promise<{ id: string; name: string; slug: string; bio: string | null; avatarUrl: string | null } | null> {
+): Promise<{ id: string; name: string; slug: string; bio: string | null; avatarUrl: string | null; themeTokens: ThemeTokens } | null> {
   const [row] = await db
     .select({
       id: artistProfiles.id,
@@ -320,22 +321,31 @@ export async function getArtistCore(
       slug: artistProfiles.slug,
       bio: artistProfiles.bio,
       avatarUrl: artistProfiles.avatarUrl,
+      themeTokens: artistProfiles.themeTokens,
     })
     .from(artistProfiles)
     .where(eq(artistProfiles.id, id))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  return { ...row, themeTokens: (row.themeTokens as ThemeTokens | null) ?? defaultThemeTokens };
 }
 
 /** Полная админ-редактура профиля артиста, включая slug (он уникален → ловим конфликт). */
 export async function adminUpdateArtist(
   id: string,
-  data: { name: string; slug: string; bio: string | null; avatarUrl: string | null },
+  data: { name: string; slug: string; bio: string | null; avatarUrl: string | null; themeTokens?: ThemeTokens },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     await db
       .update(artistProfiles)
-      .set({ name: data.name, slug: data.slug, bio: data.bio, avatarUrl: data.avatarUrl, updatedAt: new Date() })
+      .set({
+        name: data.name,
+        slug: data.slug,
+        bio: data.bio,
+        avatarUrl: data.avatarUrl,
+        updatedAt: new Date(),
+        ...(data.themeTokens ? { themeTokens: data.themeTokens } : {}),
+      })
       .where(eq(artistProfiles.id, id));
     return { ok: true };
   } catch {

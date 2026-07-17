@@ -16,6 +16,7 @@ import { transcodeQueue } from '@/lib/queue';
 import { playlistCoverStorage } from '@/lib/playlist-cover-storage';
 import { parseLrc } from '@/lib/lrc';
 import { sanitizeCredits, type TrackCredit } from '@/lib/upload';
+import { SANS_FONTS, MONO_FONTS } from '@/lib/font-catalog';
 
 // VIEWER проходит гейт (canMutate=false), но каждый мутирующий экшен — тихий no-op
 const ADMIN_VIEW_ROLES = new Set<UserRole>(['VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN']);
@@ -167,11 +168,17 @@ export async function actionAdminDeletePlaylist(id: string): Promise<{ ok?: bool
 
 export async function actionAdminUpdateArtist(
   artistProfileId: string,
-  input: { name: string; slug: string; bio: string | null; avatarUrl: string | null },
+  input: {
+    name: string;
+    slug: string;
+    bio: string | null;
+    avatarUrl: string | null;
+    theme?: { bg: string; text: string; accent: string; grain: boolean; fontSans: string; fontMono: string };
+  },
 ): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  const service = new ArtistService(new DrizzleArtistRepository(db));
+  const service = new ArtistService(new DrizzleArtistRepository(db), { fonts: { sans: SANS_FONTS, mono: MONO_FONTS } });
   const result = await service.adminUpdate(artistProfileId, input);
   if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/artists');

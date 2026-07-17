@@ -65,7 +65,7 @@ export class DrizzleArtistRepository implements IArtistRepository {
 
   adminUpdate(
     id: string,
-    data: { name: string; slug: string; bio: string | null; avatarUrl: string | null },
+    data: { name: string; slug: string; bio: string | null; avatarUrl: string | null; themeTokens?: ThemeTokens },
   ): Promise<{ ok: true } | { ok: false; error: string }> {
     return adminUpdateArtist(id, data);
   }

@@ -334,4 +334,49 @@ describe('ArtistService.adminUpdate', () => {
 
     expect(repo.adminUpdate).toHaveBeenCalledWith('artist-1', expect.objectContaining({ bio: null, avatarUrl: null }));
   });
+
+  const validTheme = { bg: '#111111', text: '#eeeeee', accent: '#ff5c39', grain: true, fontSans: 'Inter', fontMono: 'JetBrains Mono' };
+  const fonts = { sans: ['Inter', 'Rubik'], mono: ['JetBrains Mono'] };
+
+  it('passes a valid theme through to repo.adminUpdate as themeTokens', async () => {
+    const repo = makeRepo({ adminUpdate: vi.fn().mockResolvedValue({ ok: true }) });
+    const service = new ArtistService(repo, { fonts });
+
+    const result = await service.adminUpdate('artist-1', { ...validInput, theme: validTheme });
+
+    expect(result.ok).toBe(true);
+    expect(repo.adminUpdate).toHaveBeenCalledWith('artist-1', expect.objectContaining({ themeTokens: validTheme }));
+  });
+
+  it('returns err(ValidationError) when a theme color is not a valid hex', async () => {
+    const repo = makeRepo();
+    const service = new ArtistService(repo, { fonts });
+
+    const result = await service.adminUpdate('artist-1', { ...validInput, theme: { ...validTheme, accent: 'not-hex' } });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ValidationError);
+    expect(repo.adminUpdate).not.toHaveBeenCalled();
+  });
+
+  it('returns err(ValidationError) when a theme font is outside deps.fonts', async () => {
+    const repo = makeRepo();
+    const service = new ArtistService(repo, { fonts });
+
+    const result = await service.adminUpdate('artist-1', { ...validInput, theme: { ...validTheme, fontSans: 'Unknown Font' } });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ValidationError);
+    expect(repo.adminUpdate).not.toHaveBeenCalled();
+  });
+
+  it('does not pass themeTokens to repo.adminUpdate when theme is not given', async () => {
+    const repo = makeRepo({ adminUpdate: vi.fn().mockResolvedValue({ ok: true }) });
+    const service = new ArtistService(repo, { fonts });
+
+    await service.adminUpdate('artist-1', validInput);
+
+    const call = (repo.adminUpdate as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(call).not.toHaveProperty('themeTokens');
+  });
 });

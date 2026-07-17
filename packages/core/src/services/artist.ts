@@ -98,7 +98,13 @@ export class ArtistService {
 
   async adminUpdate(
     artistProfileId: string,
-    input: { name: string; slug: string; bio: string | null; avatarUrl: string | null },
+    input: {
+      name: string;
+      slug: string;
+      bio: string | null;
+      avatarUrl: string | null;
+      theme?: { bg: string; text: string; accent: string; grain: boolean; fontSans: string; fontMono: string };
+    },
   ): Promise<Result<void, ValidationError | ConflictError>> {
     const name = (input.name ?? '').trim();
     if (!name || name.length > 120) return err(new ValidationError('Имя: 1–120 символов'));
@@ -107,11 +113,33 @@ export class ArtistService {
       return err(new ValidationError('Slug: 2–60 символов, латиница/цифры/дефис'));
     }
 
+    let themeTokens: ThemeTokens | undefined;
+    if (input.theme) {
+      if (!isHex(input.theme.bg) || !isHex(input.theme.text) || !isHex(input.theme.accent)) {
+        return err(new ValidationError('Тема: цвет должен быть в формате #rrggbb'));
+      }
+      if (this.deps.fonts && !this.deps.fonts.sans.includes(input.theme.fontSans)) {
+        return err(new ValidationError('Тема: неизвестный основной шрифт'));
+      }
+      if (this.deps.fonts && !this.deps.fonts.mono.includes(input.theme.fontMono)) {
+        return err(new ValidationError('Тема: неизвестный моно-шрифт'));
+      }
+      themeTokens = {
+        bg: input.theme.bg,
+        text: input.theme.text,
+        accent: input.theme.accent,
+        grain: input.theme.grain,
+        fontSans: input.theme.fontSans,
+        fontMono: input.theme.fontMono,
+      };
+    }
+
     const res = await this.repo.adminUpdate(artistProfileId, {
       name,
       slug,
       bio: input.bio?.trim() ? input.bio.trim().slice(0, 2000) : null,
       avatarUrl: input.avatarUrl?.trim() || null,
+      ...(themeTokens ? { themeTokens } : {}),
     });
     if (!res.ok) return err(new ConflictError(res.error));
     return ok(undefined);

@@ -11,7 +11,7 @@ export default async function AdminArtistEditPage({ params }: { params: Promise<
   if (!artist) notFound();
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 max-w-5xl">
       <DetailHeader backHref="/admin/artists" backLabel="Артисты" title="Редактировать артиста" subtitle={artist.id} />
       <ArtistEditForm
         artistProfileId={artist.id}
@@ -21,6 +21,7 @@ export default async function AdminArtistEditPage({ params }: { params: Promise<
           bio: artist.bio ?? '',
           avatarUrl: artist.avatarUrl ?? '',
         }}
+        initialTheme={artist.themeTokens}
       />
     </div>
   );

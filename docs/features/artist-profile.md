@@ -59,7 +59,10 @@ motion-`Reveal`, оставлявшего висящий композит-сло
 - **Индикатор «играет»:** `apps/web/components/playing-bars.tsx` (`PlayingBars`, общий
   с трек-листом релиза)
 - **Форматтеры ридаута:** `apps/web/lib/format.ts` (`formatCount`, `plural*`, `totalDuration`)
-- **Виджет темизации (дашборд):** `apps/web/app/dashboard/profile/_components/ThemePicker.tsx` — live color picker + пресеты
+- **Виджет темизации:** `apps/web/components/theme-editor.tsx` (`ThemeEditor`, controlled) —
+  пресеты, live color picker, шрифты, зерно, превью страницы; общий для дашборда
+  (`apps/web/app/dashboard/profile/edit-profile-form.tsx`) и **админ-редактора артиста**
+  (`/admin/artists/[id]/edit`, минуя ownership-гард дашборда — правит любой профиль)
 - **API профиля:** `apps/web/app/api/v1/dashboard/profile/route.ts`
 - **Сервис:** `packages/core/src/services/artist.service.ts`
 - **Репозиторий:** `packages/core/src/repositories/artist.repository.ts`
