@@ -109,9 +109,11 @@ describe('composePlaylist', () => {
     expect(out).toEqual(['g0', 'p0']);
   });
 
-  it('defaults to the playlist list limit and MAX_PER_ARTIST', () => {
-    const out = composePlaylist([], many('p', 'P', PLAYLIST_LIST_LIMIT + 10));
+  it('defaults to the playlist list limit and the MAX_PER_ARTIST cap', () => {
+    const pool = [...many('a', 'A', 10), ...many('b', 'B', 30)];
+    const out = composePlaylist([], pool);
     expect(out).toHaveLength(PLAYLIST_LIST_LIMIT);
+    expect(out.slice(0, 6)).toEqual(['a0', 'a1', 'a2', 'b0', 'b1', 'b2']);
     expect(MAX_PER_ARTIST).toBe(3);
   });
 });

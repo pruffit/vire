@@ -71,12 +71,13 @@ const relistenersSql = sql<number>`(
 /** «Возвращаются снова»: один и тот же слушатель вернулся минимум дважды в разные дни. */
 async function generateRelistenPlaylist(pool: PlaylistCandidate[], usedFiller: Set<string>): Promise<void> {
   const rows = await db
-    .select({ trackId: tracks.id, artistId: artistProfiles.id, relisteners: relistenersSql })
+    .select({ trackId: tracks.id, artistId: artistProfiles.id, relisteners: relistenersSql.as('relisteners') })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
     .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
     .where(visibleTrackWhere)
-    .orderBy(desc(relistenersSql), desc(releases.releaseDate))
+    // ORDER BY по алиасу: повтор подзапроса в orderBy заставил бы Postgres считать агрегат дважды
+    .orderBy(sql`relisteners DESC`, desc(releases.releaseDate))
     .limit(LIST_LIMIT);
 
   const candidates = rows.filter((r) => Number(r.relisteners) > 0);
@@ -121,7 +122,9 @@ async function generateTopMoodPlaylists(pool: PlaylistCandidate[], usedFiller: S
     .select({ mood: trackMoods.mood, c: count() })
     .from(trackMoods)
     .innerJoin(tracks, eq(tracks.id, trackMoods.trackId))
-    .where(eq(tracks.status, 'READY'))
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(visibleTrackWhere)
     .groupBy(trackMoods.mood)
     .orderBy(desc(count()))
     .limit(SHARED_MOOD_COUNT);
