@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, index, date } from 'drizzle-orm/pg-core';
 
 // Отдельно от транзакционной базы: минимальные поля для аналитики, волны и будущих выплат
 // Исторические данные не восстановить задним числом: пишем с первого дня
@@ -19,3 +19,20 @@ export const playEvents = pgTable('play_events', {
   index('play_events_started_at_idx').on(t.startedAt),
   index('play_events_user_id_idx').on(t.userId),
 ]);
+
+// Ежедневный снапшот платформы: тоталы невосстановимы задним числом (unlike/unfollow/
+// удаление стирают строки), поэтому история переживает удаления. plays/listeners — за
+// этот день, остальное — тоталы на конец дня. Пишет apps/worker (metrics-daily, 00:10 МСК).
+export const platformMetricsDaily = pgTable('platform_metrics_daily', {
+  day: date('day').primaryKey(),
+  users: integer('users').notNull().default(0),
+  artists: integer('artists').notNull().default(0),
+  releasesPublished: integer('releases_published').notNull().default(0),
+  tracksReady: integer('tracks_ready').notNull().default(0),
+  plays: integer('plays').notNull().default(0),
+  listeners: integer('listeners').notNull().default(0),
+  likesTotal: integer('likes_total').notNull().default(0),
+  followsTotal: integer('follows_total').notNull().default(0),
+  playlistsTotal: integer('playlists_total').notNull().default(0),
+  postsTotal: integer('posts_total').notNull().default(0),
+});

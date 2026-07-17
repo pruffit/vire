@@ -1,14 +1,30 @@
-import { getAdminDailyPlays, getAdminTopTracks, getAdminTopArtists } from '@vire/db';
-import type { AdminDailyPlays, AdminTopTrack, AdminTopArtist } from '@vire/db';
-import { PageHeader, Section, Panel, EmptyState } from '@/components/admin/ui';
+import {
+  getAdminDailyPlays, getAdminTopTracks, getAdminTopArtists, getPlatformMetricsHistory,
+} from '@vire/db';
+import type {
+  AdminDailyPlays, AdminTopTrack, AdminTopArtist, PlatformMetricsDay,
+} from '@vire/db';
+import { PageHeader, Section, SectionLabel, Panel, EmptyState, FilterTabs } from '@/components/admin/ui';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminAnalyticsPage() {
-  const [daily, topTracks, topArtists] = await Promise.all([
+const HISTORY_PERIODS = [30, 90, 180] as const;
+type HistoryDays = (typeof HISTORY_PERIODS)[number];
+
+function parseDays(raw: string | undefined): HistoryDays {
+  const n = Number(raw);
+  return (HISTORY_PERIODS as readonly number[]).includes(n) ? (n as HistoryDays) : 30;
+}
+
+type Props = { searchParams: Promise<{ days?: string }> };
+
+export default async function AdminAnalyticsPage({ searchParams }: Props) {
+  const days = parseDays((await searchParams).days);
+  const [daily, topTracks, topArtists, history] = await Promise.all([
     getAdminDailyPlays(14),
     getAdminTopTracks(30, 10),
     getAdminTopArtists(30, 10),
+    getPlatformMetricsHistory(days),
   ]);
 
   return (
@@ -21,6 +37,8 @@ export default async function AdminAnalyticsPage() {
         <TopTracks tracks={topTracks} />
         <TopArtists artists={topArtists} />
       </div>
+
+      <PlatformHistory history={history} days={days} />
     </div>
   );
 }
@@ -156,5 +174,90 @@ function TopArtists({ artists }: { artists: AdminTopArtist[] }) {
         </div>
       )}
     </Section>
+  );
+}
+
+// ─── История платформы ─────────────────────────────────────────────────────
+
+function PlatformHistory({ history, days }: { history: PlatformMetricsDay[]; days: HistoryDays }) {
+  return (
+    <Section
+      label="История платформы"
+      action={
+        <FilterTabs
+          tabs={HISTORY_PERIODS.map((d) => ({
+            href: `?days=${d}`,
+            label: `${d}д`,
+            active: d === days,
+          }))}
+        />
+      }
+    >
+      {history.length === 0 ? (
+        <Panel>
+          <EmptyState title="История ещё не набралась" hint="Первый снапшот появится после ночного прогона джобы" />
+        </Panel>
+      ) : (
+        <div className="grid lg:grid-cols-3 gap-4">
+          <GrowthChart title="Пользователи" points={history} field="users" />
+          <GrowthChart title="Лайки" points={history} field="likesTotal" />
+          <GrowthChart title="Подписки" points={history} field="followsTotal" />
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function GrowthChart({
+  title,
+  points,
+  field,
+}: {
+  title: string;
+  points: PlatformMetricsDay[];
+  field: 'users' | 'likesTotal' | 'followsTotal';
+}) {
+  const values = points.map((p) => p[field]);
+  const max = Math.max(1, ...values);
+  const latest = values.at(-1) ?? 0;
+  const first = points[0];
+  const last = points.at(-1);
+
+  return (
+    <Panel className="p-5 min-w-0">
+      <div className="flex items-baseline justify-between gap-2">
+        <SectionLabel>{title}</SectionLabel>
+        <span className="font-mono text-sm text-foreground/75 tabular-nums">{latest.toLocaleString('ru-RU')}</span>
+      </div>
+      <div className="mt-3 flex items-end gap-px h-24">
+        {points.map((p, i) => {
+          const v = p[field];
+          const h = v === 0 ? 2 : Math.max(4, Math.round((v / max) * 100));
+          return (
+            <div
+              key={p.day}
+              className="group relative flex-1 h-full flex items-end min-w-0"
+              title={`${p.day}: ${v.toLocaleString('ru-RU')}`}
+            >
+              <div
+                className="w-full rounded-[1px] bg-foreground/30 group-hover:bg-foreground/55 transition-colors"
+                style={{ height: `${h}%` }}
+              />
+              {i === points.length - 1 && (
+                <span className="absolute -top-4 right-0 text-[10px] font-mono text-foreground/60 tabular-nums opacity-0 group-hover:opacity-100 transition-opacity">
+                  {v}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {first && last && (
+        <div className="mt-1.5 flex justify-between text-[10px] font-mono text-foreground/30 tabular-nums">
+          <span>{first.day}</span>
+          <span>{last.day}</span>
+        </div>
+      )}
+    </Panel>
   );
 }

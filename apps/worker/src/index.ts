@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Queue } from 'bullmq';
-import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH } from '@vire/core';
+import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH, QUEUE_METRICS } from '@vire/core';
 import { createTranscodeWorker, handleTerminalTranscodeFailure } from './workers/transcode.worker.js';
 import { createPlayEventsWorker } from './workers/play-events.worker.js';
 import { createNotifyReleaseWorker } from './workers/notify-release.worker.js';
@@ -9,6 +9,7 @@ import { createAnalyzeGenreWorker } from './workers/analyze-genre.worker.js';
 import { createEditorialWorker } from './workers/editorial.worker.js';
 import { createScheduledPublishWorker } from './workers/scheduled-publish.worker.js';
 import { createFulfillPresaveWorker } from './workers/fulfill-presave.worker.js';
+import { createMetricsWorker } from './workers/metrics.worker.js';
 import { connection } from './queues/connection.js';
 import { alertJobFailure, alertWorkerError, alertCrash } from './lib/alert.js';
 
@@ -20,6 +21,7 @@ const analyzeGenreWorker = createAnalyzeGenreWorker();
 const editorialWorker = createEditorialWorker();
 const scheduledPublishWorker = createScheduledPublishWorker();
 const fulfillPresaveWorker = createFulfillPresaveWorker();
+const metricsWorker = createMetricsWorker();
 
 // upsertJobScheduler идемпотентен: повторный запуск воркера не плодит дубли, обновляет расписание.
 const editorialQueue = new Queue(QUEUE_EDITORIAL, { connection });
@@ -36,6 +38,12 @@ const scheduledPublishQueue = new Queue(QUEUE_SCHEDULED_PUBLISH, { connection })
 scheduledPublishQueue
   .upsertJobScheduler('due-every-min', { pattern: '* * * * *' }, { name: 'due', data: {} })
   .catch((err) => void alertWorkerError('scheduled-publish', err as Error));
+
+// Снапшот метрик за вчера, чуть после полуночи МСК — даёт время editorial-крону (00:00) отойти.
+const metricsQueue = new Queue(QUEUE_METRICS, { connection });
+metricsQueue
+  .upsertJobScheduler('metrics-daily', { pattern: '10 0 * * *', tz: 'Europe/Moscow' }, { name: 'snapshot', data: {} })
+  .catch((err) => void alertWorkerError('metrics-daily', err as Error));
 
 editorialWorker.on('completed', (job) => {
   console.log(`[editorial] ✓ job=${job.id} scope=${job.data.scope}`);
@@ -99,7 +107,17 @@ fulfillPresaveWorker.on('error', (err) => {
   void alertWorkerError('fulfill-presave', err);
 });
 
-console.log('[worker] transcode + analyze + analyze-genre + play-events + notify-release + editorial + scheduled-publish + fulfill-presave workers started');
+metricsWorker.on('completed', (job) => {
+  console.log(`[metrics-daily] ✓ job=${job.id}`);
+});
+metricsWorker.on('failed', (job, err) => {
+  void alertJobFailure('metrics-daily', job?.id, err);
+});
+metricsWorker.on('error', (err) => {
+  void alertWorkerError('metrics-daily', err);
+});
+
+console.log('[worker] transcode + analyze + analyze-genre + play-events + notify-release + editorial + scheduled-publish + fulfill-presave + metrics-daily workers started');
 
 analyzeWorker.on('completed', (job) => {
   console.log(`[analyze] ✓ job=${job.id} track=${job.data.trackId}`);
@@ -143,6 +161,8 @@ async function shutdown() {
     scheduledPublishWorker.close(),
     fulfillPresaveWorker.close(),
     scheduledPublishQueue.close(),
+    metricsWorker.close(),
+    metricsQueue.close(),
   ]);
   process.exit(0);
 }

@@ -58,6 +58,7 @@
 - [x] [SEO и структурированные данные](seo.md) — JSON-LD, sitemap, robots, OG
 - [x] [Дашборд артиста](dashboard.md) — релизы, профиль, посты, аналитика
 - [x] [Backoffice (/admin)](admin.md) — модерация, health, аналитика
+- [x] [История метрик платформы](platform-metrics.md) — ежедневные снапшоты в Postgres, графики роста в `/admin/analytics`
 - [x] [Письма и рассылки](mailings.md) — Brevo (magic-link, обратная связь, нотификации о релизах)
 - [x] [Мониторинг и алерты](monitoring.md) — `/api/health`, крэш-алерты воркера, Telegram через CF Worker
 - [x] [Иконки](icons.md) — системный спрайт (`Icon`) + бренд-логотипы соцсетей/стримингов (`BrandIcon`), сборщик `pnpm icons:build`

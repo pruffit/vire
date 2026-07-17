@@ -177,6 +177,8 @@ export {
   generatePersonalPlaylistsForAllUsers,
   generatePersonalPlaylists,
 } from './queries/editorial';
+export { snapshotPlatformMetricsDaily, getPlatformMetricsHistory } from './queries/metrics';
+export type { PlatformMetricsDay } from './queries/metrics';
 export {
   getSmartLinkBySlug,
   getSmartLinkById,

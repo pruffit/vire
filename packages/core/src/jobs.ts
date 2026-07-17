@@ -8,6 +8,8 @@ export const QUEUE_EDITORIAL = 'editorial' as const;
 // Планировщик авто-выхода SCHEDULED-релизов по дате + исполнение пресейвов.
 export const QUEUE_SCHEDULED_PUBLISH = 'scheduled-publish' as const;
 export const QUEUE_FULFILL_PRESAVE = 'fulfill-presave' as const;
+// Ежедневный снапшот истории метрик платформы (00:10 МСК).
+export const QUEUE_METRICS = 'metrics-daily' as const;
 
 export interface TranscodeJobData {
   trackId: string;
