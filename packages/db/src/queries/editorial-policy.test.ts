@@ -5,6 +5,9 @@ import {
   hasEnoughTracksForPersonalPlaylist,
   pickPersonalMoods,
   fillToLimit,
+  composePlaylist,
+  MAX_PER_ARTIST,
+  type PlaylistCandidate,
 } from './editorial-policy';
 import type { Mood } from './track-moods';
 
@@ -90,5 +93,62 @@ describe('fillToLimit', () => {
   it('defaults to the playlist list limit', () => {
     const out = fillToLimit([], ids('p', PLAYLIST_LIST_LIMIT + 10));
     expect(out).toHaveLength(PLAYLIST_LIST_LIMIT);
+  });
+});
+
+describe('composePlaylist', () => {
+  const c = (trackId: string, artistId: string): PlaylistCandidate => ({ trackId, artistId });
+  const many = (prefix: string, artistId: string, n: number) =>
+    Array.from({ length: n }, (_, i) => c(`${prefix}${i}`, artistId));
+
+  it('caps an artist in the head, deferring overflow after other artists but before filler', () => {
+    const genuine = [...many('a', 'A', 5), c('b0', 'B'), c('c0', 'C')];
+    const pool = many('p', 'P', 10);
+    const out = composePlaylist(genuine, pool, new Set(), 10);
+    expect(out).toEqual(['a0', 'a1', 'a2', 'b0', 'c0', 'a3', 'a4', 'p0', 'p1', 'p2']);
+  });
+
+  it('never evicts genuine in favour of filler', () => {
+    const genuine = many('a', 'A', 6);
+    const pool = many('p', 'P', 10);
+    const out = composePlaylist(genuine, pool, new Set(), 6);
+    expect(out).toEqual(['a0', 'a1', 'a2', 'a3', 'a4', 'a5']);
+  });
+
+  it('applies the cap to filler counting tracks already picked from genuine', () => {
+    const genuine = [c('g0', 'A'), c('g1', 'A')];
+    const pool = [c('p0', 'A'), c('p1', 'A'), c('p2', 'B')];
+    const out = composePlaylist(genuine, pool, new Set(), 4);
+    expect(out).toEqual(['g0', 'g1', 'p0', 'p2']);
+  });
+
+  it('relaxes the filler cap only when diverse pool candidates run out', () => {
+    const genuine = [c('g0', 'A')];
+    const pool = [c('p0', 'B'), c('p1', 'B'), c('p2', 'B'), c('p3', 'B'), c('p4', 'B')];
+    const out = composePlaylist(genuine, pool, new Set(), 5);
+    expect(out).toEqual(['g0', 'p0', 'p1', 'p2', 'p3']);
+  });
+
+  it('prefers unused pool candidates, reusing avoided ones only when the pool runs dry', () => {
+    const genuine = [c('g0', 'G')];
+    const pool = [c('u0', 'U'), c('u1', 'U2'), c('f0', 'F'), c('f1', 'F2')];
+    const out = composePlaylist(genuine, pool, new Set(['u0', 'u1']), 4);
+    expect(out).toEqual(['g0', 'f0', 'f1', 'u0']);
+  });
+
+  it('deduplicates genuine tracks that also appear in the pool', () => {
+    const out = composePlaylist([c('a', 'A')], [c('a', 'A'), c('b', 'B')], new Set(), 2);
+    expect(out).toEqual(['a', 'b']);
+  });
+
+  it('returns fewer than limit only when genuine plus pool are smaller than the limit', () => {
+    const out = composePlaylist([c('g0', 'A')], [c('p0', 'B')], new Set(), 5);
+    expect(out).toEqual(['g0', 'p0']);
+  });
+
+  it('defaults to the playlist list limit and MAX_PER_ARTIST', () => {
+    const out = composePlaylist([], many('p', 'P', PLAYLIST_LIST_LIMIT + 10));
+    expect(out).toHaveLength(PLAYLIST_LIST_LIMIT);
+    expect(MAX_PER_ARTIST).toBe(3);
   });
 });

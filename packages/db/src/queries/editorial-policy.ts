@@ -29,6 +29,61 @@ export function fillToLimit(
   return out;
 }
 
+export interface PlaylistCandidate {
+  trackId: string;
+  artistId: string;
+}
+
+export const MAX_PER_ARTIST = 3;
+
+export function composePlaylist(
+  genuine: PlaylistCandidate[],
+  pool: PlaylistCandidate[],
+  avoid: ReadonlySet<string> = new Set(),
+  limit: number = PLAYLIST_LIST_LIMIT,
+  maxPerArtist: number = MAX_PER_ARTIST,
+): string[] {
+  const out: string[] = [];
+  const have = new Set<string>();
+  const perArtist = new Map<string, number>();
+
+  const push = (cand: PlaylistCandidate) => {
+    out.push(cand.trackId);
+    have.add(cand.trackId);
+    perArtist.set(cand.artistId, (perArtist.get(cand.artistId) ?? 0) + 1);
+  };
+
+  // cap переупорядочивает genuine, но не выбрасывает: подлинное совпадение важнее филлера
+  const deferred: PlaylistCandidate[] = [];
+  for (const cand of genuine) {
+    if (out.length >= limit) break;
+    if (have.has(cand.trackId)) continue;
+    if ((perArtist.get(cand.artistId) ?? 0) >= maxPerArtist) {
+      deferred.push(cand);
+      continue;
+    }
+    push(cand);
+  }
+  for (const cand of deferred) {
+    if (out.length >= limit) break;
+    if (!have.has(cand.trackId)) push(cand);
+  }
+
+  const passes: Array<(cand: PlaylistCandidate) => boolean> = [
+    (cand) => !avoid.has(cand.trackId) && (perArtist.get(cand.artistId) ?? 0) < maxPerArtist,
+    (cand) => !avoid.has(cand.trackId),
+    () => true,
+  ];
+  for (const pass of passes) {
+    for (const cand of pool) {
+      if (out.length >= limit) break;
+      if (have.has(cand.trackId) || !pass(cand)) continue;
+      push(cand);
+    }
+  }
+  return out;
+}
+
 export function hasEnoughTracksForPersonalPlaylist(trackCount: number): boolean {
   return trackCount >= MIN_PERSONAL_PLAYLIST_TRACKS;
 }
