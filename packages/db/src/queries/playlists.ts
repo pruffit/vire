@@ -9,6 +9,7 @@ export interface PlaylistSummary {
   visibility: 'PRIVATE' | 'PUBLIC';
   trackCount: number;
   coverUrl: string | null;
+  covers: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -83,35 +84,22 @@ export async function getUserPlaylists(userId: string): Promise<PlaylistSummary[
     .where(eq(playlists.ownerUserId, userId))
     .orderBy(desc(playlists.updatedAt));
 
-  const withMeta = await Promise.all(
-    rows.map(async (p) => {
-      const [countRow] = await db
-        .select({ c: count() })
-        .from(playlistTracks)
-        .where(eq(playlistTracks.playlistId, p.id));
+  const meta = await fetchPlaylistMeta(rows.map((r) => r.id));
 
-      const [firstTrack] = await db
-        .select({ coverUrl: releases.coverUrl })
-        .from(playlistTracks)
-        .innerJoin(tracks, eq(tracks.id, playlistTracks.trackId))
-        .innerJoin(releases, eq(releases.id, tracks.releaseId))
-        .where(eq(playlistTracks.playlistId, p.id))
-        .orderBy(asc(playlistTracks.position))
-        .limit(1);
-
-      return {
-        id: p.id,
-        title: p.title,
-        visibility: p.visibility,
-        updatedAt: p.updatedAt,
-        createdAt: p.createdAt,
-        trackCount: Number(countRow?.c ?? 0),
-        coverUrl: p.coverUrl ?? firstTrack?.coverUrl ?? null,
-      };
-    }),
-  );
-
-  return withMeta;
+  return rows.map((p) => {
+    const m = meta.get(p.id);
+    const covers = pickCovers(p.coverUrl, m?.covers ?? []);
+    return {
+      id: p.id,
+      title: p.title,
+      visibility: p.visibility,
+      updatedAt: p.updatedAt,
+      createdAt: p.createdAt,
+      trackCount: m?.trackCount ?? 0,
+      coverUrl: covers[0] ?? null,
+      covers,
+    };
+  });
 }
 
 export async function getPlaylistWithTracks(
@@ -333,10 +321,29 @@ interface PlaylistMetaRow {
   coverUrl: string | null;
 }
 
-/** Досчитывает trackCount + до 4 обложек (коллаж). Общий хелпер всех геттеров подборок. */
-async function hydratePlaylists(rows: PlaylistMetaRow[]): Promise<EditorialPlaylist[]> {
-  if (rows.length === 0) return [];
-  const playlistIds = rows.map((r) => r.id);
+export interface PlaylistMeta {
+  trackCount: number;
+  covers: string[];
+}
+
+/** Дедуп обложек треков, своя обложка плейлиста первой, максимум 4. */
+export function pickCovers(
+  playlistCoverUrl: string | null,
+  trackCovers: (string | null)[],
+): string[] {
+  const unique: string[] = [];
+  for (let i = 0; i < trackCovers.length && unique.length < 4; i++) {
+    const c = trackCovers[i];
+    if (c && !unique.includes(c)) unique.push(c);
+  }
+  if (!playlistCoverUrl) return unique.slice(0, 4);
+  return [playlistCoverUrl, ...unique.filter((c) => c !== playlistCoverUrl)].slice(0, 4);
+}
+
+/** Batch trackCount + до 4 обложек треков (без своей обложки плейлиста) на все id сразу. */
+export async function fetchPlaylistMeta(playlistIds: string[]): Promise<Map<string, PlaylistMeta>> {
+  const result = new Map<string, PlaylistMeta>();
+  if (playlistIds.length === 0) return result;
 
   const trackCountRows = await db
     .select({ playlistId: playlistTracks.playlistId, c: count() })
@@ -344,15 +351,12 @@ async function hydratePlaylists(rows: PlaylistMetaRow[]): Promise<EditorialPlayl
     .where(inArray(playlistTracks.playlistId, playlistIds))
     .groupBy(playlistTracks.playlistId);
 
-  const countByPlaylist = Object.fromEntries(
-    trackCountRows.map((r) => [r.playlistId, Number(r.c)]),
-  );
+  const countByPlaylist = new Map(trackCountRows.map((r) => [r.playlistId, Number(r.c)]));
 
   const coverRows = await db
     .select({
       playlistId: playlistTracks.playlistId,
       coverUrl: releases.coverUrl,
-      position: playlistTracks.position,
     })
     .from(playlistTracks)
     .innerJoin(tracks, eq(tracks.id, playlistTracks.trackId))
@@ -365,26 +369,39 @@ async function hydratePlaylists(rows: PlaylistMetaRow[]): Promise<EditorialPlayl
     )
     .orderBy(asc(playlistTracks.position));
 
-  const coversByPlaylist: Record<string, string[]> = {};
+  const coversByPlaylist = new Map<string, string[]>();
   for (const row of coverRows) {
-    const list = (coversByPlaylist[row.playlistId] ??= []);
-    if (list.length < 4 && row.coverUrl && !list.includes(row.coverUrl)) list.push(row.coverUrl);
+    if (!row.coverUrl) continue;
+    const list = coversByPlaylist.get(row.playlistId) ?? [];
+    if (list.length < 4 && !list.includes(row.coverUrl)) list.push(row.coverUrl);
+    coversByPlaylist.set(row.playlistId, list);
   }
+
+  for (const id of playlistIds) {
+    result.set(id, {
+      trackCount: countByPlaylist.get(id) ?? 0,
+      covers: coversByPlaylist.get(id) ?? [],
+    });
+  }
+  return result;
+}
+
+/** Досчитывает trackCount + до 4 обложек (коллаж). Общий хелпер всех геттеров подборок. */
+async function hydratePlaylists(rows: PlaylistMetaRow[]): Promise<EditorialPlaylist[]> {
+  if (rows.length === 0) return [];
+  const meta = await fetchPlaylistMeta(rows.map((r) => r.id));
 
   // Сохраняем порядок входных rows (важно для приоритета показа).
   return rows.map((r) => {
-    const trackCovers = coversByPlaylist[r.id] ?? [];
-    const covers = r.coverUrl
-      ? [r.coverUrl, ...trackCovers.filter((c) => c !== r.coverUrl)].slice(0, 4)
-      : trackCovers;
+    const m = meta.get(r.id);
     return {
       id: r.id,
       title: r.title,
       description: r.description,
       kind: r.kind,
-      trackCount: countByPlaylist[r.id] ?? 0,
+      trackCount: m?.trackCount ?? 0,
       likesCount: r.likesCount,
-      covers,
+      covers: pickCovers(r.coverUrl, m?.covers ?? []),
     };
   });
 }

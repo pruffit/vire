@@ -255,9 +255,11 @@
   seen-флага.
 
 Техдолг вдогонку (из ревью пачки): `track-queue-menu.tsx` — третья копия
-поповер-паттерна (`track-share.tsx` + позиционные меню). При следующем похожем
-поповере вынести общий примитив (outside-click + Escape + AnimatePresence-шелл),
-заодно один раз закрыть тач-таргеты/коллизии.
+поповер-паттерна (`track-share.tsx` + позиционные меню). ✅ **Закрыт 17.07.2026**
+(пачка «обложки+шеринг плейлистов»): общий примитив `components/popover.tsx`
+(outside-click + Escape + AnimatePresence + авто-флип + `drop="down"`),
+`track-share.tsx` и `track-queue-menu.tsx` переведены на него, `PlaylistShare`
+сразу построен на примитиве.
 
 ## Фидбек пользователей
 

@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { motion } from 'motion/react';
 import type { PlaylistSummary } from '@vire/db';
 import { Icon } from '@/components/icon';
+import { PlaylistCover } from '@/components/playlist-cover';
 import { PlaylistPeekSheet } from '@/components/playlist-quick-look';
 
 interface Props {
@@ -26,19 +26,13 @@ export function PlaylistCard({ playlist }: Props) {
           className="group block w-full text-left space-y-2"
         >
           <div className="aspect-square rounded-xl overflow-hidden bg-card border border-border relative">
-            {playlist.coverUrl ? (
-              <Image
-                src={playlist.coverUrl}
-                alt={playlist.title}
-                fill
-                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 300px"
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center opacity-20">
-                <PlaylistIcon />
-              </div>
-            )}
+            <PlaylistCover
+              covers={playlist.covers}
+              title={playlist.title}
+              variant="mosaic"
+              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 300px"
+              imageClassName="transition-transform duration-300 group-hover:scale-105"
+            />
             {playlist.visibility === 'PRIVATE' && (
               <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-background/70 flex items-center justify-center backdrop-blur-sm">
                 <LockIcon />
@@ -60,16 +54,12 @@ export function PlaylistCard({ playlist }: Props) {
         playlistId={playlist.id}
         title={playlist.title}
         trackCount={playlist.trackCount}
-        cover={playlist.coverUrl}
+        covers={playlist.covers}
         open={open}
         onClose={() => setOpen(false)}
       />
     </>
   );
-}
-
-function PlaylistIcon() {
-  return <Icon name="list" size={28} />;
 }
 
 function LockIcon() {

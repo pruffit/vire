@@ -153,6 +153,8 @@ export {
   updatePlaylist,
   setPlaylistCover,
   isPermutation,
+  fetchPlaylistMeta,
+  pickCovers,
   getEditorialPlaylists,
   getPersonalPlaylists,
   getPopularPlaylists,
@@ -168,7 +170,7 @@ export {
   searchTracksForPlaylist,
   getPlaylistSuggestions,
 } from './queries/playlists';
-export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist, PlaylistAddTrack, PlaylistSuggestions } from './queries/playlists';
+export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist, PlaylistAddTrack, PlaylistSuggestions, PlaylistMeta } from './queries/playlists';
 export {
   generateAllEditorialPlaylists,
   generateSharedPlaylists,

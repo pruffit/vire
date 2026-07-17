@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { getPlaylistWithTracks, getPlaylistLikeState } from '@vire/db';
@@ -7,8 +6,10 @@ import { FadeUp } from '@vire/ui/motion';
 import { PlaylistView } from './playlist-view';
 import { PlaylistSettingsMenu } from './playlist-settings-menu';
 import { PlaylistLikeButton } from './playlist-like-button';
+import { getHeaderCovers } from './header-cover';
+import { PlaylistCover } from '@/components/playlist-cover';
+import { PlaylistShare } from '@/components/playlist-share';
 import { formatDuration, pluralTracks } from '@/lib/format';
-import { Icon } from '@/components/icon';
 import { HeartIcon } from '@/components/icons';
 
 type Props = { params: Promise<{ id: string }> };
@@ -17,7 +18,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const playlist = await getPlaylistWithTracks(id);
   if (!playlist) return { title: 'Не найдено' };
-  return { title: playlist.title };
+
+  if (playlist.visibility === 'PRIVATE') {
+    const session = await auth();
+    if (session?.user?.id !== playlist.ownerUserId) return { title: 'Не найдено' };
+    return { title: playlist.title, robots: { index: false, follow: false } };
+  }
+
+  const url = `/playlists/${id}`;
+  const description = playlist.description
+    ?? `${playlist.tracks.length} ${pluralTracks(playlist.tracks.length)} на Vire.`;
+
+  return {
+    title: playlist.title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { type: 'music.playlist', url, title: playlist.title, description },
+    twitter: { card: 'summary_large_image', title: playlist.title, description },
+  };
 }
 
 export default async function PlaylistPage({ params }: Props) {
@@ -33,16 +51,14 @@ export default async function PlaylistPage({ params }: Props) {
     ? await getPlaylistLikeState(session.user.id, id)
     : false;
   const totalSec = playlist.tracks.reduce((s, t) => s + (t.durationSec ?? 0), 0);
-  const coverUrl = playlist.coverUrl ?? playlist.tracks[0]?.coverUrl ?? null;
+  const headerCovers = getHeaderCovers(playlist);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-12 space-y-10">
       <FadeUp>
         <header className="flex items-start gap-6">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl shrink-0 overflow-hidden bg-card border border-border">
-            {coverUrl
-              ? <Image src={coverUrl} alt={playlist.title} width={112} height={112} className="w-full h-full object-cover" />
-              : <div className="w-full h-full flex items-center justify-center opacity-20"><Icon name="list" size={32} /></div>}
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl shrink-0 overflow-hidden bg-card border border-border relative">
+            <PlaylistCover covers={headerCovers} title={playlist.title} variant="mosaic" sizes="(max-width: 640px) 96px, 112px" />
           </div>
           <div className="space-y-2 pt-1 min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -62,12 +78,15 @@ export default async function PlaylistPage({ params }: Props) {
                 </span>
               )}
             </p>
-            {showLikeButton && (
-              <PlaylistLikeButton playlistId={id} initialLiked={liked} initialCount={playlist.likesCount} />
-            )}
-            {isOwner && (
-              <PlaylistSettingsMenu playlist={{ id, title: playlist.title, description: playlist.description, visibility: playlist.visibility, coverUrl: playlist.coverUrl }} />
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              {showLikeButton && (
+                <PlaylistLikeButton playlistId={id} initialLiked={liked} initialCount={playlist.likesCount} />
+              )}
+              {isOwner && (
+                <PlaylistSettingsMenu playlist={{ id, title: playlist.title, description: playlist.description, visibility: playlist.visibility, coverUrl: playlist.coverUrl }} />
+              )}
+              <PlaylistShare playlistId={id} title={playlist.title} visibility={playlist.visibility} isOwner={isOwner} />
+            </div>
           </div>
         </header>
       </FadeUp>

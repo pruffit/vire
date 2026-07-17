@@ -7,6 +7,7 @@ import { spring } from '@vire/ui/motion';
 import type { EditorialPlaylist } from '@vire/db';
 import { pluralTracks } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
+import { CoverPlaceholder } from './playlist-cover';
 import { usePlaylistLike } from './use-playlist-like';
 import { PlaylistPeekSheet } from './playlist-quick-look';
 
@@ -49,15 +50,7 @@ export function buildFan(covers: string[]): FanLayer[] {
 function CoverFan({ covers }: { covers: string[] }) {
   const fan = buildFan(covers);
 
-  if (fan.length === 0) {
-    return (
-      <div className="absolute inset-0 grid place-items-center bg-linear-to-br from-white/[0.07] to-white/[0.01]">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="opacity-20">
-          <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6zm0 16a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
-        </svg>
-      </div>
-    );
-  }
+  if (fan.length === 0) return <CoverPlaceholder />;
 
   return (
     <div className="absolute inset-0">
@@ -146,7 +139,7 @@ export function EditorialPlaylistCard({
         playlistId={playlist.id}
         title={playlist.title}
         trackCount={playlist.trackCount}
-        cover={playlist.covers[0] ?? null}
+        covers={playlist.covers}
         open={open}
         onClose={() => setOpen(false)}
       />

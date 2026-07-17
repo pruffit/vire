@@ -39,6 +39,7 @@ function playlist(overrides: Partial<PlaylistSummary> = {}): PlaylistSummary {
     visibility: 'PRIVATE',
     trackCount: 3,
     coverUrl: null,
+    covers: [],
     createdAt: new Date('2026-01-01T00:00:00Z'),
     updatedAt: new Date('2026-01-01T00:00:00Z'),
     ...overrides,

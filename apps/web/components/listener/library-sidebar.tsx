@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Icon } from '@/components/icon';
+import { PlaylistCover } from '@/components/playlist-cover';
 import { cn } from '@/lib/utils';
 import { pluralTracks } from '@/lib/format';
 import { CreatePlaylistButton } from './create-playlist-button';
@@ -78,13 +79,15 @@ export function LibrarySidebar({
               title={p.name}
               subtitle="Плейлист"
               leading={
-                p.coverUrl ? (
-                  <Image src={p.coverUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-md object-cover" />
-                ) : (
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-foreground/[0.06]">
-                    <Icon name="music" size={18} className="text-foreground/40" />
-                  </span>
-                )
+                <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-foreground/[0.06]">
+                  <PlaylistCover
+                    covers={p.coverUrl ? [p.coverUrl] : []}
+                    title={p.name}
+                    variant="single"
+                    sizes="40px"
+                    placeholderIconSize={18}
+                  />
+                </span>
               }
             />
           ))}

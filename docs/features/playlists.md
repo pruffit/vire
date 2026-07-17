@@ -21,7 +21,26 @@
   откатом при ошибке сети.
 - **Метаданные** (меню `⋯`, только владелец): переименование, описание (≤500),
   тумблер приватности PRIVATE/PUBLIC, своя обложка (загрузка/удаление), удаление.
-- **Своя обложка** — грузится в S3, иначе фолбэк на обложку первого трека.
+- **Обложка-коллаж** — своя обложка (S3) всегда побеждает; без неё берутся обложки треков:
+  ≥4 уникальных → мозаика 2×2, 1–3 → первая обложка, 0 → плейсхолдер. Единственная точка
+  рендера — `components/playlist-cover.tsx` (`variant="mosaic"` — шапка `/playlists/[id]` и
+  карточка медиатеки; `variant="single"` — сайдбар 40px, где 2×2 читается как шум).
+  Выборка обложек — чистая `pickCovers` (`@vire/db`): дедуп, своя первой, ≤4, ранний выход
+  цикла на 4 найденных (страница плейлиста прогоняет через неё весь трек-лист).
+  `getUserPlaylists` (медиатека) отдаёт `coverUrl` как первую НЕ-null обложку по порядку
+  позиций (через `pickCovers`/`fetchPlaylistMeta`) — раньше брался трек с `position=0` в
+  лоб, даже если обложки у него не было (→ `null`).
+- **Шеринг** — `components/playlist-share.tsx` в шапке (на общем `components/popover.tsx`).
+  PUBLIC: копирование ссылки, на тач-устройствах сперва `navigator.share`. PRIVATE + владелец:
+  «Сделать публичным и поделиться» — оптимистичный `PATCH /api/v1/playlists/[id]
+  { visibility: 'PUBLIC' }` (owner-gated) с откатом при ошибке, затем копирование. PRIVATE +
+  не владелец — кнопки нет (страница и так 404).
+- **OG-картинка и метаданные** — `app/(listener)/playlists/[id]/opengraph-image.tsx`
+  (`ImageResponse` 1200×630, runtime nodejs): коллаж/обложка + название + автор + число
+  треков. Роут публичный и сессии не видит, поэтому **приватность гейтится внутри картинки**:
+  для не-PUBLIC отдаётся нейтральный фирменный фон без названия и обложек (регресс-тест
+  `opengraph-image.test.tsx`). `generateMetadata`: PUBLIC — canonical + OG (`music.playlist`)
+  + twitter; PRIVATE — `robots: noindex, nofollow` и никаких OG-полей.
 - **Воспроизведение** — «Слушать» (по порядку) и «Перемешать».
 - **Удаление трека** — оптимистично из локального состояния (без перезагрузки страницы).
 - Защита от **дублей** треков на уровне БД (уникальный индекс + `onConflictDoNothing`).
@@ -53,7 +72,13 @@
 ## Где код
 
 - **Страница:** `apps/web/app/(listener)/playlists/[id]/page.tsx` — server-shell
-  (компактный `max-w-3xl`), рендерит клиентский оркестратор.
+  (компактный `max-w-3xl`), `generateMetadata` + шапка; рендерит клиентский оркестратор.
+  Рядом: `header-cover.ts` (`getHeaderCovers` — `pickCovers` от треков страницы),
+  `opengraph-image.tsx` (OG 1200×630 с гейтом приватности).
+- **Обложка и шеринг:** `components/playlist-cover.tsx` (мозаика/одиночная/плейсхолдер —
+  плейсхолдер `CoverPlaceholder` переиспользуют `CoverFan` в `editorial-playlist-card.tsx`
+  и хедер `PlaylistPeekSheet` в `playlist-quick-look.tsx`), `components/playlist-share.tsx`
+  (на `components/popover.tsx`).
 - **Клиент:**
   - `playlist-view.tsx` — оркестратор: оптимистичное состояние треков, dnd-контекст,
     экшен-бар, эффекты вне state-updater'ов (чисто, без двойного fetch в StrictMode).

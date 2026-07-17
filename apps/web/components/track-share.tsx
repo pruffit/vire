@@ -6,6 +6,7 @@ import { spring } from '@vire/ui/motion';
 import { formatDuration } from '@/lib/format';
 import { ShareIcon, CheckIcon } from '@/components/icons';
 import { Icon } from '@/components/icon';
+import { Popover, PopoverItem, touchTargetClass } from '@/components/popover';
 
 interface Props {
   /** Каноническая ссылка на трек без query; дефолт — текущий адрес. Плеер обязан
@@ -30,28 +31,11 @@ export function TrackShare({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<null | 'link' | 'moment'>(null);
-  const ref = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   const moment = currentTime && currentTime > 2 ? Math.round(currentTime) : null;
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    window.addEventListener('pointerdown', onDown);
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('pointerdown', onDown);
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
 
   async function copy(kind: 'link' | 'moment') {
     const base = trackUrl ?? window.location.href.split('?')[0];
@@ -69,57 +53,43 @@ export function TrackShare({
     }
   }
 
-  const dim = size === 'sm' ? 'w-8 h-8' : 'w-9 h-9';
   const triggerStyle =
     variant === 'bordered'
       ? { border: '1px solid var(--artist-accent)' }
       : undefined;
 
   return (
-    <div ref={ref} className="relative shrink-0">
-      <motion.button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Поделиться"
-        aria-expanded={open}
-        whileTap={{ scale: 0.9 }}
-        whileHover={variant === 'bordered' ? { scale: 1.08 } : undefined}
-        transition={spring.snappy}
-        className={`${dim} rounded-full flex items-center justify-center transition-opacity`}
-        style={{ opacity: open ? 0.9 : 0.5, ...triggerStyle }}
-      >
-        <ShareIcon />
-      </motion.button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            role="menu"
-            initial={{ opacity: 0, y: 6, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.97 }}
-            transition={spring.snappy}
-            className={`absolute z-50 bottom-full mb-2 min-w-[184px] rounded-xl border border-white/12 bg-card/95 backdrop-blur-xl shadow-2xl shadow-black/40 p-1 ${
-              align === 'right' ? 'right-0' : 'left-0'
-            }`}
-          >
-            <ShareOption
-              label="Ссылка на трек"
-              done={copied === 'link'}
-              onClick={() => copy('link')}
-            />
-            {moment != null && (
-              <ShareOption
-                label="С текущего момента"
-                hint={formatDuration(moment)}
-                done={copied === 'moment'}
-                onClick={() => copy('moment')}
-              />
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      align={align}
+      trigger={({ open: expanded, toggle, ref }) => (
+        <motion.button
+          ref={ref}
+          type="button"
+          onClick={toggle}
+          aria-label="Поделиться"
+          aria-expanded={expanded}
+          whileTap={{ scale: 0.9 }}
+          whileHover={variant === 'bordered' ? { scale: 1.08 } : undefined}
+          transition={spring.snappy}
+          className={`${touchTargetClass(size)} rounded-full flex items-center justify-center transition-opacity`}
+          style={{ opacity: expanded ? 0.9 : 0.5, ...triggerStyle }}
+        >
+          <ShareIcon />
+        </motion.button>
+      )}
+    >
+      <ShareOption label="Ссылка на трек" done={copied === 'link'} onClick={() => copy('link')} />
+      {moment != null && (
+        <ShareOption
+          label="С текущего момента"
+          hint={formatDuration(moment)}
+          done={copied === 'moment'}
+          onClick={() => copy('moment')}
+        />
+      )}
+    </Popover>
   );
 }
 
@@ -135,13 +105,10 @@ function ShareOption({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      role="menuitem"
+    <PopoverItem
+      label={done ? 'Скопировано' : label}
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm text-foreground/85 hover:bg-white/8 transition-colors"
-    >
-      <span className="w-4 shrink-0 flex items-center justify-center text-primary">
+      icon={
         <AnimatePresence mode="popLayout" initial={false}>
           {done ? (
             <motion.span
@@ -150,6 +117,7 @@ function ShareOption({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.4 }}
               transition={spring.snappy}
+              className="text-primary"
             >
               <CheckIcon />
             </motion.span>
@@ -161,19 +129,16 @@ function ShareOption({
               exit={{ opacity: 0 }}
               className="text-foreground/30"
             >
-              <LinkIcon />
+              <Icon name="link" size={13} />
             </motion.span>
           )}
         </AnimatePresence>
-      </span>
-      <span className="flex-1">{done ? 'Скопировано' : label}</span>
-      {hint && !done && (
-        <span className="text-xs font-mono tabular-nums text-foreground/40">{hint}</span>
-      )}
-    </button>
+      }
+      hint={
+        hint && !done ? (
+          <span className="text-xs font-mono tabular-nums text-foreground/40">{hint}</span>
+        ) : undefined
+      }
+    />
   );
-}
-
-function LinkIcon() {
-  return <Icon name="link" size={13} />;
 }

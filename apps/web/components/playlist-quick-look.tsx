@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
@@ -14,14 +13,14 @@ import { TrackTitleText } from '@/components/track-title';
 import { formatDuration, pluralTracks } from '@/lib/format';
 import { Icon } from '@/components/icon';
 import { toast } from '@/lib/toast';
+import { PlaylistCover } from '@/components/playlist-cover';
 import { QuickLookSheet, QuickLookDragHandle, MiniEq } from './quick-look-sheet';
 
 interface Props {
   playlistId: string;
   title: string;
   trackCount: number;
-  /** Обложка для хедера листа (первый трек / первый элемент covers). */
-  cover: string | null;
+  covers: string[];
   open: boolean;
   onClose: () => void;
 }
@@ -30,7 +29,7 @@ interface Props {
  * Контент peek-оверлея плейлиста; хром (фон, грабёр, ESC, drag) — QuickLookSheet.
  * open-state держат карточки-триггеры (EditorialPlaylistCard, PlaylistCard).
  */
-export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, onClose }: Props) {
+export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open, onClose }: Props) {
   const activeTrack = usePlayerStore((s) => s.track);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const { load, loading, items: tracks } = useLazyQueue('playlist', playlistId);
@@ -71,13 +70,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, cover, open, 
     <QuickLookSheet open={open} onClose={onClose}>
       <QuickLookDragHandle className="px-5 pb-3 flex items-center gap-4">
         <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-muted">
-          {cover ? (
-            <Image src={cover} alt={title} fill sizes="80px" className="object-cover" />
-          ) : (
-            <div className="w-full h-full grid place-items-center opacity-20">
-              <Icon name="list" size={32} />
-            </div>
-          )}
+          <PlaylistCover covers={covers} title={title} variant="mosaic" sizes="80px" />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-base font-semibold leading-tight truncate">{title}</h3>
