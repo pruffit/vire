@@ -2,6 +2,7 @@ import { desc, eq, sql, type SQL } from 'drizzle-orm';
 import { db } from '../client';
 import { tracks, releases, artistProfiles } from '../schema';
 import { visibleTrackWhere } from './wave';
+import type { PlaylistCandidate } from './editorial-policy';
 
 /** Число прослушиваний трека за последние `days` дней: коррелированный подзапрос, ссылается на внешний tracks.id. */
 export function playsCountSql(days: number): SQL<number> {
@@ -17,15 +18,15 @@ export function popularityScoreSql(days: number, randomWeight = 0.4): SQL<number
   return sql<number>`${playsCountSql(days)} + random() * ${randomWeight}`;
 }
 
-export async function topTrackIdsByPlays(days: number, limit: number): Promise<string[]> {
+export async function topTrackCandidatesByPlays(days: number, limit: number): Promise<PlaylistCandidate[]> {
   const score = popularityScoreSql(days);
   const rows = await db
-    .select({ id: tracks.id })
+    .select({ trackId: tracks.id, artistId: artistProfiles.id })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
     .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
     .where(visibleTrackWhere)
     .orderBy(desc(score), desc(releases.releaseDate))
     .limit(limit);
-  return rows.map((r) => r.id);
+  return rows;
 }

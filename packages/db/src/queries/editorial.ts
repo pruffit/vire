@@ -1,4 +1,4 @@
-import { desc, eq, gte, lte, or, sql, and, count, inArray, notInArray, isNotNull } from 'drizzle-orm';
+import { desc, eq, gte, sql, and, count, inArray, notInArray, isNotNull } from 'drizzle-orm';
 import { db } from '../client';
 import { tracks, releases, artistProfiles, trackMoods, playEvents, likes, playlists, playlistTracks } from '../schema';
 import { upsertEditorialPlaylist, createPersonalPlaylist, deletePersonalPlaylists } from './playlists';
@@ -6,19 +6,14 @@ import { MOOD_LABELS, type Mood } from './track-moods';
 import type { TrackGenre } from './track-genres';
 import { getTasteProfile, materializeTasteProfiles, clearTasteProfileCache } from './taste';
 import { textArrayParam, visibleTrackWhere } from './wave';
-import { popularityScoreSql, topTrackIdsByPlays } from './popularity';
+import { popularityScoreSql, topTrackCandidatesByPlays } from './popularity';
 import {
   hasEnoughTracksForPersonalPlaylist,
   pickPersonalMoods,
-  fillToLimit,
+  composePlaylist,
+  type PlaylistCandidate,
   PLAYLIST_LIST_LIMIT as LIST_LIMIT,
 } from './editorial-policy';
-
-// PUBLISHED или SCHEDULED с прошедшей датой — невышедшие релизы в подборки не пускаем
-const releaseIsPublic = or(
-  eq(releases.status, 'PUBLISHED'),
-  and(eq(releases.status, 'SCHEDULED'), isNotNull(releases.releaseDate), lte(releases.releaseDate, sql`now()`)),
-);
 
 const SHARED_MOOD_COUNT = 3; // сколько топ-настроений держим в общих подборках
 const PERSONAL_MAX = 4; // максимум личных подборок на юзера
@@ -49,13 +44,12 @@ function markFiller(full: string[], genuineCount: number, usedFiller: Set<string
 }
 
 /** «Сейчас набирает» — треки с наибольшим числом прослушиваний за 7 дней. */
-async function generateTrendingPlaylist(pool: string[], usedFiller: Set<string>): Promise<void> {
-  const trackIds = await topTrackIdsByPlays(7, LIST_LIMIT);
+async function generateTrendingPlaylist(pool: PlaylistCandidate[], usedFiller: Set<string>): Promise<void> {
+  const candidates = await topTrackCandidatesByPlays(7, LIST_LIMIT);
+  if (candidates.length < MIN_TRACKS) return;
 
-  if (trackIds.length < MIN_TRACKS) return;
-
-  const full = fillToLimit(trackIds, pool, usedFiller);
-  markFiller(full, trackIds.length, usedFiller);
+  const full = composePlaylist(candidates, pool, usedFiller);
+  markFiller(full, candidates.length, usedFiller);
   await upsertEditorialPlaylist({
     kind: 'TRENDING',
     title: 'Сейчас набирает',
@@ -64,29 +58,32 @@ async function generateTrendingPlaylist(pool: string[], usedFiller: Set<string>)
   });
 }
 
-/** «Возвращаются снова»: слушатели вернулись минимум дважды в разные дни. */
-async function generateRelistenPlaylist(pool: string[], usedFiller: Set<string>): Promise<void> {
+const relistenersSql = sql<number>`(
+  SELECT COUNT(*)::int FROM (
+    SELECT 1 FROM play_events pe
+    WHERE pe.track_id = tracks.id
+      AND pe.started_at >= now() - interval '30 days'
+    GROUP BY COALESCE(pe.user_id::text, pe.session_id)
+    HAVING COUNT(DISTINCT DATE(pe.started_at)) >= 2
+  ) returned
+)`;
+
+/** «Возвращаются снова»: один и тот же слушатель вернулся минимум дважды в разные дни. */
+async function generateRelistenPlaylist(pool: PlaylistCandidate[], usedFiller: Set<string>): Promise<void> {
   const rows = await db
-    .select({
-      trackId: playEvents.trackId,
-      relisteners: sql<number>`COUNT(DISTINCT DATE(${playEvents.startedAt}))`,
-    })
-    .from(playEvents)
-    .where(
-      and(
-        isNotNull(playEvents.userId),
-        gte(playEvents.startedAt, sql`now() - interval '30 days'`),
-      ),
-    )
-    .groupBy(playEvents.trackId)
-    .having(sql`COUNT(DISTINCT DATE(${playEvents.startedAt})) >= 2`)
-    .orderBy(desc(sql`COUNT(DISTINCT DATE(${playEvents.startedAt}))`))
+    .select({ trackId: tracks.id, artistId: artistProfiles.id, relisteners: relistenersSql })
+    .from(tracks)
+    .innerJoin(releases, eq(releases.id, tracks.releaseId))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(visibleTrackWhere)
+    .orderBy(desc(relistenersSql), desc(releases.releaseDate))
     .limit(LIST_LIMIT);
 
-  if (rows.length < MIN_TRACKS) return;
+  const candidates = rows.filter((r) => Number(r.relisteners) > 0);
+  if (candidates.length < MIN_TRACKS) return;
 
-  const full = fillToLimit(rows.map((r) => r.trackId), pool, usedFiller);
-  markFiller(full, rows.length, usedFiller);
+  const full = composePlaylist(candidates, pool, usedFiller);
+  markFiller(full, candidates.length, usedFiller);
   await upsertEditorialPlaylist({
     kind: 'RELISTEN',
     title: 'Возвращаются снова',
@@ -96,18 +93,19 @@ async function generateRelistenPlaylist(pool: string[], usedFiller: Set<string>)
 }
 
 /** «Свежее» — последние опубликованные треки. */
-async function generateFreshPlaylist(pool: string[], usedFiller: Set<string>): Promise<void> {
+async function generateFreshPlaylist(pool: PlaylistCandidate[], usedFiller: Set<string>): Promise<void> {
   const rows = await db
-    .select({ id: tracks.id })
+    .select({ trackId: tracks.id, artistId: artistProfiles.id })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
-    .where(and(eq(tracks.status, 'READY'), releaseIsPublic))
+    .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .where(visibleTrackWhere)
     .orderBy(desc(releases.releaseDate))
     .limit(LIST_LIMIT);
 
   if (rows.length < MIN_TRACKS) return;
 
-  const full = fillToLimit(rows.map((r) => r.id), pool, usedFiller);
+  const full = composePlaylist(rows, pool, usedFiller);
   markFiller(full, rows.length, usedFiller);
   await upsertEditorialPlaylist({
     kind: 'FRESH',
@@ -118,7 +116,7 @@ async function generateFreshPlaylist(pool: string[], usedFiller: Set<string>): P
 }
 
 /** Только SHARED_MOOD_COUNT самых наполненных настроений; остальные mood-подборки удаляются. */
-async function generateTopMoodPlaylists(pool: string[], usedFiller: Set<string>): Promise<void> {
+async function generateTopMoodPlaylists(pool: PlaylistCandidate[], usedFiller: Set<string>): Promise<void> {
   const moodRows = await db
     .select({ mood: trackMoods.mood, c: count() })
     .from(trackMoods)
@@ -131,10 +129,10 @@ async function generateTopMoodPlaylists(pool: string[], usedFiller: Set<string>)
   const keepTitles: string[] = [];
   for (const { mood } of moodRows) {
     const title = MOOD_LABELS[mood as Mood];
-    const trackIds = await selectTrackIdsByTaste([mood as Mood], []);
-    if (trackIds.length < MIN_TRACKS) continue;
-    const full = fillToLimit(trackIds, pool, usedFiller);
-    markFiller(full, trackIds.length, usedFiller);
+    const candidates = await selectCandidatesByTaste([mood as Mood], [], []);
+    if (candidates.length < MIN_TRACKS) continue;
+    const full = composePlaylist(candidates, pool, usedFiller);
+    markFiller(full, candidates.length, usedFiller);
     await upsertEditorialPlaylist({
       kind: 'MOOD',
       title,
@@ -147,8 +145,12 @@ async function generateTopMoodPlaylists(pool: string[], usedFiller: Set<string>)
   await deleteStaleMoodPlaylists(keepTitles);
 }
 
-/** Видимые треки с любым из заданных настроений/жанров, по популярности (id, до LIST_LIMIT). */
-async function selectTrackIdsByTaste(moods: Mood[], genres: TrackGenre[]): Promise<string[]> {
+/** Видимые треки с любым из заданных настроений/жанров, отранжированные по совпадению вкуса и популярности. */
+async function selectCandidatesByTaste(
+  moods: Mood[],
+  genres: TrackGenre[],
+  affinityArtistIds: string[],
+): Promise<PlaylistCandidate[]> {
   if (moods.length === 0 && genres.length === 0) return [];
 
   const moodMatch = moods.length > 0
@@ -157,32 +159,37 @@ async function selectTrackIdsByTaste(moods: Mood[], genres: TrackGenre[]): Promi
   const genreMatch = genres.length > 0
     ? sql`EXISTS (SELECT 1 FROM track_genres tg WHERE tg.track_id = tracks.id AND tg.genre::text = ANY(${textArrayParam(genres)}))`
     : sql`false`;
+  const artistMatch = affinityArtistIds.length > 0
+    ? sql`releases.artist_profile_id::text = ANY(${textArrayParam(affinityArtistIds)})`
+    : sql`false`;
+
+  const matchScore = sql<number>`(CASE WHEN ${moodMatch} THEN 1 ELSE 0 END) + (CASE WHEN ${genreMatch} THEN 1 ELSE 0 END) + (CASE WHEN ${artistMatch} THEN 2 ELSE 0 END)`;
 
   const score = popularityScoreSql(30);
   const rows = await db
-    .select({ trackId: tracks.id })
+    .select({ trackId: tracks.id, artistId: artistProfiles.id })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
     .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
     .where(and(visibleTrackWhere, sql`(${moodMatch} OR ${genreMatch})`))
-    .orderBy(desc(score), desc(releases.releaseDate))
+    .orderBy(desc(matchScore), desc(score), desc(releases.releaseDate))
     .limit(LIST_LIMIT);
-  return rows.map((r) => r.trackId);
+  return rows;
 }
 
 const FILLER_POOL_LIMIT = 500;
 
 /** Пул филлера по популярности за 30 дней. Считается один раз на прогон (тяжёлый скан play_events). */
-async function getFillerPool(): Promise<string[]> {
+async function getFillerPool(): Promise<PlaylistCandidate[]> {
   const rows = await db
-    .select({ id: tracks.id })
+    .select({ trackId: tracks.id, artistId: artistProfiles.id })
     .from(tracks)
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
     .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
     .where(visibleTrackWhere)
     .orderBy(desc(popularityScoreSql(30)), desc(releases.releaseDate))
     .limit(FILLER_POOL_LIMIT);
-  return rows.map((r) => r.id);
+  return rows;
 }
 
 async function deleteStaleMoodPlaylists(keepTitles: string[]): Promise<void> {
@@ -266,7 +273,7 @@ async function tasteSignalTrackCount(userId: string): Promise<number> {
 }
 
 /** Личные подборки на основе getTasteProfile (лайки + прослушивания за 90 дней). */
-export async function generatePersonalPlaylists(userId: string, sharedPool?: string[]): Promise<void> {
+export async function generatePersonalPlaylists(userId: string, sharedPool?: PlaylistCandidate[]): Promise<void> {
   const signalCount = await tasteSignalTrackCount(userId);
 
   // полный пересбор: проще upsert по меняющимся заголовкам
@@ -281,9 +288,9 @@ export async function generatePersonalPlaylists(userId: string, sharedPool?: str
   let made = 0;
 
   // «Для тебя»: неполную подборку (каталог меньше лимита) не публикуем
-  const mixTrackIds = await selectTrackIdsByTaste(taste.topMoods, taste.topGenres);
-  if (hasEnoughTracksForPersonalPlaylist(mixTrackIds.length)) {
-    const fullMix = fillToLimit(mixTrackIds, pool);
+  const mixCandidates = await selectCandidatesByTaste(taste.topMoods, taste.topGenres, taste.topArtistIds);
+  if (hasEnoughTracksForPersonalPlaylist(mixCandidates.length)) {
+    const fullMix = composePlaylist(mixCandidates, pool);
     if (fullMix.length === LIST_LIMIT) {
       await createPersonalPlaylist({
         userId,
@@ -304,10 +311,10 @@ export async function generatePersonalPlaylists(userId: string, sharedPool?: str
     if (made >= PERSONAL_MAX) break;
     const label = MOOD_LABELS[mood];
     // порог сигнала проверяем до фильтра эксклюзией — иначе разбор «Для тебя» занижает сигнал
-    const genuine = await selectTrackIdsByTaste([mood], []);
+    const genuine = await selectCandidatesByTaste([mood], [], taste.topArtistIds);
     if (!hasEnoughTracksForPersonalPlaylist(genuine.length)) continue;
-    const trackIds = genuine.filter((id) => !exclude.has(id));
-    const fullTrackIds = fillToLimit(trackIds, pool, exclude);
+    const candidates = genuine.filter((cand) => !exclude.has(cand.trackId));
+    const fullTrackIds = composePlaylist(candidates, pool, exclude);
     if (fullTrackIds.length < LIST_LIMIT) continue;
     await createPersonalPlaylist({
       userId,

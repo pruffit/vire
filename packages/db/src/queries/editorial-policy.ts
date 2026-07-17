@@ -4,31 +4,6 @@ export const MIN_PERSONAL_PLAYLIST_TRACKS = 5;
 
 export const PLAYLIST_LIST_LIMIT = 25;
 
-export function fillToLimit(
-  ids: string[],
-  pool: string[],
-  avoid: ReadonlySet<string> = new Set(),
-  limit: number = PLAYLIST_LIST_LIMIT,
-): string[] {
-  const out = ids.slice(0, limit);
-  const have = new Set(out);
-  for (const id of pool) {
-    if (out.length >= limit) break;
-    if (!have.has(id) && !avoid.has(id)) {
-      out.push(id);
-      have.add(id);
-    }
-  }
-  for (const id of pool) {
-    if (out.length >= limit) break;
-    if (!have.has(id)) {
-      out.push(id);
-      have.add(id);
-    }
-  }
-  return out;
-}
-
 export interface PlaylistCandidate {
   trackId: string;
   artistId: string;
