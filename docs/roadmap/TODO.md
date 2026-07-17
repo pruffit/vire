@@ -47,13 +47,24 @@
 
 ## Надёжность
 
+- [x] **JWT-refresh роли/identity** (17.07.2026, v1.23.2) — роль/имя/аватар перечитываются из БД
+  в `jwt`-callback (`auth.ts`) не чаще раза в 5 мин (`JWT_ROLE_REFRESH_MS`), **только в Node**
+  (`isNodeRuntime` — edge-middleware `proxy.ts` postgres.js недоступен, токену доверяем). Чистый
+  хелпер `lib/jwt-refresh.ts` (`applyJwt`/`shouldRefreshRole`), 13 тестов; анти-storm: `syncedAt`
+  двигается при любой попытке (успех/удалён/ошибка) → просадка БД не даёт рефетч на каждый запрос.
+  Смена роли доезжает без релогина, статика остаётся статикой. Детали — `TECHNICAL_DEBT.md`.
+- [x] **rate-limit на `DELETE /api/v1/tracks/[id]/like`** (17.07.2026) — зеркало POST (`unlike:${uid}`,
+  60/60); асимметрия с `playlists/like` устранена. Идемпотентные DELETE-асимметрии (unlike без
+  exists-check) — намеренны (корректный REST), не баг.
 - [x] **Воркер: надёжность** — retry/backoff + removeOnFail (DLQ-поведение) уже в `lib/queue.ts`. Добавлено: статус `FAILED` (миграция 0021), на финальном падении транскодинга трек PROCESSING→FAILED + письмо артисту (Brevo), `FAILED` в админ-«требует внимания» и бейджах дашборда. Идемпотентность по `track_id` подтверждена (skip если READY; FAILED не затирает READY/BLOCKED). Миграции в деплое переставлены ДО `up -d`. (v1.0.66)
 - [ ] **Observability — внешний приёмник ошибок (Sentry/GlitchTip).** Отложено до
   апгрейда VPS. sentry.io блокирует РФ (403), а self-hosted GlitchTip не влезает в
   текущий 1 ГБ RAM (celery-worker прожорлив, гарантированный OOM). Sentry-SDK из кода
   **вырезан** (21.06.2026) — тяжёлые `@sentry/*` депы + OTel/drizzle-костыль не нужны
-  без приёмника. Что есть сейчас: health-эндпоинт + Telegram/webhook-алерты + лог
-  (см. `docs/features/monitoring.md`). Вернуться при отдельной машине/большем сервере.
+  без приёмника. Что есть сейчас: health-эндпоинт + Telegram/webhook-алерты + структурный
+  JSON-лог (`lib/observability.ts`) (см. `docs/features/monitoring.md`). Вместе с приёмником
+  возвращается и `request_id`-корреляция (сейчас без агрегатора трейсов — низкая ценность,
+  см. `TECHNICAL_DEBT.md` → Observability). Вернуться при отдельной машине/большем сервере.
 
 ## Качество
 
