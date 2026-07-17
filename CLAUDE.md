@@ -370,7 +370,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 Открытый бэклог — в `docs/roadmap/TODO.md` (Observability/Sentry — отложено до апгрейда
 VPS, контент-SEO) и `docs/roadmap/stage-2.md` (второй виток); Этап 2 — только по команде:
 1. **YooKassa боевая настройка** — по команде
-2. Открытые хвосты stage-2: §1.3 (импорты), §1.8 (комментарии), §7.2 (editorial)
+2. Открытые хвосты stage-2: §1.8 (комментарии), §7.2 (editorial)
 
 Сделано в доводке:
 - Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)
