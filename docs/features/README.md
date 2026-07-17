@@ -62,6 +62,7 @@
 - [x] [Мониторинг и алерты](monitoring.md) — `/api/health`, крэш-алерты воркера, Telegram через CF Worker
 - [x] [Иконки](icons.md) — системный спрайт (`Icon`) + бренд-логотипы соцсетей/стримингов (`BrandIcon`), сборщик `pnpm icons:build`
 - [x] [API-клиент](api-client.md) — `@vire/api-client` + `useOptimisticToggle` для тоггл-эндпоинтов
+- [x] [Пасхалки](easter-eggs.md) — код Konami, нотный дождь, `/fwqa688` + прогресс «чёрного неба»
 - [ ] Этап 2 — продажи (YooKassa)
 
 См. также: [`docs/security/owasp-top-10.md`](../security/owasp-top-10.md).

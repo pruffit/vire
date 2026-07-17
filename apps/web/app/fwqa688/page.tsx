@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { blackSkyProgress } from '@/lib/black-sky';
 
 const LINES = [
   'связь установлена',
@@ -15,6 +16,9 @@ const MORSE = '...- .. .-. .';  // VIRE в азбуке Морзе
 export default function SecretPage() {
   const [lineIdx, setLineIdx] = useState(0);
   const [glitch, setGlitch] = useState(false);
+  const [progress] = useState(() => blackSkyProgress(new Date()));
+  const [fillPct, setFillPct] = useState(0);
+  const [progressNoise, setProgressNoise] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -30,6 +34,24 @@ export default function SecretPage() {
     }, 4000);
     return () => clearInterval(pulse);
   }, []);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setFillPct(progress));
+    return () => cancelAnimationFrame(raf);
+  }, [progress]);
+
+  useEffect(() => {
+    const pulse = setInterval(() => {
+      const noise = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+      setProgressNoise(noise);
+      setTimeout(() => setProgressNoise(null), 150);
+    }, 6200);
+    return () => clearInterval(pulse);
+  }, []);
+
+  const progressLabel = progressNoise
+    ? `${progress.toFixed(4).slice(0, -2)}${progressNoise}`
+    : progress.toFixed(4);
 
   return (
     <div className="min-h-full flex flex-col items-center justify-center px-6 py-24 select-none">
@@ -89,6 +111,25 @@ export default function SecretPage() {
             Что-то готовится. Те, кто знает — узнают первыми.
           </motion.p>
         </div>
+
+        {/* прогресс «чёрного неба» */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="space-y-2"
+        >
+          <div className="flex items-center justify-between font-mono text-[11px] text-muted-foreground/60">
+            <span>{'> '}готовность протокола</span>
+            <span className="tabular-nums" suppressHydrationWarning>{progressLabel}%</span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-primary/10 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-[2000ms] ease-out"
+              style={{ width: `${fillPct}%` }}
+            />
+          </div>
+        </motion.div>
 
         {/* пульсирующая точка */}
         <motion.div
