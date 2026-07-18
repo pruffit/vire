@@ -35,7 +35,7 @@ function trackService() {
     new DrizzleTrackRepository(db),
     new DrizzleReleaseRepository(db),
     transcodeQueue,
-    { moodsRepo: new DrizzleTrackMoodsRepository(db), parseLrc },
+    { uuid: () => crypto.randomUUID(), moodsRepo: new DrizzleTrackMoodsRepository(db), parseLrc },
   );
 }
 
@@ -178,7 +178,10 @@ export async function actionAdminUpdateArtist(
 ): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  const service = new ArtistService(new DrizzleArtistRepository(db), { fonts: { sans: SANS_FONTS, mono: MONO_FONTS } });
+  const service = new ArtistService(new DrizzleArtistRepository(db), {
+    now: () => Date.now(),
+    fonts: { sans: SANS_FONTS, mono: MONO_FONTS },
+  });
   const result = await service.adminUpdate(artistProfileId, input);
   if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/artists');
@@ -191,7 +194,7 @@ export async function actionAdminUpdateRelease(
 ): Promise<{ error?: string; ok?: boolean }> {
   const { canMutate } = await requireAdmin();
   if (!canMutate) return {};
-  const service = new ReleaseService(new DrizzleReleaseRepository(db));
+  const service = new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() });
   const result = await service.adminUpdate(releaseId, input);
   if (!result.ok) return { error: result.error.message };
   revalidatePath('/admin/releases');

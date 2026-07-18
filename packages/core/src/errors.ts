@@ -32,3 +32,11 @@ export class ValidationError extends Error {
     this.name = 'ValidationError';
   }
 }
+
+export class ForbiddenError extends Error {
+  readonly _tag = 'ForbiddenError' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'ForbiddenError';
+  }
+}

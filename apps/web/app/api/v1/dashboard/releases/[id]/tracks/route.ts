@@ -63,6 +63,7 @@ export async function PUT(
     new DrizzleTrackRepository(db),
     new DrizzleReleaseRepository(db),
     transcodeQueue,
+    { uuid: () => crypto.randomUUID() },
   );
   const result = await service.reorderTracks({
     releaseId: id,

@@ -21,7 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const artists = await listActiveArtists();
-    const releaseService = new ReleaseService(new DrizzleReleaseRepository(db));
+    const releaseService = new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() });
 
     const artistRoutes: MetadataRoute.Sitemap = artists.map((a) => ({
       url: `${SITE_URL}/artists/${a.slug}`,

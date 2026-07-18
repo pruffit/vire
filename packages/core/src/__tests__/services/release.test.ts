@@ -60,7 +60,7 @@ function makeRepo(overrides?: Partial<IReleaseRepository>): IReleaseRepository {
 describe('ReleaseService.getWithTracks', () => {
   it('returns ok(releaseWithTracks) when release exists', async () => {
     const repo = makeRepo({ findWithTracks: vi.fn().mockResolvedValue(mockReleaseWithTracks) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.getWithTracks('release-1');
 
@@ -73,7 +73,7 @@ describe('ReleaseService.getWithTracks', () => {
 
   it('returns err(NotFoundError) when release is null', async () => {
     const repo = makeRepo({ findWithTracks: vi.fn().mockResolvedValue(null) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.getWithTracks('non-existent');
 
@@ -89,7 +89,7 @@ describe('ReleaseService.getPublishedByArtist', () => {
   it('returns list from repo', async () => {
     const releases = [mockRelease];
     const repo = makeRepo({ findPublishedByArtist: vi.fn().mockResolvedValue(releases) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.getPublishedByArtist('artist-1');
 
@@ -99,7 +99,7 @@ describe('ReleaseService.getPublishedByArtist', () => {
 
   it('returns empty array when artist has no published releases', async () => {
     const repo = makeRepo({ findPublishedByArtist: vi.fn().mockResolvedValue([]) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.getPublishedByArtist('artist-no-releases');
 
@@ -110,7 +110,7 @@ describe('ReleaseService.getPublishedByArtist', () => {
 describe('ReleaseService.deleteRelease', () => {
   it('returns ok when release exists and belongs to artist', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.deleteRelease({ releaseId: 'release-1', artistProfileId: 'artist-1' });
 
@@ -120,7 +120,7 @@ describe('ReleaseService.deleteRelease', () => {
 
   it('returns err(NotFoundError) when release does not exist', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue(null) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.deleteRelease({ releaseId: 'missing', artistProfileId: 'artist-1' });
 
@@ -131,7 +131,7 @@ describe('ReleaseService.deleteRelease', () => {
 
   it('returns err(Forbidden) when release belongs to another artist', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, artistProfileId: 'other-artist' }) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.deleteRelease({ releaseId: 'release-1', artistProfileId: 'artist-1' });
 
@@ -142,7 +142,7 @@ describe('ReleaseService.deleteRelease', () => {
 
   it('calls repo.delete with correct id', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     await service.deleteRelease({ releaseId: 'release-1', artistProfileId: 'artist-1' });
 
@@ -237,7 +237,7 @@ const updateParams = {
 describe('ReleaseService.update', () => {
   it('returns err(NotFoundError) when release does not exist', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue(null) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.update('release-1', 'artist-1', updateParams);
 
@@ -248,7 +248,7 @@ describe('ReleaseService.update', () => {
 
   it('returns err(Forbidden) when release belongs to another artist', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, artistProfileId: 'other' }) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.update('release-1', 'artist-1', updateParams);
 
@@ -259,7 +259,7 @@ describe('ReleaseService.update', () => {
 
   it('keeps the previous coverUrl when no new cover is given', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, coverUrl: 'https://old.jpg' }) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     await service.update('release-1', 'artist-1', updateParams);
 
@@ -269,7 +269,7 @@ describe('ReleaseService.update', () => {
   it('uploads a new cover when given and trims title/description/linerNotes', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
     const coverStorage = makeCoverStorage();
-    const service = new ReleaseService(repo, { coverStorage });
+    const service = new ReleaseService(repo, { uuid: () => 'release-1', coverStorage });
     const cover = { buffer: new Uint8Array([1]), ext: 'png', mime: 'image/png' };
 
     await service.update('release-1', 'artist-1', { ...updateParams, cover });
@@ -286,7 +286,7 @@ describe('ReleaseService.update', () => {
 describe('ReleaseService.changeStatus', () => {
   it('returns err(NotFoundError) when release does not exist', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue(null) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.changeStatus('release-1', 'artist-1', 'PUBLISHED', { name: 'A', slug: 'a' });
 
@@ -297,7 +297,7 @@ describe('ReleaseService.changeStatus', () => {
 
   it('returns err(Forbidden) when release belongs to another artist', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, artistProfileId: 'other' }) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.changeStatus('release-1', 'artist-1', 'PUBLISHED', { name: 'A', slug: 'a' });
 
@@ -309,7 +309,7 @@ describe('ReleaseService.changeStatus', () => {
   it('notifies on first publish (DRAFT -> PUBLISHED)', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, status: 'DRAFT' }) });
     const notifyQueue = makeNotifyQueue();
-    const service = new ReleaseService(repo, { notifyQueue });
+    const service = new ReleaseService(repo, { uuid: () => 'release-1', notifyQueue });
 
     const result = await service.changeStatus('release-1', 'artist-1', 'PUBLISHED', { name: 'Artist', slug: 'artist' });
 
@@ -325,7 +325,7 @@ describe('ReleaseService.changeStatus', () => {
   it('does not notify when the release is already PUBLISHED', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, status: 'PUBLISHED' }) });
     const notifyQueue = makeNotifyQueue();
-    const service = new ReleaseService(repo, { notifyQueue });
+    const service = new ReleaseService(repo, { uuid: () => 'release-1', notifyQueue });
 
     await service.changeStatus('release-1', 'artist-1', 'PUBLISHED', { name: 'Artist', slug: 'artist' });
 
@@ -335,20 +335,21 @@ describe('ReleaseService.changeStatus', () => {
   it('does not notify on transitions to a non-PUBLISHED status', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, status: 'DRAFT' }) });
     const notifyQueue = makeNotifyQueue();
-    const service = new ReleaseService(repo, { notifyQueue });
+    const service = new ReleaseService(repo, { uuid: () => 'release-1', notifyQueue });
 
     await service.changeStatus('release-1', 'artist-1', 'ARCHIVED', { name: 'Artist', slug: 'artist' });
 
     expect(notifyQueue.add).not.toHaveBeenCalled();
   });
 
-  it('throws when publishing but notifyQueue dependency is missing', async () => {
+  it('throws when publishing but notifyQueue dependency is missing, before mutating status', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, status: 'DRAFT' }) });
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     await expect(
       service.changeStatus('release-1', 'artist-1', 'PUBLISHED', { name: 'Artist', slug: 'artist' }),
     ).rejects.toThrow('deps.notifyQueue');
+    expect(repo.updateStatus).not.toHaveBeenCalled();
   });
 });
 
@@ -364,7 +365,7 @@ describe('ReleaseService.adminUpdate', () => {
 
   it('trims/normalizes and calls repo.update without an ownership check', async () => {
     const repo = makeRepo();
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.adminUpdate('release-1', validInput);
 
@@ -382,7 +383,7 @@ describe('ReleaseService.adminUpdate', () => {
 
   it('returns err(ValidationError) when title is empty or exceeds 200 chars', async () => {
     const repo = makeRepo();
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const empty = await service.adminUpdate('release-1', { ...validInput, title: '   ' });
     expect(empty.ok).toBe(false);
@@ -396,7 +397,7 @@ describe('ReleaseService.adminUpdate', () => {
 
   it('returns err(ValidationError) for an invalid type', async () => {
     const repo = makeRepo();
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.adminUpdate('release-1', { ...validInput, type: 'BOGUS' });
 
@@ -407,7 +408,7 @@ describe('ReleaseService.adminUpdate', () => {
 
   it('returns err(ValidationError) for an invalid genre', async () => {
     const repo = makeRepo();
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.adminUpdate('release-1', { ...validInput, genre: 'BOGUS' });
 
@@ -418,7 +419,7 @@ describe('ReleaseService.adminUpdate', () => {
 
   it('accepts a null genre', async () => {
     const repo = makeRepo();
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.adminUpdate('release-1', { ...validInput, genre: null });
 
@@ -428,7 +429,7 @@ describe('ReleaseService.adminUpdate', () => {
 
   it('returns err(ValidationError) for an unparseable release date', async () => {
     const repo = makeRepo();
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.adminUpdate('release-1', { ...validInput, releaseDate: 'not-a-date' });
 
@@ -439,7 +440,7 @@ describe('ReleaseService.adminUpdate', () => {
 
   it('accepts a null release date', async () => {
     const repo = makeRepo();
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     const result = await service.adminUpdate('release-1', { ...validInput, releaseDate: null });
 
@@ -449,7 +450,7 @@ describe('ReleaseService.adminUpdate', () => {
 
   it('normalizes empty description/linerNotes to null', async () => {
     const repo = makeRepo();
-    const service = new ReleaseService(repo);
+    const service = new ReleaseService(repo, { uuid: () => 'release-1' });
 
     await service.adminUpdate('release-1', { ...validInput, description: '   ', linerNotes: '   ' });
 

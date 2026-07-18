@@ -1,4 +1,4 @@
-import { err, ok, NotFoundError, type Result } from '../errors';
+import { err, ok, NotFoundError, ForbiddenError, type Result } from '../errors';
 import type { ITrackRepository } from '../repositories/track';
 import type { IReleaseRepository } from '../repositories/release';
 import type { Track } from '../types/release';
@@ -9,14 +9,14 @@ export async function authorizeTrackOwnership(
   releaseRepo: IReleaseRepository,
   trackId: string,
   artistProfileId: string,
-): Promise<Result<Track, NotFoundError | Error>> {
+): Promise<Result<Track, NotFoundError | ForbiddenError>> {
   const track = await trackRepo.findById(trackId);
   if (!track) return err(new NotFoundError('Track', trackId));
 
   const release = await releaseRepo.findById(track.releaseId);
   if (!release) return err(new NotFoundError('Release', track.releaseId));
   if (release.artistProfileId !== artistProfileId) {
-    return err(new Error('Forbidden: track does not belong to this artist'));
+    return err(new ForbiddenError('Forbidden: track does not belong to this artist'));
   }
   return ok(track);
 }

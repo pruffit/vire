@@ -194,7 +194,7 @@ describe('TrackService.createUpload', () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, { uuid: () => 'track-1' });
 
     await expect(service.createUpload(uploadParams)).rejects.toThrow('deps.audioStorage');
   });
@@ -243,7 +243,7 @@ describe('TrackService.updateTrack', () => {
   it('updates when track belongs to artist', async () => {
     const trackRepo = makeTrackRepo({ update: vi.fn().mockResolvedValue({ ...mockTrack, title: 'New' }) });
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
 
     const result = await service.updateTrack({ trackId: 'track-1', artistProfileId: 'artist-1', patch: { title: 'New' } });
 
@@ -254,7 +254,7 @@ describe('TrackService.updateTrack', () => {
   it('returns err(NotFoundError) when track missing', async () => {
     const trackRepo = makeTrackRepo({ findById: vi.fn().mockResolvedValue(null) });
     const releaseRepo = makeReleaseRepo();
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
 
     const result = await service.updateTrack({ trackId: 'x', artistProfileId: 'artist-1', patch: { title: 'New' } });
 
@@ -266,7 +266,7 @@ describe('TrackService.updateTrack', () => {
   it('returns err(Forbidden) when track belongs to another artist', async () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, artistProfileId: 'other' }) });
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
 
     const result = await service.updateTrack({ trackId: 'track-1', artistProfileId: 'artist-1', patch: { title: 'New' } });
 
@@ -280,7 +280,7 @@ describe('TrackService.deleteTrack', () => {
   it('deletes when track belongs to artist', async () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
 
     const result = await service.deleteTrack({ trackId: 'track-1', artistProfileId: 'artist-1' });
 
@@ -291,7 +291,7 @@ describe('TrackService.deleteTrack', () => {
   it('does not delete when track belongs to another artist', async () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, artistProfileId: 'other' }) });
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
 
     const result = await service.deleteTrack({ trackId: 'track-1', artistProfileId: 'artist-1' });
 
@@ -316,7 +316,7 @@ describe('TrackService.reorderTracks', () => {
       findById: vi.fn().mockResolvedValue(mockRelease),
       findWithTracks: vi.fn().mockResolvedValue(withTracks),
     });
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
 
     const result = await service.reorderTracks({
       releaseId: 'release-1',
@@ -331,7 +331,7 @@ describe('TrackService.reorderTracks', () => {
   it('returns NotFoundError when release does not exist', async () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(null) });
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
 
     const result = await service.reorderTracks({
       releaseId: 'release-1',
@@ -348,7 +348,7 @@ describe('TrackService.reorderTracks', () => {
     const releaseRepo = makeReleaseRepo({
       findById: vi.fn().mockResolvedValue({ ...mockRelease, artistProfileId: 'other' }),
     });
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
 
     const result = await service.reorderTracks({
       releaseId: 'release-1',
@@ -367,7 +367,7 @@ describe('TrackService.reorderTracks', () => {
       findById: vi.fn().mockResolvedValue(mockRelease),
       findWithTracks: vi.fn().mockResolvedValue(withTracks),
     });
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
 
     const missing = await service.reorderTracks({
       releaseId: 'release-1',
@@ -542,7 +542,7 @@ describe('TrackService.adminUpdate', () => {
   it('throws when moodsRepo dependency is missing', async () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo();
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue());
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
 
     await expect(service.adminUpdate('track-1', validInput)).rejects.toThrow('deps.moodsRepo');
   });
@@ -562,7 +562,7 @@ describe('TrackService.retranscode', () => {
     const trackRepo = makeTrackRepo({ getSourceKey: vi.fn().mockResolvedValue(null) });
     const releaseRepo = makeReleaseRepo();
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
 
     const result = await service.retranscode('track-1');
 
@@ -579,7 +579,7 @@ describe('TrackService.retranscode', () => {
     const trackRepo = makeTrackRepo({ getSourceKey: vi.fn().mockResolvedValue('tracks/track-1/source.flac') });
     const releaseRepo = makeReleaseRepo();
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
     const calls: string[] = [];
     (trackRepo.setStatus as ReturnType<typeof vi.fn>).mockImplementation(async () => { calls.push('setStatus'); });
     (queue.add as ReturnType<typeof vi.fn>).mockImplementation(async () => { calls.push('add'); });
@@ -598,7 +598,7 @@ describe('TrackService.retranscodeArtist', () => {
     const trackRepo = makeTrackRepo({ getArtistTrackSources: vi.fn().mockResolvedValue([]) });
     const releaseRepo = makeReleaseRepo();
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
 
     const result = await service.retranscodeArtist('artist-1');
 
@@ -618,7 +618,7 @@ describe('TrackService.retranscodeArtist', () => {
     const trackRepo = makeTrackRepo({ getArtistTrackSources: vi.fn().mockResolvedValue(sources) });
     const releaseRepo = makeReleaseRepo();
     const queue = makeQueue();
-    const service = new TrackService(trackRepo, releaseRepo, queue);
+    const service = new TrackService(trackRepo, releaseRepo, queue, makeDeps());
 
     const result = await service.retranscodeArtist('artist-1');
 

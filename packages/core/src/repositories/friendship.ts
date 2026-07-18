@@ -9,6 +9,8 @@ export interface IFriendshipRepository {
   deleteEdge(a: string, b: string): Promise<void>;
   listFriends(userId: string): Promise<FriendProfile[]>;
   listIncoming(userId: string): Promise<IncomingRequest[]>;
-  countIncoming(userId: string): Promise<number>;
   userExists(userId: string): Promise<boolean>;
+  listEdges(userId: string, otherIds: string[]): Promise<FriendEdge[]>;
+  countUnseenIncoming(userId: string): Promise<number>;
+  markRequestsSeen(userId: string): Promise<void>;
 }

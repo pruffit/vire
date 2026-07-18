@@ -1,4 +1,5 @@
-import { pgTable, uuid, text, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, pgEnum, index } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('role', [
   'LISTENER',
@@ -21,6 +22,10 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash'),
   role: roleEnum('role').notNull().default('LISTENER'),
   socialVisibility: userSocialVisibilityEnum('social_visibility').notNull().default('FRIENDS'),
+  friendRequestsSeenAt: timestamp('friend_requests_seen_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [
+  // Триграммный GIN: ILIKE '%q%' по имени (поиск людей) без seq-scan — зеркало artist_profiles
+  index('users_name_trgm_idx').using('gin', sql`${t.name} gin_trgm_ops`),
+]);

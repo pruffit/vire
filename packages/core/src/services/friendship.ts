@@ -1,9 +1,16 @@
 import { err, ok, ValidationError, NotFoundError, type Result } from '../errors';
 import type {
-  IFriendshipRepository, FriendProfile, IncomingRequest,
+  IFriendshipRepository, FriendEdge, FriendProfile, IncomingRequest,
 } from '../repositories/friendship';
 
 export type FriendshipStatus = 'NONE' | 'OUTGOING' | 'INCOMING' | 'FRIENDS' | 'SELF';
+
+function deriveStatus(viewerId: string, otherId: string, edge: FriendEdge | null): FriendshipStatus {
+  if (viewerId === otherId) return 'SELF';
+  if (!edge) return 'NONE';
+  if (edge.status === 'ACCEPTED') return 'FRIENDS';
+  return edge.requesterId === viewerId ? 'OUTGOING' : 'INCOMING';
+}
 
 export function canSeeLikes(
   viewerId: string,
@@ -57,13 +64,22 @@ export class FriendshipService {
   }
 
   async getStatus(viewerId: string, otherId: string): Promise<FriendshipStatus> {
-    if (viewerId === otherId) return 'SELF';
-    const edge = await this.repo.findEdge(viewerId, otherId);
-    if (!edge) return 'NONE';
-    if (edge.status === 'ACCEPTED') return 'FRIENDS';
-    return edge.requesterId === viewerId ? 'OUTGOING' : 'INCOMING';
+    const edge = viewerId === otherId ? null : await this.repo.findEdge(viewerId, otherId);
+    return deriveStatus(viewerId, otherId, edge);
+  }
+
+  async getStatuses(viewerId: string, otherIds: string[]): Promise<Map<string, FriendshipStatus>> {
+    const idsToQuery = otherIds.filter((id) => id !== viewerId);
+    const edges = idsToQuery.length > 0 ? await this.repo.listEdges(viewerId, idsToQuery) : [];
+    const edgeByOther = new Map(edges.map((e) => [e.requesterId === viewerId ? e.addresseeId : e.requesterId, e]));
+
+    const result = new Map<string, FriendshipStatus>();
+    for (const id of otherIds) result.set(id, deriveStatus(viewerId, id, edgeByOther.get(id) ?? null));
+    return result;
   }
 
   listFriends(userId: string): Promise<FriendProfile[]> { return this.repo.listFriends(userId); }
   listIncoming(userId: string): Promise<IncomingRequest[]> { return this.repo.listIncoming(userId); }
+  countUnseen(userId: string): Promise<number> { return this.repo.countUnseenIncoming(userId); }
+  async markSeen(userId: string): Promise<void> { await this.repo.markRequestsSeen(userId); }
 }

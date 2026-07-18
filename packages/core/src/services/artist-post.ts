@@ -1,4 +1,4 @@
-import { err, ok, NotFoundError, ValidationError, type Result } from '../errors';
+import { err, ok, NotFoundError, ValidationError, ForbiddenError, type Result } from '../errors';
 import type { IArtistPostRepository } from '../repositories/artist-post';
 import type { ArtistPost } from '../types/artist-post';
 
@@ -33,11 +33,11 @@ export class ArtistPostService {
     postId: string,
     artistProfileId: string,
     payload: unknown,
-  ): Promise<Result<void, NotFoundError | ValidationError | Error>> {
+  ): Promise<Result<void, NotFoundError | ValidationError | ForbiddenError>> {
     const post = await this.repo.findById(postId);
     if (!post) return err(new NotFoundError('ArtistPost', postId));
     if (post.artistProfileId !== artistProfileId) {
-      return err(new Error('Forbidden: post does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: post does not belong to this artist'));
     }
 
     const { title, body } = normalizePostInput(payload);
@@ -53,11 +53,11 @@ export class ArtistPostService {
   async delete(
     postId: string,
     artistProfileId: string,
-  ): Promise<Result<void, NotFoundError | Error>> {
+  ): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const post = await this.repo.findById(postId);
     if (!post) return err(new NotFoundError('ArtistPost', postId));
     if (post.artistProfileId !== artistProfileId) {
-      return err(new Error('Forbidden: post does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: post does not belong to this artist'));
     }
 
     await this.repo.delete(postId);

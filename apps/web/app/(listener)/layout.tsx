@@ -5,7 +5,7 @@ import {
   getFollowedArtistsCached,
   getUserPlaylistsCached,
   getUserProfileCached,
-  countIncomingCached,
+  countUnseenIncomingCached,
 } from '@/lib/listener-data';
 import { Footer } from '@/components/footer';
 import { ListenerSidebar } from '@/components/listener/listener-sidebar';
@@ -21,7 +21,7 @@ export default async function ListenerLayout({ children }: { children: React.Rea
         getFollowedArtistsCached(userId),
         getLikedTracksCached(userId),
         getUserProfileCached(userId),
-        countIncomingCached(userId),
+        countUnseenIncomingCached(userId),
       ])
     : [[], [], [], null, 0];
 

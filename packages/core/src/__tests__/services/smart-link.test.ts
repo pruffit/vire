@@ -87,7 +87,7 @@ const createInput = {
 describe('SmartLinkService.create', () => {
   it('creates with a slug derived from the title when slugRaw is absent', async () => {
     const repo = makeRepo();
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.create('artist-1', createInput);
 
@@ -98,7 +98,7 @@ describe('SmartLinkService.create', () => {
 
   it('returns err(ValidationError "Нужно название") when title is missing', async () => {
     const repo = makeRepo();
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.create('artist-1', { ...createInput, title: '   ' });
 
@@ -112,7 +112,7 @@ describe('SmartLinkService.create', () => {
 
   it('returns err(ValidationError "Некорректный адрес (slug)") for an invalid custom slug', async () => {
     const repo = makeRepo();
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.create('artist-1', { ...createInput, slugRaw: '!!!' });
 
@@ -123,7 +123,7 @@ describe('SmartLinkService.create', () => {
 
   it('returns err(ConflictError "Такой адрес уже занят") when the slug is taken', async () => {
     const repo = makeRepo({ slugTaken: vi.fn().mockResolvedValue(true) });
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.create('artist-1', createInput);
 
@@ -137,7 +137,7 @@ describe('SmartLinkService.create', () => {
 
   it('returns err(ValidationError "Релиз не найден") when releaseId is not owned by the artist', async () => {
     const repo = makeRepo({ releaseOwnedByArtist: vi.fn().mockResolvedValue(false) });
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.create('artist-1', { ...createInput, releaseIdRaw: 'release-x' });
 
@@ -159,7 +159,7 @@ describe('SmartLinkService.create', () => {
 
   it('throws when a cover is given but coverStorage dependency is missing', async () => {
     const repo = makeRepo();
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
     const cover = { buffer: new Uint8Array([1]), ext: 'jpg', mime: 'image/jpeg' };
 
     await expect(service.create('artist-1', { ...createInput, cover })).rejects.toThrow('deps.coverStorage');
@@ -182,7 +182,7 @@ const updateInput = {
 describe('SmartLinkService.update', () => {
   it('returns err(NotFoundError) when the link is missing', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue(null) });
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.update('missing', 'artist-1', updateInput);
 
@@ -193,7 +193,7 @@ describe('SmartLinkService.update', () => {
 
   it('returns err(NotFoundError) when the link belongs to another artist (not Forbidden)', async () => {
     const repo = makeRepo();
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.update('link-1', 'someone-else', updateInput);
 
@@ -204,7 +204,7 @@ describe('SmartLinkService.update', () => {
 
   it('updates only the fields present in the input', async () => {
     const repo = makeRepo();
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.update('link-1', 'artist-1', { ...updateInput, title: 'New Title' });
 
@@ -214,7 +214,7 @@ describe('SmartLinkService.update', () => {
 
   it('checks slug uniqueness with excludeId when the slug changes', async () => {
     const repo = makeRepo({ slugTaken: vi.fn().mockResolvedValue(true) });
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.update('link-1', 'artist-1', { ...updateInput, slugRaw: 'new-slug' });
 
@@ -225,7 +225,7 @@ describe('SmartLinkService.update', () => {
 
   it('does not check uniqueness when the slug is unchanged', async () => {
     const repo = makeRepo();
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     await service.update('link-1', 'artist-1', { ...updateInput, slugRaw: mockLink.slug });
 
@@ -234,7 +234,7 @@ describe('SmartLinkService.update', () => {
 
   it('clears releaseId when releaseIdRaw is present but blank', async () => {
     const repo = makeRepo();
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     await service.update('link-1', 'artist-1', { ...updateInput, releaseIdRaw: '' });
 
@@ -243,7 +243,7 @@ describe('SmartLinkService.update', () => {
 
   it('returns err(ValidationError "Релиз не найден") when releaseId is not owned', async () => {
     const repo = makeRepo({ releaseOwnedByArtist: vi.fn().mockResolvedValue(false) });
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.update('link-1', 'artist-1', { ...updateInput, releaseIdRaw: 'release-x' });
 
@@ -253,7 +253,7 @@ describe('SmartLinkService.update', () => {
 
   it('clears the cover when removeCover is set and no new cover is given', async () => {
     const repo = makeRepo();
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     await service.update('link-1', 'artist-1', { ...updateInput, removeCover: true });
 
@@ -276,7 +276,7 @@ describe('SmartLinkService.update', () => {
 describe('SmartLinkService.delete', () => {
   it('returns ok when repo deletes successfully', async () => {
     const repo = makeRepo();
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.delete('link-1', 'artist-1');
 
@@ -286,7 +286,7 @@ describe('SmartLinkService.delete', () => {
 
   it('returns err(NotFoundError) when repo reports nothing was deleted', async () => {
     const repo = makeRepo({ delete: vi.fn().mockResolvedValue(false) });
-    const service = new SmartLinkService(repo);
+    const service = new SmartLinkService(repo, { uuid: () => 'link-1' });
 
     const result = await service.delete('link-1', 'artist-1');
 

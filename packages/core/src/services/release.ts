@@ -1,7 +1,8 @@
-import { err, ok, NotFoundError, ValidationError, type Result } from '../errors';
+import { err, ok, NotFoundError, ValidationError, ForbiddenError, type Result } from '../errors';
 import type { IReleaseRepository } from '../repositories/release';
 import type { IFileStorage } from '../repositories/storage';
 import type { NotifyReleaseJobData } from '../jobs';
+import type { IdGenerator } from '../ports/effects';
 import { ALL_GENRES, type Genre, type Release, type ReleaseStatus, type ReleaseType, type ReleaseWithTracks } from '../types/release';
 
 const RELEASE_TYPES: ReleaseType[] = ['ALBUM', 'EP', 'SINGLE'];
@@ -11,9 +12,9 @@ export interface INotifyReleaseQueue {
 }
 
 export interface ReleaseServiceDeps {
+  uuid: IdGenerator;
   coverStorage?: IFileStorage;
   notifyQueue?: INotifyReleaseQueue;
-  uuid?: () => string;
 }
 
 export interface ReleaseCoverInput {
@@ -25,7 +26,7 @@ export interface ReleaseCoverInput {
 export class ReleaseService {
   constructor(
     private readonly repo: IReleaseRepository,
-    private readonly deps: ReleaseServiceDeps = {},
+    private readonly deps: ReleaseServiceDeps,
   ) {}
 
   async getWithTracks(releaseId: string): Promise<Result<ReleaseWithTracks, NotFoundError>> {
@@ -49,7 +50,7 @@ export class ReleaseService {
       cover?: ReleaseCoverInput;
     },
   ): Promise<Result<{ releaseId: string }, Error>> {
-    const releaseId = this.deps.uuid ? this.deps.uuid() : crypto.randomUUID();
+    const releaseId = this.deps.uuid();
     const coverUrl = await this.uploadCover(releaseId, params.cover);
 
     const release = await this.repo.create({
@@ -78,11 +79,11 @@ export class ReleaseService {
       linerNotes: string | null;
       cover?: ReleaseCoverInput;
     },
-  ): Promise<Result<{ releaseId: string }, NotFoundError | Error>> {
+  ): Promise<Result<{ releaseId: string }, NotFoundError | ForbiddenError>> {
     const release = await this.repo.findById(releaseId);
     if (!release) return err(new NotFoundError('Release', releaseId));
     if (release.artistProfileId !== artistProfileId) {
-      return err(new Error('Forbidden: release does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: release does not belong to this artist'));
     }
 
     const coverUrl = params.cover ? await this.uploadCover(releaseId, params.cover) : release.coverUrl;
@@ -105,19 +106,21 @@ export class ReleaseService {
     artistProfileId: string,
     status: ReleaseStatus,
     artist: { name: string; slug: string },
-  ): Promise<Result<{ status: ReleaseStatus }, NotFoundError | Error>> {
+  ): Promise<Result<{ status: ReleaseStatus }, NotFoundError | ForbiddenError>> {
     const release = await this.repo.findById(releaseId);
     if (!release) return err(new NotFoundError('Release', releaseId));
     if (release.artistProfileId !== artistProfileId) {
-      return err(new Error('Forbidden: release does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: release does not belong to this artist'));
     }
 
     const wasPublished = release.status !== 'PUBLISHED' && status === 'PUBLISHED';
+    // проверяем инвариант до мутации — иначе updateStatus уже применился бы к моменту throw
+    const notifyQueue = wasPublished ? this.requireNotifyQueue() : null;
+
     await this.repo.updateStatus(releaseId, status);
 
-    if (wasPublished) {
-      if (!this.deps.notifyQueue) throw new Error('ReleaseService: deps.notifyQueue is required to notify on publish');
-      await this.deps.notifyQueue.add({
+    if (wasPublished && notifyQueue) {
+      await notifyQueue.add({
         releaseId: release.id,
         releaseTitle: release.title,
         releaseType: release.type,
@@ -134,11 +137,11 @@ export class ReleaseService {
   async deleteRelease(params: {
     releaseId: string;
     artistProfileId: string;
-  }): Promise<Result<void, NotFoundError | Error>> {
+  }): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const release = await this.repo.findById(params.releaseId);
     if (!release) return err(new NotFoundError('Release', params.releaseId));
     if (release.artistProfileId !== params.artistProfileId) {
-      return err(new Error('Forbidden: release does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: release does not belong to this artist'));
     }
     await this.repo.delete(params.releaseId);
     return ok(undefined);
@@ -184,5 +187,10 @@ export class ReleaseService {
     if (!cover) return null;
     if (!this.deps.coverStorage) throw new Error('ReleaseService: deps.coverStorage is required to upload a cover');
     return this.deps.coverStorage.upload(`covers/${releaseId}.${cover.ext}`, cover.buffer, cover.mime);
+  }
+
+  private requireNotifyQueue(): INotifyReleaseQueue {
+    if (!this.deps.notifyQueue) throw new Error('ReleaseService: deps.notifyQueue is required to notify on publish');
+    return this.deps.notifyQueue;
   }
 }

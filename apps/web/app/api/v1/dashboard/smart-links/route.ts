@@ -33,7 +33,10 @@ export async function POST(req: Request) {
     coverInput = { buffer, ext: v.info.ext, mime: v.info.mime };
   }
 
-  const service = new SmartLinkService(new DrizzleSmartLinkRepository(db), { coverStorage: fileStorage });
+  const service = new SmartLinkService(new DrizzleSmartLinkRepository(db), {
+    uuid: () => crypto.randomUUID(),
+    coverStorage: fileStorage,
+  });
   const result = await service.create(artist.id, {
     title: formData.get('title'),
     slugRaw: formData.get('slug'),

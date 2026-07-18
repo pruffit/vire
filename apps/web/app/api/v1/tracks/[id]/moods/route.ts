@@ -5,7 +5,7 @@ import {
   ALL_MOODS, db,
   DrizzleTrackRepository, DrizzleReleaseRepository, DrizzleTrackMoodsRepository,
 } from '@vire/db';
-import { TrackMoodsService, NotFoundError } from '@vire/core';
+import { TrackMoodsService, NotFoundError, ValidationError } from '@vire/core';
 import { getActiveArtist } from '@/lib/active-artist';
 
 type Params = { params: Promise<{ id: string }> };
@@ -42,8 +42,11 @@ export async function PUT(req: Request, { params }: Params) {
 
   const result = await trackMoodsService().setMoods(id, artist.id, parsed.data);
   if (!result.ok) {
-    const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+    if (result.error instanceof NotFoundError) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (result.error instanceof ValidationError) {
+      return NextResponse.json({ error: result.error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   return NextResponse.json({ moods: parsed.data });
 }

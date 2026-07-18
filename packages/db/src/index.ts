@@ -7,6 +7,7 @@ export * from './repositories/smart-link';
 export * from './repositories/release';
 export * from './repositories/track';
 export * from './repositories/follow';
+export * from './repositories/user-directory';
 export * from './repositories/listener-track';
 export * from './repositories/track-moods';
 export * from './repositories/playlist';
@@ -214,5 +215,9 @@ export type {
 } from './queries/users';
 export * from './repositories/user-account';
 export * from './repositories/friendship';
-export { findEdge, insertRequest, acceptRequest, deleteEdge, listFriends, listIncoming, countIncoming, userExists } from './queries/friendships';
+export {
+  findEdge, insertRequest, acceptRequest, deleteEdge, listFriends, listIncoming, userExists,
+  listEdges, countUnseenIncoming, markRequestsSeen,
+} from './queries/friendships';
+export { searchUsersByName } from './queries/user-directory';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

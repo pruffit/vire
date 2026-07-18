@@ -8,6 +8,8 @@ export class DrizzleFriendshipRepository implements IFriendshipRepository {
   deleteEdge(a: string, b: string): Promise<void> { return q.deleteEdge(a, b); }
   listFriends(userId: string): Promise<FriendProfile[]> { return q.listFriends(userId); }
   listIncoming(userId: string): Promise<IncomingRequest[]> { return q.listIncoming(userId); }
-  countIncoming(userId: string): Promise<number> { return q.countIncoming(userId); }
   userExists(userId: string): Promise<boolean> { return q.userExists(userId); }
+  listEdges(userId: string, otherIds: string[]): Promise<FriendEdge[]> { return q.listEdges(userId, otherIds); }
+  countUnseenIncoming(userId: string): Promise<number> { return q.countUnseenIncoming(userId); }
+  markRequestsSeen(userId: string): Promise<void> { return q.markRequestsSeen(userId); }
 }

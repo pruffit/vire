@@ -1,4 +1,4 @@
-import { and, eq, or, count, desc } from 'drizzle-orm';
+import { and, eq, or, count, desc, inArray, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { friendships, users } from '../schema';
 import type { FriendEdge, FriendProfile, IncomingRequest } from '@vire/core';
@@ -74,13 +74,35 @@ export async function listIncoming(userId: string): Promise<IncomingRequest[]> {
   return rows;
 }
 
-export async function countIncoming(userId: string): Promise<number> {
-  const [row] = await db.select({ count: count() }).from(friendships)
-    .where(and(eq(friendships.status, 'PENDING'), eq(friendships.addresseeId, userId)));
-  return row?.count ?? 0;
-}
-
 export async function userExists(userId: string): Promise<boolean> {
   const [row] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
   return !!row;
+}
+
+export async function listEdges(userId: string, otherIds: string[]): Promise<FriendEdge[]> {
+  if (otherIds.length === 0) return [];
+  return db
+    .select({ requesterId: friendships.requesterId, addresseeId: friendships.addresseeId, status: friendships.status })
+    .from(friendships)
+    .where(or(
+      and(eq(friendships.requesterId, userId), inArray(friendships.addresseeId, otherIds)),
+      and(eq(friendships.addresseeId, userId), inArray(friendships.requesterId, otherIds)),
+    ));
+}
+
+export async function countUnseenIncoming(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: count() })
+    .from(friendships)
+    .innerJoin(users, eq(users.id, userId))
+    .where(and(
+      eq(friendships.status, 'PENDING'),
+      eq(friendships.addresseeId, userId),
+      sql`(${users.friendRequestsSeenAt} is null or ${friendships.createdAt} > ${users.friendRequestsSeenAt})`,
+    ));
+  return row?.count ?? 0;
+}
+
+export async function markRequestsSeen(userId: string): Promise<void> {
+  await db.update(users).set({ friendRequestsSeenAt: sql`now()` }).where(eq(users.id, userId));
 }

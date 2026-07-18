@@ -10,7 +10,7 @@ type Params = { params: Promise<{ releaseId: string }> };
 const guestSchema = z.object({ email: z.string().email().max(254) });
 
 function presaveService() {
-  return new PresaveService(new DrizzlePresaveRepository(db));
+  return new PresaveService(new DrizzlePresaveRepository(db), { now: () => Date.now() });
 }
 
 function presaveErrorResponse(error: NotFoundError | ValidationError): NextResponse {

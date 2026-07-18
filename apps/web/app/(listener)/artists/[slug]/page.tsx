@@ -52,11 +52,11 @@ type Props = { params: Promise<{ slug: string }> };
 
 // cache(): generateMetadata и page читают одно и то же на одном рендере
 const getArtistData = cache(async (slug: string) => {
-  const artistService = new ArtistService(new DrizzleArtistRepository(db));
+  const artistService = new ArtistService(new DrizzleArtistRepository(db), { now: () => Date.now() });
   const result = await artistService.getBySlug(slug);
   if (!result.ok) return null;
 
-  const releaseService = new ReleaseService(new DrizzleReleaseRepository(db));
+  const releaseService = new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() });
   const [releases, upcoming, posts, smartLinks, playableTracks] = await Promise.all([
     releaseService.getPublishedByArtist(result.value.id),
     getUpcomingByArtist(result.value.id),

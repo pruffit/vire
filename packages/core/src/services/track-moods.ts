@@ -1,4 +1,4 @@
-import { err, ok, NotFoundError, type Result } from '../errors';
+import { err, ok, NotFoundError, ForbiddenError, ValidationError, type Result } from '../errors';
 import type { ITrackRepository } from '../repositories/track';
 import type { IReleaseRepository } from '../repositories/release';
 import type { ITrackMoodsRepository } from '../repositories/track-moods';
@@ -13,7 +13,7 @@ export class TrackMoodsService {
     private readonly moodsRepo: ITrackMoodsRepository,
   ) {}
 
-  async getMoods(trackId: string): Promise<Result<string[], NotFoundError | Error>> {
+  async getMoods(trackId: string): Promise<Result<string[], NotFoundError>> {
     const track = await this.trackRepo.findById(trackId);
     if (!track) return err(new NotFoundError('Track', trackId));
     return ok(await this.moodsRepo.get(trackId));
@@ -23,10 +23,10 @@ export class TrackMoodsService {
     trackId: string,
     artistProfileId: string,
     moods: readonly string[],
-  ): Promise<Result<void, NotFoundError | Error>> {
+  ): Promise<Result<void, NotFoundError | ForbiddenError | ValidationError>> {
     const authorized = await authorizeTrackOwnership(this.trackRepo, this.releaseRepo, trackId, artistProfileId);
     if (!authorized.ok) return authorized;
-    if (moods.length > MAX_MOODS) return err(new Error(`Too many moods: max ${MAX_MOODS}`));
+    if (moods.length > MAX_MOODS) return err(new ValidationError(`Too many moods: max ${MAX_MOODS}`));
 
     await this.moodsRepo.set(trackId, [...moods]);
     return ok(undefined);

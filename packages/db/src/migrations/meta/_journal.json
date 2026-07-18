@@ -267,6 +267,13 @@
       "when": 1784358666761,
       "tag": "0037_woozy_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1784376078128,
+      "tag": "0038_young_argent",
+      "breakpoints": true
     }
   ]
 }

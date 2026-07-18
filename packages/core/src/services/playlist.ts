@@ -1,4 +1,4 @@
-import { err, ok, NotFoundError, ConflictError, ValidationError, type Result } from '../errors';
+import { err, ok, NotFoundError, ConflictError, ValidationError, ForbiddenError, type Result } from '../errors';
 import type { IPlaylistRepository, IPlaylistCoverStorage, PlaylistUpdatePatch } from '../repositories/playlist';
 import type { PlaylistSummary, PlaylistWithTracks, TrackSearchResult, PlaylistSuggestions } from '../types/playlist';
 
@@ -10,8 +10,8 @@ export interface PlaylistCoverFile {
 
 const MIN_SEARCH_QUERY_LENGTH = 2;
 
-function forbidden(): Error {
-  return new Error('Forbidden: playlist does not belong to this user');
+function forbidden(): ForbiddenError {
+  return new ForbiddenError('Forbidden: playlist does not belong to this user');
 }
 
 export class PlaylistService {
@@ -38,7 +38,7 @@ export class PlaylistService {
   async getForViewer(
     id: string,
     viewerUserId: string | null,
-  ): Promise<Result<PlaylistWithTracks, NotFoundError | Error>> {
+  ): Promise<Result<PlaylistWithTracks, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
     if (!playlist) return err(new NotFoundError('Playlist', id));
     if (playlist.visibility === 'PRIVATE' && playlist.ownerUserId !== viewerUserId) {
@@ -51,7 +51,7 @@ export class PlaylistService {
     id: string,
     userId: string,
     patch: PlaylistUpdatePatch,
-  ): Promise<Result<void, NotFoundError | Error>> {
+  ): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
     if (!playlist) return err(new NotFoundError('Playlist', id));
     if (playlist.ownerUserId !== userId) return err(forbidden());
@@ -74,7 +74,7 @@ export class PlaylistService {
     return ok(undefined);
   }
 
-  async addTrack(id: string, userId: string, trackId: string): Promise<Result<void, NotFoundError | Error>> {
+  async addTrack(id: string, userId: string, trackId: string): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
     if (!playlist) return err(new NotFoundError('Playlist', id));
     if (playlist.ownerUserId !== userId) return err(forbidden());
@@ -84,7 +84,7 @@ export class PlaylistService {
     return ok(undefined);
   }
 
-  async removeTrack(id: string, userId: string, trackId: string): Promise<Result<void, NotFoundError | Error>> {
+  async removeTrack(id: string, userId: string, trackId: string): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
     if (!playlist) return err(new NotFoundError('Playlist', id));
     if (playlist.ownerUserId !== userId) return err(forbidden());
@@ -97,7 +97,7 @@ export class PlaylistService {
     id: string,
     userId: string,
     trackIds: string[],
-  ): Promise<Result<void, NotFoundError | ConflictError | Error>> {
+  ): Promise<Result<void, NotFoundError | ConflictError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
     if (!playlist) return err(new NotFoundError('Playlist', id));
     if (playlist.ownerUserId !== userId) return err(forbidden());
@@ -111,7 +111,7 @@ export class PlaylistService {
     id: string,
     userId: string,
     file: PlaylistCoverFile | null,
-  ): Promise<Result<string | null, NotFoundError | Error>> {
+  ): Promise<Result<string | null, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
     if (!playlist) return err(new NotFoundError('Playlist', id));
     if (playlist.ownerUserId !== userId) return err(forbidden());
@@ -131,7 +131,7 @@ export class PlaylistService {
     id: string,
     userId: string,
     q: string,
-  ): Promise<Result<TrackSearchResult[], NotFoundError | Error>> {
+  ): Promise<Result<TrackSearchResult[], NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
     if (!playlist) return err(new NotFoundError('Playlist', id));
     if (playlist.ownerUserId !== userId) return err(forbidden());
@@ -143,7 +143,7 @@ export class PlaylistService {
     return ok(await this.repo.searchTracks(trimmed, excludeIds, 20));
   }
 
-  async suggestions(id: string, userId: string): Promise<Result<PlaylistSuggestions, NotFoundError | Error>> {
+  async suggestions(id: string, userId: string): Promise<Result<PlaylistSuggestions, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
     if (!playlist) return err(new NotFoundError('Playlist', id));
     if (playlist.ownerUserId !== userId) return err(forbidden());

@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { slug } = await params;
 
-  const service = new ArtistService(new DrizzleArtistRepository(db));
+  const service = new ArtistService(new DrizzleArtistRepository(db), { now: () => Date.now() });
   const result = await service.getBySlug(slug);
 
   if (!result.ok) {

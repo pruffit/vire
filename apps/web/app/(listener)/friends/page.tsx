@@ -5,6 +5,8 @@ import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { friendshipService } from '@/lib/friends';
 import { IncomingRequests } from '@/components/friends/incoming-requests';
+import { UserSearch } from '@/components/friends/user-search';
+import { MarkRequestsSeen } from '@/components/friends/mark-requests-seen';
 import { Section } from '@/components/listener/section';
 import { EmptyState } from '@/components/ui-kit';
 
@@ -23,7 +25,10 @@ export default async function FriendsPage() {
 
   return (
     <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-14">
+      <MarkRequestsSeen />
       <h1 className="text-2xl font-semibold tracking-tight">Друзья</h1>
+
+      <UserSearch />
 
       <IncomingRequests initial={incoming} />
 

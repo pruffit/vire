@@ -58,7 +58,10 @@ export async function POST(req: Request) {
     coverInput = { buffer, ext: v.info.ext, mime: v.info.mime };
   }
 
-  const service = new ReleaseService(new DrizzleReleaseRepository(db), { coverStorage: fileStorage });
+  const service = new ReleaseService(new DrizzleReleaseRepository(db), {
+    uuid: () => crypto.randomUUID(),
+    coverStorage: fileStorage,
+  });
   const result = await service.create(artist.id, {
     title,
     type: type as ReleaseType,

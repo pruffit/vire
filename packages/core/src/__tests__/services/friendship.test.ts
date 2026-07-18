@@ -11,8 +11,10 @@ function makeRepo(o?: Partial<IFriendshipRepository>): IFriendshipRepository {
     deleteEdge: vi.fn().mockResolvedValue(undefined),
     listFriends: vi.fn().mockResolvedValue([]),
     listIncoming: vi.fn().mockResolvedValue([]),
-    countIncoming: vi.fn().mockResolvedValue(0),
     userExists: vi.fn().mockResolvedValue(true),
+    listEdges: vi.fn().mockResolvedValue([]),
+    countUnseenIncoming: vi.fn().mockResolvedValue(0),
+    markRequestsSeen: vi.fn().mockResolvedValue(undefined),
     ...o,
   };
 }
@@ -101,6 +103,56 @@ describe('FriendshipService.getStatus', () => {
   it('INCOMING если PENDING адресована viewer', async () => {
     const repo = makeRepo({ findEdge: vi.fn().mockResolvedValue(edge('u2', 'u1', 'PENDING')) });
     expect((await new FriendshipService(repo).getStatus('u1', 'u2'))).toBe('INCOMING');
+  });
+});
+
+describe('FriendshipService.getStatuses', () => {
+  it('пустой список id → пустая карта, без запроса рёбер', async () => {
+    const repo = makeRepo();
+    const map = await new FriendshipService(repo).getStatuses('u1', []);
+    expect(map.size).toBe(0);
+    expect(repo.listEdges).not.toHaveBeenCalled();
+  });
+
+  it('SELF на своём id, без запроса рёбер для него', async () => {
+    const repo = makeRepo();
+    const map = await new FriendshipService(repo).getStatuses('u1', ['u1']);
+    expect(map.get('u1')).toBe('SELF');
+    expect(repo.listEdges).not.toHaveBeenCalled();
+  });
+
+  it('один батч-запрос рёбер на весь список, статусы разложены по каждому id', async () => {
+    const repo = makeRepo({
+      listEdges: vi.fn().mockResolvedValue([
+        edge('u2', 'u1', 'ACCEPTED'),
+        edge('u1', 'u3', 'PENDING'),
+        edge('u4', 'u1', 'PENDING'),
+      ]),
+    });
+    const map = await new FriendshipService(repo).getStatuses('u1', ['u2', 'u3', 'u4', 'u5']);
+    expect(repo.listEdges).toHaveBeenCalledTimes(1);
+    expect(repo.listEdges).toHaveBeenCalledWith('u1', ['u2', 'u3', 'u4', 'u5']);
+    expect(map.get('u2')).toBe('FRIENDS');
+    expect(map.get('u3')).toBe('OUTGOING');
+    expect(map.get('u4')).toBe('INCOMING');
+    expect(map.get('u5')).toBe('NONE');
+  });
+});
+
+describe('FriendshipService.countUnseen', () => {
+  it('делегирует в репозиторий', async () => {
+    const repo = makeRepo({ countUnseenIncoming: vi.fn().mockResolvedValue(3) });
+    const n = await new FriendshipService(repo).countUnseen('u1');
+    expect(n).toBe(3);
+    expect(repo.countUnseenIncoming).toHaveBeenCalledWith('u1');
+  });
+});
+
+describe('FriendshipService.markSeen', () => {
+  it('делегирует в репозиторий', async () => {
+    const repo = makeRepo();
+    await new FriendshipService(repo).markSeen('u1');
+    expect(repo.markRequestsSeen).toHaveBeenCalledWith('u1');
   });
 });
 
