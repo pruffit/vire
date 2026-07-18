@@ -10,6 +10,8 @@ export const roleEnum = pgEnum('role', [
   'VIEWER',
 ]);
 
+export const userSocialVisibilityEnum = pgEnum('user_social_visibility', ['FRIENDS', 'PRIVATE']);
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name'),
@@ -18,6 +20,7 @@ export const users = pgTable('users', {
   image: text('image'),
   passwordHash: text('password_hash'),
   role: roleEnum('role').notNull().default('LISTENER'),
+  socialVisibility: userSocialVisibilityEnum('social_visibility').notNull().default('FRIENDS'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

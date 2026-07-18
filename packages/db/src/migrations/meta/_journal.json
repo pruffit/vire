@@ -260,6 +260,13 @@
       "when": 1784276142971,
       "tag": "0036_lame_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1784358666761,
+      "tag": "0037_woozy_rogue",
+      "breakpoints": true
     }
   ]
 }

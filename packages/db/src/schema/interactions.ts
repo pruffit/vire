@@ -1,6 +1,7 @@
 import {
-  pgTable, uuid, text, timestamp, integer, boolean, pgEnum, numeric, unique, index
+  pgTable, uuid, text, timestamp, integer, boolean, pgEnum, numeric, unique, index, check
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { users } from './users';
 import { tracks, releases } from './releases';
 import { artistProfiles } from './artists';
@@ -13,6 +14,7 @@ export const playlistVisibilityEnum = pgEnum('playlist_visibility', ['PRIVATE', 
 export const playlistKindEnum = pgEnum('playlist_kind', ['USER', 'MOOD', 'TRENDING', 'RELISTEN', 'FRESH', 'PERSONAL']);
 export const subscriptionTypeEnum = pgEnum('subscription_type', ['ARTIST_TIER', 'LISTENER_PREMIUM']);
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['ACTIVE', 'CANCELLED', 'EXPIRED']);
+export const friendshipStatusEnum = pgEnum('friendship_status', ['PENDING', 'ACCEPTED']);
 
 // Покупка остаётся у слушателя навсегда, даже если артист ушёл с площадки
 export const purchases = pgTable('purchases', {
@@ -132,3 +134,19 @@ export const subscriptions = pgTable('subscriptions', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [index('subscriptions_user_id_idx').on(t.userId)]);
+
+// Двусторонняя дружба. requester — инициатор заявки. accept двигает PENDING→ACCEPTED;
+// decline/cancel/unfriend удаляют строку (как unfollow). Обратный дубль ловит сервис.
+export const friendships = pgTable('friendships', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  requesterId: uuid('requester_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  addresseeId: uuid('addressee_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  status: friendshipStatusEnum('status').notNull().default('PENDING'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [
+  unique('friendships_pair_unique').on(t.requesterId, t.addresseeId),
+  index('friendships_addressee_idx').on(t.addresseeId),
+  index('friendships_requester_idx').on(t.requesterId),
+  check('friendships_no_self', sql`${t.requesterId} <> ${t.addresseeId}`),
+]);
