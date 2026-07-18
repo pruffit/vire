@@ -91,11 +91,31 @@ canSeeLikes(viewerId, ownerId, ownerVisibility, areFriends)
   бейдж в server-лейауте гаснет сразу. Список на странице (`listIncoming`) по-прежнему показывает
   все PENDING, бейдж — только новые.
 
+## Блокировка и жалобы (§11.6)
+- **Блокировка** — отдельная таблица `user_blocks(blocker_id, blocked_id)` (не ребро в
+  `friendships`: pair-unique направленный, BLOCKED-ребро сосуществовало бы с friendship-ребром
+  в обратную сторону). `BlockService.block` транзакционно вставляет блок и **удаляет ребро
+  дружбы** между парой. Эффект блока (в любую сторону между A и B): нельзя заявку/чат,
+  скрыты лайки друг друга, друг из друга не находятся в поиске. Профиль: блокирующий видит
+  «Разблокировать», заблокированный — «Взаимодействие недоступно». Гейт — чистое чтение
+  `user_blocks` на каждый вызов (`existsEitherWay`), состояние нигде не кэшируется.
+- **Жалобы** — `reports(reporter_id, target_type, target_id, reason, status)` (`USER`|`MESSAGE`;
+  `OPEN`/`REVIEWED`/`DISMISSED`). `POST /api/v1/reports` (rate-limit 5/час, анти-дубль одного
+  OPEN на пару). Очередь в админке `/admin/reports` (MODERATOR+), resolve, счётчик OPEN в
+  обзоре «требует внимания».
+- Код: `packages/core/src/services/{block,report}.ts`, `packages/db/src/queries/{blocks,reports}.ts`,
+  `apps/web/app/api/v1/users/[userId]/block/route.ts`, `.../reports/route.ts`,
+  `.../admin/reports/[id]/resolve/route.ts`, `apps/web/components/friends/{profile-more-menu,unblock-button}.tsx`,
+  `apps/web/app/admin/reports/`.
+
+## Смежные фичи
+- **Активность друзей в ленте** (§11.4) — секция «Активность друзей» на главной, см. код в
+  `apps/web/lib/activity.ts` (`mergeFriendsActivity`), `packages/db/src/queries/friends-activity.ts`,
+  `apps/web/components/friends/friends-activity-feed.tsx`.
+- **Чат 1:1** (§11.5) — `docs/features/chat.md`.
+- **Уведомления** (колокольчик) — `docs/features/notifications.md`.
+
 ## Ограничения / на будущее
-- Активности друзей в ленте нет (§11.4 stage-2) — на главной друзья не показываются.
-- Чата между друзьями нет (§11.5 stage-2) — realtime-стек ещё не выбран, решается вместе с
-  джемом (§8).
-- Блокировки/жалоб нет — открытый вопрос §11.6.
-- Уведомлений о новой заявке (пуш/письмо) нет — только unread-бейдж в сайдбаре/таб-баре;
-  полноценные уведомления (таблица `notifications`) — отдельный пункт §11.6.
 - Поиск только по имени и без пагинации (лимит 10) — фильтров/discoverability-тумблера нет.
+- Discoverability-тумблер (скрыть себя из поиска) — вне среза.
+- Жалобы только на пользователя/сообщение; модерация чата вручную через `/admin/reports`.
