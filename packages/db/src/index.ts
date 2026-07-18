@@ -45,7 +45,7 @@ export { getLatestReleases, getUpcomingReleases, getUpcomingByArtist, getTracksB
 export type { DiscoveryRelease, DiscoveryTrack, ReleaseSort, ArtistPlayableTrack, PlayableChartTrack, ReleaseCardStats } from './queries/discovery';
 export { insertPlayEvent } from './queries/play-events';
 export type { InsertPlayEventData } from './queries/play-events';
-export { getLikedTracks, getFollowedArtists, getUserCreatedAt, getUserProfile, updateUserName, updateUserImage } from './queries/profile';
+export { getLikedTracks, getFollowedArtists, getUserCreatedAt, getUserProfile, updateUserName, updateUserImage, getUserPublicProfile, updateUserSocialVisibility } from './queries/profile';
 export type { LikedTrack, FollowedArtist } from './queries/profile';
 export { getListenerTaste } from './queries/listener-taste';
 export type { ListenerTaste } from './queries/listener-taste';
@@ -169,6 +169,7 @@ export {
   getLikedPlaylistIds,
   searchTracksForPlaylist,
   getPlaylistSuggestions,
+  getPublicPlaylistsByOwner,
 } from './queries/playlists';
 export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist, PlaylistAddTrack, PlaylistSuggestions, PlaylistMeta } from './queries/playlists';
 export {
@@ -212,4 +213,6 @@ export type {
   LinkAccountResult,
 } from './queries/users';
 export * from './repositories/user-account';
+export * from './repositories/friendship';
+export { findEdge, insertRequest, acceptRequest, deleteEdge, listFriends, listIncoming, countIncoming, userExists } from './queries/friendships';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

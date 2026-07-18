@@ -78,6 +78,19 @@ export async function getLikedTracks(userId: string): Promise<LikedTrack[]> {
   return rows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) }));
 }
 
+export async function getUserPublicProfile(
+  userId: string,
+): Promise<{ id: string; name: string | null; image: string | null; socialVisibility: 'FRIENDS' | 'PRIVATE' } | null> {
+  const [row] = await db
+    .select({ id: users.id, name: users.name, image: users.image, socialVisibility: users.socialVisibility })
+    .from(users).where(eq(users.id, userId)).limit(1);
+  return row ?? null;
+}
+
+export async function updateUserSocialVisibility(userId: string, v: 'FRIENDS' | 'PRIVATE'): Promise<void> {
+  await db.update(users).set({ socialVisibility: v, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
 export async function getFollowedArtists(userId: string): Promise<FollowedArtist[]> {
   const rows = await db
     .select({
