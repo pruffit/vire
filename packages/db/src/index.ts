@@ -235,4 +235,8 @@ export {
   findConversation, upsertConversation, getConversation, insertMessage, listMessages,
   listConversations, markConversationRead, countUnreadConversations,
 } from './queries/chat';
+export { getFriendsActivity } from './queries/friends-activity';
+export type {
+  FriendsActivity, FriendActor, FriendLikeActivity, FriendFollowActivity, FriendPlaylistActivity,
+} from './queries/friends-activity';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

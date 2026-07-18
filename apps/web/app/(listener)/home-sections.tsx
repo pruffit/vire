@@ -13,7 +13,10 @@ import {
   getPopularTracks,
   getRecentlyPlayed,
   getPersonalTrackPicks,
+  getFriendsActivity,
 } from '@vire/db';
+import { mergeFriendsActivity } from '@/lib/activity';
+import { FriendsActivityFeed } from '@/components/friends/friends-activity-feed';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { ScrollRow } from '@/components/scroll-row';
 import { ArtistHoverChip } from '@/components/artist-hover-chip';
@@ -61,6 +64,18 @@ export async function FeedSection({ userId }: { userId: string }) {
           </div>
         ))}
       </ScrollRow>
+    </Section>
+  );
+}
+
+export async function FriendsActivitySection({ userId }: { userId: string }) {
+  const raw = await getFriendsActivity(userId, 12).catch(() => null);
+  if (!raw) return null;
+  const items = mergeFriendsActivity(raw.likes, raw.follows, raw.playlists);
+  if (items.length === 0) return null;
+  return (
+    <Section title="Активность друзей">
+      <FriendsActivityFeed items={items} />
     </Section>
   );
 }
