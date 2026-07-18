@@ -18,7 +18,7 @@ export async function PATCH(req: Request) {
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
 
   const { name, socialVisibility } = parsed.data;
   if (name !== undefined) await updateUserName(session.user.id, name);
