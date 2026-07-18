@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { updateUserName, updateUserImage, uploadToStream } = vi.hoisted(() => ({
+const { updateUserName, updateUserImage, updateUserSocialVisibility, uploadToStream } = vi.hoisted(() => ({
   updateUserName: vi.fn(),
   updateUserImage: vi.fn(),
+  updateUserSocialVisibility: vi.fn(),
   uploadToStream: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
-vi.mock('@vire/db', () => ({ updateUserName, updateUserImage }));
+vi.mock('@vire/db', () => ({ updateUserName, updateUserImage, updateUserSocialVisibility }));
 vi.mock('@/lib/s3', () => ({ uploadToStream }));
 
 import { auth } from '@/auth';
@@ -77,6 +78,30 @@ describe('PATCH /api/v1/user/profile', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ ok: true, name: 'Danya' });
     expect(updateUserName).toHaveBeenCalledWith('u1', 'Danya');
+  });
+
+  it('happy path: updates the social visibility', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ socialVisibility: 'PRIVATE' }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true, socialVisibility: 'PRIVATE' });
+    expect(updateUserSocialVisibility).toHaveBeenCalledWith('u1', 'PRIVATE');
+    expect(updateUserName).not.toHaveBeenCalled();
+  });
+
+  it('400 on an invalid social visibility value', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ socialVisibility: 'PUBLIC' }));
+    expect(res.status).toBe(400);
+    expect(updateUserSocialVisibility).not.toHaveBeenCalled();
+  });
+
+  it('400 when the body has neither name nor socialVisibility', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({}));
+    expect(res.status).toBe(400);
+    expect(updateUserName).not.toHaveBeenCalled();
+    expect(updateUserSocialVisibility).not.toHaveBeenCalled();
   });
 });
 

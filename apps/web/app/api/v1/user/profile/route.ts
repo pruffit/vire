@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { updateUserName, updateUserImage } from '@vire/db';
+import { updateUserName, updateUserImage, updateUserSocialVisibility } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
 import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
 
-const schema = z.object({
-  name: z.string().trim().min(1).max(50),
-});
+const schema = z
+  .object({
+    name: z.string().trim().min(1).max(50).optional(),
+    socialVisibility: z.enum(['FRIENDS', 'PRIVATE']).optional(),
+  })
+  .refine((d) => d.name !== undefined || d.socialVisibility !== undefined, { message: 'Nothing to update' });
 
 export async function PATCH(req: Request) {
   const session = await auth();
@@ -17,10 +20,15 @@ export async function PATCH(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
 
-  const name = parsed.data.name.trim();
-  await updateUserName(session.user.id, name);
+  const { name, socialVisibility } = parsed.data;
+  if (name !== undefined) await updateUserName(session.user.id, name);
+  if (socialVisibility !== undefined) await updateUserSocialVisibility(session.user.id, socialVisibility);
 
-  return NextResponse.json({ ok: true, name });
+  return NextResponse.json({
+    ok: true,
+    ...(name !== undefined ? { name } : {}),
+    ...(socialVisibility !== undefined ? { socialVisibility } : {}),
+  });
 }
 
 // Загрузка / удаление собственного аватара (multipart: avatar | removeAvatar=1)
