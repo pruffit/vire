@@ -10,18 +10,20 @@ const TABS: { href: string; label: string; icon: IconName; exact?: boolean }[] =
   { href: '/', label: 'Главная', icon: 'home', exact: true },
   { href: '/search', label: 'Поиск', icon: 'search' },
   { href: '/library', label: 'Медиатека', icon: 'music' },
+  { href: '/messages', label: 'Сообщения', icon: 'message-square' },
   { href: '/friends', label: 'Друзья', icon: 'users' },
 ];
 
-export function MobileTabBar({ incomingCount = 0 }: { incomingCount?: number }) {
+export function MobileTabBar({ incomingCount = 0, messagesUnread = 0 }: { incomingCount?: number; messagesUnread?: number }) {
   const pathname = usePathname();
   if (!isListenerShellPath(pathname)) return null;
 
   return (
-    <nav className="shrink-0 grid grid-cols-4 border-t border-border bg-background/95 backdrop-blur-sm md:hidden pb-[env(safe-area-inset-bottom)]">
+    <nav className="shrink-0 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur-sm md:hidden pb-[env(safe-area-inset-bottom)]">
       {TABS.map((t) => {
         const active = t.exact ? pathname === t.href : pathname.startsWith(t.href);
-        const showBadge = t.href === '/friends' && incomingCount > 0;
+        const badgeCount = t.href === '/friends' ? incomingCount : t.href === '/messages' ? messagesUnread : 0;
+        const showBadge = badgeCount > 0;
         return (
           <Link
             key={t.href}
@@ -42,7 +44,11 @@ export function MobileTabBar({ incomingCount = 0 }: { incomingCount?: number }) 
               )}
             </span>
             {t.label}
-            {showBadge && <span className="sr-only">{incomingCount} новых заявок в друзья</span>}
+            {showBadge && (
+              <span className="sr-only">
+                {t.href === '/friends' ? `${badgeCount} новых заявок в друзья` : `${badgeCount} новых сообщений`}
+              </span>
+            )}
           </Link>
         );
       })}

@@ -14,7 +14,9 @@ const RECONNECT_MAX_MS = 15_000;
  */
 export function useRealtime(handlers: RealtimeHandlers): void {
   const handlersRef = useRef(handlers);
-  handlersRef.current = handlers;
+  useEffect(() => {
+    handlersRef.current = handlers;
+  });
 
   useEffect(() => {
     let source: EventSource | null = null;

@@ -37,11 +37,10 @@ export function ChatThread({
     bottomRef.current?.scrollIntoView({ behavior });
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- только при монтировании треда
   useEffect(() => {
-    scrollToBottom();
+    bottomRef.current?.scrollIntoView();
     markRead(conversationId);
-  }, []);
+  }, [conversationId]);
 
   useRealtime({
     message: (event) => {

@@ -15,6 +15,7 @@ export function LibrarySidebar({
   artists,
   likedCount,
   incomingCount = 0,
+  messagesUnread = 0,
   isGuest,
   collapsed = false,
 }: {
@@ -22,6 +23,7 @@ export function LibrarySidebar({
   artists: SidebarArtist[];
   likedCount: number;
   incomingCount?: number;
+  messagesUnread?: number;
   isGuest: boolean;
   collapsed?: boolean;
 }) {
@@ -83,6 +85,22 @@ export function LibrarySidebar({
               <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
                 <Icon name="users" size={18} className="text-foreground" />
                 {collapsed && incomingCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
+                )}
+              </span>
+            }
+          />
+
+          <LibraryRow
+            collapsed={collapsed}
+            href="/messages"
+            title="Сообщения"
+            subtitle={messagesUnread > 0 ? `${messagesUnread} новых` : 'Личные сообщения'}
+            badgeCount={messagesUnread}
+            leading={
+              <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
+                <Icon name="message-square" size={18} className="text-foreground" />
+                {collapsed && messagesUnread > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
                 )}
               </span>

@@ -9,6 +9,8 @@ import { likedToPlayerTrack } from '@/lib/player/liked-to-player-track';
 import { FriendButton } from '@/components/friends/friend-button';
 import { ShareProfileButton } from '@/components/friends/share-profile-button';
 import { MessageFriendButton } from '@/components/chat/message-friend-button';
+import { ProfileMoreMenu } from '@/components/friends/profile-more-menu';
+import { UnblockButton } from '@/components/friends/unblock-button';
 import { PlaylistCard } from '@/components/listener/playlist-card';
 import { Section } from '@/components/listener/section';
 import { EmptyState } from '@/components/ui-kit';
@@ -55,11 +57,18 @@ export default async function FriendProfilePage({ params }: Props) {
         </div>
         <div className="flex-1 min-w-0 space-y-3">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{displayName}</h1>
-          <div className="flex items-center gap-2">
-            {viewerId && viewerId !== view.id && (
-              <FriendButton targetUserId={view.id} initialStatus={view.status} />
+          <div className="flex flex-wrap items-center gap-2">
+            {viewerId && viewerId !== view.id && !view.blocked && (
+              <>
+                <FriendButton targetUserId={view.id} initialStatus={view.status} />
+                {view.canChat && <MessageFriendButton targetUserId={view.id} />}
+                <ProfileMoreMenu targetUserId={view.id} />
+              </>
             )}
-            {view.canChat && <MessageFriendButton targetUserId={view.id} />}
+            {view.iBlockedThem && <UnblockButton targetUserId={view.id} />}
+            {view.blocked && !view.iBlockedThem && (
+              <span className="text-sm text-muted-foreground">Взаимодействие недоступно</span>
+            )}
             <ShareProfileButton userId={view.id} />
           </div>
         </div>

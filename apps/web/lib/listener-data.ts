@@ -9,6 +9,7 @@ import {
   getLikedPlaylists,
 } from '@vire/db';
 import { friendshipService } from '@/lib/friends';
+import { chatService } from '@/lib/chat';
 
 // Request-scoped dedup: the listener layout and the page it wraps fetch the
 // same library data on one render, cache() collapses that to one query each.
@@ -21,3 +22,4 @@ export const getUserProfileCached = cache(getUserProfile);
 export const getUserPublicProfileCached = cache(getUserPublicProfile);
 export const getListenerTasteCached = cache(getListenerTaste);
 export const countUnseenIncomingCached = cache((userId: string) => friendshipService().countUnseen(userId));
+export const countUnreadMessagesCached = cache((userId: string) => chatService().countUnread(userId));
