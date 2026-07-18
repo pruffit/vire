@@ -296,6 +296,8 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   показ слушателю (трек) и артисту (дашборд); деградирует до 0 при сбое Redis (`lib/presence.ts`)
 - [x] Синхронизированный текст — LRC в `tracks.lyrics`; редактор в дашборде, подсветка
   строки по таймкодам в фуллскрин-плеере (`lib/lrc.ts`, `docs/features/lyrics.md`)
+- [x] Социальный слой (первый срез) — двусторонняя дружба, профиль `/u/[userId]` с гейтом
+  видимости лайков (`social_visibility`), экран `/friends` (`docs/features/social-friends.md`)
 
 ### Dashboard артиста (`/dashboard`)
 - [x] Список релизов со статусами + статистика прослушиваний + live «слушают сейчас» в шапке
