@@ -220,4 +220,19 @@ export {
   listEdges, countUnseenIncoming, markRequestsSeen,
 } from './queries/friendships';
 export { searchUsersByName } from './queries/user-directory';
+export * from './repositories/block';
+export { blockUser, unblockUser, isBlockedEitherWay, listBlockedIds, blockedPairsExpr } from './queries/blocks';
+export * from './repositories/report';
+export {
+  hasOpenReport, insertReport, listOpenReports, countOpenReports, getReportContext, resolveReport,
+} from './queries/reports';
+export * from './repositories/notification';
+export {
+  insertNotification, listNotifications, countUnreadNotifications, markAllNotificationsRead, markNotificationRead,
+} from './queries/notifications';
+export * from './repositories/chat';
+export {
+  findConversation, upsertConversation, getConversation, insertMessage, listMessages,
+  listConversations, markConversationRead, countUnreadConversations,
+} from './queries/chat';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

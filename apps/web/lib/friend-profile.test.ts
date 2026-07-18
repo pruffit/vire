@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { getUserPublicProfile, getLikedTracks, getPublicPlaylistsByOwner, getStatus } = vi.hoisted(() => ({
+const { getUserPublicProfile, getLikedTracks, getPublicPlaylistsByOwner, getStatus, isBlocked } = vi.hoisted(() => ({
   getUserPublicProfile: vi.fn(),
   getLikedTracks: vi.fn(),
   getPublicPlaylistsByOwner: vi.fn(),
   getStatus: vi.fn(),
+  isBlocked: vi.fn(),
 }));
 
 vi.mock('@vire/db', () => ({
@@ -14,6 +15,9 @@ vi.mock('@vire/db', () => ({
 }));
 vi.mock('@/lib/friends', () => ({
   friendshipService: () => ({ getStatus }),
+}));
+vi.mock('@/lib/blocks', () => ({
+  blockService: () => ({ isBlocked }),
 }));
 
 import { loadFriendProfile } from './friend-profile';
@@ -28,6 +32,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   getPublicPlaylistsByOwner.mockResolvedValue(PLAYLISTS);
   getLikedTracks.mockResolvedValue(LIKES);
+  isBlocked.mockResolvedValue(false);
 });
 
 describe('loadFriendProfile', () => {
@@ -43,11 +48,13 @@ describe('loadFriendProfile', () => {
     expect(result?.likesVisible).toBe(false);
     expect(result?.likes).toEqual([]);
     expect(result?.playlists).toEqual(PLAYLISTS);
+    expect(result?.canChat).toBe(false);
     expect(getLikedTracks).not.toHaveBeenCalled();
     expect(getStatus).not.toHaveBeenCalled();
+    expect(isBlocked).not.toHaveBeenCalled();
   });
 
-  it('друг на FRIENDS-профиле: лайки видны, getLikedTracks вызван', async () => {
+  it('друг на FRIENDS-профиле: лайки видны, getLikedTracks вызван, чат доступен', async () => {
     getUserPublicProfile.mockResolvedValue(PROFILE);
     getStatus.mockResolvedValue('FRIENDS');
     const result = await loadFriendProfile(VIEWER, TARGET);
@@ -55,6 +62,23 @@ describe('loadFriendProfile', () => {
     expect(result?.likesVisible).toBe(true);
     expect(result?.likes).toEqual(LIKES);
     expect(getLikedTracks).toHaveBeenCalledWith(TARGET);
+    expect(result?.canChat).toBe(true);
+  });
+
+  it('друг, но есть блок: чат недоступен', async () => {
+    getUserPublicProfile.mockResolvedValue(PROFILE);
+    getStatus.mockResolvedValue('FRIENDS');
+    isBlocked.mockResolvedValue(true);
+    const result = await loadFriendProfile(VIEWER, TARGET);
+    expect(result?.canChat).toBe(false);
+  });
+
+  it('не друзья: чат недоступен, блок не проверяется', async () => {
+    getUserPublicProfile.mockResolvedValue(PROFILE);
+    getStatus.mockResolvedValue('NONE');
+    const result = await loadFriendProfile(VIEWER, TARGET);
+    expect(result?.canChat).toBe(false);
+    expect(isBlocked).not.toHaveBeenCalled();
   });
 
   it('друг на PRIVATE-профиле: лайки скрыты, getLikedTracks НЕ вызван', async () => {

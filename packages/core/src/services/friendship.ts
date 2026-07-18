@@ -1,7 +1,9 @@
-import { err, ok, ValidationError, NotFoundError, type Result } from '../errors';
+import { err, ok, ValidationError, NotFoundError, ForbiddenError, type Result } from '../errors';
 import type {
   IFriendshipRepository, FriendEdge, FriendProfile, IncomingRequest,
 } from '../repositories/friendship';
+import type { INotificationRepository } from '../repositories/notification';
+import type { IBlockRepository } from '../repositories/block';
 
 export type FriendshipStatus = 'NONE' | 'OUTGOING' | 'INCOMING' | 'FRIENDS' | 'SELF';
 
@@ -24,20 +26,29 @@ export function canSeeLikes(
 }
 
 export class FriendshipService {
-  constructor(private readonly repo: IFriendshipRepository) {}
+  constructor(
+    private readonly repo: IFriendshipRepository,
+    private readonly notifications: INotificationRepository,
+    private readonly blocks: IBlockRepository,
+  ) {}
 
-  async request(from: string, to: string): Promise<Result<FriendshipStatus, ValidationError | NotFoundError>> {
+  async request(from: string, to: string): Promise<Result<FriendshipStatus, ValidationError | NotFoundError | ForbiddenError>> {
     if (from === to) return err(new ValidationError('Нельзя добавить в друзья самого себя'));
     if (!(await this.repo.userExists(to))) return err(new NotFoundError('User', to));
+    if (await this.blocks.existsEitherWay(from, to)) {
+      return err(new ForbiddenError('Нельзя добавить в друзья: пользователь недоступен'));
+    }
 
     const edge = await this.repo.findEdge(from, to);
     if (edge) {
       if (edge.status === 'ACCEPTED') return ok('FRIENDS');
       if (edge.requesterId === from) return ok('OUTGOING');
       await this.repo.acceptRequest(edge.requesterId, edge.addresseeId);
+      await this.notifications.insert(edge.requesterId, 'FRIEND_ACCEPT', from, null);
       return ok('FRIENDS');
     }
     await this.repo.insertRequest(from, to);
+    await this.notifications.insert(to, 'FRIEND_REQUEST', from, null);
     return ok('OUTGOING');
   }
 
@@ -47,6 +58,7 @@ export class FriendshipService {
       return err(new NotFoundError('FriendRequest', otherId));
     }
     await this.repo.acceptRequest(edge.requesterId, edge.addresseeId);
+    await this.notifications.insert(otherId, 'FRIEND_ACCEPT', userId, null);
     return ok(undefined);
   }
 

@@ -6,3 +6,5 @@ export * from './contributors';
 export * from './interactions';
 export * from './analytics';
 export * from './taste';
+export * from './notifications';
+export * from './chat';

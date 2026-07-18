@@ -15,6 +15,8 @@ export const playlistKindEnum = pgEnum('playlist_kind', ['USER', 'MOOD', 'TRENDI
 export const subscriptionTypeEnum = pgEnum('subscription_type', ['ARTIST_TIER', 'LISTENER_PREMIUM']);
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['ACTIVE', 'CANCELLED', 'EXPIRED']);
 export const friendshipStatusEnum = pgEnum('friendship_status', ['PENDING', 'ACCEPTED']);
+export const reportTargetTypeEnum = pgEnum('report_target_type', ['USER', 'MESSAGE']);
+export const reportStatusEnum = pgEnum('report_status', ['OPEN', 'REVIEWED', 'DISMISSED']);
 
 // Покупка остаётся у слушателя навсегда, даже если артист ушёл с площадки
 export const purchases = pgTable('purchases', {
@@ -149,4 +151,33 @@ export const friendships = pgTable('friendships', {
   index('friendships_addressee_idx').on(t.addresseeId),
   index('friendships_requester_idx').on(t.requesterId),
   check('friendships_no_self', sql`${t.requesterId} <> ${t.addresseeId}`),
+]);
+
+// Блок односторонний по инициативе, но двусторонний по эффекту (гейты читают either-way).
+export const userBlocks = pgTable('user_blocks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  blockerId: uuid('blocker_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  blockedId: uuid('blocked_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  unique('user_blocks_pair_unique').on(t.blockerId, t.blockedId),
+  // обратный поиск «кто меня заблокировал»
+  index('user_blocks_blocked_id_idx').on(t.blockedId),
+  check('user_blocks_no_self', sql`${t.blockerId} <> ${t.blockedId}`),
+]);
+
+// target_id — полиморфный uuid без FK (как purchases.item_id): цель либо users, либо messages.
+export const reports = pgTable('reports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  reporterId: uuid('reporter_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  targetType: reportTargetTypeEnum('target_type').notNull(),
+  targetId: uuid('target_id').notNull(),
+  reason: text('reason').notNull(),
+  status: reportStatusEnum('status').notNull().default('OPEN'),
+  reviewedBy: uuid('reviewed_by').references(() => users.id),
+  reviewedAt: timestamp('reviewed_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  // очередь модерации: открытые жалобы, свежие сверху
+  index('reports_status_created_at_idx').on(t.status, t.createdAt),
 ]);

@@ -8,6 +8,7 @@ import { loadFriendProfile } from '@/lib/friend-profile';
 import { likedToPlayerTrack } from '@/lib/player/liked-to-player-track';
 import { FriendButton } from '@/components/friends/friend-button';
 import { ShareProfileButton } from '@/components/friends/share-profile-button';
+import { MessageFriendButton } from '@/components/chat/message-friend-button';
 import { PlaylistCard } from '@/components/listener/playlist-card';
 import { Section } from '@/components/listener/section';
 import { EmptyState } from '@/components/ui-kit';
@@ -58,6 +59,7 @@ export default async function FriendProfilePage({ params }: Props) {
             {viewerId && viewerId !== view.id && (
               <FriendButton targetUserId={view.id} initialStatus={view.status} />
             )}
+            {view.canChat && <MessageFriendButton targetUserId={view.id} />}
             <ShareProfileButton userId={view.id} />
           </div>
         </div>
