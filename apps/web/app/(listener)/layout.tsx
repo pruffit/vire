@@ -1,6 +1,12 @@
 import { cookies } from 'next/headers';
 import { auth } from '@/auth';
-import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached, getUserProfileCached } from '@/lib/listener-data';
+import {
+  getLikedTracksCached,
+  getFollowedArtistsCached,
+  getUserPlaylistsCached,
+  getUserProfileCached,
+  countIncomingCached,
+} from '@/lib/listener-data';
 import { Footer } from '@/components/footer';
 import { ListenerSidebar } from '@/components/listener/listener-sidebar';
 
@@ -9,14 +15,15 @@ export default async function ListenerLayout({ children }: { children: React.Rea
   const userId = session?.user?.id;
   const collapsed = cookieStore.get('vire_sidebar')?.value === 'rail';
 
-  const [playlists, artists, liked, userProfile] = userId
+  const [playlists, artists, liked, userProfile, incomingCount] = userId
     ? await Promise.all([
         getUserPlaylistsCached(userId),
         getFollowedArtistsCached(userId),
         getLikedTracksCached(userId),
         getUserProfileCached(userId),
+        countIncomingCached(userId),
       ])
-    : [[], [], [], null];
+    : [[], [], [], null, 0];
 
   // desktop: сайдбар закреплён, скролл только во внутренней панели — иначе sticky-сайдбар
   // в общем #main-content смазывает контент при быстрой прокрутке
@@ -26,6 +33,7 @@ export default async function ListenerLayout({ children }: { children: React.Rea
         playlists={playlists.map((p) => ({ id: p.id, name: p.title, coverUrl: p.coverUrl ?? null }))}
         artists={artists.map((a) => ({ id: a.id, name: a.name, slug: a.slug, avatarUrl: a.avatarUrl ?? null }))}
         likedCount={liked.length}
+        incomingCount={incomingCount}
         isGuest={!userId}
         initialCollapsed={collapsed}
         user={

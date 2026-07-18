@@ -18,6 +18,7 @@ export function ListenerSidebar({
   playlists,
   artists,
   likedCount,
+  incomingCount = 0,
   isGuest,
   initialCollapsed,
   user,
@@ -25,6 +26,7 @@ export function ListenerSidebar({
   playlists: SidebarPlaylist[];
   artists: SidebarArtist[];
   likedCount: number;
+  incomingCount?: number;
   isGuest: boolean;
   initialCollapsed: boolean;
   user?: { name: string; avatarUrl: string | null };
@@ -67,6 +69,7 @@ export function ListenerSidebar({
         playlists={playlists}
         artists={artists}
         likedCount={likedCount}
+        incomingCount={incomingCount}
         isGuest={isGuest}
         collapsed={collapsed}
       />

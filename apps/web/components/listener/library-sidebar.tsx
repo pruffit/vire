@@ -14,12 +14,14 @@ export function LibrarySidebar({
   playlists,
   artists,
   likedCount,
+  incomingCount = 0,
   isGuest,
   collapsed = false,
 }: {
   playlists: SidebarPlaylist[];
   artists: SidebarArtist[];
   likedCount: number;
+  incomingCount?: number;
   isGuest: boolean;
   collapsed?: boolean;
 }) {
@@ -67,6 +69,22 @@ export function LibrarySidebar({
             leading={
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
                 <Icon name="heart" size={18} className="text-foreground" />
+              </span>
+            }
+          />
+
+          <LibraryRow
+            collapsed={collapsed}
+            href="/friends"
+            title="Друзья"
+            subtitle={incomingCount > 0 ? `${incomingCount} новых заявок` : 'Друзья'}
+            badgeCount={incomingCount}
+            leading={
+              <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
+                <Icon name="users" size={18} className="text-foreground" />
+                {collapsed && incomingCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
+                )}
               </span>
             }
           />
@@ -125,12 +143,14 @@ function LibraryRow({
   title,
   subtitle,
   leading,
+  badgeCount,
   collapsed = false,
 }: {
   href: string;
   title: string;
   subtitle: string;
   leading: ReactNode;
+  badgeCount?: number;
   collapsed?: boolean;
 }) {
   if (collapsed) {
@@ -149,10 +169,15 @@ function LibraryRow({
   return (
     <Link href={href} className="flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-foreground/5">
       {leading}
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="block truncate text-sm text-foreground/90">{title}</span>
         <span className="block truncate text-xs text-foreground/40">{subtitle}</span>
       </span>
+      {!!badgeCount && badgeCount > 0 && (
+        <span className="shrink-0 rounded-full bg-primary px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-primary-foreground">
+          {badgeCount}
+        </span>
+      )}
     </Link>
   );
 }
