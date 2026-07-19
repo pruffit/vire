@@ -31,7 +31,10 @@ export async function PATCH(
     );
   }
 
-  const service = new ReleaseService(new DrizzleReleaseRepository(db), { notifyQueue: notifyReleaseQueue });
+  const service = new ReleaseService(new DrizzleReleaseRepository(db), {
+    uuid: () => crypto.randomUUID(),
+    notifyQueue: notifyReleaseQueue,
+  });
   const result = await service.changeStatus(id, artist.id, body.status as ReleaseStatus, {
     name: artist.name,
     slug: artist.slug,

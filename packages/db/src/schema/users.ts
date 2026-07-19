@@ -1,4 +1,5 @@
-import { pgTable, uuid, text, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, pgEnum, index, boolean } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('role', [
   'LISTENER',
@@ -10,6 +11,8 @@ export const roleEnum = pgEnum('role', [
   'VIEWER',
 ]);
 
+export const userSocialVisibilityEnum = pgEnum('user_social_visibility', ['FRIENDS', 'PRIVATE']);
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name'),
@@ -18,6 +21,14 @@ export const users = pgTable('users', {
   image: text('image'),
   passwordHash: text('password_hash'),
   role: roleEnum('role').notNull().default('LISTENER'),
+  socialVisibility: userSocialVisibilityEnum('social_visibility').notNull().default('FRIENDS'),
+  friendRequestsSeenAt: timestamp('friend_requests_seen_at'),
+  notifyEmail: boolean('notify_email').notNull().default(true),
+  notifyPush: boolean('notify_push').notNull().default(true),
+  discoverable: boolean('discoverable').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [
+  // Триграммный GIN: ILIKE '%q%' по имени (поиск людей) без seq-scan — зеркало artist_profiles
+  index('users_name_trgm_idx').using('gin', sql`${t.name} gin_trgm_ops`),
+]);

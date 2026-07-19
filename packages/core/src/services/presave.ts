@@ -1,21 +1,18 @@
 import { err, ok, NotFoundError, ValidationError, type Result } from '../errors';
 import type { IPresaveRepository } from '../repositories/presave';
+import type { Clock } from '../ports/effects';
 
 const NOT_PRESAVABLE_MESSAGE = 'Пресейв недоступен: релиз уже вышел или не запланирован';
 
 export interface PresaveServiceDeps {
-  now?: () => number;
+  now: Clock;
 }
 
 export class PresaveService {
-  private readonly now: () => number;
-
   constructor(
     private readonly repo: IPresaveRepository,
-    deps: PresaveServiceDeps = {},
-  ) {
-    this.now = deps.now ?? Date.now;
-  }
+    private readonly deps: PresaveServiceDeps,
+  ) {}
 
   async getState(userId: string, releaseId: string): Promise<Result<{ presaved: boolean }, Error>> {
     return ok({ presaved: await this.repo.getState(userId, releaseId) });
@@ -51,7 +48,7 @@ export class PresaveService {
     const info = await this.repo.getReleaseInfo(releaseId);
     if (!info) return err(new NotFoundError('Release', releaseId));
     const presavable =
-      info.status === 'SCHEDULED' && info.releaseDate != null && new Date(info.releaseDate).getTime() > this.now();
+      info.status === 'SCHEDULED' && info.releaseDate != null && new Date(info.releaseDate).getTime() > this.deps.now();
     if (!presavable) return err(new ValidationError(NOT_PRESAVABLE_MESSAGE));
     return ok(undefined);
   }

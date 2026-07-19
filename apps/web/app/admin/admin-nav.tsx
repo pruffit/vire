@@ -9,6 +9,7 @@ const NAV: SideNavItem[] = [
   { href: '/admin/artists', label: 'Артисты' },
   { href: '/admin/tracks', label: 'Треки' },
   { href: '/admin/releases', label: 'Релизы' },
+  { href: '/admin/reports', label: 'Жалобы' },
   { href: '/admin/posts', label: 'Посты' },
   { href: '/admin/playlists', label: 'Плейлисты' },
   { href: '/admin/system', label: 'Система' },

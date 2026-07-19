@@ -48,6 +48,7 @@ export async function POST(req: Request) {
   }
 
   const service = new ArtistService(new DrizzleArtistRepository(db), {
+    now: () => Date.now(),
     fonts: { sans: SANS_FONTS, mono: MONO_FONTS },
     videoTitleResolver,
     imageStorage: fileStorage,

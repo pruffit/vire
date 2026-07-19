@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { releaseId } = await params;
 
-  const service = new ReleaseService(new DrizzleReleaseRepository(db));
+  const service = new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() });
   const result = await service.getWithTracks(releaseId);
 
   if (!result.ok) {

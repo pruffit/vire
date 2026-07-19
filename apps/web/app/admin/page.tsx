@@ -5,6 +5,7 @@ import {
 } from '@vire/db';
 import type { AdminAttention, AdminRecentRelease, AdminStats, AdminPlatformMetrics } from '@vire/db';
 import { getAdminHealth, type AdminHealth } from '@/lib/admin-health';
+import { reportService } from '@/lib/reports';
 import { QueueFailedActions } from './queue-actions';
 import { EditorialGenerateButton } from './editorial-generate-button';
 import {
@@ -15,25 +16,27 @@ import { plural } from '@/lib/format';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
-  const [stats, attention, recent, metrics, health] = await Promise.all([
+  const [stats, attention, recent, metrics, health, openReports] = await Promise.all([
     getAdminStats(),
     getAdminAttention(),
     getRecentPublishedReleases(8),
     getAdminPlatformMetrics(),
     getAdminHealth(),
+    reportService().countOpen().catch(() => 0),
   ]);
 
   const hasIssues =
     attention.stuckTracks.length > 0 ||
     attention.failedTracks.length > 0 ||
     attention.blockedTracksCount > 0 ||
-    attention.unverifiedArtists.length > 0;
+    attention.unverifiedArtists.length > 0 ||
+    openReports > 0;
 
   return (
     <div className="flex flex-col gap-10">
       <PageHeader title="Обзор" />
 
-      {hasIssues && <AttentionPanel attention={attention} />}
+      {hasIssues && <AttentionPanel attention={attention} openReports={openReports} />}
 
       <HealthPanel health={health} />
 
@@ -230,9 +233,18 @@ function EngagementPanel({ metrics }: { metrics: AdminPlatformMetrics }) {
 
 // ─── Attention ─────────────────────────────────────────────────────────────
 
-function AttentionPanel({ attention }: { attention: AdminAttention }) {
+function AttentionPanel({ attention, openReports }: { attention: AdminAttention; openReports: number }) {
   return (
     <Section label="Требует внимания">
+      {openReports > 0 && (
+        <AlertRow
+          variant="warn"
+          href="/admin/reports"
+          label={`${openReports} ${plural(openReports, ['жалоба', 'жалобы', 'жалоб'])} на рассмотрении`}
+          sub="открытые обращения пользователей"
+        />
+      )}
+
       {attention.stuckTracks.length > 0 && (
         <AlertRow
           variant="error"

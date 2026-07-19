@@ -25,8 +25,8 @@ type Props = { params: Promise<{ slug: string; releaseId: string }> };
 
 async function getPageData(slug: string, releaseId: string) {
   const [artistResult, releaseResult] = await Promise.all([
-    new ArtistService(new DrizzleArtistRepository(db)).getBySlug(slug),
-    new ReleaseService(new DrizzleReleaseRepository(db)).getWithTracks(releaseId),
+    new ArtistService(new DrizzleArtistRepository(db), { now: () => Date.now() }).getBySlug(slug),
+    new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() }).getWithTracks(releaseId),
   ]);
 
   if (!artistResult.ok || !releaseResult.ok) return null;

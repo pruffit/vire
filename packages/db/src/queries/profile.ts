@@ -78,6 +78,43 @@ export async function getLikedTracks(userId: string): Promise<LikedTrack[]> {
   return rows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) }));
 }
 
+export async function getUserPublicProfile(userId: string): Promise<{
+  id: string;
+  name: string | null;
+  image: string | null;
+  socialVisibility: 'FRIENDS' | 'PRIVATE';
+  discoverable: boolean;
+  notifyEmail: boolean;
+} | null> {
+  const [row] = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      image: users.image,
+      socialVisibility: users.socialVisibility,
+      discoverable: users.discoverable,
+      notifyEmail: users.notifyEmail,
+    })
+    .from(users).where(eq(users.id, userId)).limit(1);
+  return row ?? null;
+}
+
+export async function updateUserSocialVisibility(userId: string, v: 'FRIENDS' | 'PRIVATE'): Promise<void> {
+  await db.update(users).set({ socialVisibility: v, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
+export async function updateUserDiscoverable(userId: string, value: boolean): Promise<void> {
+  await db.update(users).set({ discoverable: value, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
+export async function updateUserNotifyEmail(userId: string, value: boolean): Promise<void> {
+  await db.update(users).set({ notifyEmail: value, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
+export async function updateUserNotifyPush(userId: string, value: boolean): Promise<void> {
+  await db.update(users).set({ notifyPush: value, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
 export async function getFollowedArtists(userId: string): Promise<FollowedArtist[]> {
   const rows = await db
     .select({
@@ -94,4 +131,15 @@ export async function getFollowedArtists(userId: string): Promise<FollowedArtist
     .orderBy(desc(follows.createdAt));
 
   return rows;
+}
+
+export async function getUserNotifyContext(userId: string): Promise<{ email: string | null; name: string | null; notifyEmail: boolean; notifyPush: boolean } | null> {
+  const [row] = await db.select({ email: users.email, name: users.name, notifyEmail: users.notifyEmail, notifyPush: users.notifyPush })
+    .from(users).where(eq(users.id, userId)).limit(1);
+  return row ?? null;
+}
+
+export async function getUserDisplayName(userId: string): Promise<string | null> {
+  const [row] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+  return row?.name ?? null;
 }

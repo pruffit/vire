@@ -1,6 +1,7 @@
 import { err, ok, NotFoundError, ValidationError, ConflictError, type Result } from '../errors';
 import type { IArtistRepository } from '../repositories/artist';
 import type { IFileStorage } from '../repositories/storage';
+import type { Clock } from '../ports/effects';
 import type { ArtistProfile, ArtistLink, ArtistVideo, ThemeTokens } from '../types/artist';
 
 export interface IVideoTitleResolver {
@@ -8,10 +9,10 @@ export interface IVideoTitleResolver {
 }
 
 export interface ArtistServiceDeps {
+  now: Clock;
   fonts?: { sans: readonly string[]; mono: readonly string[] };
   videoTitleResolver?: IVideoTitleResolver;
   imageStorage?: IFileStorage;
-  now?: () => number;
 }
 
 export interface ArtistImageInput {
@@ -40,7 +41,7 @@ export interface UpdateArtistProfileInput {
 export class ArtistService {
   constructor(
     private readonly repo: IArtistRepository,
-    private readonly deps: ArtistServiceDeps = {},
+    private readonly deps: ArtistServiceDeps,
   ) {}
 
   async getBySlug(slug: string): Promise<Result<ArtistProfile, NotFoundError>> {
@@ -152,8 +153,7 @@ export class ArtistService {
 
   // ключ S3 стабильный — без ?v=timestamp браузер/CDN отдают старое закэшированное фото
   private bust(url: string): string {
-    const now = this.deps.now ?? Date.now;
-    return `${url}?v=${now()}`;
+    return `${url}?v=${this.deps.now()}`;
   }
 
   private resolveFont(raw: unknown, catalog: readonly string[] | undefined, fallback: string): string {

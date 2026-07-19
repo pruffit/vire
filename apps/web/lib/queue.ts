@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { QUEUE_TRANSCODE, QUEUE_PLAY_EVENTS, QUEUE_NOTIFY_RELEASE, QUEUE_ANALYZE, QUEUE_ANALYZE_GENRE, type TranscodeJobData, type PlayEventJobData, type NotifyReleaseJobData, type AnalyzeJobData, type AnalyzeGenreJobData } from '@vire/core';
+import { QUEUE_TRANSCODE, QUEUE_PLAY_EVENTS, QUEUE_NOTIFY_RELEASE, QUEUE_ANALYZE, QUEUE_ANALYZE_GENRE, QUEUE_NOTIFY_EXTERNAL, type TranscodeJobData, type PlayEventJobData, type NotifyReleaseJobData, type AnalyzeJobData, type AnalyzeGenreJobData, type ExternalNotifyJobData } from '@vire/core';
 
 // Синглтон — переиспользуется между запросами в рамках процесса Next.js
 const globalForQueue = globalThis as unknown as { _transcodeQueue?: TranscodeQueue };
@@ -144,4 +144,32 @@ export const analyzeGenreQueue: AnalyzeGenreQueue =
 
 if (process.env.NODE_ENV !== 'production') {
   globalForAnalyzeGenre._analyzeGenreQueue = analyzeGenreQueue;
+}
+
+const globalForExternal = globalThis as unknown as { _externalNotifyQueue?: ExternalNotifyQueue };
+
+class ExternalNotifyQueue {
+  private q = new Queue<ExternalNotifyJobData>(QUEUE_NOTIFY_EXTERNAL, {
+    connection: {
+      url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+      maxRetriesPerRequest: null as unknown as number,
+    },
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5_000 },
+      removeOnComplete: { count: 200 },
+      removeOnFail: { count: 100 },
+    },
+  });
+
+  async add(data: ExternalNotifyJobData): Promise<void> {
+    await this.q.add('notify-external', data);
+  }
+}
+
+export const externalNotifyQueue: ExternalNotifyQueue =
+  globalForExternal._externalNotifyQueue ?? new ExternalNotifyQueue();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForExternal._externalNotifyQueue = externalNotifyQueue;
 }

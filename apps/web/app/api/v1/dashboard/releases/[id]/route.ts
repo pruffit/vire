@@ -63,7 +63,10 @@ export async function PATCH(req: Request, { params }: Params) {
     coverInput = { buffer, ext: v.info.ext, mime: v.info.mime };
   }
 
-  const service = new ReleaseService(new DrizzleReleaseRepository(db), { coverStorage: fileStorage });
+  const service = new ReleaseService(new DrizzleReleaseRepository(db), {
+    uuid: () => crypto.randomUUID(),
+    coverStorage: fileStorage,
+  });
   const result = await service.update(id, artist.id, {
     title,
     type: type as ReleaseType,
@@ -99,7 +102,7 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const service = new ReleaseService(new DrizzleReleaseRepository(db));
+  const service = new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() });
   const result = await service.deleteRelease({ releaseId: id, artistProfileId: artist.id });
 
   if (!result.ok) {

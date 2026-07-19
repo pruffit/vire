@@ -1,9 +1,10 @@
-import { err, ok, NotFoundError, ValidationError, type Result } from '../errors';
+import { err, ok, NotFoundError, ValidationError, ForbiddenError, type Result } from '../errors';
 import type { ITrackRepository, UpdateTrackParams } from '../repositories/track';
 import type { IReleaseRepository } from '../repositories/release';
 import type { IFileStorage } from '../repositories/storage';
 import type { ITrackMoodsRepository } from '../repositories/track-moods';
 import type { TranscodeJobData } from '../jobs';
+import type { IdGenerator } from '../ports/effects';
 import type { Track, TrackCredit, LyricLine } from '../types/release';
 import { authorizeTrackOwnership } from './authorize-track';
 
@@ -20,8 +21,8 @@ const AUDIO_CONTENT_TYPE: Record<AudioExt, string> = {
 };
 
 export interface TrackServiceDeps {
+  uuid: IdGenerator;
   audioStorage?: IFileStorage;
-  uuid?: () => string;
   moodsRepo?: ITrackMoodsRepository;
   parseLrc?: (raw: string) => LyricLine[];
 }
@@ -31,7 +32,7 @@ export class TrackService {
     private readonly trackRepo: ITrackRepository,
     private readonly releaseRepo: IReleaseRepository,
     private readonly queue: ITranscodeQueue,
-    private readonly deps: TrackServiceDeps = {},
+    private readonly deps: TrackServiceDeps,
   ) {}
 
   async createUpload(params: {
@@ -42,17 +43,17 @@ export class TrackService {
     ext: AudioExt;
     buffer: Uint8Array;
     credits?: TrackCredit[];
-  }): Promise<Result<Track, NotFoundError | Error>> {
+  }): Promise<Result<Track, NotFoundError | ForbiddenError>> {
     const release = await this.releaseRepo.findById(params.releaseId);
     if (!release) return err(new NotFoundError('Release', params.releaseId));
 
     if (release.artistProfileId !== params.artistProfileId) {
-      return err(new Error('Forbidden: release does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: release does not belong to this artist'));
     }
 
     // S3-загрузка после проверки владения релизом — при 403/404 осиротевший объект не создаётся.
     if (!this.deps.audioStorage) throw new Error('TrackService: deps.audioStorage is required to upload audio');
-    const trackId = this.deps.uuid ? this.deps.uuid() : crypto.randomUUID();
+    const trackId = this.deps.uuid();
     const sourceKey = `tracks/${trackId}/source.${params.ext}`;
     await this.deps.audioStorage.upload(sourceKey, params.buffer, AUDIO_CONTENT_TYPE[params.ext]);
 
@@ -73,7 +74,7 @@ export class TrackService {
     trackId: string;
     artistProfileId: string;
     patch: UpdateTrackParams;
-  }): Promise<Result<Track, NotFoundError | Error>> {
+  }): Promise<Result<Track, NotFoundError | ForbiddenError>> {
     const authorized = await authorizeTrackOwnership(
       this.trackRepo, this.releaseRepo, params.trackId, params.artistProfileId,
     );
@@ -87,7 +88,7 @@ export class TrackService {
   async deleteTrack(params: {
     trackId: string;
     artistProfileId: string;
-  }): Promise<Result<void, NotFoundError | Error>> {
+  }): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const authorized = await authorizeTrackOwnership(
       this.trackRepo, this.releaseRepo, params.trackId, params.artistProfileId,
     );
@@ -103,11 +104,11 @@ export class TrackService {
     releaseId: string;
     artistProfileId: string;
     orderedIds: string[];
-  }): Promise<Result<void, NotFoundError | Error>> {
+  }): Promise<Result<void, NotFoundError | ForbiddenError | Error>> {
     const release = await this.releaseRepo.findById(params.releaseId);
     if (!release) return err(new NotFoundError('Release', params.releaseId));
     if (release.artistProfileId !== params.artistProfileId) {
-      return err(new Error('Forbidden: release does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: release does not belong to this artist'));
     }
 
     const withTracks = await this.releaseRepo.findWithTracks(params.releaseId);

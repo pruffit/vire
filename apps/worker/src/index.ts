@@ -10,6 +10,7 @@ import { createEditorialWorker } from './workers/editorial.worker.js';
 import { createScheduledPublishWorker } from './workers/scheduled-publish.worker.js';
 import { createFulfillPresaveWorker } from './workers/fulfill-presave.worker.js';
 import { createMetricsWorker } from './workers/metrics.worker.js';
+import { createNotifyExternalWorker } from './workers/notify-external.worker.js';
 import { connection } from './queues/connection.js';
 import { alertJobFailure, alertWorkerError, alertCrash } from './lib/alert.js';
 
@@ -22,6 +23,7 @@ const editorialWorker = createEditorialWorker();
 const scheduledPublishWorker = createScheduledPublishWorker();
 const fulfillPresaveWorker = createFulfillPresaveWorker();
 const metricsWorker = createMetricsWorker();
+const notifyExternalWorker = createNotifyExternalWorker();
 
 // upsertJobScheduler идемпотентен: повторный запуск воркера не плодит дубли, обновляет расписание.
 const editorialQueue = new Queue(QUEUE_EDITORIAL, { connection });
@@ -117,7 +119,7 @@ metricsWorker.on('error', (err) => {
   void alertWorkerError('metrics-daily', err);
 });
 
-console.log('[worker] transcode + analyze + analyze-genre + play-events + notify-release + editorial + scheduled-publish + fulfill-presave + metrics-daily workers started');
+console.log('[worker] transcode + analyze + analyze-genre + play-events + notify-release + editorial + scheduled-publish + fulfill-presave + metrics-daily + notify-external workers started');
 
 analyzeWorker.on('completed', (job) => {
   console.log(`[analyze] ✓ job=${job.id} track=${job.data.trackId}`);
@@ -137,6 +139,16 @@ analyzeGenreWorker.on('failed', (job, err) => {
 });
 analyzeGenreWorker.on('error', (err) => {
   void alertWorkerError('analyze-genre', err);
+});
+
+notifyExternalWorker.on('completed', (job) => {
+  console.log(`[notify-external] ✓ job=${job.id} kind=${job.data.kind}`);
+});
+notifyExternalWorker.on('failed', (job, err) => {
+  void alertJobFailure('notify-external', job?.id, err, { kind: job?.data.kind });
+});
+notifyExternalWorker.on('error', (err) => {
+  void alertWorkerError('notify-external', err);
 });
 
 // Алертим (дождавшись доставки) и выходим с кодом 1 — иначе воркер умирал бы молча,
@@ -163,6 +175,7 @@ async function shutdown() {
     scheduledPublishQueue.close(),
     metricsWorker.close(),
     metricsQueue.close(),
+    notifyExternalWorker.close(),
   ]);
   process.exit(0);
 }

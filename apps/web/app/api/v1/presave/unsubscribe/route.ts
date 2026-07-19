@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   const email = parsed.data.email.trim().toLowerCase();
   if (!verifyUnsubscribeToken(email, parsed.data.sig)) return done(req, 'bad');
 
-  const service = new PresaveService(new DrizzlePresaveRepository(db));
+  const service = new PresaveService(new DrizzlePresaveRepository(db), { now: () => Date.now() });
   await service.unsubscribeGuest(email);
   return done(req, 'ok');
 }

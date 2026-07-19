@@ -260,6 +260,41 @@
       "when": 1784276142971,
       "tag": "0036_lame_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1784358666761,
+      "tag": "0037_woozy_rogue",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1784376078128,
+      "tag": "0038_young_argent",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1784393651398,
+      "tag": "0039_long_dakota_north",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1784445046100,
+      "tag": "0040_mean_arclight",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1784481521930,
+      "tag": "0041_curly_wild_pack",
+      "breakpoints": true
     }
   ]
 }

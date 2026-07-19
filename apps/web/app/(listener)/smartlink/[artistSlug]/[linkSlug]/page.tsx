@@ -18,7 +18,7 @@ import { abs } from '@/lib/structured-data';
 type Props = { params: Promise<{ artistSlug: string; linkSlug: string }> };
 
 async function getData(artistSlug: string, linkSlug: string) {
-  const artistResult = await new ArtistService(new DrizzleArtistRepository(db)).getBySlug(artistSlug);
+  const artistResult = await new ArtistService(new DrizzleArtistRepository(db), { now: () => Date.now() }).getBySlug(artistSlug);
   if (!artistResult.ok) return null;
   const artist = artistResult.value;
   const smartLink = await getSmartLinkBySlug(artist.id, linkSlug);

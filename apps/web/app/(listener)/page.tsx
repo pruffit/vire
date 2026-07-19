@@ -10,6 +10,7 @@ import {
   cachedLatestReleases,
   PersonalBlock,
   FeedSection,
+  FriendsActivitySection,
   HotTracksSection,
   FreshReleasesSection,
   UpcomingSection,
@@ -55,6 +56,12 @@ export default async function HomePage() {
       {userId && (
         <Suspense fallback={null}>
           <FeedSection userId={userId} />
+        </Suspense>
+      )}
+
+      {userId && (
+        <Suspense fallback={null}>
+          <FriendsActivitySection userId={userId} />
         </Suspense>
       )}
 

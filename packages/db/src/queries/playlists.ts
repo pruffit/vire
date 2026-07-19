@@ -102,6 +102,38 @@ export async function getUserPlaylists(userId: string): Promise<PlaylistSummary[
   });
 }
 
+export async function getPublicPlaylistsByOwner(ownerUserId: string): Promise<PlaylistSummary[]> {
+  const rows = await db
+    .select({
+      id: playlists.id,
+      title: playlists.title,
+      visibility: playlists.visibility,
+      coverUrl: playlists.coverUrl,
+      createdAt: playlists.createdAt,
+      updatedAt: playlists.updatedAt,
+    })
+    .from(playlists)
+    .where(and(eq(playlists.ownerUserId, ownerUserId), eq(playlists.visibility, 'PUBLIC'), eq(playlists.kind, 'USER')))
+    .orderBy(desc(playlists.updatedAt));
+
+  const meta = await fetchPlaylistMeta(rows.map((r) => r.id));
+
+  return rows.map((p) => {
+    const m = meta.get(p.id);
+    const covers = pickCovers(p.coverUrl, m?.covers ?? []);
+    return {
+      id: p.id,
+      title: p.title,
+      visibility: p.visibility,
+      updatedAt: p.updatedAt,
+      createdAt: p.createdAt,
+      trackCount: m?.trackCount ?? 0,
+      coverUrl: covers[0] ?? null,
+      covers,
+    };
+  });
+}
+
 export async function getPlaylistWithTracks(
   playlistId: string,
 ): Promise<PlaylistWithTracks | null> {

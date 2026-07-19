@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { MotionProvider, REDUCE_MOTION_INIT_SCRIPT } from '@vire/ui/motion';
+import { auth } from '@/auth';
+import { countUnseenIncomingCached, countUnreadMessagesCached } from '@/lib/listener-data';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
 import { MobileTabBar } from '@/components/listener/mobile-tab-bar';
 import { DeferredWidgets } from '@/components/deferred-widgets';
@@ -69,9 +71,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const session = await auth();
+  const userId = session?.user?.id;
+  const [incomingCount, messagesUnread] = userId
+    ? await Promise.all([countUnseenIncomingCached(userId), countUnreadMessagesCached(userId)])
+    : [0, 0];
+
   return (
     <html
       lang="ru"
@@ -98,7 +106,7 @@ export default function RootLayout({
             {children}
           </div>
           <PlayerWrapper />
-          <MobileTabBar />
+          <MobileTabBar incomingCount={incomingCount} messagesUnread={messagesUnread} />
           <DeferredWidgets />
           <Toaster />
           <YandexMetrika />

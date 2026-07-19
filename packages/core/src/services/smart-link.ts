@@ -1,6 +1,7 @@
 import { err, ok, NotFoundError, ValidationError, ConflictError, type Result } from '../errors';
 import type { ISmartLinkRepository } from '../repositories/smart-link';
 import type { IFileStorage } from '../repositories/storage';
+import type { IdGenerator } from '../ports/effects';
 import type { ArtistLink, SmartLinkInput } from '../types/artist';
 
 export const MAX_SMART_LINKS = 20; // ссылок на площадки в одном лендинге
@@ -61,8 +62,8 @@ export interface SmartLinkFileInput {
 }
 
 export interface SmartLinkServiceDeps {
+  uuid: IdGenerator;
   coverStorage?: IFileStorage;
-  uuid?: () => string;
 }
 
 export interface CreateSmartLinkInput {
@@ -92,7 +93,7 @@ export interface UpdateSmartLinkInput {
 export class SmartLinkService {
   constructor(
     private readonly repo: ISmartLinkRepository,
-    private readonly deps: SmartLinkServiceDeps = {},
+    private readonly deps: SmartLinkServiceDeps,
   ) {}
 
   async create(
@@ -203,7 +204,7 @@ export class SmartLinkService {
   private async uploadCover(cover: SmartLinkFileInput | null): Promise<string | null> {
     if (!cover) return null;
     if (!this.deps.coverStorage) throw new Error('SmartLinkService: deps.coverStorage is required to upload a cover');
-    const id = this.deps.uuid ? this.deps.uuid() : crypto.randomUUID();
+    const id = this.deps.uuid();
     return this.deps.coverStorage.upload(`covers/smartlinks/${id}.${cover.ext}`, cover.buffer, cover.mime);
   }
 }

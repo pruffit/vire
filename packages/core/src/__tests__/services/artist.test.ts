@@ -45,7 +45,7 @@ function makeRepo(overrides?: Partial<IArtistRepository>): IArtistRepository {
 describe('ArtistService.getBySlug', () => {
   it('returns ok(artist) when repo finds the artist', async () => {
     const repo = makeRepo({ findBySlug: vi.fn().mockResolvedValue(mockArtist) });
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     const result = await service.getBySlug('test-artist');
 
@@ -56,7 +56,7 @@ describe('ArtistService.getBySlug', () => {
 
   it('returns err(NotFoundError) when repo returns null', async () => {
     const repo = makeRepo({ findBySlug: vi.fn().mockResolvedValue(null) });
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     const result = await service.getBySlug('unknown-slug');
 
@@ -69,7 +69,7 @@ describe('ArtistService.getBySlug', () => {
 
   it('calls repo.findBySlug with the exact slug', async () => {
     const repo = makeRepo({ findBySlug: vi.fn().mockResolvedValue(null) });
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     await service.getBySlug('kotlaev');
 
@@ -106,7 +106,7 @@ const baseInput: UpdateArtistProfileInput = {
 describe('ArtistService.updateProfile', () => {
   it('returns err(ValidationError) when name is missing or blank', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     const result = await service.updateProfile(mockArtist, { ...baseInput, name: '   ' });
 
@@ -120,7 +120,7 @@ describe('ArtistService.updateProfile', () => {
 
   it('trims name/bio and falls back to existing avatar/header/theme when not given', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     const result = await service.updateProfile(mockArtist, { ...baseInput, name: '  New Name  ', bio: '  hi  ' });
 
@@ -136,7 +136,7 @@ describe('ArtistService.updateProfile', () => {
 
   it('clears avatar/header when remove flags are set', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     await service.updateProfile(
       { ...mockArtist, avatarUrl: 'https://old-avatar', headerUrl: 'https://old-header' },
@@ -165,7 +165,7 @@ describe('ArtistService.updateProfile', () => {
 
   it('throws when a file is given but imageStorage dependency is missing', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
     const file = { buffer: new Uint8Array([1]), ext: 'jpg', mime: 'image/jpeg' };
 
     await expect(service.updateProfile(mockArtist, { ...baseInput, avatar: file })).rejects.toThrow('deps.imageStorage');
@@ -173,7 +173,7 @@ describe('ArtistService.updateProfile', () => {
 
   it('keeps existing links/videos on malformed JSON', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     await service.updateProfile(mockArtist, { ...baseInput, linksRaw: 'not json', videosRaw: 'not json' });
 
@@ -185,7 +185,7 @@ describe('ArtistService.updateProfile', () => {
 
   it('parses links: keeps valid entries, caps at 10, drops entries without a url', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
     const links = Array.from({ length: 12 }, (_, i) => ({ url: `https://a.com/${i}` }));
 
     await service.updateProfile(mockArtist, { ...baseInput, linksRaw: JSON.stringify(links) });
@@ -197,7 +197,7 @@ describe('ArtistService.updateProfile', () => {
   it('resolves missing video titles via IVideoTitleResolver, skips already-titled videos', async () => {
     const repo = makeRepo();
     const resolver = makeVideoResolver();
-    const service = new ArtistService(repo, { videoTitleResolver: resolver });
+    const service = new ArtistService(repo, { now: () => 123, videoTitleResolver: resolver });
     const videosRaw = JSON.stringify([
       { url: 'https://youtube.com/1', title: 'Existing' },
       { url: 'https://youtube.com/2' },
@@ -216,7 +216,7 @@ describe('ArtistService.updateProfile', () => {
 
   it('throws when a video needs a title but videoTitleResolver dependency is missing', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
     const videosRaw = JSON.stringify([{ url: 'https://youtube.com/2' }]);
 
     await expect(
@@ -226,7 +226,7 @@ describe('ArtistService.updateProfile', () => {
 
   it('validates hex colors, falling back to existing theme tokens on invalid input', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     await service.updateProfile(mockArtist, { ...baseInput, bg: '#ffffff', text: 'not-hex', accent: '#123abc' });
 
@@ -237,7 +237,7 @@ describe('ArtistService.updateProfile', () => {
   it('picks fontSans/fontMono only when present in the injected catalog', async () => {
     const repo = makeRepo();
     const fonts = { sans: ['Inter', 'Rubik'], mono: ['JetBrains Mono'] };
-    const service = new ArtistService(repo, { fonts });
+    const service = new ArtistService(repo, { now: () => 123, fonts });
 
     await service.updateProfile(mockArtist, { ...baseInput, fontSans: 'Rubik', fontMono: 'Unknown Mono' });
 
@@ -248,7 +248,7 @@ describe('ArtistService.updateProfile', () => {
 
   it('throws when a font is given but the fonts catalog dependency is missing', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     await expect(
       service.updateProfile(mockArtist, { ...baseInput, fontSans: 'Inter' }),
@@ -261,7 +261,7 @@ describe('ArtistService.adminUpdate', () => {
 
   it('trims/normalizes and calls repo.adminUpdate', async () => {
     const repo = makeRepo({ adminUpdate: vi.fn().mockResolvedValue({ ok: true }) });
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     const result = await service.adminUpdate('artist-1', validInput);
 
@@ -276,7 +276,7 @@ describe('ArtistService.adminUpdate', () => {
 
   it('lowercases the slug', async () => {
     const repo = makeRepo({ adminUpdate: vi.fn().mockResolvedValue({ ok: true }) });
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     await service.adminUpdate('artist-1', { ...validInput, slug: 'NEW-SLUG' });
 
@@ -285,7 +285,7 @@ describe('ArtistService.adminUpdate', () => {
 
   it('returns err(ValidationError) when name is empty or exceeds 120 chars', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     const empty = await service.adminUpdate('artist-1', { ...validInput, name: '  ' });
     expect(empty.ok).toBe(false);
@@ -302,7 +302,7 @@ describe('ArtistService.adminUpdate', () => {
 
   it('returns err(ValidationError) for an invalid slug', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     const result = await service.adminUpdate('artist-1', { ...validInput, slug: 'a' });
 
@@ -315,7 +315,7 @@ describe('ArtistService.adminUpdate', () => {
     const repo = makeRepo({
       adminUpdate: vi.fn().mockResolvedValue({ ok: false, error: 'Slug already taken' }),
     });
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     const result = await service.adminUpdate('artist-1', validInput);
 
@@ -328,7 +328,7 @@ describe('ArtistService.adminUpdate', () => {
 
   it('normalizes empty bio/avatarUrl to null', async () => {
     const repo = makeRepo({ adminUpdate: vi.fn().mockResolvedValue({ ok: true }) });
-    const service = new ArtistService(repo);
+    const service = new ArtistService(repo, { now: () => 123 });
 
     await service.adminUpdate('artist-1', { ...validInput, bio: '   ', avatarUrl: '   ' });
 
@@ -340,7 +340,7 @@ describe('ArtistService.adminUpdate', () => {
 
   it('passes a valid theme through to repo.adminUpdate as themeTokens', async () => {
     const repo = makeRepo({ adminUpdate: vi.fn().mockResolvedValue({ ok: true }) });
-    const service = new ArtistService(repo, { fonts });
+    const service = new ArtistService(repo, { now: () => 123, fonts });
 
     const result = await service.adminUpdate('artist-1', { ...validInput, theme: validTheme });
 
@@ -350,7 +350,7 @@ describe('ArtistService.adminUpdate', () => {
 
   it('returns err(ValidationError) when a theme color is not a valid hex', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo, { fonts });
+    const service = new ArtistService(repo, { now: () => 123, fonts });
 
     const result = await service.adminUpdate('artist-1', { ...validInput, theme: { ...validTheme, accent: 'not-hex' } });
 
@@ -361,7 +361,7 @@ describe('ArtistService.adminUpdate', () => {
 
   it('returns err(ValidationError) when a theme font is outside deps.fonts', async () => {
     const repo = makeRepo();
-    const service = new ArtistService(repo, { fonts });
+    const service = new ArtistService(repo, { now: () => 123, fonts });
 
     const result = await service.adminUpdate('artist-1', { ...validInput, theme: { ...validTheme, fontSans: 'Unknown Font' } });
 
@@ -372,7 +372,7 @@ describe('ArtistService.adminUpdate', () => {
 
   it('does not pass themeTokens to repo.adminUpdate when theme is not given', async () => {
     const repo = makeRepo({ adminUpdate: vi.fn().mockResolvedValue({ ok: true }) });
-    const service = new ArtistService(repo, { fonts });
+    const service = new ArtistService(repo, { now: () => 123, fonts });
 
     await service.adminUpdate('artist-1', validInput);
 

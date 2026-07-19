@@ -1,10 +1,15 @@
 export * from './errors';
 export * from './jobs';
+export * from './ports/effects';
+export * from './ports/realtime';
+export * from './ports/external-notify';
 export * from './util/uuid';
 export * from './util/ttl-cache';
 export * from './util/throttle-gate';
 // util/signing НЕ реэкспортим: баррель тянется в Edge-runtime, где node:crypto не
 // поддержан. Импорт — через подпуть '@vire/core/signing' (только серверные потребители).
+// По той же причине notifications/unsubscribe (зависит от util/signing) — тоже
+// только подпуть '@vire/core/notifications/unsubscribe'.
 export * from './types/artist';
 export * from './types/artist-post';
 export * from './types/release';
@@ -21,6 +26,12 @@ export * from './repositories/storage';
 export * from './repositories/release';
 export * from './repositories/track';
 export * from './repositories/follow';
+export * from './repositories/friendship';
+export * from './repositories/block';
+export * from './repositories/report';
+export * from './repositories/notification';
+export * from './repositories/chat';
+export * from './repositories/user-directory';
 export * from './repositories/listener-track';
 export * from './repositories/track-moods';
 export * from './repositories/playlist';
@@ -36,7 +47,15 @@ export * from './services/smart-link';
 export * from './services/release';
 export * from './services/track';
 export * from './services/authorize-track';
+export * from './services/external-delivery';
 export * from './services/follow';
+export * from './services/friendship';
+export * from './services/block';
+export * from './services/report';
+export * from './services/notification';
+export * from './notifications/email-templates';
+export * from './services/chat';
+export * from './services/user-directory';
 export * from './services/listener-track';
 export * from './services/track-moods';
 export * from './services/playlist';

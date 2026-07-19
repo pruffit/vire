@@ -12,6 +12,7 @@ function trackService() {
     new DrizzleTrackRepository(db),
     new DrizzleReleaseRepository(db),
     transcodeQueue,
+    { uuid: () => crypto.randomUUID() },
   );
 }
 

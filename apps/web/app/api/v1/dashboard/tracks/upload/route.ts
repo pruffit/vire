@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     new DrizzleTrackRepository(db),
     new DrizzleReleaseRepository(db),
     transcodeQueue,
-    { audioStorage },
+    { uuid: () => crypto.randomUUID(), audioStorage },
   );
 
   const result = await service.createUpload({

@@ -1,13 +1,26 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { updateUserName, updateUserImage } from '@vire/db';
+import {
+  updateUserName,
+  updateUserImage,
+  updateUserSocialVisibility,
+  updateUserDiscoverable,
+  updateUserNotifyEmail,
+  updateUserNotifyPush,
+} from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
 import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
 
-const schema = z.object({
-  name: z.string().trim().min(1).max(50),
-});
+const schema = z
+  .object({
+    name: z.string().trim().min(1).max(50).optional(),
+    socialVisibility: z.enum(['FRIENDS', 'PRIVATE']).optional(),
+    discoverable: z.boolean().optional(),
+    notifyEmail: z.boolean().optional(),
+    notifyPush: z.boolean().optional(),
+  })
+  .refine((d) => Object.values(d).some((v) => v !== undefined), { message: 'Nothing to update' });
 
 export async function PATCH(req: Request) {
   const session = await auth();
@@ -15,12 +28,23 @@ export async function PATCH(req: Request) {
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
 
-  const name = parsed.data.name.trim();
-  await updateUserName(session.user.id, name);
+  const { name, socialVisibility, discoverable, notifyEmail, notifyPush } = parsed.data;
+  if (name !== undefined) await updateUserName(session.user.id, name);
+  if (socialVisibility !== undefined) await updateUserSocialVisibility(session.user.id, socialVisibility);
+  if (discoverable !== undefined) await updateUserDiscoverable(session.user.id, discoverable);
+  if (notifyEmail !== undefined) await updateUserNotifyEmail(session.user.id, notifyEmail);
+  if (notifyPush !== undefined) await updateUserNotifyPush(session.user.id, notifyPush);
 
-  return NextResponse.json({ ok: true, name });
+  return NextResponse.json({
+    ok: true,
+    ...(name !== undefined ? { name } : {}),
+    ...(socialVisibility !== undefined ? { socialVisibility } : {}),
+    ...(discoverable !== undefined ? { discoverable } : {}),
+    ...(notifyEmail !== undefined ? { notifyEmail } : {}),
+    ...(notifyPush !== undefined ? { notifyPush } : {}),
+  });
 }
 
 // Загрузка / удаление собственного аватара (multipart: avatar | removeAvatar=1)

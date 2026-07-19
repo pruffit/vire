@@ -35,7 +35,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
     coverInput = { buffer, ext: v.info.ext, mime: v.info.mime };
   }
 
-  const service = new SmartLinkService(new DrizzleSmartLinkRepository(db), { coverStorage: fileStorage });
+  const service = new SmartLinkService(new DrizzleSmartLinkRepository(db), {
+    uuid: () => crypto.randomUUID(),
+    coverStorage: fileStorage,
+  });
   const result = await service.update(id, artist.id, {
     title: formData.get('title'),
     slugRaw: formData.get('slug'),
@@ -73,7 +76,7 @@ export async function DELETE(req: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }
 
-  const service = new SmartLinkService(new DrizzleSmartLinkRepository(db));
+  const service = new SmartLinkService(new DrizzleSmartLinkRepository(db), { uuid: () => crypto.randomUUID() });
   const result = await service.delete(id, artist.id);
   if (!result.ok) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });

@@ -6,6 +6,7 @@ import { NavLink } from './nav-link';
 import { NavSignOut } from './nav-sign-out';
 import { Logo } from './logo';
 import { Icon } from '@/components/icon';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 export async function Nav() {
   const session = await auth();
@@ -45,6 +46,7 @@ export async function Nav() {
                   <span className="sm:hidden" aria-label="Админка"><AdminIcon /></span>
                 </NavLink>
               )}
+              <NotificationBell />
               <NavLink href="/profile">
                 <span className="sm:hidden max-w-[72px] truncate block">{displayName}</span>
                 <span className="hidden sm:block max-w-[140px] truncate">{user.name ?? user.email ?? 'Профиль'}</span>
