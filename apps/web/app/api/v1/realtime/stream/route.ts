@@ -1,4 +1,5 @@
 import { auth } from '@/auth';
+import { markUserOnline } from '@/lib/presence';
 import { subscribe } from '@/lib/realtime';
 
 export const runtime = 'nodejs';
@@ -32,9 +33,11 @@ export async function GET(req: Request) {
       };
 
       unsubscribe = subscribe(userId, send);
+      void markUserOnline(userId);
       heartbeat = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(': heartbeat\n\n'));
+          void markUserOnline(userId);
         } catch {
           cleanup();
         }

@@ -130,6 +130,27 @@ export async function countSiteOnline(): Promise<number> {
   }
 }
 
+const USER_PRESENCE_PREFIX = 'presence:user:';
+const USER_PRESENCE_TTL_SEC = 40; // > SSE heartbeat (25с)
+
+/** Помечает пользователя онлайн (активный SSE-стрим). Деградирует молча при недоступности Redis. */
+export async function markUserOnline(userId: string): Promise<void> {
+  try {
+    await getRedis().set(`${USER_PRESENCE_PREFIX}${userId}`, '1', 'EX', USER_PRESENCE_TTL_SEC);
+  } catch {
+    // нет Redis — деградация
+  }
+}
+
+/** Онлайн ли пользователь сейчас (для воркера — пропускать внешние уведомления). */
+export async function isUserOnline(userId: string): Promise<boolean> {
+  try {
+    return (await getRedis().exists(`${USER_PRESENCE_PREFIX}${userId}`)) === 1;
+  } catch {
+    return false;
+  }
+}
+
 /** Суммарное число слушателей по нескольким трекам (для дашборда артиста). */
 export async function countListeningMany(trackIds: string[]): Promise<number> {
   if (trackIds.length === 0) return 0;
