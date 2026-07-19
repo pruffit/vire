@@ -4,6 +4,7 @@ import type {
 } from '../repositories/friendship';
 import type { INotificationRepository } from '../repositories/notification';
 import type { IBlockRepository } from '../repositories/block';
+import type { IExternalNotifyQueue } from '../ports/external-notify';
 
 export type FriendshipStatus = 'NONE' | 'OUTGOING' | 'INCOMING' | 'FRIENDS' | 'SELF';
 
@@ -30,6 +31,7 @@ export class FriendshipService {
     private readonly repo: IFriendshipRepository,
     private readonly notifications: INotificationRepository,
     private readonly blocks: IBlockRepository,
+    private readonly externalNotify?: IExternalNotifyQueue,
   ) {}
 
   async request(from: string, to: string): Promise<Result<FriendshipStatus, ValidationError | NotFoundError | ForbiddenError>> {
@@ -49,6 +51,11 @@ export class FriendshipService {
     }
     await this.repo.insertRequest(from, to);
     await this.notifications.insert(to, 'FRIEND_REQUEST', from, null);
+    try {
+      await this.externalNotify?.add({ kind: 'FRIEND_REQUEST', recipientId: to, actorId: from });
+    } catch {
+      // best-effort: провал очереди не должен валить создание заявки
+    }
     return ok('OUTGOING');
   }
 

@@ -4,6 +4,7 @@ import { ValidationError, NotFoundError, ForbiddenError } from '../../errors';
 import type { IFriendshipRepository, FriendEdge } from '../../repositories/friendship';
 import type { INotificationRepository } from '../../repositories/notification';
 import type { IBlockRepository } from '../../repositories/block';
+import type { IExternalNotifyQueue } from '../../ports/external-notify';
 
 function makeRepo(o?: Partial<IFriendshipRepository>): IFriendshipRepository {
   return {
@@ -44,8 +45,9 @@ function makeService(o?: {
   repo?: Partial<IFriendshipRepository>;
   notifications?: Partial<INotificationRepository>;
   blocks?: Partial<IBlockRepository>;
+  externalNotify?: IExternalNotifyQueue;
 }) {
-  return new FriendshipService(makeRepo(o?.repo), makeNotifications(o?.notifications), makeBlocks(o?.blocks));
+  return new FriendshipService(makeRepo(o?.repo), makeNotifications(o?.notifications), makeBlocks(o?.blocks), o?.externalNotify);
 }
 const edge = (requesterId: string, addresseeId: string, status: 'PENDING' | 'ACCEPTED'): FriendEdge => ({ requesterId, addresseeId, status });
 
@@ -86,11 +88,31 @@ describe('FriendshipService.request', () => {
   it('встречная PENDING (u2→u1) → сразу дружба, уведомление FRIEND_ACCEPT инициатору (u2)', async () => {
     const repo = makeRepo({ findEdge: vi.fn().mockResolvedValue(edge('u2', 'u1', 'PENDING')) });
     const notifications = makeNotifications();
-    const r = await makeService({ repo, notifications }).request('u1', 'u2');
+    const add = vi.fn();
+    const r = await makeService({ repo, notifications, externalNotify: { add } }).request('u1', 'u2');
     expect(r).toEqual({ ok: true, value: 'FRIENDS' });
     expect(repo.acceptRequest).toHaveBeenCalledWith('u2', 'u1');
     expect(repo.insertRequest).not.toHaveBeenCalled();
     expect(notifications.insert).toHaveBeenCalledWith('u2', 'FRIEND_ACCEPT', 'u1', null);
+    expect(add).not.toHaveBeenCalled();
+  });
+
+  it('кладёт внешнее уведомление получателю на новой заявке', async () => {
+    const add = vi.fn();
+    const svc = makeService({ externalNotify: { add } });
+    await svc.request('requester-1', 'addressee-2');
+    expect(add).toHaveBeenCalledWith({ kind: 'FRIEND_REQUEST', recipientId: 'addressee-2', actorId: 'requester-1' });
+  });
+
+  it('externalNotify опционален: без него request не падает', async () => {
+    const r = await makeService().request('u1', 'u2');
+    expect(r).toEqual({ ok: true, value: 'OUTGOING' });
+  });
+
+  it('провал очереди не валит request (best-effort)', async () => {
+    const add = vi.fn().mockRejectedValue(new Error('queue down'));
+    const r = await makeService({ externalNotify: { add } }).request('u1', 'u2');
+    expect(r).toEqual({ ok: true, value: 'OUTGOING' });
   });
 
   it('идемпотентна: своя PENDING → OUTGOING без вставки и без уведомления', async () => {
