@@ -1,6 +1,6 @@
 self.addEventListener('push', (event) => {
   let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch (e) { data = {}; }
+  try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
   const title = data.title || 'Vire';
   const options = {
     body: data.body || '',
