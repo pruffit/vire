@@ -2,6 +2,7 @@ export * from './errors';
 export * from './jobs';
 export * from './ports/effects';
 export * from './ports/realtime';
+export * from './ports/external-notify';
 export * from './util/uuid';
 export * from './util/ttl-cache';
 export * from './util/throttle-gate';
