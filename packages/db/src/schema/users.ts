@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, pgEnum, index, boolean } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('role', [
@@ -23,6 +23,9 @@ export const users = pgTable('users', {
   role: roleEnum('role').notNull().default('LISTENER'),
   socialVisibility: userSocialVisibilityEnum('social_visibility').notNull().default('FRIENDS'),
   friendRequestsSeenAt: timestamp('friend_requests_seen_at'),
+  notifyEmail: boolean('notify_email').notNull().default(true),
+  notifyPush: boolean('notify_push').notNull().default(true),
+  discoverable: boolean('discoverable').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [

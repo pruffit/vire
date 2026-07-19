@@ -8,3 +8,4 @@ export * from './analytics';
 export * from './taste';
 export * from './notifications';
 export * from './chat';
+export * from './push-subscriptions';

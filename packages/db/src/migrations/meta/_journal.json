@@ -281,6 +281,13 @@
       "when": 1784393651398,
       "tag": "0039_long_dakota_north",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1784445046100,
+      "tag": "0040_mean_arclight",
+      "breakpoints": true
     }
   ]
 }
