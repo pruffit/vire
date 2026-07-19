@@ -84,6 +84,7 @@ export async function getUserPublicProfile(userId: string): Promise<{
   image: string | null;
   socialVisibility: 'FRIENDS' | 'PRIVATE';
   discoverable: boolean;
+  notifyEmail: boolean;
 } | null> {
   const [row] = await db
     .select({
@@ -92,6 +93,7 @@ export async function getUserPublicProfile(userId: string): Promise<{
       image: users.image,
       socialVisibility: users.socialVisibility,
       discoverable: users.discoverable,
+      notifyEmail: users.notifyEmail,
     })
     .from(users).where(eq(users.id, userId)).limit(1);
   return row ?? null;
