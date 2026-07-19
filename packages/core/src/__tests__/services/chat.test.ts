@@ -5,6 +5,7 @@ import type { IChatRepository, ChatMessage, ConversationParticipants } from '../
 import type { IFriendshipRepository, FriendEdge } from '../../repositories/friendship';
 import type { IBlockRepository } from '../../repositories/block';
 import type { RealtimePublisher } from '../../ports/realtime';
+import type { IExternalNotifyQueue } from '../../ports/external-notify';
 
 function makeChatRepo(o?: Partial<IChatRepository>): IChatRepository {
   return {
@@ -45,12 +46,14 @@ function makeService(o?: {
   chat?: Partial<IChatRepository>;
   friendship?: Partial<IFriendshipRepository>;
   block?: Partial<IBlockRepository>;
+  externalNotify?: IExternalNotifyQueue;
 }) {
   return new ChatService(
     makeChatRepo(o?.chat),
     makeFriendshipRepo(o?.friendship),
     makeBlockRepo(o?.block),
     makePublisher(),
+    o?.externalNotify,
   );
 }
 
@@ -129,6 +132,14 @@ describe('ChatService.send', () => {
     expect(insertMessage).toHaveBeenCalledWith('conv-1', 'u1', 'привет');
     expect(publish).toHaveBeenCalledWith('u2', expect.objectContaining({ type: 'message', conversationId: 'conv-1' }));
     expect(publish).toHaveBeenCalledWith('u1', expect.objectContaining({ type: 'message', conversationId: 'conv-1' }));
+  });
+
+  it('send кладёт внешнее уведомление получателю', async () => {
+    const add = vi.fn();
+    const service = makeService({ externalNotify: { add } });
+    const r = await service.send('from-1', 'to-2', 'привет');
+    expect(r.ok).toBe(true);
+    expect(add).toHaveBeenCalledWith(expect.objectContaining({ kind: 'CHAT_MESSAGE', recipientId: 'to-2', actorId: 'from-1' }));
   });
 });
 

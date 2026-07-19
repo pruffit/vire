@@ -3,6 +3,7 @@ import type { IChatRepository, ChatMessage, ConversationSummary } from '../repos
 import type { IFriendshipRepository } from '../repositories/friendship';
 import type { IBlockRepository } from '../repositories/block';
 import type { RealtimePublisher } from '../ports/realtime';
+import type { IExternalNotifyQueue } from '../ports/external-notify';
 
 const BODY_MAX = 4000;
 
@@ -16,6 +17,7 @@ export class ChatService {
     private readonly friendshipRepo: IFriendshipRepository,
     private readonly blockRepo: IBlockRepository,
     private readonly publisher: RealtimePublisher,
+    private readonly externalNotify?: IExternalNotifyQueue,
   ) {}
 
   async openOrGet(a: string, b: string): Promise<Result<{ conversationId: string }, ValidationError | ForbiddenError>> {
@@ -47,6 +49,12 @@ export class ChatService {
     await this.publisher.publish(toUserId, { type: 'message', conversationId, message });
     // синхронизирует другие открытые вкладки отправителя
     await this.publisher.publish(fromUserId, { type: 'message', conversationId, message });
+
+    try {
+      await this.externalNotify?.add({ kind: 'CHAT_MESSAGE', recipientId: toUserId, actorId: fromUserId, conversationId });
+    } catch {
+      // best-effort: провал очереди не должен валить отправку сообщения
+    }
 
     return ok({ conversationId, message });
   }
