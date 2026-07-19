@@ -53,6 +53,7 @@
     "@vire/config": "workspace:*",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "fake-indexeddb": "^6.0.0",
     "impeccable": "2.3.2",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
