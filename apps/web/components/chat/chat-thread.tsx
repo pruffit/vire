@@ -110,11 +110,13 @@ export function ChatThread({
     }
   }
 
-  const notReady = identity.ready && identity.needsLink
-    ? 'Переписка зашифрована. Подтвердите это устройство на другом своём устройстве, чтобы читать и писать.'
-    : identity.ready && !otherIkPub
-      ? 'У собеседника ещё не настроено шифрование.'
-      : null;
+  const notReady = identity.error
+    ? 'Не удалось загрузить шифрование. Обновите страницу.'
+    : identity.ready && identity.needsLink
+      ? 'Переписка зашифрована. Подтвердите это устройство на другом своём устройстве, чтобы читать и писать.'
+      : identity.ready && !otherIkPub
+        ? 'У собеседника ещё не настроено шифрование.'
+        : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
