@@ -74,6 +74,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           userId={session.user.id}
           linkError={linkError}
           socialVisibility={publicProfile?.socialVisibility ?? 'FRIENDS'}
+          discoverable={publicProfile?.discoverable ?? true}
         />
       </div>
     </main>

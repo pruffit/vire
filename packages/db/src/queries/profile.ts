@@ -78,11 +78,21 @@ export async function getLikedTracks(userId: string): Promise<LikedTrack[]> {
   return rows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) }));
 }
 
-export async function getUserPublicProfile(
-  userId: string,
-): Promise<{ id: string; name: string | null; image: string | null; socialVisibility: 'FRIENDS' | 'PRIVATE' } | null> {
+export async function getUserPublicProfile(userId: string): Promise<{
+  id: string;
+  name: string | null;
+  image: string | null;
+  socialVisibility: 'FRIENDS' | 'PRIVATE';
+  discoverable: boolean;
+} | null> {
   const [row] = await db
-    .select({ id: users.id, name: users.name, image: users.image, socialVisibility: users.socialVisibility })
+    .select({
+      id: users.id,
+      name: users.name,
+      image: users.image,
+      socialVisibility: users.socialVisibility,
+      discoverable: users.discoverable,
+    })
     .from(users).where(eq(users.id, userId)).limit(1);
   return row ?? null;
 }
