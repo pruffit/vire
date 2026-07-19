@@ -48,7 +48,7 @@ Realtime-инкремент через тот же SSE, что и чат. Час
   (`packages/core/src/ports/external-notify.ts`); обёртка в `apps/web/lib/queue.ts`.
 - **Диспетчер** — `apps/worker/src/workers/notify-external.worker.ts`, решение «слать ли по
   каналу» — чистая функция `decideExternalDelivery` (`packages/core/src/services/external-delivery.ts`):
-  1. **Presence-гард** — получатель онлайн (Redis site-presence, ~60с окно) → оба канала
+  1. **Presence-гард** — получатель онлайн (Redis site-presence, ~40с окно) → оба канала
      пропускаются, он и так увидит в колокольчике. Ошибка Redis — fail-open (шлём).
   2. **Prefs-гейт** — `users.notify_email`/`users.notify_push` получателя (оба по умолчанию `true`).
   3. **Дебаунс письма для чата** — Redis-ключ `notify:chat:emailed:{recipientId}:{conversationId}`,

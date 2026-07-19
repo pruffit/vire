@@ -73,6 +73,14 @@ describe('notify-external handle', () => {
     expect(h.sendPush).not.toHaveBeenCalled();
   });
 
+  it('does not plant the chat-email debounce key when the recipient is online', async () => {
+    h.isUserOnline.mockResolvedValue(true);
+    await handle(makeJob({ kind: 'CHAT_MESSAGE', conversationId: 'conv-1' }));
+    expect(h.chatEmailDebounced).not.toHaveBeenCalled();
+    expect(h.sendBrevoEmail).not.toHaveBeenCalled();
+    expect(h.sendPush).not.toHaveBeenCalled();
+  });
+
   it('sends both email and push when offline with both channels enabled', async () => {
     await handle(makeJob());
     expect(h.sendBrevoEmail).toHaveBeenCalledTimes(1);
@@ -96,5 +104,17 @@ describe('notify-external handle', () => {
     await handle(makeJob({ kind: 'CHAT_MESSAGE', conversationId: 'conv-1' }));
     const payload = h.sendPush.mock.calls[0][1];
     expect(payload.body).toBe('Новое сообщение от Актёр');
+  });
+
+  it('tags friend-request push per actor so distinct requesters do not collapse', async () => {
+    await handle(makeJob({ kind: 'FRIEND_REQUEST', actorId: 'actor-42' }));
+    const payload = h.sendPush.mock.calls[0][1];
+    expect(payload.tag).toBe('friend-request:actor-42');
+  });
+
+  it('does not fail the job when pruning dead push endpoints throws', async () => {
+    h.sendPush.mockResolvedValue(['https://push/dead']);
+    h.deletePushSubscriptionsByEndpoints.mockRejectedValue(new Error('db down'));
+    await expect(handle(makeJob())).resolves.toBeUndefined();
   });
 });

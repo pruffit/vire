@@ -67,16 +67,31 @@ function PushToggle() {
 
   const subscribed = state === 'subscribed';
 
+  async function patchNotifyPush(notifyPush: boolean) {
+    try {
+      const res = await fetch('/api/v1/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifyPush }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch {
+      toast.error('Не удалось сохранить настройку');
+    }
+  }
+
   async function toggle() {
     setPending(true);
     try {
       if (subscribed) {
         await unsubscribeFromPush();
         setState('unsubscribed');
+        await patchNotifyPush(false);
       } else {
         const ok = await subscribeToPush();
         if (ok) {
           setState('subscribed');
+          await patchNotifyPush(true);
         } else {
           toast.error('Не удалось включить push-уведомления');
         }

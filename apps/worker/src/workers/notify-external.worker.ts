@@ -17,26 +17,31 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
   const ctx = await getUserNotifyContext(recipientId);
   if (!ctx) return;
 
-  const online = await isUserOnline(recipientId);
+  if (await isUserOnline(recipientId)) return;
+
   const subs = await listPushSubscriptions(recipientId);
-  const emailDebounced = kind === 'CHAT_MESSAGE' && conversationId
-    ? await chatEmailDebounced(recipientId, conversationId)
-    : false;
 
   const decision = decideExternalDelivery({
     notifyEmail: ctx.notifyEmail,
     notifyPush: ctx.notifyPush,
-    recipientOnline: online,
-    emailDebounced,
+    recipientOnline: false,
+    emailDebounced: false,
     hasEmail: !!ctx.email,
     pushSubscriptionCount: subs.length,
   });
 
-  if (!decision.email && !decision.push) return;
+  // Дебаунс-ключ ставится только в момент реальной отправки письма, не раньше.
+  let sendEmail = decision.email;
+  if (decision.email && kind === 'CHAT_MESSAGE' && conversationId) {
+    const already = await chatEmailDebounced(recipientId, conversationId);
+    if (already) sendEmail = false;
+  }
+
+  if (!sendEmail && !decision.push) return;
 
   const actorName = await getUserDisplayName(actorId);
 
-  if (decision.email && ctx.email) {
+  if (sendEmail && ctx.email) {
     const token = SIGNING_SECRET ? signNotifyUnsub(SIGNING_SECRET, recipientId) : null;
     const unsubscribeUrl = token ? `${APP_URL}/api/v1/notifications/unsubscribe?uid=${recipientId}&token=${token}` : null;
     const tpl = kind === 'FRIEND_REQUEST'
@@ -48,10 +53,12 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
   if (decision.push) {
     const who = actorName ?? 'Кто-то';
     const payload = kind === 'FRIEND_REQUEST'
-      ? { title: 'Заявка в друзья', body: `${who} хочет добавить вас в друзья`, url: `${APP_URL}/friends`, tag: 'friend-request' }
+      ? { title: 'Заявка в друзья', body: `${who} хочет добавить вас в друзья`, url: `${APP_URL}/friends`, tag: `friend-request:${actorId}` }
       : { title: 'Новое сообщение', body: `Новое сообщение от ${who}`, url: `${APP_URL}/messages`, tag: conversationId ?? 'chat' };
     const dead = await sendPush(subs, payload);
-    if (dead.length) await deletePushSubscriptionsByEndpoints(dead);
+    if (dead.length) {
+      try { await deletePushSubscriptionsByEndpoints(dead); } catch { /* пруна не должна валить джобу и триггерить ретрай письма */ }
+    }
   }
 }
 

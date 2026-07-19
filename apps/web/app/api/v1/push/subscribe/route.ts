@@ -29,6 +29,6 @@ export async function DELETE(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const parsed = z.object({ endpoint: z.string().url() }).safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Invalid endpoint' }, { status: 400 });
-  await deletePushSubscription(parsed.data.endpoint);
+  await deletePushSubscription(session.user.id, parsed.data.endpoint);
   return NextResponse.json({ ok: true });
 }

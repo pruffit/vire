@@ -17,4 +17,15 @@ describe('email-templates', () => {
   it('без имени — нейтральная формулировка', () => {
     expect(friendRequestEmail({ actorName: null, appUrl: 'https://vire', unsubscribeUrl: null }).subject.length).toBeGreaterThan(0);
   });
+  it('экранирует HTML в имени актора (защита от инъекции)', () => {
+    const evil = '<img src=x onerror=alert(1)>';
+    const { html } = friendRequestEmail({ actorName: evil, appUrl: 'https://vire', unsubscribeUrl: null });
+    expect(html).not.toContain(evil);
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+  });
+  it('экранирует HTML в имени актора для чат-письма', () => {
+    const evil = '<img src=x>';
+    const { html } = chatMessageEmail({ actorName: evil, appUrl: 'https://vire', unsubscribeUrl: null });
+    expect(html).toContain('&lt;img src=x&gt;');
+  });
 });

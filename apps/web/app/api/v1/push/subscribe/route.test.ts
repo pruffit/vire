@@ -112,6 +112,6 @@ describe('DELETE /api/v1/push/subscribe', () => {
       }),
     );
     expect(res.status).toBe(200);
-    expect(deletePushSubscription).toHaveBeenCalledWith('https://push/abc');
+    expect(deletePushSubscription).toHaveBeenCalledWith('user-1', 'https://push/abc');
   });
 });

@@ -26,11 +26,17 @@ export async function subscribeToPush(): Promise<boolean> {
   const reg = await navigator.serviceWorker.register('/sw.js');
   const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID) as BufferSource });
   const json = sub.toJSON();
-  const res = await fetch('/api/v1/push/subscribe', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
-  });
-  return res.ok;
+  try {
+    const res = await fetch('/api/v1/push/subscribe', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+    });
+    if (res.ok) return true;
+  } catch {
+    // POST провалился сетевой ошибкой — ниже откатываем браузерную подписку
+  }
+  try { await sub.unsubscribe(); } catch { /* откат best-effort — всё равно вернём false */ }
+  return false;
 }
 
 export async function unsubscribeFromPush(): Promise<void> {

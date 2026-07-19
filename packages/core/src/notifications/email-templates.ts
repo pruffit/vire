@@ -4,6 +4,15 @@ interface Base {
   unsubscribeUrl: string | null;
 }
 
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function shell(
   appUrl: string,
   heading: string,
@@ -29,11 +38,12 @@ function shell(
 
 export function friendRequestEmail(i: Base): { subject: string; html: string } {
   const who = i.actorName ?? 'Кто-то';
+  const whoHtml = escapeHtml(who);
   return {
     subject: `${who} отправил вам заявку в друзья на Vire`,
     html: shell(
       i.appUrl,
-      `${who} хочет добавить вас в друзья`,
+      `${whoHtml} хочет добавить вас в друзья`,
       'Примите или отклоните заявку на Vire.',
       'Открыть заявки',
       `${i.appUrl}/friends`,
@@ -44,11 +54,12 @@ export function friendRequestEmail(i: Base): { subject: string; html: string } {
 
 export function chatMessageEmail(i: Base): { subject: string; html: string } {
   const who = i.actorName ?? 'Кто-то';
+  const whoHtml = escapeHtml(who);
   return {
     subject: `Новое сообщение от ${who} на Vire`,
     html: shell(
       i.appUrl,
-      `Новое сообщение от ${who}`,
+      `Новое сообщение от ${whoHtml}`,
       'Откройте переписку на Vire, чтобы прочитать.',
       'Открыть сообщения',
       `${i.appUrl}/messages`,
