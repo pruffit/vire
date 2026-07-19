@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useIdentity } from '@/lib/e2ee-client';
 import { useRealtime } from '@/lib/use-realtime';
 import {
