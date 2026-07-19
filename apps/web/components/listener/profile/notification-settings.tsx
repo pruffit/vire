@@ -69,18 +69,23 @@ function PushToggle() {
 
   async function toggle() {
     setPending(true);
-    if (subscribed) {
-      await unsubscribeFromPush();
-      setState('unsubscribed');
-    } else {
-      const ok = await subscribeToPush();
-      if (ok) {
-        setState('subscribed');
+    try {
+      if (subscribed) {
+        await unsubscribeFromPush();
+        setState('unsubscribed');
       } else {
-        toast.error('Не удалось включить push-уведомления');
+        const ok = await subscribeToPush();
+        if (ok) {
+          setState('subscribed');
+        } else {
+          toast.error('Не удалось включить push-уведомления');
+        }
       }
+    } catch {
+      toast.error('Не удалось изменить push-уведомления');
+    } finally {
+      setPending(false);
     }
-    setPending(false);
   }
 
   return (
