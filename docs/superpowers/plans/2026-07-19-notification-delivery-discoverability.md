@@ -1364,7 +1364,8 @@ export async function chatEmailDebounced(recipientId: string, conversationId: st
 
 ```ts
 import { Worker, type Job } from 'bullmq';
-import { QUEUE_NOTIFY_EXTERNAL, type ExternalNotifyJobData, decideExternalDelivery, friendRequestEmail, chatMessageEmail, signNotifyUnsub } from '@vire/core';
+import { QUEUE_NOTIFY_EXTERNAL, type ExternalNotifyJobData, decideExternalDelivery, friendRequestEmail, chatMessageEmail } from '@vire/core';
+import { signNotifyUnsub } from '@vire/core/notifications/unsubscribe'; // субпуть: node:crypto не в edge-safe корневом barrel (Task 15)
 import { getUserNotifyContext, getUserDisplayName, listPushSubscriptions, deletePushSubscriptionsByEndpoints } from '@vire/db';
 import { connection } from '../queues/connection.js';
 import { sendBrevoEmail } from '../lib/brevo.js';
