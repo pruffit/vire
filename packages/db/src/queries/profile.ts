@@ -130,3 +130,14 @@ export async function getFollowedArtists(userId: string): Promise<FollowedArtist
 
   return rows;
 }
+
+export async function getUserNotifyContext(userId: string): Promise<{ email: string | null; name: string | null; notifyEmail: boolean; notifyPush: boolean } | null> {
+  const [row] = await db.select({ email: users.email, name: users.name, notifyEmail: users.notifyEmail, notifyPush: users.notifyPush })
+    .from(users).where(eq(users.id, userId)).limit(1);
+  return row ?? null;
+}
+
+export async function getUserDisplayName(userId: string): Promise<string | null> {
+  const [row] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+  return row?.name ?? null;
+}
