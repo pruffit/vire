@@ -17,20 +17,23 @@ function getRedis(): Redis {
 
 const key = (id: string) => `chat:link:${id}`;
 
+// Хендшейк с коммитментом (защита SAS от грайндинга сервером):
+// start(commitB=hash(ebPub)) → attach(eaPub, видя только commit) → reveal(ebPub) → complete(wrapped).
 export interface LinkState {
   userId: string;
-  ebPub: string;
+  commitB: string;
   eaPub?: string;
+  ebPub?: string;
   wrapped?: string;
   nonce?: string;
   status: 'pending' | 'completed';
 }
 
-// Новое устройство (B) открывает сессию своим эфемерным ключом. Redis недоступен → null (привязка недоступна).
-export async function startLink(userId: string, ebPub: string): Promise<string | null> {
+// Новое устройство (B) открывает сессию КОММИТМЕНТОМ к своему эфемерному ключу (не самим ключом).
+export async function startLink(userId: string, commitB: string): Promise<string | null> {
   try {
     const id = crypto.randomUUID();
-    const state: LinkState = { userId, ebPub, status: 'pending' };
+    const state: LinkState = { userId, commitB, status: 'pending' };
     await getRedis().set(key(id), JSON.stringify(state), 'EX', TTL_SEC);
     return id;
   } catch {
@@ -50,16 +53,22 @@ export async function getLink(id: string, userId: string): Promise<LinkState | n
   }
 }
 
-// Существующее устройство (A) кладёт свой эфемерный ключ. Новое устройство (B) его поллит и
-// показывает SAS-код — обмен ключа переносится ТОЛЬКО после подтверждения кода (attach до complete).
+// Существующее устройство (A) кладёт свой эфемерный ключ, видя только коммитмент B (не ebPub).
 export async function attachLink(id: string, userId: string, eaPub: string): Promise<boolean> {
   return patch(id, userId, (state) => (state.status === 'pending' && !state.eaPub ? { ...state, eaPub } : null));
 }
 
-// A кладёт завёрнутый identity-ключ уже ПОСЛЕ подтверждения SAS-кода. Single-use: только из pending с eaPub.
+// Новое устройство (B) раскрывает ebPub уже после attach — A проверит hash(ebPub)==commitB.
+export async function revealLink(id: string, userId: string, ebPub: string): Promise<boolean> {
+  return patch(id, userId, (state) =>
+    state.status === 'pending' && state.eaPub && !state.ebPub ? { ...state, ebPub } : null,
+  );
+}
+
+// A кладёт завёрнутый identity-ключ уже ПОСЛЕ подтверждения SAS-кода. Single-use: только из pending с ebPub.
 export async function completeLink(id: string, userId: string, wrapped: string, nonce: string): Promise<boolean> {
   return patch(id, userId, (state) =>
-    state.status === 'pending' && state.eaPub ? { ...state, wrapped, nonce, status: 'completed' } : null,
+    state.status === 'pending' && state.ebPub ? { ...state, wrapped, nonce, status: 'completed' } : null,
   );
 }
 

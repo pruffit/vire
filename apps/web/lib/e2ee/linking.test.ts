@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import sodium from 'libsodium-wrappers';
 import { sodiumReady, toB64 } from './sodium';
-import { newEphemeral, deriveLinkSecret, sasDigits6, wrapPriv, unwrapPriv } from './linking';
+import { newEphemeral, deriveLinkSecret, sasDigits6, wrapPriv, unwrapPriv, hashCommit, commitMatches } from './linking';
 
 describe('e2ee/linking', () => {
   beforeAll(async () => {
@@ -40,6 +40,14 @@ describe('e2ee/linking', () => {
     const recovered = unwrapPriv(wrapped, nonce, deriveLinkSecret(b.priv, a.pub));
     expect(recovered).not.toBeNull();
     expect(toB64(recovered!)).toBe(toB64(ikPriv));
+  });
+
+  it('binds a commitment to the ephemeral key', () => {
+    const b = newEphemeral();
+    const other = newEphemeral();
+    const commit = hashCommit(b.pub);
+    expect(commitMatches(b.pub, commit)).toBe(true);
+    expect(commitMatches(other.pub, commit)).toBe(false);
   });
 
   it('returns null when the wrapped blob is corrupted', () => {

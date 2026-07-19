@@ -48,6 +48,13 @@ export function ChatThread({
     return safetyNumber(identity.pub, fromB64(otherIkPub));
   }, [identity.pub, otherIkPub]);
 
+  // Расшифровываем на изменение сообщений/ключа, а не на каждый рендер.
+  const decrypted = useMemo(() => {
+    const map = new Map<string, string>();
+    if (ck) for (const m of messages) map.set(m.id, decryptMessage(m.body, m.nonce, ck) ?? '🔒 не удалось расшифровать');
+    return map;
+  }, [messages, ck]);
+
   function scrollToBottom(behavior: ScrollBehavior = 'auto') {
     bottomRef.current?.scrollIntoView({ behavior });
   }
@@ -122,7 +129,7 @@ export function ChatThread({
         {messages.map((m) => (
           <MessageBubble
             key={m.id}
-            text={ck ? decryptMessage(m.body, m.nonce, ck) ?? '🔒 не удалось расшифровать' : '🔒'}
+            text={ck ? decrypted.get(m.id) ?? '🔒' : '🔒'}
             createdAt={m.createdAt}
             own={m.senderId === viewerId}
             pending={m.pending}

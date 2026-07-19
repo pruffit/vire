@@ -8,6 +8,7 @@ export interface IdentityState {
   pub: Uint8Array | null;
   priv: Uint8Array | null;
   needsLink: boolean;
+  error: boolean;
 }
 
 async function publishPub(pubB64: string): Promise<void> {
@@ -21,7 +22,7 @@ async function publishPub(pubB64: string): Promise<void> {
 // Бутстрап личности: локальный ключ → используем; нет локального, но есть серверный (другое
 // устройство завело личность) → needsLink (читать нельзя без привязки); нет нигде → первое устройство.
 export function useIdentity(selfId: string): IdentityState {
-  const [state, setState] = useState<IdentityState>({ ready: false, pub: null, priv: null, needsLink: false });
+  const [state, setState] = useState<IdentityState>({ ready: false, pub: null, priv: null, needsLink: false, error: false });
   const started = useRef(false);
 
   useEffect(() => {
@@ -34,22 +35,27 @@ export function useIdentity(selfId: string): IdentityState {
       if (local) {
         const pubB64 = await getIdentityPubB64();
         if (pubB64) await publishPub(pubB64);
-        setState({ ready: true, pub: local.pub, priv: local.priv, needsLink: false });
+        setState({ ready: true, pub: local.pub, priv: local.priv, needsLink: false, error: false });
         return;
       }
 
-      const remote = await fetch(`/api/v1/keys?userId=${selfId}`)
-        .then((r) => (r.ok ? (r.json() as Promise<{ ikPub: string | null }>) : { ikPub: null }))
-        .catch(() => ({ ikPub: null }));
+      // Нет локального ключа: НЕ создаём новую личность на транзиентной ошибке сети — иначе
+      // перезатёрли бы серверный ikPub и осиротили другое устройство (вся история нечитаема).
+      const res = await fetch(`/api/v1/keys?userId=${selfId}`).catch(() => null);
+      if (!res || !res.ok) {
+        setState({ ready: false, pub: null, priv: null, needsLink: false, error: true });
+        return;
+      }
+      const { ikPub } = (await res.json()) as { ikPub: string | null };
 
-      if (remote.ikPub) {
-        setState({ ready: true, pub: fromB64(remote.ikPub), priv: null, needsLink: true });
+      if (ikPub) {
+        setState({ ready: true, pub: fromB64(ikPub), priv: null, needsLink: true, error: false });
         return;
       }
 
       const created = await getOrCreateIdentity();
       await publishPub(toB64(created.pub));
-      setState({ ready: true, pub: created.pub, priv: created.priv, needsLink: false });
+      setState({ ready: true, pub: created.pub, priv: created.priv, needsLink: false, error: false });
     })();
   }, [selfId]);
 

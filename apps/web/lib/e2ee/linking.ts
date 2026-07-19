@@ -13,6 +13,16 @@ export function newEphemeral(): Ephemeral {
   return { pub: pair.publicKey, priv: pair.privateKey };
 }
 
+// Коммитмент к эфемерному ключу: новое устройство публикует hash(ebPub) ДО того, как увидит
+// eaPub. Без этого сервер мог бы грайндить 6-значный SAS (2^20 офлайн) и подменить ключ (MITM).
+export function hashCommit(pub: Uint8Array): string {
+  return toB64(sodium.crypto_generichash(32, pub));
+}
+
+export function commitMatches(pub: Uint8Array, commit: string): boolean {
+  return hashCommit(pub) === commit;
+}
+
 export function deriveLinkSecret(ephPrivSelf: Uint8Array, ephPubOther: Uint8Array): Uint8Array {
   return sodium.crypto_scalarmult(ephPrivSelf, ephPubOther);
 }

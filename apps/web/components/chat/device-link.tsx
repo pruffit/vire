@@ -4,13 +4,15 @@ import { useCallback, useRef, useState } from 'react';
 import { useIdentity } from '@/lib/e2ee-client';
 import { useRealtime } from '@/lib/use-realtime';
 import {
-  newEphemeral, deriveLinkSecret, sasDigits6, wrapPriv, unwrapPriv, importIdentity, toB64, fromB64,
+  newEphemeral, deriveLinkSecret, sasDigits6, wrapPriv, unwrapPriv, hashCommit, commitMatches,
+  importIdentity, toB64, fromB64,
 } from '@/lib/e2ee';
 
 interface LinkState {
   userId: string;
-  ebPub: string;
+  commitB: string;
   eaPub?: string;
+  ebPub?: string;
   wrapped?: string;
   nonce?: string;
   status: 'pending' | 'completed';
@@ -30,6 +32,12 @@ async function poll(linkId: string, until: (s: LinkState) => boolean): Promise<L
   return null;
 }
 
+function post(path: string, body: unknown) {
+  return fetch(`/api/v1/keys/link/${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+}
+
 export function DeviceLink({ viewerId }: { viewerId: string }) {
   const identity = useIdentity(viewerId);
   const [code, setCode] = useState<string | null>(null); // код, показываемый новым устройством
@@ -38,22 +46,23 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
   const [msg, setMsg] = useState<string | null>(null);
   const busy = useRef(false);
 
-  // Новое устройство: старт привязки, показ SAS, ожидание завёрнутого ключа.
+  // Новое устройство (B): commit(ebPub) → attach ожидание → reveal(ebPub) → показ SAS → ожидание wrapped.
   const startNew = useCallback(async () => {
     if (busy.current) return;
     busy.current = true;
     setMsg(null);
     try {
       const eB = newEphemeral();
-      const startRes = await fetch('/api/v1/keys/link/start', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ebPub: toB64(eB.pub) }),
-      });
+      const startRes = await post('start', { commit: hashCommit(eB.pub) });
       if (!startRes.ok) throw new Error();
       const { linkId } = (await startRes.json()) as { linkId: string };
 
       const attached = await poll(linkId, (s) => !!s.eaPub);
       if (!attached?.eaPub) throw new Error();
+
+      const revealRes = await post('reveal', { linkId, ebPub: toB64(eB.pub) });
+      if (!revealRes.ok) throw new Error();
+
       const secret = deriveLinkSecret(eB.priv, fromB64(attached.eaPub));
       setCode(sasDigits6(eB.pub, fromB64(attached.eaPub), secret));
 
@@ -71,19 +80,28 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
     }
   }, []);
 
-  // Существующее устройство: подтверждает запрос привязки, кладёт eaPub, ждёт ввод SAS-кода.
+  // Существующее устройство (A): attach(eaPub) видя только commit → ждёт ebPub → проверяет commit → SAS.
   const onLinkRequest = useCallback(async (linkId: string) => {
     if (!identity.priv || identity.needsLink || approve) return;
-    const state = await poll(linkId, (s) => !!s.ebPub);
-    if (!state?.ebPub) return;
+    const first = await poll(linkId, (s) => !!s.commitB && !s.eaPub);
+    if (!first?.commitB) return;
+
     const eA = newEphemeral();
-    const secret = deriveLinkSecret(eA.priv, fromB64(state.ebPub));
-    const expected = sasDigits6(fromB64(state.ebPub), eA.pub, secret);
-    const res = await fetch('/api/v1/keys/link/attach', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ linkId, eaPub: toB64(eA.pub) }),
-    });
-    if (res.ok) setApprove({ linkId, expected, secret });
+    const attachRes = await post('attach', { linkId, eaPub: toB64(eA.pub) });
+    if (!attachRes.ok) return;
+
+    const revealed = await poll(linkId, (s) => !!s.ebPub);
+    if (!revealed?.ebPub) return;
+
+    // Загрузочная проверка против MITM: ebPub обязан соответствовать коммитменту, сделанному до attach.
+    if (!commitMatches(fromB64(revealed.ebPub), first.commitB)) {
+      setMsg('Привязка отклонена: не сошёлся ключ (возможна подмена).');
+      return;
+    }
+
+    const secret = deriveLinkSecret(eA.priv, fromB64(revealed.ebPub));
+    const expected = sasDigits6(fromB64(revealed.ebPub), eA.pub, secret);
+    setApprove({ linkId, expected, secret });
   }, [identity.priv, identity.needsLink, approve]);
 
   useRealtime({
@@ -102,10 +120,7 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
       return;
     }
     const { wrapped, nonce } = wrapPriv(identity.priv, approve.secret);
-    await fetch('/api/v1/keys/link/complete', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ linkId: approve.linkId, wrapped, nonce }),
-    });
+    await post('complete', { linkId: approve.linkId, wrapped, nonce });
     setApprove(null);
     setTyped('');
     setMsg('Устройство привязано.');
@@ -113,7 +128,6 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
 
   if (!identity.ready) return null;
 
-  // Существующее устройство подтверждает новое.
   if (approve) {
     return (
       <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
@@ -137,7 +151,6 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
     );
   }
 
-  // Новое устройство: кнопка старта / показ кода.
   if (identity.needsLink) {
     return (
       <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">

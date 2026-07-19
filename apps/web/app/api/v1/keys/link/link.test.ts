@@ -1,21 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { startLink, getLink, attachLink, completeLink, publish } = vi.hoisted(() => ({
+const { startLink, getLink, attachLink, revealLink, completeLink, publish } = vi.hoisted(() => ({
   startLink: vi.fn(),
   getLink: vi.fn(),
   attachLink: vi.fn(),
+  revealLink: vi.fn(),
   completeLink: vi.fn(),
   publish: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
-vi.mock('@/lib/link-session', () => ({ startLink, getLink, attachLink, completeLink }));
+vi.mock('@/lib/link-session', () => ({ startLink, getLink, attachLink, revealLink, completeLink }));
 vi.mock('@/lib/realtime', () => ({ publish }));
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
+  tooManyRequests: vi.fn(),
+}));
 
 import { auth } from '@/auth';
 import { POST as startPOST } from './start/route';
 import { GET as pollGET } from './poll/route';
 import { POST as attachPOST } from './attach/route';
+import { POST as revealPOST } from './reveal/route';
 import { POST as completePOST } from './complete/route';
 
 const mockedAuth = vi.mocked(auth);
@@ -35,14 +41,39 @@ describe('POST /keys/link/start', () => {
     expect(res.status).toBe(401);
   });
 
-  it('creates a session and notifies other devices', async () => {
+  it('creates a session from a commitment and notifies other devices', async () => {
     authed();
     startLink.mockResolvedValue(LINK_ID);
-    const res = await startPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify({ ebPub: PUB }) }));
+    const res = await startPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify({ commit: PUB }) }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ linkId: LINK_ID });
     expect(startLink).toHaveBeenCalledWith(USER_ID, PUB);
     expect(publish).toHaveBeenCalledWith(USER_ID, { type: 'link-request', linkId: LINK_ID });
+  });
+});
+
+describe('POST /keys/link/reveal', () => {
+  const body = { linkId: LINK_ID, ebPub: PUB };
+
+  it('401 without auth', async () => {
+    anon();
+    const res = await revealPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
+    expect(res.status).toBe(401);
+  });
+
+  it('reveals the new-device ephemeral key', async () => {
+    authed();
+    revealLink.mockResolvedValue(true);
+    const res = await revealPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
+    expect(res.status).toBe(200);
+    expect(revealLink).toHaveBeenCalledWith(LINK_ID, USER_ID, PUB);
+  });
+
+  it('409 when not ready to reveal', async () => {
+    authed();
+    revealLink.mockResolvedValue(false);
+    const res = await revealPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
+    expect(res.status).toBe(409);
   });
 });
 
