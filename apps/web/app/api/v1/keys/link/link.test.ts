@@ -1,19 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { startLink, getLink, completeLink, publish } = vi.hoisted(() => ({
+const { startLink, getLink, attachLink, completeLink, publish } = vi.hoisted(() => ({
   startLink: vi.fn(),
   getLink: vi.fn(),
+  attachLink: vi.fn(),
   completeLink: vi.fn(),
   publish: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
-vi.mock('@/lib/link-session', () => ({ startLink, getLink, completeLink }));
+vi.mock('@/lib/link-session', () => ({ startLink, getLink, attachLink, completeLink }));
 vi.mock('@/lib/realtime', () => ({ publish }));
 
 import { auth } from '@/auth';
 import { POST as startPOST } from './start/route';
 import { GET as pollGET } from './poll/route';
+import { POST as attachPOST } from './attach/route';
 import { POST as completePOST } from './complete/route';
 
 const mockedAuth = vi.mocked(auth);
@@ -69,8 +71,26 @@ describe('GET /keys/link/poll', () => {
   });
 });
 
+describe('POST /keys/link/attach', () => {
+  const body = { linkId: LINK_ID, eaPub: PUB };
+
+  it('401 without auth', async () => {
+    anon();
+    const res = await attachPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
+    expect(res.status).toBe(401);
+  });
+
+  it('attaches the existing device ephemeral key', async () => {
+    authed();
+    attachLink.mockResolvedValue(true);
+    const res = await attachPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
+    expect(res.status).toBe(200);
+    expect(attachLink).toHaveBeenCalledWith(LINK_ID, USER_ID, PUB);
+  });
+});
+
 describe('POST /keys/link/complete', () => {
-  const body = { linkId: LINK_ID, eaPub: PUB, wrapped: 'd3JhcHBlZA==', nonce: 'bm9uY2U=' };
+  const body = { linkId: LINK_ID, wrapped: 'd3JhcHBlZA==', nonce: 'bm9uY2U=' };
 
   it('401 without auth', async () => {
     anon();
@@ -78,7 +98,7 @@ describe('POST /keys/link/complete', () => {
     expect(res.status).toBe(401);
   });
 
-  it('409 when the session is not pending', async () => {
+  it('409 when the session is not ready', async () => {
     authed();
     completeLink.mockResolvedValue(false);
     const res = await completePOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
@@ -90,6 +110,6 @@ describe('POST /keys/link/complete', () => {
     completeLink.mockResolvedValue(true);
     const res = await completePOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
     expect(res.status).toBe(200);
-    expect(completeLink).toHaveBeenCalledWith(LINK_ID, USER_ID, PUB, body.wrapped, body.nonce);
+    expect(completeLink).toHaveBeenCalledWith(LINK_ID, USER_ID, body.wrapped, body.nonce);
   });
 });

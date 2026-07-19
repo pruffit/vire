@@ -50,22 +50,29 @@ export async function getLink(id: string, userId: string): Promise<LinkState | n
   }
 }
 
-// Существующее устройство (A) кладёт свой эфемерный ключ + завёрнутый identity-ключ. Single-use: только из pending.
-export async function completeLink(
-  id: string,
-  userId: string,
-  eaPub: string,
-  wrapped: string,
-  nonce: string,
-): Promise<boolean> {
+// Существующее устройство (A) кладёт свой эфемерный ключ. Новое устройство (B) его поллит и
+// показывает SAS-код — обмен ключа переносится ТОЛЬКО после подтверждения кода (attach до complete).
+export async function attachLink(id: string, userId: string, eaPub: string): Promise<boolean> {
+  return patch(id, userId, (state) => (state.status === 'pending' && !state.eaPub ? { ...state, eaPub } : null));
+}
+
+// A кладёт завёрнутый identity-ключ уже ПОСЛЕ подтверждения SAS-кода. Single-use: только из pending с eaPub.
+export async function completeLink(id: string, userId: string, wrapped: string, nonce: string): Promise<boolean> {
+  return patch(id, userId, (state) =>
+    state.status === 'pending' && state.eaPub ? { ...state, wrapped, nonce, status: 'completed' } : null,
+  );
+}
+
+async function patch(id: string, userId: string, next: (s: LinkState) => LinkState | null): Promise<boolean> {
   try {
     const redis = getRedis();
     const raw = await redis.get(key(id));
     if (!raw) return false;
     const state = JSON.parse(raw) as LinkState;
-    if (state.userId !== userId || state.status !== 'pending') return false;
-    const next: LinkState = { ...state, eaPub, wrapped, nonce, status: 'completed' };
-    await redis.set(key(id), JSON.stringify(next), 'EX', TTL_SEC);
+    if (state.userId !== userId) return false;
+    const updated = next(state);
+    if (!updated) return false;
+    await redis.set(key(id), JSON.stringify(updated), 'EX', TTL_SEC);
     return true;
   } catch {
     return false;

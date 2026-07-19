@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatMessage } from '@vire/core';
 import { useRealtime } from '@/lib/use-realtime';
 import { useIdentity } from '@/lib/e2ee-client';
-import { deriveCK, encryptMessage, decryptMessage, fromB64 } from '@/lib/e2ee';
+import { deriveCK, encryptMessage, decryptMessage, safetyNumber, fromB64 } from '@/lib/e2ee';
 import { toast } from '@/lib/toast';
 import { MessageBubble } from './message-bubble';
 import { MessageComposer } from './message-composer';
@@ -42,6 +42,11 @@ export function ChatThread({
     if (!identity.priv || !identity.pub || !otherIkPub) return null;
     return deriveCK(identity.priv, fromB64(otherIkPub), identity.pub);
   }, [identity.priv, identity.pub, otherIkPub]);
+
+  const safety = useMemo(() => {
+    if (!identity.pub || !otherIkPub) return null;
+    return safetyNumber(identity.pub, fromB64(otherIkPub));
+  }, [identity.pub, otherIkPub]);
 
   function scrollToBottom(behavior: ScrollBehavior = 'auto') {
     bottomRef.current?.scrollIntoView({ behavior });
@@ -107,6 +112,13 @@ export function ChatThread({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4 sm:px-4">
+        {safety && (
+          <details className="mb-2 rounded-lg border border-border/40 bg-card/40 px-3 py-2 text-xs text-muted-foreground">
+            <summary className="cursor-pointer select-none">🔒 Сквозное шифрование — код безопасности</summary>
+            <p className="mt-2 break-words font-mono text-[11px] leading-relaxed">{safety}</p>
+            <p className="mt-1">Совпадает у обоих — переписку никто не читает.</p>
+          </details>
+        )}
         {messages.map((m) => (
           <MessageBubble
             key={m.id}

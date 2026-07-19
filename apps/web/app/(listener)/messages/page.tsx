@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { chatService } from '@/lib/chat';
 import { ConversationList } from '@/components/chat/conversation-list';
+import { DeviceLink } from '@/components/chat/device-link';
 
 export const metadata: Metadata = { title: 'Сообщения' };
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,7 @@ export default async function MessagesPage() {
   return (
     <main className="w-full max-w-3xl mx-auto px-5 sm:px-6 py-12 space-y-8">
       <h1 className="text-2xl font-semibold tracking-tight">Сообщения</h1>
+      <DeviceLink viewerId={session.user.id} />
       <ConversationList conversations={conversations} viewerId={session.user.id} />
     </main>
   );
