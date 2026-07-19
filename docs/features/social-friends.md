@@ -108,6 +108,14 @@ canSeeLikes(viewerId, ownerId, ownerVisibility, areFriends)
   `.../admin/reports/[id]/resolve/route.ts`, `apps/web/components/friends/{profile-more-menu,unblock-button}.tsx`,
   `apps/web/app/admin/reports/`.
 
+## Discoverability-тумблер (§11.6)
+`users.discoverable` (boolean, дефолт `true`) — пользователь может скрыть себя из поиска людей.
+Затрагивает только `userDirectoryService().search` (предикат `discoverable = true` в
+`searchUsersByName`): прямой переход по ссылке `/u/[userId]` и уже существующая дружба не
+скрываются — тумблер прячет только из выдачи typeahead-поиска на `/friends`. Переключатель
+«Показывать меня в поиске» — `apps/web/components/listener/profile/discoverability-settings.tsx`
+на `/profile`, сохраняется тем же `PATCH /api/v1/user/profile` (`discoverable` в zod-схеме).
+
 ## Смежные фичи
 - **Активность друзей в ленте** (§11.4) — секция «Активность друзей» на главной, см. код в
   `apps/web/lib/activity.ts` (`mergeFriendsActivity`), `packages/db/src/queries/friends-activity.ts`,
@@ -116,8 +124,7 @@ canSeeLikes(viewerId, ownerId, ownerVisibility, areFriends)
 - **Уведомления** (колокольчик) — `docs/features/notifications.md`.
 
 ## Ограничения / на будущее
-- Поиск только по имени и без пагинации (лимит 10) — фильтров/discoverability-тумблера нет.
-- Discoverability-тумблер (скрыть себя из поиска) — вне среза.
+- Поиск только по имени и без пагинации (лимит 10) — прочих фильтров нет.
 - Жалобы только на пользователя/сообщение; модерация чата вручную через `/admin/reports`.
 - **Известный редкий race:** `friendships` уникален по направленной паре `(requester_id,
   addressee_id)`, а `request()` делает `findEdge`+insert без транзакции. Если A и B почти
