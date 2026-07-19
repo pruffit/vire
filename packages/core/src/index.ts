@@ -51,6 +51,7 @@ export * from './services/friendship';
 export * from './services/block';
 export * from './services/report';
 export * from './services/notification';
+export * from './notifications/email-templates';
 export * from './services/chat';
 export * from './services/user-directory';
 export * from './services/listener-track';
