@@ -45,6 +45,7 @@ export * from './services/smart-link';
 export * from './services/release';
 export * from './services/track';
 export * from './services/authorize-track';
+export * from './services/external-delivery';
 export * from './services/follow';
 export * from './services/friendship';
 export * from './services/block';
