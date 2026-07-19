@@ -268,25 +268,70 @@ git commit -m "feat(api): user/profile PATCH принимает discoverable/not
 
 ---
 
-## Task 4: UI — тумблер discoverability в профиле
+## Task 4: Общий SettingToggle + тумблер discoverability в профиле
 
 **Files:**
-- Modify: `apps/web/components/listener/profile/notification-settings.tsx` (создаётся в Task 17; если Task 17 ещё не сделан — временно добавить тумблер в существующий блок приватности `privacy-settings.tsx` секцией ниже). Для линейности: **этот таск делает отдельный компонент `discoverability-settings.tsx`** и вставляет в профиль; Task 17 добавит рядом email/push.
+- Create: `apps/web/components/listener/profile/setting-toggle.tsx` — переиспользуемый презентационный тумблер (устраняет дубль между приватностью/discoverability/email — правило Vire «не плодить дубли»).
 - Create: `apps/web/components/listener/profile/discoverability-settings.tsx`
+- Modify: `apps/web/components/listener/profile/privacy-settings.tsx` — перевести на `SettingToggle`.
 - Modify: `apps/web/app/(listener)/profile/page.tsx`
 
 **Interfaces:**
-- Consumes: PATCH `discoverable` (Task 3); текущее значение `discoverable` из профиля (прокинуть проп из серверной страницы, читающей юзера).
+- Produces: `SettingToggle` (пропсы ниже) — используется здесь, Task 17 (email/push) и рефактором `PrivacySettings`.
+- Consumes: PATCH `discoverable` (Task 3); текущее `discoverable` из профиля (проп из серверной страницы).
 
-- [ ] **Step 1: Компонент-тумблер**
+- [ ] **Step 1: Презентационный SettingToggle**
 
-`apps/web/components/listener/profile/discoverability-settings.tsx` — копия паттерна `PrivacySettings`, но поле `discoverable`:
+`apps/web/components/listener/profile/setting-toggle.tsx` — только представление (состояние держит владелец):
+
+```tsx
+'use client';
+import { cn } from '@/lib/utils';
+
+export interface SettingToggleProps {
+  title: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+}
+
+export function SettingToggle({ title, description, checked, disabled, onToggle }: SettingToggleProps) {
+  return (
+    <div className="rounded-xl border border-border bg-card/60 px-4 py-3.5">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{title}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
+        <button
+          type="button" role="switch" aria-checked={checked} aria-label={title}
+          disabled={disabled} onClick={onToggle}
+          className="shrink-0 grid place-items-center min-h-11 min-w-11 cursor-pointer disabled:opacity-50"
+        >
+          <span className={cn('relative inline-flex h-6 w-11 items-center rounded-full ring-1 ring-inset transition-colors', checked ? 'bg-primary ring-primary' : 'bg-foreground/15 ring-border')}>
+            <span className={cn('absolute left-0.5 inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform', checked && 'translate-x-5')} />
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 2: Рефактор PrivacySettings на SettingToggle**
+
+В `apps/web/components/listener/profile/privacy-settings.tsx` заменить встроенную разметку `<div class="rounded-xl…"><button role="switch">…` на `<SettingToggle title="Лайки видны друзьям" description={isFriends ? 'Друзья видят твои лайки.' : 'Лайки скрыты от всех.'} checked={isFriends} disabled={pending} onToggle={toggle} />`. Логика `toggle`/`useState`/`fetch` не меняется. Импортировать `SettingToggle`; неиспользуемый `cn` убрать.
+
+- [ ] **Step 3: Компонент discoverability на SettingToggle**
+
+`apps/web/components/listener/profile/discoverability-settings.tsx`:
 
 ```tsx
 'use client';
 import { useState } from 'react';
 import { toast } from '@/lib/toast';
-import { cn } from '@/lib/utils';
+import { SettingToggle } from './setting-toggle';
 
 export function DiscoverabilitySettings({ initial }: { initial: boolean }) {
   const [on, setOn] = useState(initial);
@@ -313,45 +358,33 @@ export function DiscoverabilitySettings({ initial }: { initial: boolean }) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card/60 px-4 py-3.5">
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-sm font-medium">Показывать меня в поиске</p>
-          <p className="text-xs text-muted-foreground">
-            {on ? 'Другие могут найти тебя по имени.' : 'Ты скрыт из поиска людей.'}
-          </p>
-        </div>
-        <button
-          type="button" role="switch" aria-checked={on} aria-label="Показывать меня в поиске"
-          disabled={pending} onClick={toggle}
-          className="shrink-0 grid place-items-center min-h-11 min-w-11 cursor-pointer disabled:opacity-50"
-        >
-          <span className={cn('relative inline-flex h-6 w-11 items-center rounded-full ring-1 ring-inset transition-colors', on ? 'bg-primary ring-primary' : 'bg-foreground/15 ring-border')}>
-            <span className={cn('absolute left-0.5 inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform', on && 'translate-x-5')} />
-          </span>
-        </button>
-      </div>
-    </div>
+    <SettingToggle
+      title="Показывать меня в поиске"
+      description={on ? 'Другие могут найти тебя по имени.' : 'Ты скрыт из поиска людей.'}
+      checked={on}
+      disabled={pending}
+      onToggle={toggle}
+    />
   );
 }
 ```
 
-- [ ] **Step 2: Вставить в профиль**
+- [ ] **Step 4: Вставить в профиль**
 
 В `apps/web/app/(listener)/profile/page.tsx` рядом с `PrivacySettings` отрендерить `<DiscoverabilitySettings initial={user.discoverable} />`. Убедиться, что серверный фетч профиля возвращает `discoverable` (расширить select/тип, если нужно).
 
-- [ ] **Step 3: Гейты**
+- [ ] **Step 5: Гейты**
 
 Run: `pnpm --filter @vire/web typecheck && pnpm --filter @vire/web audit:design`
 Expected: PASS.
 
-Проверить мобильную ширину визуально при ручном QA (узкий вьюпорт, тач-таргет 44px — заложен).
+Проверить мобильную ширину при ручном QA (узкий вьюпорт, тач-таргет 44px — заложен в `SettingToggle`).
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add apps/web/components/listener/profile/discoverability-settings.tsx "apps/web/app/(listener)/profile/page.tsx"
-git commit -m "feat(web): тумблер discoverability в профиле"
+git add apps/web/components/listener/profile/setting-toggle.tsx apps/web/components/listener/profile/discoverability-settings.tsx apps/web/components/listener/profile/privacy-settings.tsx "apps/web/app/(listener)/profile/page.tsx"
+git commit -m "feat(web): общий SettingToggle + тумблер discoverability"
 ```
 
 ---
@@ -1137,26 +1170,42 @@ describe('notify-unsubscribe', () => {
 Run: `pnpm --filter @vire/web test -- notify-unsubscribe`
 Expected: FAIL.
 
-- [ ] **Step 3: Реализация хелпера**
+- [ ] **Step 3: Чистые sign/verify — в `@vire/core` (общие для web и worker)**
 
-`apps/web/lib/notify-unsubscribe.ts` (зеркало `presave-unsubscribe.ts`):
+Чтобы не дублировать `PURPOSE`/логику между web и воркером (worker не импортирует `apps/web/lib`), чистые функции живут в ядре и принимают секрет параметром.
+
+`packages/core/src/notifications/unsubscribe.ts`:
 
 ```ts
-import { hmacSign, hmacVerify } from '@vire/core/signing';
-import { getSigningSecret } from './app-secret';
+import { hmacSign, hmacVerify } from '../signing';
 
 const PURPOSE = 'notify-email-unsub';
 
+export function signNotifyUnsub(secret: string, userId: string): string {
+  return hmacSign(secret, `${PURPOSE}:${userId}`);
+}
+
+export function verifyNotifyUnsub(secret: string, userId: string, token: string): boolean {
+  return hmacVerify(secret, `${PURPOSE}:${userId}`, token);
+}
+```
+
+(Сверить фактический путь модуля `signing` внутри `packages/core/src` — web импортирует его как `@vire/core/signing`.) Реэкспортировать обе функции из `@vire/core`.
+
+`apps/web/lib/notify-unsubscribe.ts` — тонкая обёртка секретом (сигнатуры для роута/теста без секрета):
+
+```ts
+import { signNotifyUnsub as sign, verifyNotifyUnsub as verify } from '@vire/core';
+import { getSigningSecret } from './app-secret';
+
 export function signNotifyUnsub(userId: string): string | null {
   const secret = getSigningSecret();
-  if (!secret) return null;
-  return hmacSign(secret, `${PURPOSE}:${userId}`);
+  return secret ? sign(secret, userId) : null;
 }
 
 export function verifyNotifyUnsub(userId: string, token: string): boolean {
   const secret = getSigningSecret();
-  if (!secret) return false;
-  return hmacVerify(secret, `${PURPOSE}:${userId}`, token);
+  return secret ? verify(secret, userId, token) : false;
 }
 ```
 
@@ -1195,8 +1244,8 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add apps/web/lib/notify-unsubscribe.ts apps/web/lib/notify-unsubscribe.test.ts apps/web/app/api/v1/notifications/unsubscribe
-git commit -m "feat: HMAC-отписка от email-уведомлений + роут"
+git add packages/core/src/notifications/unsubscribe.ts packages/core/src/index.ts apps/web/lib/notify-unsubscribe.ts apps/web/lib/notify-unsubscribe.test.ts apps/web/app/api/v1/notifications/unsubscribe
+git commit -m "feat: HMAC-отписка от email-уведомлений (core-логика + web-обёртка + роут)"
 ```
 
 ---
@@ -1210,10 +1259,10 @@ git commit -m "feat: HMAC-отписка от email-уведомлений + р�
 - Test: `apps/worker/src/workers/__tests__/notify-external.worker.test.ts` (структура тестов воркера — по образцу существующих в `apps/worker`)
 
 **Interfaces:**
-- Consumes: `getUserNotifyContext`, `getUserDisplayName`, `listPushSubscriptions`, `deletePushSubscriptionsByEndpoints` (`@vire/db`); `decideExternalDelivery`, `friendRequestEmail`, `chatMessageEmail`, `ExternalNotifyJobData`, `QUEUE_NOTIFY_EXTERNAL` (`@vire/core`); `signNotifyUnsub` эквивалент.
+- Consumes: `getUserNotifyContext`, `getUserDisplayName`, `listPushSubscriptions`, `deletePushSubscriptionsByEndpoints` (`@vire/db`); `decideExternalDelivery`, `friendRequestEmail`, `chatMessageEmail`, `signNotifyUnsub` (core, секрет параметром — Task 15), `ExternalNotifyJobData`, `QUEUE_NOTIFY_EXTERNAL` (`@vire/core`).
 - Produces: `createNotifyExternalWorker()`.
 
-> Примечание: `signNotifyUnsub` живёт в `apps/web/lib` и воркеру недоступен. Продублировать чистую подпись в воркере: `apps/worker/src/lib/notify-unsub.ts` c `hmacSign` из `@vire/core/signing` и тем же `PURPOSE='notify-email-unsub'` и секретом из env (`LINK_SIGNING_SECRET || AUTH_SECRET`). Инвариант «одинаковый PURPOSE/секрет» покрыть тестом на совпадение токена с web-версией.
+> Подпись отписки НЕ дублируется: воркер импортирует `signNotifyUnsub(secret, userId)` из `@vire/core` (Task 15) и подаёт секрет из env сам (`process.env.LINK_SIGNING_SECRET || process.env.AUTH_SECRET`). PURPOSE живёт в одном месте (ядро).
 
 - [ ] **Step 1: Brevo single-send**
 
@@ -1315,16 +1364,16 @@ export async function chatEmailDebounced(recipientId: string, conversationId: st
 
 ```ts
 import { Worker, type Job } from 'bullmq';
-import { QUEUE_NOTIFY_EXTERNAL, type ExternalNotifyJobData, decideExternalDelivery, friendRequestEmail, chatMessageEmail } from '@vire/core';
+import { QUEUE_NOTIFY_EXTERNAL, type ExternalNotifyJobData, decideExternalDelivery, friendRequestEmail, chatMessageEmail, signNotifyUnsub } from '@vire/core';
 import { getUserNotifyContext, getUserDisplayName, listPushSubscriptions, deletePushSubscriptionsByEndpoints } from '@vire/db';
 import { connection } from '../queues/connection.js';
 import { sendBrevoEmail } from '../lib/brevo.js';
 import { sendPush } from '../lib/webpush.js';
 import { isUserOnline } from '../lib/user-presence.js';
 import { chatEmailDebounced } from '../lib/notify-debounce.js';
-import { signNotifyUnsub } from '../lib/notify-unsub.js';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+const SIGNING_SECRET = process.env.LINK_SIGNING_SECRET || process.env.AUTH_SECRET || null;
 
 async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
   const { kind, recipientId, actorId, conversationId } = job.data;
@@ -1352,7 +1401,7 @@ async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
   const actorName = await getUserDisplayName(actorId);
 
   if (decision.email && ctx.email) {
-    const token = signNotifyUnsub(recipientId);
+    const token = SIGNING_SECRET ? signNotifyUnsub(SIGNING_SECRET, recipientId) : null;
     const unsubscribeUrl = token ? `${APP_URL}/api/v1/notifications/unsubscribe?uid=${recipientId}&token=${token}` : null;
     const tpl = kind === 'FRIEND_REQUEST'
       ? friendRequestEmail({ actorName, appUrl: APP_URL, unsubscribeUrl })
@@ -1375,25 +1424,11 @@ export function createNotifyExternalWorker() {
 }
 ```
 
-- [ ] **Step 5: Дублёр подписи в воркере**
-
-`apps/worker/src/lib/notify-unsub.ts`:
-
-```ts
-import { hmacSign } from '@vire/core/signing';
-const PURPOSE = 'notify-email-unsub';
-export function signNotifyUnsub(userId: string): string | null {
-  const secret = process.env.LINK_SIGNING_SECRET || process.env.AUTH_SECRET || null;
-  if (!secret) return null;
-  return hmacSign(secret, `${PURPOSE}:${userId}`);
-}
-```
-
-- [ ] **Step 6: Регистрация воркера**
+- [ ] **Step 5: Регистрация воркера**
 
 В `apps/worker/src/index.ts`: импорт `createNotifyExternalWorker` и `const notifyExternalWorker = createNotifyExternalWorker();`, добавить `.on('failed', ...)`/`.on('error', ...)` по образцу соседних воркеров (через `alertJobFailure`/`alertWorkerError`).
 
-- [ ] **Step 7: Тест диспетчера**
+- [ ] **Step 6: Тест диспетчера**
 
 `apps/worker/src/workers/__tests__/notify-external.worker.test.ts` — вынести `handle` в экспорт (или тестировать через фабрику с моками). Замокать `@vire/db`, `../lib/brevo`, `../lib/webpush`, `../lib/user-presence`, `../lib/notify-debounce`. Кейсы:
 - online=true → ни `sendBrevoEmail`, ни `sendPush` не вызваны;
@@ -1403,12 +1438,12 @@ export function signNotifyUnsub(userId: string): string | null {
 
 (Для тестируемости выделить `handle` как экспортируемую функцию, принимающую `job.data`.)
 
-- [ ] **Step 8: Прогнать + typecheck воркера**
+- [ ] **Step 7: Прогнать + typecheck воркера**
 
 Run: `pnpm --filter @vire/worker test 2>/dev/null; pnpm --filter @vire/worker typecheck 2>/dev/null || npx tsc -p apps/worker --noEmit`
 Expected: PASS (сверить, как гоняются тесты/typecheck воркера в этом репо; при отсутствии отдельного скрипта — согласовать с CI-таском turbo).
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add apps/worker/src/lib apps/worker/src/workers/notify-external.worker.ts apps/worker/src/workers/__tests__/notify-external.worker.test.ts apps/worker/src/index.ts
@@ -1428,9 +1463,10 @@ git commit -m "feat(worker): диспетчер notify-external — presence-г�
 
 - [ ] **Step 1: Компонент**
 
-`notification-settings.tsx` — клиентский компонент с двумя строками-тумблерами (email — тот же паттерн `PrivacySettings`, PATCH `notifyEmail`) и push-строкой:
-- push-строка при монтировании читает `getPushState()`; статусы: `unsupported` → строка «Пуши не поддерживаются этим браузером» (disabled), `denied` → подсказка разблокировать в настройках браузера, `subscribed`/`unsubscribed` → тумблер, который зовёт `subscribeToPush()`/`unsubscribeFromPush()` и оптимистично обновляет состояние; на провал `subscribeToPush` (permission не выдан) — откат + toast.
-- Тач-таргеты ≥44px, aria-label/role="switch" как в шаблоне.
+`notification-settings.tsx` — клиентский компонент, **переиспользует `SettingToggle`** (Task 4), две строки:
+- email-строка: `SettingToggle` с состоянием `notifyEmail`, PATCH `{ notifyEmail }` (оптимистично, откат+toast на ошибку — как `DiscoverabilitySettings`).
+- push-строка при монтировании читает `getPushState()`; статусы: `unsupported` → `SettingToggle` disabled с описанием «Пуши не поддерживаются этим браузером»; `denied` → disabled с подсказкой разблокировать в настройках браузера; `subscribed`/`unsubscribed` → `SettingToggle`, `onToggle` зовёт `subscribeToPush()`/`unsubscribeFromPush()` и оптимистично обновляет состояние; на провал `subscribeToPush` (permission не выдан) — откат + toast.
+- Тач-таргеты/aria — уже внутри `SettingToggle`, свой не изобретать.
 
 ```tsx
 'use client';
