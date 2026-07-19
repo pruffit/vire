@@ -1,4 +1,4 @@
-import { and, asc, ilike, isNotNull, ne } from 'drizzle-orm';
+import { and, asc, eq, ilike, isNotNull, ne } from 'drizzle-orm';
 import type { UserDirectoryHit } from '@vire/core';
 import { db } from '../client';
 import { users } from '../schema';
@@ -11,6 +11,7 @@ export async function searchUsersByName(query: string, limit: number, excludeId:
     .where(and(
       isNotNull(users.name),
       ne(users.id, excludeId),
+      eq(users.discoverable, true),
       ilike(users.name, `%${query}%`),
       // заблокированные (в любую сторону) не находятся в поиске
       blockedPairsExpr(excludeId, users.id),
