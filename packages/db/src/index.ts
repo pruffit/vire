@@ -221,7 +221,7 @@ export {
 } from './queries/friendships';
 export { searchUsersByName } from './queries/user-directory';
 export * from './repositories/block';
-export { blockUser, unblockUser, isBlockedEitherWay, listBlockedIds, blockedPairsExpr } from './queries/blocks';
+export { blockUser, unblockUser, isBlockedEitherWay, isBlockedBy, listBlockedIds, blockedPairsExpr } from './queries/blocks';
 export * from './repositories/report';
 export {
   hasOpenReport, insertReport, listOpenReports, countOpenReports, getReportContext, resolveReport,

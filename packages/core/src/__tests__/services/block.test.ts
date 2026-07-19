@@ -8,6 +8,7 @@ function makeRepo(o?: Partial<IBlockRepository>): IBlockRepository {
     block: vi.fn().mockResolvedValue(undefined),
     unblock: vi.fn().mockResolvedValue(undefined),
     existsEitherWay: vi.fn().mockResolvedValue(false),
+    existsDirected: vi.fn().mockResolvedValue(false),
     listBlocked: vi.fn().mockResolvedValue([]),
     ...o,
   };

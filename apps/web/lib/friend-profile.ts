@@ -22,7 +22,7 @@ export async function loadFriendProfile(viewerId: string | null, targetUserId: s
   if (!profile) return null;
 
   const blocked = viewerId ? await blockService().isBlocked(viewerId, targetUserId) : false;
-  const iBlockedThem = viewerId && blocked ? (await blockService().listBlocked(viewerId)).includes(targetUserId) : false;
+  const iBlockedThem = viewerId && blocked ? await blockService().isBlockedByMe(viewerId, targetUserId) : false;
 
   const status: FriendshipStatus = viewerId
     ? await friendshipService().getStatus(viewerId, targetUserId)

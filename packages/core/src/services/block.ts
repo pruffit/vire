@@ -16,5 +16,6 @@ export class BlockService {
   }
 
   isBlocked(a: string, b: string): Promise<boolean> { return this.repo.existsEitherWay(a, b); }
+  isBlockedByMe(viewerId: string, targetId: string): Promise<boolean> { return this.repo.existsDirected(viewerId, targetId); }
   listBlocked(userId: string): Promise<string[]> { return this.repo.listBlocked(userId); }
 }

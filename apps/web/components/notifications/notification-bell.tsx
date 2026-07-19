@@ -28,15 +28,16 @@ export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number
   const [unread, setUnread] = useState(initialUnread);
   const [items, setItems] = useState<NotificationItem[]>([]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<number> => {
     try {
       const res = await fetch('/api/v1/notifications');
-      if (!res.ok) return;
+      if (!res.ok) return 0;
       const data: { notifications: NotificationItem[]; unread: number } = await res.json();
       setItems(data.notifications);
       setUnread(data.unread);
+      return data.unread;
     } catch {
-      /* сеть недоступна — оставляем текущее состояние */
+      return 0;
     }
   }, []);
 
@@ -51,8 +52,8 @@ export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number
   async function handleOpenChange(next: boolean) {
     setOpen(next);
     if (next) {
-      await load();
-      if (unread > 0) {
+      const freshUnread = await load();
+      if (freshUnread > 0) {
         setUnread(0);
         fetch('/api/v1/notifications/read', { method: 'POST' }).catch(() => {});
       }

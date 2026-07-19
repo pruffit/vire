@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { getUserPublicProfile, getLikedTracks, getPublicPlaylistsByOwner, getStatus, isBlocked, listBlocked } = vi.hoisted(() => ({
+const { getUserPublicProfile, getLikedTracks, getPublicPlaylistsByOwner, getStatus, isBlocked, isBlockedByMe } = vi.hoisted(() => ({
   getUserPublicProfile: vi.fn(),
   getLikedTracks: vi.fn(),
   getPublicPlaylistsByOwner: vi.fn(),
   getStatus: vi.fn(),
   isBlocked: vi.fn(),
-  listBlocked: vi.fn(),
+  isBlockedByMe: vi.fn(),
 }));
 
 vi.mock('@vire/db', () => ({
@@ -18,7 +18,7 @@ vi.mock('@/lib/friends', () => ({
   friendshipService: () => ({ getStatus }),
 }));
 vi.mock('@/lib/blocks', () => ({
-  blockService: () => ({ isBlocked, listBlocked }),
+  blockService: () => ({ isBlocked, isBlockedByMe }),
 }));
 
 import { loadFriendProfile } from './friend-profile';
@@ -34,7 +34,7 @@ beforeEach(() => {
   getPublicPlaylistsByOwner.mockResolvedValue(PLAYLISTS);
   getLikedTracks.mockResolvedValue(LIKES);
   isBlocked.mockResolvedValue(false);
-  listBlocked.mockResolvedValue([]);
+  isBlockedByMe.mockResolvedValue(false);
 });
 
 describe('loadFriendProfile', () => {
@@ -71,7 +71,7 @@ describe('loadFriendProfile', () => {
     getUserPublicProfile.mockResolvedValue(PROFILE);
     getStatus.mockResolvedValue('FRIENDS');
     isBlocked.mockResolvedValue(true);
-    listBlocked.mockResolvedValue([TARGET]);
+    isBlockedByMe.mockResolvedValue(true);
     const result = await loadFriendProfile(VIEWER, TARGET);
     expect(result?.canChat).toBe(false);
     expect(result?.likesVisible).toBe(false);
@@ -84,7 +84,7 @@ describe('loadFriendProfile', () => {
     getUserPublicProfile.mockResolvedValue(PROFILE);
     getStatus.mockResolvedValue('NONE');
     isBlocked.mockResolvedValue(true);
-    listBlocked.mockResolvedValue([]);
+    isBlockedByMe.mockResolvedValue(false);
     const result = await loadFriendProfile(VIEWER, TARGET);
     expect(result?.blocked).toBe(true);
     expect(result?.iBlockedThem).toBe(false);

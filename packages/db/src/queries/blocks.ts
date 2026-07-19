@@ -29,6 +29,15 @@ export async function isBlockedEitherWay(a: string, b: string): Promise<boolean>
   return !!row;
 }
 
+export async function isBlockedBy(blockerId: string, blockedId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: userBlocks.id })
+    .from(userBlocks)
+    .where(and(eq(userBlocks.blockerId, blockerId), eq(userBlocks.blockedId, blockedId)))
+    .limit(1);
+  return !!row;
+}
+
 export async function listBlockedIds(userId: string): Promise<string[]> {
   const rows = await db.select({ blockedId: userBlocks.blockedId }).from(userBlocks).where(eq(userBlocks.blockerId, userId));
   return rows.map((r) => r.blockedId);
