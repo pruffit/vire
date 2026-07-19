@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { updateUserName, updateUserImage, updateUserSocialVisibility } from '@vire/db';
+import {
+  updateUserName,
+  updateUserImage,
+  updateUserSocialVisibility,
+  updateUserDiscoverable,
+  updateUserNotifyEmail,
+  updateUserNotifyPush,
+} from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
 import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
 
@@ -9,8 +16,11 @@ const schema = z
   .object({
     name: z.string().trim().min(1).max(50).optional(),
     socialVisibility: z.enum(['FRIENDS', 'PRIVATE']).optional(),
+    discoverable: z.boolean().optional(),
+    notifyEmail: z.boolean().optional(),
+    notifyPush: z.boolean().optional(),
   })
-  .refine((d) => d.name !== undefined || d.socialVisibility !== undefined, { message: 'Nothing to update' });
+  .refine((d) => Object.values(d).some((v) => v !== undefined), { message: 'Nothing to update' });
 
 export async function PATCH(req: Request) {
   const session = await auth();
@@ -20,14 +30,20 @@ export async function PATCH(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
 
-  const { name, socialVisibility } = parsed.data;
+  const { name, socialVisibility, discoverable, notifyEmail, notifyPush } = parsed.data;
   if (name !== undefined) await updateUserName(session.user.id, name);
   if (socialVisibility !== undefined) await updateUserSocialVisibility(session.user.id, socialVisibility);
+  if (discoverable !== undefined) await updateUserDiscoverable(session.user.id, discoverable);
+  if (notifyEmail !== undefined) await updateUserNotifyEmail(session.user.id, notifyEmail);
+  if (notifyPush !== undefined) await updateUserNotifyPush(session.user.id, notifyPush);
 
   return NextResponse.json({
     ok: true,
     ...(name !== undefined ? { name } : {}),
     ...(socialVisibility !== undefined ? { socialVisibility } : {}),
+    ...(discoverable !== undefined ? { discoverable } : {}),
+    ...(notifyEmail !== undefined ? { notifyEmail } : {}),
+    ...(notifyPush !== undefined ? { notifyPush } : {}),
   });
 }
 

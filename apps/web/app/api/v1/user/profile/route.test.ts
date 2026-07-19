@@ -1,14 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { updateUserName, updateUserImage, updateUserSocialVisibility, uploadToStream } = vi.hoisted(() => ({
+const {
+  updateUserName,
+  updateUserImage,
+  updateUserSocialVisibility,
+  updateUserDiscoverable,
+  updateUserNotifyEmail,
+  updateUserNotifyPush,
+  uploadToStream,
+} = vi.hoisted(() => ({
   updateUserName: vi.fn(),
   updateUserImage: vi.fn(),
   updateUserSocialVisibility: vi.fn(),
+  updateUserDiscoverable: vi.fn(),
+  updateUserNotifyEmail: vi.fn(),
+  updateUserNotifyPush: vi.fn(),
   uploadToStream: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
-vi.mock('@vire/db', () => ({ updateUserName, updateUserImage, updateUserSocialVisibility }));
+vi.mock('@vire/db', () => ({
+  updateUserName,
+  updateUserImage,
+  updateUserSocialVisibility,
+  updateUserDiscoverable,
+  updateUserNotifyEmail,
+  updateUserNotifyPush,
+}));
 vi.mock('@/lib/s3', () => ({ uploadToStream }));
 
 import { auth } from '@/auth';
@@ -102,6 +120,30 @@ describe('PATCH /api/v1/user/profile', () => {
     expect(res.status).toBe(400);
     expect(updateUserName).not.toHaveBeenCalled();
     expect(updateUserSocialVisibility).not.toHaveBeenCalled();
+  });
+
+  it('PATCH принимает discoverable и зовёт updateUserDiscoverable', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ discoverable: false }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true, discoverable: false });
+    expect(updateUserDiscoverable).toHaveBeenCalledWith('u1', false);
+  });
+
+  it('PATCH принимает notifyEmail и зовёт updateUserNotifyEmail', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ notifyEmail: false }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true, notifyEmail: false });
+    expect(updateUserNotifyEmail).toHaveBeenCalledWith('u1', false);
+  });
+
+  it('PATCH принимает notifyPush и зовёт updateUserNotifyPush', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ notifyPush: true }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true, notifyPush: true });
+    expect(updateUserNotifyPush).toHaveBeenCalledWith('u1', true);
   });
 });
 

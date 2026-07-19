@@ -91,6 +91,18 @@ export async function updateUserSocialVisibility(userId: string, v: 'FRIENDS' | 
   await db.update(users).set({ socialVisibility: v, updatedAt: new Date() }).where(eq(users.id, userId));
 }
 
+export async function updateUserDiscoverable(userId: string, value: boolean): Promise<void> {
+  await db.update(users).set({ discoverable: value, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
+export async function updateUserNotifyEmail(userId: string, value: boolean): Promise<void> {
+  await db.update(users).set({ notifyEmail: value, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
+export async function updateUserNotifyPush(userId: string, value: boolean): Promise<void> {
+  await db.update(users).set({ notifyPush: value, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
 export async function getFollowedArtists(userId: string): Promise<FollowedArtist[]> {
   const rows = await db
     .select({
