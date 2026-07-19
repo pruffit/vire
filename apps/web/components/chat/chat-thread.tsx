@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatMessage } from '@vire/core';
 import { useRealtime } from '@/lib/use-realtime';
+import { useIdentity } from '@/lib/e2ee-client';
+import { deriveCK, encryptMessage, decryptMessage, fromB64 } from '@/lib/e2ee';
 import { toast } from '@/lib/toast';
 import { MessageBubble } from './message-bubble';
 import { MessageComposer } from './message-composer';
@@ -21,17 +23,25 @@ export function ChatThread({
   conversationId,
   viewerId,
   otherUserId,
+  otherIkPub,
   initialMessages,
   canSend,
 }: {
   conversationId: string;
   viewerId: string;
   otherUserId: string;
+  otherIkPub: string | null;
   initialMessages: ChatMessage[];
   canSend: boolean;
 }) {
   const [messages, setMessages] = useState<PendingMessage[]>(initialMessages);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const identity = useIdentity(viewerId);
+
+  const ck = useMemo(() => {
+    if (!identity.priv || !identity.pub || !otherIkPub) return null;
+    return deriveCK(identity.priv, fromB64(otherIkPub), identity.pub);
+  }, [identity.priv, identity.pub, otherIkPub]);
 
   function scrollToBottom(behavior: ScrollBehavior = 'auto') {
     bottomRef.current?.scrollIntoView({ behavior });
@@ -47,21 +57,22 @@ export function ChatThread({
       const eventConversationId = event.conversationId as string | undefined;
       if (eventConversationId !== conversationId) return;
       const incoming = normalizeMessage(event.message as ChatMessage);
-
       setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
       if (incoming.senderId !== viewerId) markRead(conversationId);
       requestAnimationFrame(() => scrollToBottom('smooth'));
     },
   });
 
-  async function handleSend(body: string) {
+  async function handleSend(plaintext: string) {
+    if (!ck) return;
+    const enc = encryptMessage(plaintext, ck);
     const tempId = `pending-${Date.now()}`;
     const optimistic: PendingMessage = {
       id: tempId,
       conversationId,
       senderId: viewerId,
-      body,
-      nonce: '',
+      body: enc.ciphertext,
+      nonce: enc.nonce,
       createdAt: new Date(),
       pending: true,
     };
@@ -72,7 +83,7 @@ export function ChatThread({
       const res = await fetch('/api/v1/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toUserId: otherUserId, body }),
+        body: JSON.stringify({ toUserId: otherUserId, ciphertext: enc.ciphertext, nonce: enc.nonce }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: { message: ChatMessage } = await res.json();
@@ -87,15 +98,33 @@ export function ChatThread({
     }
   }
 
+  const notReady = identity.ready && identity.needsLink
+    ? 'Переписка зашифрована. Подтвердите это устройство на другом своём устройстве, чтобы читать и писать.'
+    : identity.ready && !otherIkPub
+      ? 'У собеседника ещё не настроено шифрование.'
+      : null;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4 sm:px-4">
         {messages.map((m) => (
-          <MessageBubble key={m.id} message={m} own={m.senderId === viewerId} pending={m.pending} />
+          <MessageBubble
+            key={m.id}
+            text={ck ? decryptMessage(m.body, m.nonce, ck) ?? '🔒 не удалось расшифровать' : '🔒'}
+            createdAt={m.createdAt}
+            own={m.senderId === viewerId}
+            pending={m.pending}
+          />
         ))}
         <div ref={bottomRef} />
       </div>
-      <MessageComposer onSend={handleSend} disabled={!canSend} />
+      {notReady ? (
+        <div className="shrink-0 border-t border-border/40 bg-background px-4 py-3 text-center text-sm text-muted-foreground">
+          {notReady}
+        </div>
+      ) : (
+        <MessageComposer onSend={handleSend} disabled={!canSend || !ck} />
+      )}
     </div>
   );
 }

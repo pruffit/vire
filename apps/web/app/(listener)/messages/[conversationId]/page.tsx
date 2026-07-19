@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
-import { getUserPublicProfile } from '@vire/db';
+import { getUserPublicProfile, getIdentityKey } from '@vire/db';
 import { chatService } from '@/lib/chat';
 import { friendshipService } from '@/lib/friends';
 import { blockService } from '@/lib/blocks';
@@ -25,11 +25,12 @@ export default async function ConversationPage({ params }: Props) {
   if (!meta.ok) notFound();
   const { otherUserId } = meta.value;
 
-  const [other, history, status, blocked] = await Promise.all([
+  const [other, history, status, blocked, otherIkPub] = await Promise.all([
     getUserPublicProfile(otherUserId),
     chatService().history(viewerId, conversationId, null, 50),
     friendshipService().getStatus(viewerId, otherUserId),
     blockService().isBlocked(viewerId, otherUserId),
+    getIdentityKey(otherUserId),
   ]);
   if (!history.ok) notFound();
 
@@ -58,6 +59,7 @@ export default async function ConversationPage({ params }: Props) {
         conversationId={conversationId}
         viewerId={viewerId}
         otherUserId={otherUserId}
+        otherIkPub={otherIkPub}
         initialMessages={initialMessages}
         canSend={canSend}
       />

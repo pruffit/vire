@@ -1,10 +1,34 @@
+'use client';
+
+import { useMemo } from 'react';
 import Link from 'next/link';
 import type { ConversationSummary } from '@vire/core';
 import { EmptyState } from '@/components/ui-kit';
+import { useIdentity } from '@/lib/e2ee-client';
+import { deriveCK, decryptMessage, fromB64 } from '@/lib/e2ee';
 import { ChatAvatar } from './chat-avatar';
 import { formatMessageTimestamp } from './chat-format';
 
-export function ConversationList({ conversations }: { conversations: ConversationSummary[] }) {
+export function ConversationList({ conversations, viewerId }: { conversations: ConversationSummary[]; viewerId: string }) {
+  const identity = useIdentity(viewerId);
+
+  const previews = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of conversations) {
+      if (!c.lastMessageBody) {
+        map.set(c.id, 'Нет сообщений');
+        continue;
+      }
+      if (identity.priv && identity.pub && c.otherIkPub && c.lastMessageNonce) {
+        const ck = deriveCK(identity.priv, fromB64(c.otherIkPub), identity.pub);
+        map.set(c.id, decryptMessage(c.lastMessageBody, c.lastMessageNonce, ck) ?? '🔒');
+      } else {
+        map.set(c.id, '🔒 Зашифровано');
+      }
+    }
+    return map;
+  }, [conversations, identity.priv, identity.pub]);
+
   if (conversations.length === 0) {
     return <EmptyState title="Пока нет диалогов" hint="Напишите другу с его профиля" />;
   }
@@ -30,7 +54,7 @@ export function ConversationList({ conversations }: { conversations: Conversatio
               )}
             </div>
             <p className={`truncate text-sm ${c.unread ? 'text-foreground' : 'text-muted-foreground'}`}>
-              {c.lastMessageBody ?? 'Нет сообщений'}
+              {previews.get(c.id) ?? '🔒 Зашифровано'}
             </p>
           </div>
           {c.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />}
