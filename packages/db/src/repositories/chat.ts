@@ -8,8 +8,8 @@ export class DrizzleChatRepository implements IChatRepository {
   findConversation(low: string, high: string): Promise<ConversationParticipants | null> { return findConversation(low, high); }
   upsertConversation(low: string, high: string): Promise<string> { return upsertConversation(low, high); }
   getConversation(conversationId: string): Promise<ConversationParticipants | null> { return getConversation(conversationId); }
-  insertMessage(conversationId: string, senderId: string, body: string): Promise<ChatMessage> {
-    return insertMessage(conversationId, senderId, body);
+  insertMessage(conversationId: string, senderId: string, ciphertext: string, nonce: string): Promise<ChatMessage> {
+    return insertMessage(conversationId, senderId, ciphertext, nonce);
   }
   listMessages(conversationId: string, before: Date | null, limit: number): Promise<ChatMessage[]> {
     return listMessages(conversationId, before, limit);

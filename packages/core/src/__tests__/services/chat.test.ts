@@ -12,7 +12,7 @@ function makeChatRepo(o?: Partial<IChatRepository>): IChatRepository {
     findConversation: vi.fn().mockResolvedValue(null),
     upsertConversation: vi.fn().mockResolvedValue('conv-1'),
     getConversation: vi.fn().mockResolvedValue(null),
-    insertMessage: vi.fn().mockResolvedValue({ id: 'm1', conversationId: 'conv-1', senderId: 'u1', body: 'hi', createdAt: new Date() }),
+    insertMessage: vi.fn().mockResolvedValue({ id: 'm1', conversationId: 'conv-1', senderId: 'u1', body: 'ct', nonce: 'nc', createdAt: new Date() }),
     listMessages: vi.fn().mockResolvedValue([]),
     listConversations: vi.fn().mockResolvedValue([]),
     markConversationRead: vi.fn().mockResolvedValue(undefined),
@@ -98,27 +98,27 @@ describe('ChatService.openOrGet', () => {
 describe('ChatService.send', () => {
   it('отклоняет пустое сообщение', async () => {
     const service = makeService();
-    const r = await service.send('u1', 'u2', '   ');
+    const r = await service.send('u1', 'u2', { ciphertext: '', nonce: '' });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBeInstanceOf(ValidationError);
   });
 
-  it('отклоняет сообщение длиннее 4000 символов', async () => {
+  it('отклоняет слишком длинный шифротекст', async () => {
     const service = makeService();
-    const r = await service.send('u1', 'u2', 'x'.repeat(4001));
+    const r = await service.send('u1', 'u2', { ciphertext: 'A'.repeat(12000), nonce: 'nc' });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBeInstanceOf(ValidationError);
   });
 
   it('отказывает писать не-другу (расфрендились, но тред остаётся читаемым)', async () => {
     const service = makeService({ friendship: { findEdge: vi.fn().mockResolvedValue(null) } });
-    const r = await service.send('u1', 'u2', 'привет');
+    const r = await service.send('u1', 'u2', { ciphertext: 'ct', nonce: 'nc' });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBeInstanceOf(ForbiddenError);
   });
 
   it('отправляет сообщение и публикует событие обеим сторонам', async () => {
-    const message: ChatMessage = { id: 'm1', conversationId: 'conv-1', senderId: 'u1', body: 'привет', createdAt: new Date() };
+    const message: ChatMessage = { id: 'm1', conversationId: 'conv-1', senderId: 'u1', body: 'CT', nonce: 'NC', createdAt: new Date() };
     const insertMessage = vi.fn().mockResolvedValue(message);
     const publish = vi.fn().mockResolvedValue(undefined);
     const service = new ChatService(
@@ -127,9 +127,9 @@ describe('ChatService.send', () => {
       makeBlockRepo(),
       { publish },
     );
-    const r = await service.send('u1', 'u2', '  привет  ');
+    const r = await service.send('u1', 'u2', { ciphertext: 'CT', nonce: 'NC' });
     expect(r).toEqual({ ok: true, value: { conversationId: 'conv-1', message } });
-    expect(insertMessage).toHaveBeenCalledWith('conv-1', 'u1', 'привет');
+    expect(insertMessage).toHaveBeenCalledWith('conv-1', 'u1', 'CT', 'NC');
     expect(publish).toHaveBeenCalledWith('u2', expect.objectContaining({ type: 'message', conversationId: 'conv-1' }));
     expect(publish).toHaveBeenCalledWith('u1', expect.objectContaining({ type: 'message', conversationId: 'conv-1' }));
   });
@@ -137,7 +137,7 @@ describe('ChatService.send', () => {
   it('send кладёт внешнее уведомление получателю', async () => {
     const add = vi.fn();
     const service = makeService({ externalNotify: { add } });
-    const r = await service.send('from-1', 'to-2', 'привет');
+    const r = await service.send('from-1', 'to-2', { ciphertext: 'ct', nonce: 'nc' });
     expect(r.ok).toBe(true);
     expect(add).toHaveBeenCalledWith(expect.objectContaining({ kind: 'CHAT_MESSAGE', recipientId: 'to-2', actorId: 'from-1' }));
   });
@@ -161,7 +161,7 @@ describe('ChatService.history', () => {
 
   it('возвращает историю для участника', async () => {
     const conv: ConversationParticipants = { id: 'conv-1', userLowId: 'u1', userHighId: 'u2' };
-    const messages: ChatMessage[] = [{ id: 'm1', conversationId: 'conv-1', senderId: 'u2', body: 'hi', createdAt: new Date() }];
+    const messages: ChatMessage[] = [{ id: 'm1', conversationId: 'conv-1', senderId: 'u2', body: 'ct', nonce: 'nc', createdAt: new Date() }];
     const service = makeService({ chat: { getConversation: vi.fn().mockResolvedValue(conv), listMessages: vi.fn().mockResolvedValue(messages) } });
     const r = await service.history('u1', 'conv-1', null, 30);
     expect(r).toEqual({ ok: true, value: messages });

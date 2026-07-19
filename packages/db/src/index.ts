@@ -49,6 +49,7 @@ export type { InsertPlayEventData } from './queries/play-events';
 export { getLikedTracks, getFollowedArtists, getUserCreatedAt, getUserProfile, updateUserName, updateUserImage, getUserPublicProfile, updateUserSocialVisibility, updateUserDiscoverable, updateUserNotifyEmail, updateUserNotifyPush, getUserNotifyContext, getUserDisplayName } from './queries/profile';
 export type { LikedTrack, FollowedArtist } from './queries/profile';
 export { upsertPushSubscription, deletePushSubscription, deletePushSubscriptionsByEndpoints, listPushSubscriptions } from './queries/push-subscriptions';
+export { upsertIdentityKey, getIdentityKey, getIdentityKeys } from './queries/identity-keys';
 export { getListenerTaste } from './queries/listener-taste';
 export type { ListenerTaste } from './queries/listener-taste';
 export { searchAll } from './queries/search';

@@ -288,6 +288,13 @@
       "when": 1784445046100,
       "tag": "0040_mean_arclight",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1784481521930,
+      "tag": "0041_curly_wild_pack",
+      "breakpoints": true
     }
   ]
 }

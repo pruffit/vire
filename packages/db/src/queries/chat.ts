@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { conversations, messages, users } from '../schema';
+import { getIdentityKeys } from './identity-keys';
 import type { ChatMessage, ConversationParticipants, ConversationSummary } from '@vire/core';
 
 function toParticipants(row: { id: string; userLowId: string; userHighId: string }): ConversationParticipants {
@@ -36,9 +37,9 @@ export async function getConversation(conversationId: string): Promise<Conversat
   return row ? toParticipants(row) : null;
 }
 
-export async function insertMessage(conversationId: string, senderId: string, body: string): Promise<ChatMessage> {
+export async function insertMessage(conversationId: string, senderId: string, ciphertext: string, nonce: string): Promise<ChatMessage> {
   return db.transaction(async (tx) => {
-    const [message] = await tx.insert(messages).values({ conversationId, senderId, body }).returning();
+    const [message] = await tx.insert(messages).values({ conversationId, senderId, body: ciphertext, nonce }).returning();
 
     const [conv] = await tx
       .select({ userLowId: conversations.userLowId })
@@ -96,16 +97,16 @@ async function listUserConversationRows(userId: string): Promise<ConversationRow
     .orderBy(desc(conversations.lastMessageAt));
 }
 
-async function lastMessageByConversation(convIds: string[]): Promise<Map<string, { senderId: string; body: string }>> {
+async function lastMessageByConversation(convIds: string[]): Promise<Map<string, { senderId: string; body: string; nonce: string }>> {
   if (convIds.length === 0) return new Map();
   const rows = await db
     .selectDistinctOn([messages.conversationId], {
-      conversationId: messages.conversationId, senderId: messages.senderId, body: messages.body,
+      conversationId: messages.conversationId, senderId: messages.senderId, body: messages.body, nonce: messages.nonce,
     })
     .from(messages)
     .where(inArray(messages.conversationId, convIds))
     .orderBy(messages.conversationId, desc(messages.createdAt));
-  return new Map(rows.map((r) => [r.conversationId, { senderId: r.senderId, body: r.body }]));
+  return new Map(rows.map((r) => [r.conversationId, { senderId: r.senderId, body: r.body, nonce: r.nonce }]));
 }
 
 export async function listConversations(userId: string): Promise<ConversationSummary[]> {
@@ -113,9 +114,10 @@ export async function listConversations(userId: string): Promise<ConversationSum
   if (rows.length === 0) return [];
 
   const otherIds = rows.map((r) => (r.userLowId === userId ? r.userHighId : r.userLowId));
-  const [otherUsers, lastByConv] = await Promise.all([
+  const [otherUsers, lastByConv, ikByUser] = await Promise.all([
     db.select({ id: users.id, name: users.name, image: users.image }).from(users).where(inArray(users.id, otherIds)),
     lastMessageByConversation(rows.map((r) => r.id)),
+    getIdentityKeys(otherIds),
   ]);
   const userById = new Map(otherUsers.map((u) => [u.id, u]));
 
@@ -128,8 +130,10 @@ export async function listConversations(userId: string): Promise<ConversationSum
       otherUserId: otherId,
       otherUserName: other?.name ?? null,
       otherUserImage: other?.image ?? null,
+      otherIkPub: ikByUser.get(otherId) ?? null,
       lastMessageAt: r.lastMessageAt,
       lastMessageBody: last?.body ?? null,
+      lastMessageNonce: last?.nonce ?? null,
       lastMessageSenderId: last?.senderId ?? null,
       unread: isUnread(r, userId, last?.senderId ?? null),
     };

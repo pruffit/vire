@@ -30,21 +30,21 @@ beforeEach(() => vi.clearAllMocks());
 describe('POST /api/v1/chat/messages', () => {
   it('401 when not authenticated', async () => {
     mockedAuth.mockResolvedValue(null as never);
-    const res = await POST(req({ toUserId: OTHER_ID, body: 'hi' }));
+    const res = await POST(req({ toUserId: OTHER_ID, ciphertext: 'ct', nonce: 'nc' }));
     expect(res.status).toBe(401);
     expect(send).not.toHaveBeenCalled();
   });
 
   it('400 on invalid body (bad uuid)', async () => {
     mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
-    const res = await POST(req({ toUserId: 'nope', body: 'hi' }));
+    const res = await POST(req({ toUserId: 'nope', ciphertext: 'ct', nonce: 'nc' }));
     expect(res.status).toBe(400);
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('400 on empty body', async () => {
+  it('400 on missing ciphertext', async () => {
     mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
-    const res = await POST(req({ toUserId: OTHER_ID, body: '' }));
+    const res = await POST(req({ toUserId: OTHER_ID, ciphertext: '', nonce: 'nc' }));
     expect(res.status).toBe(400);
   });
 
@@ -54,7 +54,7 @@ describe('POST /api/v1/chat/messages', () => {
     mockedTooManyRequests.mockReturnValueOnce(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }) as never,
     );
-    const res = await POST(req({ toUserId: OTHER_ID, body: 'hi' }));
+    const res = await POST(req({ toUserId: OTHER_ID, ciphertext: 'ct', nonce: 'nc' }));
     expect(res.status).toBe(429);
     expect(send).not.toHaveBeenCalled();
   });
@@ -62,22 +62,22 @@ describe('POST /api/v1/chat/messages', () => {
   it('403 when not a friend', async () => {
     mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
     send.mockResolvedValue({ ok: false, error: new ForbiddenError('Написать можно только другу') });
-    const res = await POST(req({ toUserId: OTHER_ID, body: 'hi' }));
+    const res = await POST(req({ toUserId: OTHER_ID, ciphertext: 'ct', nonce: 'nc' }));
     expect(res.status).toBe(403);
   });
 
   it('422 on validation error', async () => {
     mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
     send.mockResolvedValue({ ok: false, error: new ValidationError('Нельзя написать самому себе') });
-    const res = await POST(req({ toUserId: OTHER_ID, body: 'hi' }));
+    const res = await POST(req({ toUserId: OTHER_ID, ciphertext: 'ct', nonce: 'nc' }));
     expect(res.status).toBe(422);
   });
 
   it('sends and returns the message', async () => {
     mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
     send.mockResolvedValue({ ok: true, value: { conversationId: 'c1', message: { id: 'm1' } } });
-    const res = await POST(req({ toUserId: OTHER_ID, body: 'hi' }));
+    const res = await POST(req({ toUserId: OTHER_ID, ciphertext: 'ct', nonce: 'nc' }));
     expect(res.status).toBe(200);
-    expect(send).toHaveBeenCalledWith(SELF_ID, OTHER_ID, 'hi');
+    expect(send).toHaveBeenCalledWith(SELF_ID, OTHER_ID, { ciphertext: 'ct', nonce: 'nc' });
   });
 });

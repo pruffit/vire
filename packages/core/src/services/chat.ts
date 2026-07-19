@@ -5,7 +5,16 @@ import type { IBlockRepository } from '../repositories/block';
 import type { RealtimePublisher } from '../ports/realtime';
 import type { IExternalNotifyQueue } from '../ports/external-notify';
 
-const BODY_MAX = 4000;
+// Плейнтекст-длину (1–4000) валидирует клиент до шифрования; сервер слеп и проверяет
+// только байтовый размер шифротекста (4000 UTF-8 симв. + secretbox-оверхед с запасом).
+const CIPHERTEXT_MAX_BYTES = 8192;
+
+function b64Bytes(s: string): number {
+  const len = s.length;
+  if (len === 0) return 0;
+  const pad = s.endsWith('==') ? 2 : s.endsWith('=') ? 1 : 0;
+  return (len * 3) / 4 - pad;
+}
 
 export function canonicalPair(a: string, b: string): [string, string] {
   return a < b ? [a, b] : [b, a];
@@ -33,18 +42,20 @@ export class ChatService {
   async send(
     fromUserId: string,
     toUserId: string,
-    bodyInput: unknown,
+    payload: { ciphertext: unknown; nonce: unknown },
   ): Promise<Result<{ conversationId: string; message: ChatMessage }, ValidationError | ForbiddenError>> {
     if (fromUserId === toUserId) return err(new ValidationError('Нельзя написать самому себе'));
     const guard = await this.guardCanChat(fromUserId, toUserId);
     if (!guard.ok) return guard;
 
-    const body = typeof bodyInput === 'string' ? bodyInput.trim() : '';
-    if (!body || body.length > BODY_MAX) return err(new ValidationError('Сообщение: 1–4000 символов'));
+    const ciphertext = typeof payload.ciphertext === 'string' ? payload.ciphertext : '';
+    const nonce = typeof payload.nonce === 'string' ? payload.nonce : '';
+    if (!ciphertext || !nonce) return err(new ValidationError('Пустое сообщение'));
+    if (b64Bytes(ciphertext) > CIPHERTEXT_MAX_BYTES) return err(new ValidationError('Сообщение слишком длинное'));
 
     const [low, high] = canonicalPair(fromUserId, toUserId);
     const conversationId = await this.repo.upsertConversation(low, high);
-    const message = await this.repo.insertMessage(conversationId, fromUserId, body);
+    const message = await this.repo.insertMessage(conversationId, fromUserId, ciphertext, nonce);
 
     await this.publisher.publish(toUserId, { type: 'message', conversationId, message });
     // синхронизирует другие открытые вкладки отправителя

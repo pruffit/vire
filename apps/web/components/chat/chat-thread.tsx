@@ -61,6 +61,7 @@ export function ChatThread({
       conversationId,
       senderId: viewerId,
       body,
+      nonce: '',
       createdAt: new Date(),
       pending: true,
     };

@@ -5,7 +5,11 @@ import { chatService } from '@/lib/chat';
 import { ValidationError } from '@vire/core';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
-const schema = z.object({ toUserId: z.string().uuid(), body: z.string().min(1).max(4000) });
+const schema = z.object({
+  toUserId: z.string().uuid(),
+  ciphertext: z.string().min(1).max(12000),
+  nonce: z.string().min(1).max(64),
+});
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -18,7 +22,10 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
 
-  const result = await chatService().send(session.user.id, parsed.data.toUserId, parsed.data.body);
+  const result = await chatService().send(session.user.id, parsed.data.toUserId, {
+    ciphertext: parsed.data.ciphertext,
+    nonce: parsed.data.nonce,
+  });
   if (!result.ok) {
     const status = result.error instanceof ValidationError ? 422 : 403;
     return NextResponse.json({ error: result.error.message }, { status });
