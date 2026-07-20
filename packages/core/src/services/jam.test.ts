@@ -195,6 +195,51 @@ describe('JamService.resolveCode', () => {
   });
 });
 
+describe('JamService.preview', () => {
+  it('rejects an invalid code with ValidationError', async () => {
+    const service = makeService();
+
+    const result = await service.preview('bad');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ValidationError);
+  });
+
+  it('returns NotFoundError when the code does not match any session', async () => {
+    const repo = makeRepo({ findByCode: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    const result = await service.preview('A2B3C4');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
+  });
+
+  it('returns the host display name from the participant list, without requiring identity', async () => {
+    const host = makeHostParticipant({ displayName: 'Danya' });
+    const repo = makeRepo({
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession(), participants: [host, makeParticipant()], queue: [] }),
+    });
+    const service = makeService({ repo });
+
+    const result = await service.preview('A2B3C4');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.hostDisplayName).toBe('Danya');
+    expect(repo.findParticipant).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a generic label when the session state has no host participant', async () => {
+    const repo = makeRepo({ getSessionState: vi.fn().mockResolvedValue({ session: makeSession(), participants: [], queue: [] }) });
+    const service = makeService({ repo });
+
+    const result = await service.preview('A2B3C4');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.hostDisplayName).toBe('Хост');
+  });
+});
+
 describe('JamService.join', () => {
   it('rejects an invalid code with ValidationError', async () => {
     const repo = makeRepo();

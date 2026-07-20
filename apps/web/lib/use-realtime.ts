@@ -7,12 +7,19 @@ export type RealtimeHandlers = Partial<Record<string, (event: RealtimeEvent) => 
 
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 15_000;
+const DEFAULT_URL = '/api/v1/realtime/stream';
 
 /**
- * Единый SSE-клиент на `/api/v1/realtime/stream`: диспатчит события по полю `type`
- * (чат — `message`, колокольчик — `notification`). Реконнект с экспоненциальным бэкоффом.
+ * Единый SSE-клиент: по умолчанию на `/api/v1/realtime/stream` (чат — `message`,
+ * колокольчик — `notification`), опционально на произвольный канал (джем). Диспатчит
+ * события по полю `type`. Реконнект с экспоненциальным бэкоффом.
  */
-export function useRealtime(handlers: RealtimeHandlers): void {
+export function useRealtime(handlers: RealtimeHandlers): void;
+export function useRealtime(url: string, handlers: RealtimeHandlers): void;
+export function useRealtime(urlOrHandlers: string | RealtimeHandlers, maybeHandlers?: RealtimeHandlers): void {
+  const url = typeof urlOrHandlers === 'string' ? urlOrHandlers : DEFAULT_URL;
+  const handlers = typeof urlOrHandlers === 'string' ? (maybeHandlers ?? {}) : urlOrHandlers;
+
   const handlersRef = useRef(handlers);
   useEffect(() => {
     handlersRef.current = handlers;
@@ -26,7 +33,7 @@ export function useRealtime(handlers: RealtimeHandlers): void {
 
     function connect() {
       if (stopped) return;
-      source = new EventSource('/api/v1/realtime/stream');
+      source = new EventSource(url);
 
       source.onopen = () => {
         retryMs = RECONNECT_BASE_MS;
@@ -59,5 +66,5 @@ export function useRealtime(handlers: RealtimeHandlers): void {
       source?.close();
       if (reconnectTimer) clearTimeout(reconnectTimer);
     };
-  }, []);
+  }, [url]);
 }

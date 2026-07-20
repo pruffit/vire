@@ -80,6 +80,16 @@ export class JamService {
     return ok(session);
   }
 
+  /** Публичный превью для экрана входа — до join'а у гостя ещё нет identity для getState. */
+  async preview(code: string): Promise<Result<{ session: JamSession; hostDisplayName: string }, ValidationError | NotFoundError>> {
+    const codeResult = await this.resolveCode(code);
+    if (!codeResult.ok) return codeResult;
+
+    const state = await this.repo.getSessionState(codeResult.value.id);
+    const host = state?.participants.find((p) => p.role === 'HOST');
+    return ok({ session: codeResult.value, hostDisplayName: host?.displayName ?? 'Хост' });
+  }
+
   async join(
     code: string,
     identity: JamParticipantIdentity,
