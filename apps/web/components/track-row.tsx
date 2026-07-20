@@ -36,6 +36,8 @@ export interface TrackRowProps {
   clickableRow?: boolean;
   /** Оверлей обложки остаётся видимым, пока трек играет (не только по hover). */
   keepOverlayWhilePlaying?: boolean;
+  /** 'roomy' — крупнее обложка и минимальная высота строки на мобилке (тач-таргеты в джеме). */
+  size?: 'default' | 'roomy';
   className?: string;
   style?: CSSProperties;
 }
@@ -53,6 +55,7 @@ export const TrackRow = forwardRef<HTMLDivElement, TrackRowProps>(function Track
     titleHref,
     clickableRow = false,
     keepOverlayWhilePlaying = false,
+    size = 'default',
     className = '',
     style,
   },
@@ -70,7 +73,9 @@ export const TrackRow = forwardRef<HTMLDivElement, TrackRowProps>(function Track
     ? 'opacity-100'
     : 'opacity-0 group-hover:opacity-100';
 
-  const coverClassName = 'relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted';
+  const coverClassName = size === 'roomy'
+    ? 'relative w-11 h-11 sm:w-9 sm:h-9 shrink-0 rounded-md sm:rounded-sm overflow-hidden bg-muted'
+    : 'relative w-9 h-9 shrink-0 rounded-sm overflow-hidden bg-muted';
   const coverContent = (
     <>
       {track.coverUrl ? (
@@ -105,7 +110,7 @@ export const TrackRow = forwardRef<HTMLDivElement, TrackRowProps>(function Track
       aria-label={clickableRow ? playAriaLabel : undefined}
       onClick={clickableRow ? onPlay : undefined}
       onKeyDown={clickableRow ? handleRowKeyDown : undefined}
-      className={`group flex items-center gap-3 py-2.5 -mx-3 px-3 rounded-sm hover:bg-accent/5 transition-colors ${clickableRow ? 'cursor-pointer select-none' : ''} ${className}`}
+      className={`group flex items-center gap-3 py-2.5 -mx-3 px-3 rounded-sm hover:bg-accent/5 transition-colors ${size === 'roomy' ? 'min-h-14 sm:min-h-0' : ''} ${clickableRow ? 'cursor-pointer select-none' : ''} ${className}`}
     >
       {leading}
       {clickableRow ? (

@@ -297,6 +297,23 @@ describe('JamService.join', () => {
     expect(countParticipants).not.toHaveBeenCalled();
   });
 
+  it('broadcasts jam:participants with the fresh participant list after a successful join', async () => {
+    const guest = makeParticipant({ id: 'p-guest', displayName: 'Guest' });
+    const host = makeHostParticipant();
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(null),
+      upsertParticipant: vi.fn().mockResolvedValue(guest),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession(), participants: [host, guest], queue: [] }),
+    });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, broadcaster });
+
+    const result = await service.join('A2B3C4', { guestSessionId: 'g1' }, 'Guest');
+
+    expect(result.ok).toBe(true);
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', { type: 'jam:participants', participants: [host, guest] });
+  });
+
   it('rejoining as host keeps the HOST role even though join always requests GUEST', async () => {
     let stored = makeHostParticipant();
     const repo = makeRepo({
@@ -564,6 +581,22 @@ describe('JamService.mutateQueue', () => {
     if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
   });
 
+  it('shuffles the queue using the injected random source and broadcasts jam:queue', async () => {
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(guestParticipant), getSessionState: vi.fn().mockResolvedValue(sessionState) });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, broadcaster, random: () => 0 });
+
+    const result = await service.mutateQueue('jam-1', { guestSessionId: 'guest-1' }, { kind: 'shuffle' });
+
+    expect(result.ok).toBe(true);
+    expect(repo.replaceQueue).toHaveBeenCalledWith(
+      'jam-1',
+      [expect.objectContaining({ id: 'q2' }), expect.objectContaining({ id: 'q1' })],
+      4,
+    );
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', expect.objectContaining({ type: 'jam:queue', version: 4 }));
+  });
+
   it('rejects any queue mutation once the jam has ENDED', async () => {
     const repo = makeRepo({
       findParticipant: vi.fn().mockResolvedValue(guestParticipant),
@@ -580,22 +613,42 @@ describe('JamService.mutateQueue', () => {
 });
 
 describe('JamService.setPlayback', () => {
-  it('forbids a guest (non-host caller) from controlling playback', async () => {
-    const repo = makeRepo({ findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })) });
+  it('forbids a non-participant from controlling playback', async () => {
+    const repo = makeRepo({
+      findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })),
+      findParticipant: vi.fn().mockResolvedValue(null),
+    });
     const service = makeService({ repo });
 
-    const result = await service.setPlayback('jam-1', 'guest-user-id', { kind: 'pause', positionMs: 1000 });
+    const result = await service.setPlayback('jam-1', { guestSessionId: 'stranger' }, { kind: 'pause', positionMs: 1000 });
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
   });
 
-  it('rejects host playback control once the jam has ENDED', async () => {
-    const repo = makeRepo({ findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1', status: 'ENDED' })) });
+  it('allows a guest participant (non-host) to control playback', async () => {
+    const guestParticipant = makeParticipant({ id: 'p-guest' });
+    const repo = makeRepo({
+      findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })),
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+    });
+    const state = makeState({ getPlayback: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo, state });
+
+    const result = await service.setPlayback('jam-1', { guestSessionId: 'guest-1' }, { kind: 'track', trackId: 't1' });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects playback control once the jam has ENDED, even for a participant', async () => {
+    const repo = makeRepo({
+      findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1', status: 'ENDED' })),
+      findParticipant: vi.fn().mockResolvedValue(makeHostParticipant()),
+    });
     const state = makeState();
     const service = makeService({ repo, state });
 
-    const result = await service.setPlayback('jam-1', 'host-1', { kind: 'track', trackId: 't1' });
+    const result = await service.setPlayback('jam-1', { userId: 'host-1' }, { kind: 'track', trackId: 't1' });
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
@@ -603,12 +656,15 @@ describe('JamService.setPlayback', () => {
   });
 
   it('allows the host to start playback and broadcasts jam:playback', async () => {
-    const repo = makeRepo({ findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })) });
+    const repo = makeRepo({
+      findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })),
+      findParticipant: vi.fn().mockResolvedValue(makeHostParticipant()),
+    });
     const state = makeState({ getPlayback: vi.fn().mockResolvedValue(null) });
     const broadcaster = makeBroadcaster();
     const service = makeService({ repo, state, broadcaster });
 
-    const result = await service.setPlayback('jam-1', 'host-1', { kind: 'play', trackId: 't1', positionMs: 5000 });
+    const result = await service.setPlayback('jam-1', { userId: 'host-1' }, { kind: 'play', trackId: 't1', positionMs: 5000 });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -619,11 +675,14 @@ describe('JamService.setPlayback', () => {
   });
 
   it('rejects pause when nothing is currently playing', async () => {
-    const repo = makeRepo({ findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })) });
+    const repo = makeRepo({
+      findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })),
+      findParticipant: vi.fn().mockResolvedValue(makeHostParticipant()),
+    });
     const state = makeState({ getPlayback: vi.fn().mockResolvedValue(null) });
     const service = makeService({ repo, state });
 
-    const result = await service.setPlayback('jam-1', 'host-1', { kind: 'pause', positionMs: 1000 });
+    const result = await service.setPlayback('jam-1', { userId: 'host-1' }, { kind: 'pause', positionMs: 1000 });
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
@@ -631,11 +690,14 @@ describe('JamService.setPlayback', () => {
 
   it('seek while paused updates pausedPositionMs and keeps paused:true', async () => {
     const current: JamPlaybackState = { trackId: 't1', startedAtMs: 0, paused: true, pausedPositionMs: 2000, version: 5 };
-    const repo = makeRepo({ findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })) });
+    const repo = makeRepo({
+      findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })),
+      findParticipant: vi.fn().mockResolvedValue(makeHostParticipant()),
+    });
     const state = makeState({ getPlayback: vi.fn().mockResolvedValue(current) });
     const service = makeService({ repo, state });
 
-    const result = await service.setPlayback('jam-1', 'host-1', { kind: 'seek', positionMs: 9000 });
+    const result = await service.setPlayback('jam-1', { userId: 'host-1' }, { kind: 'seek', positionMs: 9000 });
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value).toEqual({ trackId: 't1', startedAtMs: 0, paused: true, pausedPositionMs: 9000, version: 6 });
@@ -643,11 +705,14 @@ describe('JamService.setPlayback', () => {
 
   it('seek while playing recomputes startedAtMs from the clock', async () => {
     const current: JamPlaybackState = { trackId: 't1', startedAtMs: NOW - 3000, paused: false, pausedPositionMs: 0, version: 5 };
-    const repo = makeRepo({ findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })) });
+    const repo = makeRepo({
+      findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })),
+      findParticipant: vi.fn().mockResolvedValue(makeHostParticipant()),
+    });
     const state = makeState({ getPlayback: vi.fn().mockResolvedValue(current) });
     const service = makeService({ repo, state });
 
-    const result = await service.setPlayback('jam-1', 'host-1', { kind: 'seek', positionMs: 9000 });
+    const result = await service.setPlayback('jam-1', { userId: 'host-1' }, { kind: 'seek', positionMs: 9000 });
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value.startedAtMs).toBe(NOW - 9000);
@@ -683,17 +748,20 @@ describe('JamService.endJam', () => {
 describe('JamService.kick', () => {
   const hostParticipant = makeHostParticipant({ id: 'p-host' });
 
-  it('removes a participant when called by the host', async () => {
+  it('removes a participant when called by the host and broadcasts jam:participants', async () => {
     const repo = makeRepo({
       findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })),
       findParticipant: vi.fn().mockResolvedValue(hostParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession(), participants: [hostParticipant], queue: [] }),
     });
-    const service = makeService({ repo });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, broadcaster });
 
     const result = await service.kick('jam-1', 'host-1', 'p-guest');
 
     expect(result.ok).toBe(true);
     expect(repo.removeParticipant).toHaveBeenCalledWith('jam-1', 'p-guest');
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', { type: 'jam:participants', participants: [hostParticipant] });
   });
 
   it('forbids a non-host from kicking', async () => {

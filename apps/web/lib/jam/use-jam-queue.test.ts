@@ -97,6 +97,28 @@ describe('useJamQueue', () => {
     expect(result.current.queue.map((t) => t.id)).toEqual(['a', 'b']);
   });
 
+  it('shuffleQueue шлёт kind:shuffle и оставляет тот же набор id локально', async () => {
+    const serverQueue = [track('a'), track('b'), track('c')];
+    const { result } = renderHook(() => useJamQueue({ code: 'A2B3C4', sessionId: null, serverQueue, setDragging: vi.fn() }));
+
+    await act(() => result.current.shuffleQueue());
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/jam/A2B3C4/queue', expect.objectContaining({
+      body: JSON.stringify({ kind: 'shuffle' }),
+    }));
+    expect(result.current.queue.map((t) => t.id).sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('shuffleQueue откатывает локальный порядок при сетевой ошибке', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false } as Response));
+    const serverQueue = [track('a'), track('b')];
+    const { result } = renderHook(() => useJamQueue({ code: 'A2B3C4', sessionId: null, serverQueue, setDragging: vi.fn() }));
+
+    await act(() => result.current.shuffleQueue());
+
+    expect(result.current.queue.map((t) => t.id)).toEqual(['a', 'b']);
+  });
+
   it('сбрасывает оверлей, когда приходит свежая серверная очередь', () => {
     const { result, rerender } = renderHook(
       ({ serverQueue }: { serverQueue: JamQueueItem[] }) => useJamQueue({ code: 'A2B3C4', sessionId: null, serverQueue, setDragging: vi.fn() }),

@@ -10,9 +10,10 @@ const ADD_PANEL_LIMIT = 8;
 interface Props {
   onAdd: (track: SearchTrack) => void;
   suggestions?: SearchTrack[];
+  autoFocus?: boolean;
 }
 
-export function JamAddPanel({ onAdd, suggestions = [] }: Props) {
+export function JamAddPanel({ onAdd, suggestions = [], autoFocus = true }: Props) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<SearchTrack[] | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,7 +49,7 @@ export function JamAddPanel({ onAdd, suggestions = [] }: Props) {
       <div className="flex items-center gap-2 px-2 pt-1">
         <Icon name="search" size={15} className="text-muted-foreground shrink-0" />
         <input
-          autoFocus
+          autoFocus={autoFocus}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Найти трек…"

@@ -120,3 +120,28 @@ describe('applyQueueMutation — move', () => {
     expect(items).toEqual(snapshot);
   });
 });
+
+describe('applyQueueMutation — shuffle', () => {
+  it('is deterministic given a fake random source and keeps the same set of items', () => {
+    const items = [item('a'), item('b'), item('c'), item('d')];
+
+    // Fisher-Yates, i от последнего к 1, j = floor(random() * (i+1)); random()=0 всегда даёт j=0.
+    const result = applyQueueMutation(items, { kind: 'shuffle', random: () => 0 });
+
+    expect(result.map((it) => it.id).sort()).toEqual(['a', 'b', 'c', 'd']);
+    expect(result.map((it) => it.id)).toEqual(['b', 'c', 'd', 'a']);
+  });
+
+  it('is a no-op on an empty or single-item queue', () => {
+    expect(applyQueueMutation([], { kind: 'shuffle', random: () => 0 })).toEqual([]);
+    const single = [item('a')];
+    expect(applyQueueMutation(single, { kind: 'shuffle', random: () => 0 })).toEqual(single);
+  });
+
+  it('does not mutate the input array', () => {
+    const items = [item('a'), item('b'), item('c')];
+    const snapshot = [...items];
+    applyQueueMutation(items, { kind: 'shuffle', random: () => 0.5 });
+    expect(items).toEqual(snapshot);
+  });
+});

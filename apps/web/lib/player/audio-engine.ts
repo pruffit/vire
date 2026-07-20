@@ -4,6 +4,12 @@ import { getSessionId } from '@/lib/session-id';
 import { dedupeQueue, shuffleOn, shuffleOff, nextQueueIndex, capLiveQueue, insertIntoQueue } from '@/lib/player/queue';
 import { fetchManifest } from '@/lib/player/manifest-cache';
 import { needsWaveFetch, fetchWaveTracks } from '@/lib/player/wave-buffer';
+import { jamToggle } from '@/lib/jam/jam-controls';
+
+/** Джем-takeover активен — этот движок не источник звука, транспорт уходит в jamToggle(). */
+function jamOverrideActive(): boolean {
+  return usePlayerStore.getState().jamOverride !== null;
+}
 
 let audio: HTMLAudioElement | null = null;
 let hls: HlsType | null = null;
@@ -337,6 +343,7 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
 }
 
 function playAt(queue: PlayerTrack[], index: number): void {
+  if (jamOverrideActive()) return;
   const track = queue[index];
   if (!track) return;
 
@@ -370,6 +377,7 @@ export function getAudioTime(): number {
 
 export const controls = {
   playQueue(tracks: PlayerTrack[], opts: { startIndex?: number; context: PlayContext; shuffle?: boolean }): void {
+    if (jamOverrideActive()) return;
     initAudioEngine();
     if (tracks.length === 0) return;
     // Индекс резолвим по id ДО дедупа — дедуп сдвигает позиции при дубликатах раньше startIndex.
@@ -446,6 +454,7 @@ export const controls = {
   },
 
   togglePlay(): void {
+    if (jamOverrideActive()) { jamToggle(); return; }
     if (!audio) return;
     if (audio.paused) audio.play().catch(() => {});
     else audio.pause();
@@ -477,6 +486,7 @@ export const controls = {
   },
 
   async next(): Promise<void> {
+    if (jamOverrideActive()) return;
     const { queue, queueIndex, waveMode, track, repeat } = usePlayerStore.getState();
 
     // Волна главнее repeat='all' — она сама дозапрашивает буфер вместо зацикливания.
@@ -518,6 +528,7 @@ export const controls = {
   },
 
   prev(): void {
+    if (jamOverrideActive()) return;
     if (audio && audio.currentTime > 3) {
       controls.seek(0);
       audio.play().catch(() => {});
@@ -531,6 +542,7 @@ export const controls = {
 
   /** Продолжить волну для уже играющей очереди без перезапуска. */
   setWaveMode(on: boolean): void {
+    if (jamOverrideActive()) return;
     usePlayerStore.getState()._setState(on ? { waveMode: true } : { waveMode: false, waveSeed: null });
   },
 
@@ -541,6 +553,7 @@ export const controls = {
   },
 
   toggleShuffle(): void {
+    if (jamOverrideActive()) return;
     const { shuffle, queue, queueIndex, track, originalQueue } = usePlayerStore.getState();
     if (shuffle) {
       const base = originalQueue ?? queue;
@@ -564,6 +577,7 @@ export const controls = {
 
   /** Запускает волну как новую очередь; sid в sessionStorage пишется только при успешном старте. */
   async startWave(seed: { mood?: string; genre?: string } | null): Promise<boolean> {
+    if (jamOverrideActive()) return false;
     const candidateSid = crypto.randomUUID();
     const tracks = await fetchWaveTracks({
       sessionId: candidateSid,
@@ -586,6 +600,7 @@ export const controls = {
 
   /** Первый play после гидрации persist: подгружает манифест текущего трека, восстанавливает позицию и играет. */
   resumeRestored(): void {
+    if (jamOverrideActive()) return;
     const { track, currentTime } = usePlayerStore.getState();
     if (!track || track.id === loadedTrackId) return;
 

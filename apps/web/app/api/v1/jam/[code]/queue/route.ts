@@ -14,6 +14,7 @@ const schema = z.discriminatedUnion('kind', [
     toPosition: z.number().int().min(0),
     sessionId: z.string().max(SESSION_ID_MAX_LEN).optional(),
   }),
+  z.object({ kind: z.literal('shuffle'), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
 ]);
 
 type Ctx = { params: Promise<{ code: string }> };

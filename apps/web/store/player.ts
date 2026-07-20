@@ -23,6 +23,13 @@ export interface PlayContext {
   sourceId?: string;
 }
 
+/** Джем-takeover глобального плеера: пока активен, движок audio-engine молчит — играет jam-audio на странице джема. */
+export interface JamOverride {
+  code: string;
+  track: { title: string; artistName: string; coverUrl: string | null };
+  isPlaying: boolean;
+}
+
 interface State {
   track: PlayerTrack | null;
   queue: PlayerTrack[];
@@ -50,10 +57,13 @@ interface State {
   originalQueue: PlayerTrack[] | null;
   /** true сразу после гидрации persist, если в хранилище был трек (плеер стоит на паузе, манифест ещё не грузился) */
   restored: boolean;
+  /** Не персистится: сессионное состояние джема, восстанавливается как null после перезагрузки. */
+  jamOverride: JamOverride | null;
 }
 
 interface Store extends State {
   _setState(patch: Partial<State>): void;
+  setJamOverride(override: JamOverride | null): void;
 }
 
 const PERSISTED_QUEUE_LIMIT = 100;
@@ -125,7 +135,9 @@ export const usePlayerStore = create<Store>()(
       context: null,
       originalQueue: null,
       restored: false,
+      jamOverride: null,
       _setState: (patch) => set(patch),
+      setJamOverride: (override) => set({ jamOverride: override }),
     }),
     {
       name: 'vire-player',

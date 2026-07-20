@@ -9,6 +9,7 @@ import { blockService } from '@/lib/blocks';
 import { Icon } from '@/components/icon';
 import { ChatAvatar } from '@/components/chat/chat-avatar';
 import { ChatThread } from '@/components/chat/chat-thread';
+import { TypingIndicator } from '@/components/chat/typing-indicator';
 
 export const metadata: Metadata = { title: 'Диалог', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -23,7 +24,7 @@ export default async function ConversationPage({ params }: Props) {
 
   const meta = await chatService().getConversationMeta(viewerId, conversationId);
   if (!meta.ok) notFound();
-  const { otherUserId } = meta.value;
+  const { otherUserId, otherLastReadAt } = meta.value;
 
   const [other, history, status, blocked, otherIkPub] = await Promise.all([
     getUserPublicProfile(otherUserId),
@@ -51,7 +52,10 @@ export default async function ConversationPage({ params }: Props) {
         </Link>
         <Link href={`/u/${otherUserId}`} className="group flex min-w-0 items-center gap-3">
           <ChatAvatar name={other?.name ?? null} image={other?.image ?? null} size={36} />
-          <span className="truncate text-sm font-semibold group-hover:text-foreground">{otherName}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold group-hover:text-foreground">{otherName}</span>
+            <TypingIndicator conversationId={conversationId} otherUserId={otherUserId} />
+          </span>
         </Link>
       </header>
 
@@ -61,6 +65,7 @@ export default async function ConversationPage({ params }: Props) {
         otherUserId={otherUserId}
         otherName={otherName}
         otherIkPub={otherIkPub}
+        otherLastReadAt={otherLastReadAt}
         initialMessages={initialMessages}
         canSend={canSend}
       />

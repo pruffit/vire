@@ -13,7 +13,6 @@ vi.mock('@/lib/e2ee', () => ({
   deriveCK: vi.fn(() => new Uint8Array([1])),
   encryptMessage: vi.fn(() => ({ ciphertext: 'ct==', nonce: 'n==' })),
   decryptMessage: vi.fn(() => 'привет'),
-  safetyNumber: vi.fn(() => null),
   fromB64: vi.fn(() => new Uint8Array([0])),
 }));
 

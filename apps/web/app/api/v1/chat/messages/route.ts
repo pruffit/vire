@@ -22,10 +22,12 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
 
-  const result = await chatService().send(session.user.id, parsed.data.toUserId, {
-    ciphertext: parsed.data.ciphertext,
-    nonce: parsed.data.nonce,
-  });
+  const result = await chatService().send(
+    session.user.id,
+    parsed.data.toUserId,
+    { ciphertext: parsed.data.ciphertext, nonce: parsed.data.nonce },
+    session.user.name,
+  );
   if (!result.ok) {
     const status = result.error instanceof ValidationError ? 422 : 403;
     return NextResponse.json({ error: result.error.message }, { status });

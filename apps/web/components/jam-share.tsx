@@ -55,10 +55,10 @@ export function JamShare({ code, title }: Props) {
       aria-label="Поделиться джемом"
       whileTap={{ scale: 0.9 }}
       transition={spring.snappy}
-      className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-4 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-border px-3 sm:px-4 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       {copied ? <CheckIcon size={14} /> : <ShareIcon size={14} />}
-      {copied ? 'Скопировано' : 'Поделиться'}
+      <span className="hidden sm:inline">{copied ? 'Скопировано' : 'Поделиться'}</span>
     </motion.button>
   );
 }

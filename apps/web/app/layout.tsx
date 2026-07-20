@@ -9,6 +9,7 @@ import { DeferredWidgets } from '@/components/deferred-widgets';
 import { Toaster } from '@/components/toast';
 import { E2eeBootstrap } from '@/components/chat/e2ee-bootstrap';
 import { LinkApprove } from '@/components/chat/link-approve';
+import { ChatEventsBridge } from '@/components/chat/chat-events-bridge';
 import { Nav } from '@/components/nav';
 import { ScrollState } from '@/components/scroll-state';
 import { ScrollRestoration } from '@/components/scroll-restoration';
@@ -53,6 +54,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
   robots: { index: true, follow: true },
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: SITE_NAME },
   alternates: { canonical: '/' },
   // явные icons, иначе Яндекс/Google не всегда подхватывают favicon в выдаче
   icons: {
@@ -115,6 +117,7 @@ export default async function RootLayout({
             <>
               <E2eeBootstrap userId={userId} />
               <LinkApprove viewerId={userId} />
+              <ChatEventsBridge viewerId={userId} />
             </>
           )}
           <YandexMetrika />

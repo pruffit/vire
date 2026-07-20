@@ -1,5 +1,11 @@
 export type ChatMessage = { id: string; conversationId: string; senderId: string; body: string; nonce: string; createdAt: Date };
-export type ConversationParticipants = { id: string; userLowId: string; userHighId: string };
+export type ConversationParticipants = {
+  id: string;
+  userLowId: string;
+  userHighId: string;
+  lowLastReadAt: Date | null;
+  highLastReadAt: Date | null;
+};
 export type ConversationSummary = {
   id: string;
   otherUserId: string;

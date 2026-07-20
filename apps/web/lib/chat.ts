@@ -10,5 +10,6 @@ export function chatService() {
     new DrizzleBlockRepository(),
     realtimePublisher,
     externalNotifyQueue,
+    Date.now,
   );
 }

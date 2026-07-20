@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { ChatMessage } from '@vire/core';
 import { useRealtime } from '@/lib/use-realtime';
 import { useIdentity } from '@/lib/e2ee-client';
-import { deriveCK, encryptMessage, decryptMessage, safetyNumber, fromB64 } from '@/lib/e2ee';
+import { deriveCK, encryptMessage, decryptMessage, fromB64 } from '@/lib/e2ee';
 import { toast } from '@/lib/toast';
+import { refreshUnread } from '@/lib/chat-unread';
 import { Icon } from '@/components/icon';
 import { EmptyState } from '@/components/ui-kit';
 import { MessageBubble } from './message-bubble';
@@ -21,7 +22,9 @@ function normalizeMessage(raw: ChatMessage): ChatMessage {
 }
 
 function markRead(conversationId: string) {
-  fetch(`/api/v1/chat/${conversationId}/read`, { method: 'POST' }).catch(() => {});
+  fetch(`/api/v1/chat/${conversationId}/read`, { method: 'POST' })
+    .then((res) => { if (res.ok) refreshUnread(); })
+    .catch(() => {});
 }
 
 export function ChatThread({
@@ -30,6 +33,7 @@ export function ChatThread({
   otherUserId,
   otherName,
   otherIkPub,
+  otherLastReadAt,
   initialMessages,
   canSend,
 }: {
@@ -38,11 +42,13 @@ export function ChatThread({
   otherUserId: string;
   otherName: string;
   otherIkPub: string | null;
+  otherLastReadAt?: Date | string | null;
   initialMessages: ChatMessage[];
   canSend: boolean;
 }) {
   const [messages, setMessages] = useState<PendingMessage[]>(initialMessages);
   const [ikPub, setIkPub] = useState(otherIkPub);
+  const [readAt, setReadAt] = useState(otherLastReadAt ? new Date(otherLastReadAt) : null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const identity = useIdentity(viewerId);
 
@@ -64,11 +70,6 @@ export function ChatThread({
     return deriveCK(identity.priv, fromB64(ikPub), identity.pub);
   }, [identity.priv, identity.pub, ikPub]);
 
-  const safety = useMemo(() => {
-    if (!identity.pub || !ikPub) return null;
-    return safetyNumber(identity.pub, fromB64(ikPub));
-  }, [identity.pub, ikPub]);
-
   // Расшифровываем на изменение сообщений/ключа, а не на каждый рендер.
   const decrypted = useMemo(() => {
     const map = new Map<string, string>();
@@ -85,6 +86,13 @@ export function ChatThread({
     markRead(conversationId);
   }, [conversationId]);
 
+  const lastOwnMessageId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i]!.senderId === viewerId) return messages[i]!.id;
+    }
+    return null;
+  }, [messages, viewerId]);
+
   useRealtime({
     message: (event) => {
       const eventConversationId = event.conversationId as string | undefined;
@@ -93,6 +101,11 @@ export function ChatThread({
       setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
       if (incoming.senderId !== viewerId) markRead(conversationId);
       requestAnimationFrame(() => scrollToBottom('smooth'));
+    },
+    'chat:read': (event) => {
+      if (event.conversationId !== conversationId) return;
+      const raw = event.readAt as string | undefined;
+      if (raw) setReadAt(new Date(raw));
     },
   });
 
@@ -162,13 +175,6 @@ export function ChatThread({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4">
-        {safety && (
-          <details className="mb-2 rounded-lg border border-border/40 bg-card/40 px-3 py-2 text-xs text-muted-foreground">
-            <summary className="cursor-pointer select-none">🔒 Сквозное шифрование — код безопасности</summary>
-            <p className="mt-2 break-words font-mono text-[11px] leading-relaxed">{safety}</p>
-            <p className="mt-1">Совпадает у обоих — переписку никто не читает.</p>
-          </details>
-        )}
         {blocked ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             <Icon name={blocked.icon} size={28} className="text-foreground/25" />
@@ -183,19 +189,25 @@ export function ChatThread({
         ) : (
           <div className="space-y-2">
             {messages.map((m) => (
-              <MessageBubble
-                key={m.id}
-                text={ck ? decrypted.get(m.id) ?? '🔒' : '🔒'}
-                createdAt={m.createdAt}
-                own={m.senderId === viewerId}
-                pending={m.pending}
-              />
+              <Fragment key={m.id}>
+                <MessageBubble
+                  text={ck ? decrypted.get(m.id) ?? '🔒' : '🔒'}
+                  createdAt={m.createdAt}
+                  own={m.senderId === viewerId}
+                  pending={m.pending}
+                />
+                {m.id === lastOwnMessageId && !m.pending && (
+                  <p className="-mt-1 pr-1 text-right font-mono text-[11px] text-muted-foreground">
+                    {readAt && new Date(m.createdAt) <= readAt ? 'Прочитано' : 'Отправлено'}
+                  </p>
+                )}
+              </Fragment>
             ))}
             <div ref={bottomRef} />
           </div>
         )}
       </div>
-      {!blocked && <MessageComposer onSend={handleSend} disabled={!canSend || !ck} />}
+      {!blocked && <MessageComposer conversationId={conversationId} onSend={handleSend} disabled={!canSend || !ck} />}
     </div>
   );
 }

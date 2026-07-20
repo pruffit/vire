@@ -3,7 +3,8 @@ import type { JamQueueItemWrite } from '../repositories/jam';
 export type QueueMutation =
   | { kind: 'add'; trackId: string; participantId: string; addedAt: Date }
   | { kind: 'remove'; itemId: string }
-  | { kind: 'move'; itemId: string; toPosition: number };
+  | { kind: 'move'; itemId: string; toPosition: number }
+  | { kind: 'shuffle'; random: () => number };
 
 export function applyQueueMutation(
   items: JamQueueItemWrite[],
@@ -32,6 +33,16 @@ export function applyQueueMutation(
       const next = [...items];
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved!);
+      return next;
+    }
+
+    case 'shuffle': {
+      // Fisher-Yates, random за интерфейсом — детерминируемо в тестах.
+      const next = [...items];
+      for (let i = next.length - 1; i > 0; i--) {
+        const j = Math.floor(mutation.random() * (i + 1));
+        [next[i], next[j]] = [next[j]!, next[i]!];
+      }
       return next;
     }
   }

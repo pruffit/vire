@@ -41,12 +41,12 @@ describe('ConversationList', () => {
   it('активный диалог (текущий путь) подсвечен', () => {
     usePathnameMock.mockReturnValue('/messages/conv-1');
     render(<ConversationList conversations={CONVERSATIONS} viewerId="u1" />);
-    expect(screen.getByRole('link', { name: /Аня/ }).className).toContain('bg-accent/10');
+    expect(screen.getByRole('link', { name: /Аня/ }).className).toContain('bg-foreground/[0.08]');
   });
 
   it('на индексе диалог не подсвечен', () => {
     usePathnameMock.mockReturnValue('/messages');
     render(<ConversationList conversations={CONVERSATIONS} viewerId="u1" />);
-    expect(screen.getByRole('link', { name: /Аня/ }).className).not.toContain('bg-accent/10');
+    expect(screen.getByRole('link', { name: /Аня/ }).className).not.toContain('bg-foreground/[0.08]');
   });
 });

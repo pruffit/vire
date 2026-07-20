@@ -4,13 +4,26 @@ import { conversations, messages, users } from '../schema';
 import { getIdentityKeys } from './identity-keys';
 import type { ChatMessage, ConversationParticipants, ConversationSummary } from '@vire/core';
 
-function toParticipants(row: { id: string; userLowId: string; userHighId: string }): ConversationParticipants {
-  return { id: row.id, userLowId: row.userLowId, userHighId: row.userHighId };
+type ParticipantsRow = {
+  id: string; userLowId: string; userHighId: string;
+  lowLastReadAt: Date | null; highLastReadAt: Date | null;
+};
+
+function toParticipants(row: ParticipantsRow): ConversationParticipants {
+  return {
+    id: row.id, userLowId: row.userLowId, userHighId: row.userHighId,
+    lowLastReadAt: row.lowLastReadAt, highLastReadAt: row.highLastReadAt,
+  };
 }
+
+const participantsSelect = {
+  id: conversations.id, userLowId: conversations.userLowId, userHighId: conversations.userHighId,
+  lowLastReadAt: conversations.lowLastReadAt, highLastReadAt: conversations.highLastReadAt,
+};
 
 export async function findConversation(low: string, high: string): Promise<ConversationParticipants | null> {
   const [row] = await db
-    .select({ id: conversations.id, userLowId: conversations.userLowId, userHighId: conversations.userHighId })
+    .select(participantsSelect)
     .from(conversations)
     .where(and(eq(conversations.userLowId, low), eq(conversations.userHighId, high)))
     .limit(1);
@@ -30,7 +43,7 @@ export async function upsertConversation(low: string, high: string): Promise<str
 
 export async function getConversation(conversationId: string): Promise<ConversationParticipants | null> {
   const [row] = await db
-    .select({ id: conversations.id, userLowId: conversations.userLowId, userHighId: conversations.userHighId })
+    .select(participantsSelect)
     .from(conversations)
     .where(eq(conversations.id, conversationId))
     .limit(1);

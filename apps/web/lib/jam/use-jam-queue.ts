@@ -19,6 +19,17 @@ export interface UseJamQueueResult {
   startDrag: () => void;
   moveTrack: (activeId: string, overId: string) => Promise<void>;
   cancelDrag: () => void;
+  shuffleQueue: () => Promise<void>;
+}
+
+/** Локальное превью перемешивания — реальный порядок задаёт сервер эхом jam:queue. */
+function localShuffle<T>(items: T[]): T[] {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j]!, next[i]!];
+  }
+  return next;
 }
 
 async function postQueue(code: string, sessionId: string | null, intent: Record<string, unknown>): Promise<Response | null> {
@@ -88,5 +99,16 @@ export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args)
     }
   }, [overlay, serverQueue, code, sessionId, setDragging]);
 
-  return { queue, addTrack, removeTrack, startDrag, moveTrack, cancelDrag };
+  const shuffleQueue = useCallback(async () => {
+    const base = overlay ?? serverQueue;
+    if (base.length < 2) return;
+    setOverlay(localShuffle(base));
+    const res = await postQueue(code, sessionId, { kind: 'shuffle' });
+    if (!res?.ok) {
+      setOverlay(base);
+      toast.error('Не удалось перемешать очередь');
+    }
+  }, [overlay, serverQueue, code, sessionId]);
+
+  return { queue, addTrack, removeTrack, startDrag, moveTrack, cancelDrag, shuffleQueue };
 }

@@ -23,6 +23,8 @@ interface Props {
   onRemove?: (trackId: string) => void;
   removeLabel?: string;
   subtitle?: ReactNode;
+  /** 'roomy' — крупнее строка/обложка на мобилке, drag-хендл всегда виден (без hover). */
+  size?: 'default' | 'roomy';
 }
 
 export function SortableTrackRow({
@@ -36,6 +38,7 @@ export function SortableTrackRow({
   onRemove,
   removeLabel = 'Удалить',
   subtitle,
+  size = 'default',
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: track.id, disabled: !canDrag });
@@ -49,6 +52,7 @@ export function SortableTrackRow({
       isActive={isActive}
       isPlaying={isPlaying}
       onPlay={onPlay}
+      size={size}
       keepOverlayWhilePlaying
       subtitle={subtitle}
       coverExtra={isActive && isPlaying && (
@@ -69,7 +73,11 @@ export function SortableTrackRow({
             <button
               {...attributes} {...listeners}
               aria-label="Перетащить"
-              className="touch-none cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-40 hover:!opacity-80 transition-opacity shrink-0 text-muted-foreground"
+              className={`grid place-items-center touch-none cursor-grab active:cursor-grabbing transition-opacity shrink-0 text-muted-foreground ${
+                size === 'roomy'
+                  ? 'w-11 h-11 -m-1.5 opacity-70 sm:w-auto sm:h-auto sm:m-0 sm:opacity-0 sm:group-hover:opacity-40 sm:hover:!opacity-80'
+                  : 'opacity-0 group-hover:opacity-40 hover:!opacity-80'
+              }`}
             >
               <GripIcon />
             </button>
@@ -88,7 +96,11 @@ export function SortableTrackRow({
             <button
               onClick={() => onRemove?.(track.id)}
               aria-label={removeLabel}
-              className="opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive shrink-0"
+              className={`transition-opacity rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive shrink-0 ${
+                size === 'roomy'
+                  ? 'w-11 h-11 -m-1.5 opacity-70 sm:m-0 sm:opacity-0 sm:w-7 sm:h-7 sm:group-hover:opacity-100'
+                  : 'opacity-0 group-hover:opacity-100 w-7 h-7'
+              }`}
             >
               <Icon name="x" size={12} />
             </button>

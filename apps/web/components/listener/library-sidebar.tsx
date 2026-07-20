@@ -1,3 +1,5 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -5,6 +7,7 @@ import { Icon } from '@/components/icon';
 import { PlaylistCover } from '@/components/playlist-cover';
 import { cn } from '@/lib/utils';
 import { pluralTracks } from '@/lib/format';
+import { useChatUnread } from '@/lib/chat-unread';
 import { CreatePlaylistButton } from './create-playlist-button';
 
 type SidebarPlaylist = { id: string; name: string; coverUrl: string | null };
@@ -27,18 +30,27 @@ export function LibrarySidebar({
   isGuest: boolean;
   collapsed?: boolean;
 }) {
+  const liveMessagesUnread = useChatUnread(messagesUnread);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {!collapsed && (
-        <div className="flex items-center justify-between px-3 pb-2 pt-3">
-          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/35">
-            Медиатека
-          </span>
+      {(!collapsed || !isGuest) && (
+        <div
+          className={cn(
+            'flex items-center pb-2 pt-3',
+            collapsed ? 'justify-center px-2' : 'justify-between px-3',
+          )}
+        >
+          {!collapsed && (
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/35">
+              Медиатека
+            </span>
+          )}
           {!isGuest && <CreatePlaylistButton variant="icon" />}
         </div>
       )}
 
-      <div className={cn(collapsed ? 'px-2 pt-2' : 'px-1.5 pt-1', 'shrink-0')}>
+      <div className={cn(collapsed ? 'flex justify-center px-2 pt-2' : 'px-1.5 pt-1', 'shrink-0')}>
         <LibraryRow
           collapsed={collapsed}
           href="/jam"
@@ -109,12 +121,12 @@ export function LibrarySidebar({
             collapsed={collapsed}
             href="/messages"
             title="Сообщения"
-            subtitle={messagesUnread > 0 ? `${messagesUnread} новых` : 'Личные сообщения'}
-            badgeCount={messagesUnread}
+            subtitle={liveMessagesUnread > 0 ? `${liveMessagesUnread} новых` : 'Личные сообщения'}
+            badgeCount={liveMessagesUnread}
             leading={
               <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
                 <Icon name="message-square" size={18} className="text-foreground" />
-                {collapsed && messagesUnread > 0 && (
+                {collapsed && liveMessagesUnread > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
                 )}
               </span>
@@ -191,7 +203,7 @@ function LibraryRow({
         href={href}
         title={subtitle ? `${title} · ${subtitle}` : title}
         aria-label={subtitle ? `${title}, ${subtitle}` : title}
-        className="rounded-md p-1 transition-colors hover:bg-foreground/5"
+        className="inline-grid shrink-0 place-items-center rounded-md p-1 transition-colors hover:bg-foreground/5"
       >
         {leading}
       </Link>

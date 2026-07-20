@@ -21,7 +21,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe('POST /api/v1/jam/[code]/queue', () => {
   it('400 on an unknown mutation kind', async () => {
-    const res = await POST(req({ kind: 'shuffle' }), ctx('A2B3C4'));
+    const res = await POST(req({ kind: 'nonsense' }), ctx('A2B3C4'));
     expect(res.status).toBe(400);
     expect(mockedResolve).not.toHaveBeenCalled();
   });
@@ -90,5 +90,16 @@ describe('POST /api/v1/jam/[code]/queue', () => {
 
     expect(res.status).toBe(200);
     expect(mutateQueue).toHaveBeenCalledWith('jam-1', { userId: 'u1' }, { kind: 'move', itemId: ITEM_ID, toPosition: 0 });
+  });
+
+  it('shuffles the queue — available to any participant, not just the host', async () => {
+    mockedResolve.mockResolvedValue({ guestSessionId: 'g1' });
+    resolveCode.mockResolvedValue({ ok: true, value: { id: 'jam-1' } });
+    mutateQueue.mockResolvedValue({ ok: true, value: { queue: [], version: 6 } });
+
+    const res = await POST(req({ kind: 'shuffle', sessionId: 'g1.sig' }), ctx('A2B3C4'));
+
+    expect(res.status).toBe(200);
+    expect(mutateQueue).toHaveBeenCalledWith('jam-1', { guestSessionId: 'g1' }, { kind: 'shuffle' });
   });
 });

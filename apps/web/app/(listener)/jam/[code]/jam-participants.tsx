@@ -8,8 +8,43 @@ function initial(name: string): string {
   return (name.trim()[0] ?? '?').toUpperCase();
 }
 
-export function JamParticipants({ participants }: { participants: JamParticipant[] }) {
+function ParticipantRow({ participant }: { participant: JamParticipant }) {
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-xs font-medium text-muted-foreground">
+        {initial(participant.displayName)}
+      </span>
+      <span className="flex-1 min-w-0 truncate text-sm text-foreground/85">{participant.displayName}</span>
+      {participant.role === 'HOST' && (
+        <span className="shrink-0 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Хост</span>
+      )}
+    </div>
+  );
+}
+
+interface Props {
+  participants: JamParticipant[];
+  /** 'inline' — постоянный блок в правой панели (десктоп), без попап-триггера. */
+  variant?: 'popover' | 'inline';
+}
+
+export function JamParticipants({ participants, variant = 'popover' }: Props) {
   const [open, setOpen] = useState(false);
+
+  if (variant === 'inline') {
+    return (
+      <div className="rounded-xl border border-border bg-card/50 p-2">
+        <p className="flex items-center gap-1.5 px-2 pt-1 pb-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+          <Icon name="users" size={12} /> Участники <span className="tabular-nums">· {participants.length}</span>
+        </p>
+        <div className="max-h-64 overflow-y-auto">
+          {participants.map((p) => (
+            <ParticipantRow key={p.id} participant={p} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Popover
@@ -33,15 +68,7 @@ export function JamParticipants({ participants }: { participants: JamParticipant
     >
       <div className="max-h-72 w-56 overflow-y-auto py-1">
         {participants.map((p) => (
-          <div key={p.id} className="flex items-center gap-2.5 px-3 py-2">
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-xs font-medium text-muted-foreground">
-              {initial(p.displayName)}
-            </span>
-            <span className="flex-1 min-w-0 truncate text-sm text-foreground/85">{p.displayName}</span>
-            {p.role === 'HOST' && (
-              <span className="shrink-0 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Хост</span>
-            )}
-          </div>
+          <ParticipantRow key={p.id} participant={p} />
         ))}
       </div>
     </Popover>

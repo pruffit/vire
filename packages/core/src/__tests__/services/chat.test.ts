@@ -7,6 +7,10 @@ import type { IBlockRepository } from '../../repositories/block';
 import type { RealtimePublisher } from '../../ports/realtime';
 import type { IExternalNotifyQueue } from '../../ports/external-notify';
 
+function makeConv(o?: Partial<ConversationParticipants>): ConversationParticipants {
+  return { id: 'conv-1', userLowId: 'u1', userHighId: 'u2', lowLastReadAt: null, highLastReadAt: null, ...o };
+}
+
 function makeChatRepo(o?: Partial<IChatRepository>): IChatRepository {
   return {
     findConversation: vi.fn().mockResolvedValue(null),
@@ -47,13 +51,16 @@ function makeService(o?: {
   friendship?: Partial<IFriendshipRepository>;
   block?: Partial<IBlockRepository>;
   externalNotify?: IExternalNotifyQueue;
+  publisher?: RealtimePublisher;
+  clock?: () => number;
 }) {
   return new ChatService(
     makeChatRepo(o?.chat),
     makeFriendshipRepo(o?.friendship),
     makeBlockRepo(o?.block),
-    makePublisher(),
+    o?.publisher ?? makePublisher(),
     o?.externalNotify,
+    o?.clock,
   );
 }
 
@@ -134,6 +141,19 @@ describe('ChatService.send', () => {
     expect(publish).toHaveBeenCalledWith('u1', expect.objectContaining({ type: 'message', conversationId: 'conv-1' }));
   });
 
+  it('кладёт senderName в событие обеим сторонам, null если не передан', async () => {
+    const publish = vi.fn().mockResolvedValue(undefined);
+    const service = makeService({ publisher: { publish } });
+
+    await service.send('u1', 'u2', { ciphertext: 'ct', nonce: 'nc' }, 'Аня');
+    expect(publish).toHaveBeenCalledWith('u2', expect.objectContaining({ senderName: 'Аня' }));
+    expect(publish).toHaveBeenCalledWith('u1', expect.objectContaining({ senderName: 'Аня' }));
+
+    publish.mockClear();
+    await service.send('u1', 'u2', { ciphertext: 'ct', nonce: 'nc' });
+    expect(publish).toHaveBeenCalledWith('u2', expect.objectContaining({ senderName: null }));
+  });
+
   it('send кладёт внешнее уведомление получателю', async () => {
     const add = vi.fn();
     const service = makeService({ externalNotify: { add } });
@@ -152,7 +172,7 @@ describe('ChatService.history', () => {
   });
 
   it('ForbiddenError если не участник диалога', async () => {
-    const conv: ConversationParticipants = { id: 'conv-1', userLowId: 'u2', userHighId: 'u3' };
+    const conv = makeConv({ userLowId: 'u2', userHighId: 'u3' });
     const service = makeService({ chat: { getConversation: vi.fn().mockResolvedValue(conv) } });
     const r = await service.history('u1', 'conv-1', null, 30);
     expect(r.ok).toBe(false);
@@ -160,7 +180,7 @@ describe('ChatService.history', () => {
   });
 
   it('возвращает историю для участника', async () => {
-    const conv: ConversationParticipants = { id: 'conv-1', userLowId: 'u1', userHighId: 'u2' };
+    const conv = makeConv();
     const messages: ChatMessage[] = [{ id: 'm1', conversationId: 'conv-1', senderId: 'u2', body: 'ct', nonce: 'nc', createdAt: new Date() }];
     const service = makeService({ chat: { getConversation: vi.fn().mockResolvedValue(conv), listMessages: vi.fn().mockResolvedValue(messages) } });
     const r = await service.history('u1', 'conv-1', null, 30);
@@ -170,7 +190,7 @@ describe('ChatService.history', () => {
 
 describe('ChatService.markRead', () => {
   it('определяет сторону (low/high) участника и помечает прочитанным', async () => {
-    const conv: ConversationParticipants = { id: 'conv-1', userLowId: 'u2', userHighId: 'u1' };
+    const conv = makeConv({ userLowId: 'u2', userHighId: 'u1' });
     const markConversationRead = vi.fn().mockResolvedValue(undefined);
     const service = makeService({ chat: { getConversation: vi.fn().mockResolvedValue(conv), markConversationRead } });
     const r = await service.markRead('u1', 'conv-1');
@@ -179,11 +199,35 @@ describe('ChatService.markRead', () => {
   });
 
   it('ForbiddenError если не участник', async () => {
-    const conv: ConversationParticipants = { id: 'conv-1', userLowId: 'u2', userHighId: 'u3' };
+    const conv = makeConv({ userLowId: 'u2', userHighId: 'u3' });
     const service = makeService({ chat: { getConversation: vi.fn().mockResolvedValue(conv) } });
     const r = await service.markRead('u1', 'conv-1');
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('публикует chat:read второй стороне с readAt по инъектированным часам', async () => {
+    const NOW = 1_700_000_000_000;
+    const conv = makeConv({ userLowId: 'u1', userHighId: 'u2' });
+    const publish = vi.fn().mockResolvedValue(undefined);
+    const service = makeService({
+      chat: { getConversation: vi.fn().mockResolvedValue(conv) },
+      publisher: { publish },
+      clock: () => NOW,
+    });
+
+    const r = await service.markRead('u1', 'conv-1');
+    expect(r.ok).toBe(true);
+    expect(publish).toHaveBeenCalledWith('u2', { type: 'chat:read', conversationId: 'conv-1', readAt: new Date(NOW).toISOString() });
+  });
+
+  it('читает сторона high → публикует low-участнику', async () => {
+    const conv = makeConv({ userLowId: 'u1', userHighId: 'u2' });
+    const publish = vi.fn().mockResolvedValue(undefined);
+    const service = makeService({ chat: { getConversation: vi.fn().mockResolvedValue(conv) }, publisher: { publish } });
+
+    await service.markRead('u2', 'conv-1');
+    expect(publish).toHaveBeenCalledWith('u1', expect.objectContaining({ type: 'chat:read' }));
   });
 });
 
@@ -196,18 +240,27 @@ describe('ChatService.getConversationMeta', () => {
   });
 
   it('ForbiddenError если не участник диалога', async () => {
-    const conv: ConversationParticipants = { id: 'conv-1', userLowId: 'u2', userHighId: 'u3' };
+    const conv = makeConv({ userLowId: 'u2', userHighId: 'u3' });
     const service = makeService({ chat: { getConversation: vi.fn().mockResolvedValue(conv) } });
     const r = await service.getConversationMeta('u1', 'conv-1');
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toBeInstanceOf(ForbiddenError);
   });
 
-  it('возвращает id собеседника для участника', async () => {
-    const conv: ConversationParticipants = { id: 'conv-1', userLowId: 'u1', userHighId: 'u2' };
+  it('возвращает id собеседника и его otherLastReadAt для участника', async () => {
+    const readAt = new Date('2026-07-20T12:00:00Z');
+    const conv = makeConv({ userLowId: 'u1', userHighId: 'u2', highLastReadAt: readAt });
     const service = makeService({ chat: { getConversation: vi.fn().mockResolvedValue(conv) } });
     const r = await service.getConversationMeta('u1', 'conv-1');
-    expect(r).toEqual({ ok: true, value: { otherUserId: 'u2' } });
+    expect(r).toEqual({ ok: true, value: { otherUserId: 'u2', otherLastReadAt: readAt } });
+  });
+
+  it('otherLastReadAt берётся с противоположной стороны, когда читает high', async () => {
+    const readAt = new Date('2026-07-20T12:00:00Z');
+    const conv = makeConv({ userLowId: 'u1', userHighId: 'u2', lowLastReadAt: readAt });
+    const service = makeService({ chat: { getConversation: vi.fn().mockResolvedValue(conv) } });
+    const r = await service.getConversationMeta('u2', 'conv-1');
+    expect(r).toEqual({ ok: true, value: { otherUserId: 'u1', otherLastReadAt: readAt } });
   });
 });
 

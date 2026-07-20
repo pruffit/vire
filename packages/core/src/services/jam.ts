@@ -21,7 +21,8 @@ const JAM_CODE_MAX_ATTEMPTS = 5;
 export type QueueMutationIntent =
   | { kind: 'add'; trackId: string }
   | { kind: 'remove'; itemId: string }
-  | { kind: 'move'; itemId: string; toPosition: number };
+  | { kind: 'move'; itemId: string; toPosition: number }
+  | { kind: 'shuffle' };
 
 export type PlaybackIntent =
   | { kind: 'play'; trackId: string; positionMs: number }
@@ -110,7 +111,14 @@ export class JamService {
 
     // Роль на вставку — GUEST; репозиторий не понижает уже сохранённую роль (хост остаётся хостом).
     const participant = await this.repo.upsertParticipant({ jamId: session.id, identity, displayName, role: 'GUEST' });
+    await this.broadcastParticipants(session.id, [participant]);
     return ok({ session, participant });
+  }
+
+  /** Свежий список участников после join/kick — без этого другие вкладки узнают о смене только через refresh. */
+  private async broadcastParticipants(jamId: string, fallback: JamParticipant[]): Promise<void> {
+    const state = await this.repo.getSessionState(jamId);
+    await this.broadcaster.broadcast(jamId, { type: 'jam:participants', participants: state?.participants ?? fallback });
   }
 
   async getState(jamId: string, identity: JamParticipantIdentity): Promise<Result<JamFullState, ForbiddenError | NotFoundError>> {
@@ -183,7 +191,9 @@ export class JamService {
     const mutation: QueueMutation =
       intent.kind === 'add'
         ? { kind: 'add', trackId: intent.trackId, participantId: participant.id, addedAt: new Date(this.clock()) }
-        : intent;
+        : intent.kind === 'shuffle'
+          ? { kind: 'shuffle', random: this.random }
+          : intent;
 
     const nextItems = applyQueueMutation(sessionState.queue.map(toWriteItem), mutation);
     const nextVersion = sessionState.session.queueVersion + 1;
@@ -196,12 +206,14 @@ export class JamService {
 
   async setPlayback(
     jamId: string,
-    hostUserId: string,
+    identity: JamParticipantIdentity,
     intent: PlaybackIntent,
   ): Promise<Result<JamPlaybackState, NotFoundError | ForbiddenError | ConflictError>> {
+    const participant = await this.repo.findParticipant(jamId, identity);
+    if (!participant) return err(forbidden());
+
     const session = await this.repo.findById(jamId);
     if (!session) return err(new NotFoundError('Jam', jamId));
-    if (session.hostUserId !== hostUserId) return err(forbidden('Только хост управляет воспроизведением'));
     if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
 
     const current = await this.state.getPlayback(jamId);
@@ -253,6 +265,7 @@ export class JamService {
     if (host && host.id === participantId) return err(new ValidationError('Нельзя кикнуть самого себя'));
 
     await this.repo.removeParticipant(jamId, participantId);
+    await this.broadcastParticipants(jamId, []);
     return ok(undefined);
   }
 

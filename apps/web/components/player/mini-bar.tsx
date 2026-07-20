@@ -4,8 +4,10 @@ import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { usePlayerStore } from '@/store/player';
+import { usePlayerStore, type JamOverride } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
+import { jamToggle } from '@/lib/jam/jam-controls';
+import { Icon } from '@/components/icon';
 import { Controls } from './controls';
 import { ArtistLink, TitleLink } from './track-links';
 import { PlayerLikeButton } from '@/components/player-like-button';
@@ -27,6 +29,9 @@ export function MiniBar({
   ticking: boolean;
 }) {
   const track = usePlayerStore((s) => s.track);
+  const jamOverride = usePlayerStore((s) => s.jamOverride);
+
+  if (jamOverride) return <JamMiniBar override={jamOverride} />;
   if (!track) return null;
 
   return (
@@ -62,6 +67,53 @@ export function MiniBar({
       </div>
 
       <TopProgressLine active={ticking} />
+    </div>
+  );
+}
+
+/** Джем-takeover: глобальный движок остановлен (см. audio-engine guard), транспорт уходит в jamToggle(). */
+function JamMiniBar({ override }: { override: JamOverride }) {
+  const { track, isPlaying } = override;
+
+  return (
+    <div className="relative h-full">
+      {track.coverUrl && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 scale-110"
+          style={{
+            backgroundImage: `url(${track.coverUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(48px) saturate(2)',
+            opacity: 0.12,
+          }}
+        />
+      )}
+      <div className="absolute inset-0 bg-card/88" />
+
+      <div className="relative z-10 flex items-center h-full px-3 sm:px-4 gap-3">
+        <span className="w-11 h-11 shrink-0 relative rounded overflow-hidden bg-white/5">
+          {track.coverUrl && <Image src={track.coverUrl} alt={track.title} fill sizes="44px" className="object-cover" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[11px] sm:text-sm font-medium truncate leading-tight">{track.title}</span>
+            <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-primary">
+              Джем
+            </span>
+          </span>
+          <span className="block text-xs text-muted-foreground truncate">{track.artistName}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => jamToggle()}
+          aria-label={isPlaying ? 'Поставить джем на паузу' : 'Возобновить джем'}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-90"
+        >
+          <Icon name={isPlaying ? 'pause' : 'play'} size={16} />
+        </button>
+      </div>
     </div>
   );
 }

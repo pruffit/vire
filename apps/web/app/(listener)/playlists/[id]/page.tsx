@@ -54,13 +54,13 @@ export default async function PlaylistPage({ params }: Props) {
   const headerCovers = getHeaderCovers(playlist);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-12 space-y-10">
+    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-10">
       <FadeUp>
         <header className="flex items-start gap-6">
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl shrink-0 overflow-hidden bg-card border border-border relative">
             <PlaylistCover covers={headerCovers} title={playlist.title} variant="mosaic" sizes="(max-width: 640px) 96px, 112px" />
           </div>
-          <div className="space-y-2 pt-1 min-w-0 flex-1">
+          <div className="space-y-2 pt-1 min-w-0 flex-1 max-w-2xl">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight truncate">{playlist.title}</h1>
               {playlist.visibility === 'PRIVATE' && (

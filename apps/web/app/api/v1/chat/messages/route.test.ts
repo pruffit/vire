@@ -74,10 +74,10 @@ describe('POST /api/v1/chat/messages', () => {
   });
 
   it('sends and returns the message', async () => {
-    mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
+    mockedAuth.mockResolvedValue({ user: { id: SELF_ID, name: 'Аня' } } as never);
     send.mockResolvedValue({ ok: true, value: { conversationId: 'c1', message: { id: 'm1' } } });
     const res = await POST(req({ toUserId: OTHER_ID, ciphertext: 'ct', nonce: 'nc' }));
     expect(res.status).toBe(200);
-    expect(send).toHaveBeenCalledWith(SELF_ID, OTHER_ID, { ciphertext: 'ct', nonce: 'nc' });
+    expect(send).toHaveBeenCalledWith(SELF_ID, OTHER_ID, { ciphertext: 'ct', nonce: 'nc' }, 'Аня');
   });
 });

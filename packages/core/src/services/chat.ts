@@ -1,9 +1,10 @@
 import { err, ok, ValidationError, ForbiddenError, NotFoundError, type Result } from '../errors';
-import type { IChatRepository, ChatMessage, ConversationSummary } from '../repositories/chat';
+import type { IChatRepository, ChatMessage, ConversationSummary, ConversationParticipants } from '../repositories/chat';
 import type { IFriendshipRepository } from '../repositories/friendship';
 import type { IBlockRepository } from '../repositories/block';
 import type { RealtimePublisher } from '../ports/realtime';
 import type { IExternalNotifyQueue } from '../ports/external-notify';
+import type { Clock } from '../ports/effects';
 
 // Плейнтекст-длину (1–4000) валидирует клиент до шифрования; сервер слеп и проверяет
 // только байтовый размер шифротекста (4000 UTF-8 симв. + secretbox-оверхед с запасом).
@@ -27,6 +28,7 @@ export class ChatService {
     private readonly blockRepo: IBlockRepository,
     private readonly publisher: RealtimePublisher,
     private readonly externalNotify?: IExternalNotifyQueue,
+    private readonly clock: Clock = Date.now,
   ) {}
 
   async openOrGet(a: string, b: string): Promise<Result<{ conversationId: string }, ValidationError | ForbiddenError>> {
@@ -43,6 +45,7 @@ export class ChatService {
     fromUserId: string,
     toUserId: string,
     payload: { ciphertext: unknown; nonce: unknown },
+    senderName?: string | null,
   ): Promise<Result<{ conversationId: string; message: ChatMessage }, ValidationError | ForbiddenError>> {
     if (fromUserId === toUserId) return err(new ValidationError('Нельзя написать самому себе'));
     const guard = await this.guardCanChat(fromUserId, toUserId);
@@ -57,9 +60,9 @@ export class ChatService {
     const conversationId = await this.repo.upsertConversation(low, high);
     const message = await this.repo.insertMessage(conversationId, fromUserId, ciphertext, nonce);
 
-    await this.publisher.publish(toUserId, { type: 'message', conversationId, message });
+    await this.publisher.publish(toUserId, { type: 'message', conversationId, message, senderName: senderName ?? null });
     // синхронизирует другие открытые вкладки отправителя
-    await this.publisher.publish(fromUserId, { type: 'message', conversationId, message });
+    await this.publisher.publish(fromUserId, { type: 'message', conversationId, message, senderName: senderName ?? null });
 
     try {
       await this.externalNotify?.add({ kind: 'CHAT_MESSAGE', recipientId: toUserId, actorId: fromUserId, conversationId });
@@ -84,7 +87,15 @@ export class ChatService {
   async markRead(userId: string, conversationId: string): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const membership = await this.requireParticipant(userId, conversationId);
     if (!membership.ok) return membership;
-    await this.repo.markConversationRead(conversationId, membership.value.userLowId === userId ? 'low' : 'high');
+    const isLow = membership.value.userLowId === userId;
+    await this.repo.markConversationRead(conversationId, isLow ? 'low' : 'high');
+
+    const otherUserId = isLow ? membership.value.userHighId : membership.value.userLowId;
+    await this.publisher.publish(otherUserId, {
+      type: 'chat:read',
+      conversationId,
+      readAt: new Date(this.clock()).toISOString(),
+    });
     return ok(undefined);
   }
 
@@ -94,17 +105,19 @@ export class ChatService {
   async getConversationMeta(
     userId: string,
     conversationId: string,
-  ): Promise<Result<{ otherUserId: string }, NotFoundError | ForbiddenError>> {
+  ): Promise<Result<{ otherUserId: string; otherLastReadAt: Date | null }, NotFoundError | ForbiddenError>> {
     const membership = await this.requireParticipant(userId, conversationId);
     if (!membership.ok) return membership;
-    const otherUserId = membership.value.userLowId === userId ? membership.value.userHighId : membership.value.userLowId;
-    return ok({ otherUserId });
+    const isLow = membership.value.userLowId === userId;
+    const otherUserId = isLow ? membership.value.userHighId : membership.value.userLowId;
+    const otherLastReadAt = isLow ? membership.value.highLastReadAt : membership.value.lowLastReadAt;
+    return ok({ otherUserId, otherLastReadAt });
   }
 
   private async requireParticipant(
     userId: string,
     conversationId: string,
-  ): Promise<Result<{ userLowId: string; userHighId: string }, NotFoundError | ForbiddenError>> {
+  ): Promise<Result<ConversationParticipants, NotFoundError | ForbiddenError>> {
     const conv = await this.repo.getConversation(conversationId);
     if (!conv) return err(new NotFoundError('Conversation', conversationId));
     if (conv.userLowId !== userId && conv.userHighId !== userId) {

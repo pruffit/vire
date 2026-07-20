@@ -37,7 +37,7 @@ export function ConversationList({ conversations, viewerId }: { conversations: C
   }
 
   return (
-    <div className="flex flex-col p-2">
+    <div className="flex flex-col divide-y divide-border/60 p-2">
       {conversations.map((c) => {
         const active = pathname === `/messages/${c.id}`;
         return (
@@ -45,14 +45,14 @@ export function ConversationList({ conversations, viewerId }: { conversations: C
             key={c.id}
             href={`/messages/${c.id}`}
             className={cn(
-              'group flex items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-accent/5',
-              active && 'bg-accent/10',
+              'group relative flex items-center gap-3 px-3 py-3 transition-colors hover:bg-accent/5',
+              active && 'bg-foreground/[0.08] before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary',
             )}
           >
             <ChatAvatar name={c.otherUserName} image={c.otherUserImage} />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
-                <p className={`truncate text-sm ${c.unread ? 'font-semibold' : 'font-medium'}`}>
+                <p className={cn('truncate text-sm', c.unread ? 'font-medium text-foreground' : 'text-muted-foreground')}>
                   {c.otherUserName ?? 'Слушатель'}
                 </p>
                 {c.lastMessageAt && (
@@ -61,7 +61,7 @@ export function ConversationList({ conversations, viewerId }: { conversations: C
                   </span>
                 )}
               </div>
-              <p className={`truncate text-sm ${c.unread ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <p className={cn('truncate text-sm', c.unread ? 'font-medium text-foreground' : 'text-muted-foreground')}>
                 {previews.get(c.id) ?? '🔒 Зашифровано'}
               </p>
             </div>

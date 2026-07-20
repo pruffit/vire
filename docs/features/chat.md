@@ -38,8 +38,8 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
   Для needsLink-тупика (другого устройства больше нет) в `DeviceLink` есть **«Сбросить
   шифрование»** (`resetIdentity`): новая пара перезаписывает `ik_pub`, старая история
   становится нечитаемой у обеих сторон — кнопка за явным подтверждением с предупреждением.
-- **Доверие:** TOFU + число безопасности (safety-number) в треде для ручной сверки. Смена
-  публичного ключа собеседника меняет число.
+- **Доверие:** TOFU. Плашки сверки числа безопасности в UI треда нет (убрана — путала
+  пользователей сильнее, чем помогала); код подсчёта (`safetyNumber`) удалён как мёртвый.
 - **Ограничения E2EE:** нет forward secrecy (утёк долгоживущий ключ → читаема история; отдельный
   виток); привязка нового устройства требует уже настроенного устройства под рукой; **потеря разом
   всех устройств = потеря истории** (сервер восстановить не может — он слеп). Плейнтекст-режима нет.
@@ -61,10 +61,21 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
   корне лейаута (не на странице треда), поэтому механика app-shell (`(listener)/layout.tsx`:
   скрытие футера, `min-h-0`) отрабатывает на обоих роутах одинаково. Список диалогов
   грузится один раз в layout — страница треда его не дублирует.
-- Список диалогов: собеседник, последнее сообщение, флаг непрочитанного, активный диалог
-  подсвечен (сравнение пути через `usePathname`).
+- Список диалогов (`ConversationList`): собеседник, последнее сообщение, `divide-y`
+  между строками, активный диалог — фон + акцентная полоса слева (псевдо-элемент,
+  без layout shift), непрочитанный — имя/превью `text-foreground font-medium`,
+  прочитанный — muted.
 - Тред `/messages/[conversationId]`: история + живой приём новых сообщений по SSE,
   оптимистичная отправка, автоскролл, отметка прочитанного при открытии.
+- **Индикатор «печатает…»** (`TypingIndicator`, в шапке треда рядом с именем): композер
+  шлёт `POST /api/v1/chat/[conversationId]/typing` (throttle ~2.5с, только пока поле
+  непустое) → сервис публикует `chat:typing` собеседнику через тот же realtime-канал.
+  Индикатор гаснет через 4с без нового события или сразу по приходу `message`. Без БД —
+  чистый realtime, при недоступном Redis просто не работает (деградация молчаливая).
+- **Статус «Прочитано»**: под последним СВОИМ сообщением — «Прочитано», если его
+  `createdAt <= otherLastReadAt`, иначе «Отправлено». `otherLastReadAt` приходит
+  из `getConversationMeta` при открытии треда и обновляется live по `chat:read`
+  (публикуется второй стороне из `markRead`, `readAt` — по инъектированному `Clock`).
 - **Состояния треда** (`ChatThread`) — центрированные (иконка + заголовок + пояснение,
   не строка внизу): ошибка бутстрапа шифрования, `needsLink` (с кнопкой «Привязать
   устройство» на мобилке — ведёт на `/messages`, на десктопе `DeviceLink` уже виден слева),
@@ -72,7 +83,12 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
   композер скрыт.
 - Кнопка «Написать» на профиле друга `/u/[userId]` (только если друзья и нет блока) →
   открывает/создаёт диалог и ведёт в тред.
-- Пункт «Сообщения» с бейджем непрочитанных в сайдбаре медиатеки и мобильном таб-баре.
+- Пункт «Сообщения» с бейджем непрочитанных в сайдбаре медиатеки и мобильном таб-баре —
+  бейдж живой: `ChatEventsBridge` (root layout, рядом с `E2eeBootstrap`) слушает `message`
+  и при событии не для открытого диалога рефетчит `GET /api/v1/chat/unread-count` в
+  стор `lib/chat-unread.ts` (`useChatUnread`, сидируется SSR-числом один раз, дальше
+  живой); та же ветка кидает toast «Сообщение от {senderName}» (имя летит в payload
+  события `message` из `ChatService.send`).
 - Писать можно только другу без блока. Расфрендились/заблокировали → отправка запрещена,
   но история существующего треда остаётся читаемой.
 
@@ -99,12 +115,13 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
 | Миграция | `packages/db/src/migrations/0039_long_dakota_north.sql` |
 | Запросы | `packages/db/src/queries/chat.ts` (`upsertConversation`/`insertMessage`/`listMessages`/`listConversations`/`markConversationRead`/`countUnreadConversations`) |
 | Порт+репо | `packages/core/src/repositories/chat.ts`, `packages/db/src/repositories/chat.ts` |
-| Сервис | `packages/core/src/services/chat.ts` — `ChatService` (`openOrGet`/`send`/`history`/`markRead`/`listConversations`/`countUnread`/`getConversationMeta`), `canonicalPair` |
+| Сервис | `packages/core/src/services/chat.ts` — `ChatService` (`openOrGet`/`send`/`history`/`markRead`/`listConversations`/`countUnread`/`getConversationMeta`), `canonicalPair`; `send` принимает `senderName`, `markRead` публикует `chat:read`, `getConversationMeta` отдаёт `otherLastReadAt` |
 | Realtime | `apps/web/lib/realtime.ts` (publish/subscribe, порт `RealtimePublisher` в `packages/core/src/ports/realtime.ts`), клиент `apps/web/lib/use-realtime.ts` |
 | Композиция | `apps/web/lib/chat.ts` (`chatService()`) |
-| Роуты | `apps/web/app/api/v1/chat/{messages,open,[conversationId]/messages,[conversationId]/read}/route.ts`, `apps/web/app/api/v1/realtime/stream/route.ts` |
+| Роуты | `apps/web/app/api/v1/chat/{messages,open,unread-count,[conversationId]/messages,[conversationId]/read,[conversationId]/typing}/route.ts`, `apps/web/app/api/v1/realtime/stream/route.ts` |
 | Страницы | `apps/web/app/(listener)/messages/layout.tsx` (двухпанельный shell, auth-гейт, список диалогов), `.../messages/page.tsx` (заглушка «Выберите диалог»), `.../messages/[conversationId]/page.tsx` (тред) |
-| Компоненты | `apps/web/components/chat/{messages-shell,conversation-list,chat-thread,message-composer,message-bubble,chat-avatar,chat-format,device-link,link-approve,link-protocol,e2ee-bootstrap}.tsx`, `.../message-friend-button.tsx` |
+| Компоненты | `apps/web/components/chat/{messages-shell,conversation-list,chat-thread,message-composer,message-bubble,chat-avatar,chat-format,device-link,link-approve,link-protocol,e2ee-bootstrap,typing-indicator,chat-events-bridge}.tsx`, `.../message-friend-button.tsx` |
+| Live-бейджи | `apps/web/lib/chat-unread.ts` (`useChatUnreadStore`/`useChatUnread`), смонтирован в `library-sidebar.tsx`; мост — `chat-events-bridge.tsx` в root layout |
 | Навигация | пункт «Сообщения» + бейдж — `library-sidebar.tsx`, `mobile-tab-bar.tsx`; счётчик `countUnreadMessagesCached` в `lib/listener-data.ts` |
 
 ## Модель
@@ -125,6 +142,7 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
 - Только 1:1, только между друзьями. Групп/гостей нет.
 - Нет вложений/картинок — только текст (1–4000 символов; длину проверяет клиент до шифрования,
   сервер — байтовый размер шифротекста).
-- Нет индикатора «печатает» и статусов доставки (только прочитано/непрочитано на уровне
-  диалога).
+- Статус доставки — только «прочитано/отправлено» под последним своим сообщением
+  (не по каждому сообщению отдельно).
+- Web-push для закрытой вкладки — вне скоупа, ждёт VAPID на VPS.
 - Тот же realtime-примитив рассчитан на переиспользование в §8 (джем).

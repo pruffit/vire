@@ -72,7 +72,10 @@
 ## Где код
 
 - **Страница:** `apps/web/app/(listener)/playlists/[id]/page.tsx` — server-shell
-  (компактный `max-w-3xl`), `generateMetadata` + шапка; рендерит клиентский оркестратор.
+  full-bleed (`max-w-[120rem]`, паттерн контентных страниц вроде релиза), шапка
+  ограничена `max-w-2xl` под текст; `generateMetadata` + рендерит клиентский оркестратор.
+  `/library/liked` (`app/(listener)/library/liked/page.tsx`) переиспользует тот же
+  `PlaylistView` под синтетический плейлист «Любимые треки» и тот же full-bleed паттерн.
   Рядом: `header-cover.ts` (`getHeaderCovers` — `pickCovers` от треков страницы),
   `opengraph-image.tsx` (OG 1200×630 с гейтом приватности).
 - **Обложка и шеринг:** `components/playlist-cover.tsx` (мозаика/одиночная/плейсхолдер —
