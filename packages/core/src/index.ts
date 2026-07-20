@@ -60,6 +60,8 @@ export * from './services/listener-track';
 export * from './services/track-moods';
 export * from './services/playlist';
 export * from './services/musical-key';
+export * from './services/jam-sync';
+export * from './services/jam-code';
 export * from './services/wave-scoring';
 export * from './services/wave';
 export * from './services/search';
