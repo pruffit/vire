@@ -28,6 +28,16 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
   (`chat:link:{id}`, TTL 5 мин, single-use). Отказ (неверный код, несошедшийся коммитмент,
   кнопка «Отмена») бьёт `POST /keys/link/abort` — сессия удаляется сразу, новое устройство
   получает 404 на поллинге и показывает отказ, а не ждёт истечения TTL.
+  Сторона-подтверждатель (`LinkApprove`, оверлей) смонтирована **глобально в root layout** —
+  запрос привязки ловится с любой страницы, не только с открытых «Сообщений»; B-сторона
+  (кнопка «Привязать», SAS-код, статус ожидания с отменой) — карточка `DeviceLink` на
+  `/messages`. Общий транспорт поллинга/POST — `components/chat/link-protocol.ts`.
+- **Тупиков нет:** `E2eeBootstrap` (root layout) публикует `ik_pub` при любом заходе
+  залогиненного юзера — собеседнику не нужно самому открывать «Сообщения», чтобы ему можно
+  было писать; тред без ключа собеседника поллит `GET /keys?userId` каждые 8с и оживает сам.
+  Для needsLink-тупика (другого устройства больше нет) в `DeviceLink` есть **«Сбросить
+  шифрование»** (`resetIdentity`): новая пара перезаписывает `ik_pub`, старая история
+  становится нечитаемой у обеих сторон — кнопка за явным подтверждением с предупреждением.
 - **Доверие:** TOFU + число безопасности (safety-number) в треде для ручной сверки. Смена
   публичного ключа собеседника меняет число.
 - **Ограничения E2EE:** нет forward secrecy (утёк долгоживущий ключ → читаема история; отдельный
@@ -61,8 +71,10 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
   комментарий каждые 25с (держит соединение сквозь CF/Caddy), cleanup по `request.signal`
   abort — снимает подписку и таймер. Один стрим на пользователя несёт И чат-, И notification-
   события (различаются полем `type`).
-- Клиент — `apps/web/lib/use-realtime.ts` (`EventSource`, реконнект с бэкоффом, диспатч по
-  `event.type`). Переиспользуется чатом (`message`) и колокольчиком (`notification`).
+- Клиент — `apps/web/lib/use-realtime.ts`: **один `EventSource` на вкладку** (модульный
+  синглтон с refcount-подписчиками), сколько бы компонентов ни вызвали `useRealtime` —
+  чат (`message`), колокольчик (`notification`), привязка (`link-request`). Реконнект с
+  бэкоффом; последний отписавшийся закрывает соединение.
 - Деградация: нет Redis → пуши не идут, REST/refresh остаётся рабочим фолбэком (как presence).
 
 ## Где код
@@ -77,7 +89,7 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
 | Композиция | `apps/web/lib/chat.ts` (`chatService()`) |
 | Роуты | `apps/web/app/api/v1/chat/{messages,open,[conversationId]/messages,[conversationId]/read}/route.ts`, `apps/web/app/api/v1/realtime/stream/route.ts` |
 | Страницы | `apps/web/app/(listener)/messages/page.tsx`, `.../messages/[conversationId]/page.tsx` |
-| Компоненты | `apps/web/components/chat/{conversation-list,chat-thread,message-composer,message-bubble,chat-avatar,chat-format}.tsx`, `.../message-friend-button.tsx` |
+| Компоненты | `apps/web/components/chat/{conversation-list,chat-thread,message-composer,message-bubble,chat-avatar,chat-format,device-link,link-approve,link-protocol,e2ee-bootstrap}.tsx`, `.../message-friend-button.tsx` |
 | Навигация | пункт «Сообщения» + бейдж — `library-sidebar.tsx`, `mobile-tab-bar.tsx`; счётчик `countUnreadMessagesCached` в `lib/listener-data.ts` |
 
 ## Модель

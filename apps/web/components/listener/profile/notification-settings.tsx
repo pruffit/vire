@@ -88,12 +88,17 @@ function PushToggle() {
         setState('unsubscribed');
         await patchNotifyPush(false);
       } else {
-        const ok = await subscribeToPush();
-        if (ok) {
+        const result = await subscribeToPush();
+        if (result.ok) {
           setState('subscribed');
           await patchNotifyPush(true);
+        } else if (result.reason === 'permission') {
+          toast.error('Разреши уведомления в браузере');
+          if (typeof Notification !== 'undefined' && Notification.permission === 'denied') setState('denied');
+        } else if (result.reason === 'sw' || result.reason === 'push-service') {
+          toast.error('Браузер не смог подписаться: push-сервис недоступен');
         } else {
-          toast.error('Не удалось включить push-уведомления');
+          toast.error('Сервер не принял подписку');
         }
       }
     } catch {

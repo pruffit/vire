@@ -58,6 +58,15 @@ export async function clearIdentity(userId: string): Promise<void> {
   await tx('readwrite', (s) => s.delete(keyFor(userId)));
 }
 
+// Явный сброс: в отличие от getOrCreateIdentity, всегда создаёт новую пару, даже если
+// локальная личность уже есть (сценарий needsLink-тупика: старую переписку не спасти).
+export async function resetIdentity(userId: string): Promise<Identity> {
+  const pair = sodium.crypto_box_keypair();
+  const identity: Identity = { pub: pair.publicKey, priv: pair.privateKey };
+  await tx('readwrite', (s) => s.put(identity, keyFor(userId)));
+  return identity;
+}
+
 export async function getIdentityPubB64(userId: string): Promise<string | null> {
   const identity = await getIdentity(userId);
   return identity ? toB64(identity.pub) : null;

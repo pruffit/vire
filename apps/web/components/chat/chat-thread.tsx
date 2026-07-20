@@ -1,13 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import type { ChatMessage } from '@vire/core';
 import { useRealtime } from '@/lib/use-realtime';
 import { useIdentity } from '@/lib/e2ee-client';
 import { deriveCK, encryptMessage, decryptMessage, safetyNumber, fromB64 } from '@/lib/e2ee';
 import { toast } from '@/lib/toast';
+import { Icon } from '@/components/icon';
+import { EmptyState } from '@/components/ui-kit';
 import { MessageBubble } from './message-bubble';
 import { MessageComposer } from './message-composer';
+
+const KEY_POLL_MS = 8000;
 
 type PendingMessage = ChatMessage & { pending?: boolean };
 
@@ -35,18 +40,32 @@ export function ChatThread({
   canSend: boolean;
 }) {
   const [messages, setMessages] = useState<PendingMessage[]>(initialMessages);
+  const [ikPub, setIkPub] = useState(otherIkPub);
   const bottomRef = useRef<HTMLDivElement>(null);
   const identity = useIdentity(viewerId);
 
+  useEffect(() => {
+    if (ikPub || !identity.ready) return;
+    const check = async () => {
+      const res = await fetch(`/api/v1/keys?userId=${otherUserId}`).catch(() => null);
+      if (!res?.ok) return;
+      const { ikPub: fetched } = (await res.json()) as { ikPub: string | null };
+      if (fetched) setIkPub(fetched);
+    };
+    void check();
+    const interval = setInterval(check, KEY_POLL_MS);
+    return () => clearInterval(interval);
+  }, [ikPub, identity.ready, otherUserId]);
+
   const ck = useMemo(() => {
-    if (!identity.priv || !identity.pub || !otherIkPub) return null;
-    return deriveCK(identity.priv, fromB64(otherIkPub), identity.pub);
-  }, [identity.priv, identity.pub, otherIkPub]);
+    if (!identity.priv || !identity.pub || !ikPub) return null;
+    return deriveCK(identity.priv, fromB64(ikPub), identity.pub);
+  }, [identity.priv, identity.pub, ikPub]);
 
   const safety = useMemo(() => {
-    if (!identity.pub || !otherIkPub) return null;
-    return safetyNumber(identity.pub, fromB64(otherIkPub));
-  }, [identity.pub, otherIkPub]);
+    if (!identity.pub || !ikPub) return null;
+    return safetyNumber(identity.pub, fromB64(ikPub));
+  }, [identity.pub, ikPub]);
 
   // Расшифровываем на изменение сообщений/ключа, а не на каждый рендер.
   const decrypted = useMemo(() => {
@@ -110,17 +129,22 @@ export function ChatThread({
     }
   }
 
-  const notReady = identity.error
+  const notReady: React.ReactNode = identity.error
     ? 'Не удалось загрузить шифрование. Обновите страницу.'
     : identity.ready && identity.needsLink
-      ? 'Переписка зашифрована. Подтвердите это устройство на другом своём устройстве, чтобы читать и писать.'
-      : identity.ready && !otherIkPub
-        ? 'У собеседника ещё не настроено шифрование.'
+      ? (
+        <>
+          Переписка зашифрована. Подтвердите это устройство на другом своём устройстве, чтобы
+          читать и писать. <Link href="/messages" className="underline hover:no-underline">Перейти к привязке</Link>
+        </>
+      )
+      : identity.ready && !ikPub
+        ? 'Собеседник ещё не открывал Vire — как только зайдёт, переписка станет доступна.'
         : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4 sm:px-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4">
         {safety && (
           <details className="mb-2 rounded-lg border border-border/40 bg-card/40 px-3 py-2 text-xs text-muted-foreground">
             <summary className="cursor-pointer select-none">🔒 Сквозное шифрование — код безопасности</summary>
@@ -128,16 +152,25 @@ export function ChatThread({
             <p className="mt-1">Совпадает у обоих — переписку никто не читает.</p>
           </details>
         )}
-        {messages.map((m) => (
-          <MessageBubble
-            key={m.id}
-            text={ck ? decrypted.get(m.id) ?? '🔒' : '🔒'}
-            createdAt={m.createdAt}
-            own={m.senderId === viewerId}
-            pending={m.pending}
-          />
-        ))}
-        <div ref={bottomRef} />
+        {messages.length === 0 && ck ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3">
+            <Icon name="message-square" size={28} className="text-foreground/25" />
+            <EmptyState title="Напишите первое сообщение" hint="Переписка защищена сквозным шифрованием" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {messages.map((m) => (
+              <MessageBubble
+                key={m.id}
+                text={ck ? decrypted.get(m.id) ?? '🔒' : '🔒'}
+                createdAt={m.createdAt}
+                own={m.senderId === viewerId}
+                pending={m.pending}
+              />
+            ))}
+            <div ref={bottomRef} />
+          </div>
+        )}
       </div>
       {notReady ? (
         <div className="shrink-0 border-t border-border/40 bg-background px-4 py-3 text-center text-sm text-muted-foreground">

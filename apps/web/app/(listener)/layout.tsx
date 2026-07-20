@@ -30,7 +30,7 @@ export default async function ListenerLayout({ children }: { children: React.Rea
   // desktop: сайдбар закреплён, скролл только во внутренней панели — иначе sticky-сайдбар
   // в общем #main-content смазывает контент при быстрой прокрутке
   return (
-    <div className="flex min-h-full flex-col md:h-full md:flex-row">
+    <div className="flex min-h-full flex-col [&:has([data-app-screen])]:h-full md:h-full md:flex-row">
       <ListenerSidebar
         playlists={playlists.map((p) => ({ id: p.id, name: p.title, coverUrl: p.coverUrl ?? null }))}
         artists={artists.map((a) => ({ id: a.id, name: a.name, slug: a.slug, avatarUrl: a.avatarUrl ?? null }))}
@@ -51,8 +51,15 @@ export default async function ListenerLayout({ children }: { children: React.Rea
 
       {/* suppressHydrationWarning: ScrollState вешает is-scrolling через classList — это поддерево
           гидрируется позже корня, ранний scroll даёт mismatch и ломает soft-навигацию роутера */}
-      <div data-scroll-area data-desktop-pane suppressHydrationWarning className="flex min-w-0 flex-1 flex-col md:min-h-0 md:overflow-x-clip md:overflow-y-auto">
-        <div className="flex-1">{children}</div>
+      {/* [data-app-screen]-варианты: `_` между скобками = потомок ВНЕ :has() — так и нужно,
+          футер и обёртка children соседи; :has(A B) молча сломает скрытие футера */}
+      <div
+        data-scroll-area
+        data-desktop-pane
+        suppressHydrationWarning
+        className="flex min-w-0 flex-1 flex-col [&:has([data-app-screen])]:min-h-0 [&:has([data-app-screen])_[data-site-footer]]:hidden md:min-h-0 md:overflow-x-clip md:overflow-y-auto"
+      >
+        <div className="flex-1 [&:has([data-app-screen])]:min-h-0">{children}</div>
         <Footer />
       </div>
     </div>
