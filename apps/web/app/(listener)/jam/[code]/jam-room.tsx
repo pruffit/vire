@@ -8,8 +8,11 @@ import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifi
 import type { JamParticipantRole, SearchTrack } from '@vire/core';
 import { useJamRoom } from '@/lib/jam/use-jam-room';
 import { useJamQueue } from '@/lib/jam/use-jam-queue';
+import { useServerClock } from '@/lib/jam/server-clock';
+import { usePlaybackSync } from '@/lib/jam/use-playback-sync';
 import { getSessionId } from '@/lib/session-id';
 import { toast } from '@/lib/toast';
+import { controls } from '@/lib/player/audio-engine';
 import { SortableTrackRow } from '@/components/sortable-track-row';
 import { JamShare } from '@/components/jam-share';
 import { JamParticipants } from './jam-participants';
@@ -42,6 +45,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
   const [membership, setMembership] = useState<Membership | null>(null);
   const [pending, setPending] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
 
   const room = useJamRoom(code, membership?.sessionId ?? null);
   const jamQueue = useJamQueue({
@@ -50,8 +54,25 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     serverQueue: room.queue,
     setDragging: room.setDragging,
   });
+  const { serverNow } = useServerClock();
 
   const ended = initialEnded || room.ended;
+  const isHost = membership?.role === 'HOST';
+
+  const handleTrackEnded = useCallback(() => {
+    if (!isHost) return;
+    const currentTrackId = room.playback?.trackId;
+    const currentIndex = jamQueue.queue.findIndex((item) => item.trackId === currentTrackId);
+    const next = currentIndex >= 0 ? jamQueue.queue[currentIndex + 1] : undefined;
+    if (!next) return;
+    void fetch(`/api/v1/jam/${encodeURIComponent(code)}/playback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'track', trackId: next.trackId }),
+    }).catch(() => {});
+  }, [isHost, room.playback, jamQueue.queue, code]);
+
+  usePlaybackSync({ playback: room.playback, serverNow, audioEnabled, onEnded: handleTrackEnded });
 
   const handleJoin = useCallback(async (displayName: string) => {
     setPending(true);
@@ -68,6 +89,9 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
       if (!res.ok) throw new Error(String(res.status));
       const data = (await res.json()) as JoinResponse;
       setMembership({ participantId: data.participant.id, role: data.participant.role, sessionId });
+      // Два аудио одновременно недопустимы — вход в звук джема глушит глобальный плеер.
+      controls.pause();
+      setAudioEnabled(true);
     } catch {
       toast.error('Не удалось подключиться к джему');
     } finally {
@@ -135,8 +159,6 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
       />
     );
   }
-
-  const isHost = membership.role === 'HOST';
 
   if (ended) {
     return (
