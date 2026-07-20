@@ -124,6 +124,36 @@ export class JamService {
     return ok({ ...sessionState, playback });
   }
 
+  async assertParticipant(jamId: string, identity: JamParticipantIdentity): Promise<Result<JamParticipant, ForbiddenError>> {
+    const participant = await this.repo.findParticipant(jamId, identity);
+    if (!participant) return err(forbidden());
+    return ok(participant);
+  }
+
+  /** Резолв id → сессия, для роутов вне кода джема (напр. редирект `/jam/id/{jamId}`). */
+  async resolveId(jamId: string): Promise<Result<JamSession, NotFoundError>> {
+    const session = await this.repo.findById(jamId);
+    if (!session) return err(new NotFoundError('Jam', jamId));
+    return ok(session);
+  }
+
+  async getQueueForSave(
+    jamId: string,
+    identity: JamParticipantIdentity,
+  ): Promise<Result<{ session: JamSession; isHost: boolean; queue: JamQueueItem[] }, ForbiddenError | NotFoundError>> {
+    const participant = await this.repo.findParticipant(jamId, identity);
+    if (!participant) return err(forbidden());
+
+    const sessionState = await this.repo.getSessionState(jamId);
+    if (!sessionState) return err(new NotFoundError('Jam', jamId));
+
+    return ok({ session: sessionState.session, isHost: participant.role === 'HOST', queue: sessionState.queue });
+  }
+
+  async recordSavedPlaylist(jamId: string, playlistId: string): Promise<void> {
+    await this.repo.setSavedPlaylist(jamId, playlistId);
+  }
+
   async mutateQueue(
     jamId: string,
     identity: JamParticipantIdentity,

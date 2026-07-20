@@ -352,6 +352,116 @@ describe('JamService.getState', () => {
   });
 });
 
+describe('JamService.assertParticipant', () => {
+  it('forbids a non-participant', async () => {
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    const result = await service.assertParticipant('jam-1', { guestSessionId: 'ghost' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('returns the participant record for a member', async () => {
+    const participant = makeParticipant();
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(participant) });
+    const service = makeService({ repo });
+
+    const result = await service.assertParticipant('jam-1', { guestSessionId: 'guest-1' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toEqual(participant);
+  });
+});
+
+describe('JamService.resolveId', () => {
+  it('returns NotFoundError when the session does not exist', async () => {
+    const repo = makeRepo({ findById: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    const result = await service.resolveId('jam-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
+  });
+
+  it('returns the session by id', async () => {
+    const repo = makeRepo();
+    const service = makeService({ repo });
+
+    const result = await service.resolveId('jam-1');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.id).toBe('jam-1');
+  });
+});
+
+describe('JamService.getQueueForSave', () => {
+  it('forbids a non-participant', async () => {
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    const result = await service.getQueueForSave('jam-1', { guestSessionId: 'ghost' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('returns NotFoundError when the session is gone', async () => {
+    const repo = makeRepo({ getSessionState: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    const result = await service.getQueueForSave('jam-1', { guestSessionId: 'guest-1' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
+  });
+
+  it('reports isHost true for the host participant', async () => {
+    const hostParticipant = makeHostParticipant();
+    const queue = [makeQueueItem('q1')];
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(hostParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession(), participants: [hostParticipant], queue }),
+    });
+    const service = makeService({ repo });
+
+    const result = await service.getQueueForSave('jam-1', { userId: 'host-1' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.isHost).toBe(true);
+      expect(result.value.queue).toEqual(queue);
+    }
+  });
+
+  it('reports isHost false for a guest participant', async () => {
+    const guestParticipant = makeParticipant();
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession(), participants: [guestParticipant], queue: [] }),
+    });
+    const service = makeService({ repo });
+
+    const result = await service.getQueueForSave('jam-1', { guestSessionId: 'guest-1' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.isHost).toBe(false);
+  });
+});
+
+describe('JamService.recordSavedPlaylist', () => {
+  it('forwards to the repository', async () => {
+    const repo = makeRepo();
+    const service = makeService({ repo });
+
+    await service.recordSavedPlaylist('jam-1', 'playlist-1');
+
+    expect(repo.setSavedPlaylist).toHaveBeenCalledWith('jam-1', 'playlist-1');
+  });
+});
+
 describe('JamService.mutateQueue', () => {
   const guestParticipant = makeParticipant({ id: 'p-guest', role: 'GUEST' });
   const hostParticipant = makeHostParticipant({ id: 'p-host' });

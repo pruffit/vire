@@ -302,6 +302,13 @@
       "when": 1784533554565,
       "tag": "0042_mature_stingray",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1784556125814,
+      "tag": "0043_productive_king_cobra",
+      "breakpoints": true
     }
   ]
 }

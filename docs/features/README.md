@@ -65,6 +65,7 @@
 - [x] [API-клиент](api-client.md) — `@vire/api-client` + `useOptimisticToggle` для тоггл-эндпоинтов
 - [x] [Пасхалки](easter-eggs.md) — код Konami, нотный дождь, `/fwqa688` + прогресс «чёрного неба»
 - [x] [Социальный слой — друзья](social-friends.md) — дружба заявка→принятие, профиль `/u/[userId]`, видимость лайков
+- [x] [Джем-сессии](jam.md) — общая очередь по коду/QR, гости без аккаунта, синхронное воспроизведение
 - [ ] Этап 2 — продажи (YooKassa)
 
 См. также: [`docs/security/owasp-top-10.md`](../security/owasp-top-10.md).

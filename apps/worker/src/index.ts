@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Queue } from 'bullmq';
-import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH, QUEUE_METRICS } from '@vire/core';
+import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH, QUEUE_METRICS, QUEUE_JAM_REAPER } from '@vire/core';
 import { createTranscodeWorker, handleTerminalTranscodeFailure } from './workers/transcode.worker.js';
 import { createPlayEventsWorker } from './workers/play-events.worker.js';
 import { createNotifyReleaseWorker } from './workers/notify-release.worker.js';
@@ -11,6 +11,7 @@ import { createScheduledPublishWorker } from './workers/scheduled-publish.worker
 import { createFulfillPresaveWorker } from './workers/fulfill-presave.worker.js';
 import { createMetricsWorker } from './workers/metrics.worker.js';
 import { createNotifyExternalWorker } from './workers/notify-external.worker.js';
+import { createJamReaperWorker } from './workers/jam-reaper.worker.js';
 import { connection } from './queues/connection.js';
 import { alertJobFailure, alertWorkerError, alertCrash } from './lib/alert.js';
 
@@ -24,6 +25,7 @@ const scheduledPublishWorker = createScheduledPublishWorker();
 const fulfillPresaveWorker = createFulfillPresaveWorker();
 const metricsWorker = createMetricsWorker();
 const notifyExternalWorker = createNotifyExternalWorker();
+const jamReaperWorker = createJamReaperWorker();
 
 // upsertJobScheduler идемпотентен: повторный запуск воркера не плодит дубли, обновляет расписание.
 const editorialQueue = new Queue(QUEUE_EDITORIAL, { connection });
@@ -46,6 +48,12 @@ const metricsQueue = new Queue(QUEUE_METRICS, { connection });
 metricsQueue
   .upsertJobScheduler('metrics-daily', { pattern: '10 0 * * *', tz: 'Europe/Moscow' }, { name: 'snapshot', data: {} })
   .catch((err) => void alertWorkerError('metrics-daily', err as Error));
+
+// Авто-закрытие джемов без активности 12ч+, раз в 15 минут.
+const jamReaperQueue = new Queue(QUEUE_JAM_REAPER, { connection });
+jamReaperQueue
+  .upsertJobScheduler('jam-reaper-15m', { pattern: '*/15 * * * *', tz: 'Europe/Moscow' }, { name: 'reap', data: {} })
+  .catch((err) => void alertWorkerError('jam-reaper', err as Error));
 
 editorialWorker.on('completed', (job) => {
   console.log(`[editorial] ✓ job=${job.id} scope=${job.data.scope}`);
@@ -119,7 +127,7 @@ metricsWorker.on('error', (err) => {
   void alertWorkerError('metrics-daily', err);
 });
 
-console.log('[worker] transcode + analyze + analyze-genre + play-events + notify-release + editorial + scheduled-publish + fulfill-presave + metrics-daily + notify-external workers started');
+console.log('[worker] transcode + analyze + analyze-genre + play-events + notify-release + editorial + scheduled-publish + fulfill-presave + metrics-daily + notify-external + jam-reaper workers started');
 
 analyzeWorker.on('completed', (job) => {
   console.log(`[analyze] ✓ job=${job.id} track=${job.data.trackId}`);
@@ -151,6 +159,16 @@ notifyExternalWorker.on('error', (err) => {
   void alertWorkerError('notify-external', err);
 });
 
+jamReaperWorker.on('completed', (job) => {
+  console.log(`[jam-reaper] ✓ job=${job.id}`);
+});
+jamReaperWorker.on('failed', (job, err) => {
+  void alertJobFailure('jam-reaper', job?.id, err);
+});
+jamReaperWorker.on('error', (err) => {
+  void alertWorkerError('jam-reaper', err);
+});
+
 // Алертим (дождавшись доставки) и выходим с кодом 1 — иначе воркер умирал бы молча,
 // а загрузки застревали бы в PROCESSING без уведомления.
 process.on('uncaughtException', (err) => {
@@ -176,6 +194,8 @@ async function shutdown() {
     metricsWorker.close(),
     metricsQueue.close(),
     notifyExternalWorker.close(),
+    jamReaperWorker.close(),
+    jamReaperQueue.close(),
   ]);
   process.exit(0);
 }

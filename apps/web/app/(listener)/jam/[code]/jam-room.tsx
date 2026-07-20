@@ -15,9 +15,11 @@ import { toast } from '@/lib/toast';
 import { controls } from '@/lib/player/audio-engine';
 import { SortableTrackRow } from '@/components/sortable-track-row';
 import { JamShare } from '@/components/jam-share';
+import { JamInvite } from '@/components/jam-invite';
 import { JamParticipants } from './jam-participants';
 import { JamAddPanel } from './jam-add-panel';
 import { JamJoin } from './jam-join';
+import { JamSavePlaylist } from './jam-save-playlist';
 import { Icon } from '@/components/icon';
 import { EmptyState } from '@/components/ui-kit';
 import { LivePulse } from '@/components/live-pulse';
@@ -183,6 +185,8 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <JamParticipants participants={room.participants} />
+            {isLoggedIn && <JamInvite code={code} />}
+            {isLoggedIn && <JamSavePlaylist code={code} />}
             <JamShare code={code} title={title} />
           </div>
         </div>
