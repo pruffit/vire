@@ -1,0 +1,53 @@
+import { pgTable, uuid, text, timestamp, integer, pgEnum, unique, index, check } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { users } from './users';
+import { tracks } from './releases';
+import { playlists } from './interactions';
+
+export const jamSessionStatusEnum = pgEnum('jam_session_status', ['LIVE', 'ENDED']);
+export const jamParticipantRoleEnum = pgEnum('jam_participant_role', ['HOST', 'GUEST']);
+
+export const jamSessions = pgTable('jam_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: text('code').notNull().unique(),
+  hostUserId: uuid('host_user_id').notNull().references(() => users.id),
+  title: text('title'),
+  status: jamSessionStatusEnum('status').notNull().default('LIVE'),
+  // Инкрементится в той же транзакции, что мутация очереди — переживает падение Redis
+  queueVersion: integer('queue_version').notNull().default(0),
+  savedPlaylistId: uuid('saved_playlist_id').references(() => playlists.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  lastActivityAt: timestamp('last_activity_at').notNull().defaultNow(),
+  endedAt: timestamp('ended_at'),
+}, (t) => [
+  // авто-закрытие протухших джемов: LIVE-сессии, отсортированные по последней активности
+  index('jam_sessions_status_last_activity_idx').on(t.status, t.lastActivityAt),
+]);
+
+export const jamParticipants = pgTable('jam_participants', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  jamId: uuid('jam_id').notNull().references(() => jamSessions.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => users.id),
+  guestSessionId: text('guest_session_id'),
+  displayName: text('display_name').notNull(),
+  role: jamParticipantRoleEnum('role').notNull(),
+  joinedAt: timestamp('joined_at').notNull().defaultNow(),
+  lastSeenAt: timestamp('last_seen_at').notNull().defaultNow(),
+}, (t) => [
+  index('jam_participants_jam_id_idx').on(t.jamId),
+  unique('jam_participants_jam_user_unique').on(t.jamId, t.userId),
+  unique('jam_participants_jam_guest_unique').on(t.jamId, t.guestSessionId),
+  check('jam_participants_one_identity', sql`(${t.userId} IS NOT NULL) <> (${t.guestSessionId} IS NOT NULL)`),
+]);
+
+export const jamQueueItems = pgTable('jam_queue_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  jamId: uuid('jam_id').notNull().references(() => jamSessions.id, { onDelete: 'cascade' }),
+  trackId: uuid('track_id').notNull().references(() => tracks.id),
+  position: integer('position').notNull(),
+  addedByParticipantId: uuid('added_by_participant_id').references(() => jamParticipants.id, { onDelete: 'set null' }),
+  addedAt: timestamp('added_at').notNull().defaultNow(),
+}, (t) => [
+  index('jam_queue_items_jam_id_position_idx').on(t.jamId, t.position),
+  // без unique(jamId, trackId): на тусовке один трек могут осознанно поставить дважды
+]);
