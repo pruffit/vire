@@ -7,6 +7,8 @@ import { PlayerWrapper } from '@/components/player/player-wrapper';
 import { MobileTabBar } from '@/components/listener/mobile-tab-bar';
 import { DeferredWidgets } from '@/components/deferred-widgets';
 import { Toaster } from '@/components/toast';
+import { E2eeBootstrap } from '@/components/chat/e2ee-bootstrap';
+import { LinkApprove } from '@/components/chat/link-approve';
 import { Nav } from '@/components/nav';
 import { ScrollState } from '@/components/scroll-state';
 import { ScrollRestoration } from '@/components/scroll-restoration';
@@ -109,6 +111,12 @@ export default async function RootLayout({
           <MobileTabBar incomingCount={incomingCount} messagesUnread={messagesUnread} />
           <DeferredWidgets />
           <Toaster />
+          {userId && (
+            <>
+              <E2eeBootstrap userId={userId} />
+              <LinkApprove viewerId={userId} />
+            </>
+          )}
           <YandexMetrika />
         </MotionProvider>
       </body>

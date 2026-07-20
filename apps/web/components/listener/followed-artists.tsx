@@ -40,7 +40,7 @@ export function FollowedArtists({ initial }: { initial: FollowedArtist[] }) {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-3">
       <AnimatePresence mode="popLayout" initial={false}>
         {artists.map((artist) => (
           <motion.div
@@ -65,12 +65,15 @@ export function FollowedArtists({ initial }: { initial: FollowedArtist[] }) {
                 {artist.name[0]?.toUpperCase()}
               </div>
             )}
-            <Link href={`/artists/${artist.slug}`} className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate group-hover:text-foreground transition-colors">
+            <Link href={`/artists/${artist.slug}`} className="flex items-center gap-1 flex-1 min-w-0">
+              <span className="text-sm font-medium truncate min-w-0 group-hover:text-foreground transition-colors">
                 {artist.name}
-              </p>
+              </span>
               {artist.verified && (
-                <p className="text-xs text-muted-foreground">верифицирован</p>
+                <>
+                  <Icon name="check" size={12} className="shrink-0 text-muted-foreground" />
+                  <span className="sr-only">верифицирован</span>
+                </>
               )}
             </Link>
             <button

@@ -8,6 +8,7 @@ import {
   getIdentityPubB64,
   getOrCreateIdentity,
   importIdentity,
+  resetIdentity,
 } from './identity';
 
 const USER_A = 'user-a';
@@ -61,6 +62,15 @@ describe('e2ee/identity', () => {
 
     const identity = await getOrCreateIdentity(USER_A);
     expect(await getIdentityPubB64(USER_A)).toBe(toB64(identity.pub));
+  });
+
+  it('resetIdentity перезаписывает существующую личность новой парой', async () => {
+    const original = await getOrCreateIdentity(USER_A);
+    const reset = await resetIdentity(USER_A);
+    expect(toB64(reset.pub)).not.toBe(toB64(original.pub));
+
+    const stored = await getIdentity(USER_A);
+    expect(toB64(stored!.pub)).toBe(toB64(reset.pub));
   });
 
   it('личность юзера A недоступна юзеру B на общем браузере, и наоборот', async () => {
