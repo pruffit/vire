@@ -40,7 +40,7 @@ export default async function ConversationPage({ params }: Props) {
   const initialMessages = history.value.slice().reverse();
 
   return (
-    <div data-app-screen className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <header className="flex shrink-0 items-center gap-3 border-b border-border/40 px-3 py-3 sm:px-4">
         <Link
           href="/messages"
@@ -59,6 +59,7 @@ export default async function ConversationPage({ params }: Props) {
         conversationId={conversationId}
         viewerId={viewerId}
         otherUserId={otherUserId}
+        otherName={otherName}
         otherIkPub={otherIkPub}
         initialMessages={initialMessages}
         canSend={canSend}

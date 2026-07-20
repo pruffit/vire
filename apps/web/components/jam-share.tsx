@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { ShareIcon, CheckIcon } from '@/components/icons';
-import { touchTargetClass } from '@/components/popover';
 
 function isTouchDevice(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -56,7 +55,7 @@ export function JamShare({ code, title }: Props) {
       aria-label="Поделиться джемом"
       whileTap={{ scale: 0.9 }}
       transition={spring.snappy}
-      className={`${touchTargetClass('md')} inline-flex items-center gap-1.5 rounded-full border border-border px-3 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer`}
+      className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-4 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
     >
       {copied ? <CheckIcon size={14} /> : <ShareIcon size={14} />}
       {copied ? 'Скопировано' : 'Поделиться'}

@@ -28,6 +28,7 @@ export function ChatThread({
   conversationId,
   viewerId,
   otherUserId,
+  otherName,
   otherIkPub,
   initialMessages,
   canSend,
@@ -35,6 +36,7 @@ export function ChatThread({
   conversationId: string;
   viewerId: string;
   otherUserId: string;
+  otherName: string;
   otherIkPub: string | null;
   initialMessages: ChatMessage[];
   canSend: boolean;
@@ -129,18 +131,33 @@ export function ChatThread({
     }
   }
 
-  const notReady: React.ReactNode = identity.error
-    ? 'Не удалось загрузить шифрование. Обновите страницу.'
-    : identity.ready && identity.needsLink
-      ? (
-        <>
-          Переписка зашифрована. Подтвердите это устройство на другом своём устройстве, чтобы
-          читать и писать. <Link href="/messages" className="underline hover:no-underline">Перейти к привязке</Link>
-        </>
-      )
-      : identity.ready && !ikPub
-        ? 'Собеседник ещё не открывал Vire — как только зайдёт, переписка станет доступна.'
-        : null;
+  const blocked: { icon: 'lock' | 'message-square'; title: string; hint: string; action?: React.ReactNode } | null =
+    identity.error
+      ? { icon: 'lock', title: 'Не удалось загрузить шифрование', hint: 'Обновите страницу и попробуйте снова.' }
+      : identity.ready && identity.needsLink
+        ? {
+            icon: 'lock',
+            title: 'Подтвердите это устройство',
+            hint: 'Переписка зашифрована. Подтвердите устройство на другом своём, где уже открыт Vire, чтобы читать и писать.',
+            action: (
+              <>
+                <Link
+                  href="/messages"
+                  className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium transition-colors hover:bg-accent/10 md:hidden"
+                >
+                  Привязать устройство
+                </Link>
+                <p className="hidden text-xs text-foreground/35 md:block">Привязка — на панели слева.</p>
+              </>
+            ),
+          }
+        : identity.ready && !ikPub
+          ? {
+              icon: 'message-square',
+              title: `${otherName} ещё не открывал(а) Vire`,
+              hint: 'Переписка станет доступна, как только собеседник зайдёт в приложение.',
+            }
+          : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -152,7 +169,13 @@ export function ChatThread({
             <p className="mt-1">Совпадает у обоих — переписку никто не читает.</p>
           </details>
         )}
-        {messages.length === 0 && ck ? (
+        {blocked ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+            <Icon name={blocked.icon} size={28} className="text-foreground/25" />
+            <EmptyState title={blocked.title} hint={blocked.hint} />
+            {blocked.action}
+          </div>
+        ) : messages.length === 0 && ck ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <Icon name="message-square" size={28} className="text-foreground/25" />
             <EmptyState title="Напишите первое сообщение" hint="Переписка защищена сквозным шифрованием" />
@@ -172,13 +195,7 @@ export function ChatThread({
           </div>
         )}
       </div>
-      {notReady ? (
-        <div className="shrink-0 border-t border-border/40 bg-background px-4 py-3 text-center text-sm text-muted-foreground">
-          {notReady}
-        </div>
-      ) : (
-        <MessageComposer onSend={handleSend} disabled={!canSend || !ck} />
-      )}
+      {!blocked && <MessageComposer onSend={handleSend} disabled={!canSend || !ck} />}
     </div>
   );
 }

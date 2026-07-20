@@ -71,16 +71,27 @@ function getBootstrap(selfId: string): Promise<IdentityState> {
   return started;
 }
 
+const RETRY_MS = 15_000;
+
 export function useIdentity(selfId: string): IdentityState {
   const [state, setState] = useState<IdentityState>(IDLE_STATE);
 
+  // Ошибка бутстрапа (моргнула сеть/IndexedDB) раньше повторялась только при новом
+  // монтаже — глобальный E2eeBootstrap живёт всю вкладку, поэтому ретраим сами.
   useEffect(() => {
     let mounted = true;
-    getBootstrap(selfId).then((result) => {
-      if (mounted) setState(result);
-    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const run = () => {
+      getBootstrap(selfId).then((result) => {
+        if (!mounted) return;
+        setState(result);
+        if (result.error) timer = setTimeout(run, RETRY_MS);
+      });
+    };
+    run();
     return () => {
       mounted = false;
+      if (timer) clearTimeout(timer);
     };
   }, [selfId]);
 

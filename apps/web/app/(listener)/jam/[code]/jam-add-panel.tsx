@@ -9,9 +9,10 @@ const ADD_PANEL_LIMIT = 8;
 
 interface Props {
   onAdd: (track: SearchTrack) => void;
+  suggestions?: SearchTrack[];
 }
 
-export function JamAddPanel({ onAdd }: Props) {
+export function JamAddPanel({ onAdd, suggestions = [] }: Props) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<SearchTrack[] | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,6 +40,9 @@ export function JamAddPanel({ onAdd }: Props) {
     };
   }, [q]);
 
+  const isSuggesting = results === null;
+  const list = results ?? suggestions;
+
   return (
     <div className="rounded-xl border border-border bg-card/50 p-2 space-y-2">
       <div className="flex items-center gap-2 px-2 pt-1">
@@ -52,10 +56,11 @@ export function JamAddPanel({ onAdd }: Props) {
         />
       </div>
       <div className="max-h-72 overflow-y-auto space-y-1 pb-1">
-        {results === null ? (
-          <p className="px-3 py-4 text-sm text-muted-foreground">Начните вводить название трека</p>
-        ) : results.length ? (
-          results.map((t) => (
+        {isSuggesting && list.length > 0 && (
+          <p className="px-3 pb-1 pt-1 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Из любимых</p>
+        )}
+        {list.length ? (
+          list.map((t) => (
             <button
               key={t.id}
               onClick={() => onAdd(t)}
@@ -76,7 +81,9 @@ export function JamAddPanel({ onAdd }: Props) {
             </button>
           ))
         ) : (
-          <p className="px-3 py-4 text-sm text-muted-foreground">Ничего не найдено</p>
+          <p className="px-3 py-4 text-sm text-muted-foreground">
+            {isSuggesting ? 'Начните вводить название трека' : 'Ничего не найдено'}
+          </p>
         )}
       </div>
     </div>

@@ -93,7 +93,7 @@ export function LibrarySidebar({
             collapsed={collapsed}
             href="/friends"
             title="Друзья"
-            subtitle={incomingCount > 0 ? `${incomingCount} новых заявок` : 'Друзья'}
+            subtitle={incomingCount > 0 ? `${incomingCount} новых заявок` : undefined}
             badgeCount={incomingCount}
             leading={
               <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
@@ -180,7 +180,7 @@ function LibraryRow({
 }: {
   href: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   leading: ReactNode;
   badgeCount?: number;
   collapsed?: boolean;
@@ -189,8 +189,8 @@ function LibraryRow({
     return (
       <Link
         href={href}
-        title={`${title} · ${subtitle}`}
-        aria-label={`${title}, ${subtitle}`}
+        title={subtitle ? `${title} · ${subtitle}` : title}
+        aria-label={subtitle ? `${title}, ${subtitle}` : title}
         className="rounded-md p-1 transition-colors hover:bg-foreground/5"
       >
         {leading}
@@ -203,7 +203,7 @@ function LibraryRow({
       {leading}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm text-foreground/90">{title}</span>
-        <span className="block truncate text-xs text-foreground/40">{subtitle}</span>
+        {subtitle && <span className="block truncate text-xs text-foreground/40">{subtitle}</span>}
       </span>
       {!!badgeCount && badgeCount > 0 && (
         <span className="shrink-0 rounded-full bg-primary px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-primary-foreground">

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
-import { touchTargetClass } from '@/components/popover';
 import { toast } from '@/lib/toast';
 
 interface Props {
@@ -34,7 +33,7 @@ export function JamSavePlaylist({ code }: Props) {
     return (
       <Link
         href={`/playlists/${savedPlaylistId}`}
-        className={`${touchTargetClass('md')} inline-flex items-center gap-1.5 rounded-full border border-border px-3 text-sm text-primary hover:text-foreground transition-colors`}
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-4 text-sm text-primary hover:text-foreground transition-colors"
       >
         <Icon name="check" size={14} /> Открыть плейлист
       </Link>
@@ -49,7 +48,7 @@ export function JamSavePlaylist({ code }: Props) {
       aria-label="Сохранить очередь в плейлист"
       whileTap={{ scale: 0.9 }}
       transition={spring.snappy}
-      className={`${touchTargetClass('md')} inline-flex items-center gap-1.5 rounded-full border border-border px-3 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-60 cursor-pointer`}
+      className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-4 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-60 cursor-pointer"
     >
       {saving ? <Icon name="loader" size={14} className="animate-spin" /> : <Icon name="save" size={14} />}
       Сохранить в плейлист

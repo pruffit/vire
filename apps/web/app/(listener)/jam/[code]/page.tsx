@@ -1,8 +1,12 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import type { SearchTrack } from '@vire/core';
 import { auth } from '@/auth';
 import { jamService } from '@/lib/jam';
+import { getLikedTracksCached } from '@/lib/listener-data';
 import { JamRoom } from './jam-room';
+
+const SUGGESTION_LIMIT = 8;
 
 type Props = { params: Promise<{ code: string }> };
 
@@ -22,14 +26,28 @@ export default async function JamPage({ params }: Props) {
   const [preview, session] = await Promise.all([jamService().preview(code), auth()]);
   if (!preview.ok) notFound();
 
+  const userId = session?.user?.id;
+  const liked = userId ? await getLikedTracksCached(userId) : [];
+  const suggestions: SearchTrack[] = liked.slice(0, SUGGESTION_LIMIT).map((t) => ({
+    id: t.id,
+    title: t.title,
+    releaseId: t.releaseId,
+    artistSlug: t.artistSlug,
+    artistName: t.artistName,
+    coverUrl: t.releaseCoverUrl,
+    version: t.version,
+    feat: t.feat,
+  }));
+
   return (
     <JamRoom
       code={preview.value.session.code}
       title={preview.value.session.title}
       hostDisplayName={preview.value.hostDisplayName}
       initialEnded={preview.value.session.status === 'ENDED'}
-      isLoggedIn={Boolean(session?.user?.id)}
+      isLoggedIn={Boolean(userId)}
       currentUserName={session?.user?.name ?? null}
+      suggestions={suggestions}
     />
   );
 }

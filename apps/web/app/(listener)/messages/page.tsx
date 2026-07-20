@@ -1,24 +1,16 @@
-import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { auth } from '@/auth';
-import { chatService } from '@/lib/chat';
-import { ConversationList } from '@/components/chat/conversation-list';
-import { DeviceLink } from '@/components/chat/device-link';
+import { Icon } from '@/components/icon';
 
 export const metadata: Metadata = { title: 'Сообщения' };
-export const dynamic = 'force-dynamic';
 
-export default async function MessagesPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/sign-in?callbackUrl=/messages');
-
-  const conversations = await chatService().listConversations(session.user.id);
-
+export default function MessagesIndexPage() {
   return (
-    <main className="w-full max-w-3xl mx-auto px-5 sm:px-6 py-12 space-y-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Сообщения</h1>
-      <DeviceLink viewerId={session.user.id} />
-      <ConversationList conversations={conversations} viewerId={session.user.id} />
-    </main>
+    <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+      <Icon name="message-square" size={32} className="text-foreground/25" />
+      <p className="text-sm font-medium text-foreground/70">Выберите диалог</p>
+      <p className="max-w-xs text-xs text-foreground/40">
+        Переписка появится здесь, как только вы откроете один из чатов слева
+      </p>
+    </div>
   );
 }

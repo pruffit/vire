@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import type { JamParticipant } from '@vire/core';
 import { Icon } from '@/components/icon';
-import { Popover, touchTargetClass } from '@/components/popover';
+import { Popover } from '@/components/popover';
 
 function initial(name: string): string {
   return (name.trim()[0] ?? '?').toUpperCase();
@@ -24,7 +24,7 @@ export function JamParticipants({ participants }: { participants: JamParticipant
           onClick={toggle}
           aria-label="Участники джема"
           aria-expanded={open}
-          className={`${touchTargetClass('md')} inline-flex items-center gap-1.5 rounded-full border border-border px-3 text-sm text-muted-foreground hover:text-foreground transition-colors`}
+          className="min-h-11 inline-flex items-center gap-1.5 rounded-full border border-border px-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <Icon name="users" size={14} />
           <span className="tabular-nums">{participants.length}</span>

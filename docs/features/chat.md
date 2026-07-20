@@ -52,9 +52,24 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
   тред показывает «не удалось загрузить шифрование», следующий монтаж повторяет попытку.
 
 ## Что делает
-- Список диалогов `/messages` (собеседник, последнее сообщение, флаг непрочитанного).
+- **Двухпанельный мессенджер-лейаут** (`(listener)/messages/layout.tsx`): на md+ слева
+  постоянная колонка (заголовок «Сообщения», `DeviceLink`, список диалогов) фиксированной
+  ширины (`w-80`/`xl:w-96`) со своим скроллом, справа — тред или заглушка «Выберите диалог»
+  на `/messages`. На мобилке — одна панель за раз: `/messages` показывает список,
+  `/messages/[id]` — тред на весь экран; переключение по `usePathname` в клиентской
+  обёртке `MessagesShell` (`components/chat/messages-shell.tsx`). `data-app-screen` — на
+  корне лейаута (не на странице треда), поэтому механика app-shell (`(listener)/layout.tsx`:
+  скрытие футера, `min-h-0`) отрабатывает на обоих роутах одинаково. Список диалогов
+  грузится один раз в layout — страница треда его не дублирует.
+- Список диалогов: собеседник, последнее сообщение, флаг непрочитанного, активный диалог
+  подсвечен (сравнение пути через `usePathname`).
 - Тред `/messages/[conversationId]`: история + живой приём новых сообщений по SSE,
   оптимистичная отправка, автоскролл, отметка прочитанного при открытии.
+- **Состояния треда** (`ChatThread`) — центрированные (иконка + заголовок + пояснение,
+  не строка внизу): ошибка бутстрапа шифрования, `needsLink` (с кнопкой «Привязать
+  устройство» на мобилке — ведёт на `/messages`, на десктопе `DeviceLink` уже виден слева),
+  нет `ik_pub` собеседника («{Имя} ещё не открывал(а) Vire»). В блокированном состоянии
+  композер скрыт.
 - Кнопка «Написать» на профиле друга `/u/[userId]` (только если друзья и нет блока) →
   открывает/создаёт диалог и ведёт в тред.
 - Пункт «Сообщения» с бейджем непрочитанных в сайдбаре медиатеки и мобильном таб-баре.
@@ -88,8 +103,8 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
 | Realtime | `apps/web/lib/realtime.ts` (publish/subscribe, порт `RealtimePublisher` в `packages/core/src/ports/realtime.ts`), клиент `apps/web/lib/use-realtime.ts` |
 | Композиция | `apps/web/lib/chat.ts` (`chatService()`) |
 | Роуты | `apps/web/app/api/v1/chat/{messages,open,[conversationId]/messages,[conversationId]/read}/route.ts`, `apps/web/app/api/v1/realtime/stream/route.ts` |
-| Страницы | `apps/web/app/(listener)/messages/page.tsx`, `.../messages/[conversationId]/page.tsx` |
-| Компоненты | `apps/web/components/chat/{conversation-list,chat-thread,message-composer,message-bubble,chat-avatar,chat-format,device-link,link-approve,link-protocol,e2ee-bootstrap}.tsx`, `.../message-friend-button.tsx` |
+| Страницы | `apps/web/app/(listener)/messages/layout.tsx` (двухпанельный shell, auth-гейт, список диалогов), `.../messages/page.tsx` (заглушка «Выберите диалог»), `.../messages/[conversationId]/page.tsx` (тред) |
+| Компоненты | `apps/web/components/chat/{messages-shell,conversation-list,chat-thread,message-composer,message-bubble,chat-avatar,chat-format,device-link,link-approve,link-protocol,e2ee-bootstrap}.tsx`, `.../message-friend-button.tsx` |
 | Навигация | пункт «Сообщения» + бейдж — `library-sidebar.tsx`, `mobile-tab-bar.tsx`; счётчик `countUnreadMessagesCached` в `lib/listener-data.ts` |
 
 ## Модель

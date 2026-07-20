@@ -78,7 +78,13 @@ export async function searchAll(query: string, limit = 5): Promise<SearchResults
       .from(tracks)
       .innerJoin(releases, eq(releases.id, tracks.releaseId))
       .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
-      .where(and(eq(tracks.status, 'READY'), ilike(tracks.title, q)))
+      .where(
+        and(
+          eq(tracks.status, 'READY'),
+          eq(releases.status, 'PUBLISHED'),
+          or(ilike(tracks.title, q), ilike(artistProfiles.name, q), ilike(releases.title, q)),
+        ),
+      )
       .limit(limit),
   ]);
 
