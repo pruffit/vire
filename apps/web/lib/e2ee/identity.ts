@@ -8,7 +8,10 @@ export interface Identity {
 
 const DB_NAME = 'vire-e2ee';
 const STORE = 'keys';
-const KEY = 'identity';
+
+function keyFor(userId: string): string {
+  return `identity:${userId}`;
+}
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -32,30 +35,30 @@ function tx<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequ
   );
 }
 
-export async function getIdentity(): Promise<Identity | null> {
-  const value = await tx<Identity | undefined>('readonly', (s) => s.get(KEY));
+export async function getIdentity(userId: string): Promise<Identity | null> {
+  const value = await tx<Identity | undefined>('readonly', (s) => s.get(keyFor(userId)));
   return value ?? null;
 }
 
-export async function getOrCreateIdentity(): Promise<Identity> {
-  const existing = await getIdentity();
+export async function getOrCreateIdentity(userId: string): Promise<Identity> {
+  const existing = await getIdentity(userId);
   if (existing) return existing;
   const pair = sodium.crypto_box_keypair();
   const identity: Identity = { pub: pair.publicKey, priv: pair.privateKey };
-  await tx('readwrite', (s) => s.put(identity, KEY));
+  await tx('readwrite', (s) => s.put(identity, keyFor(userId)));
   return identity;
 }
 
-export async function importIdentity(priv: Uint8Array): Promise<void> {
+export async function importIdentity(userId: string, priv: Uint8Array): Promise<void> {
   const identity: Identity = { pub: sodium.crypto_scalarmult_base(priv), priv };
-  await tx('readwrite', (s) => s.put(identity, KEY));
+  await tx('readwrite', (s) => s.put(identity, keyFor(userId)));
 }
 
-export async function clearIdentity(): Promise<void> {
-  await tx('readwrite', (s) => s.delete(KEY));
+export async function clearIdentity(userId: string): Promise<void> {
+  await tx('readwrite', (s) => s.delete(keyFor(userId)));
 }
 
-export async function getIdentityPubB64(): Promise<string | null> {
-  const identity = await getIdentity();
+export async function getIdentityPubB64(userId: string): Promise<string | null> {
+  const identity = await getIdentity(userId);
   return identity ? toB64(identity.pub) : null;
 }

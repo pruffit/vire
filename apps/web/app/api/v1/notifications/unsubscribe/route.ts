@@ -1,19 +1,46 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { updateUserNotifyEmail } from '@vire/db';
 import { verifyNotifyUnsub } from '@/lib/notify-unsubscribe';
+import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+const schema = z.object({ uid: z.string().min(1).max(128), token: z.string().min(1).max(128) });
+
+function confirmPage(req: Request, params: Record<string, string>): Response {
+  const url = new URL('/notifications/unsubscribe', req.url);
+  url.search = new URLSearchParams(params).toString();
+  return NextResponse.redirect(url, 303);
+}
+
+function readTokenParams(req: Request): { uid: string | null; token: string | null } {
   const { searchParams } = new URL(req.url);
-  const uid = searchParams.get('uid') ?? '';
-  const token = searchParams.get('token') ?? '';
-  if (!uid || !token || !verifyNotifyUnsub(uid, token)) {
-    return new NextResponse('Неверная ссылка отписки', { status: 400 });
+  return { uid: searchParams.get('uid'), token: searchParams.get('token') };
+}
+
+// GET не мутирует — префетч/сканер почтового клиента иначе отписывает молча (RFC 8058)
+export async function GET(req: Request) {
+  const rl = await rateLimit(clientKey(req, 'notify-unsub'), 20, 60);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
+
+  const parsed = schema.safeParse(readTokenParams(req));
+  if (!parsed.success || !verifyNotifyUnsub(parsed.data.uid, parsed.data.token)) {
+    return confirmPage(req, { status: 'bad' });
   }
-  await updateUserNotifyEmail(uid, false);
-  return new NextResponse('Вы отписаны от email-уведомлений Vire.', {
-    status: 200,
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-  });
+  return confirmPage(req, { uid: parsed.data.uid, token: parsed.data.token });
+}
+
+// Принимает и подтверждение с формы страницы, и one-click POST почтовика (List-Unsubscribe-Post)
+export async function POST(req: Request) {
+  const rl = await rateLimit(clientKey(req, 'notify-unsub'), 20, 60);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
+
+  const parsed = schema.safeParse(readTokenParams(req));
+  if (!parsed.success || !verifyNotifyUnsub(parsed.data.uid, parsed.data.token)) {
+    return NextResponse.json({ error: 'Неверная ссылка отписки' }, { status: 400 });
+  }
+
+  await updateUserNotifyEmail(parsed.data.uid, false);
+  return NextResponse.json({ ok: true });
 }

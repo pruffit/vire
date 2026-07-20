@@ -1,16 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { startLink, getLink, attachLink, revealLink, completeLink, publish } = vi.hoisted(() => ({
+const { startLink, getLink, attachLink, revealLink, completeLink, abortLink, publish } = vi.hoisted(() => ({
   startLink: vi.fn(),
   getLink: vi.fn(),
   attachLink: vi.fn(),
   revealLink: vi.fn(),
   completeLink: vi.fn(),
+  abortLink: vi.fn(),
   publish: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
-vi.mock('@/lib/link-session', () => ({ startLink, getLink, attachLink, revealLink, completeLink }));
+vi.mock('@/lib/link-session', () => ({ startLink, getLink, attachLink, revealLink, completeLink, abortLink }));
 vi.mock('@/lib/realtime', () => ({ publish }));
 vi.mock('@/lib/rate-limit', () => ({
   rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
@@ -23,6 +24,7 @@ import { GET as pollGET } from './poll/route';
 import { POST as attachPOST } from './attach/route';
 import { POST as revealPOST } from './reveal/route';
 import { POST as completePOST } from './complete/route';
+import { POST as abortPOST } from './abort/route';
 
 const mockedAuth = vi.mocked(auth);
 const USER_ID = '22222222-2222-2222-2222-222222222222';
@@ -142,5 +144,37 @@ describe('POST /keys/link/complete', () => {
     const res = await completePOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
     expect(res.status).toBe(200);
     expect(completeLink).toHaveBeenCalledWith(LINK_ID, USER_ID, body.wrapped, body.nonce);
+  });
+});
+
+describe('POST /keys/link/abort', () => {
+  const body = { linkId: LINK_ID };
+
+  it('401 without auth', async () => {
+    anon();
+    const res = await abortPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
+    expect(res.status).toBe(401);
+  });
+
+  it('400 on invalid body', async () => {
+    authed();
+    const res = await abortPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify({ linkId: 'not-a-uuid' }) }));
+    expect(res.status).toBe(400);
+  });
+
+  it('404 when the session is not the callers', async () => {
+    authed();
+    abortLink.mockResolvedValue(false);
+    const res = await abortPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
+    expect(res.status).toBe(404);
+    expect(abortLink).toHaveBeenCalledWith(LINK_ID, USER_ID);
+  });
+
+  it('aborts an owned session', async () => {
+    authed();
+    abortLink.mockResolvedValue(true);
+    const res = await abortPOST(new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
   });
 });

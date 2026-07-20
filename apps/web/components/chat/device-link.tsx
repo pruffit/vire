@@ -20,9 +20,16 @@ interface LinkState {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function poll(linkId: string, until: (s: LinkState) => boolean): Promise<LinkState | null> {
+function isLinkState(s: LinkState | null | 'gone'): s is LinkState {
+  return s !== null && s !== 'gone';
+}
+
+// 404 = сессию удалили (abort с другой стороны или TTL) — прекращаем поллинг сразу,
+// не ждём оставшиеся ~3 минуты цикла на транзиентных ошибках сети.
+async function poll(linkId: string, until: (s: LinkState) => boolean): Promise<LinkState | null | 'gone'> {
   for (let i = 0; i < 120; i++) {
     const res = await fetch(`/api/v1/keys/link/poll?linkId=${linkId}`).catch(() => null);
+    if (res?.status === 404) return 'gone';
     if (res?.ok) {
       const state = (await res.json()) as LinkState;
       if (until(state)) return state;
@@ -58,6 +65,7 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
       const { linkId } = (await startRes.json()) as { linkId: string };
 
       const attached = await poll(linkId, (s) => !!s.eaPub);
+      if (attached === 'gone') { setCode(null); setMsg('Привязка отклонена на другом устройстве.'); return; }
       if (!attached?.eaPub) throw new Error();
 
       const revealRes = await post('reveal', { linkId, ebPub: toB64(eB.pub) });
@@ -67,10 +75,11 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
       setCode(sasDigits6(eB.pub, fromB64(attached.eaPub), secret));
 
       const completed = await poll(linkId, (s) => !!s.wrapped);
+      if (completed === 'gone') { setCode(null); setMsg('Привязка отклонена на другом устройстве.'); return; }
       if (!completed?.wrapped || !completed.nonce) throw new Error();
       const priv = unwrapPriv(completed.wrapped, completed.nonce, secret);
       if (!priv) throw new Error();
-      await importIdentity(priv);
+      await importIdentity(viewerId, priv);
       window.location.reload();
     } catch {
       setMsg('Не удалось привязать устройство. Попробуйте снова.');
@@ -78,23 +87,24 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
     } finally {
       busy.current = false;
     }
-  }, []);
+  }, [viewerId]);
 
   // Существующее устройство (A): attach(eaPub) видя только commit → ждёт ebPub → проверяет commit → SAS.
   const onLinkRequest = useCallback(async (linkId: string) => {
     if (!identity.priv || identity.needsLink || approve) return;
     const first = await poll(linkId, (s) => !!s.commitB && !s.eaPub);
-    if (!first?.commitB) return;
+    if (!isLinkState(first) || !first.commitB) return;
 
     const eA = newEphemeral();
     const attachRes = await post('attach', { linkId, eaPub: toB64(eA.pub) });
     if (!attachRes.ok) return;
 
     const revealed = await poll(linkId, (s) => !!s.ebPub);
-    if (!revealed?.ebPub) return;
+    if (!isLinkState(revealed) || !revealed.ebPub) return;
 
     // Загрузочная проверка против MITM: ebPub обязан соответствовать коммитменту, сделанному до attach.
     if (!commitMatches(fromB64(revealed.ebPub), first.commitB)) {
+      await post('abort', { linkId });
       setMsg('Привязка отклонена: не сошёлся ключ (возможна подмена).');
       return;
     }
@@ -114,6 +124,7 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
   async function confirmApprove() {
     if (!approve || !identity.priv) return;
     if (typed.trim() !== approve.expected) {
+      await post('abort', { linkId: approve.linkId });
       setMsg('Код не совпадает. Привязка отменена.');
       setApprove(null);
       setTyped('');
@@ -144,7 +155,7 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
             className="min-h-11 flex-1 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-40">
             Подтвердить
           </button>
-          <button onClick={() => { setApprove(null); setTyped(''); }}
+          <button onClick={() => { void post('abort', { linkId: approve.linkId }); setApprove(null); setTyped(''); }}
             className="min-h-11 rounded-lg border border-border px-4 text-sm">Отмена</button>
         </div>
       </div>

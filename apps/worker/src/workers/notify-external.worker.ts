@@ -47,7 +47,10 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
     const tpl = kind === 'FRIEND_REQUEST'
       ? friendRequestEmail({ actorName, appUrl: APP_URL, unsubscribeUrl })
       : chatMessageEmail({ actorName, appUrl: APP_URL, unsubscribeUrl });
-    await sendBrevoEmail({ email: ctx.email, name: ctx.name }, tpl.subject, tpl.html);
+    const unsubHeaders = unsubscribeUrl
+      ? { 'List-Unsubscribe': `<${unsubscribeUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }
+      : undefined;
+    await sendBrevoEmail({ email: ctx.email, name: ctx.name }, tpl.subject, tpl.html, unsubHeaders);
   }
 
   if (decision.push) {

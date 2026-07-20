@@ -58,10 +58,24 @@ Realtime-инкремент через тот же SSE, что и чат. Час
 - **Контентless чат-алерт**: и письмо, и пуш для `CHAT_MESSAGE` содержат только имя отправителя
   («Новое сообщение от X»), без текста сообщения — сервер намеренно остаётся слепым к содержимому
   (задел под грядущий E2EE чата, чтобы не строить то, что придётся выкидывать).
-- **Email** — Brevo HTTP API (тонкий вызов из воркера, `apps/worker/src/lib/brevo.js`), шаблоны
+- **Email** — Brevo HTTP API (тонкий вызов из воркера, `apps/worker/src/lib/brevo.ts`), шаблоны
   `friendRequestEmail`/`chatMessageEmail` в `@vire/core`. Ссылка «отписаться» в футере —
-  HMAC-подписанный линк (`signNotifyUnsub`, секрет `LINK_SIGNING_SECRET`/`AUTH_SECRET`),
-  `GET /api/v1/notifications/unsubscribe` ставит `notify_email = false` без таблицы токенов.
+  HMAC-подписанный линк (`signNotifyUnsub` из `@vire/core/notifications/unsubscribe`, секрет
+  `LINK_SIGNING_SECRET`/`AUTH_SECRET`), без таблицы токенов.
+  - `GET /api/v1/notifications/unsubscribe` не мутирует (RFC 8058 — префетч/сканер почтового
+    клиента иначе тихо отписывает) — редиректит (303) на страницу подтверждения
+    `/notifications/unsubscribe`. Битая/просроченная ссылка → та же страница со `status=bad`.
+  - `POST /api/v1/notifications/unsubscribe` ставит `notify_email = false`. Принимает и клик
+    по кнопке на странице подтверждения (`unsubscribe-confirm-form.tsx`), и one-click POST
+    от почтовика (`List-Unsubscribe-Post: List-Unsubscribe=One-Click`) — оба бьют в один и тот
+    же подписанный URL, аутентификация токеном делает CSRF-токен излишним. Rate limit по IP,
+    как в `presave/unsubscribe`.
+  - Письма уходят с `List-Unsubscribe: <подписанный URL>` и
+    `List-Unsubscribe-Post: List-Unsubscribe=One-Click` — `sendBrevoEmail` прокидывает
+    их через поле `headers` Brevo API. Без секрета подписи заголовков нет (URL не собрать).
+    На реальной отправке не проверялось, не перебивает ли Brevo заголовок своим —
+    если перебьёт, one-click уйдёт в механику Brevo, а наш путь отписки остаётся
+    через страницу подтверждения.
 - **Web-push** — таблица `push_subscriptions(user_id, endpoint unique, p256dh, auth)`, роуты
   `POST/DELETE /api/v1/push/subscribe`. Service worker `apps/web/public/sw.js` (`push` →
   `showNotification`, `notificationclick` → фокус/открытие URL из payload). Отправка —

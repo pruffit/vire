@@ -72,6 +72,21 @@ export async function completeLink(id: string, userId: string, wrapped: string, 
   );
 }
 
+// Явный отказ от привязки (SAS не сошёлся / отмена) — снимает B с TTL-ожидания сразу, не через 5 минут.
+export async function abortLink(id: string, userId: string): Promise<boolean> {
+  try {
+    const redis = getRedis();
+    const raw = await redis.get(key(id));
+    if (!raw) return false;
+    const state = JSON.parse(raw) as LinkState;
+    if (state.userId !== userId) return false;
+    await redis.del(key(id));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function patch(id: string, userId: string, next: (s: LinkState) => LinkState | null): Promise<boolean> {
   try {
     const redis = getRedis();

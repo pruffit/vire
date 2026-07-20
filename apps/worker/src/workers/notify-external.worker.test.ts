@@ -3,6 +3,8 @@ import type { Job } from 'bullmq';
 import type { ExternalNotifyJobData } from '@vire/core';
 
 const h = vi.hoisted(() => ({
+  // SIGNING_SECRET читается на уровне модуля воркера — выставить до его импорта
+  _env: (process.env.LINK_SIGNING_SECRET = 'test-secret'),
   getUserNotifyContext: vi.fn(),
   getUserDisplayName: vi.fn(),
   listPushSubscriptions: vi.fn(),
@@ -85,6 +87,13 @@ describe('notify-external handle', () => {
     await handle(makeJob());
     expect(h.sendBrevoEmail).toHaveBeenCalledTimes(1);
     expect(h.sendPush).toHaveBeenCalledTimes(1);
+  });
+
+  it('attaches RFC 8058 one-click unsubscribe headers to the email', async () => {
+    await handle(makeJob());
+    const headers = h.sendBrevoEmail.mock.calls[0][3];
+    expect(headers['List-Unsubscribe']).toMatch(/^<http.*uid=recipient-1&token=signed-token>$/);
+    expect(headers['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
   });
 
   it('prunes dead push endpoints returned by sendPush', async () => {
