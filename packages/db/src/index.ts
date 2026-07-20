@@ -15,6 +15,7 @@ export * from './repositories/wave';
 export * from './repositories/search';
 export * from './repositories/presave';
 export * from './repositories/purchase';
+export * from './repositories/jam';
 export { getTrackAudio, getPlayableTrackAudio, getTrackArtistProfileId, getTrackSourceKey, getArtistTrackSources, getTrackAudioMeta, trackExists, getTrackTitle, listTracksNeedingAnalysis, updateTrackAnalysis, getGenreSuggestionsForTracks, saveGenreSuggestions, getGenreSuggestionsSnapshot, getAudioFeaturesSnapshot } from './queries/track-audio';
 export type { TrackAudioData, PlayableTrackAudioData, GenreSuggestionRow, GenreSuggestionsSnapshot, AudioFeaturesSnapshot } from './queries/track-audio';
 export { getPublicTrackLyrics } from './queries/lyrics';

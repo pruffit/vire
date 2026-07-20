@@ -38,6 +38,20 @@ export function LibrarySidebar({
         </div>
       )}
 
+      <div className={cn(collapsed ? 'px-2 pt-2' : 'px-1.5 pt-1', 'shrink-0')}>
+        <LibraryRow
+          collapsed={collapsed}
+          href="/jam"
+          title="Джем"
+          subtitle="Слушать вместе"
+          leading={
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
+              <Icon name="sliders" size={18} className="text-foreground" />
+            </span>
+          }
+        />
+      </div>
+
       {isGuest ? (
         collapsed ? (
           <Link

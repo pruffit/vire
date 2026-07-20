@@ -10,3 +10,4 @@ export * from './notifications';
 export * from './chat';
 export * from './push-subscriptions';
 export * from './user-identity-keys';
+export * from './jam';

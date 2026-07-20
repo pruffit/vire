@@ -12,6 +12,7 @@ const TABS: { href: string; label: string; icon: IconName; exact?: boolean }[] =
   { href: '/library', label: 'Медиатека', icon: 'music' },
   { href: '/messages', label: 'Сообщения', icon: 'message-square' },
   { href: '/friends', label: 'Друзья', icon: 'users' },
+  { href: '/jam', label: 'Джем', icon: 'sliders' },
 ];
 
 export function MobileTabBar({ incomingCount = 0, messagesUnread = 0 }: { incomingCount?: number; messagesUnread?: number }) {
@@ -19,7 +20,7 @@ export function MobileTabBar({ incomingCount = 0, messagesUnread = 0 }: { incomi
   if (!isListenerShellPath(pathname)) return null;
 
   return (
-    <nav className="shrink-0 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur-sm md:hidden pb-[env(safe-area-inset-bottom)]">
+    <nav className="shrink-0 grid grid-cols-6 border-t border-border bg-background/95 backdrop-blur-sm md:hidden pb-[env(safe-area-inset-bottom)]">
       {TABS.map((t) => {
         const active = t.exact ? pathname === t.href : pathname.startsWith(t.href);
         const badgeCount = t.href === '/friends' ? incomingCount : t.href === '/messages' ? messagesUnread : 0;

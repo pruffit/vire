@@ -451,6 +451,11 @@ export const controls = {
     else audio.pause();
   },
 
+  /** Безусловная пауза — для случаев, когда играть должен только другой источник звука (джем). */
+  pause(): void {
+    audio?.pause();
+  },
+
   seek(time: number): void {
     if (audio) audio.currentTime = time;
     usePlayerStore.getState()._setState({ currentTime: time });

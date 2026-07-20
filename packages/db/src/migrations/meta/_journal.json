@@ -295,6 +295,20 @@
       "when": 1784481521930,
       "tag": "0041_curly_wild_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1784533554565,
+      "tag": "0042_mature_stingray",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1784556125814,
+      "tag": "0043_productive_king_cobra",
+      "breakpoints": true
     }
   ]
 }

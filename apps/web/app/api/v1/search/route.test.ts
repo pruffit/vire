@@ -56,4 +56,20 @@ describe('GET /api/v1/search', () => {
     await expect(res.json()).resolves.toEqual(RESULTS);
     expect(searchAll).toHaveBeenCalledWith('hello', 4);
   });
+
+  it('honors an explicit limit query param', async () => {
+    const res = await GET(new Request('http://localhost/api/v1/search?q=hello&limit=8'));
+    expect(res.status).toBe(200);
+    expect(searchAll).toHaveBeenCalledWith('hello', 8);
+  });
+
+  it('clamps an oversized limit to the max', async () => {
+    await GET(new Request('http://localhost/api/v1/search?q=hello&limit=999'));
+    expect(searchAll).toHaveBeenCalledWith('hello', 20);
+  });
+
+  it('falls back to the default limit for an invalid value', async () => {
+    await GET(new Request('http://localhost/api/v1/search?q=hello&limit=-3'));
+    expect(searchAll).toHaveBeenCalledWith('hello', 4);
+  });
 });

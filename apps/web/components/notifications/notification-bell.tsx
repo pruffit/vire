@@ -7,13 +7,14 @@ import { Icon } from '@/components/icon';
 import { Popover } from '@/components/popover';
 import { useRealtime } from '@/lib/use-realtime';
 
-type NotificationType = 'FRIEND_REQUEST' | 'FRIEND_ACCEPT';
+type NotificationType = 'FRIEND_REQUEST' | 'FRIEND_ACCEPT' | 'JAM_INVITE';
 type NotificationItem = {
   id: string;
   type: NotificationType;
   actorId: string | null;
   actorName: string | null;
   actorImage: string | null;
+  entityId: string | null;
   createdAt: string;
   readAt: string | null;
 };
@@ -21,7 +22,13 @@ type NotificationItem = {
 const LABEL: Record<NotificationType, string> = {
   FRIEND_REQUEST: 'Заявка в друзья',
   FRIEND_ACCEPT: 'Теперь у вас в друзьях',
+  JAM_INVITE: 'Зовёт в джем',
 };
+
+function notificationHref(n: NotificationItem): string {
+  if (n.type === 'JAM_INVITE') return n.entityId ? `/jam/id/${n.entityId}` : '/';
+  return n.actorId ? `/u/${n.actorId}` : '/friends';
+}
 
 export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number }) {
   const [open, setOpen] = useState(false);
@@ -91,7 +98,7 @@ export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number
           items.map((n) => (
             <Link
               key={n.id}
-              href={n.actorId ? `/u/${n.actorId}` : '/friends'}
+              href={notificationHref(n)}
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-white/8"
             >

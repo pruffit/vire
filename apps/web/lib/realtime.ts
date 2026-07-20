@@ -3,13 +3,15 @@ import { EventEmitter } from 'node:events';
 import type { RealtimePublisher, RealtimeEvent } from '@vire/core';
 
 /**
- * SSE поверх Redis pub/sub: один канал на пользователя (`rt:user:{id}`), несёт и чат-события,
- * и уведомления. Публикующий клиент — обычный ioredis (командный режим). Подписчик — ОТДЕЛЬНОЕ
+ * SSE поверх Redis pub/sub: канал на пользователя (`rt:user:{id}`) несёт чат и уведомления,
+ * канал на комнату (`rt:jam:{id}`) — события джема. Публикующий клиент — обычный ioredis
+ * (командный режим). Подписчик — ОТДЕЛЬНОЕ
  * соединение в PSUBSCRIBE-режиме (подписка блокирует клиент для обычных команд), fan-out в
  * общий EventEmitter по имени канала; SSE-роут навешивает/снимает листенер на свой канал.
  */
 
 const CHANNEL_PREFIX = 'rt:user:';
+const JAM_CHANNEL_PREFIX = 'rt:jam:';
 const PSUBSCRIBE_PATTERN = 'rt:*';
 
 const globalForRealtime = globalThis as unknown as {
@@ -58,22 +60,32 @@ function ensureSubscriber(): void {
   globalForRealtime._realtimeSubscriberRedis = sub;
 }
 
-/** Публикация на канал пользователя. Деградирует молча — REST-поллинг остаётся фолбэком. */
-export async function publish(userId: string, event: RealtimeEvent): Promise<void> {
+/** Публикация на произвольный канал. Деградирует молча — REST-поллинг остаётся фолбэком. */
+export async function publishChannel(channel: string, event: RealtimeEvent): Promise<void> {
   try {
-    await getPublisherRedis().publish(`${CHANNEL_PREFIX}${userId}`, JSON.stringify(event));
+    await getPublisherRedis().publish(channel, JSON.stringify(event));
   } catch {
     // нет Redis — событие теряется
   }
 }
 
-/** Подписка SSE-хендлера на канал пользователя. Возвращает функцию отписки (cleanup по abort). */
-export function subscribe(userId: string, cb: (event: unknown) => void): () => void {
+/** Подписка SSE-хендлера на произвольный канал. Возвращает функцию отписки (cleanup по abort). */
+export function subscribeChannel(channel: string, cb: (event: unknown) => void): () => void {
   ensureSubscriber();
-  const channel = `${CHANNEL_PREFIX}${userId}`;
   const emitter = getEmitter();
   emitter.on(channel, cb);
   return () => emitter.off(channel, cb);
+}
+
+export const userChannel = (userId: string): string => `${CHANNEL_PREFIX}${userId}`;
+export const jamChannel = (jamId: string): string => `${JAM_CHANNEL_PREFIX}${jamId}`;
+
+export function publish(userId: string, event: RealtimeEvent): Promise<void> {
+  return publishChannel(userChannel(userId), event);
+}
+
+export function subscribe(userId: string, cb: (event: unknown) => void): () => void {
+  return subscribeChannel(userChannel(userId), cb);
 }
 
 export const realtimePublisher: RealtimePublisher = { publish };
