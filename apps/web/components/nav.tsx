@@ -51,7 +51,7 @@ export async function Nav() {
                 <span className="sm:hidden max-w-[72px] truncate block">{displayName}</span>
                 <span className="hidden sm:block max-w-[140px] truncate">{user.name ?? user.email ?? 'Профиль'}</span>
               </NavLink>
-              <NavSignOut />
+              <span className="hidden sm:block"><NavSignOut /></span>
             </>
           ) : (
             <NavLink href="/sign-in">Войти</NavLink>
