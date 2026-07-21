@@ -7,7 +7,8 @@ import type { PlayerTrack, PlayContext } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
 import { Icon } from '@/components/icon';
 import { toast } from '@/lib/toast';
-import { Popover, PopoverItem, touchTargetClass } from '@/components/popover';
+import { touchTargetClass } from '@/components/popover';
+import { AdaptiveMenu } from '@/components/adaptive-menu';
 
 type Loader = () => Promise<PlayerTrack[] | null> | PlayerTrack[];
 
@@ -32,15 +33,19 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto' 
   const [open, setOpen] = useState(false);
 
   function pick(position: 'next' | 'end') {
-    setOpen(false);
     void enqueueWithToast(getTracks, position, context);
   }
 
   return (
-    <Popover
+    <AdaptiveMenu
       open={open}
       onOpenChange={setOpen}
       drop={drop}
+      title="Очередь"
+      items={[
+        { label: 'Играть следующим', icon: <Icon name="corner-down-right" size={14} />, onClick: () => pick('next') },
+        { label: 'Добавить в очередь', icon: <Icon name="list-plus" size={14} />, onClick: () => pick('end') },
+      ]}
       trigger={({ open: expanded, toggle, ref }) => (
         <motion.button
           ref={ref}
@@ -55,17 +60,6 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto' 
           <Icon name="more-vertical" size={16} />
         </motion.button>
       )}
-    >
-      <PopoverItem
-        label="Играть следующим"
-        icon={<Icon name="corner-down-right" size={14} />}
-        onClick={() => pick('next')}
-      />
-      <PopoverItem
-        label="Добавить в очередь"
-        icon={<Icon name="list-plus" size={14} />}
-        onClick={() => pick('end')}
-      />
-    </Popover>
+    />
   );
 }
