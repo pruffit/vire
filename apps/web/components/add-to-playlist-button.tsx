@@ -125,7 +125,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
         aria-label="Добавить в плейлист"
         title="Добавить в плейлист"
         className={cn(
-          'w-8 h-8 rounded-full flex items-center justify-center transition-opacity',
+          'w-8 h-8 pointer-coarse:size-11 rounded-full flex items-center justify-center transition-opacity',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           variant === 'artist'
             ? 'border border-[color-mix(in_oklch,var(--artist-accent)_35%,transparent)] opacity-50 hover:opacity-80'
