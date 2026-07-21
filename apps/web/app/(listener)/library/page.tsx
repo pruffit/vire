@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached, getLikedPlaylistsCached, countUnseenIncomingCached } from '@/lib/listener-data';
+import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached, getLikedPlaylistsCached } from '@/lib/listener-data';
 import type { PlayerTrack } from '@/store/player';
 import { likedToPlayerTrack } from '@/lib/player/liked-to-player-track';
 import { LikedTrackRow } from '@/components/listener/liked-track-row';
@@ -22,12 +22,11 @@ export default async function LibraryPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/library');
 
-  const [likedTracks, followedArtists, playlists, likedPlaylists, incomingCount] = await Promise.all([
+  const [likedTracks, followedArtists, playlists, likedPlaylists] = await Promise.all([
     getLikedTracksCached(session.user.id),
     getFollowedArtistsCached(session.user.id),
     getUserPlaylistsCached(session.user.id),
     getLikedPlaylistsCached(session.user.id),
-    countUnseenIncomingCached(session.user.id),
   ]);
 
   const likedQueue: PlayerTrack[] = likedTracks.map(likedToPlayerTrack);
@@ -38,8 +37,8 @@ export default async function LibraryPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Медиатека</h1>
       </FadeUp>
 
-      {/* сайдбар с Джемом/Друзьями скрыт на мобилке (md:flex) — без таба в MobileTabBar единственный путь */}
-      <div className="grid grid-cols-2 gap-3 md:hidden">
+      {/* Джем скрыт из сайдбара на мобилке (md:flex) — плитка единственный путь */}
+      <div className="md:hidden">
         <Link
           href="/jam"
           className="flex items-center gap-3 rounded-xl border border-border bg-foreground/[0.03] px-4 py-3.5 transition-colors hover:bg-foreground/5"
@@ -50,23 +49,6 @@ export default async function LibraryPage() {
           <span className="min-w-0">
             <span className="block text-sm font-medium text-foreground">Джем</span>
             <span className="block text-xs text-foreground/40">Слушать вместе</span>
-          </span>
-        </Link>
-        <Link
-          href="/friends"
-          className="flex items-center gap-3 rounded-xl border border-border bg-foreground/[0.03] px-4 py-3.5 transition-colors hover:bg-foreground/5"
-        >
-          <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
-            <Icon name="users" size={18} className="text-foreground" />
-            {incomingCount > 0 && (
-              <span aria-hidden className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />
-            )}
-          </span>
-          <span className="min-w-0">
-            <span className="block text-sm font-medium text-foreground">Друзья</span>
-            <span className="block text-xs text-foreground/40">
-              {incomingCount > 0 ? `${incomingCount} новых заявок` : 'Найти друзей'}
-            </span>
           </span>
         </Link>
       </div>
