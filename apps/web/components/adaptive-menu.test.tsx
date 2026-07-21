@@ -8,11 +8,11 @@ vi.mock('@/store/player', () => ({ usePlayerStore: (sel: (s: unknown) => unknown
 
 import { AdaptiveMenu, type MenuItem } from './adaptive-menu';
 
-function setup(items: MenuItem[]) {
+function setup(items: MenuItem[], onOpenChange: (open: boolean) => void = () => {}) {
   return render(
     <AdaptiveMenu
       open
-      onOpenChange={() => {}}
+      onOpenChange={onOpenChange}
       items={items}
       trigger={({ toggle, ref }) => (
         <button ref={ref} onClick={toggle}>триггер</button>
@@ -30,11 +30,13 @@ describe('AdaptiveMenu', () => {
     expect(screen.getByText('Действие A')).not.toBeNull();
   });
 
-  it('клик по пункту вызывает его onClick', () => {
+  it('на десктопе клик по пункту вызывает onClick и закрывает меню', () => {
     const onClick = vi.fn();
-    setup([{ label: 'Действие A', onClick }]);
+    const onOpenChange = vi.fn();
+    setup([{ label: 'Действие A', onClick }], onOpenChange);
     fireEvent.click(screen.getByText('Действие A'));
     expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('на таче рендерит пункты в bottom-sheet (портал в body, без role=menu)', () => {
@@ -43,5 +45,15 @@ describe('AdaptiveMenu', () => {
     const node = screen.getByText('Действие B');
     expect(document.body.contains(node)).toBe(true);
     expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('на таче клик по пункту в bottom-sheet вызывает onClick и закрывает меню', () => {
+    desktop.value = false;
+    const onClick = vi.fn();
+    const onOpenChange = vi.fn();
+    setup([{ label: 'Действие B', onClick }], onOpenChange);
+    fireEvent.click(screen.getByText('Действие B'));
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

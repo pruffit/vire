@@ -37,7 +37,7 @@ export function AdaptiveMenu({ open, onOpenChange, items, trigger, title, align,
             icon={it.icon}
             hint={it.hint}
             disabled={it.disabled}
-            onClick={it.onClick}
+            onClick={() => { onOpenChange(false); it.onClick(); }}
           />
         ))}
       </Popover>
