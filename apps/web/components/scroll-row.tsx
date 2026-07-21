@@ -103,6 +103,24 @@ export function ScrollRow({
   return (
     <div className={cn('relative isolate', bleedClassName)}>
       {overflow && !atStart && (
+        <span
+          aria-hidden
+          className={cn(
+            'hidden pointer-coarse:block absolute inset-y-0 left-0 w-8 z-30 pointer-events-none bg-linear-to-r to-transparent',
+            edgeFrom,
+          )}
+        />
+      )}
+      {overflow && !atEnd && (
+        <span
+          aria-hidden
+          className={cn(
+            'hidden pointer-coarse:block absolute inset-y-0 right-0 w-8 z-30 pointer-events-none bg-linear-to-l to-transparent',
+            edgeFrom,
+          )}
+        />
+      )}
+      {overflow && !atStart && (
         <button
           type="button"
           onClick={() => scroll(-1)}
