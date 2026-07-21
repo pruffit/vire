@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
+import { touchTargetClass } from '@/components/popover';
 
 interface PlaylistItem {
   id: string;
@@ -125,14 +126,21 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
         aria-label="Добавить в плейлист"
         title="Добавить в плейлист"
         className={cn(
-          'w-8 h-8 pointer-coarse:size-11 rounded-full flex items-center justify-center transition-opacity',
+          touchTargetClass('md'),
+          'rounded-full flex items-center justify-center',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          variant === 'artist'
-            ? 'border border-[color-mix(in_oklch,var(--artist-accent)_35%,transparent)] opacity-50 hover:opacity-80'
-            : 'border border-border opacity-50 hover:opacity-80',
         )}
       >
-        <PlusIcon />
+        <span
+          className={cn(
+            'w-8 h-8 rounded-full flex items-center justify-center transition-opacity',
+            variant === 'artist'
+              ? 'border border-[color-mix(in_oklch,var(--artist-accent)_35%,transparent)] opacity-50 hover:opacity-80'
+              : 'border border-border opacity-50 hover:opacity-80',
+          )}
+        >
+          <PlusIcon />
+        </span>
       </motion.button>
 
       <AnimatePresence>
