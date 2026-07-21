@@ -301,11 +301,13 @@ describe('JamRoom', () => {
     );
     await joinAs('HOST');
     expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(expect.objectContaining({ audioEnabled: true }));
-    expect(usePlayerStoreForTest.getState().jamOverride).toEqual({
-      code: 'A2B3C4',
-      track: { title: 'a', artistName: 'Artist', coverUrl: null },
-      isPlaying: true,
-    });
+    await waitFor(() =>
+      expect(usePlayerStoreForTest.getState().jamOverride).toEqual({
+        code: 'A2B3C4',
+        track: { title: 'a', artistName: 'Artist', coverUrl: null },
+        isPlaying: true,
+      }),
+    );
 
     useJamRoomMock.mockReturnValue(baseRoom({ queue, ended: true }));
     rerender(

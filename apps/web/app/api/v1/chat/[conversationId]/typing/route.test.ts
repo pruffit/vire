@@ -7,6 +7,10 @@ const { getConversationMeta, publish } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
+  tooManyRequests: vi.fn(),
+}));
 vi.mock('@/lib/chat', () => ({ chatService: () => ({ getConversationMeta }) }));
 vi.mock('@/lib/realtime', () => ({ publish }));
 
