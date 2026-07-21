@@ -45,7 +45,7 @@ export function MobileTabBar({ incomingCount = 0, messagesUnread = 0 }: { incomi
                 />
               )}
             </span>
-            {t.label}
+            <span className="max-w-full truncate leading-tight">{t.label}</span>
             {showBadge && (
               <span className="sr-only">
                 {t.href === '/friends' ? `${badgeCount} новых заявок в друзья` : `${badgeCount} новых сообщений`}

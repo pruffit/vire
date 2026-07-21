@@ -39,12 +39,12 @@ describe('AdaptiveMenu', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('на таче рендерит пункты в bottom-sheet (портал в body, без role=menu)', () => {
+  it('на таче рендерит пункты в bottom-sheet (портал в body, с role=menu)', () => {
     desktop.value = false;
     setup([{ label: 'Действие B', onClick: () => {} }]);
     const node = screen.getByText('Действие B');
     expect(document.body.contains(node)).toBe(true);
-    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.getByRole('menu')).not.toBeNull();
   });
 
   it('на таче клик по пункту в bottom-sheet вызывает onClick и закрывает меню', () => {

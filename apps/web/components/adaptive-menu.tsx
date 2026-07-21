@@ -47,13 +47,17 @@ export function AdaptiveMenu({ open, onOpenChange, items, trigger, title, align,
   return (
     <div className="relative shrink-0">
       {trigger({ open, toggle: () => onOpenChange(!open), ref: triggerRef })}
-      <Sheet open={open} onClose={() => onOpenChange(false)} anchor="bottom">
+      <Sheet
+        open={open}
+        onClose={() => { onOpenChange(false); triggerRef.current?.focus(); }}
+        anchor="bottom"
+      >
         {title && (
-          <p className="px-4 pt-1 pb-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+          <p className="shrink-0 px-4 pt-1 pb-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
             {title}
           </p>
         )}
-        <div className="pb-2">
+        <div role="menu" className="flex-1 min-h-0 overflow-y-auto pb-2">
           {items.map((it, i) => (
             <button
               key={i}

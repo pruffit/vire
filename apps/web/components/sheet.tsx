@@ -58,6 +58,8 @@ export function Sheet({ open, onClose, anchor = 'center', panelClassName, childr
           style={{ paddingBottom: !isBottom && activeTrack ? 'calc(64px + 1.5rem)' : undefined }}
         >
           <motion.div
+            role="dialog"
+            aria-modal="true"
             drag="y"
             dragListener={false}
             dragControls={dragControls}
