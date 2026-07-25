@@ -28,6 +28,11 @@
   на `pointer-coarse`.
 - `packages/ui/src/components/{button,input}.tsx` — `pointer-coarse:h-11` (44px на таче) для
   cva-контролов UI-кита.
+- `apps/web/components/player/{controls,fullscreen,queue-panel}.tsx`, `components/player-like-button.tsx`
+  — тач-таргеты плеера: транспорт/грип/сворачивание `pointer-coarse:min-w-11/min-h-11` (иконки с
+  `p-2 -m-1` — маргин компенсирует footprint); play/pause крупнее в фуллскрине через `Controls size="full"`
+  (`w-12` / `pointer-coarse:w-14`); like — `pointer-coarse:w-11/h-11/-m-1.5` (хит-зона на таче, десктоп
+  не тронут). Ряд Controls `gap-4 sm:gap-5` — влезает на 320px без гориз-скролла.
 - `apps/web/components/add-to-playlist-button.tsx` — адаптивно: `Sheet anchor="bottom"` на таче /
   motion-popover на десктопе (ветка по `useIsDesktopPointer()`), контент панели — общий
   `panelContent(dense)`; триггер — произвольная иконка-кнопка на `touchTargetClass('md')` (см. ниже).
