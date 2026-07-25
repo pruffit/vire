@@ -28,8 +28,11 @@
   на `pointer-coarse`.
 - `packages/ui/src/components/{button,input}.tsx` — `pointer-coarse:h-11` (44px на таче) для
   cva-контролов UI-кита.
-- `apps/web/components/add-to-playlist-button.tsx` — пример произвольной иконки-кнопки на
-  `touchTargetClass('md')` (не `pointer-coarse:`, см. ниже).
+- `apps/web/components/add-to-playlist-button.tsx` — адаптивно: `Sheet anchor="bottom"` на таче /
+  motion-popover на десктопе (ветка по `useIsDesktopPointer()`), контент панели — общий
+  `panelContent(dense)`; триггер — произвольная иконка-кнопка на `touchTargetClass('md')` (см. ниже).
+- `apps/web/components/track-share.tsx` — `TrackShare` на `AdaptiveMenu` (sheet/popover), пункты
+  «ссылка» / «с момента `?t=`»; фидбэк копирования — `toast` (инлайн-морф не показать в sheet).
 
 ## Правила
 
@@ -52,6 +55,10 @@
   скролл-области (иначе `fixed` ловит трансформированного предка).
 - **Аффорданс рейлов:** горизонтальная лента с переполнением (`ScrollRow`) показывает
   fade-маску краёв на таче; на десктопе (`pointer-fine`) — кнопки-шевроны поверх маски.
+- **Видимость действий строк:** hover-reveal-обёртки действий трек-строк (лайк, удаление,
+  drag-хендл) — `opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100`: на десктопе
+  появляются по hover, на таче видны всегда (hover'а нет). `pointer-coarse`/`pointer-fine` —
+  встроенные варианты Tailwind v4, отдельной регистрации не требуют.
 
 ## Навигация
 
