@@ -113,7 +113,7 @@ function Row({
           </span>
         )}
         <span
-          className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+          className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity"
           onClick={(e) => e.stopPropagation()}
         >
           <PlayerLikeButton trackId={track.id} size="sm" />

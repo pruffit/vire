@@ -76,7 +76,7 @@ export function SortableTrackRow({
               className={`grid place-items-center touch-none cursor-grab active:cursor-grabbing transition-opacity shrink-0 text-muted-foreground ${
                 size === 'roomy'
                   ? 'w-11 h-11 -m-1.5 opacity-70 sm:w-auto sm:h-auto sm:m-0 sm:opacity-0 sm:group-hover:opacity-40 sm:hover:!opacity-80'
-                  : 'opacity-0 group-hover:opacity-40 hover:!opacity-80'
+                  : 'opacity-0 group-hover:opacity-40 hover:!opacity-80 pointer-coarse:opacity-70 pointer-coarse:w-11 pointer-coarse:h-11 pointer-coarse:-m-1.5'
               }`}
             >
               <GripIcon />
@@ -99,7 +99,7 @@ export function SortableTrackRow({
               className={`transition-opacity rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive shrink-0 ${
                 size === 'roomy'
                   ? 'w-11 h-11 -m-1.5 opacity-70 sm:m-0 sm:opacity-0 sm:w-7 sm:h-7 sm:group-hover:opacity-100'
-                  : 'opacity-0 group-hover:opacity-100 w-7 h-7'
+                  : 'opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11 pointer-coarse:-m-1.5'
               }`}
             >
               <Icon name="x" size={12} />
