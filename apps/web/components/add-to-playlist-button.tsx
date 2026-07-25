@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
 import { touchTargetClass } from '@/components/popover';
+import { Sheet } from '@/components/sheet';
+import { useIsDesktopPointer } from '@/lib/is-desktop-pointer';
 
 interface PlaylistItem {
   id: string;
@@ -19,6 +21,7 @@ interface Props {
 }
 
 export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
+  const desktop = useIsDesktopPointer();
   const [open, setOpen] = useState(false);
   const [playlists, setPlaylists] = useState<PlaylistItem[]>([]);
   const [inPlaylists, setInPlaylists] = useState<Set<string>>(new Set());
@@ -26,6 +29,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
   const [newTitle, setNewTitle] = useState('');
   const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -42,13 +46,14 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
   }, [open, trackId]);
 
   useEffect(() => {
-    if (!open) return;
+    // Sheet ловит overlay-click/esc сам — вешать mousedown только для десктоп-поповера
+    if (!open || !desktop) return;
     function onOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener('mousedown', onOutside);
     return () => document.removeEventListener('mousedown', onOutside);
-  }, [open]);
+  }, [open, desktop]);
 
   function togglePlaylist(playlistId: string, title: string) {
     const adding = !inPlaylists.has(playlistId);
@@ -116,32 +121,134 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
     });
   }
 
-  return (
-    <div ref={ref} className="relative">
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        whileHover={{ scale: 1.08 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Добавить в плейлист"
-        title="Добавить в плейлист"
+  const panelContent = (dense: boolean) => (
+    <>
+      {playlists.length === 0 && !creating && (
+        <div className={cn('text-muted-foreground', dense ? 'px-4 py-3 text-sm' : 'px-3 py-3 text-xs')}>
+          Нет плейлистов
+        </div>
+      )}
+
+      <div className={dense ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-40 overflow-y-auto'}>
+        {playlists.map((p) => {
+          const inIt = inPlaylists.has(p.id);
+          return (
+            <button
+              key={p.id}
+              onClick={() => togglePlaylist(p.id, p.title)}
+              disabled={isPending}
+              className={cn(
+                'w-full flex items-center gap-2.5 text-left transition-colors hover:bg-secondary disabled:opacity-50',
+                dense ? 'min-h-11 px-4 text-[15px]' : 'px-3 py-2 text-sm',
+                inIt ? 'text-foreground' : 'text-muted-foreground',
+              )}
+            >
+              <span
+                className={cn(
+                  'rounded border flex-shrink-0 flex items-center justify-center transition-colors',
+                  dense ? 'w-5 h-5' : 'w-4 h-4',
+                  inIt ? 'bg-foreground border-foreground' : 'border-border',
+                )}
+              >
+                {inIt && (
+                  <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="text-background">
+                    <path d="M2 6l3 3 5-5" />
+                  </svg>
+                )}
+              </span>
+              <span className="flex-1 truncate">{p.title}</span>
+              <span className="text-[10px] font-mono opacity-30">{p.trackCount}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className={cn('border-t border-border shrink-0')}>
+        {creating ? (
+          <div className={cn('flex items-center gap-1', dense ? 'p-3' : 'p-2')}>
+            <input
+              autoFocus
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false); }}
+              placeholder="Название…"
+              className={cn(
+                'flex-1 bg-transparent border-b border-border outline-none text-foreground placeholder:text-muted-foreground',
+                dense ? 'text-sm py-2' : 'text-xs py-1 px-1',
+              )}
+            />
+            <button
+              onClick={handleCreate}
+              disabled={!newTitle.trim() || isPending}
+              className={cn(
+                'font-medium rounded hover:bg-secondary disabled:opacity-40 transition-colors',
+                dense ? 'text-sm px-3 py-2' : 'text-xs px-2 py-1',
+              )}
+            >
+              OK
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setCreating(true)}
+            className={cn(
+              'w-full flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors',
+              dense ? 'min-h-11 px-4 text-sm' : 'px-3 py-2.5 text-xs',
+            )}
+          >
+            <Icon name="plus" size={14} />
+            Новый плейлист
+          </button>
+        )}
+      </div>
+    </>
+  );
+
+  const triggerButton = (
+    <motion.button
+      ref={triggerRef}
+      whileTap={{ scale: 0.9 }}
+      whileHover={{ scale: 1.08 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+      onClick={() => setOpen((v) => !v)}
+      aria-label="Добавить в плейлист"
+      title="Добавить в плейлист"
+      className={cn(
+        touchTargetClass('md'),
+        'rounded-full flex items-center justify-center',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      )}
+    >
+      <span
         className={cn(
-          touchTargetClass('md'),
-          'rounded-full flex items-center justify-center',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'w-8 h-8 rounded-full flex items-center justify-center transition-opacity',
+          variant === 'artist'
+            ? 'border border-[color-mix(in_oklch,var(--artist-accent)_35%,transparent)] opacity-50 hover:opacity-80'
+            : 'border border-border opacity-50 hover:opacity-80',
         )}
       >
-        <span
-          className={cn(
-            'w-8 h-8 rounded-full flex items-center justify-center transition-opacity',
-            variant === 'artist'
-              ? 'border border-[color-mix(in_oklch,var(--artist-accent)_35%,transparent)] opacity-50 hover:opacity-80'
-              : 'border border-border opacity-50 hover:opacity-80',
-          )}
-        >
-          <PlusIcon />
-        </span>
-      </motion.button>
+        <PlusIcon />
+      </span>
+    </motion.button>
+  );
+
+  if (!desktop) {
+    return (
+      <div className="relative">
+        {triggerButton}
+        <Sheet open={open} onClose={() => { setOpen(false); triggerRef.current?.focus(); }} anchor="bottom">
+          <p className="shrink-0 px-4 pt-1 pb-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+            Плейлисты
+          </p>
+          {panelContent(true)}
+        </Sheet>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      {triggerButton}
 
       <AnimatePresence>
         {open && (
@@ -159,74 +266,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
               </p>
             </div>
 
-            {playlists.length === 0 && !creating && (
-              <div className="px-3 py-3 text-xs text-muted-foreground">
-                Нет плейлистов
-              </div>
-            )}
-
-            <div className="max-h-40 overflow-y-auto">
-              {playlists.map((p) => {
-                const inIt = inPlaylists.has(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => togglePlaylist(p.id, p.title)}
-                    disabled={isPending}
-                    className={cn(
-                      'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors',
-                      'hover:bg-secondary disabled:opacity-50',
-                      inIt ? 'text-foreground' : 'text-muted-foreground',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors',
-                        inIt ? 'bg-foreground border-foreground' : 'border-border',
-                      )}
-                    >
-                      {inIt && (
-                        <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" className="text-background">
-                          <path d="M2 6l3 3 5-5" />
-                        </svg>
-                      )}
-                    </span>
-                    <span className="flex-1 truncate">{p.title}</span>
-                    <span className="text-[10px] font-mono opacity-30">{p.trackCount}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="border-t border-border">
-              {creating ? (
-                <div className="flex items-center gap-1 p-2">
-                  <input
-                    autoFocus
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false); }}
-                    placeholder="Название…"
-                    className="flex-1 text-xs bg-transparent border-b border-border px-1 py-1 outline-none text-foreground placeholder:text-muted-foreground"
-                  />
-                  <button
-                    onClick={handleCreate}
-                    disabled={!newTitle.trim() || isPending}
-                    className="text-xs font-medium px-2 py-1 rounded hover:bg-secondary disabled:opacity-40 transition-colors"
-                  >
-                    OK
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setCreating(true)}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                >
-                  <Icon name="plus" size={14} />
-                  Новый плейлист
-                </button>
-              )}
-            </div>
+            {panelContent(false)}
           </motion.div>
         )}
       </AnimatePresence>
