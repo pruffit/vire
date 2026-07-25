@@ -35,7 +35,7 @@ export function PlayerLikeButton({
       whileTap={{ scale: 0.82 }}
       whileHover={{ scale: 1.15 }}
       transition={spring.snappy}
-      className="shrink-0 inline-flex transition-[color,opacity] duration-150"
+      className="shrink-0 inline-flex items-center justify-center transition-[color,opacity] duration-150 pointer-coarse:w-11 pointer-coarse:h-11 pointer-coarse:-m-1.5"
       style={{
         color: liked ? 'var(--artist-accent, var(--foreground))' : undefined,
         opacity: liked ? 1 : 0.35,

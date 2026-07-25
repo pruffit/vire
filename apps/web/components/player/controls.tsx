@@ -31,11 +31,14 @@ function PlayerToggleButton({
       aria-pressed={active}
       whileTap={!disabled ? { scale: 0.88 } : undefined}
       transition={spring.snappy}
-      className="relative p-2 -m-1 transition-colors disabled:pointer-events-none"
+      className="relative p-2 -m-1 transition-colors disabled:pointer-events-none pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
       style={active && !disabled ? { color: 'var(--artist-accent, oklch(72% 0.19 145))' } : { opacity: 0.3 }}
     >
-      {icon}
-      {badge}
+      {/* бейдж якорится к иконке, а не к боксу — на pointer-coarse бокс 44px, иначе бейдж отлетает */}
+      <span className="relative inline-flex items-center justify-center">
+        {icon}
+        {badge}
+      </span>
       <AnimatePresence>
         {active && !disabled && (
           <motion.span
@@ -107,8 +110,13 @@ export function RepeatButton() {
   );
 }
 
+const PLAY_PAUSE_SIZE_CLASS = {
+  bar: 'w-10 h-10',
+  full: 'w-12 h-12 pointer-coarse:w-14 pointer-coarse:h-14',
+} as const;
+
 /** Play/pause; в restored-состоянии клик зовёт resumeRestored(), а не паузу несуществующего audio. */
-function PlayPauseButton() {
+function PlayPauseButton({ size }: { size: 'bar' | 'full' }) {
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isLoading = usePlayerStore((s) => s.isLoading);
   const hasAudio = usePlayerStore((s) => s.hasAudio);
@@ -118,6 +126,7 @@ function PlayPauseButton() {
   const iconKey = audioError ? 'error' : isLoading ? 'loading' : isPlaying ? 'pause' : 'play';
   // Буферизация уже играющего трека кнопку не блокирует — на медленной сети 'waiting' приходит постоянно.
   const disabled = audioError || (!hasAudio && !restored) || (isLoading && !isPlaying);
+  const iconSize = size === 'full' ? 18 : undefined;
 
   return (
     <motion.button
@@ -127,7 +136,7 @@ function PlayPauseButton() {
       title={audioError ? 'Не удалось загрузить трек' : undefined}
       whileTap={!disabled ? { scale: 0.92 } : undefined}
       transition={spring.snappy}
-      className="relative w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:bg-primary/90"
+      className={`relative ${PLAY_PAUSE_SIZE_CLASS[size]} rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:bg-primary/90`}
     >
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
@@ -143,9 +152,9 @@ function PlayPauseButton() {
           ) : isLoading ? (
             <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
           ) : isPlaying ? (
-            <PauseIcon />
+            <PauseIcon size={iconSize} />
           ) : (
-            <PlayIcon className="translate-x-[1px]" />
+            <PlayIcon size={iconSize} className="translate-x-[1px]" />
           )}
         </motion.span>
       </AnimatePresence>
@@ -158,16 +167,18 @@ export function Controls({
   showShuffle = false,
   showRepeat = false,
   hideExtrasBelowSm = false,
+  size = 'bar',
 }: {
   showWaveMode?: boolean;
   showShuffle?: boolean;
   showRepeat?: boolean;
   hideExtrasBelowSm?: boolean;
+  size?: 'bar' | 'full';
 }) {
   const extraClass = `${hideExtrasBelowSm ? 'hidden sm:flex' : 'flex'} w-9 justify-center`;
 
   return (
-    <div className="flex items-center gap-5 justify-center flex-1">
+    <div className="flex items-center gap-4 sm:gap-5 justify-center flex-1">
       {showShuffle && (
         <span className={extraClass}>
           <ShuffleButton />
@@ -178,19 +189,19 @@ export function Controls({
         aria-label="Предыдущий трек"
         whileTap={{ scale: 0.92 }}
         transition={spring.snappy}
-        className="p-2 -m-1 opacity-50 hover:opacity-100 transition-opacity"
+        className="p-2 -m-1 opacity-50 hover:opacity-100 transition-opacity pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
       >
         <SkipBackIcon />
       </motion.button>
 
-      <PlayPauseButton />
+      <PlayPauseButton size={size} />
 
       <motion.button
         onClick={() => controls.next()}
         aria-label="Следующий трек"
         whileTap={{ scale: 0.92 }}
         transition={spring.snappy}
-        className="p-2 -m-1 opacity-50 hover:opacity-100 transition-opacity"
+        className="p-2 -m-1 opacity-50 hover:opacity-100 transition-opacity pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
       >
         <SkipForwardIcon />
       </motion.button>

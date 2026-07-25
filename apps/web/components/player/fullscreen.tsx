@@ -58,7 +58,7 @@ export function FullscreenPlayer({
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0, bottom: 0.7 }}
       onDragEnd={handleDragEnd}
-      className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto px-6 py-12"
+      className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto px-6 py-8 sm:py-12"
       style={
         {
           '--artist-accent': track.accentColor ?? undefined,
@@ -72,7 +72,7 @@ export function FullscreenPlayer({
       <button
         onClick={onClose}
         aria-label="Свернуть плеер"
-        className="fixed top-5 right-5 z-20 w-9 h-9 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity"
+        className="fixed top-5 right-5 z-20 w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 pointer-coarse:-m-1 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity"
       >
         <ChevronDownIcon />
       </button>
@@ -85,7 +85,7 @@ export function FullscreenPlayer({
         <span className="w-12 h-1 rounded-full bg-white/20" />
       </div>
 
-      <div className="my-auto w-full max-w-md flex flex-col items-center gap-8">
+      <div className="my-auto w-full max-w-md flex flex-col items-center gap-6 sm:gap-8">
         <div className="relative">
           <div
             aria-hidden="true"
@@ -126,7 +126,7 @@ export function FullscreenPlayer({
           <DurationLabel />
         </div>
 
-        <Controls showWaveMode={false} showShuffle showRepeat />
+        <Controls showWaveMode={false} showShuffle showRepeat size="full" />
 
         <Lyrics key={track.id} trackId={track.id} />
 
