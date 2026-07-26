@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/icon';
-import { Popover, PopoverItem } from '@/components/popover';
+import { AdaptiveMenu } from '@/components/adaptive-menu';
 import { Textarea, btnPrimary, btnGhost } from '@/components/ui-kit';
 import { toast } from '@/lib/toast';
 
@@ -16,7 +16,7 @@ export function ProfileMoreMenu({ targetUserId }: { targetUserId: string }) {
 
   return (
     <>
-      <Popover
+      <AdaptiveMenu
         open={open}
         onOpenChange={setOpen}
         align="right"
@@ -31,24 +31,11 @@ export function ProfileMoreMenu({ targetUserId }: { targetUserId: string }) {
             <Icon name="more-horizontal" size={18} />
           </button>
         )}
-      >
-        <PopoverItem
-          label="Пожаловаться"
-          icon={<Icon name="thumbs-down" size={15} />}
-          onClick={() => {
-            setOpen(false);
-            setModal('report');
-          }}
-        />
-        <PopoverItem
-          label="Заблокировать"
-          icon={<Icon name="ban" size={15} />}
-          onClick={() => {
-            setOpen(false);
-            setModal('block');
-          }}
-        />
-      </Popover>
+        items={[
+          { label: 'Пожаловаться', icon: <Icon name="thumbs-down" size={15} />, onClick: () => setModal('report') },
+          { label: 'Заблокировать', icon: <Icon name="ban" size={15} />, onClick: () => setModal('block') },
+        ]}
+      />
 
       {modal === 'report' && (
         <ReportModal targetUserId={targetUserId} onClose={() => setModal(null)} />

@@ -3,7 +3,8 @@
 import { useCallback, useState } from 'react';
 import Image from 'next/image';
 import { Icon } from '@/components/icon';
-import { Popover, touchTargetClass } from '@/components/popover';
+import { touchTargetClass } from '@/components/popover';
+import { AdaptivePopover } from '@/components/adaptive-popover';
 import { toast } from '@/lib/toast';
 
 interface Friend {
@@ -59,11 +60,12 @@ export function JamInvite({ code }: Props) {
   }
 
   return (
-    <Popover
+    <AdaptivePopover
       open={open}
       onOpenChange={handleOpenChange}
       align="left"
       drop="down"
+      title="Пригласить друзей"
       panelClassName="w-64"
       trigger={({ toggle, ref }) => (
         <button
@@ -109,6 +111,6 @@ export function JamInvite({ code }: Props) {
           })
         )}
       </div>
-    </Popover>
+    </AdaptivePopover>
   );
 }

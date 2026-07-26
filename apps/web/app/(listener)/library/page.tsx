@@ -41,15 +41,16 @@ export default async function LibraryPage() {
       <div className="md:hidden">
         <Link
           href="/jam"
-          className="flex items-center gap-3 rounded-xl border border-border bg-foreground/[0.03] px-4 py-3.5 transition-colors hover:bg-foreground/5"
+          className="flex items-center gap-3 rounded-xl border border-primary/20 bg-linear-to-br from-primary/10 to-primary/[0.03] px-4 py-3.5 transition-colors hover:border-primary/30 hover:from-primary/15"
         >
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
-            <Icon name="sliders" size={18} className="text-foreground" />
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-linear-to-br from-primary/30 to-primary/10">
+            <Icon name="sliders" size={22} className="text-primary" />
           </span>
-          <span className="min-w-0">
+          <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium text-foreground">Джем</span>
-            <span className="block text-xs text-foreground/40">Слушать вместе</span>
+            <span className="block text-xs text-foreground/50">Слушать вместе</span>
           </span>
+          <Icon name="chevron-right" size={18} className="shrink-0 text-primary/50" />
         </Link>
       </div>
 

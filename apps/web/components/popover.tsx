@@ -20,6 +20,8 @@ interface PopoverProps {
   /** 'auto' флипает вниз, если триггеру нет места сверху; 'down' — принудительно (peek-шит клипает раскрытие вверх). */
   drop?: 'up' | 'down' | 'auto';
   panelClassName?: string;
+  /** ARIA-роль панели: 'menu' для action-меню (дефолт), 'dialog' для контентного поповера. */
+  role?: string;
 }
 
 const FLIP_THRESHOLD = 170;
@@ -32,6 +34,7 @@ export function Popover({
   align = 'right',
   drop = 'up',
   panelClassName,
+  role = 'menu',
 }: PopoverProps) {
   const [dropDown, setDropDown] = useState(drop === 'down');
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -75,7 +78,7 @@ export function Popover({
       <AnimatePresence>
         {open && (
           <motion.div
-            role="menu"
+            role={role}
             initial={{ opacity: 0, y: yEnter, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: yExit, scale: 0.97 }}
