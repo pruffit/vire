@@ -25,12 +25,15 @@
   не нужно городить `max-h`/`overflow` под шит. На десктопе поповер получает `role="dialog"`
   (не `menu`) — контент не объявляется скринридеру как пустое меню.
 - `apps/web/components/popover.tsx` — десктоп-поповер + `touchTargetClass('sm' | 'md')`
-  (хит-зона 44px без изменения визуального футпринта кнопки).
+  (хит-зона 44px без изменения визуального футпринта кнопки); `touchPill` — 44px мин-высота
+  для текстовых пилюль/чипов/табов (`pointer-coarse:min-h-11` + `inline-flex items-center`),
+  десктоп-плотность не трогает.
 - `apps/web/lib/is-desktop-pointer.ts` — `(hover: hover) and (pointer: fine)`,
   `useIsDesktopPointer()` (`useSyncExternalStore`, SSR-safe).
 - `apps/web/components/listener/mobile-tab-bar.tsx` — 5 пунктов (`md:hidden`).
 - `apps/web/components/scroll-row.tsx` — рейлы: кнопки-шевроны на `pointer-fine`, fade-маска
-  на `pointer-coarse`.
+  на `pointer-coarse`. Помимо рельсов главной (Срез 0) — теперь и `home/cover-rail.tsx`
+  (домашний плей-рейл) и жанр-ряд `artist-catalog.tsx` (`/artists`).
 - `packages/ui/src/components/{button,input}.tsx` — `pointer-coarse:h-11` (44px на таче) для
   cva-контролов UI-кита.
 - `apps/web/components/player/{controls,fullscreen,queue-panel}.tsx`, `components/player-like-button.tsx`
@@ -109,6 +112,32 @@
   pointer-coarse:w-11` поверх десктоп-fine `h-9 w-9`.
 - Плитка «Джем» в «Медиатеке» — акцентный тинт (`primary/10`→`primary/[0.03]`,
   border `primary/20`), крупнее иконка (`h-12 w-12`), шеврон справа как аффорданс перехода.
+
+## Каталоги/поиск/главная (Срез 6)
+
+- Сквозной `touchPill` на пилюлях/чипах/табах фильтров и сортировки: чипы «Потока»
+  (`wave-chips.tsx`), сортировка + жанр-чипы `artist-catalog.tsx` (`/artists`), табы
+  сортировки `releases/page.tsx`, жанр-чипы `search-releases-section.tsx`.
+- `Section` «Показать все» (`listener/section.tsx`) — хит-зона 44px негативным маргином
+  (`pointer-coarse:py-3.5 pointer-coarse:-my-3.5`: text-xs lh16 + 28 = 44px), не сдвигает
+  хедер секции; покрывает все секции главной разом.
+- Поля поиска — `artist-catalog.tsx` (сырой `<input>`, стили расходятся с `@vire/ui Input`
+  — просто `pointer-coarse:h-11`), `global-search.tsx` `variant="page"` (`pointer-coarse:h-11`);
+  кнопка-иконка поиска на десктопе центрирована (`top-1/2 -translate-y-1/2`), на
+  `pointer-coarse` растёт до 44×44 (`top-0 bottom-0 translate-y-0 w-11`), инпут резервирует
+  `pointer-coarse:pr-11` под неё — иконка не сдвигается, десктоп-поведение не меняется.
+- Плей-оверлеи `pointer-coarse:opacity-100` (правило mobile-patterns) — на `home/cover-rail.tsx`,
+  `release-quick-look.tsx`, `listening-now.tsx`. Затемнение-подложка и иконка-бейдж —
+  РАЗНЫЕ элементы: подложка `group-hover` только (иначе на таче обложка затемнена всегда),
+  `pointer-coarse:opacity-100` вешается на иконку, не на подложку.
+- Плотность mobile-only (`sm:` возвращает десктоп): вертикальные отступы главной `page.tsx`
+  `space-y-10 sm:space-y-16`; сетка артистов `/search` `grid-cols-2 sm:grid-cols-3 md:grid-cols-5
+  xl:grid-cols-7 2xl:grid-cols-9` (компактнее, чем `/artists` `2/3/4/5/6` — совпадают только два
+  младших брейкпоинта, в поиске обоснованно больше колонок). Хиро `featured-release.tsx`
+  НЕ сжимали: `h-96` — минимум, при котором контент не переполняет бокс на узком экране.
+- Мелкие лайк-кнопки без хит-зоны — `touchTargetClass('sm')`: `editorial-playlist-card.tsx`;
+  строки треков в quick-look-шите `release-quick-look.tsx` — `pointer-coarse:min-h-11`
+  (вся строка тапом).
 
 ## Навигация
 
