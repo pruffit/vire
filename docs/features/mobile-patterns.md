@@ -38,6 +38,14 @@
   `panelContent(dense)`; триггер — произвольная иконка-кнопка на `touchTargetClass('md')` (см. ниже).
 - `apps/web/components/track-share.tsx` — `TrackShare` на `AdaptiveMenu` (sheet/popover), пункты
   «ссылка» / «с момента `?t=`»; фидбэк копирования — `toast` (инлайн-морф не показать в sheet).
+- **Контентные экраны (Срез 3)** — артист/релиз/трек/профиль под узкий вьюпорт:
+  крошки трека `flex-wrap` + `truncate max-w-[16rem]` на сегментах; `MetaRow` (длит./BPM/
+  тональность) `flex-wrap`; тач-таргеты на `pointer-coarse` — соц-ссылки артиста
+  (`h-11/min-w-11`), «любимый момент» и отписка (`w-11/h-11`), `LikeButton` трека
+  (`min-h-11`), кнопки linked-accounts и правки имени/аватара в profile-hero
+  (`min-h-11` + coarse-gated `inline-flex items-center`); корни артиста и профиля —
+  `overflow-x-clip` (как на релиз/трек). Иконки-хинты (карандаш имени, оверлей камеры)
+  — `pointer-coarse:opacity-100`, иначе на таче невидимы.
 
 ## Правила
 
