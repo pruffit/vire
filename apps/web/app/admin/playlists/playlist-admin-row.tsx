@@ -65,12 +65,12 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
           className="w-full min-w-[180px] rounded-md border border-transparent bg-transparent px-2 py-1 text-sm transition-colors hover:bg-foreground/5 focus:bg-foreground/5 focus:border-foreground/15 focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </Td>
-      <Td>
+      <Td label="Тип">
         <Badge tone={playlist.kind === 'USER' ? 'neutral' : 'info'}>
           {playlist.kind}
         </Badge>
       </Td>
-      <Td>
+      <Td label="Видимость">
         <Select
           options={VISIBILITY_OPTIONS}
           value={visibility}
@@ -79,9 +79,9 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
           className="w-32"
         />
       </Td>
-      <Td align="right" nums mono tone="soft">{playlist.trackCount}</Td>
-      <Td align="right" nums mono tone="soft">{playlist.likesCount}</Td>
-      <Td>
+      <Td label="Треки" align="right" nums mono tone="soft">{playlist.trackCount}</Td>
+      <Td label="Лайки" align="right" nums mono tone="soft">{playlist.likesCount}</Td>
+      <Td label="Владелец">
         {playlist.ownerEmail ? (
           <span
             className="block max-w-44 truncate font-mono text-xs text-foreground/55"
@@ -93,7 +93,7 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
           <span className="font-mono text-xs text-foreground/30">система</span>
         )}
       </Td>
-      <Td mono tone="faint" nowrap>
+      <Td label="Создан" mono tone="faint" nowrap>
         {new Date(playlist.createdAt).toLocaleDateString('ru-RU')}
       </Td>
       <Td align="right">
@@ -102,7 +102,7 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
             <button
               onClick={save}
               disabled={pending || !title.trim()}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40 active:scale-[0.98]"
+              className="pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40 active:scale-[0.98]"
             >
               <Icon name="check" size={13} />
               {pending ? 'Сохраняю…' : 'Сохранить'}
@@ -113,7 +113,7 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Открыть плейлист"
-            className="inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors hover:bg-foreground/10 hover:text-foreground active:scale-[0.98]"
+            className="pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors hover:bg-foreground/10 hover:text-foreground active:scale-[0.98]"
           >
             <Icon name="external-link" size={15} />
           </a>
@@ -121,7 +121,7 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
             onClick={del}
             disabled={pending}
             aria-label="Удалить плейлист"
-            className="inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40 active:scale-[0.98]"
+            className="pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40 active:scale-[0.98]"
           >
             <Icon name="trash-2" size={15} />
           </button>

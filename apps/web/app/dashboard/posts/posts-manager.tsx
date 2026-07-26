@@ -221,7 +221,7 @@ function PostCard({
           {post.title && <p className="font-medium leading-snug">{post.title}</p>}
           <p className="text-[11px] font-mono text-foreground/30 mt-0.5">{relativeDate(post.createdAt)}</p>
         </div>
-        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity">
           <button
             onClick={onEdit}
             className="text-xs px-2 py-1 rounded text-foreground/50 hover:text-foreground/90 hover:bg-foreground/5 transition-colors"

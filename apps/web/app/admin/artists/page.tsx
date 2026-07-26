@@ -21,7 +21,7 @@ export default async function AdminArtistsPage({ searchParams }: Props) {
 
       <SearchForm defaultValue={q} placeholder="Поиск по имени или слагу…" />
 
-      <Table minWidth="min-w-[720px]">
+      <Table minWidth="md:min-w-[720px]">
         <Thead>
           <Th>Артист</Th>
           <Th align="right">Фолловеры</Th>
@@ -46,15 +46,15 @@ export default async function AdminArtistsPage({ searchParams }: Props) {
                   <span className="font-mono text-xs text-foreground/30">@{a.slug}</span>
                 </div>
               </Td>
-              <Td align="right" tone="soft" nums>{a.followerCount}</Td>
-              <Td align="right" tone="soft" nums>{a.releaseCount}</Td>
-              <Td align="right" tone="soft" nums>{a.trackCount}</Td>
-              <Td align="right" tone="soft" nums>{a.plays30d}</Td>
-              <Td mono tone="faint">
+              <Td label="Фолловеры" align="right" tone="soft" nums>{a.followerCount}</Td>
+              <Td label="Релизы" align="right" tone="soft" nums>{a.releaseCount}</Td>
+              <Td label="Треки" align="right" tone="soft" nums>{a.trackCount}</Td>
+              <Td label="Прослуш. 30д" align="right" tone="soft" nums>{a.plays30d}</Td>
+              <Td label="Создан" mono tone="faint">
                 {new Date(a.createdAt).toLocaleDateString('ru-RU')}
               </Td>
               <Td>
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <ActionLink href={`/admin/artists/${a.id}/edit`}>Изм.</ActionLink>
                   <RetranscodeArtistButton artistProfileId={a.id} />
                   <MembersManager artistProfileId={a.id} />
@@ -65,14 +65,14 @@ export default async function AdminArtistsPage({ searchParams }: Props) {
             </Tr>
           ))}
           {artists.length === 0 && (
-            <tr>
-              <td colSpan={7}>
+            <Tr>
+              <Td colSpan={7}>
                 <EmptyState
                   title={q ? 'Артистов не нашли' : 'Артистов пока нет'}
                   hint={q ? 'Попробуй другое имя или слаг.' : undefined}
                 />
-              </td>
-            </tr>
+              </Td>
+            </Tr>
           )}
         </tbody>
       </Table>

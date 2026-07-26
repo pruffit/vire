@@ -17,7 +17,7 @@ export default async function AdminReportsPage() {
         {reports.length === 0 ? (
           <EmptyState title="Открытых жалоб нет" />
         ) : (
-          <Table minWidth="min-w-[720px]">
+          <Table minWidth="md:min-w-[720px]">
             <Thead>
               <Th>Причина</Th>
               <Th>Цель</Th>
@@ -31,7 +31,7 @@ export default async function AdminReportsPage() {
                   <Td>
                     <span className="line-clamp-2 max-w-md text-foreground/80">{r.reason}</span>
                   </Td>
-                  <Td tone="muted" className="text-xs">
+                  <Td label="Цель" tone="muted" className="text-xs">
                     <Badge tone="neutral">{TARGET_LABEL[r.targetType] ?? r.targetType}</Badge>{' '}
                     {r.targetType === 'USER' ? (
                       <a href={`/u/${r.targetId}`} target="_blank" className="hover:text-foreground transition-colors">
@@ -41,8 +41,8 @@ export default async function AdminReportsPage() {
                       <span className="font-mono text-foreground/40">{r.targetId}</span>
                     )}
                   </Td>
-                  <Td tone="muted" className="text-xs">{r.reporterName ?? r.reporterId}</Td>
-                  <Td align="right" tone="faint" mono>{new Date(r.createdAt).toLocaleDateString('ru-RU')}</Td>
+                  <Td label="От кого" tone="muted" className="text-xs">{r.reporterName ?? r.reporterId}</Td>
+                  <Td label="Дата" align="right" tone="faint" mono>{new Date(r.createdAt).toLocaleDateString('ru-RU')}</Td>
                   <Td align="right">
                     <ReportResolveActions reportId={r.id} />
                   </Td>

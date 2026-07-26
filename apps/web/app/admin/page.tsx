@@ -84,7 +84,7 @@ function HealthPanel({ health }: { health: AdminHealth }) {
         />
       </MetricGrid>
 
-      <Table minWidth="min-w-[520px]">
+      <Table minWidth="md:min-w-[520px]">
         <Thead>
           <Th>Очередь</Th>
           <Th align="right">в ожидании</Th>
@@ -99,10 +99,10 @@ function HealthPanel({ health }: { health: AdminHealth }) {
                 {q.label}{' '}
                 <span className="ml-1 font-mono text-xs text-foreground/30">{q.name}</span>
               </Td>
-              <Td align="right" tone="soft" nums>{q.waiting}</Td>
-              <Td align="right" tone="soft" nums>{q.active}</Td>
-              <Td align="right" tone="soft" nums>{q.delayed}</Td>
-              <Td align="right" nums className={q.failed > 0 ? 'text-red-400' : 'text-foreground/65'}>
+              <Td label="в ожидании" align="right" tone="soft" nums>{q.waiting}</Td>
+              <Td label="в работе" align="right" tone="soft" nums>{q.active}</Td>
+              <Td label="отложено" align="right" tone="soft" nums>{q.delayed}</Td>
+              <Td label="ошибки" align="right" nums className={q.failed > 0 ? 'text-red-400' : 'text-foreground/65'}>
                 {q.failed}
               </Td>
             </Tr>
@@ -343,7 +343,7 @@ function AlertRow({
 function RecentReleases({ releases }: { releases: AdminRecentRelease[] }) {
   return (
     <Section label="Недавно опубликовано">
-      <Table minWidth="min-w-[480px]">
+      <Table minWidth="md:min-w-[480px]">
         <tbody>
           {releases.map((r) => (
             <Tr key={r.id}>
@@ -356,7 +356,7 @@ function RecentReleases({ releases }: { releases: AdminRecentRelease[] }) {
                   {r.title}
                 </a>
               </Td>
-              <Td tone="muted" className="text-xs">
+              <Td label="Артист" tone="muted" className="text-xs">
                 <a
                   href={`/artists/${r.artistSlug}`}
                   target="_blank"
@@ -365,8 +365,8 @@ function RecentReleases({ releases }: { releases: AdminRecentRelease[] }) {
                   {r.artistName}
                 </a>
               </Td>
-              <Td tone="faint" mono>{r.type}</Td>
-              <Td align="right" tone="faint" mono>
+              <Td label="Тип" tone="faint" mono>{r.type}</Td>
+              <Td label="Дата" align="right" tone="faint" mono>
                 {new Date(r.updatedAt).toLocaleDateString('ru-RU')}
               </Td>
             </Tr>

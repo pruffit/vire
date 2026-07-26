@@ -32,7 +32,7 @@ export default async function AdminReleasesPage({ searchParams }: Props) {
         }))}
       />
 
-      <Table minWidth="min-w-[620px]">
+      <Table minWidth="md:min-w-[620px]">
         <Thead>
           <Th>Релиз</Th>
           <Th>Артист</Th>
@@ -56,7 +56,7 @@ export default async function AdminReleasesPage({ searchParams }: Props) {
                   <ReleaseStatusBadge status={release.status} />
                 </div>
               </Td>
-              <Td tone="soft" mono>
+              <Td label="Артист" tone="soft" mono>
                 <a
                   href={`/artists/${release.artistSlug}`}
                   target="_blank"
@@ -65,9 +65,9 @@ export default async function AdminReleasesPage({ searchParams }: Props) {
                   @{release.artistSlug}
                 </a>
               </Td>
-              <Td tone="muted" mono>{release.type}</Td>
-              <Td align="right" tone="muted" nums className="text-xs">{release.trackCount}</Td>
-              <Td mono tone="faint">
+              <Td label="Тип" tone="muted" mono>{release.type}</Td>
+              <Td label="Треков" align="right" tone="muted" nums className="text-xs">{release.trackCount}</Td>
+              <Td label="Дата" mono tone="faint">
                 {new Date(release.createdAt).toLocaleDateString('ru-RU')}
               </Td>
               <Td>
@@ -84,14 +84,14 @@ export default async function AdminReleasesPage({ searchParams }: Props) {
             </Tr>
           ))}
           {releases.length === 0 && (
-            <tr>
-              <td colSpan={6}>
+            <Tr>
+              <Td colSpan={6}>
                 <EmptyState
                   title={status ? 'Релизов в этом статусе нет' : 'Релизов пока нет'}
                   hint={status ? 'Сними фильтр, чтобы увидеть все.' : undefined}
                 />
-              </td>
-            </tr>
+              </Td>
+            </Tr>
           )}
         </tbody>
       </Table>
