@@ -33,7 +33,7 @@ export function LikeButton({ trackId, initialLiked, initialCount }: Props) {
       aria-label={liked ? 'Убрать лайк' : 'Лайкнуть'}
       whileTap={{ scale: 0.85 }}
       transition={spring.snappy}
-      className="flex items-center gap-1.5 text-sm transition-[color,opacity] duration-200 disabled:opacity-40"
+      className="flex items-center gap-1.5 text-sm pointer-coarse:min-h-11 transition-[color,opacity] duration-200 disabled:opacity-40"
       style={{ color: liked ? 'var(--artist-accent)' : undefined, opacity: liked ? 1 : 0.4 }}
     >
       {/* «Поп» сердечка при лайке: короткий всплеск масштаба. */}

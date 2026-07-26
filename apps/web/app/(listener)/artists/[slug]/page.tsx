@@ -171,7 +171,7 @@ export default async function ArtistPage({ params }: Props) {
           ...artistFontStyle(artist.themeTokens),
         } as React.CSSProperties
       }
-      className="min-h-full text-[var(--artist-text)] font-sans"
+      className="min-h-full text-[var(--artist-text)] font-sans overflow-x-clip"
     >
       <JsonLd
         data={musicGroupJsonLd({
@@ -403,7 +403,7 @@ function ArtistIdentity({
                 rel="noopener noreferrer"
                 title={name}
                 aria-label={name}
-                className="inline-flex h-7 min-w-7 items-center justify-center rounded-lg px-2 transition-opacity hover:opacity-80 sm:h-9 sm:min-w-9 sm:px-2.5"
+                className="inline-flex h-7 min-w-7 pointer-coarse:h-11 pointer-coarse:min-w-11 items-center justify-center rounded-lg px-2 transition-opacity hover:opacity-80 sm:h-9 sm:min-w-9 sm:px-2.5"
                 style={
                   brand
                     ? { background: '#fff' }

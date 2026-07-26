@@ -131,7 +131,7 @@ export function TrackWaveformPlayer({
             onClick={handleMarkMoment}
             title="Отметить любимый момент"
             aria-label="Отметить любимый момент"
-            className="w-8 h-8 rounded-full flex items-center justify-center opacity-40 hover:opacity-80 transition-opacity"
+            className="w-8 h-8 pointer-coarse:w-11 pointer-coarse:h-11 rounded-full flex items-center justify-center opacity-40 hover:opacity-80 transition-opacity"
             style={{ border: '1px solid var(--artist-accent)' }}
           >
             <HeartIcon size={14} strokeWidth={2} />

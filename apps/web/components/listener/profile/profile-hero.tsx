@@ -151,7 +151,7 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
                 {initials}
               </div>
             )}
-            <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity">
               {uploading ? (
                 <span className="text-xs font-medium text-white">…</span>
               ) : (
@@ -171,7 +171,7 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
           <button
             type="button"
             onClick={handleAvatarRemove}
-            className="text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+            className="text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
             Удалить
           </button>
@@ -206,13 +206,13 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
                 <button
                   onClick={handleSave}
                   disabled={isPending || !draft.trim()}
-                  className="text-xs font-medium text-primary hover:opacity-70 transition-opacity disabled:opacity-30 shrink-0"
+                  className="text-xs font-medium text-primary hover:opacity-70 transition-opacity disabled:opacity-30 shrink-0 pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
                 >
                   {isPending ? '…' : 'Сохранить'}
                 </button>
                 <button
                   onClick={cancelEdit}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
                 >
                   Отмена
                 </button>
@@ -230,7 +230,7 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
                 <button
                   onClick={startEdit}
                   aria-label="Изменить имя"
-                  className="opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity"
+                  className="opacity-0 group-hover:opacity-40 hover:!opacity-100 pointer-coarse:opacity-100 pointer-coarse:w-11 pointer-coarse:h-11 pointer-coarse:-m-1.5 pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:justify-center transition-opacity"
                 >
                   <Icon name="edit-2" size={15} />
                 </button>
