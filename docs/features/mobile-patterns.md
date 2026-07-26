@@ -28,6 +28,14 @@
   (хит-зона 44px без изменения визуального футпринта кнопки); `touchPill` — 44px мин-высота
   для текстовых пилюль/чипов/табов (`pointer-coarse:min-h-11` + `inline-flex items-center`),
   десктоп-плотность не трогает.
+- `apps/web/components/ui-kit.tsx` — `fieldClass` (базовый инпут/textarea/select форм)
+  несёт `pointer-coarse:min-h-11`; тянется во все формы дашборда и в триггеры `Select`/
+  `DateField` (оба используют `fieldClass` для кнопки-триггера — отдельно трогать не пришлось).
+  `selectClass` (компактные инлайн-селекты админ-таблиц) НЕ тронут — свой плотный контекст.
+- `apps/web/components/side-nav.tsx` — пункт `SideNav` (дашборд/листенер-сайдбар) —
+  `pointer-coarse:min-h-11`.
+- `apps/web/components/color-field.tsx` — live color picker: свотч `pointer-coarse:h-11/w-11`,
+  hue-слайдер `pointer-coarse:h-5`, hex-инпут `pointer-coarse:min-h-11`.
 - `apps/web/lib/is-desktop-pointer.ts` — `(hover: hover) and (pointer: fine)`,
   `useIsDesktopPointer()` (`useSyncExternalStore`, SSR-safe).
 - `apps/web/components/listener/mobile-tab-bar.tsx` — 5 пунктов (`md:hidden`).
@@ -138,6 +146,39 @@
 - Мелкие лайк-кнопки без хит-зоны — `touchTargetClass('sm')`: `editorial-playlist-card.tsx`;
   строки треков в quick-look-шите `release-quick-look.tsx` — `pointer-coarse:min-h-11`
   (вся строка тапом).
+
+## Дашборд артиста + плотность (Срез 7)
+
+- Общие слои дашборда — `fieldClass` (44px на всех текстовых полях/селектах/датапикерах
+  форм), `SideNav` (пункты навигации), `ColorField` (свотч/hue-слайдер/hex) — см. «Где код»
+  выше. Правка общего слоя = фикс сразу во всех формах-потребителях (create/edit-release,
+  smart-link-form, edit-profile-form, credits-editor).
+- `ThemeEditor` (`components/theme-editor.tsx`) — грид `ColorField` bg/text/accent
+  `grid-cols-1 sm:grid-cols-2`: на 320px поля стекаются в один столбец, попап цвет-пикера
+  (`absolute left-0 w-56`) влезает в full-width поле; во 2-й колонке `grid-cols-2` он вылезал
+  за экран. Грид пресетов палитры (`grid-cols-4 sm:grid-cols-6`) не тронут — там нет попапов.
+- Трек-редактор `app/dashboard/releases/[id]/track-manager.tsx` — grip-хендл, кнопки
+  «параметры»/«удалить» → `pointer-coarse:size-11`; reanalyze-иконка → `touchTargetCoarse('sm')`;
+  инпут тональности → `pointer-coarse:min-h-11`. DnD-реордер остаётся как есть (альтернатива
+  кнопками вверх/вниз — бэклог).
+- Вложенные пикеры — `GenrePicker`/`MoodPicker`/`CreditsEditor` пилюли на `touchPill`;
+  их иконки поиска/reanalyze/remove — `pointer-coarse:min-h-11`/`touchTargetCoarse('sm')`.
+- **`touchTargetCoarse` vs `touchTargetClass`:** для иконок в ПЛОТНЫХ рядах дашборда — только
+  гейтнутый `touchTargetCoarse` (`components/popover.tsx`, `pointer-coarse:size-11 + -m`): на
+  десктопе футпринт не меняется (безусловный `touchTargetClass` со своим `-m-1.5` съедал бы
+  зазор между кнопками и на мыши; плюс `mt-*` + `-m-*` в одном `cn` конфликтуют в tailwind-merge).
+- Точечные CTA дашборда (`PublishButton`, `DeleteReleaseButton`, `LyricsEditor` «Сохранить
+  текст», `posts-manager` кнопки, `LinksEditor` remove-иконка) — тач-таргет 44px, десктоп
+  без изменений. `PublishButton` — обёртка `min-h-6` (не `h-6`): фикс-высота не давала кнопке
+  вырасти до 44px на таче (налезала на соседей).
+- `fieldClass` (`pointer-coarse:min-h-11`) гейтнут `pointer-coarse` — долетает и до
+  edit-форм бэкофиса (`admin/*/edit`, create-artist-form, videos-editor), но десктоп-админку
+  не трогает (coarse на десктопе не срабатывает).
+- Отступы контейнеров: 14 (listener)-страниц (главная, каталоги, релиз/трек, профиль,
+  друзья, плейлисты и т.д.) переведены с `px-5 sm:px-6 lg:px-8` на `px-4 sm:px-6 lg:px-8`
+  (только мобильный базовый класс) — контент выровнен с уже-`px-4` навом/дашбордом/
+  админкой/джемом. Full-bleed hero-блоки артиста/релиза/профиля рендерятся вне padded-
+  контейнера — не задеты.
 
 ## Навигация
 
