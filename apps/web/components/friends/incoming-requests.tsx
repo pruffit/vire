@@ -46,17 +46,19 @@ export function IncomingRequests({ initial }: { initial: IncomingRequest[] }) {
         {rows.map((row, i) => (
           <div
             key={row.id}
-            className="flex items-center gap-3 rounded-md border border-border/40 bg-card p-3"
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-border/40 bg-card p-3"
           >
-            {row.image ? (
-              <Image src={row.image} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover" />
-            ) : (
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary text-sm font-medium text-muted-foreground">
-                {(row.name ?? '?')[0]?.toUpperCase()}
-              </div>
-            )}
-            <p className="min-w-0 flex-1 truncate text-sm font-medium">{row.name ?? 'Слушатель'}</p>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex min-w-0 flex-1 basis-[12rem] items-center gap-3">
+              {row.image ? (
+                <Image src={row.image} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover" />
+              ) : (
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary text-sm font-medium text-muted-foreground">
+                  {(row.name ?? '?')[0]?.toUpperCase()}
+                </div>
+              )}
+              <p className="min-w-0 flex-1 truncate text-sm font-medium">{row.name ?? 'Слушатель'}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 ml-auto">
               <button
                 type="button"
                 disabled={pending.has(row.id)}

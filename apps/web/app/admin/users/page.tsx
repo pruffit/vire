@@ -23,7 +23,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
 
       <SearchForm defaultValue={q} placeholder="Поиск по email или имени…" />
 
-      <Table minWidth="min-w-[680px]">
+      <Table minWidth="md:min-w-[680px]">
         <Thead>
           <Th>Email</Th>
           <Th>Имя</Th>
@@ -36,11 +36,11 @@ export default async function AdminUsersPage({ searchParams }: Props) {
           {users.map((user) => (
             <Tr key={user.id}>
               <Td mono tone="soft">{user.email}</Td>
-              <Td tone="soft">{user.name ?? '—'}</Td>
-              <Td>
+              <Td label="Имя" tone="soft">{user.name ?? '—'}</Td>
+              <Td label="Роль">
                 <RoleBadge role={user.role} />
               </Td>
-              <Td>
+              <Td label="Артист">
                 {user.artistSlug ? (
                   <div className="flex items-center gap-2">
                     <a
@@ -61,7 +61,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                   <span className="text-foreground/20">—</span>
                 )}
               </Td>
-              <Td mono tone="faint">
+              <Td label="Дата" mono tone="faint">
                 {new Date(user.createdAt).toLocaleDateString('ru-RU')}
               </Td>
               <Td>
@@ -74,14 +74,14 @@ export default async function AdminUsersPage({ searchParams }: Props) {
             </Tr>
           ))}
           {users.length === 0 && (
-            <tr>
-              <td colSpan={6}>
+            <Tr>
+              <Td colSpan={6}>
                 <EmptyState
                   title={q ? 'Никого не нашли' : 'Пользователей пока нет'}
                   hint={q ? 'Попробуй другой email или имя.' : undefined}
                 />
-              </td>
-            </tr>
+              </Td>
+            </Tr>
           )}
         </tbody>
       </Table>

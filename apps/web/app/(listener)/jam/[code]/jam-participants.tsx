@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import type { JamParticipant } from '@vire/core';
 import { Icon } from '@/components/icon';
-import { Popover } from '@/components/popover';
+import { AdaptivePopover } from '@/components/adaptive-popover';
 
 function initial(name: string): string {
   return (name.trim()[0] ?? '?').toUpperCase();
@@ -47,11 +47,13 @@ export function JamParticipants({ participants, variant = 'popover' }: Props) {
   }
 
   return (
-    <Popover
+    <AdaptivePopover
       open={open}
       onOpenChange={setOpen}
       align="left"
       drop="down"
+      title="Участники"
+      panelClassName="w-56"
       trigger={({ toggle, ref }) => (
         <button
           ref={ref}
@@ -66,11 +68,11 @@ export function JamParticipants({ participants, variant = 'popover' }: Props) {
         </button>
       )}
     >
-      <div className="max-h-72 w-56 overflow-y-auto py-1">
+      <div className="max-h-72 overflow-y-auto py-1">
         {participants.map((p) => (
           <ParticipantRow key={p.id} participant={p} />
         ))}
       </div>
-    </Popover>
+    </AdaptivePopover>
   );
 }

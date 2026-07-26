@@ -56,7 +56,7 @@ export function LyricsEditor({ trackId, initial }: { trackId: string; initial: L
           type="button"
           onClick={save}
           disabled={busy || !dirty}
-          className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/80 hover:bg-white/15 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/80 hover:bg-white/15 disabled:opacity-30 disabled:cursor-not-allowed transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
         >
           {busy ? 'Сохранение…' : 'Сохранить текст'}
         </button>

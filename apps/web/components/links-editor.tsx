@@ -7,6 +7,7 @@ import { PLATFORM_BRAND } from '@/components/brand-icon';
 import { BrandGlyph, hasBrandGlyph } from '@/components/brand-glyph';
 import { Icon } from '@/components/icon';
 import { fieldClass } from '@/components/ui-kit';
+import { touchTargetCoarse } from '@/components/popover';
 import { cn } from '@/lib/utils';
 import { useStableListKeys } from '@/lib/use-stable-list-keys';
 
@@ -126,7 +127,7 @@ function LinkRow({
         type="button"
         onClick={onRemove}
         disabled={disabled}
-        className="shrink-0 mt-2 text-foreground/30 hover:text-red-400 transition-colors disabled:opacity-50"
+        className={cn('shrink-0 mt-2 text-foreground/30 hover:text-red-400 transition-colors disabled:opacity-50', touchTargetCoarse('sm'))}
         aria-label="Удалить ссылку"
       >
         <Icon name="x" size={16} />

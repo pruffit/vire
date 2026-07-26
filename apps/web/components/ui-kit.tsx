@@ -25,7 +25,7 @@ export const selectClass =
 
 /** Класс текстового поля/textarea/select в формах. Ширину задаёт вызов. */
 export const fieldClass =
-  'rounded-md border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm transition-colors placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring focus:border-foreground/20';
+  'rounded-md border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm transition-colors placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring focus:border-foreground/20 pointer-coarse:min-h-11';
 
 /** Textarea с кастомным уголком ресайза — см. `.vire-textarea` в globals.css. */
 export const Textarea = React.forwardRef<
@@ -393,7 +393,7 @@ export function Badge({
 }
 
 export function Table({
-  minWidth = 'min-w-[640px]',
+  minWidth = 'md:min-w-[640px]',
   children,
   className,
 }: {
@@ -403,15 +403,23 @@ export function Table({
   className?: string;
 }) {
   return (
-    <div className="rounded-xl border border-foreground/10 overflow-x-auto">
-      <table className={cn('w-full text-sm', minWidth, className)}>{children}</table>
+    <div className="md:rounded-xl md:border md:border-foreground/10 md:overflow-x-auto">
+      <table
+        className={cn(
+          'w-full text-sm block md:table [&_tbody]:block md:[&_tbody]:table-row-group',
+          minWidth,
+          className,
+        )}
+      >
+        {children}
+      </table>
     </div>
   );
 }
 
 export function Thead({ children }: { children: React.ReactNode }) {
   return (
-    <thead>
+    <thead className="hidden md:table-header-group">
       <tr className="border-b border-foreground/10">{children}</tr>
     </thead>
   );
@@ -451,7 +459,9 @@ export function Tr({
   return (
     <tr
       className={cn(
-        'border-b border-foreground/[0.06] last:border-0 transition-colors hover:bg-foreground/[0.03]',
+        'block rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3 mb-2.5 last:mb-0',
+        'md:table-row md:rounded-none md:border-0 md:border-b md:border-foreground/[0.06] md:bg-transparent md:p-0 md:mb-0 md:last:border-0',
+        'transition-colors hover:bg-foreground/[0.03]',
         className,
       )}
     >
@@ -466,6 +476,7 @@ export function Td({
   mono = false,
   nums = false,
   nowrap = false,
+  label,
   className,
   children,
   colSpan,
@@ -475,15 +486,18 @@ export function Td({
   mono?: boolean;
   nums?: boolean;
   nowrap?: boolean;
+  label?: string;
   className?: string;
   children?: React.ReactNode;
   colSpan?: number;
 }) {
+  const showLabel = label != null && label !== '';
   return (
     <td
       colSpan={colSpan}
       className={cn(
-        'px-3 py-2.5 align-middle',
+        'block w-full py-1.5 align-middle md:table-cell md:w-auto md:px-3 md:py-2.5',
+        showLabel && 'flex items-center justify-between gap-4',
         tone === 'soft' && 'text-foreground/65',
         tone === 'muted' && 'text-foreground/45',
         tone === 'faint' && 'text-foreground/30',
@@ -495,7 +509,12 @@ export function Td({
         className,
       )}
     >
-      {children}
+      {showLabel && (
+        <span className="md:hidden shrink-0 font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/40">
+          {label}
+        </span>
+      )}
+      <span className={cn('md:contents', showLabel && cn('min-w-0', align === 'center' ? 'text-center' : 'text-right'))}>{children}</span>
     </td>
   );
 }
@@ -626,7 +645,7 @@ export function ActionLink({
     <Link
       href={href}
       target={external ? '_blank' : undefined}
-      className="inline-flex items-center rounded-md border border-foreground/10 bg-foreground/5 px-2 py-1 font-mono text-xs transition-colors hover:bg-foreground/10 hover:border-foreground/20 active:scale-[0.98] whitespace-nowrap"
+      className="inline-flex items-center rounded-md border border-foreground/10 bg-foreground/5 px-2 py-1 font-mono text-xs transition-colors hover:bg-foreground/10 hover:border-foreground/20 active:scale-[0.98] whitespace-nowrap pointer-coarse:min-h-11"
     >
       {children}
     </Link>

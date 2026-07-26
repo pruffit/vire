@@ -140,8 +140,8 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
           className={[
             'w-full rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground',
             'focus:outline-none focus:ring-1 focus:ring-ring',
-            'pr-9',
-            isHero ? 'h-12 px-4 text-base' : 'h-9 px-3',
+            'pr-9 pointer-coarse:pr-11',
+            isHero ? 'h-12 px-4 text-base' : 'h-9 px-3 pointer-coarse:h-11',
           ].join(' ')}
         />
         <button
@@ -153,7 +153,7 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
             }
           }}
           aria-label="Найти"
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-end pr-3 text-muted-foreground hover:text-foreground transition-colors pointer-coarse:top-0 pointer-coarse:bottom-0 pointer-coarse:translate-y-0 pointer-coarse:w-11"
         >
           <SearchIcon size={isHero ? 18 : 14} />
         </button>

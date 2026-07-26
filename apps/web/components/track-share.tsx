@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { useState } from 'react';
+import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { formatDuration } from '@/lib/format';
-import { ShareIcon, CheckIcon } from '@/components/icons';
+import { ShareIcon } from '@/components/icons';
 import { Icon } from '@/components/icon';
-import { Popover, PopoverItem, touchTargetClass } from '@/components/popover';
+import { touchTargetClass } from '@/components/popover';
+import { AdaptiveMenu, type MenuItem } from '@/components/adaptive-menu';
+import { toast } from '@/lib/toast';
 
 interface Props {
   /** Каноническая ссылка на трек без query; дефолт — текущий адрес. Плеер обязан
@@ -19,7 +21,7 @@ interface Props {
   variant?: 'plain' | 'bordered';
 }
 
-/** Поповер «поделиться»: ссылка на трек или с таймкодом `?t=<сек>` (страница трека перематывает). */
+/** Меню «поделиться»: ссылка на трек или с таймкодом `?t=<сек>` (страница трека перематывает). */
 export function TrackShare({
   trackUrl,
   currentTime,
@@ -28,10 +30,6 @@ export function TrackShare({
   variant = 'plain',
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState<null | 'link' | 'moment'>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   const moment = currentTime && currentTime > 2 ? Math.round(currentTime) : null;
 
@@ -40,15 +38,21 @@ export function TrackShare({
     const url = kind === 'moment' && moment ? `${base}?t=${moment}` : base;
     try {
       await navigator.clipboard.writeText(url);
-      setCopied(kind);
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        setCopied(null);
-        setOpen(false);
-      }, 1100);
+      toast('Ссылка скопирована');
     } catch {
       /* буфер недоступен */
     }
+  }
+
+  const items: MenuItem[] = [
+    { label: 'Ссылка на трек', icon: <Icon name="link" size={13} />, onClick: () => copy('link') },
+  ];
+  if (moment != null) {
+    items.push({
+      label: 'С текущего момента',
+      hint: <span className="text-xs font-mono tabular-nums text-foreground/40">{formatDuration(moment)}</span>,
+      onClick: () => copy('moment'),
+    });
   }
 
   const triggerStyle =
@@ -57,10 +61,12 @@ export function TrackShare({
       : undefined;
 
   return (
-    <Popover
+    <AdaptiveMenu
       open={open}
       onOpenChange={setOpen}
       align={align}
+      title="Поделиться"
+      items={items}
       trigger={({ open: expanded, toggle, ref }) => (
         <motion.button
           ref={ref}
@@ -77,66 +83,6 @@ export function TrackShare({
           <ShareIcon />
         </motion.button>
       )}
-    >
-      <ShareOption label="Ссылка на трек" done={copied === 'link'} onClick={() => copy('link')} />
-      {moment != null && (
-        <ShareOption
-          label="С текущего момента"
-          hint={formatDuration(moment)}
-          done={copied === 'moment'}
-          onClick={() => copy('moment')}
-        />
-      )}
-    </Popover>
-  );
-}
-
-function ShareOption({
-  label,
-  hint,
-  done,
-  onClick,
-}: {
-  label: string;
-  hint?: string;
-  done: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <PopoverItem
-      label={done ? 'Скопировано' : label}
-      onClick={onClick}
-      icon={
-        <AnimatePresence mode="popLayout" initial={false}>
-          {done ? (
-            <motion.span
-              key="done"
-              initial={{ opacity: 0, scale: 0.4 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.4 }}
-              transition={spring.snappy}
-              className="text-primary"
-            >
-              <CheckIcon />
-            </motion.span>
-          ) : (
-            <motion.span
-              key="dot"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-foreground/30"
-            >
-              <Icon name="link" size={13} />
-            </motion.span>
-          )}
-        </AnimatePresence>
-      }
-      hint={
-        hint && !done ? (
-          <span className="text-xs font-mono tabular-nums text-foreground/40">{hint}</span>
-        ) : undefined
-      }
     />
   );
 }

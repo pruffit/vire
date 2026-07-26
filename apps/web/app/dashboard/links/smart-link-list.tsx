@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { plural } from '@/lib/format';
 
 const iconBtnBase =
-  'inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors active:scale-[0.98] disabled:opacity-40';
+  'pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors active:scale-[0.98] disabled:opacity-40';
 const iconBtnHover = 'hover:bg-foreground/10 hover:text-foreground';
 
 export interface SmartLinkRow {

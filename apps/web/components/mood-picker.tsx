@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ALL_MOODS, MOOD_LABELS, type Mood } from '@/lib/moods';
+import { touchPill } from '@/components/popover';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -88,6 +89,7 @@ export function MoodPicker({ trackId, initial, onSave }: Props) {
                 'px-3 py-1.5 rounded-full text-xs font-mono border transition-all duration-150',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'disabled:opacity-30 disabled:cursor-not-allowed',
+                touchPill,
                 active
                   ? 'bg-foreground text-background border-foreground'
                   : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground',

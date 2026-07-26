@@ -87,7 +87,7 @@ function Row({
                 {formatCount(track.plays)}
               </span>
             )}
-            <span className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+            <span className="shrink-0 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
               <PlayerLikeButton trackId={track.id} size="sm" />
             </span>
             <span className="shrink-0" onClick={(e) => e.stopPropagation()}>

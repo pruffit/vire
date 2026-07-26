@@ -40,7 +40,7 @@ export default async function AdminTracksPage({ searchParams }: Props) {
         }))}
       />
 
-      <Table minWidth="min-w-[880px]">
+      <Table minWidth="md:min-w-[880px]">
         <Thead>
           <Th>Трек</Th>
           <Th>Релиз</Th>
@@ -59,7 +59,7 @@ export default async function AdminTracksPage({ searchParams }: Props) {
                 <span className="mr-2 font-mono text-xs text-foreground/30 tabular-nums">{track.trackNumber}.</span>
                 {track.title}
               </Td>
-              <Td tone="soft" className="text-xs">
+              <Td label="Релиз" tone="soft" className="text-xs">
                 <a
                   href={`/artists/${track.artistSlug}/releases/${track.releaseId}`}
                   target="_blank"
@@ -68,7 +68,7 @@ export default async function AdminTracksPage({ searchParams }: Props) {
                   {track.releaseTitle}
                 </a>
               </Td>
-              <Td tone="soft" mono>
+              <Td label="Артист" tone="soft" mono>
                 <a
                   href={`/artists/${track.artistSlug}`}
                   target="_blank"
@@ -77,7 +77,7 @@ export default async function AdminTracksPage({ searchParams }: Props) {
                   @{track.artistSlug}
                 </a>
               </Td>
-              <Td>
+              <Td label="Статус">
                 <div className="flex items-center gap-1.5">
                   <TrackStatusBadge status={track.status} />
                   {track.status === 'READY' && !track.hasHls && (
@@ -87,20 +87,20 @@ export default async function AdminTracksPage({ searchParams }: Props) {
                   )}
                 </div>
               </Td>
-              <Td align="right" tone="soft" mono nums nowrap>
+              <Td label="Аудио" align="right" tone="soft" mono nums nowrap>
                 {[
                   track.durationSec != null ? formatDuration(track.durationSec) : null,
                   track.bpm != null ? `${track.bpm} bpm` : null,
                   track.musicalKey,
                 ].filter(Boolean).join(' · ') || '—'}
               </Td>
-              <Td align="right" tone="soft" nums className="text-xs">{track.playsTotal}</Td>
-              <Td align="right" tone="soft" nums className="text-xs">{track.likesCount}</Td>
-              <Td mono tone="faint">
+              <Td label="Прослуш." align="right" tone="soft" nums className="text-xs">{track.playsTotal}</Td>
+              <Td label="Лайки" align="right" tone="soft" nums className="text-xs">{track.likesCount}</Td>
+              <Td label="Дата" mono tone="faint">
                 {new Date(track.createdAt).toLocaleDateString('ru-RU')}
               </Td>
               <Td>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <TrackStatusSelect trackId={track.id} currentStatus={track.status as 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED'} />
                   <RetranscodeButton trackId={track.id} />
                   <ActionLink href={`/admin/tracks/${track.id}/edit`}>Изм.</ActionLink>
@@ -109,14 +109,14 @@ export default async function AdminTracksPage({ searchParams }: Props) {
             </Tr>
           ))}
           {tracks.length === 0 && (
-            <tr>
-              <td colSpan={9}>
+            <Tr>
+              <Td colSpan={9}>
                 <EmptyState
                   title={status ? 'Треков в этом статусе нет' : 'Треков пока нет'}
                   hint={status ? 'Сними фильтр, чтобы увидеть все.' : undefined}
                 />
-              </td>
-            </tr>
+              </Td>
+            </Tr>
           )}
         </tbody>
       </Table>

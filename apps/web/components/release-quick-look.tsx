@@ -181,7 +181,7 @@ export function ReleaseQuickLook({
             )}
           </AnimatePresence>
           <span className="absolute inset-0 grid place-items-center bg-black/0 group-hover:bg-black/15 transition-colors">
-            <span className="opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300 ease-soft grid place-items-center w-11 h-11 rounded-full bg-black/55 ring-1 ring-white/30 text-white">
+            <span className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300 ease-soft grid place-items-center w-11 h-11 rounded-full bg-black/55 ring-1 ring-white/30 text-white">
               {isThisReleasePlaying && isPlaying ? <PauseIcon size={13} /> : <PlayIcon size={15} className="translate-x-[1px]" />}
             </span>
           </span>
@@ -260,7 +260,7 @@ export function ReleaseQuickLook({
                 type="button"
                 onClick={() => ready && (isCurrent ? controls.togglePlay() : void playFrom(t.id))}
                 disabled={!ready}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${ready ? 'hover:bg-white/5 cursor-pointer' : 'opacity-40 cursor-default'} ${isCurrent ? 'bg-white/5' : ''}`}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors pointer-coarse:min-h-11 ${ready ? 'hover:bg-white/5 cursor-pointer' : 'opacity-40 cursor-default'} ${isCurrent ? 'bg-white/5' : ''}`}
               >
                 <span className="w-5 text-right text-xs font-mono opacity-30 shrink-0">
                   {isCurrent ? <MiniEq animate={isPlaying} /> : t.trackNumber}

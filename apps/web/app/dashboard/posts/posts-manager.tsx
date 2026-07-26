@@ -183,7 +183,7 @@ function Composer({
           {onCancel && (
             <button
               onClick={onCancel}
-              className="text-sm px-3 py-1.5 rounded-md text-foreground/50 hover:text-foreground/80 transition-colors"
+              className="text-sm px-3 py-1.5 rounded-md text-foreground/50 hover:text-foreground/80 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
             >
               Отмена
             </button>
@@ -193,7 +193,7 @@ function Composer({
             disabled={!canSubmit}
             whileTap={canSubmit ? { scale: 0.96 } : undefined}
             transition={spring.snappy}
-            className="text-sm px-4 py-1.5 rounded-md bg-foreground/10 hover:bg-foreground/15 disabled:opacity-30 disabled:hover:bg-foreground/10 transition-colors"
+            className="text-sm px-4 py-1.5 rounded-md bg-foreground/10 hover:bg-foreground/15 disabled:opacity-30 disabled:hover:bg-foreground/10 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
             {busy ? '…' : submitLabel}
           </motion.button>
@@ -221,17 +221,17 @@ function PostCard({
           {post.title && <p className="font-medium leading-snug">{post.title}</p>}
           <p className="text-[11px] font-mono text-foreground/30 mt-0.5">{relativeDate(post.createdAt)}</p>
         </div>
-        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity">
           <button
             onClick={onEdit}
-            className="text-xs px-2 py-1 rounded text-foreground/50 hover:text-foreground/90 hover:bg-foreground/5 transition-colors"
+            className="text-xs px-2 py-1 rounded text-foreground/50 hover:text-foreground/90 hover:bg-foreground/5 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
             Изменить
           </button>
           {confirming ? (
             <button
               onClick={onDelete}
-              className="text-xs px-2 py-1 rounded text-red-400 hover:bg-red-500/10 transition-colors"
+              className="text-xs px-2 py-1 rounded text-red-400 hover:bg-red-500/10 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
             >
               Точно?
             </button>
@@ -241,7 +241,7 @@ function PostCard({
                 setConfirming(true);
                 setTimeout(() => setConfirming(false), 2500);
               }}
-              className="text-xs px-2 py-1 rounded text-foreground/50 hover:text-red-400 hover:bg-foreground/5 transition-colors"
+              className="text-xs px-2 py-1 rounded text-foreground/50 hover:text-red-400 hover:bg-foreground/5 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
             >
               Удалить
             </button>

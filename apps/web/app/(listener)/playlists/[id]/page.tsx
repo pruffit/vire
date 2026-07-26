@@ -54,7 +54,7 @@ export default async function PlaylistPage({ params }: Props) {
   const headerCovers = getHeaderCovers(playlist);
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-10">
+    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
       <FadeUp>
         <header className="flex items-start gap-6">
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl shrink-0 overflow-hidden bg-card border border-border relative">

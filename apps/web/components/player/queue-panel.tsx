@@ -96,7 +96,7 @@ function QueueRow({
         onPointerDown={(e) => dragControls.start(e)}
         onKeyDown={handleGripKeyDown}
         aria-label={`Переместить «${t.title}»: стрелки вверх/вниз`}
-        className="text-white/25 cursor-grab active:cursor-grabbing shrink-0 touch-none p-2.5 -m-1 rounded"
+        className="text-white/25 cursor-grab active:cursor-grabbing shrink-0 touch-none p-2.5 -m-1 rounded pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
       >
         <GripIcon />
       </button>

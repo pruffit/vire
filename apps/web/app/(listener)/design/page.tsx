@@ -529,7 +529,7 @@ export default function DesignPage() {
           </Section>
 
           <Section label="Table" className="mt-6">
-            <Table minWidth="min-w-[560px]">
+            <Table minWidth="md:min-w-[560px]">
               <Thead>
                 <Th>Трек</Th>
                 <Th>Артист</Th>
@@ -539,21 +539,21 @@ export default function DesignPage() {
               <tbody>
                 <Tr>
                   <Td>Северный ветер</Td>
-                  <Td tone="soft">Морозко</Td>
-                  <Td align="center"><TrackStatusBadge status="READY" /></Td>
-                  <Td align="right" mono nums>12 483</Td>
+                  <Td label="Артист" tone="soft">Морозко</Td>
+                  <Td label="Статус" align="center"><TrackStatusBadge status="READY" /></Td>
+                  <Td label="Слушаний" align="right" mono nums>12 483</Td>
                 </Tr>
                 <Tr>
                   <Td>В темноте</Td>
-                  <Td tone="soft">Полночь</Td>
-                  <Td align="center"><TrackStatusBadge status="PROCESSING" /></Td>
-                  <Td align="right" mono nums>—</Td>
+                  <Td label="Артист" tone="soft">Полночь</Td>
+                  <Td label="Статус" align="center"><TrackStatusBadge status="PROCESSING" /></Td>
+                  <Td label="Слушаний" align="right" mono nums>—</Td>
                 </Tr>
                 <Tr>
                   <Td>Город спит</Td>
-                  <Td tone="soft">Нева</Td>
-                  <Td align="center"><TrackStatusBadge status="READY" /></Td>
-                  <Td align="right" mono nums>4 102</Td>
+                  <Td label="Артист" tone="soft">Нева</Td>
+                  <Td label="Статус" align="center"><TrackStatusBadge status="READY" /></Td>
+                  <Td label="Слушаний" align="right" mono nums>4 102</Td>
                 </Tr>
               </tbody>
             </Table>

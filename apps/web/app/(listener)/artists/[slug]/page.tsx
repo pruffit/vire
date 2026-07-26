@@ -171,7 +171,7 @@ export default async function ArtistPage({ params }: Props) {
           ...artistFontStyle(artist.themeTokens),
         } as React.CSSProperties
       }
-      className="min-h-full text-[var(--artist-text)] font-sans"
+      className="min-h-full text-[var(--artist-text)] font-sans overflow-x-clip"
     >
       <JsonLd
         data={musicGroupJsonLd({
@@ -195,7 +195,7 @@ export default async function ArtistPage({ params }: Props) {
       {/* Banner — при наличии headerUrl показывает его резко; иначе — ambient-фолбэк по обложке */}
       <ArtistBanner coverUrl={releases[0]?.coverUrl ?? displayAvatar} headerUrl={artist.headerUrl} />
 
-      <div className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10">
+      <div className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-[clamp(280px,26%,360px)_1fr] gap-8 lg:gap-12">
           {/* Левая колонка — личность артиста (sticky на lg) */}
           <div className="lg:sticky lg:top-6 lg:self-start">
@@ -403,7 +403,7 @@ function ArtistIdentity({
                 rel="noopener noreferrer"
                 title={name}
                 aria-label={name}
-                className="inline-flex h-7 min-w-7 items-center justify-center rounded-lg px-2 transition-opacity hover:opacity-80 sm:h-9 sm:min-w-9 sm:px-2.5"
+                className="inline-flex h-7 min-w-7 pointer-coarse:h-11 pointer-coarse:min-w-11 items-center justify-center rounded-lg px-2 transition-opacity hover:opacity-80 sm:h-9 sm:min-w-9 sm:px-2.5"
                 style={
                   brand
                     ? { background: '#fff' }

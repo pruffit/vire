@@ -33,7 +33,7 @@ export default async function SearchPage({ searchParams }: Props) {
     : 0;
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-8">
+    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
       <div className="max-w-2xl">
         <GlobalSearch variant="page" defaultValue={query} autoFocus={!query} />
       </div>
@@ -61,7 +61,7 @@ export default async function SearchPage({ searchParams }: Props) {
           {results.artists.length > 0 && (
             <section className="space-y-3">
               <SectionHeader label="Артисты" count={results.artists.length} />
-              <Stagger step={0.035} className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-x-5 gap-y-6">
+              <Stagger step={0.035} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-9 gap-x-5 gap-y-6">
                 {results.artists.map((a) => (
                   <StaggerItem key={a.id}><ArtistCard artist={a} /></StaggerItem>
                 ))}

@@ -56,7 +56,7 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }
                 <button
                   type="button"
                   onClick={() => setShowSetPassword((s) => !s)}
-                  className="text-xs text-primary underline-offset-2 hover:underline cursor-pointer"
+                  className="text-xs text-primary underline-offset-2 hover:underline cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
                 >
                   {showSetPassword ? 'Отмена' : 'Задать'}
                 </button>
@@ -99,7 +99,7 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }
                   <form action={linkAction}>
                     <button
                       type="submit"
-                      className="text-xs text-primary underline-offset-2 hover:underline cursor-pointer"
+                      className="text-xs text-primary underline-offset-2 hover:underline cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
                     >
                       Привязать
                     </button>
@@ -141,7 +141,7 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
             className={`${inputCn} pr-16`}
           />
           <button type="button" tabIndex={-1} onClick={() => setShowPw((s) => !s)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors text-xs cursor-pointer"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors text-xs cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
             {showPw ? 'скрыть' : 'показать'}
           </button>
@@ -174,7 +174,7 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
           {pending ? 'Сохраняем…' : 'Сохранить'}
         </button>
         <button type="button" onClick={onDone}
-          className="px-4 py-2 rounded-full text-xs text-muted-foreground hover:text-foreground border border-border transition-colors cursor-pointer"
+          className="px-4 py-2 rounded-full text-xs text-muted-foreground hover:text-foreground border border-border transition-colors cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
         >
           Отмена
         </button>
@@ -204,4 +204,4 @@ const inputCn =
   'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring';
 
 const primaryBtn =
-  'rounded-full bg-primary text-primary-foreground px-4 py-2 text-xs font-medium hover:bg-primary/90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
+  'rounded-full bg-primary text-primary-foreground px-4 py-2 text-xs font-medium hover:bg-primary/90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:justify-center';

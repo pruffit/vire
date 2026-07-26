@@ -5,6 +5,7 @@ import { FadeUp } from '@vire/ui/motion';
 import { JsonLd } from '@/components/json-ld';
 import { ReleasesGrid } from './releases-grid';
 import { breadcrumbListJsonLd } from '@/lib/structured-data';
+import { touchPill } from '@/components/popover';
 
 export const metadata: Metadata = {
   title: 'Релизы',
@@ -35,7 +36,7 @@ export default async function ReleasesPage({ searchParams }: Props) {
   );
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-8">
+    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
       <JsonLd data={breadcrumbListJsonLd([
         { name: 'Главная', url: '/' },
         { name: 'Релизы', url: '/releases' },
@@ -59,7 +60,7 @@ export default async function ReleasesPage({ searchParams }: Props) {
                   key={t.key}
                   href={t.key === 'fresh' ? '/releases' : `/releases?tab=${t.key}`}
                   aria-current={active ? 'page' : undefined}
-                  className={`px-3.5 py-1.5 rounded-full text-sm transition-colors ${
+                  className={`px-3.5 py-1.5 rounded-full text-sm transition-colors ${touchPill} ${
                     active
                       ? 'bg-foreground text-background'
                       : 'border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'

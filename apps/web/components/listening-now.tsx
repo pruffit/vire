@@ -103,8 +103,10 @@ function TrackRow({ track }: { track: ListeningNowTrack }) {
         {track.coverUrl && (
           <Image src={track.coverUrl} alt="" fill quality={60} sizes="40px" className="object-cover" />
         )}
-        <span className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <PlayIcon size={12} className="text-white" />
+        <span className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/30 flex items-center justify-center">
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-black/70 opacity-0 transition-opacity group-hover:opacity-100 pointer-coarse:opacity-100">
+            <PlayIcon size={12} className="text-white" />
+          </span>
         </span>
       </span>
       <span className="flex-1 min-w-0">

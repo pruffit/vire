@@ -11,6 +11,7 @@ const TABS: { href: string; label: string; icon: IconName; exact?: boolean }[] =
   { href: '/', label: 'Главная', icon: 'home', exact: true },
   { href: '/search', label: 'Поиск', icon: 'search' },
   { href: '/library', label: 'Медиатека', icon: 'music' },
+  { href: '/friends', label: 'Друзья', icon: 'users' },
   { href: '/messages', label: 'Сообщения', icon: 'message-square' },
 ];
 
@@ -20,10 +21,10 @@ export function MobileTabBar({ incomingCount = 0, messagesUnread = 0 }: { incomi
   if (!isListenerShellPath(pathname)) return null;
 
   return (
-    <nav className="shrink-0 grid grid-cols-4 border-t border-border bg-background/95 backdrop-blur-sm md:hidden pb-[env(safe-area-inset-bottom)]">
+    <nav className="shrink-0 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur-sm md:hidden pb-[env(safe-area-inset-bottom)]">
       {TABS.map((t) => {
         const active = t.exact ? pathname === t.href : pathname.startsWith(t.href);
-        const badgeCount = t.href === '/library' ? incomingCount : t.href === '/messages' ? liveMessagesUnread : 0;
+        const badgeCount = t.href === '/friends' ? incomingCount : t.href === '/messages' ? liveMessagesUnread : 0;
         const showBadge = badgeCount > 0;
         return (
           <Link
@@ -44,10 +45,10 @@ export function MobileTabBar({ incomingCount = 0, messagesUnread = 0 }: { incomi
                 />
               )}
             </span>
-            {t.label}
+            <span className="max-w-full truncate leading-tight">{t.label}</span>
             {showBadge && (
               <span className="sr-only">
-                {t.href === '/library' ? `${badgeCount} новых заявок в друзья` : `${badgeCount} новых сообщений`}
+                {t.href === '/friends' ? `${badgeCount} новых заявок в друзья` : `${badgeCount} новых сообщений`}
               </span>
             )}
           </Link>

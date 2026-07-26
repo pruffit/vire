@@ -59,7 +59,9 @@ export const metadata: Metadata = {
   // явные icons, иначе Яндекс/Google не всегда подхватывают favicon в выдаче
   icons: {
     icon: [
+      { url: '/icon.svg', type: 'image/svg+xml', sizes: 'any' },
       { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-96x96.png', type: 'image/png', sizes: '96x96' },
       { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
       { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
     ],

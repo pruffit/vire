@@ -46,7 +46,7 @@ export default async function ConversationPage({ params }: Props) {
         <Link
           href="/messages"
           aria-label="К списку диалогов"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent/10 md:hidden"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent/10 pointer-coarse:h-11 pointer-coarse:w-11 md:hidden"
         >
           <Icon name="arrow-left" size={18} />
         </Link>

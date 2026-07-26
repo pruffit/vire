@@ -70,7 +70,7 @@ export function ReleaseEditForm({ releaseId, initial }: { releaseId: string; ini
         <input className={inputCls} value={f.title} onChange={(e) => set('title', e.target.value)} maxLength={200} />
       </Field>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Тип">
           <Select options={TYPE_OPTIONS} value={f.type} onValueChange={(v) => set('type', v)} aria-label="Тип" />
         </Field>

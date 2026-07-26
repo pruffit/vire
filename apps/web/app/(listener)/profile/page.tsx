@@ -41,9 +41,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const activity = mergeActivity(likedTracks, followedArtists, playlists);
 
   return (
-    <main className="min-h-full">
+    <main className="min-h-full overflow-x-clip">
       <ProfileBanner />
-      <div className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10 space-y-14">
+      <div className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10 space-y-14">
         <ProfileHero
           user={{
             id: session.user.id,

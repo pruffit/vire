@@ -151,13 +151,13 @@ export default async function TrackPage({ params, searchParams }: Props) {
       <AmbientBackdrop src={release.coverUrl} />
       {grain && <GrainOverlay />}
 
-      <div className="relative z-10 w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-10 sm:py-14">
-        <nav className="flex items-center gap-2 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)]">
-          <Link href={`/artists/${slug}`} className="hover:text-[var(--artist-text)] transition-colors">
+      <div className="relative z-10 w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        <nav className="flex flex-wrap items-center gap-2 min-w-0 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)]">
+          <Link href={`/artists/${slug}`} className="truncate max-w-[16rem] hover:text-[var(--artist-text)] transition-colors">
             {artist.name}
           </Link>
           <span>·</span>
-          <Link href={`/artists/${slug}/releases/${releaseId}`} className="hover:text-[var(--artist-text)] transition-colors">
+          <Link href={`/artists/${slug}/releases/${releaseId}`} className="truncate max-w-[16rem] hover:text-[var(--artist-text)] transition-colors">
             {release.title}
           </Link>
         </nav>
@@ -343,7 +343,7 @@ function MetaRow({
   if (items.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-2.5 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)] tabular-nums">
+    <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)] tabular-nums">
       {items.map((it, i) => (
         <span key={i} className="flex items-center gap-2.5">
           {i > 0 && (
