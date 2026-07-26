@@ -10,6 +10,7 @@ import { Icon } from '@/components/icon';
 import { ScrollRow } from '@/components/scroll-row';
 import { useWaveSeedStart } from '@/lib/use-wave-seed-start';
 import { AllTagsSheet } from '@/components/home/all-tags-sheet';
+import { touchPill } from '@/components/popover';
 import type { TagSheetSection, WaveChipItem } from '@/components/home/wave-chip-items';
 
 export function WaveChips({ items, sections }: { items: WaveChipItem[]; sections: TagSheetSection[] }) {
@@ -29,7 +30,10 @@ export function WaveChips({ items, sections }: { items: WaveChipItem[]; sections
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
-          className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-foreground/10 text-foreground text-sm font-medium hover:bg-foreground/15 transition-colors"
+          className={cn(
+            'shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-foreground/10 text-foreground text-sm font-medium hover:bg-foreground/15 transition-colors',
+            touchPill,
+          )}
         >
           <Icon name="list" size={14} />
           Все теги
@@ -54,6 +58,7 @@ export function WaveChips({ items, sections }: { items: WaveChipItem[]; sections
                 isActive
                   ? 'border-primary bg-primary/15 text-primary'
                   : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:bg-foreground/5',
+                touchPill,
               )}
             >
               {isLoading ? (

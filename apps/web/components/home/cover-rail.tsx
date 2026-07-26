@@ -8,6 +8,7 @@ import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import type { PlayableChartTrack } from '@vire/db';
 import { TrackTitleText } from '@/components/track-title';
+import { ScrollRow } from '@/components/scroll-row';
 
 const CONTEXT = { source: 'home' as const };
 
@@ -15,11 +16,11 @@ export function CoverRail({ tracks }: { tracks: PlayableChartTrack[] }) {
   const queue: PlayerTrack[] = toPlayerTracks(tracks);
 
   return (
-    <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-1 px-1 snap-x">
+    <ScrollRow bleedClassName="-mx-1" className="flex gap-4 px-1 snap-x">
       {tracks.map((t, i) => (
         <Cell key={t.id} track={t} queue={queue} index={i} />
       ))}
-    </div>
+    </ScrollRow>
   );
 }
 
@@ -40,7 +41,7 @@ function Cell({ track, queue, index }: { track: PlayableChartTrack; queue: Playe
             <Image src={track.coverUrl} alt={track.title} fill quality={60} sizes="(max-width: 640px) 33vw, 192px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
           )}
           <span className="absolute inset-0 grid place-items-center bg-black/0 group-hover:bg-black/25 transition-colors">
-            <span className="opacity-0 group-hover:opacity-100 grid place-items-center w-10 h-10 rounded-full bg-black/70 ring-1 ring-white/30 text-white transition-opacity">
+            <span className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 grid place-items-center w-10 h-10 rounded-full bg-black/70 ring-1 ring-white/30 text-white transition-opacity">
               {isActive && isPlaying ? <PauseIcon size={12} /> : <PlayIcon size={13} className="translate-x-px" />}
             </span>
           </span>

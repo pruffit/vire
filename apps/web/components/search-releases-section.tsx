@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { GENRE_LABELS, type Genre } from '@/lib/genres';
+import { touchPill } from '@/components/popover';
 import type { SearchRelease } from '@vire/db';
 
 interface Props {
@@ -35,7 +36,7 @@ export function SearchReleasesSection({ releases }: Props) {
             <button
               key={g}
               onClick={() => setActiveGenre(activeGenre === g ? null : g)}
-              className={`px-2.5 py-1 rounded-full text-xs font-mono border transition-all duration-150 ${
+              className={`px-2.5 py-1 rounded-full text-xs font-mono border transition-all duration-150 ${touchPill} ${
                 activeGenre === g
                   ? 'bg-foreground text-background border-foreground'
                   : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'

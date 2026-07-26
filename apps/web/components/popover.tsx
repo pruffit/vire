@@ -130,3 +130,6 @@ export function PopoverItem({
 export function touchTargetClass(size: 'sm' | 'md'): string {
   return size === 'sm' ? 'w-11 h-11 -m-1.5' : 'w-11 h-11 -m-1';
 }
+
+/** 44px тач-таргет для текстовых пилюль/чипов/табов (десктоп-плотность сохраняется). */
+export const touchPill = 'pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center';

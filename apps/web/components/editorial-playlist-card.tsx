@@ -7,6 +7,7 @@ import { spring } from '@vire/ui/motion';
 import type { EditorialPlaylist } from '@vire/db';
 import { pluralTracks } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
+import { touchTargetClass } from '@/components/popover';
 import { CoverPlaceholder } from './playlist-cover';
 import { usePlaylistLike } from './use-playlist-like';
 import { PlaylistPeekSheet } from './playlist-quick-look';
@@ -128,7 +129,7 @@ export function EditorialPlaylistCard({
           whileTap={{ scale: 0.85 }}
           transition={spring.snappy}
           aria-label={liked ? 'Убрать из избранного' : 'В избранное'}
-          className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-0.5 cursor-pointer"
+          className={`shrink-0 flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer ${touchTargetClass('sm')}`}
         >
           <HeartIcon filled={liked} size={14} strokeWidth={2} className={liked ? '[color:oklch(65%_0.20_25)]' : undefined} />
           {likes > 0 && <span className="font-mono text-[10px]">{likes}</span>}

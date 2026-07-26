@@ -38,7 +38,7 @@ export default async function HomePage() {
   const featuredStats = featured ? await getReleaseCardStats(featured.id).catch(() => null) : null;
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-16">
+    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-10 sm:space-y-16">
       <JsonLd data={websiteJsonLd()} />
       <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
 

@@ -10,6 +10,8 @@ import { ALL_GENRES, GENRE_LABELS, type Genre } from '@/lib/genres';
 import { resolveAvatarUrl } from '@/lib/avatar';
 import { Icon } from '@/components/icon';
 import { pluralReleases } from '@/lib/format';
+import { ScrollRow } from '@/components/scroll-row';
+import { touchPill } from '@/components/popover';
 
 type Sort = 'default' | 'name' | 'releases';
 
@@ -50,14 +52,14 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
           placeholder="Поиск по имени…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 min-w-0 px-3 py-1.5 rounded-md bg-white/5 border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+          className="flex-1 min-w-0 px-3 py-1.5 rounded-md bg-white/5 border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors pointer-coarse:h-11"
         />
         <div className="flex items-center gap-0.5 shrink-0">
           {(Object.keys(SORT_LABELS) as Sort[]).map((s) => (
             <button
               key={s}
               onClick={() => setSort(s)}
-              className={`px-2.5 py-1.5 rounded-md text-xs font-mono transition-colors ${
+              className={`px-2.5 py-1.5 rounded-md text-xs font-mono transition-colors ${touchPill} ${
                 sort === s
                   ? 'bg-white/10 text-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
@@ -70,10 +72,10 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
       </div>
 
       {availableGenres.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+        <ScrollRow bleedClassName="-mx-1" className="flex gap-1.5 px-1" edgeVariant="chip">
           <button
             onClick={() => setGenre(null)}
-            className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-mono border transition-all duration-150 ${
+            className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-mono border transition-all duration-150 ${touchPill} ${
               genre === null
                 ? 'bg-foreground text-background border-foreground'
                 : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
@@ -85,7 +87,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
             <button
               key={g}
               onClick={() => setGenre(genre === g ? null : (g as Genre))}
-              className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-mono border transition-all duration-150 ${
+              className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-mono border transition-all duration-150 ${touchPill} ${
                 genre === g
                   ? 'bg-foreground text-background border-foreground'
                   : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
@@ -94,7 +96,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
               {GENRE_LABELS[g as Genre] ?? g}
             </button>
           ))}
-        </div>
+        </ScrollRow>
       )}
 
       <AnimatePresence mode="wait" initial={false}>
