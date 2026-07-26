@@ -151,7 +151,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
       <AmbientBackdrop src={release.coverUrl} />
       {grain && <GrainOverlay />}
 
-      <div className="relative z-10 w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-10 sm:py-14">
+      <div className="relative z-10 w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         <nav className="flex flex-wrap items-center gap-2 min-w-0 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)]">
           <Link href={`/artists/${slug}`} className="truncate max-w-[16rem] hover:text-[var(--artist-text)] transition-colors">
             {artist.name}

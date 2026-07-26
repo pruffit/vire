@@ -24,7 +24,7 @@ export default async function FriendsPage() {
   ]);
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-14">
+    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-14">
       <MarkRequestsSeen />
       <h1 className="text-2xl font-semibold tracking-tight">Друзья</h1>
 

@@ -171,7 +171,7 @@ export function ColorField({ label, name, value, onChange, disabled }: Props) {
           disabled={disabled}
           onClick={() => setOpen((o) => !o)}
           aria-label={`${label}: выбрать цвет`}
-          className="h-8 w-8 shrink-0 rounded border border-foreground/15 disabled:opacity-50"
+          className="h-8 w-8 shrink-0 rounded border border-foreground/15 disabled:opacity-50 pointer-coarse:h-11 pointer-coarse:w-11"
           style={{ backgroundColor: valid ? value : 'transparent' }}
         />
         <input
@@ -182,7 +182,7 @@ export function ColorField({ label, name, value, onChange, disabled }: Props) {
           maxLength={7}
           onChange={(e) => onHexInput(e.target.value)}
           placeholder="#000000"
-          className="w-24 rounded-md bg-foreground/5 border border-foreground/10 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+          className="w-24 rounded-md bg-foreground/5 border border-foreground/10 px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 pointer-coarse:min-h-11"
         />
         {name && <input type="hidden" name={name} value={value} />}
 
@@ -214,7 +214,7 @@ export function ColorField({ label, name, value, onChange, disabled }: Props) {
               <div
                 ref={hueRef}
                 onPointerDown={dragHue}
-                className="relative mt-3 h-3 w-full cursor-pointer rounded-full touch-none"
+                className="relative mt-3 h-3 w-full cursor-pointer rounded-full touch-none pointer-coarse:h-5"
                 style={{
                   backgroundImage:
                     'linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)',

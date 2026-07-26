@@ -42,7 +42,7 @@ export function SideNav({
             aria-current={active ? 'page' : undefined}
             title={collapsed ? item.label : undefined}
             className={cn(
-              'inline-flex shrink-0 items-center whitespace-nowrap rounded-md text-sm transition-colors',
+              'inline-flex shrink-0 items-center whitespace-nowrap rounded-md text-sm transition-colors pointer-coarse:min-h-11',
               collapsed ? 'md:justify-center md:gap-0 md:px-0 md:py-2.5 gap-2.5 px-3 py-2' : 'gap-2.5 px-3 py-2',
               active
                 ? 'bg-foreground/10 font-medium text-foreground'

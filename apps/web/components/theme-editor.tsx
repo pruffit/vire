@@ -141,7 +141,7 @@ export function ThemeEditor({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <ColorField label="Фон" name="bg" value={bg} onChange={(v) => patch({ bg: v })} disabled={disabled} />
           <ColorField label="Текст" name="text" value={textColor} onChange={(v) => patch({ text: v })} disabled={disabled} />
           <ColorField label="Акцент" name="accent" value={accent} onChange={(v) => patch({ accent: v })} disabled={disabled} />

@@ -32,7 +32,7 @@ export default async function LibraryPage() {
   const likedQueue: PlayerTrack[] = likedTracks.map(likedToPlayerTrack);
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-14">
+    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-14">
       <FadeUp>
         <h1 className="text-2xl font-semibold tracking-tight">Медиатека</h1>
       </FadeUp>

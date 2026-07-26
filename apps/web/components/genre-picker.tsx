@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS, MAX_TRACK_GENRES, type Genre } from '@/lib/genres';
 import { useGenreAnalysis, type GenreAnalysisResult, type GenreSuggestion } from '@/lib/use-genre-analysis';
 import { Icon } from '@/components/icon';
+import { touchPill, touchTargetCoarse } from '@/components/popover';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -113,7 +114,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
             <button
               key={g}
               onClick={() => toggle(g)}
-              className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono bg-white text-black"
+              className={cn('group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono bg-white text-black', touchPill)}
             >
               {GENRE_LABELS[g]}
               <Icon name="x" size={12} className="opacity-50 group-hover:opacity-100" />
@@ -132,7 +133,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
               key={s.genre}
               onClick={() => toggle(s.genre)}
               disabled={atMax}
-              className="inline-flex items-center gap-1 rounded-full border border-dashed border-white/15 px-2.5 py-1 text-xs font-mono text-white/40 transition-colors hover:border-white/30 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-30"
+              className={cn('inline-flex items-center gap-1 rounded-full border border-dashed border-white/15 px-2.5 py-1 text-xs font-mono text-white/40 transition-colors hover:border-white/30 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-30', touchPill)}
             >
               <Icon name="plus" size={11} className="opacity-60" />
               {GENRE_LABELS[s.genre]}
@@ -143,7 +144,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
             disabled={analyzing}
             aria-label="Определить жанр заново"
             title="Определить жанр заново"
-            className="inline-flex items-center justify-center size-6 rounded-full text-foreground/30 transition-colors hover:bg-foreground/10 hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-40"
+            className={cn('inline-flex items-center justify-center size-6 rounded-full text-foreground/30 transition-colors hover:bg-foreground/10 hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-40', touchTargetCoarse('sm'))}
           >
             <Icon name="refresh-cw" size={12} className={cn(analyzing && 'animate-spin')} />
           </button>
@@ -164,7 +165,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Поиск жанра…"
-        className="w-full min-w-0 px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-xs font-mono placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/30"
+        className="w-full min-w-0 px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-xs font-mono placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/30 pointer-coarse:min-h-11"
       />
 
       <div className="max-h-64 overflow-y-auto pr-1 space-y-4 [scrollbar-width:thin]">
@@ -212,6 +213,7 @@ function Pills({
               'px-3 py-1.5 rounded-full text-xs font-mono border transition-all duration-150',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30',
               'disabled:opacity-30 disabled:cursor-not-allowed',
+              touchPill,
               active
                 ? 'bg-white text-black border-white'
                 : 'bg-transparent text-white/40 border-white/10 hover:border-white/40 hover:text-white/70',

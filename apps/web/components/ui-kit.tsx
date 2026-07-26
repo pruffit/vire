@@ -25,7 +25,7 @@ export const selectClass =
 
 /** Класс текстового поля/textarea/select в формах. Ширину задаёт вызов. */
 export const fieldClass =
-  'rounded-md border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm transition-colors placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring focus:border-foreground/20';
+  'rounded-md border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm transition-colors placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring focus:border-foreground/20 pointer-coarse:min-h-11';
 
 /** Textarea с кастомным уголком ресайза — см. `.vire-textarea` в globals.css. */
 export const Textarea = React.forwardRef<

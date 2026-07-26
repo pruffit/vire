@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from '@/lib/toast';
 import { fieldClass } from '@/components/ui-kit';
 import { Icon } from '@/components/icon';
+import { touchPill, touchTargetCoarse } from '@/components/popover';
 import { cn } from '@/lib/utils';
 import type { ContributorRole, TrackCredit } from '@/lib/upload';
 
@@ -150,7 +151,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
                   type="button"
                   disabled={isPending}
                   onClick={() => removeRow(i)}
-                  className="grid size-7 shrink-0 place-items-center rounded-md text-foreground/30 hover:bg-red-500/10 hover:text-red-400 transition-colors disabled:opacity-30"
+                  className={cn('grid size-7 shrink-0 place-items-center rounded-md text-foreground/30 hover:bg-red-500/10 hover:text-red-400 transition-colors disabled:opacity-30', touchTargetCoarse('sm'))}
                   aria-label="Удалить кредит"
                 >
                   <Icon name="x" size={16} />
@@ -168,6 +169,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
                       onClick={() => setRow(i, { role: r.value })}
                       className={cn(
                         'rounded-full border px-2.5 py-1 text-[11px] transition-colors active:scale-[0.97] disabled:opacity-40',
+                        touchPill,
                         on
                           ? 'border-primary bg-primary/15 text-foreground'
                           : 'border-foreground/10 text-foreground/45 hover:text-foreground hover:border-foreground/30',

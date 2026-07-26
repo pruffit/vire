@@ -48,7 +48,7 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
   }
 
   return (
-    <div className="h-6 flex items-center">
+    <div className="min-h-6 flex items-center">
       <AnimatePresence mode="wait" initial={false}>
         {done ? (
           <motion.span
@@ -66,7 +66,7 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
             onClick={publish}
-            className="text-xs px-2.5 py-1 rounded bg-foreground/10 hover:bg-foreground/20 transition-colors"
+            className="text-xs px-2.5 py-1 rounded bg-foreground/10 hover:bg-foreground/20 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
             {label}
           </motion.button>

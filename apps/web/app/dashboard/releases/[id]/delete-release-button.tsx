@@ -49,7 +49,7 @@ export function DeleteReleaseButton({
             onClick={() => setConfirming(true)}
             whileTap={{ scale: 0.96, y: 1 }}
             transition={spring.snappy}
-            className="text-sm text-red-400/60 hover:text-red-400 transition-colors"
+            className="text-sm text-red-400/60 hover:text-red-400 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
             Удалить релиз
           </motion.button>
@@ -75,7 +75,7 @@ export function DeleteReleaseButton({
                 disabled={loading}
                 whileTap={{ scale: 0.95, y: 1 }}
                 transition={spring.snappy}
-                className="text-sm px-3 py-1 rounded-md bg-red-500/15 text-red-400 hover:bg-red-500/25 disabled:opacity-40 transition-colors"
+                className="text-sm px-3 py-1 rounded-md bg-red-500/15 text-red-400 hover:bg-red-500/25 disabled:opacity-40 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
               >
                 {loading ? 'Удаляем…' : 'Да, удалить'}
               </motion.button>
@@ -83,7 +83,7 @@ export function DeleteReleaseButton({
                 type="button"
                 onClick={() => { setConfirming(false); setError(null); }}
                 disabled={loading}
-                className="text-sm text-foreground/40 hover:text-foreground/70 transition-colors"
+                className="text-sm text-foreground/40 hover:text-foreground/70 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
               >
                 Отмена
               </button>

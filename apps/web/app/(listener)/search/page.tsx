@@ -33,7 +33,7 @@ export default async function SearchPage({ searchParams }: Props) {
     : 0;
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-8">
+    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
       <div className="max-w-2xl">
         <GlobalSearch variant="page" defaultValue={query} autoFocus={!query} />
       </div>

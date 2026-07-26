@@ -19,6 +19,7 @@ import type { Genre } from '@/lib/genres';
 import type { TrackCredit } from '@/lib/upload';
 import type { LyricLine } from '@/lib/lrc';
 import { Icon } from '@/components/icon';
+import { touchTargetCoarse } from '@/components/popover';
 
 export interface GenreSuggestion {
   genre: Genre;
@@ -326,7 +327,7 @@ function TrackRow({
           onPointerDown={(e) => { e.preventDefault(); controls.start(e); }}
           aria-label="Перетащить для изменения порядка"
           title="Перетащить"
-          className="grid h-9 w-7 shrink-0 cursor-grab touch-none place-items-center text-foreground/25 hover:text-foreground/60 active:cursor-grabbing transition-colors"
+          className="grid h-9 w-7 shrink-0 cursor-grab touch-none place-items-center text-foreground/25 hover:text-foreground/60 active:cursor-grabbing transition-colors pointer-coarse:h-11 pointer-coarse:w-11"
         >
           <GripIcon />
         </button>
@@ -382,7 +383,7 @@ function TrackRow({
           aria-expanded={expanded}
           title="Параметры трека"
           className={cn(
-            'shrink-0 grid place-items-center size-9 rounded-full transition-colors',
+            'shrink-0 grid place-items-center size-9 rounded-full transition-colors pointer-coarse:size-11',
             expanded ? 'bg-foreground/10 text-foreground/70' : 'text-foreground/30 hover:bg-foreground/10 hover:text-foreground/60',
           )}
         >
@@ -397,7 +398,7 @@ function TrackRow({
           transition={spring.snappy}
           aria-label="Удалить трек"
           title="Удалить трек"
-          className="shrink-0 grid place-items-center size-9 rounded-full text-foreground/30 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 transition-colors"
+          className="shrink-0 grid place-items-center size-9 rounded-full text-foreground/30 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 transition-colors pointer-coarse:size-11"
         >
           <Icon name="trash" size={14} />
         </motion.button>
@@ -464,7 +465,7 @@ function TrackRow({
                     onBlur={commitKey}
                     onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                     disabled={busy}
-                    className="w-20 bg-transparent border border-foreground/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-foreground/30 disabled:opacity-50"
+                    className="w-20 bg-transparent border border-foreground/10 rounded px-2 py-1 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-foreground/30 disabled:opacity-50 pointer-coarse:min-h-11"
                   />
                 </label>
                 <button
@@ -473,7 +474,10 @@ function TrackRow({
                   disabled={busy || analyzingAudio}
                   aria-label="Переанализировать BPM/тональность"
                   title="Переанализировать BPM/тональность"
-                  className="inline-flex items-center justify-center size-6 rounded-full text-foreground/30 transition-colors hover:bg-foreground/10 hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-40"
+                  className={cn(
+                    'inline-flex items-center justify-center size-6 rounded-full text-foreground/30 transition-colors hover:bg-foreground/10 hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-40',
+                    touchTargetCoarse('sm'),
+                  )}
                 >
                   <Icon name="refresh-cw" size={12} className={cn(analyzingAudio && 'animate-spin')} />
                 </button>

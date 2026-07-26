@@ -195,7 +195,7 @@ export default async function ArtistPage({ params }: Props) {
       {/* Banner — при наличии headerUrl показывает его резко; иначе — ambient-фолбэк по обложке */}
       <ArtistBanner coverUrl={releases[0]?.coverUrl ?? displayAvatar} headerUrl={artist.headerUrl} />
 
-      <div className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10">
+      <div className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-[clamp(280px,26%,360px)_1fr] gap-8 lg:gap-12">
           {/* Левая колонка — личность артиста (sticky на lg) */}
           <div className="lg:sticky lg:top-6 lg:self-start">
