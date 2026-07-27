@@ -8,6 +8,7 @@ import { Icon } from '@/components/icon';
 import { touchTargetClass } from '@/components/popover';
 import { Sheet } from '@/components/sheet';
 import { useIsDesktopPointer } from '@/lib/is-desktop-pointer';
+import { useViewportClampX } from '@/lib/use-viewport-clamp-x';
 
 interface PlaylistItem {
   id: string;
@@ -30,6 +31,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
   const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const { panelRef, offsetX } = useViewportClampX(open);
 
   useEffect(() => {
     if (!open) return;
@@ -253,9 +255,10 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            ref={panelRef}
+            initial={{ opacity: 0, y: -6, scale: 0.96, x: offsetX }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: offsetX }}
+            exit={{ opacity: 0, y: -4, scale: 0.97, x: offsetX }}
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
             // max-w по ширине экрана — на мобилке поповер не вылезает за вьюпорт
             className="absolute left-0 top-full mt-2 w-56 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden"

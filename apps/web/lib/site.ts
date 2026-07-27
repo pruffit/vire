@@ -16,3 +16,16 @@ export const SITE_DESCRIPTION =
 
 // Полный заголовок по умолчанию (default title, OG, twitter) — один источник.
 export const SITE_TITLE = `${SITE_NAME} — независимая музыкальная площадка`;
+
+export const SITE_LOCALE = 'ru_RU';
+
+// файловая конвенция app/opengraph-image.tsx — фолбэк-картинка для страниц без своей
+export const DEFAULT_OG_IMAGE_PATH = '/opengraph-image';
+
+// один шаблон для <title> (root layout) и og:title/twitter:title (lib/metadata.ts) —
+// без template.replace('%s', …) в двух местах.
+export const TITLE_TEMPLATE = `%s — ${SITE_NAME}`;
+
+export function applyTitleTemplate(title: string): string {
+  return TITLE_TEMPLATE.replace('%s', title);
+}

@@ -16,7 +16,7 @@ import { ScrollRestoration } from '@/components/scroll-restoration';
 import { SitePresence } from '@/components/site-presence';
 import { YandexMetrika } from '@/components/yandex-metrika';
 import { fontVariables } from '@/lib/fonts';
-import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_TITLE } from '@/lib/site';
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_TITLE, SITE_LOCALE, TITLE_TEMPLATE } from '@/lib/site';
 import './globals.css';
 
 const geistSans = Geist({
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: SITE_TITLE,
-    template: `%s — ${SITE_NAME}`,
+    template: TITLE_TEMPLATE,
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: SITE_NAME,
-    locale: 'ru_RU',
+    locale: SITE_LOCALE,
     url: '/',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,

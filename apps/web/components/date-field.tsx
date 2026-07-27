@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { fieldClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
+import { useViewportClampX } from '@/lib/use-viewport-clamp-x';
 
 /**
  * Date picker — замена нативному `<input type=date>` (попап рисует браузер, мимо темы).
@@ -59,6 +60,7 @@ export function DateField({
 
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const { panelRef, offsetX } = useViewportClampX(open);
 
   const now = useMemo(() => new Date(), []);
   const initial = parseISO(current);
@@ -147,9 +149,10 @@ export function DateField({
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
+            ref={panelRef}
+            initial={{ opacity: 0, y: -4, x: offsetX }}
+            animate={{ opacity: 1, y: 0, x: offsetX }}
+            exit={{ opacity: 0, y: -4, x: offsetX }}
             transition={spring.snappy}
             role="dialog"
             className="absolute z-30 mt-1 w-[17rem] max-w-[calc(100vw-2rem)] rounded-lg border border-foreground/15 bg-background p-3 shadow-xl shadow-black/40"

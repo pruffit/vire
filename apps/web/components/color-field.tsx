@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { useViewportClampX } from '@/lib/use-viewport-clamp-x';
 
 /**
  * Color picker — замена нативному `<input type=color>` (попап светлый, мимо темы).
@@ -67,6 +68,7 @@ export function ColorField({ label, name, value, onChange, disabled }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const svRef = useRef<HTMLDivElement>(null);
   const hueRef = useRef<HTMLDivElement>(null);
+  const { panelRef, offsetX } = useViewportClampX(open);
 
   // HSV держим локально (иначе на сером/чёрном теряется hue — hex его не хранит).
   const [hsv, setHsv] = useState(() => {
@@ -189,9 +191,11 @@ export function ColorField({ label, name, value, onChange, disabled }: Props) {
         <AnimatePresence>
           {open && (
             <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
+              ref={panelRef}
+              role="dialog"
+              initial={{ opacity: 0, y: -4, x: offsetX }}
+              animate={{ opacity: 1, y: 0, x: offsetX }}
+              exit={{ opacity: 0, y: -4, x: offsetX }}
               transition={spring.snappy}
               className="absolute left-0 top-full z-30 mt-1 w-56 max-w-[calc(100vw-2rem)] rounded-lg border border-foreground/15 bg-background p-3 shadow-xl shadow-black/40"
             >

@@ -13,6 +13,7 @@ import { useJamQueue } from '@/lib/jam/use-jam-queue';
 import { useServerClock } from '@/lib/jam/server-clock';
 import { usePlaybackSync } from '@/lib/jam/use-playback-sync';
 import { setJamToggle } from '@/lib/jam/jam-controls';
+import { effectivePaused, resolvePending, PENDING_TTL_MS, type PendingToggle } from '@/lib/jam/optimistic-playback';
 import { getSessionId } from '@/lib/session-id';
 import { toast } from '@/lib/toast';
 import { usePlayerStore } from '@/store/player';
@@ -60,6 +61,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
   const [pending, setPending] = useState(false);
   const [adding, setAdding] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const [playbackPending, setPlaybackPending] = useState<PendingToggle | null>(null);
 
   const room = useJamRoom(code, membership?.sessionId ?? null);
   const jamQueue = useJamQueue({
@@ -73,7 +75,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
   const ended = initialEnded || room.ended;
   const isHost = membership?.role === 'HOST';
 
-  const postPlayback = useCallback((body: PlaybackCommand) => {
+  const postPlayback = useCallback((body: PlaybackCommand, onError?: () => void) => {
     const sessionId = membership?.sessionId;
     fetch(`/api/v1/jam/${encodeURIComponent(code)}/playback`, {
       method: 'POST',
@@ -81,7 +83,10 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
       body: JSON.stringify(sessionId ? { ...body, sessionId } : body),
     })
       .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
-      .catch(() => toast.error('Не удалось изменить воспроизведение'));
+      .catch(() => {
+        toast.error('Не удалось изменить воспроизведение');
+        onError?.();
+      });
   }, [code, membership?.sessionId]);
 
   const handleTrackEnded = useCallback(() => {
@@ -123,31 +128,58 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
   const handleRowPlay = useCallback((item: JamQueueItem) => {
     const playback = room.playback;
     if (playback?.trackId === item.trackId) {
+      const paused = effectivePaused(playback, playbackPending);
+      const next: PendingToggle = { paused: !paused, at: Date.now() };
       postPlayback(
-        playback.paused
+        paused
           ? { kind: 'play', trackId: item.trackId, positionMs: derivePositionMs(playback, serverNow()) }
           : { kind: 'pause', positionMs: derivePositionMs(playback, serverNow()) },
+        () => setPlaybackPending((prev) => (prev === next ? null : prev)),
       );
+      setPlaybackPending(next);
     } else {
+      setPlaybackPending(null);
       postPlayback({ kind: 'track', trackId: item.trackId });
     }
-  }, [room.playback, serverNow, postPlayback]);
+  }, [room.playback, playbackPending, serverNow, postPlayback]);
 
   const handleTogglePlayback = useCallback(() => {
     const playback = room.playback;
     if (!playback) return;
+    const paused = effectivePaused(playback, playbackPending);
+    const next: PendingToggle = { paused: !paused, at: Date.now() };
     postPlayback(
-      playback.paused
+      paused
         ? { kind: 'play', trackId: playback.trackId, positionMs: derivePositionMs(playback, serverNow()) }
         : { kind: 'pause', positionMs: derivePositionMs(playback, serverNow()) },
+      () => setPlaybackPending((prev) => (prev === next ? null : prev)),
     );
-  }, [room.playback, serverNow, postPlayback]);
+    setPlaybackPending(next);
+  }, [room.playback, playbackPending, serverNow, postPlayback]);
+
+  // Снятие pending — адаптация state к изменившемуся входу в рендере (приём syncedId
+  // из use-optimistic-toggle.ts): эффект тут запрещён линтером, мутация рефа — React.
+  const [resolvedPlayback, setResolvedPlayback] = useState(room.playback);
+  if (resolvedPlayback !== room.playback) {
+    setResolvedPlayback(room.playback);
+    setPlaybackPending((prev) => resolvePending(prev, Boolean(room.playback?.paused), Date.now(), PENDING_TTL_MS));
+  }
+
+  // Фолбэк на случай, если SSE-подтверждение не пришло вовсе (обрыв соединения).
+  useEffect(() => {
+    if (!playbackPending) return;
+    const timer = setTimeout(
+      () => setPlaybackPending((prev) => (prev === playbackPending ? null : prev)),
+      PENDING_TTL_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [playbackPending]);
 
   const activeTrack = useMemo(
     () => (room.playback ? jamQueue.queue.find((item) => item.trackId === room.playback!.trackId) : undefined),
     [room.playback, jamQueue.queue],
   );
-  const isPlaying = Boolean(room.playback && !room.playback.paused);
+  const isPlaying = Boolean(room.playback) && !effectivePaused(room.playback, playbackPending);
 
   const setPlayerJamOverride = usePlayerStore((s) => s.setJamOverride);
 
@@ -366,7 +398,10 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
                             index={i}
                             size="roomy"
                             isActive={room.playback?.trackId === item.trackId}
-                            isPlaying={Boolean(room.playback && room.playback.trackId === item.trackId && !room.playback.paused)}
+                            isPlaying={
+                              Boolean(room.playback && room.playback.trackId === item.trackId)
+                              && !effectivePaused(room.playback, playbackPending)
+                            }
                             onPlay={() => handleRowPlay(item)}
                             canDrag
                             canRemove={isHost || item.addedByParticipantId === membership.participantId}

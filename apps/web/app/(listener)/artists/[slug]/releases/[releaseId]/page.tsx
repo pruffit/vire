@@ -17,6 +17,7 @@ import { PageContainer } from '@/components/page-container';
 import { musicAlbumJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
 import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
 import { releaseMetaDescription } from '@/lib/meta-descriptions';
+import { pageMetadata } from '@/lib/metadata';
 import { artistFontStyle } from '@/lib/fonts';
 import { GENRE_LABELS } from '@/lib/genres';
 import { Icon } from '@/components/icon';
@@ -60,18 +61,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     year: releaseYear(release.releaseDate),
     trackCount: tracks.length,
   });
-  return {
-    title: `${release.title} — ${artist.name}`,
+  const title = `${release.title} — ${artist.name}`;
+  return pageMetadata({
+    url,
+    title,
     description,
-    alternates: { canonical: url },
-    openGraph: {
-      type: 'music.album',
-      url,
-      title: `${release.title} — ${artist.name}`,
-      description,
-      images: release.coverUrl ? [{ url: release.coverUrl }] : undefined,
-    },
-  };
+    type: 'music.album',
+    images: release.coverUrl
+      ? [{ url: release.coverUrl, width: 1200, height: 630, alt: release.title }]
+      : undefined,
+  });
 }
 
 export default async function ReleasePage({ params }: Props) {
@@ -128,7 +127,7 @@ export default async function ReleasePage({ params }: Props) {
         data={musicAlbumJsonLd(
           { id: release.id, title: release.title, coverUrl: release.coverUrl, releaseDate: release.releaseDate, description: release.description },
           { name: artist.name, slug },
-          clientTracks.map((t) => ({ id: t.id, title: t.title, trackNumber: t.trackNumber, durationSec: t.durationSec })),
+          clientTracks.map((t) => ({ id: t.id, title: t.title, durationSec: t.durationSec })),
         )}
       />
       <JsonLd data={breadcrumbListJsonLd([

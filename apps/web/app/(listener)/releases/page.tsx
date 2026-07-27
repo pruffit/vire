@@ -7,12 +7,13 @@ import { ReleasesGrid } from './releases-grid';
 import { PageContainer } from '@/components/page-container';
 import { breadcrumbListJsonLd } from '@/lib/structured-data';
 import { touchPill } from '@/components/popover';
+import { pageMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  url: '/releases',
   title: 'Релизы',
   description: 'Все релизы на Vire — свежее, за неделю и самое популярное.',
-  alternates: { canonical: '/releases' },
-};
+});
 
 type Tab = 'fresh' | 'week' | 'popular';
 

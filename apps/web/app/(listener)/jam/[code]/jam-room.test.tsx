@@ -317,4 +317,72 @@ describe('JamRoom', () => {
     expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(expect.objectContaining({ audioEnabled: false }));
     await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride).toBeNull());
   });
+
+  it('два быстрых клика по паузе до SSE-подтверждения → второй POST это play, не второй pause', async () => {
+    const queue = [track('a')];
+    useJamRoomMock.mockReturnValue(
+      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }),
+    );
+    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'HOST' } }) };
+      return { ok: true, json: async () => ({}) };
+    });
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
+
+    render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
+    );
+    fireEvent.click(screen.getByText('Подключиться к звуку'));
+    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
+
+    fireEvent.click(screen.getByLabelText('Поставить джем на паузу'));
+    await waitFor(() => expect(screen.getByLabelText('Возобновить джем')).toBeTruthy());
+    fireEvent.click(screen.getByLabelText('Возобновить джем'));
+
+    await waitFor(() => {
+      const playbackCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('/playback'));
+      expect(playbackCalls).toHaveLength(2);
+      expect(playbackCalls[0]![1]!.body).toBe(JSON.stringify({ kind: 'pause', positionMs: 0 }));
+      expect(playbackCalls[1]![1]!.body).toBe(JSON.stringify({ kind: 'play', trackId: 't-a', positionMs: 0 }));
+    });
+  });
+
+  it('после подтверждающего jam:playback pending снят — следующее серверное состояние отражается сразу', async () => {
+    const queue = [track('a')];
+    useJamRoomMock.mockReturnValue(
+      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }),
+    );
+    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'HOST' } }) };
+      return { ok: true, json: async () => ({}) };
+    });
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
+
+    const { rerender } = render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
+    );
+    fireEvent.click(screen.getByText('Подключиться к звуку'));
+    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
+
+    fireEvent.click(screen.getByLabelText('Поставить джем на паузу'));
+    await waitFor(() => expect(screen.getByLabelText('Возобновить джем')).toBeTruthy());
+
+    // SSE подтверждает желаемое (paused:true) — pending должен сняться.
+    useJamRoomMock.mockReturnValue(
+      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: true, pausedPositionMs: 0, version: 2 } }),
+    );
+    rerender(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
+    );
+
+    // Кто-то другой возобновил джем — если бы pending остался висеть, кнопка не сдвинулась бы с «Возобновить».
+    useJamRoomMock.mockReturnValue(
+      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 3 } }),
+    );
+    rerender(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
+    );
+
+    expect(screen.getByLabelText('Поставить джем на паузу')).toBeTruthy();
+  });
 });

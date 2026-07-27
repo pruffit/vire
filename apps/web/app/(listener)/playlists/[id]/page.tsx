@@ -12,6 +12,7 @@ import { PlaylistShare } from '@/components/playlist-share';
 import { PageContainer } from '@/components/page-container';
 import { formatDuration, pluralTracks } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
+import { pageMetadata } from '@/lib/metadata';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -30,13 +31,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = playlist.description
     ?? `${playlist.tracks.length} ${pluralTracks(playlist.tracks.length)} на Vire.`;
 
-  return {
+  return pageMetadata({
+    url,
     title: playlist.title,
     description,
-    alternates: { canonical: url },
-    openGraph: { type: 'music.playlist', url, title: playlist.title, description },
-    twitter: { card: 'summary_large_image', title: playlist.title, description },
-  };
+    type: 'music.playlist',
+    // своя динамическая og-картинка — mosaic обложек, app/(listener)/playlists/[id]/opengraph-image.tsx
+    images: null,
+  });
 }
 
 export default async function PlaylistPage({ params }: Props) {

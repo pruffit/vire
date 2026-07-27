@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useTransition } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import {
   actionListArtistMembers,
@@ -10,11 +10,14 @@ import {
 import type { ArtistMemberRow } from '@vire/db';
 import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
+import { clampPanelX } from '@/lib/clamp-panel-x';
+
+const PANEL_MARGIN = 8;
 
 // поповер в портале с position:fixed — иначе его обрезает таблица-родитель с overflow:auto
 export function MembersManager({ artistProfileId }: { artistProfileId: string }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; right: number; offsetX: number } | null>(null);
   const [members, setMembers] = useState<ArtistMemberRow[] | null>(null);
   const [email, setEmail] = useState('');
   const [pending, startTransition] = useTransition();
@@ -26,8 +29,24 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
     if (!el) return;
     const r = el.getBoundingClientRect();
     // Правый край поповера выровнен по правому краю кнопки, открывается вниз.
-    setPos({ top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) });
+    const right = Math.max(PANEL_MARGIN, window.innerWidth - r.right);
+    const top = r.bottom + 6;
+    const panel = popoverRef.current;
+    const offsetX = panel
+      ? clampPanelX({
+          panelLeft: window.innerWidth - right - panel.getBoundingClientRect().width,
+          panelWidth: panel.getBoundingClientRect().width,
+          viewportWidth: window.innerWidth,
+          margin: PANEL_MARGIN,
+        })
+      : 0;
+    setPos({ top, right, offsetX });
   }
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    place();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,19 +58,16 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
     }
-    function reflow() {
-      place();
-    }
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
-    window.addEventListener('resize', reflow);
+    window.addEventListener('resize', place);
     // capture: ловим скролл внутри любого контейнера (таблица, main), не только окна
-    window.addEventListener('scroll', reflow, true);
+    window.addEventListener('scroll', place, true);
     return () => {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
-      window.removeEventListener('resize', reflow);
-      window.removeEventListener('scroll', reflow, true);
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
     };
   }, [open]);
 
@@ -106,7 +122,12 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
       {open && pos && createPortal(
         <div
           ref={popoverRef}
-          style={{ position: 'fixed', top: pos.top, right: pos.right }}
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            right: pos.right,
+            transform: `translateX(${pos.offsetX}px)`,
+          }}
           className="z-50 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-foreground/10 bg-popover shadow-xl p-3 flex flex-col gap-2.5 text-left"
         >
           <p className="text-xs text-foreground/45">Аккаунты с доступом к дашборду артиста.</p>

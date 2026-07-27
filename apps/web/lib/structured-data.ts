@@ -46,7 +46,6 @@ export interface ReleaseLd {
 export interface TrackLd {
   id: string;
   title: string;
-  trackNumber: number;
   durationSec?: number | null;
 }
 
@@ -105,7 +104,6 @@ export function musicAlbumJsonLd(
       ? tracks.map((t) =>
           prune({
             '@type': 'MusicRecording',
-            position: t.trackNumber,
             name: t.title,
             url: `${albumUrl}/tracks/${t.id}`,
             duration: secondsToISO8601(t.durationSec),

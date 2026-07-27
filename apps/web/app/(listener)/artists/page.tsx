@@ -5,12 +5,13 @@ import { ArtistCatalog } from '@/components/artist-catalog';
 import { JsonLd } from '@/components/json-ld';
 import { PageContainer } from '@/components/page-container';
 import { artistsCatalogJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
+import { pageMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  url: '/artists',
   title: 'Артисты',
   description: 'Все артисты на платформе Vire',
-  alternates: { canonical: '/artists' },
-};
+});
 
 export default async function ArtistsPage() {
   const artists = await listActiveArtists();

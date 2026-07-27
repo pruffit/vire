@@ -14,6 +14,7 @@ import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
 import { JsonLd } from '@/components/json-ld';
 import { Icon } from '@/components/icon';
 import { abs } from '@/lib/structured-data';
+import { pageMetadata } from '@/lib/metadata';
 
 type Props = { params: Promise<{ artistSlug: string; linkSlug: string }> };
 
@@ -55,19 +56,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${smartLink.title} — ${artist.name}`;
   const description = smartLink.subtitle ?? `Слушай «${smartLink.title}» от ${artist.name} на всех площадках`;
   const url = `/smartlink/${artistSlug}/${linkSlug}`;
-  return {
+  return pageMetadata({
+    url,
     title,
     description,
-    alternates: { canonical: url },
-    openGraph: {
-      url,
-      title,
-      description,
-      type: 'music.album',
-      images: smartLink.coverUrl ? [{ url: smartLink.coverUrl }] : undefined,
-    },
-    twitter: { card: 'summary_large_image', title, description },
-  };
+    type: 'music.album',
+    images: smartLink.coverUrl
+      ? [{ url: smartLink.coverUrl, width: 1200, height: 630, alt: smartLink.title }]
+      : undefined,
+  });
 }
 
 export default async function SmartLinkPage({ params }: Props) {

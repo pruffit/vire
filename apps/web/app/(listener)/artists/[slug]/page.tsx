@@ -39,6 +39,7 @@ import { UpcomingPresaveButton } from '@/components/upcoming-presave-button';
 import { JsonLd } from '@/components/json-ld';
 import { musicGroupJsonLd, breadcrumbListJsonLd, artistPostJsonLd } from '@/lib/structured-data';
 import { resolveAvatarUrl } from '@/lib/avatar';
+import { pageMetadata } from '@/lib/metadata';
 import { artistFontStyle } from '@/lib/fonts';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { PageContainer } from '@/components/page-container';
@@ -90,18 +91,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const url = `/artists/${slug}`;
   const description = artist.bio ?? `${artist.name} на Vire — релизы, треки и ссылки.`;
   const ogImage = resolveAvatarUrl(artist.avatarUrl, releases[0]?.coverUrl ?? null);
-  return {
+  return pageMetadata({
+    url,
     title: artist.name,
     description,
-    alternates: { canonical: url },
-    openGraph: {
-      type: 'profile',
-      url,
-      title: artist.name,
-      description,
-      images: ogImage ? [{ url: ogImage }] : undefined,
-    },
-  };
+    type: 'profile',
+    images: ogImage ? [{ url: ogImage, width: 1200, height: 630, alt: artist.name }] : undefined,
+  });
 }
 
 export default async function ArtistPage({ params }: Props) {

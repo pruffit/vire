@@ -26,6 +26,7 @@ import { PageContainer } from '@/components/page-container';
 import { countListening } from '@/lib/presence';
 import { formatDuration, releaseYear } from '@/lib/format';
 import { trackMetaDescription } from '@/lib/meta-descriptions';
+import { pageMetadata } from '@/lib/metadata';
 import { artistFontStyle } from '@/lib/fonts';
 import { SectionHeader } from '@/components/section-header';
 import { TrackLyrics } from './track-lyrics';
@@ -68,18 +69,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     artistName: artist.name,
     year: releaseYear(release.releaseDate),
   });
-  return {
-    title: `${fullTitle} — ${artist.name}`,
+  const title = `${fullTitle} — ${artist.name}`;
+  return pageMetadata({
+    url,
+    title,
     description,
-    alternates: { canonical: url },
-    openGraph: {
-      type: 'music.song',
-      url,
-      title: `${fullTitle} — ${artist.name}`,
-      description,
-      images: release.coverUrl ? [{ url: release.coverUrl }] : undefined,
-    },
-  };
+    type: 'music.song',
+    images: release.coverUrl
+      ? [{ url: release.coverUrl, width: 1200, height: 630, alt: fullTitle }]
+      : undefined,
+  });
 }
 
 export default async function TrackPage({ params, searchParams }: Props) {
@@ -135,7 +134,6 @@ export default async function TrackPage({ params, searchParams }: Props) {
           {
             id: track.id,
             title: displayTrackTitle(track.title, { version: track.version, credits: track.credits }),
-            trackNumber: track.trackNumber,
             durationSec: track.durationSec,
           },
           { id: release.id, title: release.title, coverUrl: release.coverUrl, releaseDate: release.releaseDate },

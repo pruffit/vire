@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
 const { sodiumReady, getIdentity, getOrCreateIdentity, getIdentityPubB64 } = vi.hoisted(() => ({
   sodiumReady: vi.fn().mockResolvedValue(undefined),
@@ -141,6 +141,62 @@ describe('useIdentity — singleton-бутстрап на selfId', () => {
 
     const retried = renderHook(() => useIdentity('user-throw'));
     await waitFor(() => expect(retried.result.current.ready).toBe(true));
+  });
+
+  it('ретрай-таймер: ошибка → +15с → второй заход, успех даёт ready', async () => {
+    vi.useFakeTimers();
+    try {
+      getIdentity.mockRejectedValue(new Error('network down'));
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { result } = renderHook(() => useIdentity('user-retry-timer'));
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.error).toBe(true);
+      expect(getIdentity).toHaveBeenCalledTimes(1);
+
+      getIdentity.mockResolvedValue({ pub: LOCAL_PUB, priv: LOCAL_PRIV });
+      getIdentityPubB64.mockResolvedValue('b64:1,2,3');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+
+      expect(getIdentity).toHaveBeenCalledTimes(2);
+      expect(result.current.ready).toBe(true);
+      expect(result.current.priv).toEqual(LOCAL_PRIV);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ретрай-таймер: размонтирование до срабатывания — повтора нет', async () => {
+    vi.useFakeTimers();
+    try {
+      getIdentity.mockRejectedValue(new Error('network down'));
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { result, unmount } = renderHook(() => useIdentity('user-retry-unmount'));
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.error).toBe(true);
+      expect(getIdentity).toHaveBeenCalledTimes(1);
+
+      unmount();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+
+      expect(getIdentity).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('не вызывает setState после анмаунта', async () => {

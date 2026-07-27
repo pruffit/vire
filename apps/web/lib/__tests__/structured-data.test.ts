@@ -72,8 +72,8 @@ describe('musicAlbumJsonLd', () => {
       { id: 'rel1', title: 'Альбом', coverUrl: 'https://cdn/x.jpg', releaseDate: '2025-03-15' },
       { name: 'Kotlaev', slug: 'kotlaev' },
       [
-        { id: 't1', title: 'Один', trackNumber: 1, durationSec: 201 },
-        { id: 't2', title: 'Два', trackNumber: 2, durationSec: null },
+        { id: 't1', title: 'Один', durationSec: 201 },
+        { id: 't2', title: 'Два', durationSec: null },
       ],
     );
     expect(ld['@type']).toBe('MusicAlbum');
@@ -86,11 +86,11 @@ describe('musicAlbumJsonLd', () => {
     expect(tracks).toHaveLength(2);
     expect(tracks[0]).toMatchObject({
       '@type': 'MusicRecording',
-      position: 1,
       name: 'Один',
       url: `${BASE}/artists/kotlaev/releases/rel1/tracks/t1`,
       duration: 'PT3M21S',
     });
+    expect(tracks[0]).not.toHaveProperty('position');
     // трек без длительности не содержит duration
     expect(tracks[1]).not.toHaveProperty('duration');
   });
@@ -181,7 +181,7 @@ describe('artistPostJsonLd', () => {
 describe('musicRecordingJsonLd', () => {
   it('builds a MusicRecording with inAlbum and byArtist', () => {
     const ld = musicRecordingJsonLd(
-      { id: 't1', title: 'Трек', trackNumber: 3, durationSec: 185 },
+      { id: 't1', title: 'Трек', durationSec: 185 },
       { id: 'rel1', title: 'Альбом', coverUrl: 'https://cdn/c.jpg' },
       { name: 'Kotlaev', slug: 'kotlaev' },
     );
