@@ -13,6 +13,7 @@ import { NumberField } from '@/components/number-field';
 import { useTrackAnalysis } from '@/lib/use-track-analysis';
 import { titleRepeatsArtist } from '@/lib/title-hygiene';
 import { featLabel } from '@/lib/track-display';
+import { swapAdjacent } from '@/lib/reorder';
 import { cn } from '@/lib/utils';
 import type { Mood } from '@/lib/moods';
 import type { Genre } from '@/lib/genres';
@@ -115,8 +116,8 @@ export function TrackManager({
     setTracks(next.map((t, i) => ({ ...t, trackNumber: i + 1 })));
   }
 
-  async function commitOrder() {
-    const ids = tracks.map((t) => t.id);
+  async function commitOrder(list: ManagedTrack[] = tracks) {
+    const ids = list.map((t) => t.id);
     const prevIds = committed.current.map((t) => t.id);
     if (ids.length === prevIds.length && ids.every((id, i) => id === prevIds[i])) return;
 
@@ -130,11 +131,19 @@ export function TrackManager({
     setBusy((p) => { const n = new Set(p); ids.forEach((id) => n.delete(id)); return n; });
 
     if (res?.ok) {
-      committed.current = tracks;
+      committed.current = list;
     } else {
       setTracks(snapshot);
       toast.error('Не удалось изменить порядок треков');
     }
+  }
+
+  function move(id: string, dir: -1 | 1) {
+    const next = swapAdjacent(tracks, id, dir);
+    if (next === tracks) return;
+    const renumbered = next.map((t, i) => ({ ...t, trackNumber: i + 1 }));
+    setTracks(renumbered);
+    void commitOrder(renumbered);
   }
 
   async function commitTitle(id: string) {
@@ -214,7 +223,7 @@ export function TrackManager({
       onReorder={handleReorder}
       className="rounded-xl bg-foreground/[0.025] border border-foreground/10 divide-y divide-foreground/[0.06] overflow-hidden"
     >
-      {tracks.map((track) => (
+      {tracks.map((track, i) => (
         <TrackRow
           key={track.id}
           track={track}
@@ -222,7 +231,7 @@ export function TrackManager({
           expanded={expanded.has(track.id)}
           justSaved={justSaved.has(track.id)}
           artistName={artistName}
-          onReorderEnd={commitOrder}
+          onReorderEnd={() => commitOrder()}
           onTitleChange={(v) => setTitle(track.id, v)}
           onTitleCommit={() => commitTitle(track.id)}
           onToggleExpanded={() => toggleExpanded(track.id)}
@@ -230,6 +239,10 @@ export function TrackManager({
           onCommitField={(field, value) => commitField(track.id, field, value)}
           onAnalysisResult={(bpm, musicalKey) => applyAnalysisResult(track.id, bpm, musicalKey)}
           onRemove={() => remove(track.id)}
+          onMoveUp={() => move(track.id, -1)}
+          onMoveDown={() => move(track.id, 1)}
+          canMoveUp={i > 0}
+          canMoveDown={i < tracks.length - 1}
         />
       ))}
     </Reorder.Group>
@@ -250,6 +263,10 @@ function TrackRow({
   onCommitField,
   onAnalysisResult,
   onRemove,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: {
   track: ManagedTrack;
   busy: boolean;
@@ -264,6 +281,10 @@ function TrackRow({
   onCommitField: (field: 'bpm' | 'musicalKey' | 'version', value: number | string | null) => void;
   onAnalysisResult: (bpm: number | null, musicalKey: string | null) => void;
   onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
 }) {
   const controls = useDragControls();
   const [bpm, setBpm] = useState<number | null>(track.bpm);
@@ -331,6 +352,33 @@ function TrackRow({
         >
           <GripIcon />
         </button>
+
+        <div className="hidden shrink-0 pointer-coarse:flex">
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={busy || !canMoveUp}
+            aria-label="Переместить вверх"
+            className={cn(
+              'grid place-items-center rounded text-foreground/30 transition-colors hover:text-foreground/60 disabled:opacity-30 disabled:hover:text-foreground/30',
+              touchTargetCoarse('sm'),
+            )}
+          >
+            <Icon name="chevron-up" size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={busy || !canMoveDown}
+            aria-label="Переместить вниз"
+            className={cn(
+              'grid place-items-center rounded text-foreground/30 transition-colors hover:text-foreground/60 disabled:opacity-30 disabled:hover:text-foreground/30',
+              touchTargetCoarse('sm'),
+            )}
+          >
+            <Icon name="chevron-down" size={14} />
+          </button>
+        </div>
 
         <span className="w-5 text-right text-foreground/30 shrink-0 font-mono text-xs tabular-nums">
           {track.trackNumber}

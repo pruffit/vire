@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { getActiveArtistForPage, listUserArtists } from '@/lib/active-artist';
 import { DashboardNav } from './dashboard-nav';
 import { ArtistSwitcher } from './artist-switcher';
+import { MobileArtistSwitcher } from './mobile-artist-switcher';
 import { Icon } from '@/components/icon';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="min-h-full bg-background text-foreground flex flex-col md:flex-row">
       <aside className="shrink-0 border-b border-foreground/10 md:flex md:w-60 md:flex-col md:border-b-0 md:border-r md:bg-foreground/[0.015]">
+        {artist && (
+          <div className="flex items-center border-b border-foreground/10 px-4 py-2.5 md:hidden">
+            <MobileArtistSwitcher
+              artist={{ id: artist.id, name: artist.name, slug: artist.slug, avatarUrl: artist.avatarUrl }}
+              allArtists={allArtists.map((a) => ({ id: a.id, name: a.name, slug: a.slug }))}
+            />
+          </div>
+        )}
         {artist ? (
           <div className="hidden items-center gap-3 px-4 pb-4 pt-5 md:flex">
             {artist.avatarUrl ? (

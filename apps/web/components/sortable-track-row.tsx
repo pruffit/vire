@@ -6,6 +6,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '@/components/icon';
 import { TrackRow, type TrackRowTrack } from '@/components/track-row';
 import { formatDuration } from '@/lib/format';
+import { touchTargetCoarse } from '@/components/popover';
+import { cn } from '@/lib/utils';
 
 export interface SortableTrackRowTrack extends TrackRowTrack {
   id: string;
@@ -25,6 +27,10 @@ interface Props {
   subtitle?: ReactNode;
   /** 'roomy' — крупнее строка/обложка на мобилке, drag-хендл всегда виден (без hover). */
   size?: 'default' | 'roomy';
+  onMoveUp?: (trackId: string) => void;
+  onMoveDown?: (trackId: string) => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 export function SortableTrackRow({
@@ -39,6 +45,10 @@ export function SortableTrackRow({
   removeLabel = 'Удалить',
   subtitle,
   size = 'default',
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: track.id, disabled: !canDrag });
@@ -81,6 +91,34 @@ export function SortableTrackRow({
             >
               <GripIcon />
             </button>
+          )}
+          {(onMoveUp || onMoveDown) && (
+            <div className="hidden shrink-0 pointer-coarse:flex">
+              <button
+                type="button"
+                onClick={() => onMoveUp?.(track.id)}
+                disabled={canMoveUp === false}
+                aria-label="Переместить вверх"
+                className={cn(
+                  'grid place-items-center rounded text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30 disabled:hover:text-muted-foreground',
+                  touchTargetCoarse('sm'),
+                )}
+              >
+                <Icon name="chevron-up" size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onMoveDown?.(track.id)}
+                disabled={canMoveDown === false}
+                aria-label="Переместить вниз"
+                className={cn(
+                  'grid place-items-center rounded text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30 disabled:hover:text-muted-foreground',
+                  touchTargetCoarse('sm'),
+                )}
+              >
+                <Icon name="chevron-down" size={14} />
+              </button>
+            </div>
           )}
           <span className="w-4 text-right text-xs font-mono text-muted-foreground/40 tabular-nums shrink-0">
             {index + 1}

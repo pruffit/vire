@@ -4,8 +4,12 @@ import { Fragment, type KeyboardEvent } from 'react';
 import { Reorder, useDragControls } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
+import { swapAdjacent } from '@/lib/reorder';
+import { cn } from '@/lib/utils';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { TrackTitleText } from '@/components/track-title';
+import { Icon } from '@/components/icon';
+import { touchTargetCoarse } from '@/components/popover';
 import { GripIcon, WaveIcon } from './player-icons';
 
 export function QueuePanel({ onJump }: { onJump: () => void }) {
@@ -21,12 +25,8 @@ export function QueuePanel({ onJump }: { onJump: () => void }) {
 
   function moveTrack(trackId: string, dir: -1 | 1) {
     const { queue: current } = usePlayerStore.getState();
-    const i = current.findIndex((t) => t.id === trackId);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= current.length) return;
-    const order = current.slice();
-    [order[i], order[j]] = [order[j], order[i]];
-    handleReorder(order);
+    const next = swapAdjacent(current, trackId, dir);
+    if (next !== current) handleReorder(next);
   }
 
   function jump(t: PlayerTrack) {
@@ -50,7 +50,14 @@ export function QueuePanel({ onJump }: { onJump: () => void }) {
           return (
             <Fragment key={t.id}>
               {waveMode && i === queueIndex + 1 && <WaveDivider />}
-              <QueueRow track={t} isCurrent={isCurrent} onJump={jump} onMove={moveTrack} />
+              <QueueRow
+                track={t}
+                isCurrent={isCurrent}
+                onJump={jump}
+                onMove={moveTrack}
+                canMoveUp={i > 0}
+                canMoveDown={i < queue.length - 1}
+              />
             </Fragment>
           );
         })}
@@ -65,11 +72,15 @@ function QueueRow({
   isCurrent,
   onJump,
   onMove,
+  canMoveUp,
+  canMoveDown,
 }: {
   track: PlayerTrack;
   isCurrent: boolean;
   onJump: (t: PlayerTrack) => void;
   onMove: (trackId: string, dir: -1 | 1) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
 }) {
   const dragControls = useDragControls();
 
@@ -100,6 +111,32 @@ function QueueRow({
       >
         <GripIcon />
       </button>
+      <div className="hidden shrink-0 pointer-coarse:flex">
+        <button
+          type="button"
+          onClick={() => onMove(t.id, -1)}
+          disabled={!canMoveUp}
+          aria-label="Переместить вверх"
+          className={cn(
+            'grid place-items-center rounded text-white/25 transition-colors hover:text-white/60 disabled:opacity-30 disabled:hover:text-white/25',
+            touchTargetCoarse('sm'),
+          )}
+        >
+          <Icon name="chevron-up" size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onMove(t.id, 1)}
+          disabled={!canMoveDown}
+          aria-label="Переместить вниз"
+          className={cn(
+            'grid place-items-center rounded text-white/25 transition-colors hover:text-white/60 disabled:opacity-30 disabled:hover:text-white/25',
+            touchTargetCoarse('sm'),
+          )}
+        >
+          <Icon name="chevron-down" size={14} />
+        </button>
+      </div>
       <button type="button" onClick={() => onJump(t)} className="flex-1 min-w-0 text-left">
         <span
           className="text-sm truncate flex items-center gap-1.5"

@@ -11,13 +11,8 @@ export interface SwitcherArtist {
   slug: string;
 }
 
-export function ArtistSwitcher({
-  artists,
-  activeId,
-}: {
-  artists: SwitcherArtist[];
-  activeId: string;
-}) {
+/** Общая логика переключения активного артиста — переиспользуется десктоп-селектом и мобильным шитом. */
+export function useArtistSwitcher(activeId: string) {
   const router = useRouter();
   const [value, setValue] = useState(activeId);
   const [isPending, startTransition] = useTransition();
@@ -40,6 +35,18 @@ export function ArtistSwitcher({
       }
     });
   }
+
+  return { value, isPending, select };
+}
+
+export function ArtistSwitcher({
+  artists,
+  activeId,
+}: {
+  artists: SwitcherArtist[];
+  activeId: string;
+}) {
+  const { value, isPending, select } = useArtistSwitcher(activeId);
 
   return (
     <div className="flex min-w-0 items-center gap-2 text-sm">

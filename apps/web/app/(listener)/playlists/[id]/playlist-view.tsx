@@ -5,6 +5,7 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSo
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
 import { controls } from '@/lib/player/audio-engine';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
+import { swapAdjacent } from '@/lib/reorder';
 import { toast } from '@/lib/toast';
 import type { PlayerTrack } from '@/store/player';
 import type { PlaylistWithTracks, PlaylistTrackRow } from '@vire/db';
@@ -46,6 +47,13 @@ export function PlaylistView({ playlist, isOwner, emptyTitle = 'Плейлист
     setTracks(next);
     void persistOrder(next, prev);
   }
+
+  const move = useCallback((trackId: string, dir: -1 | 1) => {
+    const next = swapAdjacent(tracks, trackId, dir);
+    if (next === tracks) return;
+    setTracks(next);
+    void persistOrder(next, tracks);
+  }, [tracks, persistOrder]);
 
   const handleRemove = useCallback((trackId: string) => {
     const prev = tracks;
@@ -100,7 +108,19 @@ export function PlaylistView({ playlist, isOwner, emptyTitle = 'Плейлист
           <SortableContext items={tracks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
             <div className="flex flex-col">
               {tracks.map((track, i) => (
-                <SortablePlaylistRow key={track.id} track={track} index={i} queue={queue} queueIndex={i} context={context} isOwner={isOwner} onRemove={handleRemove} />
+                <SortablePlaylistRow
+                  key={track.id}
+                  track={track}
+                  index={i}
+                  queue={queue}
+                  queueIndex={i}
+                  context={context}
+                  isOwner={isOwner}
+                  onRemove={handleRemove}
+                  onMove={isOwner ? move : undefined}
+                  canMoveUp={i > 0}
+                  canMoveDown={i < tracks.length - 1}
+                />
               ))}
             </div>
           </SortableContext>

@@ -18,6 +18,7 @@ import { toast } from '@/lib/toast';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
 import { SortableTrackRow } from '@/components/sortable-track-row';
+import { PageContainer } from '@/components/page-container';
 import { JamShare } from '@/components/jam-share';
 import { JamInvite } from '@/components/jam-invite';
 import { JamParticipants } from './jam-participants';
@@ -195,6 +196,13 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     void jamQueue.moveTrack(String(active.id), String(over.id));
   }
 
+  function moveAdjacent(itemId: string, dir: -1 | 1) {
+    const i = jamQueue.queue.findIndex((item) => item.id === itemId);
+    const neighbor = i < 0 ? undefined : jamQueue.queue[i + dir];
+    if (!neighbor) return;
+    void jamQueue.moveTrack(itemId, neighbor.id);
+  }
+
   async function handleEndJam() {
     if (!confirm('Завершить джем для всех?')) return;
     const res = await fetch(`/api/v1/jam/${encodeURIComponent(code)}/end`, { method: 'POST' }).catch(() => null);
@@ -280,7 +288,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="w-full max-w-[120rem] mx-auto px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+        <PageContainer as="div" variant="compact">
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">
             <div className="min-w-0 space-y-4">
               {activeTrack && (
@@ -364,6 +372,10 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
                             canRemove={isHost || item.addedByParticipantId === membership.participantId}
                             onRemove={(id) => void jamQueue.removeTrack(id)}
                             removeLabel="Убрать из очереди"
+                            onMoveUp={() => moveAdjacent(item.id, -1)}
+                            onMoveDown={() => moveAdjacent(item.id, 1)}
+                            canMoveUp={i > 0}
+                            canMoveDown={i < jamQueue.queue.length - 1}
                             subtitle={
                               <span className="truncate">
                                 {item.artistName}
@@ -384,7 +396,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
               <JamParticipants participants={room.participants} variant="inline" />
             </aside>
           </div>
-        </div>
+        </PageContainer>
       </div>
     </div>
   );

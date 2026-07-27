@@ -13,9 +13,12 @@ interface Props {
   context: PlayContext;
   isOwner: boolean;
   onRemove: (trackId: string) => void;
+  onMove?: (trackId: string, dir: -1 | 1) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
 }
 
-export function SortablePlaylistRow({ track, index, queue, queueIndex, context, isOwner, onRemove }: Props) {
+export function SortablePlaylistRow({ track, index, queue, queueIndex, context, isOwner, onRemove, onMove, canMoveUp, canMoveDown }: Props) {
   const { playQueue, toggle } = usePlay();
   const { isActive: isThisTrack, isPlaying } = useTrackPlayState(track.id);
 
@@ -30,6 +33,10 @@ export function SortablePlaylistRow({ track, index, queue, queueIndex, context, 
       canRemove={isOwner}
       onRemove={onRemove}
       removeLabel="Удалить из плейлиста"
+      onMoveUp={onMove ? () => onMove(track.id, -1) : undefined}
+      onMoveDown={onMove ? () => onMove(track.id, 1) : undefined}
+      canMoveUp={canMoveUp}
+      canMoveDown={canMoveDown}
       subtitle={
         <Link href={`/artists/${track.artistSlug}`} className="hover:text-foreground transition-colors">
           {track.artistName}
