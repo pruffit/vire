@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { db, DrizzleArtistRepository, getSmartLinkBySlug, getSmartLinkRelease } from '@vire/db';
-import { ArtistService } from '@vire/core';
+import { ArtistService, resolveSmartLinkDisplay } from '@vire/core';
 import { SITE_NAME } from '@/lib/site';
 import { ogCard, ogFallbackCard, OG_SIZE, OG_CACHE_HEADERS } from '@/lib/og/card';
 import { fetchCoverThumb } from '@/lib/og/cover';
@@ -26,10 +26,7 @@ export default async function SmartLinkOgImage({
   if (!smartLink || !smartLink.isPublished) return new ImageResponse(ogFallbackCard(), { ...size, headers: OG_CACHE_HEADERS });
 
   const release = smartLink.releaseId ? await getSmartLinkRelease(smartLink.releaseId) : null;
-  const display = {
-    title: smartLink.title || release?.title || '',
-    coverUrl: smartLink.coverUrl ?? release?.coverUrl ?? null,
-  };
+  const display = resolveSmartLinkDisplay(smartLink, release, new Date());
   const cover = await fetchCoverThumb(display.coverUrl);
 
   return new ImageResponse(

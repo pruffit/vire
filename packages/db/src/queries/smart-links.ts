@@ -2,7 +2,7 @@ import { and, desc, eq, ne } from 'drizzle-orm';
 import { db } from '../client';
 import { smartLinks, releases } from '../schema';
 import { isUuid } from '@vire/core';
-import type { SmartLink, ArtistLink, SmartLinkInput } from '@vire/core';
+import type { SmartLink, ArtistLink, SmartLinkInput, ReleaseStatus } from '@vire/core';
 
 export type { SmartLinkInput };
 
@@ -40,7 +40,7 @@ export interface SmartLinkRelease {
   title: string;
   coverUrl: string | null;
   releaseDate: Date | null;
-  status: string;
+  status: ReleaseStatus;
 }
 
 export async function getSmartLinkRelease(releaseId: string): Promise<SmartLinkRelease | null> {

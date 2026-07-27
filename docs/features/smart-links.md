@@ -21,8 +21,10 @@
   редакторе. Когда задан, на лендинге **первой кнопкой** идёт «Слушать на VireMusic»
   (релиз вышел) или «Пресейв на VireMusic» (релиз SCHEDULED с будущей датой → ведёт на
   страницу обратного отсчёта с нативным пресейвом). Обложка/название/дата релиза
-  дополняют пустые поля лендинга. Привязать можно только собственный релиз (проверка
-  владения в API). Внешние пресейв/follow-ссылки (Spotify/Apple/Яндекс) добавляются
+  дополняют пустые поля лендинга — **только пока релиз публично видим**: DRAFT, ARCHIVED
+  и SCHEDULED без даты не подставляются ни в страницу, ни в OG-карточку (единый гейт
+  `resolveSmartLinkDisplay` в `packages/core`). Привязать можно только собственный релиз
+  (проверка владения в API). Внешние пресейв/follow-ссылки (Spotify/Apple/Яндекс) добавляются
   как обычные ссылки площадок — без OAuth.
 
 ## Где код
@@ -37,6 +39,8 @@
   монохромный глиф `platform-icon.tsx` + подпись (своя или хост). Маппинг
   `PLATFORM_BRAND` (`@/components/brand-icon`). См. `icons.md`.
 - **Валидация:** `apps/web/lib/smart-link.ts` (`normalizeSlug`, `isValidSlug`, `parseSmartLinkLinks`).
+- **Видимость привязанного релиза:** `packages/core/src/smart-link-display.ts`
+  (`resolveSmartLinkDisplay` — CTA и подстановка полей из одного гейта).
 - **Публичная страница:** `apps/web/app/smartlink/[artistSlug]/[linkSlug]/page.tsx`.
 - **Дашборд:** `apps/web/app/dashboard/links/*` (список, форма, new, [id]).
 - **API:** `apps/web/app/api/v1/dashboard/smart-links/route.ts` (POST),

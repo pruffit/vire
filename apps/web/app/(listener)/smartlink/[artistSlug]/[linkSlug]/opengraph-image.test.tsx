@@ -102,4 +102,38 @@ describe('OG-картинка смартлинка', () => {
     expect(out).toContain('Название из релиза');
     expect(out).toContain('thumb:https://cdn.test/rel.jpg');
   });
+
+  for (const status of ['DRAFT', 'ARCHIVED'] as const) {
+    it(`релиз в статусе ${status} не подставляется в карточку`, async () => {
+      getBySlug.mockResolvedValue(artist);
+      getSmartLinkBySlug.mockResolvedValue({
+        title: '', subtitle: null, coverUrl: null, releaseId: 'r1', isPublished: true, links: [],
+      });
+      getSmartLinkRelease.mockResolvedValue({ id: 'r1', title: 'Секретный релиз', coverUrl: 'https://cdn.test/secret.jpg', releaseDate: null, status });
+
+      await SmartLinkOgImage({ params });
+
+      const out = tree();
+      expect(out).not.toContain('Секретный релиз');
+      expect(out).not.toContain('secret.jpg');
+    });
+  }
+
+  it('запланированный релиз с будущей датой виден (путь пресейва)', async () => {
+    getBySlug.mockResolvedValue(artist);
+    getSmartLinkBySlug.mockResolvedValue({
+      title: '', subtitle: null, coverUrl: null, releaseId: 'r1', isPublished: true, links: [],
+    });
+    getSmartLinkRelease.mockResolvedValue({
+      id: 'r1',
+      title: 'Скоро выйдет',
+      coverUrl: 'https://cdn.test/soon.jpg',
+      releaseDate: new Date(Date.now() + 86_400_000),
+      status: 'SCHEDULED',
+    });
+
+    await SmartLinkOgImage({ params });
+
+    expect(tree()).toContain('Скоро выйдет');
+  });
 });

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { db, DrizzleArtistRepository, getSmartLinkBySlug, getSmartLinkRelease } from '@vire/db';
-import { ArtistService } from '@vire/core';
+import { ArtistService, resolveSmartLinkDisplay } from '@vire/core';
 import { artistFontStyle } from '@/lib/fonts';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { PlatformIcon } from '@/components/platform-icon';
@@ -25,25 +25,11 @@ async function getData(artistSlug: string, linkSlug: string) {
   const smartLink = await getSmartLinkBySlug(artist.id, linkSlug);
   if (!smartLink || !smartLink.isPublished) return null;
 
-  // CTA только когда релиз опубликован или запланирован на будущее — черновик/архив не светим
   const release = smartLink.releaseId ? await getSmartLinkRelease(smartLink.releaseId) : null;
-  let vire: { kind: 'listen' | 'presave'; href: string } | null = null;
-  if (release) {
-    const airedAt = release.releaseDate ? new Date(release.releaseDate).getTime() : null;
-    const href = `/artists/${artist.slug}/releases/${release.id}`;
-    if (release.status === 'PUBLISHED' || (release.status === 'SCHEDULED' && airedAt != null && airedAt <= Date.now())) {
-      vire = { kind: 'listen', href };
-    } else if (release.status === 'SCHEDULED' && airedAt != null && airedAt > Date.now()) {
-      vire = { kind: 'presave', href };
-    }
-  }
-
-  // Релиз дополняет пустые поля лендинга (обложка/название/дата) — не клобберит заданные.
-  const display = {
-    title: smartLink.title || release?.title || '',
-    coverUrl: smartLink.coverUrl ?? release?.coverUrl ?? null,
-    releaseDate: smartLink.releaseDate ?? release?.releaseDate ?? null,
-  };
+  const { cta, ...display } = resolveSmartLinkDisplay(smartLink, release, new Date());
+  const vire = cta && release
+    ? { kind: cta, href: `/artists/${artist.slug}/releases/${release.id}` }
+    : null;
 
   return { artist, smartLink, vire, display };
 }

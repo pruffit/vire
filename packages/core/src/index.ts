@@ -21,6 +21,7 @@ export * from './types/wave';
 export * from './types/search';
 export * from './types/jam';
 export * from './release-visibility';
+export * from './smart-link-display';
 export * from './track-display';
 export * from './repositories/artist';
 export * from './repositories/artist-post';
