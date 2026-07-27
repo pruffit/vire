@@ -5,6 +5,7 @@ import {
   listActiveArtists,
   getPublishedSmartLinks,
   listTrackIdsByReleaseIds,
+  getSitemapPlaylists,
 } from '@vire/db';
 import { ReleaseService } from '@vire/core';
 import { SITE_URL } from '@/lib/site';
@@ -13,15 +14,23 @@ export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/`, changeFrequency: 'daily', priority: 1 },
+    // без слэша — Next в canonical корня безусловно отдаёт origin (resolve-url.js), сверяем с ним
+    { url: SITE_URL, changeFrequency: 'daily', priority: 1 },
     { url: `${SITE_URL}/artists`, changeFrequency: 'daily', priority: 0.8 },
     { url: `${SITE_URL}/releases`, changeFrequency: 'daily', priority: 0.8 },
     { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.4 },
   ];
 
   try {
-    const artists = await listActiveArtists();
+    const [artists, playlists] = await Promise.all([listActiveArtists(), getSitemapPlaylists()]);
     const releaseService = new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() });
+
+    const playlistEntries: MetadataRoute.Sitemap = playlists.map((p) => ({
+      url: `${SITE_URL}/playlists/${p.id}`,
+      lastModified: p.updatedAt,
+      changeFrequency: 'weekly',
+      priority: 0.5,
+    }));
 
     const artistRoutes: MetadataRoute.Sitemap = artists.map((a) => ({
       url: `${SITE_URL}/artists/${a.slug}`,
@@ -73,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       return [...releaseEntries, ...smartLinkEntries];
     });
 
-    return [...staticRoutes, ...artistRoutes, ...releaseAndSmartLinkEntries];
+    return [...staticRoutes, ...artistRoutes, ...releaseAndSmartLinkEntries, ...playlistEntries];
   } catch {
     // БД недоступна — отдаём хотя бы статические маршруты, чтобы sitemap не падал.
     return staticRoutes;

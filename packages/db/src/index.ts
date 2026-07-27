@@ -174,8 +174,9 @@ export {
   searchTracksForPlaylist,
   getPlaylistSuggestions,
   getPublicPlaylistsByOwner,
+  getSitemapPlaylists,
 } from './queries/playlists';
-export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist, PlaylistAddTrack, PlaylistSuggestions, PlaylistMeta } from './queries/playlists';
+export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist, PlaylistAddTrack, PlaylistSuggestions, PlaylistMeta, SitemapPlaylist } from './queries/playlists';
 export {
   generateAllEditorialPlaylists,
   generateSharedPlaylists,

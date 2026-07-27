@@ -219,6 +219,7 @@ export function artistPostJsonLd(post: ArtistPostLd, artist: ArtistLd): Record<s
     post.createdAt instanceof Date ? post.createdAt.toISOString() : post.createdAt;
   const headline = post.title?.trim() || post.body.trim().split('\n')[0].slice(0, 110);
   const artistUrl = abs(`/artists/${artist.slug}`);
+  const postUrl = `${artistUrl}#post-${post.id}`;
 
   return prune({
     '@context': 'https://schema.org',
@@ -226,8 +227,8 @@ export function artistPostJsonLd(post: ArtistPostLd, artist: ArtistLd): Record<s
     headline,
     articleBody: post.body,
     datePublished,
-    url: `${artistUrl}#post-${post.id}`,
-    mainEntityOfPage: artistUrl,
+    url: postUrl,
+    mainEntityOfPage: postUrl,
     author: {
       '@type': 'MusicGroup',
       name: artist.name,
@@ -238,6 +239,47 @@ export function artistPostJsonLd(post: ArtistPostLd, artist: ArtistLd): Record<s
       name: 'Vire',
       url: SITE_URL,
     },
+  });
+}
+
+export interface PlaylistTrackLd {
+  title: string;
+  durationSec?: number | null;
+  artistName?: string | null;
+}
+
+export interface PlaylistLd {
+  id: string;
+  title: string;
+  description?: string | null;
+  tracks: PlaylistTrackLd[];
+}
+
+/** MusicPlaylist — публичный плейлист. Только для visibility=PUBLIC, вызывающая сторона гейтит.
+ *  Без `author`: страница имени владельца не показывает, разметка не должна утверждать больше. */
+export function musicPlaylistJsonLd(playlist: PlaylistLd): Record<string, unknown> {
+  const url = abs(`/playlists/${playlist.id}`);
+
+  return prune({
+    '@context': 'https://schema.org',
+    '@type': 'MusicPlaylist',
+    name: playlist.title,
+    description: playlist.description || undefined,
+    url,
+    numTracks: playlist.tracks.length || undefined,
+    track: playlist.tracks.length
+      ? playlist.tracks.map((t) =>
+          prune({
+            '@type': 'MusicRecording',
+            name: t.title,
+            duration: secondsToISO8601(t.durationSec),
+            byArtist: t.artistName
+              ? { '@type': 'MusicGroup', name: t.artistName }
+              : undefined,
+          }),
+        )
+      : undefined,
+    publisher: VIRE_PUBLISHER,
   });
 }
 

@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, ilike, inArray, notInArray, sql } from 'drizzle-orm';
+import { isUuid } from '@vire/core';
 import { db } from '../client';
 import { playlists, playlistTracks, playlistLikes, tracks, releases, artistProfiles, likes, playEvents } from '../schema';
 import { featFromCredits } from './track-credits';
@@ -137,6 +138,9 @@ export async function getPublicPlaylistsByOwner(ownerUserId: string): Promise<Pl
 export async function getPlaylistWithTracks(
   playlistId: string,
 ): Promise<PlaylistWithTracks | null> {
+  // без гейта нецелой строкой Postgres кидает invalid input syntax for type uuid → 500 вместо 404
+  if (!isUuid(playlistId)) return null;
+
   const [playlist] = await db
     .select()
     .from(playlists)
@@ -588,6 +592,25 @@ export async function getPublicUserPlaylists(limit = 8): Promise<EditorialPlayli
     .orderBy(desc(playlists.likesCount), desc(playlists.updatedAt))
     .limit(limit);
   return hydratePlaylists(rows);
+}
+
+export interface SitemapPlaylist {
+  id: string;
+  updatedAt: Date;
+}
+
+/** Публичные пользовательские плейлисты с треками — для sitemap. Editorial (перегенерируются
+ *  ежедневно) и personal (персональны под юзера) исключены умышленно. */
+export async function getSitemapPlaylists(): Promise<SitemapPlaylist[]> {
+  return db
+    .select({ id: playlists.id, updatedAt: playlists.updatedAt })
+    .from(playlists)
+    .where(and(
+      eq(playlists.visibility, 'PUBLIC'),
+      eq(playlists.kind, 'USER'),
+      sql`EXISTS (SELECT 1 FROM playlist_tracks pt WHERE pt.playlist_id = playlists.id)`,
+    ))
+    .orderBy(desc(playlists.updatedAt));
 }
 
 export async function getPlaylistLikeState(

@@ -87,16 +87,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return { title: 'Не найдено' };
   await assertArtistVisible(data.artist.id);
 
-  const { artist, releases } = data;
+  const { artist } = data;
   const url = `/artists/${slug}`;
   const description = artist.bio ?? `${artist.name} на Vire — релизы, треки и ссылки.`;
-  const ogImage = resolveAvatarUrl(artist.avatarUrl, releases[0]?.coverUrl ?? null);
   return pageMetadata({
     url,
     title: artist.name,
     description,
     type: 'profile',
-    images: ogImage ? [{ url: ogImage, width: 1200, height: 630, alt: artist.name }] : undefined,
+    images: null, // своя брендовая карточка — opengraph-image.tsx этого сегмента
   });
 }
 

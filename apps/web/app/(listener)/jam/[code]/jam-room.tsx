@@ -13,7 +13,7 @@ import { useJamQueue } from '@/lib/jam/use-jam-queue';
 import { useServerClock } from '@/lib/jam/server-clock';
 import { usePlaybackSync } from '@/lib/jam/use-playback-sync';
 import { setJamToggle } from '@/lib/jam/jam-controls';
-import { effectivePaused, resolvePending, PENDING_TTL_MS, type PendingToggle } from '@/lib/jam/optimistic-playback';
+import { effectivePaused, resolvePending, nextPendingVersion, PENDING_TTL_MS, type PendingToggle } from '@/lib/jam/optimistic-playback';
 import { getSessionId } from '@/lib/session-id';
 import { toast } from '@/lib/toast';
 import { usePlayerStore } from '@/store/player';
@@ -129,7 +129,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     const playback = room.playback;
     if (playback?.trackId === item.trackId) {
       const paused = effectivePaused(playback, playbackPending);
-      const next: PendingToggle = { paused: !paused, at: Date.now() };
+      const next: PendingToggle = { paused: !paused, at: Date.now(), fromVersion: nextPendingVersion(playback, playbackPending) };
       postPlayback(
         paused
           ? { kind: 'play', trackId: item.trackId, positionMs: derivePositionMs(playback, serverNow()) }
@@ -147,7 +147,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     const playback = room.playback;
     if (!playback) return;
     const paused = effectivePaused(playback, playbackPending);
-    const next: PendingToggle = { paused: !paused, at: Date.now() };
+    const next: PendingToggle = { paused: !paused, at: Date.now(), fromVersion: nextPendingVersion(playback, playbackPending) };
     postPlayback(
       paused
         ? { kind: 'play', trackId: playback.trackId, positionMs: derivePositionMs(playback, serverNow()) }
@@ -162,7 +162,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
   const [resolvedPlayback, setResolvedPlayback] = useState(room.playback);
   if (resolvedPlayback !== room.playback) {
     setResolvedPlayback(room.playback);
-    setPlaybackPending((prev) => resolvePending(prev, Boolean(room.playback?.paused), Date.now(), PENDING_TTL_MS));
+    setPlaybackPending((prev) => resolvePending(prev, room.playback?.version ?? 0, Date.now(), PENDING_TTL_MS));
   }
 
   // Фолбэк на случай, если SSE-подтверждение не пришло вовсе (обрыв соединения).

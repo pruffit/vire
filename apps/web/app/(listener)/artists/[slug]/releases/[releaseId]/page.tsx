@@ -67,9 +67,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     type: 'music.album',
-    images: release.coverUrl
-      ? [{ url: release.coverUrl, width: 1200, height: 630, alt: release.title }]
-      : undefined,
+    images: null, // своя брендовая карточка — opengraph-image.tsx этого сегмента
   });
 }
 

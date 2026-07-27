@@ -8,6 +8,7 @@ import {
   artistsCatalogJsonLd,
   faqPageJsonLd,
   artistPostJsonLd,
+  musicPlaylistJsonLd,
 } from '../structured-data';
 
 // SITE_URL по умолчанию (без env) = http://localhost:3000
@@ -165,6 +166,8 @@ describe('artistPostJsonLd', () => {
     expect(ld.articleBody).toBe('Полный текст поста.');
     expect(ld.datePublished).toBe('2025-06-01T10:00:00.000Z');
     expect(ld.url).toBe(`${BASE}/artists/kotlaev#post-p1`);
+    // якорный URL поста, не страница артиста — иначе N постов заявляют одну mainEntity
+    expect(ld.mainEntityOfPage).toBe(`${BASE}/artists/kotlaev#post-p1`);
     expect((ld.author as Record<string, unknown>).url).toBe(`${BASE}/artists/kotlaev`);
   });
 
@@ -191,5 +194,43 @@ describe('musicRecordingJsonLd', () => {
     expect(ld.image).toBe('https://cdn/c.jpg');
     expect((ld.inAlbum as Record<string, unknown>).url).toBe(`${BASE}/artists/kotlaev/releases/rel1`);
     expect((ld.byArtist as Record<string, unknown>).name).toBe('Kotlaev');
+  });
+});
+
+describe('musicPlaylistJsonLd', () => {
+  it('builds a MusicPlaylist with tracks', () => {
+    const ld = musicPlaylistJsonLd({
+      id: 'pl1',
+      title: 'Плейлист',
+      description: 'Описание',
+      tracks: [
+        { title: 'Один', durationSec: 201, artistName: 'Kotlaev' },
+        { title: 'Два', durationSec: null, artistName: null },
+      ],
+    });
+    expect(ld['@type']).toBe('MusicPlaylist');
+    expect(ld.url).toBe(`${BASE}/playlists/pl1`);
+    expect(ld.numTracks).toBe(2);
+    // владельца не публикуем: страница его не показывает
+    expect(ld).not.toHaveProperty('author');
+
+    const tracks = ld.track as Record<string, unknown>[];
+    expect(tracks).toHaveLength(2);
+    expect(tracks[0]).toMatchObject({
+      '@type': 'MusicRecording',
+      name: 'Один',
+      duration: 'PT3M21S',
+      byArtist: { '@type': 'MusicGroup', name: 'Kotlaev' },
+    });
+    expect(tracks[1]).not.toHaveProperty('duration');
+    expect(tracks[1]).not.toHaveProperty('byArtist');
+  });
+
+  it('omits track array and numTracks when empty/missing', () => {
+    const ld = musicPlaylistJsonLd({ id: 'pl2', title: 'Пусто', tracks: [] });
+    expect(ld).not.toHaveProperty('track');
+    expect(ld).not.toHaveProperty('numTracks');
+    expect(ld).not.toHaveProperty('description');
+    expect(ld).not.toHaveProperty('author');
   });
 });

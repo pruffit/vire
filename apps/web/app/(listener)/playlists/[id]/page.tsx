@@ -10,6 +10,8 @@ import { getHeaderCovers } from './header-cover';
 import { PlaylistCover } from '@/components/playlist-cover';
 import { PlaylistShare } from '@/components/playlist-share';
 import { PageContainer } from '@/components/page-container';
+import { JsonLd } from '@/components/json-ld';
+import { musicPlaylistJsonLd } from '@/lib/structured-data';
 import { formatDuration, pluralTracks } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
 import { pageMetadata } from '@/lib/metadata';
@@ -58,6 +60,16 @@ export default async function PlaylistPage({ params }: Props) {
 
   return (
     <PageContainer spaceY="10">
+      {playlist.visibility === 'PUBLIC' && (
+        <JsonLd
+          data={musicPlaylistJsonLd({
+            id,
+            title: playlist.title,
+            description: playlist.description,
+            tracks: playlist.tracks,
+          })}
+        />
+      )}
       <FadeUp>
         <header className="flex items-start gap-6">
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl shrink-0 overflow-hidden bg-card border border-border relative">

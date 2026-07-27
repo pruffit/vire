@@ -74,7 +74,11 @@
   `derivePositionMs`, `decideDriftCorrection`, `pickClockOffset`), порт
   `ports/jam-state.ts`; `apps/web/lib/jam/*` (`server-clock`, `jam-audio`,
   `use-jam-room`, `use-jam-queue`, `use-playback-sync`, `jam-state`, `jam-identity`,
-  `jam-controls`, `guest-name`); `lib/realtime.ts` —
+  `jam-controls`, `guest-name`, `optimistic-playback` — кнопка play/pause отвечает мгновенно:
+  визуал и команда считаются от оптимистичного `effectivePaused`, звук по-прежнему от
+  серверного `room.playback`. Pending снимается по **росту `version`** серверного playback
+  (любая долетевшая мутация, своя или чужая), либо по TTL 5с, либо по ошибке запроса);
+  `lib/realtime.ts` —
   `publishChannel`/`subscribeChannel`, канал `rt:jam:{id}`; `components/jam-share.tsx`,
   `components/jam-invite.tsx`; takeover глобального плеера — `store/player.ts`
   (`jamOverride`), `components/player/mini-bar.tsx`, `lib/player/audio-engine.ts`
