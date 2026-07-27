@@ -38,7 +38,7 @@ import { InteractiveDemos } from './interactive-demos';
 
 export const metadata: Metadata = {
   title: 'Design System',
-  description: 'Компоненты и токены дизайн-системы Vire',
+  description: 'Компоненты и токены дизайн-системы VireMusic',
   robots: { index: false },
 };
 
@@ -122,7 +122,7 @@ export default function DesignPage() {
           <ContentHero
             size="lg"
             glow
-            eyebrow="Vire / Design System"
+            eyebrow="VireMusic / Design System"
             title="Дизайн-система"
             subtitle="Живые компоненты, токены и паттерны движения. Тёмная платформа, OKLCH-нейтраль с тёплой подкраской, принципы Impeccable."
           />
@@ -404,7 +404,7 @@ export default function DesignPage() {
           <Section label="Eyebrow / StatusPill">
             <div className="flex flex-wrap items-start gap-6">
               <div className="space-y-1.5">
-                <Eyebrow>Vire · Независимая площадка</Eyebrow>
+                <Eyebrow>VireMusic · Независимая площадка</Eyebrow>
                 <DemoLabel>Eyebrow</DemoLabel>
               </div>
               <div className="space-y-1.5">
@@ -619,7 +619,7 @@ export default function DesignPage() {
         {/* Footer */}
         <div className="pb-8 border-t border-border pt-8 flex items-center justify-between flex-wrap gap-4">
           <p className="font-mono text-xs text-foreground/40">
-            Vire Design System — OKLCH tokens · Radix · motion/react
+            VireMusic Design System — OKLCH tokens · Radix · motion/react
           </p>
           <p className="font-mono text-xs text-foreground/40">Impeccable · Tint your grays.</p>
         </div>

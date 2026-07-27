@@ -1,4 +1,4 @@
-# Деплой Vire на один VPS
+# Деплой VireMusic на один VPS
 
 Стек целиком в Docker Compose на одном сервере **Timeweb Cloud 1 vCPU / 1 ГБ / 40 ГБ + swap**.
 Образы собирает **CI (GitHub Actions)** и пушит в **GHCR** — сервер их только тянет

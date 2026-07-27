@@ -27,7 +27,7 @@ function shell(
   return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0d0d0d;font-family:Inter,sans-serif;color:#f5f2eb">
   <div style="max-width:480px;margin:0 auto;padding:40px 24px">
-    <p style="font-size:13px;color:#666;margin:0 0 24px">Vire</p>
+    <p style="font-size:13px;color:#666;margin:0 0 24px">VireMusic</p>
     <h1 style="font-size:22px;font-weight:600;margin:0 0 12px;line-height:1.3">${heading}</h1>
     <p style="margin:0 0 32px;font-size:14px;color:#aaa">${bodyLine}</p>
     <a href="${ctaUrl}" style="display:inline-block;background:#f5f2eb;color:#0d0d0d;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:500">${ctaLabel} →</a>
@@ -40,11 +40,11 @@ export function friendRequestEmail(i: Base): { subject: string; html: string } {
   const who = i.actorName ?? 'Кто-то';
   const whoHtml = escapeHtml(who);
   return {
-    subject: `${who} отправил вам заявку в друзья на Vire`,
+    subject: `${who} отправил вам заявку в друзья на VireMusic`,
     html: shell(
       i.appUrl,
       `${whoHtml} хочет добавить вас в друзья`,
-      'Примите или отклоните заявку на Vire.',
+      'Примите или отклоните заявку на VireMusic.',
       'Открыть заявки',
       `${i.appUrl}/friends`,
       i.unsubscribeUrl,
@@ -56,11 +56,11 @@ export function chatMessageEmail(i: Base): { subject: string; html: string } {
   const who = i.actorName ?? 'Кто-то';
   const whoHtml = escapeHtml(who);
   return {
-    subject: `Новое сообщение от ${who} на Vire`,
+    subject: `Новое сообщение от ${who} на VireMusic`,
     html: shell(
       i.appUrl,
       `Новое сообщение от ${whoHtml}`,
-      'Откройте переписку на Vire, чтобы прочитать.',
+      'Откройте переписку на VireMusic, чтобы прочитать.',
       'Открыть сообщения',
       `${i.appUrl}/messages`,
       i.unsubscribeUrl,

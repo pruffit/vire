@@ -1,11 +1,11 @@
 ---
 name: vire-queues
-description: Use when working with Vire's background jobs and database access — BullMQ queues/workers (transcode, play-events, notify-release, analyze, editorial, scheduled-publish, fulfill-presave) and Drizzle ORM queries, repositories, migrations, transactions. Covers queue/worker setup, retry/backoff, idempotency & jobId dedup, the producer (apps/web/lib/queue.ts) vs consumer (apps/worker) split, Redis connection options, and Drizzle gotchas with raw sql/Date binding. Use when adding a job type, debugging stuck/failed jobs, or writing a repository query.
+description: Use when working with VireMusic's background jobs and database access — BullMQ queues/workers (transcode, play-events, notify-release, analyze, editorial, scheduled-publish, fulfill-presave) and Drizzle ORM queries, repositories, migrations, transactions. Covers queue/worker setup, retry/backoff, idempotency & jobId dedup, the producer (apps/web/lib/queue.ts) vs consumer (apps/worker) split, Redis connection options, and Drizzle gotchas with raw sql/Date binding. Use when adding a job type, debugging stuck/failed jobs, or writing a repository query.
 version: 1.0.0
 user-invocable: true
 ---
 
-# Vire — очереди (BullMQ) + БД (Drizzle)
+# VireMusic — очереди (BullMQ) + БД (Drizzle)
 
 Producer (web): `apps/web/lib/queue.ts`. Consumer (worker):
 `apps/worker/src/workers/*.worker.ts` + `apps/worker/src/queues/connection.ts`.

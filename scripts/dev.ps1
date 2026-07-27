@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 <#
-  Vire full dev startup:
+  VireMusic full dev startup:
     1. Docker infrastructure (postgres, redis, minio)
     2. MinIO bucket policies via minio-init
     3. Wait for Postgres

@@ -48,7 +48,7 @@ pnpm --filter @vire/web audit:design
 pnpm --filter @vire/web build
 pnpm --filter @vire/db test
 ```
-Независимый критик (Sonnet, свежий контекст) по Vire-чеклисту до «готово».
+Независимый критик (Sonnet, свежий контекст) по VireMusic-чеклисту до «готово».
 
 ## Ship
 Атомарные коммиты по пачкам. Доки: `docs/features/*` где новое поведение

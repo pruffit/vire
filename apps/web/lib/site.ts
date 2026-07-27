@@ -6,7 +6,7 @@ export const SITE_URL = (
   'http://localhost:3000'
 ).replace(/\/$/, '');
 
-export const SITE_NAME = 'Vire';
+export const SITE_NAME = 'VireMusic';
 
 // Версия проекта — пробрасывается из package.json через next.config.ts.
 export const SITE_VERSION = process.env.NEXT_PUBLIC_VERSION ?? '0.0.0';

@@ -204,13 +204,13 @@ export function SmartLinkForm({
       </div>
 
       {releaseOptions.length > 0 && (
-        <Field label="Релиз на Vire" hint="первой кнопкой — «Слушать/Пресейв на Vire»">
+        <Field label="Релиз на VireMusic" hint="первой кнопкой — «Слушать/Пресейв на VireMusic»">
           <Select
             value={releaseId}
             onValueChange={setReleaseId}
             disabled={busy}
             placeholder="— не привязан —"
-            aria-label="Релиз на Vire"
+            aria-label="Релиз на VireMusic"
             options={[
               { value: '', label: '— не привязан —' },
               ...releaseOptions.map((r) => ({

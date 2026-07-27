@@ -30,7 +30,7 @@ export default async function DashboardLinksPage() {
       <DashboardPageHeader
         backHref="/dashboard"
         title="Смартлинки"
-        subtitle="Красивые страницы релизов со ссылками на стриминги и соцсети. Работают и без публикации музыки на Vire."
+        subtitle="Красивые страницы релизов со ссылками на стриминги и соцсети. Работают и без публикации музыки на VireMusic."
       />
 
       <SmartLinkList items={rows} artistSlug={artist.slug} />

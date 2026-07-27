@@ -50,7 +50,7 @@ describe('OG-картинка смартлинка', () => {
   it('артист не найден — фолбэк без данных', async () => {
     getBySlug.mockResolvedValue({ ok: false });
     await SmartLinkOgImage({ params });
-    expect(tree()).toContain('Vire');
+    expect(tree()).toContain('VireMusic');
     expect(getSmartLinkBySlug).not.toHaveBeenCalled();
   });
 
@@ -58,7 +58,7 @@ describe('OG-картинка смартлинка', () => {
     getBySlug.mockResolvedValue(artist);
     getSmartLinkBySlug.mockResolvedValue(null);
     await SmartLinkOgImage({ params });
-    expect(tree()).toContain('Vire');
+    expect(tree()).toContain('VireMusic');
   });
 
   it('черновик (не опубликован) — фолбэк без данных', async () => {

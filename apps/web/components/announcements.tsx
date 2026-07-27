@@ -26,7 +26,7 @@ const ANNOUNCEMENTS: Announcement[] = [
   {
     id: 'stage1',
     storageKey: 'vire_notice_stage1_v1',
-    title: 'Vire запущен',
+    title: 'VireMusic запущен',
     icon: 'star',
     body: (
       <>

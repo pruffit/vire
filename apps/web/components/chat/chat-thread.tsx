@@ -151,7 +151,7 @@ export function ChatThread({
         ? {
             icon: 'lock',
             title: 'Подтвердите это устройство',
-            hint: 'Переписка зашифрована. Подтвердите устройство на другом своём, где уже открыт Vire, чтобы читать и писать.',
+            hint: 'Переписка зашифрована. Подтвердите устройство на другом своём, где уже открыт VireMusic, чтобы читать и писать.',
             action: (
               <>
                 <Link
@@ -167,7 +167,7 @@ export function ChatThread({
         : identity.ready && !ikPub
           ? {
               icon: 'message-square',
-              title: `${otherName} ещё не открывал(а) Vire`,
+              title: `${otherName} ещё не открывал(а) VireMusic`,
               hint: 'Переписка станет доступна, как только собеседник зайдёт в приложение.',
             }
           : null;

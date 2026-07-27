@@ -3,7 +3,7 @@ import { LegalDoc } from '@/components/content-kit';
 
 export const metadata: Metadata = {
   title: 'Политика конфиденциальности',
-  description: 'Как Vire обрабатывает персональные данные пользователей',
+  description: 'Как VireMusic обрабатывает персональные данные пользователей',
 };
 
 export default function PrivacyPage() {

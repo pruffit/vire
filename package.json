@@ -1,6 +1,6 @@
 {
   "name": "vire",
-  "version": "1.33.1",
+  "version": "1.34.0",
   "private": true,
   "packageManager": "pnpm@10.17.1",
   "engines": {

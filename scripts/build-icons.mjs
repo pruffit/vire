@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Сборщик иконок Vire. Источник правды — папка `icons/` в корне репо.
+// Сборщик иконок VireMusic. Источник правды — папка `icons/` в корне репо.
 //
 //   icons/system/*.svg     → монохромный спрайт (currentColor), <use href="#vire-name">
 //   icons/social/*.svg     → бренд-логотипы соцсетей (цветные, как есть)

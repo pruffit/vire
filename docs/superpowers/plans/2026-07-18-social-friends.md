@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Добавить в Vire двустороннюю дружбу между пользователями, публичную страницу пользователя `/u/[userId]` с гейтом видимости лайков и показом лайков/публичных подборок друзей.
+**Goal:** Добавить в VireMusic двустороннюю дружбу между пользователями, публичную страницу пользователя `/u/[userId]` с гейтом видимости лайков и показом лайков/публичных подборок друзей.
 
 **Architecture:** Слои строго handler→service→repository (см. `vire-architecture`). `FriendshipService` в `packages/core` (порт `IFriendshipRepository` + Drizzle-реализация в `packages/db`), по образцу `FollowService`. HTTP — тонкие адаптеры в `app/api/v1/friends/*`. Видимость лайков гейтит чистая функция `canSeeLikes`. Discovery — шаринг ссылки на профиль. Всё через `Result<T,E>`.
 
@@ -954,7 +954,7 @@ Create `docs/features/social-friends.md` по шаблону `docs/features/READ
 
 - [ ] **Step 4: Самокритика отдельным сабагентом**
 
-Дать независимому Sonnet-сабагенту (свежий контекст) прожарить диф по Vire review-чеклисту и gotchas: мобилка (узкий вьюпорт, тач-таргеты), дубли (искал ли готовое перед `FriendButton`/`ShareProfileButton`), утечки/ререндеры в client-компонентах, app-shell (`min-h-screen`), краевые случаи гейта видимости, комментарии. Найденное — починить и перепрожарить.
+Дать независимому Sonnet-сабагенту (свежий контекст) прожарить диф по VireMusic review-чеклисту и gotchas: мобилка (узкий вьюпорт, тач-таргеты), дубли (искал ли готовое перед `FriendButton`/`ShareProfileButton`), утечки/ререндеры в client-компонентах, app-shell (`min-h-screen`), краевые случаи гейта видимости, комментарии. Найденное — починить и перепрожарить.
 
 - [ ] **Step 5: Полный прогон гейтов**
 

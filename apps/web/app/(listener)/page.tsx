@@ -41,7 +41,7 @@ export default async function HomePage() {
   return (
     <PageContainer spaceY="home">
       <JsonLd data={websiteJsonLd()} />
-      <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
+      <h1 className="sr-only">VireMusic — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
 
       {/* без FadeUp — FeaturedRelease содержит LCP-изображение, opacity-анимация задержала бы LCP */}
       {featured && <FeaturedRelease release={featured} stats={featuredStats} />}

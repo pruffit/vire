@@ -55,7 +55,7 @@ describe('ChatThread — блокирующие состояния треда', 
     identityMock.mockReturnValue({ ready: true, pub: new Uint8Array([1]), priv: new Uint8Array([2]), needsLink: false, error: false });
     render(<ChatThread {...BASE_PROPS} otherIkPub={null} />);
 
-    expect(screen.getByText('Аня ещё не открывал(а) Vire')).toBeTruthy();
+    expect(screen.getByText('Аня ещё не открывал(а) VireMusic')).toBeTruthy();
     expect(screen.queryByPlaceholderText('Сообщение')).toBeNull();
   });
 

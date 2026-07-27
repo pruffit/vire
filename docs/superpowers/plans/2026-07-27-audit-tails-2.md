@@ -11,7 +11,7 @@
   любая ошибка → `null`. Юнит-тесты на фолбэки (null-url, non-ok ответ, битые байты).
 - `apps/web/lib/og/card.tsx` — `ogCard({ kind, title, subtitle, cover, size })`: 1200×630,
   обложка 400×400 слева (при `cover === null` — плитка-плейсхолдер), надзаголовок,
-  заголовок, подзаголовок, вордмарк Vire. Фон/типографика — как в текущей карточке
+  заголовок, подзаголовок, вордмарк VireMusic. Фон/типографика — как в текущей карточке
   плейлиста (`app/(listener)/playlists/[id]/opengraph-image.tsx`), `fontFamily: 'sans-serif'`.
   Плюс `ogFallbackCard()` — нейтральная карточка без данных.
 - `opengraph-image.tsx` в четырёх сегментах:
@@ -66,7 +66,7 @@
 ## Гейты
 
 typecheck (web/core/db), lint, check:routes, test, audit:design, build.
-Затем прожарка дифа сабагентом-критиком (Sonnet) по Vire-чеклисту.
+Затем прожарка дифа сабагентом-критиком (Sonnet) по VireMusic-чеклисту.
 
 ## Ship
 

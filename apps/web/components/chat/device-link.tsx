@@ -101,7 +101,7 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
           <>
             <p className="text-sm font-medium">Ожидание подтверждения</p>
             <p className="text-xs text-muted-foreground">
-              Откройте Vire на другом своём устройстве — там появится запрос подтверждения.
+              Откройте VireMusic на другом своём устройстве — там появится запрос подтверждения.
             </p>
             <button onClick={cancelLinking} className="min-h-11 w-full rounded-lg border border-border px-4 text-sm">
               Отмена
@@ -111,7 +111,7 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
           <>
             <p className="text-sm font-medium">Переписка зашифрована на этом устройстве</p>
             <p className="text-xs text-muted-foreground">
-              Чтобы читать историю, подтвердите это устройство на другом своём устройстве, где уже открыт Vire.
+              Чтобы читать историю, подтвердите это устройство на другом своём устройстве, где уже открыт VireMusic.
             </p>
             <button onClick={startNew}
               className="min-h-11 w-full rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">

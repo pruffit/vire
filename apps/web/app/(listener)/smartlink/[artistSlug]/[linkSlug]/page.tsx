@@ -157,12 +157,12 @@ export default async function SmartLinkPage({ params }: Props) {
           )}
         </FadeUp>
 
-        {/* Первой — кнопка Vire (если лендинг привязан к релизу): слушать/пресейв */}
+        {/* Первой — кнопка VireMusic (если лендинг привязан к релизу): слушать/пресейв */}
         {vire && (
           <FadeUp className="mt-8 w-full">
             <Link
               href={vire.href}
-              aria-label={vire.kind === 'listen' ? 'Слушать на Vire' : 'Пресейв на Vire'}
+              aria-label={vire.kind === 'listen' ? 'Слушать на VireMusic' : 'Пресейв на VireMusic'}
               className="group flex items-center gap-3.5 rounded-xl px-4 py-3.5 font-medium transition-all hover:scale-[1.015]"
               style={{
                 background: 'var(--artist-accent)',
@@ -173,7 +173,7 @@ export default async function SmartLinkPage({ params }: Props) {
                 <Logo className="h-3 w-auto text-black" />
               </span>
               <span className="flex-1 text-sm">
-                {vire.kind === 'listen' ? 'Слушать на Vire' : 'Пресейв на Vire'}
+                {vire.kind === 'listen' ? 'Слушать на VireMusic' : 'Пресейв на VireMusic'}
               </span>
               <Icon name="arrow-right" size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
             </Link>

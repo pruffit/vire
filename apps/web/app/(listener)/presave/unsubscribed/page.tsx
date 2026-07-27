@@ -17,7 +17,7 @@ export default async function PresaveUnsubscribedPage({
   return (
     <div className="min-h-full flex items-center justify-center px-6 py-24">
       <div className="max-w-md text-center">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-6">Vire</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-6">VireMusic</p>
         <h1 className="text-2xl font-semibold mb-3">
           {ok ? 'Вы отписаны' : 'Ссылка недействительна'}
         </h1>

@@ -39,7 +39,7 @@ export function JamShare({ code, title }: Props) {
   async function handleClick() {
     if (isTouchDevice() && typeof navigator.share === 'function') {
       try {
-        await navigator.share({ title: title ?? 'Джем на Vire', url: shareUrl() });
+        await navigator.share({ title: title ?? 'Джем на VireMusic', url: shareUrl() });
         return;
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return;

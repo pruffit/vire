@@ -191,7 +191,7 @@ export type { DiscoveryRelease, DiscoveryTrack, ReleaseSort, ArtistPlayableTrack
 Run: `pnpm --filter @vire/web typecheck`
 Expected: PASS (web импортирует `@vire/db`; новые функции/типы попадают в программу через реэкспорт). Если падает на `accentColor` в местах, где строится `DiscoveryRelease` — проверить, что все они идут через `releaseCardColumns` (менять их не нужно).
 
-> Примечание: DB-запросы бьют в базу — unit-тестами не покрываем (текущий подход Vire). Верификация — тайпчек здесь + визуальная проверка модулей в задачах-потребителях.
+> Примечание: DB-запросы бьют в базу — unit-тестами не покрываем (текущий подход VireMusic). Верификация — тайпчек здесь + визуальная проверка модулей в задачах-потребителях.
 
 - [ ] **Step 6: Commit**
 
@@ -808,7 +808,7 @@ export default async function HomePage() {
   return (
     <main className="w-full max-w-[120rem] mx-auto px-5 sm:px-6 lg:px-8 py-12 space-y-16">
       <JsonLd data={websiteJsonLd()} />
-      <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
+      <h1 className="sr-only">VireMusic — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
 
       {featured && <FeaturedRelease release={featured} />}
 
@@ -929,7 +929,7 @@ git commit -m "feat(home): редакционный ритм ленты — иг
 
 - [ ] **Step 1: Независимая самокритика (сабагент Sonnet, свежий контекст)**
 
-Дать сабагенту diff ветки + Vire review-чеклист + gotchas: искать забытое (мобилка, дубли, утечки/ререндеры, layout-shell, контраст, краевые случаи — пустой каталог, cold-start, нейтральный accent). Нашёл → чинить и перекритиковать.
+Дать сабагенту diff ветки + VireMusic review-чеклист + gotchas: искать забытое (мобилка, дубли, утечки/ререндеры, layout-shell, контраст, краевые случаи — пустой каталог, cold-start, нейтральный accent). Нашёл → чинить и перекритиковать.
 
 - [ ] **Step 2: Повторный прогон всех гейтов**
 

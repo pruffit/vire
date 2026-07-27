@@ -39,8 +39,8 @@ describe('releaseMetaDescription', () => {
     expect(result).toContain('Артист');
   });
 
-  it('always ends with a call to action mentioning Vire', () => {
-    expect(releaseMetaDescription({ title: 'A', artistName: 'B' })).toMatch(/Vire/);
+  it('always ends with a call to action mentioning VireMusic', () => {
+    expect(releaseMetaDescription({ title: 'A', artistName: 'B' })).toMatch(/VireMusic/);
   });
 
   it('never returns an empty string', () => {
@@ -63,8 +63,8 @@ describe('trackMetaDescription', () => {
     expect(result).not.toMatch(/\s,/);
   });
 
-  it('always ends with a call to action mentioning Vire', () => {
-    expect(trackMetaDescription({ trackTitle: 'T', releaseTitle: 'R', artistName: 'A' })).toMatch(/Vire/);
+  it('always ends with a call to action mentioning VireMusic', () => {
+    expect(trackMetaDescription({ trackTitle: 'T', releaseTitle: 'R', artistName: 'A' })).toMatch(/VireMusic/);
   });
 
   it('never returns an empty string', () => {

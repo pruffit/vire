@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Бэкап Vire → внешний S3. Запуск по cron на сервере, напр.:
+# Бэкап VireMusic → внешний S3. Запуск по cron на сервере, напр.:
 #   0 4 * * *  cd /opt/vire && ./scripts/backup.sh >> /var/log/vire-backup.log 2>&1
 #
 # Кладёт: дамп Postgres (gzip, с датой) + зеркало vault-bucket (исходные FLAC).
@@ -9,7 +9,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Грузим .env БЕЗ `source`: значения со спецсимволами shell (напр.
-# SMTP_FROM=Vire <noreply@…> с < >) ломают source. Читаем построчно и
+# SMTP_FROM=VireMusic <noreply@…> с < >) ломают source. Читаем построчно и
 # экспортируем литерально — без исполнения значений.
 set -a
 while IFS= read -r line || [ -n "$line" ]; do

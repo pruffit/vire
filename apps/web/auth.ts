@@ -105,7 +105,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Yandex({ allowDangerousEmailAccountLinking: true }),
     Nodemailer({
       server: 'smtp://localhost:25', // не используется — sendVerificationRequest переопределён
-      from: process.env.SMTP_FROM ?? 'Vire <noreply@viremusic.ru>',
+      from: process.env.SMTP_FROM ?? 'VireMusic <noreply@viremusic.ru>',
       async sendVerificationRequest({ identifier, url }) {
         if (process.env.NODE_ENV === 'development') {
           console.log(`\n[auth] Magic link for ${identifier}:\n${url}\n`);
@@ -113,8 +113,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         await sendMail({
           to: identifier,
-          subject: 'Ссылка для входа в Vire',
-          text: `Твоя ссылка для входа в Vire:\n\n${url}\n\nДействительна 24 часа.`,
+          subject: 'Ссылка для входа в VireMusic',
+          text: `Твоя ссылка для входа в VireMusic:\n\n${url}\n\nДействительна 24 часа.`,
         });
       },
     }),

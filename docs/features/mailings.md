@@ -25,7 +25,7 @@
 ## Env
 - `BREVO_API_KEY` — ключ Brevo (Transactional → SMTP & API). Обязателен; без него
   воркер/мейлер бросают ошибку.
-- `SMTP_FROM` — отправитель в формате `Vire <noreply@viremusic.ru>` (домен должен
+- `SMTP_FROM` — отправитель в формате `VireMusic <noreply@viremusic.ru>` (домен должен
   быть верифицирован в Brevo). Имя «SMTP_*» историческое — реально это HTTP API.
 - `FEEDBACK_TO` — адрес, куда падает форма обратной связи.
 - `NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_SITE_URL` — базовый URL для ссылок в письме.

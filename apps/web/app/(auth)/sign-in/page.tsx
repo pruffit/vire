@@ -27,7 +27,7 @@ export default async function SignInPage({
 
       <div className="relative w-full max-w-sm animate-fade-up">
         <p className="text-xs font-mono uppercase tracking-[0.22em] text-muted-foreground mb-4 text-center">
-          Vire
+          VireMusic
         </p>
 
         <div className="rounded-xl border border-border bg-card shadow-xl shadow-black/20 p-6">

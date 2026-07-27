@@ -53,7 +53,7 @@ describe('OG-картинка трека', () => {
     getBySlug.mockResolvedValue(artist);
     getWithTracks.mockResolvedValue({ ok: false });
     await TrackOgImage({ params });
-    expect(tree()).toContain('Vire');
+    expect(tree()).toContain('VireMusic');
   });
 
   it('трек неопубликованного релиза — фолбэк без данных', async () => {
@@ -70,7 +70,7 @@ describe('OG-картинка трека', () => {
     getBySlug.mockResolvedValue(artist);
     getWithTracks.mockResolvedValue({ ok: true, value: { release, tracks: [] } });
     await TrackOgImage({ params });
-    expect(tree()).toContain('Vire');
+    expect(tree()).toContain('VireMusic');
   });
 
   it('видимый трек — заголовок, «релиз · артист» и уменьшенная обложка', async () => {

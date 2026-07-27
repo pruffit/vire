@@ -24,7 +24,7 @@ export default async function FeedbackPage({
       <ContentHero
         size="md"
         glow
-        eyebrow="Vire · Обратная связь"
+        eyebrow="VireMusic · Обратная связь"
         title={isArtist ? 'Стать артистом' : 'Обратная связь'}
         subtitle={
           isArtist

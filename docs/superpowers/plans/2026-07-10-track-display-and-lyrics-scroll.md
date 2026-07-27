@@ -56,7 +56,7 @@ truncate-спаны. `feat: string[]` — уже готовые имена.
 
 ## Гейты (после обеих задач)
 typecheck, lint, check:routes, test, audit:design, build — все из `@vire/web`;
-самокритика отдельным сабагентом по Vire-чеклисту (мобилка, дубли, ререндеры, layout-shell).
+самокритика отдельным сабагентом по VireMusic-чеклисту (мобилка, дубли, ререндеры, layout-shell).
 
 ## Ship
 Версия 1.17.0 в корневом и `apps/web/package.json`; коммит. Тег/деплой — только по команде.

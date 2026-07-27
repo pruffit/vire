@@ -34,7 +34,7 @@ describe('Announcements', () => {
   it('авто-показывает первый непросмотренный анонс', () => {
     render(<Announcements />);
     expect(screen.getByRole('dialog')).toBeTruthy();
-    expect(screen.getByText('Vire запущен')).toBeTruthy();
+    expect(screen.getByText('VireMusic запущен')).toBeTruthy();
   });
 
   it('после закрытия второй анонс НЕ появляется в том же маунте, seen-флаг записан', () => {

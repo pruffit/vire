@@ -24,7 +24,7 @@ export async function Nav() {
       <div className="px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between gap-4">
         <Link
           href="/"
-          aria-label="Vire, на главную"
+          aria-label="VireMusic, на главную"
           className="shrink-0 hover:opacity-70 transition-opacity"
         >
           <Logo className="h-4 w-auto" />

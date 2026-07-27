@@ -28,7 +28,7 @@ export default async function ArtistOgImage({ params }: { params: Promise<{ slug
   const cover = await fetchCoverThumb(avatar);
 
   return new ImageResponse(
-    ogCard({ kind: 'АРТИСТ', title: artist.name, subtitle: artist.bio ?? 'Артист на Vire', cover }),
+    ogCard({ kind: 'АРТИСТ', title: artist.name, subtitle: artist.bio ?? 'Артист на VireMusic', cover }),
     { ...size, headers: OG_CACHE_HEADERS },
   );
 }

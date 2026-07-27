@@ -91,7 +91,7 @@ cipher = crypto_secretbox(plaintext_utf8, nonce, CK)          # XSalsa20-Poly130
 ключа), поэтому подмена ключа сервером ломает совпадение кода.
 
 **Первое устройство вообще** (нет ни одного настроенного) → просто генерит новую identity,
-привязка не нужна. Привязка — только для 2-го и далее устройств. A офлайн → «откройте Vire на
+привязка не нужна. Привязка — только для 2-го и далее устройств. A офлайн → «откройте VireMusic на
 другом своём устройстве, чтобы подтвердить».
 
 ## Данные (миграция 0041)
@@ -170,7 +170,7 @@ cipher = crypto_secretbox(plaintext_utf8, nonce, CK)          # XSalsa20-Poly130
   `chat send` хранит шифротекст дословно и режет oversize, гейты участника/друзья без изменений.
 - **Инвариант server-blindness:** `messages.body` никогда не равен плейнтексту; уведомления
   остаются контентless.
-- Все гейты Vire: typecheck (web/core/db), lint, check:routes, test (web/core/worker),
+- Все гейты VireMusic: typecheck (web/core/db), lint, check:routes, test (web/core/worker),
   audit:design (UI шифрования/устройств), build.
 
 ## UI (Impeccable / мобилка обязательна)

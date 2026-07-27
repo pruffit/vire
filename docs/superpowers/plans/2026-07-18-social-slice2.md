@@ -117,7 +117,7 @@ unread-счётчики через `lib/listener-data.ts` (React `cache()`, ка
 Один агент — чтобы правки навигации не конфликтовали.
 
 ## CRIT → FIX → GATES → SHIP
-- CRIT: независимый Sonnet прожаривает диф по Vire-чеклисту + gotchas (мобилка, дубли, утечки
+- CRIT: независимый Sonnet прожаривает диф по VireMusic-чеклисту + gotchas (мобилка, дубли, утечки
   SSE-листенеров, layout-shell, приватность/блок-гейты, N+1 в activity/conversations).
 - FIX: закрыть найденное.
 - GATES: typecheck(web/core/db)·lint·check:routes·test·audit:design·build — весь вывод.

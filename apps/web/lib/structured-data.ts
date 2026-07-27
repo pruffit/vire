@@ -49,10 +49,10 @@ export interface TrackLd {
   durationSec?: number | null;
 }
 
-/** Organization Vire как `publisher` в Music-схемах — GEO/AI-движки ищут явный источник публикации. */
+/** Organization VireMusic как `publisher` в Music-схемах — GEO/AI-движки ищут явный источник публикации. */
 const VIRE_PUBLISHER = {
   '@type': 'Organization',
-  name: 'Vire',
+  name: 'VireMusic',
   url: SITE_URL,
   logo: abs('/icon-512.png'),
 };
@@ -149,7 +149,7 @@ export function websiteJsonLd(): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Vire',
+    name: 'VireMusic',
     url: SITE_URL,
     description: 'Независимая музыкальная площадка для артистов и слушателей СНГ',
   };
@@ -160,8 +160,8 @@ export function artistsCatalogJsonLd(): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'Артисты — Vire',
-    description: 'Все артисты на платформе Vire',
+    name: 'Артисты — VireMusic',
+    description: 'Все артисты на платформе VireMusic',
     url: abs('/artists'),
   };
 }
@@ -236,7 +236,7 @@ export function artistPostJsonLd(post: ArtistPostLd, artist: ArtistLd): Record<s
     },
     publisher: {
       '@type': 'Organization',
-      name: 'Vire',
+      name: 'VireMusic',
       url: SITE_URL,
     },
   });

@@ -137,12 +137,12 @@ function failureEmailHtml(contact: TrackOwnerContact, dashboardUrl: string): str
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0d0d0d;font-family:Inter,sans-serif;color:#f5f2eb">
   <div style="max-width:480px;margin:0 auto;padding:40px 24px">
-    <p style="font-size:13px;color:#666;margin:0 0 24px">Vire</p>
+    <p style="font-size:13px;color:#666;margin:0 0 24px">VireMusic</p>
     <h1 style="font-size:20px;font-weight:600;margin:0 0 16px;line-height:1.3">Не удалось обработать трек</h1>
     <p style="margin:0 0 16px;font-size:14px;color:#aaa">${greeting} При обработке трека <strong style="color:#f5f2eb">«${contact.trackTitle}»</strong> произошла ошибка — мы не смогли подготовить его к воспроизведению после нескольких попыток.</p>
     <p style="margin:0 0 24px;font-size:14px;color:#aaa">Попробуй перезалить файл в дашборде. Если ошибка повторится — напиши нам, разберёмся.</p>
     <a href="${dashboardUrl}" style="display:inline-block;background:#f5f2eb;color:#0d0d0d;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:500">Открыть релиз →</a>
-    <p style="margin:40px 0 0;font-size:12px;color:#444">Это служебное уведомление Vire.</p>
+    <p style="margin:40px 0 0;font-size:12px;color:#444">Это служебное уведомление VireMusic.</p>
   </div>
 </body>
 </html>`;

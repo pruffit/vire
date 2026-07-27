@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const url = `/playlists/${id}`;
   const description = playlist.description
-    ?? `${playlist.tracks.length} ${pluralTracks(playlist.tracks.length)} на Vire.`;
+    ?? `${playlist.tracks.length} ${pluralTracks(playlist.tracks.length)} на VireMusic.`;
 
   return pageMetadata({
     url,

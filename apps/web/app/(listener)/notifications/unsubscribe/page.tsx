@@ -18,7 +18,7 @@ export default async function NotifyUnsubscribePage({
     return (
       <div className="min-h-full flex items-center justify-center px-6 py-24">
         <div className="max-w-md text-center">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-6">Vire</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-6">VireMusic</p>
           <h1 className="text-2xl font-semibold mb-3">Ссылка недействительна</h1>
           <p className="text-sm text-muted-foreground leading-relaxed mb-8">
             Не удалось подтвердить отписку — похоже, ссылка повреждена или устарела. Откройте
@@ -38,7 +38,7 @@ export default async function NotifyUnsubscribePage({
   return (
     <div className="min-h-full flex items-center justify-center px-6 py-24">
       <div className="max-w-md text-center">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-6">Vire</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-6">VireMusic</p>
         <UnsubscribeConfirmForm uid={uid} token={token} />
       </div>
     </div>

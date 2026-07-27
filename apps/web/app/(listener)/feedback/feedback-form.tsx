@@ -11,7 +11,7 @@ export type FeedbackType = 'bug' | 'idea' | 'artist' | 'other';
 const TYPES: { value: FeedbackType; label: string; emoji: string; hint: string }[] = [
   { value: 'bug', label: 'Баг', emoji: '🐛', hint: 'Что-то сломалось или работает неожиданно' },
   { value: 'idea', label: 'Идея', emoji: '💡', hint: 'Предложение по улучшению платформы' },
-  { value: 'artist', label: 'Стать артистом', emoji: '🎤', hint: 'Хочу публиковать музыку на Vire' },
+  { value: 'artist', label: 'Стать артистом', emoji: '🎤', hint: 'Хочу публиковать музыку на VireMusic' },
   { value: 'other', label: 'Другое', emoji: '💬', hint: 'Что угодно ещё' },
 ];
 

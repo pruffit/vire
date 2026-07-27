@@ -27,6 +27,6 @@
 Гейт: все (typecheck/lint/check:routes/test/audit:design/build) + layout-shell зелёный.
 
 ## Wave 3 — критика + ship
-- Независимый Sonnet прожаривает по Vire-чеклисту.
+- Независимый Sonnet прожаривает по VireMusic-чеклисту.
 - Доки: `docs/features/lyrics.md` (+инлайн на треке), §2.7 stage-2.
 - Версия в 2 местах при необходимости; коммит.

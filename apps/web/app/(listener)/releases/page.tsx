@@ -12,7 +12,7 @@ import { pageMetadata } from '@/lib/metadata';
 export const metadata: Metadata = pageMetadata({
   url: '/releases',
   title: 'Релизы',
-  description: 'Все релизы на Vire — свежее, за неделю и самое популярное.',
+  description: 'Все релизы на VireMusic — свежее, за неделю и самое популярное.',
 });
 
 type Tab = 'fresh' | 'week' | 'popular';

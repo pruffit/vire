@@ -29,7 +29,7 @@
 
 ## Шаг 3 — самокритика (независимый Sonnet) + гейты + доки
 
-- Ревью дифа по Vire-чеклисту + спот-чек маппинга (семантика имён жанров).
+- Ревью дифа по VireMusic-чеклисту + спот-чек маппинга (семантика имён жанров).
 - `typecheck / lint / check:routes / test / audit:design / build` (+ worker test).
 - Обновить `docs/features/auto-genre.md`, `docs/features/wave.md`.
 - Коммит. Версия/тег — по команде.

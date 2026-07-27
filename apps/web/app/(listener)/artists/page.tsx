@@ -10,7 +10,7 @@ import { pageMetadata } from '@/lib/metadata';
 export const metadata: Metadata = pageMetadata({
   url: '/artists',
   title: 'Артисты',
-  description: 'Все артисты на платформе Vire',
+  description: 'Все артисты на платформе VireMusic',
 });
 
 export default async function ArtistsPage() {

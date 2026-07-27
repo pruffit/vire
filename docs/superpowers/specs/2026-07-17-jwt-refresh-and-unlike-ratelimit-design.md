@@ -69,7 +69,7 @@ meta-descriptions. Здесь добираем два оставшихся бе�
 - `getUserById` — репозиторный/query-слой `@vire/db`, расширение select корректно тут.
 - Rate-limit — HTTP-край роута.
 
-## Vire review-чеклист (акценты)
+## VireMusic review-чеклист (акценты)
 
 - **Edge/Node граница** — refresh НЕ должен исполняться в middleware; проверить, что при
   выбросе в edge токен цел (fallback), admin-редирект по роли работает как раньше.

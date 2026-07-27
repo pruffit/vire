@@ -7,7 +7,7 @@
 ### Метатеги
 
 - `metadataBase` задаётся из `NEXT_PUBLIC_SITE_URL` → `AUTH_URL` → `http://localhost:3000` (`apps/web/lib/site.ts`)
-- Шаблон заголовков: `%s — Vire` (через `title.template` в корневом `layout.tsx`)
+- Шаблон заголовков: `%s — VireMusic` (через `title.template` в корневом `layout.tsx`)
 - Дефолтные OG/Twitter в `app/layout.tsx`
 
 ### `generateMetadata` на страницах

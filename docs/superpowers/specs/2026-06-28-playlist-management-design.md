@@ -40,7 +40,7 @@ Layout остаётся **компактным центрированным** (`
 
 ## Архитектура
 
-Слои Vire соблюдаются: Route Handler (HTTP) → query в `packages/db` → Postgres.
+Слои VireMusic соблюдаются: Route Handler (HTTP) → query в `packages/db` → Postgres.
 Бизнес-правила плейлистов тривиальны (владение, позиции) и живут в запросах
 `packages/db/src/queries/playlists.ts` — отдельный сервис в `packages/core` не заводим
 (следуем текущему паттерну этого модуля).

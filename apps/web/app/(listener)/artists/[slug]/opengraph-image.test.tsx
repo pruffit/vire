@@ -58,7 +58,7 @@ describe('OG-картинка артиста', () => {
     getBySlug.mockResolvedValue({ ok: false });
     await ArtistOgImage({ params });
     const out = tree();
-    expect(out).toContain('Vire');
+    expect(out).toContain('VireMusic');
     expect(artistHasPublishedTrackById).not.toHaveBeenCalled();
   });
 
@@ -87,12 +87,12 @@ describe('OG-картинка артиста', () => {
     expect(out).toContain('thumb:https://cdn.test/avatar.jpg');
   });
 
-  it('без bio — подпись «Артист на Vire»', async () => {
+  it('без bio — подпись «Артист на VireMusic»', async () => {
     getBySlug.mockResolvedValue({ ok: true, value: { id: 'a1', name: 'Даня', bio: null, avatarUrl: null } });
     artistHasPublishedTrackById.mockResolvedValue(true);
 
     await ArtistOgImage({ params });
 
-    expect(tree()).toContain('Артист на Vire');
+    expect(tree()).toContain('Артист на VireMusic');
   });
 });

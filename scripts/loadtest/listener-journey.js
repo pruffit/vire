@@ -1,5 +1,5 @@
 /* eslint-disable */
-// k6-сценарий «путь слушателя» — нагрузочный тест Vire (§9.5 дорожной карты).
+// k6-сценарий «путь слушателя» — нагрузочный тест VireMusic (§9.5 дорожной карты).
 //
 // k6 — отдельный бинарь (https://k6.io), не npm-пакет. Установка: `winget install k6`
 // (Windows) / `brew install k6` (macOS) / `apt install k6` (Linux).

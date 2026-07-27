@@ -89,7 +89,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { artist } = data;
   const url = `/artists/${slug}`;
-  const description = artist.bio ?? `${artist.name} на Vire — релизы, треки и ссылки.`;
+  const description = artist.bio ?? `${artist.name} на VireMusic — релизы, треки и ссылки.`;
   return pageMetadata({
     url,
     title: artist.name,

@@ -18,7 +18,7 @@ export function releaseMetaDescription(input: {
   const kind = type ? RELEASE_TYPE_LABELS[type] : 'Релиз';
   const yearPart = year ? ` ${year} года` : '';
   const countPart = trackCount ? `, ${trackCount} ${pluralTracks(trackCount)}` : '';
-  return `${kind} «${title}»${yearPart} от ${artistName}${countPart}. Слушать на Vire.`;
+  return `${kind} «${title}»${yearPart} от ${artistName}${countPart}. Слушать на VireMusic.`;
 }
 
 export function trackMetaDescription(input: {
@@ -29,5 +29,5 @@ export function trackMetaDescription(input: {
 }): string {
   const { trackTitle, releaseTitle, artistName, year } = input;
   const yearPart = year ? ` (${year})` : '';
-  return `«${trackTitle}» — трек ${artistName} из релиза «${releaseTitle}»${yearPart}. Слушать на Vire.`;
+  return `«${trackTitle}» — трек ${artistName} из релиза «${releaseTitle}»${yearPart}. Слушать на VireMusic.`;
 }

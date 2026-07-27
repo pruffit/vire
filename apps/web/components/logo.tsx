@@ -1,4 +1,4 @@
-/** Логотип Vire: марка V + вордмарк. Цвет — currentColor (из темы, без хардкода):
+/** Логотип VireMusic: марка V + вордмарк. Цвет — currentColor (из темы, без хардкода):
  * задавай через text-* на родителе (белый в шапке, чёрный на смартлинке text-black). */
 export function Logo({ className }: { className?: string }) {
   return (
@@ -6,7 +6,7 @@ export function Logo({ className }: { className?: string }) {
       viewBox="0 0 6908 2819"
       fill="none"
       role="img"
-      aria-label="Vire"
+      aria-label="VireMusic"
       className={className}
       xmlns="http://www.w3.org/2000/svg"
     >

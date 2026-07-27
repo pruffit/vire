@@ -34,7 +34,7 @@ function buildHtml(
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0d0d0d;font-family:Inter,sans-serif;color:#f5f2eb">
   <div style="max-width:480px;margin:0 auto;padding:40px 24px">
-    <p style="font-size:13px;color:#666;margin:0 0 24px">Vire</p>
+    <p style="font-size:13px;color:#666;margin:0 0 24px">VireMusic</p>
 
     <h1 style="font-size:22px;font-weight:600;margin:0 0 6px;line-height:1.3">
       ${data.releaseTitle} уже вышел
@@ -51,7 +51,7 @@ function buildHtml(
     </a>
 
     <p style="margin:40px 0 0;font-size:12px;color:#444">
-      Ты получил это письмо, потому что сделал пресейв этого релиза на Vire.
+      Ты получил это письмо, потому что сделал пресейв этого релиза на VireMusic.
       ${unsubscribeUrl ? `<a href="${unsubscribeUrl}" style="color:#666">Отписаться от таких писем</a>` : ''}
     </p>
   </div>

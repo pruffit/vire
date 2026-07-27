@@ -28,7 +28,7 @@ export function EasterEggs() {
   };
 
   useEffect(() => {
-    console.log('%cVire ♪', 'font:800 30px/1 system-ui;letter-spacing:1px');
+    console.log('%cVireMusic ♪', 'font:800 30px/1 system-ui;letter-spacing:1px');
     console.log(
       '%cНезависимая музыка для СНГ. Копаешься в коде? Нам по пути → /feedback?type=other',
       'font:600 13px/1.5 system-ui',

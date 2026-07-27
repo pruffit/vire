@@ -37,8 +37,8 @@ vs «Track» через `error.message.startsWith('Track')` — сломаетс
 ## Задача B — уникализация фолбэка meta-description релиза и трека
 
 **Проблема.** Фолбэк описания одинаков по форме у всех релизов:
-`${title} — релиз ${artist} на Vire.` (`releases/[releaseId]/page.tsx:54`), у трека —
-`${fullTitle} · ${release.title} — ${artist} на Vire.` (`.../tracks/[trackId]/page.tsx:63`).
+`${title} — релиз ${artist} на VireMusic.` (`releases/[releaseId]/page.tsx:54`), у трека —
+`${fullTitle} · ${release.title} — ${artist} на VireMusic.` (`.../tracks/[trackId]/page.tsx:63`).
 Дубль-подобные мета-описания вредят SEO.
 
 **Решение.** Чистый хелпер в `apps/web/lib/meta-descriptions.ts` (новый файл), варьирующий текст

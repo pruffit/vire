@@ -149,7 +149,7 @@ DLQ уже в `lib/queue.ts`; presence-гард/дебаунс/prefs — в од
   `user/profile` PATCH принимает `discoverable`, unsub-роут.
 - Воркер: `notify-external.worker` — presence-скип, prefs-скип, дебаунс-скип, 410-прунинг
   (замоканные Brevo/web-push/redis/repo).
-- Гейты Vire все: typecheck (web/core/db), lint, check:routes, test, audit:design (UI), build.
+- Гейты VireMusic все: typecheck (web/core/db), lint, check:routes, test, audit:design (UI), build.
 
 ## Env (дополнить `.env.example` и `docs/features/notifications.md`)
 

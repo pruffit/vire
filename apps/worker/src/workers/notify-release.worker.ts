@@ -9,7 +9,7 @@ const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
 function brevoSender(): { name?: string; email: string } {
-  const raw = process.env.SMTP_FROM ?? 'Vire <noreply@viremusic.ru>';
+  const raw = process.env.SMTP_FROM ?? 'VireMusic <noreply@viremusic.ru>';
   const m = raw.match(/^(.+?)\s*<(.+?)>$/);
   return m ? { name: m[1].trim(), email: m[2].trim() } : { email: raw };
 }
@@ -58,7 +58,7 @@ function buildHtml(data: NotifyReleaseJobData, recipientName: string | null): st
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0d0d0d;font-family:Inter,sans-serif;color:#f5f2eb">
   <div style="max-width:480px;margin:0 auto;padding:40px 24px">
-    <p style="font-size:13px;color:#666;margin:0 0 24px">Vire</p>
+    <p style="font-size:13px;color:#666;margin:0 0 24px">VireMusic</p>
 
     <h1 style="font-size:22px;font-weight:600;margin:0 0 6px;line-height:1.3">
       ${data.artistName} выпустил${typeLabel === 'Сингл' ? '' : 'а'} новый ${typeLabel.toLowerCase()}
@@ -75,7 +75,7 @@ function buildHtml(data: NotifyReleaseJobData, recipientName: string | null): st
     </a>
 
     <p style="margin:40px 0 0;font-size:12px;color:#444">
-      Ты получил это письмо, потому что подписан на ${data.artistName} на Vire.<br>
+      Ты получил это письмо, потому что подписан на ${data.artistName} на VireMusic.<br>
       <a href="${APP_URL}/profile" style="color:#666">Управлять подписками</a>
     </p>
   </div>

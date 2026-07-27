@@ -49,7 +49,7 @@ export function Footer() {
         </div>
 
         <div className="mt-10 flex items-center gap-2 border-t border-border/60 pt-6">
-          <PartyText className="font-mono text-xs text-muted-foreground select-none">© {year} Vire</PartyText>
+          <PartyText className="font-mono text-xs text-muted-foreground select-none">© {year} VireMusic</PartyText>
           <span className="text-muted-foreground/40">·</span>
           <span className="font-mono text-xs text-muted-foreground/60">v{SITE_VERSION}</span>
         </div>

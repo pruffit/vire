@@ -7,7 +7,7 @@ export async function sendMail(opts: {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) throw new Error('BREVO_API_KEY is not set');
 
-  const fromRaw = process.env.SMTP_FROM ?? 'Vire <noreply@viremusic.ru>';
+  const fromRaw = process.env.SMTP_FROM ?? 'VireMusic <noreply@viremusic.ru>';
   const match = fromRaw.match(/^(.+?)\s*<(.+?)>$/);
   const sender = match ? { name: match[1].trim(), email: match[2].trim() } : { email: fromRaw };
 

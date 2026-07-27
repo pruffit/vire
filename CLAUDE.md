@@ -1,4 +1,4 @@
-# Vire — инструкция для Claude Code
+# VireMusic — инструкция для Claude Code
 
 Независимая музыкальная площадка для артистов и слушателей СНГ.
 Полная документация: `docs/vision/concept.md`, `docs/foundation/architecture.md`, `docs/foundation/data-schema.md` (карта всех доков — `docs/README.md`).
@@ -293,7 +293,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   показ по 24 «Показать ещё»); explicit-бейдж (E) на карточках релизов везде, где видна
   обложка (`hasExplicit` агрегат, `docs/features/...`)
 - [x] Смартлинки (bandlink-лендинги) `/smartlink/{artist}/{slug}` + хаб на странице артиста;
-  **Фаза B**: привязка к релизу Vire (`release_id`) → кнопка «Слушать/Пресейв на Vire»
+  **Фаза B**: привязка к релизу VireMusic (`release_id`) → кнопка «Слушать/Пресейв на VireMusic»
   (`docs/features/smart-links.md`)
 - [x] Пресейвы релизов (Фаза A+B): нативный пресейв на экране отсчёта, авто-выход
   SCHEDULED по дате, авто-лайк + письмо, инлайн в «Скоро выйдет» (`docs/features/presaves.md`)
@@ -359,7 +359,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   треков. Детали и хвосты — `docs/roadmap/stage-2.md` §9.6.
 
 ### SEO и доступность
-- [x] `metadataBase` + title-template `%s — Vire`, OG/Twitter дефолты (`app/layout.tsx`, `lib/site.ts`)
+- [x] `metadataBase` + title-template `%s — VireMusic`, OG/Twitter дефолты (`app/layout.tsx`, `lib/site.ts`)
 - [x] `generateMetadata` артиста/релиза/трека: canonical + OG `profile`/`music.album`/`music.song`
 - [x] `app/robots.ts`, `app/sitemap.ts` (артисты + релизы из БД), `app/manifest.ts`
 - [x] Schema.org JSON-LD — `MusicGroup`/`MusicAlbum`/`MusicRecording` (`lib/structured-data.ts`,

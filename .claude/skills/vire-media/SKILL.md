@@ -1,11 +1,11 @@
 ---
 name: vire-media
-description: Use when working on Vire's audio media pipeline — FFmpeg transcoding, HLS segmentation (.m3u8 + .ts chunks), waveform peak extraction, BPM/key analysis, FLAC/WAV master handling, or S3 vault/stream bucket layout. Use for changes in apps/worker (transcode/analyze workers, lib/ffmpeg, lib/waveform, lib/audio-analysis) and anything about how a master becomes a playable HLS stream, signed FLAC downloads, or why a track is stuck in PROCESSING.
+description: Use when working on VireMusic's audio media pipeline — FFmpeg transcoding, HLS segmentation (.m3u8 + .ts chunks), waveform peak extraction, BPM/key analysis, FLAC/WAV master handling, or S3 vault/stream bucket layout. Use for changes in apps/worker (transcode/analyze workers, lib/ffmpeg, lib/waveform, lib/audio-analysis) and anything about how a master becomes a playable HLS stream, signed FLAC downloads, or why a track is stuck in PROCESSING.
 version: 1.0.0
 user-invocable: true
 ---
 
-# Vire — медиа-конвейер (FFmpeg / HLS / waveform)
+# VireMusic — медиа-конвейер (FFmpeg / HLS / waveform)
 
 Привязка к коду: `apps/worker/src/workers/transcode.worker.ts`,
 `apps/worker/src/lib/{ffmpeg,waveform,audio-analysis,metadata,s3}.ts`.

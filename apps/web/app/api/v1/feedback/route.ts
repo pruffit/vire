@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     other: '💬 Другое',
   };
 
-  const subject = `[Vire] ${typeLabel[type] ?? type}`;
+  const subject = `[VireMusic] ${typeLabel[type] ?? type}`;
   const text = [
     `Тип: ${typeLabel[type] ?? type}`,
     page ? `Страница: ${page}` : null,

@@ -1,11 +1,11 @@
 ---
 name: vire-testing
-description: Use when writing or reviewing tests in Vire — unit tests for packages/core services, route-handler permission/validation tests, pure-function tests (format, structured-data, lrc, upload), worker pipeline tests, or the app-shell layout invariant. Covers Vitest setup, TDD workflow, what to test at each layer, how to mock repositories vs inject fakes, and which gates to run. Use when deciding test strategy, fixing a failing test, or asking why something isn't covered.
+description: Use when writing or reviewing tests in VireMusic — unit tests for packages/core services, route-handler permission/validation tests, pure-function tests (format, structured-data, lrc, upload), worker pipeline tests, or the app-shell layout invariant. Covers Vitest setup, TDD workflow, what to test at each layer, how to mock repositories vs inject fakes, and which gates to run. Use when deciding test strategy, fixing a failing test, or asking why something isn't covered.
 version: 1.0.0
 user-invocable: true
 ---
 
-# Vire — тестирование (Vitest / TDD)
+# VireMusic — тестирование (Vitest / TDD)
 
 Раннер — **Vitest**. Гонять: `pnpm --filter @vire/web test` (web),
 `pnpm --filter @vire/core test`, `pnpm --filter @vire/worker test`.

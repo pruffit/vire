@@ -1,11 +1,11 @@
 ---
 name: vire-architecture
-description: Use when adding or refactoring backend code in Vire — route handlers, services/use-cases, repositories, or anything touching the handler→service→repository layering. Covers Clean/Hexagonal architecture rules, the Result<T,E> error-as-value pattern, dependency injection of effects (Clock/DB/S3), zod validation at the edge, and the FSD frontend layering. Use when deciding which layer code belongs in, where validation goes, how errors flow, or why packages/core must stay framework-free.
+description: Use when adding or refactoring backend code in VireMusic — route handlers, services/use-cases, repositories, or anything touching the handler→service→repository layering. Covers Clean/Hexagonal architecture rules, the Result<T,E> error-as-value pattern, dependency injection of effects (Clock/DB/S3), zod validation at the edge, and the FSD frontend layering. Use when deciding which layer code belongs in, where validation goes, how errors flow, or why packages/core must stay framework-free.
 version: 1.0.0
 user-invocable: true
 ---
 
-# Vire — слоистая (гексагональная) архитектура
+# VireMusic — слоистая (гексагональная) архитектура
 
 Полные правила — в корневом `CLAUDE.md` (раздел «Архитектурные правила») и
 `docs/foundation/architecture.md`. Этот скилл — рабочая выжимка с привязкой к коду.

@@ -450,7 +450,7 @@ export function WaveformScrubber(props: {
 ### Task E2: полные гейты, самокритика, версия
 
 - [ ] Прогнать ВСЕ гейты: `typecheck, lint, check:routes, test, audit:design, build` (web) + `pnpm --filter @vire/worker typecheck` + core/db тесты.
-- [ ] Независимая самокритика сабагентом (Sonnet) по Vire-чеклисту; фиксы; повторный прогон.
+- [ ] Независимая самокритика сабагентом (Sonnet) по VireMusic-чеклисту; фиксы; повторный прогон.
 - [ ] Версия: корневой `package.json` + `apps/web/package.json` → 1.8.0; `pnpm install`; коммит lockfile.
 - [ ] Итоговый отчёт владельцу (деплой-тег — только по команде).
 

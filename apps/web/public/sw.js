@@ -1,7 +1,7 @@
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
-  const title = data.title || 'Vire';
+  const title = data.title || 'VireMusic';
   const options = {
     body: data.body || '',
     tag: data.tag || undefined,

@@ -201,7 +201,7 @@ export interface LegalSection {
  * обе страницы дробятся на массив секций без дублирования вёрстки.
  */
 export function LegalDoc({
-  eyebrow = 'Vire · Правовое',
+  eyebrow = 'VireMusic · Правовое',
   title,
   revision,
   intro,

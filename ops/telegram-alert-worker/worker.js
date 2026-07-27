@@ -4,7 +4,7 @@
 // поэтому web/worker не могут слать в Telegram напрямую. Cloudflare этот хост
 // видит. Схема: VPS → POST на этот Worker (его VPS видит) → sendMessage в Telegram.
 //
-// Vire-сторона шлёт generic-webhook JSON ({ text, content, ... }) на
+// VireMusic-сторона шлёт generic-webhook JSON ({ text, content, ... }) на
 // ALERT_WEBHOOK_URL = https://<worker>.workers.dev/<ALERT_SECRET>. Воркер берёт
 // `text` и пересылает его в чат TG_CHAT_ID ботом TG_TOKEN.
 //

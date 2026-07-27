@@ -65,7 +65,7 @@ describe('OG-картинка плейлиста', () => {
   it('несуществующий плейлист — нейтральный фон', async () => {
     getPlaylistWithTracks.mockResolvedValue(null);
     await PlaylistOgImage({ params });
-    expect(tree()).toContain('Vire');
+    expect(tree()).toContain('VireMusic');
   });
 
   it('публичный плейлист отдаёт название, автора и уменьшенные обложки', async () => {

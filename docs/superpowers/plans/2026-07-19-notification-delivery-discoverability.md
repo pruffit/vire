@@ -271,7 +271,7 @@ git commit -m "feat(api): user/profile PATCH принимает discoverable/not
 ## Task 4: Общий SettingToggle + тумблер discoverability в профиле
 
 **Files:**
-- Create: `apps/web/components/listener/profile/setting-toggle.tsx` — переиспользуемый презентационный тумблер (устраняет дубль между приватностью/discoverability/email — правило Vire «не плодить дубли»).
+- Create: `apps/web/components/listener/profile/setting-toggle.tsx` — переиспользуемый презентационный тумблер (устраняет дубль между приватностью/discoverability/email — правило VireMusic «не плодить дубли»).
 - Create: `apps/web/components/listener/profile/discoverability-settings.tsx`
 - Modify: `apps/web/components/listener/profile/privacy-settings.tsx` — перевести на `SettingToggle`.
 - Modify: `apps/web/app/(listener)/profile/page.tsx`
@@ -898,7 +898,7 @@ git commit -m "feat(api): push/subscribe POST/DELETE"
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (e) { data = {}; }
-  const title = data.title || 'Vire';
+  const title = data.title || 'VireMusic';
   const options = {
     body: data.body || '',
     tag: data.tag || undefined,
@@ -1092,7 +1092,7 @@ function shell(appUrl: string, heading: string, bodyLine: string, ctaLabel: stri
   return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0d0d0d;font-family:Inter,sans-serif;color:#f5f2eb">
   <div style="max-width:480px;margin:0 auto;padding:40px 24px">
-    <p style="font-size:13px;color:#666;margin:0 0 24px">Vire</p>
+    <p style="font-size:13px;color:#666;margin:0 0 24px">VireMusic</p>
     <h1 style="font-size:22px;font-weight:600;margin:0 0 12px;line-height:1.3">${heading}</h1>
     <p style="margin:0 0 32px;font-size:14px;color:#aaa">${bodyLine}</p>
     <a href="${ctaUrl}" style="display:inline-block;background:#f5f2eb;color:#0d0d0d;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:500">${ctaLabel} →</a>
@@ -1104,8 +1104,8 @@ function shell(appUrl: string, heading: string, bodyLine: string, ctaLabel: stri
 export function friendRequestEmail(i: Base): { subject: string; html: string } {
   const who = i.actorName ?? 'Кто-то';
   return {
-    subject: `${who} отправил вам заявку в друзья на Vire`,
-    html: shell(i.appUrl, `${who} хочет добавить вас в друзья`, 'Примите или отклоните заявку на Vire.', 'Открыть заявки', `${i.appUrl}/friends`, i.unsubscribeUrl),
+    subject: `${who} отправил вам заявку в друзья на VireMusic`,
+    html: shell(i.appUrl, `${who} хочет добавить вас в друзья`, 'Примите или отклоните заявку на VireMusic.', 'Открыть заявки', `${i.appUrl}/friends`, i.unsubscribeUrl),
   };
 }
 
@@ -1113,8 +1113,8 @@ export function chatMessageEmail(i: Base): { subject: string; html: string } {
   const who = i.actorName ?? 'Кто-то';
   // Контентless: текст сообщения намеренно не включаем (готовим почву под E2EE).
   return {
-    subject: `Новое сообщение от ${who} на Vire`,
-    html: shell(i.appUrl, `Новое сообщение от ${who}`, 'Откройте переписку на Vire, чтобы прочитать.', 'Открыть сообщения', `${i.appUrl}/messages`, i.unsubscribeUrl),
+    subject: `Новое сообщение от ${who} на VireMusic`,
+    html: shell(i.appUrl, `Новое сообщение от ${who}`, 'Откройте переписку на VireMusic, чтобы прочитать.', 'Открыть сообщения', `${i.appUrl}/messages`, i.unsubscribeUrl),
   };
 }
 ```
@@ -1228,7 +1228,7 @@ export async function GET(req: Request) {
     return new NextResponse('Неверная ссылка отписки', { status: 400 });
   }
   await updateUserNotifyEmail(uid, false);
-  return new NextResponse('Вы отписаны от email-уведомлений Vire.', { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  return new NextResponse('Вы отписаны от email-уведомлений VireMusic.', { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 }
 ```
 
@@ -1270,7 +1270,7 @@ git commit -m "feat: HMAC-отписка от email-уведомлений (core
 
 ```ts
 function brevoSender(): { name?: string; email: string } {
-  const raw = process.env.SMTP_FROM ?? 'Vire <noreply@viremusic.ru>';
+  const raw = process.env.SMTP_FROM ?? 'VireMusic <noreply@viremusic.ru>';
   const m = raw.match(/^(.+?)\s*<(.+?)>$/);
   return m ? { name: m[1].trim(), email: m[2].trim() } : { email: raw };
 }
@@ -1559,7 +1559,7 @@ git commit -m "docs+chore(social): доки/env внешних уведомле�
 
 ## Финал (после всех задач)
 
-- **Самокритика** — независимый сабагент (Sonnet, свежий контекст): прожарить диф по Vire-чеклисту (мобилка, дубли, утечки, layout-shell, presence fail-open, дебаунс-гонки, 410-прунинг, отсутствие текста сообщения в письме/пуше/логах).
+- **Самокритика** — независимый сабагент (Sonnet, свежий контекст): прожарить диф по VireMusic-чеклисту (мобилка, дубли, утечки, layout-shell, presence fail-open, дебаунс-гонки, 410-прунинг, отсутствие текста сообщения в письме/пуше/логах).
 - **Верификация рантайма**: поднять dev (web+worker), пройти сценарий — заявка офлайн-другу → письмо+пуш; сообщение офлайн-другу → контентless-алерт; онлайн-получатель → тишина; тумблер скрывает из поиска.
 - **Мёрж НЕ делаем** — ждём E2EE-спеку и явную команду. В прод не катим.
 

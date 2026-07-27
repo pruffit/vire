@@ -52,7 +52,7 @@ describe('OG-картинка релиза', () => {
     getBySlug.mockResolvedValue(artist);
     getWithTracks.mockResolvedValue({ ok: false });
     await ReleaseOgImage({ params });
-    expect(tree()).toContain('Vire');
+    expect(tree()).toContain('VireMusic');
   });
 
   it('релиз другого артиста — фолбэк без данных', async () => {

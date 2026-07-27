@@ -136,7 +136,7 @@ canSeeLikes(viewerId, ownerId, ownerVisibility, areFriends): boolean
 - **`app/(listener)/u/[id]/page.tsx`** — публичная страница пользователя в listener-shell
   (app-shell-инвариант, без `min-h-screen`). Server component: имя/аватар + публичные
   плейлисты (всем) + лайки (если `canSeeLikes`). Кнопка дружбы — client, **optimistic**
-  (по умолчанию для Vire): `NONE→OUTGOING` / `INCOMING→FRIENDS|NONE` / `FRIENDS→NONE`.
+  (по умолчанию для VireMusic): `NONE→OUTGOING` / `INCOMING→FRIENDS|NONE` / `FRIENDS→NONE`.
   `robots: noindex` (страницы людей не индексируем). Треки играбельны из `TrackRow`,
   подборки — из `PlaylistCover`/`playlist-card`.
 - **`app/(listener)/friends/page.tsx`** — список друзей + входящие заявки (accept/decline).

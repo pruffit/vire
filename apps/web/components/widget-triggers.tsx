@@ -27,7 +27,7 @@ export function AnnouncementReopenLink({
   );
 }
 
-/** Тройной клик по содержимому запускает нотный дождь («© Vire» в футере). */
+/** Тройной клик по содержимому запускает нотный дождь («© VireMusic» в футере). */
 export function PartyText({ children, className }: { children: ReactNode; className?: string }) {
   const clicks = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

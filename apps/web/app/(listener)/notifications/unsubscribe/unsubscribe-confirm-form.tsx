@@ -26,7 +26,7 @@ export function UnsubscribeConfirmForm({ uid, token }: { uid: string; token: str
       <>
         <h1 className="text-2xl font-semibold mb-3">Вы отписаны</h1>
         <p className="text-sm text-muted-foreground leading-relaxed mb-8">
-          Email-уведомления Vire на этот адрес больше не приходят. Включить их обратно
+          Email-уведомления VireMusic на этот адрес больше не приходят. Включить их обратно
           можно в любой момент в настройках профиля.
         </p>
         <Link
@@ -44,7 +44,7 @@ export function UnsubscribeConfirmForm({ uid, token }: { uid: string; token: str
       <h1 className="text-2xl font-semibold mb-3">Отписаться от email-уведомлений?</h1>
       <p className="text-sm text-muted-foreground leading-relaxed mb-8">
         Письма о заявках в друзья и новых сообщениях на этот адрес перестанут приходить.
-        Уведомления внутри Vire останутся.
+        Уведомления внутри VireMusic останутся.
       </p>
       <button
         type="button"

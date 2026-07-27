@@ -134,7 +134,7 @@ describe('artistsCatalogJsonLd', () => {
     const ld = artistsCatalogJsonLd();
     expect(ld['@type']).toBe('CollectionPage');
     expect(ld.url).toBe(`${BASE}/artists`);
-    expect(ld.name).toBe('Артисты — Vire');
+    expect(ld.name).toBe('Артисты — VireMusic');
   });
 });
 
