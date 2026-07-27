@@ -7,6 +7,7 @@ export interface JamPlaybackState {
 }
 
 export const HARD_SEEK_MS = 2000;
+export const SEEK_COOLDOWN_MS = 3000;
 export const RATE_CORRECT_MIN_MS = 150;
 export const CONVERGED_MS = 50;
 export const RATE_DELTA = 0.03;
@@ -21,11 +22,24 @@ export type DriftAction =
   | { kind: 'rate'; rate: number }
   | { kind: 'seek'; toMs: number };
 
+export interface DriftDamperState {
+  /** Элемент реально буферизует (readyState/waiting) — коррекция вслепую не читает актуальную позицию. */
+  buffering: boolean;
+  /** Мс с последнего жёсткого seek, null — если его ещё не было. */
+  msSinceHardSeek: number | null;
+}
+
 export function decideDriftCorrection(
   expectedMs: number,
   actualMs: number,
   currentRate: number,
+  damper: DriftDamperState,
 ): DriftAction {
+  // Столл/свежий seek дают недостоверный actualMs — коррекция на нём петлит (столл → seek → новый столл).
+  if (damper.buffering || (damper.msSinceHardSeek !== null && damper.msSinceHardSeek < SEEK_COOLDOWN_MS)) {
+    return { kind: 'none' };
+  }
+
   const drift = actualMs - expectedMs;
   const absDrift = Math.abs(drift);
 

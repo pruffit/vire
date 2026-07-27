@@ -4,10 +4,12 @@ import {
   decideDriftCorrection,
   pickClockOffset,
   HARD_SEEK_MS,
+  SEEK_COOLDOWN_MS,
   RATE_CORRECT_MIN_MS,
   CONVERGED_MS,
   RATE_DELTA,
   type JamPlaybackState,
+  type DriftDamperState,
 } from './jam-sync';
 
 const state = (overrides: Partial<JamPlaybackState>): JamPlaybackState => ({
@@ -18,6 +20,9 @@ const state = (overrides: Partial<JamPlaybackState>): JamPlaybackState => ({
   version: 1,
   ...overrides,
 });
+
+const NOT_DAMPED: DriftDamperState = { buffering: false, msSinceHardSeek: null };
+const damper = (overrides: Partial<DriftDamperState>): DriftDamperState => ({ ...NOT_DAMPED, ...overrides });
 
 describe('derivePositionMs', () => {
   it('paused returns pausedPositionMs regardless of serverNowMs', () => {
@@ -44,32 +49,32 @@ describe('decideDriftCorrection', () => {
     ['far behind', 0, HARD_SEEK_MS + 1, { kind: 'seek', toMs: 0 }],
     ['far ahead', 10000, 10000 - HARD_SEEK_MS - 1, { kind: 'seek', toMs: 10000 }],
   ] as const)('%s: hard seek beyond HARD_SEEK_MS', (_label, expectedMs, actualMs, expected) => {
-    expect(decideDriftCorrection(expectedMs, actualMs, 1)).toEqual(expected);
+    expect(decideDriftCorrection(expectedMs, actualMs, 1, NOT_DAMPED)).toEqual(expected);
   });
 
   it('exactly HARD_SEEK_MS is rate correction, not seek (boundary inclusive to rate zone)', () => {
-    expect(decideDriftCorrection(0, HARD_SEEK_MS, 1)).toEqual({
+    expect(decideDriftCorrection(0, HARD_SEEK_MS, 1, NOT_DAMPED)).toEqual({
       kind: 'rate',
       rate: 1 - RATE_DELTA,
     });
   });
 
   it('client behind by >= RATE_CORRECT_MIN_MS speeds up (rate > 1)', () => {
-    expect(decideDriftCorrection(1000, 1000 - RATE_CORRECT_MIN_MS, 1)).toEqual({
+    expect(decideDriftCorrection(1000, 1000 - RATE_CORRECT_MIN_MS, 1, NOT_DAMPED)).toEqual({
       kind: 'rate',
       rate: 1 + RATE_DELTA,
     });
   });
 
   it('client ahead by >= RATE_CORRECT_MIN_MS slows down (rate < 1)', () => {
-    expect(decideDriftCorrection(1000, 1000 + RATE_CORRECT_MIN_MS, 1)).toEqual({
+    expect(decideDriftCorrection(1000, 1000 + RATE_CORRECT_MIN_MS, 1, NOT_DAMPED)).toEqual({
       kind: 'rate',
       rate: 1 - RATE_DELTA,
     });
   });
 
   it('exactly RATE_CORRECT_MIN_MS enters correction from rate 1 (hysteresis entry)', () => {
-    expect(decideDriftCorrection(1000, 1000 + RATE_CORRECT_MIN_MS, 1)).toEqual({
+    expect(decideDriftCorrection(1000, 1000 + RATE_CORRECT_MIN_MS, 1, NOT_DAMPED)).toEqual({
       kind: 'rate',
       rate: 1 - RATE_DELTA,
     });
@@ -77,45 +82,70 @@ describe('decideDriftCorrection', () => {
 
   it('grey zone [CONVERGED_MS, RATE_CORRECT_MIN_MS): holds current correction when already correcting', () => {
     const drift = CONVERGED_MS + 10;
-    expect(decideDriftCorrection(1000, 1000 + drift, 1 - RATE_DELTA)).toEqual({
+    expect(decideDriftCorrection(1000, 1000 + drift, 1 - RATE_DELTA, NOT_DAMPED)).toEqual({
       kind: 'rate',
       rate: 1 - RATE_DELTA,
     });
-    expect(decideDriftCorrection(1000, 1000 - drift, 1 + RATE_DELTA)).toEqual({
+    expect(decideDriftCorrection(1000, 1000 - drift, 1 + RATE_DELTA, NOT_DAMPED)).toEqual({
       kind: 'rate',
       rate: 1 + RATE_DELTA,
     });
   });
 
   it('grey zone [CONVERGED_MS, RATE_CORRECT_MIN_MS): does nothing when rate already 1', () => {
-    expect(decideDriftCorrection(1000, 1000 + CONVERGED_MS + 10, 1)).toEqual({ kind: 'none' });
+    expect(decideDriftCorrection(1000, 1000 + CONVERGED_MS + 10, 1, NOT_DAMPED)).toEqual({ kind: 'none' });
   });
 
   it('exactly CONVERGED_MS is grey zone (not converged), holds correction', () => {
-    expect(decideDriftCorrection(1000, 1000 + CONVERGED_MS, 1 - RATE_DELTA)).toEqual({
+    expect(decideDriftCorrection(1000, 1000 + CONVERGED_MS, 1 - RATE_DELTA, NOT_DAMPED)).toEqual({
       kind: 'rate',
       rate: 1 - RATE_DELTA,
     });
   });
 
   it('below CONVERGED_MS with active correction resets rate to 1 (hysteresis exit)', () => {
-    expect(decideDriftCorrection(1000, 1000 + CONVERGED_MS - 1, 1 - RATE_DELTA)).toEqual({
+    expect(decideDriftCorrection(1000, 1000 + CONVERGED_MS - 1, 1 - RATE_DELTA, NOT_DAMPED)).toEqual({
       kind: 'rate',
       rate: 1,
     });
-    expect(decideDriftCorrection(1000, 1000 - (CONVERGED_MS - 1), 1 + RATE_DELTA)).toEqual({
+    expect(decideDriftCorrection(1000, 1000 - (CONVERGED_MS - 1), 1 + RATE_DELTA, NOT_DAMPED)).toEqual({
       kind: 'rate',
       rate: 1,
     });
   });
 
   it('below CONVERGED_MS with rate already 1 does nothing', () => {
-    expect(decideDriftCorrection(1000, 1000 + CONVERGED_MS - 1, 1)).toEqual({ kind: 'none' });
-    expect(decideDriftCorrection(1000, 1000, 1)).toEqual({ kind: 'none' });
+    expect(decideDriftCorrection(1000, 1000 + CONVERGED_MS - 1, 1, NOT_DAMPED)).toEqual({ kind: 'none' });
+    expect(decideDriftCorrection(1000, 1000, 1, NOT_DAMPED)).toEqual({ kind: 'none' });
   });
 
   it('zero drift with rate already 1 does nothing', () => {
-    expect(decideDriftCorrection(5000, 5000, 1)).toEqual({ kind: 'none' });
+    expect(decideDriftCorrection(5000, 5000, 1, NOT_DAMPED)).toEqual({ kind: 'none' });
+  });
+
+  it('обычный большой дрейф вне буферизации/cooldown — жёсткий seek', () => {
+    expect(decideDriftCorrection(0, HARD_SEEK_MS + 1, 1, NOT_DAMPED)).toEqual({
+      kind: 'seek',
+      toMs: 0,
+    });
+  });
+
+  it('дрейф во время буферизации — none, даже если превышает HARD_SEEK_MS', () => {
+    expect(decideDriftCorrection(0, HARD_SEEK_MS + 1, 1, damper({ buffering: true }))).toEqual({
+      kind: 'none',
+    });
+  });
+
+  it('дрейф внутри cooldown после жёсткого seek — none', () => {
+    expect(
+      decideDriftCorrection(0, HARD_SEEK_MS + 1, 1, damper({ msSinceHardSeek: SEEK_COOLDOWN_MS - 1 })),
+    ).toEqual({ kind: 'none' });
+  });
+
+  it('после истечения cooldown — снова жёсткий seek', () => {
+    expect(
+      decideDriftCorrection(0, HARD_SEEK_MS + 1, 1, damper({ msSinceHardSeek: SEEK_COOLDOWN_MS })),
+    ).toEqual({ kind: 'seek', toMs: 0 });
   });
 });
 

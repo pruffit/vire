@@ -46,6 +46,7 @@ class FakeAudioElement {
   preservesPitch?: boolean;
   mozPreservesPitch?: boolean;
   webkitPreservesPitch?: boolean;
+  buffered: { length: number; start: (index: number) => number } = { length: 0, start: () => 0 };
   listeners = new Map<string, Set<Handler>>();
 
   play = vi.fn(async () => {
@@ -157,6 +158,37 @@ describe('createJamAudio', () => {
     hls.emit(FakeHls.Events.ERROR, {}, { fatal: true });
     await expect(loadPromise).resolves.toBeUndefined();
     expect(hls.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('non-fatal bufferStalledError: прыжок на начало буферизованного диапазона и продолжение плей', async () => {
+    fetchManifestMock.mockResolvedValue(manifest('https://cdn.example/stall.m3u8'));
+    const { createJamAudio } = await import('./jam-audio');
+    const engine = createJamAudio();
+
+    const loadPromise = engine.load('track-stall');
+    const hls = await waitForNewHls(null);
+    hls.emit(FakeHls.Events.MANIFEST_PARSED);
+    await loadPromise;
+
+    lastAudioInstance!.currentTime = 0;
+    lastAudioInstance!.buffered = { length: 1, start: () => 4.2 };
+
+    hls.emit(FakeHls.Events.ERROR, {}, { fatal: false, details: 'bufferStalledError' });
+
+    expect(lastAudioInstance!.currentTime).toBeCloseTo(4.21);
+    expect(lastAudioInstance!.play).toHaveBeenCalled();
+    expect(hls.destroy).not.toHaveBeenCalled();
+  });
+
+  it('isBuffering: true после waiting, false после playing', async () => {
+    const { createJamAudio } = await import('./jam-audio');
+    const engine = createJamAudio();
+
+    expect(engine.isBuffering()).toBe(false);
+    lastAudioInstance!.emit('waiting');
+    expect(engine.isBuffering()).toBe(true);
+    lastAudioInstance!.emit('playing');
+    expect(engine.isBuffering()).toBe(false);
   });
 
   it('load: повторный вызов на новый трек уничтожает предыдущий hls-инстанс', async () => {

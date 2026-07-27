@@ -15,6 +15,7 @@ interface FakeEngine {
   seek: ReturnType<typeof vi.fn>;
   setRate: ReturnType<typeof vi.fn>;
   currentTimeMs: ReturnType<typeof vi.fn>;
+  isBuffering: ReturnType<typeof vi.fn>;
   onEnded: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
 }
@@ -27,6 +28,7 @@ function makeFakeEngine(): FakeEngine {
     seek: vi.fn(),
     setRate: vi.fn(),
     currentTimeMs: vi.fn(() => 0),
+    isBuffering: vi.fn(() => false),
     onEnded: vi.fn(() => vi.fn()),
     destroy: vi.fn(),
   };
@@ -199,6 +201,53 @@ describe('usePlaybackSync', () => {
 
     expect(engine.seek).not.toHaveBeenCalled();
     expect(engine.setRate).not.toHaveBeenCalled();
+  });
+
+  it('буферизация подавляет коррекцию даже при большом дрейфе', async () => {
+    const serverNow = () => 10_000;
+    const pb = playback({ startedAtMs: 0 });
+    renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
+    await flush();
+    engine.seek.mockClear();
+    engine.setRate.mockClear();
+
+    engine.currentTimeMs.mockReturnValue(6_000);
+    engine.isBuffering.mockReturnValue(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(engine.seek).not.toHaveBeenCalled();
+    expect(engine.setRate).not.toHaveBeenCalled();
+  });
+
+  it('cooldown после жёсткого seek подавляет следующую коррекцию, затем снова разрешает seek', async () => {
+    const serverNow = () => 10_000;
+    const pb = playback({ startedAtMs: 0 });
+    renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
+    await flush();
+    engine.seek.mockClear();
+    engine.setRate.mockClear();
+
+    engine.currentTimeMs.mockReturnValue(6_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    expect(engine.seek).toHaveBeenCalledTimes(1);
+
+    engine.seek.mockClear();
+    engine.setRate.mockClear();
+    engine.currentTimeMs.mockReturnValue(6_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    expect(engine.seek).not.toHaveBeenCalled();
+
+    engine.currentTimeMs.mockReturnValue(6_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    expect(engine.seek).toHaveBeenCalledWith(10_000);
   });
 
   it('visibilitychange запускает немедленный прогон, не дожидаясь тика', async () => {

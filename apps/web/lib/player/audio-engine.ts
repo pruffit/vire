@@ -5,6 +5,7 @@ import { dedupeQueue, shuffleOn, shuffleOff, nextQueueIndex, capLiveQueue, inser
 import { fetchManifest } from '@/lib/player/manifest-cache';
 import { needsWaveFetch, fetchWaveTracks } from '@/lib/player/wave-buffer';
 import { jamToggle } from '@/lib/jam/jam-controls';
+import { HLS_TUNING, attachStallRecovery } from '@/lib/player/hls-runtime';
 
 /** Джем-takeover активен — этот движок не источник звука, транспорт уходит в jamToggle(). */
 function jamOverrideActive(): boolean {
@@ -297,8 +298,7 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
   const Hls = await getHls();
   if (loadedTrackId !== track.id) return;
   if (Hls.isSupported()) {
-    // Часть исходников даёт «дыру» у начала буфера — повышенная терпимость и число попыток перепрыгнуть.
-    hls = new Hls({ maxBufferHole: 0.5, nudgeOffset: 0.2, nudgeMaxRetry: 8 });
+    hls = new Hls(HLS_TUNING);
     hls.loadSource(manifest.hlsUrl);
     hls.attachMedia(audio);
     hls.once(Hls.Events.MANIFEST_PARSED, () => {
@@ -306,22 +306,12 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
       if (isResume) usePlayerStore.getState()._setState({ hasAudio: true });
       audio?.play().catch(() => {});
     });
+    attachStallRecovery(hls, audio, Hls);
     hls.on(Hls.Events.ERROR, (_evt, data) => {
       // bufferSeekOverHole/bufferNudgeOnStall — hls.js успешно перепрыгнул дыру, не сбой.
       const benign = data.details === 'bufferSeekOverHole' || data.details === 'bufferNudgeOnStall';
       if (!benign) {
         console.warn('[player] HLS error', data.type, data.details, 'fatal:', data.fatal);
-      }
-
-      // Залип на дыре в начале буфера — перепрыгиваем на старт первого буферизованного диапазона.
-      if (!data.fatal && data.details === 'bufferStalledError' && audio) {
-        try {
-          const b = audio.buffered;
-          if (b.length > 0 && audio.currentTime < b.start(0)) {
-            audio.currentTime = b.start(0) + 0.01;
-            audio.play().catch(() => {});
-          }
-        } catch { /* buffered может бросить, если медиа ещё не готово */ }
       }
 
       if (data.fatal) {

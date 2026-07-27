@@ -1,5 +1,6 @@
 import type HlsType from 'hls.js';
 import { fetchManifest } from '@/lib/player/manifest-cache';
+import { HLS_TUNING, attachStallRecovery } from '@/lib/player/hls-runtime';
 
 interface VendorPitchAudioElement extends HTMLAudioElement {
   mozPreservesPitch?: boolean;
@@ -13,6 +14,8 @@ export interface JamAudioEngine {
   seek(ms: number): void;
   setRate(rate: number): void;
   currentTimeMs(): number;
+  /** Элемент реально ждёт данные (событие `waiting` без последующего `playing`) — дрейф на этом недостоверен. */
+  isBuffering(): boolean;
   onEnded(listener: () => void): () => void;
   destroy(): void;
 }
@@ -31,10 +34,15 @@ export function createJamAudio(): JamAudioEngine {
   let hls: HlsType | null = null;
   let loadedTrackId: string | null = null;
   let pendingLoadResolve: (() => void) | null = null;
+  let buffering = false;
   const endedListeners = new Set<() => void>();
 
   const handleEnded = (): void => endedListeners.forEach((listener) => listener());
+  const handleWaiting = (): void => { buffering = true; };
+  const handlePlaying = (): void => { buffering = false; };
   audio.addEventListener('ended', handleEnded);
+  audio.addEventListener('waiting', handleWaiting);
+  audio.addEventListener('playing', handlePlaying);
 
   function destroyHls(): void {
     if (!hls) return;
@@ -63,14 +71,19 @@ export function createJamAudio(): JamAudioEngine {
       if (loadedTrackId !== trackId) return;
 
       if (Hls.isSupported()) {
-        const instance = new Hls();
+        const instance = new Hls(HLS_TUNING);
         hls = instance;
         instance.on(Hls.Events.MANIFEST_PARSED, resolvePendingLoad);
         instance.on(Hls.Events.ERROR, (_evt, data) => {
-          if (!data.fatal) return;
+          if (!data.fatal) {
+            const benign = data.details === 'bufferSeekOverHole' || data.details === 'bufferNudgeOnStall';
+            if (!benign) console.warn('[jam] HLS error', data.type, data.details);
+            return;
+          }
           destroyHls();
           resolvePendingLoad();
         });
+        attachStallRecovery(instance, audio, Hls);
         await new Promise<void>((resolve) => {
           pendingLoadResolve = resolve;
           instance.loadSource(manifest.hlsUrl);
@@ -101,6 +114,10 @@ export function createJamAudio(): JamAudioEngine {
       return audio.currentTime * 1000;
     },
 
+    isBuffering(): boolean {
+      return buffering;
+    },
+
     onEnded(listener: () => void): () => void {
       endedListeners.add(listener);
       return () => endedListeners.delete(listener);
@@ -110,6 +127,8 @@ export function createJamAudio(): JamAudioEngine {
       resolvePendingLoad();
       destroyHls();
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('waiting', handleWaiting);
+      audio.removeEventListener('playing', handlePlaying);
       audio.pause();
       audio.removeAttribute('src');
       audio.src = '';

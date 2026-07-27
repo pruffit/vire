@@ -21,6 +21,7 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
   const loadedTrackIdRef = useRef<string | null>(null);
   const pausedRef = useRef<boolean | null>(null);
   const rateRef = useRef(1);
+  const lastHardSeekAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     onEndedRef.current = onEnded;
@@ -39,6 +40,7 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
       loadedTrackIdRef.current = null;
       pausedRef.current = null;
       rateRef.current = 1;
+      lastHardSeekAtRef.current = null;
     };
   }, [audioEnabled]);
 
@@ -50,6 +52,7 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
       loadedTrackIdRef.current = playback.trackId;
       pausedRef.current = playback.paused;
       rateRef.current = 1;
+      lastHardSeekAtRef.current = null;
       void engine.load(playback.trackId).then(() => {
         // load предыдущего трека резолвится досрочно при смене — не позиционируем по устаревшему состоянию
         if (loadedTrackIdRef.current !== playback.trackId) return;
@@ -80,13 +83,19 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
     function runCorrection(): void {
       const engine = engineRef.current;
       if (!engine || !playback || playback.paused) return;
+      const nowMs = Date.now();
       const expected = derivePositionMs(playback, serverNow());
       const actual = engine.currentTimeMs();
-      const action = decideDriftCorrection(expected, actual, rateRef.current);
+      const damper = {
+        buffering: engine.isBuffering(),
+        msSinceHardSeek: lastHardSeekAtRef.current === null ? null : nowMs - lastHardSeekAtRef.current,
+      };
+      const action = decideDriftCorrection(expected, actual, rateRef.current, damper);
       if (action.kind === 'seek') {
         engine.seek(action.toMs);
         engine.setRate(1);
         rateRef.current = 1;
+        lastHardSeekAtRef.current = nowMs;
       } else if (action.kind === 'rate') {
         engine.setRate(action.rate);
         rateRef.current = action.rate;

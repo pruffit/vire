@@ -17,7 +17,11 @@
   5 NTP-замеров, минимальный RTT, ресинк 5 мин). Позиция выводится из
   `{ trackId, startedAtMs, paused, pausedPositionMs }` в Redis, а не транслируется.
   Дрейф: >2с — жёсткий seek; 150мс–2с — `playbackRate = 1 ± 0.03` до схождения <50мс
-  (гистерезис); `preservesPitch`. Отдельный аудио-движок `lib/jam/jam-audio.ts`.
+  (гистерезис); `preservesPitch`. Коррекция задемпфирована (`DriftDamperState`): пока
+  элемент буферизует (`waiting` без `playing`) и 3с после жёсткого seek (`SEEK_COOLDOWN_MS`)
+  решение — `none`, иначе столл кормит сам себя (столл → seek → новый столл → заикание).
+  Отдельный аудио-движок `lib/jam/jam-audio.ts` — на общем HLS-слое `lib/player/hls-runtime.ts`
+  (`HLS_TUNING` + `attachStallRecovery`, те же настройки, что у основного плеера).
   Вход в звук — явный тап (автоплей-политика); `usePlaybackSync` получает
   `audioEnabled = audioEnabled && !ended` — на завершении джема движок гасится сразу
   (`engine.destroy()`), а не только при уходе со страницы.
