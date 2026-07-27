@@ -91,6 +91,11 @@ const nextConfig: NextConfig = {
   // Самодостаточный бандл (server.js + только нужные node_modules) для Docker.
   output: 'standalone',
   outputFileTracingRoot: repoRoot,
+  // Трейсер не тащит libvips: sharp грузит его через dlopen по RPATH из соседней папки
+  // внутри @img, а не require'ом. Без этого в musl-образе ERR_DLOPEN_FAILED (прод v1.34.0).
+  outputFileTracingIncludes: {
+    '/**': ['../../node_modules/.pnpm/@img+sharp-*/node_modules/@img/**'],
+  },
   transpilePackages: ['@vire/core', '@vire/db', '@vire/ui'],
   images: {
     formats: ['image/avif', 'image/webp'],
