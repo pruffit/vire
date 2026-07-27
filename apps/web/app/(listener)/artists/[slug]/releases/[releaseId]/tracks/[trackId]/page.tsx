@@ -22,6 +22,7 @@ import { musicRecordingJsonLd, breadcrumbListJsonLd } from '@/lib/structured-dat
 import { LiveListeners } from '@/components/live-listeners';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { AmbientBackdrop } from '@/components/ambient-backdrop';
+import { PageContainer } from '@/components/page-container';
 import { countListening } from '@/lib/presence';
 import { formatDuration, releaseYear } from '@/lib/format';
 import { trackMetaDescription } from '@/lib/meta-descriptions';
@@ -151,7 +152,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
       <AmbientBackdrop src={release.coverUrl} />
       {grain && <GrainOverlay />}
 
-      <div className="relative z-10 w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+      <PageContainer as="div" variant="detail" className="py-10 sm:py-14">
         <nav className="flex flex-wrap items-center gap-2 min-w-0 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)]">
           <Link href={`/artists/${slug}`} className="truncate max-w-[16rem] hover:text-[var(--artist-text)] transition-colors">
             {artist.name}
@@ -312,7 +313,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
             )}
           </div>
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 }

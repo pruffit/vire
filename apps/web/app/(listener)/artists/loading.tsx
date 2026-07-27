@@ -1,10 +1,12 @@
+import { PageContainer } from '@/components/page-container';
+
 function Sk({ className }: { className?: string }) {
   return <div className={`rounded-md bg-white/6 animate-pulse ${className ?? ''}`} />;
 }
 
 export default function ArtistsLoading() {
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
+    <PageContainer spaceY="10">
       <div className="flex items-baseline justify-between">
         <Sk className="h-7 w-24" />
         <Sk className="h-4 w-6" />
@@ -23,6 +25,6 @@ export default function ArtistsLoading() {
           </div>
         ))}
       </div>
-    </main>
+    </PageContainer>
   );
 }

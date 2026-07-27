@@ -4,6 +4,7 @@ import { getMoodCounts, getGenreCounts, getReleaseCardStats } from '@vire/db';
 import { FeaturedRelease } from '@/components/featured-release';
 import { FlowBlock } from '@/components/home/flow-block';
 import { JsonLd } from '@/components/json-ld';
+import { PageContainer } from '@/components/page-container';
 import { websiteJsonLd } from '@/lib/structured-data';
 import { RailSkeleton, TrackListSkeleton } from '@/components/home/skeletons';
 import {
@@ -38,7 +39,7 @@ export default async function HomePage() {
   const featuredStats = featured ? await getReleaseCardStats(featured.id).catch(() => null) : null;
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10 sm:space-y-16">
+    <PageContainer spaceY="home">
       <JsonLd data={websiteJsonLd()} />
       <h1 className="sr-only">Vire — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
 
@@ -93,6 +94,6 @@ export default async function HomePage() {
       <Suspense fallback={null}>
         <CatalogEmptyNotice />
       </Suspense>
-    </main>
+    </PageContainer>
   );
 }

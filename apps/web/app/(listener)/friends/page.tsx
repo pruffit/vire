@@ -9,6 +9,7 @@ import { UserSearch } from '@/components/friends/user-search';
 import { MarkRequestsSeen } from '@/components/friends/mark-requests-seen';
 import { Section } from '@/components/listener/section';
 import { EmptyState } from '@/components/ui-kit';
+import { PageContainer } from '@/components/page-container';
 
 export const metadata: Metadata = { title: 'Друзья' };
 export const dynamic = 'force-dynamic';
@@ -24,7 +25,7 @@ export default async function FriendsPage() {
   ]);
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-14">
+    <PageContainer spaceY="14">
       <MarkRequestsSeen />
       <h1 className="text-2xl font-semibold tracking-tight">Друзья</h1>
 
@@ -58,6 +59,6 @@ export default async function FriendsPage() {
           </div>
         )}
       </Section>
-    </main>
+    </PageContainer>
   );
 }

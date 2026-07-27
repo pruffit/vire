@@ -4,6 +4,7 @@ import { listReleases } from '@vire/db';
 import { FadeUp } from '@vire/ui/motion';
 import { JsonLd } from '@/components/json-ld';
 import { ReleasesGrid } from './releases-grid';
+import { PageContainer } from '@/components/page-container';
 import { breadcrumbListJsonLd } from '@/lib/structured-data';
 import { touchPill } from '@/components/popover';
 
@@ -36,7 +37,7 @@ export default async function ReleasesPage({ searchParams }: Props) {
   );
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
+    <PageContainer spaceY="8">
       <JsonLd data={breadcrumbListJsonLd([
         { name: 'Главная', url: '/' },
         { name: 'Релизы', url: '/releases' },
@@ -81,6 +82,6 @@ export default async function ReleasesPage({ searchParams }: Props) {
       ) : (
         <ReleasesGrid key={tab} releases={releases} />
       )}
-    </main>
+    </PageContainer>
   );
 }

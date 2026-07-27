@@ -19,7 +19,7 @@ import { mergeFriendsActivity } from '@/lib/activity';
 import { FriendsActivityFeed } from '@/components/friends/friends-activity-feed';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { ScrollRow } from '@/components/scroll-row';
-import { ArtistHoverChip } from '@/components/artist-hover-chip';
+import { ArtistCard } from '@/components/artist-card';
 import { ListeningNow } from '@/components/listening-now';
 import { EditorialPlaylistCard } from '@/components/editorial-playlist-card';
 import { HotTracks } from '@/components/home/hot-tracks';
@@ -27,6 +27,7 @@ import { RecentRail } from '@/components/home/recent-rail';
 import { PlayableTrackList } from '@/components/track-list';
 import { getListeningNow } from '@/lib/listening-now';
 import { Section } from '@/components/listener/section';
+import { pluralReleases } from '@/lib/format';
 
 export const cachedLatestReleases = cache(() => getLatestReleases(19).catch(() => []));
 const cachedUpcoming = cache(() => getUpcomingReleases(8).catch(() => []));
@@ -173,7 +174,16 @@ export async function ArtistsSection() {
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {topArtists.map((a) => (
           <div key={a.id} className="flex-[1_0_7rem] max-w-[11rem] min-w-0 snap-start">
-            <ArtistHoverChip artist={a} />
+            <ArtistCard
+              variant="chip"
+              id={a.id}
+              slug={a.slug}
+              name={a.name}
+              avatarUrl={a.avatarUrl}
+              coverFallbackUrl={a.firstReleaseCoverUrl}
+              verified={a.verified}
+              stat={a.releaseCount > 0 ? `${a.releaseCount} ${pluralReleases(a.releaseCount)}` : undefined}
+            />
           </div>
         ))}
       </ScrollRow>

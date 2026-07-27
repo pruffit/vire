@@ -18,6 +18,7 @@ import { LibraryPreviews } from '@/components/listener/profile/library-previews'
 import { AccountSection } from '@/components/listener/profile/account-section';
 import { Section } from '@/components/listener/section';
 import { FollowedArtists } from '@/components/listener/followed-artists';
+import { PageContainer } from '@/components/page-container';
 
 export const metadata: Metadata = { title: 'Профиль' };
 export const dynamic = 'force-dynamic';
@@ -43,7 +44,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   return (
     <main className="min-h-full overflow-x-clip">
       <ProfileBanner />
-      <div className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 pb-16 -mt-16 sm:-mt-24 relative z-10 space-y-14">
+      <PageContainer as="div" variant="overlap" spaceY="14">
         <ProfileHero
           user={{
             id: session.user.id,
@@ -77,7 +78,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           discoverable={publicProfile?.discoverable ?? true}
           notifyEmail={publicProfile?.notifyEmail ?? true}
         />
-      </div>
+      </PageContainer>
     </main>
   );
 }

@@ -1,14 +1,11 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
-import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
+import { Stagger, StaggerItem } from '@vire/ui/motion';
 import type { ArtistListItem } from '@vire/db';
 import { ALL_GENRES, GENRE_LABELS, type Genre } from '@/lib/genres';
-import { resolveAvatarUrl } from '@/lib/avatar';
-import { Icon } from '@/components/icon';
+import { ArtistCard } from '@/components/artist-card';
 import { pluralReleases } from '@/lib/format';
 import { ScrollRow } from '@/components/scroll-row';
 import { touchPill } from '@/components/popover';
@@ -114,7 +111,15 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
           <Stagger step={0.03} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
             {filtered.map((artist) => (
               <StaggerItem key={artist.id}>
-                <ArtistCard artist={artist} />
+                <ArtistCard
+                  id={artist.id}
+                  slug={artist.slug}
+                  name={artist.name}
+                  avatarUrl={artist.avatarUrl}
+                  coverFallbackUrl={artist.firstReleaseCoverUrl}
+                  verified={artist.verified}
+                  stat={artist.releaseCount > 0 ? `${artist.releaseCount} ${pluralReleases(artist.releaseCount)}` : undefined}
+                />
               </StaggerItem>
             ))}
           </Stagger>
@@ -127,49 +132,6 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
         </p>
       )}
     </div>
-  );
-}
-
-function ArtistCard({ artist }: { artist: ArtistListItem }) {
-  const displayAvatar = resolveAvatarUrl(artist.avatarUrl, artist.firstReleaseCoverUrl);
-  return (
-    <Link href={`/artists/${artist.slug}`} className="block">
-      <motion.article
-        whileHover={{ y: -2 }}
-        transition={spring.snappy}
-        className="group space-y-3 text-center"
-      >
-        <div className="relative mx-auto w-full aspect-square rounded-full overflow-hidden bg-muted ring-1 ring-white/5 transition-shadow duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-lg group-hover:shadow-black/20">
-          {displayAvatar ? (
-            <Image
-              src={displayAvatar}
-              alt={artist.name}
-              fill
-              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-              className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-2xl font-mono text-muted-foreground">
-              {artist.name[0]?.toUpperCase()}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-0.5 px-1">
-          <p className="text-sm font-medium leading-snug truncate transition-colors">
-            {artist.name}
-            {artist.verified && (
-              <Icon name="check" size={12} className="ml-1 inline-block align-middle text-muted-foreground" />
-            )}
-          </p>
-          {artist.releaseCount > 0 && (
-            <p className="text-xs text-muted-foreground font-mono tabular-nums">
-              {artist.releaseCount} {pluralReleases(artist.releaseCount)}
-            </p>
-          )}
-        </div>
-      </motion.article>
-    </Link>
   );
 }
 

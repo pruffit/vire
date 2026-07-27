@@ -7,6 +7,7 @@ import { getLikedTracksCached } from '@/lib/listener-data';
 import { PlaylistView } from '../../playlists/[id]/playlist-view';
 import { formatListenTime, pluralTracks } from '@/lib/format';
 import { Icon } from '@/components/icon';
+import { PageContainer } from '@/components/page-container';
 
 export const metadata: Metadata = { title: 'Любимые треки' };
 export const dynamic = 'force-dynamic';
@@ -43,7 +44,7 @@ export default async function LikedTracksPage() {
   };
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
+    <PageContainer spaceY="10">
       <FadeUp>
         <header className="flex items-start gap-6">
           <div className="grid h-24 w-24 shrink-0 place-items-center rounded-xl bg-linear-to-br from-foreground/20 to-foreground/[0.06] sm:h-28 sm:w-28">
@@ -60,6 +61,6 @@ export default async function LikedTracksPage() {
       </FadeUp>
 
       <PlaylistView playlist={playlist} isOwner={false} emptyTitle="Нет любимых треков" />
-    </main>
+    </PageContainer>
   );
 }

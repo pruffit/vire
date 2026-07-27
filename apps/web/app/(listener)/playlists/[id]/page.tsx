@@ -9,6 +9,7 @@ import { PlaylistLikeButton } from './playlist-like-button';
 import { getHeaderCovers } from './header-cover';
 import { PlaylistCover } from '@/components/playlist-cover';
 import { PlaylistShare } from '@/components/playlist-share';
+import { PageContainer } from '@/components/page-container';
 import { formatDuration, pluralTracks } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
 
@@ -54,7 +55,7 @@ export default async function PlaylistPage({ params }: Props) {
   const headerCovers = getHeaderCovers(playlist);
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
+    <PageContainer spaceY="10">
       <FadeUp>
         <header className="flex items-start gap-6">
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl shrink-0 overflow-hidden bg-card border border-border relative">
@@ -92,6 +93,6 @@ export default async function PlaylistPage({ params }: Props) {
       </FadeUp>
 
       <PlaylistView playlist={playlist} isOwner={isOwner} />
-    </main>
+    </PageContainer>
   );
 }

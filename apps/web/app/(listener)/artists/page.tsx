@@ -3,6 +3,7 @@ import { listActiveArtists } from '@vire/db';
 import { FadeUp } from '@vire/ui/motion';
 import { ArtistCatalog } from '@/components/artist-catalog';
 import { JsonLd } from '@/components/json-ld';
+import { PageContainer } from '@/components/page-container';
 import { artistsCatalogJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
 
 export const metadata: Metadata = {
@@ -15,7 +16,7 @@ export default async function ArtistsPage() {
   const artists = await listActiveArtists();
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
+    <PageContainer spaceY="8">
       <JsonLd data={artistsCatalogJsonLd()} />
       <JsonLd data={breadcrumbListJsonLd([
         { name: 'Главная', url: '/' },
@@ -39,6 +40,6 @@ export default async function ArtistsPage() {
       ) : (
         <ArtistCatalog artists={artists} />
       )}
-    </main>
+    </PageContainer>
   );
 }

@@ -13,6 +13,7 @@ import type { PlayerTrack } from '@/store/player';
 import { JsonLd } from '@/components/json-ld';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { AmbientBackdrop } from '@/components/ambient-backdrop';
+import { PageContainer } from '@/components/page-container';
 import { musicAlbumJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
 import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
 import { releaseMetaDescription } from '@/lib/meta-descriptions';
@@ -139,7 +140,7 @@ export default async function ReleasePage({ params }: Props) {
       <AmbientBackdrop src={release.coverUrl} />
       {grain && <GrainOverlay />}
 
-      <div className="relative z-10 w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-32">
+      <PageContainer as="div" variant="detail" className="pt-10 pb-32">
         <Link
           href={`/artists/${slug}`}
           className="inline-flex items-center gap-1.5 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)] hover:text-[color-mix(in_oklch,var(--artist-text)_70%,transparent)] transition-colors mb-10"
@@ -218,7 +219,7 @@ export default async function ReleasePage({ params }: Props) {
             )}
           </div>
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 }

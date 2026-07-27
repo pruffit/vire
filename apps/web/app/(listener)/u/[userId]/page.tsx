@@ -14,6 +14,7 @@ import { UnblockButton } from '@/components/friends/unblock-button';
 import { PlaylistCard } from '@/components/listener/playlist-card';
 import { Section } from '@/components/listener/section';
 import { EmptyState } from '@/components/ui-kit';
+import { PageContainer } from '@/components/page-container';
 import { FriendLikedTrackRow } from './friend-liked-track-row';
 
 type Props = { params: Promise<{ userId: string }> };
@@ -44,7 +45,7 @@ export default async function FriendProfilePage({ params }: Props) {
   const queue = view.likes.map(likedToPlayerTrack);
 
   return (
-    <main className="min-h-full w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-14">
+    <PageContainer spaceY="14" className="min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center gap-5 animate-fade-up">
         <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-full overflow-hidden ring-1 ring-border">
           {view.image ? (
@@ -112,6 +113,6 @@ export default async function FriendProfilePage({ params }: Props) {
           </Stagger>
         )}
       </Section>
-    </main>
+    </PageContainer>
   );
 }

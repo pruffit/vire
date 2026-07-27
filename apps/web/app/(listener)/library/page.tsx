@@ -14,6 +14,7 @@ import { CreatePlaylistButton } from '@/components/listener/create-playlist-butt
 import { EmptyState } from '@/components/ui-kit';
 import { EditorialPlaylistCard } from '@/components/editorial-playlist-card';
 import { Icon } from '@/components/icon';
+import { PageContainer } from '@/components/page-container';
 
 export const metadata: Metadata = { title: 'Медиатека' };
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,7 @@ export default async function LibraryPage() {
   const likedQueue: PlayerTrack[] = likedTracks.map(likedToPlayerTrack);
 
   return (
-    <main className="w-full max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-14">
+    <PageContainer spaceY="14">
       <FadeUp>
         <h1 className="text-2xl font-semibold tracking-tight">Медиатека</h1>
       </FadeUp>
@@ -107,6 +108,6 @@ export default async function LibraryPage() {
       <Section title="Подписки" count={followedArtists.length}>
         <FollowedArtists initial={followedArtists} />
       </Section>
-    </main>
+    </PageContainer>
   );
 }
