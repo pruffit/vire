@@ -152,7 +152,7 @@ export function DateField({
             exit={{ opacity: 0, y: -4 }}
             transition={spring.snappy}
             role="dialog"
-            className="absolute z-30 mt-1 w-[17rem] rounded-lg border border-foreground/15 bg-background p-3 shadow-xl shadow-black/40"
+            className="absolute z-30 mt-1 w-[17rem] max-w-[calc(100vw-2rem)] rounded-lg border border-foreground/15 bg-background p-3 shadow-xl shadow-black/40"
           >
             <div className="flex items-center justify-between gap-2 px-1">
               <span className="text-sm font-medium tabular-nums">

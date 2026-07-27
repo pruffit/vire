@@ -193,7 +193,7 @@ export function ColorField({ label, name, value, onChange, disabled }: Props) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={spring.snappy}
-              className="absolute left-0 top-full z-30 mt-1 w-56 rounded-lg border border-foreground/15 bg-background p-3 shadow-xl shadow-black/40"
+              className="absolute left-0 top-full z-30 mt-1 w-56 max-w-[calc(100vw-2rem)] rounded-lg border border-foreground/15 bg-background p-3 shadow-xl shadow-black/40"
             >
               <div
                 ref={svRef}

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Icon } from '@/components/icon';
-import { Popover } from '@/components/popover';
+import { AdaptivePopover } from '@/components/adaptive-popover';
 import { useRealtime } from '@/lib/use-realtime';
 
 type NotificationType = 'FRIEND_REQUEST' | 'FRIEND_ACCEPT' | 'JAM_INVITE';
@@ -68,11 +68,12 @@ export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number
   }
 
   return (
-    <Popover
+    <AdaptivePopover
       open={open}
       onOpenChange={handleOpenChange}
       align="right"
       drop="down"
+      title="Уведомления"
       panelClassName="w-80 max-w-[calc(100vw-1.5rem)]"
       trigger={({ toggle, ref }) => (
         <button
@@ -118,6 +119,6 @@ export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number
           ))
         )}
       </div>
-    </Popover>
+    </AdaptivePopover>
   );
 }

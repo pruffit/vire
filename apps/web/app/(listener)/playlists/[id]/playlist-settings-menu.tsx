@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
+import { useViewportClampX } from '@/lib/use-viewport-clamp-x';
 
 interface PlaylistMeta {
   id: string;
@@ -62,6 +63,7 @@ export function PlaylistSettingsMenu({ playlist }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const blobPreviewRef = useRef<string | null>(null);
   const router = useRouter();
+  const { panelRef, offsetX } = useViewportClampX(open);
 
   useEffect(() => {
     return () => { if (blobPreviewRef.current) URL.revokeObjectURL(blobPreviewRef.current); };
@@ -160,9 +162,10 @@ export function PlaylistSettingsMenu({ playlist }: Props) {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            ref={panelRef}
+            initial={{ opacity: 0, y: -6, scale: 0.96, x: offsetX }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: offsetX }}
+            exit={{ opacity: 0, y: -4, scale: 0.97, x: offsetX }}
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
           >

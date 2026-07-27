@@ -107,7 +107,7 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
         <div
           ref={popoverRef}
           style={{ position: 'fixed', top: pos.top, right: pos.right }}
-          className="z-50 w-72 rounded-lg border border-foreground/10 bg-popover shadow-xl p-3 flex flex-col gap-2.5 text-left"
+          className="z-50 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-foreground/10 bg-popover shadow-xl p-3 flex flex-col gap-2.5 text-left"
         >
           <p className="text-xs text-foreground/45">Аккаунты с доступом к дашборду артиста.</p>
 

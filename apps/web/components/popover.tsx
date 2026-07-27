@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'rea
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { cn } from '@/lib/utils';
+import { useViewportClampX } from '@/lib/use-viewport-clamp-x';
 
 export interface PopoverTriggerProps {
   open: boolean;
@@ -39,6 +40,7 @@ export function Popover({
   const [dropDown, setDropDown] = useState(drop === 'down');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const { panelRef, offsetX } = useViewportClampX(open);
 
   function toggle() {
     if (!open) {
@@ -78,10 +80,11 @@ export function Popover({
       <AnimatePresence>
         {open && (
           <motion.div
+            ref={panelRef}
             role={role}
-            initial={{ opacity: 0, y: yEnter, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: yExit, scale: 0.97 }}
+            initial={{ opacity: 0, y: yEnter, scale: 0.96, x: offsetX }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: offsetX }}
+            exit={{ opacity: 0, y: yExit, scale: 0.97, x: offsetX }}
             transition={spring.snappy}
             className={cn(
               'absolute z-50 min-w-[184px] rounded-xl border border-white/12 bg-card/95 backdrop-blur-xl shadow-2xl shadow-black/40 p-1',
