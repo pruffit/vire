@@ -28,6 +28,11 @@ RUN DATABASE_URL=postgresql://build:build@localhost/build \
     NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY} \
     pnpm --filter @vire/web build
 
+# Барьер: libvips грузится через dlopen по RPATH, трейсер его не видит и молча собирает
+# образ без него (так слёг прод v1.34.0 — ERR_DLOPEN_FAILED на каждой странице артиста).
+RUN test -n "$(find apps/web/.next/standalone -name 'libvips-cpp.so.*' -print -quit)" \
+    || (echo 'FATAL: libvips не попал в standalone — sharp упадёт в рантайме' && exit 1)
+
 # ===== Рантайм =====
 FROM node:22-alpine AS runner
 WORKDIR /app
