@@ -1,4 +1,4 @@
-import { cache, type ReactNode } from 'react';
+import { cache, Suspense, type ReactNode } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
@@ -49,6 +49,7 @@ import type { PlayerTrack } from '@/store/player';
 import { pluralTracks, pluralReleases, totalDuration } from '@/lib/format';
 import { ArtistPopularTracks, type ArtistPopularTrack } from './artist-popular-tracks';
 import { topByPlays } from '@/lib/artist-tracks';
+import { SimilarArtistsSection } from './similar-artists-section';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -233,6 +234,10 @@ export default async function ArtistPage({ params }: Props) {
               artistName={artist.name}
               accentColor={accent}
             />
+            {/* Suspense изолирует co-listen выборку — её сбой не должен ронять страницу артиста */}
+            <Suspense fallback={null}>
+              <SimilarArtistsSection artistProfileId={artist.id} />
+            </Suspense>
             {smartLinks.length > 0 && <SmartLinksSection smartLinks={smartLinks} artistSlug={artist.slug} />}
             {posts.length > 0 && <PostsSection posts={posts} />}
             {artist.videos.length > 0 && <VideosSection videos={artist.videos} />}

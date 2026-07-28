@@ -18,6 +18,7 @@ import {
   ListeningNowSection,
   PlaylistsSection,
   ArtistsSection,
+  DiscoverySection,
   CatalogEmptyNotice,
 } from './home-sections';
 import type { Metadata } from 'next';
@@ -90,6 +91,12 @@ export default async function HomePage() {
       <Suspense fallback={<RailSkeleton title="Артисты" cardWidth="flex-[1_0_7rem] max-w-[11rem] min-w-0" href="/artists" hrefLabel="Все артисты" round />}>
         <ArtistsSection />
       </Suspense>
+
+      {userId && (
+        <Suspense fallback={null}>
+          <DiscoverySection userId={userId} />
+        </Suspense>
+      )}
 
       <Suspense fallback={null}>
         <CatalogEmptyNotice />

@@ -250,6 +250,7 @@ export {
   findConversation, upsertConversation, getConversation, insertMessage, listMessages,
   listConversations, markConversationRead, countUnreadConversations,
 } from './queries/chat';
+export { getSimilarArtists, getDiscoveryCandidates, clearSimilarityCache } from './queries/similarity';
 export { getFriendsActivity } from './queries/friends-activity';
 export type {
   FriendsActivity, FriendActor, FriendLikeActivity, FriendFollowActivity, FriendPlaylistActivity,

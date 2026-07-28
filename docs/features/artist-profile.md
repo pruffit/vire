@@ -21,7 +21,8 @@
   На мобилке колонка становится верхним блоком; `ArtistCollapseBar` (компактная полоска
   при скролле) показывается только <lg, сентинел стоит после карточки.
 - **Правая колонка — лента контента**, порядок под вовлечение:
-  `Скоро → Популярное → Релизы → Площадки → Анонсы → Видео` (пустые секции скрыты).
+  `Скоро → Популярное → Релизы → Похожие артисты → Площадки → Анонсы → Видео` (пустые
+  секции скрыты).
 
 **Блок «Популярное»** (`ArtistPopularTracks`, `'use client'`) — играбельный трек-лист
 артиста по числу прослушиваний: top-5 + тоггл «Все треки (N)». Клик по строке играет
@@ -36,6 +37,11 @@
 motion-`Reveal`, оставлявшего висящий композит-слой / scroll-jitter). Каскад карточек —
 `Stagger`. Индикатор «сейчас играет» — общий `PlayingBars` (переиспользуется трек-листом
 релиза).
+
+**Блок «Похожие артисты»** (`SimilarArtistsSection`, серверный, под `Suspense` —
+co-listen-выборка не должна ронять страницу) — до 8 карточек `ArtistCard` с
+подписью-причиной в горизонтальной ленте `ScrollRow`; не рендерится меньше чем при
+3 кандидатах, работает и для анонима. Сигналы и ранжирование — `docs/features/discovery.md`.
 
 Темизация:
 - `artist_profiles.theme_tokens` — JSONB с CSS-переменными (`--artist-bg`, `--artist-text`, `--artist-accent` и др.)
@@ -58,6 +64,8 @@ motion-`Reveal`, оставлявшего висящий композит-сло
   (`ReleaseHeroPlay`, темизирована, `controls.play` из `player/audio-engine`)
 - **Индикатор «играет»:** `apps/web/components/playing-bars.tsx` (`PlayingBars`, общий
   с трек-листом релиза)
+- **Блок «Похожие артисты»:** `apps/web/app/(listener)/artists/[slug]/similar-artists-section.tsx`
+  (`SimilarArtistsSection`) — сигналы и данные в `docs/features/discovery.md`
 - **Форматтеры ридаута:** `apps/web/lib/format.ts` (`formatCount`, `plural*`, `totalDuration`)
 - **Виджет темизации:** `apps/web/components/theme-editor.tsx` (`ThemeEditor`, controlled) —
   пресеты, live color picker, шрифты, зерно, превью страницы; общий для дашборда

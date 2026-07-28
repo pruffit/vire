@@ -29,6 +29,7 @@ import { Section } from '@/components/listener/section';
 import { pluralReleases } from '@/lib/format';
 
 export { FeedSection } from '@/components/home/feed-section';
+export { DiscoverySection } from '@/components/home/discovery-section';
 
 export const cachedLatestReleases = cache(() => getLatestReleases(19).catch(() => []));
 const cachedUpcoming = cache(() => getUpcomingReleases(8).catch(() => []));
