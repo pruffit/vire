@@ -293,8 +293,10 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] `/artists/[slug]` — профиль: full-bleed hero, темизация, grain, ссылки, видео, follow, анонсы
 - [x] `/artists/[slug]/releases/[releaseId]` — релиз, трек-лист, liner notes, credits
 - [x] `.../tracks/[trackId]` — waveform-плеер, BPM/key, like, live-счётчик
-- [x] `/feed` — лента подписок, `/profile` — карточка профиля (смена имени, загрузка своего
+- [x] `/profile` — карточка профиля (смена имени, загрузка своего
   аватара в S3, «Способы входа»: пароль + привязка OAuth/Telegram), лайки, подписки, покупки
+- [x] «Ваша лента» на главной — ранжированные релизы/скорые релизы/анонсы подписок +
+  вкуса с подписью-причиной, `/feed` — redirect на `/` (`docs/features/feed.md`)
 - [x] Глобальный плеер — Zustand (persist `vire-player`, переживает перезагрузку) +
   HLS.js + единый waveform scrubber + LRC, wave-режим; редизайн UI на
   mini-bar/fullscreen/controls/queue-panel (`docs/features/player.md`)

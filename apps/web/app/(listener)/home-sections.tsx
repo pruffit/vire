@@ -4,7 +4,6 @@ import {
   listReleases,
   getUpcomingReleases,
   listActiveArtists,
-  getFeed,
   getEditorialPlaylists,
   getPersonalPlaylists,
   getPopularPlaylists,
@@ -29,6 +28,8 @@ import { getListeningNow } from '@/lib/listening-now';
 import { Section } from '@/components/listener/section';
 import { pluralReleases } from '@/lib/format';
 
+export { FeedSection } from '@/components/home/feed-section';
+
 export const cachedLatestReleases = cache(() => getLatestReleases(19).catch(() => []));
 const cachedUpcoming = cache(() => getUpcomingReleases(8).catch(() => []));
 const cachedArtists = cache(() => listActiveArtists().catch(() => []));
@@ -50,22 +51,6 @@ export async function PersonalBlock({ userId }: { userId: string }) {
         </Section>
       )}
     </>
-  );
-}
-
-export async function FeedSection({ userId }: { userId: string }) {
-  const feed = await getFeed(userId).catch(() => []);
-  if (feed.length === 0) return null;
-  return (
-    <Section title="Новое у подписок">
-      <ScrollRow bleedClassName="-mx-1" className="flex gap-5 px-1 snap-x">
-        {feed.slice(0, 12).map((r) => (
-          <div key={r.id} className="flex-[1_0_10rem] max-w-[14rem] min-w-0 snap-start">
-            <ReleaseQuickLook release={r} />
-          </div>
-        ))}
-      </ScrollRow>
-    </Section>
   );
 }
 

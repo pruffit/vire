@@ -125,14 +125,14 @@ export async function getReleaseCardStats(releaseId: string): Promise<ReleaseCar
 }
 
 // Релиз слышен (опубликован / запланирован с прошедшей датой), тот же предикат,
-// что в getLatestReleases; вынесен для переиспользования в каталоге.
-const releaseIsAired = or(
+// что в getLatestReleases; вынесен для переиспользования в каталоге и в ленте.
+export const releaseIsAired = or(
   eq(releases.status, 'PUBLISHED'),
   and(eq(releases.status, 'SCHEDULED'), isNotNull(releases.releaseDate), lte(releases.releaseDate, sql`now()`)),
 );
 
 // Момент выхода в эфир: published_at → release_date → created_at (см. getLatestReleases).
-const releaseFreshness = sql`coalesce(${releases.publishedAt}, ${releases.releaseDate}, ${releases.createdAt})`;
+export const releaseFreshness = sql<Date>`coalesce(${releases.publishedAt}, ${releases.releaseDate}, ${releases.createdAt})`;
 
 export interface ArtistPlayableTrack {
   id: string;

@@ -22,8 +22,9 @@
    ≥4 треках) — треки артистов из лайков/подписок/профиля вкуса, за вычетом уже
    показанных в «Продолжить слушать» (дедуп по id), `PlayableTrackList` (plain,
    2 колонки) → `getPersonalTrackPicks`.
-5. **Новое у подписок** (вошедшим) — свежие релизы артистов, на которых
-   подписан слушатель, горизонтальный рейл `ReleaseQuickLook` → `getFeed`.
+5. **Ваша лента** (вошедшим) — релизы/скорые релизы/анонсы подписок + релизы по
+   вкусу, ранжированные (свежесть/близость/популярность) с подписью-причиной,
+   вертикальный список → `buildFeed` (детали ранжирования и состава — [feed](feed.md)).
 6. **Горячие треки** (всем) — топ по прослушиваниям за 30 дней, `HotTracks`
    (ranked-список) → `getPopularTracks`.
 7. **Свежие релизы** / **Скоро выйдет** (всем) — каталожные сетки,
@@ -37,7 +38,8 @@
 10. **Артисты** (всем) — витрина активных артистов, `ArtistHoverChip`.
 
 ### Лента `/feed`
-Свежие релизы артистов, на которых подписан текущий слушатель. Требует входа.
+Страница удалена (redirect на `/`, `apps/web/app/feed/page.tsx`) — контент живёт как
+секция «Ваша лента» на главной, см. п. 5 выше и [feed](feed.md).
 
 ## Где код
 - **Главная:** `apps/web/app/(listener)/page.tsx` — RSC-стриминг: блокирующая
@@ -65,18 +67,17 @@
   `editorial-playlist-card.tsx`, `artist-hover-chip.tsx`, `listening-now.tsx`,
   `wave-start-button.tsx`
 - **Данные:** `getLatestReleases`, `listReleases`, `getUpcomingReleases`,
-  `listActiveArtists`, `getFeed`, `getMoodCounts`, `getGenreCounts`,
+  `listActiveArtists`, `getMoodCounts`, `getGenreCounts`,
   `getEditorialPlaylists`, `getPersonalPlaylists`, `getPopularPlaylists`,
   `getPublicUserPlaylists`, `getLikedPlaylistIds`, `getPopularTracks`,
   `getRecentlyPlayed`, `getPersonalTrackPicks` (всё в `@vire/db`, играбельные
-  запросы возвращают `PlayableChartTrack[]`)
+  запросы возвращают `PlayableChartTrack[]`); лента — `buildFeed` ([feed](feed.md))
 
 ## Env
 Не требуется (только `DATABASE_URL`; `S3_PUBLIC_ENDPOINT` для картинок).
 
 ## Ограничения / на будущее
 - На главной **нет поиска** — это осознанный принцип (поиск отдельно, см. [search](search.md)).
-- Лента — простая хронология по подпискам, без ранжирования/персонализации.
 - «Для тебя» — прагматичная выборка по артистам из лайков ∪ подписок ∪ профиля
   вкуса (`getTasteProfile.topArtistIds`) без ML, за вычетом уже лайкнутого/играного
   за 14 дней; при холодном старте (нет сигналов) секция пуста и скрывается.

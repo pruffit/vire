@@ -41,8 +41,7 @@ export {
 } from './queries/release-presaves';
 export type { ReleasePresaveInfo, DueRelease, PresaverContact } from './queries/release-presaves';
 export { getFollowState, getFollowerCount, followArtist, unfollowArtist } from './queries/follows';
-export { getFeed } from './queries/feed';
-export type { FeedRelease } from './queries/feed';
+export { getFeedCandidates, getFreshFeedCandidates } from './queries/feed';
 export { getLatestReleases, getUpcomingReleases, getUpcomingByArtist, getTracksByIds, listReleases, getExplicitReleaseIds, getArtistPlayableTracks, getPopularTracks, getRecentlyPlayed, getPersonalTrackPicks, getReleaseCardStats } from './queries/discovery';
 export type { DiscoveryRelease, DiscoveryTrack, ReleaseSort, ArtistPlayableTrack, PlayableChartTrack, ReleaseCardStats } from './queries/discovery';
 export { insertPlayEvent } from './queries/play-events';
