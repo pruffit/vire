@@ -1,8 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { PlaylistService } from '../../services/playlist';
-import { NotFoundError, ConflictError } from '../../errors';
+import { PlaylistService, PLAYLIST_MAX_COLLABORATORS } from '../../services/playlist';
+import { NotFoundError, ConflictError, ForbiddenError } from '../../errors';
 import type { IPlaylistRepository, IPlaylistCoverStorage } from '../../repositories/playlist';
-import type { PlaylistSummary, PlaylistWithTracks, PlaylistSuggestions } from '../../types/playlist';
+import type { IBlockRepository } from '../../repositories/block';
+import type { INotificationRepository } from '../../repositories/notification';
+import type { IPlaylistBroadcaster } from '../../ports/playlist-realtime';
+import type { PlaylistSummary, PlaylistWithTracks, PlaylistSuggestions, PlaylistCollaborator } from '../../types/playlist';
 
 const mockSummary: PlaylistSummary = {
   id: 'p1',
@@ -22,6 +25,8 @@ const mockPlaylist: PlaylistWithTracks = {
   visibility: 'PRIVATE',
   ownerUserId: 'owner-1',
   likesCount: 0,
+  isCollaborative: false,
+  version: 0,
   tracks: [
     {
       id: 't1',
@@ -36,6 +41,7 @@ const mockPlaylist: PlaylistWithTracks = {
       isExplicit: false,
       version: null,
       feat: [],
+      addedBy: null,
     },
   ],
 };
@@ -48,9 +54,9 @@ function makeRepo(overrides?: Partial<IPlaylistRepository>): IPlaylistRepository
     getWithTracks: vi.fn().mockResolvedValue(mockPlaylist),
     update: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(true),
-    addTrack: vi.fn().mockResolvedValue(undefined),
-    removeTrack: vi.fn().mockResolvedValue(undefined),
-    reorder: vi.fn().mockResolvedValue(true),
+    addTrack: vi.fn().mockResolvedValue(1),
+    removeTrack: vi.fn().mockResolvedValue(1),
+    reorder: vi.fn().mockResolvedValue(1),
     setCover: vi.fn().mockResolvedValue(undefined),
     searchTracks: vi.fn().mockResolvedValue([]),
     suggestions: vi.fn().mockResolvedValue({ liked: [], recent: [], similar: [] } satisfies PlaylistSuggestions),
@@ -60,6 +66,17 @@ function makeRepo(overrides?: Partial<IPlaylistRepository>): IPlaylistRepository
     trackExists: vi.fn().mockResolvedValue(true),
     adminUpdate: vi.fn().mockResolvedValue(undefined),
     adminDelete: vi.fn().mockResolvedValue(undefined),
+    listCollaborators: vi.fn().mockResolvedValue([]),
+    isCollaborator: vi.fn().mockResolvedValue(false),
+    joinCollaborator: vi.fn().mockResolvedValue('joined'),
+    removeCollaborator: vi.fn().mockResolvedValue(true),
+    setCollaboration: vi.fn().mockResolvedValue(undefined),
+    getCollabState: vi.fn().mockResolvedValue({
+      isCollaborative: false, collabToken: null, version: 0, ownerUserId: 'owner-1',
+    }),
+    getInvitePreview: vi.fn().mockResolvedValue(null),
+    getTrackAddedBy: vi.fn().mockResolvedValue(null),
+    removeMembershipBetween: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }
@@ -71,10 +88,56 @@ function makeStorage(overrides?: Partial<IPlaylistCoverStorage>): IPlaylistCover
   };
 }
 
+function makeBlocks(overrides?: Partial<IBlockRepository>): IBlockRepository {
+  return {
+    block: vi.fn().mockResolvedValue(undefined),
+    unblock: vi.fn().mockResolvedValue(undefined),
+    existsEitherWay: vi.fn().mockResolvedValue(false),
+    existsDirected: vi.fn().mockResolvedValue(false),
+    listBlocked: vi.fn().mockResolvedValue([]),
+    ...overrides,
+  };
+}
+
+function makeNotifications(overrides?: Partial<INotificationRepository>): INotificationRepository {
+  return {
+    insert: vi.fn().mockResolvedValue(undefined),
+    list: vi.fn().mockResolvedValue([]),
+    countUnread: vi.fn().mockResolvedValue(0),
+    markAllRead: vi.fn().mockResolvedValue(undefined),
+    markRead: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
+
+function makeBroadcaster(overrides?: Partial<IPlaylistBroadcaster>): IPlaylistBroadcaster {
+  return {
+    broadcast: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
+
 const NOW = 1_700_000_000_000;
 
-function makeService(repo: IPlaylistRepository, storage: IPlaylistCoverStorage = makeStorage()) {
-  return new PlaylistService(repo, storage, () => NOW);
+function makeService(
+  repo: IPlaylistRepository,
+  storage: IPlaylistCoverStorage = makeStorage(),
+  deps?: {
+    blocks?: IBlockRepository;
+    notifications?: INotificationRepository;
+    broadcaster?: IPlaylistBroadcaster;
+    uuid?: () => string;
+  },
+) {
+  return new PlaylistService(
+    repo,
+    storage,
+    () => NOW,
+    deps?.blocks ?? makeBlocks(),
+    deps?.notifications ?? makeNotifications(),
+    deps?.broadcaster ?? makeBroadcaster(),
+    deps?.uuid ?? (() => 'token-1'),
+  );
 }
 
 describe('PlaylistService.listForUser', () => {
@@ -167,6 +230,56 @@ describe('PlaylistService.getForViewer', () => {
     expect(anon.ok).toBe(true);
     expect(other.ok).toBe(true);
   });
+
+  it('allows a collaborator to view a PRIVATE collaborative playlist', async () => {
+    const repo = makeRepo({
+      getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }),
+      isCollaborator: vi.fn().mockResolvedValue(true),
+    });
+    const service = makeService(repo);
+
+    const result = await service.getForViewer('p1', 'collab-1');
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('allows an authenticated viewer with a valid join token into a PRIVATE collaborative playlist', async () => {
+    const repo = makeRepo({
+      getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }),
+      getCollabState: vi.fn().mockResolvedValue({ isCollaborative: true, collabToken: 'good-token', version: 0, ownerUserId: 'owner-1' }),
+    });
+    const service = makeService(repo);
+
+    const result = await service.getForViewer('p1', 'invited-1', 'good-token');
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('не отдаёт состав анониму даже по валидному токену', async () => {
+    const repo = makeRepo({
+      getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }),
+      getCollabState: vi.fn().mockResolvedValue({ isCollaborative: true, collabToken: 'good-token', version: 0, ownerUserId: 'owner-1' }),
+    });
+    const service = makeService(repo);
+
+    const result = await service.getForViewer('p1', null, 'good-token');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('forbids access via an invalid join token', async () => {
+    const repo = makeRepo({
+      getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }),
+      getCollabState: vi.fn().mockResolvedValue({ isCollaborative: true, collabToken: 'good-token', version: 0, ownerUserId: 'owner-1' }),
+    });
+    const service = makeService(repo);
+
+    const result = await service.getForViewer('p1', null, 'wrong-token');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+  });
 });
 
 describe('PlaylistService.update', () => {
@@ -233,6 +346,84 @@ describe('PlaylistService.delete', () => {
   });
 });
 
+describe('PlaylistService no-op мутации', () => {
+  it('не рассылает playlist:changed, когда трек уже был в плейлисте', async () => {
+    const broadcaster = makeBroadcaster();
+    const repo = makeRepo({ addTrack: vi.fn().mockResolvedValue(null) });
+    const service = makeService(repo, undefined, { broadcaster });
+
+    const result = await service.addTrack('p1', 'owner-1', 't2');
+
+    expect(result.ok).toBe(true);
+    expect(broadcaster.broadcast).not.toHaveBeenCalled();
+  });
+
+  it('не рассылает playlist:changed, когда удалять было нечего', async () => {
+    const broadcaster = makeBroadcaster();
+    const repo = makeRepo({ removeTrack: vi.fn().mockResolvedValue(null) });
+    const service = makeService(repo, undefined, { broadcaster });
+
+    const result = await service.removeTrack('p1', 'owner-1', 't9');
+
+    expect(result.ok).toBe(true);
+    expect(broadcaster.broadcast).not.toHaveBeenCalled();
+  });
+});
+
+describe('PlaylistService.checkInvite', () => {
+  const preview = {
+    title: 'Секретный плейлист',
+    ownerUserId: 'owner-1',
+    isCollaborative: true,
+    collabToken: 'good-token',
+  };
+
+  it('отдаёт превью по валидному токену — без состава треков', async () => {
+    const repo = makeRepo({ getInvitePreview: vi.fn().mockResolvedValue(preview) });
+    const service = makeService(repo);
+
+    const result = await service.checkInvite('p1', 'good-token');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toEqual({ title: 'Секретный плейлист', ownerUserId: 'owner-1' });
+    expect(repo.getWithTracks).not.toHaveBeenCalled();
+  });
+
+  it('отказывает на мусорный токен', async () => {
+    const repo = makeRepo({ getInvitePreview: vi.fn().mockResolvedValue(preview) });
+    const service = makeService(repo);
+
+    const result = await service.checkInvite('p1', 'garbage');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('отказывает, когда совместность выключена', async () => {
+    const repo = makeRepo({
+      getInvitePreview: vi.fn().mockResolvedValue({ ...preview, isCollaborative: false, collabToken: null }),
+    });
+    const service = makeService(repo);
+
+    const result = await service.checkInvite('p1', 'good-token');
+
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('PlaylistService.removeMembershipBetween', () => {
+  it('снимает членство и оповещает затронутые плейлисты', async () => {
+    const broadcaster = makeBroadcaster();
+    const repo = makeRepo({ removeMembershipBetween: vi.fn().mockResolvedValue(['p1', 'p2']) });
+    const service = makeService(repo, undefined, { broadcaster });
+
+    await service.removeMembershipBetween('owner-1', 'blocked-1');
+
+    expect(repo.removeMembershipBetween).toHaveBeenCalledWith('owner-1', 'blocked-1');
+    expect(broadcaster.broadcast).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('PlaylistService.addTrack', () => {
   it('adds track when owner and track exists', async () => {
     const repo = makeRepo();
@@ -276,6 +467,43 @@ describe('PlaylistService.addTrack', () => {
     if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
     expect(repo.addTrack).not.toHaveBeenCalled();
   });
+
+  it('allows a collaborator to add a track on a collaborative playlist', async () => {
+    const repo = makeRepo({
+      getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }),
+      isCollaborator: vi.fn().mockResolvedValue(true),
+    });
+    const service = makeService(repo);
+
+    const result = await service.addTrack('p1', 'collab-1', 't2');
+
+    expect(result.ok).toBe(true);
+    expect(repo.addTrack).toHaveBeenCalledWith('p1', 't2', 'collab-1');
+  });
+
+  it('forbids a non-collaborator on a collaborative playlist', async () => {
+    const repo = makeRepo({
+      getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }),
+      isCollaborator: vi.fn().mockResolvedValue(false),
+    });
+    const service = makeService(repo);
+
+    const result = await service.addTrack('p1', 'random', 't2');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+    expect(repo.addTrack).not.toHaveBeenCalled();
+  });
+
+  it('broadcasts playlist:changed with the new version after a successful add', async () => {
+    const broadcaster = makeBroadcaster();
+    const repo = makeRepo({ addTrack: vi.fn().mockResolvedValue(3) });
+    const service = makeService(repo, undefined, { broadcaster });
+
+    await service.addTrack('p1', 'owner-1', 't2');
+
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('p1', { type: 'playlist:changed', playlistId: 'p1', version: 3, actorId: 'owner-1' });
+  });
 });
 
 describe('PlaylistService.removeTrack', () => {
@@ -297,6 +525,49 @@ describe('PlaylistService.removeTrack', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.message).toContain('Forbidden');
+    expect(repo.removeTrack).not.toHaveBeenCalled();
+  });
+
+  it('owner removes a track added by a collaborator', async () => {
+    const repo = makeRepo({
+      getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }),
+      getTrackAddedBy: vi.fn().mockResolvedValue('collab-1'),
+    });
+    const service = makeService(repo);
+
+    const result = await service.removeTrack('p1', 'owner-1', 't1');
+
+    expect(result.ok).toBe(true);
+    expect(repo.removeTrack).toHaveBeenCalledWith('p1', 't1');
+    expect(repo.getTrackAddedBy).not.toHaveBeenCalled();
+  });
+
+  it('a collaborator removes their own added track', async () => {
+    const repo = makeRepo({
+      getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }),
+      isCollaborator: vi.fn().mockResolvedValue(true),
+      getTrackAddedBy: vi.fn().mockResolvedValue('collab-1'),
+    });
+    const service = makeService(repo);
+
+    const result = await service.removeTrack('p1', 'collab-1', 't1');
+
+    expect(result.ok).toBe(true);
+    expect(repo.removeTrack).toHaveBeenCalledWith('p1', 't1');
+  });
+
+  it('forbids a collaborator from removing a track added by someone else', async () => {
+    const repo = makeRepo({
+      getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }),
+      isCollaborator: vi.fn().mockResolvedValue(true),
+      getTrackAddedBy: vi.fn().mockResolvedValue('someone-else'),
+    });
+    const service = makeService(repo);
+
+    const result = await service.removeTrack('p1', 'collab-1', 't1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
     expect(repo.removeTrack).not.toHaveBeenCalled();
   });
 });
@@ -335,13 +606,47 @@ describe('PlaylistService.reorder', () => {
   });
 
   it('returns err(ConflictError) when repo reports permutation mismatch', async () => {
-    const repo = makeRepo({ reorder: vi.fn().mockResolvedValue(false) });
+    const repo = makeRepo({ reorder: vi.fn().mockResolvedValue(null) });
     const service = makeService(repo);
 
     const result = await service.reorder('p1', 'owner-1', ['t1', 't1', 't2']);
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
+  });
+
+  it('allows a collaborator to reorder', async () => {
+    const repo = makeRepo({
+      getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }),
+      isCollaborator: vi.fn().mockResolvedValue(true),
+    });
+    const service = makeService(repo);
+
+    const result = await service.reorder('p1', 'collab-1', ['t1']);
+
+    expect(result.ok).toBe(true);
+    expect(repo.reorder).toHaveBeenCalledWith('p1', 'collab-1', ['t1']);
+  });
+
+  it('forbids a non-collaborator on a non-collaborative playlist', async () => {
+    const repo = makeRepo();
+    const service = makeService(repo);
+
+    const result = await service.reorder('p1', 'random', ['t1']);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+    expect(repo.reorder).not.toHaveBeenCalled();
+  });
+
+  it('broadcasts playlist:changed with the new version after a successful reorder', async () => {
+    const broadcaster = makeBroadcaster();
+    const repo = makeRepo({ reorder: vi.fn().mockResolvedValue(7) });
+    const service = makeService(repo, undefined, { broadcaster });
+
+    await service.reorder('p1', 'owner-1', ['t1']);
+
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('p1', { type: 'playlist:changed', playlistId: 'p1', version: 7, actorId: 'owner-1' });
   });
 });
 
@@ -537,5 +842,369 @@ describe('PlaylistService like state (no exists check)', () => {
 
     expect(result.ok).toBe(true);
     expect(repo.unlike).toHaveBeenCalledWith('user-1', 'p1');
+  });
+});
+
+describe('PlaylistService.setCollaboration', () => {
+  it('enables collaboration and generates a token', async () => {
+    const repo = makeRepo();
+    const service = makeService(repo, undefined, { uuid: () => 'fresh-token' });
+
+    const result = await service.setCollaboration('p1', 'owner-1', true);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.collabToken).toBe('fresh-token');
+    expect(repo.setCollaboration).toHaveBeenCalledWith('p1', 'owner-1', { isCollaborative: true, collabToken: 'fresh-token' });
+  });
+
+  it('disabling collaboration nulls the token', async () => {
+    const repo = makeRepo();
+    const service = makeService(repo);
+
+    const result = await service.setCollaboration('p1', 'owner-1', false);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.collabToken).toBeNull();
+    expect(repo.setCollaboration).toHaveBeenCalledWith('p1', 'owner-1', { isCollaborative: false, collabToken: null });
+  });
+
+  it('returns err(NotFoundError) when playlist is missing', async () => {
+    const repo = makeRepo({ getWithTracks: vi.fn().mockResolvedValue(null) });
+    const service = makeService(repo);
+
+    const result = await service.setCollaboration('missing', 'owner-1', true);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
+  });
+
+  it('returns err(Forbidden) when caller is not the owner', async () => {
+    const repo = makeRepo();
+    const service = makeService(repo);
+
+    const result = await service.setCollaboration('p1', 'someone-else', true);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+    expect(repo.setCollaboration).not.toHaveBeenCalled();
+  });
+});
+
+describe('PlaylistService.rotateCollabToken', () => {
+  it('rotates the token on a collaborative playlist', async () => {
+    const repo = makeRepo({ getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }) });
+    const service = makeService(repo, undefined, { uuid: () => 'rotated-token' });
+
+    const result = await service.rotateCollabToken('p1', 'owner-1');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.collabToken).toBe('rotated-token');
+    expect(repo.setCollaboration).toHaveBeenCalledWith('p1', 'owner-1', { isCollaborative: true, collabToken: 'rotated-token' });
+  });
+
+  it('returns err(ConflictError) when the playlist is not collaborative', async () => {
+    const repo = makeRepo();
+    const service = makeService(repo);
+
+    const result = await service.rotateCollabToken('p1', 'owner-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
+  });
+
+  it('returns err(Forbidden) when caller is not the owner', async () => {
+    const repo = makeRepo({ getWithTracks: vi.fn().mockResolvedValue({ ...mockPlaylist, isCollaborative: true }) });
+    const service = makeService(repo);
+
+    const result = await service.rotateCollabToken('p1', 'someone-else');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+  });
+
+  it('returns err(NotFoundError) when playlist is missing', async () => {
+    const repo = makeRepo({ getWithTracks: vi.fn().mockResolvedValue(null) });
+    const service = makeService(repo);
+
+    const result = await service.rotateCollabToken('missing', 'owner-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
+  });
+});
+
+const collabState = (overrides?: Partial<{ isCollaborative: boolean; collabToken: string | null; version: number; ownerUserId: string | null }>) => ({
+  isCollaborative: true,
+  collabToken: 'good-token',
+  version: 0,
+  ownerUserId: 'owner-1',
+  ...overrides,
+});
+
+describe('PlaylistService.join', () => {
+  it('joins with a valid token, notifies the owner and broadcasts', async () => {
+    const notifications = makeNotifications();
+    const broadcaster = makeBroadcaster();
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()) });
+    const service = makeService(repo, undefined, { notifications, broadcaster });
+
+    const result = await service.join('p1', 'collab-1', 'good-token');
+
+    expect(result.ok).toBe(true);
+    expect(repo.joinCollaborator).toHaveBeenCalledWith('p1', 'collab-1', 'owner-1', PLAYLIST_MAX_COLLABORATORS);
+    expect(notifications.insert).toHaveBeenCalledWith('owner-1', 'PLAYLIST_COLLAB_JOIN', 'collab-1', 'p1');
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('p1', { type: 'playlist:collaborators', playlistId: 'p1', actorId: 'collab-1' });
+  });
+
+  it('is idempotent when the user is already a collaborator', async () => {
+    const notifications = makeNotifications();
+    const broadcaster = makeBroadcaster();
+    const repo = makeRepo({
+      getCollabState: vi.fn().mockResolvedValue(collabState()),
+      isCollaborator: vi.fn().mockResolvedValue(true),
+      joinCollaborator: vi.fn().mockResolvedValue('already'),
+    });
+    const service = makeService(repo, undefined, { notifications, broadcaster });
+
+    const result = await service.join('p1', 'collab-1', 'good-token');
+
+    expect(result.ok).toBe(true);
+    expect(notifications.insert).not.toHaveBeenCalled();
+    expect(broadcaster.broadcast).not.toHaveBeenCalled();
+  });
+
+  it('returns err(NotFoundError) when playlist is missing', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(null) });
+    const service = makeService(repo);
+
+    const result = await service.join('missing', 'collab-1', 'good-token');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
+  });
+
+  it('returns err(Forbidden) when the playlist is not collaborative', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState({ isCollaborative: false })) });
+    const service = makeService(repo);
+
+    const result = await service.join('p1', 'collab-1', 'good-token');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('returns err(Forbidden) on an invalid token', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()) });
+    const service = makeService(repo);
+
+    const result = await service.join('p1', 'collab-1', 'wrong-token');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+    expect(repo.joinCollaborator).not.toHaveBeenCalled();
+  });
+
+  it('returns err(Forbidden) when the caller is the owner', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()) });
+    const service = makeService(repo);
+
+    const result = await service.join('p1', 'owner-1', 'good-token');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('returns err(Forbidden) when there is a block either way with the owner', async () => {
+    const blocks = makeBlocks({ existsEitherWay: vi.fn().mockResolvedValue(true) });
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()) });
+    const service = makeService(repo, undefined, { blocks });
+
+    const result = await service.join('p1', 'collab-1', 'good-token');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+    expect(repo.joinCollaborator).not.toHaveBeenCalled();
+  });
+
+  it('returns err(ConflictError) when the playlist is at the collaborator cap', async () => {
+    const repo = makeRepo({
+      getCollabState: vi.fn().mockResolvedValue(collabState()),
+      joinCollaborator: vi.fn().mockResolvedValue('full'),
+    });
+    const notifications = makeNotifications();
+    const service = makeService(repo, undefined, { notifications });
+
+    const result = await service.join('p1', 'collab-1', 'good-token');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
+    expect(notifications.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe('PlaylistService.leave', () => {
+  it('removes the caller as a collaborator', async () => {
+    const repo = makeRepo({
+      getCollabState: vi.fn().mockResolvedValue(collabState()),
+      isCollaborator: vi.fn().mockResolvedValue(true),
+    });
+    const service = makeService(repo);
+
+    const result = await service.leave('p1', 'collab-1');
+
+    expect(result.ok).toBe(true);
+    expect(repo.removeCollaborator).toHaveBeenCalledWith('p1', 'collab-1');
+  });
+
+  it('returns err(Forbidden) when the caller is not a collaborator', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()) });
+    const service = makeService(repo);
+
+    const result = await service.leave('p1', 'random');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+    expect(repo.removeCollaborator).not.toHaveBeenCalled();
+  });
+
+  it('returns err(NotFoundError) when playlist is missing', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(null) });
+    const service = makeService(repo);
+
+    const result = await service.leave('missing', 'collab-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('PlaylistService.kick', () => {
+  it('lets the owner remove a collaborator', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()) });
+    const service = makeService(repo);
+
+    const result = await service.kick('p1', 'owner-1', 'collab-1');
+
+    expect(result.ok).toBe(true);
+    expect(repo.removeCollaborator).toHaveBeenCalledWith('p1', 'collab-1');
+  });
+
+  it('returns err(Forbidden) when caller is not the owner', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()) });
+    const service = makeService(repo);
+
+    const result = await service.kick('p1', 'someone-else', 'collab-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+    expect(repo.removeCollaborator).not.toHaveBeenCalled();
+  });
+
+  it('returns err(NotFoundError) when playlist is missing', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(null) });
+    const service = makeService(repo);
+
+    const result = await service.kick('missing', 'owner-1', 'collab-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('PlaylistService.listCollaborators', () => {
+  const collaborators: PlaylistCollaborator[] = [{ userId: 'collab-1', name: 'Collab', image: null, joinedAt: new Date('2026-01-01') }];
+
+  it('lets the owner list collaborators', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()), listCollaborators: vi.fn().mockResolvedValue(collaborators) });
+    const service = makeService(repo);
+
+    const result = await service.listCollaborators('p1', 'owner-1');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toBe(collaborators);
+  });
+
+  it('lets a collaborator list collaborators', async () => {
+    const repo = makeRepo({
+      getCollabState: vi.fn().mockResolvedValue(collabState()),
+      isCollaborator: vi.fn().mockResolvedValue(true),
+      listCollaborators: vi.fn().mockResolvedValue(collaborators),
+    });
+    const service = makeService(repo);
+
+    const result = await service.listCollaborators('p1', 'collab-1');
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('returns err(Forbidden) for a stranger', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()) });
+    const service = makeService(repo);
+
+    const result = await service.listCollaborators('p1', 'random');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+  });
+
+  it('returns err(NotFoundError) when playlist is missing', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(null) });
+    const service = makeService(repo);
+
+    const result = await service.listCollaborators('missing', 'owner-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('PlaylistService.assertStreamAccess', () => {
+  it('allows the owner on a collaborative playlist', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()) });
+    const service = makeService(repo);
+
+    const result = await service.assertStreamAccess('p1', 'owner-1');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.version).toBe(0);
+  });
+
+  it('allows a collaborator on a collaborative playlist', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()), isCollaborator: vi.fn().mockResolvedValue(true) });
+    const service = makeService(repo);
+
+    const result = await service.assertStreamAccess('p1', 'collab-1');
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('forbids access when the playlist is not collaborative', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState({ isCollaborative: false })) });
+    const service = makeService(repo);
+
+    const result = await service.assertStreamAccess('p1', 'owner-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+  });
+
+  it('forbids a non-member', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(collabState()) });
+    const service = makeService(repo);
+
+    const result = await service.assertStreamAccess('p1', 'random');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('Forbidden');
+  });
+
+  it('returns err(NotFoundError) when playlist is missing', async () => {
+    const repo = makeRepo({ getCollabState: vi.fn().mockResolvedValue(null) });
+    const service = makeService(repo);
+
+    const result = await service.assertStreamAccess('missing', 'owner-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(NotFoundError);
   });
 });

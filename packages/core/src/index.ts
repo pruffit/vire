@@ -5,6 +5,7 @@ export * from './ports/realtime';
 export * from './ports/external-notify';
 export * from './ports/jam-state';
 export * from './ports/jam-realtime';
+export * from './ports/playlist-realtime';
 export * from './util/uuid';
 export * from './util/ttl-cache';
 export * from './util/throttle-gate';

@@ -19,6 +19,8 @@ vi.mock('@vire/db', () => ({
     unlike = unlike;
     getLikeState = getLikeState;
   },
+  DrizzleBlockRepository: class {},
+  DrizzleNotificationRepository: class {},
 }));
 
 import { auth } from '@/auth';

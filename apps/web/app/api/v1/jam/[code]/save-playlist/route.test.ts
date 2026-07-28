@@ -8,14 +8,15 @@ const { resolveCode, getQueueForSave, recordSavedPlaylist } = vi.hoisted(() => (
 }));
 const { create, addTrack, getWithTracks, trackExists } = vi.hoisted(() => ({
   create: vi.fn(),
-  addTrack: vi.fn().mockResolvedValue(undefined),
-  getWithTracks: vi.fn().mockResolvedValue({ ownerUserId: 'u1' }),
+  addTrack: vi.fn().mockResolvedValue(1),
+  getWithTracks: vi.fn().mockResolvedValue({ ownerUserId: 'u1', isCollaborative: false }),
   trackExists: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
 vi.mock('@/lib/jam', () => ({ jamService: () => ({ resolveCode, getQueueForSave, recordSavedPlaylist }) }));
 vi.mock('@/lib/playlist-cover-storage', () => ({ playlistCoverStorage: { upload: vi.fn() } }));
+vi.mock('@/lib/realtime', () => ({ publishChannel: vi.fn(), playlistChannel: (id: string) => `rt:playlist:${id}` }));
 vi.mock('@vire/db', () => ({
   db: {},
   DrizzlePlaylistRepository: class {
@@ -24,6 +25,8 @@ vi.mock('@vire/db', () => ({
     getWithTracks = getWithTracks;
     trackExists = trackExists;
   },
+  DrizzleBlockRepository: class {},
+  DrizzleNotificationRepository: class {},
 }));
 
 import { auth } from '@/auth';

@@ -14,6 +14,8 @@ vi.mock('@vire/db', () => ({
     getWithTracks = getWithTracks;
     setCover = setCover;
   },
+  DrizzleBlockRepository: class {},
+  DrizzleNotificationRepository: class {},
 }));
 vi.mock('@/lib/playlist-cover-storage', () => ({ playlistCoverStorage: { upload } }));
 vi.mock('@/lib/image', () => ({

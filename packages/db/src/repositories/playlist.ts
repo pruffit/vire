@@ -8,6 +8,10 @@ import type {
   PlaylistTrack,
   TrackSearchResult,
   PlaylistSuggestions,
+  PlaylistCollaborator,
+  PlaylistCollabState,
+  JoinCollaboratorOutcome,
+  PlaylistInvitePreview,
 } from '@vire/core';
 import {
   getUserPlaylists,
@@ -25,6 +29,15 @@ import {
   getPlaylistLikeState,
   likePlaylist,
   unlikePlaylist,
+  listPlaylistCollaborators,
+  isPlaylistCollaborator,
+  joinPlaylistCollaborator,
+  removePlaylistCollaborator,
+  setPlaylistCollaboration,
+  getPlaylistCollabState,
+  getPlaylistInvitePreview,
+  getPlaylistTrackAddedBy,
+  removeCollaboratorMembershipBetween,
   type PlaylistTrackRow,
   type PlaylistAddTrack,
 } from '../queries/playlists';
@@ -61,15 +74,15 @@ export class DrizzlePlaylistRepository implements IPlaylistRepository {
     return deletePlaylist(id, userId);
   }
 
-  addTrack(playlistId: string, trackId: string, userId: string): Promise<void> {
+  addTrack(playlistId: string, trackId: string, userId: string): Promise<number | null> {
     return addTrackToPlaylist(playlistId, trackId, userId);
   }
 
-  removeTrack(playlistId: string, trackId: string): Promise<void> {
+  removeTrack(playlistId: string, trackId: string): Promise<number | null> {
     return removeTrackFromPlaylist(playlistId, trackId);
   }
 
-  reorder(playlistId: string, userId: string, trackIds: string[]): Promise<boolean> {
+  reorder(playlistId: string, userId: string, trackIds: string[]): Promise<number | null> {
     return reorderPlaylistTracks(playlistId, userId, trackIds);
   }
 
@@ -113,6 +126,44 @@ export class DrizzlePlaylistRepository implements IPlaylistRepository {
 
   adminDelete(id: string): Promise<void> {
     return adminDeletePlaylist(id);
+  }
+
+  listCollaborators(playlistId: string): Promise<PlaylistCollaborator[]> {
+    return listPlaylistCollaborators(playlistId);
+  }
+
+  isCollaborator(playlistId: string, userId: string): Promise<boolean> {
+    return isPlaylistCollaborator(playlistId, userId);
+  }
+
+  joinCollaborator(playlistId: string, userId: string, invitedBy: string, maxCollaborators: number): Promise<JoinCollaboratorOutcome> {
+    return joinPlaylistCollaborator(playlistId, userId, invitedBy, maxCollaborators);
+  }
+
+  removeCollaborator(playlistId: string, userId: string): Promise<boolean> {
+    return removePlaylistCollaborator(playlistId, userId);
+  }
+
+  setCollaboration(playlistId: string, ownerId: string, input: { isCollaborative: boolean; collabToken: string | null }): Promise<void> {
+    return setPlaylistCollaboration(playlistId, ownerId, input);
+  }
+
+  getCollabState(playlistId: string): Promise<PlaylistCollabState | null> {
+    return getPlaylistCollabState(playlistId);
+  }
+
+  async getInvitePreview(playlistId: string): Promise<(PlaylistInvitePreview & { isCollaborative: boolean; collabToken: string | null }) | null> {
+    const row = await getPlaylistInvitePreview(playlistId);
+    if (!row || !row.ownerUserId) return null;
+    return { title: row.title, ownerUserId: row.ownerUserId, isCollaborative: row.isCollaborative, collabToken: row.collabToken };
+  }
+
+  getTrackAddedBy(playlistId: string, trackId: string): Promise<string | null> {
+    return getPlaylistTrackAddedBy(playlistId, trackId);
+  }
+
+  removeMembershipBetween(userA: string, userB: string): Promise<string[]> {
+    return removeCollaboratorMembershipBetween(userA, userB);
   }
 }
 

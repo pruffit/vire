@@ -27,6 +27,8 @@ export default async function LikedTracksPage() {
     visibility: 'PUBLIC',
     ownerUserId: session.user.id,
     likesCount: 0,
+    isCollaborative: false,
+    version: 0,
     tracks: liked.map((t, i) => ({
       id: t.id,
       title: t.title,
@@ -40,6 +42,7 @@ export default async function LikedTracksPage() {
       isExplicit: t.isExplicit,
       version: t.version,
       feat: t.feat,
+      addedBy: null,
     })),
   };
 
@@ -60,7 +63,7 @@ export default async function LikedTracksPage() {
         </header>
       </FadeUp>
 
-      <PlaylistView playlist={playlist} isOwner={false} emptyTitle="Нет любимых треков" />
+      <PlaylistView playlist={playlist} role="VIEWER" emptyTitle="Нет любимых треков" />
     </PageContainer>
   );
 }

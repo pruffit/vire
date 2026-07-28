@@ -1,15 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { db, DrizzlePlaylistRepository } from '@vire/db';
-import { PlaylistService, NotFoundError, type PlaylistUpdatePatch } from '@vire/core';
-import { playlistCoverStorage } from '@/lib/playlist-cover-storage';
+import { NotFoundError, type PlaylistUpdatePatch } from '@vire/core';
+import { playlistService } from '@/lib/playlist';
 
 type Params = { params: Promise<{ id: string }> };
-
-function playlistService() {
-  return new PlaylistService(new DrizzlePlaylistRepository(db), playlistCoverStorage, Date.now);
-}
 
 const patchSchema = z.object({
   title: z.string().min(1).max(100).optional(),

@@ -43,8 +43,13 @@ export function PlaylistCard({ playlist }: Props) {
             <p className="text-sm font-medium truncate group-hover:text-foreground transition-colors">
               {playlist.title}
             </p>
-            <p className="text-xs text-muted-foreground font-mono">
+            <p className="text-xs text-muted-foreground font-mono flex items-center gap-1">
               {playlist.trackCount} тр.
+              {playlist.role === 'COLLABORATOR' && (
+                <span className="inline-flex items-center gap-0.5 text-muted-foreground/70">
+                  <Icon name="users" size={10} /> совместный
+                </span>
+              )}
             </p>
           </div>
         </a>

@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, ilike, inArray, notInArray, sql } from 'drizzle-orm';
 import { isUuid } from '@vire/core';
 import { db } from '../client';
-import { playlists, playlistTracks, playlistLikes, tracks, releases, artistProfiles, likes, playEvents } from '../schema';
+import { playlists, playlistTracks, playlistLikes, playlistCollaborators, tracks, releases, artistProfiles, likes, playEvents, users } from '../schema';
 import { featFromCredits } from './track-credits';
 
 export interface PlaylistSummary {
@@ -13,6 +13,13 @@ export interface PlaylistSummary {
   covers: string[];
   createdAt: Date;
   updatedAt: Date;
+  role?: 'OWNER' | 'COLLABORATOR';
+}
+
+export interface PlaylistTrackAddedByRow {
+  id: string;
+  name: string | null;
+  image: string | null;
 }
 
 export interface PlaylistTrackRow {
@@ -28,6 +35,7 @@ export interface PlaylistTrackRow {
   isExplicit: boolean;
   version: string | null;
   feat: string[];
+  addedBy: PlaylistTrackAddedByRow | null;
 }
 
 export interface PlaylistWithTracks {
@@ -38,8 +46,33 @@ export interface PlaylistWithTracks {
   visibility: 'PRIVATE' | 'PUBLIC';
   ownerUserId: string | null;
   likesCount: number;
+  isCollaborative: boolean;
+  version: number;
   tracks: PlaylistTrackRow[];
 }
+
+export interface PlaylistCollaboratorRow {
+  userId: string;
+  name: string | null;
+  image: string | null;
+  joinedAt: Date;
+}
+
+export interface PlaylistCollabState {
+  isCollaborative: boolean;
+  collabToken: string | null;
+  version: number;
+  ownerUserId: string | null;
+}
+
+export interface PlaylistInvitePreviewRow {
+  title: string;
+  ownerUserId: string | null;
+  isCollaborative: boolean;
+  collabToken: string | null;
+}
+
+export type JoinCollaboratorOutcome = 'joined' | 'already' | 'full';
 
 export interface EditorialPlaylist {
   id: string;
@@ -71,19 +104,33 @@ export interface PlaylistSuggestions {
   similar: PlaylistAddTrack[];
 }
 
+const OWN_PLAYLIST_COLS = {
+  id: playlists.id,
+  title: playlists.title,
+  visibility: playlists.visibility,
+  createdAt: playlists.createdAt,
+  updatedAt: playlists.updatedAt,
+  coverUrl: playlists.coverUrl,
+};
+
 export async function getUserPlaylists(userId: string): Promise<PlaylistSummary[]> {
-  const rows = await db
-    .select({
-      id: playlists.id,
-      title: playlists.title,
-      visibility: playlists.visibility,
-      createdAt: playlists.createdAt,
-      updatedAt: playlists.updatedAt,
-      coverUrl: playlists.coverUrl,
-    })
+  const ownRows = await db
+    .select(OWN_PLAYLIST_COLS)
     .from(playlists)
     .where(eq(playlists.ownerUserId, userId))
     .orderBy(desc(playlists.updatedAt));
+
+  const collabRows = await db
+    .select(OWN_PLAYLIST_COLS)
+    .from(playlistCollaborators)
+    .innerJoin(playlists, eq(playlists.id, playlistCollaborators.playlistId))
+    .where(eq(playlistCollaborators.userId, userId))
+    .orderBy(desc(playlists.updatedAt));
+
+  const rows = [
+    ...ownRows.map((r) => ({ ...r, role: 'OWNER' as const })),
+    ...collabRows.map((r) => ({ ...r, role: 'COLLABORATOR' as const })),
+  ];
 
   const meta = await fetchPlaylistMeta(rows.map((r) => r.id));
 
@@ -99,6 +146,7 @@ export async function getUserPlaylists(userId: string): Promise<PlaylistSummary[
       trackCount: m?.trackCount ?? 0,
       coverUrl: covers[0] ?? null,
       covers,
+      role: p.role,
     };
   });
 }
@@ -162,11 +210,15 @@ export async function getPlaylistWithTracks(
       isExplicit: tracks.isExplicit,
       version: tracks.version,
       credits: tracks.credits,
+      addedById: users.id,
+      addedByName: users.name,
+      addedByImage: users.image,
     })
     .from(playlistTracks)
     .innerJoin(tracks, eq(tracks.id, playlistTracks.trackId))
     .innerJoin(releases, eq(releases.id, tracks.releaseId))
     .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+    .leftJoin(users, eq(users.id, playlistTracks.addedBy))
     .where(eq(playlistTracks.playlistId, playlistId))
     .orderBy(asc(playlistTracks.position));
 
@@ -178,7 +230,13 @@ export async function getPlaylistWithTracks(
     visibility: playlist.visibility,
     ownerUserId: playlist.ownerUserId,
     likesCount: playlist.likesCount,
-    tracks: trackRows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) })),
+    isCollaborative: playlist.isCollaborative,
+    version: playlist.version,
+    tracks: trackRows.map(({ credits, addedById, addedByName, addedByImage, ...r }) => ({
+      ...r,
+      feat: featFromCredits(credits),
+      addedBy: addedById ? { id: addedById, name: addedByName, image: addedByImage } : null,
+    })),
   };
 }
 
@@ -202,44 +260,61 @@ export async function addTrackToPlaylist(
   playlistId: string,
   trackId: string,
   userId: string,
-): Promise<void> {
-  const rows = await db
-    .select({ position: playlistTracks.position })
-    .from(playlistTracks)
-    .where(eq(playlistTracks.playlistId, playlistId))
-    .orderBy(desc(playlistTracks.position))
-    .limit(1);
+): Promise<number | null> {
+  return db.transaction(async (tx) => {
+    // Лочит строку плейлиста до конца транзакции — сериализует состав/вступление на плейлист.
+    await tx.select({ id: playlists.id }).from(playlists).where(eq(playlists.id, playlistId)).for('update');
 
-  const position = rows.length > 0 ? rows[0].position + 1 : 0;
+    const rows = await tx
+      .select({ position: playlistTracks.position })
+      .from(playlistTracks)
+      .where(eq(playlistTracks.playlistId, playlistId))
+      .orderBy(desc(playlistTracks.position))
+      .limit(1);
 
-  await db
-    .insert(playlistTracks)
-    .values({ playlistId, trackId, position, addedBy: userId })
-    .onConflictDoNothing();
+    const position = rows.length > 0 ? rows[0].position + 1 : 0;
 
-  await db
-    .update(playlists)
-    .set({ updatedAt: new Date() })
-    .where(eq(playlists.id, playlistId));
+    const inserted = await tx
+      .insert(playlistTracks)
+      .values({ playlistId, trackId, position, addedBy: userId })
+      .onConflictDoNothing()
+      .returning({ id: playlistTracks.id });
+    if (inserted.length === 0) return null; // трек уже был в плейлисте — no-op
+
+    const [row] = await tx
+      .update(playlists)
+      .set({ updatedAt: new Date(), version: sql`${playlists.version} + 1` })
+      .where(eq(playlists.id, playlistId))
+      .returning({ version: playlists.version });
+    return row?.version ?? 0;
+  });
 }
 
 export async function removeTrackFromPlaylist(
   playlistId: string,
   trackId: string,
-): Promise<void> {
-  await db
-    .delete(playlistTracks)
-    .where(
-      and(
-        eq(playlistTracks.playlistId, playlistId),
-        eq(playlistTracks.trackId, trackId),
-      ),
-    );
+): Promise<number | null> {
+  return db.transaction(async (tx) => {
+    await tx.select({ id: playlists.id }).from(playlists).where(eq(playlists.id, playlistId)).for('update');
 
-  await db
-    .update(playlists)
-    .set({ updatedAt: new Date() })
-    .where(eq(playlists.id, playlistId));
+    const deleted = await tx
+      .delete(playlistTracks)
+      .where(
+        and(
+          eq(playlistTracks.playlistId, playlistId),
+          eq(playlistTracks.trackId, trackId),
+        ),
+      )
+      .returning({ id: playlistTracks.id });
+    if (deleted.length === 0) return null; // трека и не было — no-op
+
+    const [row] = await tx
+      .update(playlists)
+      .set({ updatedAt: new Date(), version: sql`${playlists.version} + 1` })
+      .where(eq(playlists.id, playlistId))
+      .returning({ version: playlists.version });
+    return row?.version ?? 0;
+  });
 }
 
 export async function getTrackPlaylistIds(
@@ -274,24 +349,22 @@ export function isPermutation(proposed: string[], current: string[]): boolean {
   return proposed.every((id) => set.has(id));
 }
 
+// userId остаётся в сигнатуре ради стабильного контракта репозитория — авторизацию
+// (владелец/коллаборатор) проверяет сервис (PlaylistService.canEdit), не запрос.
 export async function reorderPlaylistTracks(
   playlistId: string,
   userId: string,
   orderedTrackIds: string[],
-): Promise<boolean> {
+): Promise<number | null> {
   return db.transaction(async (tx) => {
-    const [pl] = await tx
-      .select({ ownerUserId: playlists.ownerUserId })
-      .from(playlists)
-      .where(eq(playlists.id, playlistId));
-    if (!pl || pl.ownerUserId !== userId) return false;
+    await tx.select({ id: playlists.id }).from(playlists).where(eq(playlists.id, playlistId)).for('update');
 
     const current = await tx
       .select({ trackId: playlistTracks.trackId })
       .from(playlistTracks)
       .where(eq(playlistTracks.playlistId, playlistId));
 
-    if (!isPermutation(orderedTrackIds, current.map((r) => r.trackId))) return false;
+    if (!isPermutation(orderedTrackIds, current.map((r) => r.trackId))) return null;
 
     for (let i = 0; i < orderedTrackIds.length; i++) {
       await tx
@@ -304,12 +377,143 @@ export async function reorderPlaylistTracks(
           ),
         );
     }
-    await tx
+    const [row] = await tx
       .update(playlists)
-      .set({ updatedAt: new Date() })
-      .where(eq(playlists.id, playlistId));
-    return true;
+      .set({ updatedAt: new Date(), version: sql`${playlists.version} + 1` })
+      .where(eq(playlists.id, playlistId))
+      .returning({ version: playlists.version });
+    return row?.version ?? 0;
   });
+}
+
+export async function listPlaylistCollaborators(playlistId: string): Promise<PlaylistCollaboratorRow[]> {
+  return db
+    .select({ userId: playlistCollaborators.userId, name: users.name, image: users.image, joinedAt: playlistCollaborators.joinedAt })
+    .from(playlistCollaborators)
+    .innerJoin(users, eq(users.id, playlistCollaborators.userId))
+    .where(eq(playlistCollaborators.playlistId, playlistId))
+    .orderBy(asc(playlistCollaborators.joinedAt));
+}
+
+export async function isPlaylistCollaborator(playlistId: string, userId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: playlistCollaborators.id })
+    .from(playlistCollaborators)
+    .where(and(eq(playlistCollaborators.playlistId, playlistId), eq(playlistCollaborators.userId, userId)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/** true, если строка реально удалена (не no-op) — гейт для рассылки playlist:collaborators. */
+export async function removePlaylistCollaborator(playlistId: string, userId: string): Promise<boolean> {
+  const result = await db
+    .delete(playlistCollaborators)
+    .where(and(eq(playlistCollaborators.playlistId, playlistId), eq(playlistCollaborators.userId, userId)))
+    .returning({ id: playlistCollaborators.id });
+  return result.length > 0;
+}
+
+/** Атомарно (лочит строку плейлиста): вставляет коллаборатора, если ещё не участник и лимит не исчерпан. */
+export async function joinPlaylistCollaborator(
+  playlistId: string,
+  userId: string,
+  invitedBy: string,
+  maxCollaborators: number,
+): Promise<JoinCollaboratorOutcome> {
+  return db.transaction(async (tx) => {
+    await tx.select({ id: playlists.id }).from(playlists).where(eq(playlists.id, playlistId)).for('update');
+
+    const [existing] = await tx
+      .select({ id: playlistCollaborators.id })
+      .from(playlistCollaborators)
+      .where(and(eq(playlistCollaborators.playlistId, playlistId), eq(playlistCollaborators.userId, userId)))
+      .limit(1);
+    if (existing) return 'already';
+
+    const [{ n }] = await tx
+      .select({ n: count() })
+      .from(playlistCollaborators)
+      .where(eq(playlistCollaborators.playlistId, playlistId));
+    if (Number(n) >= maxCollaborators) return 'full';
+
+    await tx.insert(playlistCollaborators).values({ playlistId, userId, invitedBy }).onConflictDoNothing();
+    return 'joined';
+  });
+}
+
+export async function setPlaylistCollaboration(
+  playlistId: string,
+  ownerId: string,
+  input: { isCollaborative: boolean; collabToken: string | null },
+): Promise<void> {
+  await db
+    .update(playlists)
+    .set({ isCollaborative: input.isCollaborative, collabToken: input.collabToken, updatedAt: new Date() })
+    .where(and(eq(playlists.id, playlistId), eq(playlists.ownerUserId, ownerId)));
+}
+
+export async function getPlaylistCollabState(playlistId: string): Promise<PlaylistCollabState | null> {
+  if (!isUuid(playlistId)) return null;
+  const [row] = await db
+    .select({
+      isCollaborative: playlists.isCollaborative,
+      collabToken: playlists.collabToken,
+      version: playlists.version,
+      ownerUserId: playlists.ownerUserId,
+    })
+    .from(playlists)
+    .where(eq(playlists.id, playlistId));
+  return row ?? null;
+}
+
+export async function getPlaylistTrackAddedBy(playlistId: string, trackId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ addedBy: playlistTracks.addedBy })
+    .from(playlistTracks)
+    .where(and(eq(playlistTracks.playlistId, playlistId), eq(playlistTracks.trackId, trackId)))
+    .limit(1);
+  return row?.addedBy ?? null;
+}
+
+/** Минимум данных для экрана приглашения (без состава треков) — доступно и анониму по токену. */
+export async function getPlaylistInvitePreview(playlistId: string): Promise<PlaylistInvitePreviewRow | null> {
+  if (!isUuid(playlistId)) return null;
+  const [row] = await db
+    .select({
+      title: playlists.title,
+      ownerUserId: playlists.ownerUserId,
+      isCollaborative: playlists.isCollaborative,
+      collabToken: playlists.collabToken,
+    })
+    .from(playlists)
+    .where(eq(playlists.id, playlistId));
+  return row ?? null;
+}
+
+/** Снимает совместное членство между userA и userB в обе стороны (блокировка). Возвращает id затронутых плейлистов. */
+export async function removeCollaboratorMembershipBetween(userA: string, userB: string): Promise<string[]> {
+  const ownedByA = await db.select({ id: playlists.id }).from(playlists).where(eq(playlists.ownerUserId, userA));
+  const ownedByB = await db.select({ id: playlists.id }).from(playlists).where(eq(playlists.ownerUserId, userB));
+
+  const removed: string[] = [];
+
+  if (ownedByA.length > 0) {
+    const rows = await db
+      .delete(playlistCollaborators)
+      .where(and(inArray(playlistCollaborators.playlistId, ownedByA.map((r) => r.id)), eq(playlistCollaborators.userId, userB)))
+      .returning({ playlistId: playlistCollaborators.playlistId });
+    removed.push(...rows.map((r) => r.playlistId));
+  }
+
+  if (ownedByB.length > 0) {
+    const rows = await db
+      .delete(playlistCollaborators)
+      .where(and(inArray(playlistCollaborators.playlistId, ownedByB.map((r) => r.id)), eq(playlistCollaborators.userId, userA)))
+      .returning({ playlistId: playlistCollaborators.playlistId });
+    removed.push(...rows.map((r) => r.playlistId));
+  }
+
+  return removed;
 }
 
 export async function updatePlaylist(

@@ -15,6 +15,8 @@ vi.mock('@vire/db', () => ({
     delete = deletePlaylist;
     update = update;
   },
+  DrizzleBlockRepository: class {},
+  DrizzleNotificationRepository: class {},
 }));
 
 import { auth } from '@/auth';

@@ -6,14 +6,14 @@ import {
   db, setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus,
   createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers,
   DrizzleReleaseRepository, DrizzleTrackRepository, DrizzleTrackMoodsRepository,
-  DrizzleArtistPostRepository, DrizzlePlaylistRepository, DrizzleArtistRepository,
+  DrizzleArtistPostRepository, DrizzleArtistRepository,
   ALL_MOODS, ALL_TRACK_GENRES,
 } from '@vire/db';
 import type { UserRole, ArtistMemberRow } from '@vire/db';
-import { ArtistPostService, PlaylistService, ArtistService, ReleaseService, TrackService } from '@vire/core';
+import { ArtistPostService, ArtistService, ReleaseService, TrackService } from '@vire/core';
 import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
 import { transcodeQueue } from '@/lib/queue';
-import { playlistCoverStorage } from '@/lib/playlist-cover-storage';
+import { playlistService } from '@/lib/playlist';
 import { parseLrc } from '@/lib/lrc';
 import { sanitizeCredits, type TrackCredit } from '@/lib/upload';
 import { SANS_FONTS, MONO_FONTS } from '@/lib/font-catalog';
@@ -37,10 +37,6 @@ function trackService() {
     transcodeQueue,
     { uuid: () => crypto.randomUUID(), moodsRepo: new DrizzleTrackMoodsRepository(db), parseLrc },
   );
-}
-
-function playlistService() {
-  return new PlaylistService(new DrizzlePlaylistRepository(db), playlistCoverStorage, Date.now);
 }
 
 export async function actionSetUserRole(userId: string, role: UserRole) {

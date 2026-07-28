@@ -1,7 +1,7 @@
 import { pgTable, uuid, timestamp, pgEnum, index } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
-export const notificationTypeEnum = pgEnum('notification_type', ['FRIEND_REQUEST', 'FRIEND_ACCEPT', 'JAM_INVITE']);
+export const notificationTypeEnum = pgEnum('notification_type', ['FRIEND_REQUEST', 'FRIEND_ACCEPT', 'JAM_INVITE', 'PLAYLIST_COLLAB_JOIN']);
 
 // actor_id хватает для ссылки на /u/[actor]; entity_id — задел под будущие типы уведомлений.
 export const notifications = pgTable('notifications', {

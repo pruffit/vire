@@ -69,6 +69,82 @@
   если лайкнутый плейлист стал приватным, он выпадает из секции «Лайкнутые
   подборки» (сам лайк в БД остаётся, просто не показывается).
 
+## Коллаборативные плейлисты
+
+Тумблер `playlists.is_collaborative` (зарезервирован с миграции 0000) включён: несколько
+человек ведут один персистентный плейлист, изменения видны сразу без перезагрузки. Не
+путать с джемом (`jam.md`) — джем эфемерный, вход по коду, гости без аккаунта; здесь
+участие постоянное и требует аккаунта.
+
+- **Приглашение по ссылке** — `playlists.collab_token` (nullable). Владелец включает
+  тумблер → генерится токен → ссылка `/playlists/[id]?join=<token>`. Токен живёт, только
+  пока `is_collaborative = true`: выключение обнуляет его (старые ссылки мертвеют),
+  «Сбросить ссылку» генерит новый. Действующую ссылку отдаёт `GET .../collaboration`
+  (только владельцу) — «Скопировать ссылку» читает её оттуда и **не** выпускает новый
+  токен, иначе каждое копирование убивало бы уже разосланные приглашения. Ни один
+  публичный GET плейлиста токен не возвращает.
+- **Права** (`packages/core/src/services/playlist.ts`, приватный `canEdit`): владелец —
+  всё; коллаборатор — добавляет треки, переупорядочивает состав, удаляет только треки,
+  добавленные им самим (`playlist_tracks.added_by`); метаданные/обложка/удаление
+  плейлиста/тумблер/кик — только владелец. Приватный + совместный разрешён: валидный
+  токен в URL пускает на страницу без публикации плейлиста и без вступления в команду —
+  но **только авторизованного**. Анониму по валидной ссылке отдаётся экран приглашения
+  (`playlist-invite-screen.tsx`: название + кто зовёт + вход) без состава треков; та же
+  граница на `GET .../tracks` (403 анониму с токеном). Валидность ссылки проверяет лёгкий
+  `PlaylistService.checkInvite` — он же решает, показывать ли баннер приглашения, чтобы
+  мусорный `?join=` на публичном плейлисте не рисовал ложное «вас зовут».
+- **Участники** — таблица `playlist_collaborators` (`user_id`, `invited_by`, `joined_at`,
+  unique по `playlist_id+user_id`). Гарды на присоединение (`PlaylistService.join`):
+  авторизован, `is_collaborative`, токен совпадает, не владелец, нет блокировки в любую
+  сторону (`isBlockedEitherWay`). Вставка и проверка лимита `PLAYLIST_MAX_COLLABORATORS`
+  (50) — одной транзакцией репозитория (`joinCollaborator`, лочит строку плейлиста), иначе
+  параллельные вступления на границе лимита оба проходят; исход `joined | already | full`.
+  Уведомление и броадкаст — best-effort после успешной вставки: их сбой не откатывает
+  вступление. Членства при выключении тумблера не удаляются — обратное включение
+  возвращает ту же команду (доступ к приватному плейлисту при этом закрыт, пока тумблер
+  выключен). **Блокировка снимает членство в обе стороны** (`removeMembershipBetween`
+  дёргается из роута блокировки) — иначе заблокированный остаётся редактором.
+- **Realtime** — канал `rt:playlist:{id}` поверх `lib/realtime.ts`, порт в core
+  `IPlaylistBroadcaster`. Тонкие события без полезной нагрузки: `playlist:changed`
+  (`{playlistId, version, actorId}` — на add/remove/reorder), `playlist:collaborators`
+  (`{playlistId, actorId}` — join/leave/kick). `playlists.version` инкрементится в той же
+  транзакции, что мутация состава (`version + 1` в SQL), и **только если состав реально
+  изменился**: повторное добавление того же трека (`onConflictDoNothing`), удаление
+  отсутствующего и кик того, кого в команде не было, версию не двигают и событий не шлют —
+  иначе двойной клик рассылал бы всем подписчикам лишнее перечитывание. Мутации состава
+  лочат строку плейлиста (`select … for update`), поэтому reorder не пересекается с
+  параллельным add/remove и не оставляет дыр в позициях. SSE `GET
+  /api/v1/playlists/[id]/stream` — только участникам совместного плейлиста, snapshot с
+  текущей версией на подключении, heartbeat 25с (копия структуры `jam/[code]/stream`).
+  Клиент (`playlist-realtime-sync.tsx`) подписывается только когда плейлист совместный и
+  зритель — участник; игнорирует события со своим `actorId` (правка уже применена
+  оптимистично) и версии не новее уже применённой; на чужое `playlist:changed` перечитывает
+  `GET .../tracks` и заменяет состав. Reorder-конфликт (409, чужая правка обогнала) тоже
+  разрешается перечитыванием, а не слепым откатом к локальному `prev`. Падение Redis
+  деградирует до отсутствия live-обновлений — REST остаётся рабочим.
+- **UI** (`app/(listener)/playlists/[id]/`): бейдж «Совместный» + стек аватаров участников
+  (`playlist-collaborators.tsx`, ≤4 + «+N», `ChatAvatar`) в шапке; секция совместности в
+  `playlist-settings-menu.tsx` (тумблер, копирование/сброс ссылки, список участников с
+  «Исключить») — только владельцу; `playlist-leave-button.tsx` — коллаборатору взамен меню
+  настроек; `playlist-join-banner.tsx` при `?join=` — авторизованному кнопка
+  «Присоединиться» (`POST .../collaborators`), анониму — вход с `callbackUrl` на ту же
+  ссылку; `playlist-track-row.tsx` показывает аватар добавившего только в совместных
+  плейлистах. Все действия (тумблер, join/leave/kick, добавление/удаление трека)
+  оптимистичны с откатом в catch.
+- **`generateMetadata`/`opengraph-image.tsx` токен не пускают** — читают плейлист напрямую
+  (`getPlaylistWithTracks`) без `joinToken`, поэтому приватный совместный плейлист остаётся
+  `noindex` и с нейтральной OG-картинкой даже по действующей ссылке-приглашению
+  (регресс-тест `page.test.tsx`/`opengraph-image.test.tsx`). Страница (`page.tsx`) читает
+  плейлист через `playlistService().getForViewer(id, viewerId, joinToken)` — только это
+  чтение учитывает токен.
+- **Медиатека** — `/library` показывает плейлисты, где юзер коллаборатор, вместе со своими
+  (`getUserPlaylists` объединяет собственные и членские строки), с пометкой роли на
+  карточке (`PlaylistSummary.role`).
+- **Уведомление** — `PLAYLIST_COLLAB_JOIN` владельцу при входе участника
+  (`NotificationService`, `entityId = playlistId`); добавления треков не уведомляют (шум).
+- **Миграция** `0044` — `playlists.collab_token`, `playlists.version`,
+  `playlist_collaborators`, значение enum `PLAYLIST_COLLAB_JOIN`.
+
 ## Где код
 
 - **Страница:** `apps/web/app/(listener)/playlists/[id]/page.tsx` — server-shell
@@ -84,20 +160,36 @@
   (на `components/popover.tsx`).
 - **Клиент:**
   - `playlist-view.tsx` — оркестратор: оптимистичное состояние треков, dnd-контекст,
-    экшен-бар, эффекты вне state-updater'ов (чисто, без двойного fetch в StrictMode).
-  - `playlist-track-row.tsx` — sortable-строка (dnd-kit), play-оверлей, инлайн grip-SVG.
+    экшен-бар, эффекты вне state-updater'ов (чисто, без двойного fetch в StrictMode); права
+    по роли (`OWNER | COLLABORATOR | VIEWER`), монтирует `playlist-realtime-sync.tsx`.
+  - `playlist-realtime-sync.tsx` — тонкий SSE-клиент (`lib/use-realtime.ts`) на
+    `.../stream`, без разметки (`return null`); версия и self-id для фильтрации событий.
+  - `playlist-collaborators.tsx` — бейдж «Совместный» + `PlaylistCollaboratorsStack`
+    (стек аватаров, серверные компоненты без интерактива).
+  - `playlist-join-banner.tsx`, `playlist-leave-button.tsx` — баннер приглашения /
+    выход коллаборатора из команды.
+  - `playlist-track-row.tsx` — sortable-строка (dnd-kit), play-оверлей, инлайн grip-SVG,
+    опц. аватар добавившего (`SortableTrackRow`'s `avatar` slot).
   - `playlist-add-panel.tsx` — поиск + подсказки, AbortController на оба запроса.
   - `playlist-settings-menu.tsx` — меню владельца (rename/описание/приватность/обложка/
-    удаление), revoke blob-превью.
+    удаление/совместность), revoke blob-превью.
 - **API:** `apps/web/app/api/v1/playlists/[id]/`
-  - `tracks` — `POST` добавить (dedup), `PUT` переупорядочить (`{ trackIds }`),
-    `tracks/[trackId]` `DELETE` убрать.
+  - `tracks` — `GET` состав + версия (правила просмотра), `POST` добавить (dedup, владелец
+    или коллаборатор), `PUT` переупорядочить (`{ trackIds }`, владелец/коллаборатор, 409 на
+    гонку), `tracks/[trackId]` `DELETE` убрать (владелец — любой, коллаборатор — только свой).
   - `route.ts` — `PATCH` (title/description/visibility, owner-gated), `DELETE`.
+  - `collaboration` — `GET` действующая ссылка, `PATCH { enabled }` тумблер (генерит/
+    обнуляет токен), `POST` сброс токена; все три владелец-only, ответ — `inviteUrl`.
+  - `collaborators` — `GET` список (участникам), `POST { token }` присоединиться
+    (rate-limit 20/мин), `DELETE` выйти самому; `collaborators/[userId]` `DELETE` — кик
+    (владелец).
+  - `stream` — SSE, снапшот + `playlist:changed`/`playlist:collaborators`, только
+    участникам совместного плейлиста.
   - `../playlists/route.ts` — `GET` список плейлистов; опц. `?trackId=<uuid>` добавляет
     в ответ `inPlaylists` (id плейлистов, где трек уже есть) для галочек быстрого добавления.
   - `cover` — `POST` (multipart `cover` | `removeCover=1`).
-  - `suggestions` — `GET` умные подсказки (владелец).
-  - `add-search` — `GET ?q=` поиск треков для добавления (владелец).
+  - `suggestions` — `GET` умные подсказки (владелец или коллаборатор).
+  - `add-search` — `GET ?q=` поиск треков для добавления (владелец или коллаборатор).
 - **Данные:** `packages/db/src/queries/playlists.ts` — `reorderPlaylistTracks`
   (транзакция + `isPermutation`-guard), `updatePlaylist`, `setPlaylistCover`,
   `searchTracksForPlaylist`, `getPlaylistSuggestions`, dedup в `addTrackToPlaylist`.
@@ -114,7 +206,6 @@
 
 ## Ограничения / на будущее
 
-- **Коллаборативные плейлисты** не реализованы (колонка `is_collaborative` зарезервирована).
 - Подсказки — эвристика (лайки / недавнее / тот же артист), без ML-рекомендаций.
 - Переупорядочивание переписывает `position` строк по одной в транзакции — для очень
   больших плейлистов можно перейти на bulk-update.

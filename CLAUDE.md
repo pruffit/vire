@@ -275,7 +275,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 
 ### Фундамент
 - [x] Монорепо (Turborepo + pnpm), docker-compose (postgres/redis/minio)
-- [x] `packages/db` — Drizzle схема + миграции 0000–0036
+- [x] `packages/db` — Drizzle схема + миграции 0000–0044
 - [x] `packages/core` — Result<T,E>, domain types, сервисы (Artist/Release/Track,
   Follow/ListenerTrack/TrackMoods/Playlist, ArtistPost/SmartLink, Wave/Search/Presave,
   Auth, Purchase), репозитории

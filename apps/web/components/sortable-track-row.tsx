@@ -31,6 +31,8 @@ interface Props {
   onMoveDown?: (trackId: string) => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
+  /** Аватар добавившего трек — только в совместных плейлистах. */
+  avatar?: ReactNode;
 }
 
 export function SortableTrackRow({
@@ -49,6 +51,7 @@ export function SortableTrackRow({
   onMoveDown,
   canMoveUp,
   canMoveDown,
+  avatar,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: track.id, disabled: !canDrag });
@@ -127,6 +130,7 @@ export function SortableTrackRow({
       }
       trailing={
         <>
+          {avatar}
           {typeof track.durationSec === 'number' && track.durationSec > 0 && (
             <span className="text-xs font-mono text-muted-foreground tabular-nums shrink-0">{formatDuration(track.durationSec)}</span>
           )}

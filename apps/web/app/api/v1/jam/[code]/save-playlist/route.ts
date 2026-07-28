@@ -2,15 +2,10 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { jamService } from '@/lib/jam';
-import { db, DrizzlePlaylistRepository } from '@vire/db';
-import { PlaylistService, ForbiddenError, ValidationError } from '@vire/core';
-import { playlistCoverStorage } from '@/lib/playlist-cover-storage';
+import { ForbiddenError, ValidationError } from '@vire/core';
+import { playlistService } from '@/lib/playlist';
 
 const schema = z.object({ title: z.string().trim().min(1).max(100).optional() });
-
-function playlistService() {
-  return new PlaylistService(new DrizzlePlaylistRepository(db), playlistCoverStorage, Date.now);
-}
 
 type Ctx = { params: Promise<{ code: string }> };
 

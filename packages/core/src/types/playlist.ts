@@ -1,4 +1,5 @@
 export type PlaylistVisibility = 'PRIVATE' | 'PUBLIC';
+export type PlaylistRole = 'OWNER' | 'COLLABORATOR';
 
 export interface PlaylistSummary {
   id: string;
@@ -8,6 +9,14 @@ export interface PlaylistSummary {
   coverUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
+  /** Только у getUserPlaylists ("моя медиатека"); в остальных геттерах не заполняется. */
+  role?: PlaylistRole;
+}
+
+export interface PlaylistTrackAddedBy {
+  id: string;
+  name: string | null;
+  image: string | null;
 }
 
 export interface PlaylistTrack {
@@ -23,6 +32,7 @@ export interface PlaylistTrack {
   isExplicit: boolean;
   version: string | null;
   feat: string[];
+  addedBy: PlaylistTrackAddedBy | null;
 }
 
 export interface PlaylistWithTracks {
@@ -33,7 +43,22 @@ export interface PlaylistWithTracks {
   visibility: PlaylistVisibility;
   ownerUserId: string | null;
   likesCount: number;
+  isCollaborative: boolean;
+  version: number;
   tracks: PlaylistTrack[];
+}
+
+export interface PlaylistCollaborator {
+  userId: string;
+  name: string | null;
+  image: string | null;
+  joinedAt: Date;
+}
+
+/** Минимум данных для экрана приглашения — без состава треков. */
+export interface PlaylistInvitePreview {
+  title: string;
+  ownerUserId: string;
 }
 
 export interface TrackSearchResult {

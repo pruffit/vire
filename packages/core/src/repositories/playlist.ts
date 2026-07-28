@@ -1,4 +1,4 @@
-import type { PlaylistSummary, PlaylistWithTracks, TrackSearchResult, PlaylistSuggestions } from '../types/playlist';
+import type { PlaylistSummary, PlaylistWithTracks, TrackSearchResult, PlaylistSuggestions, PlaylistCollaborator, PlaylistInvitePreview } from '../types/playlist';
 import type { IFileStorage } from './storage';
 
 export interface PlaylistUpdatePatch {
@@ -6,6 +6,15 @@ export interface PlaylistUpdatePatch {
   description?: string | null;
   visibility?: 'PRIVATE' | 'PUBLIC';
 }
+
+export interface PlaylistCollabState {
+  isCollaborative: boolean;
+  collabToken: string | null;
+  version: number;
+  ownerUserId: string | null;
+}
+
+export type JoinCollaboratorOutcome = 'joined' | 'already' | 'full';
 
 export interface IPlaylistRepository {
   listByUser(userId: string): Promise<PlaylistSummary[]>;
@@ -16,10 +25,12 @@ export interface IPlaylistRepository {
   update(id: string, userId: string, patch: PlaylistUpdatePatch): Promise<void>;
   /** Владение проверяется в WHERE репозитория (1:1 с текущим поведением). */
   delete(id: string, userId: string): Promise<boolean>;
-  addTrack(playlistId: string, trackId: string, userId: string): Promise<void>;
-  removeTrack(playlistId: string, trackId: string): Promise<void>;
-  /** Permutation-проверка — в транзакции репозитория (1:1). */
-  reorder(playlistId: string, userId: string, trackIds: string[]): Promise<boolean>;
+  /** Версия состава инкрементится в той же транзакции (лочит строку плейлиста) —
+   *  возвращает новую версию; null, если состав фактически не изменился (no-op). */
+  addTrack(playlistId: string, trackId: string, userId: string): Promise<number | null>;
+  removeTrack(playlistId: string, trackId: string): Promise<number | null>;
+  /** Permutation-проверка — в транзакции репозитория; null = конфликт (1:1 с текущим boolean). */
+  reorder(playlistId: string, userId: string, trackIds: string[]): Promise<number | null>;
   setCover(playlistId: string, userId: string, coverUrl: string | null): Promise<void>;
   searchTracks(q: string, excludeIds: string[], limit: number): Promise<TrackSearchResult[]>;
   /** Use-case остаётся в query-слое (осознанный долг) — репозиторий делегирует как есть. */
@@ -31,6 +42,21 @@ export interface IPlaylistRepository {
   /** Правка/удаление без owner-проверки (админ). */
   adminUpdate(id: string, patch: { title: string; visibility: 'PRIVATE' | 'PUBLIC' }): Promise<void>;
   adminDelete(id: string): Promise<void>;
+
+  listCollaborators(playlistId: string): Promise<PlaylistCollaborator[]>;
+  isCollaborator(playlistId: string, userId: string): Promise<boolean>;
+  /** Атомарно (лочит строку плейлиста): вставляет коллаборатора, если ещё не участник и лимит не исчерпан. */
+  joinCollaborator(playlistId: string, userId: string, invitedBy: string, maxCollaborators: number): Promise<JoinCollaboratorOutcome>;
+  /** true, если строка реально была удалена (не no-op). */
+  removeCollaborator(playlistId: string, userId: string): Promise<boolean>;
+  /** Владение проверяется в WHERE репозитория. Выключение обнуляет collabToken на стороне вызывающего. */
+  setCollaboration(playlistId: string, ownerId: string, input: { isCollaborative: boolean; collabToken: string | null }): Promise<void>;
+  getCollabState(playlistId: string): Promise<PlaylistCollabState | null>;
+  /** Лёгкая проверка ссылки-приглашения — без состава треков. */
+  getInvitePreview(playlistId: string): Promise<PlaylistInvitePreview & { isCollaborative: boolean; collabToken: string | null } | null>;
+  getTrackAddedBy(playlistId: string, trackId: string): Promise<string | null>;
+  /** Снимает членство коллаборатора в плейлистах друг друга (обе стороны блокировки). Возвращает id затронутых плейлистов. */
+  removeMembershipBetween(userA: string, userB: string): Promise<string[]>;
 }
 
 export type IPlaylistCoverStorage = IFileStorage;

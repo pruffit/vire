@@ -49,6 +49,10 @@ export const playlists = pgTable('playlists', {
   kind: playlistKindEnum('kind').notNull().default('USER'),
   visibility: playlistVisibilityEnum('visibility').notNull().default('PRIVATE'),
   isCollaborative: boolean('is_collaborative').notNull().default(false),
+  // Живёт только пока is_collaborative=true: выключение обнуляет, "сбросить ссылку" ротирует.
+  collabToken: text('collab_token'),
+  // Версия состава (треки), инкрементится в той же транзакции, что add/remove/reorder — опорная точка realtime.
+  version: integer('version').notNull().default(0),
   isCurated: boolean('is_curated').notNull().default(false),
   likesCount: integer('likes_count').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -56,6 +60,20 @@ export const playlists = pgTable('playlists', {
 }, (t) => [
   index('playlists_owner_user_id_idx').on(t.ownerUserId),
   index('playlists_target_user_id_idx').on(t.targetUserId),
+]);
+
+// Владелец не хранится здесь (не участник своего плейлиста). Членства переживают
+// выключение совместности — обратное включение возвращает ту же команду.
+export const playlistCollaborators = pgTable('playlist_collaborators', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  playlistId: uuid('playlist_id').notNull().references(() => playlists.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  invitedBy: uuid('invited_by').references(() => users.id),
+  joinedAt: timestamp('joined_at').notNull().defaultNow(),
+}, (t) => [
+  unique('playlist_collaborators_playlist_user_unique').on(t.playlistId, t.userId),
+  index('playlist_collaborators_playlist_id_idx').on(t.playlistId),
+  index('playlist_collaborators_user_id_idx').on(t.userId),
 ]);
 
 export const playlistTracks = pgTable('playlist_tracks', {

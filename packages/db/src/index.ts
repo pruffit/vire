@@ -174,8 +174,21 @@ export {
   searchTracksForPlaylist,
   getPlaylistSuggestions,
   getPublicPlaylistsByOwner,
+  listPlaylistCollaborators,
+  isPlaylistCollaborator,
+  joinPlaylistCollaborator,
+  removePlaylistCollaborator,
+  removeCollaboratorMembershipBetween,
+  setPlaylistCollaboration,
+  getPlaylistCollabState,
+  getPlaylistInvitePreview,
+  getPlaylistTrackAddedBy,
 } from './queries/playlists';
-export type { PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, EditorialPlaylist, PlaylistAddTrack, PlaylistSuggestions, PlaylistMeta, SitemapPlaylist } from './queries/playlists';
+export type {
+  PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, PlaylistTrackAddedByRow, EditorialPlaylist, PlaylistAddTrack,
+  PlaylistSuggestions, PlaylistMeta, SitemapPlaylist, PlaylistCollaboratorRow, PlaylistCollabState,
+  PlaylistInvitePreviewRow,
+} from './queries/playlists';
 export {
   generateAllEditorialPlaylists,
   generateSharedPlaylists,

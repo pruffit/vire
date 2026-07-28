@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { db, DrizzlePlaylistRepository } from '@vire/db';
-import { PlaylistService } from '@vire/core';
-import { playlistCoverStorage } from '@/lib/playlist-cover-storage';
-
-function playlistService() {
-  return new PlaylistService(new DrizzlePlaylistRepository(db), playlistCoverStorage, Date.now);
-}
+import { playlistService } from '@/lib/playlist';
 
 const createSchema = z.object({
   title: z.string().min(1).max(100),

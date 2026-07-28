@@ -13,6 +13,8 @@ vi.mock('@vire/db', () => ({
     getWithTracks = getWithTracks;
     suggestions = suggestions;
   },
+  DrizzleBlockRepository: class {},
+  DrizzleNotificationRepository: class {},
 }));
 
 import { auth } from '@/auth';

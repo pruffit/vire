@@ -1,4 +1,4 @@
-export type NotificationType = 'FRIEND_REQUEST' | 'FRIEND_ACCEPT' | 'JAM_INVITE';
+export type NotificationType = 'FRIEND_REQUEST' | 'FRIEND_ACCEPT' | 'JAM_INVITE' | 'PLAYLIST_COLLAB_JOIN';
 
 export type NotificationItem = {
   id: string;

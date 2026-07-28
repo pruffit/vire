@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { blockService } from '@/lib/blocks';
+import { playlistService } from '@/lib/playlist';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 const paramsSchema = z.object({ userId: z.string().uuid() });
@@ -19,6 +20,10 @@ export async function POST(_req: Request, { params }: Ctx) {
 
   const result = await blockService().block(session.user.id, parsed.data.userId);
   if (!result.ok) return NextResponse.json({ error: result.error.message }, { status: 422 });
+
+  // Блокировка отбирает и совместный доступ: иначе заблокированный остаётся редактором плейлиста.
+  // Ошибка здесь — 500 намеренно: повтор блокировки идемпотентен и доведёт очистку.
+  await playlistService().removeMembershipBetween(session.user.id, parsed.data.userId);
   return NextResponse.json({ ok: true });
 }
 

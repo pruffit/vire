@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { db, DrizzlePlaylistRepository } from '@vire/db';
-import { PlaylistService, NotFoundError, ConflictError } from '@vire/core';
-import { playlistCoverStorage } from '@/lib/playlist-cover-storage';
+import { NotFoundError, ConflictError } from '@vire/core';
+import { playlistService } from '@/lib/playlist';
+import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -11,8 +11,17 @@ const addSchema = z.object({ trackId: z.string().uuid() });
 
 const reorderSchema = z.object({ trackIds: z.array(z.string().uuid()).min(1) });
 
-function playlistService() {
-  return new PlaylistService(new DrizzlePlaylistRepository(db), playlistCoverStorage, Date.now);
+export async function GET(req: Request, { params }: Params) {
+  const { id } = await params;
+  const session = await auth();
+  const token = new URL(req.url).searchParams.get('token') ?? undefined;
+
+  const result = await playlistService().getForViewer(id, session?.user?.id ?? null, token);
+  if (!result.ok) {
+    const status = result.error instanceof NotFoundError ? 404 : 403;
+    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+  }
+  return NextResponse.json({ tracks: result.value.tracks, version: result.value.version });
 }
 
 export async function PUT(req: Request, { params }: Params) {
@@ -40,6 +49,9 @@ function addTrackErrorText(error: NotFoundError): string {
 export async function POST(req: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const rl = await rateLimit(`playlist-track-add:${session.user.id}`, 20, 60);
+  if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const { id } = await params;
   const body = await req.json().catch(() => null);

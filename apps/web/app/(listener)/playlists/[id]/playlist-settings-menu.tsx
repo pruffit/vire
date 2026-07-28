@@ -3,8 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
+import type { PlaylistCollaborator } from '@vire/core';
 import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
+import { ChatAvatar } from '@/components/chat/chat-avatar';
+import { touchTargetClass } from '@/components/popover';
 import { useViewportClampX } from '@/lib/use-viewport-clamp-x';
 
 interface PlaylistMeta {
@@ -13,10 +16,12 @@ interface PlaylistMeta {
   description: string | null;
   visibility: 'PRIVATE' | 'PUBLIC';
   coverUrl: string | null;
+  isCollaborative: boolean;
 }
 
 interface Props {
   playlist: PlaylistMeta;
+  collaborators: PlaylistCollaborator[];
 }
 
 interface CoverSectionProps {
@@ -53,12 +58,15 @@ function CoverPreview({ src, onPickFile, onRemove }: CoverSectionProps) {
   );
 }
 
-export function PlaylistSettingsMenu({ playlist }: Props) {
+export function PlaylistSettingsMenu({ playlist, collaborators: initialCollaborators }: Props) {
   const { id, visibility } = playlist;
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(playlist.title);
   const [description, setDescription] = useState(playlist.description ?? '');
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [isCollaborative, setIsCollaborative] = useState(playlist.isCollaborative);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [collaborators, setCollaborators] = useState(initialCollaborators);
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const blobPreviewRef = useRef<string | null>(null);
@@ -134,6 +142,50 @@ export function PlaylistSettingsMenu({ playlist }: Props) {
     const res = await fetch(`/api/v1/playlists/${id}`, { method: 'DELETE' }).catch(() => null);
     if (!res?.ok) { toast.error('Не удалось удалить плейлист'); return; }
     router.push('/profile');
+  }
+
+  async function toggleCollaboration() {
+    const next = !isCollaborative;
+    setIsCollaborative(next);
+    if (!next) setInviteUrl(null);
+    const res = await fetch(`/api/v1/playlists/${id}/collaboration`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: next }),
+    }).catch(() => null);
+    if (!res?.ok) { setIsCollaborative(!next); toast.error('Не удалось изменить совместность'); return; }
+    const data = (await res.json()) as { inviteUrl: string | null };
+    setInviteUrl(data.inviteUrl);
+    router.refresh();
+  }
+
+  async function copyInviteLink() {
+    let url = inviteUrl;
+    if (!url) {
+      const res = await fetch(`/api/v1/playlists/${id}/collaboration`).catch(() => null);
+      const data = res?.ok ? ((await res.json()) as { inviteUrl: string | null }) : null;
+      if (!data?.inviteUrl) { toast.error('Не удалось получить ссылку'); return; }
+      url = data.inviteUrl;
+      setInviteUrl(url);
+    }
+    await navigator.clipboard.writeText(url).catch(() => {});
+    toast('Ссылка скопирована');
+  }
+
+  async function resetInviteLink() {
+    const res = await fetch(`/api/v1/playlists/${id}/collaboration`, { method: 'POST' }).catch(() => null);
+    if (!res?.ok) { toast.error('Не удалось сбросить ссылку'); return; }
+    const data = (await res.json()) as { inviteUrl: string };
+    setInviteUrl(data.inviteUrl);
+    await navigator.clipboard.writeText(data.inviteUrl).catch(() => {});
+    toast('Ссылка обновлена и скопирована');
+  }
+
+  function kick(userId: string) {
+    const prev = collaborators;
+    setCollaborators(prev.filter((c) => c.userId !== userId));
+    fetch(`/api/v1/playlists/${id}/collaborators/${userId}`, { method: 'DELETE' })
+      .then((r) => { if (!r.ok) { setCollaborators(prev); toast.error('Не удалось исключить участника'); } })
+      .catch(() => { setCollaborators(prev); toast.error('Не удалось исключить участника'); });
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -242,6 +294,58 @@ export function PlaylistSettingsMenu({ playlist }: Props) {
                   >
                     <Icon name="upload" size={13} /> Загрузить обложку
                   </button>
+                )}
+              </div>
+              {/* Совместность */}
+              <div className="space-y-2 border-t border-border pt-3">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isCollaborative}
+                  onClick={() => void toggleCollaboration()}
+                  className="flex min-h-11 w-full items-center justify-between"
+                >
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Совместный плейлист</span>
+                  <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${isCollaborative ? 'bg-primary' : 'bg-secondary'}`}>
+                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${isCollaborative ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  </span>
+                </button>
+
+                {isCollaborative && (
+                  <div className="space-y-2">
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => void copyInviteLink()}
+                        className="flex-1 flex items-center justify-center gap-1.5 min-h-11 text-xs text-muted-foreground hover:text-foreground border border-border rounded-md transition-colors"
+                      >
+                        <Icon name="link" size={12} /> Скопировать ссылку
+                      </button>
+                      <button
+                        onClick={() => void resetInviteLink()}
+                        className="flex-1 flex items-center justify-center gap-1.5 min-h-11 text-xs text-muted-foreground hover:text-foreground border border-border rounded-md transition-colors"
+                      >
+                        <Icon name="refresh-cw" size={12} /> Сбросить
+                      </button>
+                    </div>
+
+                    {collaborators.length > 0 && (
+                      <div className="max-h-40 space-y-0.5 overflow-y-auto">
+                        {collaborators.map((c) => (
+                          <div key={c.userId} className="flex items-center gap-2 px-1 py-1">
+                            <ChatAvatar name={c.name} image={c.image} size={22} />
+                            <span className="flex-1 min-w-0 truncate text-xs text-foreground/80">{c.name ?? 'Слушатель'}</span>
+                            <button
+                              onClick={() => kick(c.userId)}
+                              aria-label={`Исключить ${c.name ?? 'участника'}`}
+                              className={`${touchTargetClass('sm')} rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors`}
+                            >
+                              <Icon name="user-x" size={13} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzlePlaylistRepository } from '@vire/db';
-import { PlaylistService, NotFoundError } from '@vire/core';
-import { playlistCoverStorage } from '@/lib/playlist-cover-storage';
+import { NotFoundError } from '@vire/core';
+import { playlistService } from '@/lib/playlist';
 
 type Params = { params: Promise<{ id: string }> };
-
-function playlistService() {
-  return new PlaylistService(new DrizzlePlaylistRepository(db), playlistCoverStorage, Date.now);
-}
 
 export async function GET(req: Request, { params }: Params) {
   const session = await auth();

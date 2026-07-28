@@ -12,6 +12,7 @@ import type { RealtimePublisher, RealtimeEvent } from '@vire/core';
 
 const CHANNEL_PREFIX = 'rt:user:';
 const JAM_CHANNEL_PREFIX = 'rt:jam:';
+const PLAYLIST_CHANNEL_PREFIX = 'rt:playlist:';
 const PSUBSCRIBE_PATTERN = 'rt:*';
 
 const globalForRealtime = globalThis as unknown as {
@@ -79,6 +80,7 @@ export function subscribeChannel(channel: string, cb: (event: unknown) => void):
 
 export const userChannel = (userId: string): string => `${CHANNEL_PREFIX}${userId}`;
 export const jamChannel = (jamId: string): string => `${JAM_CHANNEL_PREFIX}${jamId}`;
+export const playlistChannel = (playlistId: string): string => `${PLAYLIST_CHANNEL_PREFIX}${playlistId}`;
 
 export function publish(userId: string, event: RealtimeEvent): Promise<void> {
   return publishChannel(userChannel(userId), event);

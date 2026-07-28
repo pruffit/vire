@@ -1,12 +1,18 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
-import { getPlaylistWithTracks, getPlaylistLikeState } from '@vire/db';
+import { getPlaylistWithTracks, getPlaylistLikeState, getUserProfile } from '@vire/db';
+import type { PlaylistCollaborator } from '@vire/core';
 import { FadeUp } from '@vire/ui/motion';
-import { PlaylistView } from './playlist-view';
+import { PlaylistView, type PlaylistViewerRole } from './playlist-view';
 import { PlaylistSettingsMenu } from './playlist-settings-menu';
 import { PlaylistLikeButton } from './playlist-like-button';
+import { PlaylistLeaveButton } from './playlist-leave-button';
+import { PlaylistJoinBanner } from './playlist-join-banner';
+import { PlaylistInviteScreen } from './playlist-invite-screen';
+import { PlaylistCollabBadge, PlaylistCollaboratorsStack } from './playlist-collaborators';
 import { getHeaderCovers } from './header-cover';
+import { playlistService } from '@/lib/playlist';
 import { PlaylistCover } from '@/components/playlist-cover';
 import { PlaylistShare } from '@/components/playlist-share';
 import { PageContainer } from '@/components/page-container';
@@ -16,16 +22,18 @@ import { formatDuration, pluralTracks } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
 import { pageMetadata } from '@/lib/metadata';
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ join?: string }> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { id } = await params;
   const playlist = await getPlaylistWithTracks(id);
   if (!playlist) return { title: 'Не найдено' };
 
   if (playlist.visibility === 'PRIVATE') {
+    const { join: joinToken } = await searchParams;
     const session = await auth();
-    if (session?.user?.id !== playlist.ownerUserId) return { title: 'Не найдено' };
+    const allowed = await playlistService().getForViewer(id, session?.user?.id ?? null, joinToken);
+    if (!allowed.ok) return { title: 'Не найдено' };
     return { title: playlist.title, robots: { index: false, follow: false } };
   }
 
@@ -43,17 +51,51 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default async function PlaylistPage({ params }: Props) {
+export default async function PlaylistPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { join: joinToken } = await searchParams;
   const session = await auth();
-  const playlist = await getPlaylistWithTracks(id);
-  if (!playlist) notFound();
-  if (playlist.visibility === 'PRIVATE' && playlist.ownerUserId !== session?.user?.id) notFound();
+  const viewerId = session?.user?.id ?? null;
 
-  const isOwner = session?.user?.id === playlist.ownerUserId;
-  const showLikeButton = Boolean(session?.user?.id) && !isOwner;
-  const liked = session?.user?.id && !isOwner
-    ? await getPlaylistLikeState(session.user.id, id)
+  const service = playlistService();
+  const inviteResult = joinToken ? await service.checkInvite(id, joinToken) : null;
+  const invite = inviteResult?.ok ? inviteResult.value : null;
+
+  const result = await service.getForViewer(id, viewerId, joinToken);
+  if (!result.ok) {
+    // Анониму по валидной ссылке показываем приглашение, а не 404 — но без состава плейлиста.
+    if (invite && joinToken && !viewerId) {
+      return <PlaylistInviteScreen playlistId={id} token={joinToken} title={invite.title} ownerUserId={invite.ownerUserId} />;
+    }
+    notFound();
+  }
+  const playlist = result.value;
+
+  const isOwner = viewerId !== null && playlist.ownerUserId === viewerId;
+  let role: PlaylistViewerRole = isOwner ? 'OWNER' : 'VIEWER';
+  let collaborators: PlaylistCollaborator[] = [];
+
+  if (isOwner && viewerId) {
+    const collabResult = await service.listCollaborators(id, viewerId);
+    if (collabResult.ok) collaborators = collabResult.value;
+  } else if (viewerId && playlist.isCollaborative) {
+    const collabResult = await service.listCollaborators(id, viewerId);
+    if (collabResult.ok) {
+      collaborators = collabResult.value;
+      role = 'COLLABORATOR';
+    }
+  }
+
+  const showJoinBanner = playlist.isCollaborative && invite !== null && role === 'VIEWER';
+  let inviterName = 'Автор плейлиста';
+  if (showJoinBanner && playlist.ownerUserId) {
+    const owner = await getUserProfile(playlist.ownerUserId);
+    if (owner?.name) inviterName = owner.name;
+  }
+
+  const showLikeButton = Boolean(viewerId) && !isOwner;
+  const liked = viewerId && !isOwner
+    ? await getPlaylistLikeState(viewerId, id)
     : false;
   const totalSec = playlist.tracks.reduce((s, t) => s + (t.durationSec ?? 0), 0);
   const headerCovers = getHeaderCovers(playlist);
@@ -76,10 +118,14 @@ export default async function PlaylistPage({ params }: Props) {
             <PlaylistCover covers={headerCovers} title={playlist.title} variant="mosaic" sizes="(max-width: 640px) 96px, 112px" />
           </div>
           <div className="space-y-2 pt-1 min-w-0 flex-1 max-w-2xl">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-semibold tracking-tight truncate">{playlist.title}</h1>
               {playlist.visibility === 'PRIVATE' && (
                 <span className="shrink-0 text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full border border-border text-muted-foreground">Приватный</span>
+              )}
+              {playlist.isCollaborative && <PlaylistCollabBadge />}
+              {playlist.isCollaborative && collaborators.length > 0 && (
+                <PlaylistCollaboratorsStack collaborators={collaborators} />
               )}
             </div>
             {playlist.description && <p className="text-sm text-muted-foreground/80 line-clamp-2">{playlist.description}</p>}
@@ -98,15 +144,23 @@ export default async function PlaylistPage({ params }: Props) {
                 <PlaylistLikeButton playlistId={id} initialLiked={liked} initialCount={playlist.likesCount} />
               )}
               {isOwner && (
-                <PlaylistSettingsMenu playlist={{ id, title: playlist.title, description: playlist.description, visibility: playlist.visibility, coverUrl: playlist.coverUrl }} />
+                <PlaylistSettingsMenu
+                  playlist={{ id, title: playlist.title, description: playlist.description, visibility: playlist.visibility, coverUrl: playlist.coverUrl, isCollaborative: playlist.isCollaborative }}
+                  collaborators={collaborators}
+                />
               )}
+              {role === 'COLLABORATOR' && <PlaylistLeaveButton playlistId={id} />}
               <PlaylistShare playlistId={id} title={playlist.title} visibility={playlist.visibility} isOwner={isOwner} />
             </div>
           </div>
         </header>
       </FadeUp>
 
-      <PlaylistView playlist={playlist} isOwner={isOwner} />
+      {showJoinBanner && joinToken && (
+        <PlaylistJoinBanner playlistId={id} token={joinToken} inviterName={inviterName} isAuthenticated={viewerId !== null} />
+      )}
+
+      <PlaylistView playlist={playlist} role={role} viewerId={viewerId} />
     </PageContainer>
   );
 }

@@ -7,7 +7,7 @@ import { Icon } from '@/components/icon';
 import { AdaptivePopover } from '@/components/adaptive-popover';
 import { useRealtime } from '@/lib/use-realtime';
 
-type NotificationType = 'FRIEND_REQUEST' | 'FRIEND_ACCEPT' | 'JAM_INVITE';
+type NotificationType = 'FRIEND_REQUEST' | 'FRIEND_ACCEPT' | 'JAM_INVITE' | 'PLAYLIST_COLLAB_JOIN';
 type NotificationItem = {
   id: string;
   type: NotificationType;
@@ -23,10 +23,12 @@ const LABEL: Record<NotificationType, string> = {
   FRIEND_REQUEST: 'Заявка в друзья',
   FRIEND_ACCEPT: 'Теперь у вас в друзьях',
   JAM_INVITE: 'Зовёт в джем',
+  PLAYLIST_COLLAB_JOIN: 'Присоединился к плейлисту',
 };
 
 function notificationHref(n: NotificationItem): string {
   if (n.type === 'JAM_INVITE') return n.entityId ? `/jam/id/${n.entityId}` : '/';
+  if (n.type === 'PLAYLIST_COLLAB_JOIN') return n.entityId ? `/playlists/${n.entityId}` : '/library';
   return n.actorId ? `/u/${n.actorId}` : '/friends';
 }
 

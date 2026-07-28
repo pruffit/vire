@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { ValidationError } from '@vire/core';
 
 const { block, unblock } = vi.hoisted(() => ({ block: vi.fn(), unblock: vi.fn() }));
+const { removeMembershipBetween } = vi.hoisted(() => ({ removeMembershipBetween: vi.fn() }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
 vi.mock('@/lib/rate-limit', () => ({
@@ -10,6 +11,7 @@ vi.mock('@/lib/rate-limit', () => ({
   tooManyRequests: vi.fn(),
 }));
 vi.mock('@/lib/blocks', () => ({ blockService: () => ({ block, unblock }) }));
+vi.mock('@/lib/playlist', () => ({ playlistService: () => ({ removeMembershipBetween }) }));
 
 import { auth } from '@/auth';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
@@ -62,6 +64,7 @@ describe('POST /api/v1/users/[userId]/block', () => {
     const res = await POST(req(), ctx(OTHER_ID));
     expect(res.status).toBe(200);
     expect(block).toHaveBeenCalledWith(SELF_ID, OTHER_ID);
+    expect(removeMembershipBetween).toHaveBeenCalledWith(SELF_ID, OTHER_ID);
   });
 });
 
