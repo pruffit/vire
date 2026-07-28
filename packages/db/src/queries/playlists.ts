@@ -599,20 +599,6 @@ export interface SitemapPlaylist {
   updatedAt: Date;
 }
 
-/** Публичные пользовательские плейлисты с треками — для sitemap. Editorial (перегенерируются
- *  ежедневно) и personal (персональны под юзера) исключены умышленно. */
-export async function getSitemapPlaylists(): Promise<SitemapPlaylist[]> {
-  return db
-    .select({ id: playlists.id, updatedAt: playlists.updatedAt })
-    .from(playlists)
-    .where(and(
-      eq(playlists.visibility, 'PUBLIC'),
-      eq(playlists.kind, 'USER'),
-      sql`EXISTS (SELECT 1 FROM playlist_tracks pt WHERE pt.playlist_id = playlists.id)`,
-    ))
-    .orderBy(desc(playlists.updatedAt));
-}
-
 export async function getPlaylistLikeState(
   userId: string,
   playlistId: string,

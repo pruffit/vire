@@ -18,7 +18,7 @@ export interface ArtistListItem {
 
 // Артист виден слушателям только если у него есть хотя бы один трек в
 // опубликованном релизе. Пустые профили скрываем из каталога, поиска и sitemap.
-const artistHasPublishedTrack = sql`exists (
+export const artistHasPublishedTrack = sql`exists (
   select 1 from tracks t
   join releases r on r.id = t.release_id
   where r.artist_profile_id = artist_profiles.id

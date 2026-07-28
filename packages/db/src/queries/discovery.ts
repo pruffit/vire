@@ -52,23 +52,6 @@ export async function getExplicitReleaseIds(releaseIds: string[]): Promise<Set<s
   return new Set(rows.map((r) => r.releaseId));
 }
 
-/** Для sitemap: ссылки на треки внутри релиза без N+1 по каждому релизу отдельно. */
-export async function listTrackIdsByReleaseIds(releaseIds: string[]): Promise<Map<string, string[]>> {
-  if (releaseIds.length === 0) return new Map();
-  const rows = await db
-    .select({ id: tracks.id, releaseId: tracks.releaseId })
-    .from(tracks)
-    .where(inArray(tracks.releaseId, releaseIds));
-
-  const byRelease = new Map<string, string[]>();
-  for (const row of rows) {
-    const list = byRelease.get(row.releaseId);
-    if (list) list.push(row.id);
-    else byRelease.set(row.releaseId, [row.id]);
-  }
-  return byRelease;
-}
-
 /** Публично слышимые треки по списку id (для секции «Сейчас слушают»). */
 export async function getTracksByIds(ids: string[]): Promise<DiscoveryTrack[]> {
   if (ids.length === 0) return [];

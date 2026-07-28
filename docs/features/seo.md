@@ -53,11 +53,22 @@
 ### Технические файлы
 
 - `apps/web/app/robots.ts` — запрещает `/admin`, `/dashboard`, `/api`
-- `apps/web/app/sitemap.ts` — артисты, релизы, треки, смартлинки и публичные
-  пользовательские плейлисты (`getSitemapPlaylists`: `PUBLIC` + `kind='USER'` + есть треки;
-  editorial перегенерируются ежедневно, personal персональны — оба исключены).
-  Главная перечислена **без** завершающего слэша: Next для корневого canonical безусловно
-  отдаёт origin (`resolve-url.js`), sitemap сверяется с ним.
+- Sitemap — индекс + шарды, потолок 10k URL на файл (протокол ограничивает 50k):
+  `GET /sitemap.xml` (`app/sitemap.xml/route.ts`) отдаёт `<sitemapindex>` со ссылками на
+  шарды, посчитанными на каждый запрос; `GET /sitemaps/{section}-{page}.xml` и
+  `/sitemaps/static.xml` (`app/sitemaps/[shard]/route.ts`) отдают сами `<urlset>`.
+  Секции: артисты, релизы, треки, смартлинки, публичные пользовательские плейлисты
+  (`PUBLIC` + `kind='USER'` + есть треки; editorial/personal исключены). Шардинг —
+  чистая логика в `lib/sitemap.ts` (`planShards`/`parseShardId`/`shardFileName`),
+  сериализация XML — `lib/sitemap-xml.ts`; постраничные запросы — `@vire/db`
+  (`packages/db/src/queries/sitemap.ts`, `count*`/`list*` с `LIMIT`/`OFFSET`,
+  стабильный `ORDER BY id`). Не `generateSitemaps` — тот перечисляет шарды на этапе
+  сборки, а список зависит от БД, которая на сборке образа недоступна (обе точки
+  `force-dynamic`, та же причина что у `robots.ts`). БД недоступна на индексе → только
+  `static.xml`; на шарде → пустой `<urlset>`, оба не 5xx. Главная в `static.xml`
+  перечислена **без** завершающего слэша: Next для корневого canonical безусловно
+  отдаёт origin (`resolve-url.js`), sitemap сверяется с ним. Адрес `/sitemap.xml` не
+  менялся при переезде на индекс — уже подтверждён в Яндекс.Вебмастер/Search Console.
 - `apps/web/app/manifest.ts` — PWA-манифест
 
 ## Где код
@@ -68,7 +79,9 @@
 - `apps/web/lib/og/{card.tsx,cover.ts}` — карточка OG и ужатие обложки
 - `apps/web/components/json-ld.tsx`
 - `apps/web/app/layout.tsx` — `metadataBase`, title template, дефолты OG
-- `apps/web/app/robots.ts`, `sitemap.ts`, `manifest.ts`
+- `apps/web/app/robots.ts`, `manifest.ts`
+- `apps/web/app/sitemap.xml/route.ts`, `apps/web/app/sitemaps/[shard]/route.ts`,
+  `apps/web/lib/sitemap.ts`, `apps/web/lib/sitemap-xml.ts`, `packages/db/src/queries/sitemap.ts`
 - Тесты: `apps/web/lib/__tests__/structured-data.test.ts`, `lib/og/*.test.ts`,
   `**/opengraph-image.test.tsx`
 
@@ -80,8 +93,8 @@ NEXT_PUBLIC_SITE_URL=           # https://vire.ru — базовый URL для 
 
 ## Известные ограничения
 
-- Sitemap генерируется при каждом запросе (нет ISR/кеша) и не ограничен по числу записей —
-  может быть медленной при большой базе
+- Sitemap-шарды генерируются при каждом запросе (нет ISR/кеша) — при очень большом каталоге
+  один шард (до 10k записей) может стать медленным запросом
 - JSON-LD для треков включает duration из `track_audio.duration_ms`, но только если трек `READY`
 - Canonical главной — без завершающего слэша, и это не настраивается: Next отдаёт `origin`
   для любого корневого canonical, если не включён глобальный `trailingSlash` (менять его
