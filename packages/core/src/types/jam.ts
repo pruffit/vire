@@ -1,5 +1,6 @@
 export type JamSessionStatus = 'LIVE' | 'ENDED';
 export type JamParticipantRole = 'HOST' | 'GUEST';
+export type JamMode = 'SYNCED' | 'SPEAKER';
 
 export interface JamSession {
   id: string;
@@ -7,6 +8,9 @@ export interface JamSession {
   hostUserId: string;
   title: string | null;
   status: JamSessionStatus;
+  mode: JamMode;
+  /** null — источник звука хост (дефолт). */
+  speakerParticipantId: string | null;
   queueVersion: number;
   savedPlaylistId: string | null;
   createdAt: Date;

@@ -1,9 +1,11 @@
-import type { JamSession, JamParticipant, JamQueueItem, JamSessionState, JamParticipantRole } from '../types/jam';
+import type { JamSession, JamParticipant, JamQueueItem, JamSessionState, JamParticipantRole, JamMode } from '../types/jam';
 
 export interface CreateJamSessionInput {
   code: string;
   hostUserId: string;
   title: string | null;
+  /** По умолчанию SYNCED — репозиторий полагается на дефолт колонки, если не передан. */
+  mode?: JamMode;
 }
 
 export type JamParticipantIdentity = { userId: string } | { guestSessionId: string };
@@ -40,6 +42,8 @@ export interface IJamRepository {
   countQueueItems(jamId: string): Promise<number>;
   endSession(jamId: string): Promise<void>;
   setSavedPlaylist(jamId: string, playlistId: string): Promise<void>;
+  setMode(jamId: string, mode: JamMode): Promise<void>;
+  setSpeaker(jamId: string, participantId: string | null): Promise<void>;
   touchActivity(jamId: string): Promise<void>;
   /** LIVE-сессии без активности дольше olderThanHours (порог считается в SQL интервалом). */
   listStaleLiveSessions(olderThanHours: number): Promise<JamSession[]>;

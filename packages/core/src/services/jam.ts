@@ -10,7 +10,7 @@ import type {
 import type { IJamStateStore } from '../ports/jam-state';
 import type { IJamBroadcaster } from '../ports/jam-realtime';
 import type { Clock } from '../ports/effects';
-import type { JamSession, JamParticipant, JamQueueItem } from '../types/jam';
+import type { JamSession, JamParticipant, JamQueueItem, JamMode } from '../types/jam';
 
 export const JAM_MAX_QUEUE = 200;
 export const JAM_MAX_PARTICIPANTS = 50;
@@ -54,12 +54,17 @@ export class JamService {
     private readonly random: () => number,
   ) {}
 
-  async create(hostUserId: string, title: string | null, hostDisplayName: string): Promise<Result<JamSession, ConflictError>> {
+  async create(
+    hostUserId: string,
+    title: string | null,
+    hostDisplayName: string,
+    mode: JamMode = 'SYNCED',
+  ): Promise<Result<JamSession, ConflictError>> {
     for (let attempt = 0; attempt < JAM_CODE_MAX_ATTEMPTS; attempt++) {
       const code = generateJamCode(this.random);
       if (await this.repo.findByCode(code)) continue;
 
-      const session = await this.repo.createSession({ code, hostUserId, title });
+      const session = await this.repo.createSession({ code, hostUserId, title, mode });
       await this.repo.upsertParticipant({
         jamId: session.id,
         identity: { userId: hostUserId },
@@ -243,6 +248,43 @@ export class JamService {
     await this.state.setPlayback(jamId, next);
     await this.broadcaster.broadcast(jamId, { type: 'jam:playback', playback: next });
     return ok(next);
+  }
+
+  async setMode(
+    jamId: string,
+    identity: JamParticipantIdentity,
+    mode: JamMode,
+  ): Promise<Result<{ mode: JamMode; speakerParticipantId: string | null }, ForbiddenError | NotFoundError | ConflictError>> {
+    const participant = await this.repo.findParticipant(jamId, identity);
+    if (!participant) return err(forbidden());
+    if (participant.role !== 'HOST') return err(forbidden('Режим меняет только хост'));
+
+    const session = await this.repo.findById(jamId);
+    if (!session) return err(new NotFoundError('Jam', jamId));
+    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
+
+    await this.repo.setMode(jamId, mode);
+    const result = { mode, speakerParticipantId: session.speakerParticipantId };
+    await this.broadcaster.broadcast(jamId, { type: 'jam:session', ...result });
+    return ok(result);
+  }
+
+  /** Любой участник может забрать роль звукового устройства себе. */
+  async claimSpeaker(
+    jamId: string,
+    identity: JamParticipantIdentity,
+  ): Promise<Result<{ mode: JamMode; speakerParticipantId: string | null }, ForbiddenError | NotFoundError | ConflictError>> {
+    const participant = await this.repo.findParticipant(jamId, identity);
+    if (!participant) return err(forbidden());
+
+    const session = await this.repo.findById(jamId);
+    if (!session) return err(new NotFoundError('Jam', jamId));
+    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
+
+    await this.repo.setSpeaker(jamId, participant.id);
+    const result = { mode: session.mode, speakerParticipantId: participant.id };
+    await this.broadcaster.broadcast(jamId, { type: 'jam:session', ...result });
+    return ok(result);
   }
 
   async endJam(jamId: string, hostUserId: string): Promise<Result<void, NotFoundError | ForbiddenError>> {

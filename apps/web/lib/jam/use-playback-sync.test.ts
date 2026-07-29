@@ -250,6 +250,24 @@ describe('usePlaybackSync', () => {
     expect(engine.seek).toHaveBeenCalledWith(10_000);
   });
 
+  it('driftCorrection: false не вешает интервал и не корректирует дрейф даже при большом расхождении', async () => {
+    const serverNow = () => 10_000;
+    const pb = playback({ startedAtMs: 0 });
+    renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true, driftCorrection: false }));
+    await flush();
+    engine.seek.mockClear();
+    engine.setRate.mockClear();
+
+    engine.currentTimeMs.mockReturnValue(6_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4_000);
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(engine.seek).not.toHaveBeenCalled();
+    expect(engine.setRate).not.toHaveBeenCalled();
+  });
+
   it('visibilitychange запускает немедленный прогон, не дожидаясь тика', async () => {
     const serverNow = () => 10_000;
     const pb = playback({ startedAtMs: 0 });

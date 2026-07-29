@@ -17,6 +17,8 @@ function makeSession(overrides?: Partial<JamSession>): JamSession {
     hostUserId: 'host-1',
     title: 'Party',
     status: 'LIVE',
+    mode: 'SYNCED',
+    speakerParticipantId: null,
     queueVersion: 3,
     savedPlaylistId: null,
     createdAt: ADDED_AT,
@@ -81,6 +83,8 @@ function makeRepo(overrides?: Partial<IJamRepository>): IJamRepository {
     countQueueItems: vi.fn().mockResolvedValue(0),
     endSession: vi.fn().mockResolvedValue(undefined),
     setSavedPlaylist: vi.fn().mockResolvedValue(undefined),
+    setMode: vi.fn().mockResolvedValue(undefined),
+    setSpeaker: vi.fn().mockResolvedValue(undefined),
     touchActivity: vi.fn().mockResolvedValue(undefined),
     listStaleLiveSessions: vi.fn().mockResolvedValue([]),
     ...overrides,
@@ -158,6 +162,24 @@ describe('JamService.create', () => {
     if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
     expect(findByCode).toHaveBeenCalledTimes(5);
     expect(repo.createSession).not.toHaveBeenCalled();
+  });
+
+  it('defaults to SYNCED when no mode is given', async () => {
+    const repo = makeRepo({ findByCode: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    await service.create('host-1', null, 'Danya');
+
+    expect(repo.createSession).toHaveBeenCalledWith(expect.objectContaining({ mode: 'SYNCED' }));
+  });
+
+  it('forwards an explicit mode to the repository', async () => {
+    const repo = makeRepo({ findByCode: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    await service.create('host-1', null, 'Danya', 'SPEAKER');
+
+    expect(repo.createSession).toHaveBeenCalledWith(expect.objectContaining({ mode: 'SPEAKER' }));
   });
 });
 
@@ -787,6 +809,105 @@ describe('JamService.kick', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBeInstanceOf(ValidationError);
     expect(repo.removeParticipant).not.toHaveBeenCalled();
+  });
+});
+
+describe('JamService.setMode', () => {
+  const hostParticipant = makeHostParticipant({ id: 'p-host' });
+  const guestParticipant = makeParticipant({ id: 'p-guest' });
+
+  it('forbids a non-participant', async () => {
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    const result = await service.setMode('jam-1', { guestSessionId: 'ghost' }, 'SPEAKER');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('forbids a non-host participant from changing the mode', async () => {
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(guestParticipant) });
+    const service = makeService({ repo });
+
+    const result = await service.setMode('jam-1', { guestSessionId: 'guest-1' }, 'SPEAKER');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+    expect(repo.setMode).not.toHaveBeenCalled();
+  });
+
+  it('rejects once the jam has ENDED', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(hostParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ status: 'ENDED' })),
+    });
+    const service = makeService({ repo });
+
+    const result = await service.setMode('jam-1', { userId: 'host-1' }, 'SPEAKER');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
+  });
+
+  it('lets the host switch the mode and broadcasts jam:session', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(hostParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ speakerParticipantId: 'p-guest' })),
+    });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, broadcaster });
+
+    const result = await service.setMode('jam-1', { userId: 'host-1' }, 'SPEAKER');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toEqual({ mode: 'SPEAKER', speakerParticipantId: 'p-guest' });
+    expect(repo.setMode).toHaveBeenCalledWith('jam-1', 'SPEAKER');
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', { type: 'jam:session', mode: 'SPEAKER', speakerParticipantId: 'p-guest' });
+  });
+});
+
+describe('JamService.claimSpeaker', () => {
+  it('forbids a non-participant', async () => {
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    const result = await service.claimSpeaker('jam-1', { guestSessionId: 'ghost' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+    expect(repo.setSpeaker).not.toHaveBeenCalled();
+  });
+
+  it('rejects once the jam has ENDED', async () => {
+    const guestParticipant = makeParticipant({ id: 'p-guest' });
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ status: 'ENDED' })),
+    });
+    const service = makeService({ repo });
+
+    const result = await service.claimSpeaker('jam-1', { guestSessionId: 'guest-1' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
+  });
+
+  it('lets any participant claim the speaker role and broadcasts jam:session', async () => {
+    const guestParticipant = makeParticipant({ id: 'p-guest' });
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ mode: 'SPEAKER' })),
+    });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, broadcaster });
+
+    const result = await service.claimSpeaker('jam-1', { guestSessionId: 'guest-1' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toEqual({ mode: 'SPEAKER', speakerParticipantId: 'p-guest' });
+    expect(repo.setSpeaker).toHaveBeenCalledWith('jam-1', 'p-guest');
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', { type: 'jam:session', mode: 'SPEAKER', speakerParticipantId: 'p-guest' });
   });
 });
 

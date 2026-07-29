@@ -11,11 +11,13 @@ export interface UsePlaybackSyncArgs {
   serverNow: () => number;
   /** Звук разблокирован жестом пользователя — до этого движок не создаём (автоплей заблокирован браузером). */
   audioEnabled: boolean;
+  /** На звуковом устройстве в режиме SPEAKER синхронизировать не с кем — периодическая коррекция дрейфа выключается. Дефолт true (SYNCED). */
+  driftCorrection?: boolean;
   onEnded?: () => void;
 }
 
 /** Владеет `JamAudioEngine`: создаёт его при разблокировке звука, применяет решения `jam-sync` и уничтожает при размонтировании. */
-export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: UsePlaybackSyncArgs): void {
+export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrection = true, onEnded }: UsePlaybackSyncArgs): void {
   const engineRef = useRef<JamAudioEngine | null>(null);
   const onEndedRef = useRef(onEnded);
   const loadedTrackIdRef = useRef<string | null>(null);
@@ -83,6 +85,7 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
 
   useEffect(() => {
     if (!playback || playback.paused) return;
+    if (!driftCorrection) return;
 
     function runCorrection(): void {
       const engine = engineRef.current;
@@ -123,5 +126,5 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [playback, serverNow]);
+  }, [playback, serverNow, driftCorrection]);
 }

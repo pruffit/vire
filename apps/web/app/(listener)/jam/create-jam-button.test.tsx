@@ -22,7 +22,7 @@ describe('CreateJamButton', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('creates a jam and navigates to its room on click', async () => {
+  it('creates a jam in SYNCED mode by default and navigates to its room on click', async () => {
     const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ code: 'A2B3C4' }) } as Response));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -30,7 +30,27 @@ describe('CreateJamButton', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Создать джем' }));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith('/jam/A2B3C4'));
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/jam', { method: 'POST' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/jam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'SYNCED' }),
+    });
+  });
+
+  it('creates a jam in SPEAKER mode after picking «На колонке»', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ code: 'A2B3C4' }) } as Response));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<CreateJamButton />);
+    fireEvent.click(screen.getByRole('radio', { name: 'На колонке' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Создать джем' }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/jam/A2B3C4'));
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/jam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'SPEAKER' }),
+    });
   });
 
   it('shows a toast and re-enables the button on failure', async () => {

@@ -31,6 +31,8 @@ export interface JamOverride {
   durationSec: number | null;
   canPrev: boolean;
   canNext: boolean;
+  /** SPEAKER-режим и это устройство — пульт: звук не создаётся, мини-бар показывает бейдж «Пульт». */
+  isRemote: boolean;
 }
 
 interface State {

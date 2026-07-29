@@ -59,6 +59,40 @@ describe('useJamRoom', () => {
     expect(result.current.queue.map((t) => t.id)).toEqual(['a']);
     expect(result.current.version).toBe(5);
     expect(result.current.connected).toBe(true);
+    expect(result.current.mode).toBe('SYNCED');
+    expect(result.current.speakerParticipantId).toBeNull();
+  });
+
+  it('берёт режим и колонку из session в снапшоте', () => {
+    const { result } = renderHook(() => useJamRoom('A2B3C4', null));
+
+    act(() => {
+      lastHandlers()['jam:snapshot']!({
+        session: { mode: 'SPEAKER', speakerParticipantId: 'p-1' },
+        participants: [],
+        queue: [],
+        version: 1,
+        playback: null,
+      });
+    });
+
+    expect(result.current.mode).toBe('SPEAKER');
+    expect(result.current.speakerParticipantId).toBe('p-1');
+  });
+
+  it('применяет jam:session к текущему состоянию', () => {
+    const { result } = renderHook(() => useJamRoom('A2B3C4', null));
+    act(() => {
+      lastHandlers()['jam:snapshot']!({ session: {}, participants: [], queue: [track('a')], version: 5, playback: null });
+    });
+
+    act(() => {
+      lastHandlers()['jam:session']!({ mode: 'SPEAKER', speakerParticipantId: 'p-2' });
+    });
+
+    expect(result.current.mode).toBe('SPEAKER');
+    expect(result.current.speakerParticipantId).toBe('p-2');
+    expect(result.current.queue.map((t) => t.id)).toEqual(['a']);
   });
 
   it('игнорирует jam:queue с версией не новее текущей', () => {

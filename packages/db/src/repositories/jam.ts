@@ -13,6 +13,7 @@ import type {
   JamParticipant,
   JamQueueItem,
   JamSessionState,
+  JamMode,
 } from '@vire/core';
 
 export class DrizzleJamRepository implements IJamRepository {
@@ -21,7 +22,12 @@ export class DrizzleJamRepository implements IJamRepository {
   async createSession(input: CreateJamSessionInput): Promise<JamSession> {
     const [row] = await this.db
       .insert(jamSessions)
-      .values({ code: input.code, hostUserId: input.hostUserId, title: input.title })
+      .values({
+        code: input.code,
+        hostUserId: input.hostUserId,
+        title: input.title,
+        ...(input.mode ? { mode: input.mode } : {}),
+      })
       .returning();
     return mapToSession(row!);
   }
@@ -138,6 +144,14 @@ export class DrizzleJamRepository implements IJamRepository {
     await this.db.update(jamSessions).set({ savedPlaylistId: playlistId }).where(eq(jamSessions.id, jamId));
   }
 
+  async setMode(jamId: string, mode: JamMode): Promise<void> {
+    await this.db.update(jamSessions).set({ mode }).where(eq(jamSessions.id, jamId));
+  }
+
+  async setSpeaker(jamId: string, participantId: string | null): Promise<void> {
+    await this.db.update(jamSessions).set({ speakerParticipantId: participantId }).where(eq(jamSessions.id, jamId));
+  }
+
   async touchActivity(jamId: string): Promise<void> {
     await this.db.update(jamSessions).set({ lastActivityAt: sql`now()` }).where(eq(jamSessions.id, jamId));
   }
@@ -199,6 +213,8 @@ function mapToSession(row: typeof jamSessions.$inferSelect): JamSession {
     hostUserId: row.hostUserId,
     title: row.title,
     status: row.status,
+    mode: row.mode,
+    speakerParticipantId: row.speakerParticipantId,
     queueVersion: row.queueVersion,
     savedPlaylistId: row.savedPlaylistId,
     createdAt: row.createdAt,

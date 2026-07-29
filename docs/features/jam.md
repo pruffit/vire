@@ -77,21 +77,40 @@
 - Join бродкастит `jam:participants` со свежим списком сразу после входа (и kick —
   после удаления) — участники видят друг друга без ручного refresh
   (`use-jam-room.ts` уже подписан на это событие).
+- **Режимы (`jam_sessions.mode`): SYNCED (дефолт) / SPEAKER.** SYNCED — звук у всех
+  участников (описано выше). SPEAKER — звук только на одном устройстве
+  (`speaker_participant_id`, `null` = хост), остальные — пульт: очередь и транспорт
+  работают как обычно, но `audioEnabled` в `usePlaybackSync` гасится, движок не создаётся
+  вовсе. Чистые функции `resolveSpeakerParticipantId`/`isAudioDevice`
+  (`packages/core/src/services/jam-mode.ts`) резолвят звуковое устройство: назначенный
+  участник, если ещё в комнате, иначе фолбэк на HOST. На звуковом устройстве в SPEAKER
+  периодическая коррекция дрейфа выключается целиком (`usePlaybackSync`, проп
+  `driftCorrection`) — синхронизировать не с кем, источник один. Режим меняет только
+  HOST (`POST /api/v1/jam/[code]/mode`); роль колонки любой участник забирает себе
+  (`POST /api/v1/jam/[code]/speaker`) — обе мутации бродкастят `jam:session
+  { mode, speakerParticipantId }`. Автопереход по `ended`: в SYNCED — хост (как раньше),
+  в SPEAKER — колонка (у пультов события `ended` нет вовсе, движок не создаётся). Мини-бар
+  такeover помечает пульт бейджем «Пульт» вместо «Джем» (`JamOverride.isRemote`), транспорт
+  и полоса прогресса остаются рабочими. Экран создания (`/jam`) даёт выбрать режим до
+  создания джема.
 
 ## Где код
 
-- **Страницы:** `app/(listener)/jam/page.tsx` (вход: создать/войти по коду),
-  `jam/[code]/` (комната: `jam-room`, `jam-join`, `jam-add-panel`, `jam-participants`,
-  `jam-save-playlist`), `jam/id/[jamId]` (редирект из уведомления)
-- **API:** `app/api/v1/jam/route.ts` (создание), `jam/time`,
-  `jam/[code]/{join,queue,playback,heartbeat,end,stream,qr,save-playlist,invite}`
-  (`queue` и `playback` резолвят идентичность через `resolveJamIdentity` — user или
-  подписанный guest `sessionId`, не только `auth()`), `GET /api/v1/friends`
-- **Сервисы/логика:** `packages/core/src/services/{jam,jam-sync,jam-queue,jam-code}.ts`
+- **Страницы:** `app/(listener)/jam/page.tsx` (вход: создать/войти по коду, выбор
+  режима в `create-jam-button.tsx`), `jam/[code]/` (комната: `jam-room`, `jam-join`,
+  `jam-add-panel`, `jam-participants`, `jam-save-playlist`), `jam/id/[jamId]` (редирект
+  из уведомления)
+- **API:** `app/api/v1/jam/route.ts` (создание, принимает `mode`), `jam/time`,
+  `jam/[code]/{join,queue,playback,mode,speaker,heartbeat,end,stream,qr,save-playlist,invite}`
+  (`queue`/`playback`/`mode`/`speaker` резолвят идентичность через `resolveJamIdentity` —
+  user или подписанный guest `sessionId`, не только `auth()`), `GET /api/v1/friends`
+- **Сервисы/логика:** `packages/core/src/services/{jam,jam-sync,jam-queue,jam-code,jam-mode}.ts`
   (чистые: права участия, лимиты, `applyQueueMutation` вкл. `shuffle`,
-  `derivePositionMs`, `decideDriftCorrection`, `pickClockOffset`), порт
+  `derivePositionMs`, `decideDriftCorrection`, `pickClockOffset`,
+  `resolveSpeakerParticipantId`/`isAudioDevice`), порт
   `ports/jam-state.ts`; `apps/web/lib/jam/*` (`server-clock`, `jam-audio`,
-  `use-jam-room`, `use-jam-queue`, `use-playback-sync`, `jam-state`, `jam-identity`,
+  `use-jam-room`, `use-jam-queue`, `use-playback-sync` (проп `driftCorrection`),
+  `jam-state`, `jam-identity`, `jam-mode-labels`,
   `jam-controls` — регистр транспорта `JamTransport`, `use-jam-position` — тик позиции
   для мини-бара, `guest-name`, `optimistic-playback` — кнопка play/pause отвечает мгновенно:
   визуал и команда считаются от оптимистичного `effectivePaused`, звук по-прежнему от
@@ -100,10 +119,12 @@
   `lib/realtime.ts` —
   `publishChannel`/`subscribeChannel`, канал `rt:jam:{id}`; `components/jam-share.tsx`,
   `components/jam-invite.tsx`; takeover глобального плеера — `store/player.ts`
-  (`jamOverride`), `components/player/{mini-bar,progress-line}.tsx`, `lib/player/audio-engine.ts`
+  (`jamOverride`, вкл. `isRemote`), `components/player/{mini-bar,progress-line}.tsx`,
+  `lib/player/audio-engine.ts`
 - **Воркер:** `apps/worker/src/workers/jam-reaper.worker.ts` +
   `lib/jam-cleanup.ts` (Redis-ключи и `jam:ended` — те же, что у web)
-- **Данные:** `packages/db/src/schema/jam.ts` — `jam_sessions` / `jam_participants`
+- **Данные:** `packages/db/src/schema/jam.ts` — `jam_sessions` (вкл. `mode`,
+  `speaker_participant_id` — миграция 0045) / `jam_participants`
   (check «ровно одна идентичность»: user XOR guest) / `jam_queue_items`
   (миграция 0042; `JAM_INVITE` в enum уведомлений — 0043).
   Redis: `jam:{id}:playback`, `jam:{id}:presence`, `jam:{id}:adds:{participant}` (TTL)

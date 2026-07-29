@@ -44,7 +44,7 @@ describe('POST /api/v1/jam', () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ code: 'A2B3C4', jamId: 'jam-1' });
-    expect(create).toHaveBeenCalledWith('host-1', 'Party', 'Danya');
+    expect(create).toHaveBeenCalledWith('host-1', 'Party', 'Danya', 'SYNCED');
   });
 
   it('falls back to a default host name when the session has none', async () => {
@@ -53,6 +53,15 @@ describe('POST /api/v1/jam', () => {
 
     await POST(req({}));
 
-    expect(create).toHaveBeenCalledWith('host-1', null, 'Хост');
+    expect(create).toHaveBeenCalledWith('host-1', null, 'Хост', 'SYNCED');
+  });
+
+  it('forwards an explicit SPEAKER mode to the service', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'host-1', name: 'Danya' } } as never);
+    create.mockResolvedValue({ ok: true, value: { id: 'jam-1', code: 'A2B3C4' } });
+
+    await POST(req({ mode: 'SPEAKER' }));
+
+    expect(create).toHaveBeenCalledWith('host-1', null, 'Danya', 'SPEAKER');
   });
 });

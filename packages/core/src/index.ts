@@ -71,6 +71,7 @@ export * from './services/musical-key';
 export * from './services/jam-sync';
 export * from './services/jam-code';
 export * from './services/jam-queue';
+export * from './services/jam-mode';
 export * from './services/jam';
 export * from './services/wave-scoring';
 export * from './services/wave';

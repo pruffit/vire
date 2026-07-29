@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import type { JamParticipant, JamPlaybackState, JamQueueItem } from '@vire/core';
+import type { JamParticipant, JamPlaybackState, JamQueueItem, JamMode } from '@vire/core';
 import { useRealtime, type RealtimeEvent } from '@/lib/use-realtime';
 
 interface JamRoomState {
@@ -9,6 +9,8 @@ interface JamRoomState {
   version: number;
   participants: JamParticipant[];
   playback: JamPlaybackState | null;
+  mode: JamMode;
+  speakerParticipantId: string | null;
   ended: boolean;
 }
 
@@ -18,6 +20,7 @@ export interface UseJamRoomResult extends JamRoomState {
 }
 
 type JamSnapshotEvent = RealtimeEvent & {
+  session: { mode?: JamMode; speakerParticipantId?: string | null };
   participants: JamParticipant[];
   queue: JamQueueItem[];
   version: number;
@@ -26,8 +29,11 @@ type JamSnapshotEvent = RealtimeEvent & {
 type JamQueueEvent = RealtimeEvent & { queue: JamQueueItem[]; version: number };
 type JamPlaybackEvent = RealtimeEvent & { playback: JamPlaybackState };
 type JamParticipantsEvent = RealtimeEvent & { participants: JamParticipant[] };
+type JamSessionEvent = RealtimeEvent & { mode: JamMode; speakerParticipantId: string | null };
 
-const INITIAL_STATE: JamRoomState = { queue: [], version: 0, participants: [], playback: null, ended: false };
+const INITIAL_STATE: JamRoomState = {
+  queue: [], version: 0, participants: [], playback: null, mode: 'SYNCED', speakerParticipantId: null, ended: false,
+};
 
 export function useJamRoom(code: string, sessionId: string | null): UseJamRoomResult {
   const [state, setState] = useState<JamRoomState>(INITIAL_STATE);
@@ -64,7 +70,15 @@ export function useJamRoom(code: string, sessionId: string | null): UseJamRoomRe
     'jam:snapshot': (event) => {
       const e = event as JamSnapshotEvent;
       pendingRef.current = null;
-      setState({ queue: e.queue, version: e.version, participants: e.participants, playback: e.playback, ended: false });
+      setState({
+        queue: e.queue,
+        version: e.version,
+        participants: e.participants,
+        playback: e.playback,
+        mode: e.session.mode ?? 'SYNCED',
+        speakerParticipantId: e.session.speakerParticipantId ?? null,
+        ended: false,
+      });
       setConnected(true);
     },
     'jam:queue': (event) => {
@@ -83,6 +97,10 @@ export function useJamRoom(code: string, sessionId: string | null): UseJamRoomRe
     'jam:participants': (event) => {
       const e = event as JamParticipantsEvent;
       setState((prev) => ({ ...prev, participants: e.participants }));
+    },
+    'jam:session': (event) => {
+      const e = event as JamSessionEvent;
+      setState((prev) => ({ ...prev, mode: e.mode, speakerParticipantId: e.speakerParticipantId }));
     },
     'jam:ended': () => {
       setState((prev) => ({ ...prev, ended: true }));

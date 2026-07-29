@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, pgEnum, unique, index, check } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, pgEnum, unique, index, check, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { users } from './users';
 import { tracks } from './releases';
@@ -6,6 +6,7 @@ import { playlists } from './interactions';
 
 export const jamSessionStatusEnum = pgEnum('jam_session_status', ['LIVE', 'ENDED']);
 export const jamParticipantRoleEnum = pgEnum('jam_participant_role', ['HOST', 'GUEST']);
+export const jamModeEnum = pgEnum('jam_mode', ['SYNCED', 'SPEAKER']);
 
 export const jamSessions = pgTable('jam_sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -13,6 +14,9 @@ export const jamSessions = pgTable('jam_sessions', {
   hostUserId: uuid('host_user_id').notNull().references(() => users.id),
   title: text('title'),
   status: jamSessionStatusEnum('status').notNull().default('LIVE'),
+  mode: jamModeEnum('mode').notNull().default('SYNCED'),
+  // null = звук у хоста (дефолт); ссылка вперёд на jamParticipants — AnyPgColumn разрывает циклическую инференцию типов между таблицами.
+  speakerParticipantId: uuid('speaker_participant_id').references((): AnyPgColumn => jamParticipants.id, { onDelete: 'set null' }),
   // Инкрементится в той же транзакции, что мутация очереди — переживает падение Redis
   queueVersion: integer('queue_version').notNull().default(0),
   savedPlaylistId: uuid('saved_playlist_id').references(() => playlists.id),

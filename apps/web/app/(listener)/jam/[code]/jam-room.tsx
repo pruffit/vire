@@ -5,14 +5,15 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
-import type { JamParticipantRole, JamQueueItem, SearchTrack } from '@vire/core';
-import { derivePositionMs } from '@vire/core';
+import type { JamParticipantRole, JamQueueItem, JamMode, SearchTrack } from '@vire/core';
+import { derivePositionMs, isAudioDevice as resolveIsAudioDevice, resolveSpeakerParticipantId } from '@vire/core';
 import { useJamRoom } from '@/lib/jam/use-jam-room';
 import { useJamQueue } from '@/lib/jam/use-jam-queue';
 import { useServerClock } from '@/lib/jam/server-clock';
 import { usePlaybackSync } from '@/lib/jam/use-playback-sync';
 import { setJamTransport, type JamTransport } from '@/lib/jam/jam-controls';
 import { effectivePaused, resolvePending, nextPendingVersion, PENDING_TTL_MS, type PendingToggle } from '@/lib/jam/optimistic-playback';
+import { JAM_MODE_LABELS, JAM_MODE_OPTIONS } from '@/lib/jam/jam-mode-labels';
 import { getSessionId } from '@/lib/session-id';
 import { toast } from '@/lib/toast';
 import { usePlayerStore } from '@/store/player';
@@ -22,6 +23,7 @@ import { PageContainer } from '@/components/page-container';
 import { Sheet } from '@/components/sheet';
 import { JamShare } from '@/components/jam-share';
 import { JamInvite } from '@/components/jam-invite';
+import { ActionSelect } from '@/components/action-select';
 import { JamParticipants } from './jam-participants';
 import { JamAddPanel } from './jam-add-panel';
 import { JamJoin } from './jam-join';
@@ -73,6 +75,19 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
 
   const ended = initialEnded || room.ended;
   const isHost = membership?.role === 'HOST';
+  const myParticipantId = membership?.participantId ?? null;
+
+  const resolvedSpeakerId = useMemo(
+    () => resolveSpeakerParticipantId(room.participants, room.speakerParticipantId),
+    [room.participants, room.speakerParticipantId],
+  );
+  const speakerName = room.participants.find((p) => p.id === resolvedSpeakerId)?.displayName ?? null;
+  const isAudioDevice = useMemo(
+    () => myParticipantId !== null && resolveIsAudioDevice({
+      mode: room.mode, participantId: myParticipantId, participants: room.participants, speakerParticipantId: room.speakerParticipantId,
+    }),
+    [myParticipantId, room.mode, room.participants, room.speakerParticipantId],
+  );
 
   const postPlayback = useCallback((body: PlaybackCommand, onError?: () => void) => {
     const sessionId = membership?.sessionId;
@@ -89,15 +104,24 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
   }, [code, membership?.sessionId]);
 
   const handleTrackEnded = useCallback(() => {
-    if (!isHost) return;
+    // SYNCED: анти-гонка — только хост инициирует переход. SPEAKER: у пультов события ended нет вовсе,
+    // это всегда звуковое устройство — проверка isAudioDevice тут для порядка.
+    const initiator = room.mode === 'SYNCED' ? isHost : isAudioDevice;
+    if (!initiator) return;
     const currentTrackId = room.playback?.trackId;
     const currentIndex = jamQueue.queue.findIndex((item) => item.trackId === currentTrackId);
     const next = currentIndex >= 0 ? jamQueue.queue[currentIndex + 1] : undefined;
     if (!next) return;
     postPlayback({ kind: 'track', trackId: next.trackId });
-  }, [isHost, room.playback, jamQueue.queue, postPlayback]);
+  }, [room.mode, isHost, isAudioDevice, room.playback, jamQueue.queue, postPlayback]);
 
-  usePlaybackSync({ playback: room.playback, serverNow, audioEnabled: audioEnabled && !ended, onEnded: handleTrackEnded });
+  usePlaybackSync({
+    playback: room.playback,
+    serverNow,
+    audioEnabled: audioEnabled && isAudioDevice && !ended,
+    driftCorrection: room.mode === 'SYNCED',
+    onEnded: handleTrackEnded,
+  });
 
   const handleJoin = useCallback(async (displayName: string) => {
     setPending(true);
@@ -123,6 +147,28 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
       setPending(false);
     }
   }, [code, isLoggedIn, currentUserName]);
+
+  const handleModeChange = useCallback((mode: JamMode) => {
+    const sessionId = membership?.sessionId;
+    fetch(`/api/v1/jam/${encodeURIComponent(code)}/mode`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sessionId ? { mode, sessionId } : { mode }),
+    })
+      .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
+      .catch(() => toast.error('Не удалось сменить режим'));
+  }, [code, membership?.sessionId]);
+
+  const handleClaimSpeaker = useCallback(() => {
+    const sessionId = membership?.sessionId;
+    fetch(`/api/v1/jam/${encodeURIComponent(code)}/speaker`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sessionId ? { sessionId } : {}),
+    })
+      .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
+      .catch(() => toast.error('Не удалось переключить звук'));
+  }, [code, membership?.sessionId]);
 
   const handleRowPlay = useCallback((item: JamQueueItem) => {
     const playback = room.playback;
@@ -206,8 +252,9 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
       durationSec: activeTrack.durationSec,
       canPrev,
       canNext,
+      isRemote: !isAudioDevice,
     });
-  }, [audioEnabled, ended, activeTrack, isPlaying, canPrev, canNext, code, setPlayerJamOverride]);
+  }, [audioEnabled, ended, activeTrack, isPlaying, canPrev, canNext, code, isAudioDevice, setPlayerJamOverride]);
 
   // Отдельно от основного эффекта — гарантирует чистку при уходе со страницы независимо от того,
   // какая ветка выше сработала последней.
@@ -344,7 +391,19 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:shrink-0">
+          <div className="flex flex-wrap items-center justify-end gap-1 sm:flex-nowrap sm:shrink-0">
+            {isHost ? (
+              <ActionSelect
+                options={JAM_MODE_OPTIONS}
+                value={room.mode}
+                onChange={(v) => handleModeChange(v as JamMode)}
+                ariaLabel="Режим воспроизведения"
+              />
+            ) : (
+              <span className="rounded-full border border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground">
+                {JAM_MODE_LABELS[room.mode]}
+              </span>
+            )}
             <JamParticipants participants={room.participants} />
             {isLoggedIn && <JamInvite code={code} />}
             {isLoggedIn && <JamSavePlaylist code={code} />}
@@ -362,6 +421,27 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
             )}
           </div>
         </div>
+
+        {room.mode === 'SPEAKER' && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {isAudioDevice ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-primary">
+                <Icon name="volume-2" size={12} /> Звук здесь
+              </span>
+            ) : (
+              <>
+                <span>Играет на устройстве {speakerName ?? '—'}</span>
+                <button
+                  type="button"
+                  onClick={handleClaimSpeaker}
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-3 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                >
+                  <Icon name="volume-2" size={12} /> Звук здесь
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { JamParticipant, JamPlaybackState, JamQueueItem, SearchTrack } from '@vire/core';
+import type { JamParticipant, JamPlaybackState, JamQueueItem, JamMode, SearchTrack } from '@vire/core';
 
 const { useJamRoomMock, getSessionIdMock, useServerClockMock, usePlaybackSyncMock, controlsPauseMock } = vi.hoisted(() => ({
   useJamRoomMock: vi.fn(),
@@ -51,6 +51,8 @@ interface RoomState {
   version: number;
   participants: JamParticipant[];
   playback: JamPlaybackState | null;
+  mode: JamMode;
+  speakerParticipantId: string | null;
   connected: boolean;
   ended: boolean;
   setDragging: ReturnType<typeof vi.fn>;
@@ -58,7 +60,22 @@ interface RoomState {
 
 function baseRoom(overrides?: Partial<RoomState>): RoomState {
   return {
-    queue: [], version: 0, participants: [], playback: null, connected: true, ended: false, setDragging: vi.fn(),
+    queue: [], version: 0, participants: [], playback: null, mode: 'SYNCED', speakerParticipantId: null,
+    connected: true, ended: false, setDragging: vi.fn(),
+    ...overrides,
+  };
+}
+
+function participant(overrides?: Partial<JamParticipant>): JamParticipant {
+  return {
+    id: 'p1',
+    jamId: 'jam-1',
+    userId: null,
+    guestSessionId: 'guest-1',
+    displayName: 'Гость',
+    role: 'GUEST',
+    joinedAt: new Date('2026-07-20T12:00:00Z'),
+    lastSeenAt: new Date('2026-07-20T12:00:00Z'),
     ...overrides,
   };
 }
@@ -282,6 +299,7 @@ describe('JamRoom', () => {
         durationSec: null,
         canPrev: false,
         canNext: true,
+        isRemote: false,
       }),
     );
   });
@@ -332,6 +350,7 @@ describe('JamRoom', () => {
         durationSec: null,
         canPrev: false,
         canNext: false,
+        isRemote: false,
       }),
     );
 
@@ -453,5 +472,72 @@ describe('JamRoom', () => {
 
     fireEvent.keyDown(window, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('SPEAKER: гость не звуковое устройство — usePlaybackSync получает audioEnabled:false и driftCorrection:false', async () => {
+    const host = participant({ id: 'p-host', role: 'HOST', displayName: 'Хост Данила' });
+    useJamRoomMock.mockReturnValue(
+      baseRoom({ mode: 'SPEAKER', participants: [host, participant({ id: 'p1', role: 'GUEST' })] }),
+    );
+
+    render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
+    );
+    await joinAs('GUEST');
+
+    expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ audioEnabled: false, driftCorrection: false }),
+    );
+  });
+
+  it('SPEAKER: пульт видит имя колонки и кнопку «Звук здесь», клик шлёт POST /speaker', async () => {
+    const host = participant({ id: 'p-host', role: 'HOST', displayName: 'Хост Данила' });
+    useJamRoomMock.mockReturnValue(
+      baseRoom({ mode: 'SPEAKER', participants: [host, participant({ id: 'p1', role: 'GUEST' })] }),
+    );
+    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'GUEST' } }) };
+      return { ok: true, json: async () => ({}) };
+    });
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
+
+    render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
+    );
+    fireEvent.click(screen.getByText('Подключиться к звуку'));
+    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
+
+    expect(screen.getByText('Играет на устройстве Хост Данила')).toBeTruthy();
+    fireEvent.click(screen.getByText('Звук здесь'));
+
+    await waitFor(() => {
+      const speakerCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/speaker'));
+      expect(speakerCall).toBeTruthy();
+      expect(speakerCall![1]!.body).toBe(JSON.stringify({ sessionId: 'guest-1.sig' }));
+    });
+  });
+
+  it('SPEAKER: колонка видит пометку «Звук здесь» без кнопки и джем-оверлей помечен isRemote:false', async () => {
+    const guest = participant({ id: 'p1', role: 'GUEST' });
+    useJamRoomMock.mockReturnValue(
+      baseRoom({
+        mode: 'SPEAKER',
+        participants: [guest],
+        speakerParticipantId: 'p1',
+        queue: [track('a')],
+        playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 },
+      }),
+    );
+
+    render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
+    );
+    await joinAs('GUEST');
+
+    const badges = screen.getAllByText('Звук здесь');
+    expect(badges).toHaveLength(1);
+    expect(badges[0]!.closest('button')).toBeNull();
+
+    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isRemote).toBe(false));
   });
 });

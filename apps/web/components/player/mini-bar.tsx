@@ -103,7 +103,7 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
             <span className="flex items-center gap-1.5 min-w-0">
               <span className="text-[11px] sm:text-sm font-medium truncate leading-tight">{track.title}</span>
               <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-primary">
-                Джем
+                {override.isRemote ? 'Пульт' : 'Джем'}
               </span>
             </span>
             <span className="hidden sm:block text-xs text-muted-foreground truncate">{track.artistName}</span>
