@@ -220,7 +220,7 @@ describe('createJamAudio', () => {
     FakeHls.isSupported.mockReturnValue(true);
   });
 
-  it('play/pause/seek/setRate управляют аудио-элементом', async () => {
+  it('play/pause/seek управляют аудио-элементом', async () => {
     const { createJamAudio } = await import('./jam-audio');
     const engine = createJamAudio();
 
@@ -233,9 +233,6 @@ describe('createJamAudio', () => {
     engine.seek(1500);
     expect(lastAudioInstance!.currentTime).toBe(1.5);
     expect(engine.currentTimeMs()).toBe(1500);
-
-    engine.setRate(1.03);
-    expect(lastAudioInstance!.playbackRate).toBe(1.03);
   });
 
   it('onEnded: подписчик получает событие ended, отписка снимает слушатель', async () => {
@@ -253,6 +250,21 @@ describe('createJamAudio', () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
+  it('onPlaying: подписчик получает событие playing, отписка снимает слушатель', async () => {
+    const { createJamAudio } = await import('./jam-audio');
+    const engine = createJamAudio();
+
+    const listener = vi.fn();
+    const unsubscribe = engine.onPlaying(listener);
+
+    lastAudioInstance!.emit('playing');
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    lastAudioInstance!.emit('playing');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   it('destroy: снимает слушатели, уничтожает hls, обнуляет src', async () => {
     fetchManifestMock.mockResolvedValue(manifest('https://cdn.example/f.m3u8'));
     const { createJamAudio } = await import('./jam-audio');
@@ -264,8 +276,10 @@ describe('createJamAudio', () => {
     await loadPromise;
     const audioInstance = lastAudioInstance!;
 
-    const listener = vi.fn();
-    engine.onEnded(listener);
+    const endedListener = vi.fn();
+    engine.onEnded(endedListener);
+    const playingListener = vi.fn();
+    engine.onPlaying(playingListener);
 
     engine.destroy();
 
@@ -275,7 +289,9 @@ describe('createJamAudio', () => {
     expect(audioInstance.load).toHaveBeenCalledTimes(1);
 
     audioInstance.emit('ended');
-    expect(listener).not.toHaveBeenCalled();
+    expect(endedListener).not.toHaveBeenCalled();
+    audioInstance.emit('playing');
+    expect(playingListener).not.toHaveBeenCalled();
   });
 
   it('destroy: не оставляет висящий load — вызов после destroy не бросает', async () => {

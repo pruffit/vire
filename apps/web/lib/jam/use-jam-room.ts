@@ -11,6 +11,7 @@ interface JamRoomState {
   playback: JamPlaybackState | null;
   mode: JamMode;
   speakerParticipantId: string | null;
+  presentParticipantIds: string[];
   ended: boolean;
 }
 
@@ -25,14 +26,17 @@ type JamSnapshotEvent = RealtimeEvent & {
   queue: JamQueueItem[];
   version: number;
   playback: JamPlaybackState | null;
+  presentParticipantIds: string[];
 };
 type JamQueueEvent = RealtimeEvent & { queue: JamQueueItem[]; version: number };
 type JamPlaybackEvent = RealtimeEvent & { playback: JamPlaybackState };
 type JamParticipantsEvent = RealtimeEvent & { participants: JamParticipant[] };
 type JamSessionEvent = RealtimeEvent & { mode: JamMode; speakerParticipantId: string | null };
+type JamPresenceEvent = RealtimeEvent & { participantIds: string[] };
 
 const INITIAL_STATE: JamRoomState = {
-  queue: [], version: 0, participants: [], playback: null, mode: 'SYNCED', speakerParticipantId: null, ended: false,
+  queue: [], version: 0, participants: [], playback: null, mode: 'SYNCED', speakerParticipantId: null,
+  presentParticipantIds: [], ended: false,
 };
 
 export function useJamRoom(code: string, sessionId: string | null): UseJamRoomResult {
@@ -77,6 +81,7 @@ export function useJamRoom(code: string, sessionId: string | null): UseJamRoomRe
         playback: e.playback,
         mode: e.session.mode ?? 'SYNCED',
         speakerParticipantId: e.session.speakerParticipantId ?? null,
+        presentParticipantIds: e.presentParticipantIds ?? [],
         ended: false,
       });
       setConnected(true);
@@ -101,6 +106,10 @@ export function useJamRoom(code: string, sessionId: string | null): UseJamRoomRe
     'jam:session': (event) => {
       const e = event as JamSessionEvent;
       setState((prev) => ({ ...prev, mode: e.mode, speakerParticipantId: e.speakerParticipantId }));
+    },
+    'jam:presence': (event) => {
+      const e = event as JamPresenceEvent;
+      setState((prev) => ({ ...prev, presentParticipantIds: e.participantIds }));
     },
     'jam:ended': () => {
       setState((prev) => ({ ...prev, ended: true }));

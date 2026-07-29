@@ -1,20 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundError, ForbiddenError } from '@vire/core';
 
-const { resolveCode, getState, heartbeat, subscribeChannel, unsubscribe } = vi.hoisted(() => {
+const { resolveCode, getState, heartbeat, listPresent, leave, subscribeChannel, publishChannel, unsubscribe } = vi.hoisted(() => {
   const unsubscribe = vi.fn();
   return {
     resolveCode: vi.fn(),
     getState: vi.fn(),
-    heartbeat: vi.fn(),
+    heartbeat: vi.fn().mockResolvedValue(undefined),
+    listPresent: vi.fn().mockResolvedValue([]),
+    leave: vi.fn().mockResolvedValue({ ok: true, value: undefined }),
     subscribeChannel: vi.fn(() => unsubscribe),
+    publishChannel: vi.fn().mockResolvedValue(undefined),
     unsubscribe,
   };
 });
 
-vi.mock('@/lib/jam', () => ({ jamService: () => ({ resolveCode, getState, heartbeat }) }));
+vi.mock('@/lib/jam', () => ({ jamService: () => ({ resolveCode, getState, heartbeat, listPresent, leave }) }));
 vi.mock('@/lib/jam/jam-identity', () => ({ resolveJamIdentity: vi.fn() }));
-vi.mock('@/lib/realtime', () => ({ subscribeChannel, jamChannel: (id: string) => `rt:jam:${id}` }));
+vi.mock('@/lib/realtime', () => ({ subscribeChannel, publishChannel, jamChannel: (id: string) => `rt:jam:${id}` }));
 
 import { resolveJamIdentity } from '@/lib/jam/jam-identity';
 import { GET } from './route';
@@ -24,6 +27,11 @@ const mockedResolve = vi.mocked(resolveJamIdentity);
 const ctx = (code: string) => ({ params: Promise.resolve({ code }) });
 const req = (code: string, sessionId?: string) =>
   new Request(`http://localhost/api/v1/jam/${code}/stream${sessionId ? `?sessionId=${sessionId}` : ''}`);
+
+async function flush(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -57,13 +65,14 @@ describe('GET /api/v1/jam/[code]/stream', () => {
     expect(res.status).toBe(403);
   });
 
-  it('opens an SSE stream for a participant and sends a snapshot', async () => {
+  it('opens an SSE stream for a participant, sends a snapshot with presence, and broadcasts jam:presence after heartbeat', async () => {
     resolveCode.mockResolvedValue({ ok: true, value: { id: 'jam-1' } });
     mockedResolve.mockResolvedValue({ userId: 'u1' });
     getState.mockResolvedValue({
       ok: true,
-      value: { session: { id: 'jam-1', queueVersion: 3 }, participants: [], queue: [], playback: null },
+      value: { session: { id: 'jam-1', queueVersion: 3 }, participants: [], queue: [], playback: null, presentParticipantIds: ['p-other'] },
     });
+    listPresent.mockResolvedValue(['p-other', 'p-me']);
 
     const res = await GET(req('A2B3C4'), ctx('A2B3C4'));
 
@@ -72,7 +81,28 @@ describe('GET /api/v1/jam/[code]/stream', () => {
     expect(subscribeChannel).toHaveBeenCalledWith('rt:jam:jam-1', expect.any(Function));
     expect(heartbeat).toHaveBeenCalledWith('jam-1', { userId: 'u1' });
 
+    await flush();
+    expect(listPresent).toHaveBeenCalledWith('jam-1');
+    expect(publishChannel).toHaveBeenCalledWith('rt:jam:jam-1', { type: 'jam:presence', participantIds: ['p-other', 'p-me'] });
+
     await res.body?.cancel();
     expect(unsubscribe).toHaveBeenCalled();
+    expect(leave).toHaveBeenCalledWith('jam-1', { userId: 'u1' });
+  });
+
+  it('cancel вызывает leave, даже если он падает — роут не должен ронять cleanup', async () => {
+    resolveCode.mockResolvedValue({ ok: true, value: { id: 'jam-1' } });
+    mockedResolve.mockResolvedValue({ userId: 'u1' });
+    getState.mockResolvedValue({
+      ok: true,
+      value: { session: { id: 'jam-1', queueVersion: 3 }, participants: [], queue: [], playback: null, presentParticipantIds: [] },
+    });
+    leave.mockRejectedValue(new Error('redis down'));
+
+    const res = await GET(req('A2B3C4'), ctx('A2B3C4'));
+    await flush();
+
+    await expect(res.body?.cancel()).resolves.toBeUndefined();
+    expect(leave).toHaveBeenCalledWith('jam-1', { userId: 'u1' });
   });
 });

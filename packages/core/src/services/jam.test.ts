@@ -97,6 +97,7 @@ function makeState(overrides?: Partial<IJamStateStore>): IJamStateStore {
     setPlayback: vi.fn().mockResolvedValue(undefined),
     heartbeat: vi.fn().mockResolvedValue(undefined),
     listPresent: vi.fn().mockResolvedValue([]),
+    dropPresence: vi.fn().mockResolvedValue(undefined),
     bumpAddCounter: vi.fn().mockResolvedValue(1),
     clear: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -388,6 +389,17 @@ describe('JamService.getState', () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value.playback).toEqual(playback);
+  });
+
+  it('returns presentParticipantIds from the state store', async () => {
+    const repo = makeRepo();
+    const state = makeState({ listPresent: vi.fn().mockResolvedValue(['p-guest', 'p-host']) });
+    const service = makeService({ repo, state });
+
+    const result = await service.getState('jam-1', { guestSessionId: 'guest-1' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.presentParticipantIds).toEqual(['p-guest', 'p-host']);
   });
 });
 
@@ -933,5 +945,44 @@ describe('JamService.heartbeat', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+});
+
+describe('JamService.listPresent', () => {
+  it('forwards to the state store', async () => {
+    const state = makeState({ listPresent: vi.fn().mockResolvedValue(['p-guest']) });
+    const service = makeService({ state });
+
+    const result = await service.listPresent('jam-1');
+
+    expect(result).toEqual(['p-guest']);
+  });
+});
+
+describe('JamService.leave', () => {
+  it('forbids a non-participant', async () => {
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(null) });
+    const state = makeState();
+    const service = makeService({ repo, state });
+
+    const result = await service.leave('jam-1', { guestSessionId: 'ghost' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+    expect(state.dropPresence).not.toHaveBeenCalled();
+  });
+
+  it('drops presence for the participant and broadcasts the fresh jam:presence list', async () => {
+    const guestParticipant = makeParticipant({ id: 'p-guest' });
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(guestParticipant) });
+    const state = makeState({ listPresent: vi.fn().mockResolvedValue(['p-host']) });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, state, broadcaster });
+
+    const result = await service.leave('jam-1', { guestSessionId: 'guest-1' });
+
+    expect(result.ok).toBe(true);
+    expect(state.dropPresence).toHaveBeenCalledWith('jam-1', 'p-guest');
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', { type: 'jam:presence', participantIds: ['p-host'] });
   });
 });

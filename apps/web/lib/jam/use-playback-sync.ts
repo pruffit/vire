@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { decideDriftCorrection, derivePositionMs, type JamPlaybackState } from '@vire/core';
 import { createJamAudio, type JamAudioEngine } from './jam-audio';
 
-const SYNC_INTERVAL_MS = 2_000;
+const SYNC_INTERVAL_MS = 10_000;
 
 export interface UsePlaybackSyncArgs {
   playback: JamPlaybackState | null;
@@ -22,9 +22,8 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrec
   const onEndedRef = useRef(onEnded);
   const loadedTrackIdRef = useRef<string | null>(null);
   const pausedRef = useRef<boolean | null>(null);
-  const rateRef = useRef(1);
   const lastHardSeekAtRef = useRef<number | null>(null);
-  const rateCorrectionStartedAtRef = useRef<number | null>(null);
+  const unsubscribeResyncRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     onEndedRef.current = onEnded;
@@ -38,13 +37,13 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrec
 
     return () => {
       unsubscribe();
+      unsubscribeResyncRef.current?.();
+      unsubscribeResyncRef.current = null;
       engine.destroy();
       engineRef.current = null;
       loadedTrackIdRef.current = null;
       pausedRef.current = null;
-      rateRef.current = 1;
       lastHardSeekAtRef.current = null;
-      rateCorrectionStartedAtRef.current = null;
     };
   }, [audioEnabled]);
 
@@ -52,36 +51,53 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrec
     const engine = engineRef.current;
     if (!engine || !playback) return;
 
+    // Ресинк по первому реальному `playing`: позиция ДО этого считается до конца буферизации
+    // первого сегмента и стабильно отстаёт. Одноразово — снимает себя после первого срабатывания.
+    // Только при включённой синхронизации: одному слушателю этот прыжок съел бы начало трека.
+    function resyncOnPlaying(target: JamPlaybackState): void {
+      if (!driftCorrection) return;
+      unsubscribeResyncRef.current?.();
+      const unsubscribe = engine!.onPlaying(() => {
+        unsubscribe();
+        unsubscribeResyncRef.current = null;
+        if (loadedTrackIdRef.current !== target.trackId) return;
+        engine!.seek(derivePositionMs(target, serverNow()));
+      });
+      unsubscribeResyncRef.current = unsubscribe;
+    }
+
     if (loadedTrackIdRef.current !== playback.trackId) {
       loadedTrackIdRef.current = playback.trackId;
       pausedRef.current = playback.paused;
-      rateRef.current = 1;
       lastHardSeekAtRef.current = null;
-      rateCorrectionStartedAtRef.current = null;
+      unsubscribeResyncRef.current?.();
+      unsubscribeResyncRef.current = null;
       void engine.load(playback.trackId).then(() => {
         // load предыдущего трека резолвится досрочно при смене — не позиционируем по устаревшему состоянию
         if (loadedTrackIdRef.current !== playback.trackId) return;
-        engine.setRate(1);
+        // Грубая наводка сразу (не грузить трек с нуля), точная позиция — по ресинку ниже.
         engine.seek(derivePositionMs(playback, serverNow()));
-        if (!playback.paused) engine.play();
+        if (!playback.paused) {
+          resyncOnPlaying(playback);
+          engine.play();
+        }
       });
       return;
     }
 
     if (pausedRef.current !== playback.paused) {
       pausedRef.current = playback.paused;
-      rateRef.current = 1;
-      rateCorrectionStartedAtRef.current = null;
       if (playback.paused) {
+        unsubscribeResyncRef.current?.();
+        unsubscribeResyncRef.current = null;
         engine.pause();
-        engine.setRate(1);
       } else {
-        engine.setRate(1);
         engine.seek(derivePositionMs(playback, serverNow()));
+        resyncOnPlaying(playback);
         engine.play();
       }
     }
-  }, [playback, serverNow]);
+  }, [playback, serverNow, driftCorrection]);
 
   useEffect(() => {
     if (!playback || playback.paused) return;
@@ -96,23 +112,11 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrec
       const damper = {
         buffering: engine.isBuffering(),
         msSinceHardSeek: lastHardSeekAtRef.current === null ? null : nowMs - lastHardSeekAtRef.current,
-        msInRateCorrection: rateCorrectionStartedAtRef.current === null ? null : nowMs - rateCorrectionStartedAtRef.current,
       };
-      const action = decideDriftCorrection(expected, actual, rateRef.current, damper);
+      const action = decideDriftCorrection(expected, actual, damper);
       if (action.kind === 'seek') {
         engine.seek(action.toMs);
-        engine.setRate(1);
-        rateRef.current = 1;
         lastHardSeekAtRef.current = nowMs;
-        rateCorrectionStartedAtRef.current = null;
-      } else if (action.kind === 'rate') {
-        if (action.rate === 1) {
-          rateCorrectionStartedAtRef.current = null;
-        } else if (rateCorrectionStartedAtRef.current === null) {
-          rateCorrectionStartedAtRef.current = nowMs;
-        }
-        engine.setRate(action.rate);
-        rateRef.current = action.rate;
       }
     }
 

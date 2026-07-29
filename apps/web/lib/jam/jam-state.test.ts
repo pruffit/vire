@@ -18,6 +18,7 @@ const redisInstance = {
   incr: vi.fn().mockRejectedValue(new Error('redis down')),
   expire: vi.fn().mockRejectedValue(new Error('redis down')),
   del: vi.fn().mockRejectedValue(new Error('redis down')),
+  zrem: vi.fn().mockRejectedValue(new Error('redis down')),
   multi: vi.fn(() => createFailingMulti()),
 };
 
@@ -57,6 +58,10 @@ describe('RedisJamStateStore — деградация при недоступн�
   it('clear не бросает', async () => {
     await expect(store.clear('jam1')).resolves.toBeUndefined();
   });
+
+  it('dropPresence не бросает', async () => {
+    await expect(store.dropPresence('jam1', 'p1')).resolves.toBeUndefined();
+  });
 });
 
 describe('RedisJamStateStore — рабочий Redis', () => {
@@ -79,5 +84,11 @@ describe('RedisJamStateStore — рабочий Redis', () => {
     const n2 = await store.bumpAddCounter('jam1', 'p1');
     expect(n2).toBe(2);
     expect(redisInstance.expire).not.toHaveBeenCalled();
+  });
+
+  it('dropPresence удаляет участника из ZSET присутствия', async () => {
+    redisInstance.zrem.mockResolvedValueOnce(1);
+    await store.dropPresence('jam1', 'p1');
+    expect(redisInstance.zrem).toHaveBeenCalledWith('jam:jam1:presence', 'p1');
   });
 });

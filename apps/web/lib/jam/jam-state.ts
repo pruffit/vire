@@ -76,6 +76,14 @@ export class RedisJamStateStore implements IJamStateStore {
     }
   }
 
+  async dropPresence(jamId: string, participantKey: string): Promise<void> {
+    try {
+      await getRedis().zrem(presenceKey(jamId), participantKey);
+    } catch {
+      // деградация — запись присутствия истечёт сама по TTL
+    }
+  }
+
   async bumpAddCounter(jamId: string, participantKey: string): Promise<number> {
     try {
       const redis = getRedis();

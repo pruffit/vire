@@ -7,35 +7,25 @@ export interface JamPlaybackState {
 }
 
 export const HARD_SEEK_MS = 2000;
-export const SEEK_COOLDOWN_MS = 3000;
-export const RATE_CORRECT_MIN_MS = 200;
-export const CONVERGED_MS = 60;
-export const RATE_DELTA = 0.01;
-export const RATE_STUCK_MS = 20_000;
+export const SEEK_COOLDOWN_MS = 10_000;
 
 export function derivePositionMs(state: JamPlaybackState, serverNowMs: number): number {
   const raw = state.paused ? state.pausedPositionMs : serverNowMs - state.startedAtMs;
   return Math.max(0, raw);
 }
 
-export type DriftAction =
-  | { kind: 'none' }
-  | { kind: 'rate'; rate: number }
-  | { kind: 'seek'; toMs: number };
+export type DriftAction = { kind: 'none' } | { kind: 'seek'; toMs: number };
 
 export interface DriftDamperState {
   /** Элемент реально буферизует (readyState/waiting) — коррекция вслепую не читает актуальную позицию. */
   buffering: boolean;
   /** Мс с последнего жёсткого seek, null — если его ещё не было. */
   msSinceHardSeek: number | null;
-  /** Мс непрерывной rate-коррекции без схождения, null — если коррекция сейчас не идёт. */
-  msInRateCorrection: number | null;
 }
 
 export function decideDriftCorrection(
   expectedMs: number,
   actualMs: number,
-  currentRate: number,
   damper: DriftDamperState,
 ): DriftAction {
   // Столл/свежий seek дают недостоверный actualMs — коррекция на нём петлит (столл → seek → новый столл).
@@ -43,30 +33,12 @@ export function decideDriftCorrection(
     return { kind: 'none' };
   }
 
-  const drift = actualMs - expectedMs;
-  const absDrift = Math.abs(drift);
-
-  // Rate-коррекция держится дольше RATE_STUCK_MS не сходясь — систематическое смещение
-  // оценки часов, а не разовый скачок; жёсткий seek обрывает деградацию на warped rate.
-  if (damper.msInRateCorrection !== null && damper.msInRateCorrection >= RATE_STUCK_MS && absDrift >= CONVERGED_MS) {
+  const drift = Math.abs(actualMs - expectedMs);
+  if (drift > HARD_SEEK_MS) {
     return { kind: 'seek', toMs: expectedMs };
   }
 
-  if (absDrift > HARD_SEEK_MS) {
-    return { kind: 'seek', toMs: expectedMs };
-  }
-
-  if (absDrift >= RATE_CORRECT_MIN_MS) {
-    return { kind: 'rate', rate: drift < 0 ? 1 + RATE_DELTA : 1 - RATE_DELTA };
-  }
-
-  if (absDrift < CONVERGED_MS) {
-    return currentRate !== 1 ? { kind: 'rate', rate: 1 } : { kind: 'none' };
-  }
-
-  // Серая зона [CONVERGED_MS, RATE_CORRECT_MIN_MS): гистерезис — входим в
-  // коррекцию на 150мс, выходим на 50мс, чтобы не дёргать rate туда-сюда.
-  return currentRate !== 1 ? { kind: 'rate', rate: currentRate } : { kind: 'none' };
+  return { kind: 'none' };
 }
 
 export function pickClockOffset(

@@ -53,6 +53,7 @@ interface RoomState {
   playback: JamPlaybackState | null;
   mode: JamMode;
   speakerParticipantId: string | null;
+  presentParticipantIds: string[];
   connected: boolean;
   ended: boolean;
   setDragging: ReturnType<typeof vi.fn>;
@@ -61,6 +62,7 @@ interface RoomState {
 function baseRoom(overrides?: Partial<RoomState>): RoomState {
   return {
     queue: [], version: 0, participants: [], playback: null, mode: 'SYNCED', speakerParticipantId: null,
+    presentParticipantIds: [],
     connected: true, ended: false, setDragging: vi.fn(),
     ...overrides,
   };
@@ -539,5 +541,27 @@ describe('JamRoom', () => {
     expect(badges[0]!.closest('button')).toBeNull();
 
     await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isRemote).toBe(false));
+  });
+
+  it('SYNCED: единственное живое устройство — usePlaybackSync получает driftCorrection:false', async () => {
+    useJamRoomMock.mockReturnValue(baseRoom({ presentParticipantIds: ['p1'] }));
+
+    render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
+    );
+    await joinAs('HOST');
+
+    expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(expect.objectContaining({ driftCorrection: false }));
+  });
+
+  it('SYNCED: два живых устройства — usePlaybackSync получает driftCorrection:true', async () => {
+    useJamRoomMock.mockReturnValue(baseRoom({ presentParticipantIds: ['p1', 'p2'] }));
+
+    render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
+    );
+    await joinAs('HOST');
+
+    expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(expect.objectContaining({ driftCorrection: true }));
   });
 });

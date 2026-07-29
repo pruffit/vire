@@ -13,11 +13,12 @@ export interface JamAudioEngine {
   play(): void;
   pause(): void;
   seek(ms: number): void;
-  setRate(rate: number): void;
   currentTimeMs(): number;
   /** Элемент реально ждёт данные (событие `waiting` без последующего `playing`) — дрейф на этом недостоверен. */
   isBuffering(): boolean;
   onEnded(listener: () => void): () => void;
+  /** Звук фактически пошёл (событие `playing`) — момент, когда позицию можно точно ресинкнуть после буферизации. */
+  onPlaying(listener: () => void): () => void;
   destroy(): void;
 }
 
@@ -27,7 +28,6 @@ async function loadHlsClass(): Promise<typeof HlsType> {
 
 export function createJamAudio(): JamAudioEngine {
   const audio = new Audio() as VendorPitchAudioElement;
-  // Дрейф корректируется playbackRate — без этого держатся вендорные варианты Firefox/Safari.
   audio.preservesPitch = true;
   audio.mozPreservesPitch = true;
   audio.webkitPreservesPitch = true;
@@ -42,10 +42,14 @@ export function createJamAudio(): JamAudioEngine {
   let pendingLoadResolve: (() => void) | null = null;
   let buffering = false;
   const endedListeners = new Set<() => void>();
+  const playingListeners = new Set<() => void>();
 
   const handleEnded = (): void => endedListeners.forEach((listener) => listener());
   const handleWaiting = (): void => { buffering = true; };
-  const handlePlaying = (): void => { buffering = false; };
+  const handlePlaying = (): void => {
+    buffering = false;
+    playingListeners.forEach((listener) => listener());
+  };
   audio.addEventListener('ended', handleEnded);
   audio.addEventListener('waiting', handleWaiting);
   audio.addEventListener('playing', handlePlaying);
@@ -112,10 +116,6 @@ export function createJamAudio(): JamAudioEngine {
       audio.currentTime = ms / 1000;
     },
 
-    setRate(rate: number): void {
-      audio.playbackRate = rate;
-    },
-
     currentTimeMs(): number {
       return audio.currentTime * 1000;
     },
@@ -127,6 +127,11 @@ export function createJamAudio(): JamAudioEngine {
     onEnded(listener: () => void): () => void {
       endedListeners.add(listener);
       return () => endedListeners.delete(listener);
+    },
+
+    onPlaying(listener: () => void): () => void {
+      playingListeners.add(listener);
+      return () => playingListeners.delete(listener);
     },
 
     destroy(): void {
@@ -141,6 +146,7 @@ export function createJamAudio(): JamAudioEngine {
       audio.src = '';
       audio.load();
       endedListeners.clear();
+      playingListeners.clear();
       loadedTrackId = null;
     },
   };

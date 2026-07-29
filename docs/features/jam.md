@@ -16,14 +16,31 @@
 - Синхронное воспроизведение: сервер-авторитетные часы (`GET /api/v1/jam/time`,
   5 NTP-замеров, минимальный RTT, ресинк 5 мин). Позиция выводится из
   `{ trackId, startedAtMs, paused, pausedPositionMs }` в Redis, а не транслируется.
-  Дрейф: >2с — жёсткий seek; 200мс–2с — `playbackRate = 1 ± 0.01` до схождения <60мс
-  (гистерезис, `preservesPitch`) — ±1% почти неслышим, в отличие от прежних ±3%.
-  Если rate-коррекция держится непрерывно ≥20с (`RATE_STUCK_MS`) и дрейф всё ещё не
-  сошёлся (`msInRateCorrection`, ведёт `use-playback-sync.ts`) — жёсткий seek обрывает
-  деградацию вместо многосекундной езды на warped rate (систематическое смещение
-  оценки часов). Коррекция задемпфирована (`DriftDamperState`): пока элемент
-  буферизует (`waiting` без `playing`) и 3с после жёсткого seek (`SEEK_COOLDOWN_MS`)
+  **Тайм-стретч (`playbackRate`) не используется вовсе** — только seek или ничего:
+  дрейф >2с (`HARD_SEEK_MS`) — жёсткий seek на ожидаемую позицию, иначе `none`. Раньше
+  умеренный дрейф (200мс–2с) гнался `playbackRate = 1 ± 0.01`, но позиция считалась ДО
+  того, как HLS реально начинал звучать (манифест + первый сегмент грузятся 1–3с) —
+  клиент стабильно отставал на время буферизации и rate-коррекция работала минутами,
+  слышно как «каша». Вместо этого позиция ресинкается по факту начала звука: на
+  загрузке трека и на возобновлении с паузы делается грубый seek ДО `play()` (не
+  грузить трек с нуля), а точный — только после первого события `playing` у `<audio>`
+  (`engine.onPlaying`, `use-playback-sync.ts`), когда буферизация первого сегмента уже
+  прошла и `serverNow()` отражает реальный момент старта звука. Подписка на `playing`
+  одноразовая (снимает себя после первого срабатывания) и отменяется при смене
+  трека/паузе/размонтировании — staleness-guard как у `load`. Периодическая коррекция
+  (интервал `SYNC_INTERVAL_MS` 10с) задемпфирована (`DriftDamperState`): пока элемент
+  буферизует (`waiting` без `playing`) и `SEEK_COOLDOWN_MS` (10с) после жёсткого seek
   решение — `none`, иначе столл кормит сам себя (столл → seek → новый столл → заикание).
+  **Коррекция дрейфа включена только когда в комнате 2+ звуковых устройства** — в одиночном
+  джеме синхронизировать не с кем, и коррекция (даже редкий seek) — чистый минус. Устройства
+  считаются по факту открытого SSE-соединения (`jam:{id}:presence` ZSET в Redis,
+  `IJamStateStore.listPresent`/`dropPresence`), а не по списку когда-либо заходивших
+  участников: вход в стрим шлёт heartbeat и сразу бродкастит `jam:presence
+  {participantIds}` всем; разрыв соединения (`stream/route.ts` `cleanup()`, срабатывает
+  и на `cancel()`, и на `abort`) зовёт `JamService.leave` — снимает присутствие и
+  бродкастит свежий список (деградирует молча при недоступном Redis). `jam-room.tsx`
+  считает `audioDeviceCount` (в SPEAKER всегда 1, в SYNCED — `presentParticipantIds.length`)
+  и включает `driftCorrection` только при `mode === 'SYNCED' && audioDeviceCount > 1`.
   Отдельный аудио-движок `lib/jam/jam-audio.ts` — на общем HLS-слое `lib/player/hls-runtime.ts`
   (`HLS_TUNING` + `attachStallRecovery`, те же настройки, что у основного плеера);
   громкость берёт из `usePlayerStore` при создании и подписывается на изменения
@@ -107,7 +124,8 @@
 - **Сервисы/логика:** `packages/core/src/services/{jam,jam-sync,jam-queue,jam-code,jam-mode}.ts`
   (чистые: права участия, лимиты, `applyQueueMutation` вкл. `shuffle`,
   `derivePositionMs`, `decideDriftCorrection`, `pickClockOffset`,
-  `resolveSpeakerParticipantId`/`isAudioDevice`), порт
+  `resolveSpeakerParticipantId`/`isAudioDevice`; `JamService.listPresent`/`leave` —
+  presence поверх `IJamStateStore.listPresent`/`dropPresence`), порт
   `ports/jam-state.ts`; `apps/web/lib/jam/*` (`server-clock`, `jam-audio`,
   `use-jam-room`, `use-jam-queue`, `use-playback-sync` (проп `driftCorrection`),
   `jam-state`, `jam-identity`, `jam-mode-labels`,

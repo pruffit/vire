@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { jamService } from '@/lib/jam';
 import { resolveJamIdentity } from '@/lib/jam/jam-identity';
-import { subscribeChannel, jamChannel } from '@/lib/realtime';
+import { subscribeChannel, publishChannel, jamChannel } from '@/lib/realtime';
 import { ForbiddenError, ValidationError } from '@vire/core';
 
 export const runtime = 'nodejs';
@@ -31,17 +31,20 @@ export async function GET(req: Request, { params }: Ctx) {
     const status = stateResult.error instanceof ForbiddenError ? 403 : 404;
     return NextResponse.json({ error: stateResult.error.message }, { status });
   }
-  const { session, participants, queue, playback } = stateResult.value;
+  const { session, participants, queue, playback, presentParticipantIds } = stateResult.value;
 
   const encoder = new TextEncoder();
   let unsubscribe: (() => void) | null = null;
   let heartbeat: ReturnType<typeof setInterval> | undefined;
 
-  function cleanup() {
+  // Arrow-выражение, не function-декларация: только так TS удерживает narrowing
+  // `identity` (не null после гарда выше) внутри тела — hoisted-декларации его теряют.
+  const cleanup = () => {
     unsubscribe?.();
     unsubscribe = null;
     if (heartbeat) clearInterval(heartbeat);
-  }
+    void service.leave(jamId, identity).catch(() => {});
+  };
 
   const stream = new ReadableStream({
     start(controller) {
@@ -54,8 +57,13 @@ export async function GET(req: Request, { params }: Ctx) {
       };
 
       unsubscribe = subscribeChannel(jamChannel(jamId), send);
-      send({ type: 'jam:snapshot', session, participants, queue, version: session.queueVersion, playback });
-      void service.heartbeat(jamId, identity);
+      send({ type: 'jam:snapshot', session, participants, queue, version: session.queueVersion, playback, presentParticipantIds });
+      // Только на входе в живое соединение — участник реально становится звуковым устройством,
+      // остальным нужно узнать об этом сразу, а не ждать следующего периодического heartbeat.
+      void service.heartbeat(jamId, identity).then(async () => {
+        const ids = await service.listPresent(jamId);
+        await publishChannel(jamChannel(jamId), { type: 'jam:presence', participantIds: ids });
+      });
 
       heartbeat = setInterval(() => {
         try {

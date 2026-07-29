@@ -13,24 +13,30 @@ interface FakeEngine {
   play: ReturnType<typeof vi.fn>;
   pause: ReturnType<typeof vi.fn>;
   seek: ReturnType<typeof vi.fn>;
-  setRate: ReturnType<typeof vi.fn>;
   currentTimeMs: ReturnType<typeof vi.fn>;
   isBuffering: ReturnType<typeof vi.fn>;
   onEnded: ReturnType<typeof vi.fn>;
+  onPlaying: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
+  firePlaying: () => void;
 }
 
 function makeFakeEngine(): FakeEngine {
+  const playingListeners = new Set<() => void>();
   return {
     load: vi.fn(async () => {}),
     play: vi.fn(),
     pause: vi.fn(),
     seek: vi.fn(),
-    setRate: vi.fn(),
     currentTimeMs: vi.fn(() => 0),
     isBuffering: vi.fn(() => false),
     onEnded: vi.fn(() => vi.fn()),
+    onPlaying: vi.fn((listener: () => void) => {
+      playingListeners.add(listener);
+      return () => playingListeners.delete(listener);
+    }),
     destroy: vi.fn(),
+    firePlaying: () => playingListeners.forEach((l) => l()),
   };
 }
 
@@ -66,7 +72,7 @@ describe('usePlaybackSync', () => {
     expect(createJamAudioMock).not.toHaveBeenCalled();
   });
 
-  it('на новый трек грузит, позиционирует по serverNow и запускает, если не на паузе', async () => {
+  it('на новый трек грузит, делает грубый seek сразу и запускает, если не на паузе', async () => {
     const pb = playback({ startedAtMs: -5_000 });
     renderHook(() => usePlaybackSync({ playback: pb, serverNow: () => 0, audioEnabled: true }));
     await flush();
@@ -76,13 +82,53 @@ describe('usePlaybackSync', () => {
     expect(engine.play).toHaveBeenCalledTimes(1);
   });
 
-  it('трек на паузе при загрузке — позиционирует, но не запускает', async () => {
+  it('точная позиция выставляется только после первого playing, с учётом времени буферизации', async () => {
+    let now = 5_000;
+    const pb = playback({ startedAtMs: 0 });
+    renderHook(() => usePlaybackSync({ playback: pb, serverNow: () => now, audioEnabled: true }));
+    await flush();
+    expect(engine.seek).toHaveBeenCalledWith(5_000);
+
+    engine.seek.mockClear();
+    now = 6_200; // время ушло на буферизацию первого сегмента, пока звук не пошёл
+    act(() => engine.firePlaying());
+
+    expect(engine.seek).toHaveBeenCalledWith(6_200);
+  });
+
+  it('повторное playing после первого ресинка не вызывает ещё один seek (одноразовая подписка)', async () => {
+    const pb = playback({ startedAtMs: 0 });
+    renderHook(() => usePlaybackSync({ playback: pb, serverNow: () => 5_000, audioEnabled: true }));
+    await flush();
+
+    act(() => engine.firePlaying());
+    engine.seek.mockClear();
+    act(() => engine.firePlaying());
+
+    expect(engine.seek).not.toHaveBeenCalled();
+  });
+
+  it('driftCorrection: false — ресинка по playing нет (одиночный джем не теряет начало трека)', async () => {
+    let now = 0;
+    const pb = playback({ startedAtMs: 0 });
+    renderHook(() => usePlaybackSync({ playback: pb, serverNow: () => now, audioEnabled: true, driftCorrection: false }));
+    await flush();
+
+    engine.seek.mockClear();
+    now = 2_000;
+    act(() => engine.firePlaying());
+
+    expect(engine.seek).not.toHaveBeenCalled();
+  });
+
+  it('трек на паузе при загрузке — позиционирует, но не запускает и не ждёт playing', async () => {
     const pb = playback({ paused: true, pausedPositionMs: 3_000 });
     renderHook(() => usePlaybackSync({ playback: pb, serverNow: () => 0, audioEnabled: true }));
     await flush();
 
     expect(engine.seek).toHaveBeenCalledWith(3_000);
     expect(engine.play).not.toHaveBeenCalled();
+    expect(engine.onPlaying).not.toHaveBeenCalled();
   });
 
   it('смена trackId в playback грузит новый трек и позиционирует заново', async () => {
@@ -128,7 +174,7 @@ describe('usePlaybackSync', () => {
     expect(engine.play).not.toHaveBeenCalled();
   });
 
-  it('paused → playing вызывает play() и репозиционирует; playing → paused вызывает pause()', async () => {
+  it('paused → playing делает грубый seek, play() и ждёт playing; playing → paused вызывает pause() и отменяет ожидание', async () => {
     const playing = playback({ paused: false, startedAtMs: 0 });
     const { rerender } = renderHook(
       ({ pb }: { pb: JamPlaybackState }) => usePlaybackSync({ playback: pb, serverNow: () => 0, audioEnabled: true }),
@@ -141,6 +187,11 @@ describe('usePlaybackSync', () => {
     rerender({ pb: paused });
     await flush();
     expect(engine.pause).toHaveBeenCalledTimes(1);
+
+    // Отменённое ожидание: playing после паузы не должен ничего сикать.
+    engine.seek.mockClear();
+    act(() => engine.firePlaying());
+    expect(engine.seek).not.toHaveBeenCalled();
 
     engine.play.mockClear();
     engine.seek.mockClear();
@@ -158,49 +209,28 @@ describe('usePlaybackSync', () => {
     renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
     await flush();
     engine.seek.mockClear();
-    engine.setRate.mockClear();
 
     engine.currentTimeMs.mockReturnValue(6_000);
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
+      await vi.advanceTimersByTimeAsync(10_000);
     });
 
     expect(engine.seek).toHaveBeenCalledWith(10_000);
-    expect(engine.setRate).toHaveBeenCalledWith(1);
   });
 
-  it('средний дрейф — коррекция playbackRate без seek', async () => {
+  it('дрейф в пределах HARD_SEEK_MS — ничего не делает (нет тайм-стретча)', async () => {
     const serverNow = () => 10_000;
     const pb = playback({ startedAtMs: 0 });
     renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
     await flush();
     engine.seek.mockClear();
-    engine.setRate.mockClear();
 
-    engine.currentTimeMs.mockReturnValue(9_700);
+    engine.currentTimeMs.mockReturnValue(9_000);
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
-    });
-
-    expect(engine.setRate).toHaveBeenCalledWith(1.01);
-    expect(engine.seek).not.toHaveBeenCalled();
-  });
-
-  it('дрейф внутри порога схождения — ничего не делает', async () => {
-    const serverNow = () => 10_000;
-    const pb = playback({ startedAtMs: 0 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
-    await flush();
-    engine.seek.mockClear();
-    engine.setRate.mockClear();
-
-    engine.currentTimeMs.mockReturnValue(9_990);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
+      await vi.advanceTimersByTimeAsync(10_000);
     });
 
     expect(engine.seek).not.toHaveBeenCalled();
-    expect(engine.setRate).not.toHaveBeenCalled();
   });
 
   it('буферизация подавляет коррекцию даже при большом дрейфе', async () => {
@@ -209,43 +239,39 @@ describe('usePlaybackSync', () => {
     renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
     await flush();
     engine.seek.mockClear();
-    engine.setRate.mockClear();
 
     engine.currentTimeMs.mockReturnValue(6_000);
     engine.isBuffering.mockReturnValue(true);
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
+      await vi.advanceTimersByTimeAsync(10_000);
     });
 
     expect(engine.seek).not.toHaveBeenCalled();
-    expect(engine.setRate).not.toHaveBeenCalled();
   });
 
-  it('cooldown после жёсткого seek подавляет следующую коррекцию, затем снова разрешает seek', async () => {
+  it('cooldown подавляет коррекцию сразу после жёсткого seek, затем снова разрешает', async () => {
     const serverNow = () => 10_000;
     const pb = playback({ startedAtMs: 0 });
     renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
     await flush();
     engine.seek.mockClear();
-    engine.setRate.mockClear();
 
     engine.currentTimeMs.mockReturnValue(6_000);
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
+      await vi.advanceTimersByTimeAsync(10_000);
     });
     expect(engine.seek).toHaveBeenCalledTimes(1);
 
+    // Немедленный повторный прогон (напр. возврат вкладки) внутри окна cooldown — подавлен.
     engine.seek.mockClear();
-    engine.setRate.mockClear();
-    engine.currentTimeMs.mockReturnValue(6_000);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
     });
     expect(engine.seek).not.toHaveBeenCalled();
 
-    engine.currentTimeMs.mockReturnValue(6_000);
+    // Cooldown истёк — коррекция снова проходит.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
+      await vi.advanceTimersByTimeAsync(10_000);
     });
     expect(engine.seek).toHaveBeenCalledWith(10_000);
   });
@@ -256,16 +282,14 @@ describe('usePlaybackSync', () => {
     renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true, driftCorrection: false }));
     await flush();
     engine.seek.mockClear();
-    engine.setRate.mockClear();
 
     engine.currentTimeMs.mockReturnValue(6_000);
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(4_000);
+      await vi.advanceTimersByTimeAsync(20_000);
     });
     document.dispatchEvent(new Event('visibilitychange'));
 
     expect(engine.seek).not.toHaveBeenCalled();
-    expect(engine.setRate).not.toHaveBeenCalled();
   });
 
   it('visibilitychange запускает немедленный прогон, не дожидаясь тика', async () => {
@@ -274,7 +298,6 @@ describe('usePlaybackSync', () => {
     renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
     await flush();
     engine.seek.mockClear();
-    engine.setRate.mockClear();
 
     engine.currentTimeMs.mockReturnValue(6_000);
     act(() => {
@@ -297,7 +320,7 @@ describe('usePlaybackSync', () => {
     engine.currentTimeMs.mockReturnValue(6_000);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(4_000);
+      await vi.advanceTimersByTimeAsync(20_000);
     });
     document.dispatchEvent(new Event('visibilitychange'));
 

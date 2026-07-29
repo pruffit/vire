@@ -35,6 +35,7 @@ export interface JamFullState {
   participants: JamParticipant[];
   queue: JamQueueItem[];
   playback: JamPlaybackState | null;
+  presentParticipantIds: string[];
 }
 
 function forbidden(message = 'Вы не участник этого джема'): ForbiddenError {
@@ -134,7 +135,8 @@ export class JamService {
     if (!sessionState) return err(new NotFoundError('Jam', jamId));
 
     const playback = await this.state.getPlayback(jamId);
-    return ok({ ...sessionState, playback });
+    const presentParticipantIds = await this.state.listPresent(jamId);
+    return ok({ ...sessionState, playback, presentParticipantIds });
   }
 
   async assertParticipant(jamId: string, identity: JamParticipantIdentity): Promise<Result<JamParticipant, ForbiddenError>> {
@@ -317,6 +319,21 @@ export class JamService {
 
     await this.repo.touchParticipant(participant.id);
     await this.state.heartbeat(jamId, participant.id);
+    return ok(undefined);
+  }
+
+  async listPresent(jamId: string): Promise<string[]> {
+    return this.state.listPresent(jamId);
+  }
+
+  /** Клиент отключился от живого SSE-соединения — снять его из presence и оповестить остальных. */
+  async leave(jamId: string, identity: JamParticipantIdentity): Promise<Result<void, ForbiddenError>> {
+    const participant = await this.repo.findParticipant(jamId, identity);
+    if (!participant) return err(forbidden());
+
+    await this.state.dropPresence(jamId, participant.id);
+    const participantIds = await this.state.listPresent(jamId);
+    await this.broadcaster.broadcast(jamId, { type: 'jam:presence', participantIds });
     return ok(undefined);
   }
 }

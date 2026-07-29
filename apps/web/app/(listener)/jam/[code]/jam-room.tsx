@@ -88,6 +88,9 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     }),
     [myParticipantId, room.mode, room.participants, room.speakerParticipantId],
   );
+  // SPEAKER — звук всегда на одном устройстве; SYNCED — сколько участников реально держат живое SSE-соединение.
+  // Синхронизировать не с кем, когда устройство одно — периодическая коррекция дрейфа отключается.
+  const audioDeviceCount = room.mode === 'SPEAKER' ? 1 : room.presentParticipantIds.length;
 
   const postPlayback = useCallback((body: PlaybackCommand, onError?: () => void) => {
     const sessionId = membership?.sessionId;
@@ -119,7 +122,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     playback: room.playback,
     serverNow,
     audioEnabled: audioEnabled && isAudioDevice && !ended,
-    driftCorrection: room.mode === 'SYNCED',
+    driftCorrection: room.mode === 'SYNCED' && audioDeviceCount > 1,
     onEnded: handleTrackEnded,
   });
 

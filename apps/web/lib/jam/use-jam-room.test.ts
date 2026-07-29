@@ -53,7 +53,9 @@ describe('useJamRoom', () => {
     const { result } = renderHook(() => useJamRoom('A2B3C4', null));
 
     act(() => {
-      lastHandlers()['jam:snapshot']!({ session: {}, participants: [], queue: [track('a')], version: 5, playback: null });
+      lastHandlers()['jam:snapshot']!({
+        session: {}, participants: [], queue: [track('a')], version: 5, playback: null, presentParticipantIds: ['p1'],
+      });
     });
 
     expect(result.current.queue.map((t) => t.id)).toEqual(['a']);
@@ -61,6 +63,33 @@ describe('useJamRoom', () => {
     expect(result.current.connected).toBe(true);
     expect(result.current.mode).toBe('SYNCED');
     expect(result.current.speakerParticipantId).toBeNull();
+    expect(result.current.presentParticipantIds).toEqual(['p1']);
+  });
+
+  it('снапшот без presentParticipantIds по умолчанию даёт пустой список', () => {
+    const { result } = renderHook(() => useJamRoom('A2B3C4', null));
+
+    act(() => {
+      lastHandlers()['jam:snapshot']!({ session: {}, participants: [], queue: [], version: 1, playback: null });
+    });
+
+    expect(result.current.presentParticipantIds).toEqual([]);
+  });
+
+  it('применяет jam:presence к текущему состоянию', () => {
+    const { result } = renderHook(() => useJamRoom('A2B3C4', null));
+    act(() => {
+      lastHandlers()['jam:snapshot']!({
+        session: {}, participants: [], queue: [track('a')], version: 5, playback: null, presentParticipantIds: ['p1'],
+      });
+    });
+
+    act(() => {
+      lastHandlers()['jam:presence']!({ participantIds: ['p1', 'p2'] });
+    });
+
+    expect(result.current.presentParticipantIds).toEqual(['p1', 'p2']);
+    expect(result.current.queue.map((t) => t.id)).toEqual(['a']);
   });
 
   it('берёт режим и колонку из session в снапшоте', () => {
