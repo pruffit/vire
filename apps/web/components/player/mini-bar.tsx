@@ -1,22 +1,22 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore, type JamOverride } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
-import { jamToggle } from '@/lib/jam/jam-controls';
+import { jamToggle, getJamTransport } from '@/lib/jam/jam-controls';
+import { useJamPosition } from '@/lib/jam/use-jam-position';
 import { Icon } from '@/components/icon';
 import { Controls } from './controls';
 import { ArtistLink, TitleLink } from './track-links';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
-import { QueueIcon, ExpandIcon } from './player-icons';
+import { QueueIcon, ExpandIcon, SkipBackIcon, SkipForwardIcon } from './player-icons';
+import { ProgressLine } from './progress-line';
 import { formatDuration } from '@/lib/format';
 import { useIsDesktopPointer } from '@/lib/is-desktop-pointer';
 import { useAudioTime } from '@/lib/player/use-audio-time';
-import { ratioFromX } from '@/lib/player/waveform-math';
 
 /** Мини-бар. `ticking=false` (фуллскрин открыт) замораживает живые части — не крутить два rAF-цикла. */
 export function MiniBar({
@@ -31,7 +31,7 @@ export function MiniBar({
   const track = usePlayerStore((s) => s.track);
   const jamOverride = usePlayerStore((s) => s.jamOverride);
 
-  if (jamOverride) return <JamMiniBar override={jamOverride} />;
+  if (jamOverride) return <JamMiniBar override={jamOverride} ticking={ticking} />;
   if (!track) return null;
 
   return (
@@ -71,9 +71,11 @@ export function MiniBar({
   );
 }
 
-/** Джем-takeover: глобальный движок остановлен (см. audio-engine guard), транспорт уходит в jamToggle(). */
-function JamMiniBar({ override }: { override: JamOverride }) {
-  const { track, isPlaying } = override;
+/** Джем-takeover: глобальный движок остановлен (см. audio-engine guard) — полноценный транспорт уходит в зарегистрированный getJamTransport(). */
+function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boolean }) {
+  const { track, isPlaying, durationSec, canPrev, canNext } = override;
+  // Тикает и на паузе: перемотка паузнутого джема должна двигать полоску (значение то же — React делает bail-out).
+  const position = useJamPosition(ticking);
 
   return (
     <div className="relative h-full">
@@ -92,28 +94,66 @@ function JamMiniBar({ override }: { override: JamOverride }) {
       )}
       <div className="absolute inset-0 bg-card/88" />
 
-      <div className="relative z-10 flex items-center h-full px-3 sm:px-4 gap-3">
-        <span className="w-11 h-11 shrink-0 relative rounded overflow-hidden bg-white/5">
-          {track.coverUrl && <Image src={track.coverUrl} alt={track.title} fill sizes="44px" className="object-cover" />}
-        </span>
-        <div className="min-w-0 flex-1">
-          <span className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[11px] sm:text-sm font-medium truncate leading-tight">{track.title}</span>
-            <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-primary">
-              Джем
-            </span>
+      <div className="relative z-10 flex items-center h-full pl-3 pr-2 sm:px-4 gap-2 sm:gap-4">
+        <div className="flex items-center gap-3 w-1/3 min-w-0">
+          <span className="w-11 h-11 shrink-0 relative rounded overflow-hidden bg-white/5">
+            {track.coverUrl && <Image src={track.coverUrl} alt={track.title} fill sizes="44px" className="object-cover" />}
           </span>
-          <span className="block text-xs text-muted-foreground truncate">{track.artistName}</span>
+          <div className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[11px] sm:text-sm font-medium truncate leading-tight">{track.title}</span>
+              <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-primary">
+                Джем
+              </span>
+            </span>
+            <span className="hidden sm:block text-xs text-muted-foreground truncate">{track.artistName}</span>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => jamToggle()}
-          aria-label={isPlaying ? 'Поставить джем на паузу' : 'Возобновить джем'}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-90"
-        >
-          <Icon name={isPlaying ? 'pause' : 'play'} size={16} />
-        </button>
+
+        <div className="flex items-center gap-4 sm:gap-5 justify-center flex-1">
+          <button
+            type="button"
+            onClick={() => getJamTransport()?.prev()}
+            disabled={!canPrev}
+            aria-label="Предыдущий трек"
+            className="p-2 -m-1 opacity-50 hover:opacity-100 disabled:opacity-20 disabled:pointer-events-none transition-opacity pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
+          >
+            <SkipBackIcon />
+          </button>
+          <button
+            type="button"
+            onClick={() => jamToggle()}
+            aria-label={isPlaying ? 'Поставить джем на паузу' : 'Возобновить джем'}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-90"
+          >
+            <Icon name={isPlaying ? 'pause' : 'play'} size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => getJamTransport()?.next()}
+            disabled={!canNext}
+            aria-label="Следующий трек"
+            className="p-2 -m-1 opacity-50 hover:opacity-100 disabled:opacity-20 disabled:pointer-events-none transition-opacity pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
+          >
+            <SkipForwardIcon />
+          </button>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-3 w-1/3 justify-end">
+          <span className="text-xs font-mono text-muted-foreground tabular-nums w-8 text-right">
+            {formatDuration(position)}
+          </span>
+          <span className="text-xs font-mono text-muted-foreground tabular-nums w-8">
+            {formatDuration(durationSec ?? 0)}
+          </span>
+        </div>
       </div>
+
+      <ProgressLine
+        position={position}
+        duration={durationSec ?? 0}
+        onSeek={(seconds) => getJamTransport()?.seek(seconds * 1000)}
+      />
     </div>
   );
 }
@@ -225,70 +265,9 @@ function MiniCurrentTimeLabel({ active }: { active: boolean }) {
   );
 }
 
-/** Линия прогресса по верхней кромке бара — единственная перемотка на мобилке. */
+/** Тонкая обёртка над ProgressLine — изолирует ре-рендер на тик от остального бара (см. useAudioTime). */
 function TopProgressLine({ active }: { active: boolean }) {
   const currentTime = useAudioTime(4, active);
   const duration = usePlayerStore((s) => s.duration);
-  const ref = useRef<HTMLDivElement>(null);
-  const [scrub, setScrub] = useState<number | null>(null);
-  // Hover-утолщение только на десктопе — на таче :hover залипает после тапа.
-  const isDesktop = useIsDesktopPointer();
-  const shown = scrub ?? (duration > 0 ? currentTime / duration : 0);
-
-  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (!duration || !ref.current) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setScrub(ratioFromX(e.clientX, ref.current.getBoundingClientRect()));
-  }
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (scrub === null || !duration || !ref.current) return;
-    setScrub(ratioFromX(e.clientX, ref.current.getBoundingClientRect()));
-  }
-  function commit() {
-    if (scrub === null || !duration) return;
-    controls.seek(scrub * duration);
-    setScrub(null);
-  }
-
-  const dragging = scrub !== null;
-
-  return (
-    // Зона касания 12px, видимая полоска — 2px у кромки.
-    <div
-      ref={ref}
-      role="slider"
-      aria-label="Перемотка"
-      aria-valuenow={Math.round(shown * duration)}
-      aria-valuemin={0}
-      aria-valuemax={Math.round(duration)}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={commit}
-      onPointerCancel={() => setScrub(null)}
-      className="absolute z-20 top-0 left-0 right-0 h-3 flex items-start touch-none cursor-pointer group"
-    >
-      <div
-        className={`relative w-full bg-white/5 transition-[height] ${
-          dragging ? 'h-[3px]' : isDesktop ? 'h-[2px] group-hover:h-[3px]' : 'h-[2px]'
-        }`}
-      >
-        <div
-          className={dragging ? 'h-full' : 'h-full transition-[width] duration-100 ease-linear'}
-          style={{
-            width: `${shown * 100}%`,
-            background: 'var(--artist-accent, oklch(72% 0.19 145))',
-            opacity: dragging ? 1 : 0.85,
-          }}
-        >
-          {isDesktop && !dragging && (
-            <span
-              aria-hidden="true"
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ background: 'var(--artist-accent, oklch(72% 0.19 145))' }}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  return <ProgressLine position={currentTime} duration={duration} onSeek={(t) => controls.seek(t)} />;
 }

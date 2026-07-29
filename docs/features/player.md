@@ -59,7 +59,14 @@
   и перемотка мимо кнопок транспорта не срабатывала; на десктопе hover утолщает линию
   и показывает плейхед. На `<sm` рядом с кнопкой очереди в фуллскрине появляется своя
   кнопка очереди в мини-баре (`MobileQueueButton`, `sm:hidden`) — раньше очередь на
-  мобилке открывалась только через фуллскрин.
+  мобилке открывалась только через фуллскрин. Прогресс-линия вынесена в
+  `progress-line.tsx` (`{ position, duration, onSeek }`) — общая для обычного режима
+  (обёртка `TopProgressLine` читает `useAudioTime`/store) и для джема
+  (`JamMiniBar` читает позицию через `lib/jam/use-jam-position.ts` и шлёт seek в
+  зарегистрированный `getJamTransport()`, см. [jam.md](jam.md)). В режиме
+  джема (`jamOverride` в сторе) мини-бар — полноценный транспорт: prev/play-pause/next
+  (prev/next `disabled` по `canPrev`/`canNext` активного трека в очереди джема), лайк/
+  волна/очередь скрыты.
 - `fullscreen.tsx` — полноэкранный плеер: OKLCH-градиент фона из акцентного цвета
   трека, лирика, waveform-скраббер, `Controls` с шаффлом. Свайп-закрытие — только
   с явных drag-зон (`useDragControls` + `dragListener={false}`, как в
@@ -136,8 +143,9 @@
 - **Маппинг в PlayerTrack:** `apps/web/lib/player/to-player-track.ts`,
   `lib/player/liked-to-player-track.ts`
 - **Компоненты:** `apps/web/components/player/index.tsx`, `mini-bar.tsx`,
-  `fullscreen.tsx`, `controls.tsx`, `queue-panel.tsx`, `waveform-scrubber.tsx`,
-  `track-links.tsx`, `player-icons.tsx`, `lyrics.tsx`, `use-player-hotkeys.ts`
+  `progress-line.tsx`, `fullscreen.tsx`, `controls.tsx`, `queue-panel.tsx`,
+  `waveform-scrubber.tsx`, `track-links.tsx`, `player-icons.tsx`, `lyrics.tsx`,
+  `use-player-hotkeys.ts`
 - **Zod-схемы источника:** `packages/api-contracts/src/wave.ts` (`PlaySource`,
   `PLAY_SOURCES`)
 - **API манифеста:** `apps/web/app/api/v1/tracks/[id]/manifest/route.ts` — rate limit

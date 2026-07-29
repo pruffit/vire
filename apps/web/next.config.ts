@@ -39,8 +39,9 @@ function buildCsp(): string {
   const parts = [
     `default-src 'self'`,
     // telegram.org — виджет входа; mc.yandex — Метрика; youtube/ytimg и vk.com — плеерные API.
-    // 'unsafe-eval' только в dev (webpack source maps).
-    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''} https://telegram.org https://mc.yandex.ru https://mc.yandex.com https://www.youtube.com https://s.ytimg.com https://vk.com`,
+    // 'unsafe-eval' только в dev (webpack source maps); 'wasm-unsafe-eval' — Метрика
+    // компилирует WebAssembly, без него tag.js падает с CompileError на каждой странице.
+    `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${dev ? " 'unsafe-eval'" : ''} https://telegram.org https://mc.yandex.ru https://mc.yandex.com https://www.youtube.com https://s.ytimg.com https://vk.com`,
     `style-src 'self' 'unsafe-inline'`,
     // аватары OAuth (yandex/lh3/t.me), Метрика, постеры YouTube (ytimg) и VK (userapi/mycdn).
     `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru https://mc.yandex.com https://i.ytimg.com https://*.ytimg.com https://*.userapi.com https://*.mycdn.me ${s3}`,

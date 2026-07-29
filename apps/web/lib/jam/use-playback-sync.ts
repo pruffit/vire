@@ -22,6 +22,7 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
   const pausedRef = useRef<boolean | null>(null);
   const rateRef = useRef(1);
   const lastHardSeekAtRef = useRef<number | null>(null);
+  const rateCorrectionStartedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     onEndedRef.current = onEnded;
@@ -41,6 +42,7 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
       pausedRef.current = null;
       rateRef.current = 1;
       lastHardSeekAtRef.current = null;
+      rateCorrectionStartedAtRef.current = null;
     };
   }, [audioEnabled]);
 
@@ -53,6 +55,7 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
       pausedRef.current = playback.paused;
       rateRef.current = 1;
       lastHardSeekAtRef.current = null;
+      rateCorrectionStartedAtRef.current = null;
       void engine.load(playback.trackId).then(() => {
         // load предыдущего трека резолвится досрочно при смене — не позиционируем по устаревшему состоянию
         if (loadedTrackIdRef.current !== playback.trackId) return;
@@ -66,6 +69,7 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
     if (pausedRef.current !== playback.paused) {
       pausedRef.current = playback.paused;
       rateRef.current = 1;
+      rateCorrectionStartedAtRef.current = null;
       if (playback.paused) {
         engine.pause();
         engine.setRate(1);
@@ -89,6 +93,7 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
       const damper = {
         buffering: engine.isBuffering(),
         msSinceHardSeek: lastHardSeekAtRef.current === null ? null : nowMs - lastHardSeekAtRef.current,
+        msInRateCorrection: rateCorrectionStartedAtRef.current === null ? null : nowMs - rateCorrectionStartedAtRef.current,
       };
       const action = decideDriftCorrection(expected, actual, rateRef.current, damper);
       if (action.kind === 'seek') {
@@ -96,7 +101,13 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, onEnded }: 
         engine.setRate(1);
         rateRef.current = 1;
         lastHardSeekAtRef.current = nowMs;
+        rateCorrectionStartedAtRef.current = null;
       } else if (action.kind === 'rate') {
+        if (action.rate === 1) {
+          rateCorrectionStartedAtRef.current = null;
+        } else if (rateCorrectionStartedAtRef.current === null) {
+          rateCorrectionStartedAtRef.current = nowMs;
+        }
         engine.setRate(action.rate);
         rateRef.current = action.rate;
       }

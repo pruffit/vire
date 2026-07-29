@@ -1,6 +1,7 @@
 import type HlsType from 'hls.js';
 import { fetchManifest } from '@/lib/player/manifest-cache';
 import { HLS_TUNING, attachStallRecovery } from '@/lib/player/hls-runtime';
+import { usePlayerStore } from '@/store/player';
 
 interface VendorPitchAudioElement extends HTMLAudioElement {
   mozPreservesPitch?: boolean;
@@ -30,6 +31,11 @@ export function createJamAudio(): JamAudioEngine {
   audio.preservesPitch = true;
   audio.mozPreservesPitch = true;
   audio.webkitPreservesPitch = true;
+  audio.volume = usePlayerStore.getState().volume;
+  // Ползунок громкости в мини-баре пишет в стор, а не в этот <audio> напрямую — движок должен сам подхватывать.
+  const unsubscribeVolume = usePlayerStore.subscribe((state, prevState) => {
+    if (state.volume !== prevState.volume) audio.volume = state.volume;
+  });
 
   let hls: HlsType | null = null;
   let loadedTrackId: string | null = null;
@@ -126,6 +132,7 @@ export function createJamAudio(): JamAudioEngine {
     destroy(): void {
       resolvePendingLoad();
       destroyHls();
+      unsubscribeVolume();
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('waiting', handleWaiting);
       audio.removeEventListener('playing', handlePlaying);

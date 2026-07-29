@@ -16,35 +16,53 @@
 - Синхронное воспроизведение: сервер-авторитетные часы (`GET /api/v1/jam/time`,
   5 NTP-замеров, минимальный RTT, ресинк 5 мин). Позиция выводится из
   `{ trackId, startedAtMs, paused, pausedPositionMs }` в Redis, а не транслируется.
-  Дрейф: >2с — жёсткий seek; 150мс–2с — `playbackRate = 1 ± 0.03` до схождения <50мс
-  (гистерезис); `preservesPitch`. Коррекция задемпфирована (`DriftDamperState`): пока
-  элемент буферизует (`waiting` без `playing`) и 3с после жёсткого seek (`SEEK_COOLDOWN_MS`)
+  Дрейф: >2с — жёсткий seek; 200мс–2с — `playbackRate = 1 ± 0.01` до схождения <60мс
+  (гистерезис, `preservesPitch`) — ±1% почти неслышим, в отличие от прежних ±3%.
+  Если rate-коррекция держится непрерывно ≥20с (`RATE_STUCK_MS`) и дрейф всё ещё не
+  сошёлся (`msInRateCorrection`, ведёт `use-playback-sync.ts`) — жёсткий seek обрывает
+  деградацию вместо многосекундной езды на warped rate (систематическое смещение
+  оценки часов). Коррекция задемпфирована (`DriftDamperState`): пока элемент
+  буферизует (`waiting` без `playing`) и 3с после жёсткого seek (`SEEK_COOLDOWN_MS`)
   решение — `none`, иначе столл кормит сам себя (столл → seek → новый столл → заикание).
   Отдельный аудио-движок `lib/jam/jam-audio.ts` — на общем HLS-слое `lib/player/hls-runtime.ts`
-  (`HLS_TUNING` + `attachStallRecovery`, те же настройки, что у основного плеера).
-  Вход в звук — явный тап (автоплей-политика); `usePlaybackSync` получает
-  `audioEnabled = audioEnabled && !ended` — на завершении джема движок гасится сразу
-  (`engine.destroy()`), а не только при уходе со страницы.
+  (`HLS_TUNING` + `attachStallRecovery`, те же настройки, что у основного плеера);
+  громкость берёт из `usePlayerStore` при создании и подписывается на изменения
+  (ползунок в мини-баре управляет и джемом). Вход в звук — явный тап (автоплей-политика);
+  `usePlaybackSync` получает `audioEnabled = audioEnabled && !ended` — на завершении
+  джема движок гасится сразу (`engine.destroy()`), а не только при уходе со страницы.
 - **Джем-takeover глобального плеера**: пока звук джема активен, `store/player.ts`
-  держит `jamOverride: { code, track, isPlaying }` (не персистится в `vire-player`).
-  Мини-бар (`components/player/mini-bar.tsx`) в этом режиме рендерит трек джема с
-  бейджем «Джем» и одной кнопкой play/pause — сик, лайк, шаффл, prev/next, волна и
-  очередь скрыты. Play/pause зовёт модульный регистр `lib/jam/jam-controls.ts`
-  (`setJamToggle`/`jamToggle`), который `jam-room.tsx` привязывает к
-  `handleTogglePlayback`. `lib/player/audio-engine.ts` гардит `playQueue`/`togglePlay`/
-  `next`/`prev`/`resumeRestored`/`playAt` — пока `jamOverride` не null, глобальный
-  движок не запускает звук (два источника звука одновременно недопустимы).
+  держит `jamOverride: { code, track, isPlaying, durationSec, canPrev, canNext }` (не
+  персистится в `vire-player`). Мини-бар (`components/player/mini-bar.tsx`) в этом
+  режиме — полноценный транспорт: обложка, название с бейджем «Джем», артист,
+  prev/play-pause/next (prev/next `disabled` по `canPrev/canNext`), общая с обычным
+  баром `ProgressLine` (`components/player/progress-line.tsx`) с перемоткой, тайминги
+  на `sm+`; лайк/волна/очередь по-прежнему скрыты. Позицию тикает
+  `lib/jam/use-jam-position.ts` (интервал 250мс, `getJamTransport()?.positionMs()`,
+  останавливается вне `ticking`/паузы — контракт как у `useAudioTime`). Транспорт —
+  модульный регистр `lib/jam/jam-controls.ts` (`setJamTransport`/`getJamTransport`,
+  `jamToggle()` для play/pause), который `jam-room.tsx` заполняет в эффекте
+  (`toggle`/`next`/`prev`/`seek`/`positionMs`); внутрикомнатного бара «сейчас играет»
+  больше нет — комната делит транспорт с глобальным мини-баром. `lib/player/audio-engine.ts`
+  гардит `playQueue`/`togglePlay`/`next`/`prev`/`resumeRestored`/`playAt` — пока
+  `jamOverride` не null, глобальный движок не запускает звук (два источника звука
+  одновременно недопустимы).
 - Права: транспорт (play/pause/seek/track) и «Перемешать» — любой участник (та же
   идентичность user XOR guest, что у мутаций очереди, проверяется как участие в
   сессии); удаление чужого трека, кик, закрытие джема — только HOST. Автопереход по
   `ended` инициирует хост (анти-гонка).
 - Управление в UI — у всех участников: клик по строке очереди — `POST playback
-  {kind:'track'}` на этот трек (или play/pause, если это уже активный трек); бар
-  «сейчас играет» над очередью (обложка/название/статус) с кнопкой play/pause
-  (`positionMs` — `derivePositionMs(playback, serverNow())`). Кнопка «Перемешать»
+  {kind:'track'}` на этот трек (или play/pause, если это уже активный трек); подсветка
+  активной строки — по индексу первого совпадения `trackId` в очереди (не по всем
+  совпадениям — иначе дубли трека подсвечивались бы разом). Кнопка «Перемешать»
   рядом с «Добавить трек» шлёт `POST queue {kind:'shuffle'}` — сервер тасует очередь
   Fisher-Yates (`applyQueueMutation`, `random` инъектируется, детерминируем в тестах),
-  поднимает `queue_version`, бродкастит как обычную мутацию.
+  поднимает `queue_version`, бродкастит как обычную мутацию. Реордер — только
+  drag-хендл (`SortableTrackRow`, без шевронов вверх/вниз — убраны везде в проекте).
+- Панель добавления трека (`jam-add-panel.tsx`) знает свою очередь: уже добавленный
+  трек показывает галочку и подпись «Добавлено» вместо «+», кнопка `disabled`
+  (`addedTrackIds`, считается из `jamQueue.queue`); `handleAdd` в комнате тоже
+  игнорирует повтор — двойной тап не шлёт второй `add`. На `<lg` панель открывается
+  в `components/sheet.tsx` (свайп/Esc/тап по подложке); на `lg+` — инлайн в сайдбаре.
 - Поиск трека для добавления (`GET /api/v1/search`) матчит по названию трека ИЛИ
   имени артиста ИЛИ названию релиза; при пустом запросе панель показывает до 8
   любимых треков вошедшего юзера («Из любимых», проп `suggestions` от `[code]/page.tsx`).
@@ -74,14 +92,15 @@
   `derivePositionMs`, `decideDriftCorrection`, `pickClockOffset`), порт
   `ports/jam-state.ts`; `apps/web/lib/jam/*` (`server-clock`, `jam-audio`,
   `use-jam-room`, `use-jam-queue`, `use-playback-sync`, `jam-state`, `jam-identity`,
-  `jam-controls`, `guest-name`, `optimistic-playback` — кнопка play/pause отвечает мгновенно:
+  `jam-controls` — регистр транспорта `JamTransport`, `use-jam-position` — тик позиции
+  для мини-бара, `guest-name`, `optimistic-playback` — кнопка play/pause отвечает мгновенно:
   визуал и команда считаются от оптимистичного `effectivePaused`, звук по-прежнему от
   серверного `room.playback`. Pending снимается по **росту `version`** серверного playback
   (любая долетевшая мутация, своя или чужая), либо по TTL 5с, либо по ошибке запроса);
   `lib/realtime.ts` —
   `publishChannel`/`subscribeChannel`, канал `rt:jam:{id}`; `components/jam-share.tsx`,
   `components/jam-invite.tsx`; takeover глобального плеера — `store/player.ts`
-  (`jamOverride`), `components/player/mini-bar.tsx`, `lib/player/audio-engine.ts`
+  (`jamOverride`), `components/player/{mini-bar,progress-line}.tsx`, `lib/player/audio-engine.ts`
 - **Воркер:** `apps/worker/src/workers/jam-reaper.worker.ts` +
   `lib/jam-cleanup.ts` (Redis-ключи и `jam:ended` — те же, что у web)
 - **Данные:** `packages/db/src/schema/jam.ts` — `jam_sessions` / `jam_participants`

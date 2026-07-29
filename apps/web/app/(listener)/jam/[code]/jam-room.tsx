@@ -1,18 +1,17 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor, TouchSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
-import Image from 'next/image';
 import type { JamParticipantRole, JamQueueItem, SearchTrack } from '@vire/core';
 import { derivePositionMs } from '@vire/core';
 import { useJamRoom } from '@/lib/jam/use-jam-room';
 import { useJamQueue } from '@/lib/jam/use-jam-queue';
 import { useServerClock } from '@/lib/jam/server-clock';
 import { usePlaybackSync } from '@/lib/jam/use-playback-sync';
-import { setJamToggle } from '@/lib/jam/jam-controls';
+import { setJamTransport, type JamTransport } from '@/lib/jam/jam-controls';
 import { effectivePaused, resolvePending, nextPendingVersion, PENDING_TTL_MS, type PendingToggle } from '@/lib/jam/optimistic-playback';
 import { getSessionId } from '@/lib/session-id';
 import { toast } from '@/lib/toast';
@@ -20,6 +19,7 @@ import { usePlayerStore } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
 import { SortableTrackRow } from '@/components/sortable-track-row';
 import { PageContainer } from '@/components/page-container';
+import { Sheet } from '@/components/sheet';
 import { JamShare } from '@/components/jam-share';
 import { JamInvite } from '@/components/jam-invite';
 import { JamParticipants } from './jam-participants';
@@ -29,7 +29,6 @@ import { JamSavePlaylist } from './jam-save-playlist';
 import { Icon } from '@/components/icon';
 import { EmptyState } from '@/components/ui-kit';
 import { LivePulse } from '@/components/live-pulse';
-import { TrackTitleText } from '@/components/track-title';
 
 interface Props {
   code: string;
@@ -175,15 +174,23 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     return () => clearTimeout(timer);
   }, [playbackPending]);
 
-  const activeTrack = useMemo(
-    () => (room.playback ? jamQueue.queue.find((item) => item.trackId === room.playback!.trackId) : undefined),
+  const activeQueueIndex = useMemo(
+    () => (room.playback ? jamQueue.queue.findIndex((item) => item.trackId === room.playback!.trackId) : -1),
     [room.playback, jamQueue.queue],
   );
+  const activeTrack = activeQueueIndex >= 0 ? jamQueue.queue[activeQueueIndex] : undefined;
   const isPlaying = Boolean(room.playback) && !effectivePaused(room.playback, playbackPending);
+  const canPrev = activeQueueIndex > 0;
+  const canNext = activeQueueIndex >= 0 && activeQueueIndex < jamQueue.queue.length - 1;
+
+  const addedTrackIds = useMemo(
+    () => new Set(jamQueue.queue.map((item) => item.trackId)),
+    [jamQueue.queue],
+  );
 
   const setPlayerJamOverride = usePlayerStore((s) => s.setJamOverride);
 
-  // Джем занимает глобальный плеер: пока звук джема играет, mini-bar показывает его трек и толкает handleTogglePlayback.
+  // Джем занимает глобальный плеер: пока звук джема играет, mini-bar показывает его трек и толкает транспорт джема.
   // Условие гашения (!audioEnabled || ended) проверяется первым и не зависит от activeTrack —
   // иначе рендер, где playback/очередь ещё не согласовались, мог бы отложить чистку оверлея.
   useEffect(() => {
@@ -196,17 +203,61 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
       code,
       track: { title: activeTrack.title, artistName: activeTrack.artistName, coverUrl: activeTrack.coverUrl },
       isPlaying,
+      durationSec: activeTrack.durationSec,
+      canPrev,
+      canNext,
     });
-  }, [audioEnabled, ended, activeTrack, isPlaying, code, setPlayerJamOverride]);
+  }, [audioEnabled, ended, activeTrack, isPlaying, canPrev, canNext, code, setPlayerJamOverride]);
 
   // Отдельно от основного эффекта — гарантирует чистку при уходе со страницы независимо от того,
   // какая ветка выше сработала последней.
   useEffect(() => () => setPlayerJamOverride(null), [setPlayerJamOverride]);
 
+  // Рефы держат актуальные значения для транспорта — эффект регистрации не пересоздаёт объект на каждый тик позиции.
+  const roomPlaybackRef = useRef(room.playback);
+  const queueRef = useRef(jamQueue.queue);
+  const playbackPendingRef = useRef(playbackPending);
+  const serverNowRef = useRef(serverNow);
   useEffect(() => {
-    setJamToggle(handleTogglePlayback);
-    return () => setJamToggle(null);
-  }, [handleTogglePlayback]);
+    roomPlaybackRef.current = room.playback;
+    queueRef.current = jamQueue.queue;
+    playbackPendingRef.current = playbackPending;
+    serverNowRef.current = serverNow;
+  });
+
+  useEffect(() => {
+    const transport: JamTransport = {
+      toggle: handleTogglePlayback,
+      next: () => {
+        const playback = roomPlaybackRef.current;
+        const i = queueRef.current.findIndex((item) => item.trackId === playback?.trackId);
+        const target = i >= 0 ? queueRef.current[i + 1] : undefined;
+        if (target) postPlayback({ kind: 'track', trackId: target.trackId });
+      },
+      prev: () => {
+        const playback = roomPlaybackRef.current;
+        const i = queueRef.current.findIndex((item) => item.trackId === playback?.trackId);
+        const target = i > 0 ? queueRef.current[i - 1] : undefined;
+        if (target) postPlayback({ kind: 'track', trackId: target.trackId });
+      },
+      seek: (ms) => {
+        const playback = roomPlaybackRef.current;
+        if (!playback) return;
+        const paused = effectivePaused(playback, playbackPendingRef.current);
+        postPlayback(
+          paused
+            ? { kind: 'pause', positionMs: ms }
+            : { kind: 'play', trackId: playback.trackId, positionMs: ms },
+        );
+      },
+      positionMs: () => {
+        const playback = roomPlaybackRef.current;
+        return playback ? derivePositionMs(playback, serverNowRef.current()) : 0;
+      },
+    };
+    setJamTransport(transport);
+    return () => setJamTransport(null);
+  }, [handleTogglePlayback, postPlayback]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -228,13 +279,6 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     void jamQueue.moveTrack(String(active.id), String(over.id));
   }
 
-  function moveAdjacent(itemId: string, dir: -1 | 1) {
-    const i = jamQueue.queue.findIndex((item) => item.id === itemId);
-    const neighbor = i < 0 ? undefined : jamQueue.queue[i + dir];
-    if (!neighbor) return;
-    void jamQueue.moveTrack(itemId, neighbor.id);
-  }
-
   async function handleEndJam() {
     if (!confirm('Завершить джем для всех?')) return;
     const res = await fetch(`/api/v1/jam/${encodeURIComponent(code)}/end`, { method: 'POST' }).catch(() => null);
@@ -242,6 +286,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
   }
 
   function handleAdd(t: SearchTrack) {
+    if (addedTrackIds.has(t.id)) return;
     void jamQueue.addTrack({
       id: `pending-${t.id}-${Date.now()}`,
       trackId: t.id,
@@ -286,9 +331,9 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
   return (
     <div data-app-screen className="flex h-full min-h-0 flex-col">
       <header className="shrink-0 border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <p className="flex items-center gap-1.5 whitespace-nowrap text-[11px] text-muted-foreground">
               {room.connected && <LivePulse small className="text-primary" />}
               {room.connected ? 'В сети' : 'Подключение…'}
             </p>
@@ -299,7 +344,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex items-center gap-1 sm:shrink-0">
             <JamParticipants participants={room.participants} />
             {isLoggedIn && <JamInvite code={code} />}
             {isLoggedIn && <JamSavePlaylist code={code} />}
@@ -323,34 +368,6 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
         <PageContainer as="div" variant="compact">
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">
             <div className="min-w-0 space-y-4">
-              {activeTrack && (
-                <div className="flex items-center gap-3 rounded-xl border border-border bg-card/50 px-3 py-2.5">
-                  <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
-                    {activeTrack.coverUrl && (
-                      <Image src={activeTrack.coverUrl} alt="" fill sizes="48px" className="object-cover" />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-primary">
-                      {isPlaying && <LivePulse small />}
-                      {isPlaying ? 'Играет' : 'На паузе'}
-                    </p>
-                    <p className="truncate text-sm font-medium">
-                      <TrackTitleText title={activeTrack.title} version={activeTrack.version} feat={activeTrack.feat} />
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">{activeTrack.artistName}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleTogglePlayback}
-                    aria-label={isPlaying ? 'Поставить джем на паузу' : 'Возобновить джем'}
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-90"
-                  >
-                    <Icon name={isPlaying ? 'pause' : 'play'} size={16} />
-                  </button>
-                </div>
-              )}
-
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setAdding((v) => !v)}
@@ -367,11 +384,11 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
                 </button>
               </div>
 
-              {adding && (
-                <div className="lg:hidden">
-                  <JamAddPanel onAdd={handleAdd} suggestions={suggestions} />
+              <Sheet open={adding} onClose={() => setAdding(false)} anchor="bottom">
+                <div className="flex min-h-0 flex-1 flex-col px-2 pb-2">
+                  <JamAddPanel onAdd={handleAdd} suggestions={suggestions} addedTrackIds={addedTrackIds} dense />
                 </div>
-              )}
+              </Sheet>
 
               {jamQueue.queue.length === 0 ? (
                 <EmptyState
@@ -397,20 +414,13 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
                             track={item}
                             index={i}
                             size="roomy"
-                            isActive={room.playback?.trackId === item.trackId}
-                            isPlaying={
-                              Boolean(room.playback && room.playback.trackId === item.trackId)
-                              && !effectivePaused(room.playback, playbackPending)
-                            }
+                            isActive={i === activeQueueIndex}
+                            isPlaying={i === activeQueueIndex && isPlaying}
                             onPlay={() => handleRowPlay(item)}
                             canDrag
                             canRemove={isHost || item.addedByParticipantId === membership.participantId}
                             onRemove={(id) => void jamQueue.removeTrack(id)}
                             removeLabel="Убрать из очереди"
-                            onMoveUp={() => moveAdjacent(item.id, -1)}
-                            onMoveDown={() => moveAdjacent(item.id, 1)}
-                            canMoveUp={i > 0}
-                            canMoveDown={i < jamQueue.queue.length - 1}
                             subtitle={
                               <span className="truncate">
                                 {item.artistName}
@@ -427,7 +437,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
             </div>
 
             <aside className="hidden lg:sticky lg:top-6 lg:flex lg:flex-col lg:gap-4 lg:self-start">
-              <JamAddPanel onAdd={handleAdd} suggestions={suggestions} autoFocus={false} />
+              <JamAddPanel onAdd={handleAdd} suggestions={suggestions} addedTrackIds={addedTrackIds} autoFocus={false} />
               <JamParticipants participants={room.participants} variant="inline" />
             </aside>
           </div>

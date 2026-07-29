@@ -6,7 +6,6 @@ import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifi
 import { useRouter } from 'next/navigation';
 import { controls } from '@/lib/player/audio-engine';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
-import { swapAdjacent } from '@/lib/reorder';
 import { toast } from '@/lib/toast';
 import type { PlayerTrack } from '@/store/player';
 import type { PlaylistWithTracks, PlaylistTrackRow } from '@vire/db';
@@ -80,13 +79,6 @@ export function PlaylistView({ playlist, role, viewerId = null, emptyTitle = 'П
     setTracks(next);
     void persistOrder(next, prev);
   }
-
-  const move = useCallback((trackId: string, dir: -1 | 1) => {
-    const next = swapAdjacent(tracks, trackId, dir);
-    if (next === tracks) return;
-    setTracks(next);
-    void persistOrder(next, tracks);
-  }, [tracks, persistOrder]);
 
   const handleRemove = useCallback((trackId: string) => {
     const prev = tracks;
@@ -168,9 +160,6 @@ export function PlaylistView({ playlist, role, viewerId = null, emptyTitle = 'П
                   canRemove={canRemoveTrack(track)}
                   showAddedBy={playlist.isCollaborative}
                   onRemove={handleRemove}
-                  onMove={canEdit ? move : undefined}
-                  canMoveUp={i > 0}
-                  canMoveDown={i < tracks.length - 1}
                 />
               ))}
             </div>

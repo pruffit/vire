@@ -16,12 +16,9 @@ interface Props {
   canRemove: boolean;
   showAddedBy: boolean;
   onRemove: (trackId: string) => void;
-  onMove?: (trackId: string, dir: -1 | 1) => void;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
 }
 
-export function SortablePlaylistRow({ track, index, queue, queueIndex, context, canDrag, canRemove, showAddedBy, onRemove, onMove, canMoveUp, canMoveDown }: Props) {
+export function SortablePlaylistRow({ track, index, queue, queueIndex, context, canDrag, canRemove, showAddedBy, onRemove }: Props) {
   const { playQueue, toggle } = usePlay();
   const { isActive: isThisTrack, isPlaying } = useTrackPlayState(track.id);
 
@@ -36,10 +33,6 @@ export function SortablePlaylistRow({ track, index, queue, queueIndex, context, 
       canRemove={canRemove}
       onRemove={onRemove}
       removeLabel="Удалить из плейлиста"
-      onMoveUp={onMove ? () => onMove(track.id, -1) : undefined}
-      onMoveDown={onMove ? () => onMove(track.id, 1) : undefined}
-      canMoveUp={canMoveUp}
-      canMoveDown={canMoveDown}
       avatar={showAddedBy && track.addedBy && (
         <span title={track.addedBy.name ?? 'Слушатель'}>
           <ChatAvatar name={track.addedBy.name} image={track.addedBy.image} size={20} />

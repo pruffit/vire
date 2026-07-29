@@ -182,7 +182,7 @@ describe('usePlaybackSync', () => {
       await vi.advanceTimersByTimeAsync(2_000);
     });
 
-    expect(engine.setRate).toHaveBeenCalledWith(1.03);
+    expect(engine.setRate).toHaveBeenCalledWith(1.01);
     expect(engine.seek).not.toHaveBeenCalled();
   });
 

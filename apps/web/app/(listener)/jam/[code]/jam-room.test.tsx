@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { JamParticipant, JamPlaybackState, JamQueueItem } from '@vire/core';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { JamParticipant, JamPlaybackState, JamQueueItem, SearchTrack } from '@vire/core';
 
 const { useJamRoomMock, getSessionIdMock, useServerClockMock, usePlaybackSyncMock, controlsPauseMock } = vi.hoisted(() => ({
   useJamRoomMock: vi.fn(),
@@ -39,9 +39,11 @@ vi.mock('motion/react', () => ({
       },
     },
   ),
+  useDragControls: () => ({ start: () => {} }),
 }));
 
 import { usePlayerStore as usePlayerStoreForTest } from '@/store/player';
+import { getJamTransport } from '@/lib/jam/jam-controls';
 import { JamRoom } from './jam-room';
 
 interface RoomState {
@@ -76,6 +78,19 @@ function track(id: string): JamQueueItem {
     coverUrl: null,
     accentColor: null,
     isExplicit: false,
+    version: null,
+    feat: [],
+  };
+}
+
+function searchTrack(id: string): SearchTrack {
+  return {
+    id,
+    title: id,
+    releaseId: 'release-1',
+    artistSlug: 'artist',
+    artistName: 'Artist',
+    coverUrl: null,
     version: null,
     feat: [],
   };
@@ -248,7 +263,7 @@ describe('JamRoom', () => {
     });
   });
 
-  it('бар «сейчас играет» показывает активный трек и кнопку паузы у хоста', async () => {
+  it('войдя, хост получает джем-оверлей глобального плеера с активным треком', async () => {
     const queue = [track('a'), track('b')];
     useJamRoomMock.mockReturnValue(
       baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }),
@@ -259,11 +274,19 @@ describe('JamRoom', () => {
     );
     await joinAs('HOST');
 
-    expect(screen.getByText('Играет')).toBeTruthy();
-    expect(screen.getByLabelText('Поставить джем на паузу')).toBeTruthy();
+    await waitFor(() =>
+      expect(usePlayerStoreForTest.getState().jamOverride).toEqual({
+        code: 'A2B3C4',
+        track: { title: 'a', artistName: 'Artist', coverUrl: null },
+        isPlaying: true,
+        durationSec: null,
+        canPrev: false,
+        canNext: true,
+      }),
+    );
   });
 
-  it('бар «сейчас играет» у гостя тоже показывает кнопку управления — транспорт у всех участников', async () => {
+  it('гость тоже переключает паузу через зарегистрированный транспорт джема — транспорт у всех участников', async () => {
     const queue = [track('a'), track('b')];
     useJamRoomMock.mockReturnValue(
       baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: true, pausedPositionMs: 5000, version: 1 } }),
@@ -280,8 +303,8 @@ describe('JamRoom', () => {
     fireEvent.click(screen.getByText('Подключиться к звуку'));
     await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
 
-    expect(screen.getByText('На паузе')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('Возобновить джем'));
+    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isPlaying).toBe(false));
+    act(() => { getJamTransport()!.toggle(); });
 
     await waitFor(() => {
       const playbackCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/playback'));
@@ -306,6 +329,9 @@ describe('JamRoom', () => {
         code: 'A2B3C4',
         track: { title: 'a', artistName: 'Artist', coverUrl: null },
         isPlaying: true,
+        durationSec: null,
+        canPrev: false,
+        canNext: false,
       }),
     );
 
@@ -318,7 +344,7 @@ describe('JamRoom', () => {
     await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride).toBeNull());
   });
 
-  it('два быстрых клика по паузе до SSE-подтверждения → второй POST это play, не второй pause', async () => {
+  it('два быстрых toggle транспорта до SSE-подтверждения → второй POST это play, не второй pause', async () => {
     const queue = [track('a')];
     useJamRoomMock.mockReturnValue(
       baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }),
@@ -335,9 +361,9 @@ describe('JamRoom', () => {
     fireEvent.click(screen.getByText('Подключиться к звуку'));
     await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
 
-    fireEvent.click(screen.getByLabelText('Поставить джем на паузу'));
-    await waitFor(() => expect(screen.getByLabelText('Возобновить джем')).toBeTruthy());
-    fireEvent.click(screen.getByLabelText('Возобновить джем'));
+    act(() => { getJamTransport()!.toggle(); });
+    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isPlaying).toBe(false));
+    act(() => { getJamTransport()!.toggle(); });
 
     await waitFor(() => {
       const playbackCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('/playback'));
@@ -364,8 +390,8 @@ describe('JamRoom', () => {
     fireEvent.click(screen.getByText('Подключиться к звуку'));
     await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
 
-    fireEvent.click(screen.getByLabelText('Поставить джем на паузу'));
-    await waitFor(() => expect(screen.getByLabelText('Возобновить джем')).toBeTruthy());
+    act(() => { getJamTransport()!.toggle(); });
+    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isPlaying).toBe(false));
 
     // SSE подтверждает желаемое (paused:true) — pending должен сняться.
     useJamRoomMock.mockReturnValue(
@@ -375,7 +401,7 @@ describe('JamRoom', () => {
       <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
     );
 
-    // Кто-то другой возобновил джем — если бы pending остался висеть, кнопка не сдвинулась бы с «Возобновить».
+    // Кто-то другой возобновил джем — если бы pending остался висеть, стейт не сдвинулся бы с paused.
     useJamRoomMock.mockReturnValue(
       baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 3 } }),
     );
@@ -383,6 +409,49 @@ describe('JamRoom', () => {
       <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
     );
 
-    expect(screen.getByLabelText('Поставить джем на паузу')).toBeTruthy();
+    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isPlaying).toBe(true));
+  });
+
+  it('повторное добавление уже добавленного трека не шлёт второй POST add', async () => {
+    useJamRoomMock.mockReturnValue(baseRoom({ queue: [] }));
+    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'HOST' } }) };
+      return { ok: true, json: async () => ({}) };
+    });
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
+
+    render(
+      <JamRoom
+        code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya"
+        suggestions={[searchTrack('sugg-1')]}
+      />,
+    );
+    fireEvent.click(screen.getByText('Подключиться к звуку'));
+    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
+
+    fireEvent.click(screen.getByText('Добавить трек'));
+    const dialog = await screen.findByRole('dialog');
+    const addButton = within(dialog).getByText('sugg-1').closest('button')!;
+    fireEvent.click(addButton);
+    fireEvent.click(addButton);
+
+    await waitFor(() => {
+      const addCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('/queue'));
+      expect(addCalls).toHaveLength(1);
+    });
+  });
+
+  it('панель добавления закрывается по onClose (Esc)', async () => {
+    useJamRoomMock.mockReturnValue(baseRoom({ queue: [] }));
+    render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
+    );
+    await joinAs('HOST');
+
+    fireEvent.click(screen.getByText('Добавить трек'));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

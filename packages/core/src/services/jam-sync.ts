@@ -8,9 +8,10 @@ export interface JamPlaybackState {
 
 export const HARD_SEEK_MS = 2000;
 export const SEEK_COOLDOWN_MS = 3000;
-export const RATE_CORRECT_MIN_MS = 150;
-export const CONVERGED_MS = 50;
-export const RATE_DELTA = 0.03;
+export const RATE_CORRECT_MIN_MS = 200;
+export const CONVERGED_MS = 60;
+export const RATE_DELTA = 0.01;
+export const RATE_STUCK_MS = 20_000;
 
 export function derivePositionMs(state: JamPlaybackState, serverNowMs: number): number {
   const raw = state.paused ? state.pausedPositionMs : serverNowMs - state.startedAtMs;
@@ -27,6 +28,8 @@ export interface DriftDamperState {
   buffering: boolean;
   /** Мс с последнего жёсткого seek, null — если его ещё не было. */
   msSinceHardSeek: number | null;
+  /** Мс непрерывной rate-коррекции без схождения, null — если коррекция сейчас не идёт. */
+  msInRateCorrection: number | null;
 }
 
 export function decideDriftCorrection(
@@ -42,6 +45,12 @@ export function decideDriftCorrection(
 
   const drift = actualMs - expectedMs;
   const absDrift = Math.abs(drift);
+
+  // Rate-коррекция держится дольше RATE_STUCK_MS не сходясь — систематическое смещение
+  // оценки часов, а не разовый скачок; жёсткий seek обрывает деградацию на warped rate.
+  if (damper.msInRateCorrection !== null && damper.msInRateCorrection >= RATE_STUCK_MS && absDrift >= CONVERGED_MS) {
+    return { kind: 'seek', toMs: expectedMs };
+  }
 
   if (absDrift > HARD_SEEK_MS) {
     return { kind: 'seek', toMs: expectedMs };

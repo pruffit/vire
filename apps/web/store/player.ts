@@ -28,6 +28,9 @@ export interface JamOverride {
   code: string;
   track: { title: string; artistName: string; coverUrl: string | null };
   isPlaying: boolean;
+  durationSec: number | null;
+  canPrev: boolean;
+  canNext: boolean;
 }
 
 interface State {

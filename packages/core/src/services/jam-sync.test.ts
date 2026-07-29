@@ -8,6 +8,7 @@ import {
   RATE_CORRECT_MIN_MS,
   CONVERGED_MS,
   RATE_DELTA,
+  RATE_STUCK_MS,
   type JamPlaybackState,
   type DriftDamperState,
 } from './jam-sync';
@@ -21,7 +22,7 @@ const state = (overrides: Partial<JamPlaybackState>): JamPlaybackState => ({
   ...overrides,
 });
 
-const NOT_DAMPED: DriftDamperState = { buffering: false, msSinceHardSeek: null };
+const NOT_DAMPED: DriftDamperState = { buffering: false, msSinceHardSeek: null, msInRateCorrection: null };
 const damper = (overrides: Partial<DriftDamperState>): DriftDamperState => ({ ...NOT_DAMPED, ...overrides });
 
 describe('derivePositionMs', () => {
@@ -146,6 +147,39 @@ describe('decideDriftCorrection', () => {
     expect(
       decideDriftCorrection(0, HARD_SEEK_MS + 1, 1, damper({ msSinceHardSeek: SEEK_COOLDOWN_MS })),
     ).toEqual({ kind: 'seek', toMs: 0 });
+  });
+
+  it('залипшая rate-коррекция дольше RATE_STUCK_MS, дрейф не сошёлся — жёсткий seek', () => {
+    expect(
+      decideDriftCorrection(
+        1000,
+        1000 + RATE_CORRECT_MIN_MS,
+        1 - RATE_DELTA,
+        damper({ msInRateCorrection: RATE_STUCK_MS }),
+      ),
+    ).toEqual({ kind: 'seek', toMs: 1000 });
+  });
+
+  it('rate-коррекция короче RATE_STUCK_MS — обычная коррекция rate, не seek', () => {
+    expect(
+      decideDriftCorrection(
+        1000,
+        1000 + RATE_CORRECT_MIN_MS,
+        1 - RATE_DELTA,
+        damper({ msInRateCorrection: RATE_STUCK_MS - 1 }),
+      ),
+    ).toEqual({ kind: 'rate', rate: 1 - RATE_DELTA });
+  });
+
+  it('залипшая rate-коррекция, но дрейф уже сошёлся (< CONVERGED_MS) — не seek, сброс rate', () => {
+    expect(
+      decideDriftCorrection(
+        1000,
+        1000 + CONVERGED_MS - 1,
+        1 - RATE_DELTA,
+        damper({ msInRateCorrection: RATE_STUCK_MS }),
+      ),
+    ).toEqual({ kind: 'rate', rate: 1 });
   });
 });
 
