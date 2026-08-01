@@ -33,6 +33,8 @@ export interface JamOverride {
   canNext: boolean;
   /** SPEAKER-режим и это устройство — пульт: звук не создаётся, мини-бар показывает бейдж «Пульт». */
   isRemote: boolean;
+  /** Звук ещё не разблокирован жестом (F5 или свежий join) — play в мини-баре сперва включает его. */
+  needsAudioGesture: boolean;
 }
 
 interface State {

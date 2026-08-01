@@ -4,6 +4,31 @@
 подключаются по коду/ссылке/QR к общей очереди треков и слышат одно и то же
 в одну секунду. Спека: `docs/superpowers/specs/2026-07-20-jam-sessions-design.md`.
 
+## Глобальная сессия (app-shell)
+
+Джем — не состояние страницы `/jam/[code]`, а сессия уровня приложения: уход со страницы
+(клик «Главная» и т.п.) не обрывает джем. Три слоя (спека
+`docs/superpowers/specs/2026-08-01-jam-global-session-design.md`):
+
+- `store/jam.ts` (zustand, persist `vire-jam`) — «какой джем активен» (`code`,
+  `participantId`, `role`, `sessionId`); переживает F5. `audioEnabled` не персистится —
+  после перезагрузки звук блокирует браузер, включается первым жестом.
+- `components/jam/jam-session-provider.tsx` — смонтирован в корневом `app/layout.tsx`
+  вокруг `#main-content` + `PlayerWrapper`, а не на странице. Владеет SSE-комнатой
+  (`useJamRoom`), серверными часами, `usePlaybackSync`, транспортом (`setJamTransport`)
+  и `jamOverride`. `jamOverride` выставляется при активном джеме **независимо** от
+  `audioEnabled` (иначе после F5 нет ни бара, ни пути назад в комнату) — с полем
+  `needsAudioGesture` (`store/player.ts`): мини-бар сначала включает звук локальным
+  жестом, и только если джем на паузе — шлёт toggle. `jam:ended` чистит стор + тост.
+  Хук `useJamSession()` отдаёт контекст странице.
+- `app/(listener)/jam/[code]/jam-room.tsx` — вью поверх сессии: очередь (DnD), панели
+  добавления/участников, join-экран. Определяет активную сессию как
+  `session.code === code`; если сессия чужая/отсутствует — экран `JamJoin`.
+- Мини-бар (`components/player/mini-bar.tsx`) в режиме джема — бейдж «Джем»/«Пульт»
+  теперь ссылка на `/jam/{code}` (вернуться в комнату), рядом — явная кнопка выхода
+  (`useJamStore().leave()`), видна и на `<sm` (единственный способ освободить плеер
+  на мобильном).
+
 ## Что делает
 
 - Хост (залогиненный) создаёт джем на `/jam`, делится кодом (6 симв., алфавит без
@@ -113,10 +138,13 @@
 
 ## Где код
 
+- **Глобальная сессия:** `apps/web/store/jam.ts` (какой джем активен, persist),
+  `apps/web/components/jam/jam-session-provider.tsx` (SSE/движок/транспорт/оверлей,
+  смонтирован в `app/layout.tsx`, хук `useJamSession`)
 - **Страницы:** `app/(listener)/jam/page.tsx` (вход: создать/войти по коду, выбор
-  режима в `create-jam-button.tsx`), `jam/[code]/` (комната: `jam-room`, `jam-join`,
-  `jam-add-panel`, `jam-participants`, `jam-save-playlist`), `jam/id/[jamId]` (редирект
-  из уведомления)
+  режима в `create-jam-button.tsx`), `jam/[code]/` (вид комнаты поверх сессии:
+  `jam-room`, `jam-join`, `jam-add-panel`, `jam-participants`, `jam-save-playlist`),
+  `jam/id/[jamId]` (редирект из уведомления)
 - **API:** `app/api/v1/jam/route.ts` (создание, принимает `mode`), `jam/time`,
   `jam/[code]/{join,queue,playback,mode,speaker,heartbeat,end,stream,qr,save-playlist,invite}`
   (`queue`/`playback`/`mode`/`speaker` резолвят идентичность через `resolveJamIdentity` —

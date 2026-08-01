@@ -50,7 +50,7 @@ export function LibrarySidebar({
         </div>
       )}
 
-      <div className={cn(collapsed ? 'flex justify-center px-2 pt-2' : 'px-1.5 pt-1', 'shrink-0')}>
+      <div className={cn(collapsed ? 'flex justify-center px-2 pt-2 pb-0.5' : 'px-1.5 pt-1 pb-0.5', 'shrink-0')}>
         <LibraryRow
           collapsed={collapsed}
           href="/jam"
@@ -70,7 +70,7 @@ export function LibrarySidebar({
             href="/sign-in"
             aria-label="Войти"
             title="Войти"
-            className="mx-auto mt-2 grid h-10 w-10 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            className="mx-auto grid h-10 w-10 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
           >
             <Icon name="log-in" size={18} />
           </Link>
@@ -86,7 +86,7 @@ export function LibrarySidebar({
         <div
           className={cn(
             'flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-2 [scrollbar-width:thin]',
-            collapsed ? 'items-center px-2 pt-2' : 'px-1.5',
+            collapsed ? 'items-center px-2' : 'px-1.5',
           )}
         >
           <LibraryRow

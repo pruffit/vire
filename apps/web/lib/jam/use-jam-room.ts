@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import type { JamParticipant, JamPlaybackState, JamQueueItem, JamMode } from '@vire/core';
+import type { JamParticipant, JamPlaybackState, JamQueueItem, JamMode, JamSessionStatus } from '@vire/core';
 import { useRealtime, type RealtimeEvent } from '@/lib/use-realtime';
 
 interface JamRoomState {
@@ -21,7 +21,7 @@ export interface UseJamRoomResult extends JamRoomState {
 }
 
 type JamSnapshotEvent = RealtimeEvent & {
-  session: { mode?: JamMode; speakerParticipantId?: string | null };
+  session: { mode?: JamMode; speakerParticipantId?: string | null; status?: JamSessionStatus };
   participants: JamParticipant[];
   queue: JamQueueItem[];
   version: number;
@@ -82,7 +82,9 @@ export function useJamRoom(code: string, sessionId: string | null): UseJamRoomRe
         mode: e.session.mode ?? 'SYNCED',
         speakerParticipantId: e.session.speakerParticipantId ?? null,
         presentParticipantIds: e.presentParticipantIds ?? [],
-        ended: false,
+        // Событие jam:ended приходит только живым подписчикам: джем, закрытый пока вкладка
+        // была закрыта, узнаётся лишь по статусу в снапшоте переподключения.
+        ended: e.session.status === 'ENDED',
       });
       setConnected(true);
     },

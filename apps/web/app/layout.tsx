@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { MotionProvider, REDUCE_MOTION_INIT_SCRIPT } from '@vire/ui/motion';
+import { JamSessionProvider } from '@/components/jam/jam-session-provider';
 import { auth } from '@/auth';
 import { countUnseenIncomingCached, countUnreadMessagesCached } from '@/lib/listener-data';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
@@ -107,11 +108,13 @@ export default async function RootLayout({
           <ScrollState />
           <ScrollRestoration />
           <SitePresence />
-          {/* suppressHydrationWarning: ScrollState вешает is-scrolling через classList напрямую */}
-          <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-clip">
-            {children}
-          </div>
-          <PlayerWrapper />
+          <JamSessionProvider>
+            {/* suppressHydrationWarning: ScrollState вешает is-scrolling через classList напрямую */}
+            <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-clip">
+              {children}
+            </div>
+            <PlayerWrapper />
+          </JamSessionProvider>
           <MobileTabBar incomingCount={incomingCount} messagesUnread={messagesUnread} />
           <DeferredWidgets />
           <Toaster />

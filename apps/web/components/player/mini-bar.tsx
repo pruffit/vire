@@ -1,9 +1,11 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore, type JamOverride } from '@/store/player';
+import { useJamStore } from '@/store/jam';
 import { controls } from '@/lib/player/audio-engine';
 import { jamToggle, getJamTransport } from '@/lib/jam/jam-controls';
 import { useJamPosition } from '@/lib/jam/use-jam-position';
@@ -73,9 +75,20 @@ export function MiniBar({
 
 /** Джем-takeover: глобальный движок остановлен (см. audio-engine guard) — полноценный транспорт уходит в зарегистрированный getJamTransport(). */
 function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boolean }) {
-  const { track, isPlaying, durationSec, canPrev, canNext } = override;
+  const { track, isPlaying, durationSec, canPrev, canNext, needsAudioGesture } = override;
   // Тикает и на паузе: перемотка паузнутого джема должна двигать полоску (значение то же — React делает bail-out).
   const position = useJamPosition(ticking);
+  const enableAudio = useJamStore((s) => s.enableAudio);
+  const leaveJam = useJamStore((s) => s.leave);
+
+  function handlePlay() {
+    if (needsAudioGesture) {
+      enableAudio();
+      if (!isPlaying) jamToggle();
+      return;
+    }
+    jamToggle();
+  }
 
   return (
     <div className="relative h-full">
@@ -102,9 +115,15 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
           <div className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5 min-w-0">
               <span className="text-[11px] sm:text-sm font-medium truncate leading-tight">{track.title}</span>
-              <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-primary">
-                {override.isRemote ? 'Пульт' : 'Джем'}
-              </span>
+              <Link
+                href={`/jam/${override.code}`}
+                aria-label="Вернуться в джем"
+                className="-m-1 shrink-0 rounded-full p-1 pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
+              >
+                <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-primary">
+                  {override.isRemote ? 'Пульт' : 'Джем'}
+                </span>
+              </Link>
             </span>
             <span className="hidden sm:block text-xs text-muted-foreground truncate">{track.artistName}</span>
           </div>
@@ -122,7 +141,7 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
           </button>
           <button
             type="button"
-            onClick={() => jamToggle()}
+            onClick={handlePlay}
             aria-label={isPlaying ? 'Поставить джем на паузу' : 'Возобновить джем'}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-90"
           >
@@ -139,13 +158,22 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
           </button>
         </div>
 
-        <div className="hidden sm:flex items-center gap-3 w-1/3 justify-end">
-          <span className="text-xs font-mono text-muted-foreground tabular-nums w-8 text-right">
+        <div className="flex items-center gap-1 sm:gap-3 w-auto sm:w-1/3 justify-end">
+          <span className="hidden sm:inline text-xs font-mono text-muted-foreground tabular-nums w-8 text-right">
             {formatDuration(position)}
           </span>
-          <span className="text-xs font-mono text-muted-foreground tabular-nums w-8">
+          <span className="hidden sm:inline text-xs font-mono text-muted-foreground tabular-nums w-8">
             {formatDuration(durationSec ?? 0)}
           </span>
+          {/* Единственный путь выйти из джема — на узком экране не прячем, иначе плеер остаётся занят навсегда. */}
+          <button
+            type="button"
+            onClick={() => leaveJam()}
+            aria-label="Покинуть джем"
+            className="p-2 -m-1 shrink-0 opacity-50 hover:opacity-100 transition-opacity pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
+          >
+            <Icon name="log-out" size={16} />
+          </button>
         </div>
       </div>
 

@@ -1,19 +1,20 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { JamParticipant, JamPlaybackState, JamQueueItem, JamMode, SearchTrack } from '@vire/core';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { JamParticipant, JamPlaybackState, JamQueueItem, SearchTrack } from '@vire/core';
+import type { JamSessionValue } from '@/components/jam/jam-session-provider';
 
-const { useJamRoomMock, getSessionIdMock, useServerClockMock, usePlaybackSyncMock, controlsPauseMock } = vi.hoisted(() => ({
-  useJamRoomMock: vi.fn(),
+const { useJamSessionMock, activateMock, getSessionIdMock, controlsPauseMock } = vi.hoisted(() => ({
+  useJamSessionMock: vi.fn(),
+  activateMock: vi.fn(),
   getSessionIdMock: vi.fn(),
-  useServerClockMock: vi.fn(),
-  usePlaybackSyncMock: vi.fn(),
   controlsPauseMock: vi.fn(),
 }));
 
-vi.mock('@/lib/jam/use-jam-room', () => ({ useJamRoom: useJamRoomMock }));
-vi.mock('@/lib/jam/server-clock', () => ({ useServerClock: useServerClockMock }));
-vi.mock('@/lib/jam/use-playback-sync', () => ({ usePlaybackSync: usePlaybackSyncMock }));
+vi.mock('@/components/jam/jam-session-provider', () => ({ useJamSession: useJamSessionMock }));
+vi.mock('@/store/jam', () => ({
+  useJamStore: (selector: (s: { activate: typeof activateMock }) => unknown) => selector({ activate: activateMock }),
+}));
 vi.mock('@/lib/player/audio-engine', () => ({ controls: { pause: controlsPauseMock } }));
 vi.mock('@/lib/session-id', () => ({ getSessionId: getSessionIdMock }));
 vi.mock('@/lib/toast', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
@@ -42,29 +43,39 @@ vi.mock('motion/react', () => ({
   useDragControls: () => ({ start: () => {} }),
 }));
 
-import { usePlayerStore as usePlayerStoreForTest } from '@/store/player';
-import { getJamTransport } from '@/lib/jam/jam-controls';
 import { JamRoom } from './jam-room';
 
-interface RoomState {
-  queue: JamQueueItem[];
-  version: number;
-  participants: JamParticipant[];
-  playback: JamPlaybackState | null;
-  mode: JamMode;
-  speakerParticipantId: string | null;
-  presentParticipantIds: string[];
-  connected: boolean;
-  ended: boolean;
-  setDragging: ReturnType<typeof vi.fn>;
-}
-
-function baseRoom(overrides?: Partial<RoomState>): RoomState {
+function baseRoom(overrides?: Partial<JamSessionValue['room']>): JamSessionValue['room'] {
   return {
     queue: [], version: 0, participants: [], playback: null, mode: 'SYNCED', speakerParticipantId: null,
-    presentParticipantIds: [],
-    connected: true, ended: false, setDragging: vi.fn(),
+    presentParticipantIds: [], connected: true, ended: false, setDragging: vi.fn(),
     ...overrides,
+  };
+}
+
+function baseSession(overrides?: Omit<Partial<JamSessionValue>, 'room'> & { room?: Partial<JamSessionValue['room']> }): JamSessionValue {
+  const { room: roomOverrides, ...rest } = overrides ?? {};
+  return {
+    code: 'A2B3C4',
+    membership: { participantId: 'p1', role: 'GUEST', sessionId: 'guest-1.sig' },
+    role: 'GUEST',
+    isHost: false,
+    room: baseRoom(roomOverrides),
+    serverNow: () => 0,
+    isAudioDevice: true,
+    speakerName: null,
+    playbackPending: null,
+    isPlaying: false,
+    activeTrackId: null,
+    actions: {
+      rowPlay: vi.fn(),
+      toggle: vi.fn(),
+      changeMode: vi.fn(),
+      claimSpeaker: vi.fn(),
+      endJam: vi.fn().mockResolvedValue(undefined),
+      leave: vi.fn(),
+    },
+    ...rest,
   };
 }
 
@@ -115,11 +126,14 @@ function searchTrack(id: string): SearchTrack {
   };
 }
 
+const playback = (trackId: string, overrides?: Partial<JamPlaybackState>): JamPlaybackState => ({
+  trackId, startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1, ...overrides,
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   getSessionIdMock.mockResolvedValue('guest-1.sig');
-  useJamRoomMock.mockReturnValue(baseRoom());
-  useServerClockMock.mockReturnValue({ offsetMs: 0, serverNow: () => 0 });
+  useJamSessionMock.mockReturnValue(null);
 });
 
 afterEach(() => {
@@ -127,41 +141,34 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function joinAs(role: 'HOST' | 'GUEST') {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn().mockResolvedValue({ ok: true, json: async () => ({ participant: { id: 'p1', role } }) } as unknown as Response),
-  );
-  fireEvent.click(screen.getByText('Подключиться к звуку'));
-  await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
-}
-
-describe('JamRoom', () => {
-  it('экран входа показывает название и хоста; после входа гость видит пустую очередь и не видит контролов хоста', async () => {
+describe('JamRoom: экран входа', () => {
+  it('без активной сессии показывает название и хоста', () => {
     render(
       <JamRoom code="A2B3C4" title="Пятничный джем" hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
     );
 
     expect(screen.getByText('Пятничный джем')).toBeTruthy();
     expect(screen.getByText('Хост — Danya')).toBeTruthy();
-
-    await joinAs('GUEST');
-
-    expect(screen.getByText('Очередь пуста')).toBeTruthy();
-    expect(screen.queryByText('Завершить джем')).toBeNull();
   });
 
-  it('хост видит кнопку завершения джема', async () => {
-    render(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
+  it('клик «Подключиться к звуку» шлёт join, глушит плеер и активирует джем в сторе', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ participant: { id: 'p1', role: 'GUEST' } }) } as unknown as Response),
     );
 
-    await joinAs('HOST');
+    render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
+    );
+    fireEvent.click(screen.getByText('Подключиться к звуку'));
 
-    expect(screen.getByText('Завершить джем')).toBeTruthy();
+    await waitFor(() => expect(activateMock).toHaveBeenCalledWith({
+      code: 'A2B3C4', participantId: 'p1', role: 'GUEST', sessionId: 'guest-1.sig',
+    }));
+    expect(controlsPauseMock).toHaveBeenCalledTimes(1);
   });
 
-  it('уже завершённый джем показывает финальный экран без возможности войти', () => {
+  it('уже завершённый джем (без сессии) показывает финальный экран без возможности войти', () => {
     render(
       <JamRoom code="A2B3C4" title="Party" hostDisplayName="Danya" initialEnded isLoggedIn={false} currentUserName={null} suggestions={[]} />,
     );
@@ -170,275 +177,76 @@ describe('JamRoom', () => {
     expect(screen.queryByText('Подключиться к звуку')).toBeNull();
   });
 
-  it('до входа звук синхронизации выключен; после входа глушит глобальный плеер и включает его', async () => {
+  it('чужой код в контексте (session.code !== code страницы) считается отсутствием сессии — снова экран входа', () => {
+    useJamSessionMock.mockReturnValue(baseSession({ code: 'ZZZZZZ' }));
     render(
       <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
     );
 
-    expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(expect.objectContaining({ audioEnabled: false }));
-    expect(controlsPauseMock).not.toHaveBeenCalled();
-
-    await joinAs('GUEST');
-
-    expect(controlsPauseMock).toHaveBeenCalledTimes(1);
-    expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(expect.objectContaining({ audioEnabled: true }));
+    expect(screen.getByText('Подключиться к звуку')).toBeTruthy();
   });
+});
 
-  it('хост на завершении трека переводит очередь на следующий; гость ничего не шлёт', async () => {
-    const queue = [track('a'), track('b')];
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }),
-    );
-    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'HOST' } }) };
-      return { ok: true, json: async () => ({}) };
-    });
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
-
-    render(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
-    );
-    fireEvent.click(screen.getByText('Подключиться к звуку'));
-    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
-
-    const onEnded = usePlaybackSyncMock.mock.calls.at(-1)![0].onEnded as () => void;
-    onEnded();
-
-    await waitFor(() => {
-      const playbackCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/playback'));
-      expect(playbackCall).toBeTruthy();
-      expect(playbackCall![1]!.body).toBe(JSON.stringify({ kind: 'track', trackId: 't-b' }));
-    });
-  });
-
-  it('гость на завершении трека не шлёт следующий трек', async () => {
-    const queue = [track('a'), track('b')];
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }),
-    );
-    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'GUEST' } }) };
-      return { ok: true, json: async () => ({}) };
-    });
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
-
+describe('JamRoom: комната', () => {
+  it('гость видит пустую очередь и не видит контролов хоста', () => {
+    useJamSessionMock.mockReturnValue(baseSession({ isHost: false, role: 'GUEST' }));
     render(
       <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
     );
-    fireEvent.click(screen.getByText('Подключиться к звуку'));
-    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
 
-    const onEnded = usePlaybackSyncMock.mock.calls.at(-1)![0].onEnded as () => void;
-    onEnded();
-
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/playback'))).toBe(false);
+    expect(screen.getByText('Очередь пуста')).toBeTruthy();
+    expect(screen.queryByText('Завершить джем')).toBeNull();
   });
 
-  it('хост кликает трек в очереди — уходит POST kind:track с его id', async () => {
+  it('хост видит кнопку завершения джема и она зовёт actions.endJam', async () => {
+    const session = baseSession({ isHost: true, role: 'HOST' });
+    useJamSessionMock.mockReturnValue(session);
+    render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
+    );
+
+    fireEvent.click(screen.getByText('Завершить джем'));
+    await waitFor(() => expect(session.actions.endJam).toHaveBeenCalledTimes(1));
+  });
+
+  it('уже присоединённый джем, помеченный ended в контексте, показывает финальный экран', () => {
+    useJamSessionMock.mockReturnValue(baseSession({ room: { ended: true } }));
+    render(
+      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
+    );
+
+    expect(screen.getByText('Джем завершён')).toBeTruthy();
+  });
+
+  it('клик по треку в очереди зовёт actions.rowPlay с этим треком', () => {
     const queue = [track('a'), track('b')];
-    useJamRoomMock.mockReturnValue(baseRoom({ queue }));
-    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'HOST' } }) };
-      return { ok: true, json: async () => ({}) };
-    });
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
+    const session = baseSession({ room: { queue } });
+    useJamSessionMock.mockReturnValue(session);
 
     render(
       <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
     );
-    fireEvent.click(screen.getByText('Подключиться к звуку'));
-    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
-
     fireEvent.click(screen.getByLabelText('Играть b'));
 
-    await waitFor(() => {
-      const playbackCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/playback'));
-      expect(playbackCall).toBeTruthy();
-      expect(playbackCall![1]!.body).toBe(JSON.stringify({ kind: 'track', trackId: 't-b' }));
-    });
+    expect(session.actions.rowPlay).toHaveBeenCalledWith(expect.objectContaining({ id: 'b', trackId: 't-b' }));
   });
 
-  it('гость тоже может кликнуть трек в очереди — транспорт теперь у всех участников', async () => {
+  it('активный трек в очереди подсвечен по playback.trackId, isPlaying берётся из контекста', () => {
     const queue = [track('a'), track('b')];
-    useJamRoomMock.mockReturnValue(baseRoom({ queue }));
-    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'GUEST' } }) };
-      return { ok: true, json: async () => ({}) };
-    });
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
-
-    render(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
-    );
-    fireEvent.click(screen.getByText('Подключиться к звуку'));
-    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
-
-    fireEvent.click(screen.getByLabelText('Играть b'));
-
-    await waitFor(() => {
-      const playbackCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/playback'));
-      expect(playbackCall).toBeTruthy();
-      expect(playbackCall![1]!.body).toBe(JSON.stringify({ kind: 'track', trackId: 't-b', sessionId: 'guest-1.sig' }));
-    });
-  });
-
-  it('войдя, хост получает джем-оверлей глобального плеера с активным треком', async () => {
-    const queue = [track('a'), track('b')];
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }),
-    );
+    const session = baseSession({ isPlaying: true, room: { queue, playback: playback('t-b') } });
+    useJamSessionMock.mockReturnValue(session);
 
     render(
       <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
     );
-    await joinAs('HOST');
 
-    await waitFor(() =>
-      expect(usePlayerStoreForTest.getState().jamOverride).toEqual({
-        code: 'A2B3C4',
-        track: { title: 'a', artistName: 'Artist', coverUrl: null },
-        isPlaying: true,
-        durationSec: null,
-        canPrev: false,
-        canNext: true,
-        isRemote: false,
-      }),
-    );
-  });
-
-  it('гость тоже переключает паузу через зарегистрированный транспорт джема — транспорт у всех участников', async () => {
-    const queue = [track('a'), track('b')];
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: true, pausedPositionMs: 5000, version: 1 } }),
-    );
-    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'GUEST' } }) };
-      return { ok: true, json: async () => ({}) };
-    });
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
-
-    render(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
-    );
-    fireEvent.click(screen.getByText('Подключиться к звуку'));
-    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
-
-    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isPlaying).toBe(false));
-    act(() => { getJamTransport()!.toggle(); });
-
-    await waitFor(() => {
-      const playbackCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/playback'));
-      expect(playbackCall).toBeTruthy();
-      expect(playbackCall![1]!.body).toBe(JSON.stringify({ kind: 'play', trackId: 't-a', positionMs: 5000, sessionId: 'guest-1.sig' }));
-    });
-  });
-
-  it('переход в ended после входа гасит звук синхронизации (audioEnabled=false для playback-sync) и чистит jam-override', async () => {
-    const queue = [track('a')];
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }),
-    );
-
-    const { rerender } = render(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
-    );
-    await joinAs('HOST');
-    expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(expect.objectContaining({ audioEnabled: true }));
-    await waitFor(() =>
-      expect(usePlayerStoreForTest.getState().jamOverride).toEqual({
-        code: 'A2B3C4',
-        track: { title: 'a', artistName: 'Artist', coverUrl: null },
-        isPlaying: true,
-        durationSec: null,
-        canPrev: false,
-        canNext: false,
-        isRemote: false,
-      }),
-    );
-
-    useJamRoomMock.mockReturnValue(baseRoom({ queue, ended: true }));
-    rerender(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
-    );
-
-    expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(expect.objectContaining({ audioEnabled: false }));
-    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride).toBeNull());
-  });
-
-  it('два быстрых toggle транспорта до SSE-подтверждения → второй POST это play, не второй pause', async () => {
-    const queue = [track('a')];
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }),
-    );
-    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'HOST' } }) };
-      return { ok: true, json: async () => ({}) };
-    });
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
-
-    render(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
-    );
-    fireEvent.click(screen.getByText('Подключиться к звуку'));
-    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
-
-    act(() => { getJamTransport()!.toggle(); });
-    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isPlaying).toBe(false));
-    act(() => { getJamTransport()!.toggle(); });
-
-    await waitFor(() => {
-      const playbackCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('/playback'));
-      expect(playbackCalls).toHaveLength(2);
-      expect(playbackCalls[0]![1]!.body).toBe(JSON.stringify({ kind: 'pause', positionMs: 0 }));
-      expect(playbackCalls[1]![1]!.body).toBe(JSON.stringify({ kind: 'play', trackId: 't-a', positionMs: 0 }));
-    });
-  });
-
-  it('после подтверждающего jam:playback pending снят — следующее серверное состояние отражается сразу', async () => {
-    const queue = [track('a')];
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }),
-    );
-    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'HOST' } }) };
-      return { ok: true, json: async () => ({}) };
-    });
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
-
-    const { rerender } = render(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
-    );
-    fireEvent.click(screen.getByText('Подключиться к звуку'));
-    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
-
-    act(() => { getJamTransport()!.toggle(); });
-    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isPlaying).toBe(false));
-
-    // SSE подтверждает желаемое (paused:true) — pending должен сняться.
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: true, pausedPositionMs: 0, version: 2 } }),
-    );
-    rerender(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
-    );
-
-    // Кто-то другой возобновил джем — если бы pending остался висеть, стейт не сдвинулся бы с paused.
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 3 } }),
-    );
-    rerender(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
-    );
-
-    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isPlaying).toBe(true));
+    expect(screen.getByLabelText('Пауза')).toBeTruthy();
   });
 
   it('повторное добавление уже добавленного трека не шлёт второй POST add', async () => {
-    useJamRoomMock.mockReturnValue(baseRoom({ queue: [] }));
-    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'HOST' } }) };
-      return { ok: true, json: async () => ({}) };
-    });
+    const session = baseSession({ isHost: true, role: 'HOST' });
+    useJamSessionMock.mockReturnValue(session);
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => ({ ok: true, json: async () => ({}) }));
     vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
 
     render(
@@ -447,8 +255,6 @@ describe('JamRoom', () => {
         suggestions={[searchTrack('sugg-1')]}
       />,
     );
-    fireEvent.click(screen.getByText('Подключиться к звуку'));
-    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
 
     fireEvent.click(screen.getByText('Добавить трек'));
     const dialog = await screen.findByRole('dialog');
@@ -463,11 +269,10 @@ describe('JamRoom', () => {
   });
 
   it('панель добавления закрывается по onClose (Esc)', async () => {
-    useJamRoomMock.mockReturnValue(baseRoom({ queue: [] }));
+    useJamSessionMock.mockReturnValue(baseSession({ isHost: true, role: 'HOST' }));
     render(
       <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
     );
-    await joinAs('HOST');
 
     fireEvent.click(screen.getByText('Добавить трек'));
     expect(screen.getByRole('dialog')).toBeTruthy();
@@ -476,92 +281,50 @@ describe('JamRoom', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  it('SPEAKER: гость не звуковое устройство — usePlaybackSync получает audioEnabled:false и driftCorrection:false', async () => {
+  it('SPEAKER: пульт видит имя колонки и кнопку «Звук здесь», клик зовёт actions.claimSpeaker', () => {
     const host = participant({ id: 'p-host', role: 'HOST', displayName: 'Хост Данила' });
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ mode: 'SPEAKER', participants: [host, participant({ id: 'p1', role: 'GUEST' })] }),
-    );
-
-    render(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
-    );
-    await joinAs('GUEST');
-
-    expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ audioEnabled: false, driftCorrection: false }),
-    );
-  });
-
-  it('SPEAKER: пульт видит имя колонки и кнопку «Звук здесь», клик шлёт POST /speaker', async () => {
-    const host = participant({ id: 'p-host', role: 'HOST', displayName: 'Хост Данила' });
-    useJamRoomMock.mockReturnValue(
-      baseRoom({ mode: 'SPEAKER', participants: [host, participant({ id: 'p1', role: 'GUEST' })] }),
-    );
-    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-      if (String(url).includes('/join')) return { ok: true, json: async () => ({ participant: { id: 'p1', role: 'GUEST' } }) };
-      return { ok: true, json: async () => ({}) };
+    const session = baseSession({
+      isAudioDevice: false,
+      room: { mode: 'SPEAKER', participants: [host, participant({ id: 'p1', role: 'GUEST' })] },
+      speakerName: 'Хост Данила',
     });
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
+    useJamSessionMock.mockReturnValue(session);
 
     render(
       <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
     );
-    fireEvent.click(screen.getByText('Подключиться к звуку'));
-    await waitFor(() => expect(screen.queryByText('Подключиться к звуку')).toBeNull());
 
     expect(screen.getByText('Играет на устройстве Хост Данила')).toBeTruthy();
     fireEvent.click(screen.getByText('Звук здесь'));
-
-    await waitFor(() => {
-      const speakerCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/speaker'));
-      expect(speakerCall).toBeTruthy();
-      expect(speakerCall![1]!.body).toBe(JSON.stringify({ sessionId: 'guest-1.sig' }));
-    });
+    expect(session.actions.claimSpeaker).toHaveBeenCalledTimes(1);
   });
 
-  it('SPEAKER: колонка видит пометку «Звук здесь» без кнопки и джем-оверлей помечен isRemote:false', async () => {
-    const guest = participant({ id: 'p1', role: 'GUEST' });
-    useJamRoomMock.mockReturnValue(
-      baseRoom({
-        mode: 'SPEAKER',
-        participants: [guest],
-        speakerParticipantId: 'p1',
-        queue: [track('a')],
-        playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 },
-      }),
-    );
+  it('SPEAKER: колонка видит пометку «Звук здесь» без кнопки', () => {
+    const session = baseSession({
+      isAudioDevice: true,
+      room: { mode: 'SPEAKER', participants: [participant({ id: 'p1', role: 'GUEST' })], speakerParticipantId: 'p1' },
+    });
+    useJamSessionMock.mockReturnValue(session);
 
     render(
       <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn={false} currentUserName={null} suggestions={[]} />,
     );
-    await joinAs('GUEST');
 
     const badges = screen.getAllByText('Звук здесь');
     expect(badges).toHaveLength(1);
     expect(badges[0]!.closest('button')).toBeNull();
-
-    await waitFor(() => expect(usePlayerStoreForTest.getState().jamOverride?.isRemote).toBe(false));
   });
 
-  it('SYNCED: единственное живое устройство — usePlaybackSync получает driftCorrection:false', async () => {
-    useJamRoomMock.mockReturnValue(baseRoom({ presentParticipantIds: ['p1'] }));
-
+  it('хост меняет режим через ActionSelect — зовёт actions.changeMode', () => {
+    const session = baseSession({ isHost: true, role: 'HOST' });
+    useJamSessionMock.mockReturnValue(session);
     render(
       <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
     );
-    await joinAs('HOST');
 
-    expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(expect.objectContaining({ driftCorrection: false }));
-  });
+    fireEvent.click(screen.getByLabelText('Режим воспроизведения'));
+    fireEvent.click(screen.getByText('На колонке'));
 
-  it('SYNCED: два живых устройства — usePlaybackSync получает driftCorrection:true', async () => {
-    useJamRoomMock.mockReturnValue(baseRoom({ presentParticipantIds: ['p1', 'p2'] }));
-
-    render(
-      <JamRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={[]} />,
-    );
-    await joinAs('HOST');
-
-    expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(expect.objectContaining({ driftCorrection: true }));
+    expect(session.actions.changeMode).toHaveBeenCalledWith('SPEAKER');
   });
 });

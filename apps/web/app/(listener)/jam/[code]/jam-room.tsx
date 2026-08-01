@@ -1,22 +1,17 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor, TouchSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
-import type { JamParticipantRole, JamQueueItem, JamMode, SearchTrack } from '@vire/core';
-import { derivePositionMs, isAudioDevice as resolveIsAudioDevice, resolveSpeakerParticipantId } from '@vire/core';
-import { useJamRoom } from '@/lib/jam/use-jam-room';
+import type { JamMode, JamParticipant, JamParticipantRole, JamQueueItem, SearchTrack } from '@vire/core';
+import { useJamSession } from '@/components/jam/jam-session-provider';
 import { useJamQueue } from '@/lib/jam/use-jam-queue';
-import { useServerClock } from '@/lib/jam/server-clock';
-import { usePlaybackSync } from '@/lib/jam/use-playback-sync';
-import { setJamTransport, type JamTransport } from '@/lib/jam/jam-controls';
-import { effectivePaused, resolvePending, nextPendingVersion, PENDING_TTL_MS, type PendingToggle } from '@/lib/jam/optimistic-playback';
 import { JAM_MODE_LABELS, JAM_MODE_OPTIONS } from '@/lib/jam/jam-mode-labels';
 import { getSessionId } from '@/lib/session-id';
 import { toast } from '@/lib/toast';
-import { usePlayerStore } from '@/store/player';
+import { useJamStore } from '@/store/jam';
 import { controls } from '@/lib/player/audio-engine';
 import { SortableTrackRow } from '@/components/sortable-track-row';
 import { PageContainer } from '@/components/page-container';
@@ -42,88 +37,33 @@ interface Props {
   suggestions: SearchTrack[];
 }
 
-type PlaybackCommand =
-  | { kind: 'play'; trackId: string; positionMs: number }
-  | { kind: 'pause'; positionMs: number }
-  | { kind: 'track'; trackId: string };
-
-interface Membership {
-  participantId: string;
-  role: JamParticipantRole;
-  sessionId: string | null;
-}
-
 interface JoinResponse {
   participant: { id: string; role: JamParticipantRole };
 }
 
+const EMPTY_QUEUE: JamQueueItem[] = [];
+const EMPTY_PARTICIPANTS: JamParticipant[] = [];
+
+function noop(): void {}
+
 export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn, currentUserName, suggestions }: Props) {
-  const [membership, setMembership] = useState<Membership | null>(null);
   const [pending, setPending] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [audioEnabled, setAudioEnabled] = useState(false);
-  const [playbackPending, setPlaybackPending] = useState<PendingToggle | null>(null);
 
-  const room = useJamRoom(code, membership?.sessionId ?? null);
+  const session = useJamSession();
+  const activate = useJamStore((s) => s.activate);
+  const activeSession = session && session.code === code ? session : null;
+
+  // Латч: страница помнит, что джем завершился, даже когда контекст уже пропал —
+  // сессия чистит стор сразу после jam:ended (см. jam-session-provider.tsx).
+  const [ended, setEnded] = useState(initialEnded);
+  if (activeSession?.room.ended && !ended) setEnded(true);
+
   const jamQueue = useJamQueue({
     code,
-    sessionId: membership?.sessionId ?? null,
-    serverQueue: room.queue,
-    setDragging: room.setDragging,
-  });
-  const { serverNow } = useServerClock();
-
-  const ended = initialEnded || room.ended;
-  const isHost = membership?.role === 'HOST';
-  const myParticipantId = membership?.participantId ?? null;
-
-  const resolvedSpeakerId = useMemo(
-    () => resolveSpeakerParticipantId(room.participants, room.speakerParticipantId),
-    [room.participants, room.speakerParticipantId],
-  );
-  const speakerName = room.participants.find((p) => p.id === resolvedSpeakerId)?.displayName ?? null;
-  const isAudioDevice = useMemo(
-    () => myParticipantId !== null && resolveIsAudioDevice({
-      mode: room.mode, participantId: myParticipantId, participants: room.participants, speakerParticipantId: room.speakerParticipantId,
-    }),
-    [myParticipantId, room.mode, room.participants, room.speakerParticipantId],
-  );
-  // SPEAKER — звук всегда на одном устройстве; SYNCED — сколько участников реально держат живое SSE-соединение.
-  // Синхронизировать не с кем, когда устройство одно — периодическая коррекция дрейфа отключается.
-  const audioDeviceCount = room.mode === 'SPEAKER' ? 1 : room.presentParticipantIds.length;
-
-  const postPlayback = useCallback((body: PlaybackCommand, onError?: () => void) => {
-    const sessionId = membership?.sessionId;
-    fetch(`/api/v1/jam/${encodeURIComponent(code)}/playback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sessionId ? { ...body, sessionId } : body),
-    })
-      .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
-      .catch(() => {
-        toast.error('Не удалось изменить воспроизведение');
-        onError?.();
-      });
-  }, [code, membership?.sessionId]);
-
-  const handleTrackEnded = useCallback(() => {
-    // SYNCED: анти-гонка — только хост инициирует переход. SPEAKER: у пультов события ended нет вовсе,
-    // это всегда звуковое устройство — проверка isAudioDevice тут для порядка.
-    const initiator = room.mode === 'SYNCED' ? isHost : isAudioDevice;
-    if (!initiator) return;
-    const currentTrackId = room.playback?.trackId;
-    const currentIndex = jamQueue.queue.findIndex((item) => item.trackId === currentTrackId);
-    const next = currentIndex >= 0 ? jamQueue.queue[currentIndex + 1] : undefined;
-    if (!next) return;
-    postPlayback({ kind: 'track', trackId: next.trackId });
-  }, [room.mode, isHost, isAudioDevice, room.playback, jamQueue.queue, postPlayback]);
-
-  usePlaybackSync({
-    playback: room.playback,
-    serverNow,
-    audioEnabled: audioEnabled && isAudioDevice && !ended,
-    driftCorrection: room.mode === 'SYNCED' && audioDeviceCount > 1,
-    onEnded: handleTrackEnded,
+    sessionId: activeSession?.membership.sessionId ?? null,
+    serverQueue: activeSession?.room.queue ?? EMPTY_QUEUE,
+    setDragging: activeSession?.room.setDragging ?? noop,
   });
 
   const handleJoin = useCallback(async (displayName: string) => {
@@ -140,174 +80,27 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
       });
       if (!res.ok) throw new Error(String(res.status));
       const data = (await res.json()) as JoinResponse;
-      setMembership({ participantId: data.participant.id, role: data.participant.role, sessionId });
       // Два аудио одновременно недопустимы — вход в звук джема глушит глобальный плеер.
       controls.pause();
-      setAudioEnabled(true);
+      activate({ code, participantId: data.participant.id, role: data.participant.role, sessionId });
     } catch {
       toast.error('Не удалось подключиться к джему');
     } finally {
       setPending(false);
     }
-  }, [code, isLoggedIn, currentUserName]);
-
-  const handleModeChange = useCallback((mode: JamMode) => {
-    const sessionId = membership?.sessionId;
-    fetch(`/api/v1/jam/${encodeURIComponent(code)}/mode`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sessionId ? { mode, sessionId } : { mode }),
-    })
-      .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
-      .catch(() => toast.error('Не удалось сменить режим'));
-  }, [code, membership?.sessionId]);
-
-  const handleClaimSpeaker = useCallback(() => {
-    const sessionId = membership?.sessionId;
-    fetch(`/api/v1/jam/${encodeURIComponent(code)}/speaker`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sessionId ? { sessionId } : {}),
-    })
-      .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
-      .catch(() => toast.error('Не удалось переключить звук'));
-  }, [code, membership?.sessionId]);
-
-  const handleRowPlay = useCallback((item: JamQueueItem) => {
-    const playback = room.playback;
-    if (playback?.trackId === item.trackId) {
-      const paused = effectivePaused(playback, playbackPending);
-      const next: PendingToggle = { paused: !paused, at: Date.now(), fromVersion: nextPendingVersion(playback, playbackPending) };
-      postPlayback(
-        paused
-          ? { kind: 'play', trackId: item.trackId, positionMs: derivePositionMs(playback, serverNow()) }
-          : { kind: 'pause', positionMs: derivePositionMs(playback, serverNow()) },
-        () => setPlaybackPending((prev) => (prev === next ? null : prev)),
-      );
-      setPlaybackPending(next);
-    } else {
-      setPlaybackPending(null);
-      postPlayback({ kind: 'track', trackId: item.trackId });
-    }
-  }, [room.playback, playbackPending, serverNow, postPlayback]);
-
-  const handleTogglePlayback = useCallback(() => {
-    const playback = room.playback;
-    if (!playback) return;
-    const paused = effectivePaused(playback, playbackPending);
-    const next: PendingToggle = { paused: !paused, at: Date.now(), fromVersion: nextPendingVersion(playback, playbackPending) };
-    postPlayback(
-      paused
-        ? { kind: 'play', trackId: playback.trackId, positionMs: derivePositionMs(playback, serverNow()) }
-        : { kind: 'pause', positionMs: derivePositionMs(playback, serverNow()) },
-      () => setPlaybackPending((prev) => (prev === next ? null : prev)),
-    );
-    setPlaybackPending(next);
-  }, [room.playback, playbackPending, serverNow, postPlayback]);
-
-  // Снятие pending — адаптация state к изменившемуся входу в рендере (приём syncedId
-  // из use-optimistic-toggle.ts): эффект тут запрещён линтером, мутация рефа — React.
-  const [resolvedPlayback, setResolvedPlayback] = useState(room.playback);
-  if (resolvedPlayback !== room.playback) {
-    setResolvedPlayback(room.playback);
-    setPlaybackPending((prev) => resolvePending(prev, room.playback?.version ?? 0, Date.now(), PENDING_TTL_MS));
-  }
-
-  // Фолбэк на случай, если SSE-подтверждение не пришло вовсе (обрыв соединения).
-  useEffect(() => {
-    if (!playbackPending) return;
-    const timer = setTimeout(
-      () => setPlaybackPending((prev) => (prev === playbackPending ? null : prev)),
-      PENDING_TTL_MS,
-    );
-    return () => clearTimeout(timer);
-  }, [playbackPending]);
-
-  const activeQueueIndex = useMemo(
-    () => (room.playback ? jamQueue.queue.findIndex((item) => item.trackId === room.playback!.trackId) : -1),
-    [room.playback, jamQueue.queue],
-  );
-  const activeTrack = activeQueueIndex >= 0 ? jamQueue.queue[activeQueueIndex] : undefined;
-  const isPlaying = Boolean(room.playback) && !effectivePaused(room.playback, playbackPending);
-  const canPrev = activeQueueIndex > 0;
-  const canNext = activeQueueIndex >= 0 && activeQueueIndex < jamQueue.queue.length - 1;
+  }, [code, isLoggedIn, currentUserName, activate]);
 
   const addedTrackIds = useMemo(
     () => new Set(jamQueue.queue.map((item) => item.trackId)),
     [jamQueue.queue],
   );
 
-  const setPlayerJamOverride = usePlayerStore((s) => s.setJamOverride);
-
-  // Джем занимает глобальный плеер: пока звук джема играет, mini-bar показывает его трек и толкает транспорт джема.
-  // Условие гашения (!audioEnabled || ended) проверяется первым и не зависит от activeTrack —
-  // иначе рендер, где playback/очередь ещё не согласовались, мог бы отложить чистку оверлея.
-  useEffect(() => {
-    if (!audioEnabled || ended) {
-      setPlayerJamOverride(null);
-      return;
-    }
-    if (!activeTrack) return;
-    setPlayerJamOverride({
-      code,
-      track: { title: activeTrack.title, artistName: activeTrack.artistName, coverUrl: activeTrack.coverUrl },
-      isPlaying,
-      durationSec: activeTrack.durationSec,
-      canPrev,
-      canNext,
-      isRemote: !isAudioDevice,
-    });
-  }, [audioEnabled, ended, activeTrack, isPlaying, canPrev, canNext, code, isAudioDevice, setPlayerJamOverride]);
-
-  // Отдельно от основного эффекта — гарантирует чистку при уходе со страницы независимо от того,
-  // какая ветка выше сработала последней.
-  useEffect(() => () => setPlayerJamOverride(null), [setPlayerJamOverride]);
-
-  // Рефы держат актуальные значения для транспорта — эффект регистрации не пересоздаёт объект на каждый тик позиции.
-  const roomPlaybackRef = useRef(room.playback);
-  const queueRef = useRef(jamQueue.queue);
-  const playbackPendingRef = useRef(playbackPending);
-  const serverNowRef = useRef(serverNow);
-  useEffect(() => {
-    roomPlaybackRef.current = room.playback;
-    queueRef.current = jamQueue.queue;
-    playbackPendingRef.current = playbackPending;
-    serverNowRef.current = serverNow;
-  });
-
-  useEffect(() => {
-    const transport: JamTransport = {
-      toggle: handleTogglePlayback,
-      next: () => {
-        const playback = roomPlaybackRef.current;
-        const i = queueRef.current.findIndex((item) => item.trackId === playback?.trackId);
-        const target = i >= 0 ? queueRef.current[i + 1] : undefined;
-        if (target) postPlayback({ kind: 'track', trackId: target.trackId });
-      },
-      prev: () => {
-        const playback = roomPlaybackRef.current;
-        const i = queueRef.current.findIndex((item) => item.trackId === playback?.trackId);
-        const target = i > 0 ? queueRef.current[i - 1] : undefined;
-        if (target) postPlayback({ kind: 'track', trackId: target.trackId });
-      },
-      seek: (ms) => {
-        const playback = roomPlaybackRef.current;
-        if (!playback) return;
-        const paused = effectivePaused(playback, playbackPendingRef.current);
-        postPlayback(
-          paused
-            ? { kind: 'pause', positionMs: ms }
-            : { kind: 'play', trackId: playback.trackId, positionMs: ms },
-        );
-      },
-      positionMs: () => {
-        const playback = roomPlaybackRef.current;
-        return playback ? derivePositionMs(playback, serverNowRef.current()) : 0;
-      },
-    };
-    setJamTransport(transport);
-    return () => setJamTransport(null);
-  }, [handleTogglePlayback, postPlayback]);
+  const activeQueueIndex = useMemo(
+    () => (activeSession?.room.playback
+      ? jamQueue.queue.findIndex((item) => item.trackId === activeSession.room.playback!.trackId)
+      : -1),
+    [activeSession, jamQueue.queue],
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -315,9 +108,10 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  const participants = activeSession?.room.participants ?? EMPTY_PARTICIPANTS;
   const participantsById = useMemo(
-    () => new Map(room.participants.map((p) => [p.id, p.displayName])),
-    [room.participants],
+    () => new Map(participants.map((p) => [p.id, p.displayName])),
+    [participants],
   );
 
   function handleDragEnd(e: DragEndEvent) {
@@ -329,19 +123,13 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     void jamQueue.moveTrack(String(active.id), String(over.id));
   }
 
-  async function handleEndJam() {
-    if (!confirm('Завершить джем для всех?')) return;
-    const res = await fetch(`/api/v1/jam/${encodeURIComponent(code)}/end`, { method: 'POST' }).catch(() => null);
-    if (!res?.ok) toast.error('Не удалось завершить джем');
-  }
-
   function handleAdd(t: SearchTrack) {
     if (addedTrackIds.has(t.id)) return;
     void jamQueue.addTrack({
       id: `pending-${t.id}-${Date.now()}`,
       trackId: t.id,
       position: jamQueue.queue.length,
-      addedByParticipantId: membership?.participantId ?? null,
+      addedByParticipantId: activeSession?.membership.participantId ?? null,
       addedAt: new Date(),
       title: t.title,
       durationSec: null,
@@ -356,7 +144,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     });
   }
 
-  if (!membership) {
+  if (!activeSession) {
     return (
       <JamJoin
         title={title}
@@ -377,6 +165,8 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
       </div>
     );
   }
+
+  const { room, isHost, isAudioDevice, speakerName, isPlaying, actions } = activeSession;
 
   return (
     <div data-app-screen className="flex h-full min-h-0 flex-col">
@@ -399,7 +189,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
               <ActionSelect
                 options={JAM_MODE_OPTIONS}
                 value={room.mode}
-                onChange={(v) => handleModeChange(v as JamMode)}
+                onChange={(v) => actions.changeMode(v as JamMode)}
                 ariaLabel="Режим воспроизведения"
               />
             ) : (
@@ -414,7 +204,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
             {isHost && (
               <button
                 type="button"
-                onClick={() => void handleEndJam()}
+                onClick={() => void actions.endJam()}
                 aria-label="Завершить джем"
                 className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground hover:text-destructive transition-colors sm:px-4"
               >
@@ -436,7 +226,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
                 <span>Играет на устройстве {speakerName ?? '—'}</span>
                 <button
                   type="button"
-                  onClick={handleClaimSpeaker}
+                  onClick={actions.claimSpeaker}
                   className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-3 text-sm text-foreground hover:bg-foreground/5 transition-colors"
                 >
                   <Icon name="volume-2" size={12} /> Звук здесь
@@ -499,9 +289,9 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
                             size="roomy"
                             isActive={i === activeQueueIndex}
                             isPlaying={i === activeQueueIndex && isPlaying}
-                            onPlay={() => handleRowPlay(item)}
+                            onPlay={() => actions.rowPlay(item)}
                             canDrag
-                            canRemove={isHost || item.addedByParticipantId === membership.participantId}
+                            canRemove={isHost || item.addedByParticipantId === activeSession.membership.participantId}
                             onRemove={(id) => void jamQueue.removeTrack(id)}
                             removeLabel="Убрать из очереди"
                             subtitle={

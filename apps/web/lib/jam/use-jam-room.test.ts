@@ -76,6 +76,35 @@ describe('useJamRoom', () => {
     expect(result.current.presentParticipantIds).toEqual([]);
   });
 
+  it('снапшот завершённого джема сразу помечает комнату завершённой', () => {
+    const { result } = renderHook(() => useJamRoom('A2B3C4', null));
+
+    act(() => {
+      lastHandlers()['jam:snapshot']!({
+        session: { status: 'ENDED' }, participants: [], queue: [], version: 1, playback: null,
+      });
+    });
+
+    expect(result.current.ended).toBe(true);
+  });
+
+  it('снапшот живого джема снимает признак завершения', () => {
+    const { result } = renderHook(() => useJamRoom('A2B3C4', null));
+
+    act(() => {
+      lastHandlers()['jam:ended']!({ type: 'jam:ended' });
+    });
+    expect(result.current.ended).toBe(true);
+
+    act(() => {
+      lastHandlers()['jam:snapshot']!({
+        session: { status: 'LIVE' }, participants: [], queue: [], version: 2, playback: null,
+      });
+    });
+
+    expect(result.current.ended).toBe(false);
+  });
+
   it('применяет jam:presence к текущему состоянию', () => {
     const { result } = renderHook(() => useJamRoom('A2B3C4', null));
     act(() => {
