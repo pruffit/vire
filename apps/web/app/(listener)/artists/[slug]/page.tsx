@@ -5,7 +5,6 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import {
   db,
-  DrizzleArtistRepository,
   DrizzleReleaseRepository,
   getFollowState,
   getFollowerCount,
@@ -15,11 +14,9 @@ import {
   listArtistPosts,
   getPublishedSmartLinks,
   getArtistPlayableTracks,
-  artistHasPublishedTrackById,
-  isArtistMember,
 } from '@vire/db';
 import type { ArtistPost } from '@vire/db';
-import { ArtistService, ReleaseService } from '@vire/core';
+import { ReleaseService } from '@vire/core';
 import type { ArtistProfile, ArtistLink, ArtistVideo, Release, SmartLink } from '@vire/core';
 import { SectionHeader } from '@/components/section-header';
 import { PlatformIcon } from '@/components/platform-icon';
@@ -27,7 +24,7 @@ import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-i
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
-import { canViewEmptyArtist } from '@/lib/artist-visibility';
+import { getArtist, assertArtistVisible } from './artist-guard';
 import { FollowButton } from './follow-button';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { parseEmbed, type EmbedInfo } from '@/lib/embed';
@@ -55,31 +52,21 @@ type Props = { params: Promise<{ slug: string }> };
 
 // cache(): generateMetadata и page читают одно и то же на одном рендере
 const getArtistData = cache(async (slug: string) => {
-  const artistService = new ArtistService(new DrizzleArtistRepository(db), { now: () => Date.now() });
-  const result = await artistService.getBySlug(slug);
-  if (!result.ok) return null;
+  const artist = await getArtist(slug);
+  if (!artist) return null;
 
   const releaseService = new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() });
   const [releases, upcoming, posts, smartLinks, playableTracks] = await Promise.all([
-    releaseService.getPublishedByArtist(result.value.id),
-    getUpcomingByArtist(result.value.id),
-    listArtistPosts(result.value.id, 5),
-    getPublishedSmartLinks(result.value.id),
-    getArtistPlayableTracks(result.value.id),
+    releaseService.getPublishedByArtist(artist.id),
+    getUpcomingByArtist(artist.id),
+    listArtistPosts(artist.id, 5),
+    getPublishedSmartLinks(artist.id),
+    getArtistPlayableTracks(artist.id),
   ]);
 
   const explicitReleaseIds = await getExplicitReleaseIds(releases.map((r) => r.id));
 
-  return { artist: result.value, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks };
-});
-
-// пустой артист скрыт с витрины (каталог/поиск/sitemap) — прямой заход должен отвечать так же
-const assertArtistVisible = cache(async (artistProfileId: string): Promise<void> => {
-  if (await artistHasPublishedTrackById(artistProfileId)) return;
-  const session = await auth();
-  const userId = session?.user?.id;
-  const isMember = userId ? await isArtistMember(artistProfileId, userId) : false;
-  if (!canViewEmptyArtist({ isMember, role: session?.user?.role })) notFound();
+  return { artist, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks };
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

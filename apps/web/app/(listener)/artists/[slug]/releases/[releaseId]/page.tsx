@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { db, DrizzleArtistRepository, DrizzleReleaseRepository, getPresaveState } from '@vire/db';
-import { ArtistService, ReleaseService, isReleasePubliclyVisible, isCountdownVisible } from '@vire/core';
+import { db, DrizzleReleaseRepository, getPresaveState } from '@vire/db';
+import { ReleaseService, isReleasePubliclyVisible, isCountdownVisible } from '@vire/core';
 import { auth } from '@/auth';
+import { getArtist } from '../../artist-guard';
 import { ZoomableCover } from '@/components/zoomable-cover';
 import { ReleaseHeroPlay } from '@/components/release-hero-play';
 import { ReleaseShareButton } from '@/components/release-share-button';
@@ -26,14 +27,13 @@ import { SectionHeader } from '@/components/section-header';
 type Props = { params: Promise<{ slug: string; releaseId: string }> };
 
 async function getPageData(slug: string, releaseId: string) {
-  const [artistResult, releaseResult] = await Promise.all([
-    new ArtistService(new DrizzleArtistRepository(db), { now: () => Date.now() }).getBySlug(slug),
+  const [artist, releaseResult] = await Promise.all([
+    getArtist(slug),
     new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() }).getWithTracks(releaseId),
   ]);
 
-  if (!artistResult.ok || !releaseResult.ok) return null;
+  if (!artist || !releaseResult.ok) return null;
 
-  const artist = artistResult.value;
   const { release, tracks } = releaseResult.value;
 
   if (release.artistProfileId !== artist.id) return null;
