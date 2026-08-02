@@ -1,5 +1,5 @@
 import type { Clock } from '../ports/effects';
-import type { IMetadataIndex, IPlayableResolver, IPageMetaFetcher, IResolutionCache, ResolutionKey, PageMeta } from '../ports/external';
+import type { IMetadataIndex, IPlayableResolver, IPageMetaFetcher, IResolutionCache, IResolvedIndex, ResolutionKey, PageMeta } from '../ports/external';
 import type { ExternalTrackRef, MetadataHint, TrackCandidate, PlayableExternalSource } from '../types/external';
 import type { SearchTrack } from '../types/search';
 import { SearchService } from './search';
@@ -22,6 +22,8 @@ export interface ExternalResolveDeps {
   playableResolver: IPlayableResolver;
   pageMetaFetcher: IPageMetaFetcher;
   cache: IResolutionCache;
+  /** Индекс уже отрезолвленного — играбельные подсказки без сети и квоты. */
+  resolvedIndex: IResolvedIndex;
   clock: Clock;
   /** Хост своего сайта (без протокола) — для распознавания собственных ссылок на трек. */
   siteHost: string;
@@ -48,18 +50,25 @@ export class ExternalResolveService {
     return this.resolveViaPageMeta(classified.url);
   }
 
-  /** Подсказки при наборе — каталог + бесплатный метаиндекс, без обращения к платным API. */
+  /**
+   * Подсказки при наборе — без платных API: каталог, уже отрезолвленное кем-то (играет сразу)
+   * и бесплатный метаиндекс. Порядок = порядок готовности к воспроизведению.
+   */
   async suggest(query: string, limit: number): Promise<TrackCandidate[]> {
     const trimmed = query.trim();
     if (trimmed.length < 2) return [];
 
-    const searchResult = await this.deps.search.search(trimmed, limit);
-    const catalog = searchResult.ok ? toVireCandidates(searchResult.value.tracks) : [];
+    const [searchResult, resolved, hints] = await Promise.all([
+      this.deps.search.search(trimmed, limit),
+      this.deps.resolvedIndex.search(trimmed, limit).catch(() => []),
+      this.deps.metadataIndex.suggest(trimmed, limit),
+    ]);
 
-    const hints = await this.deps.metadataIndex.suggest(trimmed, limit);
+    const catalog = searchResult.ok ? toVireCandidates(searchResult.value.tracks) : [];
+    const ready: TrackCandidate[] = resolved.map((ref) => ({ kind: 'EXTERNAL', ref }));
     const hintCandidates: TrackCandidate[] = hints.map((hint) => ({ kind: 'HINT', hint }));
 
-    return dedupeCandidates([...catalog, ...hintCandidates]).slice(0, limit);
+    return dedupeCandidates([...catalog, ...ready, ...hintCandidates]).slice(0, limit);
   }
 
   private async resolveKnownPlayableUrl(url: string, source: PlayableExternalSource, externalId: string): Promise<ResolveOutcome> {

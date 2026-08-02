@@ -28,6 +28,8 @@ export interface AdminHealth {
   redisLatencyMs: number | null;
   liveListeners: number;
   queues: QueueHealth[];
+  /** Опциональные внешние ключи: без них молча отваливаются поиск в сети и вкусовые подсказки. */
+  integrations: { youtubeSearch: boolean; lastfm: boolean };
 }
 
 const QUEUE_LABELS: Record<string, string> = {
@@ -115,5 +117,9 @@ export async function getAdminHealth(): Promise<AdminHealth> {
     redisLatencyMs,
     liveListeners: live.reduce((s, l) => s + l.count, 0),
     queues,
+    integrations: {
+      youtubeSearch: Boolean(process.env.YOUTUBE_API_KEY),
+      lastfm: Boolean(process.env.LASTFM_API_KEY),
+    },
   };
 }

@@ -70,6 +70,39 @@ describe('PartyAddPanel — предложка по вкусу (Last.fm)', () =>
     await waitFor(() => expect(screen.getByText(/Начните вводить/)).toBeTruthy());
   });
 
+  it('готовое к добавлению и «найдём в сети» разведены по секциям', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(suggestResponse([
+      {
+        kind: 'EXTERNAL',
+        ref: { source: 'YOUTUBE', externalId: 'y1', externalUrl: 'https://youtu.be/y1', title: 'Титан', artistName: 'Кто-то', coverUrl: null, durationSec: 200 },
+      },
+      { kind: 'HINT', hint: { title: 'Титан (live)', artistName: 'Кто-то', coverUrl: null, durationSec: null } },
+    ]))));
+
+    render(<PartyAddPanel {...noop} />);
+    fireEvent.change(screen.getByLabelText('Название трека или ссылка'), { target: { value: 'титан' } });
+
+    await waitFor(() => expect(screen.getByText('Играет сразу')).toBeTruthy());
+    expect(screen.getByText('Найдём в сети')).toBeTruthy();
+  });
+
+  it('стрелка вниз и Enter добавляют первый результат', async () => {
+    const onAddVire = vi.fn();
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(suggestResponse([
+      { kind: 'VIRE', trackId: 't1', title: 'Титан', artistName: 'Кто-то', coverUrl: null },
+    ]))));
+
+    render(<PartyAddPanel {...noop} onAddVire={onAddVire} />);
+    const input = screen.getByLabelText('Название трека или ссылка');
+    fireEvent.change(input, { target: { value: 'титан' } });
+
+    await waitFor(() => expect(screen.getByText('Титан')).toBeTruthy());
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(onAddVire).toHaveBeenCalledWith(expect.objectContaining({ trackId: 't1' }));
+  });
+
   it('упавший запрос деградирует молча — без блока и без падения', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
 

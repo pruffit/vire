@@ -24,7 +24,7 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const rlKey = 'userId' in identity ? identity.userId : identity.guestSessionId;
-  const limit = await rateLimit(`jam-queue-external:${rlKey}`, 10, 60);
+  const limit = await rateLimit(`jam-queue-external:${rlKey}`, 30, 60);
   if (!limit.ok) return tooManyRequests(limit.retryAfter);
 
   const service = jamService();

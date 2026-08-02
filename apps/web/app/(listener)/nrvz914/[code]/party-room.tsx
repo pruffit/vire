@@ -343,11 +343,18 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
                             onRemove={(id) => void jamQueue.removeTrack(id)}
                             removeLabel="Убрать из очереди"
                             subtitle={
-                              <span className="flex min-w-0 items-center gap-1.5 truncate">
-                                <span className="truncate">{item.artistName}</span>
-                                {addedByName && <span className="shrink-0">· Добавил(а) {addedByName}</span>}
-                                <SourceBadge source={item.source} />
-                              </span>
+                              jamQueue.pendingIds.has(item.id) ? (
+                                <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                                  <Icon name="loader" size={12} className="shrink-0 animate-spin" />
+                                  <span className="truncate">Ищем в сети…</span>
+                                </span>
+                              ) : (
+                                <span className="flex min-w-0 items-center gap-1.5 truncate">
+                                  <span className="truncate">{item.artistName}</span>
+                                  {addedByName && <span className="shrink-0">· Добавил(а) {addedByName}</span>}
+                                  <SourceBadge source={item.source} />
+                                </span>
+                              )
                             }
                           />
                         );

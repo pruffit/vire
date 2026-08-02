@@ -82,6 +82,16 @@ function HealthPanel({ health }: { health: AdminHealth }) {
           dot={failedTotal === 0 ? 'ok' : 'error'}
           value={failedTotal}
         />
+        <StatCard
+          label="Поиск в сети (YouTube)"
+          dot={health.integrations.youtubeSearch ? 'ok' : 'warn'}
+          value={health.integrations.youtubeSearch ? 'ключ есть' : 'ключа нет'}
+        />
+        <StatCard
+          label="Вкус Last.fm"
+          dot={health.integrations.lastfm ? 'ok' : 'warn'}
+          value={health.integrations.lastfm ? 'ключ есть' : 'ключа нет'}
+        />
       </MetricGrid>
 
       <Table minWidth="md:min-w-[520px]">

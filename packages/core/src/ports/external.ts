@@ -34,3 +34,11 @@ export interface IResolutionCache {
   get(key: ResolutionKey): Promise<CachedResolution | null>;
   put(key: ResolutionKey, ref: ExternalTrackRef | null): Promise<void>;
 }
+
+/**
+ * Уже отрезолвленное кем угодно — готовый к добавлению результат без обращения к сети и
+ * без квоты поиска. Кэш резолвов работает индексом: чем больше вечеринок, тем быстрее поиск.
+ */
+export interface IResolvedIndex {
+  search(query: string, limit: number): Promise<ExternalTrackRef[]>;
+}

@@ -27,6 +27,8 @@ export type ExternalAddOutcome =
 
 export interface UseJamQueueResult {
   queue: JamQueueItem[];
+  /** Позиции, которые сейчас резолвятся на сервере — в списке они помечены «ищем». */
+  pendingIds: ReadonlySet<string>;
   addTrack: (item: JamQueueItem) => Promise<void>;
   addExternal: (input: string, guess: OptimisticExternalGuess | null) => Promise<ExternalAddOutcome>;
   /** Локальный файл устройства-колонки — не идёт через резолв-каскад, метаданные уже известны клиенту. */
@@ -71,6 +73,7 @@ async function postQueue(code: string, sessionId: string | null, intent: Record<
  */
 export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args): UseJamQueueResult {
   const [overlay, setOverlay] = useState<JamQueueItem[] | null>(null);
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(() => new Set());
   // Свежий serverQueue (эхо своей мутации или чужая правка) обесценивает оверлей —
   // подгоняем состояние во время рендера, не в эффекте (react-hooks/set-state-in-effect).
   const [syncedServerQueue, setSyncedServerQueue] = useState(serverQueue);
@@ -98,6 +101,7 @@ export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args)
     const base = overlay ?? serverQueue;
     const pendingId = `pending-ext-${Date.now()}`;
     if (guess) {
+      setPendingIds((prev) => new Set(prev).add(pendingId));
       setOverlay([...base, {
         id: pendingId, source: 'YOUTUBE', trackId: null, externalId: null, externalUrl: null,
         position: base.length, addedByParticipantId: null, addedAt: new Date(),
@@ -113,9 +117,18 @@ export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args)
       body: JSON.stringify(sessionId ? { input, sessionId } : { input }),
     }).catch(() => null);
 
+    const clearPending = (): void => setPendingIds((prev) => {
+      if (!prev.has(pendingId)) return prev;
+      const next = new Set(prev);
+      next.delete(pendingId);
+      return next;
+    });
     // Откатываем по id, а не снимком очереди: пока летел запрос, рядом мог появиться
     // ещё один pending — снимок стёр бы и его.
-    const dropPending = () => setOverlay((prev) => prev?.filter((item) => item.id !== pendingId) ?? null);
+    const dropPending = (): void => {
+      setOverlay((prev) => prev?.filter((item) => item.id !== pendingId) ?? null);
+      clearPending();
+    };
 
     if (!res || !res.ok) {
       if (guess) dropPending();
@@ -127,6 +140,7 @@ export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args)
       const data = (await res.json().catch(() => null)) as { candidates?: TrackCandidate[] } | null;
       return { outcome: 'candidates', candidates: data?.candidates ?? [] };
     }
+    clearPending();
     return { outcome: 'added' };
   }, [overlay, serverQueue, code, sessionId]);
 
@@ -199,5 +213,5 @@ export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args)
     }
   }, [overlay, serverQueue, code, sessionId]);
 
-  return { queue, addTrack, addExternal, addLocal, removeTrack, startDrag, moveTrack, cancelDrag, shuffleQueue };
+  return { queue, pendingIds, addTrack, addExternal, addLocal, removeTrack, startDrag, moveTrack, cancelDrag, shuffleQueue };
 }

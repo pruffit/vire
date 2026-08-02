@@ -3,7 +3,7 @@ import { ExternalResolveService } from './external-resolve-service';
 import { SearchService } from './search';
 import type { ISearchRepository } from '../repositories/search';
 import type { SearchResults, SearchTrack } from '../types/search';
-import type { IMetadataIndex, IPlayableResolver, IPageMetaFetcher, IResolutionCache, ResolutionKey, CachedResolution } from '../ports/external';
+import type { IMetadataIndex, IPlayableResolver, IPageMetaFetcher, IResolutionCache, IResolvedIndex, ResolutionKey, CachedResolution } from '../ports/external';
 import type { ExternalTrackRef, MetadataHint } from '../types/external';
 
 const SITE_HOST = 'viremusic.ru';
@@ -48,6 +48,16 @@ class FakePageMetaFetcher implements IPageMetaFetcher {
   }
 }
 
+class FakeResolvedIndex implements IResolvedIndex {
+  refs: ExternalTrackRef[] = [];
+  async search(query: string, limit: number): Promise<ExternalTrackRef[]> {
+    const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+    return this.refs
+      .filter((ref) => tokens.every((t) => `${ref.artistName} ${ref.title}`.toLowerCase().includes(t)))
+      .slice(0, limit);
+  }
+}
+
 class FakeResolutionCache implements IResolutionCache {
   store = new Map<string, CachedResolution>();
   private keyOf(key: ResolutionKey) {
@@ -63,12 +73,13 @@ class FakeResolutionCache implements IResolutionCache {
 
 const NOW = new Date('2026-08-02T12:00:00Z').getTime();
 
-function buildService(overrides?: { searchRepo?: FakeSearchRepository; metadataIndex?: FakeMetadataIndex; playableResolver?: FakePlayableResolver; pageMetaFetcher?: FakePageMetaFetcher; cache?: FakeResolutionCache; clock?: () => number }) {
+function buildService(overrides?: { searchRepo?: FakeSearchRepository; metadataIndex?: FakeMetadataIndex; playableResolver?: FakePlayableResolver; pageMetaFetcher?: FakePageMetaFetcher; cache?: FakeResolutionCache; resolvedIndex?: FakeResolvedIndex; clock?: () => number }) {
   const searchRepo = overrides?.searchRepo ?? new FakeSearchRepository();
   const metadataIndex = overrides?.metadataIndex ?? new FakeMetadataIndex();
   const playableResolver = overrides?.playableResolver ?? new FakePlayableResolver();
   const pageMetaFetcher = overrides?.pageMetaFetcher ?? new FakePageMetaFetcher();
   const cache = overrides?.cache ?? new FakeResolutionCache();
+  const resolvedIndex = overrides?.resolvedIndex ?? new FakeResolvedIndex();
   const clock = overrides?.clock ?? (() => NOW);
 
   const service = new ExternalResolveService({
@@ -77,11 +88,12 @@ function buildService(overrides?: { searchRepo?: FakeSearchRepository; metadataI
     playableResolver,
     pageMetaFetcher,
     cache,
+    resolvedIndex,
     clock,
     siteHost: SITE_HOST,
   });
 
-  return { service, searchRepo, metadataIndex, playableResolver, pageMetaFetcher, cache };
+  return { service, searchRepo, metadataIndex, playableResolver, pageMetaFetcher, cache, resolvedIndex };
 }
 
 const track = (overrides: Partial<SearchTrack>): SearchTrack => ({
@@ -290,6 +302,20 @@ describe('ExternalResolveService.suggest', () => {
       { kind: 'VIRE', trackId: 't1', title: 'Группа крови', artistName: 'Кино', coverUrl: null },
       { kind: 'HINT', hint: metadataIndex.hints[1] },
     ]);
+  });
+
+  it('уже отрезолвленное кем-то идёт готовым к добавлению — после каталога, до хинтов', async () => {
+    const { service, searchRepo, metadataIndex, resolvedIndex } = buildService();
+    searchRepo.tracks = [];
+    resolvedIndex.refs = [
+      { source: 'YOUTUBE', externalId: 'yt1', externalUrl: 'https://youtu.be/yt1', title: 'Группа крови', artistName: 'Кино', coverUrl: null, durationSec: 280 },
+    ];
+    metadataIndex.hints = [{ title: 'Группа крови', artistName: 'Кино', coverUrl: null, durationSec: null }];
+
+    const candidates = await service.suggest('Кино группа', 10);
+
+    // Хинт того же трека отсеивается дедупом — играбельный вариант важнее.
+    expect(candidates).toEqual([{ kind: 'EXTERNAL', ref: resolvedIndex.refs[0] }]);
   });
 
   it('a too-short query returns no candidates without hitting any port', async () => {

@@ -1,19 +1,23 @@
 'use client';
-import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
 import Image from 'next/image';
 import type { SearchTrack, TrackCandidate } from '@vire/core';
 import type { ExternalAddOutcome, OptimisticExternalGuess } from '@/lib/jam/use-jam-queue';
 import { Icon } from '@/components/icon';
 import { TrackTitleText } from '@/components/track-title';
+import { SourceBadge } from '@/components/jam/source-badge';
+import { formatDuration } from '@/lib/format';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
 const ADD_PANEL_LIMIT = 8;
 const DEBOUNCE_MS = 250;
+const RAW_TITLE_MAX = 80;
+const URL_RE = /^https?:\/\//i;
+const URL_GLOBAL_RE = /https?:\/\/[^\s]+/g;
 // Фокус в шторке — только после её выезда: фокус во время transform заставляет мобильные
 // браузеры доскроллить наполовину приехавшую панель.
 const FOCUS_DELAY_MS = 280;
-const RAW_TITLE_MAX = 80;
-const URL_RE = /^https?:\/\//i;
 
 export interface VireCandidatePick {
   trackId: string;
@@ -47,6 +51,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
   const [tasteSuggestions, setTasteSuggestions] = useState<TrackCandidate[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [emptyHint, setEmptyHint] = useState(false);
+  const [cursor, setCursor] = useState(-1);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -88,17 +93,24 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
     };
   }, [q]);
 
-  async function submitRaw(text: string): Promise<void> {
+  function reset(): void {
+    setQ('');
+    setResults(null);
+    setPostCandidates(null);
+    setCursor(-1);
+  }
+
+  async function submitRaw(text: string, guess?: OptimisticExternalGuess): Promise<void> {
     const trimmed = text.trim();
     if (!trimmed || submitting) return;
     setSubmitting(true);
     setEmptyHint(false);
     setPostCandidates(null);
-    const outcome = await addExternal(trimmed, toRawGuess(trimmed));
+    const outcome = await addExternal(trimmed, guess ?? toRawGuess(trimmed));
     setSubmitting(false);
     if (outcome.outcome === 'added') {
-      setQ('');
-      setResults(null);
+      if (guess?.title) toast(`Добавлено: ${guess.artistName ? `${guess.artistName} — ` : ''}${guess.title}`);
+      reset();
       return;
     }
     if (outcome.outcome === 'candidates') {
@@ -107,37 +119,82 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
         return;
       }
       setPostCandidates(outcome.candidates);
+      setCursor(-1);
     }
     // outcome 'error' — тост уже показан хуком, строка остаётся для повтора
   }
 
+  async function submitAll(urls: string[]): Promise<void> {
+    for (const url of urls) await submitRaw(url);
+  }
+
+  function submitCurrent(): void {
+    const picked = cursor >= 0 ? list[cursor] : undefined;
+    if (picked) handlePickCandidate(picked);
+    else void submitRaw(q);
+  }
+
   function handleSubmit(e: FormEvent): void {
     e.preventDefault();
-    void submitRaw(q);
+    submitCurrent();
   }
 
   function handlePaste(e: ClipboardEvent<HTMLInputElement>): void {
     const pasted = e.clipboardData.getData('text/plain').trim();
-    if (!URL_RE.test(pasted)) return;
-    setQ(pasted);
-    void submitRaw(pasted);
+    const urls = pasted.match(URL_GLOBAL_RE);
+    if (!urls || !URL_RE.test(pasted)) return;
+    e.preventDefault();
+    setQ(urls.length === 1 ? urls[0]! : `${urls.length} ссылки`);
+    void submitAll(urls);
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>): void {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (list.length === 0) return;
+      e.preventDefault();
+      const delta = e.key === 'ArrowDown' ? 1 : -1;
+      setCursor((prev) => {
+        const next = prev + delta;
+        if (next < 0) return -1;
+        return next >= list.length ? list.length - 1 : next;
+      });
+      return;
+    }
+    // Enter обрабатываем здесь, а не только сабмитом формы: с выбранной стрелками строкой
+    // должен добавляться именно кандидат, а не текст запроса.
+    if (e.key === 'Enter' && cursor >= 0) {
+      e.preventDefault();
+      submitCurrent();
+      return;
+    }
+    if (e.key === 'Escape' && q) {
+      e.preventDefault();
+      reset();
+    }
   }
 
   function handlePickCandidate(candidate: TrackCandidate): void {
     if (candidate.kind === 'VIRE') {
+      if (addedTrackIds.has(candidate.trackId)) return;
       onAddVire({ trackId: candidate.trackId, title: candidate.title, artistName: candidate.artistName, coverUrl: candidate.coverUrl });
-      setQ('');
-      setResults(null);
-      setPostCandidates(null);
+      toast(`Добавлено: ${candidate.artistName} — ${candidate.title}`);
+      reset();
       return;
     }
-    if (candidate.kind === 'EXTERNAL' && candidate.ref.externalUrl) {
-      void submitRaw(candidate.ref.externalUrl);
-      return;
-    }
-    // Ещё не играбельный дескриптор (HINT либо EXTERNAL без ссылки) — дорезолвливаем как «артист + название».
-    const { title, artistName } = candidateDisplay(candidate);
-    void submitRaw(`${artistName} ${title}`.trim());
+
+    const display = candidateDisplay(candidate);
+    const guess: OptimisticExternalGuess = {
+      title: display.title,
+      artistName: display.artistName,
+      coverUrl: display.coverUrl,
+      durationSec: display.durationSec,
+    };
+    // Готовая ссылка резолвится по URL-кэшу мгновенно; у хинта играбельной ссылки нет —
+    // отправляем «артист + название», дальше решает каскад.
+    const input = candidate.kind === 'EXTERNAL' && candidate.ref.externalUrl
+      ? candidate.ref.externalUrl
+      : `${display.artistName} ${display.title}`.trim();
+    void submitRaw(input, guess);
   }
 
   const typing = q.trim().length >= 2;
@@ -146,7 +203,21 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
   // Пока ищем по набранному, старые «Из любимых» не показываем: подсказки, не связанные
   // с вводом, читаются как «поиск ничего не понял».
   const list = postCandidates ?? results ?? (typing ? [] : suggestionsToCandidates(suggestions));
-  const listTitle = postCandidates ? 'Похоже, вот это' : idle && list.length > 0 ? 'Из любимых' : null;
+  const ready = list.filter((c) => c.kind !== 'HINT');
+  const fromWeb = list.filter((c) => c.kind === 'HINT');
+  const idleTitle = postCandidates ? 'Похоже, вот это' : idle && list.length > 0 ? 'Из любимых' : null;
+
+  function renderRow(candidate: TrackCandidate, index: number) {
+    return (
+      <CandidateRow
+        key={candidate.kind === 'VIRE' ? candidate.trackId : `${candidate.kind}-${index}`}
+        candidate={candidate}
+        added={candidate.kind === 'VIRE' && addedTrackIds.has(candidate.trackId)}
+        active={cursor === index}
+        onPick={handlePickCandidate}
+      />
+    );
+  }
 
   return (
     <div className={cn('rounded-xl border border-border bg-card/50 p-2 space-y-2', dense && 'flex flex-1 min-h-0 flex-col')}>
@@ -155,8 +226,9 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
         <input
           ref={inputRef}
           value={q}
-          onChange={(e) => { setQ(e.target.value); setPostCandidates(null); setEmptyHint(false); }}
+          onChange={(e) => { setQ(e.target.value); setPostCandidates(null); setEmptyHint(false); setCursor(-1); }}
           onPaste={handlePaste}
+          onKeyDown={handleKeyDown}
           aria-label="Название трека или ссылка"
           inputMode="search"
           enterKeyHint="search"
@@ -170,7 +242,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
         {q.length > 0 && (
           <button
             type="button"
-            onClick={() => { setQ(''); setResults(null); setPostCandidates(null); setEmptyHint(false); inputRef.current?.focus(); }}
+            onClick={() => { reset(); setEmptyHint(false); inputRef.current?.focus(); }}
             aria-label="Очистить"
             className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
           >
@@ -190,25 +262,33 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
       <div className={cn('space-y-1 pb-1', dense ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-72 overflow-y-auto')}>
         {postCandidates && (
           <div className="flex items-center justify-between px-3 pb-1">
-            <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{listTitle}</p>
+            <SectionTitle>{idleTitle}</SectionTitle>
             <button type="button" onClick={() => setPostCandidates(null)} className="text-muted-foreground hover:text-foreground">
               <Icon name="x" size={12} />
             </button>
           </div>
         )}
-        {!postCandidates && listTitle && (
-          <p className="px-3 pb-1 pt-1 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{listTitle}</p>
-        )}
+        {!postCandidates && idleTitle && <SectionTitle className="px-3 pb-1 pt-1">{idleTitle}</SectionTitle>}
 
-        {list.length ? (
-          list.map((candidate, i) => (
-            <CandidateRow
-              key={candidate.kind === 'VIRE' ? candidate.trackId : `${candidate.kind}-${i}`}
-              candidate={candidate}
-              added={candidate.kind === 'VIRE' && addedTrackIds.has(candidate.trackId)}
-              onPick={handlePickCandidate}
-            />
-          ))
+        {list.length > 0 ? (
+          typing && !postCandidates ? (
+            <>
+              {ready.length > 0 && (
+                <>
+                  <SectionTitle className="px-3 pb-1 pt-1">Играет сразу</SectionTitle>
+                  {ready.map((candidate) => renderRow(candidate, list.indexOf(candidate)))}
+                </>
+              )}
+              {fromWeb.length > 0 && (
+                <>
+                  <SectionTitle className="px-3 pb-1 pt-2">Найдём в сети</SectionTitle>
+                  {fromWeb.map((candidate) => renderRow(candidate, list.indexOf(candidate)))}
+                </>
+              )}
+            </>
+          ) : (
+            list.map((candidate, i) => renderRow(candidate, i))
+          )
         ) : emptyHint ? (
           <p className="px-3 py-4 text-sm text-muted-foreground">Не нашли точного совпадения — попробуйте другую формулировку</p>
         ) : searching ? (
@@ -228,9 +308,9 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
 
         {idle && tasteSuggestions && tasteSuggestions.length > 0 && (
           <>
-            <p className="px-3 pb-1 pt-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Из вашего вкуса</p>
+            <SectionTitle className="px-3 pb-1 pt-2">Из вашего вкуса</SectionTitle>
             {tasteSuggestions.map((candidate, i) => (
-              <CandidateRow key={`taste-${i}`} candidate={candidate} added={false} onPick={handlePickCandidate} />
+              <CandidateRow key={`taste-${i}`} candidate={candidate} added={false} active={false} onPick={handlePickCandidate} />
             ))}
           </>
         )}
@@ -239,22 +319,35 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
   );
 }
 
-function candidateDisplay(candidate: TrackCandidate): { title: string; artistName: string; coverUrl: string | null } {
-  if (candidate.kind === 'VIRE') return candidate;
+function SectionTitle({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <p className={cn('font-mono text-[11px] uppercase tracking-widest text-muted-foreground', className)}>{children}</p>;
+}
+
+function candidateDisplay(candidate: TrackCandidate): { title: string; artistName: string; coverUrl: string | null; durationSec: number | null } {
+  if (candidate.kind === 'VIRE') return { ...candidate, durationSec: null };
   if (candidate.kind === 'EXTERNAL') return candidate.ref;
   return candidate.hint;
 }
 
-function CandidateRow({ candidate, added, onPick }: { candidate: TrackCandidate; added: boolean; onPick: (c: TrackCandidate) => void }) {
-  const { title, artistName, coverUrl } = candidateDisplay(candidate);
+function CandidateRow({
+  candidate, added, active, onPick,
+}: { candidate: TrackCandidate; added: boolean; active: boolean; onPick: (c: TrackCandidate) => void }) {
+  const { title, artistName, coverUrl, durationSec } = candidateDisplay(candidate);
+  const ref = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (active) ref.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [active]);
 
   return (
     <button
+      ref={ref}
       onClick={() => { if (!added) onPick(candidate); }}
       disabled={added}
+      aria-current={active || undefined}
       className={cn(
         'w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors',
-        added ? 'opacity-50 cursor-default' : 'hover:bg-accent/5',
+        added ? 'opacity-50 cursor-default' : active ? 'bg-accent/10' : 'hover:bg-accent/5',
       )}
     >
       <span className="relative w-9 h-9 rounded overflow-hidden shrink-0 bg-muted">
@@ -264,7 +357,11 @@ function CandidateRow({ candidate, added, onPick }: { candidate: TrackCandidate;
         <span className="block text-sm truncate">
           <TrackTitleText title={title} />
         </span>
-        <span className="block text-xs text-muted-foreground truncate">{artistName || ' '}</span>
+        <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="truncate">{artistName || ' '}</span>
+          {candidate.kind === 'EXTERNAL' && <SourceBadge source={candidate.ref.source} />}
+          {durationSec ? <span className="shrink-0 tabular-nums">{formatDuration(durationSec)}</span> : null}
+        </span>
       </span>
       <span className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
         {added ? (

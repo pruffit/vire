@@ -1,8 +1,9 @@
-import { db, DrizzleSearchRepository, DrizzleResolutionCache } from '@vire/db';
+import { db, DrizzleSearchRepository, DrizzleResolutionCache, DrizzleResolvedIndex } from '@vire/db';
 import { SearchService, ExternalResolveService, normalizeQueryKey, type IPageMetaFetcher, type IMetadataIndex, type MetadataHint, type PageMeta } from '@vire/core';
 import { fetchOembed } from './oembed';
 import { fetchPageMeta } from './page-meta';
 import { fetchProviderMeta } from './providers';
+import { fetchOdesliMeta } from './odesli';
 import { createYoutubeResolver } from './youtube';
 import { createItunesMetadataIndex } from './itunes';
 import { createDeezerMetadataIndex } from './deezer';
@@ -23,16 +24,23 @@ const pageMetaFetcher: IPageMetaFetcher = {
     } catch {
       return null;
     }
-    const provider = await fetchProviderMeta(url);
-    const meta = provider ? await enrichArtist(provider) : OEMBED_HOSTS.test(host) ? await fetchOembed(url) : await fetchPageMeta(url);
+    const meta = await resolveMeta(url, host);
     return meta && { ...meta, coverUrl: sanitizeCoverUrl(meta.coverUrl) };
   },
 };
 
+async function resolveMeta(url: string, host: string): Promise<PageMeta | null> {
+  const provider = await fetchProviderMeta(url);
+  if (provider) return enrichArtist(provider);
+  if (OEMBED_HOSTS.test(host)) return fetchOembed(url);
+  // Страница может не отдаться вовсе (Яндекс/VK отвечают ботам 403) — тогда спрашиваем Odesli.
+  return (await fetchPageMeta(url)) ?? enrichArtist(await fetchOdesliMeta(url));
+}
+
 // Spotify oEmbed не отдаёт исполнителя — достаём его из iTunes+Deezer метаиндекса, но только
 // при точном совпадении нормализованного названия (иначе можно подставить чужого артиста).
-async function enrichArtist(meta: PageMeta): Promise<PageMeta> {
-  if (meta.artistName) return meta;
+async function enrichArtist(meta: PageMeta | null): Promise<PageMeta | null> {
+  if (!meta || meta.artistName) return meta;
   const targetKey = normalizeQueryKey('', meta.title);
   const hints = await metadataIndex.suggest(meta.title, 5);
   const match = hints.find((h) => normalizeQueryKey('', h.title) === targetKey);
@@ -71,6 +79,7 @@ export function externalResolveService(): ExternalResolveService {
     playableResolver: createYoutubeResolver(process.env.YOUTUBE_API_KEY),
     pageMetaFetcher,
     cache: new DrizzleResolutionCache(db),
+    resolvedIndex: new DrizzleResolvedIndex(db),
     clock: Date.now,
     siteHost: new URL(SITE_URL).hostname,
   });
