@@ -5,6 +5,10 @@ const { resolveCode, addExternalItem } = vi.hoisted(() => ({ resolveCode: vi.fn(
 
 vi.mock('@/lib/jam', () => ({ jamService: () => ({ resolveCode, addExternalItem }) }));
 vi.mock('@/lib/jam/jam-identity', () => ({ resolveJamIdentity: vi.fn() }));
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
+  tooManyRequests: vi.fn(() => new Response(null, { status: 429 })),
+}));
 
 import { resolveJamIdentity } from '@/lib/jam/jam-identity';
 import { POST } from './route';

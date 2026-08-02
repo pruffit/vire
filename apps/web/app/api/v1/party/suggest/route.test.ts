@@ -4,6 +4,10 @@ const { suggest, tasteSuggestions } = vi.hoisted(() => ({ suggest: vi.fn(), tast
 vi.mock('@/lib/external', () => ({ externalResolveService: () => ({ suggest }) }));
 vi.mock('@/lib/external/taste-suggestions', () => ({ tasteSuggestions }));
 vi.mock('@/lib/jam/jam-identity', () => ({ resolveJamIdentity: vi.fn() }));
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
+  tooManyRequests: vi.fn(() => new Response(null, { status: 429 })),
+}));
 
 import { resolveJamIdentity } from '@/lib/jam/jam-identity';
 import { GET } from './route';

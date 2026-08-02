@@ -8,6 +8,10 @@ const { resolveInput } = vi.hoisted(() => ({ resolveInput: vi.fn() }));
 
 vi.mock('@/lib/jam', () => ({ jamService: () => ({ resolveCode, mutateQueue, addExternalItem, assertParticipant }) }));
 vi.mock('@/lib/jam/jam-identity', () => ({ resolveJamIdentity: vi.fn() }));
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimit: vi.fn().mockResolvedValue({ ok: true, remaining: 1, retryAfter: 0 }),
+  tooManyRequests: vi.fn(() => new Response(null, { status: 429 })),
+}));
 vi.mock('@/lib/external', () => ({ externalResolveService: () => ({ resolve: resolveInput }) }));
 
 import { resolveJamIdentity } from '@/lib/jam/jam-identity';
