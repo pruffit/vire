@@ -55,6 +55,10 @@ export function createSoundcloudSource(): JamSourceEngine {
   let positionMs = 0;
   let buffering = false;
   let pendingLoadResolve: (() => void) | null = null;
+  // Поверхность может появиться уже после старта позиции — свежий виджет обязан догнать намерение.
+  // Отдельно от `positionMs`: тот отражает фактическую позицию и обнуляется вместе с виджетом.
+  let desiredPositionMs: number | null = null;
+  let shouldPlay = false;
   const endedListeners = new Set<() => void>();
   const playingListeners = new Set<() => void>();
 
@@ -103,6 +107,8 @@ export function createSoundcloudSource(): JamSourceEngine {
     const { READY, PLAY, PAUSE, FINISH, PLAY_PROGRESS, ERROR } = SC.Widget.Events;
     w.bind(READY, () => {
       w.setVolume(usePlayerStore.getState().volume * 100);
+      if (desiredPositionMs !== null) w.seekTo(desiredPositionMs);
+      if (shouldPlay) w.play();
       resolvePendingLoad();
     });
     w.bind(ERROR, () => resolvePendingLoad());
@@ -128,6 +134,7 @@ export function createSoundcloudSource(): JamSourceEngine {
       pendingUrl = trackUrl;
       resolvePendingLoad();
       positionMs = 0;
+      desiredPositionMs = null;
 
       const el = getPartyVideoContainer();
       if (!el) return Promise.resolve(); // нет экрана вечеринки на этом устройстве — источник недоступен
@@ -145,15 +152,18 @@ export function createSoundcloudSource(): JamSourceEngine {
     },
 
     play(): void {
+      shouldPlay = true;
       widget?.play();
     },
 
     pause(): void {
+      shouldPlay = false;
       widget?.pause();
     },
 
     seek(ms: number): void {
       positionMs = ms;
+      desiredPositionMs = ms;
       widget?.seekTo(ms);
     },
 
@@ -184,6 +194,8 @@ export function createSoundcloudSource(): JamSourceEngine {
       endedListeners.clear();
       playingListeners.clear();
       pendingUrl = null;
+      desiredPositionMs = null;
+      shouldPlay = false;
     },
   };
 }

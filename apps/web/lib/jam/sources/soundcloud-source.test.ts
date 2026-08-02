@@ -149,6 +149,28 @@ describe('createSoundcloudSource', () => {
     expect(engine.currentTimeMs()).toBe(9000);
   });
 
+  it('контейнер появился после старта позиции — виджет догоняет позицию и играет', async () => {
+    const { createSoundcloudSource } = await import('./soundcloud-source');
+    const { setPartyVideoContainer } = await import('./video-container');
+    const engine = createSoundcloudSource();
+
+    await engine.load('https://soundcloud.com/a/b');
+    engine.seek(30_000);
+    engine.play();
+    expect(FakeWidget.instances).toHaveLength(0);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    setPartyVideoContainer(container);
+    fireScriptLoad();
+    await vi.waitFor(() => expect(FakeWidget.instances).toHaveLength(1));
+    const widget = FakeWidget.instances[0]!;
+    widget.emit(Events.READY);
+
+    expect(widget.seekTo).toHaveBeenCalledWith(30_000);
+    expect(widget.play).toHaveBeenCalledTimes(1);
+  });
+
   it('destroy убирает свой узел из контейнера, контейнер остаётся цел', async () => {
     const { engine, container } = await mount();
 

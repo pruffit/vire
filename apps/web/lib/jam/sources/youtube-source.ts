@@ -61,6 +61,10 @@ export function createYoutubeSource(): JamSourceEngine {
   let pendingVideoId: string | null = null;
   let buffering = false;
   let pendingLoadResolve: (() => void) | null = null;
+  // Поверхность может появиться уже после старта позиции (открыли экран/панель на ходу) —
+  // тогда свежесозданный плеер обязан догнать намерение, а не встать на нуле в паузе.
+  let desiredPositionMs: number | null = null;
+  let shouldPlay = false;
   const endedListeners = new Set<() => void>();
   const playingListeners = new Set<() => void>();
 
@@ -100,6 +104,8 @@ export function createYoutubeSource(): JamSourceEngine {
           const iframe = e.target.getIframe();
           iframe.style.width = '100%';
           iframe.style.height = '100%';
+          if (desiredPositionMs !== null) e.target.seekTo(desiredPositionMs / 1000, true);
+          if (shouldPlay) e.target.playVideo();
           resolvePendingLoad();
         },
         onStateChange: (e) => {
@@ -124,6 +130,7 @@ export function createYoutubeSource(): JamSourceEngine {
   return {
     load(videoId): Promise<void> {
       pendingVideoId = videoId;
+      desiredPositionMs = null;
       resolvePendingLoad();
 
       const el = getPartyVideoContainer();
@@ -141,14 +148,17 @@ export function createYoutubeSource(): JamSourceEngine {
     },
 
     play(): void {
+      shouldPlay = true;
       player?.playVideo();
     },
 
     pause(): void {
+      shouldPlay = false;
       player?.pauseVideo();
     },
 
     seek(ms: number): void {
+      desiredPositionMs = ms;
       player?.seekTo(ms / 1000, true);
     },
 
@@ -178,6 +188,8 @@ export function createYoutubeSource(): JamSourceEngine {
       endedListeners.clear();
       playingListeners.clear();
       pendingVideoId = null;
+      desiredPositionMs = null;
+      shouldPlay = false;
     },
   };
 }

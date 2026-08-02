@@ -184,6 +184,46 @@ describe('createYoutubeSource', () => {
     expect(() => engine.play()).not.toThrow();
   });
 
+  it('контейнер появился после старта позиции — плеер догоняет позицию и играет, а не встаёт на нуле', async () => {
+    const { createYoutubeSource } = await import('./youtube-source');
+    const { setPartyVideoContainer } = await import('./video-container');
+    const engine = createYoutubeSource();
+
+    await engine.load('vid-1');
+    engine.seek(42_000);
+    engine.play();
+    expect(FakePlayer.instances).toHaveLength(0);
+
+    setPartyVideoContainer(document.createElement('div'));
+    fireApiReady();
+    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
+    const player = FakePlayer.instances[0]!;
+    player.events.onReady?.({ target: player });
+
+    expect(player.seekTo).toHaveBeenCalledWith(42, true);
+    expect(player.playVideo).toHaveBeenCalledTimes(1);
+  });
+
+  it('контейнер появился, когда позиция на паузе — плеер не запускается сам', async () => {
+    const { createYoutubeSource } = await import('./youtube-source');
+    const { setPartyVideoContainer } = await import('./video-container');
+    const engine = createYoutubeSource();
+
+    await engine.load('vid-1');
+    engine.seek(10_000);
+    engine.play();
+    engine.pause();
+
+    setPartyVideoContainer(document.createElement('div'));
+    fireApiReady();
+    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
+    const player = FakePlayer.instances[0]!;
+    player.events.onReady?.({ target: player });
+
+    expect(player.seekTo).toHaveBeenCalledWith(10, true);
+    expect(player.playVideo).not.toHaveBeenCalled();
+  });
+
   it('destroy отписывается от реестра контейнера и уничтожает плеер', async () => {
     const { createYoutubeSource } = await import('./youtube-source');
     const { setPartyVideoContainer } = await import('./video-container');

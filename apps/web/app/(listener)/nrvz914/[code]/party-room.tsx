@@ -27,6 +27,7 @@ import { JamJoin } from '@/app/(listener)/jam/[code]/jam-join';
 import { PartyAddPanel, type VireCandidatePick } from './party-add-panel';
 import { LocalFileButton } from '@/components/local-file-button';
 import { PartyScreen } from './party-screen';
+import { PartyVideoSurface } from './party-video-surface';
 import { Icon } from '@/components/icon';
 import { EmptyState } from '@/components/ui-kit';
 import { LivePulse } from '@/components/live-pulse';
@@ -192,6 +193,8 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
   const { room, isHost, isAudioDevice, speakerName, isPlaying, votedSkipItemId, actions } = activeSession;
   const skipVotes = room.skipVotes?.itemId === room.playback?.itemId ? room.skipVotes : null;
   const iVotedSkip = room.playback ? votedSkipItemId === room.playback.itemId : false;
+  const activeItem = activeQueueIndex >= 0 ? jamQueue.queue[activeQueueIndex] : undefined;
+  const needsVideoSurface = isAudioDevice && (activeItem?.source === 'YOUTUBE' || activeItem?.source === 'SOUNDCLOUD');
 
   return (
     <div data-app-screen className="flex h-full min-h-0 flex-col">
@@ -272,6 +275,8 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
         <PageContainer as="div" variant="compact">
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">
             <div className="min-w-0 space-y-4">
+              {needsVideoSurface && <PartyVideoSurface />}
+
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setAdding((v) => !v)}
