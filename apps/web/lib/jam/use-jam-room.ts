@@ -4,6 +4,12 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { JamParticipant, JamPlaybackState, JamQueueItem, JamMode, JamSessionStatus } from '@vire/core';
 import { useRealtime, type RealtimeEvent } from '@/lib/use-realtime';
 
+export interface JamSkipVotes {
+  itemId: string;
+  votes: number;
+  needed: number;
+}
+
 interface JamRoomState {
   queue: JamQueueItem[];
   version: number;
@@ -13,6 +19,7 @@ interface JamRoomState {
   speakerParticipantId: string | null;
   presentParticipantIds: string[];
   ended: boolean;
+  skipVotes: JamSkipVotes | null;
 }
 
 export interface UseJamRoomResult extends JamRoomState {
@@ -33,10 +40,11 @@ type JamPlaybackEvent = RealtimeEvent & { playback: JamPlaybackState };
 type JamParticipantsEvent = RealtimeEvent & { participants: JamParticipant[] };
 type JamSessionEvent = RealtimeEvent & { mode: JamMode; speakerParticipantId: string | null };
 type JamPresenceEvent = RealtimeEvent & { participantIds: string[] };
+type JamSkipEvent = RealtimeEvent & JamSkipVotes;
 
 const INITIAL_STATE: JamRoomState = {
   queue: [], version: 0, participants: [], playback: null, mode: 'SYNCED', speakerParticipantId: null,
-  presentParticipantIds: [], ended: false,
+  presentParticipantIds: [], ended: false, skipVotes: null,
 };
 
 export function useJamRoom(code: string, sessionId: string | null): UseJamRoomResult {
@@ -85,6 +93,7 @@ export function useJamRoom(code: string, sessionId: string | null): UseJamRoomRe
         // Событие jam:ended приходит только живым подписчикам: джем, закрытый пока вкладка
         // была закрыта, узнаётся лишь по статусу в снапшоте переподключения.
         ended: e.session.status === 'ENDED',
+        skipVotes: null,
       });
       setConnected(true);
     },
@@ -99,7 +108,16 @@ export function useJamRoom(code: string, sessionId: string | null): UseJamRoomRe
     },
     'jam:playback': (event) => {
       const e = event as JamPlaybackEvent;
-      setState((prev) => ({ ...prev, playback: e.playback }));
+      setState((prev) => ({
+        ...prev,
+        playback: e.playback,
+        // Голоса привязаны к позиции — смена itemId (в т.ч. сам скип) обесценивает счётчик.
+        skipVotes: prev.skipVotes?.itemId === e.playback.itemId ? prev.skipVotes : null,
+      }));
+    },
+    'jam:skip': (event) => {
+      const e = event as JamSkipEvent;
+      setState((prev) => ({ ...prev, skipVotes: { itemId: e.itemId, votes: e.votes, needed: e.needed } }));
     },
     'jam:participants': (event) => {
       const e = event as JamParticipantsEvent;

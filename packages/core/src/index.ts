@@ -74,6 +74,7 @@ export * from './services/jam-sync';
 export * from './services/jam-code';
 export * from './services/jam-queue';
 export * from './services/jam-mode';
+export * from './services/jam-skip';
 export * from './services/jam';
 export * from './services/external-resolve';
 export * from './services/external-resolve-service';

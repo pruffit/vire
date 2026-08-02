@@ -24,6 +24,7 @@ function getRedis(): Redis {
 const playbackKey = (jamId: string) => `jam:${jamId}:playback`;
 const presenceKey = (jamId: string) => `jam:${jamId}:presence`;
 const addCounterKey = (jamId: string, participantKey: string) => `jam:${jamId}:adds:${participantKey}`;
+const skipVotesKey = (jamId: string, itemId: string) => `jam:${jamId}:skip:${itemId}`;
 
 export class RedisJamStateStore implements IJamStateStore {
   async getPlayback(jamId: string): Promise<JamPlaybackState | null> {
@@ -94,6 +95,27 @@ export class RedisJamStateStore implements IJamStateStore {
     } catch {
       // 0 = «лимит не превышен» — не блокируем добавление треков из-за упавшего Redis
       return 0;
+    }
+  }
+
+  async addSkipVote(jamId: string, itemId: string, participantKey: string): Promise<number> {
+    try {
+      const redis = getRedis();
+      const key = skipVotesKey(jamId, itemId);
+      await redis.sadd(key, participantKey);
+      await redis.expire(key, PLAYBACK_TTL_SEC);
+      return await redis.scard(key);
+    } catch {
+      // 0 — деградация не должна ложно триггерить/блокировать скип
+      return 0;
+    }
+  }
+
+  async clearSkipVotes(jamId: string, itemId: string): Promise<void> {
+    try {
+      await getRedis().del(skipVotesKey(jamId, itemId));
+    } catch {
+      // деградация — ключ истечёт сам по TTL
     }
   }
 

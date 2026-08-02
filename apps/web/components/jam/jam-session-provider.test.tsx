@@ -19,6 +19,7 @@ import { JamSessionProvider, useJamSession, type JamSessionValue } from './jam-s
 import { useJamStore, type ActiveJam } from '@/store/jam';
 import { usePlayerStore } from '@/store/player';
 import { getJamTransport } from '@/lib/jam/jam-controls';
+import { PARTY_PATH } from '@/lib/party';
 
 interface RoomState {
   queue: JamQueueItem[];
@@ -30,13 +31,14 @@ interface RoomState {
   presentParticipantIds: string[];
   connected: boolean;
   ended: boolean;
+  skipVotes: { itemId: string; votes: number; needed: number } | null;
   setDragging: ReturnType<typeof vi.fn>;
 }
 
 function baseRoom(overrides?: Partial<RoomState>): RoomState {
   return {
     queue: [], version: 0, participants: [], playback: null, mode: 'SYNCED', speakerParticipantId: null,
-    presentParticipantIds: [], connected: true, ended: false, setDragging: vi.fn(),
+    presentParticipantIds: [], connected: true, ended: false, skipVotes: null, setDragging: vi.fn(),
     ...overrides,
   };
 }
@@ -65,6 +67,7 @@ function track(id: string): JamQueueItem {
 }
 
 const jam: ActiveJam = { code: 'A2B3C4', participantId: 'p1', role: 'HOST', sessionId: null };
+const partyJam: ActiveJam = { ...jam, basePath: PARTY_PATH };
 
 function Harness({ showPage }: { showPage: boolean }) {
   return (
@@ -268,5 +271,125 @@ describe('JamSessionProvider: один трек дважды в очереди',
       expect(call).toBeTruthy();
       expect(call![1]!.body).toBe(JSON.stringify({ kind: 'track', itemId: 'b' }));
     });
+  });
+});
+
+describe('JamSessionProvider: автодобор из волны на пустом хвосте (вечеринка)', () => {
+  it('хвост пуст на вечеринке — инициатор дёргает refill и переходит на первую добранную позицию', async () => {
+    const queue = [track('a')];
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (String(url).includes('/refill')) {
+        return Promise.resolve({ ok: true, json: async () => ({ queue: [track('a'), track('b')], version: 2 }) } as unknown as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) } as unknown as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<Harness showPage />);
+    act(() => useJamStore.getState().activate(partyJam));
+    await waitFor(() => expect(usePlaybackSyncMock).toHaveBeenCalled());
+
+    const onEnded = usePlaybackSyncMock.mock.calls.at(-1)![0].onEnded as () => void;
+    act(() => onEnded());
+
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/refill'))).toBe(true));
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/playback'));
+      expect(call).toBeTruthy();
+      expect(call![1]!.body).toBe(JSON.stringify({ kind: 'track', itemId: 'b' }));
+    });
+  });
+
+  it('волна пуста — тишина, без запроса на playback', async () => {
+    const queue = [track('a')];
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ queue: [track('a')], version: 1 }) } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<Harness showPage />);
+    act(() => useJamStore.getState().activate(partyJam));
+    await waitFor(() => expect(usePlaybackSyncMock).toHaveBeenCalled());
+
+    const onEnded = usePlaybackSyncMock.mock.calls.at(-1)![0].onEnded as () => void;
+    act(() => onEnded());
+
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/refill'))).toBe(true));
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/playback'))).toBe(false);
+  });
+
+  it('обычный джем (не вечеринка) не дёргает refill на пустом хвосте', async () => {
+    const queue = [track('a')];
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<Harness showPage />);
+    act(() => useJamStore.getState().activate(jam));
+    await waitFor(() => expect(usePlaybackSyncMock).toHaveBeenCalled());
+
+    const onEnded = usePlaybackSyncMock.mock.calls.at(-1)![0].onEnded as () => void;
+    act(() => onEnded());
+
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/refill'))).toBe(false);
+  });
+});
+
+describe('JamSessionProvider: голосование за скип', () => {
+  it('voteSkip шлёт itemId на /skip и помечает свой голос', async () => {
+    const queue = [track('a')];
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const onSession = vi.fn();
+    function Capture() {
+      onSession(useJamSession());
+      return null;
+    }
+    render(<JamSessionProvider><Capture /></JamSessionProvider>);
+    act(() => useJamStore.getState().activate(jam));
+    await waitFor(() => expect(onSession).toHaveBeenCalledWith(expect.objectContaining({ code: 'A2B3C4' })));
+
+    let session = onSession.mock.calls.at(-1)![0] as JamSessionValue;
+    act(() => session.actions.voteSkip('a'));
+
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/skip'));
+      expect(call).toBeTruthy();
+      expect(call![1]!.body).toBe(JSON.stringify({ itemId: 'a' }));
+    });
+    await waitFor(() => {
+      session = onSession.mock.calls.at(-1)![0] as JamSessionValue;
+      expect(session.votedSkipItemId).toBe('a');
+    });
+  });
+
+  it('свой голос сбрасывается сменой активной позиции', async () => {
+    useJamRoomMock.mockReturnValue(baseRoom({
+      queue: [track('a'), track('b')],
+      playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 },
+    }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as unknown as Response));
+
+    const onSession = vi.fn();
+    function Capture() {
+      onSession(useJamSession());
+      return null;
+    }
+    render(<JamSessionProvider><Capture /></JamSessionProvider>);
+    act(() => useJamStore.getState().activate(jam));
+    await waitFor(() => expect(onSession).toHaveBeenCalledWith(expect.objectContaining({ code: 'A2B3C4' })));
+
+    act(() => (onSession.mock.calls.at(-1)![0] as JamSessionValue).actions.voteSkip('a'));
+    await waitFor(() => expect((onSession.mock.calls.at(-1)![0] as JamSessionValue).votedSkipItemId).toBe('a'));
+
+    useJamRoomMock.mockReturnValue(baseRoom({
+      queue: [track('a'), track('b')],
+      playback: { itemId: 'b', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 2 },
+    }));
+    useJamStore.setState({ active: { ...jam } });
+
+    await waitFor(() => expect((onSession.mock.calls.at(-1)![0] as JamSessionValue).votedSkipItemId).toBeNull());
   });
 });

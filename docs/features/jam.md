@@ -154,15 +154,16 @@
   `jam-room`, `jam-join`, `jam-add-panel`, `jam-participants`, `jam-save-playlist`),
   `jam/id/[jamId]` (редирект из уведомления)
 - **API:** `app/api/v1/jam/route.ts` (создание, принимает `mode`), `jam/time`,
-  `jam/[code]/{join,queue,playback,mode,speaker,heartbeat,end,stream,qr,save-playlist,invite}`
-  (`queue`/`playback`/`mode`/`speaker` резолвят идентичность через `resolveJamIdentity` —
-  user или подписанный guest `sessionId`, не только `auth()`), `GET /api/v1/friends`
-- **Сервисы/логика:** `packages/core/src/services/{jam,jam-sync,jam-queue,jam-code,jam-mode}.ts`
+  `jam/[code]/{join,queue,playback,mode,speaker,heartbeat,end,stream,qr,save-playlist,invite,skip,refill}`
+  (`queue`/`playback`/`mode`/`speaker`/`skip`/`refill` резолвят идентичность через
+  `resolveJamIdentity` — user или подписанный guest `sessionId`, не только `auth()`), `GET /api/v1/friends`
+- **Сервисы/логика:** `packages/core/src/services/{jam,jam-sync,jam-queue,jam-code,jam-mode,jam-skip}.ts`
   (чистые: права участия, лимиты, `applyQueueMutation` вкл. `shuffle`,
   `derivePositionMs`, `decideDriftCorrection`, `pickClockOffset`,
-  `resolveSpeakerParticipantId`/`isAudioDevice`; `JamService.listPresent`/`leave` —
-  presence поверх `IJamStateStore.listPresent`/`dropPresence`), порт
-  `ports/jam-state.ts`; `apps/web/lib/jam/*` (`server-clock`, `jam-audio`,
+  `resolveSpeakerParticipantId`/`isAudioDevice`, `resolveSkip` (порог голосования за скип);
+  `JamService.listPresent`/`leave` — presence поверх `IJamStateStore.listPresent`/`dropPresence`;
+  `voteSkip`/`refillFromWave` — вечеринка, см. `party.md`), порт
+  `ports/jam-state.ts` (вкл. `addSkipVote`/`clearSkipVotes`); `apps/web/lib/jam/*` (`server-clock`, `jam-audio`,
   `use-jam-room`, `use-jam-queue`, `use-playback-sync` (пропы `driftCorrection`,
   `trackId` — резолвится провайдером из очереди по `playback.itemId`; `null` = движок
   простаивает: внешний источник либо снапшот очереди ещё не долетел),
@@ -185,7 +186,8 @@
   `jam_queue_items` (миграция 0042; `JAM_INVITE` в enum уведомлений — 0043;
   миграция 0046 — `source` `VIRE|YOUTUBE|SOUNDCLOUD|LOCAL`, nullable `track_id` и
   снапшот метаданных внешней позиции под check-инвариант согласованности).
-  Redis: `jam:{id}:playback`, `jam:{id}:presence`, `jam:{id}:adds:{participant}` (TTL)
+  Redis: `jam:{id}:playback`, `jam:{id}:presence`, `jam:{id}:adds:{participant}`,
+  `jam:{id}:skip:{itemId}` (TTL, вечеринка)
 
 ## Env
 

@@ -33,11 +33,14 @@ export interface JamSessionValue {
   /** Позиция очереди (jam_queue_items.id) — подсветка активной строки должна идти по нему, не по trackId. */
   activeItemId: string | null;
   activeTrackId: string | null;
+  /** Позиция, за которую голосовал этот участник — сбрасывается сменой активной позиции. */
+  votedSkipItemId: string | null;
   actions: {
     rowPlay: (item: JamQueueItem) => void;
     toggle: () => void;
     changeMode: (mode: JamMode) => void;
     claimSpeaker: () => void;
+    voteSkip: (itemId: string) => void;
     endJam: () => Promise<void>;
     leave: () => void;
   };
@@ -115,9 +118,26 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     const currentItemId = room.playback?.itemId;
     const currentIndex = room.queue.findIndex((item) => item.id === currentItemId);
     const next = currentIndex >= 0 ? room.queue[currentIndex + 1] : undefined;
-    if (!next) return;
-    postPlayback({ kind: 'track', itemId: next.id });
-  }, [room.mode, isHost, isAudioDevice, room.playback, room.queue, postPlayback]);
+    if (next) {
+      postPlayback({ kind: 'track', itemId: next.id });
+      return;
+    }
+    // Хвост пуст и это вечеринка — добор из волны, чтобы не замолкать; волна пуста/роут упал — тишина.
+    if (basePath !== PARTY_PATH) return;
+    const queueBeforeRefill = room.queue;
+    fetch(`/api/v1/jam/${encodeURIComponent(code)}/refill`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sessionId ? { sessionId } : {}),
+    })
+      .then((res) => (res.ok ? (res.json() as Promise<{ queue?: JamQueueItem[] }>) : null))
+      .then((data) => {
+        const existingIds = new Set(queueBeforeRefill.map((item) => item.id));
+        const first = data?.queue?.find((item) => !existingIds.has(item.id));
+        if (first) postPlayback({ kind: 'track', itemId: first.id });
+      })
+      .catch(() => {});
+  }, [room.mode, isHost, isAudioDevice, room.playback, room.queue, postPlayback, basePath, code, sessionId]);
 
   const activeQueueIndex = useMemo(
     () => (room.playback ? room.queue.findIndex((item) => item.id === room.playback!.itemId) : -1),
@@ -154,6 +174,29 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
       .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
       .catch(() => toast.error('Не удалось переключить звук'));
   }, [code, sessionId]);
+
+  const [votedSkipItemId, setVotedSkipItemId] = useState<string | null>(null);
+  const voteSkip = useCallback((itemId: string) => {
+    setVotedSkipItemId(itemId);
+    fetch(`/api/v1/jam/${encodeURIComponent(code)}/skip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sessionId ? { itemId, sessionId } : { itemId }),
+    })
+      .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
+      .catch(() => {
+        setVotedSkipItemId((prev) => (prev === itemId ? null : prev));
+        toast.error('Не удалось проголосовать за пропуск');
+      });
+  }, [code, sessionId]);
+
+  // Свой голос сброшен сменой позиции — сравнение прежнего значения с текущим прямо в рендере (см. resolvedPlayback ниже).
+  const currentPlaybackItemId = room.playback?.itemId ?? null;
+  const [resolvedSkipTrackingId, setResolvedSkipTrackingId] = useState(currentPlaybackItemId);
+  if (resolvedSkipTrackingId !== currentPlaybackItemId) {
+    setResolvedSkipTrackingId(currentPlaybackItemId);
+    setVotedSkipItemId(null);
+  }
 
   const handleRowPlay = useCallback((item: JamQueueItem) => {
     const playback = room.playback;
@@ -323,18 +366,20 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     isPlaying,
     activeItemId: activeTrack?.id ?? null,
     activeTrackId: activeTrack?.trackId ?? null,
+    votedSkipItemId,
     actions: {
       rowPlay: handleRowPlay,
       toggle: handleTogglePlayback,
       changeMode: handleModeChange,
       claimSpeaker: handleClaimSpeaker,
+      voteSkip,
       endJam: handleEndJam,
       leave: leaveStore,
     },
   }), [
     code, participantId, role, sessionId, isHost, room, serverNow, isAudioDevice, speakerName,
-    playbackPending, isPlaying, activeTrack, handleRowPlay, handleTogglePlayback, handleModeChange,
-    handleClaimSpeaker, handleEndJam, leaveStore,
+    playbackPending, isPlaying, activeTrack, votedSkipItemId, handleRowPlay, handleTogglePlayback,
+    handleModeChange, handleClaimSpeaker, voteSkip, handleEndJam, leaveStore,
   ]);
 
   return <JamSessionContext.Provider value={value}>{children}</JamSessionContext.Provider>;

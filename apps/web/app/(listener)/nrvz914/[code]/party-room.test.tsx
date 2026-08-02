@@ -50,7 +50,7 @@ import { PartyRoom } from './party-room';
 function baseRoom(overrides?: Partial<JamSessionValue['room']>): JamSessionValue['room'] {
   return {
     queue: [], version: 0, participants: [], playback: null, mode: 'SYNCED', speakerParticipantId: null,
-    presentParticipantIds: [], connected: true, ended: false, setDragging: vi.fn(),
+    presentParticipantIds: [], connected: true, ended: false, skipVotes: null, setDragging: vi.fn(),
     ...overrides,
   };
 }
@@ -70,11 +70,13 @@ function baseSession(overrides?: Omit<Partial<JamSessionValue>, 'room'> & { room
     isPlaying: false,
     activeItemId: null,
     activeTrackId: null,
+    votedSkipItemId: null,
     actions: {
       rowPlay: vi.fn(),
       toggle: vi.fn(),
       changeMode: vi.fn(),
       claimSpeaker: vi.fn(),
+      voteSkip: vi.fn(),
       endJam: vi.fn().mockResolvedValue(undefined),
       leave: vi.fn(),
     },
@@ -210,6 +212,41 @@ describe('PartyRoom: комната', () => {
 
     fireEvent.click(screen.getByText('Завершить'));
     await waitFor(() => expect(session.actions.endJam).toHaveBeenCalledTimes(1));
+  });
+
+  it('голосование за пропуск: гость видит счётчик и не может проголосовать дважды', () => {
+    const session = baseSession({
+      votedSkipItemId: 'a',
+      room: { queue: [vireTrack('a')], playback: playback('a'), skipVotes: { itemId: 'a', votes: 1, needed: 2 } },
+    });
+    useJamSessionMock.mockReturnValue(session);
+
+    render(
+      <PartyRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={suggestions} />,
+    );
+
+    const button = screen.getByRole('button', { name: /Пропустить/ }) as HTMLButtonElement;
+    expect(button.textContent).toContain('1/2');
+    expect(button.disabled).toBe(true);
+  });
+
+  it('голосование за пропуск: у хоста нет счётчика и голос всегда проходит', () => {
+    const session = baseSession({
+      isHost: true, role: 'HOST',
+      room: { queue: [vireTrack('a')], playback: playback('a'), skipVotes: { itemId: 'a', votes: 1, needed: 2 } },
+    });
+    useJamSessionMock.mockReturnValue(session);
+
+    render(
+      <PartyRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={suggestions} />,
+    );
+
+    const button = screen.getByRole('button', { name: /Пропустить/ }) as HTMLButtonElement;
+    expect(button.textContent).not.toContain('1/2');
+    expect(button.disabled).toBe(false);
+
+    fireEvent.click(button);
+    expect(session.actions.voteSkip).toHaveBeenCalledWith('a');
   });
 
   it('SPEAKER: пульт видит имя колонки', () => {

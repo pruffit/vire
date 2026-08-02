@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { JamService, JAM_MAX_PARTICIPANTS, JAM_MAX_ADDS_PER_MIN, JAM_MAX_QUEUE } from './jam';
+import { JamService, JAM_MAX_PARTICIPANTS, JAM_MAX_ADDS_PER_MIN, JAM_MAX_QUEUE, JAM_REFILL_LIMIT } from './jam';
 import { NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../errors';
 import type { IJamRepository } from '../repositories/jam';
 import type { IJamStateStore } from '../ports/jam-state';
 import type { IJamBroadcaster } from '../ports/jam-realtime';
 import type { JamPlaybackState } from './jam-sync';
+import type { WaveService } from './wave';
 import type { JamSession, JamParticipant, JamQueueItem } from '../types/jam';
 
 const NOW = 1_700_000_000_000;
@@ -103,6 +104,8 @@ function makeState(overrides?: Partial<IJamStateStore>): IJamStateStore {
     listPresent: vi.fn().mockResolvedValue([]),
     dropPresence: vi.fn().mockResolvedValue(undefined),
     bumpAddCounter: vi.fn().mockResolvedValue(1),
+    addSkipVote: vi.fn().mockResolvedValue(1),
+    clearSkipVotes: vi.fn().mockResolvedValue(undefined),
     clear: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -112,11 +115,16 @@ function makeBroadcaster(overrides?: Partial<IJamBroadcaster>): IJamBroadcaster 
   return { broadcast: vi.fn().mockResolvedValue(undefined), ...overrides };
 }
 
+function makeWave(overrides?: Partial<Pick<WaveService, 'next'>>): Pick<WaveService, 'next'> {
+  return { next: vi.fn().mockResolvedValue({ ok: true, value: { tracks: [] } }), ...overrides };
+}
+
 function makeService(o?: {
   repo?: IJamRepository;
   state?: IJamStateStore;
   broadcaster?: IJamBroadcaster;
   random?: () => number;
+  wave?: Pick<WaveService, 'next'> | null;
 }) {
   return new JamService(
     o?.repo ?? makeRepo(),
@@ -124,6 +132,7 @@ function makeService(o?: {
     o?.broadcaster ?? makeBroadcaster(),
     () => NOW,
     o?.random ?? (() => 0.5),
+    o?.wave ?? null,
   );
 }
 
@@ -891,6 +900,273 @@ describe('JamService.setPlayback', () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value.startedAtMs).toBe(NOW - 9000);
+  });
+});
+
+describe('JamService.voteSkip', () => {
+  const guestParticipant = makeParticipant({ id: 'p-guest', role: 'GUEST' });
+  const hostParticipant = makeHostParticipant({ id: 'p-host' });
+  const currentPlayback: JamPlaybackState = { itemId: 'item-1', startedAtMs: NOW - 5000, paused: false, pausedPositionMs: 0, version: 3 };
+
+  it('forbids a non-participant', async () => {
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    const result = await service.voteSkip('jam-1', { guestSessionId: 'ghost' }, 'item-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('rejects a regular JAM session with ValidationError', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ kind: 'JAM' })),
+    });
+    const service = makeService({ repo });
+
+    const result = await service.voteSkip('jam-1', { guestSessionId: 'guest-1' }, 'item-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ValidationError);
+  });
+
+  it('rejects once the jam has ENDED', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ kind: 'PARTY', status: 'ENDED' })),
+    });
+    const service = makeService({ repo });
+
+    const result = await service.voteSkip('jam-1', { guestSessionId: 'guest-1' }, 'item-1');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
+  });
+
+  it('a vote for a position that already moved on is a silent no-op', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ kind: 'PARTY' })),
+    });
+    const state = makeState({ getPlayback: vi.fn().mockResolvedValue({ ...currentPlayback, itemId: 'item-2' }) });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, state, broadcaster });
+
+    const result = await service.voteSkip('jam-1', { guestSessionId: 'guest-1' }, 'item-1');
+
+    expect(result.ok).toBe(true);
+    expect(state.addSkipVote).not.toHaveBeenCalled();
+    expect(broadcaster.broadcast).not.toHaveBeenCalled();
+  });
+
+  it('below threshold: records the vote and only broadcasts jam:skip, without advancing', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ kind: 'PARTY' })),
+    });
+    const state = makeState({
+      getPlayback: vi.fn().mockResolvedValue(currentPlayback),
+      addSkipVote: vi.fn().mockResolvedValue(1),
+      listPresent: vi.fn().mockResolvedValue(['p-guest', 'p-other', 'p-third']),
+    });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, state, broadcaster });
+
+    const result = await service.voteSkip('jam-1', { guestSessionId: 'guest-1' }, 'item-1');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toEqual({ itemId: 'item-1', votes: 1, needed: 2 });
+    expect(state.clearSkipVotes).not.toHaveBeenCalled();
+    expect(state.setPlayback).not.toHaveBeenCalled();
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', { type: 'jam:skip', itemId: 'item-1', votes: 1, needed: 2 });
+  });
+
+  it('threshold reached: advances to the next item the same way as {kind:track} and clears votes', async () => {
+    const queue = [makeQueueItem('item-1'), makeQueueItem('item-2')];
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ kind: 'PARTY' })),
+      listQueue: vi.fn().mockResolvedValue(queue),
+    });
+    const state = makeState({
+      getPlayback: vi.fn().mockResolvedValue(currentPlayback),
+      addSkipVote: vi.fn().mockResolvedValue(2),
+      listPresent: vi.fn().mockResolvedValue(['p-guest', 'p-other']),
+    });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, state, broadcaster });
+
+    const result = await service.voteSkip('jam-1', { guestSessionId: 'guest-1' }, 'item-1');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toEqual({ itemId: 'item-1', votes: 2, needed: 2 });
+    expect(state.clearSkipVotes).toHaveBeenCalledWith('jam-1', 'item-1');
+    expect(state.setPlayback).toHaveBeenCalledWith('jam-1', expect.objectContaining({ itemId: 'item-2', paused: false }));
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', expect.objectContaining({ type: 'jam:playback' }));
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', { type: 'jam:skip', itemId: 'item-1', votes: 2, needed: 2 });
+  });
+
+  it('threshold reached with no next item: pauses in place instead of ending the jam', async () => {
+    const queue = [makeQueueItem('item-1')];
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ kind: 'PARTY' })),
+      listQueue: vi.fn().mockResolvedValue(queue),
+    });
+    const state = makeState({
+      getPlayback: vi.fn().mockResolvedValue(currentPlayback),
+      addSkipVote: vi.fn().mockResolvedValue(1),
+      listPresent: vi.fn().mockResolvedValue(['p-guest']),
+    });
+    const service = makeService({ repo, state });
+
+    const result = await service.voteSkip('jam-1', { guestSessionId: 'guest-1' }, 'item-1');
+
+    expect(result.ok).toBe(true);
+    expect(state.setPlayback).toHaveBeenCalledWith('jam-1', expect.objectContaining({ itemId: 'item-1', paused: true }));
+    expect(repo.endSession).not.toHaveBeenCalled();
+  });
+
+  it('the host skips on the first vote regardless of the threshold', async () => {
+    const queue = [makeQueueItem('item-1'), makeQueueItem('item-2')];
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(hostParticipant),
+      findById: vi.fn().mockResolvedValue(makeSession({ kind: 'PARTY' })),
+      listQueue: vi.fn().mockResolvedValue(queue),
+    });
+    const state = makeState({
+      getPlayback: vi.fn().mockResolvedValue(currentPlayback),
+      addSkipVote: vi.fn().mockResolvedValue(1),
+      listPresent: vi.fn().mockResolvedValue(['p-guest', 'p-other', 'p-third', 'p-fourth']),
+    });
+    const service = makeService({ repo, state });
+
+    const result = await service.voteSkip('jam-1', { userId: 'host-1' }, 'item-1');
+
+    expect(result.ok).toBe(true);
+    expect(state.clearSkipVotes).toHaveBeenCalledWith('jam-1', 'item-1');
+    expect(state.setPlayback).toHaveBeenCalledWith('jam-1', expect.objectContaining({ itemId: 'item-2' }));
+  });
+});
+
+describe('JamService.refillFromWave', () => {
+  const loggedInParticipant = makeParticipant({ id: 'p-guest', role: 'GUEST', userId: 'user-1', guestSessionId: null });
+  const activePlayback: JamPlaybackState = { itemId: 'item-1', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 };
+
+  it('forbids a non-participant', async () => {
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo, wave: makeWave() });
+
+    const result = await service.refillFromWave('jam-1', { userId: 'ghost' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('rejects a regular JAM session with ValidationError', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(loggedInParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'JAM' }), participants: [], queue: [] }),
+    });
+    const service = makeService({ repo, wave: makeWave() });
+
+    const result = await service.refillFromWave('jam-1', { userId: 'user-1' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ValidationError);
+  });
+
+  it('no-op when the wave service is not injected', async () => {
+    const queue = [makeQueueItem('item-1')];
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(loggedInParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'PARTY' }), participants: [loggedInParticipant], queue }),
+    });
+    const service = makeService({ repo, wave: null });
+
+    const result = await service.refillFromWave('jam-1', { userId: 'user-1' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.queue).toEqual(queue);
+    expect(repo.replaceQueue).not.toHaveBeenCalled();
+  });
+
+  it('no-op when the queue still has tracks after the current position', async () => {
+    const queue = [makeQueueItem('item-1'), makeQueueItem('item-2')];
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(loggedInParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'PARTY', queueVersion: 3 }), participants: [loggedInParticipant], queue }),
+    });
+    const state = makeState({ getPlayback: vi.fn().mockResolvedValue(activePlayback) });
+    const wave = makeWave();
+    const service = makeService({ repo, state, wave });
+
+    const result = await service.refillFromWave('jam-1', { userId: 'user-1' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.queue).toEqual(queue);
+    expect(wave.next).not.toHaveBeenCalled();
+    expect(repo.replaceQueue).not.toHaveBeenCalled();
+  });
+
+  it('no-op when the wave returns no tracks', async () => {
+    const queue = [makeQueueItem('item-1')];
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(loggedInParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'PARTY' }), participants: [loggedInParticipant], queue }),
+    });
+    const state = makeState({ getPlayback: vi.fn().mockResolvedValue(activePlayback) });
+    const wave = makeWave();
+    const service = makeService({ repo, state, wave });
+
+    const result = await service.refillFromWave('jam-1', { userId: 'user-1' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.queue).toEqual(queue);
+    expect(repo.replaceQueue).not.toHaveBeenCalled();
+  });
+
+  it('empty tail: appends wave tracks to the tail without round-robin and broadcasts jam:queue', async () => {
+    const queue = [makeQueueItem('item-1')];
+    const wave = makeWave({
+      next: vi.fn().mockResolvedValue({
+        ok: true,
+        value: {
+          tracks: [{
+            id: 'wave-1', title: 'W', artistName: 'A', artistSlug: 'a', releaseId: 'r',
+            coverUrl: null, accentColor: null, isExplicit: false, version: null, feat: [],
+          }],
+        },
+      }),
+    });
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(loggedInParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'PARTY', queueVersion: 3 }), participants: [loggedInParticipant], queue }),
+      listQueue: vi.fn().mockResolvedValue([...queue, makeQueueItem('item-2', { trackId: 'wave-1' })]),
+    });
+    const state = makeState({
+      getPlayback: vi.fn().mockResolvedValue(activePlayback),
+      listPresent: vi.fn().mockResolvedValue(['p-guest']),
+    });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, state, broadcaster, wave });
+
+    const result = await service.refillFromWave('jam-1', { userId: 'user-1' });
+
+    expect(result.ok).toBe(true);
+    expect(wave.next).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: 'jam:jam-1', userId: 'user-1', currentTrackId: 'track-item-1', limit: JAM_REFILL_LIMIT,
+    }));
+    expect(repo.replaceQueue).toHaveBeenCalledWith(
+      'jam-1',
+      [
+        expect.objectContaining({ id: 'item-1' }),
+        expect.objectContaining({ source: 'VIRE', trackId: 'wave-1', addedByParticipantId: null }),
+      ],
+      4,
+    );
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', expect.objectContaining({ type: 'jam:queue', version: 4 }));
   });
 });
 

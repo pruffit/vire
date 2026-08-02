@@ -33,7 +33,7 @@ export function PartyScreen({ code, onExit }: Props) {
   }, []);
 
   if (!session) return null;
-  const { room, activeItemId, isPlaying, actions } = session;
+  const { room, activeItemId, isPlaying, isHost, votedSkipItemId, actions } = session;
   const activeIndex = room.queue.findIndex((item) => item.id === activeItemId);
   const active = activeIndex >= 0 ? room.queue[activeIndex] : undefined;
   const next = activeIndex >= 0 ? room.queue.slice(activeIndex + 1, activeIndex + 1 + NEXT_COUNT) : room.queue.slice(0, NEXT_COUNT);
@@ -42,6 +42,8 @@ export function PartyScreen({ code, onExit }: Props) {
     : undefined;
   const isVideoActive = active?.source === 'YOUTUBE' || active?.source === 'SOUNDCLOUD';
   const needsAudioGesture = !audioEnabled;
+  const skipVotes = room.skipVotes?.itemId === activeItemId ? room.skipVotes : null;
+  const iVotedSkip = activeItemId !== null && votedSkipItemId === activeItemId;
 
   function handleTap(): void {
     if (needsAudioGesture) {
@@ -93,6 +95,15 @@ export function PartyScreen({ code, onExit }: Props) {
               <SourceBadge source={active.source} />
               {addedByName && <span>· Добавил(а) {addedByName}</span>}
             </p>
+            <button
+              type="button"
+              onClick={() => actions.voteSkip(active.id)}
+              disabled={!isHost && iVotedSkip}
+              className="mx-auto mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-4 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            >
+              <Icon name="skip-forward" size={14} /> Пропустить
+              {!isHost && skipVotes && <span className="tabular-nums">· {skipVotes.votes}/{skipVotes.needed}</span>}
+            </button>
           </div>
         ) : (
           <p className="text-center text-sm text-muted-foreground">Очередь пуста</p>

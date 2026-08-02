@@ -19,6 +19,8 @@ const redisInstance = {
   expire: vi.fn().mockRejectedValue(new Error('redis down')),
   del: vi.fn().mockRejectedValue(new Error('redis down')),
   zrem: vi.fn().mockRejectedValue(new Error('redis down')),
+  sadd: vi.fn().mockRejectedValue(new Error('redis down')),
+  scard: vi.fn().mockRejectedValue(new Error('redis down')),
   multi: vi.fn(() => createFailingMulti()),
 };
 
@@ -62,6 +64,14 @@ describe('RedisJamStateStore — деградация при недоступн�
   it('dropPresence не бросает', async () => {
     await expect(store.dropPresence('jam1', 'p1')).resolves.toBeUndefined();
   });
+
+  it('addSkipVote возвращает 0 (не триггерит скип ложно)', async () => {
+    expect(await store.addSkipVote('jam1', 'item-1', 'p1')).toBe(0);
+  });
+
+  it('clearSkipVotes не бросает', async () => {
+    await expect(store.clearSkipVotes('jam1', 'item-1')).resolves.toBeUndefined();
+  });
 });
 
 describe('RedisJamStateStore — рабочий Redis', () => {
@@ -90,5 +100,23 @@ describe('RedisJamStateStore — рабочий Redis', () => {
     redisInstance.zrem.mockResolvedValueOnce(1);
     await store.dropPresence('jam1', 'p1');
     expect(redisInstance.zrem).toHaveBeenCalledWith('jam:jam1:presence', 'p1');
+  });
+
+  it('addSkipVote добавляет голос в SET, ставит TTL и возвращает размер SET', async () => {
+    redisInstance.sadd.mockResolvedValueOnce(1);
+    redisInstance.expire.mockResolvedValueOnce('OK');
+    redisInstance.scard.mockResolvedValueOnce(2);
+
+    const votes = await store.addSkipVote('jam1', 'item-1', 'p1');
+
+    expect(votes).toBe(2);
+    expect(redisInstance.sadd).toHaveBeenCalledWith('jam:jam1:skip:item-1', 'p1');
+    expect(redisInstance.expire).toHaveBeenCalledWith('jam:jam1:skip:item-1', expect.any(Number));
+  });
+
+  it('clearSkipVotes удаляет SET голосов за позицию', async () => {
+    redisInstance.del.mockResolvedValueOnce(1);
+    await store.clearSkipVotes('jam1', 'item-1');
+    expect(redisInstance.del).toHaveBeenCalledWith('jam:jam1:skip:item-1');
   });
 });

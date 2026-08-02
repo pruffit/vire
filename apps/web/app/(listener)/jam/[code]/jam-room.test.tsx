@@ -48,7 +48,7 @@ import { JamRoom } from './jam-room';
 function baseRoom(overrides?: Partial<JamSessionValue['room']>): JamSessionValue['room'] {
   return {
     queue: [], version: 0, participants: [], playback: null, mode: 'SYNCED', speakerParticipantId: null,
-    presentParticipantIds: [], connected: true, ended: false, setDragging: vi.fn(),
+    presentParticipantIds: [], connected: true, ended: false, skipVotes: null, setDragging: vi.fn(),
     ...overrides,
   };
 }
@@ -68,11 +68,13 @@ function baseSession(overrides?: Omit<Partial<JamSessionValue>, 'room'> & { room
     isPlaying: false,
     activeItemId: null,
     activeTrackId: null,
+    votedSkipItemId: null,
     actions: {
       rowPlay: vi.fn(),
       toggle: vi.fn(),
       changeMode: vi.fn(),
       claimSpeaker: vi.fn(),
+      voteSkip: vi.fn(),
       endJam: vi.fn().mockResolvedValue(undefined),
       leave: vi.fn(),
     },

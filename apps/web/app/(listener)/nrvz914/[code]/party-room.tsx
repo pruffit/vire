@@ -189,7 +189,9 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
     );
   }
 
-  const { room, isHost, isAudioDevice, speakerName, isPlaying, actions } = activeSession;
+  const { room, isHost, isAudioDevice, speakerName, isPlaying, votedSkipItemId, actions } = activeSession;
+  const skipVotes = room.skipVotes?.itemId === room.playback?.itemId ? room.skipVotes : null;
+  const iVotedSkip = room.playback ? votedSkipItemId === room.playback.itemId : false;
 
   return (
     <div data-app-screen className="flex h-full min-h-0 flex-col">
@@ -285,6 +287,16 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
                 >
                   <Icon name="shuffle" size={14} /> Перемешать
                 </button>
+                {room.playback && (
+                  <button
+                    onClick={() => actions.voteSkip(room.playback!.itemId)}
+                    disabled={!isHost && iVotedSkip}
+                    className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    <Icon name="skip-forward" size={14} /> Пропустить
+                    {!isHost && skipVotes && <span className="tabular-nums">· {skipVotes.votes}/{skipVotes.needed}</span>}
+                  </button>
+                )}
               </div>
 
               <Sheet open={adding} onClose={() => setAdding(false)} anchor="bottom">

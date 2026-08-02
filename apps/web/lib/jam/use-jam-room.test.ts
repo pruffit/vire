@@ -230,4 +230,55 @@ describe('useJamRoom', () => {
 
     expect(result.current.ended).toBe(true);
   });
+
+  it('применяет jam:skip к состоянию', () => {
+    const { result } = renderHook(() => useJamRoom('A2B3C4', null));
+    act(() => {
+      lastHandlers()['jam:snapshot']!({
+        session: {}, participants: [], queue: [track('a')], version: 5,
+        playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 },
+      });
+    });
+
+    act(() => {
+      lastHandlers()['jam:skip']!({ itemId: 'a', votes: 1, needed: 2 });
+    });
+
+    expect(result.current.skipVotes).toEqual({ itemId: 'a', votes: 1, needed: 2 });
+  });
+
+  it('jam:playback на смену itemId сбрасывает skipVotes прежней позиции', () => {
+    const { result } = renderHook(() => useJamRoom('A2B3C4', null));
+    act(() => {
+      lastHandlers()['jam:snapshot']!({
+        session: {}, participants: [], queue: [track('a'), track('b')], version: 5,
+        playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 },
+      });
+      lastHandlers()['jam:skip']!({ itemId: 'a', votes: 1, needed: 2 });
+    });
+    expect(result.current.skipVotes).not.toBeNull();
+
+    act(() => {
+      lastHandlers()['jam:playback']!({ playback: { itemId: 'b', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 2 } });
+    });
+
+    expect(result.current.skipVotes).toBeNull();
+  });
+
+  it('jam:playback на той же позиции (пауза/сик) не трогает skipVotes', () => {
+    const { result } = renderHook(() => useJamRoom('A2B3C4', null));
+    act(() => {
+      lastHandlers()['jam:snapshot']!({
+        session: {}, participants: [], queue: [track('a')], version: 5,
+        playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 },
+      });
+      lastHandlers()['jam:skip']!({ itemId: 'a', votes: 1, needed: 2 });
+    });
+
+    act(() => {
+      lastHandlers()['jam:playback']!({ playback: { itemId: 'a', startedAtMs: 0, paused: true, pausedPositionMs: 1000, version: 2 } });
+    });
+
+    expect(result.current.skipVotes).toEqual({ itemId: 'a', votes: 1, needed: 2 });
+  });
 });

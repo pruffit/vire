@@ -1,7 +1,9 @@
 import { err, ok, NotFoundError, ConflictError, ValidationError, ForbiddenError, type Result } from '../errors';
 import { generateJamCode, normalizeJamCode } from './jam-code';
 import { applyQueueMutation, insertPartyQueueItem, type QueueMutation, type QueueEntry } from './jam-queue';
-import type { JamPlaybackState } from './jam-sync';
+import { derivePositionMs, type JamPlaybackState } from './jam-sync';
+import { resolveSkip } from './jam-skip';
+import type { WaveService } from './wave';
 import type {
   IJamRepository,
   JamParticipantIdentity,
@@ -16,6 +18,7 @@ import type { ExternalTrackRef } from '../types/external';
 export const JAM_MAX_QUEUE = 200;
 export const JAM_MAX_PARTICIPANTS = 50;
 export const JAM_MAX_ADDS_PER_MIN = 10;
+export const JAM_REFILL_LIMIT = 5;
 
 const JAM_CODE_MAX_ATTEMPTS = 5;
 
@@ -71,6 +74,8 @@ export class JamService {
     private readonly broadcaster: IJamBroadcaster,
     private readonly clock: Clock,
     private readonly random: () => number,
+    /** Опциональна: без неё refillFromWave — no-op (юнит-тесты джема не тянут волну). Сужено до `next` — только это и нужно. */
+    private readonly wave: Pick<WaveService, 'next'> | null = null,
   ) {}
 
   async create(
@@ -286,6 +291,10 @@ export class JamService {
     if (!session) return err(new NotFoundError('Jam', jamId));
     if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
 
+    if (intent.kind === 'track') {
+      return ok(await this.advanceToItem(jamId, intent.itemId));
+    }
+
     const current = await this.state.getPlayback(jamId);
     const now = this.clock();
     const nextVersion = (current?.version ?? 0) + 1;
@@ -294,9 +303,6 @@ export class JamService {
     switch (intent.kind) {
       case 'play':
         next = { itemId: intent.itemId, startedAtMs: now - intent.positionMs, paused: false, pausedPositionMs: 0, version: nextVersion };
-        break;
-      case 'track':
-        next = { itemId: intent.itemId, startedAtMs: now, paused: false, pausedPositionMs: 0, version: nextVersion };
         break;
       case 'pause':
         if (!current) return err(new ConflictError('Нет активного трека'));
@@ -313,6 +319,126 @@ export class JamService {
     await this.state.setPlayback(jamId, next);
     await this.broadcaster.broadcast(jamId, { type: 'jam:playback', playback: next });
     return ok(next);
+  }
+
+  /** Единая точка перехода на позицию очереди — используется и прямым `{kind:'track'}`, и скипом по голосованию. */
+  private async advanceToItem(jamId: string, itemId: string): Promise<JamPlaybackState> {
+    const current = await this.state.getPlayback(jamId);
+    const next: JamPlaybackState = {
+      itemId, startedAtMs: this.clock(), paused: false, pausedPositionMs: 0, version: (current?.version ?? 0) + 1,
+    };
+    await this.state.setPlayback(jamId, next);
+    await this.broadcaster.broadcast(jamId, { type: 'jam:playback', playback: next });
+    return next;
+  }
+
+  /** Скип последней позиции без следующей — трек замирает на текущем месте, джем не завершается. */
+  private async pauseInPlace(jamId: string, current: JamPlaybackState): Promise<JamPlaybackState> {
+    const next: JamPlaybackState = {
+      ...current, paused: true, pausedPositionMs: derivePositionMs(current, this.clock()), version: current.version + 1,
+    };
+    await this.state.setPlayback(jamId, next);
+    await this.broadcaster.broadcast(jamId, { type: 'jam:playback', playback: next });
+    return next;
+  }
+
+  /** Голосование за пропуск текущей позиции: большинство присутствующих или хост (пропускает всегда). */
+  async voteSkip(
+    jamId: string,
+    identity: JamParticipantIdentity,
+    itemId: string,
+  ): Promise<Result<{ itemId: string; votes: number; needed: number }, ForbiddenError | NotFoundError | ConflictError | ValidationError>> {
+    const participant = await this.repo.findParticipant(jamId, identity);
+    if (!participant) return err(forbidden());
+
+    const session = await this.repo.findById(jamId);
+    if (!session) return err(new NotFoundError('Jam', jamId));
+    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
+    if (session.kind !== 'PARTY') return err(new ValidationError('Голосование за пропуск доступно только в режиме вечеринки'));
+
+    // Позиция уже сменилась (гонка с чужим переходом) — голос за неё бессмысленен, молча игнорируем.
+    const playback = await this.state.getPlayback(jamId);
+    if (!playback || playback.itemId !== itemId) {
+      return ok({ itemId, votes: 0, needed: 1 });
+    }
+
+    const votes = await this.state.addSkipVote(jamId, itemId, participant.id);
+    const presentIds = await this.state.listPresent(jamId);
+    const { skip, needed } = resolveSkip({ votes, presentCount: presentIds.length, isHost: participant.role === 'HOST' });
+
+    if (skip) {
+      await this.state.clearSkipVotes(jamId, itemId);
+      const queue = await this.repo.listQueue(jamId);
+      const currentIndex = queue.findIndex((item) => item.id === itemId);
+      const nextItem = currentIndex >= 0 ? queue[currentIndex + 1] : undefined;
+      if (nextItem) {
+        await this.advanceToItem(jamId, nextItem.id);
+      } else {
+        await this.pauseInPlace(jamId, playback);
+      }
+    }
+
+    await this.broadcaster.broadcast(jamId, { type: 'jam:skip', itemId, votes, needed });
+    return ok({ itemId, votes, needed });
+  }
+
+  /**
+   * Пустой хвост очереди — добор из волны, чтобы вечеринка не замолкала. Якорь похожести — последняя
+   * каталожная позиция (внешние источники волне ничего не говорят); вкус — залогиненный присутствующий
+   * участник, ротация по queueVersion (честное упрощение вместо агрегированного профиля).
+   */
+  async refillFromWave(
+    jamId: string,
+    identity: JamParticipantIdentity,
+    limit = JAM_REFILL_LIMIT,
+  ): Promise<Result<{ queue: JamQueueItem[]; version: number }, ForbiddenError | NotFoundError | ConflictError | ValidationError>> {
+    const participant = await this.repo.findParticipant(jamId, identity);
+    if (!participant) return err(forbidden());
+
+    const sessionState = await this.repo.getSessionState(jamId);
+    if (!sessionState) return err(new NotFoundError('Jam', jamId));
+    if (sessionState.session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
+    if (sessionState.session.kind !== 'PARTY') return err(new ValidationError('Автодобор доступен только в режиме вечеринки'));
+
+    const noop = ok({ queue: sessionState.queue, version: sessionState.session.queueVersion });
+    if (!this.wave) return noop;
+
+    const playback = await this.state.getPlayback(jamId);
+    const currentIndex = playback ? sessionState.queue.findIndex((item) => item.id === playback.itemId) : -1;
+    const tailIsEmpty = currentIndex >= 0 ? currentIndex === sessionState.queue.length - 1 : sessionState.queue.length === 0;
+    if (!tailIsEmpty) return noop;
+
+    const anchorTrackId = [...sessionState.queue].reverse().find((item) => item.source === 'VIRE')?.trackId ?? null;
+    const presentIds = await this.state.listPresent(jamId);
+    const loggedInPresent = sessionState.participants.filter((p) => p.userId && presentIds.includes(p.id));
+    const rotationUserId = loggedInPresent.length > 0
+      ? loggedInPresent[sessionState.session.queueVersion % loggedInPresent.length]!.userId
+      : null;
+
+    const waveResult = await this.wave.next({
+      sessionId: `jam:${jamId}`,
+      userId: rotationUserId,
+      mood: null,
+      genre: null,
+      currentTrackId: anchorTrackId,
+      playedIds: sessionState.queue.map((item) => item.trackId).filter((id): id is string => id !== null),
+      limit,
+    });
+    if (!waveResult.ok || waveResult.value.tracks.length === 0) return noop;
+
+    const existingWriteItems = sessionState.queue.map(toWriteItem);
+    const additions: JamQueueItemWrite[] = waveResult.value.tracks.map((track) => ({
+      source: 'VIRE', trackId: track.id, externalId: null, externalUrl: null,
+      title: null, artistName: null, coverUrl: null, durationSec: null,
+      addedByParticipantId: null, addedAt: new Date(this.clock()),
+    }));
+
+    const nextVersion = sessionState.session.queueVersion + 1;
+    await this.repo.replaceQueue(jamId, [...existingWriteItems, ...additions], nextVersion);
+
+    const queue = await this.repo.listQueue(jamId);
+    await this.broadcaster.broadcast(jamId, { type: 'jam:queue', queue, version: nextVersion });
+    return ok({ queue, version: nextVersion });
   }
 
   async setMode(
