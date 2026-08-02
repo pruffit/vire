@@ -14,6 +14,10 @@ import { usePlayerStore } from '@/store/player';
 import { useJamStore, type ActiveJam } from '@/store/jam';
 import { PARTY_PATH } from '@/lib/party';
 
+const STUCK_CHECK_MS = 5_000;
+/** Запас поверх длительности: часы и звук расходятся на буферизацию, ложный переход хуже задержки. */
+const STUCK_GRACE_MS = 10_000;
+
 type PlaybackCommand =
   | { kind: 'play'; itemId: string; positionMs: number }
   | { kind: 'pause'; positionMs: number }
@@ -146,12 +150,37 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
   const activeTrack = activeQueueIndex >= 0 ? room.queue[activeQueueIndex] : undefined;
   const activeSource = useMemo(() => resolveSource(activeTrack), [activeTrack]);
 
+  // Колонка одна — общие часы подтягиваются под её реальную позицию, иначе пульты и мини-бар
+  // показывают время, ушедшее вперёд на всю буферизацию встроенного плеера.
+  const handleActualPosition = useCallback((positionMs: number) => {
+    const playback = room.playback;
+    if (!playback || playback.paused) return;
+    postPlayback({ kind: 'play', itemId: playback.itemId, positionMs });
+  }, [room.playback, postPlayback]);
+
+  // Предохранитель: звук мог не пойти вовсе (плеер не поднялся, ролик не отдался) — событие
+  // ended тогда не придёт, и вечеринка зависнет на треке навсегда. Часы ушли за длительность —
+  // переходим дальше тем же путём, что и по нормальному окончанию.
+  const initiatesTransitions = room.mode === 'SYNCED' ? isHost : isAudioDevice;
+  useEffect(() => {
+    const durationSec = activeTrack?.durationSec;
+    if (!initiatesTransitions || !room.playback || room.playback.paused || !durationSec) return;
+
+    const check = (): void => {
+      if (!room.playback) return;
+      if (derivePositionMs(room.playback, serverNow()) > durationSec * 1000 + STUCK_GRACE_MS) handleTrackEnded();
+    };
+    const timer = setInterval(check, STUCK_CHECK_MS);
+    return () => clearInterval(timer);
+  }, [initiatesTransitions, room.playback, activeTrack?.durationSec, serverNow, handleTrackEnded]);
+
   usePlaybackSync({
     playback: room.playback,
     source: activeSource,
     serverNow,
     audioEnabled: audioEnabled && isAudioDevice && !room.ended,
     driftCorrection: room.mode === 'SYNCED' && audioDeviceCount > 1,
+    onActualPosition: handleActualPosition,
     onEnded: handleTrackEnded,
   });
 

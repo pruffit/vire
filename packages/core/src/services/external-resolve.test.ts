@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyInput, parseKnownUrl, parseOwnUrl, normalizeUrlKey, normalizeQueryKey, scoreCatalogMatch } from './external-resolve';
+import { classifyInput, parseKnownUrl, parseOwnUrl, normalizeUrlKey, normalizeQueryKey, scoreCatalogMatch, matchesExpectedTrack } from './external-resolve';
 import type { SearchTrack } from '../types/search';
 
 describe('classifyInput', () => {
@@ -198,5 +198,31 @@ describe('scoreCatalogMatch', () => {
 
   it('empty candidate list returns null, not a throw', () => {
     expect(scoreCatalogMatch({ title: 'x', artistName: 'y' }, [])).toBeNull();
+  });
+});
+
+describe('matchesExpectedTrack', () => {
+  const expected = { title: 'bad guy', artistName: 'Billie Eilish' };
+
+  it('шумный заголовок ролика — всё ещё тот же трек', () => {
+    expect(matchesExpectedTrack(expected, { title: 'Billie Eilish - bad guy (Official Music Video)', artistName: 'BillieEilishVEVO' })).toBe(true);
+  });
+
+  it('похожее название другого трека не проходит', () => {
+    expect(
+      matchesExpectedTrack({ title: 'Numbed In Moscow', artistName: 'Portishead' }, { title: 'Numb (Official Video)', artistName: 'PortisheadVEVO' }),
+    ).toBe(false);
+  });
+
+  it('ремикс не выдаётся за оригинал', () => {
+    expect(matchesExpectedTrack(expected, { title: 'Billie Eilish - bad guy (Remix)', artistName: 'BillieEilishVEVO' })).toBe(false);
+  });
+
+  it('оригинал не подставляется вместо запрошенного ремикса', () => {
+    expect(matchesExpectedTrack({ title: 'bad guy (Remix)', artistName: 'Billie Eilish' }, { title: 'bad guy', artistName: 'Billie Eilish' })).toBe(false);
+  });
+
+  it('пустое ожидание совпадением не считается', () => {
+    expect(matchesExpectedTrack({ title: '', artistName: '' }, { title: 'что угодно', artistName: 'кто угодно' })).toBe(false);
   });
 });

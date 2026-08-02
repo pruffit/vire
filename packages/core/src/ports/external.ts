@@ -7,8 +7,11 @@ export interface IMetadataIndex {
 export interface IPlayableResolver {
   /** Известный playable-URL (YouTube) — авторитетный резолв через платный API (нужен ключ). */
   resolveUrl(url: string): Promise<ExternalTrackRef | null>;
-  /** Текстовый запрос → YouTube search.list (100 юнитов), только на резолве добавления. */
-  searchOne(query: string): Promise<ExternalTrackRef | null>;
+  /**
+   * Текстовый запрос → YouTube search.list (100 юнитов), только на резолве добавления.
+   * `expect` — что именно искали: найденное сверяется с ним, иначе поиск подсунет «что-нибудь».
+   */
+  searchOne(query: string, expect?: { title: string; artistName: string }): Promise<ExternalTrackRef | null>;
 }
 
 export interface PageMeta {

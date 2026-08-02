@@ -169,6 +169,27 @@ function setsEqual(a: Set<string>, b: Set<string>): boolean {
 
 const MATCH_THRESHOLD = 0.6;
 
+/**
+ * Достаточно ли найденное на стороннем сервисе похоже на то, что просили. Поиск YouTube отдаёт
+ * что-нибудь на любой запрос: без этой проверки «Numbed In Moscow» молча превращался в «Numb».
+ * Метрика та же, что и для каталога — токены плюс обязательное совпадение слов версии.
+ */
+export function matchesExpectedTrack(
+  expected: { title: string; artistName: string },
+  candidate: { title: string; artistName: string },
+): boolean {
+  const expectedTokens = scoringTokens(expected.artistName, expected.title);
+  const candidateTokens = scoringTokens(candidate.artistName, candidate.title);
+  const expectedVersions = new Set([...expectedTokens].filter((t) => VERSION_MARKERS.has(t)));
+  const candidateVersions = new Set([...candidateTokens].filter((t) => VERSION_MARKERS.has(t)));
+  if (!setsEqual(expectedVersions, candidateVersions)) return false;
+
+  // Заголовок ролика обычно шире запроса («Артист - Трек (Official Video)») — сравниваем
+  // с покрытием ожидаемых токенов, а не с симметричным пересечением.
+  const covered = [...expectedTokens].filter((t) => candidateTokens.has(t)).length;
+  return expectedTokens.size > 0 && covered / expectedTokens.size >= MATCH_THRESHOLD;
+}
+
 /** Лучший каталожный кандидат для хинта (метаданные страницы/YouTube) или null, если ничего не проходит порог. */
 export function scoreCatalogMatch(hint: { title: string; artistName: string }, candidates: SearchTrack[]): SearchTrack | null {
   const hintTokens = scoringTokens(hint.artistName, hint.title);

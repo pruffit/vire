@@ -3,20 +3,41 @@ import { createYoutubeResolver } from './youtube';
 
 afterEach(() => vi.unstubAllGlobals());
 
-const videosResponse = (overrides?: Partial<{ embeddable: boolean; privacyStatus: string }>) =>
+interface VideoOverrides {
+  embeddable: boolean;
+  privacyStatus: string;
+  ytRating: string;
+  regionRestriction: { blocked?: string[]; allowed?: string[] };
+  id: string;
+  title: string;
+  channelTitle: string;
+}
+
+const videosResponse = (overrides?: Partial<VideoOverrides>) =>
   new Response(
     JSON.stringify({
       items: [
         {
-          id: 'dQw4w9WgXcQ',
-          snippet: { title: 'Some Song', channelTitle: 'Some Channel', thumbnails: { high: { url: 'https://img/high.jpg' } } },
+          id: overrides?.id ?? 'dQw4w9WgXcQ',
+          snippet: {
+            title: overrides?.title ?? 'Some Song',
+            channelTitle: overrides?.channelTitle ?? 'Some Channel',
+            thumbnails: { high: { url: 'https://img/high.jpg' } },
+          },
           status: { embeddable: overrides?.embeddable ?? true, privacyStatus: overrides?.privacyStatus ?? 'public' },
-          contentDetails: { duration: 'PT3M25S' },
+          contentDetails: {
+            duration: 'PT3M25S',
+            ...(overrides?.ytRating ? { contentRating: { ytRating: overrides.ytRating } } : {}),
+            ...(overrides?.regionRestriction ? { regionRestriction: overrides.regionRestriction } : {}),
+          },
         },
       ],
     }),
     { status: 200 },
   );
+
+const searchResponse = (...ids: string[]) =>
+  new Response(JSON.stringify({ items: ids.map((id) => ({ id: { videoId: id } })) }), { status: 200 });
 
 describe('createYoutubeResolver — without an API key', () => {
   it('resolveUrl returns null without ever calling fetch', async () => {
@@ -71,7 +92,7 @@ describe('createYoutubeResolver — with an API key', () => {
   it('searchOne does search.list then videos.list and returns the mapped ref', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: { videoId: 'dQw4w9WgXcQ' } }] }), { status: 200 }))
+      .mockResolvedValueOnce(searchResponse('dQw4w9WgXcQ'))
       .mockResolvedValueOnce(videosResponse());
     vi.stubGlobal('fetch', fetchMock);
     const resolver = createYoutubeResolver('KEY');
@@ -82,6 +103,66 @@ describe('createYoutubeResolver — with an API key', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toContain('/search?');
     expect(fetchMock.mock.calls[1][0]).toContain('/videos?');
+  });
+
+  it('ролик с возрастным цензом кандидатом не считается — во встроенном плеере он молчит', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(videosResponse({ ytRating: 'ytAgeRestricted' })));
+    const resolver = createYoutubeResolver('KEY');
+
+    expect(await resolver.resolveUrl('https://youtu.be/dQw4w9WgXcQ')).toBeNull();
+  });
+
+  it('ролик, закрытый для региона сервера, кандидатом не считается', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(videosResponse({ regionRestriction: { blocked: ['RU'] } })));
+    const resolver = createYoutubeResolver('KEY');
+
+    expect(await resolver.resolveUrl('https://youtu.be/dQw4w9WgXcQ')).toBeNull();
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(videosResponse({ regionRestriction: { allowed: ['US'] } })));
+    expect(await createYoutubeResolver('KEY').resolveUrl('https://youtu.be/dQw4w9WgXcQ')).toBeNull();
+  });
+
+  it('searchOne перебирает выдачу дальше, если первый ролик неиграбелен', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(searchResponse('blocked-1', 'good-2'))
+      .mockResolvedValueOnce(videosResponse({ id: 'blocked-1', ytRating: 'ytAgeRestricted' }))
+      .mockResolvedValueOnce(videosResponse({ id: 'good-2' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await createYoutubeResolver('KEY').searchOne('some song');
+
+    expect(result?.externalId).toBe('good-2');
+  });
+
+  it('searchOne с ожиданием отбрасывает похожий, но другой трек', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(searchResponse('numb-1'))
+      .mockResolvedValueOnce(videosResponse({ id: 'numb-1', title: 'Numb (Official Video)', channelTitle: 'PortisheadVEVO' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await createYoutubeResolver('KEY').searchOne('Portishead Numbed In Moscow', {
+      title: 'Numbed In Moscow',
+      artistName: 'Portishead',
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it('searchOne с ожиданием принимает тот же трек в шумном заголовке', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(searchResponse('bad-guy'))
+      .mockResolvedValueOnce(videosResponse({ id: 'bad-guy', title: 'Billie Eilish - bad guy (Official Music Video)', channelTitle: 'BillieEilishVEVO' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await createYoutubeResolver('KEY').searchOne('Billie Eilish bad guy', {
+      title: 'bad guy',
+      artistName: 'Billie Eilish',
+    });
+
+    expect(result?.externalId).toBe('bad-guy');
   });
 
   it('searchOne returns null when search.list has no results (no wasted videos.list call)', async () => {

@@ -113,7 +113,7 @@ export class ExternalResolveService {
     if (cached?.found) return { outcome: 'external', ref: cached.ref };
 
     const skipSearch = Boolean(cached && !cached.found && !this.isStale(cached.resolvedAt));
-    const ref = skipSearch ? null : await this.deps.playableResolver.searchOne(query);
+    const ref = skipSearch ? null : await this.deps.playableResolver.searchOne(query, { title: hint.title, artistName: hint.artistName });
     if (!skipSearch) await this.deps.cache.put(queryKey, ref);
     if (ref) return { outcome: 'external', ref };
 

@@ -160,38 +160,10 @@ describe('PartyRoom: комната', () => {
     expect(screen.getByText('YouTube')).toBeTruthy();
   });
 
-  it('устройство-колонка на внешней позиции получает видео-поверхность прямо в комнате', () => {
+  it('комната видео-поверхность не поднимает — она живёт в app-shell (PartyVideoDock)', () => {
     const session = baseSession({
       isAudioDevice: true,
       room: { queue: [externalTrack('e1')], playback: playback('e1') },
-    });
-    useJamSessionMock.mockReturnValue(session);
-
-    render(
-      <PartyRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={suggestions} />,
-    );
-
-    expect(setPartyVideoContainerMock).toHaveBeenCalledWith(expect.any(HTMLElement));
-  });
-
-  it('пульт (не колонка) чужой плеер не поднимает', () => {
-    const session = baseSession({
-      isAudioDevice: false,
-      room: { queue: [externalTrack('e1')], playback: playback('e1') },
-    });
-    useJamSessionMock.mockReturnValue(session);
-
-    render(
-      <PartyRoom code="A2B3C4" title={null} hostDisplayName="Danya" initialEnded={false} isLoggedIn currentUserName="Danya" suggestions={suggestions} />,
-    );
-
-    expect(setPartyVideoContainerMock).not.toHaveBeenCalled();
-  });
-
-  it('каталожная позиция видео-поверхность не поднимает', () => {
-    const session = baseSession({
-      isAudioDevice: true,
-      room: { queue: [vireTrack('a')], playback: playback('a') },
     });
     useJamSessionMock.mockReturnValue(session);
 
@@ -225,7 +197,6 @@ describe('PartyRoom: комната', () => {
 
     expect(session.actions.claimSpeaker).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.getByAltText('QR-код комнаты')).toBeTruthy());
-    expect(setPartyVideoContainerMock).toHaveBeenCalled();
   });
 
   it('кнопка добавления локального файла видна только на устройстве-колонке', () => {

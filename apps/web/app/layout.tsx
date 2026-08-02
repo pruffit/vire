@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { MotionProvider, REDUCE_MOTION_INIT_SCRIPT } from '@vire/ui/motion';
 import { JamSessionProvider } from '@/components/jam/jam-session-provider';
+import { PartyVideoDock } from '@/components/jam/party-video-dock';
 import { auth } from '@/auth';
 import { countUnseenIncomingCached, countUnreadMessagesCached } from '@/lib/listener-data';
 import { PlayerWrapper } from '@/components/player/player-wrapper';
@@ -113,6 +114,7 @@ export default async function RootLayout({
             <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-clip">
               {children}
             </div>
+            <PartyVideoDock />
             <PlayerWrapper />
           </JamSessionProvider>
           <MobileTabBar incomingCount={incomingCount} messagesUnread={messagesUnread} />

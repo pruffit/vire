@@ -15,13 +15,25 @@ export interface UsePlaybackSyncArgs {
   audioEnabled: boolean;
   /** На звуковом устройстве в режиме SPEAKER синхронизировать не с кем — периодическая коррекция дрейфа выключается. Дефолт true (SYNCED). */
   driftCorrection?: boolean;
+  /**
+   * Фактическая позиция звука в момент, когда он реально пошёл, при выключенной коррекции.
+   * Колонка одна — правду знает она, а не серверные часы: за время буферизации embed-плеера
+   * часы уходят вперёд на секунды, и подтягивать надо их, а не звук (иначе трек прыгнет).
+   */
+  onActualPosition?: (positionMs: number) => void;
   onEnded?: () => void;
 }
 
+/** Расхождение меньше этого — эхо собственной команды, а не перемотка: лишний seek только дёргает звук. */
+const SEEK_EPSILON_MS = 1_200;
+/** Ниже этого расхождение часов и звука незаметно — не гоняем лишний round-trip. */
+const CLOCK_FIX_MIN_MS = 1_000;
+
 /** Владеет `JamAudioEngine`: создаёт его при разблокировке звука, применяет решения `jam-sync` и уничтожает при размонтировании. */
-export function usePlaybackSync({ playback, source, serverNow, audioEnabled, driftCorrection = true, onEnded }: UsePlaybackSyncArgs): void {
+export function usePlaybackSync({ playback, source, serverNow, audioEnabled, driftCorrection = true, onActualPosition, onEnded }: UsePlaybackSyncArgs): void {
   const engineRef = useRef<JamAudioEngine | null>(null);
   const onEndedRef = useRef(onEnded);
+  const onActualPositionRef = useRef(onActualPosition);
   const loadedItemIdRef = useRef<string | null>(null);
   const pausedRef = useRef<boolean | null>(null);
   const lastVersionRef = useRef<number | null>(null);
@@ -30,7 +42,8 @@ export function usePlaybackSync({ playback, source, serverNow, audioEnabled, dri
 
   useEffect(() => {
     onEndedRef.current = onEnded;
-  }, [onEnded]);
+    onActualPositionRef.current = onActualPosition;
+  }, [onEnded, onActualPosition]);
 
   useEffect(() => {
     if (!audioEnabled) return;
@@ -55,17 +68,24 @@ export function usePlaybackSync({ playback, source, serverNow, audioEnabled, dri
     const engine = engineRef.current;
     if (!engine || !playback) return;
 
-    // Ресинк по первому реальному `playing`: позиция ДО этого считается до конца буферизации
-    // первого сегмента и стабильно отстаёт. Одноразово — снимает себя после первого срабатывания.
-    // Только при включённой синхронизации: одному слушателю этот прыжок съел бы начало трека.
+    // Одноразовая сверка по первому реальному `playing`: до него позиция считается всё время
+    // буферизации и часы уходят вперёд на секунды. Кого подтягивать — зависит от режима.
     function resyncOnPlaying(target: JamPlaybackState): void {
-      if (!driftCorrection) return;
       unsubscribeResyncRef.current?.();
       const unsubscribe = engine!.onPlaying(() => {
         unsubscribe();
         unsubscribeResyncRef.current = null;
         if (loadedItemIdRef.current !== target.itemId) return;
-        engine!.seek(derivePositionMs(target, serverNow()));
+
+        const expected = derivePositionMs(target, serverNow());
+        // Колонок несколько — правду задают общие часы, звук догоняет их.
+        if (driftCorrection) {
+          engine!.seek(expected);
+          return;
+        }
+        // Колонка одна: прыжок вперёд съел бы начало трека, поэтому наоборот — двигаем часы под звук.
+        const actual = engine!.currentTimeMs();
+        if (Math.abs(expected - actual) >= CLOCK_FIX_MIN_MS) onActualPositionRef.current?.(actual);
       });
       unsubscribeResyncRef.current = unsubscribe;
     }
@@ -106,8 +126,12 @@ export function usePlaybackSync({ playback, source, serverNow, audioEnabled, dri
     // в режиме «на колонке» выключена — позиция не выправлялась никогда.
     if (lastVersionRef.current !== playback.version) {
       lastVersionRef.current = playback.version;
-      engine.seek(derivePositionMs(playback, serverNow()));
-      lastHardSeekAtRef.current = Date.now();
+      const target = derivePositionMs(playback, serverNow());
+      // Порог отсекает эхо собственной команды (round-trip в сотни мс) — дёргать звук на нём нельзя.
+      if (Math.abs(target - engine.currentTimeMs()) > SEEK_EPSILON_MS) {
+        engine.seek(target);
+        lastHardSeekAtRef.current = Date.now();
+      }
     }
 
     if (pausedRef.current !== playback.paused) {

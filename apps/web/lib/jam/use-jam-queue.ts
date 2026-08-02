@@ -48,6 +48,13 @@ function localShuffle<T>(items: T[]): T[] {
   return next;
 }
 
+/** Сервер отвечает осмысленным текстом («Очередь переполнена», «Слишком много добавлений») — показываем его, а не общую заглушку. */
+async function failureMessage(res: Response, fallback: string): Promise<string> {
+  if (res.status === 429) return 'Слишком часто — подождите минуту';
+  const data = (await res.json().catch(() => null)) as { error?: unknown } | null;
+  return typeof data?.error === 'string' && data.error ? data.error : fallback;
+}
+
 async function postQueue(code: string, sessionId: string | null, intent: Record<string, unknown>): Promise<Response | null> {
   return fetch(`/api/v1/jam/${encodeURIComponent(code)}/queue`, {
     method: 'POST',
@@ -108,7 +115,7 @@ export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args)
 
     if (!res || !res.ok) {
       if (guess) setOverlay(base);
-      if (res) toast.error('Не удалось добавить трек');
+      if (res) toast.error(await failureMessage(res, 'Не удалось добавить трек'));
       return { outcome: 'error' };
     }
     if (res.status === 200) {

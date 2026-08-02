@@ -1,8 +1,6 @@
 'use client';
-import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useJamSession } from '@/components/jam/jam-session-provider';
-import { setPartyVideoContainer } from '@/lib/jam/sources/video-container';
 import { useJamStore } from '@/store/jam';
 import { Icon } from '@/components/icon';
 import { TrackTitleText } from '@/components/track-title';
@@ -17,20 +15,14 @@ interface Props {
 }
 
 /**
- * Устройство-колонка: полноэкранная витрина, не пульт. Видео-поверхность держит контейнер
- * постоянно в DOM (YouTube IFrame API привязывается к нему при первом YouTube-треке в очереди) —
- * без него источник YOUTUBE недоступен нигде (см. lib/jam/sources/youtube-source.ts).
+ * Устройство-колонка: полноэкранная витрина, не пульт. Видео встраиваемых источников рисует
+ * `PartyVideoDock` из app-shell — здесь его нет намеренно: iframe нельзя переносить по DOM,
+ * а размонтирование поверхности убивает звук.
  */
 export function PartyScreen({ code, onExit }: Props) {
   const session = useJamSession();
-  const videoRef = useRef<HTMLDivElement>(null);
   const audioEnabled = useJamStore((s) => s.audioEnabled);
   const enableAudio = useJamStore((s) => s.enableAudio);
-
-  useEffect(() => {
-    setPartyVideoContainer(videoRef.current);
-    return () => setPartyVideoContainer(null);
-  }, []);
 
   if (!session) return null;
   const { room, activeItemId, isPlaying, isHost, votedSkipItemId, actions } = session;
@@ -70,9 +62,11 @@ export function PartyScreen({ code, onExit }: Props) {
 
       <div className="mx-auto mt-6 w-full max-w-3xl flex-1 space-y-8">
         <div className="relative mx-auto aspect-square w-full max-w-md overflow-hidden rounded-2xl bg-muted">
-          <div ref={videoRef} className={isVideoActive ? 'absolute inset-0' : 'absolute inset-0 opacity-0'} />
-          {!isVideoActive && active?.coverUrl && (
-            <Image src={active.coverUrl} alt="" fill sizes="480px" className="object-cover" priority />
+          {active?.coverUrl && <Image src={active.coverUrl} alt="" fill sizes="480px" className="object-cover" priority />}
+          {isVideoActive && !active?.coverUrl && (
+            <p className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-muted-foreground">
+              Видео играет в окне плеера
+            </p>
           )}
           {needsAudioGesture && (
             <button
