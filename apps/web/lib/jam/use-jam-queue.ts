@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
-import type { JamQueueItem } from '@vire/core';
+import type { JamQueueItem, TrackCandidate } from '@vire/core';
 import { toast } from '@/lib/toast';
 
 interface Args {
@@ -12,9 +12,25 @@ interface Args {
   setDragging: (dragging: boolean) => void;
 }
 
+/** Оптимистичный превью внешней позиции, пока сервер не резолвил её (без — плейсхолдер не показывается, только запрос идёт). */
+export interface OptimisticExternalGuess {
+  title: string;
+  artistName: string;
+  coverUrl: string | null;
+  durationSec: number | null;
+}
+
+export type ExternalAddOutcome =
+  | { outcome: 'added' }
+  | { outcome: 'candidates'; candidates: TrackCandidate[] }
+  | { outcome: 'error' };
+
 export interface UseJamQueueResult {
   queue: JamQueueItem[];
   addTrack: (item: JamQueueItem) => Promise<void>;
+  addExternal: (input: string, guess: OptimisticExternalGuess | null) => Promise<ExternalAddOutcome>;
+  /** Локальный файл устройства-колонки — не идёт через резолв-каскад, метаданные уже известны клиенту. */
+  addLocal: (file: { id: string; title: string; durationSec: number | null }) => Promise<boolean>;
   removeTrack: (itemId: string) => Promise<void>;
   startDrag: () => void;
   moveTrack: (activeId: string, overId: string) => Promise<void>;
@@ -69,6 +85,66 @@ export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args)
     }
   }, [overlay, serverQueue, code, sessionId]);
 
+  // Внешний/локальный ввод — полный каскад резолва на сервере (срез B): ссылка/текст → играбельная
+  // позиция либо кандидаты на выбор. Плейсхолдер снимается сервером и подтверждением через SSE.
+  const addExternal = useCallback(async (input: string, guess: OptimisticExternalGuess | null): Promise<ExternalAddOutcome> => {
+    const base = overlay ?? serverQueue;
+    const pendingId = `pending-ext-${Date.now()}`;
+    if (guess) {
+      setOverlay([...base, {
+        id: pendingId, source: 'YOUTUBE', trackId: null, externalId: null, externalUrl: null,
+        position: base.length, addedByParticipantId: null, addedAt: new Date(),
+        title: guess.title, durationSec: guess.durationSec, artistName: guess.artistName,
+        artistSlug: null, releaseId: null, coverUrl: guess.coverUrl, accentColor: null,
+        isExplicit: false, version: null, feat: null,
+      }]);
+    }
+
+    const res = await fetch(`/api/v1/jam/${encodeURIComponent(code)}/queue/external`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sessionId ? { input, sessionId } : { input }),
+    }).catch(() => null);
+
+    if (!res || !res.ok) {
+      if (guess) setOverlay(base);
+      if (res) toast.error('Не удалось добавить трек');
+      return { outcome: 'error' };
+    }
+    if (res.status === 200) {
+      if (guess) setOverlay(base);
+      const data = (await res.json().catch(() => null)) as { candidates?: TrackCandidate[] } | null;
+      return { outcome: 'candidates', candidates: data?.candidates ?? [] };
+    }
+    return { outcome: 'added' };
+  }, [overlay, serverQueue, code, sessionId]);
+
+  const addLocal = useCallback(async (file: { id: string; title: string; durationSec: number | null }): Promise<boolean> => {
+    const base = overlay ?? serverQueue;
+    setOverlay([...base, {
+      id: `pending-local-${Date.now()}`, source: 'LOCAL', trackId: null, externalId: file.id, externalUrl: null,
+      position: base.length, addedByParticipantId: null, addedAt: new Date(),
+      title: file.title, durationSec: file.durationSec, artistName: '',
+      artistSlug: null, releaseId: null, coverUrl: null, accentColor: null,
+      isExplicit: false, version: null, feat: null,
+    }]);
+
+    const res = await fetch(`/api/v1/jam/${encodeURIComponent(code)}/queue/local`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sessionId
+        ? { fileId: file.id, title: file.title, durationSec: file.durationSec, sessionId }
+        : { fileId: file.id, title: file.title, durationSec: file.durationSec }),
+    }).catch(() => null);
+
+    if (!res?.ok) {
+      setOverlay(base);
+      toast.error('Не удалось добавить файл');
+      return false;
+    }
+    return true;
+  }, [overlay, serverQueue, code, sessionId]);
+
   const removeTrack = useCallback(async (itemId: string) => {
     const base = overlay ?? serverQueue;
     setOverlay(base.filter((i) => i.id !== itemId));
@@ -112,5 +188,5 @@ export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args)
     }
   }, [overlay, serverQueue, code, sessionId]);
 
-  return { queue, addTrack, removeTrack, startDrag, moveTrack, cancelDrag, shuffleQueue };
+  return { queue, addTrack, addExternal, addLocal, removeTrack, startDrag, moveTrack, cancelDrag, shuffleQueue };
 }

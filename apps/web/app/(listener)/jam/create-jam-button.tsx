@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { JamMode } from '@vire/core';
+import type { JamMode, JamSessionKind } from '@vire/core';
 import { Button } from '@vire/ui';
 import { Icon } from '@/components/icon';
 import { toast } from '@/lib/toast';
@@ -10,7 +10,13 @@ import { touchPill } from '@/components/popover';
 import { cn } from '@/lib/utils';
 import { JAM_MODE_OPTIONS } from '@/lib/jam/jam-mode-labels';
 
-export function CreateJamButton() {
+interface Props {
+  /** Вечеринка — отдельный вход/комната (`PARTY_PATH`), обычный джем — `/jam`. */
+  kind?: JamSessionKind;
+  basePath?: string;
+}
+
+export function CreateJamButton({ kind = 'JAM', basePath = '/jam' }: Props) {
   const [pending, setPending] = useState(false);
   const [mode, setMode] = useState<JamMode>('SYNCED');
   const router = useRouter();
@@ -21,11 +27,11 @@ export function CreateJamButton() {
       const res = await fetch('/api/v1/jam', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode }),
+        body: JSON.stringify(kind === 'PARTY' ? { mode, kind } : { mode }),
       });
       if (!res.ok) throw new Error();
       const data = (await res.json()) as { code: string };
-      router.push(`/jam/${data.code}`);
+      router.push(`${basePath}/${data.code}`);
     } catch {
       toast.error('Не удалось создать джем');
       setPending(false);

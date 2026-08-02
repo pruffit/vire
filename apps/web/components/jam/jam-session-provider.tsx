@@ -6,11 +6,13 @@ import { derivePositionMs, isAudioDevice as resolveIsAudioDevice, resolveSpeaker
 import { useJamRoom, type UseJamRoomResult } from '@/lib/jam/use-jam-room';
 import { useServerClock } from '@/lib/jam/server-clock';
 import { usePlaybackSync } from '@/lib/jam/use-playback-sync';
+import type { PlayableSource } from '@/lib/jam/jam-audio';
 import { setJamTransport, type JamTransport } from '@/lib/jam/jam-controls';
 import { effectivePaused, resolvePending, nextPendingVersion, PENDING_TTL_MS, type PendingToggle } from '@/lib/jam/optimistic-playback';
 import { toast } from '@/lib/toast';
 import { usePlayerStore } from '@/store/player';
 import { useJamStore, type ActiveJam } from '@/store/jam';
+import { PARTY_PATH } from '@/lib/party';
 
 type PlaybackCommand =
   | { kind: 'play'; itemId: string; positionMs: number }
@@ -41,6 +43,19 @@ export interface JamSessionValue {
   };
 }
 
+function resolveSource(item: JamQueueItem | undefined): PlayableSource | null {
+  if (!item) return null;
+  switch (item.source) {
+    case 'VIRE': return item.trackId ? { kind: 'VIRE', trackId: item.trackId } : null;
+    case 'YOUTUBE': return item.externalId ? { kind: 'YOUTUBE', videoId: item.externalId } : null;
+    case 'LOCAL': return item.externalId ? { kind: 'LOCAL', fileId: item.externalId } : null;
+    case 'SOUNDCLOUD': {
+      const url = item.externalUrl ?? (item.externalId ? `https://soundcloud.com/${item.externalId}` : null);
+      return url ? { kind: 'SOUNDCLOUD', url } : null;
+    }
+  }
+}
+
 const JamSessionContext = createContext<JamSessionValue | null>(null);
 
 export function useJamSession(): JamSessionValue | null {
@@ -55,7 +70,7 @@ export function JamSessionProvider({ children }: { children: ReactNode }) {
 }
 
 function ActiveJamSession({ active, children }: { active: ActiveJam; children: ReactNode }) {
-  const { code, participantId, role, sessionId } = active;
+  const { code, participantId, role, sessionId, basePath = '/jam' } = active;
   const audioEnabled = useJamStore((s) => s.audioEnabled);
   const leaveStore = useJamStore((s) => s.leave);
   const [playbackPending, setPlaybackPending] = useState<PendingToggle | null>(null);
@@ -109,10 +124,11 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     [room.playback, room.queue],
   );
   const activeTrack = activeQueueIndex >= 0 ? room.queue[activeQueueIndex] : undefined;
+  const activeSource = useMemo(() => resolveSource(activeTrack), [activeTrack]);
 
   usePlaybackSync({
     playback: room.playback,
-    trackId: activeTrack?.trackId ?? null,
+    source: activeSource,
     serverNow,
     audioEnabled: audioEnabled && isAudioDevice && !room.ended,
     driftCorrection: room.mode === 'SYNCED' && audioDeviceCount > 1,
@@ -207,6 +223,7 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     if (!activeTrack) return;
     setPlayerJamOverride({
       code,
+      basePath,
       track: { title: activeTrack.title, artistName: activeTrack.artistName, coverUrl: activeTrack.coverUrl },
       isPlaying,
       durationSec: activeTrack.durationSec,
@@ -215,7 +232,7 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
       isRemote: !isAudioDevice,
       needsAudioGesture: !audioEnabled,
     });
-  }, [room.ended, activeTrack, isPlaying, canPrev, canNext, code, isAudioDevice, audioEnabled, setPlayerJamOverride]);
+  }, [room.ended, activeTrack, isPlaying, canPrev, canNext, code, basePath, isAudioDevice, audioEnabled, setPlayerJamOverride]);
 
   // Отдельно от основного эффекта — гарантирует чистку при размонтировании независимо от того,
   // какая ветка выше сработала последней.
@@ -270,8 +287,8 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
   useEffect(() => {
     if (!room.ended) return;
     leaveStore();
-    toast('Джем завершён');
-  }, [room.ended, leaveStore]);
+    toast(basePath === PARTY_PATH ? 'Вечеринка завершена' : 'Джем завершён');
+  }, [room.ended, basePath, leaveStore]);
 
   // Протухшая запись в localStorage (кик, удалённый джем, чужой sessionId) иначе даёт вечный
   // реконнект SSE без следа в UI: EventSource молча ретраит любую 4xx. Сетевую ошибку не считаем

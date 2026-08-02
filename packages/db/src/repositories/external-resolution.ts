@@ -22,7 +22,7 @@ export class DrizzleResolutionCache implements IResolutionCache {
       ref: {
         source: row.source as PlayableExternalSource,
         externalId: row.externalId!,
-        externalUrl: row.externalUrl!,
+        externalUrl: row.externalUrl,
         title: row.title!,
         artistName: row.artistName ?? '',
         coverUrl: row.coverUrl,

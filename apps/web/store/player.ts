@@ -26,6 +26,8 @@ export interface PlayContext {
 /** Джем-takeover глобального плеера: пока активен, движок audio-engine молчит — играет jam-audio на странице джема. */
 export interface JamOverride {
   code: string;
+  /** База ссылки назад в комнату: `/jam` либо секретный путь вечеринки. */
+  basePath: string;
   track: { title: string; artistName: string; coverUrl: string | null };
   isPlaying: boolean;
   durationSec: number | null;

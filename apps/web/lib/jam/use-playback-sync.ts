@@ -2,14 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import { decideDriftCorrection, derivePositionMs, type JamPlaybackState } from '@vire/core';
-import { createJamAudio, type JamAudioEngine } from './jam-audio';
+import { createJamAudio, type JamAudioEngine, type PlayableSource } from './jam-audio';
 
 const SYNC_INTERVAL_MS = 10_000;
 
 export interface UsePlaybackSyncArgs {
   playback: JamPlaybackState | null;
-  /** Трек резолвится из очереди по playback.itemId; null — внешний источник (звук появится в срезе C), движок не грузит. */
-  trackId: string | null;
+  /** Резолвится из позиции очереди по playback.itemId (провайдером); null — источник недоступен на этом устройстве (нет контейнера/файла) или снапшот ещё не долетел, движок простаивает. */
+  source: PlayableSource | null;
   serverNow: () => number;
   /** Звук разблокирован жестом пользователя — до этого движок не создаём (автоплей заблокирован браузером). */
   audioEnabled: boolean;
@@ -19,7 +19,7 @@ export interface UsePlaybackSyncArgs {
 }
 
 /** Владеет `JamAudioEngine`: создаёт его при разблокировке звука, применяет решения `jam-sync` и уничтожает при размонтировании. */
-export function usePlaybackSync({ playback, trackId, serverNow, audioEnabled, driftCorrection = true, onEnded }: UsePlaybackSyncArgs): void {
+export function usePlaybackSync({ playback, source, serverNow, audioEnabled, driftCorrection = true, onEnded }: UsePlaybackSyncArgs): void {
   const engineRef = useRef<JamAudioEngine | null>(null);
   const onEndedRef = useRef(onEnded);
   const loadedItemIdRef = useRef<string | null>(null);
@@ -74,16 +74,16 @@ export function usePlaybackSync({ playback, trackId, serverNow, audioEnabled, dr
       unsubscribeResyncRef.current?.();
       unsubscribeResyncRef.current = null;
 
-      // Трека нет: либо внешний источник (звук — срез C), либо снапшот очереди ещё не долетел.
+      // Источник недоступен на этом устройстве (нет контейнера/файла) либо снапшот очереди ещё не долетел.
       // Позицию НЕ помечаем загруженной — иначе пришедшая следом очередь уже не запустит трек.
-      if (trackId === null) {
+      if (source === null) {
         loadedItemIdRef.current = null;
         engine.pause();
         return;
       }
 
       loadedItemIdRef.current = playback.itemId;
-      void engine.load(trackId).then(() => {
+      void engine.load(source).then(() => {
         // load предыдущей позиции резолвится досрочно при смене — не позиционируем по устаревшему состоянию
         if (loadedItemIdRef.current !== playback.itemId) return;
         // Грубая наводка сразу (не грузить трек с нуля), точная позиция — по ресинку ниже.
@@ -96,7 +96,7 @@ export function usePlaybackSync({ playback, trackId, serverNow, audioEnabled, dr
       return;
     }
 
-    if (trackId === null) return;
+    if (source === null) return;
 
     if (pausedRef.current !== playback.paused) {
       pausedRef.current = playback.paused;
@@ -110,10 +110,10 @@ export function usePlaybackSync({ playback, trackId, serverNow, audioEnabled, dr
         engine.play();
       }
     }
-  }, [playback, trackId, serverNow, driftCorrection]);
+  }, [playback, source, serverNow, driftCorrection]);
 
   useEffect(() => {
-    if (!playback || playback.paused || trackId === null) return;
+    if (!playback || playback.paused || source === null) return;
     if (!driftCorrection) return;
 
     function runCorrection(): void {
@@ -143,5 +143,5 @@ export function usePlaybackSync({ playback, trackId, serverNow, audioEnabled, dr
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [playback, trackId, serverNow, driftCorrection]);
+  }, [playback, source, serverNow, driftCorrection]);
 }

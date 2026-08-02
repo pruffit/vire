@@ -1,15 +1,16 @@
-import type HlsType from 'hls.js';
-import { fetchManifest } from '@/lib/player/manifest-cache';
-import { HLS_TUNING, attachStallRecovery } from '@/lib/player/hls-runtime';
-import { usePlayerStore } from '@/store/player';
+import { createVireSource } from './sources/vire-source';
+import { createYoutubeSource } from './sources/youtube-source';
+import { createSoundcloudSource } from './sources/soundcloud-source';
+import { createLocalSource } from './sources/local-source';
 
-interface VendorPitchAudioElement extends HTMLAudioElement {
-  mozPreservesPitch?: boolean;
-  webkitPreservesPitch?: boolean;
-}
+export type PlayableSource =
+  | { kind: 'VIRE'; trackId: string }
+  | { kind: 'YOUTUBE'; videoId: string }
+  | { kind: 'SOUNDCLOUD'; url: string }
+  | { kind: 'LOCAL'; fileId: string };
 
 export interface JamAudioEngine {
-  load(trackId: string): Promise<void>;
+  load(source: PlayableSource): Promise<void>;
   play(): void;
   pause(): void;
   seek(ms: number): void;
@@ -22,106 +23,85 @@ export interface JamAudioEngine {
   destroy(): void;
 }
 
-async function loadHlsClass(): Promise<typeof HlsType> {
-  return (await import('hls.js')).default;
+/** Контракт одного источника звука — тот же набор методов, что `JamAudioEngine`, но `load` берёт id своего типа (trackId/videoId/fileId). */
+export interface JamSourceEngine {
+  load(id: string): Promise<void>;
+  play(): void;
+  pause(): void;
+  seek(ms: number): void;
+  currentTimeMs(): number;
+  isBuffering(): boolean;
+  onEnded(listener: () => void): () => void;
+  onPlaying(listener: () => void): () => void;
+  destroy(): void;
 }
 
-export function createJamAudio(): JamAudioEngine {
-  const audio = new Audio() as VendorPitchAudioElement;
-  audio.preservesPitch = true;
-  audio.mozPreservesPitch = true;
-  audio.webkitPreservesPitch = true;
-  audio.volume = usePlayerStore.getState().volume;
-  // Ползунок громкости в мини-баре пишет в стор, а не в этот <audio> напрямую — движок должен сам подхватывать.
-  const unsubscribeVolume = usePlayerStore.subscribe((state, prevState) => {
-    if (state.volume !== prevState.volume) audio.volume = state.volume;
-  });
+const FACTORIES: Record<PlayableSource['kind'], () => JamSourceEngine> = {
+  VIRE: createVireSource,
+  YOUTUBE: createYoutubeSource,
+  SOUNDCLOUD: createSoundcloudSource,
+  LOCAL: createLocalSource,
+};
 
-  let hls: HlsType | null = null;
-  let loadedTrackId: string | null = null;
-  let pendingLoadResolve: (() => void) | null = null;
-  let buffering = false;
+function idOf(source: PlayableSource): string {
+  switch (source.kind) {
+    case 'VIRE': return source.trackId;
+    case 'YOUTUBE': return source.videoId;
+    case 'SOUNDCLOUD': return source.url;
+    case 'LOCAL': return source.fileId;
+  }
+}
+
+/**
+ * Диспетчер источников звука: один и тот же `JamAudioEngine` наружу, внутри — переключение
+ * между VIRE (HLS)/YOUTUBE (IFrame API)/LOCAL (`<audio>` над файлом) по `kind` позиции очереди.
+ * Смена `kind` уничтожает предыдущий под-движок и создаёт новый; смена id в рамках того же
+ * kind (VIRE→VIRE на другой трек) переиспользует его.
+ */
+export function createJamAudio(): JamAudioEngine {
+  let active: JamSourceEngine | null = null;
+  let activeKind: PlayableSource['kind'] | null = null;
   const endedListeners = new Set<() => void>();
   const playingListeners = new Set<() => void>();
+  let unsubEnded: (() => void) | null = null;
+  let unsubPlaying: (() => void) | null = null;
 
-  const handleEnded = (): void => endedListeners.forEach((listener) => listener());
-  const handleWaiting = (): void => { buffering = true; };
-  const handlePlaying = (): void => {
-    buffering = false;
-    playingListeners.forEach((listener) => listener());
-  };
-  audio.addEventListener('ended', handleEnded);
-  audio.addEventListener('waiting', handleWaiting);
-  audio.addEventListener('playing', handlePlaying);
-
-  function destroyHls(): void {
-    if (!hls) return;
-    hls.destroy();
-    hls = null;
-  }
-
-  function resolvePendingLoad(): void {
-    const resolve = pendingLoadResolve;
-    pendingLoadResolve = null;
-    resolve?.();
+  function attach(engine: JamSourceEngine): void {
+    unsubEnded?.();
+    unsubPlaying?.();
+    unsubEnded = engine.onEnded(() => endedListeners.forEach((l) => l()));
+    unsubPlaying = engine.onPlaying(() => playingListeners.forEach((l) => l()));
   }
 
   return {
-    async load(trackId) {
-      loadedTrackId = trackId;
-      resolvePendingLoad();
-      destroyHls();
-
-      const manifest = await fetchManifest(trackId).catch(() => null);
-      // Staleness guard: пока ждали сеть, load() мог быть вызван для другого трека.
-      if (loadedTrackId !== trackId) return;
-      if (!manifest) return;
-
-      const Hls = await loadHlsClass();
-      if (loadedTrackId !== trackId) return;
-
-      if (Hls.isSupported()) {
-        const instance = new Hls(HLS_TUNING);
-        hls = instance;
-        instance.on(Hls.Events.MANIFEST_PARSED, resolvePendingLoad);
-        instance.on(Hls.Events.ERROR, (_evt, data) => {
-          if (!data.fatal) {
-            const benign = data.details === 'bufferSeekOverHole' || data.details === 'bufferNudgeOnStall';
-            if (!benign) console.warn('[jam] HLS error', data.type, data.details);
-            return;
-          }
-          destroyHls();
-          resolvePendingLoad();
-        });
-        attachStallRecovery(instance, audio, Hls);
-        await new Promise<void>((resolve) => {
-          pendingLoadResolve = resolve;
-          instance.loadSource(manifest.hlsUrl);
-          instance.attachMedia(audio);
-        });
-      } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
-        audio.src = manifest.hlsUrl;
+    async load(source) {
+      if (activeKind !== source.kind) {
+        active?.destroy();
+        active = FACTORIES[source.kind]();
+        activeKind = source.kind;
+        attach(active);
       }
+      await active!.load(idOf(source));
     },
 
     play(): void {
-      audio.play().catch(() => {});
+      active?.play();
     },
 
     pause(): void {
-      audio.pause();
+      active?.pause();
     },
 
     seek(ms: number): void {
-      audio.currentTime = ms / 1000;
+      active?.seek(ms);
     },
 
     currentTimeMs(): number {
-      return audio.currentTime * 1000;
+      return active?.currentTimeMs() ?? 0;
     },
 
     isBuffering(): boolean {
-      return buffering;
+      return active?.isBuffering() ?? false;
     },
 
     onEnded(listener: () => void): () => void {
@@ -135,19 +115,13 @@ export function createJamAudio(): JamAudioEngine {
     },
 
     destroy(): void {
-      resolvePendingLoad();
-      destroyHls();
-      unsubscribeVolume();
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('waiting', handleWaiting);
-      audio.removeEventListener('playing', handlePlaying);
-      audio.pause();
-      audio.removeAttribute('src');
-      audio.src = '';
-      audio.load();
+      unsubEnded?.();
+      unsubPlaying?.();
+      active?.destroy();
+      active = null;
+      activeKind = null;
       endedListeners.clear();
       playingListeners.clear();
-      loadedTrackId = null;
     },
   };
 }

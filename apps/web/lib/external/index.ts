@@ -5,6 +5,7 @@ import { fetchPageMeta } from './page-meta';
 import { createYoutubeResolver } from './youtube';
 import { createItunesMetadataIndex } from './itunes';
 import { createDeezerMetadataIndex } from './deezer';
+import { sanitizeCoverUrl } from './cover-hosts';
 import { SITE_URL } from '@/lib/site';
 
 const OEMBED_HOSTS = /(^|\.)(youtube\.com|youtu\.be|soundcloud\.com)$/i;
@@ -19,8 +20,8 @@ const pageMetaFetcher: IPageMetaFetcher = {
     } catch {
       return null;
     }
-    if (OEMBED_HOSTS.test(host)) return fetchOembed(url);
-    return fetchPageMeta(url);
+    const meta = OEMBED_HOSTS.test(host) ? await fetchOembed(url) : await fetchPageMeta(url);
+    return meta && { ...meta, coverUrl: sanitizeCoverUrl(meta.coverUrl) };
   },
 };
 
@@ -30,7 +31,9 @@ function createMetadataIndex(): IMetadataIndex {
   return {
     async suggest(query, limit) {
       const [a, b] = await Promise.all([itunes.suggest(query, limit), deezer.suggest(query, limit)]);
-      return dedupeHints([...a, ...b]).slice(0, limit);
+      return dedupeHints([...a, ...b])
+        .slice(0, limit)
+        .map((h) => ({ ...h, coverUrl: sanitizeCoverUrl(h.coverUrl) }));
     },
   };
 }

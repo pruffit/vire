@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { jamService } from '@/lib/jam';
+import { PARTY_PATH } from '@/lib/party';
 
 type Props = { params: Promise<{ jamId: string }> };
 
@@ -9,5 +10,6 @@ export default async function JamByIdPage({ params }: Props) {
   if (!result.ok) notFound();
   if (result.value.status === 'ENDED') redirect('/');
 
-  redirect(`/jam/${result.value.code}`);
+  const base = result.value.kind === 'PARTY' ? PARTY_PATH : '/jam';
+  redirect(`${base}/${result.value.code}`);
 }

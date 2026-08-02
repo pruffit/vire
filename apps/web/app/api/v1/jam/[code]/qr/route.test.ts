@@ -46,6 +46,15 @@ describe('GET /api/v1/jam/[code]/qr', () => {
     expect(toString).toHaveBeenCalledWith('http://localhost:3000/jam/A2B3C4', { type: 'svg' });
   });
 
+  it('renders a party-room URL for a PARTY-kind session', async () => {
+    resolveCode.mockResolvedValue({ ok: true, value: { id: 'jam-1', code: 'A2B3C4', kind: 'PARTY' } });
+    toString.mockResolvedValue('<svg>qr</svg>');
+
+    await GET(req(), ctx('A2B3C4'));
+
+    expect(toString).toHaveBeenCalledWith('http://localhost:3000/nrvz914/A2B3C4', { type: 'svg' });
+  });
+
   it('sets a long-lived cache header — the code-to-URL mapping never changes', async () => {
     resolveCode.mockResolvedValue({ ok: true, value: { id: 'jam-1', code: 'A2B3C4' } });
     toString.mockResolvedValue('<svg>qr</svg>');

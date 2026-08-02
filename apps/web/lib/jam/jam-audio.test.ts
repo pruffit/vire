@@ -1,305 +1,155 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { ManifestData } from '@/lib/player/manifest-cache';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { fetchManifestMock } = vi.hoisted(() => ({ fetchManifestMock: vi.fn() }));
-vi.mock('@/lib/player/manifest-cache', () => ({ fetchManifest: fetchManifestMock }));
+const { createVireSourceMock, createYoutubeSourceMock, createLocalSourceMock } = vi.hoisted(() => ({
+  createVireSourceMock: vi.fn(),
+  createYoutubeSourceMock: vi.fn(),
+  createLocalSourceMock: vi.fn(),
+}));
+vi.mock('./sources/vire-source', () => ({ createVireSource: createVireSourceMock }));
+vi.mock('./sources/youtube-source', () => ({ createYoutubeSource: createYoutubeSourceMock }));
+vi.mock('./sources/local-source', () => ({ createLocalSource: createLocalSourceMock }));
 
-type Handler = (...args: unknown[]) => void;
+import { createJamAudio } from './jam-audio';
 
-class FakeHls {
-  static isSupported = vi.fn(() => true);
-  static Events = { MANIFEST_PARSED: 'hlsManifestParsed', ERROR: 'hlsError' } as const;
-
-  listeners = new Map<string, Set<Handler>>();
-  loadSource = vi.fn();
-  attachMedia = vi.fn();
-  destroy = vi.fn();
-
-  on(event: string, handler: Handler): void {
-    if (!this.listeners.has(event)) this.listeners.set(event, new Set());
-    this.listeners.get(event)!.add(handler);
-  }
-
-  off(event: string, handler: Handler): void {
-    this.listeners.get(event)?.delete(handler);
-  }
-
-  emit(event: string, ...args: unknown[]): void {
-    this.listeners.get(event)?.forEach((handler) => handler(...args));
-  }
+interface FakeSourceEngine {
+  load: ReturnType<typeof vi.fn>;
+  play: ReturnType<typeof vi.fn>;
+  pause: ReturnType<typeof vi.fn>;
+  seek: ReturnType<typeof vi.fn>;
+  currentTimeMs: ReturnType<typeof vi.fn>;
+  isBuffering: ReturnType<typeof vi.fn>;
+  onEnded: ReturnType<typeof vi.fn>;
+  onPlaying: ReturnType<typeof vi.fn>;
+  destroy: ReturnType<typeof vi.fn>;
 }
 
-let lastHlsInstance: FakeHls | null = null;
-const HlsCtor = vi.fn(function () {
-  lastHlsInstance = new FakeHls();
-  return lastHlsInstance;
-});
-Object.assign(HlsCtor, { isSupported: FakeHls.isSupported, Events: FakeHls.Events });
-
-vi.mock('hls.js', () => ({ default: HlsCtor }));
-
-class FakeAudioElement {
-  currentTime = 0;
-  playbackRate = 1;
-  src = '';
-  paused = true;
-  preservesPitch?: boolean;
-  mozPreservesPitch?: boolean;
-  webkitPreservesPitch?: boolean;
-  buffered: { length: number; start: (index: number) => number } = { length: 0, start: () => 0 };
-  listeners = new Map<string, Set<Handler>>();
-
-  play = vi.fn(async () => {
-    this.paused = false;
-  });
-  pause = vi.fn(() => {
-    this.paused = true;
-  });
-  load = vi.fn();
-  removeAttribute = vi.fn();
-  canPlayType = vi.fn(() => '');
-
-  addEventListener(event: string, handler: Handler): void {
-    if (!this.listeners.has(event)) this.listeners.set(event, new Set());
-    this.listeners.get(event)!.add(handler);
-  }
-
-  removeEventListener(event: string, handler: Handler): void {
-    this.listeners.get(event)?.delete(handler);
-  }
-
-  emit(event: string): void {
-    this.listeners.get(event)?.forEach((handler) => handler());
-  }
-}
-
-let lastAudioInstance: FakeAudioElement | null = null;
-
-async function waitForNewHls(prev: FakeHls | null): Promise<FakeHls> {
-  await vi.waitFor(() => {
-    if (lastHlsInstance === prev) throw new Error('hls-инстанс ещё не создан');
-  });
-  return lastHlsInstance!;
-}
-
-function manifest(url: string): ManifestData {
-  return { hlsUrl: url, waveformPeaks: null };
+function makeFakeSource(): FakeSourceEngine {
+  return {
+    load: vi.fn(async () => {}),
+    play: vi.fn(),
+    pause: vi.fn(),
+    seek: vi.fn(),
+    currentTimeMs: vi.fn(() => 0),
+    isBuffering: vi.fn(() => false),
+    onEnded: vi.fn(() => vi.fn()),
+    onPlaying: vi.fn(() => vi.fn()),
+    destroy: vi.fn(),
+  };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  lastHlsInstance = null;
-  lastAudioInstance = null;
-  vi.stubGlobal(
-    'Audio',
-    vi.fn(function () {
-      lastAudioInstance = new FakeAudioElement();
-      return lastAudioInstance;
-    }),
-  );
+  createVireSourceMock.mockImplementation(makeFakeSource);
+  createYoutubeSourceMock.mockImplementation(makeFakeSource);
+  createLocalSourceMock.mockImplementation(makeFakeSource);
 });
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
+describe('createJamAudio (dispatcher)', () => {
+  it('VIRE-источник создаёт vire-source и грузит trackId', async () => {
+    const engine = createJamAudio();
+    await engine.load({ kind: 'VIRE', trackId: 'track-1' });
 
-describe('createJamAudio', () => {
-  it('выставляет preservesPitch и вендорные варианты при создании', async () => {
-    const { createJamAudio } = await import('./jam-audio');
-    createJamAudio();
-
-    expect(lastAudioInstance!.preservesPitch).toBe(true);
-    expect(lastAudioInstance!.mozPreservesPitch).toBe(true);
-    expect(lastAudioInstance!.webkitPreservesPitch).toBe(true);
+    expect(createVireSourceMock).toHaveBeenCalledTimes(1);
+    const source = createVireSourceMock.mock.results[0]!.value as FakeSourceEngine;
+    expect(source.load).toHaveBeenCalledWith('track-1');
+    expect(createYoutubeSourceMock).not.toHaveBeenCalled();
+    expect(createLocalSourceMock).not.toHaveBeenCalled();
   });
 
-  it('load: грузит манифест, гонит через hls.js и резолвится на MANIFEST_PARSED', async () => {
-    fetchManifestMock.mockResolvedValue(manifest('https://cdn.example/a.m3u8'));
-    const { createJamAudio } = await import('./jam-audio');
+  it('YOUTUBE-источник создаёт youtube-source и грузит videoId', async () => {
     const engine = createJamAudio();
+    await engine.load({ kind: 'YOUTUBE', videoId: 'yt-1' });
 
-    const loadPromise = engine.load('track-a');
-    const hls = await waitForNewHls(null);
-    expect(hls.loadSource).toHaveBeenCalledWith('https://cdn.example/a.m3u8');
-    expect(hls.attachMedia).toHaveBeenCalledWith(lastAudioInstance);
-
-    hls.emit(FakeHls.Events.MANIFEST_PARSED);
-    await expect(loadPromise).resolves.toBeUndefined();
+    expect(createYoutubeSourceMock).toHaveBeenCalledTimes(1);
+    const source = createYoutubeSourceMock.mock.results[0]!.value as FakeSourceEngine;
+    expect(source.load).toHaveBeenCalledWith('yt-1');
   });
 
-  it('load: манифест не найден — молчаливая деградация, без throw', async () => {
-    fetchManifestMock.mockResolvedValue(null);
-    const { createJamAudio } = await import('./jam-audio');
+  it('LOCAL-источник создаёт local-source и грузит fileId', async () => {
     const engine = createJamAudio();
+    await engine.load({ kind: 'LOCAL', fileId: 'file-1' });
 
-    await expect(engine.load('missing-track')).resolves.toBeUndefined();
-    expect(HlsCtor).not.toHaveBeenCalled();
+    expect(createLocalSourceMock).toHaveBeenCalledTimes(1);
+    const source = createLocalSourceMock.mock.results[0]!.value as FakeSourceEngine;
+    expect(source.load).toHaveBeenCalledWith('file-1');
   });
 
-  it('load: fetchManifest отклоняется — молчаливая деградация', async () => {
-    fetchManifestMock.mockRejectedValue(new Error('network down'));
-    const { createJamAudio } = await import('./jam-audio');
+  it('смена kind уничтожает предыдущий под-движок и создаёт новый', async () => {
     const engine = createJamAudio();
+    await engine.load({ kind: 'VIRE', trackId: 'track-1' });
+    const vireSource = createVireSourceMock.mock.results[0]!.value as FakeSourceEngine;
 
-    await expect(engine.load('broken-track')).resolves.toBeUndefined();
+    await engine.load({ kind: 'YOUTUBE', videoId: 'yt-1' });
+
+    expect(vireSource.destroy).toHaveBeenCalledTimes(1);
+    expect(createYoutubeSourceMock).toHaveBeenCalledTimes(1);
   });
 
-  it('load: фатальная ошибка hls.js резолвит загрузку и уничтожает инстанс', async () => {
-    fetchManifestMock.mockResolvedValue(manifest('https://cdn.example/b.m3u8'));
-    const { createJamAudio } = await import('./jam-audio');
+  it('тот же kind на другой id переиспользует под-движок, не пересоздаёт', async () => {
     const engine = createJamAudio();
+    await engine.load({ kind: 'VIRE', trackId: 'track-1' });
+    await engine.load({ kind: 'VIRE', trackId: 'track-2' });
 
-    const loadPromise = engine.load('track-b');
-    const hls = await waitForNewHls(null);
-
-    hls.emit(FakeHls.Events.ERROR, {}, { fatal: false });
-    expect(hls.destroy).not.toHaveBeenCalled();
-
-    hls.emit(FakeHls.Events.ERROR, {}, { fatal: true });
-    await expect(loadPromise).resolves.toBeUndefined();
-    expect(hls.destroy).toHaveBeenCalledTimes(1);
+    expect(createVireSourceMock).toHaveBeenCalledTimes(1);
+    const source = createVireSourceMock.mock.results[0]!.value as FakeSourceEngine;
+    expect(source.load).toHaveBeenNthCalledWith(2, 'track-2');
   });
 
-  it('non-fatal bufferStalledError: прыжок на начало буферизованного диапазона и продолжение плей', async () => {
-    fetchManifestMock.mockResolvedValue(manifest('https://cdn.example/stall.m3u8'));
-    const { createJamAudio } = await import('./jam-audio');
+  it('play/pause/seek/currentTimeMs/isBuffering делегируют активному под-движку', async () => {
     const engine = createJamAudio();
-
-    const loadPromise = engine.load('track-stall');
-    const hls = await waitForNewHls(null);
-    hls.emit(FakeHls.Events.MANIFEST_PARSED);
-    await loadPromise;
-
-    lastAudioInstance!.currentTime = 0;
-    lastAudioInstance!.buffered = { length: 1, start: () => 4.2 };
-
-    hls.emit(FakeHls.Events.ERROR, {}, { fatal: false, details: 'bufferStalledError' });
-
-    expect(lastAudioInstance!.currentTime).toBeCloseTo(4.21);
-    expect(lastAudioInstance!.play).toHaveBeenCalled();
-    expect(hls.destroy).not.toHaveBeenCalled();
-  });
-
-  it('isBuffering: true после waiting, false после playing', async () => {
-    const { createJamAudio } = await import('./jam-audio');
-    const engine = createJamAudio();
-
-    expect(engine.isBuffering()).toBe(false);
-    lastAudioInstance!.emit('waiting');
-    expect(engine.isBuffering()).toBe(true);
-    lastAudioInstance!.emit('playing');
-    expect(engine.isBuffering()).toBe(false);
-  });
-
-  it('load: повторный вызов на новый трек уничтожает предыдущий hls-инстанс', async () => {
-    fetchManifestMock.mockResolvedValue(manifest('https://cdn.example/c.m3u8'));
-    const { createJamAudio } = await import('./jam-audio');
-    const engine = createJamAudio();
-
-    const firstLoad = engine.load('track-c');
-    const firstHls = await waitForNewHls(null);
-    firstHls.emit(FakeHls.Events.MANIFEST_PARSED);
-    await firstLoad;
-
-    fetchManifestMock.mockResolvedValue(manifest('https://cdn.example/d.m3u8'));
-    const secondLoad = engine.load('track-d');
-    expect(firstHls.destroy).toHaveBeenCalledTimes(1);
-    const secondHls = await waitForNewHls(firstHls);
-    secondHls.emit(FakeHls.Events.MANIFEST_PARSED);
-    await secondLoad;
-  });
-
-  it('load: без нативной и hls.js поддержки не падает', async () => {
-    FakeHls.isSupported.mockReturnValue(false);
-    fetchManifestMock.mockResolvedValue(manifest('https://cdn.example/e.m3u8'));
-    const { createJamAudio } = await import('./jam-audio');
-    const engine = createJamAudio();
-
-    await expect(engine.load('track-e')).resolves.toBeUndefined();
-    expect(lastAudioInstance!.src).toBe('');
-    FakeHls.isSupported.mockReturnValue(true);
-  });
-
-  it('play/pause/seek управляют аудио-элементом', async () => {
-    const { createJamAudio } = await import('./jam-audio');
-    const engine = createJamAudio();
+    await engine.load({ kind: 'VIRE', trackId: 'track-1' });
+    const source = createVireSourceMock.mock.results[0]!.value as FakeSourceEngine;
+    source.currentTimeMs.mockReturnValue(1234);
+    source.isBuffering.mockReturnValue(true);
 
     engine.play();
-    expect(lastAudioInstance!.play).toHaveBeenCalledTimes(1);
-
     engine.pause();
-    expect(lastAudioInstance!.pause).toHaveBeenCalledTimes(1);
+    engine.seek(500);
 
-    engine.seek(1500);
-    expect(lastAudioInstance!.currentTime).toBe(1.5);
-    expect(engine.currentTimeMs()).toBe(1500);
+    expect(source.play).toHaveBeenCalledTimes(1);
+    expect(source.pause).toHaveBeenCalledTimes(1);
+    expect(source.seek).toHaveBeenCalledWith(500);
+    expect(engine.currentTimeMs()).toBe(1234);
+    expect(engine.isBuffering()).toBe(true);
   });
 
-  it('onEnded: подписчик получает событие ended, отписка снимает слушатель', async () => {
-    const { createJamAudio } = await import('./jam-audio');
+  it('без активного под-движка — безопасные дефолты, без throw', () => {
     const engine = createJamAudio();
-
-    const listener = vi.fn();
-    const unsubscribe = engine.onEnded(listener);
-
-    lastAudioInstance!.emit('ended');
-    expect(listener).toHaveBeenCalledTimes(1);
-
-    unsubscribe();
-    lastAudioInstance!.emit('ended');
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(() => engine.play()).not.toThrow();
+    expect(() => engine.pause()).not.toThrow();
+    expect(() => engine.seek(100)).not.toThrow();
+    expect(engine.currentTimeMs()).toBe(0);
+    expect(engine.isBuffering()).toBe(false);
   });
 
-  it('onPlaying: подписчик получает событие playing, отписка снимает слушатель', async () => {
-    const { createJamAudio } = await import('./jam-audio');
+  it('onEnded/onPlaying переживают смену под-движка — подписка на диспетчере, не на конкретном движке', async () => {
     const engine = createJamAudio();
-
-    const listener = vi.fn();
-    const unsubscribe = engine.onPlaying(listener);
-
-    lastAudioInstance!.emit('playing');
-    expect(listener).toHaveBeenCalledTimes(1);
-
-    unsubscribe();
-    lastAudioInstance!.emit('playing');
-    expect(listener).toHaveBeenCalledTimes(1);
-  });
-
-  it('destroy: снимает слушатели, уничтожает hls, обнуляет src', async () => {
-    fetchManifestMock.mockResolvedValue(manifest('https://cdn.example/f.m3u8'));
-    const { createJamAudio } = await import('./jam-audio');
-    const engine = createJamAudio();
-
-    const loadPromise = engine.load('track-f');
-    const hlsInstance = await waitForNewHls(null);
-    hlsInstance.emit(FakeHls.Events.MANIFEST_PARSED);
-    await loadPromise;
-    const audioInstance = lastAudioInstance!;
-
     const endedListener = vi.fn();
-    engine.onEnded(endedListener);
     const playingListener = vi.fn();
+    engine.onEnded(endedListener);
     engine.onPlaying(playingListener);
 
-    engine.destroy();
+    await engine.load({ kind: 'VIRE', trackId: 'track-1' });
+    const vireSource = createVireSourceMock.mock.results[0]!.value as FakeSourceEngine;
+    const vireEndedHandler = vireSource.onEnded.mock.calls[0]![0] as () => void;
+    vireEndedHandler();
+    expect(endedListener).toHaveBeenCalledTimes(1);
 
-    expect(hlsInstance.destroy).toHaveBeenCalledTimes(1);
-    expect(audioInstance.pause).toHaveBeenCalled();
-    expect(audioInstance.src).toBe('');
-    expect(audioInstance.load).toHaveBeenCalledTimes(1);
-
-    audioInstance.emit('ended');
-    expect(endedListener).not.toHaveBeenCalled();
-    audioInstance.emit('playing');
-    expect(playingListener).not.toHaveBeenCalled();
+    await engine.load({ kind: 'YOUTUBE', videoId: 'yt-1' });
+    const ytSource = createYoutubeSourceMock.mock.results[0]!.value as FakeSourceEngine;
+    const ytPlayingHandler = ytSource.onPlaying.mock.calls[0]![0] as () => void;
+    ytPlayingHandler();
+    expect(playingListener).toHaveBeenCalledTimes(1);
   });
 
-  it('destroy: не оставляет висящий load — вызов после destroy не бросает', async () => {
-    const { createJamAudio } = await import('./jam-audio');
+  it('destroy уничтожает активный под-движок и очищает слушателей', async () => {
     const engine = createJamAudio();
+    await engine.load({ kind: 'VIRE', trackId: 'track-1' });
+    const source = createVireSourceMock.mock.results[0]!.value as FakeSourceEngine;
+
     engine.destroy();
 
-    fetchManifestMock.mockResolvedValue(null);
-    await expect(engine.load('after-destroy')).resolves.toBeUndefined();
+    expect(source.destroy).toHaveBeenCalledTimes(1);
+    expect(() => engine.play()).not.toThrow();
   });
 });

@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import { normalizeJamCode } from '@vire/core';
 import { Button, Input } from '@vire/ui';
 
-export function JamCodeForm() {
+interface Props {
+  basePath?: string;
+}
+
+export function JamCodeForm({ basePath = '/jam' }: Props) {
   const [value, setValue] = useState('');
   const router = useRouter();
   const normalized = normalizeJamCode(value);
@@ -13,7 +17,7 @@ export function JamCodeForm() {
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!normalized) return;
-    router.push(`/jam/${normalized}`);
+    router.push(`${basePath}/${normalized}`);
   }
 
   return (

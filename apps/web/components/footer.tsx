@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Logo } from './logo';
 import { AnnouncementReopenLink } from './widget-triggers';
+import { PartyTrigger } from './party-trigger';
 import { SITE_VERSION } from '@/lib/site';
 
 const reopenCls =
@@ -49,7 +50,7 @@ export function Footer() {
         </div>
 
         <div className="mt-10 flex items-center gap-2 border-t border-border/60 pt-6">
-          <span className="font-mono text-xs text-muted-foreground select-none">© {year} VireMusic</span>
+          <PartyTrigger className="font-mono text-xs text-muted-foreground select-none">© {year} VireMusic</PartyTrigger>
           <span className="text-muted-foreground/40">·</span>
           <span className="font-mono text-xs text-muted-foreground/60">v{SITE_VERSION}</span>
         </div>

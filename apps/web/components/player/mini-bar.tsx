@@ -9,6 +9,7 @@ import { useJamStore } from '@/store/jam';
 import { controls } from '@/lib/player/audio-engine';
 import { jamToggle, getJamTransport } from '@/lib/jam/jam-controls';
 import { useJamPosition } from '@/lib/jam/use-jam-position';
+import { PARTY_PATH } from '@/lib/party';
 import { Icon } from '@/components/icon';
 import { Controls } from './controls';
 import { ArtistLink, TitleLink } from './track-links';
@@ -116,12 +117,12 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
             <span className="flex items-center gap-1.5 min-w-0">
               <span className="text-[11px] sm:text-sm font-medium truncate leading-tight">{track.title}</span>
               <Link
-                href={`/jam/${override.code}`}
-                aria-label="Вернуться в джем"
+                href={`${override.basePath}/${override.code}`}
+                aria-label="Вернуться в комнату"
                 className="-m-1 shrink-0 rounded-full p-1 pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
               >
                 <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-primary">
-                  {override.isRemote ? 'Пульт' : 'Джем'}
+                  {override.isRemote ? 'Пульт' : override.basePath === PARTY_PATH ? 'Вечеринка' : 'Джем'}
                 </span>
               </Link>
             </span>

@@ -7,6 +7,8 @@ export interface ActiveJam {
   participantId: string;
   role: JamParticipantRole;
   sessionId: string | null;
+  /** Откуда пришли в комнату — `/jam` или секретный путь вечеринки; путь назад из мини-бара. */
+  basePath?: string;
 }
 
 interface State {

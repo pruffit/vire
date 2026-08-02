@@ -11,15 +11,17 @@ interface Props {
   isLoggedIn: boolean;
   pending: boolean;
   onJoin: (displayName: string) => void;
+  kind?: 'JAM' | 'PARTY';
 }
 
-export function JamJoin({ title, hostDisplayName, ended, isLoggedIn, pending, onJoin }: Props) {
+export function JamJoin({ title, hostDisplayName, ended, isLoggedIn, pending, onJoin, kind = 'JAM' }: Props) {
   const [name, setName] = useState(() => generateGuestName());
+  const eyebrow = kind === 'PARTY' ? 'Вечеринка' : 'Джем';
 
   if (ended) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center px-6 py-24 text-center">
-        <p className="text-2xl font-semibold tracking-tight">Джем завершён</p>
+        <p className="text-2xl font-semibold tracking-tight">{kind === 'PARTY' ? 'Вечеринка завершена' : 'Джем завершён'}</p>
         <p className="mt-3 text-sm text-muted-foreground">Хост закрыл эту сессию — ссылка больше не активна.</p>
       </div>
     );
@@ -31,8 +33,8 @@ export function JamJoin({ title, hostDisplayName, ended, isLoggedIn, pending, on
     <div className="flex min-h-full flex-col items-center justify-center px-6 py-16">
       <div className="w-full max-w-sm space-y-8 text-center">
         <div className="space-y-2">
-          <p className="text-xs font-mono uppercase tracking-[0.22em] text-muted-foreground">Джем</p>
-          <h1 className="text-2xl font-semibold tracking-tight">{title ?? 'Джем-сессия'}</h1>
+          <p className="text-xs font-mono uppercase tracking-[0.22em] text-muted-foreground">{eyebrow}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{title ?? (kind === 'PARTY' ? 'Вечеринка' : 'Джем-сессия')}</h1>
           <p className="text-sm text-muted-foreground">Хост — {hostDisplayName}</p>
         </div>
 

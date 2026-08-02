@@ -13,16 +13,17 @@ function isTouchDevice(): boolean {
 interface Props {
   code: string;
   title: string | null;
+  basePath?: string;
 }
 
-export function JamShare({ code, title }: Props) {
+export function JamShare({ code, title, basePath = '/jam' }: Props) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   function shareUrl(): string {
-    return `${window.location.origin}/jam/${code}`;
+    return `${window.location.origin}${basePath}/${code}`;
   }
 
   async function copyLink() {

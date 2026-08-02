@@ -41,16 +41,17 @@ function buildCsp(): string {
     // telegram.org — виджет входа; mc.yandex — Метрика; youtube/ytimg и vk.com — плеерные API.
     // 'unsafe-eval' только в dev (webpack source maps); 'wasm-unsafe-eval' — Метрика
     // компилирует WebAssembly, без него tag.js падает с CompileError на каждой странице.
-    `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${dev ? " 'unsafe-eval'" : ''} https://telegram.org https://mc.yandex.ru https://mc.yandex.com https://www.youtube.com https://s.ytimg.com https://vk.com`,
+    `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${dev ? " 'unsafe-eval'" : ''} https://telegram.org https://mc.yandex.ru https://mc.yandex.com https://www.youtube.com https://s.ytimg.com https://vk.com https://w.soundcloud.com`,
     `style-src 'self' 'unsafe-inline'`,
-    // аватары OAuth (yandex/lh3/t.me), Метрика, постеры YouTube (ytimg) и VK (userapi/mycdn).
-    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru https://mc.yandex.com https://i.ytimg.com https://*.ytimg.com https://*.userapi.com https://*.mycdn.me ${s3}`,
+    // аватары OAuth (yandex/lh3/t.me), Метрика, постеры YouTube (ytimg) и VK (userapi/mycdn);
+    // обложки внешних треков вечеринки (см. lib/external/cover-hosts.ts — тот же список).
+    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru https://mc.yandex.com https://i.ytimg.com https://*.ytimg.com https://*.userapi.com https://*.mycdn.me https://*.sndcdn.com https://*.mzstatic.com https://i.scdn.co https://*.scdn.co https://*.dzcdn.net ${s3}`,
     `media-src 'self' blob: ${s3}`,
     `connect-src 'self' blob: ${s3} https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
     `worker-src blob:`,
     // iframe виджета Telegram Login + встраиваемые видеоплееры
-    `frame-src https://oauth.telegram.org https://www.youtube.com https://www.youtube-nocookie.com https://vk.com https://vkvideo.ru`,
+    `frame-src https://oauth.telegram.org https://www.youtube.com https://www.youtube-nocookie.com https://vk.com https://vkvideo.ru https://w.soundcloud.com`,
     `frame-ancestors 'none'`,
     `object-src 'none'`,
     `base-uri 'self'`,
@@ -111,6 +112,15 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'avatars.yandex.net', pathname: '/**' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com', pathname: '/**' },
       { protocol: 'https', hostname: 't.me', pathname: '/**' },
+      // Обложки внешних треков вечеринки; список синхронизирован с img-src в buildCsp()
+      // и с белым списком lib/external/cover-hosts.ts — чужие хосты туда не доезжают.
+      { protocol: 'https', hostname: '**.ytimg.com', pathname: '/**' },
+      { protocol: 'https', hostname: '**.sndcdn.com', pathname: '/**' },
+      { protocol: 'https', hostname: '**.mzstatic.com', pathname: '/**' },
+      { protocol: 'https', hostname: '**.scdn.co', pathname: '/**' },
+      { protocol: 'https', hostname: '**.dzcdn.net', pathname: '/**' },
+      { protocol: 'https', hostname: '**.userapi.com', pathname: '/**' },
+      { protocol: 'https', hostname: '**.mycdn.me', pathname: '/**' },
     ],
     // Next 16 блокирует оптимизацию с loopback IP (SSRF-защита); локальному MinIO нужен обход только в dev.
     dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
