@@ -11,7 +11,3 @@ export function fileToPlayerTrack(file: File): PlayerTrack {
   return { id, title: titleFromFileName(file.name), artistName: '', coverUrl: null, localFileId: id };
 }
 
-/** Файл уже зарегистрирован — кнопка выбора сама это делает (кнопочная дверь). */
-export function pickedFileToPlayerTrack(file: { id: string; title: string }): PlayerTrack {
-  return { id: file.id, title: file.title, artistName: '', coverUrl: null, localFileId: file.id };
-}

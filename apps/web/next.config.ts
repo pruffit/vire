@@ -49,7 +49,9 @@ function buildCsp(): string {
     `media-src 'self' blob: ${s3}`,
     `connect-src 'self' blob: ${s3} https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
-    `worker-src blob:`,
+    // 'self' обязателен: service worker пушей грузится как /sw.js — с одним blob: браузер
+    // блокирует его регистрацию (SecurityError), и подписка на пуши не начинается вовсе.
+    `worker-src 'self' blob:`,
     // iframe виджета Telegram Login + встраиваемые видеоплееры
     `frame-src https://oauth.telegram.org https://www.youtube.com https://www.youtube-nocookie.com https://vk.com https://vkvideo.ru https://w.soundcloud.com`,
     `frame-ancestors 'none'`,
