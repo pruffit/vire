@@ -24,6 +24,7 @@ export function usePlaybackSync({ playback, source, serverNow, audioEnabled, dri
   const onEndedRef = useRef(onEnded);
   const loadedItemIdRef = useRef<string | null>(null);
   const pausedRef = useRef<boolean | null>(null);
+  const lastVersionRef = useRef<number | null>(null);
   const lastHardSeekAtRef = useRef<number | null>(null);
   const unsubscribeResyncRef = useRef<(() => void) | null>(null);
 
@@ -45,6 +46,7 @@ export function usePlaybackSync({ playback, source, serverNow, audioEnabled, dri
       engineRef.current = null;
       loadedItemIdRef.current = null;
       pausedRef.current = null;
+      lastVersionRef.current = null;
       lastHardSeekAtRef.current = null;
     };
   }, [audioEnabled]);
@@ -83,6 +85,7 @@ export function usePlaybackSync({ playback, source, serverNow, audioEnabled, dri
       }
 
       loadedItemIdRef.current = playback.itemId;
+      lastVersionRef.current = playback.version;
       void engine.load(source).then(() => {
         // load предыдущей позиции резолвится досрочно при смене — не позиционируем по устаревшему состоянию
         if (loadedItemIdRef.current !== playback.itemId) return;
@@ -97,6 +100,15 @@ export function usePlaybackSync({ playback, source, serverNow, audioEnabled, dri
     }
 
     if (source === null) return;
+
+    // Новая версия состояния на той же позиции очереди = кто-то перемотал. Без этого seek
+    // не доезжал до движка вовсе: смены трека нет, флаг паузы прежний, а коррекция дрейфа
+    // в режиме «на колонке» выключена — позиция не выправлялась никогда.
+    if (lastVersionRef.current !== playback.version) {
+      lastVersionRef.current = playback.version;
+      engine.seek(derivePositionMs(playback, serverNow()));
+      lastHardSeekAtRef.current = Date.now();
+    }
 
     if (pausedRef.current !== playback.paused) {
       pausedRef.current = playback.paused;

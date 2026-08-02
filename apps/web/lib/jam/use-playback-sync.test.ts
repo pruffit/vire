@@ -178,6 +178,55 @@ describe('usePlaybackSync', () => {
     expect(engine.seek).toHaveBeenCalledWith(1_000);
   });
 
+  it('перемотка внутри трека (новая версия, тот же itemId) доезжает до движка', async () => {
+    const pb1 = playback({ itemId: 'item-1', startedAtMs: 0, version: 1 });
+    const { rerender } = renderHook(
+      ({ pb }: { pb: JamPlaybackState }) => usePlaybackSync({ playback: pb, source: src('track-1'), serverNow: () => 0, audioEnabled: true, driftCorrection: false }),
+      { initialProps: { pb: pb1 } },
+    );
+    await flush();
+    engine.seek.mockClear();
+
+    // Перемотали на 90с: startedAtMs уезжает назад, itemId и пауза те же.
+    rerender({ pb: playback({ itemId: 'item-1', startedAtMs: -90_000, version: 2 }) });
+    await flush();
+
+    expect(engine.seek).toHaveBeenCalledWith(90_000);
+    expect(engine.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('перемотка на паузе тоже применяется к движку и не запускает воспроизведение', async () => {
+    const pb1 = playback({ itemId: 'item-1', paused: true, pausedPositionMs: 1_000, version: 1 });
+    const { rerender } = renderHook(
+      ({ pb }: { pb: JamPlaybackState }) => usePlaybackSync({ playback: pb, source: src('track-1'), serverNow: () => 0, audioEnabled: true, driftCorrection: false }),
+      { initialProps: { pb: pb1 } },
+    );
+    await flush();
+    engine.seek.mockClear();
+    engine.play.mockClear();
+
+    rerender({ pb: playback({ itemId: 'item-1', paused: true, pausedPositionMs: 45_000, version: 2 }) });
+    await flush();
+
+    expect(engine.seek).toHaveBeenCalledWith(45_000);
+    expect(engine.play).not.toHaveBeenCalled();
+  });
+
+  it('то же состояние без новой версии лишних seek не делает', async () => {
+    const pb = playback({ itemId: 'item-1', startedAtMs: 0, version: 1 });
+    const { rerender } = renderHook(
+      ({ p }: { p: JamPlaybackState }) => usePlaybackSync({ playback: p, source: src('track-1'), serverNow: () => 0, audioEnabled: true, driftCorrection: false }),
+      { initialProps: { p: pb } },
+    );
+    await flush();
+    engine.seek.mockClear();
+
+    rerender({ p: { ...pb } });
+    await flush();
+
+    expect(engine.seek).not.toHaveBeenCalled();
+  });
+
   it('позиция сменилась, пока грузился предыдущий трек — устаревший load не позиционирует', async () => {
     let resolveFirst: (() => void) | null = null;
     engine.load.mockImplementationOnce(() => new Promise<void>((resolve) => { resolveFirst = resolve; }));
