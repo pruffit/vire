@@ -20,12 +20,12 @@ import { JamShare } from '@/components/jam-share';
 import { ActionSelect } from '@/components/action-select';
 import { SourceBadge } from '@/components/jam/source-badge';
 import { PARTY_PATH } from '@/lib/party';
-import { restorePersistedFiles } from '@/lib/party/local-files';
+import { restorePersistedFiles } from '@/lib/local-files';
 import { JamParticipants } from '@/app/(listener)/jam/[code]/jam-participants';
 import { JamSavePlaylist } from '@/app/(listener)/jam/[code]/jam-save-playlist';
 import { JamJoin } from '@/app/(listener)/jam/[code]/jam-join';
 import { PartyAddPanel, type VireCandidatePick } from './party-add-panel';
-import { PartyLocalFileButton } from './party-local-file-button';
+import { LocalFileButton } from '@/components/local-file-button';
 import { PartyScreen } from './party-screen';
 import { Icon } from '@/components/icon';
 import { EmptyState } from '@/components/ui-kit';
@@ -279,7 +279,7 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
                 >
                   <Icon name="plus" size={14} /> Добавить трек
                 </button>
-                {isAudioDevice && <PartyLocalFileButton onPick={(f) => void jamQueue.addLocal(f)} />}
+                {isAudioDevice && <LocalFileButton onPick={(f) => void jamQueue.addLocal(f)} />}
                 <button
                   onClick={() => void jamQueue.shuffleQueue()}
                   disabled={jamQueue.queue.length < 2}

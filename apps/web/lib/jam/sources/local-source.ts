@@ -1,4 +1,4 @@
-import { getLocalFile } from '@/lib/party/local-files';
+import { getLocalFile } from '@/lib/local-files';
 import { usePlayerStore } from '@/store/player';
 import type { JamSourceEngine } from '../jam-audio';
 

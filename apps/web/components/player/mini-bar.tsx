@@ -217,12 +217,15 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
           <span className="flex items-center gap-1.5 min-w-0">
             <TitleLink track={track} className="text-[11px] sm:text-sm font-medium truncate leading-tight" />
             {track.isExplicit && <ExplicitBadge />}
+            {track.localFileId && <Icon name="file" size={11} className="shrink-0 text-muted-foreground/70" />}
           </span>
           <ArtistLink track={track} className="hidden sm:block text-xs text-muted-foreground truncate" />
         </div>
-        <span className="hidden sm:inline-flex shrink-0">
-          <PlayerLikeButton trackId={track.id} size="sm" />
-        </span>
+        {!track.localFileId && (
+          <span className="hidden sm:inline-flex shrink-0">
+            <PlayerLikeButton trackId={track.id} size="sm" />
+          </span>
+        )}
       </div>
     </div>
   );

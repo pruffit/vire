@@ -1,6 +1,7 @@
 import type HlsType from 'hls.js';
 import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
 import { getSessionId } from '@/lib/session-id';
+import { getLocalFile } from '@/lib/local-files';
 import { dedupeQueue, shuffleOn, shuffleOff, nextQueueIndex, capLiveQueue, insertIntoQueue } from '@/lib/player/queue';
 import { fetchManifest } from '@/lib/player/manifest-cache';
 import { needsWaveFetch, fetchWaveTracks } from '@/lib/player/wave-buffer';
@@ -21,6 +22,17 @@ async function getHls(): Promise<typeof HlsType> {
   return HlsClass;
 }
 let loadedTrackId: string | null = null;
+// Один object URL на движок — держим единственный, чтобы освободить предыдущий перед следующим (как в local-source.ts).
+let localObjectUrl: string | null = null;
+const MAX_LOCAL_MISSES = 3;
+let consecutiveLocalMisses = 0;
+
+function releaseLocalObjectUrl(): void {
+  if (localObjectUrl) {
+    URL.revokeObjectURL(localObjectUrl);
+    localObjectUrl = null;
+  }
+}
 
 const LOAD_TIMEOUT_MS = 20_000;
 let loadWatchdog: ReturnType<typeof setTimeout> | null = null;
@@ -125,7 +137,8 @@ function playedIdsForWaveRequest(): string[] {
 
 async function growWaveBuffer(): Promise<PlayerTrack[]> {
   const { track } = usePlayerStore.getState();
-  if (!track) return usePlayerStore.getState().queue;
+  // Локальный файл не каталожный трек — волне не с чем работать, буфер просто не растёт.
+  if (!track || track.localFileId) return usePlayerStore.getState().queue;
 
   waveFetchInFlight = true;
   try {
@@ -185,7 +198,7 @@ function maybePrefetchNextManifest(): void {
   if (duration - currentTime >= 15) return;
   if (prefetchedAheadFor === track.id) return;
   const next = queue[queueIndex + 1];
-  if (!next) return;
+  if (!next || next.localFileId) return;
   prefetchedAheadFor = track.id;
   void fetchManifest(next.id);
 }
@@ -234,12 +247,17 @@ export function initAudioEngine(): void {
     consecutiveWaveErrors = 0;
     usePlayerStore.getState()._setState({ isPlaying: true, isLoading: false });
     const { track, context } = usePlayerStore.getState();
-    if (track && track.id !== playStartedTrackId) {
-      playStartedAt = Date.now();
-      playStartedTrackId = track.id;
-      playStartedSource = context?.source ?? 'direct';
+    // Локальный файл — не каталожный трек: heartbeat/play-event на его id дали бы 404 и мусор в аналитике.
+    if (track?.localFileId) {
+      stopHeartbeat();
+    } else if (track) {
+      if (track.id !== playStartedTrackId) {
+        playStartedAt = Date.now();
+        playStartedTrackId = track.id;
+        playStartedSource = context?.source ?? 'direct';
+      }
+      startHeartbeat(track.id);
     }
-    if (track) startHeartbeat(track.id);
     void maybeFetchWaveBuffer();
   });
   audio.addEventListener('pause', () => {
@@ -254,12 +272,47 @@ export function initAudioEngine(): void {
   audio.addEventListener('canplay', () =>
     usePlayerStore.getState()._setState({ isLoading: false }),
   );
+  audio.addEventListener('error', () => {
+    // audio.src напрямую ставится только локальным файлом (HLS идёт через MediaSource) — фильтруем по нему.
+    const { track } = usePlayerStore.getState();
+    if (!track?.localFileId) return;
+    clearLoadWatchdog();
+    usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
+    void controls.next();
+  });
+}
+
+/** Файл с устройства слушателя: манифест не запрашиваем, hls.js не поднимаем — прямой blob на `<audio>`. */
+function attachLocalTrack(track: PlayerTrack, opts: { seekTo?: number }): void {
+  if (!audio || !track.localFileId) return;
+  if (hls) { hls.destroy(); hls = null; }
+
+  const file = getLocalFile(track.localFileId);
+  if (!file) {
+    // Перезагрузка страницы или чужое устройство — файла в памяти вкладки больше нет.
+    // Счётчик обязателен: очередь из одних пропавших файлов при repeat='all' крутила бы next() вечно.
+    consecutiveLocalMisses += 1;
+    const exhausted = consecutiveLocalMisses >= MAX_LOCAL_MISSES;
+    usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
+    if (exhausted) consecutiveLocalMisses = 0;
+    else void controls.next();
+    return;
+  }
+
+  consecutiveLocalMisses = 0;
+  localObjectUrl = URL.createObjectURL(file);
+  audio.src = localObjectUrl;
+  audio.load();
+  usePlayerStore.getState()._setState({ hasAudio: true });
+  if (opts.seekTo) audio.currentTime = opts.seekTo;
+  audio.play().catch(() => {});
 }
 
 async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {}): Promise<void> {
   if (!audio) return;
 
   flushPlayEvent();
+  releaseLocalObjectUrl();
 
   prefetchedAheadFor = null;
   // На резюме duration не сбрасываем — иначе кадр 0:00/0:00 до durationchange.
@@ -272,6 +325,12 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
     ...(isResume ? {} : { duration: 0 }),
     waveformPeaks: null,
   });
+
+  if (track.localFileId) {
+    attachLocalTrack(track, opts);
+    return;
+  }
+
   armLoadWatchdog();
 
   const manifest = await fetchManifest(track.id);

@@ -154,3 +154,54 @@ describe('persist: partialize', () => {
     expect(persisted.originalQueue[0]?.id).toBe('o0');
   });
 });
+
+describe('persist: локальные файлы не переживают перезагрузку', () => {
+  function localTrack(id: string): PlayerTrack {
+    return { id, title: `local-${id}`, artistName: '', coverUrl: null, localFileId: id };
+  }
+
+  it('локальные позиции вырезаются из персистируемой очереди', () => {
+    const partialize = usePlayerStore.persist.getOptions().partialize;
+    const queue = [track('a'), localTrack('l1'), track('b'), localTrack('l2')];
+    const persisted = partialize!({
+      ...usePlayerStore.getState(),
+      track: track('b'),
+      queue,
+      queueIndex: 2,
+    }) as { queue: PlayerTrack[]; queueIndex: number };
+
+    expect(persisted.queue.map((t) => t.id)).toEqual(['a', 'b']);
+    expect(persisted.queue[persisted.queueIndex]?.id).toBe('b');
+  });
+
+  it('текущий трек локальный — persist track:null, currentTime/duration обнулены, очередь без него', () => {
+    const partialize = usePlayerStore.persist.getOptions().partialize;
+    const queue = [track('a'), localTrack('l1'), track('b')];
+    const persisted = partialize!({
+      ...usePlayerStore.getState(),
+      track: localTrack('l1'),
+      queue,
+      queueIndex: 1,
+      currentTime: 42,
+      duration: 180,
+    }) as { track: PlayerTrack | null; queue: PlayerTrack[]; queueIndex: number; currentTime: number; duration: number };
+
+    expect(persisted.track).toBeNull();
+    expect(persisted.queue.map((t) => t.id)).toEqual(['a', 'b']);
+    expect(persisted.queue[persisted.queueIndex]).toBeDefined();
+    expect(persisted.currentTime).toBe(0);
+    expect(persisted.duration).toBe(0);
+  });
+
+  it('originalQueue тоже вырезает локальные позиции', () => {
+    const partialize = usePlayerStore.persist.getOptions().partialize;
+    const originalQueue = [track('a'), localTrack('l1'), track('b')];
+    const persisted = partialize!({
+      ...usePlayerStore.getState(),
+      track: track('b'),
+      originalQueue,
+    }) as { originalQueue: PlayerTrack[] };
+
+    expect(persisted.originalQueue.map((t) => t.id)).toEqual(['a', 'b']);
+  });
+});

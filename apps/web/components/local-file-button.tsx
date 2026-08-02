@@ -1,10 +1,13 @@
 'use client';
 import { useRef, useState } from 'react';
 import { Icon } from '@/components/icon';
-import { hasFileSystemAccess, pickLocalFile, registerLocalFile, getLocalFile } from '@/lib/party/local-files';
+import { hasFileSystemAccess, pickLocalFile, registerLocalFile, getLocalFile } from '@/lib/local-files';
+import { titleFromFileName } from '@/lib/player/local-file-track';
+import { cn } from '@/lib/utils';
 
 interface Props {
   onPick: (file: { id: string; title: string; durationSec: number | null }) => void;
+  className?: string;
 }
 
 function readDuration(file: File): Promise<number | null> {
@@ -21,12 +24,8 @@ function readDuration(file: File): Promise<number | null> {
   });
 }
 
-function titleFromName(name: string): string {
-  return name.replace(/\.[^.]+$/, '');
-}
-
-/** Только для устройства-колонки: файл лежит у него, на сервер не уходит (см. lib/party/local-files.ts). */
-export function PartyLocalFileButton({ onPick }: Props) {
+/** Файл с устройства слушателя, на сервер не уходит (см. lib/local-files.ts). Общая кнопка вечеринки (колонка) и очереди глобального плеера. */
+export function LocalFileButton({ onPick, className }: Props) {
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -39,7 +38,7 @@ export function PartyLocalFileButton({ onPick }: Props) {
       if (!picked) return;
       const file = getLocalFile(picked.id);
       const durationSec = file ? await readDuration(file) : null;
-      onPick({ id: picked.id, title: titleFromName(picked.name), durationSec });
+      onPick({ id: picked.id, title: titleFromFileName(picked.name), durationSec });
       return;
     }
     inputRef.current?.click();
@@ -53,7 +52,7 @@ export function PartyLocalFileButton({ onPick }: Props) {
     const id = registerLocalFile(file);
     const durationSec = await readDuration(file);
     setBusy(false);
-    onPick({ id, title: titleFromName(file.name), durationSec });
+    onPick({ id, title: titleFromFileName(file.name), durationSec });
   }
 
   return (
@@ -63,7 +62,10 @@ export function PartyLocalFileButton({ onPick }: Props) {
         type="button"
         onClick={() => void handleClick()}
         disabled={busy}
-        className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+        className={cn(
+          'inline-flex items-center gap-1.5 min-h-11 rounded-full border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50',
+          className,
+        )}
       >
         {busy ? <Icon name="loader" size={14} className="animate-spin" /> : <Icon name="file-plus" size={14} />}
         Файл с устройства

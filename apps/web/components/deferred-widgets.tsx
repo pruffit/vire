@@ -14,6 +14,9 @@ const Announcements = dynamic(() => import('./announcements').then((m) => m.Anno
 const EasterEggs = dynamic(() => import('./easter-eggs').then((m) => m.EasterEggs), {
   ssr: false,
 });
+const LocalFileDrop = dynamic(() => import('./local-file-drop').then((m) => m.LocalFileDrop), {
+  ssr: false,
+});
 
 export function DeferredWidgets() {
   return (
@@ -22,6 +25,7 @@ export function DeferredWidgets() {
       <CookieBanner />
       <Announcements />
       <EasterEggs />
+      <LocalFileDrop />
     </>
   );
 }

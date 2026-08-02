@@ -6,7 +6,7 @@ import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { SESSION_ID_MAX_LEN } from '@/lib/session-signing';
 import { ForbiddenError, ConflictError, ValidationError } from '@vire/core';
 
-// Файл живёт только в памяти вкладки-колонки — сюда приходит id из lib/party/local-files.ts
+// Файл живёт только в памяти вкладки-колонки — сюда приходит id из lib/local-files.ts
 // и снапшот метаданных, которые клиент уже знает (имя файла, длительность из <audio>).
 const schema = z.object({
   fileId: z.string().min(1).max(200),

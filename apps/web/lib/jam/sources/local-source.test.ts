@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { getLocalFileMock } = vi.hoisted(() => ({ getLocalFileMock: vi.fn() }));
-vi.mock('@/lib/party/local-files', () => ({ getLocalFile: getLocalFileMock }));
+vi.mock('@/lib/local-files', () => ({ getLocalFile: getLocalFileMock }));
 
 type Handler = (...args: unknown[]) => void;
 

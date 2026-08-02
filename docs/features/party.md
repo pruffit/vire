@@ -78,7 +78,7 @@ YouTube IFrame API и SoundCloud Widget. Ничего не скачиваетс�
 ## Где код
 
 - **Страницы:** `apps/web/app/(listener)/nrvz914/` — `page.tsx` (вход), `layout.tsx` (noindex),
-  `[code]/{page,party-room,party-add-panel,party-screen,party-local-file-button}.tsx`.
+  `[code]/{page,party-room,party-add-panel,party-screen}.tsx`.
 - **Вход из футера:** `apps/web/components/party-trigger.tsx`, путь — `apps/web/lib/party.ts`.
 - **API:** `POST /api/v1/jam/[code]/queue/external` (любой ввод), `POST …/queue/local`
   (файл устройства), `GET /api/v1/party/suggest` (подсказки при наборе), `POST …/skip`
@@ -87,7 +87,8 @@ YouTube IFrame API и SoundCloud Widget. Ничего не скачиваетс�
   адаптеры сети — `apps/web/lib/external/` (`oembed`, `page-meta`, `youtube`, `itunes`,
   `deezer`, `safe-fetch`).
 - **Звук:** `apps/web/lib/jam/jam-audio.ts` + `apps/web/lib/jam/sources/`.
-- **Локальные файлы:** `apps/web/lib/party/local-files.ts`.
+- **Локальные файлы:** `apps/web/lib/local-files.ts` (общий реестр, шарится с глобальным
+  плеером — см. [player.md](player.md)), кнопка выбора — `apps/web/components/local-file-button.tsx`.
 - **Данные:** `jam_sessions.kind` (`JAM|PARTY`), `jam_queue_items.{source,external_id,external_url}`
   + снапшот метаданных и nullable `track_id` (миграция 0046); кэш резолва
   `external_resolutions` (0047).

@@ -94,6 +94,22 @@
 | `F` | Favourite (любимый момент) |
 | `↑` / `↓` | Громкость ±10% |
 
+### Локальные файлы
+
+Файл с устройства слушателя встаёт в очередь наравне с каталожными треками — общий
+транспорт/громкость/очередь, ничего не заливается на сервер. Признак — `localFileId` в
+`PlayerTrack` (реестр файлов — `lib/local-files.ts`, общий с вечеринкой, см. [party.md](party.md)).
+Две двери добавления: кнопка «Файл с устройства» в панели очереди (`LocalFileButton`,
+`components/local-file-button.tsx`) и перетаскивание файла в окно (`components/local-file-drop.tsx`,
+смонтирован в `DeferredWidgets`). Движок (`attachAndPlay`) для такого трека не запрашивает
+HLS-манифест — `URL.createObjectURL(file)` напрямую на `<audio>`, один object URL на движок,
+освобождается при следующей загрузке; отсутствующий файл (после F5 или на чужом устройстве)
+даёт `audioError` и переход к следующему треку. Heartbeat, play-события и дозапрос волны для
+локального трека не выполняются (нет каталожного `trackId`). Название — имя файла без
+расширения, исполнитель пуст, обложки нет, лайк не рендерится. Локальные позиции не
+персистятся: `partialize` вырезает их из очереди/`originalQueue`, текущий локальный трек даёт
+`track: null` при сохранении — blob не переживает перезагрузку страницы.
+
 ### Очередь
 
 - Добавить трек / релиз / плейлист / результаты волны — `controls.playQueue(tracks, opts)`,
@@ -140,6 +156,9 @@
 - **Манифест-кэш:** `apps/web/lib/player/manifest-cache.ts`
 - **Буфер волны:** `apps/web/lib/player/wave-buffer.ts`
 - **Очередь/шаффл:** `apps/web/lib/player/queue.ts`
+- **Локальные файлы:** `apps/web/lib/local-files.ts` (реестр), `lib/player/local-file-track.ts`
+  (File → PlayerTrack), `lib/player/enqueue-local-files.ts` (вставка в очередь + тост),
+  `components/local-file-button.tsx`, `components/local-file-drop.tsx`
 - **Маппинг в PlayerTrack:** `apps/web/lib/player/to-player-track.ts`,
   `lib/player/liked-to-player-track.ts`
 - **Компоненты:** `apps/web/components/player/index.tsx`, `mini-bar.tsx`,

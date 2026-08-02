@@ -10,6 +10,7 @@ import { Controls, WaveModeButton } from './controls';
 import { ArtistLink, TitleLink } from './track-links';
 import { PlayerLikeButton } from '@/components/player-like-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
+import { Icon } from '@/components/icon';
 import { TrackShare } from '@/components/track-share';
 import { Lyrics } from './lyrics';
 import { WaveformScrubber } from './waveform-scrubber';
@@ -112,12 +113,15 @@ export function FullscreenPlayer({
             <span className="flex items-center justify-center gap-2 min-w-0">
               <TitleLink track={track} onClick={onClose} className="text-xl font-semibold truncate" />
               {track.isExplicit && <ExplicitBadge />}
+              {track.localFileId && <Icon name="file" size={13} className="shrink-0 text-muted-foreground/70" />}
             </span>
             <ArtistLink track={track} onClick={onClose} className="text-sm text-muted-foreground truncate block mt-1" />
           </div>
-          <div className="shrink-0">
-            <PlayerLikeButton trackId={track.id} size="md" />
-          </div>
+          {!track.localFileId && (
+            <div className="shrink-0">
+              <PlayerLikeButton trackId={track.id} size="md" />
+            </div>
+          )}
         </div>
 
         <div className="w-full flex items-center gap-3">

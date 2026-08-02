@@ -4,11 +4,14 @@ import { Fragment, type KeyboardEvent } from 'react';
 import { Reorder, useDragControls } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
+import { enqueueLocalTracks } from '@/lib/player/enqueue-local-files';
+import { pickedFileToPlayerTrack } from '@/lib/player/local-file-track';
 import { swapAdjacent } from '@/lib/reorder';
 import { cn } from '@/lib/utils';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { TrackTitleText } from '@/components/track-title';
 import { Icon } from '@/components/icon';
+import { LocalFileButton } from '@/components/local-file-button';
 import { touchTargetCoarse } from '@/components/popover';
 import { GripIcon, WaveIcon } from './player-icons';
 
@@ -36,32 +39,41 @@ export function QueuePanel({ onJump }: { onJump: () => void }) {
     onJump();
   }
 
+  function handleLocalPick(file: { id: string; title: string; durationSec: number | null }) {
+    enqueueLocalTracks([pickedFileToPlayerTrack(file)]);
+  }
+
   return (
-    <div className="w-full max-h-[46vh] overflow-y-auto overscroll-contain min-h-0 -mx-1 px-1">
-      <Reorder.Group
-        as="div"
-        axis="y"
-        values={queue}
-        onReorder={handleReorder}
-        className="w-full space-y-1"
-      >
-        {queue.map((t, i) => {
-          const isCurrent = t.id === currentId;
-          return (
-            <Fragment key={t.id}>
-              {waveMode && i === queueIndex + 1 && <WaveDivider />}
-              <QueueRow
-                track={t}
-                isCurrent={isCurrent}
-                onJump={jump}
-                onMove={moveTrack}
-                canMoveUp={i > 0}
-                canMoveDown={i < queue.length - 1}
-              />
-            </Fragment>
-          );
-        })}
-      </Reorder.Group>
+    <div className="w-full">
+      <div className="flex justify-end px-1 pb-2">
+        <LocalFileButton onPick={handleLocalPick} />
+      </div>
+      <div className="max-h-[46vh] overflow-y-auto overscroll-contain min-h-0 -mx-1 px-1">
+        <Reorder.Group
+          as="div"
+          axis="y"
+          values={queue}
+          onReorder={handleReorder}
+          className="w-full space-y-1"
+        >
+          {queue.map((t, i) => {
+            const isCurrent = t.id === currentId;
+            return (
+              <Fragment key={t.id}>
+                {waveMode && i === queueIndex + 1 && <WaveDivider />}
+                <QueueRow
+                  track={t}
+                  isCurrent={isCurrent}
+                  onJump={jump}
+                  onMove={moveTrack}
+                  canMoveUp={i > 0}
+                  canMoveDown={i < queue.length - 1}
+                />
+              </Fragment>
+            );
+          })}
+        </Reorder.Group>
+      </div>
     </div>
   );
 }
@@ -146,6 +158,7 @@ function QueueRow({
             <TrackTitleText title={t.title} version={t.version} feat={t.feat} />
           </span>
           {t.isExplicit && <ExplicitBadge />}
+          {t.localFileId && <Icon name="file" size={11} className="shrink-0 text-muted-foreground/70" />}
         </span>
         <span className="text-xs text-muted-foreground truncate block">{t.artistName}</span>
       </button>

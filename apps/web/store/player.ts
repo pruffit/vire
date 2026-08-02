@@ -15,6 +15,8 @@ export interface PlayerTrack {
   isExplicit?: boolean;
   version?: string | null;
   feat?: string[];
+  /** Файл с устройства слушателя — признак «локальный». Blob не переживает перезагрузку, не персистится. */
+  localFileId?: string;
 }
 
 /** Откуда запущено воспроизведение — для аналитики и «вернуться к источнику». */
@@ -94,6 +96,25 @@ type PersistedState = Pick<
   | 'duration'
 >;
 
+function stripLocal(tracks: PlayerTrack[]): PlayerTrack[] {
+  return tracks.filter((t) => !t.localFileId);
+}
+
+/** Локальные позиции не переживают перезагрузку (blob невалиден за пределами вкладки) — вырезаем
+ *  перед оконным срезом, сдвигая queueIndex на число вырезанных элементов до него. */
+function withoutLocal(queue: PlayerTrack[], queueIndex: number): { queue: PlayerTrack[]; queueIndex: number } {
+  let removedBefore = 0;
+  const filtered: PlayerTrack[] = [];
+  queue.forEach((t, i) => {
+    if (t.localFileId) {
+      if (i <= queueIndex) removedBefore += 1;
+      return;
+    }
+    filtered.push(t);
+  });
+  return { queue: filtered, queueIndex: Math.max(0, queueIndex - removedBefore) };
+}
+
 /** Окно вокруг текущего трека, не slice(0,100) — иначе на queueIndex>99 персист теряет текущий трек. */
 function sliceQueueForPersist(
   queue: PlayerTrack[],
@@ -153,9 +174,11 @@ export const usePlayerStore = create<Store>()(
       version: 1,
       storage: createJSONStorage(() => localStorage),
       partialize: (state): PersistedState => {
-        const { queue, queueIndex } = sliceQueueForPersist(state.queue, state.queueIndex);
+        const currentIsLocal = Boolean(state.track?.localFileId);
+        const { queue: withoutLocalQueue, queueIndex: adjustedIndex } = withoutLocal(state.queue, state.queueIndex);
+        const { queue, queueIndex } = sliceQueueForPersist(withoutLocalQueue, adjustedIndex);
         return {
-          track: state.track,
+          track: currentIsLocal ? null : state.track,
           queue,
           queueIndex,
           volume: state.volume,
@@ -163,9 +186,12 @@ export const usePlayerStore = create<Store>()(
           shuffle: state.shuffle,
           repeat: state.repeat,
           context: state.context,
-          originalQueue: sliceOriginalQueueForPersist(state.originalQueue, state.track?.id),
-          currentTime: state.currentTime,
-          duration: state.duration,
+          originalQueue: sliceOriginalQueueForPersist(
+            state.originalQueue ? stripLocal(state.originalQueue) : null,
+            currentIsLocal ? undefined : state.track?.id,
+          ),
+          currentTime: currentIsLocal ? 0 : state.currentTime,
+          duration: currentIsLocal ? 0 : state.duration,
         };
       },
       // Через _setState (не мутацией) — иначе подписчики не узнают о restored.
