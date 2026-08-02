@@ -1,12 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import { Icon, type IconName } from './icon';
-import { BrandIcon, type BrandName } from './brand-icon';
-import { PARTY_EVENT } from './widget-triggers';
+import { Icon } from './icon';
 
 // e.code, не e.key — работает на любой раскладке
 const KONAMI = [
@@ -15,17 +13,7 @@ const KONAMI = [
 ];
 
 export function EasterEggs() {
-  const [party, setParty] = useState(false);
   const [secret, setSecret] = useState(false);
-  const partyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => { if (partyTimerRef.current) clearTimeout(partyTimerRef.current); }, []);
-
-  const startParty = () => {
-    if (partyTimerRef.current) clearTimeout(partyTimerRef.current);
-    setParty(true);
-    partyTimerRef.current = setTimeout(() => setParty(false), 3400);
-  };
 
   useEffect(() => {
     console.log('%cVireMusic ♪', 'font:800 30px/1 system-ui;letter-spacing:1px');
@@ -51,17 +39,8 @@ export function EasterEggs() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  useEffect(() => {
-    const onParty = () => startParty();
-    window.addEventListener(PARTY_EVENT, onParty);
-    return () => window.removeEventListener(PARTY_EVENT, onParty);
-  }, []);
-
   return (
-    <>
-      <AnimatePresence>{party && <NoteRain key="note-rain" />}</AnimatePresence>
-      <AnimatePresence>{secret && <SecretPopup onClose={() => setSecret(false)} />}</AnimatePresence>
-    </>
+    <AnimatePresence>{secret && <SecretPopup onClose={() => setSecret(false)} />}</AnimatePresence>
   );
 }
 
@@ -112,61 +91,6 @@ function SecretPopup({ onClose }: { onClose: () => void }) {
           Уйти
         </button>
       </motion.div>
-    </motion.div>
-  );
-}
-
-type RainPiece = { type: 'brand'; name: BrandName } | { type: 'icon'; name: IconName };
-
-const BRAND_PIECES: BrandName[] = [
-  'vk', 'x', 'instagram', 'telegram', 'tiktok', 'twitch', 'discord', 'facebook',
-  'bluesky', 'apple-music', 'bandcamp', 'deezer', 'youtube-music',
-];
-const ICON_PIECES: IconName[] = ['music', 'heart', 'star', 'play-circle', 'shuffle', 'volume-2'];
-const ICON_COLORS = ['#1ED760', '#FF0033', '#0077FF', '#A335FF', '#FF5500', '#34D1D9'];
-
-const POOL: RainPiece[] = [
-  ...BRAND_PIECES.map((name): RainPiece => ({ type: 'brand', name })),
-  ...ICON_PIECES.map((name): RainPiece => ({ type: 'icon', name })),
-];
-
-function NoteRain() {
-  const [items] = useState(() =>
-    Array.from({ length: 32 }, (_, i) => ({
-      id: i,
-      piece: POOL[Math.floor(Math.random() * POOL.length)],
-      left: Math.random() * 100,
-      delay: Math.random() * 1,
-      duration: 2.6 + Math.random() * 1.4,
-      size: 22 + Math.round(Math.random() * 26),
-      color: ICON_COLORS[Math.floor(Math.random() * ICON_COLORS.length)],
-      spin: Math.random() > 0.5 ? 220 : -220,
-    })),
-  );
-
-  return (
-    <motion.div
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-[90] overflow-hidden"
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      {items.map((n) => (
-        <motion.span
-          key={n.id}
-          className="absolute inline-flex select-none drop-shadow"
-          style={{ left: `${n.left}%`, top: -56 }}
-          initial={{ y: -56, opacity: 0, rotate: -20 }}
-          animate={{ y: '114vh', opacity: [0, 1, 1, 0], rotate: n.spin }}
-          transition={{ duration: n.duration, delay: n.delay, ease: 'easeIn' }}
-        >
-          {n.piece.type === 'brand' ? (
-            <BrandIcon name={n.piece.name} size={n.size} />
-          ) : (
-            <Icon name={n.piece.name} size={n.size} style={{ color: n.color }} />
-          )}
-        </motion.span>
-      ))}
     </motion.div>
   );
 }

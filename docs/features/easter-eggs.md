@@ -1,14 +1,12 @@
 # Пасхалки
 
-Скрытые интерактивные элементы платформы: код Konami, нотный дождь по копирайту и
-терминал-страница `/fwqa688` с «загадочным» прогресс-баром.
+Скрытые интерактивные элементы платформы: код Konami и терминал-страница `/fwqa688`
+с «загадочным» прогресс-баром.
 
 ## Что делает
 
 - **Код Konami** (`↑ ↑ ↓ ↓ ← → ← → B A`, слушает `e.code` — не зависит от раскладки)
   открывает попап-приглашение со ссылкой на `/fwqa688`.
-- **Тройной клик по «© VireMusic»** в футере запускает «нотный дождь» — иконки/бренд-лого
-  соцсетей падают и вращаются поверх страницы ~3.4с.
 - **`/fwqa688`** — скрытая терминал-страница (не в sitemap, `robots: noindex`): бегущая
   строка, глитчующий морзе-логотип и детерминированный прогресс-бар «готовности
   протокола», который растёт месяцами/годами с лёгким дневным джиттером (иногда
@@ -17,10 +15,11 @@
 
 ## Где код
 
-- **Компонент:** `apps/web/components/easter-eggs.tsx` — Konami-попап (`SecretPopup`)
-  + нотный дождь (`NoteRain`); подключён через `apps/web/components/deferred-widgets.tsx`.
-- **Триггеры:** `apps/web/components/widget-triggers.tsx` — `PartyText` (тройной клик,
-  используется в `footer.tsx`), `PARTY_EVENT`/`OPEN_ANNOUNCEMENT_EVENT`.
+- **Компонент:** `apps/web/components/easter-eggs.tsx` — Konami-попап (`SecretPopup`);
+  подключён через `apps/web/components/deferred-widgets.tsx`.
+- **Триггеры:** `apps/web/components/widget-triggers.tsx` — `OPEN_ANNOUNCEMENT_EVENT`.
+- Нотный дождь по тройному клику на копирайт удалён 01.08.2026; сам жест отдан под
+  вход на секретную страницу вечеринки (см. `docs/features/party.md`, срез C).
 - **Страница:** `apps/web/app/fwqa688/page.tsx` + `layout.tsx` (noindex).
 - **Формула прогресса:** `apps/web/lib/black-sky.ts` — `blackSkyProgress(now: Date): number`,
   чистая функция, покрыта тестом `black-sky.test.ts`.
