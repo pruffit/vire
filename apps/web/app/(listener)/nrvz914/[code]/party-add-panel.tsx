@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
 import Image from 'next/image';
-import type { SearchTrack, TrackCandidate } from '@vire/core';
+import type { JamQueueItem, SearchTrack, TrackCandidate } from '@vire/core';
 import type { ExternalAddOutcome, OptimisticExternalGuess } from '@/lib/jam/use-jam-queue';
 import { Icon } from '@/components/icon';
 import { TrackTitleText } from '@/components/track-title';
@@ -32,9 +32,35 @@ interface Props {
   suggestions?: SearchTrack[];
   autoFocus?: boolean;
   addedTrackIds: ReadonlySet<string>;
+  /** Уже сыгранное на этой вечеринке — блок «Ещё раз» в простое. */
+  history?: JamQueueItem[];
   /** true — внутри шторки: список тянется на всю высоту контейнера вместо своего max-h. */
   dense?: boolean;
 }
+
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start(): void;
+  abort(): void;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+}
+
+type SpeechWindow = Window & {
+  SpeechRecognition?: new () => SpeechRecognitionLike;
+  webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+};
+
+function speechCtor(): (new () => SpeechRecognitionLike) | null {
+  if (typeof window === 'undefined') return null;
+  const w = window as SpeechWindow;
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+const noSubscribe = (): (() => void) => () => {};
 
 function toRawGuess(text: string): OptimisticExternalGuess {
   return { title: text.length > RAW_TITLE_MAX ? `${text.slice(0, RAW_TITLE_MAX)}…` : text, artistName: '', coverUrl: null, durationSec: null };
@@ -44,7 +70,7 @@ function suggestionsToCandidates(tracks: SearchTrack[]): TrackCandidate[] {
   return tracks.map((t) => ({ kind: 'VIRE', trackId: t.id, title: t.title, artistName: t.artistName, coverUrl: t.coverUrl }));
 }
 
-export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFocus = true, addedTrackIds, dense = false }: Props) {
+export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFocus = true, addedTrackIds, history = [], dense = false }: Props) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<TrackCandidate[] | null>(null);
   const [postCandidates, setPostCandidates] = useState<TrackCandidate[] | null>(null);
@@ -52,6 +78,10 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
   const [submitting, setSubmitting] = useState(false);
   const [emptyHint, setEmptyHint] = useState(false);
   const [cursor, setCursor] = useState(-1);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const canPaste = useSyncExternalStore(noSubscribe, () => Boolean(navigator.clipboard?.readText), () => false);
+  const canListen = useSyncExternalStore(noSubscribe, () => speechCtor() !== null, () => false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +91,8 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
     const timer = setTimeout(() => inputRef.current?.focus(), FOCUS_DELAY_MS);
     return () => clearTimeout(timer);
   }, [autoFocus]);
+
+  useEffect(() => () => recognitionRef.current?.abort(), []);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -148,6 +180,45 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
     void submitAll(urls);
   }
 
+  async function pasteFromClipboard(): Promise<void> {
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (!text) return;
+      const urls = text.match(URL_GLOBAL_RE);
+      if (!urls) {
+        setQ(text);
+        inputRef.current?.focus();
+        return;
+      }
+      setQ(urls.length === 1 ? urls[0]! : `${urls.length} ссылки`);
+      await submitAll(urls);
+    } catch {
+      toast.error('Не удалось прочитать буфер обмена');
+    }
+  }
+
+  function startListening(): void {
+    const Ctor = speechCtor();
+    if (!Ctor || listening) return;
+    const recognition = new Ctor();
+    recognitionRef.current = recognition;
+    recognition.lang = 'ru-RU';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript;
+      if (transcript) setQ(transcript);
+    };
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+    try {
+      recognition.start();
+      setListening(true);
+    } catch {
+      setListening(false);
+    }
+  }
+
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>): void {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       if (list.length === 0) return;
@@ -206,6 +277,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
   const ready = list.filter((c) => c.kind !== 'HINT');
   const fromWeb = list.filter((c) => c.kind === 'HINT');
   const idleTitle = postCandidates ? 'Похоже, вот это' : idle && list.length > 0 ? 'Из любимых' : null;
+  const historyCandidates = historyToCandidates(history);
 
   function renderRow(candidate: TrackCandidate, index: number) {
     return (
@@ -239,7 +311,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
           // text-base на мобилке: при шрифте меньше 16px iOS зумит страницу на фокусе
           className="min-w-0 flex-1 bg-transparent py-1 text-base outline-none placeholder:text-muted-foreground sm:text-sm"
         />
-        {q.length > 0 && (
+        {q.length > 0 ? (
           <button
             type="button"
             onClick={() => { reset(); setEmptyHint(false); inputRef.current?.focus(); }}
@@ -248,6 +320,33 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
           >
             <Icon name="x" size={14} />
           </button>
+        ) : (
+          <>
+            {canListen && (
+              <button
+                type="button"
+                onClick={startListening}
+                aria-label="Сказать голосом"
+                aria-pressed={listening}
+                className={cn(
+                  'grid h-11 w-11 shrink-0 place-items-center rounded-full transition-colors',
+                  listening ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Icon name="volume-2" size={15} />
+              </button>
+            )}
+            {canPaste && (
+              <button
+                type="button"
+                onClick={() => void pasteFromClipboard()}
+                aria-label="Вставить из буфера"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Icon name="clipboard" size={15} />
+              </button>
+            )}
+          </>
         )}
         <button
           type="submit"
@@ -306,6 +405,15 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
           <p className="px-3 pb-1 pt-2 text-[11px] text-muted-foreground">Нет нужного? Enter — поищем в сети</p>
         )}
 
+        {idle && historyCandidates.length > 0 && (
+          <>
+            <SectionTitle className="px-3 pb-1 pt-2">Ещё раз</SectionTitle>
+            {historyCandidates.map((candidate, i) => (
+              <CandidateRow key={`again-${i}`} candidate={candidate} added={false} active={false} onPick={handlePickCandidate} />
+            ))}
+          </>
+        )}
+
         {idle && tasteSuggestions && tasteSuggestions.length > 0 && (
           <>
             <SectionTitle className="px-3 pb-1 pt-2">Из вашего вкуса</SectionTitle>
@@ -317,6 +425,31 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
       </div>
     </div>
   );
+}
+
+/** Уже сыгранное на этой вечеринке — свежее первым, без повторов и без незарезолвленных позиций. */
+function historyToCandidates(history: JamQueueItem[]): TrackCandidate[] {
+  const seen = new Set<string>();
+  const out: TrackCandidate[] = [];
+  for (let i = history.length - 1; i >= 0 && out.length < 5; i--) {
+    const item = history[i]!;
+    const key = `${item.source}:${item.trackId ?? item.externalId ?? item.title}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (item.source === 'VIRE' && item.trackId) {
+      out.push({ kind: 'VIRE', trackId: item.trackId, title: item.title, artistName: item.artistName, coverUrl: item.coverUrl });
+      continue;
+    }
+    if ((item.source !== 'YOUTUBE' && item.source !== 'SOUNDCLOUD') || !item.externalId) continue;
+    out.push({
+      kind: 'EXTERNAL',
+      ref: {
+        source: item.source, externalId: item.externalId, externalUrl: item.externalUrl,
+        title: item.title, artistName: item.artistName, coverUrl: item.coverUrl, durationSec: item.durationSec,
+      },
+    });
+  }
+  return out;
 }
 
 function SectionTitle({ children, className }: { children: React.ReactNode; className?: string }) {

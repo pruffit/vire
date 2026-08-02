@@ -109,6 +109,11 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
     [activeSession, jamQueue.queue],
   );
 
+  const playedHistory = useMemo(
+    () => (activeQueueIndex > 0 ? jamQueue.queue.slice(0, activeQueueIndex) : []),
+    [activeQueueIndex, jamQueue.queue],
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
@@ -182,13 +187,8 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
     );
   }
 
-  if (screenOn) {
-    return (
-      <div data-app-screen className="h-full min-h-0 overflow-y-auto">
-        <PartyScreen code={code} onExit={() => setScreenOn(false)} />
-      </div>
-    );
-  }
+  // Экран сам рисуется порталом на весь вьюпорт — обёртки со скроллом ему не нужно.
+  if (screenOn) return <PartyScreen code={code} onExit={() => setScreenOn(false)} />;
 
   const { room, isHost, isAudioDevice, speakerName, isPlaying, votedSkipItemId, actions } = activeSession;
   const skipVotes = room.skipVotes?.itemId === room.playback?.itemId ? room.skipVotes : null;
@@ -307,7 +307,7 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
 
               <Sheet open={adding} onClose={() => setAdding(false)} anchor="bottom">
                 <div className="flex min-h-0 flex-1 flex-col px-2 pb-2">
-                  <PartyAddPanel onAddVire={handleAddVire} addExternal={jamQueue.addExternal} suggestions={suggestions} addedTrackIds={addedTrackIds} dense />
+                  <PartyAddPanel onAddVire={handleAddVire} addExternal={jamQueue.addExternal} suggestions={suggestions} addedTrackIds={addedTrackIds} history={playedHistory} dense />
                 </div>
               </Sheet>
 
@@ -366,7 +366,7 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
             </div>
 
             <aside className="hidden lg:sticky lg:top-6 lg:flex lg:flex-col lg:gap-4 lg:self-start">
-              <PartyAddPanel onAddVire={handleAddVire} addExternal={jamQueue.addExternal} suggestions={suggestions} addedTrackIds={addedTrackIds} autoFocus={false} />
+              <PartyAddPanel onAddVire={handleAddVire} addExternal={jamQueue.addExternal} suggestions={suggestions} addedTrackIds={addedTrackIds} history={playedHistory} autoFocus={false} />
               <JamParticipants participants={room.participants} variant="inline" />
             </aside>
           </div>
