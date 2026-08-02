@@ -3,7 +3,7 @@ import type { JamPlaybackState } from '@vire/core';
 import { effectivePaused, resolvePending, nextPendingVersion, PENDING_TTL_MS } from './optimistic-playback';
 
 const playback = (overrides?: Partial<JamPlaybackState>): JamPlaybackState => ({
-  trackId: 't1',
+  itemId: 'item-1',
   startedAtMs: 0,
   paused: false,
   pausedPositionMs: 0,

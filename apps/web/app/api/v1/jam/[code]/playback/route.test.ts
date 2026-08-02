@@ -10,7 +10,7 @@ import { resolveJamIdentity } from '@/lib/jam/jam-identity';
 import { POST } from './route';
 
 const mockedResolve = vi.mocked(resolveJamIdentity);
-const TRACK_ID = '11111111-1111-1111-1111-111111111111';
+const ITEM_ID = '11111111-1111-1111-1111-111111111111';
 
 const ctx = (code: string) => ({ params: Promise.resolve({ code }) });
 const req = (body: unknown) =>
@@ -60,7 +60,7 @@ describe('POST /api/v1/jam/[code]/playback', () => {
     resolveCode.mockResolvedValue({ ok: true, value: { id: 'jam-1' } });
     setPlayback.mockResolvedValue({ ok: false, error: new ConflictError('Джем уже завершён') });
 
-    const res = await POST(req({ kind: 'track', trackId: TRACK_ID }), ctx('A2B3C4'));
+    const res = await POST(req({ kind: 'track', itemId: ITEM_ID }), ctx('A2B3C4'));
 
     expect(res.status).toBe(409);
   });
@@ -68,25 +68,25 @@ describe('POST /api/v1/jam/[code]/playback', () => {
   it('starts playback as a logged-in participant', async () => {
     mockedResolve.mockResolvedValue({ userId: 'host-1' });
     resolveCode.mockResolvedValue({ ok: true, value: { id: 'jam-1' } });
-    const playback = { trackId: TRACK_ID, startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 };
+    const playback = { itemId: ITEM_ID, startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 };
     setPlayback.mockResolvedValue({ ok: true, value: playback });
 
-    const res = await POST(req({ kind: 'play', trackId: TRACK_ID, positionMs: 0 }), ctx('A2B3C4'));
+    const res = await POST(req({ kind: 'play', itemId: ITEM_ID, positionMs: 0 }), ctx('A2B3C4'));
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual(playback);
-    expect(setPlayback).toHaveBeenCalledWith('jam-1', { userId: 'host-1' }, { kind: 'play', trackId: TRACK_ID, positionMs: 0 });
+    expect(setPlayback).toHaveBeenCalledWith('jam-1', { userId: 'host-1' }, { kind: 'play', itemId: ITEM_ID, positionMs: 0 });
   });
 
   it('starts playback as a guest with a signed sessionId, stripping it before calling the service', async () => {
     mockedResolve.mockResolvedValue({ guestSessionId: 'g1' });
     resolveCode.mockResolvedValue({ ok: true, value: { id: 'jam-1' } });
-    const playback = { trackId: TRACK_ID, startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 2 };
+    const playback = { itemId: ITEM_ID, startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 2 };
     setPlayback.mockResolvedValue({ ok: true, value: playback });
 
-    const res = await POST(req({ kind: 'track', trackId: TRACK_ID, sessionId: 'g1.sig' }), ctx('A2B3C4'));
+    const res = await POST(req({ kind: 'track', itemId: ITEM_ID, sessionId: 'g1.sig' }), ctx('A2B3C4'));
 
     expect(res.status).toBe(200);
-    expect(setPlayback).toHaveBeenCalledWith('jam-1', { guestSessionId: 'g1' }, { kind: 'track', trackId: TRACK_ID });
+    expect(setPlayback).toHaveBeenCalledWith('jam-1', { guestSessionId: 'g1' }, { kind: 'track', itemId: ITEM_ID });
   });
 });

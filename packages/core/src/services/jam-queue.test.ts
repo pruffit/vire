@@ -1,41 +1,74 @@
 import { describe, it, expect } from 'vitest';
-import { applyQueueMutation, type QueueMutation } from './jam-queue';
+import { applyQueueMutation, insertPartyQueueItem, type QueueMutation } from './jam-queue';
 import type { JamQueueItemWrite } from '../repositories/jam';
 
 const ADDED_AT = new Date('2026-07-20T12:00:00Z');
 
 const item = (id: string, overrides?: Partial<JamQueueItemWrite>): JamQueueItemWrite => ({
   id,
+  source: 'VIRE',
   trackId: `track-${id}`,
+  externalId: null,
+  externalUrl: null,
+  title: null,
+  artistName: null,
+  coverUrl: null,
+  durationSec: null,
   addedByParticipantId: 'p1',
   addedAt: ADDED_AT,
   ...overrides,
 });
 
-describe('applyQueueMutation — add', () => {
-  it('appends a new item without an id, at the end', () => {
-    const items = [item('a'), item('b')];
-    const mutation: QueueMutation = { kind: 'add', trackId: 'track-new', participantId: 'p2', addedAt: ADDED_AT };
+const addVire = (trackId: string, participantId: string, addedAt = ADDED_AT): QueueMutation => ({
+  kind: 'add',
+  entry: { source: 'VIRE', trackId },
+  participantId,
+  addedAt,
+});
 
-    const result = applyQueueMutation(items, mutation);
+describe('applyQueueMutation — add', () => {
+  it('appends a new VIRE item without an id, at the end', () => {
+    const items = [item('a'), item('b')];
+
+    const result = applyQueueMutation(items, addVire('track-new', 'p2'));
 
     expect(result).toHaveLength(3);
-    expect(result[2]).toEqual({ trackId: 'track-new', addedByParticipantId: 'p2', addedAt: ADDED_AT });
+    expect(result[2]).toEqual({
+      source: 'VIRE', trackId: 'track-new', externalId: null, externalUrl: null,
+      title: null, artistName: null, coverUrl: null, durationSec: null,
+      addedByParticipantId: 'p2', addedAt: ADDED_AT,
+    });
     expect('id' in result[2]!).toBe(false);
+  });
+
+  it('appends a new external item carrying its metadata snapshot', () => {
+    const mutation: QueueMutation = {
+      kind: 'add',
+      entry: { source: 'YOUTUBE', externalId: 'yt-1', externalUrl: 'https://youtu.be/yt-1', title: 'Song', artistName: 'Artist', coverUrl: 'https://img', durationSec: 180 },
+      participantId: 'p2',
+      addedAt: ADDED_AT,
+    };
+
+    const result = applyQueueMutation([], mutation);
+
+    expect(result[0]).toEqual({
+      source: 'YOUTUBE', trackId: null, externalId: 'yt-1', externalUrl: 'https://youtu.be/yt-1',
+      title: 'Song', artistName: 'Artist', coverUrl: 'https://img', durationSec: 180,
+      addedByParticipantId: 'p2', addedAt: ADDED_AT,
+    });
   });
 
   it('preserves existing items and their ids unchanged', () => {
     const items = [item('a'), item('b')];
-    const mutation: QueueMutation = { kind: 'add', trackId: 'track-new', participantId: 'p2', addedAt: ADDED_AT };
 
-    const result = applyQueueMutation(items, mutation);
+    const result = applyQueueMutation(items, addVire('track-new', 'p2'));
 
     expect(result[0]).toEqual(items[0]);
     expect(result[1]).toEqual(items[1]);
   });
 
   it('adding into an empty queue produces a single item at index 0', () => {
-    const result = applyQueueMutation([], { kind: 'add', trackId: 't1', participantId: 'p1', addedAt: ADDED_AT });
+    const result = applyQueueMutation([], addVire('t1', 'p1'));
     expect(result).toHaveLength(1);
     expect(result[0]!.trackId).toBe('t1');
   });
@@ -43,7 +76,7 @@ describe('applyQueueMutation — add', () => {
   it('does not mutate the input array', () => {
     const items = [item('a')];
     const snapshot = [...items];
-    applyQueueMutation(items, { kind: 'add', trackId: 't2', participantId: 'p1', addedAt: ADDED_AT });
+    applyQueueMutation(items, addVire('t2', 'p1'));
     expect(items).toEqual(snapshot);
   });
 });
@@ -143,5 +176,49 @@ describe('applyQueueMutation — shuffle', () => {
     const snapshot = [...items];
     applyQueueMutation(items, { kind: 'shuffle', random: () => 0.5 });
     expect(items).toEqual(snapshot);
+  });
+});
+
+describe('insertPartyQueueItem', () => {
+  const forParticipant = (id: string, participantId: string) => item(id, { addedByParticipantId: participantId });
+
+  it('single guest — FIFO order (round-robin with one contributor is a plain append)', () => {
+    let queue: JamQueueItemWrite[] = [];
+    queue = insertPartyQueueItem(queue, forParticipant('a1', 'guest-a'), { addedByParticipantId: 'guest-a', currentItemId: null });
+    queue = insertPartyQueueItem(queue, forParticipant('a2', 'guest-a'), { addedByParticipantId: 'guest-a', currentItemId: null });
+    queue = insertPartyQueueItem(queue, forParticipant('a3', 'guest-a'), { addedByParticipantId: 'guest-a', currentItemId: null });
+
+    expect(queue.map((i) => i.id)).toEqual(['a1', 'a2', 'a3']);
+  });
+
+  it('three guests mixed in — a newcomer\'s first track is inserted before the earlier round of others, not appended', () => {
+    let queue: JamQueueItemWrite[] = [];
+    queue = insertPartyQueueItem(queue, forParticipant('a1', 'A'), { addedByParticipantId: 'A', currentItemId: null });
+    queue = insertPartyQueueItem(queue, forParticipant('b1', 'B'), { addedByParticipantId: 'B', currentItemId: null });
+    queue = insertPartyQueueItem(queue, forParticipant('c1', 'C'), { addedByParticipantId: 'C', currentItemId: null });
+    // A's second track — no one else has an unplayed second track yet, goes to the end.
+    queue = insertPartyQueueItem(queue, forParticipant('a2', 'A'), { addedByParticipantId: 'A', currentItemId: null });
+    expect(queue.map((i) => i.id)).toEqual(['a1', 'b1', 'c1', 'a2']);
+
+    // B's second track — same round as a2, goes after it (FIFO within a round).
+    queue = insertPartyQueueItem(queue, forParticipant('b2', 'B'), { addedByParticipantId: 'B', currentItemId: null });
+    expect(queue.map((i) => i.id)).toEqual(['a1', 'b1', 'c1', 'a2', 'b2']);
+
+    // D's first track must land before a2/b2 (round 1) — not after — the invariant this queue exists for.
+    queue = insertPartyQueueItem(queue, forParticipant('d1', 'D'), { addedByParticipantId: 'D', currentItemId: null });
+    expect(queue.map((i) => i.id)).toEqual(['a1', 'b1', 'c1', 'd1', 'a2', 'b2']);
+  });
+
+  it('adding during playback does not move the currently playing position or anything before it', () => {
+    const queue = [forParticipant('a1', 'A'), forParticipant('b1', 'B'), forParticipant('a2', 'A')];
+    const result = insertPartyQueueItem(queue, forParticipant('c1', 'C'), { addedByParticipantId: 'C', currentItemId: 'a1' });
+
+    // a1 is locked (playing); only the future tail (b1, a2) is subject to round-robin.
+    expect(result.map((i) => i.id)).toEqual(['a1', 'b1', 'c1', 'a2']);
+  });
+
+  it('empty queue — the new item becomes the only entry', () => {
+    const result = insertPartyQueueItem([], item('a1'), { addedByParticipantId: 'p1', currentItemId: null });
+    expect(result.map((i) => i.id)).toEqual(['a1']);
   });
 });

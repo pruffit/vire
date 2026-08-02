@@ -57,7 +57,9 @@ export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args)
   }
   const queue = overlay ?? serverQueue;
 
+  // Внешние позиции (source !== 'VIRE') добавляются отдельным роутом (срез B/C) — этот путь только для каталога.
   const addTrack = useCallback(async (item: JamQueueItem) => {
+    if (!item.trackId) return;
     const base = overlay ?? serverQueue;
     setOverlay([...base, item]);
     const res = await postQueue(code, sessionId, { kind: 'add', trackId: item.trackId });

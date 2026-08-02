@@ -1,6 +1,6 @@
 import { err, ok, NotFoundError, ConflictError, ValidationError, ForbiddenError, type Result } from '../errors';
 import { generateJamCode, normalizeJamCode } from './jam-code';
-import { applyQueueMutation, type QueueMutation } from './jam-queue';
+import { applyQueueMutation, insertPartyQueueItem, type QueueMutation, type QueueEntry } from './jam-queue';
 import type { JamPlaybackState } from './jam-sync';
 import type {
   IJamRepository,
@@ -10,7 +10,7 @@ import type {
 import type { IJamStateStore } from '../ports/jam-state';
 import type { IJamBroadcaster } from '../ports/jam-realtime';
 import type { Clock } from '../ports/effects';
-import type { JamSession, JamParticipant, JamQueueItem, JamMode } from '../types/jam';
+import type { JamSession, JamParticipant, JamQueueItem, JamMode, JamSessionKind } from '../types/jam';
 
 export const JAM_MAX_QUEUE = 200;
 export const JAM_MAX_PARTICIPANTS = 50;
@@ -24,11 +24,13 @@ export type QueueMutationIntent =
   | { kind: 'move'; itemId: string; toPosition: number }
   | { kind: 'shuffle' };
 
+export type ExternalQueueEntry = Extract<QueueEntry, { source: 'YOUTUBE' | 'SOUNDCLOUD' }>;
+
 export type PlaybackIntent =
-  | { kind: 'play'; trackId: string; positionMs: number }
+  | { kind: 'play'; itemId: string; positionMs: number }
   | { kind: 'pause'; positionMs: number }
   | { kind: 'seek'; positionMs: number }
-  | { kind: 'track'; trackId: string };
+  | { kind: 'track'; itemId: string };
 
 export interface JamFullState {
   session: JamSession;
@@ -43,7 +45,22 @@ function forbidden(message = 'Вы не участник этого джема')
 }
 
 function toWriteItem(item: JamQueueItem): JamQueueItemWrite {
-  return { id: item.id, trackId: item.trackId, addedByParticipantId: item.addedByParticipantId, addedAt: item.addedAt };
+  // Снапшот-колонки (title/artistName/coverUrl/durationSec) — только для внешних источников;
+  // для VIRE отображаемые значения идут через join, в строке они не дублируются.
+  const isVire = item.source === 'VIRE';
+  return {
+    id: item.id,
+    source: item.source,
+    trackId: item.trackId,
+    externalId: item.externalId,
+    externalUrl: item.externalUrl,
+    title: isVire ? null : item.title,
+    artistName: isVire ? null : item.artistName,
+    coverUrl: isVire ? null : item.coverUrl,
+    durationSec: isVire ? null : item.durationSec,
+    addedByParticipantId: item.addedByParticipantId,
+    addedAt: item.addedAt,
+  };
 }
 
 export class JamService {
@@ -60,12 +77,13 @@ export class JamService {
     title: string | null,
     hostDisplayName: string,
     mode: JamMode = 'SYNCED',
+    kind: JamSessionKind = 'JAM',
   ): Promise<Result<JamSession, ConflictError>> {
     for (let attempt = 0; attempt < JAM_CODE_MAX_ATTEMPTS; attempt++) {
       const code = generateJamCode(this.random);
       if (await this.repo.findByCode(code)) continue;
 
-      const session = await this.repo.createSession({ code, hostUserId, title, mode });
+      const session = await this.repo.createSession({ code, hostUserId, title, mode, kind });
       await this.repo.upsertParticipant({
         jamId: session.id,
         identity: { userId: hostUserId },
@@ -197,12 +215,56 @@ export class JamService {
 
     const mutation: QueueMutation =
       intent.kind === 'add'
-        ? { kind: 'add', trackId: intent.trackId, participantId: participant.id, addedAt: new Date(this.clock()) }
+        ? { kind: 'add', entry: { source: 'VIRE', trackId: intent.trackId }, participantId: participant.id, addedAt: new Date(this.clock()) }
         : intent.kind === 'shuffle'
           ? { kind: 'shuffle', random: this.random }
           : intent;
 
-    const nextItems = applyQueueMutation(sessionState.queue.map(toWriteItem), mutation);
+    return this.commitQueueMutation(jamId, sessionState, participant, intent.kind === 'add', mutation);
+  }
+
+  /**
+   * Внешняя (не-каталожная) позиция — только для kind='PARTY'. Резолв ссылки в дескриптор —
+   * ответственность вызывающей стороны (срез B); здесь только гарды и запись.
+   */
+  async addExternalItem(
+    jamId: string,
+    identity: JamParticipantIdentity,
+    entry: ExternalQueueEntry,
+  ): Promise<Result<{ queue: JamQueueItem[]; version: number }, ForbiddenError | NotFoundError | ConflictError | ValidationError>> {
+    const participant = await this.repo.findParticipant(jamId, identity);
+    if (!participant) return err(forbidden());
+
+    const sessionState = await this.repo.getSessionState(jamId);
+    if (!sessionState) return err(new NotFoundError('Jam', jamId));
+    if (sessionState.session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
+    if (sessionState.session.kind !== 'PARTY') return err(new ValidationError('Внешние треки доступны только в режиме вечеринки'));
+
+    const addCount = await this.state.bumpAddCounter(jamId, participant.id);
+    if (addCount > JAM_MAX_ADDS_PER_MIN) return err(new ConflictError('Слишком много добавлений, попробуйте через минуту'));
+    if (sessionState.queue.length >= JAM_MAX_QUEUE) return err(new ConflictError('Очередь переполнена'));
+
+    const mutation: QueueMutation = { kind: 'add', entry, participantId: participant.id, addedAt: new Date(this.clock()) };
+    return this.commitQueueMutation(jamId, sessionState, participant, true, mutation);
+  }
+
+  private async commitQueueMutation(
+    jamId: string,
+    sessionState: { session: JamSession; queue: JamQueueItem[] },
+    participant: JamParticipant,
+    isAdd: boolean,
+    mutation: QueueMutation,
+  ): Promise<Result<{ queue: JamQueueItem[]; version: number }, never>> {
+    const existingWriteItems = sessionState.queue.map(toWriteItem);
+    const appended = applyQueueMutation(existingWriteItems, mutation);
+
+    let nextItems = appended;
+    if (isAdd && sessionState.session.kind === 'PARTY') {
+      const currentItemId = (await this.state.getPlayback(jamId))?.itemId ?? null;
+      const newItem = appended[appended.length - 1]!;
+      nextItems = insertPartyQueueItem(existingWriteItems, newItem, { addedByParticipantId: participant.id, currentItemId });
+    }
+
     const nextVersion = sessionState.session.queueVersion + 1;
     await this.repo.replaceQueue(jamId, nextItems, nextVersion);
 
@@ -230,10 +292,10 @@ export class JamService {
     let next: JamPlaybackState;
     switch (intent.kind) {
       case 'play':
-        next = { trackId: intent.trackId, startedAtMs: now - intent.positionMs, paused: false, pausedPositionMs: 0, version: nextVersion };
+        next = { itemId: intent.itemId, startedAtMs: now - intent.positionMs, paused: false, pausedPositionMs: 0, version: nextVersion };
         break;
       case 'track':
-        next = { trackId: intent.trackId, startedAtMs: now, paused: false, pausedPositionMs: 0, version: nextVersion };
+        next = { itemId: intent.itemId, startedAtMs: now, paused: false, pausedPositionMs: 0, version: nextVersion };
         break;
       case 'pause':
         if (!current) return err(new ConflictError('Нет активного трека'));

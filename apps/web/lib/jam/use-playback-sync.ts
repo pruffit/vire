@@ -8,6 +8,8 @@ const SYNC_INTERVAL_MS = 10_000;
 
 export interface UsePlaybackSyncArgs {
   playback: JamPlaybackState | null;
+  /** Трек резолвится из очереди по playback.itemId; null — внешний источник (звук появится в срезе C), движок не грузит. */
+  trackId: string | null;
   serverNow: () => number;
   /** Звук разблокирован жестом пользователя — до этого движок не создаём (автоплей заблокирован браузером). */
   audioEnabled: boolean;
@@ -17,10 +19,10 @@ export interface UsePlaybackSyncArgs {
 }
 
 /** Владеет `JamAudioEngine`: создаёт его при разблокировке звука, применяет решения `jam-sync` и уничтожает при размонтировании. */
-export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrection = true, onEnded }: UsePlaybackSyncArgs): void {
+export function usePlaybackSync({ playback, trackId, serverNow, audioEnabled, driftCorrection = true, onEnded }: UsePlaybackSyncArgs): void {
   const engineRef = useRef<JamAudioEngine | null>(null);
   const onEndedRef = useRef(onEnded);
-  const loadedTrackIdRef = useRef<string | null>(null);
+  const loadedItemIdRef = useRef<string | null>(null);
   const pausedRef = useRef<boolean | null>(null);
   const lastHardSeekAtRef = useRef<number | null>(null);
   const unsubscribeResyncRef = useRef<(() => void) | null>(null);
@@ -41,7 +43,7 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrec
       unsubscribeResyncRef.current = null;
       engine.destroy();
       engineRef.current = null;
-      loadedTrackIdRef.current = null;
+      loadedItemIdRef.current = null;
       pausedRef.current = null;
       lastHardSeekAtRef.current = null;
     };
@@ -60,21 +62,30 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrec
       const unsubscribe = engine!.onPlaying(() => {
         unsubscribe();
         unsubscribeResyncRef.current = null;
-        if (loadedTrackIdRef.current !== target.trackId) return;
+        if (loadedItemIdRef.current !== target.itemId) return;
         engine!.seek(derivePositionMs(target, serverNow()));
       });
       unsubscribeResyncRef.current = unsubscribe;
     }
 
-    if (loadedTrackIdRef.current !== playback.trackId) {
-      loadedTrackIdRef.current = playback.trackId;
+    if (loadedItemIdRef.current !== playback.itemId) {
       pausedRef.current = playback.paused;
       lastHardSeekAtRef.current = null;
       unsubscribeResyncRef.current?.();
       unsubscribeResyncRef.current = null;
-      void engine.load(playback.trackId).then(() => {
-        // load предыдущего трека резолвится досрочно при смене — не позиционируем по устаревшему состоянию
-        if (loadedTrackIdRef.current !== playback.trackId) return;
+
+      // Трека нет: либо внешний источник (звук — срез C), либо снапшот очереди ещё не долетел.
+      // Позицию НЕ помечаем загруженной — иначе пришедшая следом очередь уже не запустит трек.
+      if (trackId === null) {
+        loadedItemIdRef.current = null;
+        engine.pause();
+        return;
+      }
+
+      loadedItemIdRef.current = playback.itemId;
+      void engine.load(trackId).then(() => {
+        // load предыдущей позиции резолвится досрочно при смене — не позиционируем по устаревшему состоянию
+        if (loadedItemIdRef.current !== playback.itemId) return;
         // Грубая наводка сразу (не грузить трек с нуля), точная позиция — по ресинку ниже.
         engine.seek(derivePositionMs(playback, serverNow()));
         if (!playback.paused) {
@@ -84,6 +95,8 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrec
       });
       return;
     }
+
+    if (trackId === null) return;
 
     if (pausedRef.current !== playback.paused) {
       pausedRef.current = playback.paused;
@@ -97,10 +110,10 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrec
         engine.play();
       }
     }
-  }, [playback, serverNow, driftCorrection]);
+  }, [playback, trackId, serverNow, driftCorrection]);
 
   useEffect(() => {
-    if (!playback || playback.paused) return;
+    if (!playback || playback.paused || trackId === null) return;
     if (!driftCorrection) return;
 
     function runCorrection(): void {
@@ -130,5 +143,5 @@ export function usePlaybackSync({ playback, serverNow, audioEnabled, driftCorrec
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [playback, serverNow, driftCorrection]);
+  }, [playback, trackId, serverNow, driftCorrection]);
 }

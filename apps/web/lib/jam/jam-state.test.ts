@@ -30,7 +30,7 @@ vi.mock('ioredis', () => ({
 
 const { RedisJamStateStore } = await import('./jam-state');
 
-const state = { trackId: 't1', startedAtMs: 1000, paused: false, pausedPositionMs: 0, version: 1 };
+const state = { itemId: 'item-1', startedAtMs: 1000, paused: false, pausedPositionMs: 0, version: 1 };
 
 describe('RedisJamStateStore — деградация при недоступном Redis', () => {
   const store = new RedisJamStateStore();

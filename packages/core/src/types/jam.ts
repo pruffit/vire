@@ -1,6 +1,8 @@
 export type JamSessionStatus = 'LIVE' | 'ENDED';
 export type JamParticipantRole = 'HOST' | 'GUEST';
 export type JamMode = 'SYNCED' | 'SPEAKER';
+export type JamSessionKind = 'JAM' | 'PARTY';
+export type JamQueueSource = 'VIRE' | 'YOUTUBE' | 'SOUNDCLOUD' | 'LOCAL';
 
 export interface JamSession {
   id: string;
@@ -9,6 +11,7 @@ export interface JamSession {
   title: string | null;
   status: JamSessionStatus;
   mode: JamMode;
+  kind: JamSessionKind;
   /** null — источник звука хост (дефолт). */
   speakerParticipantId: string | null;
   queueVersion: number;
@@ -31,20 +34,26 @@ export interface JamParticipant {
 
 export interface JamQueueItem {
   id: string;
-  trackId: string;
+  source: JamQueueSource;
+  /** Только для source='VIRE'. */
+  trackId: string | null;
+  /** Только для источников вне каталога (не 'VIRE'). */
+  externalId: string | null;
+  externalUrl: string | null;
   position: number;
   addedByParticipantId: string | null;
   addedAt: Date;
   title: string;
   durationSec: number | null;
   artistName: string;
-  artistSlug: string;
-  releaseId: string;
+  /** Каталожные поля — только для source='VIRE'. */
+  artistSlug: string | null;
+  releaseId: string | null;
   coverUrl: string | null;
   accentColor: string | null;
-  isExplicit: boolean;
+  isExplicit: boolean | null;
   version: string | null;
-  feat: string[];
+  feat: string[] | null;
 }
 
 export interface JamSessionState {

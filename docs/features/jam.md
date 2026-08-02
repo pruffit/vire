@@ -40,7 +40,8 @@
   локальной, при активном drag буферизует.
 - Синхронное воспроизведение: сервер-авторитетные часы (`GET /api/v1/jam/time`,
   5 NTP-замеров, минимальный RTT, ресинк 5 мин). Позиция выводится из
-  `{ trackId, startedAtMs, paused, pausedPositionMs }` в Redis, а не транслируется.
+  `{ itemId, startedAtMs, paused, pausedPositionMs }` в Redis (`itemId` — позиция
+  очереди, не трек), а не транслируется.
   **Тайм-стретч (`playbackRate`) не используется вовсе** — только seek или ничего:
   дрейф >2с (`HARD_SEEK_MS`) — жёсткий seek на ожидаемую позицию, иначе `none`. Раньше
   умеренный дрейф (200мс–2с) гнался `playbackRate = 1 ± 0.01`, но позиция считалась ДО
@@ -93,9 +94,10 @@
   сессии); удаление чужого трека, кик, закрытие джема — только HOST. Автопереход по
   `ended` инициирует хост (анти-гонка).
 - Управление в UI — у всех участников: клик по строке очереди — `POST playback
-  {kind:'track'}` на этот трек (или play/pause, если это уже активный трек); подсветка
-  активной строки — по индексу первого совпадения `trackId` в очереди (не по всем
-  совпадениям — иначе дубли трека подсвечивались бы разом). Кнопка «Перемешать»
+  {kind:'track', itemId}` на эту позицию (или play/pause, если она уже активна);
+  подсветка активной строки — по `itemId`, поэтому один трек, стоящий в очереди
+  дважды, подсвечивается и играет ровно тем вхождением, по которому кликнули.
+  Кнопка «Перемешать»
   рядом с «Добавить трек» шлёт `POST queue {kind:'shuffle'}` — сервер тасует очередь
   Fisher-Yates (`applyQueueMutation`, `random` инъектируется, детерминируем в тестах),
   поднимает `queue_version`, бродкастит как обычную мутацию. Реордер — только
@@ -155,7 +157,9 @@
   `resolveSpeakerParticipantId`/`isAudioDevice`; `JamService.listPresent`/`leave` —
   presence поверх `IJamStateStore.listPresent`/`dropPresence`), порт
   `ports/jam-state.ts`; `apps/web/lib/jam/*` (`server-clock`, `jam-audio`,
-  `use-jam-room`, `use-jam-queue`, `use-playback-sync` (проп `driftCorrection`),
+  `use-jam-room`, `use-jam-queue`, `use-playback-sync` (пропы `driftCorrection`,
+  `trackId` — резолвится провайдером из очереди по `playback.itemId`; `null` = движок
+  простаивает: внешний источник либо снапшот очереди ещё не долетел),
   `jam-state`, `jam-identity`, `jam-mode-labels`,
   `jam-controls` — регистр транспорта `JamTransport`, `use-jam-position` — тик позиции
   для мини-бара, `guest-name`, `optimistic-playback` — кнопка play/pause отвечает мгновенно:
@@ -170,9 +174,11 @@
 - **Воркер:** `apps/worker/src/workers/jam-reaper.worker.ts` +
   `lib/jam-cleanup.ts` (Redis-ключи и `jam:ended` — те же, что у web)
 - **Данные:** `packages/db/src/schema/jam.ts` — `jam_sessions` (вкл. `mode`,
-  `speaker_participant_id` — миграция 0045) / `jam_participants`
-  (check «ровно одна идентичность»: user XOR guest) / `jam_queue_items`
-  (миграция 0042; `JAM_INVITE` в enum уведомлений — 0043).
+  `speaker_participant_id` — миграция 0045; `kind` `JAM|PARTY` — 0046) /
+  `jam_participants` (check «ровно одна идентичность»: user XOR guest) /
+  `jam_queue_items` (миграция 0042; `JAM_INVITE` в enum уведомлений — 0043;
+  миграция 0046 — `source` `VIRE|YOUTUBE|SOUNDCLOUD|LOCAL`, nullable `track_id` и
+  снапшот метаданных внешней позиции под check-инвариант согласованности).
   Redis: `jam:{id}:playback`, `jam:{id}:presence`, `jam:{id}:adds:{participant}` (TTL)
 
 ## Env

@@ -44,7 +44,8 @@ const req = (body: unknown = {}) =>
 
 const TRACK_A = '11111111-1111-1111-1111-111111111111';
 const TRACK_B = '22222222-2222-2222-2222-222222222222';
-const queueItem = (trackId: string) => ({ id: `q-${trackId}`, trackId } as never);
+const queueItem = (trackId: string) => ({ id: `q-${trackId}`, source: 'VIRE', trackId } as never);
+const externalQueueItem = (id: string) => ({ id, source: 'YOUTUBE', trackId: null } as never);
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -109,6 +110,41 @@ describe('POST /api/v1/jam/[code]/save-playlist', () => {
 
     expect(res.status).toBe(400);
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it('400 when the queue has only external items', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    resolveCode.mockResolvedValue({ ok: true, value: { id: 'jam-1' } });
+    getQueueForSave.mockResolvedValue({
+      ok: true,
+      value: { session: { id: 'jam-1', title: 'Party' }, isHost: true, queue: [externalQueueItem('ext-1')] },
+    });
+
+    const res = await POST(req(), ctx('A2B3C4'));
+
+    expect(res.status).toBe(400);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('skips external items and only saves catalog tracks', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    resolveCode.mockResolvedValue({ ok: true, value: { id: 'jam-1' } });
+    getQueueForSave.mockResolvedValue({
+      ok: true,
+      value: {
+        session: { id: 'jam-1', title: 'Party' },
+        isHost: true,
+        queue: [queueItem(TRACK_A), externalQueueItem('ext-1'), queueItem(TRACK_B)],
+      },
+    });
+    create.mockResolvedValue({ id: 'playlist-1' });
+
+    const res = await POST(req(), ctx('A2B3C4'));
+
+    expect(res.status).toBe(201);
+    expect(addTrack).toHaveBeenCalledTimes(2);
+    expect(addTrack).toHaveBeenNthCalledWith(1, 'playlist-1', TRACK_A, 'u1');
+    expect(addTrack).toHaveBeenNthCalledWith(2, 'playlist-1', TRACK_B, 'u1');
   });
 
   it('creates a playlist from the queue and records it as saved when the caller is host', async () => {

@@ -32,7 +32,8 @@ export async function POST(req: Request, { params }: Ctx) {
   }
 
   const { session: jam, isHost, queue } = saveResult.value;
-  if (queue.length === 0) return NextResponse.json({ error: 'Очередь пуста' }, { status: 400 });
+  const vireItems = queue.filter((item): item is typeof item & { trackId: string } => item.source === 'VIRE' && item.trackId !== null);
+  if (vireItems.length === 0) return NextResponse.json({ error: 'Очередь пуста' }, { status: 400 });
 
   const title = parsed.data.title ?? jam.title ?? `Джем ${new Date().toLocaleDateString('ru-RU')}`;
 
@@ -41,7 +42,7 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!created.ok) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
 
   const playlistId = created.value.id;
-  for (const item of queue) {
+  for (const item of vireItems) {
     await plSvc.addTrack(playlistId, session.user.id, item.trackId);
   }
 

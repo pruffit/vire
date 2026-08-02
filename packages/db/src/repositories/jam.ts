@@ -27,6 +27,7 @@ export class DrizzleJamRepository implements IJamRepository {
         hostUserId: input.hostUserId,
         title: input.title,
         ...(input.mode ? { mode: input.mode } : {}),
+        ...(input.kind ? { kind: input.kind } : {}),
       })
       .returning();
     return mapToSession(row!);
@@ -112,7 +113,14 @@ export class DrizzleJamRepository implements IJamRepository {
           items.map((item, position) => ({
             ...(item.id ? { id: item.id } : {}),
             jamId,
+            source: item.source,
             trackId: item.trackId,
+            externalId: item.externalId,
+            externalUrl: item.externalUrl,
+            title: item.title,
+            artistName: item.artistName,
+            coverUrl: item.coverUrl,
+            durationSec: item.durationSec,
             position,
             addedByParticipantId: item.addedByParticipantId,
             addedAt: item.addedAt,
@@ -174,29 +182,32 @@ export class DrizzleJamRepository implements IJamRepository {
     const rows = await this.db
       .select({
         id: jamQueueItems.id,
-        trackId: tracks.id,
+        source: jamQueueItems.source,
+        trackId: jamQueueItems.trackId,
+        externalId: jamQueueItems.externalId,
+        externalUrl: jamQueueItems.externalUrl,
         position: jamQueueItems.position,
         addedByParticipantId: jamQueueItems.addedByParticipantId,
         addedAt: jamQueueItems.addedAt,
-        title: tracks.title,
-        durationSec: tracks.durationSec,
-        artistName: artistProfiles.name,
+        title: sql<string>`coalesce(${tracks.title}, ${jamQueueItems.title})`,
+        durationSec: sql<number | null>`coalesce(${tracks.durationSec}, ${jamQueueItems.durationSec})`,
+        artistName: sql<string>`coalesce(${artistProfiles.name}, ${jamQueueItems.artistName})`,
         artistSlug: artistProfiles.slug,
         releaseId: releases.id,
-        coverUrl: releases.coverUrl,
+        coverUrl: sql<string | null>`coalesce(${releases.coverUrl}, ${jamQueueItems.coverUrl})`,
         accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
         isExplicit: tracks.isExplicit,
         version: tracks.version,
         credits: tracks.credits,
       })
       .from(jamQueueItems)
-      .innerJoin(tracks, eq(tracks.id, jamQueueItems.trackId))
-      .innerJoin(releases, eq(releases.id, tracks.releaseId))
-      .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
+      .leftJoin(tracks, eq(tracks.id, jamQueueItems.trackId))
+      .leftJoin(releases, eq(releases.id, tracks.releaseId))
+      .leftJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
       .where(eq(jamQueueItems.jamId, jamId))
       .orderBy(asc(jamQueueItems.position));
 
-    return rows.map(({ credits, ...r }) => ({ ...r, feat: featFromCredits(credits) }));
+    return rows.map(({ credits, ...r }) => ({ ...r, feat: credits ? featFromCredits(credits) : null }));
   }
 }
 
@@ -214,6 +225,7 @@ function mapToSession(row: typeof jamSessions.$inferSelect): JamSession {
     title: row.title,
     status: row.status,
     mode: row.mode,
+    kind: row.kind,
     speakerParticipantId: row.speakerParticipantId,
     queueVersion: row.queueVersion,
     savedPlaylistId: row.savedPlaylistId,

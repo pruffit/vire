@@ -17,7 +17,10 @@ function lastHandlers() {
 function track(id: string): JamQueueItem {
   return {
     id,
+    source: 'VIRE',
     trackId: `t-${id}`,
+    externalId: null,
+    externalUrl: null,
     position: 0,
     addedByParticipantId: null,
     addedAt: new Date('2026-07-20T12:00:00Z'),

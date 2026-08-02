@@ -10,7 +10,7 @@ import {
 } from './jam-sync';
 
 const state = (overrides: Partial<JamPlaybackState>): JamPlaybackState => ({
-  trackId: 'track-1',
+  itemId: 'item-1',
   startedAtMs: 0,
   paused: false,
   pausedPositionMs: 0,

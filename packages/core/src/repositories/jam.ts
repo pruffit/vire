@@ -1,4 +1,4 @@
-import type { JamSession, JamParticipant, JamQueueItem, JamSessionState, JamParticipantRole, JamMode } from '../types/jam';
+import type { JamSession, JamParticipant, JamQueueItem, JamSessionState, JamParticipantRole, JamMode, JamSessionKind, JamQueueSource } from '../types/jam';
 
 export interface CreateJamSessionInput {
   code: string;
@@ -6,6 +6,8 @@ export interface CreateJamSessionInput {
   title: string | null;
   /** По умолчанию SYNCED — репозиторий полагается на дефолт колонки, если не передан. */
   mode?: JamMode;
+  /** По умолчанию JAM — репозиторий полагается на дефолт колонки, если не передан. */
+  kind?: JamSessionKind;
 }
 
 export type JamParticipantIdentity = { userId: string } | { guestSessionId: string };
@@ -21,7 +23,16 @@ export interface UpsertJamParticipantInput {
 export interface JamQueueItemWrite {
   /** Существующий элемент сохраняет id при перезаписи очереди: иначе чужая мутация обесценит id у всех и параллельный move схлопнется в no-op. */
   id?: string;
-  trackId: string;
+  source: JamQueueSource;
+  /** Только для source='VIRE'. */
+  trackId: string | null;
+  externalId: string | null;
+  externalUrl: string | null;
+  /** Снапшот метаданных внешней/локальной позиции — null для 'VIRE' (отображение идёт через join). */
+  title: string | null;
+  artistName: string | null;
+  coverUrl: string | null;
+  durationSec: number | null;
   addedByParticipantId: string | null;
   addedAt: Date;
 }

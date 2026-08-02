@@ -66,6 +66,7 @@ function baseSession(overrides?: Omit<Partial<JamSessionValue>, 'room'> & { room
     speakerName: null,
     playbackPending: null,
     isPlaying: false,
+    activeItemId: null,
     activeTrackId: null,
     actions: {
       rowPlay: vi.fn(),
@@ -96,7 +97,10 @@ function participant(overrides?: Partial<JamParticipant>): JamParticipant {
 function track(id: string): JamQueueItem {
   return {
     id,
+    source: 'VIRE',
     trackId: `t-${id}`,
+    externalId: null,
+    externalUrl: null,
     position: 0,
     addedByParticipantId: null,
     addedAt: new Date('2026-07-20T12:00:00Z'),
@@ -126,8 +130,8 @@ function searchTrack(id: string): SearchTrack {
   };
 }
 
-const playback = (trackId: string, overrides?: Partial<JamPlaybackState>): JamPlaybackState => ({
-  trackId, startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1, ...overrides,
+const playback = (itemId: string, overrides?: Partial<JamPlaybackState>): JamPlaybackState => ({
+  itemId, startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1, ...overrides,
 });
 
 beforeEach(() => {
@@ -231,9 +235,9 @@ describe('JamRoom: комната', () => {
     expect(session.actions.rowPlay).toHaveBeenCalledWith(expect.objectContaining({ id: 'b', trackId: 't-b' }));
   });
 
-  it('активный трек в очереди подсвечен по playback.trackId, isPlaying берётся из контекста', () => {
+  it('активный трек в очереди подсвечен по playback.itemId, isPlaying берётся из контекста', () => {
     const queue = [track('a'), track('b')];
-    const session = baseSession({ isPlaying: true, room: { queue, playback: playback('t-b') } });
+    const session = baseSession({ isPlaying: true, room: { queue, playback: playback('b') } });
     useJamSessionMock.mockReturnValue(session);
 
     render(

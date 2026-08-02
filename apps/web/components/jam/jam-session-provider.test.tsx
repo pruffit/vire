@@ -15,7 +15,7 @@ vi.mock('@/lib/jam/server-clock', () => ({ useServerClock: useServerClockMock })
 vi.mock('@/lib/jam/use-playback-sync', () => ({ usePlaybackSync: usePlaybackSyncMock }));
 vi.mock('@/lib/toast', () => ({ toast: toastMock }));
 
-import { JamSessionProvider } from './jam-session-provider';
+import { JamSessionProvider, useJamSession, type JamSessionValue } from './jam-session-provider';
 import { useJamStore, type ActiveJam } from '@/store/jam';
 import { usePlayerStore } from '@/store/player';
 import { getJamTransport } from '@/lib/jam/jam-controls';
@@ -44,7 +44,10 @@ function baseRoom(overrides?: Partial<RoomState>): RoomState {
 function track(id: string): JamQueueItem {
   return {
     id,
+    source: 'VIRE',
     trackId: `t-${id}`,
+    externalId: null,
+    externalUrl: null,
     position: 0,
     addedByParticipantId: null,
     addedAt: new Date('2026-07-20T12:00:00Z'),
@@ -88,7 +91,7 @@ afterEach(() => {
 describe('JamSessionProvider: регресс — уход со страницы не убивает джем', () => {
   it('размонтирование дочерней страницы не чистит jamOverride и транспорт — они живут в сторе, не на странице', async () => {
     const queue = [track('a'), track('b')];
-    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
 
     const { rerender } = render(<Harness showPage />);
     act(() => useJamStore.getState().activate(jam));
@@ -128,7 +131,7 @@ describe('JamSessionProvider: протухшая запись джема', () =>
 describe('JamSessionProvider: завершение и восстановление после F5', () => {
   it('jam:ended (room.ended) чистит стор и показывает тост', async () => {
     const queue = [track('a')];
-    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
 
     render(<Harness showPage />);
     act(() => useJamStore.getState().activate(jam));
@@ -145,7 +148,7 @@ describe('JamSessionProvider: завершение и восстановлени
 
   it('после F5 (active восстановлен из persist, audioEnabled=false) override приходит с needsAudioGesture:true', async () => {
     const queue = [track('a')];
-    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
     useJamStore.setState({ active: jam, audioEnabled: false });
 
     render(<Harness showPage />);
@@ -156,7 +159,7 @@ describe('JamSessionProvider: завершение и восстановлени
 
   it('когда audioEnabled=true, needsAudioGesture:false', async () => {
     const queue = [track('a')];
-    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
 
     render(<Harness showPage />);
     act(() => useJamStore.getState().activate(jam));
@@ -168,7 +171,7 @@ describe('JamSessionProvider: завершение и восстановлени
 describe('JamSessionProvider: переход трека', () => {
   it('хост на завершении трека переводит очередь на следующий', async () => {
     const queue = [track('a'), track('b')];
-    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as unknown as Response);
     vi.stubGlobal('fetch', fetchMock);
 
@@ -182,13 +185,13 @@ describe('JamSessionProvider: переход трека', () => {
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/playback'));
       expect(call).toBeTruthy();
-      expect(call![1]!.body).toBe(JSON.stringify({ kind: 'track', trackId: 't-b' }));
+      expect(call![1]!.body).toBe(JSON.stringify({ kind: 'track', itemId: 'b' }));
     });
   });
 
   it('гость на завершении трека ничего не шлёт', async () => {
     const queue = [track('a'), track('b')];
-    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { trackId: 't-a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as unknown as Response);
     vi.stubGlobal('fetch', fetchMock);
 
@@ -238,5 +241,32 @@ describe('JamSessionProvider: SPEAKER/SYNCED флаги для usePlaybackSync',
     await waitFor(() => expect(usePlaybackSyncMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ driftCorrection: true }),
     ));
+  });
+});
+
+describe('JamSessionProvider: один трек дважды в очереди', () => {
+  it('rowPlay по второй позиции переключает именно на неё, а не на первую с тем же треком', async () => {
+    const queue = [{ ...track('a'), trackId: 't-dup' }, { ...track('b'), trackId: 't-dup' }];
+    useJamRoomMock.mockReturnValue(baseRoom({ queue, playback: { itemId: 'a', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1 } }));
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const onSession = vi.fn();
+    function Capture() {
+      onSession(useJamSession());
+      return null;
+    }
+    render(<JamSessionProvider><Capture /></JamSessionProvider>);
+    act(() => useJamStore.getState().activate(jam));
+    await waitFor(() => expect(onSession).toHaveBeenCalledWith(expect.objectContaining({ code: 'A2B3C4' })));
+
+    const session = onSession.mock.calls.at(-1)![0] as JamSessionValue;
+    act(() => session.actions.rowPlay(queue[1]!));
+
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/playback'));
+      expect(call).toBeTruthy();
+      expect(call![1]!.body).toBe(JSON.stringify({ kind: 'track', itemId: 'b' }));
+    });
   });
 });

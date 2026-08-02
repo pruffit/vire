@@ -1,5 +1,6 @@
 export interface JamPlaybackState {
-  trackId: string;
+  /** Позиция в очереди (jam_queue_items.id), не трек — один трек может стоять в очереди дважды. */
+  itemId: string;
   startedAtMs: number;
   paused: boolean;
   pausedPositionMs: number;

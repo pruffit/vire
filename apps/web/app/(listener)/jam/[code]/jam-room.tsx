@@ -91,13 +91,13 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
   }, [code, isLoggedIn, currentUserName, activate]);
 
   const addedTrackIds = useMemo(
-    () => new Set(jamQueue.queue.map((item) => item.trackId)),
+    () => new Set(jamQueue.queue.map((item) => item.trackId).filter((id): id is string => id !== null)),
     [jamQueue.queue],
   );
 
   const activeQueueIndex = useMemo(
     () => (activeSession?.room.playback
-      ? jamQueue.queue.findIndex((item) => item.trackId === activeSession.room.playback!.trackId)
+      ? jamQueue.queue.findIndex((item) => item.id === activeSession.room.playback!.itemId)
       : -1),
     [activeSession, jamQueue.queue],
   );
@@ -127,7 +127,10 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     if (addedTrackIds.has(t.id)) return;
     void jamQueue.addTrack({
       id: `pending-${t.id}-${Date.now()}`,
+      source: 'VIRE',
       trackId: t.id,
+      externalId: null,
+      externalUrl: null,
       position: jamQueue.queue.length,
       addedByParticipantId: activeSession?.membership.participantId ?? null,
       addedAt: new Date(),
@@ -284,7 +287,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
                         return (
                           <SortableTrackRow
                             key={item.id}
-                            track={item}
+                            track={{ ...item, isExplicit: item.isExplicit ?? undefined, feat: item.feat ?? undefined }}
                             index={i}
                             size="roomy"
                             isActive={i === activeQueueIndex}

@@ -6,10 +6,10 @@ import { SESSION_ID_MAX_LEN } from '@/lib/session-signing';
 import { ForbiddenError, ConflictError, ValidationError } from '@vire/core';
 
 const schema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('play'), trackId: z.string().uuid(), positionMs: z.number().min(0), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
+  z.object({ kind: z.literal('play'), itemId: z.string().uuid(), positionMs: z.number().min(0), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
   z.object({ kind: z.literal('pause'), positionMs: z.number().min(0), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
   z.object({ kind: z.literal('seek'), positionMs: z.number().min(0), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
-  z.object({ kind: z.literal('track'), trackId: z.string().uuid(), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
+  z.object({ kind: z.literal('track'), itemId: z.string().uuid(), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
 ]);
 
 type Ctx = { params: Promise<{ code: string }> };

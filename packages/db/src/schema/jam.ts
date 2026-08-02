@@ -7,6 +7,8 @@ import { playlists } from './interactions';
 export const jamSessionStatusEnum = pgEnum('jam_session_status', ['LIVE', 'ENDED']);
 export const jamParticipantRoleEnum = pgEnum('jam_participant_role', ['HOST', 'GUEST']);
 export const jamModeEnum = pgEnum('jam_mode', ['SYNCED', 'SPEAKER']);
+export const jamSessionKindEnum = pgEnum('jam_session_kind', ['JAM', 'PARTY']);
+export const jamQueueSourceEnum = pgEnum('jam_queue_source', ['VIRE', 'YOUTUBE', 'SOUNDCLOUD', 'LOCAL']);
 
 export const jamSessions = pgTable('jam_sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -15,6 +17,7 @@ export const jamSessions = pgTable('jam_sessions', {
   title: text('title'),
   status: jamSessionStatusEnum('status').notNull().default('LIVE'),
   mode: jamModeEnum('mode').notNull().default('SYNCED'),
+  kind: jamSessionKindEnum('kind').notNull().default('JAM'),
   // null = звук у хоста (дефолт); ссылка вперёд на jamParticipants — AnyPgColumn разрывает циклическую инференцию типов между таблицами.
   speakerParticipantId: uuid('speaker_participant_id').references((): AnyPgColumn => jamParticipants.id, { onDelete: 'set null' }),
   // Инкрементится в той же транзакции, что мутация очереди — переживает падение Redis
@@ -47,11 +50,27 @@ export const jamParticipants = pgTable('jam_participants', {
 export const jamQueueItems = pgTable('jam_queue_items', {
   id: uuid('id').primaryKey().defaultRandom(),
   jamId: uuid('jam_id').notNull().references(() => jamSessions.id, { onDelete: 'cascade' }),
-  trackId: uuid('track_id').notNull().references(() => tracks.id),
+  source: jamQueueSourceEnum('source').notNull().default('VIRE'),
+  trackId: uuid('track_id').references(() => tracks.id),
+  externalId: text('external_id'),
+  externalUrl: text('external_url'),
+  // Снапшот метаданных внешней/локальной позиции — своя запись, не тянет tracks/releases join.
+  title: text('title'),
+  artistName: text('artist_name'),
+  coverUrl: text('cover_url'),
+  durationSec: integer('duration_sec'),
   position: integer('position').notNull(),
   addedByParticipantId: uuid('added_by_participant_id').references(() => jamParticipants.id, { onDelete: 'set null' }),
   addedAt: timestamp('added_at').notNull().defaultNow(),
 }, (t) => [
   index('jam_queue_items_jam_id_position_idx').on(t.jamId, t.position),
   // без unique(jamId, trackId): на тусовке один трек могут осознанно поставить дважды
+  check(
+    'jam_queue_items_source_consistency',
+    sql`(
+      (${t.source} = 'VIRE' AND ${t.trackId} IS NOT NULL AND ${t.externalId} IS NULL)
+      OR (${t.source} IN ('YOUTUBE', 'SOUNDCLOUD') AND ${t.trackId} IS NULL AND ${t.externalId} IS NOT NULL AND ${t.title} IS NOT NULL)
+      OR (${t.source} = 'LOCAL' AND ${t.trackId} IS NULL AND ${t.title} IS NOT NULL)
+    )`,
+  ),
 ]);

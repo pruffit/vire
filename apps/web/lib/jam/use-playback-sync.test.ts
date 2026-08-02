@@ -41,7 +41,7 @@ function makeFakeEngine(): FakeEngine {
 }
 
 function playback(overrides: Partial<JamPlaybackState> = {}): JamPlaybackState {
-  return { trackId: 'track-1', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1, ...overrides };
+  return { itemId: 'item-1', startedAtMs: 0, paused: false, pausedPositionMs: 0, version: 1, ...overrides };
 }
 
 async function flush(): Promise<void> {
@@ -66,7 +66,7 @@ afterEach(() => {
 
 describe('usePlaybackSync', () => {
   it('не создаёт движок, пока звук не разблокирован', async () => {
-    renderHook(() => usePlaybackSync({ playback: playback(), serverNow: () => 0, audioEnabled: false }));
+    renderHook(() => usePlaybackSync({ playback: playback(), trackId: 'track-1', serverNow: () => 0, audioEnabled: false }));
     await flush();
 
     expect(createJamAudioMock).not.toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe('usePlaybackSync', () => {
 
   it('на новый трек грузит, делает грубый seek сразу и запускает, если не на паузе', async () => {
     const pb = playback({ startedAtMs: -5_000 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow: () => 0, audioEnabled: true }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow: () => 0, audioEnabled: true }));
     await flush();
 
     expect(engine.load).toHaveBeenCalledWith('track-1');
@@ -82,10 +82,36 @@ describe('usePlaybackSync', () => {
     expect(engine.play).toHaveBeenCalledTimes(1);
   });
 
+  it('trackId=null (внешний источник) — не грузит и не играет', async () => {
+    const pb = playback({ startedAtMs: -5_000 });
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: null, serverNow: () => 0, audioEnabled: true }));
+    await flush();
+
+    expect(engine.load).not.toHaveBeenCalled();
+    expect(engine.play).not.toHaveBeenCalled();
+  });
+
+  it('трек, доехавший позже playback (снапшот очереди отстал), всё равно грузится', async () => {
+    const pb = playback({ startedAtMs: -5_000 });
+    const { rerender } = renderHook(
+      ({ trackId }: { trackId: string | null }) =>
+        usePlaybackSync({ playback: pb, trackId, serverNow: () => 0, audioEnabled: true }),
+      { initialProps: { trackId: null as string | null } },
+    );
+    await flush();
+    expect(engine.load).not.toHaveBeenCalled();
+
+    rerender({ trackId: 'track-1' });
+    await flush();
+
+    expect(engine.load).toHaveBeenCalledWith('track-1');
+    expect(engine.play).toHaveBeenCalledTimes(1);
+  });
+
   it('точная позиция выставляется только после первого playing, с учётом времени буферизации', async () => {
     let now = 5_000;
     const pb = playback({ startedAtMs: 0 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow: () => now, audioEnabled: true }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow: () => now, audioEnabled: true }));
     await flush();
     expect(engine.seek).toHaveBeenCalledWith(5_000);
 
@@ -98,7 +124,7 @@ describe('usePlaybackSync', () => {
 
   it('повторное playing после первого ресинка не вызывает ещё один seek (одноразовая подписка)', async () => {
     const pb = playback({ startedAtMs: 0 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow: () => 5_000, audioEnabled: true }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow: () => 5_000, audioEnabled: true }));
     await flush();
 
     act(() => engine.firePlaying());
@@ -111,7 +137,7 @@ describe('usePlaybackSync', () => {
   it('driftCorrection: false — ресинка по playing нет (одиночный джем не теряет начало трека)', async () => {
     let now = 0;
     const pb = playback({ startedAtMs: 0 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow: () => now, audioEnabled: true, driftCorrection: false }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow: () => now, audioEnabled: true, driftCorrection: false }));
     await flush();
 
     engine.seek.mockClear();
@@ -123,7 +149,7 @@ describe('usePlaybackSync', () => {
 
   it('трек на паузе при загрузке — позиционирует, но не запускает и не ждёт playing', async () => {
     const pb = playback({ paused: true, pausedPositionMs: 3_000 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow: () => 0, audioEnabled: true }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow: () => 0, audioEnabled: true }));
     await flush();
 
     expect(engine.seek).toHaveBeenCalledWith(3_000);
@@ -131,36 +157,36 @@ describe('usePlaybackSync', () => {
     expect(engine.onPlaying).not.toHaveBeenCalled();
   });
 
-  it('смена trackId в playback грузит новый трек и позиционирует заново', async () => {
-    const pb1 = playback({ trackId: 'track-1', startedAtMs: 0 });
+  it('смена позиции (itemId) в playback грузит новый трек и позиционирует заново', async () => {
+    const pb1 = playback({ itemId: 'item-1', startedAtMs: 0 });
     const { rerender } = renderHook(
-      ({ pb }: { pb: JamPlaybackState }) => usePlaybackSync({ playback: pb, serverNow: () => 0, audioEnabled: true }),
-      { initialProps: { pb: pb1 } },
+      ({ pb, trackId }: { pb: JamPlaybackState; trackId: string }) => usePlaybackSync({ playback: pb, trackId, serverNow: () => 0, audioEnabled: true }),
+      { initialProps: { pb: pb1, trackId: 'track-1' } },
     );
     await flush();
     engine.load.mockClear();
     engine.seek.mockClear();
 
-    const pb2 = playback({ trackId: 'track-2', startedAtMs: -1_000 });
-    rerender({ pb: pb2 });
+    const pb2 = playback({ itemId: 'item-2', startedAtMs: -1_000 });
+    rerender({ pb: pb2, trackId: 'track-2' });
     await flush();
 
     expect(engine.load).toHaveBeenCalledWith('track-2');
     expect(engine.seek).toHaveBeenCalledWith(1_000);
   });
 
-  it('трек сменился, пока грузился предыдущий — устаревший load не позиционирует', async () => {
+  it('позиция сменилась, пока грузился предыдущий трек — устаревший load не позиционирует', async () => {
     let resolveFirst: (() => void) | null = null;
     engine.load.mockImplementationOnce(() => new Promise<void>((resolve) => { resolveFirst = resolve; }));
 
-    const pb1 = playback({ trackId: 'track-1', startedAtMs: 0 });
+    const pb1 = playback({ itemId: 'item-1', startedAtMs: 0 });
     const { rerender } = renderHook(
-      ({ pb }: { pb: JamPlaybackState }) => usePlaybackSync({ playback: pb, serverNow: () => 0, audioEnabled: true }),
-      { initialProps: { pb: pb1 } },
+      ({ pb, trackId }: { pb: JamPlaybackState; trackId: string }) => usePlaybackSync({ playback: pb, trackId, serverNow: () => 0, audioEnabled: true }),
+      { initialProps: { pb: pb1, trackId: 'track-1' } },
     );
     await flush();
 
-    rerender({ pb: playback({ trackId: 'track-2', startedAtMs: -7_000 }) });
+    rerender({ pb: playback({ itemId: 'item-2', startedAtMs: -7_000 }), trackId: 'track-2' });
     await flush();
     engine.seek.mockClear();
     engine.play.mockClear();
@@ -177,7 +203,7 @@ describe('usePlaybackSync', () => {
   it('paused → playing делает грубый seek, play() и ждёт playing; playing → paused вызывает pause() и отменяет ожидание', async () => {
     const playing = playback({ paused: false, startedAtMs: 0 });
     const { rerender } = renderHook(
-      ({ pb }: { pb: JamPlaybackState }) => usePlaybackSync({ playback: pb, serverNow: () => 0, audioEnabled: true }),
+      ({ pb }: { pb: JamPlaybackState }) => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow: () => 0, audioEnabled: true }),
       { initialProps: { pb: playing } },
     );
     await flush();
@@ -206,7 +232,7 @@ describe('usePlaybackSync', () => {
   it('дрейф больше HARD_SEEK_MS — жёсткий seek на тике', async () => {
     const serverNow = () => 10_000;
     const pb = playback({ startedAtMs: 0 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow, audioEnabled: true }));
     await flush();
     engine.seek.mockClear();
 
@@ -221,7 +247,7 @@ describe('usePlaybackSync', () => {
   it('дрейф в пределах HARD_SEEK_MS — ничего не делает (нет тайм-стретча)', async () => {
     const serverNow = () => 10_000;
     const pb = playback({ startedAtMs: 0 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow, audioEnabled: true }));
     await flush();
     engine.seek.mockClear();
 
@@ -236,7 +262,7 @@ describe('usePlaybackSync', () => {
   it('буферизация подавляет коррекцию даже при большом дрейфе', async () => {
     const serverNow = () => 10_000;
     const pb = playback({ startedAtMs: 0 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow, audioEnabled: true }));
     await flush();
     engine.seek.mockClear();
 
@@ -252,7 +278,7 @@ describe('usePlaybackSync', () => {
   it('cooldown подавляет коррекцию сразу после жёсткого seek, затем снова разрешает', async () => {
     const serverNow = () => 10_000;
     const pb = playback({ startedAtMs: 0 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow, audioEnabled: true }));
     await flush();
     engine.seek.mockClear();
 
@@ -279,7 +305,7 @@ describe('usePlaybackSync', () => {
   it('driftCorrection: false не вешает интервал и не корректирует дрейф даже при большом расхождении', async () => {
     const serverNow = () => 10_000;
     const pb = playback({ startedAtMs: 0 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true, driftCorrection: false }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow, audioEnabled: true, driftCorrection: false }));
     await flush();
     engine.seek.mockClear();
 
@@ -295,7 +321,7 @@ describe('usePlaybackSync', () => {
   it('visibilitychange запускает немедленный прогон, не дожидаясь тика', async () => {
     const serverNow = () => 10_000;
     const pb = playback({ startedAtMs: 0 });
-    renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
+    renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow, audioEnabled: true }));
     await flush();
     engine.seek.mockClear();
 
@@ -310,7 +336,7 @@ describe('usePlaybackSync', () => {
   it('размонтирование чистит интервал, слушатель visibilitychange и вызывает destroy движка', async () => {
     const serverNow = () => 10_000;
     const pb = playback({ startedAtMs: 0 });
-    const { unmount } = renderHook(() => usePlaybackSync({ playback: pb, serverNow, audioEnabled: true }));
+    const { unmount } = renderHook(() => usePlaybackSync({ playback: pb, trackId: 'track-1', serverNow, audioEnabled: true }));
     await flush();
 
     unmount();
@@ -335,7 +361,7 @@ describe('usePlaybackSync', () => {
       return vi.fn();
     });
 
-    renderHook(() => usePlaybackSync({ playback: playback(), serverNow: () => 0, audioEnabled: true, onEnded }));
+    renderHook(() => usePlaybackSync({ playback: playback(), trackId: 'track-1', serverNow: () => 0, audioEnabled: true, onEnded }));
     await flush();
 
     endedHandler?.();

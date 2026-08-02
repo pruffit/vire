@@ -8,7 +8,8 @@ vi.mock('@/lib/toast', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }
 
 function track(id: string): JamQueueItem {
   return {
-    id, trackId: `t-${id}`, position: 0, addedByParticipantId: null, addedAt: new Date('2026-07-20T12:00:00Z'),
+    id, source: 'VIRE', trackId: `t-${id}`, externalId: null, externalUrl: null, position: 0,
+    addedByParticipantId: null, addedAt: new Date('2026-07-20T12:00:00Z'),
     title: id, durationSec: null, artistName: 'Artist', artistSlug: 'artist', releaseId: 'release-1',
     coverUrl: null, accentColor: null, isExplicit: false, version: null, feat: [],
   };

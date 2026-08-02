@@ -18,6 +18,7 @@ function makeSession(overrides?: Partial<JamSession>): JamSession {
     title: 'Party',
     status: 'LIVE',
     mode: 'SYNCED',
+    kind: 'JAM',
     speakerParticipantId: null,
     queueVersion: 3,
     savedPlaylistId: null,
@@ -49,7 +50,10 @@ function makeHostParticipant(overrides?: Partial<JamParticipant>): JamParticipan
 function makeQueueItem(id: string, overrides?: Partial<JamQueueItem>): JamQueueItem {
   return {
     id,
+    source: 'VIRE',
     trackId: `track-${id}`,
+    externalId: null,
+    externalUrl: null,
     position: 0,
     addedByParticipantId: 'p-guest',
     addedAt: ADDED_AT,
@@ -181,6 +185,24 @@ describe('JamService.create', () => {
     await service.create('host-1', null, 'Danya', 'SPEAKER');
 
     expect(repo.createSession).toHaveBeenCalledWith(expect.objectContaining({ mode: 'SPEAKER' }));
+  });
+
+  it('defaults to JAM when no kind is given', async () => {
+    const repo = makeRepo({ findByCode: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    await service.create('host-1', null, 'Danya');
+
+    expect(repo.createSession).toHaveBeenCalledWith(expect.objectContaining({ kind: 'JAM' }));
+  });
+
+  it('forwards an explicit kind (PARTY) to the repository', async () => {
+    const repo = makeRepo({ findByCode: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    await service.create('host-1', null, 'Danya', 'SYNCED', 'PARTY');
+
+    expect(repo.createSession).toHaveBeenCalledWith(expect.objectContaining({ kind: 'PARTY' }));
   });
 });
 
@@ -380,7 +402,7 @@ describe('JamService.getState', () => {
   });
 
   it('returns the full state including playback for a participant', async () => {
-    const playback: JamPlaybackState = { trackId: 't1', startedAtMs: 100, paused: false, pausedPositionMs: 0, version: 2 };
+    const playback: JamPlaybackState = { itemId: 'item-1', startedAtMs: 100, paused: false, pausedPositionMs: 0, version: 2 };
     const repo = makeRepo();
     const state = makeState({ getPlayback: vi.fn().mockResolvedValue(playback) });
     const service = makeService({ repo, state });
@@ -538,12 +560,16 @@ describe('JamService.mutateQueue', () => {
     const result = await service.mutateQueue('jam-1', { guestSessionId: 'guest-1' }, { kind: 'add', trackId: 'track-new' });
 
     expect(result.ok).toBe(true);
+    const viireWrite = (id: string, trackId: string, participantId: string) => ({
+      id, source: 'VIRE', trackId, externalId: null, externalUrl: null, title: null, artistName: null, coverUrl: null, durationSec: null,
+      addedByParticipantId: participantId, addedAt: ADDED_AT,
+    });
     expect(repo.replaceQueue).toHaveBeenCalledWith(
       'jam-1',
       [
-        { id: 'q1', trackId: 'track-q1', addedByParticipantId: 'p-guest', addedAt: ADDED_AT },
-        { id: 'q2', trackId: 'track-q2', addedByParticipantId: 'p-other', addedAt: ADDED_AT },
-        { trackId: 'track-new', addedByParticipantId: 'p-guest', addedAt: new Date(NOW) },
+        viireWrite('q1', 'track-q1', 'p-guest'),
+        viireWrite('q2', 'track-q2', 'p-other'),
+        { source: 'VIRE', trackId: 'track-new', externalId: null, externalUrl: null, title: null, artistName: null, coverUrl: null, durationSec: null, addedByParticipantId: 'p-guest', addedAt: new Date(NOW) },
       ],
       4,
     );
@@ -644,6 +670,121 @@ describe('JamService.mutateQueue', () => {
     if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
     expect(repo.replaceQueue).not.toHaveBeenCalled();
   });
+
+  it('on a PARTY session, adding applies round-robin positioning instead of a plain append', async () => {
+    const partyQueue = [
+      makeQueueItem('q1', { addedByParticipantId: 'p-a' }),
+      makeQueueItem('q2', { addedByParticipantId: 'p-b' }),
+      makeQueueItem('q3', { addedByParticipantId: 'p-a' }),
+    ];
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'PARTY', queueVersion: 3 }), participants: [], queue: partyQueue }),
+    });
+    const state = makeState({ getPlayback: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo, state });
+
+    const result = await service.mutateQueue('jam-1', { guestSessionId: 'guest-1' }, { kind: 'add', trackId: 'track-new' });
+
+    expect(result.ok).toBe(true);
+    // guestParticipant.id ('p-guest') has 0 tracks so far — round 0 lands before p-a's second track (q3, round 1).
+    const written = vi.mocked(repo.replaceQueue).mock.calls[0]![1] as Array<{ id?: string; trackId: string | null }>;
+    expect(written.map((i) => i.id ?? i.trackId)).toEqual(['q1', 'q2', 'track-new', 'q3']);
+  });
+});
+
+describe('JamService.addExternalItem', () => {
+  const guestParticipant = makeParticipant({ id: 'p-guest', role: 'GUEST' });
+  const externalEntry = { source: 'YOUTUBE' as const, externalId: 'yt-1', externalUrl: 'https://youtu.be/yt-1', title: 'Song', artistName: 'Artist', coverUrl: null, durationSec: 200 };
+
+  it('rejects a non-participant', async () => {
+    const repo = makeRepo({ findParticipant: vi.fn().mockResolvedValue(null) });
+    const service = makeService({ repo });
+
+    const result = await service.addExternalItem('jam-1', { guestSessionId: 'ghost' }, externalEntry);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('rejects a regular JAM session with ValidationError', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'JAM' }), participants: [], queue: [] }),
+    });
+    const service = makeService({ repo });
+
+    const result = await service.addExternalItem('jam-1', { guestSessionId: 'guest-1' }, externalEntry);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ValidationError);
+    expect(repo.replaceQueue).not.toHaveBeenCalled();
+  });
+
+  it('rejects once the jam has ENDED', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'PARTY', status: 'ENDED' }), participants: [], queue: [] }),
+    });
+    const service = makeService({ repo });
+
+    const result = await service.addExternalItem('jam-1', { guestSessionId: 'guest-1' }, externalEntry);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
+  });
+
+  it('rejects when the per-minute add limit is exceeded', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'PARTY' }), participants: [], queue: [] }),
+    });
+    const state = makeState({ bumpAddCounter: vi.fn().mockResolvedValue(JAM_MAX_ADDS_PER_MIN + 1) });
+    const service = makeService({ repo, state });
+
+    const result = await service.addExternalItem('jam-1', { guestSessionId: 'guest-1' }, externalEntry);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
+    expect(repo.replaceQueue).not.toHaveBeenCalled();
+  });
+
+  it('rejects when the queue is full', async () => {
+    const full = Array.from({ length: JAM_MAX_QUEUE }, (_, i) => makeQueueItem(`item-${i}`));
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'PARTY' }), participants: [], queue: full }),
+    });
+    const service = makeService({ repo });
+
+    const result = await service.addExternalItem('jam-1', { guestSessionId: 'guest-1' }, externalEntry);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
+  });
+
+  it('on a PARTY session, adds the external item and broadcasts jam:queue', async () => {
+    const repo = makeRepo({
+      findParticipant: vi.fn().mockResolvedValue(guestParticipant),
+      getSessionState: vi.fn().mockResolvedValue({ session: makeSession({ kind: 'PARTY', queueVersion: 3 }), participants: [], queue: [] }),
+    });
+    const broadcaster = makeBroadcaster();
+    const service = makeService({ repo, broadcaster });
+
+    const result = await service.addExternalItem('jam-1', { guestSessionId: 'guest-1' }, externalEntry);
+
+    expect(result.ok).toBe(true);
+    expect(repo.replaceQueue).toHaveBeenCalledWith(
+      'jam-1',
+      [{
+        source: 'YOUTUBE', trackId: null, externalId: 'yt-1', externalUrl: 'https://youtu.be/yt-1',
+        title: 'Song', artistName: 'Artist', coverUrl: null, durationSec: 200,
+        addedByParticipantId: 'p-guest', addedAt: new Date(NOW),
+      }],
+      4,
+    );
+    expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', expect.objectContaining({ type: 'jam:queue', version: 4 }));
+  });
 });
 
 describe('JamService.setPlayback', () => {
@@ -669,7 +810,7 @@ describe('JamService.setPlayback', () => {
     const state = makeState({ getPlayback: vi.fn().mockResolvedValue(null) });
     const service = makeService({ repo, state });
 
-    const result = await service.setPlayback('jam-1', { guestSessionId: 'guest-1' }, { kind: 'track', trackId: 't1' });
+    const result = await service.setPlayback('jam-1', { guestSessionId: 'guest-1' }, { kind: 'track', itemId: 'item-1' });
 
     expect(result.ok).toBe(true);
   });
@@ -682,7 +823,7 @@ describe('JamService.setPlayback', () => {
     const state = makeState();
     const service = makeService({ repo, state });
 
-    const result = await service.setPlayback('jam-1', { userId: 'host-1' }, { kind: 'track', trackId: 't1' });
+    const result = await service.setPlayback('jam-1', { userId: 'host-1' }, { kind: 'track', itemId: 'item-1' });
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBeInstanceOf(ConflictError);
@@ -698,11 +839,11 @@ describe('JamService.setPlayback', () => {
     const broadcaster = makeBroadcaster();
     const service = makeService({ repo, state, broadcaster });
 
-    const result = await service.setPlayback('jam-1', { userId: 'host-1' }, { kind: 'play', trackId: 't1', positionMs: 5000 });
+    const result = await service.setPlayback('jam-1', { userId: 'host-1' }, { kind: 'play', itemId: 'item-1', positionMs: 5000 });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value).toEqual({ trackId: 't1', startedAtMs: NOW - 5000, paused: false, pausedPositionMs: 0, version: 1 });
+      expect(result.value).toEqual({ itemId: 'item-1', startedAtMs: NOW - 5000, paused: false, pausedPositionMs: 0, version: 1 });
     }
     expect(state.setPlayback).toHaveBeenCalledWith('jam-1', result.ok ? result.value : undefined);
     expect(broadcaster.broadcast).toHaveBeenCalledWith('jam-1', { type: 'jam:playback', playback: result.ok ? result.value : undefined });
@@ -723,7 +864,7 @@ describe('JamService.setPlayback', () => {
   });
 
   it('seek while paused updates pausedPositionMs and keeps paused:true', async () => {
-    const current: JamPlaybackState = { trackId: 't1', startedAtMs: 0, paused: true, pausedPositionMs: 2000, version: 5 };
+    const current: JamPlaybackState = { itemId: 'item-1', startedAtMs: 0, paused: true, pausedPositionMs: 2000, version: 5 };
     const repo = makeRepo({
       findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })),
       findParticipant: vi.fn().mockResolvedValue(makeHostParticipant()),
@@ -734,11 +875,11 @@ describe('JamService.setPlayback', () => {
     const result = await service.setPlayback('jam-1', { userId: 'host-1' }, { kind: 'seek', positionMs: 9000 });
 
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.value).toEqual({ trackId: 't1', startedAtMs: 0, paused: true, pausedPositionMs: 9000, version: 6 });
+    if (result.ok) expect(result.value).toEqual({ itemId: 'item-1', startedAtMs: 0, paused: true, pausedPositionMs: 9000, version: 6 });
   });
 
   it('seek while playing recomputes startedAtMs from the clock', async () => {
-    const current: JamPlaybackState = { trackId: 't1', startedAtMs: NOW - 3000, paused: false, pausedPositionMs: 0, version: 5 };
+    const current: JamPlaybackState = { itemId: 'item-1', startedAtMs: NOW - 3000, paused: false, pausedPositionMs: 0, version: 5 };
     const repo = makeRepo({
       findById: vi.fn().mockResolvedValue(makeSession({ hostUserId: 'host-1' })),
       findParticipant: vi.fn().mockResolvedValue(makeHostParticipant()),

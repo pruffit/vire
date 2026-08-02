@@ -13,9 +13,9 @@ import { usePlayerStore } from '@/store/player';
 import { useJamStore, type ActiveJam } from '@/store/jam';
 
 type PlaybackCommand =
-  | { kind: 'play'; trackId: string; positionMs: number }
+  | { kind: 'play'; itemId: string; positionMs: number }
   | { kind: 'pause'; positionMs: number }
-  | { kind: 'track'; trackId: string };
+  | { kind: 'track'; itemId: string };
 
 export interface JamSessionValue {
   code: string;
@@ -28,6 +28,8 @@ export interface JamSessionValue {
   speakerName: string | null;
   playbackPending: PendingToggle | null;
   isPlaying: boolean;
+  /** Позиция очереди (jam_queue_items.id) — подсветка активной строки должна идти по нему, не по trackId. */
+  activeItemId: string | null;
   activeTrackId: string | null;
   actions: {
     rowPlay: (item: JamQueueItem) => void;
@@ -95,15 +97,22 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     // это всегда звуковое устройство — проверка isAudioDevice тут для порядка.
     const initiator = room.mode === 'SYNCED' ? isHost : isAudioDevice;
     if (!initiator) return;
-    const currentTrackId = room.playback?.trackId;
-    const currentIndex = room.queue.findIndex((item) => item.trackId === currentTrackId);
+    const currentItemId = room.playback?.itemId;
+    const currentIndex = room.queue.findIndex((item) => item.id === currentItemId);
     const next = currentIndex >= 0 ? room.queue[currentIndex + 1] : undefined;
     if (!next) return;
-    postPlayback({ kind: 'track', trackId: next.trackId });
+    postPlayback({ kind: 'track', itemId: next.id });
   }, [room.mode, isHost, isAudioDevice, room.playback, room.queue, postPlayback]);
+
+  const activeQueueIndex = useMemo(
+    () => (room.playback ? room.queue.findIndex((item) => item.id === room.playback!.itemId) : -1),
+    [room.playback, room.queue],
+  );
+  const activeTrack = activeQueueIndex >= 0 ? room.queue[activeQueueIndex] : undefined;
 
   usePlaybackSync({
     playback: room.playback,
+    trackId: activeTrack?.trackId ?? null,
     serverNow,
     audioEnabled: audioEnabled && isAudioDevice && !room.ended,
     driftCorrection: room.mode === 'SYNCED' && audioDeviceCount > 1,
@@ -132,19 +141,19 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
 
   const handleRowPlay = useCallback((item: JamQueueItem) => {
     const playback = room.playback;
-    if (playback?.trackId === item.trackId) {
+    if (playback?.itemId === item.id) {
       const paused = effectivePaused(playback, playbackPending);
       const next: PendingToggle = { paused: !paused, at: Date.now(), fromVersion: nextPendingVersion(playback, playbackPending) };
       postPlayback(
         paused
-          ? { kind: 'play', trackId: item.trackId, positionMs: derivePositionMs(playback, serverNow()) }
+          ? { kind: 'play', itemId: item.id, positionMs: derivePositionMs(playback, serverNow()) }
           : { kind: 'pause', positionMs: derivePositionMs(playback, serverNow()) },
         () => setPlaybackPending((prev) => (prev === next ? null : prev)),
       );
       setPlaybackPending(next);
     } else {
       setPlaybackPending(null);
-      postPlayback({ kind: 'track', trackId: item.trackId });
+      postPlayback({ kind: 'track', itemId: item.id });
     }
   }, [room.playback, playbackPending, serverNow, postPlayback]);
 
@@ -155,7 +164,7 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     const next: PendingToggle = { paused: !paused, at: Date.now(), fromVersion: nextPendingVersion(playback, playbackPending) };
     postPlayback(
       paused
-        ? { kind: 'play', trackId: playback.trackId, positionMs: derivePositionMs(playback, serverNow()) }
+        ? { kind: 'play', itemId: playback.itemId, positionMs: derivePositionMs(playback, serverNow()) }
         : { kind: 'pause', positionMs: derivePositionMs(playback, serverNow()) },
       () => setPlaybackPending((prev) => (prev === next ? null : prev)),
     );
@@ -180,11 +189,6 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     return () => clearTimeout(timer);
   }, [playbackPending]);
 
-  const activeQueueIndex = useMemo(
-    () => (room.playback ? room.queue.findIndex((item) => item.trackId === room.playback!.trackId) : -1),
-    [room.playback, room.queue],
-  );
-  const activeTrack = activeQueueIndex >= 0 ? room.queue[activeQueueIndex] : undefined;
   const isPlaying = Boolean(room.playback) && !effectivePaused(room.playback, playbackPending);
   const canPrev = activeQueueIndex > 0;
   const canNext = activeQueueIndex >= 0 && activeQueueIndex < room.queue.length - 1;
@@ -234,15 +238,15 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
       toggle: handleTogglePlayback,
       next: () => {
         const playback = roomPlaybackRef.current;
-        const i = queueRef.current.findIndex((item) => item.trackId === playback?.trackId);
+        const i = queueRef.current.findIndex((item) => item.id === playback?.itemId);
         const target = i >= 0 ? queueRef.current[i + 1] : undefined;
-        if (target) postPlayback({ kind: 'track', trackId: target.trackId });
+        if (target) postPlayback({ kind: 'track', itemId: target.id });
       },
       prev: () => {
         const playback = roomPlaybackRef.current;
-        const i = queueRef.current.findIndex((item) => item.trackId === playback?.trackId);
+        const i = queueRef.current.findIndex((item) => item.id === playback?.itemId);
         const target = i > 0 ? queueRef.current[i - 1] : undefined;
-        if (target) postPlayback({ kind: 'track', trackId: target.trackId });
+        if (target) postPlayback({ kind: 'track', itemId: target.id });
       },
       seek: (ms) => {
         const playback = roomPlaybackRef.current;
@@ -251,7 +255,7 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
         postPlayback(
           paused
             ? { kind: 'pause', positionMs: ms }
-            : { kind: 'play', trackId: playback.trackId, positionMs: ms },
+            : { kind: 'play', itemId: playback.itemId, positionMs: ms },
         );
       },
       positionMs: () => {
@@ -300,6 +304,7 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     speakerName,
     playbackPending,
     isPlaying,
+    activeItemId: activeTrack?.id ?? null,
     activeTrackId: activeTrack?.trackId ?? null,
     actions: {
       rowPlay: handleRowPlay,
