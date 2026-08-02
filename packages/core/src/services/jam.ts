@@ -11,6 +11,7 @@ import type { IJamStateStore } from '../ports/jam-state';
 import type { IJamBroadcaster } from '../ports/jam-realtime';
 import type { Clock } from '../ports/effects';
 import type { JamSession, JamParticipant, JamQueueItem, JamMode, JamSessionKind } from '../types/jam';
+import type { ExternalTrackRef } from '../types/external';
 
 export const JAM_MAX_QUEUE = 200;
 export const JAM_MAX_PARTICIPANTS = 50;
@@ -24,7 +25,7 @@ export type QueueMutationIntent =
   | { kind: 'move'; itemId: string; toPosition: number }
   | { kind: 'shuffle' };
 
-export type ExternalQueueEntry = Extract<QueueEntry, { source: 'YOUTUBE' | 'SOUNDCLOUD' }>;
+export type ExternalQueueEntry = ExternalTrackRef;
 
 export type PlaybackIntent =
   | { kind: 'play'; itemId: string; positionMs: number }

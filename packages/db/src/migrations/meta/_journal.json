@@ -330,6 +330,13 @@
       "when": 1785651056127,
       "tag": "0046_low_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1785655706176,
+      "tag": "0047_fair_james_howlett",
+      "breakpoints": true
     }
   ]
 }

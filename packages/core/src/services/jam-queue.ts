@@ -1,17 +1,7 @@
 import type { JamQueueItemWrite } from '../repositories/jam';
-import type { JamQueueSource } from '../types/jam';
+import type { ExternalTrackRef } from '../types/external';
 
-export type QueueEntry =
-  | { source: 'VIRE'; trackId: string }
-  | {
-      source: Extract<JamQueueSource, 'YOUTUBE' | 'SOUNDCLOUD'>;
-      externalId: string;
-      externalUrl: string;
-      title: string;
-      artistName: string;
-      coverUrl: string | null;
-      durationSec: number | null;
-    };
+export type QueueEntry = { source: 'VIRE'; trackId: string } | ExternalTrackRef;
 
 export type QueueMutation =
   | { kind: 'add'; entry: QueueEntry; participantId: string; addedAt: Date }
