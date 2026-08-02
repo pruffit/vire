@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyInput, parseKnownUrl, parseOwnUrl, normalizeUrlKey, normalizeQueryKey, scoreCatalogMatch, matchesExpectedTrack } from './external-resolve';
+import { classifyInput, parseKnownUrl, parseOwnUrl, normalizeUrlKey, normalizeQueryKey, scoreCatalogMatch, matchesExpectedTrack, parseProviderTrackUrl } from './external-resolve';
 import type { SearchTrack } from '../types/search';
 
 describe('classifyInput', () => {
@@ -90,6 +90,65 @@ describe('parseKnownUrl — unrecognized', () => {
 
   it('malformed URLs do not throw', () => {
     expect(parseKnownUrl('not a url')).toBeNull();
+  });
+});
+
+describe('parseProviderTrackUrl', () => {
+  it('spotify: a plain track URL', () => {
+    expect(parseProviderTrackUrl('https://open.spotify.com/track/abc123XYZ')).toEqual({ provider: 'spotify', id: 'abc123XYZ' });
+  });
+
+  it('spotify: a localized track URL (intl-ru prefix)', () => {
+    expect(parseProviderTrackUrl('https://open.spotify.com/intl-ru/track/abc123XYZ')).toEqual({ provider: 'spotify', id: 'abc123XYZ' });
+  });
+
+  it('spotify: query noise (si param) does not affect the match', () => {
+    expect(parseProviderTrackUrl('https://open.spotify.com/track/abc123XYZ?si=xyz')).toEqual({ provider: 'spotify', id: 'abc123XYZ' });
+  });
+
+  it('spotify: a playlist/album/artist URL is not a track', () => {
+    expect(parseProviderTrackUrl('https://open.spotify.com/playlist/abc123')).toBeNull();
+    expect(parseProviderTrackUrl('https://open.spotify.com/album/abc123')).toBeNull();
+    expect(parseProviderTrackUrl('https://open.spotify.com/artist/abc123')).toBeNull();
+  });
+
+  it('apple-music: id from the ?i= query param on an album URL', () => {
+    expect(parseProviderTrackUrl('https://music.apple.com/us/album/some-song/1234567890?i=987654321')).toEqual({
+      provider: 'apple-music',
+      id: '987654321',
+    });
+  });
+
+  it('apple-music: id from a /song/{slug}/{id} path with locale', () => {
+    expect(parseProviderTrackUrl('https://music.apple.com/us/song/some-song/987654321')).toEqual({
+      provider: 'apple-music',
+      id: '987654321',
+    });
+  });
+
+  it('apple-music: an album URL with no ?i= is not a track', () => {
+    expect(parseProviderTrackUrl('https://music.apple.com/us/album/some-album/1234567890')).toBeNull();
+  });
+
+  it('deezer: a plain track URL', () => {
+    expect(parseProviderTrackUrl('https://www.deezer.com/track/123456789')).toEqual({ provider: 'deezer', id: '123456789' });
+  });
+
+  it('deezer: a language-prefixed track URL', () => {
+    expect(parseProviderTrackUrl('https://www.deezer.com/ru/track/123456789')).toEqual({ provider: 'deezer', id: '123456789' });
+  });
+
+  it('deezer: bare deezer.com host (no www) also matches', () => {
+    expect(parseProviderTrackUrl('https://deezer.com/track/123456789')).toEqual({ provider: 'deezer', id: '123456789' });
+  });
+
+  it('deezer: an album/playlist URL is not a track', () => {
+    expect(parseProviderTrackUrl('https://www.deezer.com/album/123456789')).toBeNull();
+  });
+
+  it('unrelated hosts and malformed URLs return null', () => {
+    expect(parseProviderTrackUrl('https://example.com/track/1')).toBeNull();
+    expect(parseProviderTrackUrl('not a url')).toBeNull();
   });
 });
 

@@ -13,6 +13,7 @@ vi.mock('./jam-session-provider', () => ({ useJamSession: useJamSessionMock }));
 vi.mock('@/lib/jam/sources/video-container', () => ({ setPartyVideoContainer: setPartyVideoContainerMock }));
 
 import { PartyVideoDock } from './party-video-dock';
+import { setPartyVideoSlot } from '@/lib/jam/sources/video-slot';
 
 function item(overrides: Partial<JamQueueItem> & Pick<JamQueueItem, 'id' | 'source'>): JamQueueItem {
   return {
@@ -60,6 +61,45 @@ describe('PartyVideoDock', () => {
     useJamSessionMock.mockReturnValue(session([item({ id: 'a', source: 'VIRE', trackId: 't-a' })], 'a', true));
     render(<PartyVideoDock />);
     expect(setPartyVideoContainerMock).not.toHaveBeenCalled();
+  });
+
+  it('со слотом на странице док встаёт по его прямоугольнику, а не поверх интерфейса', () => {
+    useJamSessionMock.mockReturnValue(session([item({ id: 'e1', source: 'YOUTUBE' })], 'e1', true));
+    vi.stubGlobal('requestAnimationFrame', vi.fn().mockReturnValue(1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const slot = document.createElement('div');
+    slot.getBoundingClientRect = () =>
+      ({ left: 40, top: 60, width: 320, height: 180, right: 360, bottom: 240, x: 40, y: 60, toJSON: () => ({}) }) as DOMRect;
+    setPartyVideoSlot(slot);
+
+    const { container } = render(<PartyVideoDock />);
+    const dock = container.firstElementChild as HTMLElement;
+
+    expect(dock.style.transform).toBe('translate(40px, 60px)');
+    expect(dock.style.width).toBe('320px');
+    expect(dock.style.height).toBe('180px');
+
+    setPartyVideoSlot(null);
+    vi.unstubAllGlobals();
+  });
+
+  it('слот вне зоны видимости — док остаётся уголковым PiP', () => {
+    useJamSessionMock.mockReturnValue(session([item({ id: 'e1', source: 'YOUTUBE' })], 'e1', true));
+    vi.stubGlobal('requestAnimationFrame', vi.fn().mockReturnValue(1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const slot = document.createElement('div');
+    const offscreen = window.innerHeight + 200;
+    slot.getBoundingClientRect = () =>
+      ({ left: 0, top: offscreen, width: 320, height: 180, right: 320, bottom: offscreen + 180, x: 0, y: offscreen, toJSON: () => ({}) }) as DOMRect;
+    setPartyVideoSlot(slot);
+
+    const { container } = render(<PartyVideoDock />);
+    const dock = container.firstElementChild as HTMLElement;
+
+    expect(dock.getAttribute('style')).toBeNull();
+
+    setPartyVideoSlot(null);
+    vi.unstubAllGlobals();
   });
 
   it('размонтирование снимает контейнер с реестра', () => {

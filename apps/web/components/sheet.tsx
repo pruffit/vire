@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useDragControls, type DragControls, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { cn } from '@/lib/utils';
+import { useKeyboardInset } from '@/lib/use-keyboard-inset';
 import { usePlayerStore } from '@/store/player';
 
 // drag стартует только с граббера/шапки: drag="y" на всей шторке ставит touch-action:none
@@ -22,6 +23,7 @@ interface SheetProps {
 export function Sheet({ open, onClose, anchor = 'center', panelClassName, children }: SheetProps) {
   const activeTrack = usePlayerStore((s) => s.track);
   const dragControls = useDragControls();
+  const keyboardInset = useKeyboardInset();
 
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; });
@@ -55,7 +57,11 @@ export function Sheet({ open, onClose, anchor = 'center', panelClassName, childr
             'fixed inset-0 z-[60] flex bg-black/80 backdrop-blur-xl',
             isBottom ? 'items-end justify-center' : 'items-center justify-center p-4 sm:p-6',
           )}
-          style={{ paddingBottom: !isBottom && activeTrack ? 'calc(64px + 1.5rem)' : undefined }}
+          style={{
+            paddingBottom: isBottom
+              ? keyboardInset || undefined
+              : `calc(${keyboardInset}px + ${activeTrack ? '64px + 1.5rem' : '0px'})`,
+          }}
         >
           <motion.div
             role="dialog"
@@ -74,7 +80,11 @@ export function Sheet({ open, onClose, anchor = 'center', panelClassName, childr
             className={cn(
               'flex flex-col bg-card border-border shadow-2xl overflow-hidden cursor-default',
               isBottom
-                ? 'w-full max-w-xl max-h-[85vh] rounded-t-2xl border-t border-x pb-[env(safe-area-inset-bottom)]'
+                ? cn(
+                    'w-full max-w-xl rounded-t-2xl border-t border-x',
+                    // клавиатура уже съела низ overlay-падингом: своё ограничение по vh тут только мешает
+                    keyboardInset > 0 ? 'max-h-full' : 'max-h-[85vh] pb-[env(safe-area-inset-bottom)]',
+                  )
                 : 'w-full max-w-md max-h-full rounded-2xl border',
               panelClassName,
             )}

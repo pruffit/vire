@@ -28,6 +28,44 @@ function cleanQueryText(text: string): string {
 
 export type KnownUrlMatch = { source: PlayableExternalSource; externalId: string } | { service: string; needsPageMeta: true } | null;
 
+export type ProviderTrackMatch = { provider: 'spotify' | 'apple-music' | 'deezer'; id: string };
+
+const SPOTIFY_TRACK_RE = /^\/(?:intl-[a-z]{2}\/)?track\/([a-zA-Z0-9]+)\/?$/i;
+const DEEZER_TRACK_RE = /^\/(?:[a-z]{2}\/)?track\/(\d+)\/?$/i;
+const APPLE_SONG_RE = /^\/(?:[a-z]{2}\/)?song\/[^/]+\/(\d+)\/?$/i;
+
+/**
+ * Ссылка Spotify/Apple Music/Deezer на конкретный трек → провайдер + id для фиксированного
+ * API-эндпоинта (страницы этих сервисов ботам не отдаются, см. providers.ts). Плейлисты/
+ * альбомы/артисты — вне области, null.
+ */
+export function parseProviderTrackUrl(url: string): ProviderTrackMatch | null {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return null;
+  }
+  const host = u.hostname.toLowerCase();
+
+  if (host === 'open.spotify.com') {
+    const m = u.pathname.match(SPOTIFY_TRACK_RE);
+    return m ? { provider: 'spotify', id: m[1]! } : null;
+  }
+  if (host === 'music.apple.com') {
+    const i = u.searchParams.get('i');
+    if (i) return { provider: 'apple-music', id: i };
+    const m = u.pathname.match(APPLE_SONG_RE);
+    return m ? { provider: 'apple-music', id: m[1]! } : null;
+  }
+  if (host === 'deezer.com' || host === 'www.deezer.com') {
+    const m = u.pathname.match(DEEZER_TRACK_RE);
+    return m ? { provider: 'deezer', id: m[1]! } : null;
+  }
+
+  return null;
+}
+
 const YT_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com']);
 const SC_HOSTS = new Set(['soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com']);
 const SC_RESERVED_FIRST_SEGMENTS = new Set(['you', 'discover', 'stream', 'search', 'tags', 'charts', 'upload', 'settings']);

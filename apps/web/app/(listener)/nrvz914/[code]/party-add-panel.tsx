@@ -9,6 +9,9 @@ import { cn } from '@/lib/utils';
 
 const ADD_PANEL_LIMIT = 8;
 const DEBOUNCE_MS = 250;
+// Фокус в шторке — только после её выезда: фокус во время transform заставляет мобильные
+// браузеры доскроллить наполовину приехавшую панель.
+const FOCUS_DELAY_MS = 280;
 const RAW_TITLE_MAX = 80;
 const URL_RE = /^https?:\/\//i;
 
@@ -46,6 +49,13 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
   const [emptyHint, setEmptyHint] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    const timer = setTimeout(() => inputRef.current?.focus(), FOCUS_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [autoFocus]);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -130,24 +140,51 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
     void submitRaw(`${artistName} ${title}`.trim());
   }
 
-  const isSuggesting = results === null;
-  const list = postCandidates ?? results ?? suggestionsToCandidates(suggestions);
-  const listTitle = postCandidates ? 'Похоже, вот это' : isSuggesting && list.length > 0 ? 'Из любимых' : null;
-  const idle = isSuggesting && !postCandidates;
+  const typing = q.trim().length >= 2;
+  const searching = typing && results === null;
+  const idle = results === null && !typing && !postCandidates;
+  // Пока ищем по набранному, старые «Из любимых» не показываем: подсказки, не связанные
+  // с вводом, читаются как «поиск ничего не понял».
+  const list = postCandidates ?? results ?? (typing ? [] : suggestionsToCandidates(suggestions));
+  const listTitle = postCandidates ? 'Похоже, вот это' : idle && list.length > 0 ? 'Из любимых' : null;
 
   return (
     <div className={cn('rounded-xl border border-border bg-card/50 p-2 space-y-2', dense && 'flex flex-1 min-h-0 flex-col')}>
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 px-2 pt-1 shrink-0">
+      <form onSubmit={handleSubmit} className="flex items-center gap-1 px-2 pt-1 shrink-0">
         <Icon name="search" size={15} className="text-muted-foreground shrink-0" />
         <input
-          autoFocus={autoFocus}
+          ref={inputRef}
           value={q}
           onChange={(e) => { setQ(e.target.value); setPostCandidates(null); setEmptyHint(false); }}
           onPaste={handlePaste}
+          aria-label="Название трека или ссылка"
+          inputMode="search"
+          enterKeyHint="search"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           placeholder="Вставьте ссылку или вспомните трек…"
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground py-1"
+          // text-base на мобилке: при шрифте меньше 16px iOS зумит страницу на фокусе
+          className="min-w-0 flex-1 bg-transparent py-1 text-base outline-none placeholder:text-muted-foreground sm:text-sm"
         />
-        {submitting && <Icon name="loader" size={14} className="shrink-0 animate-spin text-muted-foreground" />}
+        {q.length > 0 && (
+          <button
+            type="button"
+            onClick={() => { setQ(''); setResults(null); setPostCandidates(null); setEmptyHint(false); inputRef.current?.focus(); }}
+            aria-label="Очистить"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Icon name="x" size={14} />
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={q.trim().length === 0 || submitting}
+          aria-label="Добавить в очередь"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+        >
+          <Icon name={submitting ? 'loader' : 'arrow-right'} size={15} className={submitting ? 'animate-spin' : undefined} />
+        </button>
       </form>
 
       <div className={cn('space-y-1 pb-1', dense ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-72 overflow-y-auto')}>
@@ -174,10 +211,19 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
           ))
         ) : emptyHint ? (
           <p className="px-3 py-4 text-sm text-muted-foreground">Не нашли точного совпадения — попробуйте другую формулировку</p>
+        ) : searching ? (
+          <p className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+            <Icon name="loader" size={14} className="shrink-0 animate-spin" />
+            <span className="truncate">Ищем «{q.trim()}»…</span>
+          </p>
         ) : (
           <p className="px-3 py-4 text-sm text-muted-foreground">
-            {isSuggesting ? 'Начните вводить название трека или вставьте ссылку' : 'Ничего не найдено — нажмите Enter, чтобы поискать в сети'}
+            {idle ? 'Начните вводить название трека или вставьте ссылку' : 'Ничего не найдено — нажмите Enter, чтобы поискать в сети'}
           </p>
+        )}
+
+        {typing && !postCandidates && list.length > 0 && (
+          <p className="px-3 pb-1 pt-2 text-[11px] text-muted-foreground">Нет нужного? Enter — поищем в сети</p>
         )}
 
         {idle && tasteSuggestions && tasteSuggestions.length > 0 && (

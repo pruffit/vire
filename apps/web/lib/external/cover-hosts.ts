@@ -9,6 +9,7 @@ const ALLOWED = [
   'sndcdn.com',
   'mzstatic.com',
   'scdn.co',
+  'spotifycdn.com',
   'dzcdn.net',
   'userapi.com',
   'mycdn.me',

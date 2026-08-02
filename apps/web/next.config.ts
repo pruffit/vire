@@ -45,7 +45,7 @@ function buildCsp(): string {
     `style-src 'self' 'unsafe-inline'`,
     // аватары OAuth (yandex/lh3/t.me), Метрика, постеры YouTube (ytimg) и VK (userapi/mycdn);
     // обложки внешних треков вечеринки (см. lib/external/cover-hosts.ts — тот же список).
-    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru https://mc.yandex.com https://i.ytimg.com https://*.ytimg.com https://*.userapi.com https://*.mycdn.me https://*.sndcdn.com https://*.mzstatic.com https://i.scdn.co https://*.scdn.co https://*.dzcdn.net ${s3}`,
+    `img-src 'self' data: blob: https://avatars.yandex.net https://lh3.googleusercontent.com https://t.me https://mc.yandex.ru https://mc.yandex.com https://i.ytimg.com https://*.ytimg.com https://*.userapi.com https://*.mycdn.me https://*.sndcdn.com https://*.mzstatic.com https://i.scdn.co https://*.scdn.co https://*.spotifycdn.com https://*.dzcdn.net ${s3}`,
     `media-src 'self' blob: ${s3}`,
     `connect-src 'self' blob: ${s3} https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com${dev ? ' ws://localhost:* wss://localhost:*' : ''}`,
     `font-src 'self' data:`,
@@ -120,6 +120,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.sndcdn.com', pathname: '/**' },
       { protocol: 'https', hostname: '**.mzstatic.com', pathname: '/**' },
       { protocol: 'https', hostname: '**.scdn.co', pathname: '/**' },
+      { protocol: 'https', hostname: '**.spotifycdn.com', pathname: '/**' },
       { protocol: 'https', hostname: '**.dzcdn.net', pathname: '/**' },
       { protocol: 'https', hostname: '**.userapi.com', pathname: '/**' },
       { protocol: 'https', hostname: '**.mycdn.me', pathname: '/**' },

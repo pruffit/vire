@@ -7,6 +7,7 @@ describe('sanitizeCoverUrl', () => {
     'https://i1.sndcdn.com/artworks-x-t500x500.jpg',
     'https://is1-ssl.mzstatic.com/image/thumb/x.jpg',
     'https://i.scdn.co/image/x',
+    'https://image-cdn-ak.spotifycdn.com/image/x',
     'https://e-cdns-images.dzcdn.net/images/cover/x/250x250.jpg',
     'https://avatars.yandex.net/get-music-content/x',
   ])('пропускает обложку с настроенного хоста: %s', (url) => {
