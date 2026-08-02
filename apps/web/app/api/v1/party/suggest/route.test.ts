@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { suggest } = vi.hoisted(() => ({ suggest: vi.fn() }));
+const { suggest, tasteSuggestions } = vi.hoisted(() => ({ suggest: vi.fn(), tasteSuggestions: vi.fn() }));
 vi.mock('@/lib/external', () => ({ externalResolveService: () => ({ suggest }) }));
+vi.mock('@/lib/external/taste-suggestions', () => ({ tasteSuggestions }));
 vi.mock('@/lib/jam/jam-identity', () => ({ resolveJamIdentity: vi.fn() }));
 
 import { resolveJamIdentity } from '@/lib/jam/jam-identity';
@@ -14,12 +15,6 @@ const req = (query: string) => new Request(`http://localhost/api/v1/party/sugges
 beforeEach(() => vi.clearAllMocks());
 
 describe('GET /api/v1/party/suggest', () => {
-  it('an empty q returns empty candidates without checking identity', async () => {
-    const res = await GET(req('?q='));
-    expect(await res.json()).toEqual({ candidates: [] });
-    expect(mockedResolveIdentity).not.toHaveBeenCalled();
-  });
-
   it('401 without a resolvable identity', async () => {
     mockedResolveIdentity.mockResolvedValue(null);
     const res = await GET(req('?q=song'));
@@ -46,5 +41,27 @@ describe('GET /api/v1/party/suggest', () => {
     await GET(req('?q=song&sessionId=g1.sig'));
 
     expect(mockedResolveIdentity).toHaveBeenCalledWith('g1.sig');
+  });
+
+  it('without q, a guest gets empty candidates without touching taste suggestions', async () => {
+    mockedResolveIdentity.mockResolvedValue({ guestSessionId: 'g1' });
+
+    const res = await GET(req(''));
+
+    expect(await res.json()).toEqual({ candidates: [] });
+    expect(tasteSuggestions).not.toHaveBeenCalled();
+  });
+
+  it('without q, an authenticated user gets Last.fm taste suggestions', async () => {
+    mockedResolveIdentity.mockResolvedValue({ userId: 'u1' });
+    const hints = [{ kind: 'HINT', hint: { title: 'X', artistName: 'Y', coverUrl: null, durationSec: null } }];
+    tasteSuggestions.mockResolvedValue(hints);
+
+    const res = await GET(req('?q='));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ candidates: hints });
+    expect(tasteSuggestions).toHaveBeenCalledWith('u1', 8);
+    expect(suggest).not.toHaveBeenCalled();
   });
 });

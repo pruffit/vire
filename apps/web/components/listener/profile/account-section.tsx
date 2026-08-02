@@ -4,6 +4,7 @@ import { AppearanceSettings } from './appearance-settings';
 import { PrivacySettings } from './privacy-settings';
 import { DiscoverabilitySettings } from './discoverability-settings';
 import { NotificationSettings } from './notification-settings';
+import { LastfmSettings } from './lastfm-settings';
 import { SignOutButton } from './sign-out-button';
 
 interface Props {
@@ -12,9 +13,10 @@ interface Props {
   socialVisibility: 'FRIENDS' | 'PRIVATE';
   discoverable: boolean;
   notifyEmail: boolean;
+  lastfmUsername: string | null;
 }
 
-export function AccountSection({ userId, linkError, socialVisibility, discoverable, notifyEmail }: Props) {
+export function AccountSection({ userId, linkError, socialVisibility, discoverable, notifyEmail, lastfmUsername }: Props) {
   return (
     <section className="animate-fade-up grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
       <LinkedAccounts userId={userId} linkError={linkError} />
@@ -30,6 +32,9 @@ export function AccountSection({ userId, linkError, socialVisibility, discoverab
             <PrivacySettings initial={socialVisibility} />
             <DiscoverabilitySettings initial={discoverable} />
           </div>
+        </Section>
+        <Section title="Музыкальный вкус">
+          <LastfmSettings initial={lastfmUsername} />
         </Section>
         <div className="pt-2 border-t border-border">
           <SignOutButton />

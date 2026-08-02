@@ -8,9 +8,12 @@ import {
   updateUserDiscoverable,
   updateUserNotifyEmail,
   updateUserNotifyPush,
+  updateUserLastfmUsername,
 } from '@vire/db';
 import { uploadToStream } from '@/lib/s3';
 import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
+
+const LASTFM_USERNAME_RE = /^[a-zA-Z0-9_.-]{2,64}$/;
 
 const schema = z
   .object({
@@ -19,6 +22,7 @@ const schema = z
     discoverable: z.boolean().optional(),
     notifyEmail: z.boolean().optional(),
     notifyPush: z.boolean().optional(),
+    lastfmUsername: z.string().regex(LASTFM_USERNAME_RE).max(64).nullable().optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: 'Nothing to update' });
 
@@ -30,12 +34,13 @@ export async function PATCH(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
 
-  const { name, socialVisibility, discoverable, notifyEmail, notifyPush } = parsed.data;
+  const { name, socialVisibility, discoverable, notifyEmail, notifyPush, lastfmUsername } = parsed.data;
   if (name !== undefined) await updateUserName(session.user.id, name);
   if (socialVisibility !== undefined) await updateUserSocialVisibility(session.user.id, socialVisibility);
   if (discoverable !== undefined) await updateUserDiscoverable(session.user.id, discoverable);
   if (notifyEmail !== undefined) await updateUserNotifyEmail(session.user.id, notifyEmail);
   if (notifyPush !== undefined) await updateUserNotifyPush(session.user.id, notifyPush);
+  if (lastfmUsername !== undefined) await updateUserLastfmUsername(session.user.id, lastfmUsername);
 
   return NextResponse.json({
     ok: true,
@@ -44,6 +49,7 @@ export async function PATCH(req: Request) {
     ...(discoverable !== undefined ? { discoverable } : {}),
     ...(notifyEmail !== undefined ? { notifyEmail } : {}),
     ...(notifyPush !== undefined ? { notifyPush } : {}),
+    ...(lastfmUsername !== undefined ? { lastfmUsername } : {}),
   });
 }
 

@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { externalResolveService } from '@/lib/external';
+import { tasteSuggestions } from '@/lib/external/taste-suggestions';
 import { resolveJamIdentity } from '@/lib/jam/jam-identity';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 
 const DEFAULT_LIMIT = 8;
-const schema = z.object({ q: z.string().min(1).max(200) });
+const schema = z.object({ q: z.string().max(200).optional() });
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const parsed = schema.safeParse({ q: searchParams.get('q') ?? '' });
+  const parsed = schema.safeParse({ q: searchParams.get('q') ?? undefined });
   if (!parsed.success) return NextResponse.json({ candidates: [] });
 
   const identity = await resolveJamIdentity(searchParams.get('sessionId') ?? undefined);
@@ -19,6 +20,12 @@ export async function GET(req: Request) {
   const limit = await rateLimit(`party-suggest:${rlKey}`, 30, 60);
   if (!limit.ok) return tooManyRequests(limit.retryAfter);
 
-  const candidates = await externalResolveService().suggest(parsed.data.q, DEFAULT_LIMIT);
+  const q = parsed.data.q?.trim();
+  if (!q) {
+    const candidates = 'userId' in identity ? await tasteSuggestions(identity.userId, DEFAULT_LIMIT) : [];
+    return NextResponse.json({ candidates });
+  }
+
+  const candidates = await externalResolveService().suggest(q, DEFAULT_LIMIT);
   return NextResponse.json({ candidates });
 }

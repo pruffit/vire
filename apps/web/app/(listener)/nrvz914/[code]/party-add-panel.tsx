@@ -41,10 +41,20 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
   const [q, setQ] = useState('');
   const [results, setResults] = useState<TrackCandidate[] | null>(null);
   const [postCandidates, setPostCandidates] = useState<TrackCandidate[] | null>(null);
+  const [tasteSuggestions, setTasteSuggestions] = useState<TrackCandidate[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [emptyHint, setEmptyHint] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    fetch('/api/v1/party/suggest', { signal: ac.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { candidates?: TrackCandidate[] } | null) => setTasteSuggestions(d?.candidates ?? []))
+      .catch((e) => { if (!(e instanceof Error && e.name === 'AbortError')) setTasteSuggestions([]); });
+    return () => ac.abort();
+  }, []);
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
@@ -123,6 +133,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
   const isSuggesting = results === null;
   const list = postCandidates ?? results ?? suggestionsToCandidates(suggestions);
   const listTitle = postCandidates ? 'Похоже, вот это' : isSuggesting && list.length > 0 ? 'Из любимых' : null;
+  const idle = isSuggesting && !postCandidates;
 
   return (
     <div className={cn('rounded-xl border border-border bg-card/50 p-2 space-y-2', dense && 'flex flex-1 min-h-0 flex-col')}>
@@ -167,6 +178,15 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
           <p className="px-3 py-4 text-sm text-muted-foreground">
             {isSuggesting ? 'Начните вводить название трека или вставьте ссылку' : 'Ничего не найдено — нажмите Enter, чтобы поискать в сети'}
           </p>
+        )}
+
+        {idle && tasteSuggestions && tasteSuggestions.length > 0 && (
+          <>
+            <p className="px-3 pb-1 pt-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Из вашего вкуса</p>
+            {tasteSuggestions.map((candidate, i) => (
+              <CandidateRow key={`taste-${i}`} candidate={candidate} added={false} onPick={handlePickCandidate} />
+            ))}
+          </>
         )}
       </div>
     </div>

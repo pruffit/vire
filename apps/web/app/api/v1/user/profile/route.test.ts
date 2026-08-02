@@ -7,6 +7,7 @@ const {
   updateUserDiscoverable,
   updateUserNotifyEmail,
   updateUserNotifyPush,
+  updateUserLastfmUsername,
   uploadToStream,
 } = vi.hoisted(() => ({
   updateUserName: vi.fn(),
@@ -15,6 +16,7 @@ const {
   updateUserDiscoverable: vi.fn(),
   updateUserNotifyEmail: vi.fn(),
   updateUserNotifyPush: vi.fn(),
+  updateUserLastfmUsername: vi.fn(),
   uploadToStream: vi.fn(),
 }));
 
@@ -26,6 +28,7 @@ vi.mock('@vire/db', () => ({
   updateUserDiscoverable,
   updateUserNotifyEmail,
   updateUserNotifyPush,
+  updateUserLastfmUsername,
 }));
 vi.mock('@/lib/s3', () => ({ uploadToStream }));
 
@@ -144,6 +147,29 @@ describe('PATCH /api/v1/user/profile', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ ok: true, notifyPush: true });
     expect(updateUserNotifyPush).toHaveBeenCalledWith('u1', true);
+  });
+
+  it('PATCH принимает валидный lastfmUsername и зовёт updateUserLastfmUsername', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ lastfmUsername: 'danya_music' }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true, lastfmUsername: 'danya_music' });
+    expect(updateUserLastfmUsername).toHaveBeenCalledWith('u1', 'danya_music');
+  });
+
+  it('PATCH принимает null lastfmUsername (отвязка)', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ lastfmUsername: null }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true, lastfmUsername: null });
+    expect(updateUserLastfmUsername).toHaveBeenCalledWith('u1', null);
+  });
+
+  it('400 на мусорный lastfmUsername', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ lastfmUsername: 'not a valid username!!' }));
+    expect(res.status).toBe(400);
+    expect(updateUserLastfmUsername).not.toHaveBeenCalled();
   });
 });
 

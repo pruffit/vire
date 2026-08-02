@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, pgEnum, index, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, varchar, timestamp, pgEnum, index, boolean } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('role', [
@@ -26,6 +26,8 @@ export const users = pgTable('users', {
   notifyEmail: boolean('notify_email').notNull().default(true),
   notifyPush: boolean('notify_push').notNull().default(true),
   discoverable: boolean('discoverable').notNull().default(true),
+  // Только вкус для предложки на вечеринке (user.getTopTracks) — не OAuth, без скробблинга.
+  lastfmUsername: varchar('lastfm_username', { length: 64 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [

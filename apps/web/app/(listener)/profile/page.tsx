@@ -7,6 +7,7 @@ import {
   getUserProfileCached,
   getUserPublicProfileCached,
   getListenerTasteCached,
+  getUserLastfmUsernameCached,
 } from '@/lib/listener-data';
 import { mergeActivity } from '@/lib/activity';
 import { auth } from '@/auth';
@@ -28,13 +29,14 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   if (!session?.user?.id) redirect('/sign-in?callbackUrl=/profile');
 
   const { link_error: linkError } = await searchParams;
-  const [likedTracks, followedArtists, playlists, profile, taste, publicProfile] = await Promise.all([
+  const [likedTracks, followedArtists, playlists, profile, taste, publicProfile, lastfmUsername] = await Promise.all([
     getLikedTracksCached(session.user.id),
     getFollowedArtistsCached(session.user.id),
     getUserPlaylistsCached(session.user.id),
     getUserProfileCached(session.user.id),
     getListenerTasteCached(session.user.id),
     getUserPublicProfileCached(session.user.id),
+    getUserLastfmUsernameCached(session.user.id),
   ]);
 
   const stats = { likes: likedTracks.length, following: followedArtists.length, playlists: playlists.length };
@@ -77,6 +79,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           socialVisibility={publicProfile?.socialVisibility ?? 'FRIENDS'}
           discoverable={publicProfile?.discoverable ?? true}
           notifyEmail={publicProfile?.notifyEmail ?? true}
+          lastfmUsername={lastfmUsername}
         />
       </PageContainer>
     </main>

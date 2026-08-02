@@ -115,6 +115,15 @@ export async function updateUserNotifyPush(userId: string, value: boolean): Prom
   await db.update(users).set({ notifyPush: value, updatedAt: new Date() }).where(eq(users.id, userId));
 }
 
+export async function getUserLastfmUsername(userId: string): Promise<string | null> {
+  const [row] = await db.select({ lastfmUsername: users.lastfmUsername }).from(users).where(eq(users.id, userId)).limit(1);
+  return row?.lastfmUsername ?? null;
+}
+
+export async function updateUserLastfmUsername(userId: string, username: string | null): Promise<void> {
+  await db.update(users).set({ lastfmUsername: username, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
 export async function getFollowedArtists(userId: string): Promise<FollowedArtist[]> {
   const rows = await db
     .select({

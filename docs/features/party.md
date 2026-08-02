@@ -34,6 +34,14 @@
   Триггерит клиент (`handleTrackEnded` в `jam-session-provider.tsx`) при пустом хвосте на
   вечеринке; волна пуста или роут упал — тишина, как раньше. `POST /api/v1/jam/[code]/refill`
   (лимит по джему, не по участнику — добор общий).
+- **Предложка по вкусу (Last.fm).** В `/profile` слушатель может привязать ник Last.fm
+  (только вкус — никакого OAuth, никакого скробблинга, ничего не проигрывается оттуда).
+  `GET /api/v1/party/suggest` без `q` отдаёт `user.getTopTracks` привязанного ника как
+  подсказки-`HINT`, минус уже лайкнутое (дедуп по нормализованному «артист + название»).
+  `PartyAddPanel` дёргает его один раз при монтировании и показывает в простое, после
+  «Из любимых», блоком «Из вашего вкуса». Ника нет / ключа `LASTFM_API_KEY` нет / API
+  молчит / гость без сессии — блока просто нет, без ошибок. Обложки Last.fm не входят в
+  белый список `cover-hosts.ts` — отпадают в `null` осознанно.
 
 ## Каскад резолва (любой ввод → играбельная позиция)
 
@@ -81,11 +89,14 @@ YouTube IFrame API и SoundCloud Widget. Ничего не скачиваетс�
   `[code]/{page,party-room,party-add-panel,party-screen}.tsx`.
 - **Вход из футера:** `apps/web/components/party-trigger.tsx`, путь — `apps/web/lib/party.ts`.
 - **API:** `POST /api/v1/jam/[code]/queue/external` (любой ввод), `POST …/queue/local`
-  (файл устройства), `GET /api/v1/party/suggest` (подсказки при наборе), `POST …/skip`
-  (голос за пропуск), `POST …/refill` (автодобор из волны).
+  (файл устройства), `GET /api/v1/party/suggest` (подсказки при наборе; без `q` — вкусовые
+  подсказки из Last.fm), `POST …/skip` (голос за пропуск), `POST …/refill` (автодобор из волны).
 - **Резолв:** `packages/core/src/services/external-resolve{,-service}.ts`;
   адаптеры сети — `apps/web/lib/external/` (`oembed`, `page-meta`, `youtube`, `itunes`,
-  `deezer`, `safe-fetch`).
+  `deezer`, `safe-fetch`, `lastfm`, `taste-suggestions`).
+- **Вкус:** `users.lastfm_username` (миграция 0048), `getUserLastfmUsername`/
+  `updateUserLastfmUsername` в `packages/db/src/queries/profile.ts`; UI —
+  `apps/web/components/listener/profile/lastfm-settings.tsx`.
 - **Звук:** `apps/web/lib/jam/jam-audio.ts` + `apps/web/lib/jam/sources/`.
 - **Локальные файлы:** `apps/web/lib/local-files.ts` (общий реестр, шарится с глобальным
   плеером — см. [player.md](player.md)), кнопка выбора — `apps/web/components/local-file-button.tsx`.
@@ -113,6 +124,7 @@ YouTube IFrame API и SoundCloud Widget. Ничего не скачиваетс�
 - `YOUTUBE_API_KEY` — опционально. Без ключа прямые ссылки на YouTube/SoundCloud резолвятся
   через oEmbed, работает и каталожный матч; отваливается только поиск по названию
   (`search.list`) — ввод без ссылки чаще будет отдавать кандидатов на выбор.
+- `LASTFM_API_KEY` — опционально. Без ключа блок «Из вашего вкуса» просто не появляется.
 
 ## Ограничения / на будущее
 
@@ -129,5 +141,5 @@ YouTube IFrame API и SoundCloud Widget. Ничего не скачиваетс�
 - Автоплей на iOS требует жеста — на экране вечеринки для этого есть «Нажмите, чтобы
   продолжить».
 - Сохранение очереди в плейлист берёт только каталожные позиции: внешние сохранять некуда.
-- Отложено: предложка по внешним профилям стриминга (нужен ключ Last.fm и привязка
-  профиля), локальные файлы в глобальном плеере вне вечеринки.
+- Last.fm-ник хранится как есть, без проверки существования аккаунта.
+- Отложено: локальные файлы в глобальном плеере вне вечеринки.

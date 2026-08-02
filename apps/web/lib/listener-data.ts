@@ -7,6 +7,7 @@ import {
   getUserPublicProfile,
   getListenerTaste,
   getLikedPlaylists,
+  getUserLastfmUsername,
 } from '@vire/db';
 import { friendshipService } from '@/lib/friends';
 import { chatService } from '@/lib/chat';
@@ -21,5 +22,6 @@ export const getLikedPlaylistsCached = cache(getLikedPlaylists);
 export const getUserProfileCached = cache(getUserProfile);
 export const getUserPublicProfileCached = cache(getUserPublicProfile);
 export const getListenerTasteCached = cache(getListenerTaste);
+export const getUserLastfmUsernameCached = cache(getUserLastfmUsername);
 export const countUnseenIncomingCached = cache((userId: string) => friendshipService().countUnseen(userId));
 export const countUnreadMessagesCached = cache((userId: string) => chatService().countUnread(userId));
