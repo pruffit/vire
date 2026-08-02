@@ -113,13 +113,17 @@ export function useJamQueue({ code, sessionId, serverQueue, setDragging }: Args)
       body: JSON.stringify(sessionId ? { input, sessionId } : { input }),
     }).catch(() => null);
 
+    // Откатываем по id, а не снимком очереди: пока летел запрос, рядом мог появиться
+    // ещё один pending — снимок стёр бы и его.
+    const dropPending = () => setOverlay((prev) => prev?.filter((item) => item.id !== pendingId) ?? null);
+
     if (!res || !res.ok) {
-      if (guess) setOverlay(base);
+      if (guess) dropPending();
       if (res) toast.error(await failureMessage(res, 'Не удалось добавить трек'));
       return { outcome: 'error' };
     }
     if (res.status === 200) {
-      if (guess) setOverlay(base);
+      if (guess) dropPending();
       const data = (await res.json().catch(() => null)) as { candidates?: TrackCandidate[] } | null;
       return { outcome: 'candidates', candidates: data?.candidates ?? [] };
     }

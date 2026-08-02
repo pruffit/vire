@@ -7,6 +7,9 @@ import { classifyInput, parseKnownUrl, parseOwnUrl, normalizeUrlKey, normalizeQu
 
 const CACHE_STALE_DAYS = 30;
 const CACHE_STALE_MS = CACHE_STALE_DAYS * 24 * 60 * 60 * 1000;
+// Меняется вместе с логикой каскада: старые записи (в первую очередь негативные — «не нашли»)
+// не должны закрывать дорогу новому пути резолва на 30 дней вперёд.
+const CACHE_VERSION = 2;
 
 export type ResolveOutcome =
   | { outcome: 'vire'; trackId: string }
@@ -60,7 +63,7 @@ export class ExternalResolveService {
   }
 
   private async resolveKnownPlayableUrl(url: string, source: PlayableExternalSource, externalId: string): Promise<ResolveOutcome> {
-    const key: ResolutionKey = { kind: 'URL', value: normalizeUrlKey(url) };
+    const key = urlKey(url);
     const cached = await this.deps.cache.get(key);
     if (cached?.found) return { outcome: 'external', ref: cached.ref };
     if (cached && !cached.found && !this.isStale(cached.resolvedAt)) return { outcome: 'candidates', candidates: [] };
@@ -73,14 +76,14 @@ export class ExternalResolveService {
 
     await this.deps.cache.put(key, ref);
     if (ref) {
-      await this.deps.cache.put({ kind: 'QUERY', value: normalizeQueryKey(ref.artistName, ref.title) }, ref);
+      await this.deps.cache.put(queryKey(ref.artistName, ref.title), ref);
       return { outcome: 'external', ref };
     }
     return { outcome: 'candidates', candidates: [] };
   }
 
   private async resolveViaPageMeta(url: string): Promise<ResolveOutcome> {
-    const key: ResolutionKey = { kind: 'URL', value: normalizeUrlKey(url) };
+    const key = urlKey(url);
     const cached = await this.deps.cache.get(key);
     if (cached?.found) return { outcome: 'external', ref: cached.ref };
     if (cached && !cached.found && !this.isStale(cached.resolvedAt)) return { outcome: 'candidates', candidates: [] };
@@ -108,13 +111,13 @@ export class ExternalResolveService {
     const match = scoreCatalogMatch(hint, catalogTracks);
     if (match) return { outcome: 'vire', trackId: match.id };
 
-    const queryKey: ResolutionKey = { kind: 'QUERY', value: normalizeQueryKey(hint.artistName, hint.title) };
-    const cached = await this.deps.cache.get(queryKey);
+    const key = queryKey(hint.artistName, hint.title);
+    const cached = await this.deps.cache.get(key);
     if (cached?.found) return { outcome: 'external', ref: cached.ref };
 
     const skipSearch = Boolean(cached && !cached.found && !this.isStale(cached.resolvedAt));
     const ref = skipSearch ? null : await this.deps.playableResolver.searchOne(query, { title: hint.title, artistName: hint.artistName });
-    if (!skipSearch) await this.deps.cache.put(queryKey, ref);
+    if (!skipSearch) await this.deps.cache.put(key, ref);
     if (ref) return { outcome: 'external', ref };
 
     return { outcome: 'candidates', candidates: await this.candidatesFor(hint, catalogTracks) };
@@ -130,6 +133,14 @@ export class ExternalResolveService {
   private isStale(resolvedAt: Date): boolean {
     return this.deps.clock() - resolvedAt.getTime() >= CACHE_STALE_MS;
   }
+}
+
+function urlKey(url: string): ResolutionKey {
+  return { kind: 'URL', value: `v${CACHE_VERSION}:${normalizeUrlKey(url)}` };
+}
+
+function queryKey(artistName: string, title: string): ResolutionKey {
+  return { kind: 'QUERY', value: `v${CACHE_VERSION}:${normalizeQueryKey(artistName, title)}` };
 }
 
 function toRef(source: PlayableExternalSource, externalId: string, url: string, meta: PageMeta): ExternalTrackRef {

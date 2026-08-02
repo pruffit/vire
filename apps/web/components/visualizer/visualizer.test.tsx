@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, renderHook } from '@testing-library/react';
-import { Visualizer, useVisualizerPreset } from './index';
-import { createScene, parseAccent, rotateHue } from './presets';
+import { Visualizer, useVisualizerEnabled } from './index';
+import { createVisualizerEngine } from './engine';
+import { parseAccent, rotateHue, SCENE_FACTORIES } from './scenes';
 
 vi.mock('@/lib/player/manifest-cache', () => ({
   fetchManifest: vi.fn().mockResolvedValue({ hlsUrl: 'x.m3u8', waveformPeaks: [0.1, 0.9, 0.4] }),
@@ -10,6 +11,16 @@ vi.mock('@/lib/player/manifest-cache', () => ({
 
 const rafSpy = vi.fn<(cb: FrameRequestCallback) => number>();
 const cancelSpy = vi.fn<(id: number) => void>();
+
+function fakeContext(): CanvasRenderingContext2D {
+  return {
+    setTransform: vi.fn(), fillRect: vi.fn(), clearRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(),
+    lineTo: vi.fn(), closePath: vi.fn(), stroke: vi.fn(), drawImage: vi.fn(),
+    save: vi.fn(), restore: vi.fn(), translate: vi.fn(), rotate: vi.fn(), scale: vi.fn(),
+    createRadialGradient: vi.fn().mockReturnValue({ addColorStop: vi.fn() }),
+    globalCompositeOperation: '', globalAlpha: 1, fillStyle: '', strokeStyle: '', lineWidth: 0,
+  } as unknown as CanvasRenderingContext2D;
+}
 
 beforeEach(() => {
   let id = 0;
@@ -20,11 +31,7 @@ beforeEach(() => {
     observe(): void {}
     disconnect(): void {}
   });
-  HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
-    setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(),
-    stroke: vi.fn(), createRadialGradient: vi.fn().mockReturnValue({ addColorStop: vi.fn() }),
-    globalCompositeOperation: '', fillStyle: '', strokeStyle: '', lineWidth: 0,
-  }) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = vi.fn(fakeContext) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 });
 
 afterEach(() => {
@@ -36,39 +43,65 @@ afterEach(() => {
 const base = { accentColor: '#3366ff', playing: true, positionSec: 0, durationSec: 100 };
 
 describe('Visualizer', () => {
-  it('preset=off ничего не рисует', () => {
-    const { container } = render(<Visualizer {...base} preset="off" />);
+  it('выключенный ничего не рисует', () => {
+    const { container } = render(<Visualizer {...base} enabled={false} />);
     expect(container.querySelector('canvas')).toBeNull();
     expect(rafSpy).not.toHaveBeenCalled();
   });
 
   it('на паузе кадр рисуется, но цикл не крутится', () => {
-    render(<Visualizer {...base} preset="spiral" playing={false} />);
+    render(<Visualizer {...base} enabled playing={false} />);
     expect(rafSpy).not.toHaveBeenCalled();
   });
 
   it('размонтирование снимает кадр анимации', () => {
-    const { unmount } = render(<Visualizer {...base} preset="particles" />);
+    const { unmount } = render(<Visualizer {...base} enabled />);
     expect(rafSpy).toHaveBeenCalled();
     unmount();
     expect(cancelSpy).toHaveBeenCalled();
   });
 });
 
-describe('useVisualizerPreset', () => {
-  it('читает сохранённый пресет и пишет выбранный', () => {
-    localStorage.setItem('vire-visualizer', 'plasma');
-    const { result } = renderHook(() => useVisualizerPreset());
-    expect(result.current[0]).toBe('plasma');
+describe('useVisualizerEnabled', () => {
+  it('читает сохранённое состояние и пишет выбранное', () => {
+    localStorage.setItem('vire-visualizer', 'on');
+    const { result } = renderHook(() => useVisualizerEnabled());
+    expect(result.current[0]).toBe(true);
 
-    act(() => result.current[1]('spiral'));
-    expect(localStorage.getItem('vire-visualizer')).toBe('spiral');
+    act(() => result.current[1](false));
+    expect(localStorage.getItem('vire-visualizer')).toBe('off');
   });
 
-  it('мусор в хранилище игнорируется', () => {
-    localStorage.setItem('vire-visualizer', 'нет-такого');
-    const { result } = renderHook(() => useVisualizerPreset());
-    expect(result.current[0]).toBe('off');
+  it('без записи в хранилище визуализация выключена', () => {
+    const { result } = renderHook(() => useVisualizerEnabled());
+    expect(result.current[0]).toBe(false);
+  });
+});
+
+describe('движок визуализации', () => {
+  const frame = { width: 800, height: 600, time: 0, amp: 0.7, accent: parseAccent('#3366ff') };
+
+  it('рисует непрерывно и сам сменяет форму со временем', () => {
+    const engine = createVisualizerEngine();
+    const ctx = fakeContext();
+
+    engine.draw(ctx, frame, 1);
+    const beforeSwitch = (ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.length;
+    expect(beforeSwitch).toBe(1);
+
+    // За пределом сегмента в кадре появляется вторая сцена — идёт перетекание.
+    engine.draw(ctx, { ...frame, time: 40 }, 1);
+    expect((ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.length).toBe(3);
+
+    engine.dispose();
+  });
+
+  it('все сцены рисуются без ошибок', () => {
+    const ctx = fakeContext();
+    for (const factory of SCENE_FACTORIES) {
+      const scene = factory();
+      expect(() => scene.draw(ctx, { ...frame, time: 3 })).not.toThrow();
+    }
   });
 });
 
@@ -83,14 +116,6 @@ describe('палитра', () => {
     for (const channel of [rotated.r, rotated.g, rotated.b]) {
       expect(channel).toBeGreaterThanOrEqual(0);
       expect(channel).toBeLessThanOrEqual(255);
-    }
-  });
-
-  it('все сцены создаются и рисуют без ошибок', () => {
-    const ctx = HTMLCanvasElement.prototype.getContext.call(document.createElement('canvas'), '2d') as CanvasRenderingContext2D;
-    for (const preset of ['spiral', 'plasma', 'particles'] as const) {
-      const scene = createScene(preset);
-      expect(() => scene.draw(ctx, { width: 800, height: 600, time: 3, amp: 0.7, accent: parseAccent('#3366ff') })).not.toThrow();
     }
   });
 });

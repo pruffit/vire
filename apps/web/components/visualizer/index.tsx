@@ -3,46 +3,40 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useReduceMotionPref } from '@vire/ui/motion';
 import { fetchManifest } from '@/lib/player/manifest-cache';
-import { createScene, parseAccent, VISUALIZER_PRESETS, type Scene, type VisualizerPreset } from './presets';
-
-export { VISUALIZER_PRESETS, type VisualizerPreset } from './presets';
+import { createVisualizerEngine } from './engine';
+import { parseAccent } from './scenes';
 
 const STORAGE_KEY = 'vire-visualizer';
 const MAX_DPR = 1.5;
 const AMP_SMOOTHING = 0.16;
 
-function isPreset(value: string | null): value is VisualizerPreset {
-  return VISUALIZER_PRESETS.some((p) => p.value === value);
-}
-
-function readPreset(): VisualizerPreset {
-  if (typeof window === 'undefined') return 'off';
+function readEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return isPreset(stored) ? stored : 'off';
+    return localStorage.getItem(STORAGE_KEY) === 'on';
   } catch {
-    return 'off';
+    return false;
   }
 }
 
 /** Экран вечеринки рисуется только после клика — SSR его не отдаёт, читать хранилище на первом рендере безопасно. */
-export function useVisualizerPreset(): [VisualizerPreset, (next: VisualizerPreset) => void] {
-  const [preset, setPreset] = useState<VisualizerPreset>(readPreset);
+export function useVisualizerEnabled(): [boolean, (next: boolean) => void] {
+  const [enabled, setEnabled] = useState(readEnabled);
 
-  const update = useCallback((next: VisualizerPreset) => {
-    setPreset(next);
+  const update = useCallback((next: boolean) => {
+    setEnabled(next);
     try {
-      localStorage.setItem(STORAGE_KEY, next);
+      localStorage.setItem(STORAGE_KEY, next ? 'on' : 'off');
     } catch {
       // приватный режим/заблокированное хранилище — выбор просто не переживёт перезагрузку
     }
   }, []);
 
-  return [preset, update];
+  return [enabled, update];
 }
 
 interface Props {
-  preset: VisualizerPreset;
+  enabled: boolean;
   accentColor?: string | null;
   /** Позиция каталога — амплитуду берём из готовых waveform-пиков трека. */
   trackId?: string | null;
@@ -52,10 +46,9 @@ interface Props {
   className?: string;
 }
 
-export function Visualizer({ preset, accentColor, trackId, playing, positionSec, durationSec, className }: Props) {
+export function Visualizer({ enabled, accentColor, trackId, playing, positionSec, durationSec, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const peaksRef = useRef<number[] | null>(null);
-  const sceneRef = useRef<{ preset: VisualizerPreset; scene: Scene } | null>(null);
   const positionRef = useRef({ sec: positionSec, at: 0 });
   const playingRef = useRef(playing);
   const durationRef = useRef(durationSec ?? null);
@@ -81,13 +74,11 @@ export function Visualizer({ preset, accentColor, trackId, playing, positionSec,
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (preset === 'off' || !canvas) return;
+    if (!enabled || !canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    if (sceneRef.current?.preset !== preset) sceneRef.current = { preset, scene: createScene(preset) };
-    const scene = sceneRef.current.scene;
-
+    const engine = createVisualizerEngine();
     const dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
     let width = 1;
     let height = 1;
@@ -121,7 +112,7 @@ export function Visualizer({ preset, accentColor, trackId, playing, positionSec,
     function render(): void {
       const seconds = (performance.now() - startedAt) / 1000;
       amp += (targetAmp(seconds) - amp) * AMP_SMOOTHING;
-      scene.draw(ctx!, { width, height, time: seconds, amp, accent: accentRef.current });
+      engine.draw(ctx!, { width, height, time: seconds, amp, accent: accentRef.current }, dpr);
     }
 
     function loop(): void {
@@ -149,10 +140,11 @@ export function Visualizer({ preset, accentColor, trackId, playing, positionSec,
       if (frame) cancelAnimationFrame(frame);
       observer.disconnect();
       document.removeEventListener('visibilitychange', sync);
+      engine.dispose();
     };
-  }, [preset, reduceMotion, playing]);
+  }, [enabled, reduceMotion, playing]);
 
-  if (preset === 'off') return null;
+  if (!enabled) return null;
 
   return <canvas ref={canvasRef} aria-hidden="true" className={className} />;
 }

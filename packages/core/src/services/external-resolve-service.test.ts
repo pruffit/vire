@@ -171,7 +171,7 @@ describe('ExternalResolveService.resolve — unknown/non-playable URL degrades t
     const outcome = await service.resolve('https://open.spotify.com/track/abc123');
 
     expect(outcome).toEqual({ outcome: 'external', ref: ytRef });
-    const queryCached = await cache.get({ kind: 'QUERY', value: 'some artist::some song' });
+    const queryCached = await cache.get({ kind: 'QUERY', value: 'v2:some artist::some song' });
     expect(queryCached).toEqual({ found: true, ref: ytRef });
   });
 
@@ -218,7 +218,7 @@ describe('ExternalResolveService.resolve — plain text query', () => {
 
     expect(outcome).toEqual({ outcome: 'external', ref: ytRef });
     expect(playableResolver.searchOneCalls).toBe(1);
-    const cached = await cache.get({ kind: 'QUERY', value: '::some random song' });
+    const cached = await cache.get({ kind: 'QUERY', value: 'v2:::some random song' });
     expect(cached).toEqual({ found: true, ref: ytRef });
   });
 
