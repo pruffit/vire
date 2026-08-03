@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { PRESENCE_TRACK_PREFIX, PRESENCE_SITE_KEY, presenceTrackKey, presenceUserKey } from '@vire/core';
 
 /**
  * Live-присутствие на Redis: ZSET по треку (member=sessionId, score=время heartbeat, мс);
@@ -24,9 +25,9 @@ function getRedis(): Redis {
   return globalForRedis._presenceRedis;
 }
 
-const trackKey = (trackId: string) => `presence:track:${trackId}`;
+const trackKey = presenceTrackKey;
 // Присутствие на сайте в целом (не на конкретном треке) — один ZSET на всех.
-const SITE_KEY = 'presence:site';
+const SITE_KEY = PRESENCE_SITE_KEY;
 
 /** Пинг Redis: латентность в мс или null, если недоступен (для health-панели). */
 export async function pingRedis(): Promise<number | null> {
@@ -78,7 +79,7 @@ export async function listListening(limit = 12): Promise<Array<{ trackId: string
   const keys: string[] = [];
   let cursor = '0';
   do {
-    const [next, batch] = await redis.scan(cursor, 'MATCH', 'presence:track:*', 'COUNT', 100);
+    const [next, batch] = await redis.scan(cursor, 'MATCH', `${PRESENCE_TRACK_PREFIX}*`, 'COUNT', 100);
     cursor = next;
     keys.push(...batch);
   } while (cursor !== '0' && keys.length < 500);
@@ -95,7 +96,7 @@ export async function listListening(limit = 12): Promise<Array<{ trackId: string
   const out: Array<{ trackId: string; count: number }> = [];
   for (let i = 0; i < keys.length; i++) {
     const count = Number(res[i * 2 + 1]?.[1] ?? 0);
-    if (count > 0) out.push({ trackId: keys[i].slice('presence:track:'.length), count });
+    if (count > 0) out.push({ trackId: keys[i].slice(PRESENCE_TRACK_PREFIX.length), count });
   }
   return out.sort((a, b) => b.count - a.count).slice(0, limit);
 }
@@ -130,13 +131,12 @@ export async function countSiteOnline(): Promise<number> {
   }
 }
 
-const USER_PRESENCE_PREFIX = 'presence:user:';
 const USER_PRESENCE_TTL_SEC = 40; // > SSE heartbeat (25с)
 
 /** Помечает пользователя онлайн (активный SSE-стрим). Деградирует молча при недоступности Redis. */
 export async function markUserOnline(userId: string): Promise<void> {
   try {
-    await getRedis().set(`${USER_PRESENCE_PREFIX}${userId}`, '1', 'EX', USER_PRESENCE_TTL_SEC);
+    await getRedis().set(presenceUserKey(userId), '1', 'EX', USER_PRESENCE_TTL_SEC);
   } catch {
     // нет Redis — деградация
   }
@@ -145,7 +145,7 @@ export async function markUserOnline(userId: string): Promise<void> {
 /** Онлайн ли пользователь сейчас (для воркера — пропускать внешние уведомления). */
 export async function isUserOnline(userId: string): Promise<boolean> {
   try {
-    return (await getRedis().exists(`${USER_PRESENCE_PREFIX}${userId}`)) === 1;
+    return (await getRedis().exists(presenceUserKey(userId))) === 1;
   } catch {
     return false;
   }

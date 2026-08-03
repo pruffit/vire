@@ -1,5 +1,6 @@
 export * from './errors';
 export * from './jobs';
+export * from './presence-keys';
 export * from './ports/effects';
 export * from './ports/realtime';
 export * from './ports/external-notify';
