@@ -62,7 +62,7 @@ export function createVisualizerEngine(): VisualizerEngine {
 
   return {
     draw(ctx, frame, dpr) {
-      const { width, height, time, amp, accent } = frame;
+      const { width, height, time, amp, bass, treble, beat, accent } = frame;
       if (!current || size.width !== width || size.height !== height || size.dpr !== dpr) {
         reset(width, height, dpr);
         scheduleNext(time);
@@ -70,7 +70,7 @@ export function createVisualizerEngine(): VisualizerEngine {
       if (!current) return;
 
       const drifted = rotateHue(accent, time * HUE_DRIFT_DEG_PER_SEC);
-      const sceneFrame: Frame = { width, height, time, amp, accent: drifted };
+      const sceneFrame: Frame = { width, height, time, amp, bass, treble, beat, accent: drifted };
 
       if (!incoming && time >= nextSwitchAt) {
         incoming = createLayer(width, height, dpr, current.index);

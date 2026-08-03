@@ -9,8 +9,14 @@ export interface Frame {
   height: number;
   /** Секунды с момента запуска визуализации. */
   time: number;
-  /** Сглаженная громкость 0..1. */
+  /** Сглаженная громкость 0..1 — общий «размах» сцены. */
   amp: number;
+  /** Низ 0..1: масса, ядро, толщина. */
+  bass: number;
+  /** Верх 0..1: детализация и блеск. */
+  treble: number;
+  /** Импульс удара 0..1, затухает между битами. */
+  beat: number;
   accent: Rgb;
 }
 
@@ -153,7 +159,7 @@ function bloomScene(): Scene {
   });
 
   return {
-    draw(ctx, { width, height, time, amp, accent }) {
+    draw(ctx, { width, height, time, amp, bass, treble, beat, accent }) {
       if (bounds.width !== width || bounds.height !== height) {
         bounds = { width, height };
         walkers = Array.from({ length: walkerCount }, spawn);
@@ -162,14 +168,14 @@ function bloomScene(): Scene {
 
       const cx = width / 2;
       const cy = height / 2;
-      const step = Math.min(width, height) * 0.012 * (0.6 + amp * 1.5) * spread;
+      const step = Math.min(width, height) * 0.012 * (0.6 + amp * 1.5 + beat * 0.55) * spread;
       const maxLife = 90 + amp * 40;
 
       kaleidoscope(ctx, cx, cy, sectors, () => {
         ctx.globalCompositeOperation = 'lighter';
         for (const w of walkers) {
-          ctx.strokeStyle = rgba(rotateHue(accent, w.hue + time * 6), 0.12 + amp * 0.22);
-          ctx.lineWidth = 1 + amp * 1.4;
+          ctx.strokeStyle = rgba(rotateHue(accent, w.hue + time * 6), 0.12 + amp * 0.22 + treble * 0.14);
+          ctx.lineWidth = 1 + amp * 1.4 + treble * 1.1;
           ctx.beginPath();
           ctx.moveTo(w.x, w.y);
           ctx.lineTo(w.x + Math.cos(w.angle) * step, w.y + Math.sin(w.angle) * step);
@@ -187,7 +193,7 @@ function bloomScene(): Scene {
         }
       }
 
-      coreGlow(ctx, cx, cy, Math.min(width, height) * (0.08 + amp * 0.1), rotateHue(accent, time * 6), 0.5);
+      coreGlow(ctx, cx, cy, Math.min(width, height) * (0.08 + amp * 0.1 + bass * 0.12), rotateHue(accent, time * 6), 0.5 + beat * 0.3);
       ctx.globalCompositeOperation = 'source-over';
     },
   };
@@ -201,7 +207,7 @@ function starburstScene(): Scene {
   const taper = between(0.35, 0.85);
 
   return {
-    draw(ctx, { width, height, time, amp, accent }) {
+    draw(ctx, { width, height, time, amp, bass, treble, beat, accent }) {
       fadeTrail(ctx, width, height, 0.3);
       const cx = width / 2;
       const cy = height / 2;
@@ -210,10 +216,10 @@ function starburstScene(): Scene {
       for (let i = 0; i < rays; i++) {
         const base = (i / rays) * Math.PI * 2 + time * spin;
         const wave = Math.sin(time * 1.7 + i * 0.9);
-        const length = reach * (taper + 0.3 * wave + amp * 0.45);
+        const length = reach * (taper + 0.3 * wave + amp * 0.45 + beat * 0.28);
         const color = rotateHue(accent, i * (360 / rays) * 0.9 + time * 8);
         const bend = Math.sin(time * 0.8 + i) * jitter;
-        glow(ctx, color, 1.2 + amp * 2.2, 0.14 + amp * 0.18, () => {
+        glow(ctx, color, 1.2 + amp * 2.2 + bass * 1.6, 0.14 + amp * 0.18 + treble * 0.16, () => {
           ctx.moveTo(cx, cy);
           for (let s = 1; s <= 6; s++) {
             const p = s / 6;
@@ -223,7 +229,7 @@ function starburstScene(): Scene {
         });
       }
 
-      coreGlow(ctx, cx, cy, Math.min(width, height) * (0.1 + amp * 0.14), rotateHue(accent, time * 8), 0.6);
+      coreGlow(ctx, cx, cy, Math.min(width, height) * (0.1 + amp * 0.14 + bass * 0.16), rotateHue(accent, time * 8), 0.6 + beat * 0.3);
       ctx.globalCompositeOperation = 'source-over';
     },
   };
@@ -237,14 +243,14 @@ function ribbonsScene(): Scene {
   const steps = 90;
 
   return {
-    draw(ctx, { width, height, time, amp, accent }) {
+    draw(ctx, { width, height, time, amp, bass, treble, beat, accent }) {
       fadeTrail(ctx, width, height, 0.14);
 
       for (let band = 0; band < bands; band++) {
         const offset = (band + 0.5) / bands;
-        const swing = height * (0.1 + amp * 0.3) * (0.5 + Math.sin(band * 1.3) * 0.5);
+        const swing = height * (0.1 + amp * 0.3 + bass * 0.14) * (0.5 + Math.sin(band * 1.3) * 0.5);
         const color = rotateHue(accent, band * 34 + time * 7);
-        glow(ctx, color, 2 + amp * 5, 0.16 + amp * 0.18, () => {
+        glow(ctx, color, 2 + amp * 5 + beat * 2.4, 0.16 + amp * 0.18 + treble * 0.12, () => {
           for (let i = 0; i <= steps; i++) {
             const p = i / steps;
             const x = p * width;
@@ -271,16 +277,16 @@ function spiralScene(): Scene {
   const steps = 180;
 
   return {
-    draw(ctx, { width, height, time, amp, accent }) {
+    draw(ctx, { width, height, time, amp, bass, treble, beat, accent }) {
       fadeTrail(ctx, width, height, 0.3);
       const cx = width / 2;
       const cy = height / 2;
-      const scale = (Math.hypot(width, height) / 2) * (0.72 + amp * 0.3);
+      const scale = (Math.hypot(width, height) / 2) * (0.72 + amp * 0.3 + beat * 0.12);
 
       for (let arm = 0; arm < arms; arm++) {
         const color = rotateHue(accent, arm * 96 + time * 7);
         const phase = direction * time * 0.36 + (arm * Math.PI * 2) / arms;
-        glow(ctx, color, 1.3 + amp * 2.4, 0.16 + amp * 0.16, () => {
+        glow(ctx, color, 1.3 + amp * 2.4 + bass * 1.4, 0.16 + amp * 0.16 + treble * 0.14, () => {
           for (let i = 0; i <= steps; i++) {
             const p = i / steps;
             const angle = phase + p * Math.PI * turns;
@@ -293,7 +299,7 @@ function spiralScene(): Scene {
         });
       }
 
-      coreGlow(ctx, cx, cy, Math.min(width, height) * (0.07 + amp * 0.12), rotateHue(accent, 20 + time * 7), 0.55);
+      coreGlow(ctx, cx, cy, Math.min(width, height) * (0.07 + amp * 0.12 + bass * 0.13), rotateHue(accent, 20 + time * 7), 0.55 + beat * 0.3);
       ctx.globalCompositeOperation = 'source-over';
     },
   };
@@ -307,17 +313,17 @@ function latticeScene(): Scene {
   const steps = 220;
 
   return {
-    draw(ctx, { width, height, time, amp, accent }) {
+    draw(ctx, { width, height, time, amp, bass, treble, beat, accent }) {
       fadeTrail(ctx, width, height, 0.28);
       const cx = width / 2;
       const cy = height / 2;
-      const rx = width * (0.34 + amp * 0.12);
-      const ry = height * (0.34 + amp * 0.12);
+      const rx = width * (0.34 + amp * 0.12 + beat * 0.06);
+      const ry = height * (0.34 + amp * 0.12 + bass * 0.07);
       const delta = time * 0.22;
 
       kaleidoscope(ctx, cx, cy, sectors, (sector) => {
         const color = rotateHue(accent, sector * 48 + time * 9);
-        glow(ctx, color, 1.1 + amp * 1.6, 0.12 + amp * 0.12, () => {
+        glow(ctx, color, 1.1 + amp * 1.6 + treble * 1.3, 0.12 + amp * 0.12 + beat * 0.12, () => {
           for (let i = 0; i <= steps; i++) {
             const t = (i / steps) * Math.PI * 2;
             const x = cx + Math.sin(a * t + delta) * rx;
@@ -339,7 +345,7 @@ function plasmaScene(): Scene {
   const spread = between(0.24, 0.34);
 
   return {
-    draw(ctx, { width, height, time, amp, accent }) {
+    draw(ctx, { width, height, time, amp, bass, beat, accent }) {
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = BASE_COLOR;
       ctx.fillRect(0, 0, width, height);
@@ -350,10 +356,10 @@ function plasmaScene(): Scene {
         const k = i + 1;
         const x = width * (0.5 + spread * Math.sin(time * drift * k + i * 1.7));
         const y = height * (0.5 + spread * 0.94 * Math.cos(time * drift * 0.8 * k + i * 2.3));
-        const radius = Math.max(1, span * (0.11 + 0.06 * Math.sin(time * 0.3 + i)) * (0.85 + amp * 0.5));
+        const radius = Math.max(1, span * (0.11 + 0.06 * Math.sin(time * 0.3 + i)) * (0.85 + amp * 0.5 + bass * 0.35));
         const color = rotateHue(accent, i * 37 + time * 6);
         const blob = ctx.createRadialGradient(x, y, 0, x, y, radius);
-        blob.addColorStop(0, rgba(color, 0.6 + amp * 0.28));
+        blob.addColorStop(0, rgba(color, Math.min(1, 0.6 + amp * 0.28 + beat * 0.2)));
         blob.addColorStop(0.4, rgba(color, 0.18));
         blob.addColorStop(1, rgba(color, 0));
         ctx.fillStyle = blob;
@@ -392,7 +398,7 @@ function particlesScene(): Scene {
   const particles: Particle[] = Array.from({ length: count }, () => spawn(Math.random()));
 
   return {
-    draw(ctx, { width, height, time, amp, accent }) {
+    draw(ctx, { width, height, time, amp, bass, treble, beat, accent }) {
       fadeTrail(ctx, width, height, 0.16);
       const cx = width / 2;
       const cy = height / 2;
@@ -402,15 +408,16 @@ function particlesScene(): Scene {
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i]!;
         const prev = p.radius;
-        p.radius += p.speed * (0.004 + amp * 0.012);
+        // Удар выталкивает всю пачку разом — это читается как «взрыв на бите».
+        p.radius += p.speed * (0.004 + amp * 0.012 + beat * 0.02);
         p.angle += spin * 0.004;
         if (p.radius > 1) {
           particles[i] = spawn(0);
           continue;
         }
         const color = rotateHue(accent, p.hue + time * 6);
-        ctx.strokeStyle = rgba(color, 0.2 + p.radius * 0.8);
-        ctx.lineWidth = 0.8 + p.radius * (2.4 + amp * 3.2);
+        ctx.strokeStyle = rgba(color, 0.2 + p.radius * 0.8 * (1 + treble * 0.4));
+        ctx.lineWidth = 0.8 + p.radius * (2.4 + amp * 3.2 + bass * 2.6);
         ctx.beginPath();
         ctx.moveTo(cx + Math.cos(p.angle) * prev * reach, cy + Math.sin(p.angle) * prev * reach);
         ctx.lineTo(cx + Math.cos(p.angle) * p.radius * reach, cy + Math.sin(p.angle) * p.radius * reach);

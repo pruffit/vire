@@ -2,6 +2,7 @@ import type HlsType from 'hls.js';
 import { fetchManifest } from '@/lib/player/manifest-cache';
 import { HLS_TUNING, attachStallRecovery } from '@/lib/player/hls-runtime';
 import { usePlayerStore } from '@/store/player';
+import { clearVisualizerElement, setVisualizerElement } from '@/lib/visualizer/audio-tap';
 import type { JamSourceEngine } from '../jam-audio';
 
 interface VendorPitchAudioElement extends HTMLAudioElement {
@@ -87,6 +88,8 @@ export function createVireSource(): JamSourceEngine {
           instance.loadSource(manifest.hlsUrl);
           instance.attachMedia(audio);
         });
+        // Через MSE элемент играет blob: — поток не заграждён CORS, визуализатор его слышит.
+        setVisualizerElement(audio);
       } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
         audio.src = manifest.hlsUrl;
       }
@@ -130,6 +133,7 @@ export function createVireSource(): JamSourceEngine {
     destroy(): void {
       resolvePendingLoad();
       destroyHls();
+      clearVisualizerElement(audio);
       unsubscribeVolume();
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('waiting', handleWaiting);

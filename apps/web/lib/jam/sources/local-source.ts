@@ -1,5 +1,6 @@
 import { getLocalFile } from '@/lib/local-files';
 import { usePlayerStore } from '@/store/player';
+import { clearVisualizerElement, setVisualizerElement } from '@/lib/visualizer/audio-tap';
 import type { JamSourceEngine } from '../jam-audio';
 
 /** Локальный файл с устройства-колонки: обычный `<audio>` поверх `URL.createObjectURL`. Неизвестный id (файл лежит на чужом устройстве) — молчаливый простой, без throw. */
@@ -44,6 +45,8 @@ export function createLocalSource(): JamSourceEngine {
       objectUrl = URL.createObjectURL(file);
       audio.src = objectUrl;
       audio.load();
+      // blob: своего происхождения — анализировать можно без оглядки на CORS.
+      setVisualizerElement(audio);
       return new Promise((resolve) => {
         const done = () => {
           audio.removeEventListener('loadedmetadata', done);
@@ -95,6 +98,7 @@ export function createLocalSource(): JamSourceEngine {
     destroy(): void {
       settlePendingLoad?.();
       releaseUrl();
+      clearVisualizerElement(audio);
       unsubscribeVolume();
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('waiting', handleWaiting);

@@ -79,7 +79,11 @@ describe('useVisualizerEnabled', () => {
 });
 
 describe('движок визуализации', () => {
-  const frame = { width: 800, height: 600, time: 0, amp: 0.7, accent: parseAccent('#3366ff') };
+  const frame = {
+    width: 800, height: 600, time: 0,
+    amp: 0.7, bass: 0.6, treble: 0.3, beat: 0.5,
+    accent: parseAccent('#3366ff'),
+  };
 
   it('рисует непрерывно и сам сменяет форму со временем', () => {
     const engine = createVisualizerEngine();
