@@ -275,9 +275,8 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
         <PageContainer as="div" variant="compact">
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">
             <div className="min-w-0 space-y-4">
-              {/* На телефоне сцена съедала пол-экрана — там видео живёт перетаскиваемым PiP. */}
               {isAudioDevice && isEmbedActive && (
-                <PartyVideoSlot className="hidden aspect-video w-full max-w-sm border border-border lg:block" />
+                <PartyVideoSlot className="aspect-video w-full max-w-sm border border-border" />
               )}
               <div className="flex flex-wrap items-center gap-2">
                 <button

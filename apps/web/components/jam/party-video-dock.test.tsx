@@ -86,7 +86,17 @@ describe('PartyVideoDock', () => {
     vi.unstubAllGlobals();
   });
 
-  it('слот вне зоны видимости — док остаётся уголковым PiP', () => {
+  it('без слота док припаркован за экраном, но поверхность жива — звук не рвётся', () => {
+    useJamSessionMock.mockReturnValue(session([item({ id: 'e1', source: 'YOUTUBE' })], 'e1', true));
+    const { container } = render(<PartyVideoDock />);
+    const dock = container.firstElementChild as HTMLElement;
+
+    expect(dock.style.transform).toBe('translate(-100vw, 0)');
+    expect(dock.getAttribute('aria-hidden')).toBe('true');
+    expect(setPartyVideoContainerMock).toHaveBeenCalledWith(expect.any(HTMLElement));
+  });
+
+  it('слот вне зоны видимости — док уезжает за экран, а не висит поверх интерфейса', () => {
     useJamSessionMock.mockReturnValue(session([item({ id: 'e1', source: 'YOUTUBE' })], 'e1', true));
     vi.stubGlobal('requestAnimationFrame', vi.fn().mockReturnValue(1));
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
@@ -99,7 +109,8 @@ describe('PartyVideoDock', () => {
     const { container } = render(<PartyVideoDock />);
     const dock = container.firstElementChild as HTMLElement;
 
-    expect(dock.getAttribute('style')).toBeNull();
+    expect(dock.style.transform).toBe('translate(-100vw, 0)');
+    expect(dock.style.zIndex).toBe('');
 
     setPartyVideoSlot(null);
     vi.unstubAllGlobals();
