@@ -10,6 +10,7 @@ type FakeSelf = {
   skipWaiting: () => void;
   clients: { claim: () => void; matchAll: () => Promise<unknown[]> };
   registration: { showNotification: (...args: unknown[]) => void };
+  location: { origin: string };
   __test?: SwTestExports;
 };
 
@@ -62,6 +63,7 @@ async function loadSw() {
     skipWaiting: vi.fn(),
     clients: { claim: vi.fn(), matchAll: vi.fn().mockResolvedValue([]) },
     registration: { showNotification: vi.fn() },
+    location: { origin: 'https://vire.example' },
   };
   const cacheStorage = fakeCacheStorage();
   const fetchMock = vi.fn();
@@ -118,10 +120,17 @@ describe('sw.js strategyFor', () => {
     expect(sw.test.strategyFor(url, req)).toBe('static');
   });
 
-  it('картинка по destination → image', () => {
-    const req = request('https://s3.example/covers/1.jpg', { destination: 'image' });
+  it('своя картинка по destination → image', () => {
+    const req = request('https://vire.example/covers/1.jpg', { destination: 'image' });
     const url = new URL(req.url);
     expect(sw.test.strategyFor(url, req)).toBe('image');
+  });
+
+  /** Регрессия: fetch из воркера идёт под connect-src — перехват чужой картинки ломал превью YouTube. */
+  it('картинка с чужого домена → bypass', () => {
+    const req = request('https://i.ytimg.com/vi/abc/hqdefault.jpg', { destination: 'image' });
+    const url = new URL(req.url);
+    expect(sw.test.strategyFor(url, req)).toBe('bypass');
   });
 
   it('/_next/image → image', () => {

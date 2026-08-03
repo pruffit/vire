@@ -105,7 +105,6 @@ export function OfflineScreen() {
           <h1 className="text-2xl font-semibold tracking-tight">Скачанное</h1>
           <p className="mt-1 text-sm text-foreground/50">
             Треки, доступные без интернета{tracks && tracks.length > 0 ? ` · ${tracks.length}` : ''}
-            {usage && usage.usage > 0 && ` · занято ${formatBytes(usage.usage)}`}
           </p>
         </div>
         {!online && (
@@ -142,6 +141,8 @@ export function OfflineScreen() {
             className="text-xs text-foreground/30 hover:text-foreground/50 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
             Сбросить кэш приложения
+            {/* storage.estimate() меряет весь origin (оболочка, статика, картинки), а не треки. */}
+            {usage && usage.usage > 0 && ` · сейчас ${formatBytes(usage.usage)}`}
           </button>
         ) : (
           <div className="flex flex-wrap items-center gap-3">

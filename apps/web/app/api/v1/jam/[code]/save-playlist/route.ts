@@ -33,7 +33,13 @@ export async function POST(req: Request, { params }: Ctx) {
 
   const { session: jam, isHost, queue } = saveResult.value;
   const vireItems = queue.filter((item): item is typeof item & { trackId: string } => item.source === 'VIRE' && item.trackId !== null);
-  if (vireItems.length === 0) return NextResponse.json({ error: 'Очередь пуста' }, { status: 400 });
+  if (vireItems.length === 0) {
+    // Плейлист ссылается на треки каталога — YouTube/SoundCloud/файлы с устройства в него не кладутся.
+    const error = queue.length > 0
+      ? 'В очереди нет треков из каталога VireMusic — сохранить можно только их'
+      : 'Очередь пуста';
+    return NextResponse.json({ error }, { status: 400 });
+  }
 
   const title = parsed.data.title ?? jam.title ?? `Джем ${new Date().toLocaleDateString('ru-RU')}`;
 

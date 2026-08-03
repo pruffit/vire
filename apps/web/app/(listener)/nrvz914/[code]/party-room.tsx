@@ -188,7 +188,7 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
   }
 
   // Экран сам рисуется порталом на весь вьюпорт — обёртки со скроллом ему не нужно.
-  if (screenOn) return <PartyScreen code={code} onExit={() => setScreenOn(false)} />;
+  if (screenOn) return <PartyScreen code={code} onExit={() => setScreenOn(false)} isLoggedIn={isLoggedIn} />;
 
   const { room, isHost, isAudioDevice, speakerName, isPlaying, votedSkipItemId, actions } = activeSession;
   const skipVotes = room.skipVotes?.itemId === room.playback?.itemId ? room.skipVotes : null;

@@ -80,7 +80,8 @@ const SECURITY_HEADERS = [
       'accelerometer=()',
       'gyroscope=()',
       'magnetometer=()',
-      'display-capture=()',
+      // self: экран вечеринки просит звук вкладки для визуализации (getDisplayMedia).
+      'display-capture=(self)',
       'interest-cohort=()',
     ].join(', '),
   },

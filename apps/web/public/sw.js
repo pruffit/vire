@@ -28,7 +28,9 @@ function strategyFor(url, request) {
   }
 
   if (request.destination === 'image' || pathname.startsWith('/_next/image')) {
-    return 'image';
+    // Чужие домены не трогаем: fetch из воркера идёт под connect-src, который их не пускает,
+    // и перехват ломал бы картинку, которую браузер сам загрузил бы по img-src.
+    return url.origin === self.location.origin ? 'image' : 'bypass';
   }
 
   if (/^\/api\/v1\/tracks\/[^/]+\/manifest$/.test(pathname)) {
@@ -97,7 +99,8 @@ async function staleWhileRevalidateImage(request, event) {
   }
   const network = await networkPromise;
   if (network) return network;
-  throw new Error('image fetch failed, no cache');
+  // Бросок здесь всплывал бы «Uncaught (in promise)» в консоли на каждой картинке офлайна.
+  return Response.error();
 }
 
 // Пишет сюда только явная загрузка со страницы: иначе прослушивание копило бы манифесты

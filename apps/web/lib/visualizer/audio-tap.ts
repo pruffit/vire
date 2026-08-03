@@ -8,6 +8,11 @@ type Listener = (tap: VisualizerTap) => void;
 let element: HTMLMediaElement | null = null;
 let stream: MediaStream | null = null;
 const listeners = new Set<Listener>();
+/**
+ * Снимок пересобирается только при смене источника: `useSyncExternalStore` сравнивает
+ * его по ссылке, и новый объект на каждый вызов уводит React в бесконечный цикл.
+ */
+let snapshot: VisualizerTap = null;
 
 /**
  * Кто отдаёт звук на анализ. Источники вечеринки регистрируют свой `<audio>` — но только те,
@@ -15,15 +20,9 @@ const listeners = new Set<Listener>();
  * тишину И глушит воспроизведение. Захват вкладки (`getDisplayMedia`) перебивает элемент:
  * он слышит в том числе YouTube, до которого из кода не дотянуться.
  */
-function current(): VisualizerTap {
-  if (stream) return { kind: 'stream', stream };
-  if (element) return { kind: 'element', element };
-  return null;
-}
-
 function emit(): void {
-  const tap = current();
-  listeners.forEach((listener) => listener(tap));
+  snapshot = stream ? { kind: 'stream', stream } : element ? { kind: 'element', element } : null;
+  listeners.forEach((listener) => listener(snapshot));
 }
 
 export function setVisualizerElement(el: HTMLMediaElement | null): void {
@@ -44,7 +43,7 @@ export function setVisualizerStream(next: MediaStream | null): void {
 }
 
 export function getVisualizerTap(): VisualizerTap {
-  return current();
+  return snapshot;
 }
 
 export function onVisualizerTapChange(listener: Listener): () => void {

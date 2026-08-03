@@ -5,8 +5,9 @@ import { useReduceMotionPref } from '@vire/ui/motion';
 import { fetchManifest } from '@/lib/player/manifest-cache';
 import { createFeatureReader, type FeatureReader } from '@/lib/visualizer/analyser';
 import { getVisualizerTap, onVisualizerTapChange } from '@/lib/visualizer/audio-tap';
+import { loadCoverPalette } from '@/lib/visualizer/palette';
 import { createVisualizerEngine } from './engine';
-import { parseAccent } from './scenes';
+import { parseAccent, type Rgb } from './scenes';
 
 const STORAGE_KEY = 'vire-visualizer';
 const MAX_DPR = 1.5;
@@ -42,6 +43,8 @@ export function useVisualizerEnabled(): [boolean, (next: boolean) => void] {
 interface Props {
   enabled: boolean;
   accentColor?: string | null;
+  /** Обложка текущего трека — из неё берётся палитра сцены. */
+  coverUrl?: string | null;
   /** Позиция каталога — амплитуду берём из готовых waveform-пиков трека. */
   trackId?: string | null;
   playing: boolean;
@@ -50,7 +53,7 @@ interface Props {
   className?: string;
 }
 
-export function Visualizer({ enabled, accentColor, trackId, playing, positionSec, durationSec, className }: Props) {
+export function Visualizer({ enabled, accentColor, coverUrl, trackId, playing, positionSec, durationSec, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const peaksRef = useRef<number[] | null>(null);
   const positionRef = useRef({ sec: positionSec, at: 0 });
@@ -60,6 +63,17 @@ export function Visualizer({ enabled, accentColor, trackId, playing, positionSec
   const reduceMotion = useReduceMotionPref();
   const tap = useSyncExternalStore(onVisualizerTapChange, getVisualizerTap, () => null);
   const readerRef = useRef<FeatureReader | null>(null);
+  const paletteRef = useRef<Rgb[]>([]);
+
+  useEffect(() => {
+    paletteRef.current = [];
+    if (!coverUrl) return;
+    let cancelled = false;
+    void loadCoverPalette(coverUrl).then((colors) => {
+      if (!cancelled) paletteRef.current = colors;
+    });
+    return () => { cancelled = true; };
+  }, [coverUrl]);
 
   useEffect(() => {
     readerRef.current = createFeatureReader(tap);
@@ -131,7 +145,11 @@ export function Visualizer({ enabled, accentColor, trackId, playing, positionSec
       const bass = live ? live.bass : amp * 0.8;
       const treble = live ? live.treble : amp * 0.45;
       const beat = live ? live.beat : 0;
-      engine.draw(ctx!, { width, height, time: seconds, amp, bass, treble, beat, accent: accentRef.current }, dpr);
+      engine.draw(
+        ctx!,
+        { width, height, time: seconds, amp, bass, treble, beat, accent: accentRef.current, palette: paletteRef.current },
+        dpr,
+      );
     }
 
     function loop(): void {

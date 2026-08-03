@@ -13,6 +13,7 @@ import { SourceBadge } from '@/components/jam/source-badge';
 import { PartyVideoSlot } from '@/components/jam/party-video-slot';
 import { Visualizer, useVisualizerEnabled } from '@/components/visualizer';
 import { VisualizerCaptureButton } from '@/components/visualizer/capture-button';
+import { JamSavePlaylist } from '@/app/(listener)/jam/[code]/jam-save-playlist';
 import { PARTY_PATH } from '@/lib/party';
 
 const NEXT_COUNT = 4;
@@ -20,6 +21,7 @@ const NEXT_COUNT = 4;
 interface Props {
   code: string;
   onExit: () => void;
+  isLoggedIn: boolean;
 }
 
 /**
@@ -27,7 +29,7 @@ interface Props {
  * иначе сцена делит высоту с навигацией и плеером, и всё уезжает в скролл. Видео рисует
  * `PartyVideoDock` из app-shell, здесь только слот под него.
  */
-export function PartyScreen({ code, onExit }: Props) {
+export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
   const session = useJamSession();
   const audioEnabled = useJamStore((s) => s.audioEnabled);
   const enableAudio = useJamStore((s) => s.enableAudio);
@@ -101,6 +103,7 @@ export function PartyScreen({ code, onExit }: Props) {
             <Icon name={visualizerOn ? 'layers' : 'image'} size={16} />
           </button>
           {visualizerOn && <VisualizerCaptureButton />}
+          {isLoggedIn && <JamSavePlaylist code={code} />}
           <button
             type="button"
             onClick={toggleFullscreen}
@@ -130,6 +133,7 @@ export function PartyScreen({ code, onExit }: Props) {
                 <Visualizer
                   enabled
                   accentColor={accent}
+                  coverUrl={active?.coverUrl ?? null}
                   trackId={active?.trackId ?? null}
                   playing={isPlaying}
                   positionSec={position}
