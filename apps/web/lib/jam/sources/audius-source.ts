@@ -1,18 +1,21 @@
-import { getLocalFile } from '@/lib/local-files';
+import { audiusStreamUrl } from '@/lib/external/audius';
 import { usePlayerStore } from '@/store/player';
 import type { JamSourceEngine } from '../jam-audio';
 
-/** Локальный файл с устройства-колонки: обычный `<audio>` поверх `URL.createObjectURL`. Неизвестный id (файл лежит на чужом устройстве) — молчаливый простой, без throw. */
-export function createLocalSource(): JamSourceEngine {
+/**
+ * Audius — прямой аудиопоток по официальному API, без iframe и без видео-поверхности.
+ * Значит колонкой может быть любое устройство, даже когда экран вечеринки не открыт.
+ */
+export function createAudiusSource(): JamSourceEngine {
   const audio = new Audio();
+  audio.preload = 'auto';
   audio.volume = usePlayerStore.getState().volume;
+
   const unsubscribeVolume = usePlayerStore.subscribe((state, prevState) => {
     if (state.volume !== prevState.volume) audio.volume = state.volume;
   });
 
   let buffering = false;
-  let objectUrl: string | null = null;
-  let settlePendingLoad: (() => void) | null = null;
   const endedListeners = new Set<() => void>();
   const playingListeners = new Set<() => void>();
 
@@ -26,35 +29,11 @@ export function createLocalSource(): JamSourceEngine {
   audio.addEventListener('waiting', handleWaiting);
   audio.addEventListener('playing', handlePlaying);
 
-  function releaseUrl(): void {
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = null;
-  }
-
   return {
-    load(fileId): Promise<void> {
-      settlePendingLoad?.();
-      releaseUrl();
-      const file = getLocalFile(fileId);
-      if (!file) {
-        audio.removeAttribute('src');
-        audio.load();
-        return Promise.resolve();
-      }
-      objectUrl = URL.createObjectURL(file);
-      audio.src = objectUrl;
+    load(trackId): Promise<void> {
+      audio.src = audiusStreamUrl(trackId);
       audio.load();
-      return new Promise((resolve) => {
-        const done = () => {
-          audio.removeEventListener('loadedmetadata', done);
-          audio.removeEventListener('error', done);
-          settlePendingLoad = null;
-          resolve();
-        };
-        settlePendingLoad = done;
-        audio.addEventListener('loadedmetadata', done);
-        audio.addEventListener('error', done);
-      });
+      return Promise.resolve();
     },
 
     play(): void {
@@ -82,26 +61,23 @@ export function createLocalSource(): JamSourceEngine {
       return () => endedListeners.delete(listener);
     },
 
-    // Прямого плеера у пользователя тут нет — переключать нечего.
-    onUserToggle(): () => void {
-      return () => {};
-    },
-
     onPlaying(listener: () => void): () => void {
       playingListeners.add(listener);
       return () => playingListeners.delete(listener);
     },
 
+    // Своего плеера у пользователя тут нет — переключать нечего.
+    onUserToggle(): () => void {
+      return () => {};
+    },
+
     destroy(): void {
-      settlePendingLoad?.();
-      releaseUrl();
       unsubscribeVolume();
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('waiting', handleWaiting);
       audio.removeEventListener('playing', handlePlaying);
       audio.pause();
       audio.removeAttribute('src');
-      audio.src = '';
       audio.load();
       endedListeners.clear();
       playingListeners.clear();

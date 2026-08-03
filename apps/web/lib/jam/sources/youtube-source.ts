@@ -67,6 +67,7 @@ export function createYoutubeSource(): JamSourceEngine {
   let shouldPlay = false;
   const endedListeners = new Set<() => void>();
   const playingListeners = new Set<() => void>();
+  const userToggleListeners = new Set<(playing: boolean) => void>();
 
   const unsubscribeVolume = usePlayerStore.subscribe((state, prevState) => {
     if (state.volume !== prevState.volume) player?.setVolume(state.volume * 100);
@@ -114,6 +115,15 @@ export function createYoutubeSource(): JamSourceEngine {
           if (state === YT.PlayerState.PLAYING) {
             buffering = false;
             playingListeners.forEach((l) => l());
+            // Играет, хотя мы не просили — значит нажали play в самом плеере YouTube.
+            if (!shouldPlay) {
+              shouldPlay = true;
+              userToggleListeners.forEach((l) => l(true));
+            }
+          }
+          if (state === YT.PlayerState.PAUSED && shouldPlay) {
+            shouldPlay = false;
+            userToggleListeners.forEach((l) => l(false));
           }
           if (state === YT.PlayerState.ENDED) endedListeners.forEach((l) => l());
         },
@@ -180,6 +190,11 @@ export function createYoutubeSource(): JamSourceEngine {
       return () => playingListeners.delete(listener);
     },
 
+    onUserToggle(listener: (playing: boolean) => void): () => void {
+      userToggleListeners.add(listener);
+      return () => userToggleListeners.delete(listener);
+    },
+
     destroy(): void {
       resolvePendingLoad();
       unsubscribeContainer();
@@ -187,6 +202,7 @@ export function createYoutubeSource(): JamSourceEngine {
       destroyPlayer();
       endedListeners.clear();
       playingListeners.clear();
+      userToggleListeners.clear();
       pendingVideoId = null;
       desiredPositionMs = null;
       shouldPlay = false;

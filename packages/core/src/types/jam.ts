@@ -2,7 +2,7 @@ export type JamSessionStatus = 'LIVE' | 'ENDED';
 export type JamParticipantRole = 'HOST' | 'GUEST';
 export type JamMode = 'SYNCED' | 'SPEAKER';
 export type JamSessionKind = 'JAM' | 'PARTY';
-export type JamQueueSource = 'VIRE' | 'YOUTUBE' | 'SOUNDCLOUD' | 'LOCAL';
+export type JamQueueSource = 'VIRE' | 'YOUTUBE' | 'SOUNDCLOUD' | 'AUDIUS' | 'LOCAL';
 
 export interface JamSession {
   id: string;

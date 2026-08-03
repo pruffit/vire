@@ -117,6 +117,11 @@ export function createVireSource(): JamSourceEngine {
       return () => endedListeners.delete(listener);
     },
 
+    // Прямого плеера у пользователя тут нет — переключать нечего.
+    onUserToggle(): () => void {
+      return () => {};
+    },
+
     onPlaying(listener: () => void): () => void {
       playingListeners.add(listener);
       return () => playingListeners.delete(listener);

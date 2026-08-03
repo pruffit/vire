@@ -225,6 +225,16 @@ describe('normalizeQueryKey', () => {
   });
 });
 
+describe('parseKnownUrl — Audius', () => {
+  it('ссылка на трек — играбельный источник', () => {
+    expect(parseKnownUrl('https://audius.co/boysnoize/tasty')).toEqual({ source: 'AUDIUS', externalId: 'boysnoize/tasty' });
+  });
+
+  it('профиль артиста треком не считается', () => {
+    expect(parseKnownUrl('https://audius.co/boysnoize')).toBeNull();
+  });
+});
+
 describe('matchesExpectedTrack — целый альбом вместо трека', () => {
   it('«Full Album» не сходится с запросом одного трека', () => {
     expect(matchesExpectedTrack(

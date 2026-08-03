@@ -22,6 +22,8 @@ export interface UsePlaybackSyncArgs {
    */
   onActualPosition?: (positionMs: number) => void;
   onEnded?: () => void;
+  /** Пользователь нажал play/pause внутри встроенного плеера — состояние джема идёт за ним. */
+  onUserToggle?: (playing: boolean) => void;
 }
 
 /** Расхождение меньше этого — эхо собственной команды, а не перемотка: лишний seek только дёргает звук. */
@@ -30,10 +32,11 @@ const SEEK_EPSILON_MS = 1_200;
 const CLOCK_FIX_MIN_MS = 1_000;
 
 /** Владеет `JamAudioEngine`: создаёт его при разблокировке звука, применяет решения `jam-sync` и уничтожает при размонтировании. */
-export function usePlaybackSync({ playback, source, serverNow, audioEnabled, driftCorrection = true, onActualPosition, onEnded }: UsePlaybackSyncArgs): void {
+export function usePlaybackSync({ playback, source, serverNow, audioEnabled, driftCorrection = true, onActualPosition, onEnded, onUserToggle }: UsePlaybackSyncArgs): void {
   const engineRef = useRef<JamAudioEngine | null>(null);
   const onEndedRef = useRef(onEnded);
   const onActualPositionRef = useRef(onActualPosition);
+  const onUserToggleRef = useRef(onUserToggle);
   const loadedItemIdRef = useRef<string | null>(null);
   const pausedRef = useRef<boolean | null>(null);
   const lastVersionRef = useRef<number | null>(null);
@@ -43,16 +46,19 @@ export function usePlaybackSync({ playback, source, serverNow, audioEnabled, dri
   useEffect(() => {
     onEndedRef.current = onEnded;
     onActualPositionRef.current = onActualPosition;
-  }, [onEnded, onActualPosition]);
+    onUserToggleRef.current = onUserToggle;
+  }, [onEnded, onActualPosition, onUserToggle]);
 
   useEffect(() => {
     if (!audioEnabled) return;
     const engine = createJamAudio();
     engineRef.current = engine;
     const unsubscribe = engine.onEnded(() => onEndedRef.current?.());
+    const unsubscribeToggle = engine.onUserToggle((playing) => onUserToggleRef.current?.(playing));
 
     return () => {
       unsubscribe();
+      unsubscribeToggle();
       unsubscribeResyncRef.current?.();
       unsubscribeResyncRef.current = null;
       engine.destroy();

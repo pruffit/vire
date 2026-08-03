@@ -20,6 +20,7 @@ interface FakeEngine {
   isBuffering: ReturnType<typeof vi.fn>;
   onEnded: ReturnType<typeof vi.fn>;
   onPlaying: ReturnType<typeof vi.fn>;
+  onUserToggle: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
   firePlaying: () => void;
 }
@@ -34,6 +35,7 @@ function makeFakeEngine(): FakeEngine {
     currentTimeMs: vi.fn(() => 0),
     isBuffering: vi.fn(() => false),
     onEnded: vi.fn(() => vi.fn()),
+    onUserToggle: vi.fn(() => vi.fn()),
     onPlaying: vi.fn((listener: () => void) => {
       playingListeners.add(listener);
       return () => playingListeners.delete(listener);

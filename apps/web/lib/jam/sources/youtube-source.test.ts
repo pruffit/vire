@@ -165,6 +165,39 @@ describe('createYoutubeSource', () => {
     expect(endedListener).toHaveBeenCalledTimes(1);
   });
 
+  it('пауза в самом плеере YouTube доезжает до джема, наша собственная — нет', async () => {
+    const { createYoutubeSource } = await import('./youtube-source');
+    const { setPartyVideoContainer } = await import('./video-container');
+    setPartyVideoContainer(document.createElement('div'));
+    const engine = createYoutubeSource();
+    const toggleListener = vi.fn();
+    engine.onUserToggle(toggleListener);
+
+    const loadPromise = engine.load('vid-1');
+    fireApiReady();
+    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
+    const player = FakePlayer.instances[0]!;
+    player.events.onReady?.({ target: player });
+    await loadPromise;
+
+    engine.play();
+    player.events.onStateChange?.({ target: player, data: PlayerState.PLAYING });
+    expect(toggleListener).not.toHaveBeenCalled();
+
+    // Пользователь нажал паузу внутри плеера.
+    player.events.onStateChange?.({ target: player, data: PlayerState.PAUSED });
+    expect(toggleListener).toHaveBeenCalledWith(false);
+
+    // Наша собственная пауза эха не даёт.
+    toggleListener.mockClear();
+    engine.play();
+    player.events.onStateChange?.({ target: player, data: PlayerState.PLAYING });
+    toggleListener.mockClear();
+    engine.pause();
+    player.events.onStateChange?.({ target: player, data: PlayerState.PAUSED });
+    expect(toggleListener).not.toHaveBeenCalled();
+  });
+
   it('контейнер снят (экран вечеринки закрыт) — плеер уничтожается, движок не падает', async () => {
     const { createYoutubeSource } = await import('./youtube-source');
     const { setPartyVideoContainer } = await import('./video-container');

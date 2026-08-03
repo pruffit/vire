@@ -98,6 +98,12 @@ export function parseKnownUrl(url: string): KnownUrlMatch {
     return null;
   }
 
+  if (host === 'audius.co' || host === 'www.audius.co') {
+    const path = u.pathname.replace(/^\/+|\/+$/g, '');
+    // Трек — это /{handle}/{slug}; профиль (один сегмент) и плейлисты не играбельны.
+    return path.split('/').filter(Boolean).length === 2 ? { source: 'AUDIUS', externalId: path } : null;
+  }
+
   if (host === 'open.spotify.com' || host === 'spotify.link') return { service: 'spotify', needsPageMeta: true };
   if (host === 'music.apple.com') return { service: 'apple-music', needsPageMeta: true };
   if (host === 'music.yandex.ru' || host === 'music.yandex.com') return { service: 'yandex-music', needsPageMeta: true };

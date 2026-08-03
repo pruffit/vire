@@ -1,9 +1,9 @@
 import type { Clock } from '../ports/effects';
-import type { IMetadataIndex, IPlayableResolver, IPageMetaFetcher, IResolutionCache, IResolvedIndex, ResolutionKey, PageMeta } from '../ports/external';
+import type { IMetadataIndex, IPlayableResolver, IPlayableSearch, IPageMetaFetcher, IResolutionCache, IResolvedIndex, ResolutionKey, PageMeta } from '../ports/external';
 import type { ExternalTrackRef, MetadataHint, TrackCandidate, PlayableExternalSource } from '../types/external';
 import type { SearchTrack } from '../types/search';
 import { SearchService } from './search';
-import { classifyInput, parseKnownUrl, parseOwnUrl, normalizeUrlKey, normalizeQueryKey, scoreCatalogMatch } from './external-resolve';
+import { classifyInput, parseKnownUrl, parseOwnUrl, normalizeUrlKey, normalizeQueryKey, scoreCatalogMatch, matchesExpectedTrack } from './external-resolve';
 
 const CACHE_STALE_DAYS = 30;
 const CACHE_STALE_MS = CACHE_STALE_DAYS * 24 * 60 * 60 * 1000;
@@ -20,6 +20,8 @@ export interface ExternalResolveDeps {
   search: SearchService;
   metadataIndex: IMetadataIndex;
   playableResolver: IPlayableResolver;
+  /** Свободный играбельный каталог (Audius) — ищем в нём до платного поиска YouTube. */
+  playableSearch: IPlayableSearch;
   pageMetaFetcher: IPageMetaFetcher;
   cache: IResolutionCache;
   /** Индекс уже отрезолвленного — играбельные подсказки без сети и квоты. */
@@ -58,14 +60,15 @@ export class ExternalResolveService {
     const trimmed = query.trim();
     if (trimmed.length < 2) return [];
 
-    const [searchResult, resolved, hints] = await Promise.all([
+    const [searchResult, resolved, playable, hints] = await Promise.all([
       this.deps.search.search(trimmed, limit),
       this.deps.resolvedIndex.search(trimmed, limit).catch(() => []),
+      this.deps.playableSearch.search(trimmed, limit).catch(() => []),
       this.deps.metadataIndex.suggest(trimmed, limit),
     ]);
 
     const catalog = searchResult.ok ? toVireCandidates(searchResult.value.tracks) : [];
-    const ready: TrackCandidate[] = resolved.map((ref) => ({ kind: 'EXTERNAL', ref }));
+    const ready: TrackCandidate[] = [...resolved, ...playable].map((ref) => ({ kind: 'EXTERNAL', ref }));
     const hintCandidates: TrackCandidate[] = hints.map((hint) => ({ kind: 'HINT', hint }));
 
     return dedupeCandidates([...catalog, ...ready, ...hintCandidates]).slice(0, limit);
@@ -77,7 +80,7 @@ export class ExternalResolveService {
     if (cached?.found) return { outcome: 'external', ref: cached.ref };
     if (cached && !cached.found && !this.isStale(cached.resolvedAt)) return { outcome: 'candidates', candidates: [] };
 
-    let ref = source === 'YOUTUBE' ? await this.deps.playableResolver.resolveUrl(url) : null;
+    let ref = source === 'YOUTUBE' || source === 'AUDIUS' ? await this.deps.playableResolver.resolveUrl(url) : null;
     if (!ref) {
       const meta = await this.deps.pageMetaFetcher.fetch(url);
       if (meta) ref = toRef(source, externalId, url, meta);
@@ -123,6 +126,14 @@ export class ExternalResolveService {
     const key = queryKey(hint.artistName, hint.title);
     const cached = await this.deps.cache.get(key);
     if (cached?.found) return { outcome: 'external', ref: cached.ref };
+
+    // Бесплатный играбельный каталог идёт до квотируемого поиска YouTube.
+    const fromPlayable = await this.deps.playableSearch.search(query, 5).catch(() => []);
+    const direct = fromPlayable.find((candidate) => matchesExpectedTrack({ title: hint.title, artistName: hint.artistName }, candidate));
+    if (direct) {
+      await this.deps.cache.put(key, direct);
+      return { outcome: 'external', ref: direct };
+    }
 
     const skipSearch = Boolean(cached && !cached.found && !this.isStale(cached.resolvedAt));
     const found = skipSearch ? null : await this.deps.playableResolver.searchOne(query, { title: hint.title, artistName: hint.artistName });

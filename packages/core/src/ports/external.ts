@@ -14,6 +14,11 @@ export interface IPlayableResolver {
   searchOne(query: string, expect?: { title: string; artistName: string }): Promise<ExternalTrackRef | null>;
 }
 
+/** Каталог, который умеет и искать, и играть сам (Audius): результат сразу играбелен, квоты нет. */
+export interface IPlayableSearch {
+  search(query: string, limit: number): Promise<ExternalTrackRef[]>;
+}
+
 export interface PageMeta {
   title: string;
   artistName: string | null;

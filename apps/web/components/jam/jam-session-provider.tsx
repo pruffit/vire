@@ -55,6 +55,7 @@ function resolveSource(item: JamQueueItem | undefined): PlayableSource | null {
   switch (item.source) {
     case 'VIRE': return item.trackId ? { kind: 'VIRE', trackId: item.trackId } : null;
     case 'YOUTUBE': return item.externalId ? { kind: 'YOUTUBE', videoId: item.externalId } : null;
+    case 'AUDIUS': return item.externalId ? { kind: 'AUDIUS', trackId: item.externalId } : null;
     case 'LOCAL': return item.externalId ? { kind: 'LOCAL', fileId: item.externalId } : null;
     case 'SOUNDCLOUD': {
       const url = item.externalUrl ?? (item.externalId ? `https://soundcloud.com/${item.externalId}` : null);
@@ -174,6 +175,19 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     return () => clearInterval(timer);
   }, [initiatesTransitions, room.playback, activeTrack?.durationSec, serverNow, handleTrackEnded]);
 
+  // Пауза/плей прямо во встроенном плеере: состояние джема (и всех пультов) идёт за ним,
+  // иначе плеер комнаты продолжает считать, что трек играет.
+  const handleUserToggle = useCallback((playing: boolean) => {
+    const playback = room.playback;
+    if (!playback) return;
+    if (playing === !effectivePaused(playback, playbackPending)) return;
+    postPlayback(
+      playing
+        ? { kind: 'play', itemId: playback.itemId, positionMs: derivePositionMs(playback, serverNow()) }
+        : { kind: 'pause', positionMs: derivePositionMs(playback, serverNow()) },
+    );
+  }, [room.playback, playbackPending, postPlayback, serverNow]);
+
   usePlaybackSync({
     playback: room.playback,
     source: activeSource,
@@ -182,6 +196,7 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     driftCorrection: room.mode === 'SYNCED' && audioDeviceCount > 1,
     onActualPosition: handleActualPosition,
     onEnded: handleTrackEnded,
+    onUserToggle: handleUserToggle,
   });
 
   const handleModeChange = useCallback((mode: JamMode) => {

@@ -61,6 +61,7 @@ export function createSoundcloudSource(): JamSourceEngine {
   let shouldPlay = false;
   const endedListeners = new Set<() => void>();
   const playingListeners = new Set<() => void>();
+  const userToggleListeners = new Set<(playing: boolean) => void>();
 
   const unsubscribeVolume = usePlayerStore.subscribe((state, prevState) => {
     if (state.volume !== prevState.volume) widget?.setVolume(state.volume * 100);
@@ -112,8 +113,21 @@ export function createSoundcloudSource(): JamSourceEngine {
       resolvePendingLoad();
     });
     w.bind(ERROR, () => resolvePendingLoad());
-    w.bind(PLAY, () => { buffering = true; });
-    w.bind(PAUSE, () => { buffering = false; });
+    w.bind(PLAY, () => {
+      buffering = true;
+      // Играет, хотя мы не просили — нажали play в самом виджете SoundCloud.
+      if (!shouldPlay) {
+        shouldPlay = true;
+        userToggleListeners.forEach((l) => l(true));
+      }
+    });
+    w.bind(PAUSE, () => {
+      buffering = false;
+      if (shouldPlay) {
+        shouldPlay = false;
+        userToggleListeners.forEach((l) => l(false));
+      }
+    });
     w.bind(PLAY_PROGRESS, (e) => {
       const wasBuffering = buffering;
       buffering = false;
@@ -179,6 +193,11 @@ export function createSoundcloudSource(): JamSourceEngine {
     onEnded(listener: () => void): () => void {
       endedListeners.add(listener);
       return () => endedListeners.delete(listener);
+    },
+
+    onUserToggle(listener: (playing: boolean) => void): () => void {
+      userToggleListeners.add(listener);
+      return () => userToggleListeners.delete(listener);
     },
 
     onPlaying(listener: () => void): () => void {

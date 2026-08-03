@@ -1,0 +1,1 @@
+ALTER TYPE "public"."jam_queue_source" ADD VALUE 'AUDIUS' BEFORE 'LOCAL';

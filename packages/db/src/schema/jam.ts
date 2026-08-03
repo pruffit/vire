@@ -8,7 +8,7 @@ export const jamSessionStatusEnum = pgEnum('jam_session_status', ['LIVE', 'ENDED
 export const jamParticipantRoleEnum = pgEnum('jam_participant_role', ['HOST', 'GUEST']);
 export const jamModeEnum = pgEnum('jam_mode', ['SYNCED', 'SPEAKER']);
 export const jamSessionKindEnum = pgEnum('jam_session_kind', ['JAM', 'PARTY']);
-export const jamQueueSourceEnum = pgEnum('jam_queue_source', ['VIRE', 'YOUTUBE', 'SOUNDCLOUD', 'LOCAL']);
+export const jamQueueSourceEnum = pgEnum('jam_queue_source', ['VIRE', 'YOUTUBE', 'SOUNDCLOUD', 'AUDIUS', 'LOCAL']);
 
 export const jamSessions = pgTable('jam_sessions', {
   id: uuid('id').primaryKey().defaultRandom(),

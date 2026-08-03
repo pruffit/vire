@@ -1,10 +1,11 @@
 import { db, DrizzleSearchRepository, DrizzleResolutionCache, DrizzleResolvedIndex } from '@vire/db';
-import { SearchService, ExternalResolveService, normalizeQueryKey, type IPageMetaFetcher, type IMetadataIndex, type MetadataHint, type PageMeta } from '@vire/core';
+import { SearchService, ExternalResolveService, normalizeQueryKey, type IPageMetaFetcher, type IPlayableResolver, type IMetadataIndex, type MetadataHint, type PageMeta } from '@vire/core';
 import { fetchOembed } from './oembed';
 import { fetchPageMeta } from './page-meta';
 import { fetchProviderMeta } from './providers';
 import { fetchOdesliMeta } from './odesli';
 import { createYoutubeResolver } from './youtube';
+import { searchAudius, resolveAudiusUrl } from './audius';
 import { createItunesMetadataIndex } from './itunes';
 import { createDeezerMetadataIndex } from './deezer';
 import { sanitizeCoverUrl } from './cover-hosts';
@@ -84,11 +85,24 @@ function dedupeHints(hints: MetadataHint[]): MetadataHint[] {
   return out;
 }
 
+/** Ссылка audius.co резолвится их же API, всё остальное — прежним резолвером YouTube. */
+function withAudius(resolver: IPlayableResolver): IPlayableResolver {
+  return {
+    async resolveUrl(url) {
+      const host = (() => { try { return new URL(url).hostname.toLowerCase(); } catch { return ''; } })();
+      if (host === 'audius.co' || host === 'www.audius.co') return resolveAudiusUrl(url);
+      return resolver.resolveUrl(url);
+    },
+    searchOne: (query, expect) => resolver.searchOne(query, expect),
+  };
+}
+
 export function externalResolveService(): ExternalResolveService {
   return new ExternalResolveService({
     search: new SearchService(new DrizzleSearchRepository(db)),
     metadataIndex,
-    playableResolver: createYoutubeResolver(process.env.YOUTUBE_API_KEY),
+    playableResolver: withAudius(createYoutubeResolver(process.env.YOUTUBE_API_KEY)),
+    playableSearch: { search: (query, limit) => searchAudius(query, limit).catch(() => []) },
     pageMetaFetcher,
     cache: new DrizzleResolutionCache(db),
     resolvedIndex: new DrizzleResolvedIndex(db),

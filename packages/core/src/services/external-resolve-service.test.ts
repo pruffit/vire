@@ -3,7 +3,7 @@ import { ExternalResolveService } from './external-resolve-service';
 import { SearchService } from './search';
 import type { ISearchRepository } from '../repositories/search';
 import type { SearchResults, SearchTrack } from '../types/search';
-import type { IMetadataIndex, IPlayableResolver, IPageMetaFetcher, IResolutionCache, IResolvedIndex, ResolutionKey, CachedResolution } from '../ports/external';
+import type { IMetadataIndex, IPlayableResolver, IPlayableSearch, IPageMetaFetcher, IResolutionCache, IResolvedIndex, ResolutionKey, CachedResolution } from '../ports/external';
 import type { ExternalTrackRef, MetadataHint } from '../types/external';
 
 const SITE_HOST = 'viremusic.ru';
@@ -48,6 +48,15 @@ class FakePageMetaFetcher implements IPageMetaFetcher {
   }
 }
 
+class FakePlayableSearch implements IPlayableSearch {
+  refs: ExternalTrackRef[] = [];
+  calls = 0;
+  async search(_query: string, limit: number): Promise<ExternalTrackRef[]> {
+    this.calls++;
+    return this.refs.slice(0, limit);
+  }
+}
+
 class FakeResolvedIndex implements IResolvedIndex {
   refs: ExternalTrackRef[] = [];
   async search(query: string, limit: number): Promise<ExternalTrackRef[]> {
@@ -73,13 +82,14 @@ class FakeResolutionCache implements IResolutionCache {
 
 const NOW = new Date('2026-08-02T12:00:00Z').getTime();
 
-function buildService(overrides?: { searchRepo?: FakeSearchRepository; metadataIndex?: FakeMetadataIndex; playableResolver?: FakePlayableResolver; pageMetaFetcher?: FakePageMetaFetcher; cache?: FakeResolutionCache; resolvedIndex?: FakeResolvedIndex; clock?: () => number }) {
+function buildService(overrides?: { searchRepo?: FakeSearchRepository; metadataIndex?: FakeMetadataIndex; playableResolver?: FakePlayableResolver; pageMetaFetcher?: FakePageMetaFetcher; cache?: FakeResolutionCache; resolvedIndex?: FakeResolvedIndex; playableSearch?: FakePlayableSearch; clock?: () => number }) {
   const searchRepo = overrides?.searchRepo ?? new FakeSearchRepository();
   const metadataIndex = overrides?.metadataIndex ?? new FakeMetadataIndex();
   const playableResolver = overrides?.playableResolver ?? new FakePlayableResolver();
   const pageMetaFetcher = overrides?.pageMetaFetcher ?? new FakePageMetaFetcher();
   const cache = overrides?.cache ?? new FakeResolutionCache();
   const resolvedIndex = overrides?.resolvedIndex ?? new FakeResolvedIndex();
+  const playableSearch = overrides?.playableSearch ?? new FakePlayableSearch();
   const clock = overrides?.clock ?? (() => NOW);
 
   const service = new ExternalResolveService({
@@ -89,11 +99,12 @@ function buildService(overrides?: { searchRepo?: FakeSearchRepository; metadataI
     pageMetaFetcher,
     cache,
     resolvedIndex,
+    playableSearch,
     clock,
     siteHost: SITE_HOST,
   });
 
-  return { service, searchRepo, metadataIndex, playableResolver, pageMetaFetcher, cache, resolvedIndex };
+  return { service, searchRepo, metadataIndex, playableResolver, pageMetaFetcher, cache, resolvedIndex, playableSearch };
 }
 
 const track = (overrides: Partial<SearchTrack>): SearchTrack => ({

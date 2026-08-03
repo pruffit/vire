@@ -2,11 +2,13 @@ import { createVireSource } from './sources/vire-source';
 import { createYoutubeSource } from './sources/youtube-source';
 import { createSoundcloudSource } from './sources/soundcloud-source';
 import { createLocalSource } from './sources/local-source';
+import { createAudiusSource } from './sources/audius-source';
 
 export type PlayableSource =
   | { kind: 'VIRE'; trackId: string }
   | { kind: 'YOUTUBE'; videoId: string }
   | { kind: 'SOUNDCLOUD'; url: string }
+  | { kind: 'AUDIUS'; trackId: string }
   | { kind: 'LOCAL'; fileId: string };
 
 export interface JamAudioEngine {
@@ -20,6 +22,8 @@ export interface JamAudioEngine {
   onEnded(listener: () => void): () => void;
   /** Звук фактически пошёл (событие `playing`) — момент, когда позицию можно точно ресинкнуть после буферизации. */
   onPlaying(listener: () => void): () => void;
+  /** Пользователь нажал play/pause внутри встроенного плеера — джем обязан пойти за ним, иначе состояния разъезжаются. */
+  onUserToggle(listener: (playing: boolean) => void): () => void;
   destroy(): void;
 }
 
@@ -33,6 +37,7 @@ export interface JamSourceEngine {
   isBuffering(): boolean;
   onEnded(listener: () => void): () => void;
   onPlaying(listener: () => void): () => void;
+  onUserToggle(listener: (playing: boolean) => void): () => void;
   destroy(): void;
 }
 
@@ -40,6 +45,7 @@ const FACTORIES: Record<PlayableSource['kind'], () => JamSourceEngine> = {
   VIRE: createVireSource,
   YOUTUBE: createYoutubeSource,
   SOUNDCLOUD: createSoundcloudSource,
+  AUDIUS: createAudiusSource,
   LOCAL: createLocalSource,
 };
 
@@ -48,6 +54,7 @@ function idOf(source: PlayableSource): string {
     case 'VIRE': return source.trackId;
     case 'YOUTUBE': return source.videoId;
     case 'SOUNDCLOUD': return source.url;
+    case 'AUDIUS': return source.trackId;
     case 'LOCAL': return source.fileId;
   }
 }
@@ -63,14 +70,18 @@ export function createJamAudio(): JamAudioEngine {
   let activeKind: PlayableSource['kind'] | null = null;
   const endedListeners = new Set<() => void>();
   const playingListeners = new Set<() => void>();
+  const userToggleListeners = new Set<(playing: boolean) => void>();
   let unsubEnded: (() => void) | null = null;
   let unsubPlaying: (() => void) | null = null;
+  let unsubUserToggle: (() => void) | null = null;
 
   function attach(engine: JamSourceEngine): void {
     unsubEnded?.();
     unsubPlaying?.();
+    unsubUserToggle?.();
     unsubEnded = engine.onEnded(() => endedListeners.forEach((l) => l()));
     unsubPlaying = engine.onPlaying(() => playingListeners.forEach((l) => l()));
+    unsubUserToggle = engine.onUserToggle((playing) => userToggleListeners.forEach((l) => l(playing)));
   }
 
   return {
@@ -114,14 +125,21 @@ export function createJamAudio(): JamAudioEngine {
       return () => playingListeners.delete(listener);
     },
 
+    onUserToggle(listener: (playing: boolean) => void): () => void {
+      userToggleListeners.add(listener);
+      return () => userToggleListeners.delete(listener);
+    },
+
     destroy(): void {
       unsubEnded?.();
       unsubPlaying?.();
+      unsubUserToggle?.();
       active?.destroy();
       active = null;
       activeKind = null;
       endedListeners.clear();
       playingListeners.clear();
+      userToggleListeners.clear();
     },
   };
 }

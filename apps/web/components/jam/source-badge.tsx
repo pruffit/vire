@@ -5,6 +5,7 @@ import { Icon } from '@/components/icon';
 const LABEL: Record<Exclude<JamQueueSource, 'VIRE'>, string> = {
   YOUTUBE: 'YouTube',
   SOUNDCLOUD: 'SoundCloud',
+  AUDIUS: 'Audius',
   LOCAL: 'Файл',
 };
 
@@ -13,7 +14,11 @@ export function SourceBadge({ source }: { source: JamQueueSource }) {
   if (source === 'VIRE') return null;
   return (
     <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground/80">
-      {source === 'LOCAL' ? <Icon name="file" size={11} /> : <PlatformIcon platform={source === 'YOUTUBE' ? 'youtube' : 'soundcloud'} size={11} />}
+      {source === 'YOUTUBE' || source === 'SOUNDCLOUD' ? (
+        <PlatformIcon platform={source === 'YOUTUBE' ? 'youtube' : 'soundcloud'} size={11} />
+      ) : (
+        <Icon name={source === 'AUDIUS' ? 'music' : 'file'} size={11} />
+      )}
       {LABEL[source]}
     </span>
   );

@@ -20,6 +20,7 @@ interface FakeSourceEngine {
   isBuffering: ReturnType<typeof vi.fn>;
   onEnded: ReturnType<typeof vi.fn>;
   onPlaying: ReturnType<typeof vi.fn>;
+  onUserToggle: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
 }
 
@@ -33,6 +34,7 @@ function makeFakeSource(): FakeSourceEngine {
     isBuffering: vi.fn(() => false),
     onEnded: vi.fn(() => vi.fn()),
     onPlaying: vi.fn(() => vi.fn()),
+    onUserToggle: vi.fn(() => vi.fn()),
     destroy: vi.fn(),
   };
 }

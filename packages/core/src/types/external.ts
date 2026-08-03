@@ -1,7 +1,7 @@
 import type { JamQueueSource } from './jam';
 
 /** Источники, из которых реально можно проиграть трек (embed-плеер или локальный файл). */
-export type PlayableExternalSource = Extract<JamQueueSource, 'YOUTUBE' | 'SOUNDCLOUD' | 'LOCAL'>;
+export type PlayableExternalSource = Extract<JamQueueSource, 'YOUTUBE' | 'SOUNDCLOUD' | 'AUDIUS' | 'LOCAL'>;
 
 export interface ExternalTrackRef {
   source: PlayableExternalSource;
