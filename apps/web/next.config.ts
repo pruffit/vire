@@ -130,7 +130,14 @@ const nextConfig: NextConfig = {
     dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
   },
   async headers() {
-    return [{ source: '/(.*)', headers: SECURITY_HEADERS }];
+    return [
+      { source: '/(.*)', headers: SECURITY_HEADERS },
+      // updateViaCache: 'none' в регистрации не спасает от прокси/браузерного кэша ответа.
+      {
+        source: '/sw.js',
+        headers: [{ key: 'Cache-Control', value: 'no-cache, must-revalidate' }],
+      },
+    ];
   },
   experimental: {
     // proxy.ts заставляет Next буферизовать тело запроса; дефолтные 10MB рвут multipart

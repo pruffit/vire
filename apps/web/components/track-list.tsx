@@ -91,7 +91,7 @@ function Row({
               <PlayerLikeButton trackId={track.id} size="sm" />
             </span>
             <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
-              <TrackQueueMenu getTracks={() => [queue[index]]} context={context} />
+              <TrackQueueMenu getTracks={() => [queue[index]]} context={context} track={queue[index]} />
             </span>
           </>
         }

@@ -38,6 +38,9 @@ export interface TrackRowProps {
   keepOverlayWhilePlaying?: boolean;
   /** 'roomy' — крупнее обложка и минимальная высота строки на мобилке (тач-таргеты в джеме). */
   size?: 'default' | 'roomy';
+  /** Рендерит обложку без /_next/image-оптимизации — запрос идёт ровно по track.coverUrl
+   *  (нужно для офлайн-экрана: сегменты закэшированы по сырому S3-URL). */
+  unoptimizedCover?: boolean;
   className?: string;
   style?: CSSProperties;
 }
@@ -56,6 +59,7 @@ export const TrackRow = forwardRef<HTMLDivElement, TrackRowProps>(function Track
     clickableRow = false,
     keepOverlayWhilePlaying = false,
     size = 'default',
+    unoptimizedCover = false,
     className = '',
     style,
   },
@@ -79,7 +83,7 @@ export const TrackRow = forwardRef<HTMLDivElement, TrackRowProps>(function Track
   const coverContent = (
     <>
       {track.coverUrl ? (
-        <Image src={track.coverUrl} alt={track.title} fill quality={60} sizes="36px" className="object-cover" />
+        <Image src={track.coverUrl} alt={track.title} fill quality={60} sizes="36px" unoptimized={unoptimizedCover} className="object-cover" />
       ) : (
         <div className="w-full h-full bg-white/5" />
       )}

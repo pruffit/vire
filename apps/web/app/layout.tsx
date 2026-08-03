@@ -118,7 +118,7 @@ export default async function RootLayout({
             <PlayerWrapper />
           </JamSessionProvider>
           <MobileTabBar incomingCount={incomingCount} messagesUnread={messagesUnread} />
-          <DeferredWidgets />
+          <DeferredWidgets userId={userId} />
           <Toaster />
           {userId && (
             <>

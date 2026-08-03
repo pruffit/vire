@@ -326,6 +326,9 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   при исчерпании очереди (`docs/features/wave.md`)
 - [x] Любимые моменты — анонимные маркеры на волне (`favorite_moments`), агрегат на странице трека
 - [x] Шеринг с таймкодом — `TrackShare` поповер (ссылка / «с момента M:SS») в плеере и на треке
+- [x] PWA — приложение устанавливается (SW с fetch-обработчиком, манифест с `id`/`scope`/
+  shortcuts/maskable), оболочка и статика из кэша, скачивание треков в Cache Storage и
+  экран «Скачанное» `/offline`; библиотека привязана к аккаунту (`docs/features/pwa-offline.md`)
 - [x] Live «слушают сейчас» — Redis-присутствие (ZSET + окно 45с), heartbeat из плеера;
   показ слушателю (трек) и артисту (дашборд); деградирует до 0 при сбое Redis (`lib/presence.ts`)
 - [x] Синхронизированный текст — LRC в `tracks.lyrics`; редактор в дашборде, подсветка
@@ -387,7 +390,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Скачивание FLAC по presigned S3 URL
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
-### Тесты (apps/web — 751, гонять `pnpm --filter @vire/web test`)
+### Тесты (apps/web — 1777, гонять `pnpm --filter @vire/web test`)
 - [x] `packages/core` — сервисы artist/release/track, follow/listener-track/track-moods/playlist, Result/errors (Vitest)
 - [x] `apps/web/lib` — `embed` (YouTube/VK), `upload` (валидация), `format`, `structured-data` (JSON-LD билдеры)
 - [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),

@@ -17,8 +17,12 @@ const EasterEggs = dynamic(() => import('./easter-eggs').then((m) => m.EasterEgg
 const LocalFileDrop = dynamic(() => import('./local-file-drop').then((m) => m.LocalFileDrop), {
   ssr: false,
 });
+const ServiceWorkerRegistrar = dynamic(
+  () => import('./service-worker-registrar').then((m) => m.ServiceWorkerRegistrar),
+  { ssr: false },
+);
 
-export function DeferredWidgets() {
+export function DeferredWidgets({ userId }: { userId?: string | null }) {
   return (
     <>
       <CommandPalette />
@@ -26,6 +30,7 @@ export function DeferredWidgets() {
       <Announcements />
       <EasterEggs />
       <LocalFileDrop />
+      <ServiceWorkerRegistrar userId={userId} />
     </>
   );
 }

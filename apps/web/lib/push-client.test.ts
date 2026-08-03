@@ -126,6 +126,33 @@ describe('subscribeToPush', () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
+  it('регистрации ещё нет → регистрируем сами, а не зависаем на ready', async () => {
+    const sub = { toJSON: () => ({ endpoint: 'e', keys: { p256dh: 'a', auth: 'b' } }), unsubscribe: vi.fn() };
+    const registerMock = vi.fn().mockResolvedValue({ pushManager: { subscribe: vi.fn().mockResolvedValue(sub) } });
+    Object.defineProperty(window.navigator, 'serviceWorker', {
+      value: { register: registerMock, getRegistration: vi.fn().mockResolvedValue(null) },
+      configurable: true,
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    const { subscribeToPush } = await loadModule(VAPID);
+    await expect(subscribeToPush()).resolves.toEqual({ ok: true });
+    expect(registerMock).toHaveBeenCalledWith('/sw.js');
+  });
+
+  it('SW уже зарегистрирован → использует существующую регистрацию, register() не вызывает', async () => {
+    const sub = { toJSON: () => ({ endpoint: 'e', keys: { p256dh: 'a', auth: 'b' } }), unsubscribe: vi.fn() };
+    const registerMock = vi.fn();
+    const existingReg = { pushManager: { subscribe: vi.fn().mockResolvedValue(sub) } };
+    Object.defineProperty(window.navigator, 'serviceWorker', {
+      value: { register: registerMock, getRegistration: vi.fn().mockResolvedValue(existingReg) },
+      configurable: true,
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    const { subscribeToPush } = await loadModule(VAPID);
+    await expect(subscribeToPush()).resolves.toEqual({ ok: true });
+    expect(registerMock).not.toHaveBeenCalled();
+  });
+
   it('всё успешно → ok true, POST на /api/v1/push/subscribe', async () => {
     const sub = { toJSON: () => ({ endpoint: 'e', keys: { p256dh: 'a', auth: 'b' } }), unsubscribe: vi.fn() };
     Object.defineProperty(window.navigator, 'serviceWorker', {

@@ -12,6 +12,7 @@ import type { PlaylistWithTracks, PlaylistTrackRow } from '@vire/db';
 import { SortablePlaylistRow } from './playlist-track-row';
 import { PlaylistAddPanel } from './playlist-add-panel';
 import { PlaylistRealtimeSync } from './playlist-realtime-sync';
+import { PlaylistDownloadButton } from './playlist-download-button';
 import { PlayIcon } from '@/components/icons';
 import { Icon } from '@/components/icon';
 
@@ -128,6 +129,7 @@ export function PlaylistView({ playlist, role, viewerId = null, emptyTitle = 'П
             <Icon name="plus" size={14} /> Добавить треки
           </button>
         )}
+        <PlaylistDownloadButton tracks={queue} />
       </div>
 
       {canEdit && adding && (

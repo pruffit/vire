@@ -43,7 +43,10 @@ export async function subscribeToPush(): Promise<SubscribeResult> {
 
   let reg: ServiceWorkerRegistration;
   try {
-    reg = await navigator.serviceWorker.register('/sw.js');
+    // Регистрация теперь общая (ServiceWorkerRegistrar в layout); fallback на register(),
+    // если виджет ещё не успел зарегистрировать SW.
+    const existing = await navigator.serviceWorker.getRegistration();
+    reg = existing ?? (await navigator.serviceWorker.register('/sw.js'));
   } catch (err) {
     console.error('push: service worker register failed', err);
     return { ok: false, reason: 'sw' };
