@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, useSyncExternalStore, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
 import Image from 'next/image';
 import type { JamQueueItem, SearchTrack, TrackCandidate } from '@vire/core';
 import type { ExternalAddOutcome, OptimisticExternalGuess } from '@/lib/jam/use-jam-queue';
@@ -38,30 +38,6 @@ interface Props {
   dense?: boolean;
 }
 
-interface SpeechRecognitionLike {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
-  start(): void;
-  abort(): void;
-  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-}
-
-type SpeechWindow = Window & {
-  SpeechRecognition?: new () => SpeechRecognitionLike;
-  webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-};
-
-function speechCtor(): (new () => SpeechRecognitionLike) | null {
-  if (typeof window === 'undefined') return null;
-  const w = window as SpeechWindow;
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
-
-const noSubscribe = (): (() => void) => () => {};
-
 function toRawGuess(text: string): OptimisticExternalGuess {
   return { title: text.length > RAW_TITLE_MAX ? `${text.slice(0, RAW_TITLE_MAX)}…` : text, artistName: '', coverUrl: null, durationSec: null };
 }
@@ -78,10 +54,6 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
   const [submitting, setSubmitting] = useState(false);
   const [emptyHint, setEmptyHint] = useState(false);
   const [cursor, setCursor] = useState(-1);
-  const [listening, setListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const canPaste = useSyncExternalStore(noSubscribe, () => Boolean(navigator.clipboard?.readText), () => false);
-  const canListen = useSyncExternalStore(noSubscribe, () => speechCtor() !== null, () => false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -91,8 +63,6 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
     const timer = setTimeout(() => inputRef.current?.focus(), FOCUS_DELAY_MS);
     return () => clearTimeout(timer);
   }, [autoFocus]);
-
-  useEffect(() => () => recognitionRef.current?.abort(), []);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -178,45 +148,6 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
     e.preventDefault();
     setQ(urls.length === 1 ? urls[0]! : `${urls.length} ссылки`);
     void submitAll(urls);
-  }
-
-  async function pasteFromClipboard(): Promise<void> {
-    try {
-      const text = (await navigator.clipboard.readText()).trim();
-      if (!text) return;
-      const urls = text.match(URL_GLOBAL_RE);
-      if (!urls) {
-        setQ(text);
-        inputRef.current?.focus();
-        return;
-      }
-      setQ(urls.length === 1 ? urls[0]! : `${urls.length} ссылки`);
-      await submitAll(urls);
-    } catch {
-      toast.error('Не удалось прочитать буфер обмена');
-    }
-  }
-
-  function startListening(): void {
-    const Ctor = speechCtor();
-    if (!Ctor || listening) return;
-    const recognition = new Ctor();
-    recognitionRef.current = recognition;
-    recognition.lang = 'ru-RU';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript;
-      if (transcript) setQ(transcript);
-    };
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
-    try {
-      recognition.start();
-      setListening(true);
-    } catch {
-      setListening(false);
-    }
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>): void {
@@ -320,34 +251,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
           >
             <Icon name="x" size={14} />
           </button>
-        ) : (
-          <>
-            {canListen && (
-              <button
-                type="button"
-                onClick={startListening}
-                aria-label="Сказать голосом"
-                aria-pressed={listening}
-                className={cn(
-                  'grid h-11 w-11 shrink-0 place-items-center rounded-full transition-colors',
-                  listening ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                <Icon name="volume-2" size={15} />
-              </button>
-            )}
-            {canPaste && (
-              <button
-                type="button"
-                onClick={() => void pasteFromClipboard()}
-                aria-label="Вставить из буфера"
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <Icon name="clipboard" size={15} />
-              </button>
-            )}
-          </>
-        )}
+        ) : null}
         <button
           type="submit"
           disabled={q.trim().length === 0 || submitting}

@@ -178,6 +178,9 @@ export function normalizeQueryKey(artistName: string, title: string): string {
 // Слова версии меняют идентичность трека (ремикс ≠ оригинал) — точное совпадение обязательно.
 // Слова-descriptors («official video» и т.п.) — шум YouTube-заголовков, не влияют на идентичность.
 const VERSION_MARKERS = new Set(['remix', 'cover', 'acoustic', 'live', 'instrumental', 'remaster', 'remastered', 'extended', 'version', 'mix', 'demo', 'unplugged', 'edit', 'rework', 'reprise']);
+// Целый альбом/сборник вместо трека — самый частый промах поиска: по токенам он проходит
+// («Yes Future» ⊂ «The Toxic Avenger - Yes Future - Full Album»), поэтому судим отдельно.
+const BULK_MARKERS = new Set(['album', 'lp', 'ep', 'compilation', 'megamix', 'mixtape', 'playlist', 'discography', 'anthology', 'сборник', 'альбом', 'дискография', 'концерт', 'concert', 'сет']);
 const NOISE_WORDS = new Set(['official', 'video', 'audio', 'lyrics', 'lyric', 'hd', 'clip', 'music']);
 
 function scoringTokens(artistName: string, title: string): Set<string> {
@@ -221,6 +224,10 @@ export function matchesExpectedTrack(
   const expectedVersions = new Set([...expectedTokens].filter((t) => VERSION_MARKERS.has(t)));
   const candidateVersions = new Set([...candidateTokens].filter((t) => VERSION_MARKERS.has(t)));
   if (!setsEqual(expectedVersions, candidateVersions)) return false;
+
+  const expectedBulk = new Set([...expectedTokens].filter((t) => BULK_MARKERS.has(t)));
+  const candidateBulk = new Set([...candidateTokens].filter((t) => BULK_MARKERS.has(t)));
+  if (!setsEqual(expectedBulk, candidateBulk)) return false;
 
   // Заголовок ролика обычно шире запроса («Артист - Трек (Official Video)») — сравниваем
   // с покрытием ожидаемых токенов, а не с симметричным пересечением.

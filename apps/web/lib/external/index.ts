@@ -31,10 +31,22 @@ const pageMetaFetcher: IPageMetaFetcher = {
 
 async function resolveMeta(url: string, host: string): Promise<PageMeta | null> {
   const provider = await fetchProviderMeta(url);
-  if (provider) return enrichArtist(provider);
+  if (provider) return withArtist(provider, url);
   if (OEMBED_HOSTS.test(host)) return fetchOembed(url);
   // Страница может не отдаться вовсе (Яндекс/VK отвечают ботам 403) — тогда спрашиваем Odesli.
-  return (await fetchPageMeta(url)) ?? enrichArtist(await fetchOdesliMeta(url));
+  return (await fetchPageMeta(url)) ?? await fetchOdesliMeta(url);
+}
+
+/**
+ * Spotify oEmbed отдаёт название без исполнителя, а без него поиск ловит что угодно — вплоть
+ * до целого альбома с похожим названием. Исполнителя знает Odesli (по той же ссылке);
+ * не ответил — пробуем метаиндекс по точному совпадению названия.
+ */
+async function withArtist(meta: PageMeta, url: string): Promise<PageMeta> {
+  if (meta.artistName) return meta;
+  const odesli = await fetchOdesliMeta(url);
+  if (odesli?.artistName) return { ...meta, artistName: odesli.artistName, title: odesli.title || meta.title };
+  return (await enrichArtist(meta)) ?? meta;
 }
 
 // Spotify oEmbed не отдаёт исполнителя — достаём его из iTunes+Deezer метаиндекса, но только

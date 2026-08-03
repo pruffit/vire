@@ -225,6 +225,29 @@ describe('normalizeQueryKey', () => {
   });
 });
 
+describe('matchesExpectedTrack — целый альбом вместо трека', () => {
+  it('«Full Album» не сходится с запросом одного трека', () => {
+    expect(matchesExpectedTrack(
+      { title: 'Yes Future!', artistName: 'The Toxic Avenger' },
+      { title: 'The Toxic Avenger - Yes Future - Full Album', artistName: 'Enchanté Records' },
+    )).toBe(false);
+  });
+
+  it('сам трек по-прежнему сходится', () => {
+    expect(matchesExpectedTrack(
+      { title: 'Yes Future!', artistName: 'The Toxic Avenger' },
+      { title: 'The Toxic Avenger - Yes Future! (Official Video)', artistName: 'The Toxic Avenger' },
+    )).toBe(true);
+  });
+
+  it('запрос альбома альбому не мешает', () => {
+    expect(matchesExpectedTrack(
+      { title: 'Yes Future Full Album', artistName: 'The Toxic Avenger' },
+      { title: 'The Toxic Avenger - Yes Future - Full Album', artistName: 'Enchanté Records' },
+    )).toBe(true);
+  });
+});
+
 describe('scoreCatalogMatch', () => {
   const track = (overrides: Partial<SearchTrack>): SearchTrack => ({
     id: 't1', title: 'Группа крови', releaseId: 'r1', artistSlug: 'kino', artistName: 'Кино', coverUrl: null, version: null, feat: [],

@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useJamSession } from '@/components/jam/jam-session-provider';
@@ -32,7 +32,6 @@ export function PartyScreen({ code, onExit }: Props) {
   const enableAudio = useJamStore((s) => s.enableAudio);
   const [visualizerOn, setVisualizerOn] = useVisualizerEnabled();
   const [fullscreen, setFullscreen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
   const isPlaying = session?.isPlaying ?? false;
   const position = useJamPosition(isPlaying);
   useWakeLock(true);
@@ -48,7 +47,8 @@ export function PartyScreen({ code, onExit }: Props) {
 
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
-    else void rootRef.current?.requestFullscreen().catch(() => {});
+    // Фуллскрин самого оверлея скрыл бы док видео — он живёт вне его поддерева.
+    else void document.documentElement.requestFullscreen().catch(() => {});
   }, []);
 
   if (!session || typeof document === 'undefined') return null;
@@ -81,7 +81,6 @@ export function PartyScreen({ code, onExit }: Props) {
 
   return createPortal(
     <div
-      ref={rootRef}
       className="fixed inset-0 z-[70] flex flex-col overflow-clip bg-[#09090c] text-white"
       style={accent ? { backgroundImage: `radial-gradient(120% 90% at 50% 0%, ${accent}2e, transparent 70%)` } : undefined}
     >
@@ -123,7 +122,7 @@ export function PartyScreen({ code, onExit }: Props) {
         <div className="flex min-h-0 flex-1 flex-col gap-3">
           <div className="relative min-h-0 flex-1 overflow-clip rounded-2xl border border-white/10 bg-black/50">
             {isVideoActive && !visualizerOn ? (
-              <PartyVideoSlot className="h-full w-full rounded-none bg-transparent" />
+              <PartyVideoSlot z={75} className="h-full w-full rounded-none bg-transparent" />
             ) : visualizerOn ? (
               <>
                 <Visualizer
@@ -136,7 +135,7 @@ export function PartyScreen({ code, onExit }: Props) {
                   className="h-full w-full"
                 />
                 {videoInCorner && (
-                  <PartyVideoSlot className="absolute bottom-3 right-3 h-[200px] w-[356px] max-w-[60%] border border-white/15 shadow-2xl" />
+                  <PartyVideoSlot z={75} className="absolute bottom-3 right-3 h-[200px] w-[356px] max-w-[60%] border border-white/15 shadow-2xl" />
                 )}
               </>
             ) : active?.coverUrl ? (

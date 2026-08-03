@@ -125,7 +125,8 @@ export class ExternalResolveService {
     if (cached?.found) return { outcome: 'external', ref: cached.ref };
 
     const skipSearch = Boolean(cached && !cached.found && !this.isStale(cached.resolvedAt));
-    const ref = skipSearch ? null : await this.deps.playableResolver.searchOne(query, { title: hint.title, artistName: hint.artistName });
+    const found = skipSearch ? null : await this.deps.playableResolver.searchOne(query, { title: hint.title, artistName: hint.artistName });
+    const ref = found && labelFromHint(found, hint);
     if (!skipSearch) await this.deps.cache.put(key, ref);
     if (ref) return { outcome: 'external', ref };
 
@@ -142,6 +143,22 @@ export class ExternalResolveService {
   private isStale(resolvedAt: Date): boolean {
     return this.deps.clock() - resolvedAt.getTime() >= CACHE_STALE_MS;
   }
+}
+
+/**
+ * Играет ролик с YouTube, но в очереди должно стоять «артист — трек», а не заголовок ролика
+ * с названием канала («Harry — Portishead - Numbed In Moscow (1994 - Singles…)»). Подменяем
+ * подпись данными хинта, когда он полноценный; сам источник и id не трогаем.
+ */
+function labelFromHint(ref: ExternalTrackRef, hint: MetadataHint): ExternalTrackRef {
+  if (!hint.artistName || !hint.title) return ref;
+  return {
+    ...ref,
+    title: hint.title,
+    artistName: hint.artistName,
+    coverUrl: ref.coverUrl ?? hint.coverUrl,
+    durationSec: ref.durationSec ?? hint.durationSec,
+  };
 }
 
 function urlKey(url: string): ResolutionKey {

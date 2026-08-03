@@ -68,6 +68,7 @@ describe('PartyVideoDock', () => {
     vi.stubGlobal('requestAnimationFrame', vi.fn().mockReturnValue(1));
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
     const slot = document.createElement('div');
+    slot.dataset.videoZ = '75';
     slot.getBoundingClientRect = () =>
       ({ left: 40, top: 60, width: 320, height: 180, right: 360, bottom: 240, x: 40, y: 60, toJSON: () => ({}) }) as DOMRect;
     setPartyVideoSlot(slot);
@@ -75,6 +76,8 @@ describe('PartyVideoDock', () => {
     const { container } = render(<PartyVideoDock />);
     const dock = container.firstElementChild as HTMLElement;
 
+    // Слот внутри оверлея просит поднять док над ним — иначе видео чёрное.
+    expect(dock.style.zIndex).toBe('75');
     expect(dock.style.transform).toBe('translate(40px, 60px)');
     expect(dock.style.width).toBe('320px');
     expect(dock.style.height).toBe('180px');

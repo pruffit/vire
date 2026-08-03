@@ -234,6 +234,23 @@ describe('ExternalResolveService.resolve — plain text query', () => {
     expect(cached).toEqual({ found: true, ref: ytRef });
   });
 
+  it('в очередь идёт «артист — трек» из метаданных, а не заголовок ролика с каналом', async () => {
+    const { service, playableResolver, pageMetaFetcher } = buildService();
+    pageMetaFetcher.result = { title: 'Numbed In Moscow', artistName: 'Portishead', coverUrl: null, durationSec: 234 };
+    playableResolver.searchOneResult = {
+      source: 'YOUTUBE', externalId: 'vid', externalUrl: 'https://youtu.be/vid',
+      title: 'Portishead - Numbed In Moscow (1994 - Singles - Nobody Loves Me)', artistName: 'Harry',
+      coverUrl: 'https://i.ytimg.com/vi/vid/hq.jpg', durationSec: null,
+    };
+
+    const outcome = await service.resolve('https://music.yandex.ru/album/1/track/2');
+
+    expect(outcome).toEqual({
+      outcome: 'external',
+      ref: expect.objectContaining({ externalId: 'vid', title: 'Numbed In Moscow', artistName: 'Portishead', durationSec: 234 }),
+    });
+  });
+
   it('a fresh cache hit avoids a second YouTube call entirely (quota discipline)', async () => {
     const { service, playableResolver } = buildService();
     playableResolver.searchOneResult = ytRef;

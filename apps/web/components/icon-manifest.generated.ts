@@ -65,6 +65,7 @@ export const SYSTEM_ICON_NAMES = [
   'maximize-2',
   'menu',
   'message-square',
+  'mic',
   'minimize',
   'minimize-2',
   'minus-square',
