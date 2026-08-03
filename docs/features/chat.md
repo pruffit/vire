@@ -64,9 +64,26 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
 - Список диалогов (`ConversationList`): собеседник, последнее сообщение, `divide-y`
   между строками, активный диалог — фон + акцентная полоса слева (псевдо-элемент,
   без layout shift), непрочитанный — имя/превью `text-foreground font-medium`,
-  прочитанный — muted.
-- Тред `/messages/[conversationId]`: история + живой приём новых сообщений по SSE,
-  оптимистичная отправка, автоскролл, отметка прочитанного при открытии.
+  прочитанный — muted. **Живой** — стор `lib/chat-conversations.ts` (`useConversations`,
+  паттерн `chat-unread.ts`) сидируется списком из layout один раз на владельца, дальше сам
+  обновляет превью/время/непрочитанность и поднимает диалог наверх по своему же `message` с
+  realtime-канала (сервер публикует событие и отправителю тоже — отдельный путь не нужен).
+  Сид заскоуплен по `viewerId`: смена юзера в той же вкладке без hard-reload пересидирует стор,
+  чужой список не переживает логин. Рефетч `GET /api/v1/chat/conversations` — на неизвестный
+  диалог (первое сообщение), на диалог без `otherIkPub` (собеседник только что опубликовал ключ,
+  иначе превью навсегда «зашифровано»), по `@reconnect` и по фокусу вкладки. Непрочитанность
+  снимается только для диалога, который открыт **и** вкладка видима — иначе бейдж врал бы,
+  пока отложен реальный `markRead`.
+- Тред `/messages/[conversationId]`: история ASC (старые→новые, без двойного разворота),
+  живой приём новых сообщений по SSE, оптимистичная отправка (`tempId` — `crypto.randomUUID()`,
+  снимается при совпадении шифротекста с пришедшим серверным — `lib/chat-messages.ts`,
+  `mergeMessages`). Автоскролл — плавный на своё сообщение или если читатель был у низа (порог
+  120px), иначе пилюля «Новые сообщения ↓»; на смену диалога — мгновенно. Пагинация вверх при
+  скролле к верху, пока `hasMore` (стартует от `initialMessages.length >= 50`); курсор —
+  keyset-пара `(createdAt, id)`, параметры `?before=&beforeId=` (только по `createdAt` сообщения
+  с одинаковым таймстампом проваливались бы между страницами; частичный курсор → 400).
+  Догрузка пропущенного за разрыв — по `@reconnect`, возврату вкладки и фокусу окна. `markRead`
+  только пока вкладка видима, иначе откладывается до возврата.
 - **Индикатор «печатает…»** (`TypingIndicator`, в шапке треда рядом с именем): композер
   шлёт `POST /api/v1/chat/[conversationId]/typing` (throttle ~2.5с, только пока поле
   непустое) → сервис публикует `chat:typing` собеседнику через тот же realtime-канал.
@@ -105,7 +122,10 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
 - Клиент — `apps/web/lib/use-realtime.ts`: **один `EventSource` на вкладку** (модульный
   синглтон с refcount-подписчиками), сколько бы компонентов ни вызвали `useRealtime` —
   чат (`message`), колокольчик (`notification`), привязка (`link-request`). Реконнект с
-  бэкоффом; последний отписавшийся закрывает соединение.
+  бэкоффом; последний отписавшийся закрывает соединение. Второй и последующий `onopen`
+  (реконнект после разрыва) диспатчит подписчикам синтетическое событие `@reconnect` —
+  точка догрузки пропущенного для треда и списка диалогов. `visibilitychange` → вкладка
+  видима и соединения нет — коннект сразу, не дожидаясь бэкоффа.
 - Деградация: нет Redis → пуши не идут, REST/refresh остаётся рабочим фолбэком (как presence).
 
 ## Где код
@@ -118,9 +138,11 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
 | Сервис | `packages/core/src/services/chat.ts` — `ChatService` (`openOrGet`/`send`/`history`/`markRead`/`listConversations`/`countUnread`/`getConversationMeta`), `canonicalPair`; `send` принимает `senderName`, `markRead` публикует `chat:read`, `getConversationMeta` отдаёт `otherLastReadAt` |
 | Realtime | `apps/web/lib/realtime.ts` (publish/subscribe, порт `RealtimePublisher` в `packages/core/src/ports/realtime.ts`), клиент `apps/web/lib/use-realtime.ts` |
 | Композиция | `apps/web/lib/chat.ts` (`chatService()`) |
-| Роуты | `apps/web/app/api/v1/chat/{messages,open,unread-count,[conversationId]/messages,[conversationId]/read,[conversationId]/typing}/route.ts`, `apps/web/app/api/v1/realtime/stream/route.ts` |
+| Роуты | `apps/web/app/api/v1/chat/{messages,open,conversations,unread-count,[conversationId]/messages,[conversationId]/read,[conversationId]/typing}/route.ts`, `apps/web/app/api/v1/realtime/stream/route.ts` |
 | Страницы | `apps/web/app/(listener)/messages/layout.tsx` (двухпанельный shell, auth-гейт, список диалогов), `.../messages/page.tsx` (заглушка «Выберите диалог»), `.../messages/[conversationId]/page.tsx` (тред) |
 | Компоненты | `apps/web/components/chat/{messages-shell,conversation-list,chat-thread,message-composer,message-bubble,chat-avatar,chat-format,device-link,link-approve,link-protocol,e2ee-bootstrap,typing-indicator,chat-events-bridge}.tsx`, `.../message-friend-button.tsx` |
+| Сообщения (клиент) | `apps/web/lib/chat-messages.ts` — чистые `normalizeMessage`/`mergeMessages` (дедуп по id, снятие pending по совпадению шифротекста, сортировка ASC) |
+| Живой список диалогов | `apps/web/lib/chat-conversations.ts` (`useConversations`/`refreshConversations`/`applyIncomingMessage`/`markConversationReadLocal`), роут `GET /api/v1/chat/conversations` |
 | Live-бейджи | `apps/web/lib/chat-unread.ts` (`useChatUnreadStore`/`useChatUnread`), смонтирован в `library-sidebar.tsx`; мост — `chat-events-bridge.tsx` в root layout |
 | Навигация | пункт «Сообщения» + бейдж — `library-sidebar.tsx`, `mobile-tab-bar.tsx`; счётчик `countUnreadMessagesCached` в `lib/listener-data.ts` |
 

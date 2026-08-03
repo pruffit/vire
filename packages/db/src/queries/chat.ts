@@ -71,12 +71,23 @@ export async function insertMessage(conversationId: string, senderId: string, ci
   });
 }
 
-export async function listMessages(conversationId: string, before: Date | null, limit: number): Promise<ChatMessage[]> {
+export async function listMessages(
+  conversationId: string,
+  before: { createdAt: Date; id: string } | null,
+  limit: number,
+): Promise<ChatMessage[]> {
   const rows = await db
     .select()
     .from(messages)
-    .where(and(eq(messages.conversationId, conversationId), before ? lt(messages.createdAt, before) : undefined))
-    .orderBy(desc(messages.createdAt))
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        before
+          ? or(lt(messages.createdAt, before.createdAt), and(eq(messages.createdAt, before.createdAt), lt(messages.id, before.id)))
+          : undefined,
+      ),
+    )
+    .orderBy(desc(messages.createdAt), desc(messages.id))
     .limit(limit);
   return rows.reverse();
 }

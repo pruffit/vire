@@ -16,6 +16,7 @@ type Channel = {
   source: EventSource | null;
   reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   retryMs: number;
+  everOpened: boolean;
 };
 
 // Один EventSource на URL на вкладку, сколько бы компонентов ни подписалось
@@ -27,6 +28,13 @@ function connect(url: string, ch: Channel) {
 
   ch.source.onopen = () => {
     ch.retryMs = RECONNECT_BASE_MS;
+    // Второй и последующие onopen — реконнект после разрыва: догрузка пропущенного
+    // (чат/список диалогов) идёт по синтетическому '@reconnect', сервер такого не шлёт.
+    if (ch.everOpened) {
+      const reconnectEvent: RealtimeEvent = { type: '@reconnect' };
+      for (const ref of ch.subscribers) ref.current['@reconnect']?.(reconnectEvent);
+    }
+    ch.everOpened = true;
   };
 
   ch.source.onmessage = (e: MessageEvent<string>) => {
@@ -53,10 +61,25 @@ function connect(url: string, ch: Channel) {
   };
 }
 
+// Вкладка вернулась в фокус (сон/бэкграунд мобильного таба рвёт TCP без onerror) —
+// не ждать бэкофф, коннектиться сразу, если соединения нет.
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    for (const [url, ch] of channels) {
+      if (ch.source || ch.subscribers.size === 0) continue;
+      if (ch.reconnectTimer) clearTimeout(ch.reconnectTimer);
+      ch.reconnectTimer = undefined;
+      ch.retryMs = RECONNECT_BASE_MS;
+      connect(url, ch);
+    }
+  });
+}
+
 function subscribe(url: string, ref: HandlersRef): () => void {
   let ch = channels.get(url);
   if (!ch) {
-    ch = { subscribers: new Set(), source: null, reconnectTimer: undefined, retryMs: RECONNECT_BASE_MS };
+    ch = { subscribers: new Set(), source: null, reconnectTimer: undefined, retryMs: RECONNECT_BASE_MS, everOpened: false };
     channels.set(url, ch);
   }
   ch.subscribers.add(ref);

@@ -25,12 +25,13 @@ export function ChatEventsBridge({ viewerId }: { viewerId: string }) {
       const senderId = message?.senderId;
       if (!senderId || senderId === viewerId) return;
 
+      // Счётчик тянем всегда — сервер знает правду о прочитанном; тост душим только на открытом диалоге.
+      refreshUnread();
       const conversationId = event.conversationId as string | undefined;
       if (pathnameRef.current === `/messages/${conversationId}`) return;
 
       const senderName = (event.senderName as string | null | undefined) ?? 'Пользователь';
       toast(`Сообщение от ${senderName}`);
-      refreshUnread();
     },
   });
 

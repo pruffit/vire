@@ -1,19 +1,41 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ConversationSummary } from '@vire/core';
 import { EmptyState } from '@/components/ui-kit';
 import { useIdentity } from '@/lib/e2ee-client';
 import { deriveCK, decryptMessage, fromB64 } from '@/lib/e2ee';
+import { useRealtime } from '@/lib/use-realtime';
+import { useConversations, refreshConversations, applyIncomingMessage } from '@/lib/chat-conversations';
 import { cn } from '@/lib/utils';
 import { ChatAvatar } from './chat-avatar';
 import { formatMessageTimestamp } from './chat-format';
 
-export function ConversationList({ conversations, viewerId }: { conversations: ConversationSummary[]; viewerId: string }) {
+export function ConversationList({ conversations: initial, viewerId }: { conversations: ConversationSummary[]; viewerId: string }) {
+  const conversations = useConversations(initial, viewerId);
   const identity = useIdentity(viewerId);
   const pathname = usePathname();
+  const activeId = pathname?.startsWith('/messages/') ? pathname.slice('/messages/'.length) : null;
+
+  useRealtime({
+    message: (event) => {
+      const conversationId = event.conversationId as string | undefined;
+      const message = event.message as { senderId: string; body: string; nonce: string; createdAt: string } | undefined;
+      if (!conversationId || !message) return;
+      applyIncomingMessage({ conversationId, message, senderId: message.senderId, viewerId, activeId });
+    },
+    '@reconnect': () => refreshConversations(),
+  });
+
+  useEffect(() => {
+    function onFocus() {
+      refreshConversations();
+    }
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   const previews = useMemo(() => {
     const map = new Map<string, string>();

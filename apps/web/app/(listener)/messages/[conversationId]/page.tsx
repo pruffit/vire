@@ -37,8 +37,7 @@ export default async function ConversationPage({ params }: Props) {
 
   const canSend = status === 'FRIENDS' && !blocked;
   const otherName = other?.name ?? 'Слушатель';
-  // history приходит DESC (свежие сверху) — тред рисует сверху вниз, разворачиваем в ASC
-  const initialMessages = history.value.slice().reverse();
+  const initialMessages = history.value;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -54,12 +53,14 @@ export default async function ConversationPage({ params }: Props) {
           <ChatAvatar name={other?.name ?? null} image={other?.image ?? null} size={36} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold group-hover:text-foreground">{otherName}</span>
-            <TypingIndicator conversationId={conversationId} otherUserId={otherUserId} />
+            <TypingIndicator key={conversationId} conversationId={conversationId} otherUserId={otherUserId} />
           </span>
         </Link>
       </header>
 
+      {/* key: смена диалога — навигация внутри сегмента, без него состояние треда переезжает в новый диалог */}
       <ChatThread
+        key={conversationId}
         conversationId={conversationId}
         viewerId={viewerId}
         otherUserId={otherUserId}

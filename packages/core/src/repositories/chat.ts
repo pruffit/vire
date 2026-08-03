@@ -24,7 +24,7 @@ export interface IChatRepository {
   upsertConversation(low: string, high: string): Promise<string>;
   getConversation(conversationId: string): Promise<ConversationParticipants | null>;
   insertMessage(conversationId: string, senderId: string, ciphertext: string, nonce: string): Promise<ChatMessage>;
-  listMessages(conversationId: string, before: Date | null, limit: number): Promise<ChatMessage[]>;
+  listMessages(conversationId: string, before: { createdAt: Date; id: string } | null, limit: number): Promise<ChatMessage[]>;
   listConversations(userId: string): Promise<ConversationSummary[]>;
   markConversationRead(conversationId: string, side: 'low' | 'high'): Promise<void>;
   countUnreadConversations(userId: string): Promise<number>;

@@ -16,12 +16,17 @@ export async function GET(req: Request, { params }: Ctx) {
   const parsedParams = paramsSchema.safeParse(await params);
   if (!parsedParams.success) return NextResponse.json({ error: 'Invalid conversationId' }, { status: 400 });
 
-  const beforeRaw = new URL(req.url).searchParams.get('before');
-  let before: Date | null = null;
-  if (beforeRaw) {
-    const parsedDate = new Date(beforeRaw);
-    if (Number.isNaN(parsedDate.getTime())) return NextResponse.json({ error: 'Invalid before' }, { status: 400 });
-    before = parsedDate;
+  const searchParams = new URL(req.url).searchParams;
+  const beforeRaw = searchParams.get('before');
+  const beforeIdRaw = searchParams.get('beforeId');
+  let before: { createdAt: Date; id: string } | null = null;
+  if (beforeRaw || beforeIdRaw) {
+    const parsedId = z.string().uuid().safeParse(beforeIdRaw);
+    const parsedDate = beforeRaw ? new Date(beforeRaw) : null;
+    if (!parsedDate || Number.isNaN(parsedDate.getTime()) || !parsedId.success) {
+      return NextResponse.json({ error: 'Invalid before' }, { status: 400 });
+    }
+    before = { createdAt: parsedDate, id: parsedId.data };
   }
 
   const result = await chatService().history(session.user.id, parsedParams.data.conversationId, before, HISTORY_LIMIT);

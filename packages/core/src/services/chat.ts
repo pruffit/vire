@@ -76,7 +76,7 @@ export class ChatService {
   async history(
     userId: string,
     conversationId: string,
-    before: Date | null,
+    before: { createdAt: Date; id: string } | null,
     limit: number,
   ): Promise<Result<ChatMessage[], NotFoundError | ForbiddenError>> {
     const membership = await this.requireParticipant(userId, conversationId);

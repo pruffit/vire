@@ -11,7 +11,7 @@ export class DrizzleChatRepository implements IChatRepository {
   insertMessage(conversationId: string, senderId: string, ciphertext: string, nonce: string): Promise<ChatMessage> {
     return insertMessage(conversationId, senderId, ciphertext, nonce);
   }
-  listMessages(conversationId: string, before: Date | null, limit: number): Promise<ChatMessage[]> {
+  listMessages(conversationId: string, before: { createdAt: Date; id: string } | null, limit: number): Promise<ChatMessage[]> {
     return listMessages(conversationId, before, limit);
   }
   listConversations(userId: string): Promise<ConversationSummary[]> { return listConversations(userId); }

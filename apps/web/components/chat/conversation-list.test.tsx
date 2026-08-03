@@ -10,8 +10,10 @@ const { identityMock, usePathnameMock } = vi.hoisted(() => ({
 
 vi.mock('@/lib/e2ee-client', () => ({ useIdentity: identityMock }));
 vi.mock('next/navigation', () => ({ usePathname: usePathnameMock }));
+vi.mock('@/lib/use-realtime', () => ({ useRealtime: vi.fn() }));
 
 import { ConversationList } from './conversation-list';
+import { useChatConversationsStore } from '@/lib/chat-conversations';
 
 const CONVERSATIONS: ConversationSummary[] = [
   {
@@ -28,7 +30,10 @@ const CONVERSATIONS: ConversationSummary[] = [
   },
 ];
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  useChatConversationsStore.setState({ conversations: [], initialized: false });
+});
 afterEach(() => cleanup());
 
 describe('ConversationList', () => {
