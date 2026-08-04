@@ -1,10 +1,14 @@
 import type { PlayerTrack } from '@/store/player';
+import { releaseAllOfflineCoverUrls } from './cover-url';
 
 const DB_NAME = 'vire-offline';
 const STORE = 'tracks';
 
 export interface OfflineTrack extends Pick<PlayerTrack, 'id' | 'title' | 'artistName' | 'coverUrl' | 'artistSlug' | 'releaseId' | 'isExplicit' | 'version'> {
   durationSec?: number;
+  // Обложка живёт на CDN (чужой origin), а SW такие картинки намеренно не перехватывает —
+  // без собственной копии офлайн-экран и плеер показывали бы битую картинку.
+  coverBlob?: Blob;
   hlsUrl: string;
   segmentUrls: string[];
   bytes: number;
@@ -55,6 +59,7 @@ export async function deleteTrack(id: string): Promise<void> {
 const OFFLINE_CACHE_NAME = 'vire-offline-v1';
 
 export async function purgeOfflineLibrary(): Promise<void> {
+  releaseAllOfflineCoverUrls();
   await caches.delete(OFFLINE_CACHE_NAME);
   await tx<undefined>('readwrite', (s) => s.clear());
 }

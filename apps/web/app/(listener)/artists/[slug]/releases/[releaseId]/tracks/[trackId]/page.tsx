@@ -17,6 +17,7 @@ import { ExplicitBadge } from '@/components/explicit-badge';
 import { displayTrackTitle, featLabel, featuredNames } from '@/lib/track-display';
 import { TrackTitleText } from '@/components/track-title';
 import { AddToPlaylistButton } from '@/components/add-to-playlist-button';
+import { TrackQueueMenu } from '@/components/track-queue-menu';
 import { JsonLd } from '@/components/json-ld';
 import { HeartIcon } from '@/components/icons';
 import { musicRecordingJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
@@ -202,6 +203,14 @@ export default async function TrackPage({ params, searchParams }: Props) {
                   }
                   {session?.user && (
                     <AddToPlaylistButton trackId={trackId} variant="artist" />
+                  )}
+                  {playerTrack && (
+                    <TrackQueueMenu
+                      context={playContext}
+                      track={playerTrack}
+                      size="md"
+                      variant="artist"
+                    />
                   )}
                 </div>
                 <LiveListeners trackId={trackId} initialCount={liveCount} />

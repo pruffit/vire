@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { downloadTrack, removeDownload, cachedSegmentKeys, planDownload, type DownloadMeta } from '@/lib/offline/download';
 import { getAllTracks } from '@/lib/offline/db';
+import { offlineCoverUrl } from '@/lib/offline/cover-url';
 import { toast } from '@/lib/toast';
 
 export type OfflineStatus = 'idle' | 'downloading' | 'partial' | 'done';
@@ -13,6 +14,9 @@ export interface OfflineEntry {
 
 interface OfflineState {
   entries: Map<string, OfflineEntry>;
+  /** trackId → object URL локальной копии обложки. Живёт только в памяти: blob-ссылку
+   *  нельзя класть в PlayerTrack, её персист (`vire-player`) переживал бы саму ссылку. */
+  covers: Map<string, string>;
   hydrated: boolean;
   hydrate(): Promise<void>;
   download(meta: DownloadMeta): void;
@@ -21,6 +25,11 @@ interface OfflineState {
 }
 
 const IDLE: OfflineEntry = { status: 'idle', done: 0, total: 0 };
+
+/** Обложка скачанного трека: локальная копия, если она есть, иначе исходный CDN-URL. */
+export function useOfflineCover(trackId: string, fallback: string | null): string | null {
+  return useOfflineStore((s) => s.covers.get(trackId)) ?? fallback;
+}
 
 // In-flight guard: вне стора, чтобы читаться синхронно (повторный клик «скачать» по
 // тому же треку до ответа сети должен быть no-op, как в store/likes.ts).
@@ -36,8 +45,18 @@ export const useOfflineStore = create<OfflineState>((set, get) => {
     });
   }
 
+  function setCover(trackId: string, url: string | null): void {
+    set((s) => {
+      const covers = new Map(s.covers);
+      if (url) covers.set(trackId, url);
+      else covers.delete(trackId);
+      return { covers };
+    });
+  }
+
   return {
     entries: new Map(),
+    covers: new Map(),
     hydrated: false,
 
     async hydrate() {
@@ -50,7 +69,10 @@ export const useOfflineStore = create<OfflineState>((set, get) => {
       const cachedKeys = hasPartial ? await cachedSegmentKeys() : [];
       set((s) => {
         const entries = new Map(s.entries);
+        const covers = new Map(s.covers);
         for (const track of tracks) {
+          const localCover = track.coverBlob ? offlineCoverUrl(track) : null;
+          if (localCover) covers.set(track.id, localCover);
           // Активная загрузка не персистится в IndexedDB до завершения — не затираем её живой прогресс.
           if (entries.get(track.id)?.status === 'downloading') continue;
           const total = track.segmentUrls.length;
@@ -59,7 +81,7 @@ export const useOfflineStore = create<OfflineState>((set, get) => {
             : total;
           entries.set(track.id, { status: track.status, done, total });
         }
-        return { entries };
+        return { entries, covers };
       });
     },
 
@@ -80,6 +102,7 @@ export const useOfflineStore = create<OfflineState>((set, get) => {
         .then((track) => {
           const wasCancelled = controller.signal.aborted;
           const total = track.segmentUrls.length;
+          if (track.coverBlob) setCover(trackId, offlineCoverUrl(track));
           // У недокачанного done — то, что реально успело лечь; иначе прогресс схлопнется в 100%.
           const progress = get().entries.get(trackId);
           setEntry(trackId, {
@@ -107,7 +130,10 @@ export const useOfflineStore = create<OfflineState>((set, get) => {
 
     remove(trackId) {
       removeDownload(trackId)
-        .then(() => setEntry(trackId, IDLE))
+        .then(() => {
+          setEntry(trackId, IDLE);
+          setCover(trackId, null);
+        })
         .catch(() => toast.error('Не удалось удалить офлайн-копию'));
     },
   };

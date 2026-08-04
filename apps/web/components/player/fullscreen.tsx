@@ -19,6 +19,7 @@ import { ChevronDownIcon, QueueIcon, VolumeIcon } from './player-icons';
 import { formatDuration } from '@/lib/format';
 import { useIsDesktopPointer } from '@/lib/is-desktop-pointer';
 import { useAudioTime } from '@/lib/player/use-audio-time';
+import { useOfflineCover } from '@/store/offline';
 
 /** Фуллскрин-плеер: обложка разворачивается из мини-бара (shared layoutId `player-cover`). */
 export function FullscreenPlayer({
@@ -30,6 +31,7 @@ export function FullscreenPlayer({
 }) {
   const track = usePlayerStore((s) => s.track);
   const queueLength = usePlayerStore((s) => s.queue.length);
+  const coverUrl = useOfflineCover(track?.id ?? '', track?.coverUrl ?? null);
   const [showQueue, setShowQueue] = useState(initialShowQueue);
   const dragControls = useDragControls();
 
@@ -99,8 +101,8 @@ export function FullscreenPlayer({
             onPointerDown={(e) => dragControls.start(e)}
             className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-lg overflow-hidden shadow-2xl shadow-black/50 bg-white/5 cursor-grab active:cursor-grabbing touch-none"
           >
-            {track.coverUrl && (
-              <Image src={track.coverUrl} alt={track.title} fill sizes="320px" className="object-cover" />
+            {coverUrl && (
+              <Image src={coverUrl} alt={track.title} fill sizes="320px" unoptimized={coverUrl.startsWith('blob:')} className="object-cover" />
             )}
           </motion.div>
         </div>

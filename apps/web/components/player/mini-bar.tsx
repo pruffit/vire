@@ -20,6 +20,7 @@ import { ProgressLine } from './progress-line';
 import { formatDuration } from '@/lib/format';
 import { useIsDesktopPointer } from '@/lib/is-desktop-pointer';
 import { useAudioTime } from '@/lib/player/use-audio-time';
+import { useOfflineCover } from '@/store/offline';
 
 /** Мини-бар. `ticking=false` (фуллскрин открыт) замораживает живые части — не крутить два rAF-цикла. */
 export function MiniBar({
@@ -33,6 +34,7 @@ export function MiniBar({
 }) {
   const track = usePlayerStore((s) => s.track);
   const jamOverride = usePlayerStore((s) => s.jamOverride);
+  const coverUrl = useOfflineCover(track?.id ?? '', track?.coverUrl ?? null);
 
   if (jamOverride) return <JamMiniBar override={jamOverride} ticking={ticking} />;
   if (!track) return null;
@@ -40,12 +42,12 @@ export function MiniBar({
   return (
     <div className="relative h-full">
       {/* Размытая обложка даёт цветовой ореол без JS-извлечения цвета */}
-      {track.coverUrl && (
+      {coverUrl && (
         <div
           aria-hidden="true"
           className="absolute inset-0 scale-110"
           style={{
-            backgroundImage: `url(${track.coverUrl})`,
+            backgroundImage: `url(${coverUrl})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             filter: 'blur(48px) saturate(2)',
@@ -189,6 +191,7 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
 
 function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
   const track = usePlayerStore((s) => s.track);
+  const coverUrl = useOfflineCover(track?.id ?? '', track?.coverUrl ?? null);
   if (!track) return null;
 
   return (
@@ -204,8 +207,8 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
           className="absolute inset-0 rounded overflow-hidden bg-white/5"
           transition={spring.smooth}
         >
-          {track.coverUrl && (
-            <Image src={track.coverUrl} alt={track.title} fill sizes="44px" className="object-cover" />
+          {coverUrl && (
+            <Image src={coverUrl} alt={track.title} fill sizes="44px" unoptimized={coverUrl.startsWith('blob:')} className="object-cover" />
           )}
         </motion.div>
         <span className="absolute inset-0 rounded bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">

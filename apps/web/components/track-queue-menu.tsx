@@ -25,14 +25,18 @@ export async function enqueueWithToast(load: Loader, position: 'next' | 'end', c
   else toast(position === 'next' ? 'Будет следующим' : 'В очереди');
 }
 
-export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto', track }: {
-  getTracks: Loader;
+export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto', track, variant = 'platform' }: {
+  /** Необязателен: без него в очередь идёт сам `track`. Серверные страницы функции
+   *  в клиентский компонент передать не могут — им остаются только сериализуемые пропсы. */
+  getTracks?: Loader;
   context: PlayContext;
   size?: 'sm' | 'md';
   /** 'down' — внутри overflow-hidden контейнеров (peek-шит), где раскрытие вверх клипается. */
   drop?: 'auto' | 'down';
   /** Когда задан — добавляет пункт «Сохранить офлайн»/«Удалить из офлайна» именно для этого трека. */
   track?: PlayerTrack;
+  /** 'artist' — страницы с темой артиста: цвет берётся из её токенов, а не платформенных. */
+  variant?: 'platform' | 'artist';
 }) {
   const [open, setOpen] = useState(false);
   const entries = useOfflineStore((s) => s.entries);
@@ -46,7 +50,8 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto',
   }, [track, hydrate]);
 
   function pick(position: 'next' | 'end') {
-    void enqueueWithToast(getTracks, position, context);
+    const load: Loader = getTracks ?? (() => (track ? [track] : []));
+    void enqueueWithToast(load, position, context);
   }
 
   const items: MenuItem[] = [
@@ -95,7 +100,11 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto',
           aria-expanded={expanded}
           whileTap={{ scale: 0.9 }}
           transition={spring.snappy}
-          className={`${touchTargetClass(size)} rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer`}
+          className={`${touchTargetClass(size)} rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+            variant === 'artist'
+              ? 'text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)] hover:text-[color-mix(in_oklch,var(--artist-text)_90%,transparent)]'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
         >
           <Icon name="more-vertical" size={16} />
         </motion.button>

@@ -7,6 +7,8 @@ const TRACK_ID = 't1';
 const MANIFEST_URL = `/api/v1/tracks/${TRACK_ID}/manifest`;
 const HLS_URL = 'https://s3.example/vault/tracks/t1/hls/index.m3u8';
 const COVER_URL = 'https://s3.example/covers/t1.jpg';
+// Качается не оригинал, а оптимизированное превью (см. coverPreviewUrl).
+const COVER_FETCH_URL = `/_next/image?url=${encodeURIComponent(COVER_URL)}&w=640&q=75`;
 // 8 сегментов => 2 пачки при concurrency=4 (см. download.ts) — нужно для теста прогресса/abort.
 const SEGMENT_URLS = Array.from({ length: 8 }, (_, i) => `https://s3.example/vault/tracks/t1/hls/chunk_00${i}.ts`);
 const PLAYLIST_TEXT = ['#EXTM3U', ...SEGMENT_URLS.map((_, i) => `chunk_00${i}.ts`)].join('\n');
@@ -31,6 +33,9 @@ function fakeResponse(body: string, ok = true): Response {
     status: ok ? 200 : 500,
     async arrayBuffer() {
       return buf;
+    },
+    async blob() {
+      return new Blob([body]);
     },
     clone() {
       return fakeResponse(body, ok);
@@ -84,7 +89,7 @@ function makeFetch(overrides: Record<string, () => Response | Promise<Response>>
     if (overrides[url]) return overrides[url]();
     if (url === MANIFEST_URL) return fakeResponse(MANIFEST_JSON);
     if (url === HLS_URL) return fakeResponse(PLAYLIST_TEXT);
-    if (url === COVER_URL) return fakeResponse('cover-bytes');
+    if (url === COVER_FETCH_URL) return fakeResponse('cover-bytes');
     if (url.endsWith('.ts')) return fakeResponse('segment-bytes');
     throw new Error(`unexpected fetch: ${url}`);
   });
@@ -145,10 +150,25 @@ describe('downloadTrack', () => {
     expect(await cache.match(MANIFEST_URL)).toBeDefined();
     expect(await cache.match(HLS_URL)).toBeDefined();
     for (const url of SEGMENT_URLS) expect(await cache.match(url)).toBeDefined();
-    expect(await cache.match(COVER_URL)).toBeDefined();
 
     const persisted = await getTrack(TRACK_ID);
     expect(persisted?.status).toBe('done');
+    // Обложка на чужом origin: SW её не перехватывает, поэтому копия живёт в IndexedDB.
+    expect(persisted?.coverBlob).toBeInstanceOf(Blob);
+    expect(persisted?.coverBlob?.size).toBeGreaterThan(0);
+  });
+
+  it('повторная загрузка не перекачивает уже сохранённую обложку', async () => {
+    const fetchMock = makeFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    await downloadTrack(META);
+
+    const coverCallsFirst = fetchMock.mock.calls.filter(([url]) => url === COVER_FETCH_URL).length;
+    expect(coverCallsFirst).toBe(1);
+
+    await downloadTrack(META);
+    const coverCallsTotal = fetchMock.mock.calls.filter(([url]) => url === COVER_FETCH_URL).length;
+    expect(coverCallsTotal).toBe(1);
   });
 
   it('обрыв по signal во время загрузки сегментов даёт partial, не бросает ошибку', async () => {
@@ -273,7 +293,7 @@ describe('downloadTrack', () => {
 
   it('сбой загрузки обложки не мешает статусу done', async () => {
     const fetchMock = makeFetch({
-      [COVER_URL]: () => fakeResponse('', false),
+      [COVER_FETCH_URL]: () => fakeResponse('', false),
     });
     vi.stubGlobal('fetch', fetchMock);
 

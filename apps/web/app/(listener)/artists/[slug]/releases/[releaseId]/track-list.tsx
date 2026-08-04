@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
-import type { PlayerTrack } from '@/store/player';
+import type { PlayerTrack, PlayContext } from '@/store/player';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
 import { controls } from '@/lib/player/audio-engine';
 import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
@@ -15,6 +15,7 @@ import { featuredNames } from '@/lib/track-display';
 import { TrackTitleText } from '@/components/track-title';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { PlayingBars } from '@/components/playing-bars';
+import { TrackQueueMenu } from '@/components/track-queue-menu';
 
 export interface ClientTrack {
   id: string;
@@ -65,6 +66,8 @@ export function TrackList({ tracks, artistName, artistSlug, releaseId, coverUrl,
             track={track}
             href={`/artists/${artistSlug}/releases/${releaseId}/tracks/${track.id}`}
             onPlay={() => handlePlay(track)}
+            playerTrack={queue.find((q) => q.id === track.id) ?? null}
+            context={{ source: 'release', sourceId: releaseId }}
           />
         </StaggerItem>
       ))}
@@ -76,10 +79,14 @@ function TrackRow({
   track,
   href,
   onPlay,
+  playerTrack,
+  context,
 }: {
   track: ClientTrack;
   href: string;
   onPlay: () => void;
+  playerTrack: PlayerTrack | null;
+  context: PlayContext;
 }) {
   const ready = track.status === 'READY';
   const processing = track.status === 'PROCESSING';
@@ -170,6 +177,9 @@ function TrackRow({
           <span className="opacity-40 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
             <PlayerLikeButton trackId={track.id} size="sm" />
           </span>
+        )}
+        {ready && playerTrack && (
+          <TrackQueueMenu getTracks={() => [playerTrack]} context={context} track={playerTrack} variant="artist" />
         )}
       </div>
     </div>

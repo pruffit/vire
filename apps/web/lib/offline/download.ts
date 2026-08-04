@@ -1,5 +1,6 @@
 import { parseHlsSegments } from './hls';
 import { getTrack, putTrack, deleteTrack, type OfflineTrack } from './db';
+import { releaseOfflineCoverUrl } from './cover-url';
 
 // Держать синхронно с OFFLINE_CACHE в public/sw.js — расхождение имени рвёт офлайн-раздачу SW.
 export const OFFLINE_CACHE = 'vire-offline-v1';
@@ -46,6 +47,13 @@ async function cachePutSized(cache: Cache, key: string, response: Response): Pro
 
 function manifestUrlFor(trackId: string): string {
   return `/api/v1/tracks/${trackId}/manifest`;
+}
+
+// Оригинал с CDN бывает многомегабайтным (артист грузит мастер-обложку), а офлайн-копия
+// нужна максимум под фуллскрин-плеер — берём ту же оптимизированную версию, что и UI.
+export function coverPreviewUrl(coverUrl: string): string {
+  if (coverUrl.startsWith('/') && !coverUrl.startsWith('//')) return coverUrl;
+  return `/_next/image?url=${encodeURIComponent(coverUrl)}&w=640&q=75`;
 }
 
 // Не бросает наружу: сеть офлайн-загрузки нестабильна по определению (обрыв, отмена
@@ -119,10 +127,14 @@ export async function downloadTrack(meta: DownloadMeta, options: DownloadOptions
     }
   }
 
-  if (!failed && meta.coverUrl && !signal?.aborted) {
+  let coverBlob = existing?.coverBlob;
+  if (!failed && meta.coverUrl && !coverBlob && !signal?.aborted) {
     try {
-      const coverRes = await fetch(meta.coverUrl, { signal });
-      if (coverRes.ok) bytes += await cachePutSized(cache, meta.coverUrl, coverRes);
+      const coverRes = await fetch(coverPreviewUrl(meta.coverUrl), { signal });
+      if (coverRes.ok) {
+        coverBlob = await coverRes.blob();
+        bytes += coverBlob.size;
+      }
     } catch {
       // обложка необязательна для офлайн-воспроизведения — не валим загрузку из-за неё
     }
@@ -138,6 +150,7 @@ export async function downloadTrack(meta: DownloadMeta, options: DownloadOptions
     isExplicit: meta.isExplicit,
     version: meta.version,
     durationSec: meta.durationSec,
+    coverBlob,
     hlsUrl,
     segmentUrls,
     bytes,
@@ -156,6 +169,7 @@ export async function cachedSegmentKeys(): Promise<string[]> {
 export async function removeDownload(trackId: string): Promise<void> {
   const track = await getTrack(trackId);
   const cache = await caches.open(OFFLINE_CACHE);
+  releaseOfflineCoverUrl(trackId);
   if (track) {
     await cache.delete(manifestUrlFor(trackId));
     await cache.delete(track.hlsUrl);

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { getAllTracks, type OfflineTrack } from '@/lib/offline/db';
 import { removeDownload, estimateUsage } from '@/lib/offline/download';
-import { useOfflineStore } from '@/store/offline';
+import { useOfflineStore, useOfflineCover } from '@/store/offline';
 import { controls } from '@/lib/player/audio-engine';
 import { useTrackPlayState } from '@/lib/player/use-play';
 import { TrackRow } from '@/components/track-row';
@@ -25,6 +25,8 @@ function toPlayerTrack(t: OfflineTrack): PlayerTrack {
     id: t.id,
     title: t.title,
     artistName: t.artistName,
+    // Исходный URL, не blob: очередь плеера персистится, а object URL после перезагрузки мёртв —
+    // локальную копию подставляет useOfflineCover уже на рендере.
     coverUrl: t.coverUrl,
     artistSlug: t.artistSlug,
     releaseId: t.releaseId,
@@ -87,7 +89,9 @@ export function OfflineScreen() {
       useOfflineStore.setState((s) => {
         const entries = new Map(s.entries);
         entries.delete(id);
-        return { entries };
+        const covers = new Map(s.covers);
+        covers.delete(id);
+        return { entries, covers };
       });
       estimateUsage().then(setUsage);
     } catch {
@@ -179,6 +183,7 @@ function OfflineTrackRow({
   onRemove: () => void;
 }) {
   const { isActive, isPlaying } = useTrackPlayState(track.id);
+  const coverUrl = useOfflineCover(track.id, track.coverUrl);
 
   function handlePlay() {
     if (isActive) controls.toggle(track.id);
@@ -187,7 +192,7 @@ function OfflineTrackRow({
 
   return (
     <TrackRow
-      track={track}
+      track={{ ...track, coverUrl }}
       isActive={isActive}
       isPlaying={isPlaying}
       onPlay={handlePlay}

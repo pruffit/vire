@@ -172,3 +172,41 @@ describe('useOfflineStore', () => {
     expect(useOfflineStore.getState().entries.get('t1')).toEqual({ status: 'downloading', done: 2, total: 5 });
   });
 });
+
+describe('useOfflineStore — локальные обложки', () => {
+  beforeEach(() => {
+    useOfflineStore.setState({ entries: new Map(), covers: new Map(), hydrated: false });
+    vi.mocked(getAllTracks).mockReset();
+    vi.mocked(downloadTrack).mockReset();
+    vi.mocked(removeDownload).mockReset();
+    vi.mocked(cachedSegmentKeys).mockReset().mockResolvedValue([]);
+    vi.stubGlobal('URL', { createObjectURL: () => 'blob:local/1', revokeObjectURL: () => {} });
+  });
+
+  it('hydrate() выдаёт object URL только трекам с локальной копией обложки', async () => {
+    vi.mocked(getAllTracks).mockResolvedValue([
+      { ...fakeTrack('done'), id: 'with', coverBlob: new Blob(['x']) },
+      { ...fakeTrack('done'), id: 'without' },
+    ]);
+
+    await useOfflineStore.getState().hydrate();
+
+    expect(useOfflineStore.getState().covers.get('with')).toBe('blob:local/1');
+    expect(useOfflineStore.getState().covers.has('without')).toBe(false);
+  });
+
+  it('успешная загрузка с обложкой кладёт её в covers', async () => {
+    vi.mocked(downloadTrack).mockResolvedValue({ ...fakeTrack('done'), coverBlob: new Blob(['x']) });
+
+    useOfflineStore.getState().download(META);
+    await vi.waitFor(() => expect(useOfflineStore.getState().covers.get('t1')).toBe('blob:local/1'));
+  });
+
+  it('remove() убирает обложку из covers', async () => {
+    useOfflineStore.setState({ covers: new Map([['t1', 'blob:local/1']]) });
+    vi.mocked(removeDownload).mockResolvedValue(undefined);
+
+    useOfflineStore.getState().remove('t1');
+    await vi.waitFor(() => expect(useOfflineStore.getState().covers.has('t1')).toBe(false));
+  });
+});

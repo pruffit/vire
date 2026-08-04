@@ -11,6 +11,7 @@ VireMusic ставится как приложение (иконка на дом
   Статика (`/_next/static`, иконки, шрифты) и картинки отдаются из кэша.
 - **Скачивание.** В меню трека — «Сохранить офлайн» (и «Докачать»/«Удалить из офлайна» по
   состоянию), на странице плейлиста — «Скачать плейлист» с общим прогрессом и отменой.
+  Меню есть на главной, в поиске, в трек-листе релиза и на странице трека.
 - **Экран «Скачанное»** (`/offline`) — список скачанного, воспроизведение без сети, занятое
   место, удаление, аварийный сброс кэша приложения.
 
@@ -30,7 +31,8 @@ VireMusic ставится как приложение (иконка на дом
   чистая `planDownload`), `hls.ts` (`parseHlsSegments`), `db.ts` (IndexedDB `vire-offline`,
   store `tracks`, `purgeOfflineLibrary`), `owner.ts` (`shouldPurge`), `to-download-meta.ts`.
 - **Состояние:** `apps/web/store/offline.ts` — статусы `idle | downloading | partial | done`,
-  прогресс, guard от повторного запуска (module-level `Set`, как в `store/likes.ts`).
+  прогресс, guard от повторного запуска (module-level `Set`, как в `store/likes.ts`);
+  там же `covers` (trackId → object URL локальной обложки) и хук `useOfflineCover`.
 - **Поверхности:** `app/offline/{page,offline-screen}.tsx`, `components/install-app-button.tsx`,
   `components/track-queue-menu.tsx`, `app/(listener)/playlists/[id]/playlist-download-button.tsx`,
   плитка «Скачанное» в `app/(listener)/library/page.tsx`.
@@ -49,6 +51,14 @@ VireMusic ставится как приложение (иконка на дом
 | `/api/v1/tracks/{id}/manifest` | сеть, при сбое — кэш (пишет туда только загрузчик) |
 | `.m3u8`, `.ts` | кэш по попаданию, промах → сеть **без записи** |
 | остальное и любые не-GET | сеть напрямую |
+
+**Обложка скачанного трека живёт в IndexedDB (`coverBlob`), не в Cache Storage.** Картинки с
+CDN — чужой origin, а такие SW намеренно не перехватывает (перехват ломал превью YouTube и
+упирался в `connect-src`), поэтому офлайн запрос к CDN просто не проходит. Качаем не оригинал,
+а то же оптимизированное превью, что показывает UI (`/_next/image?...&w=640&q=75` —
+`coverPreviewUrl`): мастер-обложка бывает на десяток мегабайт. Object URL выдаётся на рендере
+через `useOfflineCover` и **не** попадает в `PlayerTrack`: очередь плеера персистится в
+`vire-player`, а `blob:`-ссылка после перезагрузки мертва.
 
 **HTML не кэшируется намеренно** (кроме `/offline`): корневой layout персонализирован, и
 кэш документа прошлого аккаунта на общем устройстве был бы утечкой. Аудио не кэшируется
