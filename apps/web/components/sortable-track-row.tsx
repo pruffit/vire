@@ -27,6 +27,8 @@ interface Props {
   size?: 'default' | 'roomy';
   /** Аватар добавившего трек — только в совместных плейлистах. */
   avatar?: ReactNode;
+  /** Доп. действия в хвосте строки (меню очереди/офлайна) — перед кнопкой удаления. */
+  actions?: ReactNode;
 }
 
 export function SortableTrackRow({
@@ -42,6 +44,7 @@ export function SortableTrackRow({
   subtitle,
   size = 'default',
   avatar,
+  actions,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: track.id, disabled: !canDrag });
@@ -96,6 +99,7 @@ export function SortableTrackRow({
           {typeof track.durationSec === 'number' && track.durationSec > 0 && (
             <span className="text-xs font-mono text-muted-foreground tabular-nums shrink-0">{formatDuration(track.durationSec)}</span>
           )}
+          {actions}
           {canRemove && (
             <button
               onClick={() => onRemove?.(track.id)}

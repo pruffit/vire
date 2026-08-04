@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { SortableTrackRow } from '@/components/sortable-track-row';
+import { TrackQueueMenu } from '@/components/track-queue-menu';
 import { ChatAvatar } from '@/components/chat/chat-avatar';
 import type { PlayerTrack, PlayContext } from '@/store/player';
 import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
@@ -33,6 +34,7 @@ export function SortablePlaylistRow({ track, index, queue, queueIndex, context, 
       canRemove={canRemove}
       onRemove={onRemove}
       removeLabel="Удалить из плейлиста"
+      actions={<TrackQueueMenu context={context} track={queue[queueIndex]} />}
       avatar={showAddedBy && track.addedBy && (
         <span title={track.addedBy.name ?? 'Слушатель'}>
           <ChatAvatar name={track.addedBy.name} image={track.addedBy.image} size={20} />

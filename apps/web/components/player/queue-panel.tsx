@@ -8,6 +8,7 @@ import { swapAdjacent } from '@/lib/reorder';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { TrackTitleText } from '@/components/track-title';
 import { Icon } from '@/components/icon';
+import { TrackQueueMenu } from '@/components/track-queue-menu';
 import { GripIcon, WaveIcon } from './player-icons';
 
 export function QueuePanel({ onJump }: { onJump: () => void }) {
@@ -114,6 +115,8 @@ function QueueRow({
         <span className="text-xs text-muted-foreground truncate block">{t.artistName}</span>
       </button>
       {isCurrent && <PlayingDot />}
+      {/* Локальный файл живёт на устройстве, скачивать в офлайн-кэш нечего. */}
+      {!t.localFileId && <TrackQueueMenu context={{ source: 'direct' }} track={t} />}
     </Reorder.Item>
   );
 }
