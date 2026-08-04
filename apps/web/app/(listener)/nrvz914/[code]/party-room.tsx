@@ -233,7 +233,11 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
               <Icon name="maximize-2" size={14} /> <span className="hidden sm:inline">Экран вечеринки</span>
             </button>
             <JamParticipants participants={room.participants} />
-            {isLoggedIn && <JamSavePlaylist code={code} />}
+            {isLoggedIn && <JamSavePlaylist
+                code={code}
+                savableCount={jamQueue.queue.filter((i) => i.source === 'VIRE' && i.trackId).length}
+                queueLength={jamQueue.queue.length}
+              />}
             <JamShare code={code} title={title} basePath={PARTY_PATH} />
             {isHost && (
               <button

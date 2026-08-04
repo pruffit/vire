@@ -202,7 +202,11 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
             )}
             <JamParticipants participants={room.participants} />
             {isLoggedIn && <JamInvite code={code} />}
-            {isLoggedIn && <JamSavePlaylist code={code} />}
+            {isLoggedIn && <JamSavePlaylist
+                code={code}
+                savableCount={jamQueue.queue.filter((i) => i.source === 'VIRE' && i.trackId).length}
+                queueLength={jamQueue.queue.length}
+              />}
             <JamShare code={code} title={title} />
             {isHost && (
               <button

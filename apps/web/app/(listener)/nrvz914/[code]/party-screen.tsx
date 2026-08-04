@@ -103,7 +103,11 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
             <Icon name={visualizerOn ? 'layers' : 'image'} size={16} />
           </button>
           {visualizerOn && <VisualizerCaptureButton />}
-          {isLoggedIn && <JamSavePlaylist code={code} />}
+          {isLoggedIn && <JamSavePlaylist
+                code={code}
+                savableCount={room.queue.filter((i) => i.source === 'VIRE' && i.trackId).length}
+                queueLength={room.queue.length}
+              />}
           <button
             type="button"
             onClick={toggleFullscreen}
