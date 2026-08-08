@@ -113,7 +113,7 @@ export function SystemPanel({ initial }: { initial: SystemData }) {
 
 function Subhead({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-mono text-[11px] uppercase tracking-[0.12em] text-foreground/40">{children}</h2>
+    <h2 className="label-mono text-foreground/40">{children}</h2>
   );
 }
 

@@ -293,7 +293,7 @@ export function TrackEditForm({
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">
+          <span className="label-mono text-foreground/45">
             Предложено моделью
           </span>
           <button
@@ -362,7 +362,7 @@ export function TrackEditForm({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">{label}</span>
+      <span className="label-mono text-foreground/45">{label}</span>
       {children}
     </label>
   );

@@ -114,7 +114,7 @@ export function ReleaseEditForm({ releaseId, initial }: { releaseId: string; ini
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">{label}</span>
+      <span className="label-mono text-foreground/45">{label}</span>
       {children}
     </label>
   );

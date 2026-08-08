@@ -51,7 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         ) : (
           <div className="hidden px-4 pb-4 pt-5 md:block">
-            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/35">
+            <span className="label-wide text-foreground/35">
               Дашборд
             </span>
           </div>

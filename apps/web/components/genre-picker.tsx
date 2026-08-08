@@ -78,7 +78,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-mono text-white/40 uppercase tracking-widest">
+        <span className="text-xs font-mono text-foreground/40 uppercase tracking-widest">
           Жанры <span className="opacity-50">({selected.size}/{MAX_TRACK_GENRES})</span>
         </span>
         <AnimatePresence mode="wait">
@@ -88,7 +88,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
               initial={{ opacity: 0, x: 4 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0 }}
-              className="text-xs font-mono text-white/40"
+              className="text-xs font-mono text-foreground/40"
             >
               Сохранено
             </motion.span>
@@ -100,7 +100,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
               exit={{ opacity: 0 }}
               onClick={handleSave}
               disabled={isPending}
-              className="text-xs font-mono text-white underline-offset-2 hover:underline disabled:opacity-40"
+              className="text-xs font-mono text-foreground underline-offset-2 hover:underline disabled:opacity-40"
             >
               {isPending ? 'Сохраняю…' : 'Сохранить'}
             </motion.button>
@@ -114,7 +114,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
             <button
               key={g}
               onClick={() => toggle(g)}
-              className={cn('group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono bg-white text-black', touchPill)}
+              className={cn('group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono bg-foreground text-background', touchPill)}
             >
               {GENRE_LABELS[g]}
               <Icon name="x" size={12} className="opacity-50 group-hover:opacity-100" />
@@ -125,7 +125,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
 
       {suggestions.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-mono text-white/25 uppercase tracking-widest">
+          <span className="text-[10px] font-mono text-foreground/25 uppercase tracking-widest">
             Предложено
           </span>
           {pendingSuggestions.map((s) => (
@@ -133,7 +133,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
               key={s.genre}
               onClick={() => toggle(s.genre)}
               disabled={atMax}
-              className={cn('inline-flex items-center gap-1 rounded-full border border-dashed border-white/15 px-2.5 py-1 text-xs font-mono text-white/40 transition-colors hover:border-white/30 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-30', touchPill)}
+              className={cn('inline-flex items-center gap-1 rounded-full border border-dashed border-foreground/15 px-2.5 py-1 text-xs font-mono text-foreground/40 transition-colors hover:border-foreground/30 hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-30', touchPill)}
             >
               <Icon name="plus" size={11} className="opacity-60" />
               {GENRE_LABELS[s.genre]}
@@ -165,20 +165,20 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Поиск жанра…"
-        className="w-full min-w-0 px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-xs font-mono placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/30 pointer-coarse:min-h-11"
+        className="w-full min-w-0 px-3 py-1.5 rounded-md bg-foreground/5 border border-foreground/10 text-xs font-mono placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring pointer-coarse:min-h-11"
       />
 
       <div className="max-h-64 overflow-y-auto pr-1 space-y-4 [scrollbar-width:thin]">
         {matches ? (
           matches.length === 0 ? (
-            <p className="text-xs font-mono text-white/30 py-2">Ничего не найдено</p>
+            <p className="text-xs font-mono text-foreground/30 py-2">Ничего не найдено</p>
           ) : (
             <Pills genres={matches} selected={selected} atMax={atMax} onToggle={toggle} />
           )
         ) : (
           GENRE_GROUPS.map((group) => (
             <section key={group.label} className="space-y-2">
-              <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">{group.label}</p>
+              <p className="text-[10px] font-mono text-foreground/30 uppercase tracking-widest">{group.label}</p>
               <Pills genres={group.genres} selected={selected} atMax={atMax} onToggle={toggle} />
             </section>
           ))
@@ -211,12 +211,12 @@ function Pills({
             disabled={!active && atMax}
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-mono border transition-all duration-150',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               'disabled:opacity-30 disabled:cursor-not-allowed',
               touchPill,
               active
-                ? 'bg-white text-black border-white'
-                : 'bg-transparent text-white/40 border-white/10 hover:border-white/40 hover:text-white/70',
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground',
             )}
           >
             {GENRE_LABELS[genre]}

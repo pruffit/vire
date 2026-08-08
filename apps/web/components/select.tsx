@@ -172,7 +172,7 @@ export function Select({
                   ...(align === 'end' ? { right: coords.right } : { left: coords.left }),
                   minWidth: coords.width,
                 }}
-                className="z-50 w-max max-w-[min(20rem,calc(100vw-2rem))] rounded-lg border border-foreground/15 bg-background shadow-xl shadow-black/40 overflow-hidden"
+                className="z-50 w-max max-w-[min(20rem,calc(100vw-2rem))] rounded-lg border border-foreground/15 bg-background shadow-xl shadow-background/40 overflow-hidden"
               >
                 {searchable && (
                   <div className="p-2 border-b border-foreground/10">
@@ -202,7 +202,7 @@ export function Select({
                     allGroups.map((group, gi) => (
                       <div key={group.label || gi} className={cn(group.label && 'pt-1.5 first:pt-0')}>
                         {group.label && (
-                          <p className="px-2 pb-1 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground/30">
+                          <p className="px-2 pb-1 label-mono text-[10px] text-foreground/30">
                             {group.label}
                           </p>
                         )}

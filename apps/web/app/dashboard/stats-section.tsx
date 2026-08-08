@@ -14,7 +14,7 @@ function MiniBar({ value, max }: { value: number; max: number }) {
 function CardHeader({ title, meta }: { title: string; meta?: React.ReactNode }) {
   return (
     <div className="mb-3 flex items-baseline justify-between gap-2">
-      <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-foreground/40">{title}</p>
+      <p className="label-mono text-foreground/40">{title}</p>
       {meta && <p className="text-xs text-foreground/30">{meta}</p>}
     </div>
   );

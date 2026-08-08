@@ -86,7 +86,7 @@ function ArtistSheetList({
 
   return (
     <div className="px-4 pb-4 pt-1">
-      <p className="px-2 pb-2 font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/35">Артист</p>
+      <p className="px-2 pb-2 label-wide text-foreground/35">Артист</p>
       <div className="space-y-1">
         {allArtists.map((a) => (
           <button

@@ -484,7 +484,7 @@ function TrackRow({
               </div>
 
               <label className="flex flex-col gap-1.5">
-                <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">
+                <span className="label-mono text-foreground/45">
                   Версия <span className="normal-case tracking-normal text-foreground/30">необязательно</span>
                 </span>
                 <input

@@ -45,8 +45,8 @@ const TRACKING_ARBITRARY_RE = /\btracking-\[/;
 
 /**
  * Allowlist правила 1 (цветовые литералы). Ключ — путь относительно apps/web.
- * `overlay: true` — легитимный оверлей поверх видео/изображения (постоянное исключение).
- * `overlay: false` — временный технический долг, кандидат на чистку в срезах B/C.
+ * `overlay: true` — легитимный оверлей поверх видео/изображения/произвольного цвета
+ * (постоянное исключение). `overlay: false` — демо-витрина токенов, сознательно вне роли.
  */
 const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string }> = {
   'app/(listener)/nrvz914/[code]/party-screen.tsx': {
@@ -75,10 +75,10 @@ const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string
     reason: 'кольцо+тень вокруг аватара артиста при hover — токен рамки даёт непредсказуемый контраст на произвольном фото',
   },
 
-  // Временные — литералы вне медиа-оверлеев, чистка в срезе C (design-system plan, A4).
-  'components/color-field.tsx': { overlay: false, reason: 'temporary — срез C' },
-  'components/date-field.tsx': { overlay: false, reason: 'temporary — срез C' },
-  'components/genre-picker.tsx': { overlay: false, reason: 'temporary — срез C (в карте плана, топ-15)' },
+  'components/color-field.tsx': {
+    overlay: true,
+    reason: 'белый курсор-маркер поверх SV-квадрата и hue-слайдера произвольного цвета — токен даёт непредсказуемый контраст на любой позиции градиента',
+  },
   'components/editorial-playlist-card.tsx': {
     overlay: true,
     reason: 'обложки-веер плейлиста и бейдж поверх них — токен фона неприменим к произвольным обложкам',
@@ -91,7 +91,6 @@ const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string
     overlay: true,
     reason: 'play-скрим и кнопка поверх обложки трека в «Сейчас слушают» — токен фона неприменим (тот же паттерн, что track-row.tsx)',
   },
-  'components/lyrics-editor.tsx': { overlay: false, reason: 'temporary — срез C (в карте плана, топ-15)' },
   'app/(listener)/smartlink/[artistSlug]/[linkSlug]/page.tsx': {
     overlay: true,
     reason: 'тень обложки и белые плашки под лого поверх произвольного --artist-accent — гарантируют читаемость на любой теме артиста',
@@ -116,7 +115,6 @@ const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string
     overlay: true,
     reason: 'hover-кольцо вокруг обложки релиза в ленте (произвольное фото) — тот же паттерн, что artist-card.tsx',
   },
-  'components/select.tsx': { overlay: false, reason: 'temporary — срез C' },
   'components/player/player-icons.tsx': {
     overlay: true,
     reason: 'ExpandIcon используется только внутри bg-black/40 скрима поверх обложки в мини-баре — белый цвет часть того же оверлея',
@@ -133,13 +131,22 @@ const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string
     overlay: true,
     reason: 'кольцо/тень/скрим-плей поверх обложки релиза в peek-оверлее — токен фона неприменим',
   },
-  'components/links-editor.tsx': { overlay: false, reason: 'temporary — срез C' },
+  'components/links-editor.tsx': {
+    overlay: true,
+    reason: 'белая плашка под фиксированным брендовым глифом (BrandGlyph, свои цвета, не перекрасить) — тот же паттерн, что about-content.tsx',
+  },
   'components/sortable-track-row.tsx': {
     overlay: true,
     reason: 'анимация эквалайзера внутри cover-оверлея (поверх обложки трека) — токен фона неприменим',
   },
-  'components/videos-editor.tsx': { overlay: false, reason: 'temporary — срез C' },
-  'components/theme-editor.tsx': { overlay: false, reason: 'temporary — срез C' },
+  'components/videos-editor.tsx': {
+    overlay: true,
+    reason: 'белая плашка под фиксированным брендовым глифом (BrandGlyph, свои цвета, не перекрасить) — тот же паттерн, что about-content.tsx',
+  },
+  'components/theme-editor.tsx': {
+    overlay: true,
+    reason: 'кольцо вокруг превью пресета палитры — фон свотча произвольный (10 пресетов, вкл. светлые), токен рамки даёт непредсказуемый контраст',
+  },
   'components/track-row.tsx': {
     overlay: true,
     reason: 'play/pause-скрим и иконка поверх обложки трека — токен фона неприменим',
@@ -152,29 +159,19 @@ const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string
 };
 
 /**
- * Allowlist правила 2 (сырой eyebrow-паттерн). Временный — раскатка `label-mono`
- * по экранам вне ui-kit.tsx/content-kit.tsx (дашборд/админка) идёт в срезе C.
+ * Allowlist правила 2 (сырой eyebrow-паттерн). Постоянные записи — одноразовая
+ * кинематографичная эстетика вне переиспользуемого UI-хрома, не кандидат на роль.
  */
 const RAW_EYEBROW_ALLOWLIST = new Set<string>([
-  'app/(listener)/design/page.tsx',
-  'app/admin/artists/[id]/edit/artist-edit-form.tsx',
-  'app/admin/layout.tsx',
-  'app/admin/releases/[id]/edit/release-edit-form.tsx',
-  'app/admin/system/system-panel.tsx',
-  'app/admin/tracks/[id]/edit/track-edit-form.tsx',
-  'app/dashboard/layout.tsx',
-  'app/dashboard/mobile-artist-switcher.tsx',
-  'app/dashboard/releases/[id]/track-manager.tsx',
-  'app/dashboard/stats-section.tsx',
+  // Секретная пасхалка: уникальное значение 0.3em (шире label-wide) для морзянки в
+  // анимированном intro-экране — не повторяющийся UI-паттерн, роль не подходит.
   'app/fwqa688/page.tsx',
-  'components/credits-editor.tsx',
-  'components/select.tsx',
 ]);
 
 describe('design tokens: роли и запрет литералов вне allowlist', () => {
   // Регрессия: `text-white`/`bg-white`/`white/NN`/`black/NN`/hex в className в обход
-  // OKLCH-токенов платформы (ui-principles.md:129-132). Часть легитимна — оверлеи поверх
-  // видео/изображений, где токен фона неприменим; остальное — временный долг (срез C).
+  // OKLCH-токенов платформы (ui-principles.md:129-132). Легитимны только оверлеи поверх
+  // видео/изображений/произвольного цвета, где токен фона неприменим (`overlay: true`).
   it('цветовые литералы вне allowlist не используются', () => {
     const files = relFiles(collectAll());
     const offenders = files.filter((rel) => {
@@ -187,7 +184,7 @@ describe('design tokens: роли и запрет литералов вне allo
   });
 
   // Allowlist не должен протухать в другую сторону: запись, для которой в коде больше
-  // нет нарушения, — сигнал вычистить её (срез B/C уже почистил файл).
+  // нет нарушения, — сигнал вычистить её.
   it('allowlist цветовых литералов не содержит лишних записей', () => {
     const stale = Object.keys(COLOR_LITERAL_ALLOWLIST).filter((rel) => {
       const full = path.join(WEB_DIR, rel);

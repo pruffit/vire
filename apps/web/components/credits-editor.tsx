@@ -85,7 +85,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">
+        <span className="label-mono text-foreground/45">
           Кредиты
         </span>
         {!controlled && (

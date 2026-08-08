@@ -15,7 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-full bg-background text-foreground flex flex-col md:flex-row">
       <aside className="shrink-0 border-b border-foreground/10 md:border-b-0 md:border-r md:w-52 md:flex md:flex-col md:bg-foreground/[0.015] md:px-3 md:py-5">
         <div className="hidden md:flex items-center gap-2 px-3 mb-5">
-          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/35">
+          <span className="label-wide text-foreground/35">
             Backoffice
           </span>
         </div>

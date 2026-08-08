@@ -80,9 +80,9 @@ const TYPOGRAPHY_SCALE = [
   { cls: 'text-base', display: 'Основной текст', label: 'text-base' },
   { cls: 'text-sm text-muted-foreground', display: 'Вспомогательный', label: 'text-sm · muted' },
   {
-    cls: 'text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground',
+    cls: 'label-wide text-muted-foreground',
     display: 'MONO LABEL',
-    label: 'font-mono · uppercase',
+    label: 'label-wide',
   },
 ] as const;
 
