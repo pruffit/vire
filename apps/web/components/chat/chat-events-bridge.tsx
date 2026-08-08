@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/i18n/navigation';
 import { useRealtime } from '@/lib/use-realtime';
 import { toast } from '@/lib/toast';
 import { refreshUnread } from '@/lib/chat-unread';

@@ -50,7 +50,7 @@ const TRACKING_ARBITRARY_RE = /\btracking-(\[|wide\b|wider\b|widest\b)/;
  * (постоянное исключение). `overlay: false` — демо-витрина токенов, сознательно вне роли.
  */
 const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string }> = {
-  'app/(listener)/nrvz914/[code]/party-screen.tsx': {
+  'app/[locale]/(listener)/nrvz914/[code]/party-screen.tsx': {
     overlay: true,
     reason: 'полноэкранный оверлей поверх видео вечеринки — токен фона неприменим (спека A4)',
   },
@@ -92,7 +92,7 @@ const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string
     overlay: true,
     reason: 'play-скрим и кнопка поверх обложки трека в «Сейчас слушают» — токен фона неприменим (тот же паттерн, что track-row.tsx)',
   },
-  'app/(listener)/smartlink/[artistSlug]/[linkSlug]/page.tsx': {
+  'app/[locale]/(listener)/smartlink/[artistSlug]/[linkSlug]/page.tsx': {
     overlay: true,
     reason: 'тень обложки и белые плашки под лого поверх произвольного --artist-accent — гарантируют читаемость на любой теме артиста',
   },
@@ -152,8 +152,8 @@ const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string
     overlay: true,
     reason: 'play/pause-скрим и иконка поверх обложки трека — токен фона неприменим',
   },
-  'app/(listener)/design/page.tsx': { overlay: false, reason: 'демо-витрина токенов — swatch-примеры сознательно показывают сырые значения' },
-  'app/(listener)/about/about-content.tsx': {
+  'app/[locale]/(listener)/design/page.tsx': { overlay: false, reason: 'демо-витрина токенов — swatch-примеры сознательно показывают сырые значения' },
+  'app/[locale]/(listener)/about/about-content.tsx': {
     overlay: true,
     reason: 'белая плашка под фиксированным брендовым лого DSP (BrandIcon, свои цвета, не перекрасить) в демо-карточке — тот же паттерн, что смартлинк-страница',
   },

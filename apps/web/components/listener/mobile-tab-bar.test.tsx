@@ -2,7 +2,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/' }));
+vi.mock('@/i18n/navigation', () => ({
+  usePathname: () => '/',
+  Link: ({ href, children, ...rest }: { href: string; children?: React.ReactNode }) => (
+    <a href={href} {...rest}>{children}</a>
+  ),
+}));
 vi.mock('@/lib/chat-unread', () => ({ useChatUnread: (n: number) => n }));
 
 import { MobileTabBar } from './mobile-tab-bar';

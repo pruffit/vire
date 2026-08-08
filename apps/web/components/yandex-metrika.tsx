@@ -2,7 +2,7 @@
 
 import Script from 'next/script';
 import { useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/i18n/navigation';
 
 const id = process.env.NEXT_PUBLIC_METRIKA_ID;
 

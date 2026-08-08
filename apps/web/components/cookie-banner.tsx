@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { Link } from '@/i18n/navigation';
 
 const STORAGE_KEY = 'vire_cookie_ok';
 
@@ -51,9 +52,9 @@ export function CookieBanner() {
           <div className="rounded-xl bg-card border border-border/60 shadow-xl shadow-background/30 px-4 py-3.5 space-y-3 backdrop-blur-sm">
             <p className="text-xs text-muted-foreground leading-relaxed">
               Мы используем только необходимые cookie — сессия входа. Аналитики и сторонних cookie нет.{' '}
-              <a href="/privacy" className="underline underline-offset-2 hover:opacity-70 transition-opacity">
+              <Link href="/privacy" className="underline underline-offset-2 hover:opacity-70 transition-opacity">
                 Подробнее
-              </a>
+              </Link>
             </p>
             <div className="flex items-center justify-end gap-2">
               <button

@@ -8,6 +8,7 @@ const {
   updateUserNotifyEmail,
   updateUserNotifyPush,
   updateUserLastfmUsername,
+  updateUserLocale,
   uploadToStream,
 } = vi.hoisted(() => ({
   updateUserName: vi.fn(),
@@ -17,6 +18,7 @@ const {
   updateUserNotifyEmail: vi.fn(),
   updateUserNotifyPush: vi.fn(),
   updateUserLastfmUsername: vi.fn(),
+  updateUserLocale: vi.fn(),
   uploadToStream: vi.fn(),
 }));
 
@@ -29,6 +31,7 @@ vi.mock('@vire/db', () => ({
   updateUserNotifyEmail,
   updateUserNotifyPush,
   updateUserLastfmUsername,
+  updateUserLocale,
 }));
 vi.mock('@/lib/s3', () => ({ uploadToStream }));
 
@@ -163,6 +166,20 @@ describe('PATCH /api/v1/user/profile', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ ok: true, lastfmUsername: null });
     expect(updateUserLastfmUsername).toHaveBeenCalledWith('u1', null);
+  });
+
+  it('PATCH принимает locale и зовёт updateUserLocale', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ locale: 'en' }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true, locale: 'en' });
+    expect(updateUserLocale).toHaveBeenCalledWith('u1', 'en');
+  });
+
+  it('400 на неизвестную locale', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    const res = await PATCH(patchReq({ locale: 'fr' }));
+    expect(res.status).toBe(400);
   });
 
   it('400 на мусорный lastfmUsername', async () => {

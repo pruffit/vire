@@ -1,0 +1,76 @@
+import { notFound } from 'next/navigation';
+import { Link, redirect } from '@/i18n/navigation';
+import type { Metadata } from 'next';
+import { getLocale } from 'next-intl/server';
+import { auth } from '@/auth';
+import { getUserPublicProfile, getIdentityKey } from '@vire/db';
+import { chatService } from '@/lib/chat';
+import { friendshipService } from '@/lib/friends';
+import { blockService } from '@/lib/blocks';
+import { Icon } from '@/components/icon';
+import { ChatAvatar } from '@/components/chat/chat-avatar';
+import { ChatThread } from '@/components/chat/chat-thread';
+import { TypingIndicator } from '@/components/chat/typing-indicator';
+
+export const metadata: Metadata = { title: 'Диалог', robots: { index: false, follow: false } };
+export const dynamic = 'force-dynamic';
+
+type Props = { params: Promise<{ conversationId: string }> };
+
+export default async function ConversationPage({ params }: Props) {
+  const { conversationId } = await params;
+  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const viewerId = session?.user?.id;
+  if (!viewerId) return redirect({ href: `/sign-in?callbackUrl=/messages/${conversationId}`, locale });
+
+  const meta = await chatService().getConversationMeta(viewerId, conversationId);
+  if (!meta.ok) notFound();
+  const { otherUserId, otherLastReadAt } = meta.value;
+
+  const [other, history, status, blocked, otherIkPub] = await Promise.all([
+    getUserPublicProfile(otherUserId),
+    chatService().history(viewerId, conversationId, null, 50),
+    friendshipService().getStatus(viewerId, otherUserId),
+    blockService().isBlocked(viewerId, otherUserId),
+    getIdentityKey(otherUserId),
+  ]);
+  if (!history.ok) notFound();
+
+  const canSend = status === 'FRIENDS' && !blocked;
+  const otherName = other?.name ?? 'Слушатель';
+  const initialMessages = history.value;
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <header className="flex shrink-0 items-center gap-3 border-b border-border/40 px-3 py-3 sm:px-4">
+        <Link
+          href="/messages"
+          aria-label="К списку диалогов"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-accent/10 pointer-coarse:h-11 pointer-coarse:w-11 md:hidden"
+        >
+          <Icon name="arrow-left" size={18} />
+        </Link>
+        <Link href={`/u/${otherUserId}`} className="group flex min-w-0 items-center gap-3">
+          <ChatAvatar name={other?.name ?? null} image={other?.image ?? null} size={36} />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold group-hover:text-foreground">{otherName}</span>
+            <TypingIndicator key={conversationId} conversationId={conversationId} otherUserId={otherUserId} />
+          </span>
+        </Link>
+      </header>
+
+      {/* key: смена диалога — навигация внутри сегмента, без него состояние треда переезжает в новый диалог */}
+      <ChatThread
+        key={conversationId}
+        conversationId={conversationId}
+        viewerId={viewerId}
+        otherUserId={otherUserId}
+        otherName={otherName}
+        otherIkPub={otherIkPub}
+        otherLastReadAt={otherLastReadAt}
+        initialMessages={initialMessages}
+        canSend={canSend}
+      />
+    </div>
+  );
+}

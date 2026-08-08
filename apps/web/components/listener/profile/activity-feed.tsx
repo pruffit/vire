@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { type ActivityItem, activityKey } from '@/lib/activity';
 import { Section } from '@/components/listener/section';
 import { EmptyState } from '@/components/ui-kit';

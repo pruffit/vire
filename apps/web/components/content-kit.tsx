@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { cn } from '@vire/ui';
 import { Reveal } from '@vire/ui/motion';
 import { Icon, type IconName } from '@/components/icon';

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { Logo } from './logo';
 import { AnnouncementReopenLink } from './widget-triggers';
 import { PartyTrigger } from './party-trigger';

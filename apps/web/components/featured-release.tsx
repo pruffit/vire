@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import type { DiscoveryRelease, ReleaseCardStats } from '@vire/db';
 import { FeaturedPlayButton } from './featured-play-button';
 import { ExplicitBadge } from '@/components/explicit-badge';

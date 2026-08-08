@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import type { PlayerTrack } from '@/store/player';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
 import { usePlay, useTrackPlayState } from '@/lib/player/use-play';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { ShareIcon, CheckIcon } from '@/components/icons';

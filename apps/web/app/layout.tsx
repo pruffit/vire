@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages } from '@vire/i18n/messages';
+import { DEFAULT_LOCALE, isLocale, type Locale } from '@vire/i18n/config';
 import { MotionProvider, REDUCE_MOTION_INIT_SCRIPT } from '@vire/ui/motion';
 import { JamSessionProvider } from '@/components/jam/jam-session-provider';
 import { PartyVideoDock } from '@/components/jam/party-video-dock';
@@ -84,13 +88,21 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await auth();
   const userId = session?.user?.id;
-  const [incomingCount, messagesUnread] = userId
-    ? await Promise.all([countUnseenIncomingCached(userId), countUnreadMessagesCached(userId)])
-    : [0, 0];
+  const [incomingCount, messagesUnread, requestHeaders] = await Promise.all([
+    userId ? countUnseenIncomingCached(userId) : 0,
+    userId ? countUnreadMessagesCached(userId) : 0,
+    headers(),
+  ]);
+
+  // /admin и другие нелокализованные ветки не проходят через next-intl middleware —
+  // заголовка нет, остаёмся на дефолтной локали (см. proxy.ts).
+  const headerLocale = requestHeaders.get('x-next-intl-locale');
+  const locale: Locale = headerLocale && isLocale(headerLocale) ? headerLocale : DEFAULT_LOCALE;
+  const messages = await getMessages(locale);
 
   return (
     <html
-      lang="ru"
+      lang={locale}
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${fontVariables} h-full antialiased`}
     >
@@ -104,31 +116,33 @@ export default async function RootLayout({
         >
           К содержимому
         </a>
-        <MotionProvider>
-          <Nav />
-          <ScrollState />
-          <ScrollRestoration />
-          <SitePresence />
-          <JamSessionProvider>
-            {/* suppressHydrationWarning: ScrollState вешает is-scrolling через classList напрямую */}
-            <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-clip">
-              {children}
-            </div>
-            <PartyVideoDock />
-            <PlayerWrapper />
-          </JamSessionProvider>
-          <MobileTabBar incomingCount={incomingCount} messagesUnread={messagesUnread} />
-          <DeferredWidgets userId={userId} />
-          <Toaster />
-          {userId && (
-            <>
-              <E2eeBootstrap userId={userId} />
-              <LinkApprove viewerId={userId} />
-              <ChatEventsBridge viewerId={userId} />
-            </>
-          )}
-          <YandexMetrika />
-        </MotionProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <MotionProvider>
+            <Nav />
+            <ScrollState />
+            <ScrollRestoration />
+            <SitePresence />
+            <JamSessionProvider>
+              {/* suppressHydrationWarning: ScrollState вешает is-scrolling через classList напрямую */}
+              <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-clip">
+                {children}
+              </div>
+              <PartyVideoDock />
+              <PlayerWrapper />
+            </JamSessionProvider>
+            <MobileTabBar incomingCount={incomingCount} messagesUnread={messagesUnread} />
+            <DeferredWidgets userId={userId} />
+            <Toaster />
+            {userId && (
+              <>
+                <E2eeBootstrap userId={userId} />
+                <LinkApprove viewerId={userId} />
+                <ChatEventsBridge viewerId={userId} />
+              </>
+            )}
+            <YandexMetrika />
+          </MotionProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

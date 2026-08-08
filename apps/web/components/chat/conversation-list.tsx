@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
 import type { ConversationSummary } from '@vire/core';
 import { EmptyState } from '@/components/ui-kit';
 import { useIdentity } from '@/lib/e2ee-client';

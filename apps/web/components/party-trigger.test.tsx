@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 const push = vi.fn();
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+vi.mock('@/i18n/navigation', () => ({ useRouter: () => ({ push }) }));
 
 import { PartyTrigger } from './party-trigger';
 import { PARTY_PATH } from '@/lib/party';

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { auth } from '@/auth';
 import { listUserArtists } from '@/lib/active-artist';
 import { NavSearch } from './nav-search';

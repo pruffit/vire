@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { Icon } from '@/components/icon';
 import { AdaptiveMenu } from '@/components/adaptive-menu';
 import { Textarea, btnPrimary, btnGhost } from '@/components/ui-kit';

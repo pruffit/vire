@@ -7,7 +7,12 @@ const OFFLINE_CACHE = 'vire-offline-v1';
 const CACHE_PREFIX = 'vire-';
 const CURRENT_CACHES = new Set([SHELL_CACHE, STATIC_CACHE, IMG_CACHE, OFFLINE_CACHE]);
 const IMG_CACHE_LIMIT = 200;
-const PRECACHE_URLS = ['/offline', '/icon-192.png', '/icon-512.png'];
+// /offline живёт под app/[locale]/offline — ru без префикса, en под /en.
+const PRECACHE_URLS = ['/offline', '/en/offline', '/icon-192.png', '/icon-512.png'];
+
+function offlineFallbackPath(pathname) {
+  return pathname === '/en' || pathname.startsWith('/en/') ? '/en/offline' : '/offline';
+}
 // Ключ владельца шелл-кэша — синтетический Request внутри самого Cache Storage,
 // отдельный IndexedDB не заводим ради одной строки.
 const OWNER_KEY = '/__owner';
@@ -63,7 +68,7 @@ async function networkOnlyWithOfflineFallback(request) {
     return await fetch(request);
   } catch {
     const cache = await caches.open(SHELL_CACHE);
-    const offline = await cache.match('/offline');
+    const offline = await cache.match(offlineFallbackPath(new URL(request.url).pathname));
     if (offline) return offline;
     return new Response('Offline', { status: 503, statusText: 'Offline' });
   }
@@ -221,6 +226,7 @@ self.addEventListener('notificationclick', (event) => {
 self.__test = {
   strategyFor,
   trimCache,
+  offlineFallbackPath,
   SHELL_CACHE,
   STATIC_CACHE,
   IMG_CACHE,

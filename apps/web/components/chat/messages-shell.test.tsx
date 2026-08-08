@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
 const { usePathnameMock } = vi.hoisted(() => ({ usePathnameMock: vi.fn() }));
-vi.mock('next/navigation', () => ({ usePathname: usePathnameMock }));
+vi.mock('@/i18n/navigation', () => ({ usePathname: usePathnameMock }));
 
 import { MessagesShell } from './messages-shell';
 

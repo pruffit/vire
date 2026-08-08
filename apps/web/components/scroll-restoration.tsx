@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/i18n/navigation';
 import { getContentScrollArea } from '@/lib/scroll-area';
 
 /**

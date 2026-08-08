@@ -9,7 +9,7 @@ const APP_DIR = fileURLToPath(new URL('..', import.meta.url));
 // dashboard/** — авторизованная зона артиста, не индексируется поисковиками
 // (нет в sitemap/публичных ссылках); soft-404 там не несёт SEO-риска, поэтому
 // оставлен как принятый долг (см. docs/roadmap/TODO.md).
-const EXEMPT = [path.join(APP_DIR, 'dashboard')];
+const EXEMPT = [path.join(APP_DIR, '[locale]', 'dashboard')];
 
 function collectPageAndLayoutFiles(dir: string): string[] {
   const out: string[] = [];

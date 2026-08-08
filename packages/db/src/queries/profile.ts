@@ -10,13 +10,17 @@ export async function getUserCreatedAt(userId: string): Promise<Date | null> {
 
 export async function getUserProfile(
   userId: string,
-): Promise<{ name: string | null; image: string | null; createdAt: Date | null } | null> {
+): Promise<{ name: string | null; image: string | null; createdAt: Date | null; locale: string | null } | null> {
   const [row] = await db
-    .select({ name: users.name, image: users.image, createdAt: users.createdAt })
+    .select({ name: users.name, image: users.image, createdAt: users.createdAt, locale: users.locale })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
   return row ?? null;
+}
+
+export async function updateUserLocale(userId: string, locale: string): Promise<void> {
+  await db.update(users).set({ locale, updatedAt: new Date() }).where(eq(users.id, userId));
 }
 
 export async function updateUserName(userId: string, name: string): Promise<void> {

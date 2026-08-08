@@ -1,7 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
 import { Icon, type IconName } from '@/components/icon';
 import { useChatUnread } from '@/lib/chat-unread';
 import { isListenerShellPath } from '@/lib/listener-shell';

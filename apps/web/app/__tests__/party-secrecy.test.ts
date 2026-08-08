@@ -20,7 +20,7 @@ describe('секретность входа вечеринки', () => {
   });
 
   it('страница входа помечена noindex', () => {
-    const src = readFileSync(path.join(APP_DIR, '(listener)', SEGMENT, 'layout.tsx'), 'utf8');
+    const src = readFileSync(path.join(APP_DIR, '[locale]', '(listener)', SEGMENT, 'layout.tsx'), 'utf8');
     expect(src).toMatch(/robots:\s*\{\s*index:\s*false/);
   });
 });

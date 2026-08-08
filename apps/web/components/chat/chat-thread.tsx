@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import type { ChatMessage } from '@vire/core';
 import { useRealtime } from '@/lib/use-realtime';
 import { useIdentity } from '@/lib/e2ee-client';

@@ -2,7 +2,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock('@/i18n/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+  Link: ({ href, children, ...rest }: { href: string; children?: React.ReactNode }) => (
+    <a href={href} {...rest}>{children}</a>
+  ),
+}));
 
 import { LibrarySidebar } from './library-sidebar';
 

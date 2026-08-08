@@ -2,6 +2,7 @@ import type { NextConfig } from 'next';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import createNextIntlPlugin from 'next-intl/plugin';
 
 const _require = createRequire(import.meta.url);
 const { version } = _require('./package.json') as { version: string };
@@ -102,7 +103,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/**': ['../../node_modules/.pnpm/@img+sharp-*/node_modules/@img/**'],
   },
-  transpilePackages: ['@vire/core', '@vire/db', '@vire/ui'],
+  transpilePackages: ['@vire/core', '@vire/db', '@vire/ui', '@vire/i18n'],
   images: {
     formats: ['image/avif', 'image/webp'],
     // Только нужные брейкпоинты — меньше вариантов кешируется на сервере.
@@ -147,4 +148,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
+export default withNextIntl(nextConfig);

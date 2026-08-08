@@ -1,8 +1,11 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useLocale } from 'next-intl';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
+import { usePathname, useRouter } from '@/i18n/navigation';
+import { LOCALES, type Locale } from '@vire/i18n/config';
 import { SidebarPrimaryNav } from './sidebar-primary-nav';
 import { LibrarySidebar } from './library-sidebar';
 import { SidebarUser } from './sidebar-user';
@@ -34,6 +37,31 @@ export function ListenerSidebar({
   user?: { name: string; avatarUrl: string | null };
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const locale = useLocale() as Locale;
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const switchLocale = useCallback(() => {
+    const next = LOCALES.find((l) => l !== locale) ?? locale;
+    fetch('/api/v1/user/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locale: next }),
+    }).catch(() => {});
+    router.replace(pathname, { locale: next });
+  }, [locale, pathname, router]);
+
+  const localeButton = (
+    <button
+      type="button"
+      onClick={switchLocale}
+      aria-label={`Переключить язык на ${locale === 'ru' ? 'английский' : 'русский'}`}
+      title={locale.toUpperCase()}
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-xs font-medium text-foreground/45 transition-colors hover:bg-foreground/5 hover:text-foreground"
+    >
+      {locale.toUpperCase()}
+    </button>
+  );
 
   const toggle = useCallback(() => {
     setCollapsed((prev) => {
@@ -93,6 +121,7 @@ export function ListenerSidebar({
         ) : (
           !collapsed && <span className="flex-1" aria-hidden />
         )}
+        {localeButton}
         {toggleButton}
       </div>
     </aside>

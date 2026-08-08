@@ -9,7 +9,12 @@ const { identityMock, usePathnameMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/e2ee-client', () => ({ useIdentity: identityMock }));
-vi.mock('next/navigation', () => ({ usePathname: usePathnameMock }));
+vi.mock('@/i18n/navigation', () => ({
+  usePathname: usePathnameMock,
+  Link: ({ href, children, ...rest }: { href: string; children?: React.ReactNode }) => (
+    <a href={href} {...rest}>{children}</a>
+  ),
+}));
 vi.mock('@/lib/use-realtime', () => ({ useRealtime: vi.fn() }));
 
 import { ConversationList } from './conversation-list';

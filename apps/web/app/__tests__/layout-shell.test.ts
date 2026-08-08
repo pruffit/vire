@@ -66,7 +66,7 @@ describe('app-shell layout invariants', () => {
     // Эталон — admin/layout.tsx: сайдбар закреплён (flex-панель), скроллится только
     // <main>. Sticky-сайдбар в ОБЩЕЙ скролл-области (#main-content) давал смазывание
     // контента при быстрой прокрутке — поэтому здесь именно внутренний скролл-пейн.
-    const layout = readFileSync(path.join(APP_DIR, '(listener)', 'layout.tsx'), 'utf8');
+    const layout = readFileSync(path.join(APP_DIR, '[locale]', '(listener)', 'layout.tsx'), 'utf8');
     expect(layout).toMatch(/data-scroll-area[^>]*\boverflow-y-auto\b/);
     expect(layout).toMatch(/data-scroll-area[^>]*\bmd:overflow-x-clip\b/);
     expect(layout).toMatch(/<ListenerSidebar\b/);
@@ -85,7 +85,7 @@ describe('app-shell layout invariants', () => {
   // а #main-content обязан быть заклипан — иначе любой случайный overflow (плюс
   // scrollbar-gutter) рисует вторую полосу скролла у края окна.
   it('десктоп listener: внешняя область клипается при наличии внутренней панели', () => {
-    const layout = readFileSync(path.join(APP_DIR, '(listener)', 'layout.tsx'), 'utf8');
+    const layout = readFileSync(path.join(APP_DIR, '[locale]', '(listener)', 'layout.tsx'), 'utf8');
     expect(layout).toMatch(/data-desktop-pane/);
 
     const css = readFileSync(path.join(APP_DIR, 'globals.css'), 'utf8');

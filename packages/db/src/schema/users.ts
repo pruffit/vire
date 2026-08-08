@@ -28,6 +28,8 @@ export const users = pgTable('users', {
   discoverable: boolean('discoverable').notNull().default(true),
   // Только вкус для предложки на вечеринке (user.getTopTracks) — не OAuth, без скробблинга.
   lastfmUsername: varchar('lastfm_username', { length: 64 }),
+  // null = не выбирал — согласование по Accept-Language/cookie NEXT_LOCALE, не JWT (см. CLAUDE.md).
+  locale: varchar('locale', { length: 8 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [

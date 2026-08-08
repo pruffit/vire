@@ -1,0 +1,24 @@
+{
+  "name": "@vire/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts",
+    "./messages": "./src/messages.ts",
+    "./translator": "./src/translator.ts",
+    "./messages/*": "./messages/*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "use-intl": "4.13.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@vire/config": "workspace:*",
+    "typescript": "^5.8.3"
+  }
+}

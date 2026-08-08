@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 
 // Badge lives in the server layout; only router.refresh() after the write
 // clears it — a server-side effect here would race the layout's own render.

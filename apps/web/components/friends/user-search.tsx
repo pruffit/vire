@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import type { FriendshipStatus } from '@vire/core';
 import { Icon } from '@/components/icon';
 import { FriendButton } from '@/components/friends/friend-button';

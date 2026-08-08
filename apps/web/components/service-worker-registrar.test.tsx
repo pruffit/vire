@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup, waitFor } from '@testing-library/react';
 
 const prefetchMock = vi.fn();
-vi.mock('next/navigation', () => ({ useRouter: () => ({ prefetch: prefetchMock }) }));
+vi.mock('@/i18n/navigation', () => ({ useRouter: () => ({ prefetch: prefetchMock }) }));
 
 vi.mock('@/lib/offline/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/offline/db')>();
