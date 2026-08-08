@@ -5,6 +5,7 @@ vi.mock('@/lib/offline/download', () => ({
   downloadTrack: vi.fn(),
   removeDownload: vi.fn(),
   cachedSegmentKeys: vi.fn().mockResolvedValue([]),
+  backfillCovers: vi.fn().mockResolvedValue([]),
   planDownload: (segmentUrls: string[], cachedUrls: string[]) => {
     const cached = new Set(cachedUrls);
     return segmentUrls.filter((url) => !cached.has(url));
@@ -13,7 +14,7 @@ vi.mock('@/lib/offline/download', () => ({
 vi.mock('@/lib/offline/db', () => ({ getAllTracks: vi.fn() }));
 vi.mock('@/lib/toast', () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
 
-import { downloadTrack, removeDownload, cachedSegmentKeys, type DownloadMeta, type DownloadOptions } from '@/lib/offline/download';
+import { downloadTrack, removeDownload, cachedSegmentKeys, backfillCovers, type DownloadMeta, type DownloadOptions } from '@/lib/offline/download';
 import { getAllTracks, type OfflineTrack } from '@/lib/offline/db';
 import { toast } from '@/lib/toast';
 import { useOfflineStore } from './offline';
@@ -180,6 +181,7 @@ describe('useOfflineStore — локальные обложки', () => {
     vi.mocked(downloadTrack).mockReset();
     vi.mocked(removeDownload).mockReset();
     vi.mocked(cachedSegmentKeys).mockReset().mockResolvedValue([]);
+    vi.mocked(backfillCovers).mockReset().mockResolvedValue([]);
     vi.stubGlobal('URL', { createObjectURL: () => 'blob:local/1', revokeObjectURL: () => {} });
   });
 
@@ -208,5 +210,26 @@ describe('useOfflineStore — локальные обложки', () => {
 
     useOfflineStore.getState().remove('t1');
     await vi.waitFor(() => expect(useOfflineStore.getState().covers.has('t1')).toBe(false));
+  });
+
+  it('hydrate() докачивает обложки записям без coverBlob и кладёт их в covers', async () => {
+    vi.mocked(getAllTracks).mockResolvedValue([{ ...fakeTrack('done'), id: 'old', coverUrl: 'https://cdn/x.jpg' }]);
+    vi.mocked(backfillCovers).mockResolvedValue([
+      { ...fakeTrack('done'), id: 'old', coverUrl: 'https://cdn/x.jpg', coverBlob: new Blob(['x']) },
+    ]);
+
+    await useOfflineStore.getState().hydrate();
+
+    await vi.waitFor(() => expect(useOfflineStore.getState().covers.get('old')).toBe('blob:local/1'));
+  });
+
+  it('сбой докачки обложек не ломает hydrate', async () => {
+    vi.mocked(getAllTracks).mockResolvedValue([{ ...fakeTrack('done'), id: 'old', coverUrl: 'https://cdn/x.jpg' }]);
+    vi.mocked(backfillCovers).mockRejectedValue(new Error('offline'));
+
+    await useOfflineStore.getState().hydrate();
+
+    expect(useOfflineStore.getState().entries.get('old')?.status).toBe('done');
+    expect(useOfflineStore.getState().covers.has('old')).toBe(false);
   });
 });

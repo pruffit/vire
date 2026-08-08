@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { downloadTrack, removeDownload, cachedSegmentKeys, planDownload, type DownloadMeta } from '@/lib/offline/download';
+import { downloadTrack, removeDownload, cachedSegmentKeys, planDownload, backfillCovers, type DownloadMeta } from '@/lib/offline/download';
 import { getAllTracks } from '@/lib/offline/db';
 import { offlineCoverUrl } from '@/lib/offline/cover-url';
 import { toast } from '@/lib/toast';
@@ -83,6 +83,21 @@ export const useOfflineStore = create<OfflineState>((set, get) => {
         }
         return { entries, covers };
       });
+
+      // Записи из версий без coverBlob: обложку тянем фоном, экран уже отрисован.
+      void backfillCovers(tracks)
+        .then((updated) => {
+          if (updated.length === 0) return;
+          set((s) => {
+            const covers = new Map(s.covers);
+            for (const track of updated) {
+              const url = offlineCoverUrl(track);
+              if (url?.startsWith('blob:')) covers.set(track.id, url);
+            }
+            return { covers };
+          });
+        })
+        .catch(() => { /* нет сети — обложки подтянутся в следующий заход */ });
     },
 
     download(meta) {

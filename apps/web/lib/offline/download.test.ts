@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { downloadTrack, planDownload, chunk, OFFLINE_CACHE, estimateUsage, requestPersistence, type DownloadMeta } from './download';
+import { downloadTrack, planDownload, chunk, backfillCovers, OFFLINE_CACHE, estimateUsage, requestPersistence, type DownloadMeta } from './download';
 import { getTrack, putTrack, deleteTrack } from './db';
 
 const TRACK_ID = 't1';
@@ -309,5 +309,65 @@ describe('estimateUsage / requestPersistence без navigator.storage', () => {
 
   it('requestPersistence деградирует до false', async () => {
     expect(await requestPersistence()).toBe(false);
+  });
+});
+
+describe('backfillCovers', () => {
+  const stale = {
+    id: 'old', title: 'T', artistName: 'A', coverUrl: COVER_URL,
+    hlsUrl: HLS_URL, segmentUrls: [], bytes: 100, addedAt: 1, status: 'done' as const,
+  };
+
+  afterEach(async () => {
+    vi.unstubAllGlobals();
+    await deleteTrack('old');
+  });
+
+  it('качает превью записям без обложки и сохраняет его в IndexedDB', async () => {
+    vi.stubGlobal('caches', fakeCacheStorage());
+    const fetchMock = makeFetch();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const updated = await backfillCovers([stale]);
+
+    expect(updated).toHaveLength(1);
+    expect(updated[0].coverBlob).toBeInstanceOf(Blob);
+    expect(fetchMock).toHaveBeenCalledWith(COVER_FETCH_URL);
+    expect((await getTrack('old'))?.coverBlob).toBeInstanceOf(Blob);
+  });
+
+  it('старую копию обложки убирает из кэша и пересчитывает bytes на превью', async () => {
+    const cacheStorage = fakeCacheStorage();
+    vi.stubGlobal('caches', cacheStorage);
+    const cache = await cacheStorage.open(OFFLINE_CACHE);
+    // «оригинал» прошлых версий: 40 байт тела, они уже сидят в bytes записи
+    await cache.put(COVER_URL, fakeResponse('x'.repeat(40)));
+    vi.stubGlobal('fetch', makeFetch());
+
+    const [updated] = await backfillCovers([{ ...stale, bytes: 140 }]);
+
+    expect(await cache.match(COVER_URL)).toBeUndefined();
+    expect(updated.bytes).toBe(140 - 40 + updated.coverBlob!.size);
+  });
+
+  it('записи с обложкой и без coverUrl не трогает — в сеть не ходит', async () => {
+    vi.stubGlobal('caches', fakeCacheStorage());
+    const fetchMock = makeFetch();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const updated = await backfillCovers([
+      { ...stale, coverBlob: new Blob(['x']) },
+      { ...stale, id: 'nocover', coverUrl: null },
+    ]);
+
+    expect(updated).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('нет сети — тихо возвращает пусто, запись не портит', async () => {
+    vi.stubGlobal('caches', fakeCacheStorage());
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
+
+    await expect(backfillCovers([stale])).resolves.toEqual([]);
   });
 });

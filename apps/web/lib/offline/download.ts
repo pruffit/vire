@@ -161,6 +161,37 @@ export async function downloadTrack(meta: DownloadMeta, options: DownloadOptions
   return track;
 }
 
+/** Догружает обложки записям, скачанным до появления `coverBlob` — иначе у них офлайн
+ *  остаётся битая картинка навсегда. Тихая best-effort операция: без сети просто ничего не делает. */
+export async function backfillCovers(tracks: OfflineTrack[]): Promise<OfflineTrack[]> {
+  const stale = tracks.filter((t) => !t.coverBlob && t.coverUrl);
+  if (stale.length === 0) return [];
+
+  const cache = await caches.open(OFFLINE_CACHE);
+  const updated: OfflineTrack[] = [];
+  for (const batch of chunk(stale, CONCURRENCY)) {
+    const results = await Promise.allSettled(
+      batch.map(async (track) => {
+        const coverUrl = track.coverUrl!;
+        const res = await fetch(coverPreviewUrl(coverUrl));
+        if (!res.ok) throw new Error('cover fetch failed');
+        const coverBlob = await res.blob();
+        // Прежние версии клали оригинал в Cache Storage: он уже учтён в bytes, а отдать
+        // его офлайн SW всё равно не может — меняем на превью и в кэше, и в счётчике.
+        const oldSize = (await cache.match(coverUrl).then((r) => r?.blob()).catch(() => null))?.size ?? 0;
+        await cache.delete(coverUrl);
+        const next: OfflineTrack = { ...track, coverBlob, bytes: Math.max(0, track.bytes - oldSize) + coverBlob.size };
+        await putTrack(next);
+        return next;
+      }),
+    );
+    for (const r of results) if (r.status === 'fulfilled') updated.push(r.value);
+    // Одна сетевая ошибка обычно значит «сети нет» — дальше долбиться незачем.
+    if (results.some((r) => r.status === 'rejected')) break;
+  }
+  return updated;
+}
+
 export async function cachedSegmentKeys(): Promise<string[]> {
   const cache = await caches.open(OFFLINE_CACHE);
   return (await cache.keys()).map((r) => r.url);
