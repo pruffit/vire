@@ -242,7 +242,7 @@ export function ReleaseQuickLook({
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 pb-3" data-scroll-area>
           {loading && !tracks && (
             <div className="py-8 grid place-items-center">
-              <span className="w-6 h-6 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />
+              <span className="w-6 h-6 border-2 border-current opacity-30 border-t-transparent rounded-full animate-spin" />
             </div>
           )}
           {!loading && !tracks && (
@@ -260,7 +260,7 @@ export function ReleaseQuickLook({
                 type="button"
                 onClick={() => ready && (isCurrent ? controls.togglePlay() : void playFrom(t.id))}
                 disabled={!ready}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors pointer-coarse:min-h-11 ${ready ? 'hover:bg-white/5 cursor-pointer' : 'opacity-40 cursor-default'} ${isCurrent ? 'bg-white/5' : ''}`}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors pointer-coarse:min-h-11 ${ready ? 'hover:bg-accent/5 cursor-pointer' : 'opacity-40 cursor-default'} ${isCurrent ? 'bg-accent/5' : ''}`}
               >
                 <span className="w-5 text-right text-xs font-mono opacity-30 shrink-0">
                   {isCurrent ? <MiniEq animate={isPlaying} /> : t.trackNumber}
@@ -272,7 +272,7 @@ export function ReleaseQuickLook({
                   {t.isExplicit && <ExplicitBadge />}
                 </span>
                 {t.durationSec != null && ready && (
-                  <span className="text-xs font-mono opacity-30 shrink-0">{formatDuration(t.durationSec)}</span>
+                  <span className="text-xs readout opacity-30 shrink-0">{formatDuration(t.durationSec)}</span>
                 )}
                 {t.status === 'PROCESSING' && <span className="text-[10px] font-mono opacity-30 shrink-0">обработка…</span>}
               </button>

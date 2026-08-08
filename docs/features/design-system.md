@@ -20,8 +20,14 @@ Tailwind v4 через `@import "@vire/ui/globals.css"` в `apps/web/app/globals
 
 | Класс | Состав | Когда |
 |---|---|---|
-| `label-mono` | `font-mono`, 11px, `uppercase`, `tracking: 0.08em` | Микро-лейблы, eyebrow-подписи |
+| `label-mono` | `font-mono`, 11px, `uppercase`, `tracking: 0.08em` | Плотный UI-хром: подписи полей, шапки таблиц, служебные пилюли |
+| `label-wide` | `font-mono`, 11px, `uppercase`, `tracking: 0.2em` | Редакционные eyebrow: заголовки секций, hero, экраны джема и вечеринки |
 | `readout` | `font-mono`, `tabular-nums`, `slashed-zero` | Данные: длительность, таймкод, BPM, метрики |
+
+Лейблов две роли, а не одна: широкая разрядка моно-капса — приём TE-эстетики
+(`ui-principles.md`), а плотная подпись поля — служебный хром. До ревизии обе семьи
+существовали россыпью значений (0.08/0.12 в одной, 0.15/0.18/0.2/0.22/0.25 в другой);
+роли схлопывают разнобой внутри каждой семьи, но не сливают семьи между собой.
 
 Цвет и вес в роли не зашиты — задаются на месте применения (`text-foreground/45`,
 `text-muted-foreground`, `color-mix(--artist-text …)` и т.д.). `label-mono` не задаёт

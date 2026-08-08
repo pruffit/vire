@@ -169,7 +169,7 @@ function TrackRow({
           <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)]">обработка…</span>
         )}
         {track.durationSec != null && ready && (
-          <span className="text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)] w-10 text-right">
+          <span className="text-xs readout text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)] w-10 text-right">
             {formatDuration(track.durationSec)}
           </span>
         )}

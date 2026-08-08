@@ -86,19 +86,19 @@ export function ReleaseCountdown({
         {coverUrl ? (
           <Image src={coverUrl} alt={title} fill sizes="288px" className="object-cover" priority />
         ) : (
-          <div className="h-full w-full bg-white/5" />
+          <div className="h-full w-full bg-[color-mix(in_oklch,var(--artist-text)_5%,transparent)]" />
         )}
         <div className="absolute inset-0 bg-black/25" />
       </motion.div>
 
-      <p className="mt-8 text-[10px] font-mono uppercase tracking-[0.25em] opacity-50" style={{ color: 'var(--artist-accent)' }}>
+      <p className="mt-8 label-wide opacity-50" style={{ color: 'var(--artist-accent)' }}>
         {type} · скоро
       </p>
       <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-balance">{title}</h1>
       <p className="mt-1 text-sm opacity-50">{artistName}</p>
 
       {timeLeft && (
-        <div className="mt-8 flex items-start gap-4 font-mono tabular-nums sm:gap-6">
+        <div className="mt-8 flex items-start gap-4 readout sm:gap-6">
           <Unit value={timeLeft.days} label="дней" />
           <Colon />
           <Unit value={timeLeft.hours} label="часов" />

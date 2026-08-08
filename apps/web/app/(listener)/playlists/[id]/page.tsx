@@ -129,7 +129,7 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
               )}
             </div>
             {playlist.description && <p className="text-sm text-muted-foreground/80 line-clamp-2">{playlist.description}</p>}
-            <p className="text-sm text-muted-foreground flex items-center gap-1 flex-wrap">
+            <p className="text-sm text-muted-foreground flex items-center gap-1 flex-wrap tabular-nums">
               <span>
                 {playlist.tracks.length} {pluralTracks(playlist.tracks.length)}{totalSec > 0 && ` · ${formatDuration(totalSec)}`}
               </span>

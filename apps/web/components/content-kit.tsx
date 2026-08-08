@@ -27,7 +27,7 @@ export function GlowBackdrop({ className, corner = false }: { className?: string
 
 export function Eyebrow({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={cn('label-mono text-muted-foreground', className)}>
+    <p className={cn('label-wide text-muted-foreground', className)}>
       {children}
     </p>
   );

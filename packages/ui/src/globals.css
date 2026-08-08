@@ -76,6 +76,12 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+@utility label-wide {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
 @utility readout {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums slashed-zero;

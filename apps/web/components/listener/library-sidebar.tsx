@@ -42,7 +42,7 @@ export function LibrarySidebar({
           )}
         >
           {!collapsed && (
-            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground/35">
+            <span className="label-wide text-foreground/35">
               Медиатека
             </span>
           )}

@@ -146,7 +146,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open,
                   {t.isExplicit && <ExplicitBadge />}
                 </span>
                 {t.durationSec != null && (
-                  <span className="text-xs font-mono opacity-30 shrink-0">
+                  <span className="text-xs readout opacity-30 shrink-0">
                     {formatDuration(t.durationSec)}
                   </span>
                 )}

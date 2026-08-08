@@ -67,7 +67,7 @@ function SecretPopup({ onClose }: { onClose: () => void }) {
           className="absolute inset-0 -z-10 rounded-2xl opacity-40"
           style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, color-mix(in oklch, var(--primary) 40%, transparent), transparent)' }}
         />
-        <p className="font-mono text-[11px] tracking-[0.2em] text-primary uppercase">
+        <p className="label-wide text-primary">
           ↑ ↑ ↓ ↓ ← → ← → B A
         </p>
         <div className="space-y-1.5">

@@ -12,7 +12,7 @@ export function InteractiveDemos() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <Panel className="p-5 space-y-4">
-        <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/40">Switch</p>
+        <p className="label-mono text-foreground/40">Switch</p>
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-foreground/85">Уведомления</span>
@@ -30,7 +30,7 @@ export function InteractiveDemos() {
       </Panel>
 
       <Panel className="p-5 space-y-3">
-        <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/40">Check</p>
+        <p className="label-mono text-foreground/40">Check</p>
         <Check
           label="Explicit (ненормативная лексика)"
           hint="Отметьте, если трек содержит мат"

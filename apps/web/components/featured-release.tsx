@@ -57,7 +57,7 @@ export function FeaturedRelease({ release, stats }: { release: DiscoveryRelease;
         <div className="order-2 flex min-w-0 flex-col gap-3 sm:order-1">
           <Link
             href={`/artists/${release.artistSlug}`}
-            className="self-start text-xs font-mono uppercase tracking-[0.18em] text-white/70 hover:text-white transition-colors"
+            className="self-start label-wide text-white/70 hover:text-white transition-colors"
           >
             {release.artistName}
           </Link>
@@ -65,7 +65,7 @@ export function FeaturedRelease({ release, stats }: { release: DiscoveryRelease;
             {release.title}
             {release.hasExplicit && <ExplicitBadge className="ml-2 align-middle" />}
           </h2>
-          <p className="text-xs font-mono text-white/70">{meta}</p>
+          <p className="text-xs font-mono tabular-nums text-white/70">{meta}</p>
           <div className="flex items-center gap-4 pt-1">
             <FeaturedPlayButton
               releaseId={release.id}

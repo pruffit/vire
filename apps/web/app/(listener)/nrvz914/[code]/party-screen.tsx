@@ -88,7 +88,7 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
       style={accent ? { backgroundImage: `radial-gradient(120% 90% at 50% 0%, ${accent}2e, transparent 70%)` } : undefined}
     >
       <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-3 sm:px-6">
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-white/45">Экран вечеринки</p>
+        <p className="label-wide text-white/45">Экран вечеринки</p>
         <div className="flex items-center gap-1">
           <button
             type="button"

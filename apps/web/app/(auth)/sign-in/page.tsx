@@ -26,7 +26,7 @@ export default async function SignInPage({
       />
 
       <div className="relative w-full max-w-sm animate-fade-up">
-        <p className="text-xs font-mono uppercase tracking-[0.22em] text-muted-foreground mb-4 text-center">
+        <p className="label-wide text-muted-foreground mb-4 text-center">
           VireMusic
         </p>
 

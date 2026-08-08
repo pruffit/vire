@@ -291,7 +291,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
                           <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)] shrink-0">обработка…</span>
                         )}
                         {t.durationSec != null && t.status === 'READY' && (
-                          <span className="text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_35%,transparent)] shrink-0">{formatDuration(t.durationSec)}</span>
+                          <span className="text-xs readout text-[color-mix(in_oklch,var(--artist-text)_35%,transparent)] shrink-0">{formatDuration(t.durationSec)}</span>
                         )}
                       </>
                     );

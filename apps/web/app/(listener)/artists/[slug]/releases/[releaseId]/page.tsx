@@ -181,7 +181,7 @@ export default async function ReleasePage({ params }: Props) {
                     {release.description}
                   </p>
                 )}
-                <p className="text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)] tabular-nums">
+                <p className="text-xs readout text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)]">
                   {tracks.length} {pluralTracks(tracks.length)}
                   {totalDuration(tracks) && ` · ${totalDuration(tracks)}`}
                 </p>

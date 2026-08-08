@@ -16,7 +16,7 @@ export default async function PartyLandingPage() {
     <div className="flex min-h-full flex-col items-center justify-center px-6 py-16">
       <div className="w-full max-w-sm space-y-10 text-center">
         <div className="space-y-2">
-          <p className="text-xs font-mono uppercase tracking-[0.22em] text-muted-foreground">Вечеринка</p>
+          <p className="label-wide text-muted-foreground">Вечеринка</p>
           <h1 className="text-2xl font-semibold tracking-tight">Любой трек, любая колонка</h1>
           <p className="text-sm text-muted-foreground">
             Общая очередь для тусовки — гости кидают что угодно, хоть ссылку с любого сервиса.

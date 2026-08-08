@@ -85,7 +85,7 @@ export const TrackRow = forwardRef<HTMLDivElement, TrackRowProps>(function Track
       {track.coverUrl ? (
         <Image src={track.coverUrl} alt={track.title} fill quality={60} sizes="36px" unoptimized={unoptimizedCover} className="object-cover" />
       ) : (
-        <div className="w-full h-full bg-white/5" />
+        <div className="w-full h-full" />
       )}
       <span className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity ${overlayVisibility}`}>
         {isActive && isPlaying ? <PauseIcon size={12} className="text-white" /> : <PlayIcon size={12} className="text-white" />}

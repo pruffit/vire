@@ -44,7 +44,7 @@ export function ArtistPopularTracks({
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-2 self-start min-h-11 px-3 text-xs font-mono uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
+          className="mt-2 self-start min-h-11 px-3 label-wide transition-opacity hover:opacity-80"
           style={{ color: 'var(--artist-accent)' }}
         >
           {expanded ? 'Свернуть' : `Все треки (${tracks.length})`}
