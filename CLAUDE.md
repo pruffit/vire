@@ -234,7 +234,15 @@ pnpm --filter @vire/web check:routes   # инвариант роутинга (с
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов
 pnpm --filter @vire/web build          # прод-сборка (prebuild сам гоняет check:routes)
+pnpm audit --audit-level=high          # из корня; гейт CI, локально о нём легко забыть
 ```
+
+> ⚠️ `pnpm audit` живёт только в CI и валит job `gates` **до** сборки образов — свежая
+> advisory на транзитивную зависимость роняет релиз, даже если код не трогали (так слетел
+> тег v1.48.0 на `nanoid`). Гоняй его перед тегом. Чинить — через `pnpm.overrides` в
+> корневом `package.json`, и **кареткой, а не `>=`**: открытый диапазон утягивает пакет на
+> свежий мажор (`nanoid` уехал на 6.x ESM-only, которого `postcss` не ждёт). `pnpm update`
+> для этого не годится — поднимает вторую копию нативных пакетов рядом со старой.
 
 > CI (`gates`) гоняет typecheck единым `pnpm turbo run typecheck` — таск в `turbo.json`
 > без scope-фильтра, подхватывает любой пакет со своим script `typecheck` (сейчас
