@@ -57,7 +57,7 @@ export function Field({
   return (
     <label htmlFor={htmlFor} className={cn('flex flex-col gap-1.5 min-w-0', className)}>
       <span className="flex items-baseline gap-2 flex-wrap">
-        <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/45">
+        <span className="label-mono text-foreground/45">
           {label}
         </span>
         {hint && <span className="text-xs text-foreground/30 normal-case tracking-normal font-sans">{hint}</span>}
@@ -161,7 +161,7 @@ export function PageHeader({
       <div className="flex items-baseline gap-3">
         <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
         {count !== undefined && (
-          <span className="font-mono text-xs text-foreground/40 tabular-nums">
+          <span className="readout text-xs text-foreground/40">
             {count.toLocaleString('ru-RU')}
           </span>
         )}
@@ -228,7 +228,7 @@ export function DashboardPageHeader({
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-foreground/40">
+    <p className="label-mono text-foreground/40">
       {children}
     </p>
   );
@@ -312,7 +312,7 @@ export function StatCard({
         )}
         {label}
       </span>
-      <span className="text-2xl font-semibold tabular-nums leading-none mt-0.5">
+      <span className="readout text-2xl font-semibold leading-none mt-0.5">
         {typeof value === 'number' ? value.toLocaleString('ru-RU') : value}
       </span>
       {sub && <span className="text-xs text-foreground/35 leading-snug">{sub}</span>}
@@ -437,7 +437,7 @@ export function Th({
   return (
     <th
       className={cn(
-        'px-3 py-2.5 font-mono text-[11px] font-normal uppercase tracking-[0.08em] text-foreground/40',
+        'px-3 py-2.5 label-mono font-normal text-foreground/40',
         align === 'right' && 'text-right',
         align === 'center' && 'text-center',
         align === 'left' && 'text-left',
@@ -503,14 +503,14 @@ export function Td({
         tone === 'faint' && 'text-foreground/30',
         align === 'right' && 'text-right',
         align === 'center' && 'text-center',
-        mono && 'font-mono text-xs',
-        nums && 'tabular-nums',
+        mono && 'readout text-xs',
+        nums && 'readout',
         nowrap && 'whitespace-nowrap',
         className,
       )}
     >
       {showLabel && (
-        <span className="md:hidden shrink-0 font-mono text-[11px] uppercase tracking-[0.08em] text-foreground/40">
+        <span className="md:hidden shrink-0 label-mono text-foreground/40">
           {label}
         </span>
       )}

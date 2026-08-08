@@ -29,7 +29,7 @@ import {
   btnPrimary,
   btnGhost,
 } from '@/components/ui-kit';
-import { Button, Input, Card, CardHeader, CardTitle, CardContent } from '@vire/ui';
+import { Button, Input } from '@vire/ui';
 import { FadeUp, Stagger, StaggerItem, Reveal, Press } from '@vire/ui/motion';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { VerifiedBadge } from '@/components/verified-badge';
@@ -298,7 +298,7 @@ export default function DesignPage() {
         <NumberedSection
           index="03"
           title="Core UI · @vire/ui"
-          subtitle="Button, Input, Card — базовые блоки пакета @vire/ui."
+          subtitle="Button, Input — базовые блоки пакета @vire/ui."
         >
           <Section label="Button · variant">
             <div className="flex flex-wrap gap-4 items-end">
@@ -362,35 +362,6 @@ export default function DesignPage() {
                 <p className="font-mono text-[11px] text-foreground/40">search</p>
                 <Input type="search" placeholder="Поиск..." />
               </div>
-            </div>
-          </Section>
-
-          <Section label="Card" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Базовая карточка</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">bg-card · rounded-lg · shadow-md</p>
-                </CardContent>
-              </Card>
-              <Card className="border border-border">
-                <CardHeader>
-                  <CardTitle>С бордером</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">+ border border-border</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-secondary border-0 shadow-none">
-                <CardHeader>
-                  <CardTitle>bg-secondary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Вариация bg-secondary</p>
-                </CardContent>
-              </Card>
             </div>
           </Section>
         </NumberedSection>

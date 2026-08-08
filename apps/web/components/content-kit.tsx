@@ -27,7 +27,7 @@ export function GlowBackdrop({ className, corner = false }: { className?: string
 
 export function Eyebrow({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={cn('font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground', className)}>
+    <p className={cn('label-mono text-muted-foreground', className)}>
       {children}
     </p>
   );
@@ -35,7 +35,7 @@ export function Eyebrow({ children, className }: { children: React.ReactNode; cl
 
 export function StatusPill({ children, dot = true }: { children: React.ReactNode; dot?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-mono uppercase tracking-widest text-muted-foreground">
+    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 label-mono text-muted-foreground">
       {dot && <span className="size-1.5 rounded-full bg-primary animate-pulse" />}
       {children}
     </span>
