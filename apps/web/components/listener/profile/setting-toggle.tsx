@@ -23,7 +23,7 @@ export function SettingToggle({ title, description, checked, disabled, onToggle 
           className="shrink-0 grid place-items-center min-h-11 min-w-11 cursor-pointer disabled:opacity-50"
         >
           <span className={cn('relative inline-flex h-6 w-11 items-center rounded-full ring-1 ring-inset transition-colors', checked ? 'bg-primary ring-primary' : 'bg-foreground/15 ring-border')}>
-            <span className={cn('absolute left-0.5 inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform', checked && 'translate-x-5')} />
+            <span className={cn('absolute left-0.5 inline-block h-5 w-5 rounded-full shadow-sm transition-[transform,background-color]', checked ? 'translate-x-5 bg-background' : 'bg-foreground')} />
           </span>
         </button>
       </div>

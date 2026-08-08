@@ -90,14 +90,14 @@ function QueueRow({
       value={t}
       dragListener={false}
       dragControls={dragControls}
-      className={`flex items-center gap-2 px-2 py-2 rounded-md select-none ${isCurrent ? 'bg-white/10' : 'hover:bg-white/5'}`}
+      className={`flex items-center gap-2 px-2 py-2 rounded-md select-none ${isCurrent ? 'bg-foreground/10' : 'hover:bg-foreground/5'}`}
     >
       <button
         type="button"
         onPointerDown={(e) => dragControls.start(e)}
         onKeyDown={handleGripKeyDown}
         aria-label={`Переместить «${t.title}»: стрелки вверх/вниз`}
-        className="text-white/25 cursor-grab active:cursor-grabbing shrink-0 touch-none p-2.5 -m-1 rounded pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
+        className="text-foreground/25 cursor-grab active:cursor-grabbing shrink-0 touch-none p-2.5 -m-1 rounded pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
       >
         <GripIcon />
       </button>
@@ -131,7 +131,7 @@ function WaveDivider() {
         <WaveIcon size={14} />
       </span>
       <span>Дальше — Волна</span>
-      <span className="flex-1 h-px bg-white/8" />
+      <span className="flex-1 h-px bg-foreground/8" />
     </div>
   );
 }

@@ -29,8 +29,8 @@ export function AppearanceSettings() {
           >
             <span
               className={cn(
-                'absolute left-0.5 inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform',
-                reduce && 'translate-x-5',
+                'absolute left-0.5 inline-block h-5 w-5 rounded-full shadow-sm transition-[transform,background-color]',
+                reduce ? 'translate-x-5 bg-background' : 'bg-foreground',
               )}
             />
           </span>

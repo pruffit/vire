@@ -1,7 +1,7 @@
 import { PageContainer } from '@/components/page-container';
 
 function Sk({ className }: { className?: string }) {
-  return <div className={`rounded-md bg-white/6 animate-pulse ${className ?? ''}`} />;
+  return <div className={`rounded-md bg-foreground/6 animate-pulse ${className ?? ''}`} />;
 }
 
 export default function ArtistsLoading() {

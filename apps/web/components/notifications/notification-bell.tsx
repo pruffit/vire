@@ -103,7 +103,7 @@ export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number
               key={n.id}
               href={notificationHref(n)}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-white/8"
+              className="flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-foreground/8"
             >
               {n.actorImage ? (
                 <Image src={n.actorImage} alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-full object-cover" />

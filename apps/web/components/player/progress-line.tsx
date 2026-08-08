@@ -51,7 +51,7 @@ export function ProgressLine({ position, duration, onSeek }: Props) {
       className="absolute z-20 top-0 left-0 right-0 h-3 flex items-start touch-none cursor-pointer group"
     >
       <div
-        className={`relative w-full bg-white/5 transition-[height] ${
+        className={`relative w-full bg-foreground/5 transition-[height] ${
           dragging ? 'h-[3px]' : isDesktop ? 'h-[2px] group-hover:h-[3px]' : 'h-[2px]'
         }`}
       >

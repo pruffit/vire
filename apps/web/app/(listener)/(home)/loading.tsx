@@ -1,5 +1,5 @@
 function Sk({ className }: { className?: string }) {
-  return <div className={`rounded-md bg-white/6 animate-pulse ${className ?? ''}`} />;
+  return <div className={`rounded-md bg-foreground/6 animate-pulse ${className ?? ''}`} />;
 }
 
 function SkReleaseCard() {
@@ -25,7 +25,7 @@ export default function HomeLoading() {
   return (
     <main className="mx-auto max-w-5xl px-6 py-12 space-y-16">
       {/* Featured release */}
-      <div className="rounded-2xl overflow-hidden flex flex-col sm:flex-row gap-6 p-6 bg-white/[0.03] border border-white/5">
+      <div className="rounded-2xl overflow-hidden flex flex-col sm:flex-row gap-6 p-6 bg-foreground/[0.03] border border-foreground/5">
         <Sk className="w-full sm:w-52 aspect-square rounded-xl shrink-0" />
         <div className="flex flex-col gap-3 pt-1 flex-1">
           <Sk className="h-3.5 w-20" />

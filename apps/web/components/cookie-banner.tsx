@@ -48,7 +48,7 @@ export function CookieBanner() {
           transition={spring.snappy}
           className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm z-50 pointer-events-auto"
         >
-          <div className="rounded-xl bg-card border border-border/60 shadow-xl shadow-black/30 px-4 py-3.5 space-y-3 backdrop-blur-sm">
+          <div className="rounded-xl bg-card border border-border/60 shadow-xl shadow-background/30 px-4 py-3.5 space-y-3 backdrop-blur-sm">
             <p className="text-xs text-muted-foreground leading-relaxed">
               Мы используем только необходимые cookie — сессия входа. Аналитики и сторонних cookie нет.{' '}
               <a href="/privacy" className="underline underline-offset-2 hover:opacity-70 transition-opacity">

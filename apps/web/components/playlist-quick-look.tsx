@@ -108,7 +108,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open,
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 pb-3" data-scroll-area>
         {tracks === null && loading && (
           <div className="py-8 grid place-items-center">
-            <span className="w-6 h-6 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />
+            <span className="w-6 h-6 border-2 border-foreground/30 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
         {tracks === null && !loading && (
@@ -127,7 +127,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open,
                 onClick={() =>
                   isCurrent ? controls.togglePlay() : void playFrom(t.id)
                 }
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors hover:bg-white/5 cursor-pointer ${isCurrent ? 'bg-white/5' : ''}`}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors hover:bg-foreground/5 cursor-pointer ${isCurrent ? 'bg-foreground/5' : ''}`}
               >
                 <span className="w-5 text-right text-xs font-mono opacity-30 shrink-0">
                   {isCurrent ? <MiniEq animate={isPlaying} /> : i + 1}

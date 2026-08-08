@@ -63,7 +63,7 @@ export function LinkApprove({ viewerId }: { viewerId: string }) {
   if (!identity.ready || !identity.priv || (!approve && !msg)) return null;
 
   return (
-    <div className="fixed bottom-20 right-4 z-[55] w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-card/95 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl space-y-3 md:bottom-6">
+    <div className="fixed bottom-20 right-4 z-[55] w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-card/95 p-4 shadow-2xl shadow-background/40 backdrop-blur-xl space-y-3 md:bottom-6">
       {approve ? (
         <>
           <p className="text-sm font-medium">Новое устройство хочет доступ к переписке</p>

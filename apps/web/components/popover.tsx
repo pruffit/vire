@@ -87,7 +87,7 @@ export function Popover({
             exit={{ opacity: 0, y: yExit, scale: 0.97, x: offsetX }}
             transition={spring.snappy}
             className={cn(
-              'absolute z-50 min-w-[184px] rounded-xl border border-white/12 bg-card/95 backdrop-blur-xl shadow-2xl shadow-black/40 p-1',
+              'absolute z-50 min-w-[184px] rounded-xl border border-foreground/12 bg-card/95 backdrop-blur-xl shadow-2xl shadow-background/40 p-1',
               align === 'right' ? 'right-0' : 'left-0',
               dropDown ? 'top-full mt-2' : 'bottom-full mb-2',
               panelClassName,
@@ -120,7 +120,7 @@ export function PopoverItem({
       role="menuitem"
       onClick={onClick}
       disabled={disabled}
-      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm text-foreground/85 hover:bg-white/8 disabled:opacity-60 disabled:pointer-events-none transition-colors"
+      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm text-foreground/85 hover:bg-foreground/8 disabled:opacity-60 disabled:pointer-events-none transition-colors"
     >
       {icon && <span className="w-4 shrink-0 flex items-center justify-center text-foreground/30">{icon}</span>}
       <span className="flex-1">{label}</span>

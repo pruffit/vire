@@ -117,7 +117,7 @@ export function CommandPalette() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           onClick={close}
-          className="fixed inset-0 z-[70] flex items-start justify-center pt-[16vh] px-4 bg-black/60 backdrop-blur-md"
+          className="fixed inset-0 z-[70] flex items-start justify-center pt-[16vh] px-4 bg-background/60 backdrop-blur-md"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: -8 }}

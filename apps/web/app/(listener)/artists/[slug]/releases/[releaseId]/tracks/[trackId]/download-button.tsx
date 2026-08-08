@@ -70,7 +70,7 @@ export function DownloadButton({ trackId, trackTitle, initialOwned, initialPendi
             href={`/api/v1/tracks/${trackId}/download?filename=${encodeURIComponent(trackTitle)}`}
             whileTap={{ scale: 0.96 }}
             transition={spring.snappy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-white/10 hover:bg-white/15 transition-colors border border-white/10"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-foreground/10 hover:bg-foreground/15 transition-colors border border-foreground/10"
           >
             <DownloadIcon />
             FLAC
@@ -96,7 +96,7 @@ export function DownloadButton({ trackId, trackTitle, initialOwned, initialPendi
             disabled={busy}
             whileTap={busy ? undefined : { scale: 0.96 }}
             transition={spring.snappy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-white/10 hover:bg-white/15 transition-colors border border-white/10 disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-foreground/10 hover:bg-foreground/15 transition-colors border border-foreground/10 disabled:opacity-40"
           >
             {busy ? (
               <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />

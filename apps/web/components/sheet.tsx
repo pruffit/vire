@@ -54,7 +54,7 @@ export function Sheet({ open, onClose, anchor = 'center', panelClassName, childr
           transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
           onClick={onClose}
           className={cn(
-            'fixed inset-0 z-[60] flex bg-black/80 backdrop-blur-xl',
+            'fixed inset-0 z-[60] flex bg-background/80 backdrop-blur-xl',
             isBottom ? 'items-end justify-center' : 'items-center justify-center p-4 sm:p-6',
           )}
           style={{
@@ -94,7 +94,7 @@ export function Sheet({ open, onClose, anchor = 'center', panelClassName, childr
                 onPointerDown={(e) => dragControls.start(e)}
                 className="pt-2.5 pb-1 flex justify-center touch-none cursor-grab active:cursor-grabbing shrink-0"
               >
-                <span className="w-10 h-1 rounded-full bg-white/15" />
+                <span className="w-10 h-1 rounded-full bg-foreground/15" />
               </div>
               {children}
             </DragHandleContext.Provider>

@@ -75,21 +75,10 @@ const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string
     reason: 'кольцо+тень вокруг аватара артиста при hover — токен рамки даёт непредсказуемый контраст на произвольном фото',
   },
 
-  // Временные — литералы вне медиа-оверлеев, чистка в срезах B/C (design-system plan, A4).
-  'components/adaptive-menu.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/announcements.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/color-field.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'app/(listener)/about/about-content.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/cookie-banner.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/command-palette.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'app/(listener)/(home)/loading.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/easter-eggs.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/date-field.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'app/(auth)/sign-in/page.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/chat/link-approve.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/genre-picker.tsx': { overlay: false, reason: 'temporary — срез B/C (в карте плана, топ-15)' },
-  'components/artist-catalog.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/explicit-badge.tsx': { overlay: false, reason: 'temporary — срез B/C' },
+  // Временные — литералы вне медиа-оверлеев, чистка в срезе C (design-system plan, A4).
+  'components/color-field.tsx': { overlay: false, reason: 'temporary — срез C' },
+  'components/date-field.tsx': { overlay: false, reason: 'temporary — срез C' },
+  'components/genre-picker.tsx': { overlay: false, reason: 'temporary — срез C (в карте плана, топ-15)' },
   'components/editorial-playlist-card.tsx': {
     overlay: true,
     reason: 'обложки-веер плейлиста и бейдж поверх них — токен фона неприменим к произвольным обложкам',
@@ -98,57 +87,73 @@ const COLOR_LITERAL_ALLOWLIST: Record<string, { overlay: boolean; reason: string
     overlay: true,
     reason: 'полноэкранная hero-карточка: текст и контролы поверх блюра обложки и градиента-скрима — токен фона неприменим',
   },
-  'components/friends/profile-more-menu.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/listening-now.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/lyrics-editor.tsx': { overlay: false, reason: 'temporary — срез B/C (в карте плана, топ-15)' },
+  'components/listening-now.tsx': {
+    overlay: true,
+    reason: 'play-скрим и кнопка поверх обложки трека в «Сейчас слушают» — токен фона неприменим (тот же паттерн, что track-row.tsx)',
+  },
+  'components/lyrics-editor.tsx': { overlay: false, reason: 'temporary — срез C (в карте плана, топ-15)' },
   'app/(listener)/smartlink/[artistSlug]/[linkSlug]/page.tsx': {
     overlay: true,
     reason: 'тень обложки и белые плашки под лого поверх произвольного --artist-accent — гарантируют читаемость на любой теме артиста',
   },
-  'components/jam/party-video-slot.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/notifications/notification-bell.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/playlist-quick-look.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/playlist-cover.tsx': { overlay: false, reason: 'temporary — срез B/C' },
+  'components/jam/party-video-slot.tsx': {
+    overlay: true,
+    reason: 'плейсхолдер-подложка под видео party-режима — нейтральный фон letterbox вне темы артиста',
+  },
+  'components/playlist-cover.tsx': {
+    overlay: true,
+    reason: 'тёмный grout мозаики из 4 произвольных обложек плейлиста — токен фона неприменим',
+  },
   'components/release-countdown.tsx': {
     overlay: true,
     reason: 'кольцо+тень и тёмный скрим поверх обложки релиза — токен фона неприменим',
   },
-  'components/presave-button.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/player/waveform-scrubber.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/popover.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/player/queue-panel.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/listener/profile/setting-toggle.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/player/progress-line.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/listener/profile/profile-hero.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/home/feed-list.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/select.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/player/player-icons.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/player/mini-bar.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/listener/profile/appearance-settings.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/player/fullscreen.tsx': { overlay: false, reason: 'temporary — срез B/C' },
+  'components/listener/profile/profile-hero.tsx': {
+    overlay: true,
+    reason: 'камера-иконка и скрим поверх аватара пользователя (произвольное фото) при смене — токен фона неприменим',
+  },
+  'components/home/feed-list.tsx': {
+    overlay: true,
+    reason: 'hover-кольцо вокруг обложки релиза в ленте (произвольное фото) — тот же паттерн, что artist-card.tsx',
+  },
+  'components/select.tsx': { overlay: false, reason: 'temporary — срез C' },
+  'components/player/player-icons.tsx': {
+    overlay: true,
+    reason: 'ExpandIcon используется только внутри bg-black/40 скрима поверх обложки в мини-баре — белый цвет часть того же оверлея',
+  },
+  'components/player/mini-bar.tsx': {
+    overlay: true,
+    reason: 'hover-скрим с ExpandIcon поверх обложки трека при разворачивании — токен фона неприменим (как track-row.tsx)',
+  },
+  'components/player/fullscreen.tsx': {
+    overlay: true,
+    reason: 'тень под обложкой трека (shadow-black/50) — токен фона непредсказуем на произвольной обложке',
+  },
   'components/release-quick-look.tsx': {
     overlay: true,
     reason: 'кольцо/тень/скрим-плей поверх обложки релиза в peek-оверлее — токен фона неприменим',
   },
-  'components/links-editor.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/sortable-track-row.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/videos-editor.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/sheet.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'components/theme-editor.tsx': { overlay: false, reason: 'temporary — срез B/C' },
+  'components/links-editor.tsx': { overlay: false, reason: 'temporary — срез C' },
+  'components/sortable-track-row.tsx': {
+    overlay: true,
+    reason: 'анимация эквалайзера внутри cover-оверлея (поверх обложки трека) — токен фона неприменим',
+  },
+  'components/videos-editor.tsx': { overlay: false, reason: 'temporary — срез C' },
+  'components/theme-editor.tsx': { overlay: false, reason: 'temporary — срез C' },
   'components/track-row.tsx': {
     overlay: true,
     reason: 'play/pause-скрим и иконка поверх обложки трека — токен фона неприменим',
   },
   'app/(listener)/design/page.tsx': { overlay: false, reason: 'демо-витрина токенов — swatch-примеры сознательно показывают сырые значения' },
-  'app/(listener)/artists/[slug]/follow-button.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'app/(listener)/artists/[slug]/artist-collapse-bar.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'app/(listener)/artists/(catalog)/loading.tsx': { overlay: false, reason: 'temporary — срез B/C' },
-  'app/(listener)/artists/[slug]/releases/[releaseId]/tracks/[trackId]/download-button.tsx': { overlay: false, reason: 'temporary — срез B/C' },
+  'app/(listener)/about/about-content.tsx': {
+    overlay: true,
+    reason: 'белая плашка под фиксированным брендовым лого DSP (BrandIcon, свои цвета, не перекрасить) в демо-карточке — тот же паттерн, что смартлинк-страница',
+  },
 };
 
 /**
  * Allowlist правила 2 (сырой eyebrow-паттерн). Временный — раскатка `label-mono`
- * по экранам вне ui-kit.tsx/content-kit.tsx идёт в срезах B/C.
+ * по экранам вне ui-kit.tsx/content-kit.tsx (дашборд/админка) идёт в срезе C.
  */
 const RAW_EYEBROW_ALLOWLIST = new Set<string>([
   'app/(listener)/design/page.tsx',
@@ -169,7 +174,7 @@ const RAW_EYEBROW_ALLOWLIST = new Set<string>([
 describe('design tokens: роли и запрет литералов вне allowlist', () => {
   // Регрессия: `text-white`/`bg-white`/`white/NN`/`black/NN`/hex в className в обход
   // OKLCH-токенов платформы (ui-principles.md:129-132). Часть легитимна — оверлеи поверх
-  // видео/изображений, где токен фона неприменим; остальное — временный долг (срез B/C).
+  // видео/изображений, где токен фона неприменим; остальное — временный долг (срез C).
   it('цветовые литералы вне allowlist не используются', () => {
     const files = relFiles(collectAll());
     const offenders = files.filter((rel) => {

@@ -57,7 +57,7 @@ export function ProfileMoreMenu({ targetUserId }: { targetUserId: string }) {
 function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4"
+      className="fixed inset-0 z-[60] grid place-items-center bg-background/60 p-4"
       role="dialog"
       aria-modal="true"
       onClick={onClose}

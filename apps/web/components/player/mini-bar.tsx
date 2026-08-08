@@ -112,7 +112,7 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
 
       <div className="relative z-10 flex items-center h-full pl-3 pr-2 sm:px-4 gap-2 sm:gap-4">
         <div className="flex items-center gap-3 w-1/3 min-w-0">
-          <span className="w-11 h-11 shrink-0 relative rounded overflow-hidden bg-white/5">
+          <span className="w-11 h-11 shrink-0 relative rounded overflow-hidden bg-muted">
             {track.coverUrl && <Image src={track.coverUrl} alt={track.title} fill sizes="44px" className="object-cover" />}
           </span>
           <div className="min-w-0 flex-1">
@@ -204,7 +204,7 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
         {/* layoutId связывает эту обложку с большой в фуллскрине */}
         <motion.div
           layoutId="player-cover"
-          className="absolute inset-0 rounded overflow-hidden bg-white/5"
+          className="absolute inset-0 rounded overflow-hidden bg-muted"
           transition={spring.smooth}
         >
           {coverUrl && (

@@ -65,7 +65,7 @@ export function AdaptiveMenu({ open, onOpenChange, items, trigger, title, align,
               role="menuitem"
               disabled={it.disabled}
               onClick={() => { onOpenChange(false); it.onClick(); }}
-              className="w-full min-h-11 flex items-center gap-3 px-4 text-left text-[15px] text-foreground/90 hover:bg-white/5 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+              className="w-full min-h-11 flex items-center gap-3 px-4 text-left text-[15px] text-foreground/90 hover:bg-foreground/5 disabled:opacity-50 disabled:pointer-events-none transition-colors"
             >
               {it.icon && <span className="w-5 shrink-0 flex items-center justify-center text-foreground/40">{it.icon}</span>}
               <span className="flex-1">{it.label}</span>

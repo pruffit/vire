@@ -142,7 +142,7 @@ export function Announcements() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           onClick={close}
-          className="fixed inset-0 z-[80] grid place-items-center p-4 bg-black/70"
+          className="fixed inset-0 z-[80] grid place-items-center p-4 bg-background/70"
         >
           <motion.div
             role="dialog"
@@ -153,7 +153,7 @@ export function Announcements() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={spring.snappy}
-            className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl shadow-black/40 p-6 space-y-4 overflow-hidden"
+            className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl shadow-background/40 p-6 space-y-4 overflow-hidden"
           >
             <GlowBackdrop corner />
 

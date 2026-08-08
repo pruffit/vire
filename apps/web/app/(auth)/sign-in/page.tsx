@@ -30,7 +30,7 @@ export default async function SignInPage({
           VireMusic
         </p>
 
-        <div className="rounded-xl border border-border bg-card shadow-xl shadow-black/20 p-6">
+        <div className="rounded-xl border border-border bg-card shadow-xl shadow-background/20 p-6">
           {sent ? (
             <div className="text-center space-y-3 py-4">
               <p className="text-3xl">📬</p>

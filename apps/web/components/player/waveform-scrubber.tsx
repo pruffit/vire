@@ -108,7 +108,7 @@ export function WaveformScrubber({
         aria-valuenow={active ? Math.round(progress * duration) : undefined}
         aria-valuemin={active ? 0 : undefined}
         aria-valuemax={active ? Math.round(duration) : undefined}
-        className={`select-none focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40 rounded-sm ${
+        className={`select-none focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm ${
           active ? 'touch-none' : ''
         } ${dragging ? 'cursor-grabbing' : 'cursor-pointer'} ${className ?? ''}`}
       >

@@ -63,7 +63,10 @@ export function ArtistCollapseBar({
                   <Image src={avatarUrl} alt="" fill quality={60} sizes="24px" className="object-cover" />
                 </span>
               ) : (
-                <span className="w-6 h-6 rounded-full bg-white/10 shrink-0" />
+                <span
+                  className="w-6 h-6 rounded-full shrink-0"
+                  style={{ background: 'color-mix(in oklch, var(--artist-text) 10%, transparent)' }}
+                />
               )}
               <span className="text-sm font-semibold truncate">{name}</span>
               {verified && (

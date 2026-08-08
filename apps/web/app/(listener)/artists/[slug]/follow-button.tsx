@@ -34,11 +34,16 @@ export function FollowButton({ slug, initialFollowing, initialCount }: Props) {
         whileTap={{ scale: 0.95 }}
         transition={spring.snappy}
         className={`relative inline-flex min-h-11 items-center justify-center px-4 rounded-full text-sm font-medium overflow-hidden transition-colors duration-300 disabled:opacity-50 ${
-          following
-            ? 'bg-white/10 hover:bg-white/15 border border-white/20'
-            : 'bg-[var(--artist-accent)] hover:opacity-80 border border-transparent'
+          following ? 'hover:opacity-80' : 'bg-[var(--artist-accent)] hover:opacity-80 border border-transparent'
         }`}
-        style={following ? undefined : { color: 'var(--artist-bg, #0d0d0d)' }}
+        style={
+          following
+            ? {
+                background: 'color-mix(in oklch, var(--artist-text) 10%, transparent)',
+                border: '1px solid color-mix(in oklch, var(--artist-text) 20%, transparent)',
+              }
+            : { color: 'var(--artist-bg, #0d0d0d)' }
+        }
       >
         {/* Текст состояния кроссфейдится при переключении подписки. */}
         <AnimatePresence mode="popLayout" initial={false}>

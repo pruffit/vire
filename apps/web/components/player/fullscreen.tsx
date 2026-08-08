@@ -85,7 +85,7 @@ export function FullscreenPlayer({
         onPointerDown={(e) => dragControls.start(e)}
         className="fixed top-0 left-0 right-0 h-10 z-10 flex items-start justify-center pt-3 touch-none cursor-grab active:cursor-grabbing"
       >
-        <span className="w-12 h-1 rounded-full bg-white/20" />
+        <span className="w-12 h-1 rounded-full bg-foreground/20" />
       </div>
 
       <div className="my-auto w-full max-w-md flex flex-col items-center gap-6 sm:gap-8">
@@ -99,7 +99,7 @@ export function FullscreenPlayer({
             layoutId="player-cover"
             transition={spring.smooth}
             onPointerDown={(e) => dragControls.start(e)}
-            className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-lg overflow-hidden shadow-2xl shadow-black/50 bg-white/5 cursor-grab active:cursor-grabbing touch-none"
+            className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-lg overflow-hidden shadow-2xl shadow-black/50 bg-muted cursor-grab active:cursor-grabbing touch-none"
           >
             {coverUrl && (
               <Image src={coverUrl} alt={track.title} fill sizes="320px" unoptimized={coverUrl.startsWith('blob:')} className="object-cover" />

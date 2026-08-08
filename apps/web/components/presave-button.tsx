@@ -96,8 +96,12 @@ export function PresaveButton({
             onChange={(e) => setEmail(e.target.value)}
             placeholder="email@example.com"
             disabled={guestBusy}
-            className="rounded-full bg-white/10 border border-white/15 px-4 py-2 text-sm w-52 focus:outline-none focus:ring-1 focus:ring-[var(--artist-accent)] disabled:opacity-60"
-            style={{ color: 'var(--artist-text)' }}
+            className="rounded-full px-4 py-2 text-sm w-52 focus:outline-none focus:ring-1 focus:ring-[var(--artist-accent)] disabled:opacity-60"
+            style={{
+              color: 'var(--artist-text)',
+              background: 'color-mix(in oklch, var(--artist-text) 10%, transparent)',
+              border: '1px solid color-mix(in oklch, var(--artist-text) 15%, transparent)',
+            }}
           />
           <motion.button
             type="submit"
