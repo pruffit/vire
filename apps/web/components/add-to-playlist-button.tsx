@@ -239,7 +239,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
       <div className="relative">
         {triggerButton}
         <Sheet open={open} onClose={() => { setOpen(false); triggerRef.current?.focus(); }} anchor="bottom">
-          <p className="shrink-0 px-4 pt-1 pb-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+          <p className="shrink-0 px-4 pt-1 pb-2 label-mono text-muted-foreground">
             Плейлисты
           </p>
           {panelContent(true)}
@@ -264,7 +264,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
             className="absolute left-0 top-full mt-2 w-56 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
           >
             <div className="px-3 pt-3 pb-1">
-              <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              <p className="label-mono text-[10px] text-muted-foreground">
                 Плейлисты
               </p>
             </div>

@@ -357,7 +357,7 @@ function historyToCandidates(history: JamQueueItem[]): TrackCandidate[] {
 }
 
 function SectionTitle({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <p className={cn('font-mono text-[11px] uppercase tracking-widest text-muted-foreground', className)}>{children}</p>;
+  return <p className={cn('label-mono text-muted-foreground', className)}>{children}</p>;
 }
 
 function candidateDisplay(candidate: TrackCandidate): { title: string; artistName: string; coverUrl: string | null; durationSec: number | null } {
@@ -402,7 +402,7 @@ function CandidateRow({
       </span>
       <span className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
         {added ? (
-          <span className="text-[11px] font-mono uppercase tracking-widest">Добавлено</span>
+          <span className="label-mono">Добавлено</span>
         ) : candidate.kind === 'HINT' ? (
           <Icon name="globe" size={13} />
         ) : null}

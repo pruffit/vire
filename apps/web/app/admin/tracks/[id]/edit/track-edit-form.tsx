@@ -282,7 +282,7 @@ export function TrackEditForm({
             ) : (
               GENRE_GROUPS.map((g) => (
                 <div key={g.label} className="flex flex-col gap-1.5">
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-foreground/30">{g.label}</span>
+                  <span className="label-mono text-[10px] text-foreground/30">{g.label}</span>
                   <div className="flex flex-wrap gap-2">{g.genres.map(renderGenrePill)}</div>
                 </div>
               ))

@@ -16,7 +16,7 @@ function ParticipantRow({ participant }: { participant: JamParticipant }) {
       </span>
       <span className="flex-1 min-w-0 truncate text-sm text-foreground/85">{participant.displayName}</span>
       {participant.role === 'HOST' && (
-        <span className="shrink-0 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Хост</span>
+        <span className="shrink-0 label-mono text-[10px] text-muted-foreground">Хост</span>
       )}
     </div>
   );
@@ -34,7 +34,7 @@ export function JamParticipants({ participants, variant = 'popover' }: Props) {
   if (variant === 'inline') {
     return (
       <div className="rounded-xl border border-border bg-card/50 p-2">
-        <p className="flex items-center gap-1.5 px-2 pt-1 pb-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+        <p className="flex items-center gap-1.5 px-2 pt-1 pb-2 label-mono text-muted-foreground">
           <Icon name="users" size={12} /> Участники <span className="tabular-nums">· {participants.length}</span>
         </p>
         <div className="max-h-64 overflow-y-auto">

@@ -180,7 +180,7 @@ function ProgressRow({ icon, label, caption, value, done = false }: { icon: Icon
           <Icon name={icon} size={15} className={done ? 'text-primary' : 'text-muted-foreground'} />
           {label}
         </span>
-        <span className={`shrink-0 text-xs font-mono uppercase tracking-wide ${done ? 'text-primary' : 'text-muted-foreground'}`}>
+        <span className={`shrink-0 label-mono text-xs ${done ? 'text-primary' : 'text-muted-foreground'}`}>
           {caption}
         </span>
       </div>
@@ -282,7 +282,7 @@ function ShortcutsTable() {
       {groups.map((group) => (
         <div key={group}>
           <div className="px-5 py-2.5 bg-muted/40">
-            <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground">{group}</span>
+            <span className="label-mono text-xs text-muted-foreground">{group}</span>
           </div>
           <div className="divide-y divide-border/50">
             {SHORTCUTS.filter((s) => s.group === group).map((s) => (

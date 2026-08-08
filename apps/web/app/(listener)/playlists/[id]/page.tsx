@@ -121,7 +121,7 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-semibold tracking-tight truncate">{playlist.title}</h1>
               {playlist.visibility === 'PRIVATE' && (
-                <span className="shrink-0 text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full border border-border text-muted-foreground">Приватный</span>
+                <span className="shrink-0 label-mono text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground">Приватный</span>
               )}
               {playlist.isCollaborative && <PlaylistCollabBadge />}
               {playlist.isCollaborative && collaborators.length > 0 && (

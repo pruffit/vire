@@ -39,9 +39,10 @@ function relFiles(files: string[]): string[] {
 const COLOR_LITERAL_RE = /\b(?:text|bg|border)-white\b|\bwhite\/\d{1,3}\b|\bblack\/\d{1,3}\b|\b[\w-]+-\[#[0-9a-fA-F]{3,8}\]/;
 
 // Сырой eyebrow-паттерн вместо роли `label-mono` — три токена в одной строке className.
+// Разрядка считается и шкальной (tracking-wide/wider/widest), и произвольной (tracking-[...]).
 const RAW_EYEBROW_RE = /\bfont-mono\b/;
 const UPPERCASE_RE = /\buppercase\b/;
-const TRACKING_ARBITRARY_RE = /\btracking-\[/;
+const TRACKING_ARBITRARY_RE = /\btracking-(\[|wide\b|wider\b|widest\b)/;
 
 /**
  * Allowlist правила 1 (цветовые литералы). Ключ — путь относительно apps/web.

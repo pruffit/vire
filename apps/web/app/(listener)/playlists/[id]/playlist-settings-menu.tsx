@@ -224,7 +224,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
             <div className="p-3 space-y-3">
               {/* Название */}
               <div className="space-y-1">
-                <label htmlFor="playlist-title" className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Название</label>
+                <label htmlFor="playlist-title" className="label-mono text-[10px] text-muted-foreground">Название</label>
                 <div className="flex items-center gap-1">
                   <input
                     id="playlist-title"
@@ -245,7 +245,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
 
               {/* Описание */}
               <div className="space-y-1">
-                <label htmlFor="playlist-description" className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Описание</label>
+                <label htmlFor="playlist-description" className="label-mono text-[10px] text-muted-foreground">Описание</label>
                 <textarea
                   id="playlist-description"
                   value={description}
@@ -260,7 +260,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
 
               {/* Приватность */}
               <div className="space-y-1">
-                <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Доступ</p>
+                <p className="label-mono text-[10px] text-muted-foreground">Доступ</p>
                 <div className="flex gap-1">
                   <button
                     onClick={() => void setVisibility('PRIVATE')}
@@ -279,7 +279,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
 
               {/* Обложка */}
               <div className="space-y-1">
-                <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Обложка</p>
+                <p className="label-mono text-[10px] text-muted-foreground">Обложка</p>
                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                 {currentCover ? (
                   <CoverPreview
@@ -305,7 +305,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
                   onClick={() => void toggleCollaboration()}
                   className="flex min-h-11 w-full items-center justify-between"
                 >
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Совместный плейлист</span>
+                  <span className="label-mono text-[10px] text-muted-foreground">Совместный плейлист</span>
                   <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${isCollaborative ? 'bg-primary' : 'bg-secondary'}`}>
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${isCollaborative ? 'translate-x-5' : 'translate-x-0.5'}`} />
                   </span>

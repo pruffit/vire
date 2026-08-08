@@ -62,7 +62,7 @@ export function JamAddPanel({ onAdd, suggestions = [], autoFocus = true, addedTr
       </div>
       <div className={cn('space-y-1 pb-1', dense ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-72 overflow-y-auto')}>
         {isSuggesting && list.length > 0 && (
-          <p className="px-3 pb-1 pt-1 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Из любимых</p>
+          <p className="px-3 pb-1 pt-1 label-mono text-muted-foreground">Из любимых</p>
         )}
         {list.length ? (
           list.map((t) => {
@@ -87,7 +87,7 @@ export function JamAddPanel({ onAdd, suggestions = [], autoFocus = true, addedTr
                   <span className="block text-xs text-muted-foreground truncate">{t.artistName}</span>
                 </span>
                 <span className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
-                  {added && <span className="text-[11px] font-mono uppercase tracking-widest">Добавлено</span>}
+                  {added && <span className="label-mono">Добавлено</span>}
                   <span className="w-6 h-6 grid place-items-center rounded-full">
                     <Icon name={added ? 'check' : 'plus'} size={14} />
                   </span>

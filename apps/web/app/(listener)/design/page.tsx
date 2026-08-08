@@ -175,7 +175,7 @@ export default function DesignPage() {
             }
             className="mt-6 rounded-xl border border-border p-5 space-y-3"
           >
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            <p className="label-mono text-[10px] text-muted-foreground">
               Artist layer · violet preset
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

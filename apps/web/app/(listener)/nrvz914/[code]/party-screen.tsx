@@ -219,7 +219,7 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
         <aside className="flex shrink-0 items-center gap-4 lg:w-64 lg:flex-col lg:items-stretch lg:justify-center lg:gap-6">
           {next.length > 0 && (
             <div className="hidden min-w-0 lg:block">
-              <p className="font-mono text-[11px] uppercase tracking-widest text-white/35">Дальше</p>
+              <p className="label-mono text-white/35">Дальше</p>
               <ul className="mt-2 space-y-2">
                 {next.map((item) => (
                   <li key={item.id} className="flex min-w-0 items-center gap-2.5">

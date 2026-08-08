@@ -49,7 +49,7 @@ export function CountdownBadge({ releaseDate, title }: Props) {
       className="inline-flex items-center gap-3 px-4 py-2 rounded-xl border border-[color-mix(in_oklch,var(--artist-accent)_25%,transparent)] bg-[color-mix(in_oklch,var(--artist-accent)_6%,transparent)]"
       aria-label={`Выходит через ${days} дней`}
     >
-      <span className="text-[10px] font-mono uppercase tracking-widest opacity-50">
+      <span className="label-mono text-[10px] opacity-50">
         Скоро
       </span>
       <div className="flex items-baseline gap-1 font-mono tabular-nums">

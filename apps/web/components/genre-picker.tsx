@@ -78,7 +78,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-mono text-foreground/40 uppercase tracking-widest">
+        <span className="label-mono text-xs text-foreground/40">
           Жанры <span className="opacity-50">({selected.size}/{MAX_TRACK_GENRES})</span>
         </span>
         <AnimatePresence mode="wait">
@@ -125,7 +125,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
 
       {suggestions.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-mono text-foreground/25 uppercase tracking-widest">
+          <span className="label-mono text-[10px] text-foreground/25">
             Предложено
           </span>
           {pendingSuggestions.map((s) => (
@@ -178,7 +178,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         ) : (
           GENRE_GROUPS.map((group) => (
             <section key={group.label} className="space-y-2">
-              <p className="text-[10px] font-mono text-foreground/30 uppercase tracking-widest">{group.label}</p>
+              <p className="label-mono text-[10px] text-foreground/30">{group.label}</p>
               <Pills genres={group.genres} selected={selected} atMax={atMax} onToggle={toggle} />
             </section>
           ))

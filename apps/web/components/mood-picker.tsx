@@ -46,7 +46,7 @@ export function MoodPicker({ trackId, initial, onSave }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
+        <span className="label-mono text-xs text-muted-foreground">
           Настроение <span className="opacity-50">({selected.size}/5)</span>
         </span>
         <AnimatePresence mode="wait">

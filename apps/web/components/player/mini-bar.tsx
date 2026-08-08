@@ -123,7 +123,7 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
                 aria-label="Вернуться в комнату"
                 className="-m-1 shrink-0 rounded-full p-1 pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
               >
-                <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-primary">
+                <span className="rounded-full bg-primary/15 px-1.5 py-0.5 label-mono text-[9px] text-primary">
                   {override.isRemote ? 'Пульт' : override.basePath === PARTY_PATH ? 'Вечеринка' : 'Джем'}
                 </span>
               </Link>

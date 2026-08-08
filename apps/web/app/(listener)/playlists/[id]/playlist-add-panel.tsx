@@ -57,7 +57,7 @@ function TrackSection({ title, items, added, onAdd }: SectionProps) {
   if (!items.length) return null;
   return (
     <div className="space-y-1">
-      <p className="px-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{title}</p>
+      <p className="px-3 label-mono text-[10px] text-muted-foreground">{title}</p>
       {items.map((t) => <TrackRow key={t.id} track={t} added={added} onAdd={onAdd} />)}
     </div>
   );

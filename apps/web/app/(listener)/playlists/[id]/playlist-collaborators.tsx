@@ -6,7 +6,7 @@ const MAX_AVATARS = 4;
 
 export function PlaylistCollabBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 label-mono text-[10px] text-muted-foreground">
       <Icon name="users" size={11} /> Совместный
     </span>
   );

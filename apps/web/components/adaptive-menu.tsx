@@ -53,7 +53,7 @@ export function AdaptiveMenu({ open, onOpenChange, items, trigger, title, align,
         anchor="bottom"
       >
         {title && (
-          <p className="shrink-0 px-4 pt-1 pb-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+          <p className="shrink-0 px-4 pt-1 pb-2 label-mono text-muted-foreground">
             {title}
           </p>
         )}

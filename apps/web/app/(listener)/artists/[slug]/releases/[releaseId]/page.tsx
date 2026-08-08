@@ -165,7 +165,7 @@ export default async function ReleasePage({ params }: Props) {
               </div>
 
               <div className="space-y-4 pt-1 flex flex-col">
-                <p className="text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)] uppercase tracking-widest">
+                <p className="label-mono text-xs text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)]">
                   <span style={{ color: 'var(--artist-accent)' }}>{release.type}</span>
                   {year ? <span className="text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)]"> · {year}</span> : null}
                   {release.genre ? <span className="text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)]"> · {GENRE_LABELS[release.genre]}</span> : null}
