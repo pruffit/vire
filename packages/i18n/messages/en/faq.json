@@ -1,1 +1,22 @@
-{}
+{
+  "whatIsVire": {
+    "question": "What is VireMusic?",
+    "answer": "VireMusic is an independent music platform for artists and listeners in the CIS. Artists publish music without middlemen, and listeners find it without algorithmic ranking games or ads."
+  },
+  "pricing": {
+    "question": "How much does VireMusic cost?",
+    "answer": "Listening to music on VireMusic is free. In this first stage, purchases and subscriptions are turned off — the platform runs in Friends & Family mode."
+  },
+  "becomeArtist": {
+    "question": "How do I become an artist on VireMusic?",
+    "answer": "In this first stage, profiles are set up by hand. Submit a request through the “Become an Artist” form with links to your music, and we'll open up access to uploading releases and setting up your page."
+  },
+  "audioQuality": {
+    "question": "What audio quality does VireMusic stream in?",
+    "answer": "Artists upload FLAC source files, and the platform automatically prepares an adaptive stream (HLS). Sound plays as a stream — there's no file to download."
+  },
+  "smartLink": {
+    "question": "What is a VireMusic smart link?",
+    "answer": "A smart link is a release landing page with links to every platform (Spotify, Apple Music, VK Music, YouTube, and others). It works even without publishing the music on VireMusic itself."
+  }
+}

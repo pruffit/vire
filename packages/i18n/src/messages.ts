@@ -23,6 +23,7 @@ export const NAMESPACES = [
   'dashboard',
   'legal',
   'faq',
+  'about',
   'moods',
   'genres',
   'platforms',

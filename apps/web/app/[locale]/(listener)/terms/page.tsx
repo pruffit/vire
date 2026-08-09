@@ -1,103 +1,95 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { LegalDoc } from '@/components/content-kit';
 
-export const metadata: Metadata = {
-  title: 'Пользовательское соглашение',
-  description: 'Условия использования платформы VireMusic',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('legal.terms.meta');
+  return { title: t('title'), description: t('description') };
+}
 
-export default function TermsPage() {
+function Paragraphs({ items }: { items: string[] }) {
+  return (
+    <>
+      {items.map((p) => (
+        <p key={p}>{p}</p>
+      ))}
+    </>
+  );
+}
+
+function BulletList({ items }: { items: string[] }) {
+  return (
+    <ul>
+      {items.map((i) => (
+        <li key={i}>{i}</li>
+      ))}
+    </ul>
+  );
+}
+
+export default async function TermsPage() {
+  const t = await getTranslations('legal');
+  const s = t.raw('terms.sections') as Record<string, { title: string }>;
+
   return (
     <LegalDoc
-      title="Пользовательское соглашение"
-      revision="Редакция от 5 июля 2026 г."
+      eyebrow={t('eyebrow')}
+      draftNotice={t('draftNotice')}
+      tocAriaLabel={t('toc.ariaLabel')}
+      title={t('terms.title')}
+      revision={t('terms.revision')}
       sections={[
         {
-          title: 'Общие положения',
+          title: s.general.title,
+          body: <Paragraphs items={t.raw('terms.sections.general.paragraphs') as string[]} />,
+        },
+        {
+          title: s.contentRights.title,
+          body: <Paragraphs items={t.raw('terms.sections.contentRights.paragraphs') as string[]} />,
+        },
+        {
+          title: s.ugc.title,
           body: (
             <>
-              <p>Настоящее соглашение регулирует использование платформы VireMusic (далее — «Сервис»), предназначенной для публикации и прослушивания независимой музыки артистов СНГ.</p>
-              <p>Используя Сервис, вы принимаете условия настоящего соглашения. Если вы не согласны с ними — пожалуйста, не пользуйтесь Сервисом.</p>
+              <p>{t('terms.sections.ugc.intro')}</p>
+              <BulletList items={t.raw('terms.sections.ugc.items') as string[]} />
+              <p>{t('terms.sections.ugc.outro')}</p>
             </>
           ),
         },
         {
-          title: 'Права на контент',
-          body: (
-            <>
-              <p>Артист, публикующий треки и релизы на VireMusic, сохраняет все исключительные права на свои произведения.</p>
-              <p>Загружая контент, артист предоставляет VireMusic безвозмездную, неисключительную лицензию на воспроизведение, трансляцию и отображение этого контента в рамках работы Сервиса (стриминг для зарегистрированных пользователей, отображение метаданных и обложек).</p>
-              <p>VireMusic не претендует на право собственности или соавторство в отношении контента артистов.</p>
-            </>
-          ),
+          title: s.account.title,
+          body: <Paragraphs items={t.raw('terms.sections.account.paragraphs') as string[]} />,
         },
         {
-          title: 'Правила публикации (UGC)',
-          body: (
-            <>
-              <p>Публикуя контент на платформе, пользователь гарантирует, что:</p>
-              <ul>
-                <li>обладает всеми необходимыми правами на размещаемый контент;</li>
-                <li>контент не нарушает авторские права третьих лиц;</li>
-                <li>контент не содержит материалов, запрещённых действующим законодательством;</li>
-                <li>контент не является спамом, мошенничеством или вводящим в заблуждение материалом.</li>
-              </ul>
-              <p>VireMusic оставляет за собой право без предварительного уведомления удалить контент, нарушающий настоящие правила, или приостановить доступ к аккаунту.</p>
-            </>
-          ),
+          title: s.streaming.title,
+          body: <Paragraphs items={t.raw('terms.sections.streaming.paragraphs') as string[]} />,
         },
         {
-          title: 'Аккаунт пользователя',
-          body: (
-            <>
-              <p>Для доступа к части функций требуется создание аккаунта — через Яндекс (OAuth) либо по email (пароль или ссылка magic-link).</p>
-              <p>Вы несёте ответственность за сохранность доступа к своему аккаунту и за все действия, совершённые под вашим аккаунтом.</p>
-              <p>Для защиты от подбора пароля Сервис ограничивает число попыток входа с одного IP-адреса в единицу времени.</p>
-            </>
-          ),
+          title: s.presave.title,
+          body: <Paragraphs items={t.raw('terms.sections.presave.paragraphs') as string[]} />,
         },
         {
-          title: 'Стриминг и скачивание',
-          body: (
-            <>
-              <p>Зарегистрированные пользователи могут прослушивать опубликованные треки в формате HLS-стриминга.</p>
-              <p>Скачивание треков в формате FLAC доступно только после приобретения у артиста (функция находится в разработке и пока не предлагается на публичных страницах).</p>
-              <p>Извлечение, копирование или распространение аудиоматериалов за пределами Сервиса без разрешения правообладателя запрещено.</p>
-            </>
-          ),
+          title: s.playlists.title,
+          body: <Paragraphs items={t.raw('terms.sections.playlists.paragraphs') as string[]} />,
         },
         {
-          title: 'Пресейв релиза',
-          body: (
-            <>
-              <p>Для анонсированных релизов доступен пресейв — вы отмечаете намерение послушать релиз до его выхода. Для зарегистрированных пользователей достаточно нажать кнопку; для гостей потребуется указать email.</p>
-              <p>В день выхода релиза он автоматически добавляется в ваши лайки, а на указанный email приходит уведомление о выходе.</p>
-            </>
-          ),
+          title: s.liability.title,
+          body: <Paragraphs items={t.raw('terms.sections.liability.paragraphs') as string[]} />,
         },
         {
-          title: 'Плейлисты и лайки',
-          body: (
-            <p>Зарегистрированные пользователи могут создавать плейлисты, добавлять в них треки, а также отмечать лайком треки и плейлисты (в том числе публичные плейлисты других пользователей). Плейлист может быть приватным или доступным по ссылке.</p>
-          ),
+          title: s.changes.title,
+          body: <Paragraphs items={t.raw('terms.sections.changes.paragraphs') as string[]} />,
         },
         {
-          title: 'Ограничение ответственности',
+          title: s.contact.title,
           body: (
-            <p>Сервис предоставляется «как есть». VireMusic не даёт гарантий бесперебойной работы и не несёт ответственности за косвенный ущерб, возникший в связи с использованием Сервиса.</p>
-          ),
-        },
-        {
-          title: 'Изменения соглашения',
-          body: (
-            <p>VireMusic оставляет за собой право изменять настоящее соглашение. О существенных изменениях мы уведомим пользователей. Продолжение использования Сервиса после изменений означает их принятие.</p>
-          ),
-        },
-        {
-          title: 'Контакт',
-          body: (
-            <p>По вопросам, связанным с соглашением: <Link href="/feedback">форма обратной связи</Link></p>
+            <p>
+              {t.rich('terms.sections.contact.body', {
+                link: (chunks) => <Link href="/feedback">{chunks}</Link>,
+              })}
+            </p>
           ),
         },
       ]}

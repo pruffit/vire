@@ -1,1 +1,174 @@
-{}
+{
+  "eyebrow": "VireMusic · Legal",
+  "draftNotice": "draft — not legal advice",
+  "toc": { "ariaLabel": "Table of contents" },
+  "terms": {
+    "meta": {
+      "title": "Terms of Service",
+      "description": "Terms of use for the VireMusic platform"
+    },
+    "title": "Terms of Service",
+    "revision": "Last revised: July 5, 2026",
+    "sections": {
+      "general": {
+        "title": "General Provisions",
+        "paragraphs": [
+          "These Terms govern the use of the VireMusic platform (the “Service”), built for publishing and streaming independent music by artists from the CIS.",
+          "By using the Service, you accept these Terms. If you do not agree with them, please do not use the Service."
+        ]
+      },
+      "contentRights": {
+        "title": "Content Rights",
+        "paragraphs": [
+          "An artist who publishes tracks and releases on VireMusic retains all exclusive rights to their work.",
+          "By uploading content, the artist grants VireMusic a royalty-free, non-exclusive license to reproduce, transmit, and display that content as part of operating the Service (streaming for registered users, display of metadata and cover art).",
+          "VireMusic does not claim ownership of, or co-authorship in, artists' content."
+        ]
+      },
+      "ugc": {
+        "title": "Publishing Rules (User-Generated Content)",
+        "intro": "By publishing content on the platform, the user guarantees that:",
+        "items": [
+          "they hold all rights necessary for the content being published;",
+          "the content does not infringe the copyright of third parties;",
+          "the content does not contain material prohibited under applicable law;",
+          "the content is not spam, fraud, or misleading material."
+        ],
+        "outro": "VireMusic reserves the right to remove content that violates these rules, or to suspend account access, without prior notice."
+      },
+      "account": {
+        "title": "User Account",
+        "paragraphs": [
+          "Access to some features requires an account — created via Yandex (OAuth) or by email (password or magic link).",
+          "You are responsible for keeping access to your account secure and for all actions taken under your account.",
+          "To protect against password guessing, the Service limits the number of login attempts from a single IP address per unit of time."
+        ]
+      },
+      "streaming": {
+        "title": "Streaming and Downloads",
+        "paragraphs": [
+          "Registered users can stream published tracks via HLS streaming.",
+          "Downloading tracks in FLAC format is available only after purchase from the artist (this feature is under development and is not currently offered on public pages).",
+          "Extracting, copying, or distributing audio material outside the Service without the rights holder's permission is prohibited."
+        ]
+      },
+      "presave": {
+        "title": "Release Presave",
+        "paragraphs": [
+          "For announced releases, a presave is available — you mark your intent to listen to the release before it comes out. Registered users only need to click the button; guests must provide an email address.",
+          "On the release day, it is automatically added to your likes, and a notification is sent to the email address you provided."
+        ]
+      },
+      "playlists": {
+        "title": "Playlists and Likes",
+        "paragraphs": [
+          "Registered users can create playlists, add tracks to them, and like tracks and playlists (including public playlists created by other users). A playlist can be private or accessible via a link."
+        ]
+      },
+      "liability": {
+        "title": "Limitation of Liability",
+        "paragraphs": [
+          "The Service is provided “as is.” VireMusic makes no guarantee of uninterrupted operation and is not liable for any indirect damages arising from use of the Service."
+        ]
+      },
+      "changes": {
+        "title": "Changes to These Terms",
+        "paragraphs": [
+          "VireMusic reserves the right to amend these Terms. We will notify users of material changes. Continued use of the Service after such changes constitutes acceptance of them."
+        ]
+      },
+      "contact": {
+        "title": "Contact",
+        "body": "For questions about these Terms: <link>feedback form</link>"
+      }
+    }
+  },
+  "privacy": {
+    "meta": {
+      "title": "Privacy Policy",
+      "description": "How VireMusic handles users' personal data"
+    },
+    "title": "Privacy Policy",
+    "revision": "Last revised: July 5, 2026",
+    "sections": {
+      "dataCollected": {
+        "title": "What Data We Collect",
+        "oauthIntro": "When you sign up via Yandex (OAuth), we receive:",
+        "oauthItems": [
+          "your email address;",
+          "your display name;",
+          "your avatar URL (we store the link; the image itself is not copied)."
+        ],
+        "emailAuth": "When you sign up by email (password or magic link), we receive only your email address.",
+        "ownAvatar": "If you upload your own avatar, the image is stored in our file storage (S3).",
+        "presaveGuest": "When you presave an announced release without signing in, we receive only the email address you provide for the release notification.",
+        "usageIntro": "As you use the Service, we record:",
+        "usageItems": [
+          "track likes (track_id + user_id);",
+          "playlist likes (playlist_id + user_id);",
+          "artist follows (artist_id + user_id);",
+          "the playlists you create and their contents;",
+          "release presaves: user_id for registered users, or email for guests;",
+          "play events: track_id, an anonymous session_id, date/time, duration, and playback source. A user_id is attached only for registered users;",
+          "favorite moments on a track (timestamp + anonymous session_id; user_id only for registered users);",
+          "the “listening now” presence signal — an anonymous session_id kept in in-memory storage (Redis), never retained longer than 45 seconds of inactivity;",
+          "mood tags and genres assigned to a track (by the track's owning artist only)."
+        ]
+      },
+      "dataUse": {
+        "title": "How We Use the Data",
+        "items": [
+          "Authenticating and identifying you within the Service.",
+          "Building your personal follows feed.",
+          "A taste profile for the track-recommendation algorithm (“Wave”) — aggregated from your listening and like history (track mood tags and genres) to generate personal recommendations.",
+          "Notifying you about a release you've presaved, and automatically adding the release to your likes on release day.",
+          "Analytics for artists: play counts, unique listeners, day-by-day trends.",
+          "Ensuring security and preventing abuse (including rate-limiting requests by IP address)."
+        ]
+      },
+      "dataSharing": {
+        "title": "Sharing Data with Third Parties",
+        "intro": "We do not sell or share personal data with third parties for advertising or commercial purposes.",
+        "listIntro": "Data may be shared only:",
+        "items": [
+          "with infrastructure providers (hosting, file storage, email delivery) — to the extent necessary to operate the Service;",
+          "at the request of authorized government bodies, in cases established by law."
+        ]
+      },
+      "cookies": {
+        "title": "Cookies, Browser Storage, and Analytics",
+        "necessary": "We use essential cookies — an Auth.js session token for user authentication.",
+        "metricaIntro": "To collect site traffic statistics, the platform uses <strong>Yandex.Metrica</strong> (JSC “Yandex”, Russia). Metrica collects:",
+        "metricaItems": [
+          "data on pages viewed, referral sources, and time spent on the site;",
+          "click maps and scroll maps (clickmap);",
+          "session recordings — Webvisor (mouse movement, clicks, scrolling). Webvisor does not capture input into form fields (passwords, emails)."
+        ],
+        "metricaPolicy": "This data is processed by Yandex in accordance with <link>Yandex's privacy policy</link>. We do not share personal data (email, name) with Yandex — only browser session behavioral data.",
+        "localStorage": "localStorage is used to store player state (playback queue, volume, track position) and interface preferences (for example, whether you've dismissed a banner). This data stays in your browser and is never sent to our server."
+      },
+      "storage": {
+        "title": "Data Storage and Deletion",
+        "location": "Data is stored on servers in Russia (Timeweb Cloud VPS). Files — cover art, audio files, avatars — are stored in S3-compatible storage on the same infrastructure.",
+        "deletion": "To delete your account and the personal data associated with it, use the <link>feedback form</link>. We will process your request within 14 days.",
+        "afterDeletion": "After account deletion, anonymized play events (without a user_id) may be retained in aggregated statistics."
+      },
+      "security": {
+        "title": "Security",
+        "paragraphs": [
+          "We apply standard technical safeguards: HTTPS, an httpOnly session cookie, and files stored in a private S3 bucket accessible only via signed URLs."
+        ]
+      },
+      "policyChanges": {
+        "title": "Changes to This Policy",
+        "paragraphs": [
+          "We will notify users of material changes to this Privacy Policy by email or via an in-Service notification."
+        ]
+      },
+      "contact": {
+        "title": "Contact",
+        "body": "For questions about the processing of personal data: <link>feedback form</link>"
+      }
+    }
+  }
+}

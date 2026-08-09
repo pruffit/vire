@@ -201,15 +201,19 @@ export interface LegalSection {
  * обе страницы дробятся на массив секций без дублирования вёрстки.
  */
 export function LegalDoc({
-  eyebrow = 'VireMusic · Правовое',
+  eyebrow,
   title,
   revision,
+  draftNotice,
+  tocAriaLabel,
   intro,
   sections,
 }: {
-  eyebrow?: string;
+  eyebrow: string;
   title: string;
   revision: string;
+  draftNotice: string;
+  tocAriaLabel: string;
   intro?: React.ReactNode;
   sections: LegalSection[];
 }) {
@@ -228,7 +232,7 @@ export function LegalDoc({
               <Icon name="clock" size={12} className="text-primary" />
               {revision}
             </span>
-            <span className="text-muted-foreground/60">драфт — не юридическая консультация</span>
+            <span className="text-muted-foreground/60">{draftNotice}</span>
           </span>
         }
       />
@@ -236,7 +240,7 @@ export function LegalDoc({
       {intro && <p className="mt-8 max-w-prose text-sm leading-relaxed text-muted-foreground">{intro}</p>}
 
       <div className="mt-12 lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-12">
-        <LegalToc items={toc} />
+        <LegalToc items={toc} ariaLabel={tocAriaLabel} />
         <div className="space-y-12">
           {sections.map((s, i) => (
             <section key={toc[i].id} id={toc[i].id} className="scroll-mt-24 space-y-3">

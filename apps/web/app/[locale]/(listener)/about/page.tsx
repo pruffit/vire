@@ -1,21 +1,25 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { AboutContent } from './about-content';
 import { JsonLd } from '@/components/json-ld';
 import { faqPageJsonLd } from '@/lib/structured-data';
-import { SITE_FAQ } from '@/lib/faq';
+import { getSiteFaq } from '@/lib/faq';
 import { pageMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = pageMetadata({
-  url: '/about',
-  title: 'О платформе',
-  description:
-    'VireMusic — независимая музыкальная площадка для артистов и слушателей СНГ. Этап 1: подробно о каждой возможности — что уже работает и что будет дальше.',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('about.meta');
+  return pageMetadata({
+    url: '/about',
+    title: t('title'),
+    description: t('description'),
+  });
+}
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const t = await getTranslations('faq');
   return (
     <>
-      <JsonLd data={faqPageJsonLd(SITE_FAQ)} />
+      <JsonLd data={faqPageJsonLd(getSiteFaq(t))} />
       <AboutContent />
     </>
   );

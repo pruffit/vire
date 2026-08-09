@@ -9,7 +9,7 @@ interface TocItem {
   title: string;
 }
 
-export function LegalToc({ items }: { items: TocItem[] }) {
+export function LegalToc({ items, ariaLabel }: { items: TocItem[]; ariaLabel: string }) {
   const [active, setActive] = useState(items[0]?.id ?? '');
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export function LegalToc({ items }: { items: TocItem[] }) {
   }, [items]);
 
   return (
-    <nav aria-label="Оглавление" className="mb-10 hidden lg:block">
+    <nav aria-label={ariaLabel} className="mb-10 hidden lg:block">
       <ul className="sticky top-8 space-y-1 border-l border-border">
         {items.map((item) => {
           const isActive = item.id === active;

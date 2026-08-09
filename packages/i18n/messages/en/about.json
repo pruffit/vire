@@ -1,0 +1,102 @@
+{
+  "meta": {
+    "title": "About the Platform",
+    "description": "VireMusic is an independent music platform for artists and listeners in the CIS. Stage 1: an in-depth look at every feature — what already works and what's coming next."
+  },
+  "badge": "Stage 1 · Friends & Family",
+  "hero": {
+    "titleLine1": "Independent music,",
+    "titleAccent": "on your own terms",
+    "subtitle": "VireMusic is a platform where artists publish music without middlemen, and listeners find it without algorithmic ranking games or ads. We're in an early, cozy stage right now — launching among friends and shaping the platform together with you."
+  },
+  "roadmap": {
+    "index": "01",
+    "title": "Roadmap",
+    "stage1": { "label": "Stage 1 — Friends & Family", "caption": "launched" },
+    "stage2": { "label": "Stage 2 — Direct sales", "caption": "in progress" },
+    "stage3": { "label": "Stage 3 — Community and full launch", "caption": "coming up" }
+  },
+  "examples": {
+    "index": "02",
+    "title": "What it looks like",
+    "subtitle": "Live interface pieces — not screenshots.",
+    "wave": "Wave",
+    "moodTags": "Mood tags",
+    "smartlink": "Smart link — listen everywhere",
+    "trackLabeling": "Track labeling",
+    "syncedLyrics": "Synced lyrics",
+    "moods": ["melancholy", "drive", "night", "focus", "warmth"],
+    "track1": "Midnight Express",
+    "track2": "Quiet Hour",
+    "lyrics": [
+      "rain in the city, I walk without an umbrella",
+      "the streetlights seem to whisper along with me",
+      "and every step is a brand new line"
+    ]
+  },
+  "forListeners": {
+    "index": "03",
+    "title": "For listeners",
+    "features": {
+      "player": { "title": "Player and stream", "text": "A global player on every page: queue, scrubbing along the waveform, keyboard shortcuts (space, arrows, M, R for repeat). Sound plays as a stream — no files to download." },
+      "wave": { "title": "Wave", "text": "An endless stream tuned to your taste: matched by mood tags, tempo, and key. When the queue runs out, Wave keeps going on its own. You can start it from any track." },
+      "likes": { "title": "Likes", "text": "Like tracks from the player, a track list, or the track page — the state stays in sync everywhere and collects in your profile." },
+      "playlists": { "title": "Playlists", "text": "Your own collections in one click: add, rename, delete. Private or link-only. You can like other people's public playlists — they show up in your library." },
+      "follows": { "title": "Follows and feed", "text": "Follow artists — new releases and announcements land in your personal feed." },
+      "moodTags": { "title": "Mood tags", "text": "Tracks carry mood tags — Wave runs on them, and they make it easier to find music that fits how you feel." },
+      "favoriteMoments": { "title": "Favorite moments", "text": "Mark the best seconds right on the track's waveform. Marks are anonymous and build up into a shared “heat” trail." },
+      "syncedLyrics": { "title": "Synced lyrics", "text": "Lyrics right in the player: lines highlight as the track plays, and tapping a line jumps playback to that spot." },
+      "sharing": { "title": "Sharing with a timestamp", "text": "Share a plain link or “from M:SS” — whoever opens it lands on exactly that second." },
+      "listeningNow": { "title": "Listening now", "text": "The track page and the artist dashboard show a live counter: how many people are listening right now." },
+      "search": { "title": "Search", "text": "A dedicated page, a quick inline dropdown, and a command palette via ⌘K / Ctrl+K." }
+    }
+  },
+  "forArtists": {
+    "index": "04",
+    "title": "For artists",
+    "features": {
+      "page": { "title": "Page and theming", "text": "A full-bleed cover, bio, links, and video. The artist sets colors, grain, and fonts for their own page — no code changes needed." },
+      "upload": { "title": "Uploading releases", "text": "Upload a source file — the platform cuts it into a stream and calculates the waveform on its own. Statuses range from draft to published (scheduling included)." },
+      "trackCard": { "title": "Track card", "text": "BPM, key, an explicit (18+) label, liner notes, and credits. Co-writers and their shares live at the track level." },
+      "lyrics": { "title": "Track lyrics", "text": "Add synced (LRC) or plain lyrics — listeners see them in the player, highlighted in time with the track." },
+      "analytics": { "title": "Analytics", "text": "Plays over 24h / 7 / 30 days, unique listeners, day-by-day trends, and repeat listens — all in the dashboard." },
+      "posts": { "title": "Announcements", "text": "Posts on the artist page with inline editing. Followers see them in their feed." },
+      "smartlinks": { "title": "Smart links", "text": "Release landing pages with links to every platform — they work even without publishing the music on VireMusic itself." }
+    }
+  },
+  "whatsNext": {
+    "index": "05",
+    "title": "What's next",
+    "badge": "Coming soon · Stage 2",
+    "text": "<strong>Direct sales</strong> are coming: buy a track or release and support the artist directly, with no middlemen. Purchases are off in Stage 1 — we'll turn them on once everything's ready. Here's a preview of what it'll look like:",
+    "mockRelease": {
+      "title": "New release",
+      "subtitle": "FLAC · support the artist",
+      "price": "299 ₽",
+      "tooltip": "Purchases arrive in Stage 2"
+    }
+  },
+  "shortcuts": {
+    "index": "06",
+    "title": "Keyboard shortcuts",
+    "items": [
+      { "group": "Navigation", "desc": "Open search" },
+      { "group": "Navigation", "desc": "Command palette" },
+      { "group": "Navigation", "desc": "Command palette (alternate)" },
+      { "group": "Player", "desc": "Play / Pause" },
+      { "group": "Player", "desc": "Seek −5 sec" },
+      { "group": "Player", "desc": "Seek +5 sec" },
+      { "group": "Player", "desc": "Previous track" },
+      { "group": "Player", "desc": "Next track" },
+      { "group": "Player", "desc": "Mute / Unmute" },
+      { "group": "Player", "desc": "Repeat mode (queue / track / off)" }
+    ]
+  },
+  "faqSection": { "index": "07", "title": "Frequently asked questions" },
+  "cta": {
+    "title": "Are you an artist?",
+    "text": "In Stage 1 we set up profiles by hand — tell us about yourself and share links to your music, and we'll open up access to uploading and setting up your page.",
+    "becomeArtist": "Become an artist",
+    "listenArtists": "Listen to artists"
+  }
+}

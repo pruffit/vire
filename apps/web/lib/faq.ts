@@ -1,30 +1,12 @@
 import type { FaqItem } from './structured-data';
 
 // Единый источник для FAQ-блока и FAQPage JSON-LD — разметка должна совпадать с видимым текстом (требование Google).
-export const SITE_FAQ: FaqItem[] = [
-  {
-    question: 'Что такое VireMusic?',
-    answer:
-      'VireMusic — независимая музыкальная площадка для артистов и слушателей СНГ. Артисты публикуют музыку без посредников, а слушатели находят её без алгоритмической гонки и рекламы.',
-  },
-  {
-    question: 'Сколько стоит пользоваться VireMusic?',
-    answer:
-      'Слушать музыку на VireMusic можно бесплатно. На первом этапе покупки и подписки отключены — площадка работает в режиме Friends & Family.',
-  },
-  {
-    question: 'Как стать артистом на VireMusic?',
-    answer:
-      'На первом этапе профили заводятся вручную. Оставьте заявку через форму «Стать артистом» со ссылками на свою музыку — мы откроем доступ к загрузке релизов и оформлению страницы.',
-  },
-  {
-    question: 'В каком качестве звучит музыка на VireMusic?',
-    answer:
-      'Артисты загружают исходники в FLAC, платформа автоматически готовит адаптивный поток (HLS). Звук идёт потоком, без скачивания файлов.',
-  },
-  {
-    question: 'Что такое смартлинк на VireMusic?',
-    answer:
-      'Смартлинк — это страница-лендинг релиза со ссылками на все площадки (Spotify, Apple Music, VK Музыка, YouTube и другие). Работает даже без публикации музыки на самой VireMusic.',
-  },
-];
+const FAQ_KEYS = ['whatIsVire', 'pricing', 'becomeArtist', 'audioQuality', 'smartLink'] as const;
+
+/** t — переводчик namespace 'faq' (ключи <key>.question/<key>.answer). */
+export function getSiteFaq(t: (key: string) => string): FaqItem[] {
+  return FAQ_KEYS.map((key) => ({
+    question: t(`${key}.question`),
+    answer: t(`${key}.answer`),
+  }));
+}
