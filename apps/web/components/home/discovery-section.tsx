@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { buildDiscovery } from '@/lib/discovery';
 import { discoveryReasonLabel } from '@/lib/discovery-reason';
 import { Section } from '@/components/listener/section';
@@ -8,11 +9,12 @@ import { ArtistCard } from '@/components/artist-card';
 export const DISCOVERY_MIN_CANDIDATES = 4;
 
 export async function DiscoverySection({ userId }: { userId: string }) {
+  const t = await getTranslations('home.sections');
   const artists = await buildDiscovery(userId).catch(() => []);
   if (artists.length < DISCOVERY_MIN_CANDIDATES) return null;
 
   return (
-    <Section title="Открытия для вас" count={artists.length}>
+    <Section title={t('discoveries')} count={artists.length}>
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {artists.map((a) => (
           <div key={a.artistProfileId} className="flex-[1_0_9rem] max-w-[10rem] min-w-0 snap-start">

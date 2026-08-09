@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, type KeyboardEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { Reorder, useDragControls } from 'motion/react';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
@@ -62,7 +63,7 @@ export function QueuePanel({ onJump }: { onJump: () => void }) {
 
 /** dragListener={false} + драг только с грипа — иначе touch-action:none на строке убивал тач-скролл списка. */
 function QueueRow({
-  track: t,
+  track,
   isCurrent,
   onJump,
   onMove,
@@ -72,22 +73,23 @@ function QueueRow({
   onJump: (t: PlayerTrack) => void;
   onMove: (trackId: string, dir: -1 | 1) => void;
 }) {
+  const t = useTranslations('player');
   const dragControls = useDragControls();
 
   function handleGripKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      onMove(t.id, -1);
+      onMove(track.id, -1);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      onMove(t.id, 1);
+      onMove(track.id, 1);
     }
   }
 
   return (
     <Reorder.Item
       as="div"
-      value={t}
+      value={track}
       dragListener={false}
       dragControls={dragControls}
       className={`flex items-center gap-2 px-2 py-2 rounded-md select-none ${isCurrent ? 'bg-foreground/10' : 'hover:bg-foreground/5'}`}
@@ -96,32 +98,33 @@ function QueueRow({
         type="button"
         onPointerDown={(e) => dragControls.start(e)}
         onKeyDown={handleGripKeyDown}
-        aria-label={`Переместить «${t.title}»: стрелки вверх/вниз`}
+        aria-label={t('moveTrackAria', { title: track.title })}
         className="text-foreground/25 cursor-grab active:cursor-grabbing shrink-0 touch-none p-2.5 -m-1 rounded pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
       >
         <GripIcon />
       </button>
-      <button type="button" onClick={() => onJump(t)} className="flex-1 min-w-0 text-left">
+      <button type="button" onClick={() => onJump(track)} className="flex-1 min-w-0 text-left">
         <span
           className="text-sm truncate flex items-center gap-1.5"
           style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
         >
           <span className="truncate">
-            <TrackTitleText title={t.title} version={t.version} feat={t.feat} />
+            <TrackTitleText title={track.title} version={track.version} feat={track.feat} />
           </span>
-          {t.isExplicit && <ExplicitBadge />}
-          {t.localFileId && <Icon name="file" size={11} className="shrink-0 text-muted-foreground/70" />}
+          {track.isExplicit && <ExplicitBadge />}
+          {track.localFileId && <Icon name="file" size={11} className="shrink-0 text-muted-foreground/70" />}
         </span>
-        <span className="text-xs text-muted-foreground truncate block">{t.artistName}</span>
+        <span className="text-xs text-muted-foreground truncate block">{track.artistName}</span>
       </button>
       {isCurrent && <PlayingDot />}
       {/* Локальный файл живёт на устройстве, скачивать в офлайн-кэш нечего. */}
-      {!t.localFileId && <TrackQueueMenu context={{ source: 'direct' }} track={t} />}
+      {!track.localFileId && <TrackQueueMenu context={{ source: 'direct' }} track={track} />}
     </Reorder.Item>
   );
 }
 
 function WaveDivider() {
+  const t = useTranslations('player');
   return (
     <div
       className="flex items-center gap-2 px-2 pt-3 pb-1 text-xs text-muted-foreground"
@@ -130,7 +133,7 @@ function WaveDivider() {
       <span style={{ color: 'var(--artist-accent)' }}>
         <WaveIcon size={14} />
       </span>
-      <span>Дальше — Волна</span>
+      <span>{t('nextIsWave')}</span>
       <span className="flex-1 h-px bg-foreground/8" />
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
@@ -9,6 +10,7 @@ import { PlayIcon } from '@/components/icons';
 import { toast } from '@/lib/toast';
 
 export function WaveStartButton() {
+  const t = useTranslations('home.wave');
   const waveMode = usePlayerStore((s) => s.waveMode);
   const currentTrack = usePlayerStore((s) => s.track);
   const isActive = waveMode && !!currentTrack;
@@ -19,7 +21,7 @@ export function WaveStartButton() {
     setLoading(true);
     try {
       const started = await controls.startWave(null);
-      if (!started) toast.error('Не удалось запустить поток');
+      if (!started) toast.error(t('startFailed'));
     } finally {
       setLoading(false);
     }
@@ -46,7 +48,7 @@ export function WaveStartButton() {
               transition={spring.snappy}
               className="flex items-center gap-2 min-w-0"
             >
-              <span className="text-sm font-medium">Поток запущен</span>
+              <span className="text-sm font-medium">{t('started')}</span>
               <PlayingBars />
               <span className="text-xs text-muted-foreground truncate hidden sm:inline">
                 {currentTrack?.title} · {currentTrack?.artistName}
@@ -60,9 +62,9 @@ export function WaveStartButton() {
               exit={{ opacity: 0, y: 4 }}
               transition={spring.snappy}
             >
-              <span className="text-sm font-medium">Поток</span>
+              <span className="text-sm font-medium">{t('idle')}</span>
               <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">
-                непрерывное радио из похожих треков
+                {t('idleHint')}
               </span>
             </motion.div>
           )}
@@ -81,7 +83,7 @@ export function WaveStartButton() {
             whileTap={{ scale: 0.94 }}
             className="shrink-0 py-3 -my-3 px-2 -mx-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            Остановить
+            {t('stop')}
           </motion.button>
         ) : (
           <motion.button
@@ -100,7 +102,7 @@ export function WaveStartButton() {
             ) : (
               <PlayIcon size={13} />
             )}
-            Запустить
+            {t('start')}
           </motion.button>
         )}
       </AnimatePresence>

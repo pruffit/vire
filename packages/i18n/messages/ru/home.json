@@ -1,1 +1,53 @@
-{}
+{
+  "srHeading": "независимая музыкальная площадка для артистов и слушателей СНГ",
+  "sections": {
+    "forYou": "Для тебя",
+    "friendsActivity": "Активность друзей",
+    "hotTracks": "Горячие треки",
+    "wholeCatalog": "Весь каталог",
+    "freshReleases": "Свежие релизы",
+    "viewAll": "Посмотреть все",
+    "comingSoon": "Скоро выйдет",
+    "playlists": "Подборки",
+    "artists": "Артисты",
+    "allArtists": "Все артисты",
+    "discoveries": "Открытия для вас",
+    "yourFeed": "Ваша лента",
+    "continueListening": "Продолжить слушать",
+    "emptyCatalog": "Пока пусто. Скоро здесь появится музыка."
+  },
+  "feed": {
+    "reasonFollow": "Вы подписаны",
+    "reasonTaste": "Похоже на ваши вкусы",
+    "reasonFresh": "Свежее на площадке",
+    "showMore": "Показать ещё ({count})"
+  },
+  "allTagsSheet": {
+    "title": "Все теги",
+    "searchPlaceholder": "Найти тег…",
+    "searchAria": "Найти тег",
+    "empty": "Ничего не нашлось."
+  },
+  "flowBlock": {
+    "aria": "Поток"
+  },
+  "wave": {
+    "started": "Поток запущен",
+    "idle": "Поток",
+    "idleHint": "непрерывное радио из похожих треков",
+    "stop": "Остановить",
+    "start": "Запустить",
+    "startFailed": "Не удалось запустить поток"
+  },
+  "coverRail": {
+    "playAria": "Слушать {title}"
+  },
+  "featured": {
+    "aria": "Редакционный выбор",
+    "coverAlt": "Обложка «{title}»",
+    "toRelease": "К релизу",
+    "toReleaseAria": "{title} — к релизу",
+    "listen": "Слушать",
+    "loadFailed": "Не удалось загрузить треки"
+  }
+}

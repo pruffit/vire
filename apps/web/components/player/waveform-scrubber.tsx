@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAudioTime } from '@/lib/player/use-audio-time';
 import { buildBars, ratioFromX } from '@/lib/player/waveform-math';
 
@@ -39,11 +40,13 @@ export function WaveformScrubber({
   onSeek,
   duration,
   className,
-  ariaLabel = 'Перемотка',
+  ariaLabel,
   active = true,
   onActivate,
   hoverAccent = false,
 }: WaveformScrubberProps) {
+  const t = useTranslations('player');
+  const resolvedAriaLabel = ariaLabel ?? t('seekAria');
   const liveTime = useAudioTime(4, active);
   const svgRef = useRef<SVGSVGElement>(null);
   const [scrub, setScrub] = useState<number | null>(null);
@@ -103,7 +106,7 @@ export function WaveformScrubber({
         onPointerCancel={() => setScrub(null)}
         onKeyDown={onKeyDown}
         tabIndex={active ? 0 : undefined}
-        aria-label={active ? ariaLabel : 'Воспроизвести'}
+        aria-label={active ? resolvedAriaLabel : t('waveformPlayAria')}
         role={active ? 'slider' : 'button'}
         aria-valuenow={active ? Math.round(progress * duration) : undefined}
         aria-valuemin={active ? 0 : undefined}

@@ -1,1 +1,74 @@
-{}
+{
+  "logoAria": "VireMusic, go to homepage",
+  "dashboard": "Dashboard",
+  "admin": "Admin",
+  "profileFallback": "Profile",
+  "signIn": "Sign in",
+  "signOut": "Sign out",
+  "footer": {
+    "platform": "Platform",
+    "artists": "Artists",
+    "releases": "Releases",
+    "about": "About",
+    "design": "Design",
+    "whatsNew": "What's new",
+    "support": "Support",
+    "becomeArtist": "Become an artist",
+    "feedback": "Feedback",
+    "legal": "Legal",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "authChanges": "Sign-in changes"
+  },
+  "sidebar": {
+    "library": "Library",
+    "home": "Home",
+    "jamTitle": "Jam",
+    "jamSubtitle": "Listen together",
+    "guestPrompt": "Sign in to save favorites and playlists.",
+    "signInCta": "Sign in →",
+    "signInAria": "Sign in",
+    "likedTracks": "Liked tracks",
+    "friends": "Friends",
+    "friendsNewRequests": "{count} new requests",
+    "messages": "Messages",
+    "personalMessages": "Direct messages",
+    "messagesNew": "{count} new",
+    "playlist": "Playlist",
+    "artist": "Artist",
+    "emptyLibrary": "Nothing here yet. Like tracks and follow artists.",
+    "collapseAria": "Collapse library",
+    "expandAria": "Expand library",
+    "collapseTitle": "Collapse",
+    "expandTitle": "Expand",
+    "switchLocaleAria": "Switch language to {target}",
+    "localeRu": "Russian",
+    "localeEn": "English",
+    "profileAria": "Profile: {name}",
+    "profileLabel": "Profile"
+  },
+  "tabBar": {
+    "home": "Home",
+    "search": "Search",
+    "library": "Library",
+    "friends": "Friends",
+    "messages": "Messages",
+    "friendRequestsSr": "{count} new friend requests",
+    "messagesSr": "{count} new messages"
+  },
+  "playlistCard": {
+    "collaborative": "collaborative"
+  },
+  "followedArtists": {
+    "unfollowFailed": "Couldn't unfollow",
+    "emptyPrefix": "You're not following anyone yet.",
+    "findArtists": "Find artists",
+    "unfollowAria": "Unfollow",
+    "verifiedSr": "verified"
+  },
+  "createPlaylist": {
+    "label": "Create playlist",
+    "failed": "Couldn't create playlist",
+    "defaultTitle": "My playlist"
+  }
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { QuickLookSheet } from '@/components/quick-look-sheet';
 import { Icon } from '@/components/icon';
 import { useWaveSeedStart } from '@/lib/use-wave-seed-start';
@@ -15,6 +16,7 @@ export function AllTagsSheet({
   onClose: () => void;
   sections: TagSheetSection[];
 }) {
+  const t = useTranslations('home.allTagsSheet');
   const [query, setQuery] = useState('');
   const { loading, start } = useWaveSeedStart();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +42,7 @@ export function AllTagsSheet({
   return (
     <QuickLookSheet open={open} onClose={close}>
       <div className="px-5 pt-1 pb-3 space-y-3">
-        <h2 className="text-base font-semibold">Все теги</h2>
+        <h2 className="text-base font-semibold">{t('title')}</h2>
         <div className="relative">
           <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40 pointer-events-none" />
           <input
@@ -48,8 +50,8 @@ export function AllTagsSheet({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Найти тег…"
-            aria-label="Найти тег"
+            placeholder={t('searchPlaceholder')}
+            aria-label={t('searchAria')}
             className="w-full min-h-11 rounded-full border border-border bg-foreground/[0.03] pl-9 pr-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -57,7 +59,7 @@ export function AllTagsSheet({
 
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-5 space-y-5" data-scroll-area>
         {filtered.length === 0 && (
-          <p className="py-6 text-center text-sm text-muted-foreground">Ничего не нашлось.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t('empty')}</p>
         )}
         {filtered.map((section) => (
           <div key={section.label} className="space-y-2">

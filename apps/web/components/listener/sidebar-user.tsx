@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -14,6 +15,7 @@ export function SidebarUser({
   collapsed: boolean;
   className?: string;
 }) {
+  const t = useTranslations('nav.sidebar');
   const avatar = avatarUrl ? (
     <Image
       src={avatarUrl}
@@ -33,7 +35,7 @@ export function SidebarUser({
       <Link
         href="/profile"
         title={name}
-        aria-label={`Профиль: ${name}`}
+        aria-label={t('profileAria', { name })}
         className={cn('grid place-items-center rounded-md p-1 transition-colors hover:bg-foreground/5', className)}
       >
         {avatar}
@@ -49,7 +51,7 @@ export function SidebarUser({
       {avatar}
       <span className="min-w-0">
         <span className="block truncate text-sm text-foreground/90">{name}</span>
-        <span className="block truncate text-xs text-foreground/40">Профиль</span>
+        <span className="block truncate text-xs text-foreground/40">{t('profileLabel')}</span>
       </span>
     </Link>
   );

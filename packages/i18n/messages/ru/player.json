@@ -1,1 +1,44 @@
-{}
+{
+  "waveModeOn": "Режим волны включён",
+  "waveModeOff": "Режим волны выключен",
+  "shuffleOn": "Случайный порядок включён",
+  "shuffleOff": "Случайный порядок",
+  "repeatOff": "Повтор выключен",
+  "repeatAll": "Повтор очереди",
+  "repeatOne": "Повтор трека",
+  "play": "Играть",
+  "pause": "Пауза",
+  "loadError": "Ошибка загрузки",
+  "loadErrorTitle": "Не удалось загрузить трек",
+  "prev": "Предыдущий трек",
+  "next": "Следующий трек",
+  "expandAria": "Открыть плеер на весь экран",
+  "collapseAria": "Свернуть плеер",
+  "queueAria": "Очередь, {count} треков",
+  "queueCount": "Очередь · {count}",
+  "hideQueue": "Скрыть очередь",
+  "volumeAria": "Громкость",
+  "muteAria": "Включить звук",
+  "unmuteAria": "Выключить звук",
+  "seekAria": "Перемотка",
+  "waveformPlayAria": "Воспроизвести",
+  "moveTrackAria": "Переместить «{title}»: стрелки вверх/вниз",
+  "nextIsWave": "Дальше — Волна",
+  "lyrics": {
+    "show": "Текст",
+    "hide": "Скрыть текст",
+    "noLyrics": "Нет текста"
+  },
+  "jam": {
+    "remote": "Пульт",
+    "party": "Вечеринка",
+    "jamLabel": "Джем",
+    "backToRoom": "Вернуться в комнату",
+    "pauseAria": "Поставить джем на паузу",
+    "resumeAria": "Возобновить джем",
+    "leaveAria": "Покинуть джем"
+  },
+  "nowPlayingSr": "Сейчас играет",
+  "like": "Лайкнуть",
+  "unlike": "Убрать лайк"
+}

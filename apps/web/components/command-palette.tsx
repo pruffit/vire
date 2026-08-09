@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
@@ -20,15 +21,8 @@ interface Item {
   isAction?: boolean;
 }
 
-const ACTIONS: { label: string; sub: string; href: string }[] = [
-  { label: 'Главная', sub: 'Открытие и активность', href: '/' },
-  { label: 'Все артисты', sub: 'Каталог', href: '/artists' },
-  { label: 'Профиль', sub: 'Лайки, подписки, покупки', href: '/profile' },
-  { label: 'Медиатека', sub: 'Треки, плейлисты, подписки', href: '/library' },
-  { label: 'Дашборд', sub: 'Управление релизами', href: '/dashboard' },
-];
-
 export function CommandPalette() {
+  const t = useTranslations('common');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -37,16 +31,24 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const actions = useMemo<{ label: string; sub: string; href: string }[]>(() => [
+    { label: t('commandPalette.actions.home.label'), sub: t('commandPalette.actions.home.sub'), href: '/' },
+    { label: t('commandPalette.actions.artists.label'), sub: t('commandPalette.actions.artists.sub'), href: '/artists' },
+    { label: t('commandPalette.actions.profile.label'), sub: t('commandPalette.actions.profile.sub'), href: '/profile' },
+    { label: t('commandPalette.actions.library.label'), sub: t('commandPalette.actions.library.sub'), href: '/library' },
+    { label: t('commandPalette.actions.dashboard.label'), sub: t('commandPalette.actions.dashboard.sub'), href: '/dashboard' },
+  ], [t]);
+
   const q = query.trim().toLowerCase();
-  const actionItems: Item[] = ACTIONS
+  const actionItems: Item[] = actions
     .filter((a) => !q || a.label.toLowerCase().includes(q))
     .map((a) => ({ key: `act:${a.href}`, label: a.label, sub: a.sub, href: a.href, isAction: true }));
 
   const resultItems: Item[] = results
     ? [
-        ...results.artists.map((a) => ({ key: `ar:${a.id}`, href: `/artists/${a.slug}`, label: a.name, sub: 'Артист', img: resolveAvatarUrl(a.avatarUrl, a.firstReleaseCoverUrl), round: true, initial: a.name[0]?.toUpperCase() })),
+        ...results.artists.map((a) => ({ key: `ar:${a.id}`, href: `/artists/${a.slug}`, label: a.name, sub: t('entity.artist'), img: resolveAvatarUrl(a.avatarUrl, a.firstReleaseCoverUrl), round: true, initial: a.name[0]?.toUpperCase() })),
         ...results.releases.map((r) => ({ key: `re:${r.id}`, href: `/artists/${r.artistSlug}/releases/${r.id}`, label: r.title, sub: `${r.type} · ${r.artistName}`, img: r.coverUrl, initial: r.title[0]?.toUpperCase() })),
-        ...results.tracks.map((t) => ({ key: `tr:${t.id}`, href: `/artists/${t.artistSlug}/releases/${t.releaseId}/tracks/${t.id}`, label: t.title, sub: `Трек · ${t.artistName}`, img: t.coverUrl, initial: t.title[0]?.toUpperCase() })),
+        ...results.tracks.map((track) => ({ key: `tr:${track.id}`, href: `/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`, label: track.title, sub: `${t('entity.track')} · ${track.artistName}`, img: track.coverUrl, initial: track.title[0]?.toUpperCase() })),
       ]
     : [];
 
@@ -134,7 +136,7 @@ export function CommandPalette() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={onInputKey}
-                placeholder="Куда перейти или что найти…"
+                placeholder={t('commandPalette.placeholder')}
                 autoComplete="off"
                 className="flex-1 h-12 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
               />
@@ -144,7 +146,7 @@ export function CommandPalette() {
             <div className="max-h-[52vh] overflow-y-auto py-1.5" data-scroll-area>
               {items.length === 0 ? (
                 <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                  {query.trim().length >= 2 ? 'Ничего не найдено' : 'Начни вводить…'}
+                  {query.trim().length >= 2 ? t('commandPalette.nothingFound') : t('commandPalette.startTyping')}
                 </p>
               ) : (
                 items.map((item, i) => (

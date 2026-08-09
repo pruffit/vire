@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import type { PlaylistSummary } from '@vire/db';
 import { Icon } from '@/components/icon';
 import { PlaylistCover } from '@/components/playlist-cover';
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function PlaylistCard({ playlist }: Props) {
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
 
   return (
@@ -44,10 +46,10 @@ export function PlaylistCard({ playlist }: Props) {
               {playlist.title}
             </p>
             <p className="text-xs text-muted-foreground font-mono flex items-center gap-1">
-              {playlist.trackCount} тр.
+              {t('common.trackCountShort', { count: playlist.trackCount })}
               {playlist.role === 'COLLABORATOR' && (
                 <span className="inline-flex items-center gap-0.5 text-muted-foreground/70">
-                  <Icon name="users" size={10} /> совместный
+                  <Icon name="users" size={10} /> {t('nav.playlistCard.collaborative')}
                 </span>
               )}
             </p>

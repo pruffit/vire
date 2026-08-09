@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
+import { getTranslator } from '@vire/i18n/translator';
+import { DEFAULT_LOCALE, isLocale } from '@vire/i18n/config';
 import { Eyebrow, FeatureCard, PillLink } from '@/components/content-kit';
 
 const EQ_BARS = [0.0, 0.22, 0.45, 0.12, 0.34, 0.06, 0.28, 0.16, 0.4];
@@ -17,7 +20,13 @@ function EqualizerRule() {
   );
 }
 
-export default function NotFound() {
+export default async function NotFound() {
+  // Вне app/[locale] — next-intl не проставляет локаль автоматически (см. app/layout.tsx),
+  // локаль читаем из заголовка, выставленного next-intl middleware в proxy.ts.
+  const headerLocale = (await headers()).get('x-next-intl-locale');
+  const locale = headerLocale && isLocale(headerLocale) ? headerLocale : DEFAULT_LOCALE;
+  const t = await getTranslator(locale, 'common');
+
   return (
     <main className="relative flex min-h-full flex-col items-center justify-center overflow-hidden px-6 py-16 text-center sm:py-20">
       <div
@@ -41,32 +50,31 @@ export default function NotFound() {
       </div>
 
       <div className="mt-8 flex animate-fade-up flex-col items-center gap-3">
-        <Eyebrow>Тишина в эфире</Eyebrow>
+        <Eyebrow>{t('notFound.eyebrow')}</Eyebrow>
         <h1 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
-          Страница не найдена
+          {t('notFound.title')}
         </h1>
         <p className="max-w-sm text-pretty text-sm leading-relaxed text-muted-foreground">
-          Возможно, ссылка устарела или релиз сняли с витрины. Вернитесь на главную или
-          найдите то, что искали.
+          {t('notFound.body')}
         </p>
       </div>
 
       <div className="mt-8 flex animate-fade-up flex-wrap justify-center gap-3">
-        <PillLink href="/" tone="primary" icon="home">На главную</PillLink>
-        <PillLink href="/search" tone="outline" icon="search">Поиск</PillLink>
-        <PillLink href="/artists" tone="outline" icon="users">Артисты</PillLink>
+        <PillLink href="/" tone="primary" icon="home">{t('notFound.home')}</PillLink>
+        <PillLink href="/search" tone="outline" icon="search">{t('notFound.search')}</PillLink>
+        <PillLink href="/artists" tone="outline" icon="users">{t('notFound.artists')}</PillLink>
       </div>
 
-      <h2 className="sr-only">Быстрые ссылки</h2>
+      <h2 className="sr-only">{t('notFound.quickLinksHeading')}</h2>
       <div className="mt-12 grid w-full max-w-xl animate-fade-up grid-cols-1 gap-3 sm:grid-cols-3">
         <Link href="/releases" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl">
-          <FeatureCard icon="music" title="Релизы">Слушать новое</FeatureCard>
+          <FeatureCard icon="music" title={t('notFound.cards.releases.title')}>{t('notFound.cards.releases.desc')}</FeatureCard>
         </Link>
         <Link href="/artists" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl">
-          <FeatureCard icon="users" title="Артисты">Каталог исполнителей</FeatureCard>
+          <FeatureCard icon="users" title={t('notFound.cards.artists.title')}>{t('notFound.cards.artists.desc')}</FeatureCard>
         </Link>
         <Link href="/search" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl">
-          <FeatureCard icon="search" title="Поиск">Найти трек или артиста</FeatureCard>
+          <FeatureCard icon="search" title={t('notFound.cards.search.title')}>{t('notFound.cards.search.desc')}</FeatureCard>
         </Link>
       </div>
     </main>

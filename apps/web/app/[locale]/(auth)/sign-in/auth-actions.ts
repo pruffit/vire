@@ -1,6 +1,7 @@
 'use server';
 
 import { AuthError } from 'next-auth';
+import { getTranslations } from 'next-intl/server';
 import { z } from 'zod';
 import { signIn } from '@/auth';
 import { db, DrizzleUserAccountRepository } from '@vire/db';
@@ -26,6 +27,7 @@ export async function loginAction(
   _prev: string | null,
   formData: FormData,
 ): Promise<string | null> {
+  const t = await getTranslations('auth.errors');
   const raw = {
     email: formData.get('email'),
     password: formData.get('password'),
@@ -33,7 +35,7 @@ export async function loginAction(
   };
 
   const parsed = loginSchema.safeParse(raw);
-  if (!parsed.success) return 'Введи корректный email и пароль.';
+  if (!parsed.success) return t('invalidCredentials');
 
   try {
     await signIn('credentials', {
@@ -43,8 +45,8 @@ export async function loginAction(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      if (error.type === 'CredentialsSignin') return 'Неверный email или пароль.';
-      return 'Ошибка входа. Попробуй ещё раз.';
+      if (error.type === 'CredentialsSignin') return t('wrongCredentials');
+      return t('genericSignIn');
     }
     throw error; // NEXT_REDIRECT: пробрасываем, Next.js сам обработает
   }
@@ -55,6 +57,7 @@ export async function registerAction(
   _prev: string | null,
   formData: FormData,
 ): Promise<string | null> {
+  const t = await getTranslations('auth.errors');
   const raw = {
     name: formData.get('name'),
     email: formData.get('email'),
@@ -66,11 +69,11 @@ export async function registerAction(
   const parsed = registerSchema.safeParse(raw);
   if (!parsed.success) {
     const first = parsed.error.issues[0];
-    if (first.path.includes('name')) return 'Имя должно быть от 2 до 60 символов.';
-    if (first.path.includes('email')) return 'Введи корректный email.';
-    if (first.path.includes('password')) return 'Пароль должен быть не менее 8 символов.';
-    if (first.path.includes('consent')) return 'Нужно принять условия и согласие на обработку данных.';
-    return 'Проверь введённые данные.';
+    if (first.path.includes('name')) return t('invalidName');
+    if (first.path.includes('email')) return t('invalidEmail');
+    if (first.path.includes('password')) return t('invalidPassword');
+    if (first.path.includes('consent')) return t('consentRequired');
+    return t('checkFields');
   }
 
   const { name, email, password, callbackUrl } = parsed.data;
@@ -78,14 +81,14 @@ export async function registerAction(
   const service = new AuthService(new DrizzleUserAccountRepository(db), { hasher: new BcryptPasswordHasher() });
   const result = await service.register({ email, name, password });
   if (!result.ok) {
-    if (result.error instanceof ConflictError) return 'Аккаунт с этим email уже существует. Войди вместо этого.';
+    if (result.error instanceof ConflictError) return t('accountExists');
     throw result.error;
   }
 
   try {
     await signIn('credentials', { email, password, redirectTo: callbackUrl ?? '/' });
   } catch (error) {
-    if (error instanceof AuthError) return 'Аккаунт создан, но войти не удалось. Попробуй войти вручную.';
+    if (error instanceof AuthError) return t('registeredButSignInFailed');
     throw error;
   }
   return null;
@@ -100,13 +103,14 @@ export async function signInMagicLinkAction(
   _prev: string | null,
   formData: FormData,
 ): Promise<string | null> {
+  const t = await getTranslations('auth.errors');
   const email = formData.get('email') as string;
   const callbackUrl = (formData.get('callbackUrl') as string) ?? '/';
-  if (!email) return 'Введи email.';
+  if (!email) return t('emailRequired');
   try {
     await signIn('nodemailer', { email, redirectTo: callbackUrl });
   } catch (error) {
-    if (error instanceof AuthError) return 'Не удалось отправить письмо. Проверь email.';
+    if (error instanceof AuthError) return t('magicLinkFailed');
     throw error;
   }
   return null;

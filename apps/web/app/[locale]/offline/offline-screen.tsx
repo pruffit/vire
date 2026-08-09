@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useTranslations } from 'next-intl';
 import { getAllTracks, type OfflineTrack } from '@/lib/offline/db';
 import { removeDownload, estimateUsage } from '@/lib/offline/download';
 import { useOfflineStore, useOfflineCover } from '@/store/offline';
@@ -14,10 +15,10 @@ import { toast } from '@/lib/toast';
 import { formatDuration } from '@/lib/format';
 import type { PlayerTrack } from '@/store/player';
 
-function formatBytes(n: number): string {
+function formatBytes(n: number, t: ReturnType<typeof useTranslations>): string {
   const mb = n / (1024 * 1024);
-  if (mb < 1024) return `${mb.toFixed(mb < 10 ? 1 : 0)} МБ`;
-  return `${(mb / 1024).toFixed(1)} ГБ`;
+  if (mb < 1024) return t('mb', { value: mb.toFixed(mb < 10 ? 1 : 0) });
+  return t('gb', { value: (mb / 1024).toFixed(1) });
 }
 
 function toPlayerTrack(t: OfflineTrack): PlayerTrack {
@@ -64,6 +65,7 @@ async function resetAppCache(): Promise<void> {
 }
 
 export function OfflineScreen() {
+  const t = useTranslations('pwa.offline');
   const [tracks, setTracks] = useState<OfflineTrack[] | null>(null);
   const [usage, setUsage] = useState<{ usage: number; quota: number } | null>(null);
   const [resetConfirming, setResetConfirming] = useState(false);
@@ -96,7 +98,7 @@ export function OfflineScreen() {
       estimateUsage().then(setUsage);
     } catch {
       setTracks(prev);
-      toast.error('Не удалось удалить офлайн-копию');
+      toast.error(t('removeFailed'));
     }
   }
 
@@ -106,22 +108,22 @@ export function OfflineScreen() {
     <div className="space-y-8">
       <header className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Скачанное</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('heading')}</h1>
           <p className="mt-1 text-sm text-foreground/50">
-            Треки, доступные без интернета{tracks && tracks.length > 0 ? ` · ${tracks.length}` : ''}
+            {t('subtitle')}{tracks && tracks.length > 0 ? ` · ${tracks.length}` : ''}
           </p>
         </div>
         {!online && (
-          <Badge tone="warn" dot>Нет сети</Badge>
+          <Badge tone="warn" dot>{t('noNetwork')}</Badge>
         )}
       </header>
 
       {tracks === null ? (
-        <p className="text-sm text-foreground/40">Загрузка…</p>
+        <p className="text-sm text-foreground/40">{t('loading')}</p>
       ) : tracks.length === 0 ? (
         <EmptyState
-          title="Пока нет скачанного"
-          hint="Сохрани трек офлайн через меню очереди или скачай целый плейлист."
+          title={t('emptyTitle')}
+          hint={t('emptyHint')}
         />
       ) : (
         <div className="flex flex-col">
@@ -144,28 +146,28 @@ export function OfflineScreen() {
             onClick={() => setResetConfirming(true)}
             className="text-xs text-foreground/30 hover:text-foreground/50 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
-            Сбросить кэш приложения
+            {t('resetCache')}
             {/* storage.estimate() меряет весь origin (оболочка, статика, картинки), а не треки. */}
-            {usage && usage.usage > 0 && ` · сейчас ${formatBytes(usage.usage)}`}
+            {usage && usage.usage > 0 && ` · ${t('resetCacheUsage', { size: formatBytes(usage.usage, t) })}`}
           </button>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs text-foreground/50">
-              Удалит скачанные треки и офлайн-оболочку приложения. <span className="text-red-400/70">Необратимо.</span>
+              {t('resetConfirmText')} <span className="text-red-400/70">{t('resetConfirmIrreversible')}</span>
             </span>
             <button
               type="button"
               onClick={() => void resetAppCache()}
               className="text-xs px-2.5 py-1 rounded-md bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
             >
-              Да, сбросить
+              {t('resetConfirm')}
             </button>
             <button
               type="button"
               onClick={() => setResetConfirming(false)}
               className="text-xs text-foreground/40 hover:text-foreground/70 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
             >
-              Отмена
+              {t('resetCancel')}
             </button>
           </div>
         )}
@@ -182,6 +184,7 @@ function OfflineTrackRow({
   index: number;
   onRemove: () => void;
 }) {
+  const t = useTranslations('pwa.offline');
   const { isActive, isPlaying } = useTrackPlayState(track.id);
   const coverUrl = useOfflineCover(track.id, track.coverUrl);
 
@@ -199,19 +202,19 @@ function OfflineTrackRow({
       unoptimizedCover
       trailing={
         <>
-          {track.status === 'partial' && <Badge tone="warn">неполно</Badge>}
+          {track.status === 'partial' && <Badge tone="warn">{t('partial')}</Badge>}
           {track.durationSec != null && (
             <span className="shrink-0 hidden sm:block text-xs font-mono tabular-nums text-muted-foreground">
               {formatDuration(track.durationSec)}
             </span>
           )}
           <span className="shrink-0 hidden sm:block text-xs font-mono tabular-nums text-muted-foreground">
-            {formatBytes(track.bytes)}
+            {formatBytes(track.bytes, t)}
           </span>
           <button
             type="button"
             onClick={onRemove}
-            aria-label="Удалить из офлайна"
+            aria-label={t('removeAria')}
             className={`${touchTargetClass('sm')} rounded-full flex items-center justify-center text-muted-foreground hover:text-red-400 transition-colors cursor-pointer`}
           >
             <Icon name="trash-2" size={15} />

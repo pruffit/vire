@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion, useDragControls, type PanInfo } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore, type PlayerTrack } from '@/store/player';
@@ -29,6 +30,7 @@ export function FullscreenPlayer({
   onClose: () => void;
   initialShowQueue?: boolean;
 }) {
+  const t = useTranslations('player');
   const track = usePlayerStore((s) => s.track);
   const queueLength = usePlayerStore((s) => s.queue.length);
   const coverUrl = useOfflineCover(track?.id ?? '', track?.coverUrl ?? null);
@@ -74,7 +76,7 @@ export function FullscreenPlayer({
     >
       <button
         onClick={onClose}
-        aria-label="Свернуть плеер"
+        aria-label={t('collapseAria')}
         className="fixed top-5 right-5 z-20 w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 pointer-coarse:-m-1 rounded-full flex items-center justify-center opacity-50 hover:opacity-100 transition-opacity"
       >
         <ChevronDownIcon />
@@ -180,6 +182,7 @@ function FullscreenExtras({
   showQueue: boolean;
   onToggleQueue: () => void;
 }) {
+  const t = useTranslations('player');
   const volume = usePlayerStore((s) => s.volume);
 
   const showVolume = useIsDesktopPointer();
@@ -190,7 +193,7 @@ function FullscreenExtras({
         <>
           <motion.button
             onClick={() => controls.toggleMute()}
-            aria-label={volume === 0 ? 'Включить звук' : 'Выключить звук'}
+            aria-label={volume === 0 ? t('muteAria') : t('unmuteAria')}
             whileTap={{ scale: 0.88 }}
             transition={spring.snappy}
             className="opacity-50 hover:opacity-100 transition-opacity shrink-0"
@@ -204,7 +207,7 @@ function FullscreenExtras({
             step={0.02}
             value={volume}
             onChange={(e) => controls.setVolume(Number(e.target.value))}
-            aria-label="Громкость"
+            aria-label={t('volumeAria')}
             className="flex-1 h-1 accent-primary cursor-pointer"
           />
         </>
@@ -217,7 +220,7 @@ function FullscreenExtras({
           className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
         >
           <QueueIcon />
-          {showQueue ? 'Скрыть очередь' : `Очередь · ${queueLength}`}
+          {showQueue ? t('hideQueue') : t('queueCount', { count: queueLength })}
         </button>
       )}
       <FullscreenShareButton track={track} />
@@ -239,6 +242,7 @@ function DurationLabel() {
 }
 
 function PlayerWaveform() {
+  const t = useTranslations('player');
   const peaks = usePlayerStore((s) => s.waveformPeaks);
   const duration = usePlayerStore((s) => s.duration);
 
@@ -247,7 +251,7 @@ function PlayerWaveform() {
       peaks={peaks}
       duration={duration}
       onSeek={controls.seek}
-      ariaLabel="Перемотка"
+      ariaLabel={t('seekAria')}
       className="flex-1 h-9"
     />
   );

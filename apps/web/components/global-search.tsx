@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect, useCallback, type KeyboardEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import Image from 'next/image';
 import { SearchIcon } from '@/components/icons';
@@ -24,6 +25,7 @@ interface FlatResult {
 }
 
 export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }: Props) {
+  const t = useTranslations('common');
   const router = useRouter();
   const [query, setQuery] = useState(defaultValue);
   const [results, setResults] = useState<SearchResults | null>(null);
@@ -38,7 +40,7 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
         ...results.artists.map((a) => ({
           href: `/artists/${a.slug}`,
           label: a.name,
-          sub: 'Артист',
+          sub: t('entity.artist'),
           avatarUrl: resolveAvatarUrl(a.avatarUrl, a.firstReleaseCoverUrl),
           initial: a.name[0]?.toUpperCase(),
         })),
@@ -49,12 +51,12 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
           coverUrl: r.coverUrl,
           initial: r.title[0]?.toUpperCase(),
         })),
-        ...results.tracks.map((t) => ({
-          href: `/artists/${t.artistSlug}/releases/${t.releaseId}/tracks/${t.id}`,
-          label: t.title,
-          sub: `Трек · ${t.artistName}`,
-          coverUrl: t.coverUrl,
-          initial: t.title[0]?.toUpperCase(),
+        ...results.tracks.map((track) => ({
+          href: `/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`,
+          label: track.title,
+          sub: `${t('entity.track')} · ${track.artistName}`,
+          coverUrl: track.coverUrl,
+          initial: track.title[0]?.toUpperCase(),
         })),
       ]
     : [];
@@ -135,7 +137,7 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
           onFocus={() => { if (hasResults) setOpen(true); }}
           onKeyDown={onKeyDown}
           autoFocus={autoFocus}
-          placeholder="Поиск артистов, релизов, треков…"
+          placeholder={t('search.placeholder')}
           autoComplete="off"
           className={[
             'w-full rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground',
@@ -152,7 +154,7 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
               router.push(`/search?q=${encodeURIComponent(query.trim())}`);
             }
           }}
-          aria-label="Найти"
+          aria-label={t('search.findAria')}
           className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-end pr-3 text-muted-foreground hover:text-foreground transition-colors pointer-coarse:top-0 pointer-coarse:bottom-0 pointer-coarse:translate-y-0 pointer-coarse:w-11"
         >
           <SearchIcon size={isHero ? 18 : 14} />
@@ -166,12 +168,12 @@ export function GlobalSearch({ variant = 'page', defaultValue = '', autoFocus }:
         >
           {results && <DropdownSections results={results} flat={flat} activeIdx={activeIdx} onSelect={navigate} />}
           <div className="px-3 py-2 border-t border-border flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">Enter — все результаты</span>
+            <span className="text-[11px] text-muted-foreground">{t('search.enterAllResults')}</span>
             <button
               onMouseDown={(e) => { e.preventDefault(); router.push(`/search?q=${encodeURIComponent(query.trim())}`); setOpen(false); }}
               className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
             >
-              Показать все <Icon name="arrow-right" size={12} />
+              {t('search.showAll')} <Icon name="arrow-right" size={12} />
             </button>
           </div>
         </div>
@@ -188,20 +190,21 @@ interface SectionsProps {
 }
 
 function DropdownSections({ results, flat, activeIdx, onSelect }: SectionsProps) {
+  const t = useTranslations('common.entity');
   let offset = 0;
 
   const sections: { label: string; items: FlatResult[]; startIdx: number }[] = [];
 
   if (results.artists.length > 0) {
-    sections.push({ label: 'Артисты', items: flat.slice(offset, offset + results.artists.length), startIdx: offset });
+    sections.push({ label: t('artists'), items: flat.slice(offset, offset + results.artists.length), startIdx: offset });
     offset += results.artists.length;
   }
   if (results.releases.length > 0) {
-    sections.push({ label: 'Релизы', items: flat.slice(offset, offset + results.releases.length), startIdx: offset });
+    sections.push({ label: t('releases'), items: flat.slice(offset, offset + results.releases.length), startIdx: offset });
     offset += results.releases.length;
   }
   if (results.tracks.length > 0) {
-    sections.push({ label: 'Треки', items: flat.slice(offset, offset + results.tracks.length), startIdx: offset });
+    sections.push({ label: t('tracks'), items: flat.slice(offset, offset + results.tracks.length), startIdx: offset });
   }
 
   return (

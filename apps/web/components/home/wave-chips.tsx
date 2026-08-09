@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import { cn } from '@vire/ui';
 import { usePlayerStore } from '@/store/player';
@@ -14,6 +15,7 @@ import { touchPill } from '@/components/popover';
 import type { TagSheetSection, WaveChipItem } from '@/components/home/wave-chip-items';
 
 export function WaveChips({ items, sections }: { items: WaveChipItem[]; sections: TagSheetSection[] }) {
+  const t = useTranslations('home.allTagsSheet');
   const waveSeed = usePlayerStore((s) => s.waveSeed);
   const { loading, start } = useWaveSeedStart();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -36,7 +38,7 @@ export function WaveChips({ items, sections }: { items: WaveChipItem[]; sections
           )}
         >
           <Icon name="list" size={14} />
-          Все теги
+          {t('title')}
         </button>
 
         {items.map((item) => {

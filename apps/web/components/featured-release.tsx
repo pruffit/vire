@@ -1,25 +1,24 @@
 import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import type { DiscoveryRelease, ReleaseCardStats } from '@vire/db';
 import { FeaturedPlayButton } from './featured-play-button';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { Icon } from '@/components/icon';
-import { releaseYear, pluralTracks, formatDuration } from '@/lib/format';
-
-const typeLabel: Record<string, string> = {
-  ALBUM: 'Альбом', SINGLE: 'Сингл', EP: 'EP', COMPILATION: 'Сборник',
-};
+import { releaseYear, formatDuration } from '@/lib/format';
 
 // Дефолтный нейтральный accent из темы: на нём одного цвета мало, подмешиваем блюр обложки.
 const NEUTRAL_ACCENT = '#4a5568';
 
-export function FeaturedRelease({ release, stats }: { release: DiscoveryRelease; stats?: ReleaseCardStats | null }) {
+export async function FeaturedRelease({ release, stats }: { release: DiscoveryRelease; stats?: ReleaseCardStats | null }) {
+  const t = await getTranslations('home.featured');
+  const tCommon = await getTranslations('common');
   const yr = releaseYear(release.releaseDate);
   const href = `/artists/${release.artistSlug}/releases/${release.id}`;
   const meta = [
-    typeLabel[release.type] ?? release.type,
+    tCommon(`releaseType.${release.type}`),
     yr,
-    stats && stats.trackCount > 0 ? `${stats.trackCount} ${pluralTracks(stats.trackCount)}` : null,
+    stats && stats.trackCount > 0 ? tCommon('trackCount', { count: stats.trackCount }) : null,
     stats && stats.totalDurationSec > 0 ? formatDuration(stats.totalDurationSec) : null,
   ].filter(Boolean).join(' · ');
   const hasImage = !!release.coverUrl;
@@ -28,7 +27,7 @@ export function FeaturedRelease({ release, stats }: { release: DiscoveryRelease;
 
   return (
     <section
-      aria-label="Редакционный выбор"
+      aria-label={t('aria')}
       className="relative h-96 sm:h-[26rem] rounded-2xl overflow-hidden ring-1 ring-inset ring-white/10 isolate"
       style={{ backgroundColor: '#0c0b0a' }}
     >
@@ -75,7 +74,7 @@ export function FeaturedRelease({ release, stats }: { release: DiscoveryRelease;
               accentColor={release.accentColor}
             />
             <Link href={href} className="inline-flex items-center gap-1 text-sm text-white/80 hover:text-white transition-colors">
-              К релизу <Icon name="arrow-right" size={14} />
+              {t('toRelease')} <Icon name="arrow-right" size={14} />
             </Link>
           </div>
         </div>
@@ -83,13 +82,13 @@ export function FeaturedRelease({ release, stats }: { release: DiscoveryRelease;
         {hasImage && (
           <Link
             href={href}
-            aria-label={`${release.title} — к релизу`}
+            aria-label={t('toReleaseAria', { title: release.title })}
             className="group order-1 mx-auto shrink-0 self-start sm:order-2 sm:mx-0 sm:self-center"
           >
             <span className="block aspect-square w-36 overflow-hidden rounded-xl ring-1 ring-white/15 shadow-2xl shadow-black/60 transition-transform duration-300 ease-out group-hover:-translate-y-1 sm:w-44 lg:w-56">
               <Image
                 src={release.coverUrl!}
-                alt={`Обложка «${release.title}»`}
+                alt={t('coverAlt', { title: release.title })}
                 width={224}
                 height={224}
                 priority

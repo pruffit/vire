@@ -114,7 +114,7 @@ export default async function RootLayout({
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-3 focus:left-3 focus:rounded-md focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
         >
-          К содержимому
+          {messages.common.skipLink as string}
         </a>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <MotionProvider>

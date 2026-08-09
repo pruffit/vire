@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { Button } from '@vire/ui';
@@ -13,12 +14,15 @@ import { ChatAvatar } from '@/components/chat/chat-avatar';
 
 const INITIAL_VISIBLE = 12;
 
-export function feedReasonLabel(reason: FeedReason): string {
-  switch (reason) {
-    case 'follow': return 'Вы подписаны';
-    case 'taste': return 'Похоже на ваши вкусы';
-    case 'fresh': return 'Свежее на площадке';
-  }
+function useFeedReasonLabel() {
+  const t = useTranslations('home.feed');
+  return (reason: FeedReason): string => {
+    switch (reason) {
+      case 'follow': return t('reasonFollow');
+      case 'taste': return t('reasonTaste');
+      case 'fresh': return t('reasonFresh');
+    }
+  };
 }
 
 /** Прогрессивный показ (сервер уже отдал до 24) — тут только клиентский слайс, без второго запроса. */
@@ -29,6 +33,7 @@ export function FeedList({
   items: RankedFeedItem[];
   presavedReleaseIds: string[];
 }) {
+  const t = useTranslations('home.feed');
   const [visible, setVisible] = useState(INITIAL_VISIBLE);
   const presaved = new Set(presavedReleaseIds);
   const shown = items.slice(0, visible);
@@ -44,7 +49,7 @@ export function FeedList({
       {remaining > 0 && (
         <div className="flex justify-center">
           <Button variant="outline" onClick={() => setVisible((v) => v + remaining)}>
-            Показать ещё ({remaining})
+            {t('showMore', { count: remaining })}
           </Button>
         </div>
       )}
@@ -58,6 +63,7 @@ function FeedItemRow({ item, presaved }: { item: RankedFeedItem; presaved: boole
 }
 
 function FeedReleaseRow({ item, presaved }: { item: RankedFeedItem; presaved: boolean }) {
+  const feedReasonLabel = useFeedReasonLabel();
   const href = `/artists/${item.artistSlug}/releases/${item.id}`;
   const isUpcoming = item.kind === 'UPCOMING';
 
@@ -109,6 +115,7 @@ function FeedReleaseRow({ item, presaved }: { item: RankedFeedItem; presaved: bo
 }
 
 function FeedPostRow({ item }: { item: RankedFeedItem }) {
+  const feedReasonLabel = useFeedReasonLabel();
   const href = `/artists/${item.artistSlug}`;
 
   return (

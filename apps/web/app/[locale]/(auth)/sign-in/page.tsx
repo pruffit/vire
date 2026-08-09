@@ -1,15 +1,18 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { AuthForms } from './auth-forms';
 
-export const metadata: Metadata = {
-  title: 'Войти',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('auth');
+  return { title: t('pageTitle') };
+}
 
 export default async function SignInPage({
   searchParams,
 }: {
   searchParams: Promise<{ callbackUrl?: string; sent?: string }>;
 }) {
+  const t = await getTranslations('auth');
   const { callbackUrl, sent } = await searchParams;
   const redirectTo = callbackUrl ?? '/';
 
@@ -34,9 +37,9 @@ export default async function SignInPage({
           {sent ? (
             <div className="text-center space-y-3 py-4">
               <p className="text-3xl">📬</p>
-              <h1 className="text-xl font-semibold">Письмо отправлено</h1>
+              <h1 className="text-xl font-semibold">{t('sent.title')}</h1>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Проверь почту — там ссылка для входа. Если не видишь, загляни в спам.
+                {t('sent.body')}
               </p>
             </div>
           ) : (

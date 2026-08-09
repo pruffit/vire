@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import { controls } from '@/lib/player/audio-engine';
 import { useLazyQueue } from '@/lib/player/use-play';
@@ -20,12 +21,13 @@ export function FeaturedPlayButton({
   artistSlug: string;
   accentColor?: string | null;
 }) {
+  const t = useTranslations('home.featured');
   const { load, loading } = useLazyQueue('release', releaseId, { artistName, artistSlug, coverUrl, accentColor });
 
   async function play() {
     const queue = await load();
     if (queue === null) {
-      toast.error('Не удалось загрузить треки');
+      toast.error(t('loadFailed'));
       return;
     }
     if (queue[0]) controls.playQueue(queue, { context: { source: 'release', sourceId: releaseId } });
@@ -45,7 +47,7 @@ export function FeaturedPlayButton({
       ) : (
         <PlayIcon className="translate-x-[1px]" />
       )}
-      Слушать
+      {t('listen')}
     </motion.button>
   );
 }

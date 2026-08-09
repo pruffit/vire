@@ -1,1 +1,66 @@
-{}
+{
+  "skipLink": "Skip to content",
+  "tagline": "An independent music platform for artists and listeners across the CIS",
+  "search": {
+    "placeholder": "Search artists, releases, tracks…",
+    "openAria": "Search",
+    "closeAria": "Close search",
+    "showAll": "Show all",
+    "enterAllResults": "Enter — all results",
+    "findAria": "Search"
+  },
+  "entity": {
+    "artist": "Artist",
+    "track": "Track",
+    "artists": "Artists",
+    "releases": "Releases",
+    "tracks": "Tracks"
+  },
+  "releaseType": {
+    "ALBUM": "Album",
+    "SINGLE": "Single",
+    "EP": "EP",
+    "COMPILATION": "Compilation"
+  },
+  "commandPalette": {
+    "placeholder": "Jump to a page or search…",
+    "startTyping": "Start typing…",
+    "nothingFound": "Nothing found",
+    "actions": {
+      "home": { "label": "Home", "sub": "Discover and activity" },
+      "artists": { "label": "All artists", "sub": "Catalog" },
+      "profile": { "label": "Profile", "sub": "Likes, follows, purchases" },
+      "library": { "label": "Library", "sub": "Tracks, playlists, follows" },
+      "dashboard": { "label": "Dashboard", "sub": "Manage releases" }
+    }
+  },
+  "trackCount": "{count, plural, one {# track} other {# tracks}}",
+  "trackCountShort": "{count, plural, one {# track} other {# tracks}}",
+  "releaseCount": "{count, plural, one {# release} other {# releases}}",
+  "notFound": {
+    "eyebrow": "Silence on air",
+    "title": "Page not found",
+    "body": "The link may be outdated, or the release was taken off the shelf. Head back home or find what you were looking for.",
+    "home": "Go home",
+    "search": "Search",
+    "artists": "Artists",
+    "quickLinksHeading": "Quick links",
+    "cards": {
+      "releases": { "title": "Releases", "desc": "Listen to what's new" },
+      "artists": { "title": "Artists", "desc": "Browse the catalog" },
+      "search": { "title": "Search", "desc": "Find a track or artist" }
+    }
+  },
+  "serverError": {
+    "title": "Something went wrong",
+    "body": "An unexpected error occurred. Try refreshing the page.",
+    "retry": "Try again"
+  },
+  "cookieBanner": {
+    "aria": "Cookie notice",
+    "text": "We only use essential cookies — your sign-in session. No analytics or third-party cookies.",
+    "learnMore": "Learn more",
+    "reject": "Reject",
+    "accept": "Accept"
+  }
+}

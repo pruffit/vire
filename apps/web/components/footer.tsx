@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { Logo } from './logo';
 import { AnnouncementReopenLink } from './widget-triggers';
@@ -7,7 +8,9 @@ import { SITE_VERSION } from '@/lib/site';
 const reopenCls =
   'text-xs text-muted-foreground transition-colors hover:text-foreground cursor-pointer text-left';
 
-export function Footer() {
+export async function Footer() {
+  const t = await getTranslations('nav');
+  const tCommon = await getTranslations('common');
   const year = new Date().getFullYear();
 
   return (
@@ -17,32 +20,32 @@ export function Footer() {
           <div className="max-w-xs space-y-3">
             <Logo className="h-4 w-auto text-foreground/80" />
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Независимая музыкальная площадка для артистов и слушателей СНГ.
+              {tCommon('tagline')}.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-12">
-            <FooterCol title="Площадка">
-              <FooterLink href="/artists">Артисты</FooterLink>
-              <FooterLink href="/releases">Релизы</FooterLink>
-              <FooterLink href="/about">О платформе</FooterLink>
-              <FooterLink href="/design">Дизайн</FooterLink>
+            <FooterCol title={t('footer.platform')}>
+              <FooterLink href="/artists">{t('footer.artists')}</FooterLink>
+              <FooterLink href="/releases">{t('footer.releases')}</FooterLink>
+              <FooterLink href="/about">{t('footer.about')}</FooterLink>
+              <FooterLink href="/design">{t('footer.design')}</FooterLink>
               <li>
                 <AnnouncementReopenLink id="stage1" className={reopenCls}>
-                  Что нового
+                  {t('footer.whatsNew')}
                 </AnnouncementReopenLink>
               </li>
             </FooterCol>
-            <FooterCol title="Поддержка">
-              <FooterLink href="/feedback?type=artist">Стать артистом</FooterLink>
-              <FooterLink href="/feedback">Обратная связь</FooterLink>
+            <FooterCol title={t('footer.support')}>
+              <FooterLink href="/feedback?type=artist">{t('footer.becomeArtist')}</FooterLink>
+              <FooterLink href="/feedback">{t('footer.feedback')}</FooterLink>
             </FooterCol>
-            <FooterCol title="Правовое">
-              <FooterLink href="/terms">Условия</FooterLink>
-              <FooterLink href="/privacy">Конфиденциальность</FooterLink>
+            <FooterCol title={t('footer.legal')}>
+              <FooterLink href="/terms">{t('footer.terms')}</FooterLink>
+              <FooterLink href="/privacy">{t('footer.privacy')}</FooterLink>
               <li>
                 <AnnouncementReopenLink id="auth" className={reopenCls}>
-                  Изменения во входе
+                  {t('footer.authChanges')}
                 </AnnouncementReopenLink>
               </li>
             </FooterCol>

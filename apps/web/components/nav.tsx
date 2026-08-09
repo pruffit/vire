@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { auth } from '@/auth';
 import { listUserArtists } from '@/lib/active-artist';
@@ -9,6 +10,7 @@ import { Icon } from '@/components/icon';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 
 export async function Nav() {
+  const t = await getTranslations('nav');
   const session = await auth();
   const user = session?.user;
   const isArtist = user?.role === 'ARTIST' || user?.role === 'MODERATOR' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
@@ -17,14 +19,14 @@ export async function Nav() {
   // членство (artist_members) проверяем только для VIEWER — не вешать запрос на каждого слушателя
   const showDashboard = isArtist || (user?.role === 'VIEWER' && (await listUserArtists(user.id)).length > 0);
 
-  const displayName = user?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'Профиль';
+  const displayName = user?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? t('profileFallback');
 
   return (
     <nav className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between gap-4">
         <Link
           href="/"
-          aria-label="VireMusic, на главную"
+          aria-label={t('logoAria')}
           className="shrink-0 hover:opacity-70 transition-opacity"
         >
           <Logo className="h-4 w-auto" />
@@ -36,25 +38,25 @@ export async function Nav() {
             <>
               {showDashboard && (
                 <NavLink href="/dashboard">
-                  <span className="hidden sm:inline">Дашборд</span>
-                  <span className="sm:hidden" aria-label="Дашборд"><DashboardIcon /></span>
+                  <span className="hidden sm:inline">{t('dashboard')}</span>
+                  <span className="sm:hidden" aria-label={t('dashboard')}><DashboardIcon /></span>
                 </NavLink>
               )}
               {isAdmin && (
                 <NavLink href="/admin">
-                  <span className="hidden sm:inline">Админка</span>
-                  <span className="sm:hidden" aria-label="Админка"><AdminIcon /></span>
+                  <span className="hidden sm:inline">{t('admin')}</span>
+                  <span className="sm:hidden" aria-label={t('admin')}><AdminIcon /></span>
                 </NavLink>
               )}
               <NotificationBell />
               <NavLink href="/profile">
                 <span className="sm:hidden max-w-[72px] truncate block">{displayName}</span>
-                <span className="hidden sm:block max-w-[140px] truncate">{user.name ?? user.email ?? 'Профиль'}</span>
+                <span className="hidden sm:block max-w-[140px] truncate">{user.name ?? user.email ?? t('profileFallback')}</span>
               </NavLink>
               <span className="hidden sm:block"><NavSignOut /></span>
             </>
           ) : (
-            <NavLink href="/sign-in">Войти</NavLink>
+            <NavLink href="/sign-in">{t('signIn')}</NavLink>
           )}
         </div>
       </div>

@@ -1,12 +1,12 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { Icon } from '@/components/icon';
 import { PlaylistCover } from '@/components/playlist-cover';
 import { cn } from '@/lib/utils';
-import { pluralTracks } from '@/lib/format';
 import { useChatUnread } from '@/lib/chat-unread';
 import { CreatePlaylistButton } from './create-playlist-button';
 
@@ -30,6 +30,8 @@ export function LibrarySidebar({
   isGuest: boolean;
   collapsed?: boolean;
 }) {
+  const t = useTranslations('nav.sidebar');
+  const tCommon = useTranslations('common');
   const liveMessagesUnread = useChatUnread(messagesUnread);
 
   return (
@@ -43,7 +45,7 @@ export function LibrarySidebar({
         >
           {!collapsed && (
             <span className="label-wide text-foreground/35">
-              Медиатека
+              {t('library')}
             </span>
           )}
           {!isGuest && <CreatePlaylistButton variant="icon" />}
@@ -54,8 +56,8 @@ export function LibrarySidebar({
         <LibraryRow
           collapsed={collapsed}
           href="/jam"
-          title="Джем"
-          subtitle="Слушать вместе"
+          title={t('jamTitle')}
+          subtitle={t('jamSubtitle')}
           leading={
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
               <Icon name="sliders" size={18} className="text-foreground" />
@@ -68,17 +70,17 @@ export function LibrarySidebar({
         collapsed ? (
           <Link
             href="/sign-in"
-            aria-label="Войти"
-            title="Войти"
+            aria-label={t('signInAria')}
+            title={t('signInAria')}
             className="mx-auto grid h-10 w-10 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
           >
             <Icon name="log-in" size={18} />
           </Link>
         ) : (
           <div className="mx-2 rounded-lg border border-border bg-foreground/[0.03] p-4 text-sm">
-            <p className="text-foreground/70">Войди, чтобы собирать любимое и плейлисты.</p>
+            <p className="text-foreground/70">{t('guestPrompt')}</p>
             <Link href="/sign-in" className="mt-2 inline-block text-sm font-medium text-foreground hover:underline">
-              Войти →
+              {t('signInCta')}
             </Link>
           </div>
         )
@@ -92,8 +94,8 @@ export function LibrarySidebar({
           <LibraryRow
             collapsed={collapsed}
             href="/library/liked"
-            title="Любимые треки"
-            subtitle={`${likedCount} ${pluralTracks(likedCount)}`}
+            title={t('likedTracks')}
+            subtitle={tCommon('trackCount', { count: likedCount })}
             leading={
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
                 <Icon name="heart" size={18} className="text-foreground" />
@@ -104,8 +106,8 @@ export function LibrarySidebar({
           <LibraryRow
             collapsed={collapsed}
             href="/friends"
-            title="Друзья"
-            subtitle={incomingCount > 0 ? `${incomingCount} новых заявок` : undefined}
+            title={t('friends')}
+            subtitle={incomingCount > 0 ? t('friendsNewRequests', { count: incomingCount }) : undefined}
             badgeCount={incomingCount}
             leading={
               <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
@@ -120,8 +122,8 @@ export function LibrarySidebar({
           <LibraryRow
             collapsed={collapsed}
             href="/messages"
-            title="Сообщения"
-            subtitle={liveMessagesUnread > 0 ? `${liveMessagesUnread} новых` : 'Личные сообщения'}
+            title={t('messages')}
+            subtitle={liveMessagesUnread > 0 ? t('messagesNew', { count: liveMessagesUnread }) : t('personalMessages')}
             badgeCount={liveMessagesUnread}
             leading={
               <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
@@ -139,7 +141,7 @@ export function LibrarySidebar({
               collapsed={collapsed}
               href={`/playlists/${p.id}`}
               title={p.name}
-              subtitle="Плейлист"
+              subtitle={t('playlist')}
               leading={
                 <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-foreground/[0.06]">
                   <PlaylistCover
@@ -160,7 +162,7 @@ export function LibrarySidebar({
               collapsed={collapsed}
               href={`/artists/${a.slug}`}
               title={a.name}
-              subtitle="Артист"
+              subtitle={t('artist')}
               leading={
                 a.avatarUrl ? (
                   <Image src={a.avatarUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover" />
@@ -174,7 +176,7 @@ export function LibrarySidebar({
           ))}
 
           {playlists.length === 0 && artists.length === 0 && !collapsed && (
-            <p className="px-2 py-3 text-xs text-foreground/40">Пока пусто. Лайкай треки и подписывайся на артистов.</p>
+            <p className="px-2 py-3 text-xs text-foreground/40">{t('emptyLibrary')}</p>
           )}
         </div>
       )}

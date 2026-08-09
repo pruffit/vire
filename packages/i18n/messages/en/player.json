@@ -1,1 +1,44 @@
-{}
+{
+  "waveModeOn": "Wave mode on",
+  "waveModeOff": "Wave mode off",
+  "shuffleOn": "Shuffle on",
+  "shuffleOff": "Shuffle",
+  "repeatOff": "Repeat off",
+  "repeatAll": "Repeat queue",
+  "repeatOne": "Repeat track",
+  "play": "Play",
+  "pause": "Pause",
+  "loadError": "Load error",
+  "loadErrorTitle": "Couldn't load the track",
+  "prev": "Previous track",
+  "next": "Next track",
+  "expandAria": "Open fullscreen player",
+  "collapseAria": "Collapse player",
+  "queueAria": "{count, plural, one {Queue, # track} other {Queue, # tracks}}",
+  "queueCount": "Queue · {count}",
+  "hideQueue": "Hide queue",
+  "volumeAria": "Volume",
+  "muteAria": "Unmute",
+  "unmuteAria": "Mute",
+  "seekAria": "Seek",
+  "waveformPlayAria": "Play",
+  "moveTrackAria": "Move “{title}”: arrow up/down",
+  "nextIsWave": "Up next — Wave",
+  "lyrics": {
+    "show": "Lyrics",
+    "hide": "Hide lyrics",
+    "noLyrics": "No lyrics"
+  },
+  "jam": {
+    "remote": "Remote",
+    "party": "Party",
+    "jamLabel": "Jam",
+    "backToRoom": "Back to room",
+    "pauseAria": "Pause jam",
+    "resumeAria": "Resume jam",
+    "leaveAria": "Leave jam"
+  },
+  "nowPlayingSr": "Now playing",
+  "like": "Like",
+  "unlike": "Unlike"
+}

@@ -1,1 +1,74 @@
-{}
+{
+  "logoAria": "VireMusic, на главную",
+  "dashboard": "Дашборд",
+  "admin": "Админка",
+  "profileFallback": "Профиль",
+  "signIn": "Войти",
+  "signOut": "Выйти",
+  "footer": {
+    "platform": "Площадка",
+    "artists": "Артисты",
+    "releases": "Релизы",
+    "about": "О платформе",
+    "design": "Дизайн",
+    "whatsNew": "Что нового",
+    "support": "Поддержка",
+    "becomeArtist": "Стать артистом",
+    "feedback": "Обратная связь",
+    "legal": "Правовое",
+    "terms": "Условия",
+    "privacy": "Конфиденциальность",
+    "authChanges": "Изменения во входе"
+  },
+  "sidebar": {
+    "library": "Медиатека",
+    "home": "Главная",
+    "jamTitle": "Джем",
+    "jamSubtitle": "Слушать вместе",
+    "guestPrompt": "Войди, чтобы собирать любимое и плейлисты.",
+    "signInCta": "Войти →",
+    "signInAria": "Войти",
+    "likedTracks": "Любимые треки",
+    "friends": "Друзья",
+    "friendsNewRequests": "{count} новых заявок",
+    "messages": "Сообщения",
+    "personalMessages": "Личные сообщения",
+    "messagesNew": "{count} новых",
+    "playlist": "Плейлист",
+    "artist": "Артист",
+    "emptyLibrary": "Пока пусто. Лайкай треки и подписывайся на артистов.",
+    "collapseAria": "Свернуть медиатеку",
+    "expandAria": "Развернуть медиатеку",
+    "collapseTitle": "Свернуть",
+    "expandTitle": "Развернуть",
+    "switchLocaleAria": "Переключить язык на {target}",
+    "localeRu": "русский",
+    "localeEn": "английский",
+    "profileAria": "Профиль: {name}",
+    "profileLabel": "Профиль"
+  },
+  "tabBar": {
+    "home": "Главная",
+    "search": "Поиск",
+    "library": "Медиатека",
+    "friends": "Друзья",
+    "messages": "Сообщения",
+    "friendRequestsSr": "{count} новых заявок в друзья",
+    "messagesSr": "{count} новых сообщений"
+  },
+  "playlistCard": {
+    "collaborative": "совместный"
+  },
+  "followedArtists": {
+    "unfollowFailed": "Не удалось отписаться",
+    "emptyPrefix": "Ты ни на кого не подписан.",
+    "findArtists": "Найти артистов",
+    "unfollowAria": "Отписаться",
+    "verifiedSr": "верифицирован"
+  },
+  "createPlaylist": {
+    "label": "Создать плейлист",
+    "failed": "Не удалось создать плейлист",
+    "defaultTitle": "Мой плейлист"
+  }
+}

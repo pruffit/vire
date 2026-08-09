@@ -1,1 +1,27 @@
-{}
+{
+  "offline": {
+    "pageTitle": "Downloads",
+    "heading": "Downloads",
+    "subtitle": "Tracks available without internet",
+    "noNetwork": "Offline",
+    "loading": "Loading…",
+    "emptyTitle": "Nothing downloaded yet",
+    "emptyHint": "Save a track offline from the queue menu, or download a whole playlist.",
+    "removeFailed": "Couldn't remove the offline copy",
+    "partial": "incomplete",
+    "playAria": "Play {title}",
+    "removeAria": "Remove from downloads",
+    "resetCache": "Reset app cache",
+    "resetCacheUsage": "currently {size}",
+    "resetConfirmText": "This will delete downloaded tracks and the app's offline shell.",
+    "resetConfirmIrreversible": "This can't be undone.",
+    "resetConfirm": "Yes, reset",
+    "resetCancel": "Cancel",
+    "mb": "{value} MB",
+    "gb": "{value} GB"
+  },
+  "install": {
+    "label": "Install app",
+    "hint": "No browser chrome, an icon on your home screen"
+  }
+}

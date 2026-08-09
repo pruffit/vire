@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useIsDesktopPointer } from '@/lib/is-desktop-pointer';
 import { ratioFromX } from '@/lib/player/waveform-math';
 
@@ -12,6 +13,7 @@ interface Props {
 
 /** Линия прогресса по верхней кромке бара — единственная перемотка на мобилке. Общая для обычного мини-бара и режима джема. */
 export function ProgressLine({ position, duration, onSeek }: Props) {
+  const t = useTranslations('player');
   const ref = useRef<HTMLDivElement>(null);
   const [scrub, setScrub] = useState<number | null>(null);
   // Hover-утолщение только на десктопе — на таче :hover залипает после тапа.
@@ -40,7 +42,7 @@ export function ProgressLine({ position, duration, onSeek }: Props) {
     <div
       ref={ref}
       role="slider"
-      aria-label="Перемотка"
+      aria-label={t('seekAria')}
       aria-valuenow={Math.round(shown * duration)}
       aria-valuemin={0}
       aria-valuemax={Math.round(duration)}

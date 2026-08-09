@@ -1,13 +1,7 @@
-import { cn } from '@vire/ui';
+'use client';
 
-const LEVELS = [
-  { label: 'слабый', color: 'bg-red-500' },
-  { label: 'слабый', color: 'bg-red-500' },
-  { label: 'средний', color: 'bg-yellow-500' },
-  { label: 'хороший', color: 'bg-green-500' },
-  { label: 'надёжный', color: 'bg-green-500' },
-  { label: 'надёжный', color: 'bg-green-500' },
-] as const;
+import { useTranslations } from 'next-intl';
+import { cn } from '@vire/ui';
 
 function score(password: string): number {
   let s = 0;
@@ -24,7 +18,16 @@ function score(password: string): number {
  * Чистая функция пропсов (без хуков). `size`: md (форма) / sm (компактный, в строке).
  */
 export function PasswordStrength({ password, size = 'md' }: { password: string; size?: 'md' | 'sm' }) {
-  const { label, color } = LEVELS[Math.min(score(password), 5)];
+  const t = useTranslations('auth.passwordStrength');
+  const levels = [
+    { label: t('weak'), color: 'bg-red-500' },
+    { label: t('weak'), color: 'bg-red-500' },
+    { label: t('medium'), color: 'bg-yellow-500' },
+    { label: t('good'), color: 'bg-green-500' },
+    { label: t('strong'), color: 'bg-green-500' },
+    { label: t('strong'), color: 'bg-green-500' },
+  ] as const;
+  const { label, color } = levels[Math.min(score(password), 5)];
   const pct = Math.max(20, (Math.min(score(password), 5) / 5) * 100);
 
   return (

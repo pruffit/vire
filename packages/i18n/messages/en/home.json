@@ -1,1 +1,53 @@
-{}
+{
+  "srHeading": "an independent music platform for artists and listeners across the CIS",
+  "sections": {
+    "forYou": "For you",
+    "friendsActivity": "Friends' activity",
+    "hotTracks": "Hot tracks",
+    "wholeCatalog": "Whole catalog",
+    "freshReleases": "Fresh releases",
+    "viewAll": "View all",
+    "comingSoon": "Coming soon",
+    "playlists": "Playlists",
+    "artists": "Artists",
+    "allArtists": "All artists",
+    "discoveries": "Discover for you",
+    "yourFeed": "Your feed",
+    "continueListening": "Continue listening",
+    "emptyCatalog": "Nothing here yet. Music is coming soon."
+  },
+  "feed": {
+    "reasonFollow": "You follow this artist",
+    "reasonTaste": "Matches your taste",
+    "reasonFresh": "Fresh on the platform",
+    "showMore": "Show more ({count})"
+  },
+  "allTagsSheet": {
+    "title": "All tags",
+    "searchPlaceholder": "Find a tag…",
+    "searchAria": "Find a tag",
+    "empty": "Nothing found."
+  },
+  "flowBlock": {
+    "aria": "Flow"
+  },
+  "wave": {
+    "started": "Wave is on",
+    "idle": "Wave",
+    "idleHint": "an endless radio of similar tracks",
+    "stop": "Stop",
+    "start": "Start",
+    "startFailed": "Couldn't start the wave"
+  },
+  "coverRail": {
+    "playAria": "Play {title}"
+  },
+  "featured": {
+    "aria": "Editor's pick",
+    "coverAlt": "“{title}” cover",
+    "toRelease": "View release",
+    "toReleaseAria": "{title} — view release",
+    "listen": "Listen",
+    "loadFailed": "Couldn't load tracks"
+  }
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from '@/i18n/navigation';
@@ -36,6 +36,7 @@ export function ListenerSidebar({
   initialCollapsed: boolean;
   user?: { name: string; avatarUrl: string | null };
 }) {
+  const t = useTranslations('nav.sidebar');
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const locale = useLocale() as Locale;
   const pathname = usePathname();
@@ -55,7 +56,7 @@ export function ListenerSidebar({
     <button
       type="button"
       onClick={switchLocale}
-      aria-label={`Переключить язык на ${locale === 'ru' ? 'английский' : 'русский'}`}
+      aria-label={t('switchLocaleAria', { target: locale === 'ru' ? t('localeEn') : t('localeRu') })}
       title={locale.toUpperCase()}
       className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-xs font-medium text-foreground/45 transition-colors hover:bg-foreground/5 hover:text-foreground"
     >
@@ -76,8 +77,8 @@ export function ListenerSidebar({
     <button
       type="button"
       onClick={toggle}
-      aria-label={collapsed ? 'Развернуть медиатеку' : 'Свернуть медиатеку'}
-      title={collapsed ? 'Развернуть' : 'Свернуть'}
+      aria-label={collapsed ? t('expandAria') : t('collapseAria')}
+      title={collapsed ? t('expandTitle') : t('collapseTitle')}
       className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-foreground/45 transition-colors hover:bg-foreground/5 hover:text-foreground"
     >
       <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} size={18} />

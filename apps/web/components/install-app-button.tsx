@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/icon';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -14,6 +15,7 @@ function isStandalone(): boolean {
 }
 
 export function InstallAppButton() {
+  const t = useTranslations('pwa.install');
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   // SSR: matchMedia недоступен, но deferred=null всё равно скрывает кнопку до первого
   // клиентского события — начальное значение installed на гидратацию не влияет.
@@ -57,8 +59,8 @@ export function InstallAppButton() {
         <Icon name="maximize" size={22} className="text-foreground/70" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-foreground">Установить приложение</span>
-        <span className="block text-xs text-foreground/50">Без хрома браузера, с иконкой на экране</span>
+        <span className="block text-sm font-medium text-foreground">{t('label')}</span>
+        <span className="block text-xs text-foreground/50">{t('hint')}</span>
       </span>
       <Icon name="chevron-right" size={18} className="shrink-0 text-foreground/30" />
     </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
@@ -58,43 +59,41 @@ function PlayerToggleButton({
 
 /** Кнопка «Волны». Вынесена из Controls — в фуллскрине стоит отдельно, зеркально кнопке лайка. */
 export function WaveModeButton() {
+  const t = useTranslations('player');
   const waveMode = usePlayerStore((s) => s.waveMode);
   return (
     <PlayerToggleButton
       icon={<WaveIcon />}
       active={waveMode}
       onClick={() => controls.setWaveMode(!waveMode)}
-      label={waveMode ? 'Режим волны включён' : 'Режим волны выключен'}
+      label={waveMode ? t('waveModeOn') : t('waveModeOff')}
     />
   );
 }
 
 export function ShuffleButton() {
+  const t = useTranslations('player');
   const shuffle = usePlayerStore((s) => s.shuffle);
   return (
     <PlayerToggleButton
       icon={<Icon name="shuffle" size={18} />}
       active={shuffle}
       onClick={() => controls.toggleShuffle()}
-      label={shuffle ? 'Случайный порядок включён' : 'Случайный порядок'}
+      label={shuffle ? t('shuffleOn') : t('shuffleOff')}
     />
   );
 }
 
-const REPEAT_LABELS = {
-  off: 'Повтор выключен',
-  all: 'Повтор очереди',
-  one: 'Повтор трека',
-} as const;
-
 export function RepeatButton() {
+  const t = useTranslations('player');
+  const repeatLabels = { off: t('repeatOff'), all: t('repeatAll'), one: t('repeatOne') } as const;
   const repeat = usePlayerStore((s) => s.repeat);
   return (
     <PlayerToggleButton
       icon={<RepeatIcon />}
       active={repeat !== 'off'}
       onClick={() => controls.cycleRepeat()}
-      label={REPEAT_LABELS[repeat]}
+      label={repeatLabels[repeat]}
       badge={
         repeat === 'one' ? (
           <span
@@ -117,6 +116,7 @@ const PLAY_PAUSE_SIZE_CLASS = {
 
 /** Play/pause; в restored-состоянии клик зовёт resumeRestored(), а не паузу несуществующего audio. */
 function PlayPauseButton({ size }: { size: 'bar' | 'full' }) {
+  const t = useTranslations('player');
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const isLoading = usePlayerStore((s) => s.isLoading);
   const hasAudio = usePlayerStore((s) => s.hasAudio);
@@ -132,8 +132,8 @@ function PlayPauseButton({ size }: { size: 'bar' | 'full' }) {
     <motion.button
       onClick={() => (restored ? controls.resumeRestored() : controls.togglePlay())}
       disabled={disabled}
-      aria-label={audioError ? 'Ошибка загрузки' : isPlaying ? 'Пауза' : 'Играть'}
-      title={audioError ? 'Не удалось загрузить трек' : undefined}
+      aria-label={audioError ? t('loadError') : isPlaying ? t('pause') : t('play')}
+      title={audioError ? t('loadErrorTitle') : undefined}
       whileTap={!disabled ? { scale: 0.92 } : undefined}
       transition={spring.snappy}
       className={`relative ${PLAY_PAUSE_SIZE_CLASS[size]} rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:bg-primary/90`}
@@ -175,6 +175,7 @@ export function Controls({
   hideExtrasBelowSm?: boolean;
   size?: 'bar' | 'full';
 }) {
+  const t = useTranslations('player');
   const extraClass = `${hideExtrasBelowSm ? 'hidden sm:flex' : 'flex'} w-9 justify-center`;
 
   return (
@@ -186,7 +187,7 @@ export function Controls({
       )}
       <motion.button
         onClick={() => controls.prev()}
-        aria-label="Предыдущий трек"
+        aria-label={t('prev')}
         whileTap={{ scale: 0.92 }}
         transition={spring.snappy}
         className="p-2 -m-1 opacity-50 hover:opacity-100 transition-opacity pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
@@ -198,7 +199,7 @@ export function Controls({
 
       <motion.button
         onClick={() => controls.next()}
-        aria-label="Следующий трек"
+        aria-label={t('next')}
         whileTap={{ scale: 0.92 }}
         transition={spring.snappy}
         className="p-2 -m-1 opacity-50 hover:opacity-100 transition-opacity pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"

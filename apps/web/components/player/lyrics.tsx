@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
@@ -21,6 +22,7 @@ function cacheLyrics(trackId: string, lines: LyricLine[] | null): void {
 
 /** Текст трека в фуллскрин-плеере. Родитель должен ставить key={trackId} — сброс состояния на новый трек. */
 export function Lyrics({ trackId }: { trackId: string }) {
+  const t = useTranslations('player.lyrics');
   const [lines, setLines] = useState<LyricLine[] | null>(() => lyricsCache.get(trackId) ?? null);
   const [open, setOpen] = useState(false);
 
@@ -53,11 +55,11 @@ export function Lyrics({ trackId }: { trackId: string }) {
         onClick={() => setOpen((s) => !s)}
         disabled={buttonDisabled}
         aria-expanded={!buttonDisabled ? open : undefined}
-        title={!loading && !hasLyrics ? 'Нет текста' : undefined}
+        title={!loading && !hasLyrics ? t('noLyrics') : undefined}
         className="mx-auto flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none"
       >
         <Icon name="align-left" size={15} />
-        {open && hasLyrics ? 'Скрыть текст' : 'Текст'}
+        {open && hasLyrics ? t('hide') : t('show')}
       </button>
       <AnimatePresence initial={false}>
         {open && hasLyrics && (

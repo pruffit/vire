@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
@@ -20,6 +21,7 @@ interface FlatResult {
 }
 
 export function NavSearch() {
+  const t = useTranslations('common');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -32,16 +34,16 @@ export function NavSearch() {
   const flat: FlatResult[] = results
     ? [
         ...results.artists.map((a) => ({
-          href: `/artists/${a.slug}`, label: a.name, sub: 'Артист',
+          href: `/artists/${a.slug}`, label: a.name, sub: t('entity.artist'),
           img: resolveAvatarUrl(a.avatarUrl, a.firstReleaseCoverUrl), round: true, initial: a.name[0]?.toUpperCase(),
         })),
         ...results.releases.map((r) => ({
           href: `/artists/${r.artistSlug}/releases/${r.id}`, label: r.title,
           sub: `${r.type} · ${r.artistName}`, img: r.coverUrl, initial: r.title[0]?.toUpperCase(),
         })),
-        ...results.tracks.map((t) => ({
-          href: `/artists/${t.artistSlug}/releases/${t.releaseId}/tracks/${t.id}`, label: t.title,
-          sub: `Трек · ${t.artistName}`, img: t.coverUrl, initial: t.title[0]?.toUpperCase(),
+        ...results.tracks.map((track) => ({
+          href: `/artists/${track.artistSlug}/releases/${track.releaseId}/tracks/${track.id}`, label: track.title,
+          sub: `${t('entity.track')} · ${track.artistName}`, img: track.coverUrl, initial: track.title[0]?.toUpperCase(),
         })),
       ].slice(0, 6)
     : [];
@@ -129,7 +131,7 @@ export function NavSearch() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Поиск артистов, релизов, треков…"
+          placeholder={t('search.placeholder')}
           autoComplete="off"
           tabIndex={open ? 0 : -1}
           className="w-[220px] h-8 rounded-md border border-border bg-card px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus-visible:border-ring focus-visible:ring-0"
@@ -139,7 +141,7 @@ export function NavSearch() {
       <motion.button
         type="button"
         onClick={toggle}
-        aria-label={open ? 'Закрыть поиск' : 'Поиск'}
+        aria-label={open ? t('search.closeAria') : t('search.openAria')}
         aria-expanded={open}
         whileHover={{ scale: 1.15 }}
         whileTap={{ scale: 0.9 }}
@@ -194,12 +196,12 @@ export function NavSearch() {
               </button>
             ))}
             <div className="px-3 py-2 border-t border-border flex items-center justify-between">
-              <span className="text-[11px] text-muted-foreground">Enter — все результаты</span>
+              <span className="text-[11px] text-muted-foreground">{t('search.enterAllResults')}</span>
               <button
                 onMouseDown={(e) => { e.preventDefault(); goAll(); }}
                 className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
               >
-                Показать все <Icon name="arrow-right" size={12} />
+                {t('search.showAll')} <Icon name="arrow-right" size={12} />
               </button>
             </div>
           </motion.div>

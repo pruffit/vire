@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { getTranslations } from 'next-intl/server';
 import {
   getLatestReleases,
   listReleases,
@@ -26,7 +27,6 @@ import { RecentRail } from '@/components/home/recent-rail';
 import { PlayableTrackList } from '@/components/track-list';
 import { getListeningNow } from '@/lib/listening-now';
 import { Section } from '@/components/listener/section';
-import { pluralReleases } from '@/lib/format';
 
 export { FeedSection } from '@/components/home/feed-section';
 export { DiscoverySection } from '@/components/home/discovery-section';
@@ -36,6 +36,7 @@ const cachedUpcoming = cache(() => getUpcomingReleases(8).catch(() => []));
 const cachedArtists = cache(() => listActiveArtists().catch(() => []));
 
 export async function PersonalBlock({ userId }: { userId: string }) {
+  const t = await getTranslations('home.sections');
   const [recent, personalPicks] = await Promise.all([
     getRecentlyPlayed(userId, 12).catch(() => []),
     getPersonalTrackPicks(userId, 12).catch(() => []),
@@ -47,7 +48,7 @@ export async function PersonalBlock({ userId }: { userId: string }) {
     <>
       <RecentRail tracks={recent} />
       {personalPicksDeduped.length >= 4 && (
-        <Section title="Для тебя">
+        <Section title={t('forYou')}>
           <PlayableTrackList variant="plain" columns={2} tracks={personalPicksDeduped} context={{ source: 'home' }} />
         </Section>
       )}
@@ -56,12 +57,13 @@ export async function PersonalBlock({ userId }: { userId: string }) {
 }
 
 export async function FriendsActivitySection({ userId }: { userId: string }) {
+  const t = await getTranslations('home.sections');
   const raw = await getFriendsActivity(userId, 12).catch(() => null);
   if (!raw) return null;
   const items = mergeFriendsActivity(raw.likes, raw.follows, raw.playlists);
   if (items.length === 0) return null;
   return (
-    <Section title="Активность друзей">
+    <Section title={t('friendsActivity')}>
       <FriendsActivityFeed items={items} />
     </Section>
   );
@@ -73,6 +75,7 @@ export async function HotTracksSection() {
 }
 
 export async function FreshReleasesSection() {
+  const t = await getTranslations('home.sections');
   const [freshWeek, latest] = await Promise.all([
     listReleases({ sort: 'fresh', sinceDays: 7, limit: 18 }).catch(() => []),
     cachedLatestReleases(),
@@ -84,7 +87,7 @@ export async function FreshReleasesSection() {
   if (rest.length === 0) return null;
 
   return (
-    <Section title="Свежие релизы" count={rest.length} href="/releases" hrefLabel="Посмотреть все">
+    <Section title={t('freshReleases')} count={rest.length} href="/releases" hrefLabel={t('viewAll')}>
       {/* -my/py: overflow-x-auto клипает и по Y — иначе hover-тень карточек срезается */}
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {rest.map((r) => (
@@ -98,10 +101,11 @@ export async function FreshReleasesSection() {
 }
 
 export async function UpcomingSection() {
+  const t = await getTranslations('home.sections');
   const upcoming = await cachedUpcoming();
   if (upcoming.length === 0) return null;
   return (
-    <Section title="Скоро выйдет" count={upcoming.length}>
+    <Section title={t('comingSoon')} count={upcoming.length}>
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {upcoming.map((r) => (
           <div key={r.id} className="flex-[1_0_10rem] max-w-[14rem] min-w-0 snap-start">
@@ -119,6 +123,7 @@ export async function ListeningNowSection() {
 }
 
 export async function PlaylistsSection({ userId }: { userId?: string }) {
+  const t = await getTranslations('home.sections');
   const [sharedPlaylists, personalRaw, publicPlaylists, likedPlaylistIds] = await Promise.all([
     getEditorialPlaylists(4).catch(() => []),
     userId ? getPersonalPlaylists(userId, 4).catch(() => []) : Promise.resolve([]),
@@ -139,7 +144,7 @@ export async function PlaylistsSection({ userId }: { userId?: string }) {
 
   if (allPlaylists.length === 0) return null;
   return (
-    <Section title="Подборки" count={allPlaylists.length}>
+    <Section title={t('playlists')} count={allPlaylists.length}>
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {allPlaylists.map((p) => (
           <div key={p.id} className="flex-[1_0_10rem] max-w-[14rem] min-w-0 snap-start">
@@ -152,11 +157,13 @@ export async function PlaylistsSection({ userId }: { userId?: string }) {
 }
 
 export async function ArtistsSection() {
+  const t = await getTranslations('home.sections');
+  const tCommon = await getTranslations('common');
   const artists = await cachedArtists();
   const topArtists = artists.slice(0, 12);
   if (topArtists.length === 0) return null;
   return (
-    <Section title="Артисты" count={topArtists.length} href="/artists" hrefLabel="Все артисты">
+    <Section title={t('artists')} count={topArtists.length} href="/artists" hrefLabel={t('allArtists')}>
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {topArtists.map((a) => (
           <div key={a.id} className="flex-[1_0_7rem] max-w-[11rem] min-w-0 snap-start">
@@ -168,7 +175,7 @@ export async function ArtistsSection() {
               avatarUrl={a.avatarUrl}
               coverFallbackUrl={a.firstReleaseCoverUrl}
               verified={a.verified}
-              stat={a.releaseCount > 0 ? `${a.releaseCount} ${pluralReleases(a.releaseCount)}` : undefined}
+              stat={a.releaseCount > 0 ? tCommon('releaseCount', { count: a.releaseCount }) : undefined}
             />
           </div>
         ))}
@@ -178,11 +185,12 @@ export async function ArtistsSection() {
 }
 
 export async function CatalogEmptyNotice() {
+  const t = await getTranslations('home.sections');
   const [latest, upcoming, artists] = await Promise.all([cachedLatestReleases(), cachedUpcoming(), cachedArtists()]);
   if (latest.length > 0 || upcoming.length > 0 || artists.length > 0) return null;
   return (
     <p className="text-center text-sm text-muted-foreground py-12">
-      Пока пусто. Скоро здесь появится музыка.
+      {t('emptyCatalog')}
     </p>
   );
 }

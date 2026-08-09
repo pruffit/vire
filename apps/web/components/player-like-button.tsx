@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import { useLikesStore } from '@/store/likes';
 import { HeartIcon } from '@/components/icons';
@@ -13,6 +14,7 @@ export function PlayerLikeButton({
   trackId: string;
   size?: 'sm' | 'md';
 }) {
+  const t = useTranslations('player');
   const load = useLikesStore((s) => s.load);
   const storeToggle = useLikesStore((s) => s.toggle);
   const liked = useLikesStore((s) => s.state[trackId] ?? null);
@@ -31,7 +33,7 @@ export function PlayerLikeButton({
     <motion.button
       type="button"
       onClick={toggle}
-      aria-label={liked ? 'Убрать лайк' : 'Лайкнуть'}
+      aria-label={liked ? t('unlike') : t('like')}
       whileTap={{ scale: 0.82 }}
       whileHover={{ scale: 1.15 }}
       transition={spring.snappy}

@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import { Link } from '@/i18n/navigation';
 
@@ -20,6 +21,7 @@ function getServerSnapshot(): boolean {
 }
 
 export function CookieBanner() {
+  const t = useTranslations('common.cookieBanner');
   const [dismissed, setDismissed] = useState(false);
   // useSyncExternalStore: сервер → false (пустой снепшот), клиент → читает localStorage
   const storageNotDismissed = useSyncExternalStore(
@@ -42,7 +44,7 @@ export function CookieBanner() {
       {visible && (
         <motion.div
           role="region"
-          aria-label="Уведомление об использовании cookie"
+          aria-label={t('aria')}
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8 }}
@@ -51,9 +53,9 @@ export function CookieBanner() {
         >
           <div className="rounded-xl bg-card border border-border/60 shadow-xl shadow-background/30 px-4 py-3.5 space-y-3 backdrop-blur-sm">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Мы используем только необходимые cookie — сессия входа. Аналитики и сторонних cookie нет.{' '}
+              {t('text')}{' '}
               <Link href="/privacy" className="underline underline-offset-2 hover:opacity-70 transition-opacity">
-                Подробнее
+                {t('learnMore')}
               </Link>
             </p>
             <div className="flex items-center justify-end gap-2">
@@ -61,13 +63,13 @@ export function CookieBanner() {
                 onClick={() => decide('rejected')}
                 className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 cursor-pointer"
               >
-                Отклонить
+                {t('reject')}
               </button>
               <button
                 onClick={() => decide('accepted')}
                 className="text-xs font-medium rounded-full bg-primary text-primary-foreground px-4 py-1.5 hover:bg-primary/90 transition-opacity cursor-pointer"
               >
-                Принять
+                {t('accept')}
               </button>
             </div>
           </div>

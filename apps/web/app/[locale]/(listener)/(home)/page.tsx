@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { getMoodCounts, getGenreCounts, getReleaseCardStats } from '@vire/db';
 import { FeaturedRelease } from '@/components/featured-release';
@@ -27,6 +28,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 export default async function HomePage() {
+  const t = await getTranslations('home');
   const session = await auth();
   const userId = session?.user?.id;
 
@@ -42,7 +44,7 @@ export default async function HomePage() {
   return (
     <PageContainer spaceY="home">
       <JsonLd data={websiteJsonLd()} />
-      <h1 className="sr-only">VireMusic — независимая музыкальная площадка для артистов и слушателей СНГ</h1>
+      <h1 className="sr-only">VireMusic — {t('srHeading')}</h1>
 
       {/* без FadeUp — FeaturedRelease содержит LCP-изображение, opacity-анимация задержала бы LCP */}
       {featured && <FeaturedRelease release={featured} stats={featuredStats} />}
@@ -68,11 +70,11 @@ export default async function HomePage() {
       )}
 
       {/* rows = лимит getPopularTracks — иначе замена скелетона сдвигает всё ниже */}
-      <Suspense fallback={<TrackListSkeleton title="Горячие треки" rows={20} href="/releases" hrefLabel="Весь каталог" />}>
+      <Suspense fallback={<TrackListSkeleton title={t('sections.hotTracks')} rows={20} href="/releases" hrefLabel={t('sections.wholeCatalog')} />}>
         <HotTracksSection />
       </Suspense>
 
-      <Suspense fallback={<RailSkeleton title="Свежие релизы" cardWidth="flex-[1_0_12rem] max-w-[14rem] min-w-0" href="/releases" hrefLabel="Посмотреть все" />}>
+      <Suspense fallback={<RailSkeleton title={t('sections.freshReleases')} cardWidth="flex-[1_0_12rem] max-w-[14rem] min-w-0" href="/releases" hrefLabel={t('sections.viewAll')} />}>
         <FreshReleasesSection />
       </Suspense>
 
@@ -84,11 +86,11 @@ export default async function HomePage() {
         <ListeningNowSection />
       </Suspense>
 
-      <Suspense fallback={<RailSkeleton title="Подборки" cardWidth="flex-[1_0_10rem] max-w-[14rem] min-w-0" />}>
+      <Suspense fallback={<RailSkeleton title={t('sections.playlists')} cardWidth="flex-[1_0_10rem] max-w-[14rem] min-w-0" />}>
         <PlaylistsSection userId={userId} />
       </Suspense>
 
-      <Suspense fallback={<RailSkeleton title="Артисты" cardWidth="flex-[1_0_7rem] max-w-[11rem] min-w-0" href="/artists" hrefLabel="Все артисты" round />}>
+      <Suspense fallback={<RailSkeleton title={t('sections.artists')} cardWidth="flex-[1_0_7rem] max-w-[11rem] min-w-0" href="/artists" hrefLabel={t('sections.allArtists')} round />}>
         <ArtistsSection />
       </Suspense>
 

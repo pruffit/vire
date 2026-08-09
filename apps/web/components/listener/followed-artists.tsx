@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Icon } from '@/components/icon';
 import Image from 'next/image';
@@ -10,6 +11,7 @@ import type { FollowedArtist } from '@vire/db';
 import { toast } from '@/lib/toast';
 
 export function FollowedArtists({ initial }: { initial: FollowedArtist[] }) {
+  const t = useTranslations('nav.followedArtists');
   const [artists, setArtists] = useState(initial);
   const [pending, setPending] = useState<Set<string>>(new Set());
 
@@ -22,7 +24,7 @@ export function FollowedArtists({ initial }: { initial: FollowedArtist[] }) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       setArtists(prev); // откат
-      toast.error('Не удалось отписаться');
+      toast.error(t('unfollowFailed'));
     } finally {
       setPending((p) => { const n = new Set(p); n.delete(slug); return n; });
     }
@@ -31,9 +33,9 @@ export function FollowedArtists({ initial }: { initial: FollowedArtist[] }) {
   if (artists.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-6 text-center">
-        Ты ни на кого не подписан.{' '}
+        {t('emptyPrefix')}{' '}
         <Link href="/artists" className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground transition-colors">
-          Найти артистов <Icon name="arrow-right" size={13} />
+          {t('findArtists')} <Icon name="arrow-right" size={13} />
         </Link>
       </p>
     );
@@ -72,15 +74,15 @@ export function FollowedArtists({ initial }: { initial: FollowedArtist[] }) {
               {artist.verified && (
                 <>
                   <Icon name="check" size={12} className="shrink-0 text-muted-foreground" />
-                  <span className="sr-only">верифицирован</span>
+                  <span className="sr-only">{t('verifiedSr')}</span>
                 </>
               )}
             </Link>
             <button
               onClick={() => unfollow(artist.slug)}
               disabled={pending.has(artist.slug)}
-              title="Отписаться"
-              aria-label="Отписаться"
+              title={t('unfollowAria')}
+              aria-label={t('unfollowAria')}
               className="shrink-0 grid place-items-center w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11 rounded-full text-muted-foreground opacity-40 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all disabled:opacity-40 active:scale-90"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

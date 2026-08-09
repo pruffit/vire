@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import {
   loginAction,
@@ -16,14 +17,15 @@ import { PasswordStrength } from '@/components/password-strength';
 type Tab = 'login' | 'register' | 'magic';
 
 export function AuthForms({ callbackUrl }: { callbackUrl: string }) {
+  const t = useTranslations('auth');
   const [tab, setTab] = useState<Tab>('login');
 
   return (
     <div className="space-y-5">
       {/* Переключатель */}
       <div className="flex rounded-lg bg-muted p-1 gap-1">
-        <TabButton active={tab === 'login'} onClick={() => setTab('login')}>Войти</TabButton>
-        <TabButton active={tab === 'register'} onClick={() => setTab('register')}>Регистрация</TabButton>
+        <TabButton active={tab === 'login'} onClick={() => setTab('login')}>{t('tabs.login')}</TabButton>
+        <TabButton active={tab === 'register'} onClick={() => setTab('register')}>{t('tabs.register')}</TabButton>
       </div>
 
       <AnimatePresence mode="wait" initial={false}>
@@ -73,42 +75,43 @@ export function AuthForms({ callbackUrl }: { callbackUrl: string }) {
 // ─── Войти ────────────────────────────────────────────────────────────────────
 
 function LoginForm({ callbackUrl, onMagicLink }: { callbackUrl: string; onMagicLink: () => void }) {
+  const t = useTranslations('auth');
   const [error, action, pending] = useActionState(loginAction, null);
   const [showPw, setShowPw] = useState(false);
 
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="callbackUrl" value={callbackUrl} />
-      <FormField label="Email">
+      <FormField label={t('fields.email')}>
         <input
           type="email" name="email" required autoComplete="email"
-          placeholder="you@example.ru" className={inputCn}
+          placeholder={t('login.emailPlaceholder')} className={inputCn}
         />
       </FormField>
-      <FormField label="Пароль">
+      <FormField label={t('fields.password')}>
         <div className="relative">
           <input
             type={showPw ? 'text' : 'password'} name="password" required
-            autoComplete="current-password" placeholder="••••••••"
+            autoComplete="current-password" placeholder={t('login.passwordPlaceholder')}
             className={`${inputCn} pr-10`}
           />
           <button
             type="button" onClick={() => setShowPw((s) => !s)} tabIndex={-1}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors text-xs cursor-pointer"
-            aria-label={showPw ? 'Скрыть пароль' : 'Показать пароль'}
+            aria-label={showPw ? t('login.hidePasswordAria') : t('login.showPasswordAria')}
           >
-            {showPw ? 'скрыть' : 'показать'}
+            {showPw ? t('login.hidePassword') : t('login.showPassword')}
           </button>
         </div>
       </FormField>
       <ErrorMessage error={error} />
       <button type="submit" disabled={pending} className={primaryBtn}>
-        {pending ? 'Входим…' : 'Войти'}
+        {pending ? t('login.submitting') : t('login.submit')}
       </button>
       <button type="button" onClick={onMagicLink}
         className="inline-flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors text-center cursor-pointer"
       >
-        Забыл пароль? Войти по ссылке на email <Icon name="arrow-right" size={13} />
+        {t('login.forgotPassword')} <Icon name="arrow-right" size={13} />
       </button>
     </form>
   );
@@ -117,6 +120,7 @@ function LoginForm({ callbackUrl, onMagicLink }: { callbackUrl: string; onMagicL
 // ─── Регистрация ──────────────────────────────────────────────────────────────
 
 function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
+  const t = useTranslations('auth');
   const [error, action, pending] = useActionState(registerAction, null);
   const [showPw, setShowPw] = useState(false);
   const [password, setPassword] = useState('');
@@ -124,29 +128,29 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="callbackUrl" value={callbackUrl} />
-      <FormField label="Имя">
+      <FormField label={t('fields.name')}>
         <input type="text" name="name" required minLength={2} maxLength={60}
-          autoComplete="name" placeholder="Как тебя зовут" className={inputCn}
+          autoComplete="name" placeholder={t('login.namePlaceholder')} className={inputCn}
         />
       </FormField>
-      <FormField label="Email">
+      <FormField label={t('fields.email')}>
         <input type="email" name="email" required autoComplete="email"
-          placeholder="you@example.ru" className={inputCn}
+          placeholder={t('login.emailPlaceholder')} className={inputCn}
         />
       </FormField>
-      <FormField label="Пароль">
+      <FormField label={t('fields.password')}>
         <div className="relative">
           <input
             type={showPw ? 'text' : 'password'} name="password" required minLength={8}
-            autoComplete="new-password" placeholder="Минимум 8 символов"
+            autoComplete="new-password" placeholder={t('register.passwordPlaceholder')}
             onChange={(e) => setPassword(e.target.value)}
             className={`${inputCn} pr-10`}
           />
           <button type="button" onClick={() => setShowPw((s) => !s)} tabIndex={-1}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors text-xs cursor-pointer"
-            aria-label={showPw ? 'Скрыть пароль' : 'Показать пароль'}
+            aria-label={showPw ? t('login.hidePasswordAria') : t('login.showPasswordAria')}
           >
-            {showPw ? 'скрыть' : 'показать'}
+            {showPw ? t('login.hidePassword') : t('login.showPassword')}
           </button>
         </div>
         {password.length > 0 && <PasswordStrength password={password} />}
@@ -159,15 +163,15 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
           className="mt-0.5 size-3.5 shrink-0 accent-primary cursor-pointer"
         />
         <span>
-          Принимаю{' '}
-          <a href="/terms" className="underline underline-offset-2 hover:opacity-70" target="_blank" rel="noopener">условия</a>{' '}
-          и{' '}
-          <a href="/privacy" className="underline underline-offset-2 hover:opacity-70" target="_blank" rel="noopener">политику конфиденциальности</a>{' '}
-          и даю согласие на обработку персональных данных.
+          {t('register.consentPrefix')}{' '}
+          <a href="/terms" className="underline underline-offset-2 hover:opacity-70" target="_blank" rel="noopener">{t('register.terms')}</a>{' '}
+          {t('register.consentAnd')}{' '}
+          <a href="/privacy" className="underline underline-offset-2 hover:opacity-70" target="_blank" rel="noopener">{t('register.privacy')}</a>{' '}
+          {t('register.consentSuffix')}
         </span>
       </label>
       <button type="submit" disabled={pending} className={primaryBtn}>
-        {pending ? 'Создаём аккаунт…' : 'Создать аккаунт'}
+        {pending ? t('register.submitting') : t('register.submit')}
       </button>
     </form>
   );
@@ -176,25 +180,26 @@ function RegisterForm({ callbackUrl }: { callbackUrl: string }) {
 // ─── Magic link ───────────────────────────────────────────────────────────────
 
 function MagicLinkForm({ callbackUrl, onBack }: { callbackUrl: string; onBack: () => void }) {
+  const t = useTranslations('auth');
   const [error, action, pending] = useActionState(signInMagicLinkAction, null);
 
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="callbackUrl" value={callbackUrl} />
-      <p className="text-sm text-muted-foreground">Пришлём ссылку для входа без пароля.</p>
-      <FormField label="Email">
+      <p className="text-sm text-muted-foreground">{t('magicLink.hint')}</p>
+      <FormField label={t('fields.email')}>
         <input type="email" name="email" required autoComplete="email"
-          placeholder="you@example.ru" className={inputCn}
+          placeholder={t('login.emailPlaceholder')} className={inputCn}
         />
       </FormField>
       <ErrorMessage error={error} />
       <button type="submit" disabled={pending} className={primaryBtn}>
-        {pending ? 'Отправляем…' : 'Отправить ссылку'}
+        {pending ? t('magicLink.submitting') : t('magicLink.submit')}
       </button>
       <button type="button" onClick={onBack}
         className="inline-flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors text-center cursor-pointer"
       >
-        <Icon name="arrow-left" size={13} /> Назад
+        <Icon name="arrow-left" size={13} /> {t('magicLink.back')}
       </button>
     </form>
   );
@@ -203,8 +208,9 @@ function MagicLinkForm({ callbackUrl, onBack }: { callbackUrl: string; onBack: (
 // ─── Социальные провайдеры ────────────────────────────────────────────────────
 
 function SocialProviders({ callbackUrl }: { callbackUrl: string }) {
+  const t = useTranslations('auth');
   return (
-    <OAuthButton action={signInYandexAction} callbackUrl={callbackUrl} label="Войти через Яндекс">
+    <OAuthButton action={signInYandexAction} callbackUrl={callbackUrl} label={t('social.yandex')}>
       <YandexIcon size={17} />
     </OAuthButton>
   );
@@ -280,13 +286,14 @@ function ErrorMessage({ error }: { error: string | null }) {
 }
 
 function Divider() {
+  const t = useTranslations('auth');
   return (
     <div className="relative my-1">
       <div className="absolute inset-0 flex items-center">
         <span className="w-full border-t border-border" />
       </div>
       <div className="relative flex justify-center text-xs">
-        <span className="bg-card px-2 text-muted-foreground">или</span>
+        <span className="bg-card px-2 text-muted-foreground">{t('social.or')}</span>
       </div>
     </div>
   );

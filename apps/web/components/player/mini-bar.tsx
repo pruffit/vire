@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
@@ -78,6 +79,7 @@ export function MiniBar({
 
 /** Джем-takeover: глобальный движок остановлен (см. audio-engine guard) — полноценный транспорт уходит в зарегистрированный getJamTransport(). */
 function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boolean }) {
+  const t = useTranslations('player');
   const { track, isPlaying, durationSec, canPrev, canNext, needsAudioGesture } = override;
   // Тикает и на паузе: перемотка паузнутого джема должна двигать полоску (значение то же — React делает bail-out).
   const position = useJamPosition(ticking);
@@ -120,11 +122,11 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
               <span className="text-[11px] sm:text-sm font-medium truncate leading-tight">{track.title}</span>
               <Link
                 href={`${override.basePath}/${override.code}`}
-                aria-label="Вернуться в комнату"
+                aria-label={t('jam.backToRoom')}
                 className="-m-1 shrink-0 rounded-full p-1 pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
               >
                 <span className="rounded-full bg-primary/15 px-1.5 py-0.5 label-mono text-[9px] text-primary">
-                  {override.isRemote ? 'Пульт' : override.basePath === PARTY_PATH ? 'Вечеринка' : 'Джем'}
+                  {override.isRemote ? t('jam.remote') : override.basePath === PARTY_PATH ? t('jam.party') : t('jam.jamLabel')}
                 </span>
               </Link>
             </span>
@@ -137,7 +139,7 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
             type="button"
             onClick={() => getJamTransport()?.prev()}
             disabled={!canPrev}
-            aria-label="Предыдущий трек"
+            aria-label={t('prev')}
             className="p-2 -m-1 opacity-50 hover:opacity-100 disabled:opacity-20 disabled:pointer-events-none transition-opacity pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
           >
             <SkipBackIcon />
@@ -145,7 +147,7 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
           <button
             type="button"
             onClick={handlePlay}
-            aria-label={isPlaying ? 'Поставить джем на паузу' : 'Возобновить джем'}
+            aria-label={isPlaying ? t('jam.pauseAria') : t('jam.resumeAria')}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-90"
           >
             <Icon name={isPlaying ? 'pause' : 'play'} size={16} />
@@ -154,7 +156,7 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
             type="button"
             onClick={() => getJamTransport()?.next()}
             disabled={!canNext}
-            aria-label="Следующий трек"
+            aria-label={t('next')}
             className="p-2 -m-1 opacity-50 hover:opacity-100 disabled:opacity-20 disabled:pointer-events-none transition-opacity pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
           >
             <SkipForwardIcon />
@@ -172,7 +174,7 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
           <button
             type="button"
             onClick={() => leaveJam()}
-            aria-label="Покинуть джем"
+            aria-label={t('jam.leaveAria')}
             className="p-2 -m-1 shrink-0 opacity-50 hover:opacity-100 transition-opacity pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center"
           >
             <Icon name="log-out" size={16} />
@@ -190,6 +192,7 @@ function JamMiniBar({ override, ticking }: { override: JamOverride; ticking: boo
 }
 
 function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
+  const t = useTranslations('player');
   const track = usePlayerStore((s) => s.track);
   const coverUrl = useOfflineCover(track?.id ?? '', track?.coverUrl ?? null);
   if (!track) return null;
@@ -198,7 +201,7 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
     <div className="flex items-center gap-3 w-1/3 min-w-0">
       <button
         onClick={onExpandCover}
-        aria-label="Открыть плеер на весь экран"
+        aria-label={t('expandAria')}
         className="w-11 h-11 shrink-0 relative group"
       >
         {/* layoutId связывает эту обложку с большой в фуллскрине */}
@@ -235,6 +238,7 @@ function TrackInfo({ onExpandCover }: { onExpandCover: () => void }) {
 }
 
 function MobileQueueButton({ onOpenQueue }: { onOpenQueue: () => void }) {
+  const t = useTranslations('player');
   const queueLength = usePlayerStore((s) => s.queue.length);
   if (queueLength <= 1) return null;
 
@@ -242,7 +246,7 @@ function MobileQueueButton({ onOpenQueue }: { onOpenQueue: () => void }) {
     <button
       type="button"
       onClick={onOpenQueue}
-      aria-label={`Очередь, ${queueLength} треков`}
+      aria-label={t('queueAria', { count: queueLength })}
       className="sm:hidden shrink-0 w-10 h-10 -m-1 flex items-center justify-center opacity-60 active:opacity-100 transition-opacity"
     >
       <QueueIcon />
@@ -251,6 +255,7 @@ function MobileQueueButton({ onOpenQueue }: { onOpenQueue: () => void }) {
 }
 
 function MiniBarTrailing({ active, onOpenQueue }: { active: boolean; onOpenQueue: () => void }) {
+  const t = useTranslations('player');
   const duration = usePlayerStore((s) => s.duration);
   const volume = usePlayerStore((s) => s.volume);
   const queueLength = usePlayerStore((s) => s.queue.length);
@@ -268,7 +273,7 @@ function MiniBarTrailing({ active, onOpenQueue }: { active: boolean; onOpenQueue
         <button
           type="button"
           onClick={onOpenQueue}
-          aria-label={`Очередь, ${queueLength} треков`}
+          aria-label={t('queueAria', { count: queueLength })}
           className="opacity-50 hover:opacity-100 transition-opacity shrink-0"
         >
           <QueueIcon />
@@ -283,7 +288,7 @@ function MiniBarTrailing({ active, onOpenQueue }: { active: boolean; onOpenQueue
           step={0.02}
           value={volume}
           onChange={(e) => controls.setVolume(Number(e.target.value))}
-          aria-label="Громкость"
+          aria-label={t('volumeAria')}
           className="w-16 h-1 accent-primary cursor-pointer hidden lg:block"
         />
       )}

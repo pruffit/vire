@@ -29,7 +29,7 @@ export function Section({
               href={href}
               className="group inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground pointer-coarse:py-3.5 pointer-coarse:-my-3.5"
             >
-              {hrefLabel ?? 'Все'}
+              {hrefLabel}
               <Icon name="arrow-right" size={13} className="transition-transform group-hover:translate-x-0.5" />
             </Link>
           )}
