@@ -1,16 +1,26 @@
+import type { Metadata } from 'next';
 import { redirect } from '@/i18n/navigation';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { getActiveArtistForPage } from '@/lib/active-artist';
 import { EditProfileForm, type EditableProfile } from './edit-profile-form';
 import { DashboardPageHeader } from '@/components/ui-kit';
 import { Icon } from '@/components/icon';
 
-export const metadata = { title: 'Профиль артиста' };
 export const dynamic = 'force-dynamic';
 
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('dashboard.profile');
+  return { title: t('metaTitle') };
+}
+
 export default async function DashboardProfilePage() {
-  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const [session, locale, t, tCommon] = await Promise.all([
+    auth(),
+    getLocale(),
+    getTranslations('dashboard.profile'),
+    getTranslations('dashboard.common'),
+  ]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/dashboard/profile', locale });
 
   const artist = await getActiveArtistForPage(session.user.id);
@@ -31,7 +41,8 @@ export default async function DashboardProfilePage() {
     <div className="flex flex-col gap-8">
       <DashboardPageHeader
         backHref="/dashboard"
-        title="Профиль артиста"
+        backLabel={tCommon('dashboardLabel')}
+        title={t('metaTitle')}
         subtitle={`@${artist.slug}`}
         action={
           <a
@@ -40,7 +51,7 @@ export default async function DashboardProfilePage() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sm text-foreground/50 transition-colors hover:text-foreground"
           >
-            Открыть <Icon name="external-link" size={14} />
+            {t('openPublicPage')} <Icon name="external-link" size={14} />
           </a>
         }
       />

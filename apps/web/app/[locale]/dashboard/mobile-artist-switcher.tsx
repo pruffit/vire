@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Sheet } from '@/components/sheet';
 import { Icon } from '@/components/icon';
 import { useArtistSwitcher, type SwitcherArtist } from './artist-switcher';
@@ -38,6 +39,7 @@ export function MobileArtistSwitcher({
   allArtists: SwitcherArtist[];
 }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations('dashboard.mobileArtistSwitcher');
 
   if (allArtists.length <= 1) {
     return (
@@ -58,7 +60,7 @@ export function MobileArtistSwitcher({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`Сменить артиста (сейчас ${artist.name})`}
+        aria-label={t('switchAria', { name: artist.name })}
         className="flex min-w-0 items-center gap-2 pointer-coarse:min-h-11"
       >
         <ArtistAvatar name={artist.name} avatarUrl={artist.avatarUrl} />
@@ -83,10 +85,12 @@ function ArtistSheetList({
   onClose: () => void;
 }) {
   const { value, isPending, select } = useArtistSwitcher(artist.id);
+  const t = useTranslations('dashboard.artistSwitcher');
+  const tMobile = useTranslations('dashboard.mobileArtistSwitcher');
 
   return (
     <div className="px-4 pb-4 pt-1">
-      <p className="px-2 pb-2 label-wide text-foreground/35">Артист</p>
+      <p className="px-2 pb-2 label-wide text-foreground/35">{t('label')}</p>
       <div className="space-y-1">
         {allArtists.map((a) => (
           <button
@@ -111,7 +115,7 @@ function ArtistSheetList({
         onClick={onClose}
         className="mt-3 flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm text-foreground/60 hover:text-foreground"
       >
-        Открыть страницу артиста <Icon name="external-link" size={13} />
+        {tMobile('openArtistPage')} <Icon name="external-link" size={13} />
       </a>
     </div>
   );

@@ -1,6 +1,7 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { getActiveArtistForPage } from '@/lib/active-artist';
 import { getSmartLinkById, getReleaseOptions } from '@vire/db';
@@ -8,14 +9,18 @@ import { SmartLinkForm, type SmartLinkInitial } from '../smart-link-form';
 import { DashboardPageHeader } from '@/components/ui-kit';
 import { Icon } from '@/components/icon';
 
-export const metadata = { title: 'Смартлинк' };
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('dashboard.links');
+  return { title: t('editMetaTitle') };
+}
 
 type Props = { params: Promise<{ id: string }> };
 
 export default async function EditSmartLinkPage({ params }: Props) {
   const { id } = await params;
-  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const [session, locale, t] = await Promise.all([auth(), getLocale(), getTranslations('dashboard.links')]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/dashboard/links', locale });
 
   const artist = await getActiveArtistForPage(session.user.id);
@@ -42,8 +47,8 @@ export default async function EditSmartLinkPage({ params }: Props) {
     <div className="flex flex-col gap-8">
       <DashboardPageHeader
         backHref="/dashboard/links"
-        backLabel="Смартлинки"
-        title="Редактирование"
+        backLabel={t('heading')}
+        title={t('editPageTitle')}
         subtitle={
           smartLink.isPublished ? (
             <a

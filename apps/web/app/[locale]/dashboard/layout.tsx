@@ -1,6 +1,6 @@
 import { redirect } from '@/i18n/navigation';
 import Image from 'next/image';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { getActiveArtistForPage, listUserArtists } from '@/lib/active-artist';
 import { DashboardNav } from './dashboard-nav';
@@ -14,9 +14,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const [session, locale] = await Promise.all([auth(), getLocale()]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/dashboard', locale });
 
-  const [artist, allArtists] = await Promise.all([
+  const [artist, allArtists, t] = await Promise.all([
     getActiveArtistForPage(session.user.id),
     listUserArtists(session.user.id),
+    getTranslations('dashboard'),
   ]);
 
   return (
@@ -53,7 +54,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         ) : (
           <div className="hidden px-4 pb-4 pt-5 md:block">
             <span className="label-wide text-foreground/35">
-              Дашборд
+              {t('common.dashboardLabel')}
             </span>
           </div>
         )}
@@ -74,7 +75,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 text-xs text-foreground/45 transition-colors hover:text-foreground"
             >
-              Открыть страницу <Icon name="external-link" size={13} />
+              {t('layout.openArtistPage')} <Icon name="external-link" size={13} />
             </a>
           </div>
         )}

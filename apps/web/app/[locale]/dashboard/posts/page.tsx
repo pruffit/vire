@@ -1,5 +1,5 @@
 import { redirect } from '@/i18n/navigation';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { listArtistPosts } from '@vire/db';
 import { getActiveArtistForPage } from '@/lib/active-artist';
@@ -9,14 +9,19 @@ import { DashboardPageHeader } from '@/components/ui-kit';
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPostsPage() {
-  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const [session, locale, t, tCommon] = await Promise.all([
+    auth(),
+    getLocale(),
+    getTranslations('dashboard.posts'),
+    getTranslations('dashboard.common'),
+  ]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/dashboard/posts', locale });
 
   const artist = await getActiveArtistForPage(session.user.id);
   if (!artist) {
     return (
       <p className="text-foreground/50">
-        У тебя нет профиля артиста. Обратись к администратору для создания.
+        {t('noArtist')}
       </p>
     );
   }
@@ -33,8 +38,9 @@ export default async function DashboardPostsPage() {
     <div className="flex flex-col gap-8">
       <DashboardPageHeader
         backHref="/dashboard"
-        title="Анонсы"
-        subtitle="Новости и анонсы для подписчиков — появляются на странице артиста"
+        backLabel={tCommon('dashboardLabel')}
+        title={t('heading')}
+        subtitle={t('subtitle')}
       />
 
       <PostsManager initialPosts={initial} artistSlug={artist.slug} />

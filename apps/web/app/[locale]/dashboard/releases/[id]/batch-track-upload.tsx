@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/lib/toast';
@@ -46,6 +47,7 @@ export function BatchTrackUpload({
   artistName: string;
 }) {
   const router = useRouter();
+  const t = useTranslations('dashboard.releases.batchUpload');
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<QueueItem[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -88,7 +90,7 @@ export function BatchTrackUpload({
           update(item.key, { state: 'processing', progress: 1 });
           resolve(true);
         } else {
-          let msg = `Ошибка ${xhr.status}`;
+          let msg = t('httpError', { status: xhr.status });
           try { msg = JSON.parse(xhr.responseText).error ?? msg; } catch { /* keep */ }
           update(item.key, { state: 'error', error: msg });
           resolve(false);
@@ -96,7 +98,7 @@ export function BatchTrackUpload({
       };
       xhr.onerror = () => {
         activeXhrsRef.current.delete(xhr);
-        update(item.key, { state: 'error', error: 'Сбой сети' });
+        update(item.key, { state: 'error', error: t('networkError') });
         resolve(false);
       };
       xhr.onabort = () => {
@@ -123,13 +125,13 @@ export function BatchTrackUpload({
     setUploading(false);
 
     if (ok > 0) {
-      toast(`Загружено треков: ${ok}${fail ? `, с ошибкой: ${fail}` : ''}. Идёт обработка…`);
+      toast(t('uploadedSummary', { ok, fail }));
       router.refresh();
       setTimeout(() => {
         setItems((prev) => prev.filter((it) => it.state === 'error'));
       }, 1400);
     } else if (fail > 0) {
-      toast.error(`Не удалось загрузить (${fail})`);
+      toast.error(t('uploadFailedCount', { fail }));
     }
   }
 
@@ -138,7 +140,7 @@ export function BatchTrackUpload({
     const accepted = files.filter((f) => hasAudioExt(f.name));
     const rejected = files.length - accepted.length;
     if (rejected > 0) {
-      toast.error(`Пропущено файлов (не аудио): ${rejected}`);
+      toast.error(t('rejectedFiles', { rejected }));
     }
     if (accepted.length === 0) return;
 
@@ -176,14 +178,13 @@ export function BatchTrackUpload({
       >
         <UploadIcon />
         <span className="text-sm text-foreground/70">
-          {uploading ? 'Загрузка…' : 'Перетащи файлы сюда или нажми, чтобы выбрать'}
+          {uploading ? t('uploading') : t('dropHint')}
         </span>
         <span className="text-xs text-foreground/40">
-          WAV, FLAC или MP3 · можно несколько сразу · автонумерация и исполнитель «{artistName}»
+          {t('formatsHint', { artistName })}
         </span>
         <span className="text-[11px] text-foreground/30 max-w-sm">
-          Название трека — без имени артиста: оно и так показано рядом. Имя файла
-          станет названием — переименуй ниже, если нужно.
+          {t('nameHint')}
         </span>
         <input
           ref={inputRef}
@@ -214,10 +215,10 @@ export function BatchTrackUpload({
                 : it.state === 'processing' ? 'text-yellow-400'
                 : 'text-foreground/40'
               }`}>
-                {it.state === 'queued' ? 'в очереди'
+                {it.state === 'queued' ? t('queued')
                   : it.state === 'uploading' ? `${Math.round(it.progress * 100)}%`
-                  : it.state === 'processing' ? 'обрабатывается'
-                  : 'ошибка'}
+                  : it.state === 'processing' ? t('processing')
+                  : t('error')}
               </span>
             </div>
 

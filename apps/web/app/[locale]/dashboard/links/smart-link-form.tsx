@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import type { ArtistLink } from '@vire/core';
 import { normalizeSlug, MAX_SMART_LINKS } from '@/lib/smart-link';
 import { toast } from '@/lib/toast';
@@ -30,13 +31,6 @@ export interface ReleaseOption {
   status: string;
 }
 
-const RELEASE_STATUS_LABEL: Record<string, string> = {
-  DRAFT: 'черновик',
-  SCHEDULED: 'запланирован',
-  PUBLISHED: 'опубликован',
-  ARCHIVED: 'архив',
-};
-
 export function SmartLinkForm({
   artistSlug,
   initial,
@@ -47,6 +41,14 @@ export function SmartLinkForm({
   releaseOptions?: ReleaseOption[];
 }) {
   const router = useRouter();
+  const t = useTranslations('dashboard.links');
+  const tCommon = useTranslations('dashboard.common');
+  const RELEASE_STATUS_LABEL: Record<string, string> = {
+    DRAFT: t('releaseStatus.DRAFT'),
+    SCHEDULED: t('releaseStatus.SCHEDULED'),
+    PUBLISHED: t('releaseStatus.PUBLISHED'),
+    ARCHIVED: t('releaseStatus.ARCHIVED'),
+  };
   const editing = !!initial;
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,8 +95,8 @@ export function SmartLinkForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
-    if (!title.trim()) return toast.error('Нужно название');
-    if (!normalizeSlug(effectiveSlug)) return toast.error('Нужен адрес (slug)');
+    if (!title.trim()) return toast.error(t('titleRequired'));
+    if (!normalizeSlug(effectiveSlug)) return toast.error(t('slugRequired'));
     setBusy(true);
 
     const fd = new FormData();
@@ -113,11 +115,11 @@ export function SmartLinkForm({
 
     setBusy(false);
     if (!res?.ok) {
-      let msg = 'Не удалось сохранить';
+      let msg = t('saveFailed');
       try { msg = (await res!.json()).error ?? msg; } catch { /* keep */ }
       return toast.error(msg);
     }
-    toast(editing ? 'Сохранено' : 'Лендинг создан');
+    toast(editing ? t('saved') : t('created'));
     router.push('/dashboard/links');
     router.refresh();
   }
@@ -137,7 +139,7 @@ export function SmartLinkForm({
           ) : (
             <span className="flex flex-col items-center gap-1 text-foreground/35">
               <Icon name="image" size={20} />
-              <span className="text-[11px]">Обложка 1:1</span>
+              <span className="text-[11px]">{t('coverSquare')}</span>
             </span>
           )}
         </button>
@@ -150,13 +152,13 @@ export function SmartLinkForm({
         />
 
         <div className="flex min-w-0 flex-1 flex-col gap-3">
-          <Field label="Название">
+          <Field label={t('titleLabel')}>
             <input
               value={title}
               onChange={(e) => onTitle(e.target.value)}
               disabled={busy}
               required
-              placeholder="Название релиза"
+              placeholder={t('titlePlaceholder')}
               className={cn(fieldClass, 'w-full')}
             />
           </Field>
@@ -166,13 +168,13 @@ export function SmartLinkForm({
               onClick={clearCover}
               className="inline-flex items-center gap-1.5 self-start text-xs text-foreground/40 transition-colors hover:text-red-400"
             >
-              <Icon name="trash" size={12} /> Убрать обложку
+              <Icon name="trash" size={12} /> {t('removeCover')}
             </button>
           )}
         </div>
       </div>
 
-      <Field label="Адрес страницы" hint="латиница, цифры, дефис">
+      <Field label={t('slugLabel')} hint={t('slugHint')}>
         <div className="flex min-w-0 items-center gap-1 text-sm">
           <span className="shrink-0 max-w-[45%] truncate font-mono text-xs text-foreground/40">
             /smartlink/{artistSlug}/
@@ -181,38 +183,38 @@ export function SmartLinkForm({
             value={slug}
             onChange={(e) => { setSlug(normalizeSlug(e.target.value)); setSlugEdited(true); }}
             disabled={busy}
-            placeholder={normalizeSlug(title) || 'moy-reliz'}
+            placeholder={normalizeSlug(title) || t('slugPlaceholderFallback')}
             className={cn(fieldClass, 'min-w-0 flex-1 font-mono')}
           />
         </div>
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Подзаголовок" hint="необязательно">
+        <Field label={t('subtitleLabel')} hint={tCommon('optionalHint')}>
           <input
             value={subtitle}
             onChange={(e) => setSubtitle(e.target.value)}
             disabled={busy}
-            placeholder="Сингл · 2026 / любой текст"
+            placeholder={t('subtitlePlaceholder')}
             className={cn(fieldClass, 'w-full')}
           />
         </Field>
 
-        <Field label="Дата релиза" hint="необязательно">
-          <DateField value={releaseDate} onValueChange={setReleaseDate} disabled={busy} aria-label="Дата релиза" />
+        <Field label={t('releaseDateLabel')} hint={tCommon('optionalHint')}>
+          <DateField value={releaseDate} onValueChange={setReleaseDate} disabled={busy} aria-label={t('releaseDateLabel')} />
         </Field>
       </div>
 
       {releaseOptions.length > 0 && (
-        <Field label="Релиз на VireMusic" hint="первой кнопкой — «Слушать/Пресейв на VireMusic»">
+        <Field label={t('releaseLabel')} hint={t('releaseHint')}>
           <Select
             value={releaseId}
             onValueChange={setReleaseId}
             disabled={busy}
-            placeholder="— не привязан —"
-            aria-label="Релиз на VireMusic"
+            placeholder={t('releaseNotLinked')}
+            aria-label={t('releaseLabel')}
             options={[
-              { value: '', label: '— не привязан —' },
+              { value: '', label: t('releaseNotLinked') },
               ...releaseOptions.map((r) => ({
                 value: r.id,
                 label: `${r.title} · ${RELEASE_STATUS_LABEL[r.status] ?? r.status.toLowerCase()}`,
@@ -226,8 +228,8 @@ export function SmartLinkForm({
       <div className="flex flex-col gap-6">
       <div>
         <LinksEditor
-          title="Ссылки на площадки"
-          hint="Вставь ссылку — иконка и название подхватятся сами."
+          title={t('linksOnPlatformsTitle')}
+          hint={t('linksOnPlatformsHint')}
           links={links}
           onChange={setLinks}
           max={MAX_SMART_LINKS}
@@ -237,14 +239,14 @@ export function SmartLinkForm({
 
       <div className="mt-auto flex flex-col gap-4 border-t border-foreground/[0.06] pt-5">
         <Check
-          label="Опубликовать"
-          hint="Страница станет доступна по ссылке"
+          label={t('publishLabel')}
+          hint={t('publishHint')}
           checked={isPublished}
           disabled={busy}
           onChange={setIsPublished}
         />
         <button type="submit" disabled={busy} className={cn(btnPrimary, 'self-start')}>
-          {busy ? 'Сохранение…' : editing ? 'Сохранить' : 'Создать лендинг'}
+          {busy ? t('saving') : editing ? t('save') : t('create')}
         </button>
       </div>
       </div>

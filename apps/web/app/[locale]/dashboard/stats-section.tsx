@@ -24,14 +24,14 @@ function CardHeader({ title, meta }: { title: string; meta?: React.ReactNode }) 
 export async function TopTracksCard({ stats }: { stats: ArtistPlayStats }) {
   const { tracks } = stats;
   const maxPlays = tracks[0]?.totalPlays ?? 0;
-  const [format, tCommon] = await Promise.all([getFormatter(), getTranslations('common')]);
-  const listenTimeUnit = tCommon.raw('listenTimeUnit') as { seconds: string; minutes: string; hours: string };
+  const [format, t] = await Promise.all([getFormatter(), getTranslations()]);
+  const listenTimeUnit = t.raw('common.listenTimeUnit') as { seconds: string; minutes: string; hours: string };
 
   return (
     <Panel className="flex flex-col p-5">
-      <CardHeader title="Топ треков" />
+      <CardHeader title={t('dashboard.stats.topTracks.title')} />
       {tracks.length === 0 ? (
-        <p className="text-sm text-foreground/40">Прослушиваний пока нет.</p>
+        <p className="text-sm text-foreground/40">{t('dashboard.stats.topTracks.empty')}</p>
       ) : (
         <div className="flex flex-col gap-3">
           {tracks.map((t, i) => (
@@ -61,22 +61,21 @@ export async function TopTracksCard({ stats }: { stats: ArtistPlayStats }) {
 /** Возвращаются — слушатели, вернувшиеся к треку в разные дни (сигнал сильнее лайка). */
 export async function RelistenCard({ relisten }: { relisten: ArtistRelistenStats }) {
   const returned = relisten.tracks.filter((t) => t.returningListeners > 0);
-  const format = await getFormatter();
+  const [format, t] = await Promise.all([getFormatter(), getTranslations('dashboard.stats.relisten')]);
 
   return (
     <Panel className="flex flex-col p-5">
       <CardHeader
-        title="Возвращаются"
+        title={t('title')}
         meta={
           relisten.totalReturning > 0
-            ? `${format.number(relisten.totalReturning)} ${pluralListeners(relisten.totalReturning)}`
+            ? t('listenerCount', { count: relisten.totalReturning })
             : undefined
         }
       />
       {returned.length === 0 ? (
         <p className="text-sm text-foreground/40">
-          Пока никто не возвращался к трекам в разные дни. Это сильный сигнал — он появится, когда
-          слушатели начнут переслушивать.
+          {t('empty')}
         </p>
       ) : (
         <div className="flex flex-col gap-3">
@@ -109,12 +108,4 @@ export async function RelistenCard({ relisten }: { relisten: ArtistRelistenStats
       )}
     </Panel>
   );
-}
-
-function pluralListeners(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'слушатель';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'слушателя';
-  return 'слушателей';
 }

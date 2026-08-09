@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { ArtistLink } from '@vire/core';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { PlatformIcon } from '@/components/platform-icon';
@@ -18,7 +19,7 @@ export function LinksEditor({
   onChange,
   max,
   disabled,
-  addLabel = 'добавить ссылку',
+  addLabel,
 }: {
   title: string;
   hint: string;
@@ -28,6 +29,8 @@ export function LinksEditor({
   disabled?: boolean;
   addLabel?: string;
 }) {
+  const t = useTranslations('dashboard.linksEditor');
+  const resolvedAddLabel = addLabel ?? t('addLink');
   const { keys, add: addKey, remove: removeKey } = useStableListKeys(links.length);
 
   const update = (i: number, patch: Partial<ArtistLink>) =>
@@ -67,7 +70,7 @@ export function LinksEditor({
           onClick={add}
           className="self-start inline-flex items-center gap-1 text-sm text-foreground/50 hover:text-foreground/80 transition-colors mt-1 disabled:opacity-50"
         >
-          <Icon name="plus" size={14} /> {addLabel}
+          <Icon name="plus" size={14} /> {resolvedAddLabel}
         </button>
       )}
     </div>
@@ -87,7 +90,9 @@ function LinkRow({
   onLabel: (label: string) => void;
   onRemove: () => void;
 }) {
-  const { key } = detectPlatform(link.url);
+  const t = useTranslations('dashboard.linksEditor');
+  const tPlatforms = useTranslations('platforms');
+  const { key } = detectPlatform(link.url, tPlatforms('website'));
   const brand = link.url ? PLATFORM_BRAND[key] : null;
   const glyph = !!link.url && hasBrandGlyph(key);
 
@@ -108,7 +113,7 @@ function LinkRow({
           value={link.url}
           disabled={disabled}
           onChange={(e) => onUrl(e.target.value)}
-          placeholder="https://open.spotify.com/…"
+          placeholder={t('urlPlaceholder')}
           className={cn(fieldClass, 'w-full')}
         />
         {/* Подпись нужна только для нераспознанных ссылок — у площадки своё лого/название. */}
@@ -118,7 +123,7 @@ function LinkRow({
             value={link.label ?? ''}
             disabled={disabled}
             onChange={(e) => onLabel(e.target.value)}
-            placeholder={link.url ? `Подпись (по умолчанию «${linkLabel(link.url)}»)` : 'Подпись (необязательно)'}
+            placeholder={link.url ? t('labelPlaceholderWithDefault', { label: linkLabel(link.url, undefined, tPlatforms('website')) }) : t('labelPlaceholder')}
             className={cn(fieldClass, 'w-full text-xs')}
           />
         )}
@@ -128,7 +133,7 @@ function LinkRow({
         onClick={onRemove}
         disabled={disabled}
         className={cn('shrink-0 mt-2 text-foreground/30 hover:text-red-400 transition-colors disabled:opacity-50', touchTargetCoarse('sm'))}
-        aria-label="Удалить ссылку"
+        aria-label={t('removeAria')}
       >
         <Icon name="x" size={16} />
       </button>

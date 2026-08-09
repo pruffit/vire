@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useFormatter } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/lib/toast';
@@ -26,6 +26,7 @@ export function PostsManager({
 }) {
   const [posts, setPosts] = useState<ClientPost[]>(initialPosts);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const t = useTranslations('dashboard.posts');
 
   async function create(title: string | null, body: string) {
     const res = await fetch('/api/v1/dashboard/posts', {
@@ -34,7 +35,7 @@ export function PostsManager({
       body: JSON.stringify({ title, body }),
     }).catch(() => null);
     if (!res?.ok) {
-      toast.error('Не удалось опубликовать пост');
+      toast.error(t('publishFailed'));
       return false;
     }
     const { post } = (await res.json()) as { post: ClientPost & { createdAt: string } };
@@ -53,7 +54,7 @@ export function PostsManager({
     }).catch(() => null);
     if (!res?.ok) {
       setPosts(prev);
-      toast.error('Не удалось сохранить пост');
+      toast.error(t('saveFailed'));
     }
   }
 
@@ -63,7 +64,7 @@ export function PostsManager({
     const res = await fetch(`/api/v1/dashboard/posts/${id}`, { method: 'DELETE' }).catch(() => null);
     if (!res?.ok) {
       setPosts(prev);
-      toast.error('Не удалось удалить пост');
+      toast.error(t('deleteFailed'));
     }
   }
 
@@ -73,7 +74,7 @@ export function PostsManager({
 
       {posts.length === 0 ? (
         <p className="text-sm text-foreground/40">
-          Пока нет анонсов. Первая запись появится у подписчиков на странице{' '}
+          {t('emptyBefore')}{' '}
           <a
             href={`/artists/${artistSlug}`}
             target="_blank"
@@ -100,7 +101,7 @@ export function PostsManager({
                   <Composer
                     initialTitle={post.title ?? ''}
                     initialBody={post.body}
-                    submitLabel="Сохранить"
+                    submitLabel={t('save')}
                     onCancel={() => setEditingId(null)}
                     onSubmit={async (t, b) => {
                       await save(post.id, t, b);
@@ -126,7 +127,7 @@ export function PostsManager({
 function Composer({
   initialTitle = '',
   initialBody = '',
-  submitLabel = 'Опубликовать',
+  submitLabel,
   onSubmit,
   onCancel,
 }: {
@@ -136,6 +137,9 @@ function Composer({
   onSubmit: (title: string | null, body: string) => Promise<boolean>;
   onCancel?: () => void;
 }) {
+  const t = useTranslations('dashboard.posts');
+  const tCommon = useTranslations('dashboard.common');
+  const resolvedSubmitLabel = submitLabel ?? t('publish');
   const [title, setTitle] = useState(initialTitle);
   const [body, setBody] = useState(initialBody);
   const [busy, setBusy] = useState(false);
@@ -159,13 +163,13 @@ function Composer({
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))}
-        placeholder="Заголовок (необязательно)"
+        placeholder={t('titlePlaceholder')}
         className="bg-transparent text-sm font-medium placeholder:text-foreground/30 focus:outline-none"
       />
       <Textarea
         value={body}
         onChange={(e) => setBody(e.target.value.slice(0, BODY_MAX + 1))}
-        placeholder="Что нового? Анонс, новость, мысль…"
+        placeholder={t('bodyPlaceholder')}
         rows={3}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
@@ -186,7 +190,7 @@ function Composer({
               onClick={onCancel}
               className="text-sm px-3 py-1.5 rounded-md text-foreground/50 hover:text-foreground/80 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
             >
-              Отмена
+              {tCommon('cancel')}
             </button>
           )}
           <motion.button
@@ -196,7 +200,7 @@ function Composer({
             transition={spring.snappy}
             className="text-sm px-4 py-1.5 rounded-md bg-foreground/10 hover:bg-foreground/15 disabled:opacity-30 disabled:hover:bg-foreground/10 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
-            {busy ? '…' : submitLabel}
+            {busy ? '…' : resolvedSubmitLabel}
           </motion.button>
         </div>
       </div>
@@ -215,27 +219,28 @@ function PostCard({
 }) {
   const [confirming, setConfirming] = useState(false);
   const format = useFormatter();
+  const t = useTranslations('dashboard.posts');
 
   return (
     <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 flex flex-col gap-2 group">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {post.title && <p className="font-medium leading-snug">{post.title}</p>}
-          <p className="text-[11px] font-mono text-foreground/30 mt-0.5">{relativeDate(post.createdAt, format)}</p>
+          <p className="text-[11px] font-mono text-foreground/30 mt-0.5">{relativeDate(post.createdAt, format, t)}</p>
         </div>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity">
           <button
             onClick={onEdit}
             className="text-xs px-2 py-1 rounded text-foreground/50 hover:text-foreground/90 hover:bg-foreground/5 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
-            Изменить
+            {t('edit')}
           </button>
           {confirming ? (
             <button
               onClick={onDelete}
               className="text-xs px-2 py-1 rounded text-red-400 hover:bg-red-500/10 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
             >
-              Точно?
+              {t('confirmDelete')}
             </button>
           ) : (
             <button
@@ -245,7 +250,7 @@ function PostCard({
               }}
               className="text-xs px-2 py-1 rounded text-foreground/50 hover:text-red-400 hover:bg-foreground/5 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
             >
-              Удалить
+              {t('delete')}
             </button>
           )}
         </div>
@@ -255,17 +260,17 @@ function PostCard({
   );
 }
 
-function relativeDate(iso: string, format: ReturnType<typeof useFormatter>): string {
+function relativeDate(iso: string, format: ReturnType<typeof useFormatter>, t: ReturnType<typeof useTranslations>): string {
   const then = new Date(iso).getTime();
   if (!Number.isFinite(then)) return '';
   const diffMs = Date.now() - then;
   const min = Math.floor(diffMs / 60000);
-  if (min < 1) return 'только что';
-  if (min < 60) return `${min} мин назад`;
+  if (min < 1) return t('justNow');
+  if (min < 60) return t('minutesAgo', { count: min });
   const hours = Math.floor(min / 60);
-  if (hours < 24) return `${hours} ч назад`;
+  if (hours < 24) return t('hoursAgo', { count: hours });
   const days = Math.floor(hours / 24);
-  if (days === 1) return 'вчера';
-  if (days < 7) return `${days} дн назад`;
+  if (days === 1) return t('yesterday');
+  if (days < 7) return t('daysAgo', { count: days });
   return format.dateTime(new Date(iso), { day: 'numeric', month: 'long', year: 'numeric' });
 }

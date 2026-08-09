@@ -1,16 +1,26 @@
+import type { Metadata } from 'next';
 import { redirect } from '@/i18n/navigation';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { getActiveArtistForPage } from '@/lib/active-artist';
 import { listSmartLinks } from '@vire/db';
 import { SmartLinkList, type SmartLinkRow } from './smart-link-list';
 import { DashboardPageHeader } from '@/components/ui-kit';
 
-export const metadata = { title: 'Смартлинки' };
 export const dynamic = 'force-dynamic';
 
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('dashboard.links');
+  return { title: t('metaTitle') };
+}
+
 export default async function DashboardLinksPage() {
-  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const [session, locale, t, tCommon] = await Promise.all([
+    auth(),
+    getLocale(),
+    getTranslations('dashboard.links'),
+    getTranslations('dashboard.common'),
+  ]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/dashboard/links', locale });
 
   const artist = await getActiveArtistForPage(session.user.id);
@@ -30,8 +40,9 @@ export default async function DashboardLinksPage() {
     <div className="flex flex-col gap-8">
       <DashboardPageHeader
         backHref="/dashboard"
-        title="Смартлинки"
-        subtitle="Красивые страницы релизов со ссылками на стриминги и соцсети. Работают и без публикации музыки на VireMusic."
+        backLabel={tCommon('dashboardLabel')}
+        title={t('heading')}
+        subtitle={t('subtitle')}
       />
 
       <SmartLinkList items={rows} artistSlug={artist.slug} />

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { ArtistVideo } from '@vire/core';
 import { detectPlatform } from '@/lib/platforms';
 import { PlatformIcon } from '@/components/platform-icon';
@@ -21,6 +22,8 @@ export function VideosEditor({
   max: number;
   disabled?: boolean;
 }) {
+  const t = useTranslations('dashboard.videosEditor');
+  const tPlatforms = useTranslations('platforms');
   const { keys, add: addKey, remove: removeKey } = useStableListKeys(videos.length);
 
   // При правке ссылки сбрасываем тайтл — он подтянется заново на сервере.
@@ -38,15 +41,15 @@ export function VideosEditor({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between">
-        <span className="text-sm font-medium">Видео</span>
+        <span className="text-sm font-medium">{t('heading')}</span>
         <span className="text-xs text-foreground/30 tabular-nums">{videos.length}/{max}</span>
       </div>
       <p className="text-xs text-foreground/40 -mt-1">
-        Вставь ссылку на ролик YouTube или VK — название подтянется само, плеер встроится на странице артиста.
+        {t('hint')}
       </p>
 
       {videos.map((video, i) => {
-        const { key } = detectPlatform(video.url);
+        const { key } = detectPlatform(video.url, tPlatforms('website'));
         const glyph = !!video.url && hasBrandGlyph(key);
         return (
           <div key={keys[i]} className="flex items-start gap-2">
@@ -65,7 +68,7 @@ export function VideosEditor({
                 value={video.url}
                 disabled={disabled}
                 onChange={(e) => update(i, e.target.value)}
-                placeholder="https://youtube.com/watch?v=… или vk.com/video…"
+                placeholder={t('urlPlaceholder')}
                 className={cn(fieldClass, 'w-full')}
               />
               {video.title && (
@@ -77,7 +80,7 @@ export function VideosEditor({
               onClick={() => remove(i)}
               disabled={disabled}
               className="shrink-0 mt-2 text-foreground/30 hover:text-red-400 transition-colors disabled:opacity-50"
-              aria-label="Удалить видео"
+              aria-label={t('removeAria')}
             >
               <Icon name="x" size={16} />
             </button>
@@ -92,7 +95,7 @@ export function VideosEditor({
           onClick={add}
           className="self-start inline-flex items-center gap-1 text-sm text-foreground/50 hover:text-foreground/80 transition-colors mt-1 disabled:opacity-50"
         >
-          <Icon name="plus" size={14} /> добавить видео
+          <Icon name="plus" size={14} /> {t('addVideo')}
         </button>
       )}
     </div>

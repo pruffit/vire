@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Field, Switch } from '@/components/ui-kit';
 import { ColorField } from '@/components/color-field';
 import { VerifiedBadge } from '@/components/verified-badge';
@@ -16,19 +17,20 @@ export interface ThemeValue {
 }
 
 // light-темы дают переход тёмный nav → светлый фон — помечены флагом
-const THEME_PRESETS: { name: string; bg: string; text: string; accent: string; light?: true }[] = [
-  { name: 'Платформа',    bg: '#121210', text: '#edebe5', accent: '#9b8e7e' },
-  { name: 'Тёплый',       bg: '#100f0d', text: '#e9e2d0', accent: '#6f9d92' },
-  { name: 'Уголь',        bg: '#111111', text: '#ededed', accent: '#ff5c39' },
-  { name: 'Ночь',         bg: '#0a0a12', text: '#d8d8e8', accent: '#7c6cff' },
-  { name: 'Сепия',        bg: '#1a1410', text: '#e7d6bd', accent: '#c98a3a' },
-  { name: 'Мята',         bg: '#0e1513', text: '#dceee7', accent: '#57c2a3' },
-  { name: 'Неон',         bg: '#0b0b0b', text: '#f0f0f0', accent: '#c8ff3d' },
-  { name: 'Аметист',      bg: '#0d0b14', text: '#dcd4f2', accent: '#a87fff' },
-  { name: 'Ржавчина',     bg: '#130a08', text: '#ead3c6', accent: '#d45628' },
-  { name: 'Лёд',          bg: '#080e16', text: '#cce4f6', accent: '#4bbde8' },
-  { name: 'Кремовый',     bg: '#f4f1ea', text: '#1c1a17', accent: '#b5532f', light: true },
-  { name: 'Бумага',       bg: '#eeead9', text: '#23201b', accent: '#3a6b5f', light: true },
+// id — стабильный ключ (не завязан на локализованное имя), key в dashboard.themeEditor.presets
+const THEME_PRESETS: { id: string; bg: string; text: string; accent: string; light?: true }[] = [
+  { id: 'platform', bg: '#121210', text: '#edebe5', accent: '#9b8e7e' },
+  { id: 'warm',      bg: '#100f0d', text: '#e9e2d0', accent: '#6f9d92' },
+  { id: 'coal',      bg: '#111111', text: '#ededed', accent: '#ff5c39' },
+  { id: 'night',     bg: '#0a0a12', text: '#d8d8e8', accent: '#7c6cff' },
+  { id: 'sepia',     bg: '#1a1410', text: '#e7d6bd', accent: '#c98a3a' },
+  { id: 'mint',      bg: '#0e1513', text: '#dceee7', accent: '#57c2a3' },
+  { id: 'neon',      bg: '#0b0b0b', text: '#f0f0f0', accent: '#c8ff3d' },
+  { id: 'amethyst',  bg: '#0d0b14', text: '#dcd4f2', accent: '#a87fff' },
+  { id: 'rust',      bg: '#130a08', text: '#ead3c6', accent: '#d45628' },
+  { id: 'ice',       bg: '#080e16', text: '#cce4f6', accent: '#4bbde8' },
+  { id: 'cream',     bg: '#f4f1ea', text: '#1c1a17', accent: '#b5532f', light: true },
+  { id: 'paper',     bg: '#eeead9', text: '#23201b', accent: '#3a6b5f', light: true },
 ];
 
 // не <select>: браузеры не позволяют свой font-family на каждом <option>
@@ -89,6 +91,7 @@ export function ThemeEditor({
   avatarUrl: string | null;
   disabled?: boolean;
 }) {
+  const t = useTranslations('dashboard.themeEditor');
   const { bg, text: textColor, accent, grain, fontSans, fontMono } = value;
 
   // кегль имени под длину самого длинного слова — чтобы не рвалось в узком превью
@@ -103,17 +106,18 @@ export function ThemeEditor({
     <div className="flex flex-col gap-6">
       <div className="order-2 flex min-w-0 flex-col gap-6">
         <div className="flex flex-col gap-3">
-          <span className="text-xs text-foreground/40">Пресеты палитры</span>
+          <span className="text-xs text-foreground/40">{t('presetsHeading')}</span>
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
             {THEME_PRESETS.map((p) => {
               const active = bg === p.bg && textColor === p.text && accent === p.accent;
+              const name = t(`presets.${p.id}`);
               return (
                 <button
-                  key={p.name}
+                  key={p.id}
                   type="button"
                   disabled={disabled}
                   onClick={() => patch({ bg: p.bg, text: p.text, accent: p.accent })}
-                  aria-label={`Палитра ${p.name}`}
+                  aria-label={t('presetAria', { name })}
                   aria-pressed={active}
                   className="group relative flex flex-col items-center gap-1.5 disabled:opacity-50"
                 >
@@ -127,41 +131,41 @@ export function ThemeEditor({
                     <span className="absolute left-1.5 top-1.5 h-2.5 w-2.5 rounded-full" style={{ background: p.accent }} />
                     <span className="absolute bottom-2 left-1.5 right-1.5 h-0.5 rounded-full" style={{ background: p.text, opacity: 0.5 }} />
                     <span className="absolute bottom-3.5 left-1.5 h-0.5 rounded-full" style={{ background: p.text, opacity: 0.25, width: '55%' }} />
-                    {p.light && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-yellow-400/70" title="Световая тема" />}
+                    {p.light && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-yellow-400/70" title={t('lightThemeTitle')} />}
                   </div>
                   <span className="w-full truncate text-center text-[10px] leading-none text-foreground/40 transition-colors group-hover:text-foreground/70">
-                    {p.name}
+                    {name}
                   </span>
                 </button>
               );
             })}
           </div>
           <p className="text-[10px] leading-snug text-foreground/25">
-            Жёлтая точка — световая тема. Создаёт контраст при переходе с тёмного навбара.
+            {t('lightThemeHint')}
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <ColorField label="Фон" name="bg" value={bg} onChange={(v) => patch({ bg: v })} disabled={disabled} />
-          <ColorField label="Текст" name="text" value={textColor} onChange={(v) => patch({ text: v })} disabled={disabled} />
-          <ColorField label="Акцент" name="accent" value={accent} onChange={(v) => patch({ accent: v })} disabled={disabled} />
-          <Field label="Зерно">
-            <Switch checked={grain} onChange={(v) => patch({ grain: v })} disabled={disabled} aria-label="Зерно" />
+          <ColorField label={t('bgLabel')} name="bg" value={bg} onChange={(v) => patch({ bg: v })} disabled={disabled} />
+          <ColorField label={t('textLabel')} name="text" value={textColor} onChange={(v) => patch({ text: v })} disabled={disabled} />
+          <ColorField label={t('accentLabel')} name="accent" value={accent} onChange={(v) => patch({ accent: v })} disabled={disabled} />
+          <Field label={t('grainLabel')}>
+            <Switch checked={grain} onChange={(v) => patch({ grain: v })} disabled={disabled} aria-label={t('grainLabel')} />
           </Field>
         </div>
 
         <div className="flex flex-col gap-4">
-          <Field label="Основной">
-            <FontGrid name="fontSans" value={fontSans} onChange={(v) => patch({ fontSans: v })} fonts={SANS_VAR} disabled={disabled} ariaLabel="Шрифт текста" />
+          <Field label={t('sansLabel')}>
+            <FontGrid name="fontSans" value={fontSans} onChange={(v) => patch({ fontSans: v })} fonts={SANS_VAR} disabled={disabled} ariaLabel={t('sansAria')} />
           </Field>
-          <Field label="Моно">
-            <FontGrid name="fontMono" value={fontMono} onChange={(v) => patch({ fontMono: v })} fonts={MONO_VAR} disabled={disabled} ariaLabel="Шрифт моно" />
+          <Field label={t('monoLabel')}>
+            <FontGrid name="fontMono" value={fontMono} onChange={(v) => patch({ fontMono: v })} fonts={MONO_VAR} disabled={disabled} ariaLabel={t('monoAria')} />
           </Field>
         </div>
       </div>
 
       <aside className="order-1 w-full self-start">
-        <span className="mb-2 block text-xs text-foreground/40">Превью страницы</span>
+        <span className="mb-2 block text-xs text-foreground/40">{t('previewHeading')}</span>
         <div
           className="overflow-hidden rounded-xl ring-1 ring-foreground/10 transition-colors"
           style={{ background: bg, fontFamily: SANS_VAR[fontSans], color: textColor }}
@@ -202,7 +206,7 @@ export function ThemeEditor({
                 <div className="flex flex-wrap items-center gap-2">
                   <VerifiedBadge color={accent} fontFamily={MONO_VAR[fontMono]} />
                   <span className="rounded-full px-3 py-1 text-[10px] font-medium" style={{ background: accent, color: bg }}>
-                    Подписаться
+                    {t('previewFollow')}
                   </span>
                 </div>
               </div>

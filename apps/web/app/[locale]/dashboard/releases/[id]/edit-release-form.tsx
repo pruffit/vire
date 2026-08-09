@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import type { ReleaseType } from '@vire/core';
 import { Field, fieldClass, btnPrimary, Textarea } from '@/components/ui-kit';
 import { GenreSelect } from '@/components/genre-select';
@@ -9,12 +10,6 @@ import { Select } from '@/components/select';
 import { DateField } from '@/components/date-field';
 import { titleRepeatsArtist } from '@/lib/title-hygiene';
 import { cn } from '@/lib/utils';
-
-const RELEASE_TYPE_OPTIONS = [
-  { value: 'ALBUM', label: 'Альбом' },
-  { value: 'EP', label: 'EP' },
-  { value: 'SINGLE', label: 'Сингл' },
-];
 
 interface Initial {
   title: string;
@@ -36,6 +31,14 @@ type State = 'idle' | 'saving' | 'saved' | 'error';
 
 export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
   const router = useRouter();
+  const t = useTranslations('dashboard.releases');
+  const tCommon = useTranslations('dashboard.common');
+  const tType = useTranslations('common');
+  const RELEASE_TYPE_OPTIONS = [
+    { value: 'ALBUM', label: tType('releaseType.ALBUM') },
+    { value: 'EP', label: tType('releaseType.EP') },
+    { value: 'SINGLE', label: tType('releaseType.SINGLE') },
+  ];
   const formRef = useRef<HTMLFormElement>(null);
   const [state, setState] = useState<State>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +68,7 @@ export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
       router.refresh();
       setTimeout(() => setState('idle'), 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка');
+      setError(err instanceof Error ? err.message : tCommon('genericError'));
       setState('error');
     }
   }
@@ -85,7 +88,7 @@ export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <Field label="Название" hint="без имени артиста — оно и так рядом с обложкой">
+      <Field label={t('titleLabel')} hint={t('titleHint')}>
         <input
           name="title"
           type="text"
@@ -97,24 +100,24 @@ export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
         />
         {titleWarn && (
           <span className="text-[11px] text-amber-400/90 leading-snug">
-            Имя артиста уже показано рядом — в названии его дублировать не нужно.
+            {tCommon('titleRepeatsArtistWarning')}
           </span>
         )}
       </Field>
 
-      <Field label="Тип">
-        <Select name="type" defaultValue={initial.type} options={RELEASE_TYPE_OPTIONS} disabled={busy} aria-label="Тип" />
+      <Field label={t('typeLabel')}>
+        <Select name="type" defaultValue={initial.type} options={RELEASE_TYPE_OPTIONS} disabled={busy} aria-label={t('typeLabel')} />
       </Field>
 
-      <Field label="Жанр" hint="необязательно">
+      <Field label={t('genreLabel')} hint={tCommon('optionalHint')}>
         <GenreSelect name="genre" defaultValue={initial.genre ?? ''} disabled={busy} />
       </Field>
 
-      <Field label="Дата релиза" hint="необязательно">
-        <DateField name="releaseDate" defaultValue={initial.releaseDate} disabled={busy} className="w-44" aria-label="Дата релиза" />
+      <Field label={t('releaseDateLabel')} hint={tCommon('optionalHint')}>
+        <DateField name="releaseDate" defaultValue={initial.releaseDate} disabled={busy} className="w-44" aria-label={t('releaseDateLabel')} />
       </Field>
 
-      <Field label="Обложка" hint="Квадрат 1:1, от 1400×1400 (рек. 3000×3000) · оставь пустым — без изменений">
+      <Field label={t('coverLabel')} hint={t('coverHintEdit')}>
         <div className="flex items-start gap-4 min-w-0">
           <input
             name="cover"
@@ -128,30 +131,30 @@ export function EditReleaseForm({ releaseId, artistName, initial }: Props) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={coverPreview ?? initial.coverUrl!}
-              alt="Обложка"
+              alt={t('coverAlt')}
               className="w-16 h-16 rounded-md object-cover shrink-0"
             />
           )}
         </div>
       </Field>
 
-      <Field label="Описание" hint="необязательно">
+      <Field label={t('descriptionLabel')} hint={tCommon('optionalHint')}>
         <Textarea name="description" rows={3} disabled={busy} defaultValue={initial.description} className={cn(fieldClass, 'w-full')} />
       </Field>
 
-      <Field label="Liner notes" hint="необязательно · виден только купившим">
+      <Field label={t('linerNotesLabel')} hint={t('linerNotesHint')}>
         <Textarea name="linerNotes" rows={5} disabled={busy} defaultValue={initial.linerNotes} className={cn(fieldClass, 'w-full font-mono text-xs')} />
       </Field>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
-      {state === 'saved' && <p className="text-sm text-emerald-400">Сохранено</p>}
+      {state === 'saved' && <p className="text-sm text-emerald-400">{t('saved')}</p>}
 
       <div className="flex items-center gap-4 pt-1">
         <button type="submit" disabled={busy} className={btnPrimary}>
-          {busy ? 'Сохраняю…' : 'Сохранить'}
+          {busy ? t('saving') : t('save')}
         </button>
         <Link href="/dashboard" className="text-sm text-foreground/40 hover:text-foreground/70 transition-colors">
-          Отмена
+          {tCommon('cancel')}
         </Link>
       </div>
     </form>

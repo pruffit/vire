@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from '@/i18n/navigation';
-import { useFormatter } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/lib/toast';
@@ -16,6 +16,7 @@ interface Props {
 export function PublishButton({ releaseId, releaseDate }: Props) {
   const router = useRouter();
   const format = useFormatter();
+  const t = useTranslations('dashboard.publishButton');
   // Оптимистично: считаем публикацию успешной сразу, откатываем при ошибке
   const [done, setDone] = useState(false);
   const [, startTransition] = useTransition();
@@ -24,8 +25,8 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
   const targetStatus = isFuture ? 'SCHEDULED' : 'PUBLISHED';
 
   const label = isFuture
-    ? `Запланировать на ${formatDate(releaseDate!, format)}`
-    : 'Опубликовать';
+    ? t('scheduleFor', { date: formatDate(releaseDate!, format) })
+    : t('publish');
 
   function publish() {
     setDone(true);
@@ -43,7 +44,7 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
         const json = res ? await res.json().catch(() => ({})) : {};
         toast.error(
           (json as { error?: string }).error ??
-            (isFuture ? 'Не удалось запланировать релиз' : 'Не удалось опубликовать релиз'),
+            (isFuture ? t('scheduleFailed') : t('publishFailed')),
         );
       }
     });
@@ -60,7 +61,7 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
             transition={spring.snappy}
             className="inline-flex items-center gap-1 text-xs text-emerald-400"
           >
-            {isFuture ? 'Запланирован' : 'Опубликован'} <Icon name="check" size={13} />
+            {isFuture ? t('scheduled') : t('published')} <Icon name="check" size={13} />
           </motion.span>
         ) : (
           <motion.button

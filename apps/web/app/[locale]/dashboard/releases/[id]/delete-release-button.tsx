@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 
@@ -13,6 +14,8 @@ export function DeleteReleaseButton({
   title: string;
 }) {
   const router = useRouter();
+  const t = useTranslations('dashboard.releases.deleteRelease');
+  const tCommon = useTranslations('dashboard.common');
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,14 +29,14 @@ export function DeleteReleaseButton({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError((data as { error?: string }).error ?? 'Ошибка удаления');
+        setError((data as { error?: string }).error ?? t('deleteError'));
         setLoading(false);
         setConfirming(false);
         return;
       }
       router.push('/dashboard');
     } catch {
-      setError('Ошибка сети');
+      setError(t('networkError'));
       setLoading(false);
       setConfirming(false);
     }
@@ -51,7 +54,7 @@ export function DeleteReleaseButton({
             transition={spring.snappy}
             className="text-sm text-red-400/60 hover:text-red-400 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
-            Удалить релиз
+            {t('trigger')}
           </motion.button>
         ) : (
           <motion.div
@@ -63,10 +66,11 @@ export function DeleteReleaseButton({
             className="flex flex-wrap items-center gap-3"
           >
             <span className="text-sm text-foreground/60">
-              Удалить{' '}
-              <span className="text-foreground/90 font-medium">«{title}»</span>
-              {' '}и все треки?{' '}
-              <span className="text-red-400/70">Необратимо.</span>
+              {t.rich('confirmText', {
+                title,
+                strong: (chunks) => <span className="text-foreground/90 font-medium">{chunks}</span>,
+              })}{' '}
+              <span className="text-red-400/70">{t('irreversible')}</span>
             </span>
             <div className="flex items-center gap-2">
               <motion.button
@@ -77,7 +81,7 @@ export function DeleteReleaseButton({
                 transition={spring.snappy}
                 className="text-sm px-3 py-1 rounded-md bg-red-500/15 text-red-400 hover:bg-red-500/25 disabled:opacity-40 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
               >
-                {loading ? 'Удаляем…' : 'Да, удалить'}
+                {loading ? t('deleting') : t('confirmYes')}
               </motion.button>
               <button
                 type="button"
@@ -85,7 +89,7 @@ export function DeleteReleaseButton({
                 disabled={loading}
                 className="text-sm text-foreground/40 hover:text-foreground/70 transition-colors pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
               >
-                Отмена
+                {tCommon('cancel')}
               </button>
             </div>
           </motion.div>

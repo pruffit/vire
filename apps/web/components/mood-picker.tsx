@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
-import { ALL_MOODS, MOOD_LABELS, type Mood } from '@/lib/moods';
+import { ALL_MOODS, type Mood } from '@/lib/moods';
 import { touchPill } from '@/components/popover';
 import { cn } from '@/lib/utils';
 
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function MoodPicker({ trackId, initial, onSave }: Props) {
+  const t = useTranslations('dashboard.moodPicker');
+  const tMoods = useTranslations('moods');
   const [selected, setSelected] = useState<Set<Mood>>(new Set(initial));
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -47,7 +50,7 @@ export function MoodPicker({ trackId, initial, onSave }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="label-mono text-xs text-muted-foreground">
-          Настроение <span className="opacity-50">({selected.size}/5)</span>
+          {t('heading')} <span className="opacity-50">({selected.size}/5)</span>
         </span>
         <AnimatePresence mode="wait">
           {saved ? (
@@ -58,7 +61,7 @@ export function MoodPicker({ trackId, initial, onSave }: Props) {
               exit={{ opacity: 0 }}
               className="text-xs font-mono text-muted-foreground"
             >
-              Сохранено
+              {t('saved')}
             </motion.span>
           ) : (
             <motion.button
@@ -70,7 +73,7 @@ export function MoodPicker({ trackId, initial, onSave }: Props) {
               disabled={isPending}
               className="text-xs font-mono text-foreground underline-offset-2 hover:underline disabled:opacity-40"
             >
-              {isPending ? 'Сохраняю…' : 'Сохранить'}
+              {isPending ? t('saving') : t('save')}
             </motion.button>
           )}
         </AnimatePresence>
@@ -95,7 +98,7 @@ export function MoodPicker({ trackId, initial, onSave }: Props) {
                   : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground',
               )}
             >
-              {MOOD_LABELS[mood]}
+              {tMoods(mood)}
             </button>
           );
         })}

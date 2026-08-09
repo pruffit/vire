@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
-import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS, MAX_TRACK_GENRES, type Genre } from '@/lib/genres';
+import { ALL_GENRES, GENRE_GROUPS, genreLabel, genreGroupLabel, MAX_TRACK_GENRES, type Genre } from '@/lib/genres';
 import { useGenreAnalysis, type GenreAnalysisResult, type GenreSuggestion } from '@/lib/use-genre-analysis';
 import { Icon } from '@/components/icon';
 import { touchPill, touchTargetCoarse } from '@/components/popover';
@@ -15,6 +16,8 @@ interface Props {
 }
 
 export function GenrePicker({ trackId, initial, suggestions: initialSuggestions = [] }: Props) {
+  const t = useTranslations('dashboard.genrePicker');
+  const tGenres = useTranslations('genres');
   const [selected, setSelected] = useState<Set<Genre>>(new Set(initial));
   const [suggestions, setSuggestions] = useState(initialSuggestions);
   const [query, setQuery] = useState('');
@@ -41,6 +44,12 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
       suggestions: `/api/v1/dashboard/tracks/${trackId}/genre-suggestions`,
     },
     handleAnalysis,
+    {
+      pending: t('analysisPending'),
+      start: t('analysisStartFailed'),
+      timeout: t('analysisTimeout'),
+      success: t('analysisDone'),
+    },
   );
   const analyzing = analysisStatus === 'running';
 
@@ -50,8 +59,8 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return null;
-    return ALL_GENRES.filter((g) => GENRE_LABELS[g].toLowerCase().includes(q));
-  }, [query]);
+    return ALL_GENRES.filter((g) => genreLabel(g, tGenres).toLowerCase().includes(q));
+  }, [query, tGenres]);
 
   function toggle(genre: Genre) {
     setSelected((prev) => {
@@ -79,7 +88,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="label-mono text-xs text-foreground/40">
-          Жанры <span className="opacity-50">({selected.size}/{MAX_TRACK_GENRES})</span>
+          {t('heading')} <span className="opacity-50">({selected.size}/{MAX_TRACK_GENRES})</span>
         </span>
         <AnimatePresence mode="wait">
           {saved ? (
@@ -90,7 +99,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
               exit={{ opacity: 0 }}
               className="text-xs font-mono text-foreground/40"
             >
-              Сохранено
+              {t('saved')}
             </motion.span>
           ) : (
             <motion.button
@@ -102,7 +111,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
               disabled={isPending}
               className="text-xs font-mono text-foreground underline-offset-2 hover:underline disabled:opacity-40"
             >
-              {isPending ? 'Сохраняю…' : 'Сохранить'}
+              {isPending ? t('saving') : t('save')}
             </motion.button>
           )}
         </AnimatePresence>
@@ -116,7 +125,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
               onClick={() => toggle(g)}
               className={cn('group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono bg-foreground text-background', touchPill)}
             >
-              {GENRE_LABELS[g]}
+              {genreLabel(g, tGenres)}
               <Icon name="x" size={12} className="opacity-50 group-hover:opacity-100" />
             </button>
           ))}
@@ -126,7 +135,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
       {suggestions.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="label-mono text-[10px] text-foreground/25">
-            Предложено
+            {t('suggested')}
           </span>
           {pendingSuggestions.map((s) => (
             <button
@@ -136,14 +145,14 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
               className={cn('inline-flex items-center gap-1 rounded-full border border-dashed border-foreground/15 px-2.5 py-1 text-xs font-mono text-foreground/40 transition-colors hover:border-foreground/30 hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-30', touchPill)}
             >
               <Icon name="plus" size={11} className="opacity-60" />
-              {GENRE_LABELS[s.genre]}
+              {genreLabel(s.genre, tGenres)}
             </button>
           ))}
           <button
             onClick={startAnalysis}
             disabled={analyzing}
-            aria-label="Определить жанр заново"
-            title="Определить жанр заново"
+            aria-label={t('reanalyzeAria')}
+            title={t('reanalyzeAria')}
             className={cn('inline-flex items-center justify-center size-6 rounded-full text-foreground/30 transition-colors hover:bg-foreground/10 hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-40', touchTargetCoarse('sm'))}
           >
             <Icon name="refresh-cw" size={12} className={cn(analyzing && 'animate-spin')} />
@@ -156,7 +165,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
           className="inline-flex items-center gap-1.5 text-xs font-mono text-foreground/50 transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Icon name="refresh-cw" size={12} className={cn(analyzing && 'animate-spin')} />
-          {analyzing ? 'Определяю жанр…' : 'Определить жанр'}
+          {analyzing ? t('analyzing') : t('analyze')}
         </button>
       )}
 
@@ -164,22 +173,22 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Поиск жанра…"
+        placeholder={t('searchPlaceholder')}
         className="w-full min-w-0 px-3 py-1.5 rounded-md bg-foreground/5 border border-foreground/10 text-xs font-mono placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring pointer-coarse:min-h-11"
       />
 
       <div className="max-h-64 overflow-y-auto pr-1 space-y-4 [scrollbar-width:thin]">
         {matches ? (
           matches.length === 0 ? (
-            <p className="text-xs font-mono text-foreground/30 py-2">Ничего не найдено</p>
+            <p className="text-xs font-mono text-foreground/30 py-2">{t('noResults')}</p>
           ) : (
-            <Pills genres={matches} selected={selected} atMax={atMax} onToggle={toggle} />
+            <Pills genres={matches} selected={selected} atMax={atMax} onToggle={toggle} labelFor={(g) => genreLabel(g, tGenres)} />
           )
         ) : (
           GENRE_GROUPS.map((group) => (
-            <section key={group.label} className="space-y-2">
-              <p className="label-mono text-[10px] text-foreground/30">{group.label}</p>
-              <Pills genres={group.genres} selected={selected} atMax={atMax} onToggle={toggle} />
+            <section key={group.key} className="space-y-2">
+              <p className="label-mono text-[10px] text-foreground/30">{genreGroupLabel(group, tGenres)}</p>
+              <Pills genres={group.genres} selected={selected} atMax={atMax} onToggle={toggle} labelFor={(g) => genreLabel(g, tGenres)} />
             </section>
           ))
         )}
@@ -193,11 +202,13 @@ function Pills({
   selected,
   atMax,
   onToggle,
+  labelFor,
 }: {
   genres: Genre[];
   selected: Set<Genre>;
   atMax: boolean;
   onToggle: (g: Genre) => void;
+  labelFor: (g: Genre) => string;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -219,7 +230,7 @@ function Pills({
                 : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground',
             )}
           >
-            {GENRE_LABELS[genre]}
+            {labelFor(genre)}
           </button>
         );
       })}

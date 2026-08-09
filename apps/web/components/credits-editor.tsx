@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from '@/lib/toast';
 import { fieldClass } from '@/components/ui-kit';
@@ -8,14 +9,6 @@ import { Icon } from '@/components/icon';
 import { touchPill, touchTargetCoarse } from '@/components/popover';
 import { cn } from '@/lib/utils';
 import type { ContributorRole, TrackCredit } from '@/lib/upload';
-
-const ROLES: { value: ContributorRole; label: string }[] = [
-  { value: 'PERFORMER', label: 'Исполнитель' },
-  { value: 'FEATURED', label: 'Гость (feat.)' },
-  { value: 'LYRICIST', label: 'Автор текста' },
-  { value: 'COMPOSER', label: 'Композитор' },
-  { value: 'PRODUCER', label: 'Продюсер' },
-];
 
 const MAX = 20;
 
@@ -32,6 +25,14 @@ type CreditsEditorProps = {
 );
 
 export function CreditsEditor({ trackId, initial, artistName, onChange }: CreditsEditorProps) {
+  const t = useTranslations('dashboard.creditsEditor');
+  const ROLES: { value: ContributorRole; label: string }[] = [
+    { value: 'PERFORMER', label: t('roles.PERFORMER') },
+    { value: 'FEATURED', label: t('roles.FEATURED') },
+    { value: 'LYRICIST', label: t('roles.LYRICIST') },
+    { value: 'COMPOSER', label: t('roles.COMPOSER') },
+    { value: 'PRODUCER', label: t('roles.PRODUCER') },
+  ];
   const controlled = onChange !== undefined;
   const nextId = useRef(initial.length);
   const [credits, setCredits] = useState<(TrackCredit & { _id: number })[]>(() =>
@@ -73,7 +74,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
         setCredits(toSave.map((c) => ({ ...c, _id: nextId.current++ })));
         setSaved(true);
       } else {
-        toast.error('Не удалось сохранить кредиты');
+        toast.error(t('saveFailed'));
       }
     });
   }
@@ -86,7 +87,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
     <div className="space-y-2.5">
       <div className="flex items-center justify-between">
         <span className="label-mono text-foreground/45">
-          Кредиты
+          {t('heading')}
         </span>
         {!controlled && (
         <AnimatePresence mode="wait">
@@ -98,7 +99,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
               exit={{ opacity: 0 }}
               className="inline-flex items-center gap-1 text-xs font-mono text-emerald-400"
             >
-              <Icon name="check" size={13} /> сохранено
+              <Icon name="check" size={13} /> {t('saved')}
             </motion.span>
           ) : (
             <motion.button
@@ -111,7 +112,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
               disabled={isPending}
               className="text-xs font-mono text-foreground underline-offset-2 hover:underline disabled:opacity-40"
             >
-              {isPending ? 'Сохраняю…' : 'Сохранить'}
+              {isPending ? t('saving') : t('save')}
             </motion.button>
           )}
         </AnimatePresence>
@@ -119,14 +120,12 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
       </div>
 
       <p className="text-[11px] text-foreground/35 leading-snug">
-        Кто работал над треком: вокал, текст, музыка, продакшн. Для фита добавь
-        приглашённого артиста с ролью «Гость (feat.)» — он подпишется как feat.
-        рядом с названием. Имя — без приставок.
+        {t('hint')}
       </p>
 
       <div className="space-y-2">
         {credits.length === 0 && (
-          <p className="text-xs text-foreground/30">Кредитов пока нет.</p>
+          <p className="text-xs text-foreground/30">{t('empty')}</p>
         )}
         <AnimatePresence initial={false}>
           {credits.map((c, i) => (
@@ -141,7 +140,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Имя"
+                  placeholder={t('namePlaceholder')}
                   value={c.name}
                   disabled={isPending}
                   onChange={(e) => setRow(i, { name: e.target.value })}
@@ -152,7 +151,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
                   disabled={isPending}
                   onClick={() => removeRow(i)}
                   className={cn('grid size-7 shrink-0 place-items-center rounded-md text-foreground/30 hover:bg-red-500/10 hover:text-red-400 transition-colors disabled:opacity-30', touchTargetCoarse('sm'))}
-                  aria-label="Удалить кредит"
+                  aria-label={t('removeAria')}
                 >
                   <Icon name="x" size={16} />
                 </button>
@@ -192,7 +191,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
               onClick={() => addRow()}
               className="text-xs text-foreground/45 hover:text-foreground transition-colors disabled:opacity-40"
             >
-              + добавить
+              {t('addRow')}
             </button>
           )}
           {canSuggestSelf && credits.length < MAX && (
@@ -202,7 +201,7 @@ export function CreditsEditor({ trackId, initial, artistName, onChange }: Credit
               onClick={() => addRow({ name: artistName!.trim(), role: 'PERFORMER' })}
               className="text-xs text-foreground/45 hover:text-foreground transition-colors disabled:opacity-40"
             >
-              + {artistName} — исполнитель
+              {t('addSelf', { name: artistName })}
             </button>
           )}
         </div>

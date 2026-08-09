@@ -25,14 +25,17 @@ const ERROR_MESSAGES = {
   success: 'Жанр определён',
 };
 
-/** Анализ жанра по требованию + поллинг: обёртка над `useTrackAnalysis`, общая для GenrePicker и админского TrackEditForm (различаются только эндпоинтами). */
+/** Анализ жанра по требованию + поллинг: обёртка над `useTrackAnalysis`, общая для GenrePicker и
+ *  админского TrackEditForm. Сообщения необязательны — админка (вне next-intl) получает дефолт,
+ *  дашборд передаёт переведённые через next-intl. */
 export function useGenreAnalysis(
   endpoints: { analyze: string; suggestions: string },
   onResult: (result: GenreAnalysisResult) => void,
+  messages: typeof ERROR_MESSAGES = ERROR_MESSAGES,
 ) {
   return useTrackAnalysis<Snapshot>(
     { analyze: endpoints.analyze, snapshot: endpoints.suggestions },
     onResult,
-    ERROR_MESSAGES,
+    messages,
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import type { ArtistLink, ArtistVideo, ThemeTokens } from '@vire/core';
 import { btnPrimary, Textarea, Field, fieldClass, SectionLabel } from '@/components/ui-kit';
 import { LinksEditor } from '@/components/links-editor';
@@ -23,6 +24,8 @@ export interface EditableProfile {
 
 export function EditProfileForm({ artist }: { artist: EditableProfile }) {
   const router = useRouter();
+  const t = useTranslations('dashboard.profile');
+  const tCommon = useTranslations('dashboard.common');
   const formRef = useRef<HTMLFormElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +63,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       setSaved(true);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка');
+      setError(err instanceof Error ? err.message : tCommon('genericError'));
     } finally {
       setBusy(false);
     }
@@ -99,17 +102,17 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       <div className="grid items-start gap-x-10 gap-y-8 lg:grid-cols-2">
       <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-5">
-        <SectionLabel>Профиль</SectionLabel>
+        <SectionLabel>{t('section')}</SectionLabel>
 
-        <Field label="Имя артиста">
+        <Field label={t('nameLabel')}>
           <input name="name" type="text" required disabled={busy} defaultValue={artist.name} className={cn(fieldClass, 'w-full')} />
         </Field>
 
-        <Field label="Биография" hint="необязательно">
-          <Textarea name="bio" rows={4} disabled={busy} defaultValue={artist.bio ?? ''} placeholder="Расскажи о себе…" className={cn(fieldClass, 'w-full')} />
+        <Field label={t('bioLabel')} hint={tCommon('optionalHint')}>
+          <Textarea name="bio" rows={4} disabled={busy} defaultValue={artist.bio ?? ''} placeholder={t('bioPlaceholder')} className={cn(fieldClass, 'w-full')} />
         </Field>
 
-        <Field label="Аватар" hint="около-квадрат, от 400×400 · JPEG/PNG/WebP">
+        <Field label={t('avatarLabel')} hint={t('avatarHint')}>
           <div className="flex min-w-0 items-center gap-4">
             {avatarPreview && !removeAvatar ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -134,13 +137,13 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
                   onClick={() => { setRemoveAvatar(true); setAvatarPreview(null); }}
                   className="inline-flex items-center gap-1.5 self-start text-xs text-foreground/40 transition-colors hover:text-red-400"
                 >
-                  <Icon name="trash" size={12} /> Удалить аватар
+                  <Icon name="trash" size={12} /> {t('removeAvatar')}
                 </button>
               )}
             </div>
           </div>
         </Field>
-        <Field label="Широкая обложка" hint="рекомендуется ~3:1 · 1500×500 · JPEG/PNG/WebP">
+        <Field label={t('headerLabel')} hint={t('headerHint')}>
           <div className="flex flex-col gap-3">
             {headerPreview && !removeHeader ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -163,7 +166,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
                   onClick={() => { setRemoveHeader(true); setHeaderPreview(null); }}
                   className="inline-flex items-center gap-1.5 self-start text-xs text-foreground/40 transition-colors hover:text-red-400"
                 >
-                  <Icon name="trash" size={12} /> Удалить обложку
+                  <Icon name="trash" size={12} /> {t('removeHeader')}
                 </button>
               )}
             </div>
@@ -173,8 +176,8 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
 
       <div className="border-t border-foreground/[0.06] pt-7">
         <LinksEditor
-          title="Ссылки"
-          hint="Соцсети и площадки — иконка и название подхватятся сами; для нераспознанных задай подпись. Появятся блоком на твоей странице артиста."
+          title={t('linksTitle')}
+          hint={t('linksHint')}
           links={links}
           onChange={setLinks}
           max={10}
@@ -188,7 +191,7 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       </div>
 
       <section className="flex flex-col gap-4">
-        <SectionLabel>Тема страницы</SectionLabel>
+        <SectionLabel>{t('themeHeading')}</SectionLabel>
         <ThemeEditor
           value={theme}
           onChange={setTheme}
@@ -200,14 +203,14 @@ export function EditProfileForm({ artist }: { artist: EditableProfile }) {
       </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
-      {saved && <p className="text-sm text-emerald-400">Сохранено</p>}
+      {saved && <p className="text-sm text-emerald-400">{t('saved')}</p>}
 
       <div className="flex items-center gap-4 border-t border-foreground/[0.06] pt-5">
         <button type="submit" disabled={busy} className={btnPrimary}>
-          {busy ? 'Сохраняю…' : 'Сохранить'}
+          {busy ? t('saving') : t('save')}
         </button>
         <Link href="/dashboard" className="text-sm text-foreground/40 transition-colors hover:text-foreground/70">
-          Отмена
+          {tCommon('cancel')}
         </Link>
       </div>
     </form>

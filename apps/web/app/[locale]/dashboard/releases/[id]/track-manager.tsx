@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion, Reorder, useDragControls } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/lib/toast';
@@ -62,6 +63,7 @@ export function TrackManager({
   releaseId: string;
   artistName: string;
 }) {
+  const t = useTranslations('dashboard.releases.trackManager');
   const [tracks, setTracks] = useState<ManagedTrack[]>(initial);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -133,7 +135,7 @@ export function TrackManager({
       committed.current = list;
     } else {
       setTracks(snapshot);
-      toast.error('Не удалось изменить порядок треков');
+      toast.error(t('reorderFailed'));
     }
   }
 
@@ -152,7 +154,7 @@ export function TrackManager({
       flashSaved(id);
     } else {
       setTitle(id, savedTitle);
-      toast.error('Не удалось переименовать трек');
+      toast.error(t('renameFailed'));
     }
   }
 
@@ -165,7 +167,7 @@ export function TrackManager({
       committed.current = committed.current.map((t) => (t.id === id ? { ...t, [field]: value } : t));
       flashSaved(id);
     } else {
-      toast.error('Не удалось сохранить');
+      toast.error(t('saveFailed'));
     }
   }
 
@@ -186,12 +188,12 @@ export function TrackManager({
       flashSaved(id);
     } else {
       setTracks((ts) => ts.map((t) => (t.id === id ? { ...t, [flag]: !next } : t)));
-      toast.error('Не удалось сохранить метку');
+      toast.error(t('flagSaveFailed'));
     }
   }
 
   async function remove(id: string) {
-    if (!confirm('Удалить трек? Это действие необратимо.')) return;
+    if (!confirm(t('deleteConfirm'))) return;
     const prev = tracks;
     setTracks((ts) => ts.filter((t) => t.id !== id));
     const res = await fetch(`/api/v1/dashboard/tracks/${id}`, { method: 'DELETE' }).catch(() => null);
@@ -199,12 +201,12 @@ export function TrackManager({
       committed.current = committed.current.filter((t) => t.id !== id);
     } else {
       setTracks(prev);
-      toast.error('Не удалось удалить трек');
+      toast.error(t('deleteFailed'));
     }
   }
 
   if (tracks.length === 0) {
-    return <p className="text-sm text-foreground/30 px-1">Пока нет треков. Добавь первый ниже.</p>;
+    return <p className="text-sm text-foreground/30 px-1">{t('empty')}</p>;
   }
 
   return (
@@ -265,6 +267,8 @@ function TrackRow({
   onAnalysisResult: (bpm: number | null, musicalKey: string | null) => void;
   onRemove: () => void;
 }) {
+  const t = useTranslations('dashboard.releases.trackManager');
+  const tCommon = useTranslations('dashboard.common');
   const controls = useDragControls();
   const [bpm, setBpm] = useState<number | null>(track.bpm);
   const [key, setKey] = useState(track.musicalKey ?? '');
@@ -285,12 +289,12 @@ function TrackRow({
       setBpm(snapshot.bpm);
       setKey(snapshot.musicalKey ?? '');
       onAnalysisResult(snapshot.bpm, snapshot.musicalKey);
-      toast('BPM и тональность обновлены');
+      toast(t('analysisUpdated'));
     },
     {
-      pending: 'Определяю BPM и тональность…',
-      start: 'Не удалось запустить анализ BPM/тональности',
-      timeout: 'Анализ BPM/тональности занял слишком много времени — попробуй позже',
+      pending: t('analysisPending'),
+      start: t('analysisStartFailed'),
+      timeout: t('analysisTimeout'),
     },
   );
   const analyzingAudio = audioAnalysisStatus === 'running';
@@ -325,8 +329,8 @@ function TrackRow({
         <button
           type="button"
           onPointerDown={(e) => { e.preventDefault(); controls.start(e); }}
-          aria-label="Перетащить для изменения порядка"
-          title="Перетащить"
+          aria-label={t('dragHandleAria')}
+          title={t('dragHandleTitle')}
           className="grid h-9 w-7 shrink-0 cursor-grab touch-none place-items-center text-foreground/25 hover:text-foreground/60 active:cursor-grabbing transition-colors pointer-coarse:h-11 pointer-coarse:w-11"
         >
           <GripIcon />
@@ -342,12 +346,12 @@ function TrackRow({
             onChange={(e) => onTitleChange(e.target.value)}
             onBlur={onTitleCommit}
             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-            aria-label="Название трека"
+            aria-label={t('titleAria')}
             className="w-full bg-transparent rounded px-2 py-1 -mx-2 hover:bg-foreground/5 focus:bg-foreground/5 focus:outline-none focus:ring-1 focus:ring-foreground/20 transition-colors"
           />
           {titleWarn && (
             <p className="px-0.5 pt-1 text-[11px] text-amber-400/90 leading-snug">
-              Имя артиста уже показано рядом — в названии его дублировать не нужно.
+              {tCommon('titleRepeatsArtistWarning')}
             </p>
           )}
           {(feat || track.version) && (
@@ -379,9 +383,9 @@ function TrackRow({
           onClick={onToggleExpanded}
           whileTap={{ scale: 0.9 }}
           transition={spring.snappy}
-          aria-label="Параметры трека"
+          aria-label={t('detailsAria')}
           aria-expanded={expanded}
-          title="Параметры трека"
+          title={t('detailsAria')}
           className={cn(
             'shrink-0 grid place-items-center size-9 rounded-full transition-colors pointer-coarse:size-11',
             expanded ? 'bg-foreground/10 text-foreground/70' : 'text-foreground/30 hover:bg-foreground/10 hover:text-foreground/60',
@@ -396,8 +400,8 @@ function TrackRow({
           disabled={busy}
           whileTap={{ scale: 0.9 }}
           transition={spring.snappy}
-          aria-label="Удалить трек"
-          title="Удалить трек"
+          aria-label={t('removeAria')}
+          title={t('removeAria')}
           className="shrink-0 grid place-items-center size-9 rounded-full text-foreground/30 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-30 transition-colors pointer-coarse:size-11"
         >
           <Icon name="trash" size={14} />
@@ -417,22 +421,22 @@ function TrackRow({
             <div className="px-3 sm:px-4 py-3 space-y-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-8 sm:gap-y-2">
                 <Check
-                  label={<><span className="font-mono font-semibold text-foreground/80">18+</span> Explicit</>}
-                  hint="Мат/контент 18+ — бейдж «E» на витрине"
+                  label={<><span className="font-mono font-semibold text-foreground/80">18+</span> {t('explicitLabel')}</>}
+                  hint={t('explicitHint')}
                   checked={track.isExplicit}
                   disabled={busy}
                   onChange={(v) => onToggleFlag('isExplicit', v)}
                 />
                 <Check
-                  label="Эксклюзив"
-                  hint="Метка «excl» в трек-листе релиза"
+                  label={t('exclusiveLabel')}
+                  hint={t('exclusiveHint')}
                   checked={track.isExclusive}
                   disabled={busy}
                   onChange={(v) => onToggleFlag('isExclusive', v)}
                 />
                 <Check
-                  label="WIP (демо)"
-                  hint="Черновик/демо — метка «wip»"
+                  label={t('wipLabel')}
+                  hint={t('wipHint')}
                   checked={track.isWip}
                   disabled={busy}
                   onChange={(v) => onToggleFlag('isWip', v)}
@@ -456,7 +460,7 @@ function TrackRow({
                   />
                 </label>
                 <label className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-foreground/40 shrink-0">Тональность</span>
+                  <span className="text-xs font-mono text-foreground/40 shrink-0">{t('keyLabel')}</span>
                   <input
                     type="text"
                     placeholder="—"
@@ -472,8 +476,8 @@ function TrackRow({
                   type="button"
                   onClick={startAudioAnalysis}
                   disabled={busy || analyzingAudio}
-                  aria-label="Переанализировать BPM/тональность"
-                  title="Переанализировать BPM/тональность"
+                  aria-label={t('reanalyzeAria')}
+                  title={t('reanalyzeAria')}
                   className={cn(
                     'inline-flex items-center justify-center size-6 rounded-full text-foreground/30 transition-colors hover:bg-foreground/10 hover:text-foreground/70 disabled:cursor-not-allowed disabled:opacity-40',
                     touchTargetCoarse('sm'),
@@ -485,11 +489,11 @@ function TrackRow({
 
               <label className="flex flex-col gap-1.5">
                 <span className="label-mono text-foreground/45">
-                  Версия <span className="normal-case tracking-normal text-foreground/30">необязательно</span>
+                  {t('versionLabel')} <span className="normal-case tracking-normal text-foreground/30">{tCommon('optionalHint')}</span>
                 </span>
                 <input
                   type="text"
-                  placeholder="Radio Edit · Slowed + Reverb · Sped Up · Acoustic…"
+                  placeholder={t('versionPlaceholder')}
                   value={version}
                   onChange={(e) => setVersion(e.target.value)}
                   onBlur={commitVersion}

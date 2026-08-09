@@ -52,12 +52,13 @@ function IconButton({
 
 export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; artistSlug: string }) {
   const tCommon = useTranslations('common');
+  const t = useTranslations('dashboard.links');
   const router = useRouter();
   const [rows, setRows] = useState(items);
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   async function remove(id: string, title: string) {
-    if (!confirm(`Удалить «${title}»? Действие необратимо.`)) return;
+    if (!confirm(t('deleteConfirm', { title }))) return;
     setPendingId(id);
     const prev = rows;
     setRows((r) => r.filter((x) => x.id !== id));
@@ -65,7 +66,7 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
     setPendingId(null);
     if (!res?.ok) {
       setRows(prev);
-      toast.error('Не удалось удалить');
+      toast.error(t('deleteFailed'));
     } else {
       router.refresh();
     }
@@ -73,20 +74,20 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
 
   function copyLink(slug: string) {
     const url = `${window.location.origin}/smartlink/${artistSlug}/${slug}`;
-    navigator.clipboard.writeText(url).then(() => toast('Ссылка скопирована')).catch(() => {});
+    navigator.clipboard.writeText(url).then(() => toast(t('linkCopied'))).catch(() => {});
   }
 
   return (
     <div className="flex flex-col gap-3">
       <Link href="/dashboard/links/new" className={cn(btnPrimary, 'gap-1.5 self-start')}>
-        <Icon name="plus" size={16} /> Создать лендинг
+        <Icon name="plus" size={16} /> {t('createLanding')}
       </Link>
 
       {rows.length === 0 ? (
         <Panel>
           <EmptyState
-            title="Пока нет лендингов"
-            hint="Создай первый — собери ссылки на стриминги и соцсети в одну страницу."
+            title={t('emptyTitle')}
+            hint={t('emptyHint')}
           />
         </Panel>
       ) : (
@@ -119,7 +120,7 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
                     {tCommon('linkCount', { count: row.linkCount })}
                   </span>
                   <Badge tone={row.isPublished ? 'success' : 'neutral'}>
-                    {row.isPublished ? 'опубликован' : 'черновик'}
+                    {row.isPublished ? t('published') : t('draft')}
                   </Badge>
                 </div>
               </div>
@@ -131,26 +132,26 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
                       href={`/smartlink/${artistSlug}/${row.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label="Открыть страницу"
-                      title="Открыть страницу"
+                      aria-label={t('openPage')}
+                      title={t('openPage')}
                       className={cn(iconBtnBase, iconBtnHover)}
                     >
                       <Icon name="external-link" size={15} />
                     </a>
-                    <IconButton onClick={() => copyLink(row.slug)} label="Скопировать ссылку" icon="copy" />
+                    <IconButton onClick={() => copyLink(row.slug)} label={t('copyLink')} icon="copy" />
                   </>
                 )}
                 <Link
                   href={`/dashboard/links/${row.id}`}
-                  aria-label="Изменить"
-                  title="Изменить"
+                  aria-label={t('edit')}
+                  title={t('edit')}
                   className={cn(iconBtnBase, iconBtnHover)}
                 >
                   <Icon name="edit-2" size={15} />
                 </Link>
                 <IconButton
                   onClick={() => remove(row.id, row.title)}
-                  label="Удалить"
+                  label={t('delete')}
                   icon="trash"
                   danger
                   disabled={pendingId === row.id}

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { db, DrizzleReleaseRepository, getMoodsForTracks, getTrackAudioMeta, getGenresForTracks, getGenreSuggestionsForTracks } from '@vire/db';
 import { isGenre, type Genre } from '@/lib/genres';
@@ -18,7 +18,12 @@ export const dynamic = 'force-dynamic';
 type Props = { params: Promise<{ id: string }> };
 
 export default async function EditReleasePage({ params }: Props) {
-  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const [session, locale, t, tCommon] = await Promise.all([
+    auth(),
+    getLocale(),
+    getTranslations('dashboard.releases'),
+    getTranslations('dashboard.common'),
+  ]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/dashboard', locale });
 
   const { id } = await params;
@@ -44,6 +49,7 @@ export default async function EditReleasePage({ params }: Props) {
     <div className="flex flex-col gap-8">
       <DashboardPageHeader
         backHref="/dashboard"
+        backLabel={tCommon('dashboardLabel')}
         title={release.title}
         action={
           <>
@@ -60,7 +66,7 @@ export default async function EditReleasePage({ params }: Props) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm text-foreground/50 transition-colors hover:text-foreground"
               >
-                Открыть <Icon name="external-link" size={14} />
+                {t('openPage')} <Icon name="external-link" size={14} />
               </a>
             ) : null}
           </>
@@ -69,7 +75,7 @@ export default async function EditReleasePage({ params }: Props) {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="order-2 flex min-w-0 flex-col gap-3 lg:order-1">
-          <SectionLabel>Треки · {tracks.length}</SectionLabel>
+          <SectionLabel>{t('trackCountHeading', { count: tracks.length })}</SectionLabel>
 
           <TrackManager
             key={tracks.map((t) => t.id).join('-')}
@@ -97,7 +103,7 @@ export default async function EditReleasePage({ params }: Props) {
           />
 
           <Panel className="p-4 sm:p-5">
-            <p className="mb-4 text-sm font-medium">Добавить треки</p>
+            <p className="mb-4 text-sm font-medium">{t('addTracksHeading')}</p>
             <BatchTrackUpload
               releaseId={release.id}
               nextTrackNumber={tracks.length + 1}
@@ -108,7 +114,7 @@ export default async function EditReleasePage({ params }: Props) {
 
         <aside className="order-1 flex flex-col gap-4 lg:order-2">
           <Panel className="p-4 sm:p-5">
-            <SectionLabel>Релиз</SectionLabel>
+            <SectionLabel>{t('releaseSectionHeading')}</SectionLabel>
             <div className="mt-4">
               <EditReleaseForm
                 releaseId={release.id}

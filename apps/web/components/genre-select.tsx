@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Select, type SelectGroup } from '@/components/select';
-import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
+import { GENRE_GROUPS, genreLabel, genreGroupLabel } from '@/lib/genres';
 
 export function GenreSelect({
   name,
@@ -15,15 +15,16 @@ export function GenreSelect({
   disabled?: boolean;
 }) {
   const t = useTranslations('common.form.genreSelect');
+  const tGenres = useTranslations('genres');
   const groups = useMemo<SelectGroup[]>(
     () => [
       { label: '', options: [{ value: '', label: t('none') }] },
       ...GENRE_GROUPS.map((g) => ({
-        label: g.label,
-        options: g.genres.map((gen) => ({ value: gen, label: GENRE_LABELS[gen] })),
+        label: genreGroupLabel(g, tGenres),
+        options: g.genres.map((gen) => ({ value: gen, label: genreLabel(gen, tGenres) })),
       })),
     ],
-    [t],
+    [t, tGenres],
   );
 
   return (
