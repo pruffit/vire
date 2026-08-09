@@ -147,6 +147,7 @@ export async function getPresaverUserIds(releaseId: string): Promise<string[]> {
 export interface PresaverContact {
   email: string;
   name: string | null;
+  locale: string | null;
   // Ссылка «отписаться» в письме удаляет только гостевые пресейвы по email:
   // юзеру её не показываем, его presave живёт при userId, а не при email.
   isGuest: boolean;
@@ -160,6 +161,7 @@ export async function getPresaverContacts(releaseId: string): Promise<PresaverCo
       guestEmail: releasePresaves.email,
       userEmail: users.email,
       userName: users.name,
+      userLocale: users.locale,
     })
     .from(releasePresaves)
     .leftJoin(users, eq(users.id, releasePresaves.userId))
@@ -169,6 +171,7 @@ export async function getPresaverContacts(releaseId: string): Promise<PresaverCo
     .map((r) => ({
       email: r.userId ? r.userEmail : r.guestEmail,
       name: r.userName ?? null,
+      locale: r.userLocale ?? null,
       isGuest: r.userId === null,
     }))
     .filter((r): r is PresaverContact => r.email !== null);

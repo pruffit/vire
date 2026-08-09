@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 
 type Status = 'idle' | 'sending' | 'done' | 'error';
 
 export function UnsubscribeConfirmForm({ uid, token }: { uid: string; token: string }) {
   const [status, setStatus] = useState<Status>('idle');
+  const t = useTranslations('email.unsubscribe.notifications');
 
   async function confirm() {
     if (status === 'sending') return;
@@ -24,16 +26,15 @@ export function UnsubscribeConfirmForm({ uid, token }: { uid: string; token: str
   if (status === 'done') {
     return (
       <>
-        <h1 className="text-2xl font-semibold mb-3">Вы отписаны</h1>
+        <h1 className="text-2xl font-semibold mb-3">{t('doneTitle')}</h1>
         <p className="text-sm text-muted-foreground leading-relaxed mb-8">
-          Email-уведомления VireMusic на этот адрес больше не приходят. Включить их обратно
-          можно в любой момент в настройках профиля.
+          {t('doneBody')}
         </p>
         <Link
           href="/"
           className="inline-flex items-center rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
         >
-          На главную
+          {t('home')}
         </Link>
       </>
     );
@@ -41,10 +42,9 @@ export function UnsubscribeConfirmForm({ uid, token }: { uid: string; token: str
 
   return (
     <>
-      <h1 className="text-2xl font-semibold mb-3">Отписаться от email-уведомлений?</h1>
+      <h1 className="text-2xl font-semibold mb-3">{t('confirmTitle')}</h1>
       <p className="text-sm text-muted-foreground leading-relaxed mb-8">
-        Письма о заявках в друзья и новых сообщениях на этот адрес перестанут приходить.
-        Уведомления внутри VireMusic останутся.
+        {t('confirmBody')}
       </p>
       <button
         type="button"
@@ -52,11 +52,11 @@ export function UnsubscribeConfirmForm({ uid, token }: { uid: string; token: str
         disabled={status === 'sending'}
         className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
-        {status === 'sending' ? 'Отписываю…' : 'Отписаться'}
+        {status === 'sending' ? t('confirmPending') : t('confirmCta')}
       </button>
       {status === 'error' && (
         <p className="mt-4 text-sm text-destructive">
-          Не удалось отписаться. Попробуйте ещё раз или напишите на{' '}
+          {t('errorBody')}{' '}
           <a href="mailto:hello@viremusic.ru" className="underline underline-offset-2">
             hello@viremusic.ru
           </a>

@@ -185,6 +185,9 @@ importers:
       '@vire/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@vire/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       bullmq:
         specifier: ^5.34.0
         version: 5.78.0
@@ -286,6 +289,10 @@ importers:
         version: 8.60.1(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
 
   packages/core:
+    dependencies:
+      '@vire/i18n':
+        specifier: workspace:*
+        version: link:../i18n
     devDependencies:
       '@types/node':
         specifier: ^20

@@ -146,8 +146,8 @@ export async function getFollowedArtists(userId: string): Promise<FollowedArtist
   return rows;
 }
 
-export async function getUserNotifyContext(userId: string): Promise<{ email: string | null; name: string | null; notifyEmail: boolean; notifyPush: boolean } | null> {
-  const [row] = await db.select({ email: users.email, name: users.name, notifyEmail: users.notifyEmail, notifyPush: users.notifyPush })
+export async function getUserNotifyContext(userId: string): Promise<{ email: string | null; name: string | null; notifyEmail: boolean; notifyPush: boolean; locale: string | null } | null> {
+  const [row] = await db.select({ email: users.email, name: users.name, notifyEmail: users.notifyEmail, notifyPush: users.notifyPush, locale: users.locale })
     .from(users).where(eq(users.id, userId)).limit(1);
   return row ?? null;
 }

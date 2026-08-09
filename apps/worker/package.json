@@ -16,6 +16,7 @@
     "@smithy/node-http-handler": "^4.7.7",
     "@vire/core": "workspace:*",
     "@vire/db": "workspace:*",
+    "@vire/i18n": "workspace:*",
     "bullmq": "^5.34.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",

@@ -1,10 +1,11 @@
 import { Worker, type Job } from 'bullmq';
 import { getFollowerEmails } from '@vire/db';
 import { QUEUE_NOTIFY_RELEASE, type NotifyReleaseJobData } from '@vire/core';
+import { getTranslator, isLocale, localizedPath, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
 import { connection } from '../queues/connection.js';
 
 // Brevo HTTP API — SMTP на проде заблокирован хостингом. messageVersions — батч:
-// каждый адресат получает отдельное письмо с персональным приветствием.
+// каждый адресат получает отдельное письмо на своей локали.
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
@@ -16,11 +17,12 @@ function brevoSender(): { name?: string; email: string } {
 
 interface BrevoMessageVersion {
   to: Array<{ email: string; name?: string }>;
+  subject: string;
   htmlContent: string;
 }
 
 async function sendBrevoBatch(
-  subject: string,
+  subjectFallback: string,
   htmlFallback: string,
   messageVersions: BrevoMessageVersion[],
 ): Promise<void> {
@@ -31,7 +33,7 @@ async function sendBrevoBatch(
     headers: { 'Content-Type': 'application/json', accept: 'application/json', 'api-key': apiKey },
     body: JSON.stringify({
       sender: brevoSender(),
-      subject,
+      subject: subjectFallback,
       htmlContent: htmlFallback,
       messageVersions,
     }),
@@ -42,45 +44,55 @@ async function sendBrevoBatch(
   }
 }
 
-const RELEASE_TYPE_RU: Record<string, string> = {
-  ALBUM: 'Альбом',
-  EP: 'EP',
-  SINGLE: 'Сингл',
-};
+async function buildEmail(
+  data: NotifyReleaseJobData,
+  recipientName: string | null,
+  locale: Locale,
+): Promise<{ subject: string; html: string }> {
+  const t = await getTranslator(locale, 'email');
+  const releaseUrl = `${APP_URL}${localizedPath(locale, `/artists/${data.artistSlug}/releases/${data.releaseId}`)}`;
+  const manageUrl = `${APP_URL}${localizedPath(locale, '/profile')}`;
 
-function buildHtml(data: NotifyReleaseJobData, recipientName: string | null): string {
-  const typeLabel = RELEASE_TYPE_RU[data.releaseType] ?? data.releaseType;
-  const releaseUrl = `${APP_URL}/artists/${data.artistSlug}/releases/${data.releaseId}`;
-  const greeting = recipientName ? `Привет, ${recipientName}!` : 'Привет!';
+  const subject = t('release.subject', { artistName: data.artistName, releaseTitle: data.releaseTitle });
+  const heading = t('release.heading', { artistName: data.artistName, type: data.releaseType });
+  const greeting = recipientName
+    ? t('release.greeting', { name: recipientName })
+    : t('release.greetingAnonymous');
+  const body = t('release.body', { greeting, artistName: data.artistName, type: data.releaseType });
+  const cta = t('release.cta');
+  const footer = t('release.footer', { artistName: data.artistName });
+  const manageLabel = t('release.manageSubscriptions');
 
-  return `<!DOCTYPE html>
-<html lang="ru">
+  const html = `<!DOCTYPE html>
+<html lang="${locale}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0d0d0d;font-family:Inter,sans-serif;color:#f5f2eb">
   <div style="max-width:480px;margin:0 auto;padding:40px 24px">
     <p style="font-size:13px;color:#666;margin:0 0 24px">VireMusic</p>
 
     <h1 style="font-size:22px;font-weight:600;margin:0 0 6px;line-height:1.3">
-      ${data.artistName} выпустил${typeLabel === 'Сингл' ? '' : 'а'} новый ${typeLabel.toLowerCase()}
+      ${heading}
     </h1>
 
     ${data.coverUrl ? `<img src="${data.coverUrl}" alt="${data.releaseTitle}" width="200" height="200" style="display:block;border-radius:6px;margin:20px 0;object-fit:cover">` : ''}
 
     <p style="font-size:20px;font-weight:500;margin:0 0 24px">${data.releaseTitle}</p>
 
-    <p style="margin:0 0 32px;font-size:14px;color:#aaa">${greeting} Вышел новый ${typeLabel.toLowerCase()} от ${data.artistName}.</p>
+    <p style="margin:0 0 32px;font-size:14px;color:#aaa">${body}</p>
 
     <a href="${releaseUrl}" style="display:inline-block;background:#f5f2eb;color:#0d0d0d;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:500">
-      Слушать →
+      ${cta} →
     </a>
 
     <p style="margin:40px 0 0;font-size:12px;color:#444">
-      Ты получил это письмо, потому что подписан на ${data.artistName} на VireMusic.<br>
-      <a href="${APP_URL}/profile" style="color:#666">Управлять подписками</a>
+      ${footer}<br>
+      <a href="${manageUrl}" style="color:#666">${manageLabel}</a>
     </p>
   </div>
 </body>
 </html>`;
+
+  return { subject, html };
 }
 
 async function handle(job: Job<NotifyReleaseJobData>): Promise<void> {
@@ -94,20 +106,25 @@ async function handle(job: Job<NotifyReleaseJobData>): Promise<void> {
 
   await job.log(`Sending to ${followers.length} followers`);
 
-  const subject = `${data.artistName} — ${data.releaseTitle}`;
+  const fallback = await buildEmail(data, null, DEFAULT_LOCALE);
   // Brevo messageVersions: до 1000 на запрос — берём с запасом по 500
   const BATCH = 500;
   for (let i = 0; i < followers.length; i += BATCH) {
     const chunk = followers.slice(i, i + BATCH);
 
-    await sendBrevoBatch(
-      subject,
-      buildHtml(data, null),
-      chunk.map((f) => ({
-        to: [f.name ? { email: f.email, name: f.name } : { email: f.email }],
-        htmlContent: buildHtml(data, f.name),
-      })),
+    const versions = await Promise.all(
+      chunk.map(async (f): Promise<BrevoMessageVersion> => {
+        const locale = isLocale(f.locale ?? '') ? (f.locale as Locale) : DEFAULT_LOCALE;
+        const { subject, html } = await buildEmail(data, f.name, locale);
+        return {
+          to: [f.name ? { email: f.email, name: f.name } : { email: f.email }],
+          subject,
+          htmlContent: html,
+        };
+      }),
     );
+
+    await sendBrevoBatch(fallback.subject, fallback.html, versions);
 
     await job.updateProgress(Math.round(((i + chunk.length) / followers.length) * 100));
   }

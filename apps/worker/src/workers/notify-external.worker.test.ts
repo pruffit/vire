@@ -92,7 +92,7 @@ describe('notify-external handle', () => {
   it('attaches RFC 8058 one-click unsubscribe headers to the email', async () => {
     await handle(makeJob());
     const headers = h.sendBrevoEmail.mock.calls[0][3];
-    expect(headers['List-Unsubscribe']).toMatch(/^<http.*uid=recipient-1&token=signed-token>$/);
+    expect(headers['List-Unsubscribe']).toMatch(/^<http.*uid=recipient-1&token=signed-token&locale=ru>$/);
     expect(headers['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
   });
 
@@ -125,5 +125,22 @@ describe('notify-external handle', () => {
     h.sendPush.mockResolvedValue(['https://push/dead']);
     h.deletePushSubscriptionsByEndpoints.mockRejectedValue(new Error('db down'));
     await expect(handle(makeJob())).resolves.toBeUndefined();
+  });
+
+  it('renders push and email in the recipient locale (en), with /en-prefixed links', async () => {
+    h.getUserNotifyContext.mockResolvedValue({
+      email: 'user@example.com',
+      name: 'Получатель',
+      notifyEmail: true,
+      notifyPush: true,
+      locale: 'en',
+    });
+    await handle(makeJob({ kind: 'CHAT_MESSAGE', conversationId: 'conv-1' }));
+    const payload = h.sendPush.mock.calls[0][1];
+    expect(payload.title).toBe('New message');
+    expect(payload.body).toBe('New message from Актёр');
+    expect(payload.url).toContain('/en/messages');
+    const [, , html] = h.sendBrevoEmail.mock.calls[0];
+    expect(html).toContain('<html lang="en">');
   });
 });

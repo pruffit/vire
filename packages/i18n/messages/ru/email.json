@@ -1,1 +1,70 @@
-{}
+{
+  "someone": "Кто-то",
+  "unsubscribeLink": "Отписаться от писем",
+  "notificationSettingsLink": "Настройки уведомлений",
+  "friendRequest": {
+    "subject": "{name} отправил вам заявку в друзья на VireMusic",
+    "heading": "{name} хочет добавить вас в друзья",
+    "body": "Примите или отклоните заявку на VireMusic.",
+    "cta": "Открыть заявки"
+  },
+  "chatMessage": {
+    "subject": "Новое сообщение от {name} на VireMusic",
+    "heading": "Новое сообщение от {name}",
+    "body": "Откройте переписку на VireMusic, чтобы прочитать.",
+    "cta": "Открыть сообщения"
+  },
+  "push": {
+    "friendRequest": {
+      "title": "Заявка в друзья",
+      "body": "{name} хочет добавить вас в друзья"
+    },
+    "chatMessage": {
+      "title": "Новое сообщение",
+      "body": "Новое сообщение от {name}"
+    }
+  },
+  "release": {
+    "subject": "{artistName} — {releaseTitle}",
+    "heading": "{artistName} {type, select, SINGLE {выпустил} other {выпустила}} новый {type, select, ALBUM {альбом} EP {ep} SINGLE {сингл} other {релиз}}",
+    "greeting": "Привет, {name}!",
+    "greetingAnonymous": "Привет!",
+    "body": "{greeting} Вышел новый {type, select, ALBUM {альбом} EP {ep} SINGLE {сингл} other {релиз}} от {artistName}.",
+    "cta": "Слушать",
+    "footer": "Ты получил это письмо, потому что подписан на {artistName} на VireMusic.",
+    "manageSubscriptions": "Управлять подписками"
+  },
+  "presaveOut": {
+    "subject": "{artistName} — {releaseTitle} уже вышел",
+    "heading": "{releaseTitle} уже вышел",
+    "greeting": "Привет, {name}!",
+    "greetingAnonymous": "Привет!",
+    "body": "{greeting} {type, select, ALBUM {Альбом} EP {EP} SINGLE {Сингл} other {Релиз}} «{releaseTitle}» от {artistName}, который ты сохранил заранее, теперь доступен. Мы уже добавили его в твои «Лайки».",
+    "cta": "Слушать",
+    "footer": "Ты получил это письмо, потому что сделал пресейв этого релиза на VireMusic.",
+    "unsubscribe": "Отписаться от таких писем"
+  },
+  "unsubscribe": {
+    "notifications": {
+      "title": "Отписка от уведомлений",
+      "invalidTitle": "Ссылка недействительна",
+      "invalidBody": "Не удалось подтвердить отписку — похоже, ссылка повреждена или устарела. Откройте её из письма целиком.",
+      "home": "На главную",
+      "confirmTitle": "Отписаться от email-уведомлений?",
+      "confirmBody": "Письма о заявках в друзья и новых сообщениях на этот адрес перестанут приходить. Уведомления внутри VireMusic останутся.",
+      "confirmCta": "Отписаться",
+      "confirmPending": "Отписываю…",
+      "doneTitle": "Вы отписаны",
+      "doneBody": "Email-уведомления VireMusic на этот адрес больше не приходят. Включить их обратно можно в любой момент в настройках профиля.",
+      "errorBody": "Не удалось отписаться. Попробуйте ещё раз или напишите на"
+    },
+    "presave": {
+      "title": "Отписка от пресейв-писем",
+      "doneTitle": "Вы отписаны",
+      "doneBody": "Писем о выходе сохранённых заранее релизов на этот адрес больше не будет. Продолжить слушать можно в любой момент.",
+      "invalidTitle": "Ссылка недействительна",
+      "invalidBody": "Не удалось подтвердить отписку — похоже, ссылка повреждена или устарела. Откройте её из письма целиком.",
+      "home": "На главную"
+    }
+  }
+}

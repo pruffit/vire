@@ -18,3 +18,9 @@ export const LOCALE_OG: Record<Locale, string> = {
   ru: 'ru_RU',
   en: 'en_US',
 };
+
+/** Путь с префиксом локали (`as-needed`: ru без префикса) — для писем/пуша,
+ *  где next-intl's getPathname недоступен (вне React-дерева apps/web). */
+export function localizedPath(locale: Locale, path: string): string {
+  return locale === DEFAULT_LOCALE ? path : `/${locale}${path}`;
+}

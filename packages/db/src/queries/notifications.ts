@@ -6,11 +6,12 @@ import type { NotificationType, NotificationItem } from '@vire/core';
 export interface FollowerEmail {
   email: string;
   name: string | null;
+  locale: string | null;
 }
 
 export async function getFollowerEmails(artistProfileId: string): Promise<FollowerEmail[]> {
   const rows = await db
-    .select({ email: users.email, name: users.name })
+    .select({ email: users.email, name: users.name, locale: users.locale })
     .from(follows)
     .innerJoin(users, eq(users.id, follows.userId))
     .where(eq(follows.artistProfileId, artistProfileId));

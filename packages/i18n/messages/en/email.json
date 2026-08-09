@@ -1,1 +1,70 @@
-{}
+{
+  "someone": "Someone",
+  "unsubscribeLink": "Unsubscribe from emails",
+  "notificationSettingsLink": "Notification settings",
+  "friendRequest": {
+    "subject": "{name} sent you a friend request on VireMusic",
+    "heading": "{name} wants to add you as a friend",
+    "body": "Accept or decline the request on VireMusic.",
+    "cta": "Open requests"
+  },
+  "chatMessage": {
+    "subject": "New message from {name} on VireMusic",
+    "heading": "New message from {name}",
+    "body": "Open the conversation on VireMusic to read it.",
+    "cta": "Open messages"
+  },
+  "push": {
+    "friendRequest": {
+      "title": "Friend request",
+      "body": "{name} wants to add you as a friend"
+    },
+    "chatMessage": {
+      "title": "New message",
+      "body": "New message from {name}"
+    }
+  },
+  "release": {
+    "subject": "{artistName} — {releaseTitle}",
+    "heading": "{artistName} released a new {type, select, ALBUM {album} EP {EP} SINGLE {single} other {release}}",
+    "greeting": "Hi, {name}!",
+    "greetingAnonymous": "Hi!",
+    "body": "{greeting} A new {type, select, ALBUM {album} EP {EP} SINGLE {single} other {release}} from {artistName} is out now.",
+    "cta": "Listen",
+    "footer": "You're receiving this because you follow {artistName} on VireMusic.",
+    "manageSubscriptions": "Manage subscriptions"
+  },
+  "presaveOut": {
+    "subject": "{artistName} — {releaseTitle} is out",
+    "heading": "{releaseTitle} is out",
+    "greeting": "Hi, {name}!",
+    "greetingAnonymous": "Hi!",
+    "body": "{greeting} The {type, select, ALBUM {album} EP {EP} SINGLE {single} other {release}} “{releaseTitle}” by {artistName}, which you pre-saved, is available now. We've already added it to your Likes.",
+    "cta": "Listen",
+    "footer": "You're receiving this because you pre-saved this release on VireMusic.",
+    "unsubscribe": "Unsubscribe from these emails"
+  },
+  "unsubscribe": {
+    "notifications": {
+      "title": "Unsubscribe from notifications",
+      "invalidTitle": "Invalid link",
+      "invalidBody": "We couldn't confirm the unsubscribe request — the link may be broken or expired. Open it from the email in full.",
+      "home": "Go home",
+      "confirmTitle": "Unsubscribe from email notifications?",
+      "confirmBody": "Emails about friend requests and new messages to this address will stop. In-app notifications on VireMusic will still work.",
+      "confirmCta": "Unsubscribe",
+      "confirmPending": "Unsubscribing…",
+      "doneTitle": "You're unsubscribed",
+      "doneBody": "VireMusic email notifications to this address have stopped. You can turn them back on anytime in your profile settings.",
+      "errorBody": "Couldn't unsubscribe. Try again or email us at"
+    },
+    "presave": {
+      "title": "Unsubscribe from presave emails",
+      "doneTitle": "You're unsubscribed",
+      "doneBody": "Emails about releases you pre-saved will no longer be sent to this address. You can keep listening anytime.",
+      "invalidTitle": "Invalid link",
+      "invalidBody": "We couldn't confirm the unsubscribe request — the link may be broken or expired. Open it from the email in full.",
+      "home": "Go home"
+    }
+  }
+}

@@ -11,12 +11,17 @@ function signingSecret(): string | null {
 
 /** Ссылка отписки для письма «вышло»; null, если секрет не настроен — тогда
  *  письмо уходит без ссылки, а не с битой/неверифицируемой. */
-export function buildUnsubscribeUrl(appUrl: string, email: string): string | null {
+export function buildUnsubscribeUrl(
+  appUrl: string,
+  email: string,
+  locale?: string,
+): string | null {
   const secret = signingSecret();
   if (!secret) return null;
   const sig = hmacSign(secret, `${PURPOSE}:${email}`);
   const url = new URL('/api/v1/presave/unsubscribe', appUrl);
   url.searchParams.set('email', email);
   url.searchParams.set('sig', sig);
+  if (locale) url.searchParams.set('locale', locale);
   return url.toString();
 }

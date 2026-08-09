@@ -2,6 +2,7 @@ import { Worker, type Job } from 'bullmq';
 import { QUEUE_NOTIFY_EXTERNAL, type ExternalNotifyJobData, decideExternalDelivery, friendRequestEmail, chatMessageEmail } from '@vire/core';
 import { signNotifyUnsub } from '@vire/core/notifications/unsubscribe'; // субпуть: node:crypto не в edge-safe корневом barrel (Task 15)
 import { getUserNotifyContext, getUserDisplayName, listPushSubscriptions, deletePushSubscriptionsByEndpoints } from '@vire/db';
+import { getTranslator, isLocale, localizedPath, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
 import { connection } from '../queues/connection.js';
 import { sendBrevoEmail } from '../lib/brevo.js';
 import { sendPush } from '../lib/webpush.js';
@@ -40,13 +41,16 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
   if (!sendEmail && !decision.push) return;
 
   const actorName = await getUserDisplayName(actorId);
+  const locale: Locale = isLocale(ctx.locale ?? '') ? (ctx.locale as Locale) : DEFAULT_LOCALE;
 
   if (sendEmail && ctx.email) {
     const token = SIGNING_SECRET ? signNotifyUnsub(SIGNING_SECRET, recipientId) : null;
-    const unsubscribeUrl = token ? `${APP_URL}/api/v1/notifications/unsubscribe?uid=${recipientId}&token=${token}` : null;
+    const unsubscribeUrl = token
+      ? `${APP_URL}/api/v1/notifications/unsubscribe?uid=${recipientId}&token=${token}&locale=${locale}`
+      : null;
     const tpl = kind === 'FRIEND_REQUEST'
-      ? friendRequestEmail({ actorName, appUrl: APP_URL, unsubscribeUrl })
-      : chatMessageEmail({ actorName, appUrl: APP_URL, unsubscribeUrl });
+      ? await friendRequestEmail({ actorName, appUrl: APP_URL, unsubscribeUrl, locale })
+      : await chatMessageEmail({ actorName, appUrl: APP_URL, unsubscribeUrl, locale });
     const unsubHeaders = unsubscribeUrl
       ? { 'List-Unsubscribe': `<${unsubscribeUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }
       : undefined;
@@ -54,10 +58,21 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
   }
 
   if (decision.push) {
-    const who = actorName ?? 'Кто-то';
+    const t = await getTranslator(locale, 'email');
+    const who = actorName ?? t('someone');
     const payload = kind === 'FRIEND_REQUEST'
-      ? { title: 'Заявка в друзья', body: `${who} хочет добавить вас в друзья`, url: `${APP_URL}/friends`, tag: `friend-request:${actorId}` }
-      : { title: 'Новое сообщение', body: `Новое сообщение от ${who}`, url: `${APP_URL}/messages`, tag: conversationId ?? 'chat' };
+      ? {
+          title: t('push.friendRequest.title'),
+          body: t('push.friendRequest.body', { name: who }),
+          url: `${APP_URL}${localizedPath(locale, '/friends')}`,
+          tag: `friend-request:${actorId}`,
+        }
+      : {
+          title: t('push.chatMessage.title'),
+          body: t('push.chatMessage.body', { name: who }),
+          url: `${APP_URL}${localizedPath(locale, '/messages')}`,
+          tag: conversationId ?? 'chat',
+        };
     const dead = await sendPush(subs, payload);
     if (dead.length) {
       try { await deletePushSubscriptionsByEndpoints(dead); } catch { /* пруна не должна валить джобу и триггерить ретрай письма */ }

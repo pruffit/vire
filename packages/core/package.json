@@ -13,6 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
+  "dependencies": {
+    "@vire/i18n": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^20",
     "@vire/config": "workspace:*",
