@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
@@ -45,6 +46,7 @@ export function EasterEggs() {
 }
 
 function SecretPopup({ onClose }: { onClose: () => void }) {
+  const t = useTranslations('common.easterEgg');
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -71,9 +73,9 @@ function SecretPopup({ onClose }: { onClose: () => void }) {
           ↑ ↑ ↓ ↓ ← → ← → B A
         </p>
         <div className="space-y-1.5">
-          <h2 className="text-xl font-bold tracking-tight">Ты знаешь коды</h2>
+          <h2 className="text-xl font-bold tracking-tight">{t('title')}</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Здесь что-то есть. Войдёшь?
+            {t('body')}
           </p>
         </div>
         <Link
@@ -81,14 +83,14 @@ function SecretPopup({ onClose }: { onClose: () => void }) {
           onClick={onClose}
           className="flex items-center justify-center gap-1.5 rounded-full bg-primary text-primary-foreground px-6 py-2.5 text-sm font-medium hover:bg-primary/90 transition-opacity"
         >
-          Войти <Icon name="arrow-right" size={14} />
+          {t('enter')} <Icon name="arrow-right" size={14} />
         </Link>
         <button
           type="button"
           onClick={onClose}
           className="block w-full text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
-          Уйти
+          {t('leave')}
         </button>
       </motion.div>
     </motion.div>

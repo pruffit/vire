@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import type { SearchTrack } from '@vire/core';
 import { auth } from '@/auth';
 import { jamService } from '@/lib/jam';
@@ -12,11 +13,11 @@ type Props = { params: Promise<{ code: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { code } = await params;
-  const preview = await jamService().preview(code);
-  if (!preview.ok) return { title: 'Не найдено' };
+  const [preview, t] = await Promise.all([jamService().preview(code), getTranslations('jam')]);
+  if (!preview.ok) return { title: t('notFound') };
 
   return {
-    title: preview.value.session.title ?? 'Джем',
+    title: preview.value.session.title ?? t('landing.title'),
     robots: { index: false, follow: false },
   };
 }

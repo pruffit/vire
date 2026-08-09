@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/icon';
 import { ShareIcon, CheckIcon } from '@/components/icons';
 import { Popover, PopoverItem, touchTargetClass } from '@/components/popover';
@@ -11,6 +12,7 @@ interface Props {
 
 /** Поповер «поделиться профилем»: navigator.share при поддержке, иначе копия ссылки. */
 export function ShareProfileButton({ userId }: Props) {
+  const t = useTranslations('social.shareProfile');
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,7 +60,7 @@ export function ShareProfileButton({ userId }: Props) {
           ref={ref}
           type="button"
           onClick={handleTrigger}
-          aria-label="Поделиться профилем"
+          aria-label={t('aria')}
           className={`${touchTargetClass('md')} rounded-full flex items-center justify-center text-foreground/60 hover:text-foreground transition-colors`}
         >
           <ShareIcon />
@@ -66,7 +68,7 @@ export function ShareProfileButton({ userId }: Props) {
       )}
     >
       <PopoverItem
-        label={copied ? 'Скопировано' : 'Скопировать ссылку'}
+        label={copied ? t('copied') : t('copyLink')}
         onClick={copy}
         icon={copied ? <CheckIcon className="text-primary" /> : <Icon name="link" size={13} />}
       />

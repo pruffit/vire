@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, type KeyboardEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/icon';
 
 const BODY_MAX = 4000;
@@ -15,6 +16,7 @@ export function MessageComposer({
   onSend: (body: string) => void;
   disabled?: boolean;
 }) {
+  const t = useTranslations('chat.composer');
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastTypingSentRef = useRef(0);
@@ -51,7 +53,7 @@ export function MessageComposer({
   if (disabled) {
     return (
       <div className="sticky bottom-0 shrink-0 border-t border-border/40 bg-background px-4 py-3 text-center text-sm text-muted-foreground">
-        Написать можно только другу
+        {t('friendsOnly')}
       </div>
     );
   }
@@ -63,7 +65,7 @@ export function MessageComposer({
         value={value}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
-        placeholder="Сообщение"
+        placeholder={t('placeholder')}
         rows={1}
         maxLength={BODY_MAX}
         className="max-h-40 min-h-11 flex-1 resize-none rounded-2xl border border-border/60 bg-background px-4 py-2.5 text-sm outline-none focus:border-ring"
@@ -72,7 +74,7 @@ export function MessageComposer({
         type="button"
         onClick={submit}
         disabled={!value.trim()}
-        aria-label="Отправить"
+        aria-label={t('sendAria')}
         className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:opacity-40"
       >
         <Icon name="arrow-right" size={18} />

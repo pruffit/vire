@@ -1,7 +1,7 @@
 import { Link, redirect } from '@/i18n/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { friendshipService } from '@/lib/friends';
 import { IncomingRequests } from '@/components/friends/incoming-requests';
@@ -11,11 +11,16 @@ import { Section } from '@/components/listener/section';
 import { EmptyState } from '@/components/ui-kit';
 import { PageContainer } from '@/components/page-container';
 
-export const metadata: Metadata = { title: 'Друзья' };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('social.friendsPage');
+  return { title: t('title') };
+}
 export const dynamic = 'force-dynamic';
 
 export default async function FriendsPage() {
-  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const [session, locale, t, tc] = await Promise.all([
+    auth(), getLocale(), getTranslations('social.friendsPage'), getTranslations('common'),
+  ]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/friends', locale });
 
   const svc = friendshipService();
@@ -27,15 +32,15 @@ export default async function FriendsPage() {
   return (
     <PageContainer spaceY="14">
       <MarkRequestsSeen />
-      <h1 className="text-2xl font-semibold tracking-tight">Друзья</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
 
       <UserSearch />
 
       <IncomingRequests initial={incoming} />
 
-      <Section title="Друзья" count={friends.length}>
+      <Section title={t('friendsSection')} count={friends.length}>
         {friends.length === 0 ? (
-          <EmptyState title="Пока нет друзей" hint="Поделись ссылкой на профиль" />
+          <EmptyState title={t('emptyTitle')} hint={t('emptyHint')} />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
             {friends.map((friend) => (
@@ -52,7 +57,7 @@ export default async function FriendsPage() {
                   </div>
                 )}
                 <p className="min-w-0 flex-1 truncate text-sm font-medium group-hover:text-foreground transition-colors">
-                  {friend.name ?? 'Слушатель'}
+                  {friend.name ?? tc('listenerFallback')}
                 </p>
               </Link>
             ))}

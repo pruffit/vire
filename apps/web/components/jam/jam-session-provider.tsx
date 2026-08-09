@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import type { JamMode, JamParticipantRole, JamQueueItem } from '@vire/core';
 import { derivePositionMs, isAudioDevice as resolveIsAudioDevice, resolveSpeakerParticipantId } from '@vire/core';
 import { useJamRoom, type UseJamRoomResult } from '@/lib/jam/use-jam-room';
@@ -78,6 +79,7 @@ export function JamSessionProvider({ children }: { children: ReactNode }) {
 }
 
 function ActiveJamSession({ active, children }: { active: ActiveJam; children: ReactNode }) {
+  const t = useTranslations('jam.session');
   const { code, participantId, role, sessionId, basePath = '/jam' } = active;
   const audioEnabled = useJamStore((s) => s.audioEnabled);
   const leaveStore = useJamStore((s) => s.leave);
@@ -110,10 +112,10 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
     })
       .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
       .catch(() => {
-        toast.error('Не удалось изменить воспроизведение');
+        toast.error(t('playbackFailed'));
         onError?.();
       });
-  }, [code, sessionId]);
+  }, [code, sessionId, t]);
 
   const handleTrackEnded = useCallback(() => {
     // SYNCED: анти-гонка — только хост инициирует переход. SPEAKER: у пультов события ended нет вовсе,
@@ -206,8 +208,8 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
       body: JSON.stringify(sessionId ? { mode, sessionId } : { mode }),
     })
       .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
-      .catch(() => toast.error('Не удалось сменить режим'));
-  }, [code, sessionId]);
+      .catch(() => toast.error(t('modeChangeFailed')));
+  }, [code, sessionId, t]);
 
   const handleClaimSpeaker = useCallback(() => {
     fetch(`/api/v1/jam/${encodeURIComponent(code)}/speaker`, {
@@ -216,8 +218,8 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
       body: JSON.stringify(sessionId ? { sessionId } : {}),
     })
       .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
-      .catch(() => toast.error('Не удалось переключить звук'));
-  }, [code, sessionId]);
+      .catch(() => toast.error(t('speakerFailed')));
+  }, [code, sessionId, t]);
 
   const [votedSkipItemId, setVotedSkipItemId] = useState<string | null>(null);
   const voteSkip = useCallback((itemId: string) => {
@@ -230,9 +232,9 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
       .then((res) => { if (!res.ok) throw new Error(String(res.status)); })
       .catch(() => {
         setVotedSkipItemId((prev) => (prev === itemId ? null : prev));
-        toast.error('Не удалось проголосовать за пропуск');
+        toast.error(t('skipVoteFailed'));
       });
-  }, [code, sessionId]);
+  }, [code, sessionId, t]);
 
   // Свой голос сброшен сменой позиции — сравнение прежнего значения с текущим прямо в рендере (см. resolvedPlayback ниже).
   const currentPlaybackItemId = room.playback?.itemId ?? null;
@@ -374,8 +376,8 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
   useEffect(() => {
     if (!room.ended) return;
     leaveStore();
-    toast(basePath === PARTY_PATH ? 'Вечеринка завершена' : 'Джем завершён');
-  }, [room.ended, basePath, leaveStore]);
+    toast(t('endedToast', { kind: basePath === PARTY_PATH ? 'PARTY' : 'JAM' }));
+  }, [room.ended, basePath, leaveStore, t]);
 
   // Протухшая запись в localStorage (кик, удалённый джем, чужой sessionId) иначе даёт вечный
   // реконнект SSE без следа в UI: EventSource молча ретраит любую 4xx. Сетевую ошибку не считаем
@@ -392,10 +394,10 @@ function ActiveJamSession({ active, children }: { active: ActiveJam; children: R
   }, [code, sessionId, leaveStore]);
 
   const handleEndJam = useCallback(async () => {
-    if (!confirm('Завершить джем для всех?')) return;
+    if (!confirm(t('confirmEnd'))) return;
     const res = await fetch(`/api/v1/jam/${encodeURIComponent(code)}/end`, { method: 'POST' }).catch(() => null);
-    if (!res?.ok) toast.error('Не удалось завершить джем');
-  }, [code]);
+    if (!res?.ok) toast.error(t('endFailed'));
+  }, [code, t]);
 
   const value = useMemo<JamSessionValue>(() => ({
     code,

@@ -1,5 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/icon';
 import { hasFileSystemAccess, pickLocalFile, registerLocalFile, getLocalFile } from '@/lib/local-files';
 import { titleFromFileName } from '@/lib/player/local-file-track';
@@ -26,6 +27,7 @@ function readDuration(file: File): Promise<number | null> {
 
 /** Файл с устройства слушателя, на сервер не уходит (см. lib/local-files.ts). Общая кнопка вечеринки (колонка) и очереди глобального плеера. */
 export function LocalFileButton({ onPick, className }: Props) {
+  const t = useTranslations('common.localFile');
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -68,7 +70,7 @@ export function LocalFileButton({ onPick, className }: Props) {
         )}
       >
         {busy ? <Icon name="loader" size={14} className="animate-spin" /> : <Icon name="file-plus" size={14} />}
-        Файл с устройства
+        {t('pickButton')}
       </button>
     </>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function JamSavePlaylist({ code, savableCount, queueLength }: Props) {
+  const t = useTranslations('jam.savePlaylist');
   const [saving, setSaving] = useState(false);
   const [savedPlaylistId, setSavedPlaylistId] = useState<string | null>(null);
 
@@ -23,9 +25,7 @@ export function JamSavePlaylist({ code, savableCount, queueLength }: Props) {
     // Тот же отказ, что и у API, но без похода в сеть: клик по заведомо пустой очереди
     // раньше давал 400 и молчаливый провал.
     if (savableCount === 0) {
-      toast.error(queueLength > 0
-        ? 'В плейлист идут только треки каталога VireMusic'
-        : 'Очередь пуста — добавьте треки');
+      toast.error(queueLength > 0 ? t('onlyVireTracks') : t('queueEmpty'));
       return;
     }
     setSaving(true);
@@ -35,7 +35,7 @@ export function JamSavePlaylist({ code, savableCount, queueLength }: Props) {
       if (!res.ok) throw new Error((data as { error?: string } | null)?.error ?? String(res.status));
       setSavedPlaylistId((data as { playlistId: string }).playlistId);
     } catch (e) {
-      toast.error(e instanceof Error && e.message ? e.message : 'Не удалось сохранить плейлист');
+      toast.error(e instanceof Error && e.message ? e.message : t('failed'));
     } finally {
       setSaving(false);
     }
@@ -47,7 +47,7 @@ export function JamSavePlaylist({ code, savableCount, queueLength }: Props) {
         href={`/playlists/${savedPlaylistId}`}
         className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-border px-3 sm:px-4 text-sm text-primary hover:text-foreground transition-colors"
       >
-        <Icon name="check" size={14} /> <span className="hidden sm:inline">Открыть плейлист</span>
+        <Icon name="check" size={14} /> <span className="hidden sm:inline">{t('openPlaylist')}</span>
       </Link>
     );
   }
@@ -57,7 +57,7 @@ export function JamSavePlaylist({ code, savableCount, queueLength }: Props) {
       type="button"
       onClick={() => void handleSave()}
       disabled={saving}
-      aria-label="Сохранить очередь в плейлист"
+      aria-label={t('aria')}
       whileTap={{ scale: 0.9 }}
       transition={spring.snappy}
       className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-border px-3 sm:px-4 text-sm transition-colors disabled:opacity-60 cursor-pointer ${
@@ -65,7 +65,7 @@ export function JamSavePlaylist({ code, savableCount, queueLength }: Props) {
       }`}
     >
       {saving ? <Icon name="loader" size={14} className="animate-spin" /> : <Icon name="save" size={14} />}
-      <span className="hidden sm:inline">Сохранить в плейлист</span>
+      <span className="hidden sm:inline">{t('save')}</span>
     </motion.button>
   );
 }

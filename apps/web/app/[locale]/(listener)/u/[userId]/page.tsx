@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
 import { Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
 import { loadFriendProfile } from '@/lib/friend-profile';
@@ -24,10 +25,10 @@ const getView = cache(async (viewerId: string | null, userId: string) => loadFri
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { userId } = await params;
-  const session = await auth();
+  const [session, tc] = await Promise.all([auth(), getTranslations('common')]);
   const view = await getView(session?.user?.id ?? null, userId);
   return {
-    title: view?.name ?? 'Профиль',
+    title: view?.name ?? tc('listenerFallback'),
     // страницы людей не индексируем
     robots: { index: false, follow: false },
   };
@@ -35,12 +36,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function FriendProfilePage({ params }: Props) {
   const { userId } = await params;
-  const session = await auth();
+  const [session, t, tc] = await Promise.all([
+    auth(), getTranslations('social.profilePage'), getTranslations('common'),
+  ]);
   const viewerId = session?.user?.id ?? null;
   const view = await getView(viewerId, userId);
   if (!view) notFound();
 
-  const displayName = view.name ?? 'Слушатель';
+  const displayName = view.name ?? tc('listenerFallback');
   const initials = displayName.slice(0, 2).toUpperCase();
   const queue = view.likes.map(likedToPlayerTrack);
 
@@ -68,7 +71,7 @@ export default async function FriendProfilePage({ params }: Props) {
             )}
             {view.iBlockedThem && <UnblockButton targetUserId={view.id} />}
             {view.blocked && !view.iBlockedThem && (
-              <span className="text-sm text-muted-foreground">Взаимодействие недоступно</span>
+              <span className="text-sm text-muted-foreground">{t('interactionUnavailable')}</span>
             )}
             <ShareProfileButton userId={view.id} />
           </div>
@@ -76,9 +79,9 @@ export default async function FriendProfilePage({ params }: Props) {
       </div>
 
       {view.likesVisible ? (
-        <Section title="Лайки" count={view.likes.length}>
+        <Section title={t('likes')} count={view.likes.length}>
           {view.likes.length === 0 ? (
-            <EmptyState title="Пока нет лайков" />
+            <EmptyState title={t('likesEmpty')} />
           ) : (
             <div className="flex flex-col">
               {view.likes.map((track, i) => (
@@ -95,14 +98,14 @@ export default async function FriendProfilePage({ params }: Props) {
           )}
         </Section>
       ) : (
-        <Section title="Лайки">
-          <p className="text-sm text-muted-foreground">Лайки скрыты</p>
+        <Section title={t('likes')}>
+          <p className="text-sm text-muted-foreground">{t('likesHidden')}</p>
         </Section>
       )}
 
-      <Section title="Публичные плейлисты" count={view.playlists.length}>
+      <Section title={t('publicPlaylists')} count={view.playlists.length}>
         {view.playlists.length === 0 ? (
-          <EmptyState title="Нет публичных плейлистов" />
+          <EmptyState title={t('publicPlaylistsEmpty')} />
         ) : (
           <Stagger step={0.04} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {view.playlists.map((p) => (

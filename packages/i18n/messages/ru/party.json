@@ -1,1 +1,60 @@
-{}
+{
+  "notFound": "Не найдено",
+  "landing": {
+    "title": "Вечеринка",
+    "eyebrow": "Вечеринка",
+    "heading": "Любой трек, любая колонка",
+    "subtitle": "Общая очередь для тусовки — гости кидают что угодно, хоть ссылку с любого сервиса.",
+    "signInPrompt": "Войдите, чтобы начать вечеринку",
+    "signInLink": "Войти →",
+    "or": "или"
+  },
+  "room": {
+    "titleFallback": "Вечеринка",
+    "endedTitle": "Вечеринка завершена",
+    "endedBody": "Спасибо, что заглянули.",
+    "joinFailed": "Не удалось подключиться к вечеринке",
+    "screenButton": "Экран вечеринки",
+    "endAria": "Завершить вечеринку",
+    "end": "Завершить",
+    "searchingWeb": "Ищем в сети…",
+    "skip": "Пропустить"
+  },
+  "addPanel": {
+    "titleAria": "Название трека или ссылка",
+    "placeholder": "Вставьте ссылку или вспомните трек…",
+    "clearAria": "Очистить",
+    "addAria": "Добавить в очередь",
+    "postCandidatesTitle": "Похоже, вот это",
+    "fromLikedTitle": "Из любимых",
+    "playsNow": "Играет сразу",
+    "findOnWeb": "Найдём в сети",
+    "noExactMatch": "Не нашли точного совпадения — попробуйте другую формулировку",
+    "searching": "Ищем «{query}»…",
+    "startHint": "Начните вводить название трека или вставьте ссылку",
+    "notFoundHint": "Ничего не найдено — нажмите Enter, чтобы поискать в сети",
+    "notFoundRetryHint": "Нет нужного? Enter — поищем в сети",
+    "playAgain": "Ещё раз",
+    "fromTaste": "Из вашего вкуса",
+    "added": "Добавлено",
+    "addedToast": "Добавлено: {artistName} — {title}",
+    "addedToastNoArtist": "Добавлено: {title}",
+    "multipleLinksInput": "{count, plural, one {# ссылка} few {# ссылки} many {# ссылок} other {# ссылок}}"
+  },
+  "screen": {
+    "eyebrow": "Экран вечеринки",
+    "visualizerAria": "Визуализация",
+    "fullscreenEnter": "Во весь экран",
+    "fullscreenExit": "Выйти из полноэкранного режима",
+    "closeAria": "Закрыть экран вечеринки",
+    "tapToContinue": "Нажмите, чтобы продолжить",
+    "playAria": "Играть",
+    "pauseAria": "Пауза",
+    "skipAria": "Пропустить",
+    "queueEmpty": "Очередь пуста — добавьте трек с телефона",
+    "next": "Дальше",
+    "scanQr": "Заходите с телефона",
+    "qrAlt": "QR-код комнаты",
+    "addedBy": "Добавил(а) {name}"
+  }
+}

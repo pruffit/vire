@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { Icon } from '@/components/icon';
@@ -19,13 +20,6 @@ type NotificationItem = {
   readAt: string | null;
 };
 
-const LABEL: Record<NotificationType, string> = {
-  FRIEND_REQUEST: 'Заявка в друзья',
-  FRIEND_ACCEPT: 'Теперь у вас в друзьях',
-  JAM_INVITE: 'Зовёт в джем',
-  PLAYLIST_COLLAB_JOIN: 'Присоединился к плейлисту',
-};
-
 function notificationHref(n: NotificationItem): string {
   if (n.type === 'JAM_INVITE') return n.entityId ? `/jam/id/${n.entityId}` : '/';
   if (n.type === 'PLAYLIST_COLLAB_JOIN') return n.entityId ? `/playlists/${n.entityId}` : '/library';
@@ -33,6 +27,8 @@ function notificationHref(n: NotificationItem): string {
 }
 
 export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number }) {
+  const t = useTranslations('social.notifications');
+  const tc = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -75,14 +71,14 @@ export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number
       onOpenChange={handleOpenChange}
       align="right"
       drop="down"
-      title="Уведомления"
+      title={t('title')}
       panelClassName="w-80 max-w-[calc(100vw-1.5rem)]"
       trigger={({ toggle, ref }) => (
         <button
           ref={ref}
           type="button"
           onClick={toggle}
-          aria-label={unread > 0 ? `Уведомления, непрочитанных: ${unread}` : 'Уведомления'}
+          aria-label={unread > 0 ? t('unreadAria', { count: unread }) : t('aria')}
           className="relative grid h-10 w-10 place-items-center rounded-full text-foreground/70 transition-colors hover:bg-accent/10 hover:text-foreground"
         >
           <Icon name="bell" size={19} />
@@ -96,7 +92,7 @@ export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number
     >
       <div className="max-h-[70vh] overflow-y-auto">
         {items.length === 0 ? (
-          <p className="px-3 py-6 text-center text-sm text-muted-foreground">Нет уведомлений</p>
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">{t('empty')}</p>
         ) : (
           items.map((n) => (
             <Link
@@ -113,8 +109,8 @@ export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number
                 </span>
               )}
               <span className="min-w-0 flex-1 text-sm">
-                <span className="font-medium">{n.actorName ?? 'Слушатель'}</span>
-                <span className="block truncate text-xs text-muted-foreground">{LABEL[n.type]}</span>
+                <span className="font-medium">{n.actorName ?? tc('listenerFallback')}</span>
+                <span className="block truncate text-xs text-muted-foreground">{t(`types.${n.type}`)}</span>
               </span>
               {!n.readAt && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />}
             </Link>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@vire/ui';
 import { useReduceMotionPref } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
@@ -44,6 +45,7 @@ export function ScrollRow({
   /** Цвет-шторка краевой зоны; если лента на приподнятой поверхности — передай её цвет. */
   edgeFrom?: string;
 }) {
+  const t = useTranslations('common.scrollRow');
   const scrollRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState(false);
   const [atStart, setAtStart] = useState(true);
@@ -124,7 +126,7 @@ export function ScrollRow({
         <button
           type="button"
           onClick={() => scroll(-1)}
-          aria-label="Прокрутить влево"
+          aria-label={t('left')}
           className={cn(EDGE_BUTTON, EDGE_VARIANT[edgeVariant], 'left-0 justify-start bg-linear-to-r to-transparent', edgeFrom)}
         >
           {edgeVariant === 'chip' ? (
@@ -143,7 +145,7 @@ export function ScrollRow({
         <button
           type="button"
           onClick={() => scroll(1)}
-          aria-label="Прокрутить вправо"
+          aria-label={t('right')}
           className={cn(EDGE_BUTTON, EDGE_VARIANT[edgeVariant], 'right-0 justify-end bg-linear-to-l to-transparent', edgeFrom)}
         >
           {edgeVariant === 'chip' ? (

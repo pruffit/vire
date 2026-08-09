@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { Icon } from '@/components/icon';
 import { fileToPlayerTrack } from '@/lib/player/local-file-track';
@@ -21,6 +22,7 @@ function hasFiles(e: DragEvent): boolean {
 /** Вторая дверь добавления локальных файлов в очередь (первая — кнопка в панели). HTML5 DnD
  *  на window не конфликтует с dnd-kit в очереди (тот работает через pointer events). */
 export function LocalFileDrop() {
+  const t = useTranslations('common.localFile');
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
@@ -78,7 +80,7 @@ export function LocalFileDrop() {
         >
           <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/60 px-8 py-8 sm:px-10 text-center">
             <Icon name="file-plus" size={32} className="text-primary" />
-            <p className="text-base font-medium">Отпустите — добавим в очередь</p>
+            <p className="text-base font-medium">{t('dropHint')}</p>
           </div>
         </motion.div>
       )}

@@ -1,7 +1,9 @@
 import Image from 'next/image';
 
-export function ChatAvatar({ name, image, size = 44 }: { name: string | null; image: string | null; size?: number }) {
-  const displayName = name ?? 'Слушатель';
+export function ChatAvatar({
+  name, image, size = 44, fallbackName,
+}: { name: string | null; image: string | null; size?: number; fallbackName?: string }) {
+  const displayName = name ?? fallbackName ?? '?';
   if (image) {
     return (
       <Image

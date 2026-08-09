@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor, TouchSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
@@ -47,6 +48,7 @@ const EMPTY_PARTICIPANTS: JamParticipant[] = [];
 function noop(): void {}
 
 export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn, currentUserName, suggestions }: Props) {
+  const t = useTranslations('jam.room');
   const [pending, setPending] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -74,7 +76,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          displayName: isLoggedIn ? (currentUserName ?? 'Я') : displayName,
+          displayName: isLoggedIn ? (currentUserName ?? t('selfName')) : displayName,
           ...(sessionId ? { sessionId } : {}),
         }),
       });
@@ -84,11 +86,11 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
       controls.pause();
       activate({ code, participantId: data.participant.id, role: data.participant.role, sessionId });
     } catch {
-      toast.error('Не удалось подключиться к джему');
+      toast.error(t('joinFailed'));
     } finally {
       setPending(false);
     }
-  }, [code, isLoggedIn, currentUserName, activate]);
+  }, [code, isLoggedIn, currentUserName, activate, t]);
 
   const addedTrackIds = useMemo(
     () => new Set(jamQueue.queue.map((item) => item.trackId).filter((id): id is string => id !== null)),
@@ -123,27 +125,27 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
     void jamQueue.moveTrack(String(active.id), String(over.id));
   }
 
-  function handleAdd(t: SearchTrack) {
-    if (addedTrackIds.has(t.id)) return;
+  function handleAdd(track: SearchTrack) {
+    if (addedTrackIds.has(track.id)) return;
     void jamQueue.addTrack({
-      id: `pending-${t.id}-${Date.now()}`,
+      id: `pending-${track.id}-${Date.now()}`,
       source: 'VIRE',
-      trackId: t.id,
+      trackId: track.id,
       externalId: null,
       externalUrl: null,
       position: jamQueue.queue.length,
       addedByParticipantId: activeSession?.membership.participantId ?? null,
       addedAt: new Date(),
-      title: t.title,
+      title: track.title,
       durationSec: null,
-      artistName: t.artistName,
-      artistSlug: t.artistSlug,
-      releaseId: t.releaseId,
-      coverUrl: t.coverUrl,
+      artistName: track.artistName,
+      artistSlug: track.artistSlug,
+      releaseId: track.releaseId,
+      coverUrl: track.coverUrl,
       accentColor: null,
       isExplicit: false,
-      version: t.version,
-      feat: t.feat,
+      version: track.version,
+      feat: track.feat,
     });
   }
 
@@ -163,8 +165,8 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
   if (ended) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center px-6 py-24 text-center">
-        <p className="text-2xl font-semibold tracking-tight">Джем завершён</p>
-        <p className="mt-3 text-sm text-muted-foreground">Спасибо, что заглянули.</p>
+        <p className="text-2xl font-semibold tracking-tight">{t('endedTitle')}</p>
+        <p className="mt-3 text-sm text-muted-foreground">{t('endedBody')}</p>
       </div>
     );
   }
@@ -178,10 +180,10 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 whitespace-nowrap text-[11px] text-muted-foreground">
               {room.connected && <LivePulse small className="text-primary" />}
-              {room.connected ? 'В сети' : 'Подключение…'}
+              {room.connected ? t('connected') : t('connecting')}
             </p>
             <div className="mt-0.5 flex items-baseline gap-2">
-              <h1 className="truncate text-lg font-semibold tracking-tight sm:text-xl">{title ?? 'Джем-сессия'}</h1>
+              <h1 className="truncate text-lg font-semibold tracking-tight sm:text-xl">{title ?? t('defaultTitle')}</h1>
               <p className="shrink-0 font-mono text-sm font-semibold tabular-nums tracking-[0.12em] text-muted-foreground sm:text-base">
                 {code}
               </p>
@@ -193,7 +195,7 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
                 options={JAM_MODE_OPTIONS}
                 value={room.mode}
                 onChange={(v) => actions.changeMode(v as JamMode)}
-                ariaLabel="Режим воспроизведения"
+                ariaLabel={t('modeAria')}
               />
             ) : (
               <span className="rounded-full border border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground">
@@ -212,11 +214,11 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
               <button
                 type="button"
                 onClick={() => void actions.endJam()}
-                aria-label="Завершить джем"
+                aria-label={t('endJam')}
                 className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground hover:text-destructive transition-colors sm:px-4"
               >
                 <Icon name="log-out" size={14} />
-                <span className="hidden sm:inline">Завершить джем</span>
+                <span className="hidden sm:inline">{t('endJam')}</span>
               </button>
             )}
           </div>
@@ -226,17 +228,17 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {isAudioDevice ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-primary">
-                <Icon name="volume-2" size={12} /> Звук здесь
+                <Icon name="volume-2" size={12} /> {t('soundHere')}
               </span>
             ) : (
               <>
-                <span>Играет на устройстве {speakerName ?? '—'}</span>
+                <span>{t('playingOnDevice', { name: speakerName ?? '—' })}</span>
                 <button
                   type="button"
                   onClick={actions.claimSpeaker}
                   className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-3 text-sm text-foreground hover:bg-foreground/5 transition-colors"
                 >
-                  <Icon name="volume-2" size={12} /> Звук здесь
+                  <Icon name="volume-2" size={12} /> {t('soundHere')}
                 </button>
               </>
             )}
@@ -253,14 +255,14 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
                   onClick={() => setAdding((v) => !v)}
                   className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors lg:hidden"
                 >
-                  <Icon name="plus" size={14} /> Добавить трек
+                  <Icon name="plus" size={14} /> {t('addTrack')}
                 </button>
                 <button
                   onClick={() => void jamQueue.shuffleQueue()}
                   disabled={jamQueue.queue.length < 2}
                   className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:pointer-events-none"
                 >
-                  <Icon name="shuffle" size={14} /> Перемешать
+                  <Icon name="shuffle" size={14} /> {t('shuffle')}
                 </button>
               </div>
 
@@ -272,8 +274,8 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
 
               {jamQueue.queue.length === 0 ? (
                 <EmptyState
-                  title="Очередь пуста"
-                  hint="Добавьте первый трек, чтобы начать"
+                  title={t('queueEmptyTitle')}
+                  hint={t('queueEmptyHint')}
                   className="rounded-xl border border-dashed border-border/60 bg-card/20"
                 />
               ) : (
@@ -300,11 +302,11 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
                             canDrag
                             canRemove={isHost || item.addedByParticipantId === activeSession.membership.participantId}
                             onRemove={(id) => void jamQueue.removeTrack(id)}
-                            removeLabel="Убрать из очереди"
+                            removeLabel={t('removeFromQueue')}
                             subtitle={
                               <span className="truncate">
                                 {item.artistName}
-                                {addedByName && <> · Добавил(а) {addedByName}</>}
+                                {addedByName && <> · {t('addedBy', { name: addedByName })}</>}
                               </span>
                             }
                           />

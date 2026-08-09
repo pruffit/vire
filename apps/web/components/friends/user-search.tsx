@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import type { FriendshipStatus } from '@vire/core';
 import { Icon } from '@/components/icon';
@@ -12,6 +13,7 @@ interface Hit { id: string; name: string; image: string | null; status: Friendsh
 const MIN_QUERY_LENGTH = 2;
 
 export function UserSearch() {
+  const t = useTranslations('social.userSearch');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Hit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,7 +53,7 @@ export function UserSearch() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Найти человека по имени…"
+          placeholder={t('placeholder')}
           autoComplete="off"
           className="h-11 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
@@ -60,9 +62,9 @@ export function UserSearch() {
       {showPanel && (
         <div className="flex flex-col gap-2">
           {loading && results.length === 0 ? (
-            <p className="px-1 text-sm text-muted-foreground">Ищем…</p>
+            <p className="px-1 text-sm text-muted-foreground">{t('searching')}</p>
           ) : results.length === 0 ? (
-            <p className="px-1 text-sm text-muted-foreground">Никого не нашли</p>
+            <p className="px-1 text-sm text-muted-foreground">{t('empty')}</p>
           ) : (
             results.map((hit) => (
               <div key={hit.id} className="flex items-center gap-3 rounded-md border border-border/40 bg-card p-3">

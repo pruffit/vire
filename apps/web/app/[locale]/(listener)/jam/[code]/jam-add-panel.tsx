@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import type { SearchTrack } from '@vire/core';
 import { Icon } from '@/components/icon';
 import { TrackTitleText } from '@/components/track-title';
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function JamAddPanel({ onAdd, suggestions = [], autoFocus = true, addedTrackIds, dense = false }: Props) {
+  const t = useTranslations('jam.addPanel');
   const [q, setQ] = useState('');
   const [results, setResults] = useState<SearchTrack[] | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,21 +58,21 @@ export function JamAddPanel({ onAdd, suggestions = [], autoFocus = true, addedTr
           autoFocus={autoFocus}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Найти трек…"
+          placeholder={t('placeholder')}
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground py-1"
         />
       </div>
       <div className={cn('space-y-1 pb-1', dense ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-72 overflow-y-auto')}>
         {isSuggesting && list.length > 0 && (
-          <p className="px-3 pb-1 pt-1 label-mono text-muted-foreground">Из любимых</p>
+          <p className="px-3 pb-1 pt-1 label-mono text-muted-foreground">{t('fromLiked')}</p>
         )}
         {list.length ? (
-          list.map((t) => {
-            const added = addedTrackIds.has(t.id);
+          list.map((track) => {
+            const added = addedTrackIds.has(track.id);
             return (
               <button
-                key={t.id}
-                onClick={() => { if (!added) onAdd(t); }}
+                key={track.id}
+                onClick={() => { if (!added) onAdd(track); }}
                 disabled={added}
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors',
@@ -78,16 +80,16 @@ export function JamAddPanel({ onAdd, suggestions = [], autoFocus = true, addedTr
                 )}
               >
                 <span className="relative w-9 h-9 rounded overflow-hidden shrink-0 bg-muted">
-                  {t.coverUrl && <Image src={t.coverUrl} alt="" fill sizes="36px" className="object-cover" />}
+                  {track.coverUrl && <Image src={track.coverUrl} alt="" fill sizes="36px" className="object-cover" />}
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm truncate">
-                    <TrackTitleText title={t.title} version={t.version} feat={t.feat} />
+                    <TrackTitleText title={track.title} version={track.version} feat={track.feat} />
                   </span>
-                  <span className="block text-xs text-muted-foreground truncate">{t.artistName}</span>
+                  <span className="block text-xs text-muted-foreground truncate">{track.artistName}</span>
                 </span>
                 <span className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
-                  {added && <span className="label-mono">Добавлено</span>}
+                  {added && <span className="label-mono">{t('added')}</span>}
                   <span className="w-6 h-6 grid place-items-center rounded-full">
                     <Icon name={added ? 'check' : 'plus'} size={14} />
                   </span>
@@ -97,7 +99,7 @@ export function JamAddPanel({ onAdd, suggestions = [], autoFocus = true, addedTr
           })
         ) : (
           <p className="px-3 py-4 text-sm text-muted-foreground">
-            {isSuggesting ? 'Начните вводить название трека' : 'Ничего не найдено'}
+            {isSuggesting ? t('startTyping') : t('nothingFound')}
           </p>
         )}
       </div>

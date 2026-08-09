@@ -1,6 +1,21 @@
 {
   "skipLink": "Skip to content",
   "tagline": "An independent music platform for artists and listeners across the CIS",
+  "listenerFallback": "Listener",
+  "scrollRow": {
+    "left": "Scroll left",
+    "right": "Scroll right"
+  },
+  "localFile": {
+    "dropHint": "Drop it — we'll add it to the queue",
+    "pickButton": "File from device"
+  },
+  "easterEgg": {
+    "title": "You know the codes",
+    "body": "There's something here. Come in?",
+    "enter": "Enter",
+    "leave": "Leave"
+  },
   "search": {
     "placeholder": "Search artists, releases, tracks…",
     "openAria": "Search",

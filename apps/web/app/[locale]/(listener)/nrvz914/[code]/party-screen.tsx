@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { useJamSession } from '@/components/jam/jam-session-provider';
 import { useJamStore } from '@/store/jam';
 import { useJamPosition } from '@/lib/jam/use-jam-position';
@@ -30,6 +31,7 @@ interface Props {
  * `PartyVideoDock` из app-shell, здесь только слот под него.
  */
 export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
+  const t = useTranslations('party.screen');
   const session = useJamSession();
   const audioEnabled = useJamStore((s) => s.audioEnabled);
   const enableAudio = useJamStore((s) => s.enableAudio);
@@ -88,14 +90,14 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
       style={accent ? { backgroundImage: `radial-gradient(120% 90% at 50% 0%, ${accent}2e, transparent 70%)` } : undefined}
     >
       <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-3 sm:px-6">
-        <p className="label-wide text-white/45">Экран вечеринки</p>
+        <p className="label-wide text-white/45">{t('eyebrow')}</p>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setVisualizerOn(!visualizerOn)}
             aria-pressed={visualizerOn}
-            aria-label="Визуализация"
-            title="Визуализация"
+            aria-label={t('visualizerAria')}
+            title={t('visualizerAria')}
             className={`inline-flex h-11 w-11 items-center justify-center rounded-full border transition-colors ${
               visualizerOn ? 'border-white/70 text-white' : 'border-white/15 text-white/50 hover:text-white'
             }`}
@@ -111,7 +113,7 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
           <button
             type="button"
             onClick={toggleFullscreen}
-            aria-label={fullscreen ? 'Выйти из полноэкранного режима' : 'Во весь экран'}
+            aria-label={fullscreen ? t('fullscreenExit') : t('fullscreenEnter')}
             className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-white/50 transition-colors hover:text-white"
           >
             <Icon name={fullscreen ? 'minimize' : 'maximize'} size={16} />
@@ -119,7 +121,7 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
           <button
             type="button"
             onClick={onExit}
-            aria-label="Закрыть экран вечеринки"
+            aria-label={t('closeAria')}
             className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-white/50 transition-colors hover:text-white"
           >
             <Icon name="x" size={16} />
@@ -161,7 +163,7 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
                 onClick={handleTap}
                 className="absolute inset-0 flex items-center justify-center bg-black/60 text-base font-medium"
               >
-                Нажмите, чтобы продолжить
+                {t('tapToContinue')}
               </button>
             )}
           </div>
@@ -176,14 +178,14 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
                   <p className="mt-1 flex min-w-0 items-center gap-x-2 truncate text-sm text-white/55">
                     <span className="truncate">{active.artistName}</span>
                     <SourceBadge source={active.source} />
-                    {addedByName && <span className="hidden truncate sm:inline">· Добавил(а) {addedByName}</span>}
+                    {addedByName && <span className="hidden truncate sm:inline">· {t('addedBy', { name: addedByName })}</span>}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={handleTap}
-                    aria-label={isPlaying ? 'Пауза' : 'Играть'}
+                    aria-label={isPlaying ? t('pauseAria') : t('playAria')}
                     className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-black transition-transform hover:scale-105 active:scale-95"
                   >
                     <Icon name={isPlaying ? 'pause' : 'play'} size={20} />
@@ -192,7 +194,7 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
                     type="button"
                     onClick={() => actions.voteSkip(active.id)}
                     disabled={!isHost && iVotedSkip}
-                    aria-label="Пропустить"
+                    aria-label={t('skipAria')}
                     className="inline-flex h-12 items-center gap-2 rounded-full border border-white/15 px-4 text-sm text-white/70 transition-colors hover:text-white disabled:pointer-events-none disabled:opacity-40"
                   >
                     <Icon name="skip-forward" size={16} />
@@ -212,14 +214,14 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
               </div>
             </div>
           ) : (
-            <p className="shrink-0 text-white/50">Очередь пуста — добавьте трек с телефона</p>
+            <p className="shrink-0 text-white/50">{t('queueEmpty')}</p>
           )}
         </div>
 
         <aside className="flex shrink-0 items-center gap-4 lg:w-64 lg:flex-col lg:items-stretch lg:justify-center lg:gap-6">
           {next.length > 0 && (
             <div className="hidden min-w-0 lg:block">
-              <p className="label-mono text-white/35">Дальше</p>
+              <p className="label-mono text-white/35">{t('next')}</p>
               <ul className="mt-2 space-y-2">
                 {next.map((item) => (
                   <li key={item.id} className="flex min-w-0 items-center gap-2.5">
@@ -240,9 +242,9 @@ export function PartyScreen({ code, onExit, isLoggedIn }: Props) {
 
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element -- SVG, отдаётся публичным API-роутом, next/image ему не даёт выигрыша */}
-            <img src={`/api/v1/jam/${encodeURIComponent(code)}/qr`} alt="QR-код комнаты" width={72} height={72} className="shrink-0 rounded-lg bg-white p-1.5" />
+            <img src={`/api/v1/jam/${encodeURIComponent(code)}/qr`} alt={t('qrAlt')} width={72} height={72} className="shrink-0 rounded-lg bg-white p-1.5" />
             <div className="min-w-0">
-              <p className="text-xs text-white/45">Заходите с телефона</p>
+              <p className="text-xs text-white/45">{t('scanQr')}</p>
               <p className="truncate font-mono text-sm">{PARTY_PATH}/{code}</p>
             </div>
           </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { Icon } from '@/components/icon';
 import { AdaptiveMenu } from '@/components/adaptive-menu';
@@ -10,6 +11,7 @@ import { toast } from '@/lib/toast';
 const REASON_MAX = 500;
 
 export function ProfileMoreMenu({ targetUserId }: { targetUserId: string }) {
+  const t = useTranslations('social.profileMenu');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState<null | 'report' | 'block'>(null);
@@ -25,15 +27,15 @@ export function ProfileMoreMenu({ targetUserId }: { targetUserId: string }) {
             ref={ref}
             type="button"
             onClick={toggle}
-            aria-label="Ещё"
+            aria-label={t('moreAria')}
             className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary/60 text-foreground/70 transition-colors hover:bg-secondary"
           >
             <Icon name="more-horizontal" size={18} />
           </button>
         )}
         items={[
-          { label: 'Пожаловаться', icon: <Icon name="thumbs-down" size={15} />, onClick: () => setModal('report') },
-          { label: 'Заблокировать', icon: <Icon name="ban" size={15} />, onClick: () => setModal('block') },
+          { label: t('report'), icon: <Icon name="thumbs-down" size={15} />, onClick: () => setModal('report') },
+          { label: t('block'), icon: <Icon name="ban" size={15} />, onClick: () => setModal('block') },
         ]}
       />
 
@@ -70,6 +72,7 @@ function Overlay({ children, onClose }: { children: React.ReactNode; onClose: ()
 }
 
 function ReportModal({ targetUserId, onClose }: { targetUserId: string; onClose: () => void }) {
+  const t = useTranslations('social.profileMenu.reportModal');
   const [reason, setReason] = useState('');
   const [pending, setPending] = useState(false);
 
@@ -84,37 +87,37 @@ function ReportModal({ targetUserId, onClose }: { targetUserId: string; onClose:
         body: JSON.stringify({ targetType: 'USER', targetId: targetUserId, reason: trimmed }),
       });
       if (res.status === 409) {
-        toast.error('Жалоба уже на рассмотрении');
+        toast.error(t('alreadyPending'));
         onClose();
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      toast('Жалоба отправлена');
+      toast(t('sent'));
       onClose();
     } catch {
       setPending(false);
-      toast.error('Не удалось отправить жалобу');
+      toast.error(t('sendFailed'));
     }
   }
 
   return (
     <Overlay onClose={onClose}>
-      <h2 className="text-lg font-semibold">Пожаловаться на пользователя</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Опиши причину — жалобу рассмотрит модерация.</p>
+      <h2 className="text-lg font-semibold">{t('title')}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{t('hint')}</p>
       <Textarea
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         maxLength={REASON_MAX}
         rows={4}
-        placeholder="Причина"
+        placeholder={t('placeholder')}
         className="mt-4 w-full"
         autoFocus
       />
       <div className="mt-2 text-right text-xs text-muted-foreground/60">{reason.length}/{REASON_MAX}</div>
       <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onClose} className={btnGhost}>Отмена</button>
+        <button type="button" onClick={onClose} className={btnGhost}>{t('cancel')}</button>
         <button type="button" onClick={submit} disabled={!reason.trim() || pending} className={btnPrimary}>
-          Отправить
+          {t('send')}
         </button>
       </div>
     </Overlay>
@@ -130,6 +133,7 @@ function BlockConfirmModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const t = useTranslations('social.profileMenu.blockModal');
   const [pending, setPending] = useState(false);
 
   async function block() {
@@ -137,24 +141,24 @@ function BlockConfirmModal({
     try {
       const res = await fetch(`/api/v1/users/${targetUserId}/block`, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      toast('Пользователь заблокирован');
+      toast(t('success'));
       onDone();
     } catch {
       setPending(false);
-      toast.error('Не удалось заблокировать');
+      toast.error(t('failed'));
     }
   }
 
   return (
     <Overlay onClose={onClose}>
-      <h2 className="text-lg font-semibold">Заблокировать пользователя?</h2>
+      <h2 className="text-lg font-semibold">{t('title')}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Вы перестанете быть друзьями, не сможете переписываться и видеть лайки друг друга.
+        {t('body')}
       </p>
       <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onClose} className={btnGhost}>Отмена</button>
+        <button type="button" onClick={onClose} className={btnGhost}>{t('cancel')}</button>
         <button type="button" onClick={block} disabled={pending} className={`${btnPrimary} !bg-destructive`}>
-          Заблокировать
+          {t('confirm')}
         </button>
       </div>
     </Overlay>

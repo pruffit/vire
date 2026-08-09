@@ -1,1 +1,101 @@
-{}
+{
+  "notFound": "Not found",
+  "landing": {
+    "title": "Jam",
+    "eyebrow": "Jam",
+    "heading": "Listen to music together",
+    "subtitle": "A shared queue and synced playback for a group in one room.",
+    "signInPrompt": "Sign in to start a jam",
+    "signInLink": "Sign in →",
+    "or": "or"
+  },
+  "createButton": {
+    "modeAria": "Playback mode",
+    "submit": "Start a jam",
+    "failed": "Couldn't start the jam"
+  },
+  "codeForm": {
+    "placeholder": "Jam code",
+    "aria": "Jam code",
+    "submit": "Join by code"
+  },
+  "join": {
+    "eyebrow": { "JAM": "Jam", "PARTY": "Party" },
+    "defaultTitle": { "JAM": "Jam session", "PARTY": "Party" },
+    "endedTitle": { "JAM": "Jam ended", "PARTY": "Party ended" },
+    "endedHint": "The host closed this session — the link is no longer active.",
+    "hostedBy": "Host — {name}",
+    "namePlaceholder": "Your name",
+    "nameAria": "Your name",
+    "submit": "Connect to sound",
+    "gestureHint": "Browsers require an explicit confirmation before turning on sound — that's how every platform works."
+  },
+  "guestNameAdjectives": ["Quiet", "Loud", "Nightly", "Swift", "Warm", "Wild", "Bright", "Bold"],
+  "guestNameNouns": ["Listener", "Guest", "DJ", "Dancer", "Melophile", "Bassist"],
+  "room": {
+    "defaultTitle": "Jam session",
+    "selfName": "Me",
+    "connected": "Online",
+    "connecting": "Connecting…",
+    "modeAria": "Playback mode",
+    "addTrack": "Add track",
+    "shuffle": "Shuffle",
+    "endJam": "End jam",
+    "queueEmptyTitle": "Queue is empty",
+    "queueEmptyHint": "Add the first track to get started",
+    "removeFromQueue": "Remove from queue",
+    "addedBy": "Added by {name}",
+    "soundHere": "Sound here",
+    "playingOnDevice": "Playing on {name}'s device",
+    "joinFailed": "Couldn't connect to the jam",
+    "endedTitle": "Jam ended",
+    "endedBody": "Thanks for stopping by."
+  },
+  "addPanel": {
+    "placeholder": "Find a track…",
+    "fromLiked": "From your likes",
+    "added": "Added",
+    "startTyping": "Start typing a track name",
+    "nothingFound": "Nothing found"
+  },
+  "participantsPopover": {
+    "title": "Participants",
+    "aria": "Jam participants",
+    "host": "Host"
+  },
+  "savePlaylist": {
+    "onlyVireTracks": "Only VireMusic catalog tracks go into the playlist",
+    "queueEmpty": "Queue is empty — add some tracks",
+    "failed": "Couldn't save the playlist",
+    "openPlaylist": "Open playlist",
+    "aria": "Save queue as playlist",
+    "save": "Save as playlist"
+  },
+  "invite": {
+    "title": "Invite friends",
+    "aria": "Invite friends",
+    "loading": "Loading…",
+    "empty": "No friends",
+    "invited": "Invited",
+    "invite": "Invite",
+    "failed": "Couldn't send the invite"
+  },
+  "share": {
+    "aria": "Share the jam",
+    "titleFallback": "Jam on VireMusic",
+    "copied": "Copied",
+    "share": "Share"
+  },
+  "session": {
+    "endedToast": "{kind, select, PARTY {Party ended} other {Jam ended}}",
+    "confirmEnd": "End the jam for everyone?",
+    "endFailed": "Couldn't end the jam",
+    "playbackFailed": "Couldn't change playback",
+    "modeChangeFailed": "Couldn't change the mode",
+    "speakerFailed": "Couldn't switch sound",
+    "skipVoteFailed": "Couldn't vote to skip"
+  },
+  "sourceLabels": {
+    "LOCAL": "File"
+  }
+}

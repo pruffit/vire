@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button, Input } from '@vire/ui';
 import { Icon } from '@/components/icon';
 import { generateGuestName } from '@/lib/jam/guest-name';
@@ -15,14 +16,16 @@ interface Props {
 }
 
 export function JamJoin({ title, hostDisplayName, ended, isLoggedIn, pending, onJoin, kind = 'JAM' }: Props) {
-  const [name, setName] = useState(() => generateGuestName());
-  const eyebrow = kind === 'PARTY' ? 'Вечеринка' : 'Джем';
+  const t = useTranslations('jam.join');
+  const tRoot = useTranslations('jam');
+  const [name, setName] = useState(() => generateGuestName(Math.random, tRoot.raw('guestNameAdjectives'), tRoot.raw('guestNameNouns')));
+  const eyebrow = t(`eyebrow.${kind}`);
 
   if (ended) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center px-6 py-24 text-center">
-        <p className="text-2xl font-semibold tracking-tight">{kind === 'PARTY' ? 'Вечеринка завершена' : 'Джем завершён'}</p>
-        <p className="mt-3 text-sm text-muted-foreground">Хост закрыл эту сессию — ссылка больше не активна.</p>
+        <p className="text-2xl font-semibold tracking-tight">{t(`endedTitle.${kind}`)}</p>
+        <p className="mt-3 text-sm text-muted-foreground">{t('endedHint')}</p>
       </div>
     );
   }
@@ -34,8 +37,8 @@ export function JamJoin({ title, hostDisplayName, ended, isLoggedIn, pending, on
       <div className="w-full max-w-sm space-y-8 text-center">
         <div className="space-y-2">
           <p className="label-wide text-muted-foreground">{eyebrow}</p>
-          <h1 className="text-2xl font-semibold tracking-tight">{title ?? (kind === 'PARTY' ? 'Вечеринка' : 'Джем-сессия')}</h1>
-          <p className="text-sm text-muted-foreground">Хост — {hostDisplayName}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{title ?? t(`defaultTitle.${kind}`)}</h1>
+          <p className="text-sm text-muted-foreground">{t('hostedBy', { name: hostDisplayName })}</p>
         </div>
 
         {!isLoggedIn && (
@@ -43,8 +46,8 @@ export function JamJoin({ title, hostDisplayName, ended, isLoggedIn, pending, on
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
-            placeholder="Ваше имя"
-            aria-label="Ваше имя"
+            placeholder={t('namePlaceholder')}
+            aria-label={t('nameAria')}
             className="h-11 text-center text-base"
           />
         )}
@@ -56,11 +59,11 @@ export function JamJoin({ title, hostDisplayName, ended, isLoggedIn, pending, on
           className="h-14 w-full rounded-full text-base font-semibold gap-2"
         >
           {pending && <Icon name="loader" size={16} className="animate-spin" />}
-          Подключиться к звуку
+          {t('submit')}
         </Button>
 
         <p className="text-xs text-muted-foreground/70 leading-relaxed">
-          Браузер требует явное подтверждение перед тем, как включить звук — так устроены все платформы.
+          {t('gestureHint')}
         </p>
       </div>
     </div>

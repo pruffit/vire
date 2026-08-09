@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import type { JamQueueItem, SearchTrack, TrackCandidate } from '@vire/core';
 import type { ExternalAddOutcome, OptimisticExternalGuess } from '@/lib/jam/use-jam-queue';
 import { Icon } from '@/components/icon';
@@ -47,6 +48,7 @@ function suggestionsToCandidates(tracks: SearchTrack[]): TrackCandidate[] {
 }
 
 export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFocus = true, addedTrackIds, history = [], dense = false }: Props) {
+  const t = useTranslations('party.addPanel');
   const [q, setQ] = useState('');
   const [results, setResults] = useState<TrackCandidate[] | null>(null);
   const [postCandidates, setPostCandidates] = useState<TrackCandidate[] | null>(null);
@@ -111,7 +113,11 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
     const outcome = await addExternal(trimmed, guess ?? toRawGuess(trimmed));
     setSubmitting(false);
     if (outcome.outcome === 'added') {
-      if (guess?.title) toast(`Добавлено: ${guess.artistName ? `${guess.artistName} — ` : ''}${guess.title}`);
+      if (guess?.title) {
+        toast(guess.artistName
+          ? t('addedToast', { artistName: guess.artistName, title: guess.title })
+          : t('addedToastNoArtist', { title: guess.title }));
+      }
       reset();
       return;
     }
@@ -146,7 +152,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
     const urls = pasted.match(URL_GLOBAL_RE);
     if (!urls || !URL_RE.test(pasted)) return;
     e.preventDefault();
-    setQ(urls.length === 1 ? urls[0]! : `${urls.length} ссылки`);
+    setQ(urls.length === 1 ? urls[0]! : t('multipleLinksInput', { count: urls.length }));
     void submitAll(urls);
   }
 
@@ -179,7 +185,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
     if (candidate.kind === 'VIRE') {
       if (addedTrackIds.has(candidate.trackId)) return;
       onAddVire({ trackId: candidate.trackId, title: candidate.title, artistName: candidate.artistName, coverUrl: candidate.coverUrl });
-      toast(`Добавлено: ${candidate.artistName} — ${candidate.title}`);
+      toast(t('addedToast', { artistName: candidate.artistName, title: candidate.title }));
       reset();
       return;
     }
@@ -207,7 +213,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
   const list = postCandidates ?? results ?? (typing ? [] : suggestionsToCandidates(suggestions));
   const ready = list.filter((c) => c.kind !== 'HINT');
   const fromWeb = list.filter((c) => c.kind === 'HINT');
-  const idleTitle = postCandidates ? 'Похоже, вот это' : idle && list.length > 0 ? 'Из любимых' : null;
+  const idleTitle = postCandidates ? t('postCandidatesTitle') : idle && list.length > 0 ? t('fromLikedTitle') : null;
   const historyCandidates = historyToCandidates(history);
 
   function renderRow(candidate: TrackCandidate, index: number) {
@@ -232,13 +238,13 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
           onChange={(e) => { setQ(e.target.value); setPostCandidates(null); setEmptyHint(false); setCursor(-1); }}
           onPaste={handlePaste}
           onKeyDown={handleKeyDown}
-          aria-label="Название трека или ссылка"
+          aria-label={t('titleAria')}
           inputMode="search"
           enterKeyHint="search"
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
-          placeholder="Вставьте ссылку или вспомните трек…"
+          placeholder={t('placeholder')}
           // text-base на мобилке: при шрифте меньше 16px iOS зумит страницу на фокусе
           className="min-w-0 flex-1 bg-transparent py-1 text-base outline-none placeholder:text-muted-foreground sm:text-sm"
         />
@@ -246,7 +252,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
           <button
             type="button"
             onClick={() => { reset(); setEmptyHint(false); inputRef.current?.focus(); }}
-            aria-label="Очистить"
+            aria-label={t('clearAria')}
             className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
           >
             <Icon name="x" size={14} />
@@ -255,7 +261,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
         <button
           type="submit"
           disabled={q.trim().length === 0 || submitting}
-          aria-label="Добавить в очередь"
+          aria-label={t('addAria')}
           className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
         >
           <Icon name={submitting ? 'loader' : 'arrow-right'} size={15} className={submitting ? 'animate-spin' : undefined} />
@@ -278,13 +284,13 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
             <>
               {ready.length > 0 && (
                 <>
-                  <SectionTitle className="px-3 pb-1 pt-1">Играет сразу</SectionTitle>
+                  <SectionTitle className="px-3 pb-1 pt-1">{t('playsNow')}</SectionTitle>
                   {ready.map((candidate) => renderRow(candidate, list.indexOf(candidate)))}
                 </>
               )}
               {fromWeb.length > 0 && (
                 <>
-                  <SectionTitle className="px-3 pb-1 pt-2">Найдём в сети</SectionTitle>
+                  <SectionTitle className="px-3 pb-1 pt-2">{t('findOnWeb')}</SectionTitle>
                   {fromWeb.map((candidate) => renderRow(candidate, list.indexOf(candidate)))}
                 </>
               )}
@@ -293,25 +299,25 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
             list.map((candidate, i) => renderRow(candidate, i))
           )
         ) : emptyHint ? (
-          <p className="px-3 py-4 text-sm text-muted-foreground">Не нашли точного совпадения — попробуйте другую формулировку</p>
+          <p className="px-3 py-4 text-sm text-muted-foreground">{t('noExactMatch')}</p>
         ) : searching ? (
           <p className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
             <Icon name="loader" size={14} className="shrink-0 animate-spin" />
-            <span className="truncate">Ищем «{q.trim()}»…</span>
+            <span className="truncate">{t('searching', { query: q.trim() })}</span>
           </p>
         ) : (
           <p className="px-3 py-4 text-sm text-muted-foreground">
-            {idle ? 'Начните вводить название трека или вставьте ссылку' : 'Ничего не найдено — нажмите Enter, чтобы поискать в сети'}
+            {idle ? t('startHint') : t('notFoundHint')}
           </p>
         )}
 
         {typing && !postCandidates && list.length > 0 && (
-          <p className="px-3 pb-1 pt-2 text-[11px] text-muted-foreground">Нет нужного? Enter — поищем в сети</p>
+          <p className="px-3 pb-1 pt-2 text-[11px] text-muted-foreground">{t('notFoundRetryHint')}</p>
         )}
 
         {idle && historyCandidates.length > 0 && (
           <>
-            <SectionTitle className="px-3 pb-1 pt-2">Ещё раз</SectionTitle>
+            <SectionTitle className="px-3 pb-1 pt-2">{t('playAgain')}</SectionTitle>
             {historyCandidates.map((candidate, i) => (
               <CandidateRow key={`again-${i}`} candidate={candidate} added={false} active={false} onPick={handlePickCandidate} />
             ))}
@@ -320,7 +326,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
 
         {idle && tasteSuggestions && tasteSuggestions.length > 0 && (
           <>
-            <SectionTitle className="px-3 pb-1 pt-2">Из вашего вкуса</SectionTitle>
+            <SectionTitle className="px-3 pb-1 pt-2">{t('fromTaste')}</SectionTitle>
             {tasteSuggestions.map((candidate, i) => (
               <CandidateRow key={`taste-${i}`} candidate={candidate} added={false} active={false} onPick={handlePickCandidate} />
             ))}
@@ -369,6 +375,7 @@ function candidateDisplay(candidate: TrackCandidate): { title: string; artistNam
 function CandidateRow({
   candidate, added, active, onPick,
 }: { candidate: TrackCandidate; added: boolean; active: boolean; onPick: (c: TrackCandidate) => void }) {
+  const tj = useTranslations('jam.addPanel');
   const { title, artistName, coverUrl, durationSec } = candidateDisplay(candidate);
   const ref = useRef<HTMLButtonElement>(null);
 
@@ -402,7 +409,7 @@ function CandidateRow({
       </span>
       <span className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
         {added ? (
-          <span className="label-mono">Добавлено</span>
+          <span className="label-mono">{tj('added')}</span>
         ) : candidate.kind === 'HINT' ? (
           <Icon name="globe" size={13} />
         ) : null}

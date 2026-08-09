@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { normalizeJamCode } from '@vire/core';
 import { Button, Input } from '@vire/ui';
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function JamCodeForm({ basePath = '/jam' }: Props) {
+  const t = useTranslations('jam.codeForm');
   const [value, setValue] = useState('');
   const router = useRouter();
   const normalized = normalizeJamCode(value);
@@ -26,8 +28,8 @@ export function JamCodeForm({ basePath = '/jam' }: Props) {
         value={value}
         onChange={(e) => setValue(e.target.value.toUpperCase().slice(0, 6))}
         maxLength={6}
-        placeholder="Код джема"
-        aria-label="Код джема"
+        placeholder={t('placeholder')}
+        aria-label={t('aria')}
         className="h-11 text-center font-mono text-lg tracking-[0.3em]"
       />
       <Button
@@ -36,7 +38,7 @@ export function JamCodeForm({ basePath = '/jam' }: Props) {
         disabled={!normalized}
         className="h-11 w-full rounded-full text-sm font-medium"
       >
-        Войти по коду
+        {t('submit')}
       </Button>
     </form>
   );

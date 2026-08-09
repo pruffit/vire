@@ -1,1 +1,77 @@
-{}
+{
+  "layout": {
+    "title": "Messages"
+  },
+  "index": {
+    "empty": "Select a conversation",
+    "emptyHint": "The conversation will show up here once you open one of the chats on the left"
+  },
+  "conversation": {
+    "metaTitle": "Conversation",
+    "backAria": "Back to conversations"
+  },
+  "conversationList": {
+    "empty": "No conversations yet",
+    "emptyHint": "Message a friend from their profile",
+    "noMessages": "No messages",
+    "encrypted": "🔒 Encrypted"
+  },
+  "thread": {
+    "read": "Read",
+    "sent": "Sent",
+    "newMessages": "New messages ↓",
+    "loading": "Loading…",
+    "emptyTitle": "Write the first message",
+    "emptyHint": "The conversation is end-to-end encrypted",
+    "sendFailed": "Couldn't send the message",
+    "decryptFailed": "🔒 couldn't decrypt",
+    "blocked": {
+      "identityErrorTitle": "Couldn't load encryption",
+      "identityErrorHint": "Refresh the page and try again.",
+      "needsLinkTitle": "Confirm this device",
+      "needsLinkHint": "The conversation is encrypted. Confirm this device on another of yours where VireMusic is already open to read and write.",
+      "linkDevice": "Link device",
+      "linkHintDesktop": "Linking is in the panel on the left.",
+      "noKeyTitle": "{name} hasn't opened VireMusic yet",
+      "noKeyHint": "The conversation will become available once the other person opens the app."
+    }
+  },
+  "composer": {
+    "placeholder": "Message",
+    "sendAria": "Send",
+    "friendsOnly": "You can only message friends"
+  },
+  "typing": "typing…",
+  "unknownSender": "User",
+  "newMessageToast": "Message from {name}",
+  "deviceLink": {
+    "linkTitle": "Linking code",
+    "linkHint": "Enter this code on your other, already set up device.",
+    "cancel": "Cancel",
+    "waitingTitle": "Waiting for confirmation",
+    "waitingHint": "Open VireMusic on your other device — a confirmation request will appear there.",
+    "promptTitle": "The conversation is encrypted on this device",
+    "promptHint": "To read the history, confirm this device on another of yours where VireMusic is already open.",
+    "linkButton": "Link this device",
+    "resetWarning": "Old messages will become unreadable for you and your contacts. This can't be undone.",
+    "resetting": "Resetting…",
+    "resetConfirm": "Reset encryption",
+    "resetPrompt": "Reset encryption…",
+    "rejectedElsewhere": "Linking was declined on the other device.",
+    "linkFailed": "Couldn't link the device. Try again.",
+    "resetFailed": "Couldn't reset encryption. Try again."
+  },
+  "linkApprove": {
+    "title": "A new device wants access to the conversation",
+    "hint": "Enter the 6-digit code shown on the new device.",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "mismatch": "The code doesn't match. Linking cancelled.",
+    "keyMismatch": "Linking declined: key mismatch (possible spoofing).",
+    "linked": "Device linked."
+  },
+  "messageFriendButton": {
+    "label": "Message",
+    "failed": "Couldn't open the conversation"
+  }
+}

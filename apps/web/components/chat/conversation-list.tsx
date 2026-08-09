@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/navigation';
 import type { ConversationSummary } from '@vire/core';
 import { EmptyState } from '@/components/ui-kit';
@@ -13,6 +14,8 @@ import { ChatAvatar } from './chat-avatar';
 import { formatMessageTimestamp } from './chat-format';
 
 export function ConversationList({ conversations: initial, viewerId }: { conversations: ConversationSummary[]; viewerId: string }) {
+  const t = useTranslations('chat.conversationList');
+  const tc = useTranslations('common');
   const conversations = useConversations(initial, viewerId);
   const identity = useIdentity(viewerId);
   const pathname = usePathname();
@@ -40,21 +43,21 @@ export function ConversationList({ conversations: initial, viewerId }: { convers
     const map = new Map<string, string>();
     for (const c of conversations) {
       if (!c.lastMessageBody) {
-        map.set(c.id, 'Нет сообщений');
+        map.set(c.id, t('noMessages'));
         continue;
       }
       if (identity.priv && identity.pub && c.otherIkPub && c.lastMessageNonce) {
         const ck = deriveCK(identity.priv, fromB64(c.otherIkPub), identity.pub);
         map.set(c.id, decryptMessage(c.lastMessageBody, c.lastMessageNonce, ck) ?? '🔒');
       } else {
-        map.set(c.id, '🔒 Зашифровано');
+        map.set(c.id, t('encrypted'));
       }
     }
     return map;
-  }, [conversations, identity.priv, identity.pub]);
+  }, [conversations, identity.priv, identity.pub, t]);
 
   if (conversations.length === 0) {
-    return <EmptyState title="Пока нет диалогов" hint="Напишите другу с его профиля" />;
+    return <EmptyState title={t('empty')} hint={t('emptyHint')} />;
   }
 
   return (
@@ -70,11 +73,11 @@ export function ConversationList({ conversations: initial, viewerId }: { convers
               active && 'bg-foreground/[0.08] before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary',
             )}
           >
-            <ChatAvatar name={c.otherUserName} image={c.otherUserImage} />
+            <ChatAvatar name={c.otherUserName} image={c.otherUserImage} fallbackName={tc('listenerFallback')} />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
                 <p className={cn('truncate text-sm', c.unread ? 'font-medium text-foreground' : 'text-muted-foreground')}>
-                  {c.otherUserName ?? 'Слушатель'}
+                  {c.otherUserName ?? tc('listenerFallback')}
                 </p>
                 {c.lastMessageAt && (
                   <span className="shrink-0 font-mono text-xs text-muted-foreground">
@@ -83,7 +86,7 @@ export function ConversationList({ conversations: initial, viewerId }: { convers
                 )}
               </div>
               <p className={cn('truncate text-sm', c.unread ? 'font-medium text-foreground' : 'text-muted-foreground')}>
-                {previews.get(c.id) ?? '🔒 Зашифровано'}
+                {previews.get(c.id) ?? t('encrypted')}
               </p>
             </div>
             {c.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />}

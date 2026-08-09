@@ -1,1 +1,93 @@
-{}
+{
+  "friendButton": {
+    "add": "Add friend",
+    "requestSent": "Request sent",
+    "accept": "Accept",
+    "decline": "Decline",
+    "friends": "Friends",
+    "remove": "Remove",
+    "removeAria": "Remove from friends",
+    "errors": {
+      "request": "Couldn't send the friend request",
+      "action": "Couldn't complete the action",
+      "accept": "Couldn't accept the request"
+    }
+  },
+  "incomingRequests": {
+    "heading": "Incoming requests",
+    "accept": "Accept",
+    "decline": "Decline",
+    "errors": {
+      "accept": "Couldn't accept the request",
+      "decline": "Couldn't decline the request"
+    }
+  },
+  "activityFeed": {
+    "like": "liked",
+    "followedArtist": "followed",
+    "playlist": "playlist"
+  },
+  "profileMenu": {
+    "moreAria": "More",
+    "report": "Report",
+    "block": "Block",
+    "reportModal": {
+      "title": "Report this user",
+      "hint": "Describe the reason — moderation will review the report.",
+      "placeholder": "Reason",
+      "cancel": "Cancel",
+      "send": "Send",
+      "alreadyPending": "Report is already under review",
+      "sent": "Report sent",
+      "sendFailed": "Couldn't send the report"
+    },
+    "blockModal": {
+      "title": "Block this user?",
+      "body": "You'll stop being friends, won't be able to message each other, and won't see each other's likes.",
+      "cancel": "Cancel",
+      "confirm": "Block",
+      "success": "User blocked",
+      "failed": "Couldn't block the user"
+    }
+  },
+  "shareProfile": {
+    "aria": "Share profile",
+    "copied": "Copied",
+    "copyLink": "Copy link"
+  },
+  "unblock": {
+    "button": "Unblock",
+    "failed": "Couldn't unblock"
+  },
+  "userSearch": {
+    "placeholder": "Find a person by name…",
+    "searching": "Searching…",
+    "empty": "No one found"
+  },
+  "friendsPage": {
+    "title": "Friends",
+    "friendsSection": "Friends",
+    "emptyTitle": "No friends yet",
+    "emptyHint": "Share your profile link"
+  },
+  "profilePage": {
+    "interactionUnavailable": "Interaction unavailable",
+    "likes": "Likes",
+    "likesEmpty": "No likes yet",
+    "likesHidden": "Likes are hidden",
+    "publicPlaylists": "Public playlists",
+    "publicPlaylistsEmpty": "No public playlists"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "aria": "Notifications",
+    "unreadAria": "Notifications, unread: {count}",
+    "empty": "No notifications",
+    "types": {
+      "FRIEND_REQUEST": "Friend request",
+      "FRIEND_ACCEPT": "Now friends",
+      "JAM_INVITE": "Invites you to a jam",
+      "PLAYLIST_COLLAB_JOIN": "Joined a playlist"
+    }
+  }
+}

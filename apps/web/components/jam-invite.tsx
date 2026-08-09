@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/icon';
 import { touchTargetClass } from '@/components/popover';
 import { AdaptivePopover } from '@/components/adaptive-popover';
@@ -18,6 +19,8 @@ interface Props {
 }
 
 export function JamInvite({ code }: Props) {
+  const t = useTranslations('jam.invite');
+  const tc = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [friends, setFriends] = useState<Friend[] | null>(null);
@@ -53,7 +56,7 @@ export function JamInvite({ code }: Props) {
       if (!res.ok) throw new Error();
       setInvited((s) => new Set(s).add(userId));
     } catch {
-      toast.error('Не удалось пригласить');
+      toast.error(t('failed'));
     } finally {
       setInvitingId(null);
     }
@@ -65,14 +68,14 @@ export function JamInvite({ code }: Props) {
       onOpenChange={handleOpenChange}
       align="left"
       drop="down"
-      title="Пригласить друзей"
+      title={t('title')}
       panelClassName="w-64"
       trigger={({ toggle, ref }) => (
         <button
           ref={ref}
           type="button"
           onClick={toggle}
-          aria-label="Пригласить друзей"
+          aria-label={t('aria')}
           aria-expanded={open}
           className={`${touchTargetClass('md')} inline-flex items-center gap-1.5 rounded-full border border-border px-3 text-sm text-muted-foreground hover:text-foreground transition-colors`}
         >
@@ -82,9 +85,9 @@ export function JamInvite({ code }: Props) {
     >
       <div className="max-h-72 w-full overflow-y-auto py-1">
         {loading ? (
-          <p className="px-3 py-4 text-center text-sm text-muted-foreground">Загрузка…</p>
+          <p className="px-3 py-4 text-center text-sm text-muted-foreground">{t('loading')}</p>
         ) : !friends || friends.length === 0 ? (
-          <p className="px-3 py-4 text-center text-sm text-muted-foreground">Нет друзей</p>
+          <p className="px-3 py-4 text-center text-sm text-muted-foreground">{t('empty')}</p>
         ) : (
           friends.map((f) => {
             const isInvited = invited.has(f.id);
@@ -97,14 +100,14 @@ export function JamInvite({ code }: Props) {
                     {(f.name ?? '?')[0]?.toUpperCase()}
                   </span>
                 )}
-                <span className="flex-1 min-w-0 truncate text-sm text-foreground/85">{f.name ?? 'Слушатель'}</span>
+                <span className="flex-1 min-w-0 truncate text-sm text-foreground/85">{f.name ?? tc('listenerFallback')}</span>
                 <button
                   type="button"
                   onClick={() => void handleInvite(f.id)}
                   disabled={isInvited || invitingId === f.id}
                   className="shrink-0 text-xs font-medium text-primary hover:text-foreground disabled:text-muted-foreground disabled:pointer-events-none transition-colors"
                 >
-                  {isInvited ? 'Приглашён' : invitingId === f.id ? '…' : 'Пригласить'}
+                  {isInvited ? t('invited') : invitingId === f.id ? '…' : t('invite')}
                 </button>
               </div>
             );

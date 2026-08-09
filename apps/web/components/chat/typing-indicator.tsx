@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRealtime } from '@/lib/use-realtime';
 
 const TYPING_TIMEOUT_MS = 4000;
 
 export function TypingIndicator({ conversationId, otherUserId }: { conversationId: string; otherUserId: string }) {
+  const t = useTranslations('chat');
   const [typing, setTyping] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -29,5 +31,5 @@ export function TypingIndicator({ conversationId, otherUserId }: { conversationI
   });
 
   if (!typing) return null;
-  return <span className="block truncate text-xs text-muted-foreground">печатает…</span>;
+  return <span className="block truncate text-xs text-muted-foreground">{t('typing')}</span>;
 }

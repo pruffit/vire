@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import type { JamMode, JamSessionKind } from '@vire/core';
 import { Button } from '@vire/ui';
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function CreateJamButton({ kind = 'JAM', basePath = '/jam' }: Props) {
+  const t = useTranslations('jam.createButton');
   const [pending, setPending] = useState(false);
   const [mode, setMode] = useState<JamMode>('SYNCED');
   const router = useRouter();
@@ -33,14 +35,14 @@ export function CreateJamButton({ kind = 'JAM', basePath = '/jam' }: Props) {
       const data = (await res.json()) as { code: string };
       router.push(`${basePath}/${data.code}`);
     } catch {
-      toast.error('Не удалось создать джем');
+      toast.error(t('failed'));
       setPending(false);
     }
   }
 
   return (
     <div className="space-y-4">
-      <div role="radiogroup" aria-label="Режим воспроизведения" className="flex justify-center gap-2">
+      <div role="radiogroup" aria-label={t('modeAria')} className="flex justify-center gap-2">
         {JAM_MODE_OPTIONS.map((option) => (
           <button
             key={option.value}
@@ -69,7 +71,7 @@ export function CreateJamButton({ kind = 'JAM', basePath = '/jam' }: Props) {
         className="h-14 w-full rounded-full text-base font-semibold gap-2"
       >
         {pending && <Icon name="loader" size={16} className="animate-spin" />}
-        Создать джем
+        {t('submit')}
       </Button>
     </div>
   );

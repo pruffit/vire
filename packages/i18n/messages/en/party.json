@@ -1,1 +1,60 @@
-{}
+{
+  "notFound": "Not found",
+  "landing": {
+    "title": "Party",
+    "eyebrow": "Party",
+    "heading": "Any track, any speaker",
+    "subtitle": "A shared queue for the crowd — guests throw in anything, even a link from any service.",
+    "signInPrompt": "Sign in to start a party",
+    "signInLink": "Sign in →",
+    "or": "or"
+  },
+  "room": {
+    "titleFallback": "Party",
+    "endedTitle": "Party ended",
+    "endedBody": "Thanks for stopping by.",
+    "joinFailed": "Couldn't connect to the party",
+    "screenButton": "Party screen",
+    "endAria": "End party",
+    "end": "End",
+    "searchingWeb": "Searching the web…",
+    "skip": "Skip"
+  },
+  "addPanel": {
+    "titleAria": "Track name or link",
+    "placeholder": "Paste a link or recall a track…",
+    "clearAria": "Clear",
+    "addAria": "Add to queue",
+    "postCandidatesTitle": "Looks like this",
+    "fromLikedTitle": "From your likes",
+    "playsNow": "Plays right away",
+    "findOnWeb": "We'll find it on the web",
+    "noExactMatch": "Couldn't find an exact match — try a different phrasing",
+    "searching": "Searching “{query}”…",
+    "startHint": "Start typing a track name or paste a link",
+    "notFoundHint": "Nothing found — press Enter to search the web",
+    "notFoundRetryHint": "Not what you need? Enter — we'll search the web",
+    "playAgain": "Play again",
+    "fromTaste": "From your taste",
+    "added": "Added",
+    "addedToast": "Added: {artistName} — {title}",
+    "addedToastNoArtist": "Added: {title}",
+    "multipleLinksInput": "{count, plural, one {# link} other {# links}}"
+  },
+  "screen": {
+    "eyebrow": "Party screen",
+    "visualizerAria": "Visualizer",
+    "fullscreenEnter": "Enter fullscreen",
+    "fullscreenExit": "Exit fullscreen",
+    "closeAria": "Close party screen",
+    "tapToContinue": "Tap to continue",
+    "playAria": "Play",
+    "pauseAria": "Pause",
+    "skipAria": "Skip",
+    "queueEmpty": "Queue is empty — add a track from your phone",
+    "next": "Next up",
+    "scanQr": "Join from your phone",
+    "qrAlt": "Room QR code",
+    "addedBy": "Added by {name}"
+  }
+}

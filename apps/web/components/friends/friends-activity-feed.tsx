@@ -1,5 +1,6 @@
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
 import { type FriendActivityItem, friendActivityKey } from '@/lib/activity';
 
 function formatActivityDate(at: Date): string {
@@ -17,7 +18,8 @@ function ActorAvatar({ name, image }: { name: string | null; image: string | nul
   );
 }
 
-export function FriendsActivityFeed({ items }: { items: FriendActivityItem[] }) {
+export async function FriendsActivityFeed({ items }: { items: FriendActivityItem[] }) {
+  const [t, tc] = await Promise.all([getTranslations('social.activityFeed'), getTranslations('common')]);
   return (
     <div className="flex flex-col">
       {items.map((item) => (
@@ -25,11 +27,11 @@ export function FriendsActivityFeed({ items }: { items: FriendActivityItem[] }) 
           <ActorAvatar name={item.actor.name} image={item.actor.image} />
           <p className="min-w-0 flex-1 truncate text-sm">
             <Link href={`/u/${item.actor.id}`} className="font-medium hover:underline">
-              {item.actor.name ?? 'Слушатель'}
+              {item.actor.name ?? tc('listenerFallback')}
             </Link>
             {item.kind === 'like' && (
               <>
-                <span className="text-muted-foreground"> · лайк </span>
+                <span className="text-muted-foreground"> · {t('like')} </span>
                 <Link href={`/artists/${item.artistSlug}/releases/${item.releaseId}`} className="hover:underline">
                   {item.trackTitle}
                   <span className="text-muted-foreground"> — {item.artistName}</span>
@@ -38,13 +40,13 @@ export function FriendsActivityFeed({ items }: { items: FriendActivityItem[] }) 
             )}
             {item.kind === 'follow' && (
               <>
-                <span className="text-muted-foreground"> · подписка на </span>
+                <span className="text-muted-foreground"> · {t('followedArtist')} </span>
                 <Link href={`/artists/${item.artistSlug}`} className="hover:underline">{item.artistName}</Link>
               </>
             )}
             {item.kind === 'playlist' && (
               <>
-                <span className="text-muted-foreground"> · плейлист </span>
+                <span className="text-muted-foreground"> · {t('playlist')} </span>
                 <Link href={`/playlists/${item.playlistId}`} className="hover:underline">{item.title}</Link>
               </>
             )}

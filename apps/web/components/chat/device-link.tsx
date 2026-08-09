@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useIdentity } from '@/lib/e2ee-client';
 import {
   newEphemeral, deriveLinkSecret, sasDigits6, unwrapPriv, hashCommit,
@@ -10,6 +11,7 @@ import { pollLink, postLink } from './link-protocol';
 
 // Новое устройство (B): commit(ebPub) → attach ожидание → reveal(ebPub) → показ SAS → ожидание wrapped.
 export function DeviceLink({ viewerId }: { viewerId: string }) {
+  const t = useTranslations('chat.deviceLink');
   const identity = useIdentity(viewerId);
   const [linkId, setLinkId] = useState<string | null>(null);
   const [code, setCode] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
 
       const attached = await pollLink(id, (s) => !!s.eaPub);
       if (cancelled.current) return;
-      if (attached === 'gone') { setLinkId(null); setMsg('Привязка отклонена на другом устройстве.'); return; }
+      if (attached === 'gone') { setLinkId(null); setMsg(t('rejectedElsewhere')); return; }
       if (!attached?.eaPub) throw new Error();
 
       const revealRes = await postLink('reveal', { linkId: id, ebPub: toB64(eB.pub) });
@@ -44,20 +46,20 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
 
       const completed = await pollLink(id, (s) => !!s.wrapped);
       if (cancelled.current) return;
-      if (completed === 'gone') { setLinkId(null); setCode(null); setMsg('Привязка отклонена на другом устройстве.'); return; }
+      if (completed === 'gone') { setLinkId(null); setCode(null); setMsg(t('rejectedElsewhere')); return; }
       if (!completed?.wrapped || !completed.nonce) throw new Error();
       const priv = unwrapPriv(completed.wrapped, completed.nonce, secret);
       if (!priv) throw new Error();
       await importIdentity(viewerId, priv);
       window.location.reload();
     } catch {
-      if (!cancelled.current) setMsg('Не удалось привязать устройство. Попробуйте снова.');
+      if (!cancelled.current) setMsg(t('linkFailed'));
       setLinkId(null);
       setCode(null);
     } finally {
       busy.current = false;
     }
-  }, [viewerId]);
+  }, [viewerId, t]);
 
   function cancelLinking() {
     cancelled.current = true;
@@ -79,7 +81,7 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
     } catch {
       setResetting(false);
       setConfirmingReset(false);
-      setMsg('Не удалось сбросить шифрование. Попробуйте снова.');
+      setMsg(t('resetFailed'));
     }
   }
 
@@ -90,53 +92,53 @@ export function DeviceLink({ viewerId }: { viewerId: string }) {
       <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
         {code ? (
           <>
-            <p className="text-sm font-medium">Код для привязки</p>
+            <p className="text-sm font-medium">{t('linkTitle')}</p>
             <p className="text-center font-mono text-3xl tracking-[0.3em]">{code}</p>
-            <p className="text-xs text-muted-foreground">Введите этот код на своём уже настроенном устройстве.</p>
+            <p className="text-xs text-muted-foreground">{t('linkHint')}</p>
             <button onClick={cancelLinking} className="min-h-11 w-full rounded-lg border border-border px-4 text-sm">
-              Отмена
+              {t('cancel')}
             </button>
           </>
         ) : linkId ? (
           <>
-            <p className="text-sm font-medium">Ожидание подтверждения</p>
+            <p className="text-sm font-medium">{t('waitingTitle')}</p>
             <p className="text-xs text-muted-foreground">
-              Откройте VireMusic на другом своём устройстве — там появится запрос подтверждения.
+              {t('waitingHint')}
             </p>
             <button onClick={cancelLinking} className="min-h-11 w-full rounded-lg border border-border px-4 text-sm">
-              Отмена
+              {t('cancel')}
             </button>
           </>
         ) : (
           <>
-            <p className="text-sm font-medium">Переписка зашифрована на этом устройстве</p>
+            <p className="text-sm font-medium">{t('promptTitle')}</p>
             <p className="text-xs text-muted-foreground">
-              Чтобы читать историю, подтвердите это устройство на другом своём устройстве, где уже открыт VireMusic.
+              {t('promptHint')}
             </p>
             <button onClick={startNew}
               className="min-h-11 w-full rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">
-              Привязать это устройство
+              {t('linkButton')}
             </button>
             {confirmingReset ? (
               <div className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
                 <p className="text-xs text-destructive">
-                  Старая переписка станет нечитаемой у вас и у собеседников. Отменить нельзя.
+                  {t('resetWarning')}
                 </p>
                 <div className="flex gap-2">
                   <button onClick={handleReset} disabled={resetting}
                     className="min-h-9 flex-1 rounded-lg bg-destructive px-3 text-xs font-medium text-foreground disabled:opacity-40">
-                    {resetting ? 'Сбрасываем…' : 'Сбросить шифрование'}
+                    {resetting ? t('resetting') : t('resetConfirm')}
                   </button>
                   <button onClick={() => setConfirmingReset(false)} disabled={resetting}
                     className="min-h-9 rounded-lg border border-border px-3 text-xs">
-                    Отмена
+                    {t('cancel')}
                   </button>
                 </div>
               </div>
             ) : (
               <button onClick={() => setConfirmingReset(true)}
                 className="w-full text-center text-xs text-muted-foreground underline hover:text-destructive">
-                Сбросить шифрование…
+                {t('resetPrompt')}
               </button>
             )}
           </>

@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import type { ChatMessage } from '@vire/core';
 import { useRealtime } from '@/lib/use-realtime';
@@ -48,7 +49,8 @@ const DecryptedBubble = memo(function DecryptedBubble({
   own: boolean;
   pending?: boolean;
 }) {
-  const text = useMemo(() => (ck ? (decryptMessage(body, nonce, ck) ?? '🔒 не удалось расшифровать') : '🔒'), [body, nonce, ck]);
+  const t = useTranslations('chat.thread');
+  const text = useMemo(() => (ck ? (decryptMessage(body, nonce, ck) ?? t('decryptFailed')) : '🔒'), [body, nonce, ck, t]);
   return <MessageBubble text={text} createdAt={createdAt} own={own} pending={pending} />;
 });
 
@@ -71,6 +73,7 @@ export function ChatThread({
   initialMessages: ChatMessage[];
   canSend: boolean;
 }) {
+  const t = useTranslations('chat.thread');
   const [messages, setMessages] = useState<PendingMessage[]>(initialMessages);
   const [ikPub, setIkPub] = useState(otherIkPub);
   const [readAt, setReadAt] = useState(otherLastReadAt ? new Date(otherLastReadAt) : null);
@@ -271,35 +274,35 @@ export function ChatThread({
       setMessages((prev) => mergeMessages(prev, [message]));
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      toast.error('Не удалось отправить сообщение');
+      toast.error(t('sendFailed'));
     }
   }
 
   const blocked: { icon: 'lock' | 'message-square'; title: string; hint: string; action?: React.ReactNode } | null =
     identity.error
-      ? { icon: 'lock', title: 'Не удалось загрузить шифрование', hint: 'Обновите страницу и попробуйте снова.' }
+      ? { icon: 'lock', title: t('blocked.identityErrorTitle'), hint: t('blocked.identityErrorHint') }
       : identity.ready && identity.needsLink
         ? {
             icon: 'lock',
-            title: 'Подтвердите это устройство',
-            hint: 'Переписка зашифрована. Подтвердите устройство на другом своём, где уже открыт VireMusic, чтобы читать и писать.',
+            title: t('blocked.needsLinkTitle'),
+            hint: t('blocked.needsLinkHint'),
             action: (
               <>
                 <Link
                   href="/messages"
                   className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium transition-colors hover:bg-accent/10 md:hidden"
                 >
-                  Привязать устройство
+                  {t('blocked.linkDevice')}
                 </Link>
-                <p className="hidden text-xs text-foreground/35 md:block">Привязка — на панели слева.</p>
+                <p className="hidden text-xs text-foreground/35 md:block">{t('blocked.linkHintDesktop')}</p>
               </>
             ),
           }
         : identity.ready && !ikPub
           ? {
               icon: 'message-square',
-              title: `${otherName} ещё не открывал(а) VireMusic`,
-              hint: 'Переписка станет доступна, как только собеседник зайдёт в приложение.',
+              title: t('blocked.noKeyTitle', { name: otherName }),
+              hint: t('blocked.noKeyHint'),
             }
           : null;
 
@@ -316,17 +319,17 @@ export function ChatThread({
           ) : messages.length === 0 && ck ? (
             <div className="flex h-full flex-col items-center justify-center gap-3">
               <Icon name="message-square" size={28} className="text-foreground/25" />
-              <EmptyState title="Напишите первое сообщение" hint="Переписка защищена сквозным шифрованием" />
+              <EmptyState title={t('emptyTitle')} hint={t('emptyHint')} />
             </div>
           ) : (
             <div className="space-y-2">
-              {loadingOlder && <p className="py-1 text-center text-xs text-muted-foreground">Загрузка…</p>}
+              {loadingOlder && <p className="py-1 text-center text-xs text-muted-foreground">{t('loading')}</p>}
               {messages.map((m) => (
                 <Fragment key={m.id}>
                   <DecryptedBubble body={m.body} nonce={m.nonce} ck={ck} createdAt={m.createdAt} own={m.senderId === viewerId} pending={m.pending} />
                   {m.id === lastOwnMessageId && !m.pending && (
                     <p className="-mt-1 pr-1 text-right font-mono text-[11px] text-muted-foreground">
-                      {readAt && new Date(m.createdAt) <= readAt ? 'Прочитано' : 'Отправлено'}
+                      {readAt && new Date(m.createdAt) <= readAt ? t('read') : t('sent')}
                     </p>
                   )}
                 </Fragment>
@@ -340,7 +343,7 @@ export function ChatThread({
             onClick={scrollToBottom}
             className="absolute inset-x-0 bottom-3 mx-auto w-fit rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground shadow-lg"
           >
-            Новые сообщения ↓
+            {t('newMessages')}
           </button>
         )}
       </div>
