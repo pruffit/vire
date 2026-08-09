@@ -6,36 +6,24 @@ export function formatDuration(sec: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** Seconds → coarse human listen time in Russian (e.g. 45 → "45с", 600 → "10м", 3700 → "1ч 1м"). */
-export function formatListenTime(sec: number): string {
-  if (sec < 60) return `${sec}с`;
-  if (sec < 3600) return `${Math.floor(sec / 60)}м`;
-  return `${Math.floor(sec / 3600)}ч ${Math.floor((sec % 3600) / 60)}м`;
+export interface ListenTimeUnit {
+  seconds: string;
+  minutes: string;
+  hours: string;
+}
+
+/** Seconds → coarse human listen time (e.g. 45 → "45s", 600 → "10m", 3700 → "1h 1m");
+ *  unit — локализованные суффиксы (common.listenTimeUnit из next-intl). */
+export function formatListenTime(sec: number, unit: ListenTimeUnit): string {
+  if (sec < 60) return `${sec}${unit.seconds}`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}${unit.minutes}`;
+  return `${Math.floor(sec / 3600)}${unit.hours} ${Math.floor((sec % 3600) / 60)}${unit.minutes}`;
 }
 
 /** Compact count (e.g. 1500 → "1.5k", 999 → "999"). */
 export function formatCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return String(n);
-}
-
-/** Russian pluralization: `plural(n, ['ссылка', 'ссылки', 'ссылок'])`. */
-export function plural(n: number, forms: readonly [string, string, string]): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return forms[0];
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return forms[1];
-  return forms[2];
-}
-
-/** Russian plural for "трек" (1 → "трек", 2 → "трека", 5 → "треков"). */
-export function pluralTracks(n: number): string {
-  return plural(n, ['трек', 'трека', 'треков']);
-}
-
-/** Russian plural for "релиз" (1 → "релиз", 2 → "релиза", 5 → "релизов"). */
-export function pluralReleases(n: number): string {
-  return plural(n, ['релиз', 'релиза', 'релизов']);
 }
 
 /** Release year from a Date or ISO string; null if absent or unparseable. */

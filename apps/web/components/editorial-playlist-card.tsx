@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import type { EditorialPlaylist } from '@vire/db';
-import { pluralTracks } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
 import { touchTargetClass } from '@/components/popover';
 import { CoverPlaceholder } from './playlist-cover';
@@ -89,6 +89,7 @@ export function EditorialPlaylistCard({
   playlist: EditorialPlaylist;
   liked: boolean;
 }) {
+  const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const { liked, likes, toggle } = usePlaylistLike(playlist.id, initialLiked, playlist.likesCount);
 
@@ -119,7 +120,7 @@ export function EditorialPlaylistCard({
         <div className="min-w-0">
           <p className="text-sm font-medium leading-snug truncate">{playlist.title}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {playlist.trackCount} {pluralTracks(playlist.trackCount)}
+            {tCommon('trackCount', { count: playlist.trackCount })}
           </p>
         </div>
 

@@ -3,7 +3,7 @@ import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, getFormatter } from 'next-intl/server';
 import {
   db,
   DrizzleReleaseRepository,
@@ -304,7 +304,7 @@ async function ArtistIdentity({
   trackCount: number;
   runtime: string | null;
 }) {
-  const tCommon = await getTranslations('common');
+  const [tCommon, tPlatforms] = await Promise.all([getTranslations('common'), getTranslations('platforms')]);
   const readout = [
     releaseCount > 0 ? tCommon('releaseCount', { count: releaseCount }) : null,
     trackCount > 0 ? tCommon('trackCount', { count: trackCount }) : null,
@@ -382,8 +382,8 @@ async function ArtistIdentity({
       {artist.links.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {artist.links.map((link: ArtistLink, i: number) => {
-            const key = detectPlatform(link.url).key;
-            const name = linkLabel(link.url, link.label);
+            const key = detectPlatform(link.url, tPlatforms('website')).key;
+            const name = linkLabel(link.url, link.label, tPlatforms('website'));
             const brand = PLATFORM_BRAND[key];
             const wordmark = brand ? isBrandWordmark(brand) : false;
             return (
@@ -553,7 +553,7 @@ async function ReleasesSection({
 // ─── Posts (анонсы) ──────────────────────────────────────────────────────────
 
 async function PostsSection({ posts }: { posts: ArtistPost[] }) {
-  const t = await getTranslations('artist.sections');
+  const [t, format] = await Promise.all([getTranslations('artist.sections'), getFormatter()]);
   return (
     <section className="animate-fade-up">
       <SectionHeader label={t('posts')} />
@@ -578,7 +578,7 @@ async function PostsSection({ posts }: { posts: ArtistPost[] }) {
                 className="text-[11px] font-mono shrink-0"
                 style={{ color: 'color-mix(in oklch, var(--artist-text) 40%, transparent)' }}
               >
-                {postDate(post.createdAt)}
+                {postDate(post.createdAt, format)}
               </time>
             </div>
             <p
@@ -594,12 +594,8 @@ async function PostsSection({ posts }: { posts: ArtistPost[] }) {
   );
 }
 
-function postDate(d: Date): string {
-  return new Date(d).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+function postDate(d: Date, format: Awaited<ReturnType<typeof getFormatter>>): string {
+  return format.dateTime(new Date(d), { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 // ─── Videos ────────────────────────────────────────────────────────────────

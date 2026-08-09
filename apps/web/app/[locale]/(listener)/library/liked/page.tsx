@@ -6,7 +6,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { getLikedTracksCached } from '@/lib/listener-data';
 import { PlaylistView } from '../../playlists/[id]/playlist-view';
-import { formatListenTime, pluralTracks } from '@/lib/format';
+import { formatListenTime } from '@/lib/format';
 import { Icon } from '@/components/icon';
 import { PageContainer } from '@/components/page-container';
 
@@ -18,7 +18,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LikedTracksPage() {
-  const [session, locale, t] = await Promise.all([auth(), getLocale(), getTranslations('library.likedTracksPage')]);
+  const [session, locale, t, tCommon] = await Promise.all([
+    auth(),
+    getLocale(),
+    getTranslations('library.likedTracksPage'),
+    getTranslations('common'),
+  ]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/library/liked', locale });
 
   const liked = await getLikedTracksCached(session.user.id);
@@ -61,8 +66,8 @@ export default async function LikedTracksPage() {
           <div className="min-w-0 flex-1 max-w-2xl space-y-2 pt-1">
             <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
             <p className="text-sm text-muted-foreground">
-              {liked.length} {pluralTracks(liked.length)}
-              {totalSec > 0 && ` · ${formatListenTime(totalSec)}`}
+              {tCommon('trackCount', { count: liked.length })}
+              {totalSec > 0 && ` · ${formatListenTime(totalSec, tCommon.raw('listenTimeUnit'))}`}
             </p>
           </div>
         </header>

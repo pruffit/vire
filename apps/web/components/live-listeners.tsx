@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useFormatter } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { LivePulse } from '@/components/live-pulse';
@@ -14,6 +15,7 @@ export function LiveListeners({
   trackId: string;
   initialCount?: number;
 }) {
+  const format = useFormatter();
   const [count, setCount] = useState(initialCount);
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export function LiveListeners({
         >
           <LivePulse />
           <span className="tabular-nums">
-            {count.toLocaleString('ru-RU')} {count === 1 ? 'слушает' : 'слушают'} сейчас
+            {format.number(count)} {count === 1 ? 'слушает' : 'слушают'} сейчас
           </span>
         </motion.span>
       )}

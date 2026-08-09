@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { db, DrizzleArtistRepository, getSmartLinkBySlug, getSmartLinkRelease } from '@vire/db';
 import { ArtistService, resolveSmartLinkDisplay } from '@vire/core';
 import { artistFontStyle } from '@/lib/fonts';
@@ -59,6 +60,7 @@ export default async function SmartLinkPage({ params }: Props) {
   const { artist, smartLink, vire, display } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
   const year = display.releaseDate ? new Date(display.releaseDate).getFullYear() : null;
+  const tPlatforms = await getTranslations('platforms');
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -170,8 +172,8 @@ export default async function SmartLinkPage({ params }: Props) {
         {smartLink.links.length > 0 && (
           <Stagger className={`${vire ? 'mt-2.5' : 'mt-8'} w-full space-y-2.5`}>
             {smartLink.links.map((link, i) => {
-              const { key } = detectPlatform(link.url);
-              const name = linkLabel(link.url, link.label);
+              const { key } = detectPlatform(link.url, tPlatforms('website'));
+              const name = linkLabel(link.url, link.label, tPlatforms('website'));
               const brand = PLATFORM_BRAND[key];
               const wordmark = brand ? isBrandWordmark(brand) : false;
               return (

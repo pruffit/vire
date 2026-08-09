@@ -26,7 +26,8 @@
     "title": "All tags",
     "searchPlaceholder": "Find a tag…",
     "searchAria": "Find a tag",
-    "empty": "Nothing found."
+    "empty": "Nothing found.",
+    "moodsHeading": "Moods"
   },
   "flowBlock": {
     "aria": "Flow"

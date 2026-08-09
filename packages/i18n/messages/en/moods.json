@@ -1,1 +1,20 @@
-{}
+{
+  "MELANCHOLY": "Melancholy",
+  "NIGHT": "Night",
+  "DRIVE": "Drive",
+  "AMBIENT": "Ambient",
+  "HYPE": "Hype",
+  "CHILL": "Chill",
+  "EPIC": "Epic",
+  "DARK": "Dark",
+  "ROMANTIC": "Romantic",
+  "NOSTALGIC": "Nostalgic",
+  "DREAMY": "Dreamy",
+  "AGGRESSIVE": "Aggressive",
+  "UPLIFTING": "Uplifting",
+  "SAD": "Sad",
+  "GROOVY": "Groovy",
+  "MEDITATIVE": "Meditative",
+  "TENSE": "Tense",
+  "PLAYFUL": "Playful"
+}

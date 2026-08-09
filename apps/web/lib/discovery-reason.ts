@@ -1,9 +1,6 @@
 import type { DiscoveryReason } from '@vire/core';
 
-export function discoveryReasonLabel(reason: DiscoveryReason): string {
-  switch (reason) {
-    case 'friends': return 'Слушают ваши друзья';
-    case 'similar': return 'Похоже на то, что вы слушаете';
-    case 'taste': return 'В вашем жанре';
-  }
+/** t — переводчик namespace 'common' (ключи discoveryReason.*). */
+export function discoveryReasonLabel(reason: DiscoveryReason, t: (key: string) => string): string {
+  return t(`discoveryReason.${reason}`);
 }

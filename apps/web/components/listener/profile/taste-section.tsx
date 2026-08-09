@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ListenerTaste } from '@vire/db';
 import { Section } from '@/components/listener/section';
 import { EmptyState } from '@/components/ui-kit';
-import { GENRE_LABELS, type Genre } from '@/lib/genres';
+import { genreLabel, isGenre } from '@/lib/genres';
 import { ArtistCard } from '@/components/artist-card';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export async function TasteSection({ genres, artists }: Props) {
-  const t = await getTranslations('profile.tasteSection');
+  const [t, tGenres] = await Promise.all([getTranslations('profile.tasteSection'), getTranslations('genres')]);
   return (
     <section className="animate-fade-up">
       <Section title={t('title')}>
@@ -29,7 +29,7 @@ export async function TasteSection({ genres, artists }: Props) {
                     key={g.genre}
                     className="px-2.5 py-1 rounded-full text-xs font-mono border border-border text-muted-foreground"
                   >
-                    {GENRE_LABELS[g.genre as Genre] ?? g.genre}
+                    {isGenre(g.genre) ? genreLabel(g.genre, tGenres) : g.genre}
                   </span>
                 ))}
               </div>

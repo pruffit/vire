@@ -11,7 +11,7 @@ import { EditorialGenerateButton } from './editorial-generate-button';
 import {
   PageHeader, Section, MetricGrid, StatCard, Table, Thead, Th, Tr, Td,
 } from '@/components/admin/ui';
-import { plural } from '@/lib/format';
+import { pluralRu } from '@/lib/ru-plural';
 
 export const dynamic = 'force-dynamic';
 
@@ -250,7 +250,7 @@ function AttentionPanel({ attention, openReports }: { attention: AdminAttention;
         <AlertRow
           variant="warn"
           href="/admin/reports"
-          label={`${openReports} ${plural(openReports, ['жалоба', 'жалобы', 'жалоб'])} на рассмотрении`}
+          label={`${openReports} ${pluralRu(openReports, ['жалоба', 'жалобы', 'жалоб'])} на рассмотрении`}
           sub="открытые обращения пользователей"
         />
       )}
@@ -259,7 +259,7 @@ function AttentionPanel({ attention, openReports }: { attention: AdminAttention;
         <AlertRow
           variant="error"
           href="/admin/tracks?status=PROCESSING"
-          label={`${attention.stuckTracks.length} ${plural(attention.stuckTracks.length, ['трек', 'трека', 'треков'])} зависл${attention.stuckTracks.length === 1 ? '' : 'о'} в обработке`}
+          label={`${attention.stuckTracks.length} ${pluralRu(attention.stuckTracks.length, ['трек', 'трека', 'треков'])} зависл${attention.stuckTracks.length === 1 ? '' : 'о'} в обработке`}
           sub="не двигается более 2 часов — возможная ошибка ffmpeg"
         />
       )}
@@ -268,7 +268,7 @@ function AttentionPanel({ attention, openReports }: { attention: AdminAttention;
         <AlertRow
           variant="error"
           href="/admin/tracks?status=FAILED"
-          label={`${attention.failedTracks.length} ${plural(attention.failedTracks.length, ['трек', 'трека', 'треков'])} с ошибкой транскодинга`}
+          label={`${attention.failedTracks.length} ${pluralRu(attention.failedTracks.length, ['трек', 'трека', 'треков'])} с ошибкой транскодинга`}
           sub="транскодинг упал после всех попыток — артист уведомлён письмом"
         />
       )}
@@ -277,7 +277,7 @@ function AttentionPanel({ attention, openReports }: { attention: AdminAttention;
         <AlertRow
           variant="warn"
           href="/admin/tracks?status=BLOCKED"
-          label={`${attention.blockedTracksCount} ${plural(attention.blockedTracksCount, ['трек', 'трека', 'треков'])} заблокировано`}
+          label={`${attention.blockedTracksCount} ${pluralRu(attention.blockedTracksCount, ['трек', 'трека', 'треков'])} заблокировано`}
           sub="ожидают ручной проверки или разблокировки"
         />
       )}
@@ -288,7 +288,7 @@ function AttentionPanel({ attention, openReports }: { attention: AdminAttention;
             <div className="min-w-0">
               <span className="text-sm font-medium text-sky-300">
                 {attention.unverifiedArtists.length}{' '}
-                {plural(attention.unverifiedArtists.length, ['артист', 'артиста', 'артистов'])} без верификации
+                {pluralRu(attention.unverifiedArtists.length, ['артист', 'артиста', 'артистов'])} без верификации
               </span>
               <span className="ml-2 text-xs text-sky-400/60">с опубликованными релизами</span>
             </div>
@@ -307,7 +307,7 @@ function AttentionPanel({ attention, openReports }: { attention: AdminAttention;
                   <span className="shrink-0 font-mono text-xs text-foreground/30">@{a.slug}</span>
                 </div>
                 <span className="shrink-0 text-xs text-foreground/35 tabular-nums">
-                  {a.publishedCount} {plural(a.publishedCount, ['релиз', 'релиза', 'релизов'])}
+                  {a.publishedCount} {pluralRu(a.publishedCount, ['релиз', 'релиза', 'релизов'])}
                 </span>
               </div>
             ))}

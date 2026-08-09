@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
 import { Stagger, StaggerItem } from '@vire/ui/motion';
 import type { ArtistListItem } from '@vire/db';
-import { ALL_GENRES, GENRE_LABELS, type Genre } from '@/lib/genres';
+import { ALL_GENRES, genreLabel, isGenre, type Genre } from '@/lib/genres';
 import { ArtistCard } from '@/components/artist-card';
 import { ScrollRow } from '@/components/scroll-row';
 import { touchPill } from '@/components/popover';
@@ -15,6 +15,7 @@ type Sort = 'default' | 'name' | 'releases';
 export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
   const t = useTranslations('artist.catalog');
   const tCommon = useTranslations('common');
+  const tGenres = useTranslations('genres');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<Sort>('default');
   const [genre, setGenre] = useState<Genre | null>(null);
@@ -92,7 +93,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
                   : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
               }`}
             >
-              {GENRE_LABELS[g as Genre] ?? g}
+              {isGenre(g) ? genreLabel(g, tGenres) : g}
             </button>
           ))}
         </ScrollRow>

@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
+import { getTranslations } from 'next-intl/server';
 import { getPlaylistWithTracks, getUserProfile } from '@vire/db';
 import { SITE_NAME } from '@/lib/site';
-import { pluralTracks } from '@/lib/format';
 import { ogCard, ogFallbackCard, OG_SIZE, OG_CACHE_HEADERS } from '@/lib/og/card';
 import { fetchCoverThumb } from '@/lib/og/cover';
 import { getHeaderCovers } from './header-cover';
@@ -26,12 +26,13 @@ export default async function PlaylistOgImage({ params }: { params: Promise<{ id
   const owner = playlist.ownerUserId ? await getUserProfile(playlist.ownerUserId) : null;
   const authorName = owner?.name ?? SITE_NAME;
   const count = playlist.tracks.length;
+  const tCommon = await getTranslations('common');
 
   return new ImageResponse(
     ogCard({
       kind: 'ПЛЕЙЛИСТ',
       title: playlist.title,
-      subtitle: `${authorName} · ${count} ${pluralTracks(count)}`,
+      subtitle: `${authorName} · ${tCommon('trackCount', { count })}`,
       cover,
     }),
     { ...size, headers: OG_CACHE_HEADERS },

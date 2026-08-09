@@ -1,11 +1,14 @@
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
+import { getFormatter, getTranslations } from 'next-intl/server';
 import type { TrackStatus, ReleaseStatus, ReleaseType } from '@vire/core';
 import { PublishButton } from './publish-button';
 import { Panel, ReleaseStatusBadge } from '@/components/ui-kit';
 import { Icon } from '@/components/icon';
 import { LivePulse } from '@/components/live-pulse';
-import { pluralTracks } from '@/lib/format';
+
+type Translator = Awaited<ReturnType<typeof getTranslations>>;
+type Formatter = Awaited<ReturnType<typeof getFormatter>>;
 
 // Date-free типы для безопасной RSC-сериализации
 export interface DashboardTrack {
@@ -26,7 +29,7 @@ export interface DashboardRelease {
   tracks: DashboardTrack[];
 }
 
-function TrackHealth({ tracks }: { tracks: DashboardTrack[] }) {
+function TrackHealth({ tracks, t }: { tracks: DashboardTrack[]; t: Translator }) {
   if (tracks.length === 0) {
     return <span className="text-xs text-foreground/30">Треков пока нет</span>;
   }
@@ -38,7 +41,7 @@ function TrackHealth({ tracks }: { tracks: DashboardTrack[] }) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-amber-300">
         <LivePulse small className="text-amber-400" />
-        {processing} {pluralTracks(processing)} обрабатыва{processing === 1 ? 'ется' : 'ются'}
+        {t('trackCount', { count: processing })} обрабатыва{processing === 1 ? 'ется' : 'ются'}
       </span>
     );
   }
@@ -46,14 +49,14 @@ function TrackHealth({ tracks }: { tracks: DashboardTrack[] }) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-red-300">
         <span className="h-1.5 w-1.5 rounded-full bg-red-400" aria-hidden="true" />
-        {problem} {pluralTracks(problem)} с ошибкой
+        {t('trackCount', { count: problem })} с ошибкой
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-foreground/35">
       <Icon name="check" size={12} className="text-emerald-400/80" />
-      {ready} {pluralTracks(ready)} готов{ready === 1 ? '' : 'ы'}
+      {t('trackCount', { count: ready })} готов{ready === 1 ? '' : 'ы'}
     </span>
   );
 }
@@ -77,7 +80,17 @@ function ReleaseCover({ release }: { release: DashboardRelease }) {
   );
 }
 
-function ReleaseCard({ data, artistSlug }: { data: DashboardRelease; artistSlug: string }) {
+function ReleaseCard({
+  data,
+  artistSlug,
+  t,
+  format,
+}: {
+  data: DashboardRelease;
+  artistSlug: string;
+  t: Translator;
+  format: Formatter;
+}) {
   const editHref = `/dashboard/releases/${data.id}`;
   return (
     <Panel className="group flex flex-col gap-3 p-4 transition-colors hover:border-foreground/20">
@@ -105,14 +118,10 @@ function ReleaseCard({ data, artistSlug }: { data: DashboardRelease; artistSlug:
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
             <ReleaseStatusBadge status={data.status} />
             <span className="font-mono text-xs text-foreground/45">{data.type}</span>
-            <span className="font-mono text-xs text-foreground/45">{data.tracks.length} тр.</span>
+            <span className="font-mono text-xs text-foreground/45">{t('trackCountShort', { count: data.tracks.length })}</span>
             {data.status === 'SCHEDULED' && data.releaseDate && (
               <span className="font-mono text-xs text-foreground/45">
-                {new Date(data.releaseDate).toLocaleDateString('ru-RU', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })}
+                {format.dateTime(new Date(data.releaseDate), { day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
             )}
           </div>
@@ -122,7 +131,7 @@ function ReleaseCard({ data, artistSlug }: { data: DashboardRelease; artistSlug:
       {data.status === 'DRAFT' && <PublishButton releaseId={data.id} releaseDate={data.releaseDate} />}
 
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-foreground/[0.06] pt-2.5">
-        <TrackHealth tracks={data.tracks} />
+        <TrackHealth tracks={data.tracks} t={t} />
         <Link
           href={editHref}
           className="inline-flex items-center gap-1.5 text-xs text-foreground/50 transition-colors hover:text-foreground"
@@ -134,11 +143,12 @@ function ReleaseCard({ data, artistSlug }: { data: DashboardRelease; artistSlug:
   );
 }
 
-export function ReleaseList({ releases, artistSlug }: { releases: DashboardRelease[]; artistSlug: string }) {
+export async function ReleaseList({ releases, artistSlug }: { releases: DashboardRelease[]; artistSlug: string }) {
+  const [t, format] = await Promise.all([getTranslations('common'), getFormatter()]);
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {releases.map((r) => (
-        <ReleaseCard key={r.id} data={r} artistSlug={artistSlug} />
+        <ReleaseCard key={r.id} data={r} artistSlug={artistSlug} t={t} format={format} />
       ))}
     </div>
   );

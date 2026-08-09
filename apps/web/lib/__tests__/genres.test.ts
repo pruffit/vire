@@ -14,11 +14,17 @@ describe('genres (web) — зеркало @vire/core', () => {
     expect(ALL_GENRES).toEqual(flat);
   });
 
-  it('у каждой группы непустой лейбл и непустой список жанров', () => {
+  it('у каждой группы непустой лейбл, ключ и непустой список жанров', () => {
     for (const group of GENRE_GROUPS) {
       expect(group.label.trim().length).toBeGreaterThan(0);
+      expect(group.key.trim().length).toBeGreaterThan(0);
       expect(group.genres.length).toBeGreaterThan(0);
     }
+  });
+
+  it('ключи групп уникальны', () => {
+    const keys = GENRE_GROUPS.map((g) => g.key);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
   it('GENRE_LABELS покрывает все жанры непустыми подписями', () => {

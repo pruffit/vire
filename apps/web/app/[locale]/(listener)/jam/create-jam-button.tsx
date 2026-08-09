@@ -9,7 +9,7 @@ import { Icon } from '@/components/icon';
 import { toast } from '@/lib/toast';
 import { touchPill } from '@/components/popover';
 import { cn } from '@/lib/utils';
-import { JAM_MODE_OPTIONS } from '@/lib/jam/jam-mode-labels';
+import { jamModeOptions } from '@/lib/jam/jam-mode-labels';
 
 interface Props {
   /** Вечеринка — отдельный вход/комната (`PARTY_PATH`), обычный джем — `/jam`. */
@@ -19,6 +19,7 @@ interface Props {
 
 export function CreateJamButton({ kind = 'JAM', basePath = '/jam' }: Props) {
   const t = useTranslations('jam.createButton');
+  const tMode = useTranslations('jam.mode');
   const [pending, setPending] = useState(false);
   const [mode, setMode] = useState<JamMode>('SYNCED');
   const router = useRouter();
@@ -43,7 +44,7 @@ export function CreateJamButton({ kind = 'JAM', basePath = '/jam' }: Props) {
   return (
     <div className="space-y-4">
       <div role="radiogroup" aria-label={t('modeAria')} className="flex justify-center gap-2">
-        {JAM_MODE_OPTIONS.map((option) => (
+        {jamModeOptions(tMode).map((option) => (
           <button
             key={option.value}
             type="button"

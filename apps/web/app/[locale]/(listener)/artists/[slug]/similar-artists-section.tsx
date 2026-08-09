@@ -11,7 +11,7 @@ export const SIMILAR_ARTISTS_MIN_CANDIDATES = 3;
 export async function SimilarArtistsSection({ artistProfileId }: { artistProfileId: string }) {
   const artists = await buildSimilarArtists(artistProfileId).catch(() => []);
   if (artists.length < SIMILAR_ARTISTS_MIN_CANDIDATES) return null;
-  const t = await getTranslations('artist.similarArtists');
+  const [t, tCommon] = await Promise.all([getTranslations('artist.similarArtists'), getTranslations('common')]);
 
   return (
     <section className="animate-fade-up">
@@ -25,7 +25,7 @@ export async function SimilarArtistsSection({ artistProfileId }: { artistProfile
               name={a.artistName}
               avatarUrl={a.artistAvatarUrl}
               verified={a.verified}
-              stat={discoveryReasonLabel(a.reason)}
+              stat={discoveryReasonLabel(a.reason, tCommon)}
             />
           </div>
         ))}

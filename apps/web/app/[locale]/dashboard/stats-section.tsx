@@ -1,3 +1,4 @@
+import { getFormatter, getTranslations } from 'next-intl/server';
 import type { ArtistPlayStats, ArtistRelistenStats } from '@vire/db';
 import { formatListenTime } from '@/lib/format';
 import { Panel } from '@/components/ui-kit';
@@ -20,9 +21,11 @@ function CardHeader({ title, meta }: { title: string; meta?: React.ReactNode }) 
   );
 }
 
-export function TopTracksCard({ stats }: { stats: ArtistPlayStats }) {
+export async function TopTracksCard({ stats }: { stats: ArtistPlayStats }) {
   const { tracks } = stats;
   const maxPlays = tracks[0]?.totalPlays ?? 0;
+  const [format, tCommon] = await Promise.all([getFormatter(), getTranslations('common')]);
+  const listenTimeUnit = tCommon.raw('listenTimeUnit') as { seconds: string; minutes: string; hours: string };
 
   return (
     <Panel className="flex flex-col p-5">
@@ -40,9 +43,9 @@ export function TopTracksCard({ stats }: { stats: ArtistPlayStats }) {
                   <span className="hidden truncate text-xs text-foreground/30 sm:block">{t.releaseTitle}</span>
                 </div>
                 <div className="flex shrink-0 items-baseline gap-3">
-                  <span className="tabular-nums text-xs text-foreground/30">{formatListenTime(t.totalListenedSec)}</span>
+                  <span className="tabular-nums text-xs text-foreground/30">{formatListenTime(t.totalListenedSec, listenTimeUnit)}</span>
                   <span className="w-12 text-right text-sm font-medium tabular-nums">
-                    {t.totalPlays.toLocaleString('ru-RU')}
+                    {format.number(t.totalPlays)}
                   </span>
                 </div>
               </div>
@@ -56,8 +59,9 @@ export function TopTracksCard({ stats }: { stats: ArtistPlayStats }) {
 }
 
 /** Возвращаются — слушатели, вернувшиеся к треку в разные дни (сигнал сильнее лайка). */
-export function RelistenCard({ relisten }: { relisten: ArtistRelistenStats }) {
+export async function RelistenCard({ relisten }: { relisten: ArtistRelistenStats }) {
   const returned = relisten.tracks.filter((t) => t.returningListeners > 0);
+  const format = await getFormatter();
 
   return (
     <Panel className="flex flex-col p-5">
@@ -65,7 +69,7 @@ export function RelistenCard({ relisten }: { relisten: ArtistRelistenStats }) {
         title="Возвращаются"
         meta={
           relisten.totalReturning > 0
-            ? `${relisten.totalReturning.toLocaleString('ru-RU')} ${pluralListeners(relisten.totalReturning)}`
+            ? `${format.number(relisten.totalReturning)} ${pluralListeners(relisten.totalReturning)}`
             : undefined
         }
       />
@@ -90,9 +94,9 @@ export function RelistenCard({ relisten }: { relisten: ArtistRelistenStats }) {
                   <div className="flex shrink-0 items-baseline gap-3">
                     <span className="tabular-nums text-xs text-foreground/30">{rate}%</span>
                     <span className="text-sm font-medium tabular-nums">
-                      {t.returningListeners.toLocaleString('ru-RU')}
+                      {format.number(t.returningListeners)}
                       <span className="font-normal text-foreground/30">
-                        {' / '}{t.distinctListeners.toLocaleString('ru-RU')}
+                        {' / '}{format.number(t.distinctListeners)}
                       </span>
                     </span>
                   </div>

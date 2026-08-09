@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { Link, useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/lib/toast';
 import { Badge, Panel, EmptyState, btnPrimary } from '@/components/ui-kit';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
-import { plural } from '@/lib/format';
 
 const iconBtnBase =
   'pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors active:scale-[0.98] disabled:opacity-40';
@@ -51,6 +51,7 @@ function IconButton({
 }
 
 export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; artistSlug: string }) {
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const [rows, setRows] = useState(items);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -115,7 +116,7 @@ export function SmartLinkList({ items, artistSlug }: { items: SmartLinkRow[]; ar
 
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="hidden font-mono text-xs text-foreground/35 sm:inline">
-                    {row.linkCount} {plural(row.linkCount, ['ссылка', 'ссылки', 'ссылок'])}
+                    {tCommon('linkCount', { count: row.linkCount })}
                   </span>
                   <Badge tone={row.isPublished ? 'success' : 'neutral'}>
                     {row.isPublished ? 'опубликован' : 'черновик'}

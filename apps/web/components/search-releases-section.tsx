@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
-import { GENRE_LABELS, type Genre } from '@/lib/genres';
+import { genreLabel, isGenre } from '@/lib/genres';
 import { touchPill } from '@/components/popover';
 import type { SearchRelease } from '@vire/db';
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function SearchReleasesSection({ releases }: Props) {
+  const tGenres = useTranslations('genres');
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
 
   const genres = useMemo(() => {
@@ -42,7 +44,7 @@ export function SearchReleasesSection({ releases }: Props) {
                   : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
               }`}
             >
-              {GENRE_LABELS[g as Genre] ?? g}
+              {isGenre(g) ? genreLabel(g, tGenres) : g}
             </button>
           ))}
         </div>

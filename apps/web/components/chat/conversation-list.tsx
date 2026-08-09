@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/navigation';
 import type { ConversationSummary } from '@vire/core';
 import { EmptyState } from '@/components/ui-kit';
@@ -16,6 +16,7 @@ import { formatMessageTimestamp } from './chat-format';
 export function ConversationList({ conversations: initial, viewerId }: { conversations: ConversationSummary[]; viewerId: string }) {
   const t = useTranslations('chat.conversationList');
   const tc = useTranslations('common');
+  const format = useFormatter();
   const conversations = useConversations(initial, viewerId);
   const identity = useIdentity(viewerId);
   const pathname = usePathname();
@@ -81,7 +82,7 @@ export function ConversationList({ conversations: initial, viewerId }: { convers
                 </p>
                 {c.lastMessageAt && (
                   <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                    {formatMessageTimestamp(new Date(c.lastMessageAt))}
+                    {formatMessageTimestamp(new Date(c.lastMessageAt), format)}
                   </span>
                 )}
               </div>

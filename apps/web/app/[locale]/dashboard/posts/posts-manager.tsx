@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useFormatter } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/lib/toast';
@@ -213,13 +214,14 @@ function PostCard({
   onDelete: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const format = useFormatter();
 
   return (
     <div className="rounded-xl bg-foreground/[0.025] border border-foreground/10 p-4 flex flex-col gap-2 group">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {post.title && <p className="font-medium leading-snug">{post.title}</p>}
-          <p className="text-[11px] font-mono text-foreground/30 mt-0.5">{relativeDate(post.createdAt)}</p>
+          <p className="text-[11px] font-mono text-foreground/30 mt-0.5">{relativeDate(post.createdAt, format)}</p>
         </div>
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity">
           <button
@@ -253,7 +255,7 @@ function PostCard({
   );
 }
 
-function relativeDate(iso: string): string {
+function relativeDate(iso: string, format: ReturnType<typeof useFormatter>): string {
   const then = new Date(iso).getTime();
   if (!Number.isFinite(then)) return '';
   const diffMs = Date.now() - then;
@@ -265,5 +267,5 @@ function relativeDate(iso: string): string {
   const days = Math.floor(hours / 24);
   if (days === 1) return 'вчера';
   if (days < 7) return `${days} дн назад`;
-  return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  return format.dateTime(new Date(iso), { day: 'numeric', month: 'long', year: 'numeric' });
 }

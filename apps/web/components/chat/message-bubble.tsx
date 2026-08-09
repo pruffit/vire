@@ -1,6 +1,10 @@
+'use client';
+
+import { useFormatter } from 'next-intl';
 import { formatMessageTimestamp } from './chat-format';
 
 export function MessageBubble({ text, createdAt, own, pending }: { text: string; createdAt: Date | string; own: boolean; pending?: boolean }) {
+  const format = useFormatter();
   return (
     <div className={`flex ${own ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -10,7 +14,7 @@ export function MessageBubble({ text, createdAt, own, pending }: { text: string;
       >
         <p className="whitespace-pre-wrap break-words text-sm">{text}</p>
         <p className={`mt-1 text-right font-mono text-[11px] ${own ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-          {formatMessageTimestamp(new Date(createdAt))}
+          {formatMessageTimestamp(new Date(createdAt), format)}
         </p>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { getTranslations } from 'next-intl/server';
+import { getFormatter, getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { type ActivityItem, activityKey } from '@/lib/activity';
 import { Section } from '@/components/listener/section';
@@ -11,12 +11,13 @@ const ACTIVITY_ICON: Record<ActivityItem['kind'], IconName> = {
   playlist: 'list',
 };
 
-function formatActivityDate(at: Date): string {
-  return new Date(at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+function formatActivityDate(at: Date, format: Awaited<ReturnType<typeof getFormatter>>): string {
+  // timeZone: 'UTC' обязателен — иначе расходится с сервером у дат возле границы суток (гидрация #418)
+  return format.dateTime(new Date(at), { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
 export async function ActivityFeed({ items }: { items: ActivityItem[] }) {
-  const t = await getTranslations('profile.activityFeed');
+  const [t, format] = await Promise.all([getTranslations('profile.activityFeed'), getFormatter()]);
   return (
     <section className="animate-fade-up">
       <Section title={t('title')}>
@@ -57,7 +58,7 @@ export async function ActivityFeed({ items }: { items: ActivityItem[] }) {
                   )}
                 </p>
                 <time className="text-xs font-mono text-muted-foreground/60 shrink-0">
-                  {formatActivityDate(item.at)}
+                  {formatActivityDate(item.at, format)}
                 </time>
               </div>
             ))}

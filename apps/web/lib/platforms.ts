@@ -60,8 +60,10 @@ export interface DetectedPlatform {
   name: string;
 }
 
-/** Распознаёт площадку по URL. Невалидный/неизвестный → website. */
-export function detectPlatform(url: string): DetectedPlatform {
+/** Распознаёт площадку по URL. Невалидный/неизвестный → website.
+ *  websiteLabel — локализованная подпись (namespace 'platforms', ключ website);
+ *  по умолчанию русская — для вызовов вне next-intl (админка, дашборд). */
+export function detectPlatform(url: string, websiteLabel: string = PLATFORM_NAMES.website): DetectedPlatform {
   let host: string;
   let path: string;
   try {
@@ -69,7 +71,7 @@ export function detectPlatform(url: string): DetectedPlatform {
     host = u.hostname.toLowerCase().replace(/^www\./, '');
     path = u.pathname.toLowerCase();
   } catch {
-    return { key: 'website', name: PLATFORM_NAMES.website };
+    return { key: 'website', name: websiteLabel };
   }
 
   const is = (...domains: string[]) => domains.some((d) => host === d || host.endsWith(`.${d}`));
@@ -111,7 +113,7 @@ export function detectPlatform(url: string): DetectedPlatform {
 }
 
 /** Итоговая подпись ссылки: пользовательская подпись приоритетнее распознанной. */
-export function linkLabel(url: string, label?: string | null): string {
+export function linkLabel(url: string, label?: string | null, websiteLabel?: string): string {
   if (label && label.trim()) return label.trim();
-  return detectPlatform(url).name;
+  return detectPlatform(url, websiteLabel).name;
 }

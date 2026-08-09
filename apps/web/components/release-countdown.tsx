@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { motion } from 'motion/react';
 import { PresaveButton } from '@/components/presave-button';
 import { Icon } from '@/components/icon';
@@ -52,6 +52,7 @@ export function ReleaseCountdown({
   isAuthed: boolean;
 }) {
   const t = useTranslations('release.countdown');
+  const format = useFormatter();
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(releaseAtMs));
 
   useEffect(() => {
@@ -64,11 +65,7 @@ export function ReleaseCountdown({
     return () => clearInterval(id);
   }, [releaseAtMs]);
 
-  const dateLabel = new Date(releaseAtMs).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const dateLabel = format.dateTime(new Date(releaseAtMs), { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <main className="relative z-10 mx-auto flex min-h-full max-w-md flex-col items-center px-6 py-16 text-center">

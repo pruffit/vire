@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useFormatter } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
@@ -76,6 +77,7 @@ export function ListeningNow({ initial }: { initial: ListeningNowTrack[] }) {
 }
 
 function TrackRow({ track }: { track: ListeningNowTrack }) {
+  const format = useFormatter();
   const { playQueue, toggle } = usePlay();
   const { isActive } = useTrackPlayState(track.id);
 
@@ -117,7 +119,7 @@ function TrackRow({ track }: { track: ListeningNowTrack }) {
       </span>
       <span className="shrink-0 flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
         <LivePulse small className="text-green-400" />
-        {track.listeners.toLocaleString('ru-RU')}
+        {format.number(track.listeners)}
       </span>
     </motion.button>
   );

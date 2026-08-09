@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from '@/i18n/navigation';
+import { useFormatter } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { toast } from '@/lib/toast';
@@ -14,6 +15,7 @@ interface Props {
 
 export function PublishButton({ releaseId, releaseDate }: Props) {
   const router = useRouter();
+  const format = useFormatter();
   // Оптимистично: считаем публикацию успешной сразу, откатываем при ошибке
   const [done, setDone] = useState(false);
   const [, startTransition] = useTransition();
@@ -22,7 +24,7 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
   const targetStatus = isFuture ? 'SCHEDULED' : 'PUBLISHED';
 
   const label = isFuture
-    ? `Запланировать на ${formatDate(releaseDate!)}`
+    ? `Запланировать на ${formatDate(releaseDate!, format)}`
     : 'Опубликовать';
 
   function publish() {
@@ -76,10 +78,6 @@ export function PublishButton({ releaseId, releaseDate }: Props) {
   );
 }
 
-function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+function formatDate(date: string, format: ReturnType<typeof useFormatter>): string {
+  return format.dateTime(new Date(date), { day: 'numeric', month: 'short', year: 'numeric' });
 }

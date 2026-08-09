@@ -52,6 +52,17 @@
   "trackCount": "{count, plural, one {# трек} few {# трека} many {# треков} other {# треков}}",
   "trackCountShort": "{count} тр.",
   "releaseCount": "{count, plural, one {# релиз} few {# релиза} many {# релизов} other {# релизов}}",
+  "linkCount": "{count, plural, one {# ссылка} few {# ссылки} many {# ссылок} other {# ссылок}}",
+  "listenTimeUnit": {
+    "seconds": "с",
+    "minutes": "м",
+    "hours": "ч"
+  },
+  "discoveryReason": {
+    "friends": "Слушают ваши друзья",
+    "similar": "Похоже на то, что вы слушаете",
+    "taste": "В вашем жанре"
+  },
   "notFound": {
     "eyebrow": "Тишина в эфире",
     "title": "Страница не найдена",

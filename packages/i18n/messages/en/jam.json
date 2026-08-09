@@ -97,5 +97,9 @@
   },
   "sourceLabels": {
     "LOCAL": "File"
+  },
+  "mode": {
+    "SYNCED": "Headphones",
+    "SPEAKER": "Speaker"
   }
 }

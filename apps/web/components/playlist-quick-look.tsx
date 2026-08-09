@@ -11,7 +11,7 @@ import { useLazyQueue } from '@/lib/player/use-play';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { TrackTitleText } from '@/components/track-title';
-import { formatDuration, pluralTracks } from '@/lib/format';
+import { formatDuration } from '@/lib/format';
 import { Icon } from '@/components/icon';
 import { toast } from '@/lib/toast';
 import { PlaylistCover } from '@/components/playlist-cover';
@@ -32,6 +32,7 @@ interface Props {
  */
 export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open, onClose }: Props) {
   const t = useTranslations('playlist');
+  const tCommon = useTranslations('common');
   const activeTrack = usePlayerStore((s) => s.track);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const { load, loading, items: tracks } = useLazyQueue('playlist', playlistId);
@@ -77,7 +78,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open,
         <div className="min-w-0 flex-1">
           <h3 className="text-base font-semibold leading-tight truncate">{title}</h3>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {trackCount} {pluralTracks(trackCount)}
+            {tCommon('trackCount', { count: trackCount })}
           </p>
         </div>
       </QuickLookDragHandle>

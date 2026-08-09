@@ -6,6 +6,8 @@ import type { Genre } from '@vire/core';
 export type { Genre };
 
 export interface GenreGroup {
+  /** Ключ для genres.json (messages/{ru,en}/genres.json → groups.*); label ниже — русский, для admin/дашборда вне next-intl. */
+  key: string;
   label: string;
   genres: Genre[];
 }
@@ -16,6 +18,7 @@ export const MAX_TRACK_GENRES = 3;
 // Порядок групп = порядок в пикерах/<optgroup>; каждый жанр ровно в одной группе.
 export const GENRE_GROUPS: GenreGroup[] = [
   {
+    key: 'house',
     label: 'Хаус',
     genres: [
       'HOUSE', 'DEEP_HOUSE', 'TECH_HOUSE', 'PROGRESSIVE_HOUSE', 'ELECTRO_HOUSE',
@@ -24,14 +27,17 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'techno',
     label: 'Техно',
     genres: ['TECHNO', 'MINIMAL_TECHNO', 'MINIMAL', 'DEEP_TECHNO', 'DUB_TECHNO', 'HARD_TECHNO', 'SCHRANZ', 'BLEEP'],
   },
   {
+    key: 'trance',
     label: 'Транс',
     genres: ['TRANCE', 'PROGRESSIVE_TRANCE', 'PSY_TRANCE', 'GOA_TRANCE', 'HARD_TRANCE', 'TECH_TRANCE'],
   },
   {
+    key: 'bassBreaksGarage',
     label: 'Бас, брейкбит и гараж',
     genres: [
       'DNB', 'JUNGLE', 'DUBSTEP', 'HALFTIME', 'GARAGE', 'SPEED_GARAGE', 'BASSLINE',
@@ -40,10 +46,12 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'hardcoreHardstyle',
     label: 'Хардкор и хардстайл',
     genres: ['HARDSTYLE', 'HARDCORE_EDM', 'GABBER', 'HAPPY_HARDCORE', 'SPEEDCORE', 'JUMPSTYLE', 'HANDS_UP', 'DONK', 'MAKINA'],
   },
   {
+    key: 'ambientDowntempo',
     label: 'Эмбиент и даунтемпо',
     genres: [
       'AMBIENT', 'DARK_AMBIENT', 'NEW_AGE', 'BERLIN_SCHOOL', 'ILLBIENT', 'DRONE',
@@ -52,6 +60,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'synthDiscoRetro',
     label: 'Синт, диско и ретро',
     genres: [
       'SYNTHPOP', 'SYNTHWAVE', 'VAPORWAVE', 'NEW_WAVE', 'DARKWAVE', 'ELECTROCLASH',
@@ -60,6 +69,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'electronicOther',
     label: 'Электроника: прочее',
     genres: [
       'ELECTRONIC', 'IDM', 'GLITCH', 'LEFTFIELD', 'CHIPTUNE', 'MUSIQUE_CONCRETE',
@@ -67,6 +77,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'hiphopRnb',
     label: 'Хип-хоп и R&B',
     genres: [
       'HIPHOP', 'BOOMBAP', 'TRAP', 'DRILL', 'CLOUDRAP', 'PHONK', 'GANGSTA', 'G_FUNK',
@@ -76,6 +87,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'soulFunk',
     label: 'Соул и фанк',
     genres: [
       'SOUL', 'NEOSOUL', 'PSYCHEDELIC_SOUL', 'UK_STREET_SOUL', 'GOSPEL', 'FUNK',
@@ -83,6 +95,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'rock',
     label: 'Рок',
     genres: [
       'ROCK', 'INDIE', 'ALTERNATIVE', 'CLASSIC_ROCK', 'HARD_ROCK', 'BLUES_ROCK',
@@ -95,6 +108,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'punkHardcore',
     label: 'Панк и хардкор',
     genres: [
       'PUNK', 'HARDCORE_PUNK', 'MELODIC_HARDCORE', 'POST_HARDCORE', 'EMO', 'POP_PUNK',
@@ -103,6 +117,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'metal',
     label: 'Метал',
     genres: [
       'METAL', 'HEAVYMETAL', 'THRASH', 'SPEED_METAL', 'POWER_METAL', 'PROGRESSIVE_METAL',
@@ -113,6 +128,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'pop',
     label: 'Поп',
     genres: [
       'POP', 'INDIEPOP', 'HYPERPOP', 'BALLAD', 'BUBBLEGUM', 'EUROPOP',
@@ -121,6 +137,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'jazz',
     label: 'Джаз',
     genres: [
       'JAZZ', 'BEBOP', 'HARD_BOP', 'POST_BOP', 'COOL_JAZZ', 'MODAL_JAZZ', 'FREE_JAZZ',
@@ -130,6 +147,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'blues',
     label: 'Блюз',
     genres: [
       'BLUES', 'DELTA_BLUES', 'CHICAGO_BLUES', 'TEXAS_BLUES', 'LOUISIANA_BLUES',
@@ -138,6 +156,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'classical',
     label: 'Классика',
     genres: [
       'CLASSICAL', 'MEDIEVAL', 'RENAISSANCE', 'BAROQUE', 'ROMANTICISM', 'IMPRESSIONIST',
@@ -146,6 +165,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'folkCountry',
     label: 'Фолк и кантри',
     genres: [
       'FOLK', 'NEOFOLK', 'ACOUSTIC', 'SINGER_SONGWRITER', 'COUNTRY', 'BLUEGRASS',
@@ -153,6 +173,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'worldMusic',
     label: 'Этника',
     genres: [
       'WORLD', 'AFRICAN', 'HIGHLIFE', 'SOUKOUS', 'SEGA', 'RAI', 'ZOUK', 'PACIFIC',
@@ -161,6 +182,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'latin',
     label: 'Латино',
     genres: [
       'LATIN', 'REGGAETON', 'SALSA', 'CUMBIA', 'BOSSA_NOVA', 'SAMBA', 'BATUCADA',
@@ -171,6 +193,7 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'reggaeDub',
     label: 'Регги и даб',
     genres: [
       'REGGAE', 'ROOTS_REGGAE', 'DANCEHALL', 'RAGGA', 'DUB', 'ROCKSTEADY', 'SKA',
@@ -178,10 +201,12 @@ export const GENRE_GROUPS: GenreGroup[] = [
     ],
   },
   {
+    key: 'soundtrackStage',
     label: 'Саундтрек и сцена',
     genres: ['SOUNDTRACK', 'CINEMATIC', 'MUSICAL', 'BRASS'],
   },
   {
+    key: 'experimentalOther',
     label: 'Эксперимент и прочее',
     genres: ['EXPERIMENTAL', 'NOISE', 'INDUSTRIAL', 'SPOKENWORD', 'FIELD_RECORDING'],
   },
@@ -589,3 +614,17 @@ export const GENRE_LABELS: Record<Genre, string> = {
   SPOKENWORD: 'Spoken Word',
   FIELD_RECORDING: 'Полевые записи',
 };
+
+const CYRILLIC = /[Ѐ-ӿ]/;
+
+/** Локализованная подпись жанра: сценовые термины на латинице (уже одинаковы в ru/en)
+ *  отдаются как есть, русские — идут через genres.json (namespace 'genres'). */
+export function genreLabel(genre: Genre, t: (key: string) => string): string {
+  const base = GENRE_LABELS[genre];
+  return CYRILLIC.test(base) ? t(`labels.${genre}`) : base;
+}
+
+/** Локализованная подпись группы жанров (namespace 'genres', ключ group.key). */
+export function genreGroupLabel(group: GenreGroup, t: (key: string) => string): string {
+  return t(`groups.${group.key}`);
+}

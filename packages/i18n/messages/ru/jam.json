@@ -97,5 +97,9 @@
   },
   "sourceLabels": {
     "LOCAL": "Файл"
+  },
+  "mode": {
+    "SYNCED": "В наушниках",
+    "SPEAKER": "На колонке"
   }
 }

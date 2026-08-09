@@ -26,7 +26,8 @@
     "title": "Все теги",
     "searchPlaceholder": "Найти тег…",
     "searchAria": "Найти тег",
-    "empty": "Ничего не нашлось."
+    "empty": "Ничего не нашлось.",
+    "moodsHeading": "Настроения"
   },
   "flowBlock": {
     "aria": "Поток"

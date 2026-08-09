@@ -1,10 +1,11 @@
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
-import { getTranslations } from 'next-intl/server';
+import { getFormatter, getTranslations } from 'next-intl/server';
 import { type FriendActivityItem, friendActivityKey } from '@/lib/activity';
 
-function formatActivityDate(at: Date): string {
-  return new Date(at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+function formatActivityDate(at: Date, format: Awaited<ReturnType<typeof getFormatter>>): string {
+  // timeZone: 'UTC' обязателен — иначе расходится с сервером у дат возле границы суток (гидрация #418)
+  return format.dateTime(new Date(at), { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
 function ActorAvatar({ name, image }: { name: string | null; image: string | null }) {
@@ -19,7 +20,11 @@ function ActorAvatar({ name, image }: { name: string | null; image: string | nul
 }
 
 export async function FriendsActivityFeed({ items }: { items: FriendActivityItem[] }) {
-  const [t, tc] = await Promise.all([getTranslations('social.activityFeed'), getTranslations('common')]);
+  const [t, tc, format] = await Promise.all([
+    getTranslations('social.activityFeed'),
+    getTranslations('common'),
+    getFormatter(),
+  ]);
   return (
     <div className="flex flex-col">
       {items.map((item) => (
@@ -51,7 +56,7 @@ export async function FriendsActivityFeed({ items }: { items: FriendActivityItem
               </>
             )}
           </p>
-          <time className="shrink-0 font-mono text-xs text-muted-foreground/60">{formatActivityDate(item.at)}</time>
+          <time className="shrink-0 font-mono text-xs text-muted-foreground/60">{formatActivityDate(item.at, format)}</time>
         </div>
       ))}
     </div>

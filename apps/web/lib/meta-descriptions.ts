@@ -1,5 +1,5 @@
 import type { ReleaseType } from '@vire/core';
-import { pluralTracks } from './format';
+import { pluralRu } from './ru-plural';
 
 const RELEASE_TYPE_LABELS: Record<ReleaseType, string> = {
   ALBUM: 'Альбом',
@@ -17,7 +17,7 @@ export function releaseMetaDescription(input: {
   const { title, artistName, type, year, trackCount } = input;
   const kind = type ? RELEASE_TYPE_LABELS[type] : 'Релиз';
   const yearPart = year ? ` ${year} года` : '';
-  const countPart = trackCount ? `, ${trackCount} ${pluralTracks(trackCount)}` : '';
+  const countPart = trackCount ? `, ${trackCount} ${pluralRu(trackCount, ['трек', 'трека', 'треков'])}` : '';
   return `${kind} «${title}»${yearPart} от ${artistName}${countPart}. Слушать на VireMusic.`;
 }
 

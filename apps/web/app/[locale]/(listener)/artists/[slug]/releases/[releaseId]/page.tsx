@@ -21,7 +21,7 @@ import { releaseYear, totalDuration } from '@/lib/format';
 import { releaseMetaDescription } from '@/lib/meta-descriptions';
 import { pageMetadata } from '@/lib/metadata';
 import { artistFontStyle } from '@/lib/fonts';
-import { GENRE_LABELS } from '@/lib/genres';
+import { genreLabel } from '@/lib/genres';
 import { Icon } from '@/components/icon';
 import { SectionHeader } from '@/components/section-header';
 
@@ -82,6 +82,7 @@ export default async function ReleasePage({ params }: Props) {
 
   const t = await getTranslations('release');
   const tCommon = await getTranslations('common');
+  const tGenres = await getTranslations('genres');
 
   const { artist, release, tracks, releaseAtMs, isReleased, showCountdown } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
@@ -175,7 +176,7 @@ export default async function ReleasePage({ params }: Props) {
                 <p className="label-mono text-xs text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)]">
                   <span style={{ color: 'var(--artist-accent)' }}>{release.type}</span>
                   {year ? <span className="text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)]"> · {year}</span> : null}
-                  {release.genre ? <span className="text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)]"> · {GENRE_LABELS[release.genre]}</span> : null}
+                  {release.genre ? <span className="text-[color-mix(in_oklch,var(--artist-text)_62%,transparent)]"> · {genreLabel(release.genre, tGenres)}</span> : null}
                 </p>
                 <h1
                   className="font-bold tracking-tight leading-[0.95] text-balance break-words"

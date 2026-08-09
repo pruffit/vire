@@ -9,7 +9,7 @@ import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifi
 import type { JamMode, JamParticipant, JamParticipantRole, JamQueueItem, SearchTrack } from '@vire/core';
 import { useJamSession } from '@/components/jam/jam-session-provider';
 import { useJamQueue } from '@/lib/jam/use-jam-queue';
-import { JAM_MODE_LABELS, JAM_MODE_OPTIONS } from '@/lib/jam/jam-mode-labels';
+import { jamModeLabel, jamModeOptions } from '@/lib/jam/jam-mode-labels';
 import { getSessionId } from '@/lib/session-id';
 import { toast } from '@/lib/toast';
 import { useJamStore } from '@/store/jam';
@@ -49,6 +49,7 @@ function noop(): void {}
 
 export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn, currentUserName, suggestions }: Props) {
   const t = useTranslations('jam.room');
+  const tMode = useTranslations('jam.mode');
   const [pending, setPending] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -192,14 +193,14 @@ export function JamRoom({ code, title, hostDisplayName, initialEnded, isLoggedIn
           <div className="flex flex-wrap items-center justify-end gap-1 sm:flex-nowrap sm:shrink-0">
             {isHost ? (
               <ActionSelect
-                options={JAM_MODE_OPTIONS}
+                options={jamModeOptions(tMode)}
                 value={room.mode}
                 onChange={(v) => actions.changeMode(v as JamMode)}
                 ariaLabel={t('modeAria')}
               />
             ) : (
               <span className="rounded-full border border-border/60 px-2.5 py-1 text-[11px] text-muted-foreground">
-                {JAM_MODE_LABELS[room.mode]}
+                {jamModeLabel(room.mode, tMode)}
               </span>
             )}
             <JamParticipants participants={room.participants} />

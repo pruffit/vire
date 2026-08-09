@@ -1,7 +1,8 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { MOOD_LABELS, type Mood } from '@/lib/moods';
+import { useTranslations } from 'next-intl';
+import type { Mood } from '@/lib/moods';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function MoodBadges({ moods, variant = 'platform', className }: Props) {
+  const t = useTranslations('moods');
   if (moods.length === 0) return null;
 
   return (
@@ -28,7 +30,7 @@ export function MoodBadges({ moods, variant = 'platform', className }: Props) {
               : 'border-border text-muted-foreground',
           )}
         >
-          {MOOD_LABELS[mood]}
+          {t(mood)}
         </motion.span>
       ))}
     </div>

@@ -9,9 +9,9 @@ import { ArtistCard } from '@/components/artist-card';
 export const DISCOVERY_MIN_CANDIDATES = 4;
 
 export async function DiscoverySection({ userId }: { userId: string }) {
-  const t = await getTranslations('home.sections');
   const artists = await buildDiscovery(userId).catch(() => []);
   if (artists.length < DISCOVERY_MIN_CANDIDATES) return null;
+  const [t, tCommon] = await Promise.all([getTranslations('home.sections'), getTranslations('common')]);
 
   return (
     <Section title={t('discoveries')} count={artists.length}>
@@ -24,7 +24,7 @@ export async function DiscoverySection({ userId }: { userId: string }) {
               name={a.artistName}
               avatarUrl={a.artistAvatarUrl}
               verified={a.verified}
-              stat={discoveryReasonLabel(a.reason)}
+              stat={discoveryReasonLabel(a.reason, tCommon)}
             />
           </div>
         ))}

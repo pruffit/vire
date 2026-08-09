@@ -3,7 +3,7 @@
 import { useId, useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
@@ -39,7 +39,7 @@ function year(d: Date | string | null): string | null {
   return Number.isFinite(y) ? String(y) : null;
 }
 
-function untilLabel(d: Date | string | null): string | null {
+function untilLabel(d: Date | string | null, format: ReturnType<typeof useFormatter>): string | null {
   if (!d) return null;
   const date = new Date(d);
   if (!Number.isFinite(date.getTime())) return null;
@@ -52,7 +52,7 @@ function untilLabel(d: Date | string | null): string | null {
   if (days === 1) return 'завтра';
   if (days < 7) return `через ${days} дн.`;
   // timeZone:'UTC' обязателен — иначе расходится с сервером у дат возле границы суток (гидрация #418)
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  return format.dateTime(date, { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
 export function ReleaseQuickLook({
@@ -69,6 +69,7 @@ export function ReleaseQuickLook({
 }) {
   const t = useTranslations('release');
   const tTrack = useTranslations('track');
+  const format = useFormatter();
   const [open, setOpen] = useState(false);
   const layoutId = useId();
   const yr = year(release.releaseDate);
@@ -98,7 +99,7 @@ export function ReleaseQuickLook({
           )}
           {release.releaseDate && (
             <span className="absolute top-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-mono text-white/90">
-              {untilLabel(release.releaseDate) ?? release.type}
+              {untilLabel(release.releaseDate, format) ?? release.type}
             </span>
           )}
         </div>

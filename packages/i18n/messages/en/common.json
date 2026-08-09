@@ -52,6 +52,17 @@
   "trackCount": "{count, plural, one {# track} other {# tracks}}",
   "trackCountShort": "{count, plural, one {# track} other {# tracks}}",
   "releaseCount": "{count, plural, one {# release} other {# releases}}",
+  "linkCount": "{count, plural, one {# link} other {# links}}",
+  "listenTimeUnit": {
+    "seconds": "s",
+    "minutes": "m",
+    "hours": "h"
+  },
+  "discoveryReason": {
+    "friends": "Your friends are listening",
+    "similar": "Similar to what you listen to",
+    "taste": "In your genre"
+  },
   "notFound": {
     "eyebrow": "Silence on air",
     "title": "Page not found",

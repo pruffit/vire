@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { formatDuration, formatListenTime, formatCount, pluralTracks, releaseYear, totalDuration } from '../format';
+import { formatDuration, formatListenTime, formatCount, releaseYear, totalDuration } from '../format';
+
+const unit = { seconds: 'с', minutes: 'м', hours: 'ч' };
 
 describe('formatDuration', () => {
   it('formats sub-minute durations with zero-padded seconds', () => {
@@ -21,20 +23,25 @@ describe('formatDuration', () => {
 
 describe('formatListenTime', () => {
   it('uses seconds below a minute', () => {
-    expect(formatListenTime(0)).toBe('0с');
-    expect(formatListenTime(45)).toBe('45с');
+    expect(formatListenTime(0, unit)).toBe('0с');
+    expect(formatListenTime(45, unit)).toBe('45с');
   });
 
   it('uses whole minutes below an hour', () => {
-    expect(formatListenTime(60)).toBe('1м');
-    expect(formatListenTime(600)).toBe('10м');
-    expect(formatListenTime(3599)).toBe('59м');
+    expect(formatListenTime(60, unit)).toBe('1м');
+    expect(formatListenTime(600, unit)).toBe('10м');
+    expect(formatListenTime(3599, unit)).toBe('59м');
   });
 
   it('uses hours and minutes from an hour up', () => {
-    expect(formatListenTime(3600)).toBe('1ч 0м');
-    expect(formatListenTime(3700)).toBe('1ч 1м');
-    expect(formatListenTime(7325)).toBe('2ч 2м');
+    expect(formatListenTime(3600, unit)).toBe('1ч 0м');
+    expect(formatListenTime(3700, unit)).toBe('1ч 1м');
+    expect(formatListenTime(7325, unit)).toBe('2ч 2м');
+  });
+
+  it('supports other locale units', () => {
+    expect(formatListenTime(45, { seconds: 's', minutes: 'm', hours: 'h' })).toBe('45s');
+    expect(formatListenTime(3700, { seconds: 's', minutes: 'm', hours: 'h' })).toBe('1h 1m');
   });
 });
 
@@ -48,28 +55,6 @@ describe('formatCount', () => {
     expect(formatCount(1000)).toBe('1.0k');
     expect(formatCount(1500)).toBe('1.5k');
     expect(formatCount(12345)).toBe('12.3k');
-  });
-});
-
-describe('pluralTracks', () => {
-  it('singular for 1, 21, 31', () => {
-    expect(pluralTracks(1)).toBe('трек');
-    expect(pluralTracks(21)).toBe('трек');
-  });
-
-  it('few-form for 2-4, 22-24', () => {
-    expect(pluralTracks(2)).toBe('трека');
-    expect(pluralTracks(3)).toBe('трека');
-    expect(pluralTracks(24)).toBe('трека');
-  });
-
-  it('many-form for 0, 5-20, teens', () => {
-    expect(pluralTracks(0)).toBe('треков');
-    expect(pluralTracks(5)).toBe('треков');
-    expect(pluralTracks(11)).toBe('треков');
-    expect(pluralTracks(12)).toBe('треков');
-    expect(pluralTracks(14)).toBe('треков');
-    expect(pluralTracks(20)).toBe('треков');
   });
 });
 
