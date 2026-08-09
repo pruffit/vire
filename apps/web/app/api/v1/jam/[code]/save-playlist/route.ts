@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { jamService } from '@/lib/jam';
 import { ForbiddenError, ValidationError } from '@vire/core';
 import { playlistService } from '@/lib/playlist';
+import { errorJson } from '@/lib/error-response';
 
 const schema = z.object({ title: z.string().trim().min(1).max(100).optional() });
 
@@ -22,13 +23,13 @@ export async function POST(req: Request, { params }: Ctx) {
   const codeResult = await service.resolveCode(code);
   if (!codeResult.ok) {
     const status = codeResult.error instanceof ValidationError ? 400 : 404;
-    return NextResponse.json({ error: codeResult.error.message }, { status });
+    return errorJson(codeResult.error, status);
   }
 
   const saveResult = await service.getQueueForSave(codeResult.value.id, { userId: session.user.id });
   if (!saveResult.ok) {
     const status = saveResult.error instanceof ForbiddenError ? 403 : 404;
-    return NextResponse.json({ error: saveResult.error.message }, { status });
+    return errorJson(saveResult.error, status);
   }
 
   const { session: jam, isHost, queue } = saveResult.value;

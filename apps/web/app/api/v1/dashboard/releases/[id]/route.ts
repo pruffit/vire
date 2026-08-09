@@ -5,6 +5,7 @@ import { fileStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, COVER_POLICY } from '@/lib/image';
 import { ReleaseService, NotFoundError, ALL_GENRES, type Genre, type ReleaseType } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 const VALID_TYPES = new Set<ReleaseType>(['ALBUM', 'EP', 'SINGLE']);
 const VALID_GENRES = new Set<string>(ALL_GENRES);
@@ -79,9 +80,9 @@ export async function PATCH(req: Request, { params }: Params) {
 
   if (!result.ok) {
     if (result.error instanceof NotFoundError) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      return errorJson(result.error, 404);
     }
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return errorJson(result.error, 403);
   }
 
   return NextResponse.json({ releaseId: result.value.releaseId });
@@ -107,7 +108,7 @@ export async function DELETE(
 
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: result.error.message }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ ok: true });
 }

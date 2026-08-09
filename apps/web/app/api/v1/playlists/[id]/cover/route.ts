@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { NotFoundError } from '@vire/core';
 import { playlistService } from '@/lib/playlist';
 import { validateImageUpload, PLAYLIST_COVER_POLICY } from '@/lib/image';
+import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -20,7 +21,7 @@ export async function POST(req: Request, { params }: Params) {
     const result = await playlistService().setCover(id, session.user.id, null);
     if (!result.ok) {
       const status = result.error instanceof NotFoundError ? 404 : 403;
-      return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+      return errorJson(result.error, status);
     }
     return NextResponse.json({ ok: true, coverUrl: null });
   }
@@ -36,7 +37,7 @@ export async function POST(req: Request, { params }: Params) {
   const result = await playlistService().setCover(id, session.user.id, { buffer, contentType: v.info.mime, ext: v.info.ext });
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ ok: true, coverUrl: result.value });
 }

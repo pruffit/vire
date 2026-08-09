@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db, DrizzlePurchaseRepository } from '@vire/db';
 import { PurchaseService, NotFoundError, ValidationError } from '@vire/core';
 import { YookassaPaymentGateway } from '@/lib/payment-gateway';
+import { errorJson } from '@/lib/error-response';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
@@ -28,10 +29,10 @@ export async function POST(req: Request, { params }: Params) {
   const result = await purchaseService().purchase(session.user.id, trackId, returnUrl);
   if (!result.ok) {
     if (result.error instanceof NotFoundError) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      return errorJson(result.error, 404);
     }
     if (result.error instanceof ValidationError) {
-      return NextResponse.json({ error: result.error.message }, { status: 503 });
+      return errorJson(result.error, 503);
     }
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { chatService } from '@/lib/chat';
 import { NotFoundError } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 const paramsSchema = z.object({ conversationId: z.string().uuid() });
 const HISTORY_LIMIT = 50;
@@ -32,7 +33,7 @@ export async function GET(req: Request, { params }: Ctx) {
   const result = await chatService().history(session.user.id, parsedParams.data.conversationId, before, HISTORY_LIMIT);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: 'Not found' }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ messages: result.value });
 }

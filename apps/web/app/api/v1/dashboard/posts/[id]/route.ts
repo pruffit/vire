@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db, DrizzleArtistPostRepository } from '@vire/db';
 import { ArtistPostService, NotFoundError, ValidationError } from '@vire/core';
 import { getActiveArtist } from '@/lib/active-artist';
+import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,12 +32,12 @@ export async function PATCH(req: Request, { params }: Params) {
 
   if (!result.ok) {
     if (result.error instanceof NotFoundError) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      return errorJson(result.error, 404);
     }
     if (result.error instanceof ValidationError) {
-      return NextResponse.json({ error: result.error.message }, { status: 400 });
+      return errorJson(result.error, 400);
     }
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return errorJson(result.error, 403);
   }
 
   return NextResponse.json({ ok: true });
@@ -59,9 +60,9 @@ export async function DELETE(req: Request, { params }: Params) {
 
   if (!result.ok) {
     if (result.error instanceof NotFoundError) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      return errorJson(result.error, 404);
     }
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return errorJson(result.error, 403);
   }
 
   return NextResponse.json({ ok: true });

@@ -11,7 +11,7 @@ export class ListenerTrackService {
   }
 
   async like(userId: string, trackId: string): Promise<Result<void, NotFoundError | Error>> {
-    if (!(await this.repo.trackExists(trackId))) return err(new NotFoundError('Track', trackId));
+    if (!(await this.repo.trackExists(trackId))) return err(new NotFoundError('Track', trackId, 'track.notFound'));
     await this.repo.like(userId, trackId);
     return ok(undefined);
   }
@@ -23,7 +23,7 @@ export class ListenerTrackService {
   }
 
   async getMoments(trackId: string): Promise<Result<AggregateMoment[], NotFoundError | Error>> {
-    if (!(await this.repo.trackExists(trackId))) return err(new NotFoundError('Track', trackId));
+    if (!(await this.repo.trackExists(trackId))) return err(new NotFoundError('Track', trackId, 'track.notFound'));
     return ok(await this.repo.getAggregateMoments(trackId));
   }
 
@@ -32,7 +32,7 @@ export class ListenerTrackService {
     positionSec: number,
     userId: string | null,
   ): Promise<Result<void, NotFoundError | Error>> {
-    if (!(await this.repo.trackExists(trackId))) return err(new NotFoundError('Track', trackId));
+    if (!(await this.repo.trackExists(trackId))) return err(new NotFoundError('Track', trackId, 'track.notFound'));
     await this.repo.addMoment(trackId, positionSec, userId);
     return ok(undefined);
   }

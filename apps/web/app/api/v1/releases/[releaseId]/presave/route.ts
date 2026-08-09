@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { db, DrizzlePresaveRepository } from '@vire/db';
 import { PresaveService, NotFoundError, type ValidationError } from '@vire/core';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
+import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ releaseId: string }> };
 
@@ -15,9 +16,9 @@ function presaveService() {
 
 function presaveErrorResponse(error: NotFoundError | ValidationError): NextResponse {
   if (error instanceof NotFoundError) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return errorJson(error, 404);
   }
-  return NextResponse.json({ error: error.message }, { status: 400 });
+  return errorJson(error, 400);
 }
 
 export async function GET(_req: Request, { params }: Params) {
@@ -45,7 +46,7 @@ export async function POST(req: Request, { params }: Params) {
   const body = await req.json().catch(() => ({}));
   const parsed = guestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Нужен корректный email' }, { status: 400 });
+    return NextResponse.json({ error: 'Нужен корректный email', code: 'presave.invalidEmail' }, { status: 400 });
   }
 
   // По IP отдельно от email-лимита: иначе гость спамит чужой ящик, каждый раз указывая новый email.

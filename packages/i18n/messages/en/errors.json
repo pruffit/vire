@@ -1,1 +1,101 @@
-{}
+{
+  "artist": {
+    "nameRequired": "Name is required",
+    "notFound": "Artist not found"
+  },
+  "artistPost": {
+    "bodyRequired": "Post text is required",
+    "forbidden": "This post does not belong to this artist",
+    "notFound": "Post not found",
+    "textLength": "Text must be 1–10000 characters",
+    "tooLong": "Too long"
+  },
+  "auth": {
+    "emailTaken": "This email is already registered",
+    "passwordAlreadySet": "Password is already set"
+  },
+  "block": {
+    "self": "You can't block yourself"
+  },
+  "chat": {
+    "conversationNotFound": "Conversation not found",
+    "emptyMessage": "Empty message",
+    "messageTooLong": "Message is too long",
+    "notFriends": "You can only message friends",
+    "notParticipant": "You are not a participant in this conversation",
+    "selfMessage": "You can't message yourself",
+    "userUnavailable": "You can't message this user: unavailable"
+  },
+  "friendship": {
+    "requestNotFound": "Friend request not found",
+    "self": "You can't add yourself as a friend",
+    "userNotFound": "User not found",
+    "userUnavailable": "You can't add this user as a friend: unavailable"
+  },
+  "jam": {
+    "addRateLimited": "Too many additions, try again in a minute",
+    "codeGenerationFailed": "Could not generate a jam code, please try again",
+    "finished": "The jam has already ended",
+    "full": "The jam is full",
+    "hostOnlyEnd": "Only the host can end the jam",
+    "hostOnlyKick": "Only the host can remove a participant",
+    "hostOnlyMode": "Only the host can change the mode",
+    "inviteFriendsOnly": "You can only invite a friend",
+    "invalidCode": "Invalid jam code",
+    "kickSelf": "You can't remove yourself",
+    "noActiveTrack": "No active track",
+    "notFound": "Jam not found",
+    "notParticipant": "You are not a participant in this jam",
+    "partyOnlyExternalTracks": "External tracks are only available in party mode",
+    "partyOnlyRefill": "Auto-fill is only available in party mode",
+    "partyOnlySkipVote": "Skip voting is only available in party mode",
+    "queueFull": "The queue is full",
+    "removeForeignTrackForbidden": "Only the host can remove someone else's track"
+  },
+  "playlist": {
+    "forbidden": "This playlist does not belong to you",
+    "full": "The playlist is full",
+    "invalidInviteLink": "Invalid invite link",
+    "joinForbidden": "You can't join",
+    "notCollaborative": "This playlist is not collaborative",
+    "notFound": "Playlist not found",
+    "ownerCannotJoin": "The owner can't join their own playlist",
+    "removeForeignTrackForbidden": "You can only remove tracks you added",
+    "reorderConflict": "Couldn't reorder tracks, please try again"
+  },
+  "presave": {
+    "invalidEmail": "Enter a valid email",
+    "notPresavable": "Pre-save unavailable: the release is already out or not scheduled"
+  },
+  "purchase": {
+    "gatewayNotConfigured": "Payment service is not configured"
+  },
+  "release": {
+    "forbidden": "This release does not belong to this artist",
+    "notFound": "Release not found"
+  },
+  "report": {
+    "alreadyOpen": "This report is already under review",
+    "reasonLength": "Reason must be 1–500 characters"
+  },
+  "smartLink": {
+    "invalidSlug": "Invalid address (slug)",
+    "notFound": "Smart link not found",
+    "releaseNotFound": "Release not found",
+    "slugTaken": "This address is already taken",
+    "titleRequired": "Title is required"
+  },
+  "track": {
+    "forbidden": "This track does not belong to this artist",
+    "notFound": "Track not found"
+  },
+  "trackMoods": {
+    "tooMany": "Too many moods: maximum 5"
+  },
+  "upload": {
+    "fileTooLarge": "File is too large (max 300 MB)",
+    "invalidAudioFormat": "File must be WAV, FLAC, or MP3",
+    "magicBytesMismatch": "File format does not match its extension"
+  },
+  "generic": "Something went wrong, please try again"
+}

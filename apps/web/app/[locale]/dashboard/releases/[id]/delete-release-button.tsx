@@ -5,6 +5,7 @@ import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
+import { apiErrorMessage } from '@/lib/api-error';
 
 export function DeleteReleaseButton({
   releaseId,
@@ -16,6 +17,7 @@ export function DeleteReleaseButton({
   const router = useRouter();
   const t = useTranslations('dashboard.releases.deleteRelease');
   const tCommon = useTranslations('dashboard.common');
+  const tErrors = useTranslations('errors');
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export function DeleteReleaseButton({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError((data as { error?: string }).error ?? t('deleteError'));
+        setError(apiErrorMessage(tErrors, data, t('deleteError')));
         setLoading(false);
         setConfirming(false);
         return;

@@ -75,7 +75,7 @@ describe('PATCH /api/v1/dashboard/smart-links/[id]', () => {
     slugTaken.mockResolvedValue(true);
     const res = await PATCH(patchReq({ slug: 'new-slug' }), ctx);
     expect(res.status).toBe(409);
-    await expect(res.json()).resolves.toEqual({ error: 'Такой адрес уже занят' });
+    await expect(res.json()).resolves.toEqual({ error: 'Такой адрес уже занят', code: 'smartLink.slugTaken' });
     expect(update).not.toHaveBeenCalled();
   });
 
@@ -86,7 +86,7 @@ describe('PATCH /api/v1/dashboard/smart-links/[id]', () => {
     releaseOwnedByArtist.mockResolvedValue(false);
     const res = await PATCH(patchReq({ releaseId: 'rel-1' }), ctx);
     expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: 'Релиз не найден' });
+    await expect(res.json()).resolves.toEqual({ error: 'Релиз не найден', code: 'smartLink.releaseNotFound' });
     expect(update).not.toHaveBeenCalled();
   });
 

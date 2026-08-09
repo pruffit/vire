@@ -44,8 +44,8 @@ export interface JamFullState {
   presentParticipantIds: string[];
 }
 
-function forbidden(message = 'Вы не участник этого джема'): ForbiddenError {
-  return new ForbiddenError(message);
+function forbidden(message = 'Вы не участник этого джема', code = 'jam.notParticipant'): ForbiddenError {
+  return new ForbiddenError(message, code);
 }
 
 function toWriteItem(item: JamQueueItem): JamQueueItemWrite {
@@ -98,16 +98,16 @@ export class JamService {
       });
       return ok(session);
     }
-    return err(new ConflictError('Не удалось сгенерировать код джема, попробуйте ещё раз'));
+    return err(new ConflictError('Не удалось сгенерировать код джема, попробуйте ещё раз', undefined, 'jam.codeGenerationFailed'));
   }
 
   /** Резолв кода джема в сессию для роутов, которым дальше нужен jamId (не тащить БД в хендлер). */
   async resolveCode(code: string): Promise<Result<JamSession, ValidationError | NotFoundError>> {
     const normalized = normalizeJamCode(code);
-    if (!normalized) return err(new ValidationError('Неверный код джема'));
+    if (!normalized) return err(new ValidationError('Неверный код джема', 'jam.invalidCode'));
 
     const session = await this.repo.findByCode(normalized);
-    if (!session) return err(new NotFoundError('Jam', normalized));
+    if (!session) return err(new NotFoundError('Jam', normalized, 'jam.notFound'));
     return ok(session);
   }
 
@@ -127,16 +127,16 @@ export class JamService {
     displayName: string,
   ): Promise<Result<{ session: JamSession; participant: JamParticipant }, ValidationError | NotFoundError | ConflictError>> {
     const normalized = normalizeJamCode(code);
-    if (!normalized) return err(new ValidationError('Неверный код джема'));
+    if (!normalized) return err(new ValidationError('Неверный код джема', 'jam.invalidCode'));
 
     const session = await this.repo.findByCode(normalized);
-    if (!session) return err(new NotFoundError('Jam', normalized));
-    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
+    if (!session) return err(new NotFoundError('Jam', normalized, 'jam.notFound'));
+    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён', undefined, 'jam.finished'));
 
     const existing = await this.repo.findParticipant(session.id, identity);
     if (!existing) {
       const count = await this.repo.countParticipants(session.id);
-      if (count >= JAM_MAX_PARTICIPANTS) return err(new ConflictError('Джем заполнен'));
+      if (count >= JAM_MAX_PARTICIPANTS) return err(new ConflictError('Джем заполнен', undefined, 'jam.full'));
     }
 
     // Роль на вставку — GUEST; репозиторий не понижает уже сохранённую роль (хост остаётся хостом).
@@ -156,7 +156,7 @@ export class JamService {
     if (!participant) return err(forbidden());
 
     const sessionState = await this.repo.getSessionState(jamId);
-    if (!sessionState) return err(new NotFoundError('Jam', jamId));
+    if (!sessionState) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
 
     const playback = await this.state.getPlayback(jamId);
     const presentParticipantIds = await this.state.listPresent(jamId);
@@ -172,7 +172,7 @@ export class JamService {
   /** Резолв id → сессия, для роутов вне кода джема (напр. редирект `/jam/id/{jamId}`). */
   async resolveId(jamId: string): Promise<Result<JamSession, NotFoundError>> {
     const session = await this.repo.findById(jamId);
-    if (!session) return err(new NotFoundError('Jam', jamId));
+    if (!session) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
     return ok(session);
   }
 
@@ -184,7 +184,7 @@ export class JamService {
     if (!participant) return err(forbidden());
 
     const sessionState = await this.repo.getSessionState(jamId);
-    if (!sessionState) return err(new NotFoundError('Jam', jamId));
+    if (!sessionState) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
 
     return ok({ session: sessionState.session, isHost: participant.role === 'HOST', queue: sessionState.queue });
   }
@@ -202,20 +202,20 @@ export class JamService {
     if (!participant) return err(forbidden());
 
     const sessionState = await this.repo.getSessionState(jamId);
-    if (!sessionState) return err(new NotFoundError('Jam', jamId));
-    if (sessionState.session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
+    if (!sessionState) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
+    if (sessionState.session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён', undefined, 'jam.finished'));
 
     if (intent.kind === 'add') {
       const addCount = await this.state.bumpAddCounter(jamId, participant.id);
-      if (addCount > JAM_MAX_ADDS_PER_MIN) return err(new ConflictError('Слишком много добавлений, попробуйте через минуту'));
+      if (addCount > JAM_MAX_ADDS_PER_MIN) return err(new ConflictError('Слишком много добавлений, попробуйте через минуту', undefined, 'jam.addRateLimited'));
 
-      if (sessionState.queue.length >= JAM_MAX_QUEUE) return err(new ConflictError('Очередь переполнена'));
+      if (sessionState.queue.length >= JAM_MAX_QUEUE) return err(new ConflictError('Очередь переполнена', undefined, 'jam.queueFull'));
     }
 
     if (intent.kind === 'remove') {
       const target = sessionState.queue.find((i) => i.id === intent.itemId);
       if (target && participant.role !== 'HOST' && target.addedByParticipantId !== participant.id) {
-        return err(forbidden('Удалить чужой трек может только хост'));
+        return err(forbidden('Удалить чужой трек может только хост', 'jam.removeForeignTrackForbidden'));
       }
     }
 
@@ -242,13 +242,13 @@ export class JamService {
     if (!participant) return err(forbidden());
 
     const sessionState = await this.repo.getSessionState(jamId);
-    if (!sessionState) return err(new NotFoundError('Jam', jamId));
-    if (sessionState.session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
-    if (sessionState.session.kind !== 'PARTY') return err(new ValidationError('Внешние треки доступны только в режиме вечеринки'));
+    if (!sessionState) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
+    if (sessionState.session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён', undefined, 'jam.finished'));
+    if (sessionState.session.kind !== 'PARTY') return err(new ValidationError('Внешние треки доступны только в режиме вечеринки', 'jam.partyOnlyExternalTracks'));
 
     const addCount = await this.state.bumpAddCounter(jamId, participant.id);
-    if (addCount > JAM_MAX_ADDS_PER_MIN) return err(new ConflictError('Слишком много добавлений, попробуйте через минуту'));
-    if (sessionState.queue.length >= JAM_MAX_QUEUE) return err(new ConflictError('Очередь переполнена'));
+    if (addCount > JAM_MAX_ADDS_PER_MIN) return err(new ConflictError('Слишком много добавлений, попробуйте через минуту', undefined, 'jam.addRateLimited'));
+    if (sessionState.queue.length >= JAM_MAX_QUEUE) return err(new ConflictError('Очередь переполнена', undefined, 'jam.queueFull'));
 
     const mutation: QueueMutation = { kind: 'add', entry, participantId: participant.id, addedAt: new Date(this.clock()) };
     return this.commitQueueMutation(jamId, sessionState, participant, true, mutation);
@@ -288,8 +288,8 @@ export class JamService {
     if (!participant) return err(forbidden());
 
     const session = await this.repo.findById(jamId);
-    if (!session) return err(new NotFoundError('Jam', jamId));
-    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
+    if (!session) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
+    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён', undefined, 'jam.finished'));
 
     if (intent.kind === 'track') {
       return ok(await this.advanceToItem(jamId, intent.itemId));
@@ -305,11 +305,11 @@ export class JamService {
         next = { itemId: intent.itemId, startedAtMs: now - intent.positionMs, paused: false, pausedPositionMs: 0, version: nextVersion };
         break;
       case 'pause':
-        if (!current) return err(new ConflictError('Нет активного трека'));
+        if (!current) return err(new ConflictError('Нет активного трека', undefined, 'jam.noActiveTrack'));
         next = { ...current, paused: true, pausedPositionMs: intent.positionMs, version: nextVersion };
         break;
       case 'seek':
-        if (!current) return err(new ConflictError('Нет активного трека'));
+        if (!current) return err(new ConflictError('Нет активного трека', undefined, 'jam.noActiveTrack'));
         next = current.paused
           ? { ...current, pausedPositionMs: intent.positionMs, version: nextVersion }
           : { ...current, startedAtMs: now - intent.positionMs, version: nextVersion };
@@ -352,9 +352,9 @@ export class JamService {
     if (!participant) return err(forbidden());
 
     const session = await this.repo.findById(jamId);
-    if (!session) return err(new NotFoundError('Jam', jamId));
-    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
-    if (session.kind !== 'PARTY') return err(new ValidationError('Голосование за пропуск доступно только в режиме вечеринки'));
+    if (!session) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
+    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён', undefined, 'jam.finished'));
+    if (session.kind !== 'PARTY') return err(new ValidationError('Голосование за пропуск доступно только в режиме вечеринки', 'jam.partyOnlySkipVote'));
 
     // Позиция уже сменилась (гонка с чужим переходом) — голос за неё бессмысленен, молча игнорируем.
     const playback = await this.state.getPlayback(jamId);
@@ -396,9 +396,9 @@ export class JamService {
     if (!participant) return err(forbidden());
 
     const sessionState = await this.repo.getSessionState(jamId);
-    if (!sessionState) return err(new NotFoundError('Jam', jamId));
-    if (sessionState.session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
-    if (sessionState.session.kind !== 'PARTY') return err(new ValidationError('Автодобор доступен только в режиме вечеринки'));
+    if (!sessionState) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
+    if (sessionState.session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён', undefined, 'jam.finished'));
+    if (sessionState.session.kind !== 'PARTY') return err(new ValidationError('Автодобор доступен только в режиме вечеринки', 'jam.partyOnlyRefill'));
 
     const noop = ok({ queue: sessionState.queue, version: sessionState.session.queueVersion });
     if (!this.wave) return noop;
@@ -448,11 +448,11 @@ export class JamService {
   ): Promise<Result<{ mode: JamMode; speakerParticipantId: string | null }, ForbiddenError | NotFoundError | ConflictError>> {
     const participant = await this.repo.findParticipant(jamId, identity);
     if (!participant) return err(forbidden());
-    if (participant.role !== 'HOST') return err(forbidden('Режим меняет только хост'));
+    if (participant.role !== 'HOST') return err(forbidden('Режим меняет только хост', 'jam.hostOnlyMode'));
 
     const session = await this.repo.findById(jamId);
-    if (!session) return err(new NotFoundError('Jam', jamId));
-    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
+    if (!session) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
+    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён', undefined, 'jam.finished'));
 
     await this.repo.setMode(jamId, mode);
     const result = { mode, speakerParticipantId: session.speakerParticipantId };
@@ -469,8 +469,8 @@ export class JamService {
     if (!participant) return err(forbidden());
 
     const session = await this.repo.findById(jamId);
-    if (!session) return err(new NotFoundError('Jam', jamId));
-    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён'));
+    if (!session) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
+    if (session.status !== 'LIVE') return err(new ConflictError('Джем уже завершён', undefined, 'jam.finished'));
 
     await this.repo.setSpeaker(jamId, participant.id);
     const result = { mode: session.mode, speakerParticipantId: participant.id };
@@ -480,8 +480,8 @@ export class JamService {
 
   async endJam(jamId: string, hostUserId: string): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const session = await this.repo.findById(jamId);
-    if (!session) return err(new NotFoundError('Jam', jamId));
-    if (session.hostUserId !== hostUserId) return err(forbidden('Только хост может завершить джем'));
+    if (!session) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
+    if (session.hostUserId !== hostUserId) return err(forbidden('Только хост может завершить джем', 'jam.hostOnlyEnd'));
 
     await this.repo.endSession(jamId);
     await this.state.clear(jamId);
@@ -491,11 +491,11 @@ export class JamService {
 
   async kick(jamId: string, hostUserId: string, participantId: string): Promise<Result<void, NotFoundError | ForbiddenError | ValidationError>> {
     const session = await this.repo.findById(jamId);
-    if (!session) return err(new NotFoundError('Jam', jamId));
-    if (session.hostUserId !== hostUserId) return err(forbidden('Только хост может кикнуть участника'));
+    if (!session) return err(new NotFoundError('Jam', jamId, 'jam.notFound'));
+    if (session.hostUserId !== hostUserId) return err(forbidden('Только хост может кикнуть участника', 'jam.hostOnlyKick'));
 
     const host = await this.repo.findParticipant(jamId, { userId: hostUserId });
-    if (host && host.id === participantId) return err(new ValidationError('Нельзя кикнуть самого себя'));
+    if (host && host.id === participantId) return err(new ValidationError('Нельзя кикнуть самого себя', 'jam.kickSelf'));
 
     await this.repo.removeParticipant(jamId, participantId);
     await this.broadcastParticipants(jamId, []);

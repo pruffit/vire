@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { NotFoundError, ConflictError } from '@vire/core';
 import { playlistService } from '@/lib/playlist';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -19,7 +20,7 @@ export async function GET(req: Request, { params }: Params) {
   const result = await playlistService().getForViewer(id, session?.user?.id ?? null, token);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ tracks: result.value.tracks, version: result.value.version });
 }

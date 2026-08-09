@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
+import { apiErrorMessage } from '@/lib/api-error';
 
 interface Stats {
   likes: number;
@@ -27,6 +28,7 @@ interface Props {
 
 export function ProfileHero({ user, stats, likedMinutes }: Props) {
   const t = useTranslations('profile.profileHero');
+  const tErrors = useTranslations('errors');
   const months = t.raw('months') as string[];
 
   function formatJoined(date: Date): string {
@@ -66,7 +68,7 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
       setImgError(false);
     } else {
       const data = await res.json().catch(() => null);
-      setAvatarError(data?.error ?? t('avatarUploadFailed'));
+      setAvatarError(apiErrorMessage(tErrors, data, t('avatarUploadFailed')));
     }
   }
 

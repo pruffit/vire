@@ -7,6 +7,7 @@ import {
 } from '@vire/db';
 import { TrackMoodsService, NotFoundError, ValidationError } from '@vire/core';
 import { getActiveArtist } from '@/lib/active-artist';
+import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -23,7 +24,7 @@ function trackMoodsService() {
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
   const result = await trackMoodsService().getMoods(id);
-  if (!result.ok) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!result.ok) return errorJson(result.error, 404);
   return NextResponse.json({ moods: result.value });
 }
 
@@ -42,11 +43,11 @@ export async function PUT(req: Request, { params }: Params) {
 
   const result = await trackMoodsService().setMoods(id, artist.id, parsed.data);
   if (!result.ok) {
-    if (result.error instanceof NotFoundError) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (result.error instanceof NotFoundError) return errorJson(result.error, 404);
     if (result.error instanceof ValidationError) {
-      return NextResponse.json({ error: result.error.message }, { status: 400 });
+      return errorJson(result.error, 400);
     }
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return errorJson(result.error, 403);
   }
   return NextResponse.json({ moods: parsed.data });
 }

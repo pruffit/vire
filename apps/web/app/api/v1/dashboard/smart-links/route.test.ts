@@ -56,7 +56,7 @@ describe('POST /api/v1/dashboard/smart-links', () => {
     findByUserId.mockResolvedValue({ id: 'artist1' });
     const res = await POST(makeReq({ title: '   ' }));
     expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: 'Нужно название' });
+    await expect(res.json()).resolves.toEqual({ error: 'Нужно название', code: 'smartLink.titleRequired' });
     expect(create).not.toHaveBeenCalled();
   });
 
@@ -66,7 +66,7 @@ describe('POST /api/v1/dashboard/smart-links', () => {
     slugTaken.mockResolvedValue(true);
     const res = await POST(makeReq({ title: 'X', slug: 'taken' }));
     expect(res.status).toBe(409);
-    await expect(res.json()).resolves.toEqual({ error: 'Такой адрес уже занят' });
+    await expect(res.json()).resolves.toEqual({ error: 'Такой адрес уже занят', code: 'smartLink.slugTaken' });
     expect(create).not.toHaveBeenCalled();
   });
 
@@ -76,7 +76,7 @@ describe('POST /api/v1/dashboard/smart-links', () => {
     releaseOwnedByArtist.mockResolvedValue(false);
     const res = await POST(makeReq({ title: 'X', releaseId: 'rel-1' }));
     expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: 'Релиз не найден' });
+    await expect(res.json()).resolves.toEqual({ error: 'Релиз не найден', code: 'smartLink.releaseNotFound' });
     expect(create).not.toHaveBeenCalled();
   });
 

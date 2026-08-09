@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { chatService } from '@/lib/chat';
 import { ValidationError } from '@vire/core';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import { errorJson } from '@/lib/error-response';
 
 const schema = z.object({
   toUserId: z.string().uuid(),
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
   );
   if (!result.ok) {
     const status = result.error instanceof ValidationError ? 422 : 403;
-    return NextResponse.json({ error: result.error.message }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json(result.value);
 }

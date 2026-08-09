@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { friendshipService } from '@/lib/friends';
 import { NotFoundError } from '@vire/core';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import { errorJson } from '@/lib/error-response';
 
 const paramsSchema = z.object({ userId: z.string().uuid() });
 type Ctx = { params: Promise<{ userId: string }> };
@@ -21,7 +22,7 @@ export async function POST(_req: Request, { params }: Ctx) {
   const result = await friendshipService().accept(session.user.id, parsed.data.userId);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ ok: true });
 }

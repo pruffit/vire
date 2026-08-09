@@ -45,10 +45,10 @@ export class TrackService {
     credits?: TrackCredit[];
   }): Promise<Result<Track, NotFoundError | ForbiddenError>> {
     const release = await this.releaseRepo.findById(params.releaseId);
-    if (!release) return err(new NotFoundError('Release', params.releaseId));
+    if (!release) return err(new NotFoundError('Release', params.releaseId, 'release.notFound'));
 
     if (release.artistProfileId !== params.artistProfileId) {
-      return err(new ForbiddenError('Forbidden: release does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: release does not belong to this artist', 'release.forbidden'));
     }
 
     // S3-загрузка после проверки владения релизом — при 403/404 осиротевший объект не создаётся.
@@ -81,7 +81,7 @@ export class TrackService {
     if (!authorized.ok) return authorized;
 
     const updated = await this.trackRepo.update(params.trackId, params.patch);
-    if (!updated) return err(new NotFoundError('Track', params.trackId));
+    if (!updated) return err(new NotFoundError('Track', params.trackId, 'track.notFound'));
     return ok(updated);
   }
 
@@ -106,9 +106,9 @@ export class TrackService {
     orderedIds: string[];
   }): Promise<Result<void, NotFoundError | ForbiddenError | Error>> {
     const release = await this.releaseRepo.findById(params.releaseId);
-    if (!release) return err(new NotFoundError('Release', params.releaseId));
+    if (!release) return err(new NotFoundError('Release', params.releaseId, 'release.notFound'));
     if (release.artistProfileId !== params.artistProfileId) {
-      return err(new ForbiddenError('Forbidden: release does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: release does not belong to this artist', 'release.forbidden'));
     }
 
     const withTracks = await this.releaseRepo.findWithTracks(params.releaseId);

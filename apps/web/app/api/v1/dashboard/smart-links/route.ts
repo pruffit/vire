@@ -5,6 +5,7 @@ import { SmartLinkService, ConflictError } from '@vire/core';
 import { fileStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, COVER_POLICY } from '@/lib/image';
+import { errorJson } from '@/lib/error-response';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -50,9 +51,9 @@ export async function POST(req: Request) {
 
   if (!result.ok) {
     if (result.error instanceof ConflictError) {
-      return NextResponse.json({ error: result.error.message }, { status: 409 });
+      return errorJson(result.error, 409);
     }
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
+    return errorJson(result.error, 400);
   }
 
   return NextResponse.json({ id: result.value.id, slug: result.value.slug }, { status: 201 });

@@ -4,6 +4,7 @@ import { jamService } from '@/lib/jam';
 import { SITE_URL } from '@/lib/site';
 import { PARTY_PATH } from '@/lib/party';
 import { ValidationError } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 type Ctx = { params: Promise<{ code: string }> };
 
@@ -13,7 +14,7 @@ export async function GET(_req: Request, { params }: Ctx) {
   const codeResult = await jamService().resolveCode(code);
   if (!codeResult.ok) {
     const status = codeResult.error instanceof ValidationError ? 400 : 404;
-    return NextResponse.json({ error: codeResult.error.message }, { status });
+    return errorJson(codeResult.error, status);
   }
 
   const base = codeResult.value.kind === 'PARTY' ? PARTY_PATH : '/jam';

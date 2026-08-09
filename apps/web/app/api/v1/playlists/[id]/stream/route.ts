@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { playlistService } from '@/lib/playlist';
 import { subscribeChannel, playlistChannel } from '@/lib/realtime';
 import { NotFoundError } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 export const runtime = 'nodejs';
 
@@ -18,7 +19,7 @@ export async function GET(req: Request, { params }: Ctx) {
   const result = await playlistService().assertStreamAccess(id, session.user.id);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+    return errorJson(result.error, status);
   }
   const { version } = result.value;
 

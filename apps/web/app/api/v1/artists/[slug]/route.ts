@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, DrizzleArtistRepository } from '@vire/db';
 import { ArtistService, NotFoundError } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 export async function GET(
   _req: Request,
@@ -13,7 +14,7 @@ export async function GET(
 
   if (!result.ok) {
     if (result.error instanceof NotFoundError) {
-      return NextResponse.json({ error: 'Artist not found' }, { status: 404 });
+      return errorJson(result.error, 404);
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

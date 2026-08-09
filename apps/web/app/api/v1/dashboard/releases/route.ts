@@ -5,6 +5,7 @@ import { fileStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, COVER_POLICY } from '@/lib/image';
 import { ReleaseService, ALL_GENRES, type Genre, type ReleaseType } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 const VALID_TYPES = new Set<ReleaseType>(['ALBUM', 'EP', 'SINGLE']);
 const VALID_GENRES = new Set<string>(ALL_GENRES);
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
   });
 
   if (!result.ok) {
-    return NextResponse.json({ error: result.error.message }, { status: 403 });
+    return errorJson(result.error, 403);
   }
 
   return NextResponse.json({ releaseId: result.value.releaseId }, { status: 201 });

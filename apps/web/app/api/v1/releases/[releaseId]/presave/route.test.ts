@@ -74,7 +74,7 @@ describe('POST /api/v1/releases/[id]/presave', () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     const res = await POST(req(), ctx);
     expect(res.status).toBe(404);
-    await expect(res.json()).resolves.toEqual({ error: 'Not found' });
+    await expect(res.json()).resolves.toEqual({ error: 'Release not found: rel-1', code: 'release.notFound' });
     expect(presaveForUser).not.toHaveBeenCalled();
   });
 
@@ -87,6 +87,7 @@ describe('POST /api/v1/releases/[id]/presave', () => {
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({
       error: 'Пресейв недоступен: релиз уже вышел или не запланирован',
+      code: 'presave.notPresavable',
     });
     expect(presaveForUser).not.toHaveBeenCalled();
   });

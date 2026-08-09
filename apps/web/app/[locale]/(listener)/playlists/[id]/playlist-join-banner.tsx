@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Icon } from '@/components/icon';
 import { toast } from '@/lib/toast';
+import { apiErrorMessage } from '@/lib/api-error';
 
 interface Props {
   playlistId: string;
@@ -14,6 +15,7 @@ interface Props {
 
 export function PlaylistJoinBanner({ playlistId, token, inviterName, isAuthenticated }: Props) {
   const t = useTranslations();
+  const tErrors = useTranslations('errors');
   const [joining, setJoining] = useState(false);
   const router = useRouter();
 
@@ -27,7 +29,7 @@ export function PlaylistJoinBanner({ playlistId, token, inviterName, isAuthentic
       }).catch(() => null);
       if (!res?.ok) {
         const data = res ? await res.json().catch(() => null) : null;
-        toast.error(res?.status === 409 ? (data?.error ?? t('playlist.join.full')) : t('playlist.join.failed'));
+        toast.error(res?.status === 409 ? apiErrorMessage(tErrors, data, t('playlist.join.full')) : t('playlist.join.failed'));
         setJoining(false);
         return;
       }

@@ -15,7 +15,7 @@ export class TrackMoodsService {
 
   async getMoods(trackId: string): Promise<Result<string[], NotFoundError>> {
     const track = await this.trackRepo.findById(trackId);
-    if (!track) return err(new NotFoundError('Track', trackId));
+    if (!track) return err(new NotFoundError('Track', trackId, 'track.notFound'));
     return ok(await this.moodsRepo.get(trackId));
   }
 
@@ -26,7 +26,7 @@ export class TrackMoodsService {
   ): Promise<Result<void, NotFoundError | ForbiddenError | ValidationError>> {
     const authorized = await authorizeTrackOwnership(this.trackRepo, this.releaseRepo, trackId, artistProfileId);
     if (!authorized.ok) return authorized;
-    if (moods.length > MAX_MOODS) return err(new ValidationError(`Too many moods: max ${MAX_MOODS}`));
+    if (moods.length > MAX_MOODS) return err(new ValidationError(`Too many moods: max ${MAX_MOODS}`, 'trackMoods.tooMany'));
 
     await this.moodsRepo.set(trackId, [...moods]);
     return ok(undefined);

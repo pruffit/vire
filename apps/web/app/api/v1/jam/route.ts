@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { jamService } from '@/lib/jam';
 import { ConflictError } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 const schema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   );
   if (!result.ok) {
     const status = result.error instanceof ConflictError ? 409 : 500;
-    return NextResponse.json({ error: result.error.message }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ code: result.value.code, jamId: result.value.id });
 }

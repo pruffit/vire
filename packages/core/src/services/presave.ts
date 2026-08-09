@@ -46,10 +46,10 @@ export class PresaveService {
   /** Пресейв доступен только для запланированного релиза с будущей датой выхода. */
   private async checkPresavable(releaseId: string): Promise<Result<void, NotFoundError | ValidationError>> {
     const info = await this.repo.getReleaseInfo(releaseId);
-    if (!info) return err(new NotFoundError('Release', releaseId));
+    if (!info) return err(new NotFoundError('Release', releaseId, 'release.notFound'));
     const presavable =
       info.status === 'SCHEDULED' && info.releaseDate != null && new Date(info.releaseDate).getTime() > this.deps.now();
-    if (!presavable) return err(new ValidationError(NOT_PRESAVABLE_MESSAGE));
+    if (!presavable) return err(new ValidationError(NOT_PRESAVABLE_MESSAGE, 'presave.notPresavable'));
     return ok(undefined);
   }
 }

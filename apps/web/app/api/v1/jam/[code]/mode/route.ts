@@ -4,6 +4,7 @@ import { jamService } from '@/lib/jam';
 import { resolveJamIdentity } from '@/lib/jam/jam-identity';
 import { SESSION_ID_MAX_LEN } from '@/lib/session-signing';
 import { ForbiddenError, ConflictError, ValidationError } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 const schema = z.object({
   mode: z.enum(['SYNCED', 'SPEAKER']),
@@ -25,13 +26,13 @@ export async function POST(req: Request, { params }: Ctx) {
   const codeResult = await service.resolveCode(code);
   if (!codeResult.ok) {
     const status = codeResult.error instanceof ValidationError ? 400 : 404;
-    return NextResponse.json({ error: codeResult.error.message }, { status });
+    return errorJson(codeResult.error, status);
   }
 
   const result = await service.setMode(codeResult.value.id, identity, parsed.data.mode);
   if (!result.ok) {
     const status = result.error instanceof ForbiddenError ? 403 : result.error instanceof ConflictError ? 409 : 404;
-    return NextResponse.json({ error: result.error.message }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json(result.value);
 }

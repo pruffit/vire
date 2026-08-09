@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { db, DrizzleListenerTrackRepository } from '@vire/db';
 import { ListenerTrackService, NotFoundError } from '@vire/core';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
+import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -38,7 +39,7 @@ export async function POST(req: Request, { params }: Params) {
   const result = await listenerTrackService().addMoment(id, parsed.data.positionSec, session?.user?.id ?? null);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ ok: true });
 }

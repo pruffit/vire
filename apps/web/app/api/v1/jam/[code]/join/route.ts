@@ -5,6 +5,7 @@ import { resolveJamIdentity } from '@/lib/jam/jam-identity';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { SESSION_ID_MAX_LEN } from '@/lib/session-signing';
 import { NotFoundError, ConflictError } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 const schema = z.object({
   displayName: z.string().trim().min(1).max(80),
@@ -28,7 +29,7 @@ export async function POST(req: Request, { params }: Ctx) {
   const result = await jamService().join(code, identity, parsed.data.displayName);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : result.error instanceof ConflictError ? 409 : 400;
-    return NextResponse.json({ error: result.error.message }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json(result.value);
 }

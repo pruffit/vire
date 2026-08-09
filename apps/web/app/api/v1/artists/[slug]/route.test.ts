@@ -26,10 +26,10 @@ beforeEach(() => vi.clearAllMocks());
 
 describe('GET /api/v1/artists/[slug]', () => {
   it('404 when the artist is not found', async () => {
-    getBySlug.mockResolvedValue({ ok: false, error: new NotFoundError('ArtistProfile', 'danya') });
+    getBySlug.mockResolvedValue({ ok: false, error: new NotFoundError('ArtistProfile', 'danya', 'artist.notFound') });
     const res = await GET(req(), ctx('danya'));
     expect(res.status).toBe(404);
-    await expect(res.json()).resolves.toEqual({ error: 'Artist not found' });
+    await expect(res.json()).resolves.toEqual({ error: 'ArtistProfile not found: danya', code: 'artist.notFound' });
   });
 
   it('500 on any other error', async () => {

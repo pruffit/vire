@@ -55,6 +55,6 @@ describe('GET /api/v1/releases/[releaseId]', () => {
     findWithTracks.mockResolvedValue(release(status, date));
     const res = await GET(req(), ctx);
     expect(res.status).toBe(404);
-    await expect(res.json()).resolves.toEqual({ error: 'Release not found' });
+    await expect(res.json()).resolves.toEqual({ error: 'Release not found', code: 'release.notFound' });
   });
 });

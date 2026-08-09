@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { NotFoundError, type PlaylistUpdatePatch } from '@vire/core';
 import { playlistService } from '@/lib/playlist';
+import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -19,7 +20,7 @@ export async function GET(_req: Request, { params }: Params) {
   const result = await playlistService().getForViewer(id, session?.user?.id ?? null);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ playlist: result.value });
 }
@@ -41,7 +42,7 @@ export async function PATCH(req: Request, { params }: Params) {
   const result = await playlistService().update(id, session.user.id, patch);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ ok: true });
 }
@@ -52,6 +53,6 @@ export async function DELETE(_req: Request, { params }: Params) {
 
   const { id } = await params;
   const result = await playlistService().delete(id, session.user.id);
-  if (!result.ok) return NextResponse.json({ error: 'Not found or forbidden' }, { status: 404 });
+  if (!result.ok) return errorJson(result.error, 404);
   return NextResponse.json({ ok: true });
 }

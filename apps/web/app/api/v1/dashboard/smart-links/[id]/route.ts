@@ -5,6 +5,7 @@ import { SmartLinkService, NotFoundError, ConflictError } from '@vire/core';
 import { fileStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, COVER_POLICY } from '@/lib/image';
+import { errorJson } from '@/lib/error-response';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -54,12 +55,12 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
   if (!result.ok) {
     if (result.error instanceof NotFoundError) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      return errorJson(result.error, 404);
     }
     if (result.error instanceof ConflictError) {
-      return NextResponse.json({ error: result.error.message }, { status: 409 });
+      return errorJson(result.error, 409);
     }
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
+    return errorJson(result.error, 400);
   }
 
   return NextResponse.json({ ok: true });
@@ -79,7 +80,7 @@ export async function DELETE(req: Request, { params }: Ctx) {
   const service = new SmartLinkService(new DrizzleSmartLinkRepository(db), { uuid: () => crypto.randomUUID() });
   const result = await service.delete(id, artist.id);
   if (!result.ok) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return errorJson(result.error, 404);
   }
   return NextResponse.json({ ok: true });
 }

@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { NotFoundError, ConflictError } from '@vire/core';
 import { playlistService } from '@/lib/playlist';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -17,7 +18,7 @@ export async function GET(_req: Request, { params }: Params) {
   const result = await playlistService().listCollaborators(id, session.user.id);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ collaborators: result.value });
 }
@@ -36,9 +37,9 @@ export async function POST(req: Request, { params }: Params) {
 
   const result = await playlistService().join(id, session.user.id, parsed.data.token);
   if (!result.ok) {
-    if (result.error instanceof NotFoundError) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    if (result.error instanceof ConflictError) return NextResponse.json({ error: result.error.message }, { status: 409 });
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (result.error instanceof NotFoundError) return errorJson(result.error, 404);
+    if (result.error instanceof ConflictError) return errorJson(result.error, 409);
+    return errorJson(result.error, 403);
   }
   return NextResponse.json({ playlist: result.value.playlist });
 }
@@ -51,7 +52,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   const result = await playlistService().leave(id, session.user.id);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: status === 404 ? 'Not found' : 'Forbidden' }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ ok: true });
 }

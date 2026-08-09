@@ -4,6 +4,7 @@ import { jamService } from '@/lib/jam';
 import { resolveJamIdentity } from '@/lib/jam/jam-identity';
 import { SESSION_ID_MAX_LEN } from '@/lib/session-signing';
 import { ValidationError } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 const schema = z.object({ sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() });
 
@@ -22,10 +23,10 @@ export async function POST(req: Request, { params }: Ctx) {
   const codeResult = await service.resolveCode(code);
   if (!codeResult.ok) {
     const status = codeResult.error instanceof ValidationError ? 400 : 404;
-    return NextResponse.json({ error: codeResult.error.message }, { status });
+    return errorJson(codeResult.error, status);
   }
 
   const result = await service.heartbeat(codeResult.value.id, identity);
-  if (!result.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!result.ok) return errorJson(result.error, 403);
   return NextResponse.json({ ok: true });
 }

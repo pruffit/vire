@@ -20,9 +20,9 @@ export class ArtistPostService {
     payload: unknown,
   ): Promise<Result<{ post: ArtistPost }, ValidationError>> {
     const { title, body } = normalizePostInput(payload);
-    if (!body) return err(new ValidationError('Body is required'));
+    if (!body) return err(new ValidationError('Body is required', 'artistPost.bodyRequired'));
     if (body.length > BODY_MAX || (title && title.length > TITLE_MAX)) {
-      return err(new ValidationError('Too long'));
+      return err(new ValidationError('Too long', 'artistPost.tooLong'));
     }
 
     const post = await this.repo.create({ artistProfileId, title, body });
@@ -35,15 +35,15 @@ export class ArtistPostService {
     payload: unknown,
   ): Promise<Result<void, NotFoundError | ValidationError | ForbiddenError>> {
     const post = await this.repo.findById(postId);
-    if (!post) return err(new NotFoundError('ArtistPost', postId));
+    if (!post) return err(new NotFoundError('ArtistPost', postId, 'artistPost.notFound'));
     if (post.artistProfileId !== artistProfileId) {
-      return err(new ForbiddenError('Forbidden: post does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: post does not belong to this artist', 'artistPost.forbidden'));
     }
 
     const { title, body } = normalizePostInput(payload);
-    if (!body) return err(new ValidationError('Body is required'));
+    if (!body) return err(new ValidationError('Body is required', 'artistPost.bodyRequired'));
     if (body.length > BODY_MAX || (title && title.length > TITLE_MAX)) {
-      return err(new ValidationError('Too long'));
+      return err(new ValidationError('Too long', 'artistPost.tooLong'));
     }
 
     await this.repo.update(postId, { title, body });
@@ -55,9 +55,9 @@ export class ArtistPostService {
     artistProfileId: string,
   ): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const post = await this.repo.findById(postId);
-    if (!post) return err(new NotFoundError('ArtistPost', postId));
+    if (!post) return err(new NotFoundError('ArtistPost', postId, 'artistPost.notFound'));
     if (post.artistProfileId !== artistProfileId) {
-      return err(new ForbiddenError('Forbidden: post does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: post does not belong to this artist', 'artistPost.forbidden'));
     }
 
     await this.repo.delete(postId);
@@ -69,7 +69,7 @@ export class ArtistPostService {
     input: { title: string | null; body: string },
   ): Promise<Result<void, ValidationError>> {
     const body = (input.body ?? '').trim();
-    if (!body || body.length > 10000) return err(new ValidationError('Текст: 1–10000 символов'));
+    if (!body || body.length > 10000) return err(new ValidationError('Текст: 1–10000 символов', 'artistPost.textLength'));
     const title = input.title?.trim() ? input.title.trim().slice(0, 200) : null;
 
     await this.repo.update(id, { title, body });

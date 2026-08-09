@@ -5,7 +5,7 @@ export class BlockService {
   constructor(private readonly repo: IBlockRepository) {}
 
   async block(blockerId: string, blockedId: string): Promise<Result<void, ValidationError>> {
-    if (blockerId === blockedId) return err(new ValidationError('Нельзя заблокировать самого себя'));
+    if (blockerId === blockedId) return err(new ValidationError('Нельзя заблокировать самого себя', 'block.self'));
     await this.repo.block(blockerId, blockedId);
     return ok(undefined);
   }

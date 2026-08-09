@@ -7,6 +7,7 @@ import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, AVATAR_POLICY, HEADER_POLICY } from '@/lib/image';
 import { videoTitleResolver } from '@/lib/video-meta';
 import { SANS_FONTS, MONO_FONTS } from '@/lib/font-catalog';
+import { errorJson } from '@/lib/error-response';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
   });
 
   if (!result.ok) {
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
+    return errorJson(result.error, 400);
   }
 
   return NextResponse.json({ ok: true });

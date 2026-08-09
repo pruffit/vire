@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, DrizzleReleaseRepository } from '@vire/db';
 import { ReleaseService, NotFoundError, isReleasePubliclyVisible } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 export async function GET(
   _req: Request,
@@ -13,7 +14,7 @@ export async function GET(
 
   if (!result.ok) {
     if (result.error instanceof NotFoundError) {
-      return NextResponse.json({ error: 'Release not found' }, { status: 404 });
+      return errorJson(result.error, 404);
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -21,7 +22,7 @@ export async function GET(
   // Роут публичный: черновик/архив/ещё не вышедший SCHEDULED неотличим от несуществующего.
   // Свои неопубликованные релизы артист смотрит через /api/v1/dashboard/releases/[id]/tracks.
   if (!isReleasePubliclyVisible(result.value.release, new Date())) {
-    return NextResponse.json({ error: 'Release not found' }, { status: 404 });
+    return NextResponse.json({ error: 'Release not found', code: 'release.notFound' }, { status: 404 });
   }
 
   return NextResponse.json(result.value);

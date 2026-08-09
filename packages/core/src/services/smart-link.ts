@@ -101,15 +101,15 @@ export class SmartLinkService {
     input: CreateSmartLinkInput,
   ): Promise<Result<{ id: string; slug: string }, ValidationError | ConflictError>> {
     if (typeof input.title !== 'string' || !input.title.trim()) {
-      return err(new ValidationError('Нужно название'));
+      return err(new ValidationError('Нужно название', 'smartLink.titleRequired'));
     }
 
     const slug = normalizeSlug(typeof input.slugRaw === 'string' && input.slugRaw ? input.slugRaw : input.title);
     if (!isValidSlug(slug)) {
-      return err(new ValidationError('Некорректный адрес (slug)'));
+      return err(new ValidationError('Некорректный адрес (slug)', 'smartLink.invalidSlug'));
     }
     if (await this.repo.slugTaken(artistProfileId, slug)) {
-      return err(new ConflictError('Такой адрес уже занят'));
+      return err(new ConflictError('Такой адрес уже занят', undefined, 'smartLink.slugTaken'));
     }
 
     const links = parseSmartLinkLinks(input.linksRaw);
@@ -119,7 +119,7 @@ export class SmartLinkService {
     let releaseId: string | null = null;
     if (typeof input.releaseIdRaw === 'string' && input.releaseIdRaw.trim()) {
       const owned = await this.repo.releaseOwnedByArtist(artistProfileId, input.releaseIdRaw);
-      if (!owned) return err(new ValidationError('Релиз не найден'));
+      if (!owned) return err(new ValidationError('Релиз не найден', 'smartLink.releaseNotFound'));
       releaseId = input.releaseIdRaw;
     }
 
@@ -146,21 +146,21 @@ export class SmartLinkService {
   ): Promise<Result<void, NotFoundError | ValidationError | ConflictError>> {
     const existing = await this.repo.findById(id);
     if (!existing || existing.artistProfileId !== artistProfileId) {
-      return err(new NotFoundError('SmartLink', id));
+      return err(new NotFoundError('SmartLink', id, 'smartLink.notFound'));
     }
 
     const patch: Partial<SmartLinkInput> = {};
 
     if (typeof input.title === 'string') {
-      if (!input.title.trim()) return err(new ValidationError('Нужно название'));
+      if (!input.title.trim()) return err(new ValidationError('Нужно название', 'smartLink.titleRequired'));
       patch.title = input.title.trim();
     }
 
     if (typeof input.slugRaw === 'string') {
       const slug = normalizeSlug(input.slugRaw);
-      if (!isValidSlug(slug)) return err(new ValidationError('Некорректный адрес (slug)'));
+      if (!isValidSlug(slug)) return err(new ValidationError('Некорректный адрес (slug)', 'smartLink.invalidSlug'));
       if (slug !== existing.slug && (await this.repo.slugTaken(artistProfileId, slug, id))) {
-        return err(new ConflictError('Такой адрес уже занят'));
+        return err(new ConflictError('Такой адрес уже занят', undefined, 'smartLink.slugTaken'));
       }
       patch.slug = slug;
     }
@@ -176,7 +176,7 @@ export class SmartLinkService {
         patch.releaseId = null;
       } else {
         const owned = await this.repo.releaseOwnedByArtist(artistProfileId, input.releaseIdRaw);
-        if (!owned) return err(new ValidationError('Релиз не найден'));
+        if (!owned) return err(new ValidationError('Релиз не найден', 'smartLink.releaseNotFound'));
         patch.releaseId = input.releaseIdRaw;
       }
     }
@@ -197,7 +197,7 @@ export class SmartLinkService {
 
   async delete(id: string, artistProfileId: string): Promise<Result<void, NotFoundError>> {
     const deleted = await this.repo.delete(id, artistProfileId);
-    if (!deleted) return err(new NotFoundError('SmartLink', id));
+    if (!deleted) return err(new NotFoundError('SmartLink', id, 'smartLink.notFound'));
     return ok(undefined);
   }
 

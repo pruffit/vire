@@ -13,9 +13,9 @@ export class ReportService {
     reasonInput: unknown,
   ): Promise<Result<{ id: string }, ValidationError | ConflictError>> {
     const reason = typeof reasonInput === 'string' ? reasonInput.trim() : '';
-    if (!reason || reason.length > REASON_MAX) return err(new ValidationError('Причина: 1–500 символов'));
+    if (!reason || reason.length > REASON_MAX) return err(new ValidationError('Причина: 1–500 символов', 'report.reasonLength'));
     if (await this.repo.hasOpenReport(reporterId, targetType, targetId)) {
-      return err(new ConflictError('Жалоба уже на рассмотрении'));
+      return err(new ConflictError('Жалоба уже на рассмотрении', undefined, 'report.alreadyOpen'));
     }
 
     const created = await this.repo.insert(reporterId, targetType, targetId, reason);

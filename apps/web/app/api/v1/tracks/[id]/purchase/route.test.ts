@@ -70,7 +70,7 @@ describe('POST /api/v1/tracks/[id]/purchase', () => {
     isConfigured.mockReturnValue(false);
     const res = await POST(req(), ctx);
     expect(res.status).toBe(503);
-    await expect(res.json()).resolves.toEqual({ error: 'Платёжный сервис не настроен' });
+    await expect(res.json()).resolves.toEqual({ error: 'Платёжный сервис не настроен', code: 'purchase.gatewayNotConfigured' });
     expect(createPayment).not.toHaveBeenCalled();
   });
 
@@ -88,7 +88,7 @@ describe('POST /api/v1/tracks/[id]/purchase', () => {
     trackExists.mockResolvedValue(false);
     const res = await POST(req(), ctx);
     expect(res.status).toBe(404);
-    await expect(res.json()).resolves.toEqual({ error: 'Not found' });
+    await expect(res.json()).resolves.toEqual({ error: 'Track not found: track-1', code: 'track.notFound' });
   });
 
   it('returns alreadyOwned when the track was already purchased', async () => {

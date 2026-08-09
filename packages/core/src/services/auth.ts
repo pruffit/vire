@@ -17,7 +17,7 @@ export class AuthService {
 
   async register(input: { email: string; name: string; password: string }): Promise<Result<void, ConflictError>> {
     const existing = await this.repo.findByEmail(input.email);
-    if (existing) return err(new ConflictError('User', input.email));
+    if (existing) return err(new ConflictError('User', input.email, 'auth.emailTaken'));
 
     const passwordHash = await this.hash(input.password);
     await this.repo.createWithPassword({ email: input.email, name: input.name, passwordHash });
@@ -26,7 +26,7 @@ export class AuthService {
 
   async setPassword(userId: string, password: string): Promise<Result<void, ConflictError>> {
     const info = await this.repo.getAuthInfo(userId);
-    if (info.hasPassword) return err(new ConflictError('Password', userId));
+    if (info.hasPassword) return err(new ConflictError('Password', userId, 'auth.passwordAlreadySet'));
 
     const passwordHash = await this.hash(password);
     await this.repo.setPasswordHash(userId, passwordHash);

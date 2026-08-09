@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db, DrizzleArtistPostRepository } from '@vire/db';
 import { ArtistPostService } from '@vire/core';
 import { getActiveArtist } from '@/lib/active-artist';
+import { errorJson } from '@/lib/error-response';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
   const result = await service.create(artist.id, payload);
 
   if (!result.ok) {
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
+    return errorJson(result.error, 400);
   }
 
   return NextResponse.json({ post: result.value.post }, { status: 201 });

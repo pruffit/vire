@@ -6,6 +6,7 @@ import { transcodeQueue } from '@/lib/queue';
 import { isUuid, sanitizeCredits } from '@/lib/upload';
 import { getActiveArtist } from '@/lib/active-artist';
 import { parseLrc } from '@/lib/lrc';
+import { errorJson } from '@/lib/error-response';
 
 function trackService() {
   return new TrackService(
@@ -109,7 +110,7 @@ export async function PATCH(
   const result = await trackService().updateTrack({ trackId: id, artistProfileId: guard.artistId, patch });
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: result.error.message }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ track: result.value });
 }
@@ -127,7 +128,7 @@ export async function DELETE(
   const result = await trackService().deleteTrack({ trackId: id, artistProfileId: guard.artistId });
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: result.error.message }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ ok: true });
 }

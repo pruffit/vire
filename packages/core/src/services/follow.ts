@@ -10,14 +10,14 @@ export class FollowService {
 
   async follow(userId: string, artistSlug: string): Promise<Result<void, NotFoundError | Error>> {
     const artist = await this.artistRepo.findBySlug(artistSlug);
-    if (!artist) return err(new NotFoundError('ArtistProfile', artistSlug));
+    if (!artist) return err(new NotFoundError('ArtistProfile', artistSlug, 'artist.notFound'));
     await this.followRepo.follow(userId, artist.id);
     return ok(undefined);
   }
 
   async unfollow(userId: string, artistSlug: string): Promise<Result<void, NotFoundError | Error>> {
     const artist = await this.artistRepo.findBySlug(artistSlug);
-    if (!artist) return err(new NotFoundError('ArtistProfile', artistSlug));
+    if (!artist) return err(new NotFoundError('ArtistProfile', artistSlug, 'artist.notFound'));
     await this.followRepo.unfollow(userId, artist.id);
     return ok(undefined);
   }

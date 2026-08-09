@@ -7,6 +7,7 @@ import { getActiveArtist } from '@/lib/active-artist';
 import { transcodeQueue } from '@/lib/queue';
 import { isUuid, parseAudioExt, parseCredits, parseTrackNumber, MAX_AUDIO_FILE_SIZE, validateMagicBytes } from '@/lib/upload';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
+import { errorJson } from '@/lib/error-response';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -56,16 +57,16 @@ export async function POST(req: Request) {
 
   const ext = parseAudioExt(file.name);
   if (!ext) {
-    return NextResponse.json({ error: 'Файл должен быть WAV, FLAC или MP3' }, { status: 400 });
+    return NextResponse.json({ error: 'Файл должен быть WAV, FLAC или MP3', code: 'upload.invalidAudioFormat' }, { status: 400 });
   }
 
   if (file.size > MAX_AUDIO_FILE_SIZE) {
-    return NextResponse.json({ error: 'Файл слишком большой (макс. 300 МБ)' }, { status: 413 });
+    return NextResponse.json({ error: 'Файл слишком большой (макс. 300 МБ)', code: 'upload.fileTooLarge' }, { status: 413 });
   }
 
   const header = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
   if (!validateMagicBytes(header, ext)) {
-    return NextResponse.json({ error: 'Формат файла не соответствует расширению' }, { status: 400 });
+    return NextResponse.json({ error: 'Формат файла не соответствует расширению', code: 'upload.magicBytesMismatch' }, { status: 400 });
   }
 
   // кодек WAV не ограничиваем — ffmpeg в воркере декодирует и сжатый, и 32-бит float (типичный экспорт DAW)
@@ -91,9 +92,9 @@ export async function POST(req: Request) {
 
   if (!result.ok) {
     if (result.error instanceof NotFoundError) {
-      return NextResponse.json({ error: result.error.message }, { status: 404 });
+      return errorJson(result.error, 404);
     }
-    return NextResponse.json({ error: result.error.message }, { status: 403 });
+    return errorJson(result.error, 403);
   }
 
   return NextResponse.json({ trackId: result.value.id, status: 'PROCESSING' }, { status: 201 });

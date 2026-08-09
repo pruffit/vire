@@ -3,6 +3,7 @@ import { jamService } from '@/lib/jam';
 import { resolveJamIdentity } from '@/lib/jam/jam-identity';
 import { subscribeChannel, publishChannel, jamChannel } from '@/lib/realtime';
 import { ForbiddenError, ValidationError } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 export const runtime = 'nodejs';
 
@@ -18,7 +19,7 @@ export async function GET(req: Request, { params }: Ctx) {
   const codeResult = await service.resolveCode(code);
   if (!codeResult.ok) {
     const status = codeResult.error instanceof ValidationError ? 400 : 404;
-    return NextResponse.json({ error: codeResult.error.message }, { status });
+    return errorJson(codeResult.error, status);
   }
   const jamId = codeResult.value.id;
 
@@ -29,7 +30,7 @@ export async function GET(req: Request, { params }: Ctx) {
   const stateResult = await service.getState(jamId, identity);
   if (!stateResult.ok) {
     const status = stateResult.error instanceof ForbiddenError ? 403 : 404;
-    return NextResponse.json({ error: stateResult.error.message }, { status });
+    return errorJson(stateResult.error, status);
   }
   const { session, participants, queue, playback, presentParticipantIds } = stateResult.value;
 

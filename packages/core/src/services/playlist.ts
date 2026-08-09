@@ -15,8 +15,8 @@ export interface PlaylistCoverFile {
 const MIN_SEARCH_QUERY_LENGTH = 2;
 export const PLAYLIST_MAX_COLLABORATORS = 50;
 
-function forbidden(message = 'Forbidden: playlist does not belong to this user'): ForbiddenError {
-  return new ForbiddenError(message);
+function forbidden(message = 'Forbidden: playlist does not belong to this user', code = 'playlist.forbidden'): ForbiddenError {
+  return new ForbiddenError(message, code);
 }
 
 export class PlaylistService {
@@ -72,7 +72,7 @@ export class PlaylistService {
     joinToken?: string,
   ): Promise<Result<PlaylistWithTracks, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (playlist.visibility !== 'PRIVATE') return ok(playlist);
     if (playlist.ownerUserId === viewerUserId) return ok(playlist);
 
@@ -93,9 +93,9 @@ export class PlaylistService {
     token: string,
   ): Promise<Result<PlaylistInvitePreview, NotFoundError | ForbiddenError>> {
     const preview = await this.repo.getInvitePreview(id);
-    if (!preview) return err(new NotFoundError('Playlist', id));
+    if (!preview) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (!preview.isCollaborative || !preview.collabToken || preview.collabToken !== token || !preview.ownerUserId) {
-      return err(forbidden('Неверная ссылка-приглашение'));
+      return err(forbidden('Неверная ссылка-приглашение', 'playlist.invalidInviteLink'));
     }
     return ok({ title: preview.title, ownerUserId: preview.ownerUserId });
   }
@@ -106,7 +106,7 @@ export class PlaylistService {
     patch: PlaylistUpdatePatch,
   ): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (playlist.ownerUserId !== userId) return err(forbidden());
 
     const normalized: PlaylistUpdatePatch = {};
@@ -123,15 +123,15 @@ export class PlaylistService {
   // false → NotFound и при «не найден», и при «не владелец» (boolean из repo, 1:1).
   async delete(id: string, userId: string): Promise<Result<void, NotFoundError>> {
     const deleted = await this.repo.delete(id, userId);
-    if (!deleted) return err(new NotFoundError('Playlist', id));
+    if (!deleted) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     return ok(undefined);
   }
 
   async addTrack(id: string, userId: string, trackId: string): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (!(await this.canEdit(playlist, userId))) return err(forbidden());
-    if (!(await this.repo.trackExists(trackId))) return err(new NotFoundError('Track', trackId));
+    if (!(await this.repo.trackExists(trackId))) return err(new NotFoundError('Track', trackId, 'track.notFound'));
 
     const version = await this.repo.addTrack(id, trackId, userId);
     if (version !== null) await this.broadcastChange(id, version, userId);
@@ -140,12 +140,12 @@ export class PlaylistService {
 
   async removeTrack(id: string, userId: string, trackId: string): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
 
     if (playlist.ownerUserId !== userId) {
       if (!(await this.canEdit(playlist, userId))) return err(forbidden());
       const addedBy = await this.repo.getTrackAddedBy(id, trackId);
-      if (addedBy !== userId) return err(forbidden('Можно удалить только добавленные вами треки'));
+      if (addedBy !== userId) return err(forbidden('Можно удалить только добавленные вами треки', 'playlist.removeForeignTrackForbidden'));
     }
 
     const version = await this.repo.removeTrack(id, trackId);
@@ -159,11 +159,11 @@ export class PlaylistService {
     trackIds: string[],
   ): Promise<Result<void, NotFoundError | ConflictError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (!(await this.canEdit(playlist, userId))) return err(forbidden());
 
     const version = await this.repo.reorder(id, userId, trackIds);
-    if (version === null) return err(new ConflictError('Playlist reorder', id));
+    if (version === null) return err(new ConflictError('Playlist reorder', id, 'playlist.reorderConflict'));
     await this.broadcastChange(id, version, userId);
     return ok(undefined);
   }
@@ -174,7 +174,7 @@ export class PlaylistService {
     file: PlaylistCoverFile | null,
   ): Promise<Result<string | null, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (playlist.ownerUserId !== userId) return err(forbidden());
 
     if (file === null) {
@@ -194,7 +194,7 @@ export class PlaylistService {
     q: string,
   ): Promise<Result<TrackSearchResult[], NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (!(await this.canEdit(playlist, userId))) return err(forbidden());
 
     const trimmed = q.trim();
@@ -206,7 +206,7 @@ export class PlaylistService {
 
   async suggestions(id: string, userId: string): Promise<Result<PlaylistSuggestions, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (!(await this.canEdit(playlist, userId))) return err(forbidden());
 
     return ok(await this.repo.suggestions(id, userId));
@@ -251,7 +251,7 @@ export class PlaylistService {
     enabled: boolean,
   ): Promise<Result<{ collabToken: string | null }, NotFoundError | ForbiddenError>> {
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (playlist.ownerUserId !== ownerId) return err(forbidden());
 
     const collabToken = enabled ? this.uuid() : null;
@@ -264,7 +264,7 @@ export class PlaylistService {
     ownerId: string,
   ): Promise<Result<{ collabToken: string | null }, NotFoundError | ForbiddenError>> {
     const state = await this.repo.getCollabState(id);
-    if (!state) return err(new NotFoundError('Playlist', id));
+    if (!state) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (state.ownerUserId !== ownerId) return err(forbidden());
     return ok({ collabToken: state.isCollaborative ? state.collabToken : null });
   }
@@ -274,9 +274,9 @@ export class PlaylistService {
     ownerId: string,
   ): Promise<Result<{ collabToken: string }, NotFoundError | ForbiddenError | ConflictError>> {
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (playlist.ownerUserId !== ownerId) return err(forbidden());
-    if (!playlist.isCollaborative) return err(new ConflictError('Playlist is not collaborative'));
+    if (!playlist.isCollaborative) return err(new ConflictError('Playlist is not collaborative', undefined, 'playlist.notCollaborative'));
 
     const collabToken = this.uuid();
     await this.repo.setCollaboration(id, ownerId, { isCollaborative: true, collabToken });
@@ -297,34 +297,34 @@ export class PlaylistService {
     token: string,
   ): Promise<Result<{ playlist: PlaylistWithTracks }, NotFoundError | ForbiddenError | ConflictError>> {
     const state = await this.repo.getCollabState(id);
-    if (!state) return err(new NotFoundError('Playlist', id));
+    if (!state) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (!state.isCollaborative || !state.collabToken || state.collabToken !== token) {
-      return err(forbidden('Неверная ссылка-приглашение'));
+      return err(forbidden('Неверная ссылка-приглашение', 'playlist.invalidInviteLink'));
     }
     if (!state.ownerUserId || state.ownerUserId === userId) {
-      return err(forbidden('Владелец не может присоединиться к своему плейлисту'));
+      return err(forbidden('Владелец не может присоединиться к своему плейлисту', 'playlist.ownerCannotJoin'));
     }
     if (await this.blocks.existsEitherWay(state.ownerUserId, userId)) {
-      return err(forbidden('Присоединиться нельзя'));
+      return err(forbidden('Присоединиться нельзя', 'playlist.joinForbidden'));
     }
 
     // Одна транзакция репозитория: лочит строку плейлиста, проверяет лимит и
     // вставляет коллаборатора атомарно — иначе параллельные join на границе лимита оба проходят.
     const outcome = await this.repo.joinCollaborator(id, userId, state.ownerUserId, PLAYLIST_MAX_COLLABORATORS);
-    if (outcome === 'full') return err(new ConflictError('Плейлист заполнен'));
+    if (outcome === 'full') return err(new ConflictError('Плейлист заполнен', undefined, 'playlist.full'));
     if (outcome === 'joined') {
       await this.notifyJoin(state.ownerUserId, userId, id);
       await this.broadcastCollaborators(id, userId);
     }
 
     const playlist = await this.repo.getWithTracks(id);
-    if (!playlist) return err(new NotFoundError('Playlist', id));
+    if (!playlist) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     return ok({ playlist });
   }
 
   async leave(id: string, userId: string): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const state = await this.repo.getCollabState(id);
-    if (!state) return err(new NotFoundError('Playlist', id));
+    if (!state) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (!(await this.repo.isCollaborator(id, userId))) return err(forbidden());
 
     const removed = await this.repo.removeCollaborator(id, userId);
@@ -334,7 +334,7 @@ export class PlaylistService {
 
   async kick(id: string, ownerId: string, targetUserId: string): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const state = await this.repo.getCollabState(id);
-    if (!state) return err(new NotFoundError('Playlist', id));
+    if (!state) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (state.ownerUserId !== ownerId) return err(forbidden());
 
     const removed = await this.repo.removeCollaborator(id, targetUserId);
@@ -352,7 +352,7 @@ export class PlaylistService {
 
   async listCollaborators(id: string, viewerId: string): Promise<Result<PlaylistCollaborator[], NotFoundError | ForbiddenError>> {
     const state = await this.repo.getCollabState(id);
-    if (!state) return err(new NotFoundError('Playlist', id));
+    if (!state) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
 
     const isOwner = state.ownerUserId === viewerId;
     if (!isOwner && !(await this.repo.isCollaborator(id, viewerId))) return err(forbidden());
@@ -362,7 +362,7 @@ export class PlaylistService {
 
   async assertStreamAccess(id: string, userId: string): Promise<Result<{ version: number }, NotFoundError | ForbiddenError>> {
     const state = await this.repo.getCollabState(id);
-    if (!state) return err(new NotFoundError('Playlist', id));
+    if (!state) return err(new NotFoundError('Playlist', id, 'playlist.notFound'));
     if (!state.isCollaborative) return err(forbidden());
 
     const isOwner = state.ownerUserId === userId;

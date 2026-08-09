@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { blockService } from '@/lib/blocks';
 import { playlistService } from '@/lib/playlist';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import { errorJson } from '@/lib/error-response';
 
 const paramsSchema = z.object({ userId: z.string().uuid() });
 type Ctx = { params: Promise<{ userId: string }> };
@@ -19,7 +20,7 @@ export async function POST(_req: Request, { params }: Ctx) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid userId' }, { status: 400 });
 
   const result = await blockService().block(session.user.id, parsed.data.userId);
-  if (!result.ok) return NextResponse.json({ error: result.error.message }, { status: 422 });
+  if (!result.ok) return errorJson(result.error, 422);
 
   // Блокировка отбирает и совместный доступ: иначе заблокированный остаётся редактором плейлиста.
   // Ошибка здесь — 500 намеренно: повтор блокировки идемпотентен и доведёт очистку.

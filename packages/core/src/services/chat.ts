@@ -32,7 +32,7 @@ export class ChatService {
   ) {}
 
   async openOrGet(a: string, b: string): Promise<Result<{ conversationId: string }, ValidationError | ForbiddenError>> {
-    if (a === b) return err(new ValidationError('Нельзя написать самому себе'));
+    if (a === b) return err(new ValidationError('Нельзя написать самому себе', 'chat.selfMessage'));
     const guard = await this.guardCanChat(a, b);
     if (!guard.ok) return guard;
 
@@ -47,14 +47,14 @@ export class ChatService {
     payload: { ciphertext: unknown; nonce: unknown },
     senderName?: string | null,
   ): Promise<Result<{ conversationId: string; message: ChatMessage }, ValidationError | ForbiddenError>> {
-    if (fromUserId === toUserId) return err(new ValidationError('Нельзя написать самому себе'));
+    if (fromUserId === toUserId) return err(new ValidationError('Нельзя написать самому себе', 'chat.selfMessage'));
     const guard = await this.guardCanChat(fromUserId, toUserId);
     if (!guard.ok) return guard;
 
     const ciphertext = typeof payload.ciphertext === 'string' ? payload.ciphertext : '';
     const nonce = typeof payload.nonce === 'string' ? payload.nonce : '';
-    if (!ciphertext || !nonce) return err(new ValidationError('Пустое сообщение'));
-    if (b64Bytes(ciphertext) > CIPHERTEXT_MAX_BYTES) return err(new ValidationError('Сообщение слишком длинное'));
+    if (!ciphertext || !nonce) return err(new ValidationError('Пустое сообщение', 'chat.emptyMessage'));
+    if (b64Bytes(ciphertext) > CIPHERTEXT_MAX_BYTES) return err(new ValidationError('Сообщение слишком длинное', 'chat.messageTooLong'));
 
     const [low, high] = canonicalPair(fromUserId, toUserId);
     const conversationId = await this.repo.upsertConversation(low, high);
@@ -119,9 +119,9 @@ export class ChatService {
     conversationId: string,
   ): Promise<Result<ConversationParticipants, NotFoundError | ForbiddenError>> {
     const conv = await this.repo.getConversation(conversationId);
-    if (!conv) return err(new NotFoundError('Conversation', conversationId));
+    if (!conv) return err(new NotFoundError('Conversation', conversationId, 'chat.conversationNotFound'));
     if (conv.userLowId !== userId && conv.userHighId !== userId) {
-      return err(new ForbiddenError('Not a participant'));
+      return err(new ForbiddenError('Not a participant', 'chat.notParticipant'));
     }
     return ok(conv);
   }
@@ -130,10 +130,10 @@ export class ChatService {
   // расфрендились/заблокировали → следующая отправка сразу откажет.
   private async guardCanChat(a: string, b: string): Promise<Result<void, ForbiddenError>> {
     if (await this.blockRepo.existsEitherWay(a, b)) {
-      return err(new ForbiddenError('Написать нельзя: пользователь недоступен'));
+      return err(new ForbiddenError('Написать нельзя: пользователь недоступен', 'chat.userUnavailable'));
     }
     const edge = await this.friendshipRepo.findEdge(a, b);
-    if (!edge || edge.status !== 'ACCEPTED') return err(new ForbiddenError('Написать можно только другу'));
+    if (!edge || edge.status !== 'ACCEPTED') return err(new ForbiddenError('Написать можно только другу', 'chat.notFriends'));
     return ok(undefined);
   }
 }

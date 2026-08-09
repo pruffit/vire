@@ -12,6 +12,7 @@ import { DateField } from '@/components/date-field';
 import { LinksEditor } from '@/components/links-editor';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
+import { apiErrorMessage } from '@/lib/api-error';
 
 export interface SmartLinkInitial {
   id: string;
@@ -42,6 +43,7 @@ export function SmartLinkForm({
 }) {
   const router = useRouter();
   const t = useTranslations('dashboard.links');
+  const tErrors = useTranslations('errors');
   const tCommon = useTranslations('dashboard.common');
   const RELEASE_STATUS_LABEL: Record<string, string> = {
     DRAFT: t('releaseStatus.DRAFT'),
@@ -116,7 +118,7 @@ export function SmartLinkForm({
     setBusy(false);
     if (!res?.ok) {
       let msg = t('saveFailed');
-      try { msg = (await res!.json()).error ?? msg; } catch { /* keep */ }
+      try { msg = apiErrorMessage(tErrors, await res!.json(), msg); } catch { /* keep */ }
       return toast.error(msg);
     }
     toast(editing ? t('saved') : t('created'));

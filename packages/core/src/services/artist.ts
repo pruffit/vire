@@ -46,7 +46,7 @@ export class ArtistService {
 
   async getBySlug(slug: string): Promise<Result<ArtistProfile, NotFoundError>> {
     const artist = await this.repo.findBySlug(slug);
-    if (!artist) return err(new NotFoundError('ArtistProfile', slug));
+    if (!artist) return err(new NotFoundError('ArtistProfile', slug, 'artist.notFound'));
     return ok(artist);
   }
 
@@ -55,7 +55,7 @@ export class ArtistService {
     input: UpdateArtistProfileInput,
   ): Promise<Result<{ ok: true }, ValidationError>> {
     if (typeof input.name !== 'string' || !input.name.trim()) {
-      return err(new ValidationError('Name is required'));
+      return err(new ValidationError('Name is required', 'artist.nameRequired'));
     }
 
     const links = this.parseLinks(input.linksRaw, artist.links);

@@ -5,6 +5,7 @@ import { chatService } from '@/lib/chat';
 import { publish } from '@/lib/realtime';
 import { NotFoundError } from '@vire/core';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import { errorJson } from '@/lib/error-response';
 
 const paramsSchema = z.object({ conversationId: z.string().uuid() });
 
@@ -24,7 +25,7 @@ export async function POST(_req: Request, { params }: Ctx) {
   const result = await chatService().getConversationMeta(session.user.id, parsedParams.data.conversationId);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
-    return NextResponse.json({ error: 'Not found' }, { status });
+    return errorJson(result.error, status);
   }
 
   await publish(result.value.otherUserId, {

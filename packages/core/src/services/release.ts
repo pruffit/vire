@@ -31,7 +31,7 @@ export class ReleaseService {
 
   async getWithTracks(releaseId: string): Promise<Result<ReleaseWithTracks, NotFoundError>> {
     const result = await this.repo.findWithTracks(releaseId);
-    if (!result) return err(new NotFoundError('Release', releaseId));
+    if (!result) return err(new NotFoundError('Release', releaseId, 'release.notFound'));
     return ok(result);
   }
 
@@ -81,9 +81,9 @@ export class ReleaseService {
     },
   ): Promise<Result<{ releaseId: string }, NotFoundError | ForbiddenError>> {
     const release = await this.repo.findById(releaseId);
-    if (!release) return err(new NotFoundError('Release', releaseId));
+    if (!release) return err(new NotFoundError('Release', releaseId, 'release.notFound'));
     if (release.artistProfileId !== artistProfileId) {
-      return err(new ForbiddenError('Forbidden: release does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: release does not belong to this artist', 'release.forbidden'));
     }
 
     const coverUrl = params.cover ? await this.uploadCover(releaseId, params.cover) : release.coverUrl;
@@ -108,9 +108,9 @@ export class ReleaseService {
     artist: { name: string; slug: string },
   ): Promise<Result<{ status: ReleaseStatus }, NotFoundError | ForbiddenError>> {
     const release = await this.repo.findById(releaseId);
-    if (!release) return err(new NotFoundError('Release', releaseId));
+    if (!release) return err(new NotFoundError('Release', releaseId, 'release.notFound'));
     if (release.artistProfileId !== artistProfileId) {
-      return err(new ForbiddenError('Forbidden: release does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: release does not belong to this artist', 'release.forbidden'));
     }
 
     const wasPublished = release.status !== 'PUBLISHED' && status === 'PUBLISHED';
@@ -139,9 +139,9 @@ export class ReleaseService {
     artistProfileId: string;
   }): Promise<Result<void, NotFoundError | ForbiddenError>> {
     const release = await this.repo.findById(params.releaseId);
-    if (!release) return err(new NotFoundError('Release', params.releaseId));
+    if (!release) return err(new NotFoundError('Release', params.releaseId, 'release.notFound'));
     if (release.artistProfileId !== params.artistProfileId) {
-      return err(new ForbiddenError('Forbidden: release does not belong to this artist'));
+      return err(new ForbiddenError('Forbidden: release does not belong to this artist', 'release.forbidden'));
     }
     await this.repo.delete(params.releaseId);
     return ok(undefined);

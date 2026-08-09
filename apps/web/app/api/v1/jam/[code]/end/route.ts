@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { jamService } from '@/lib/jam';
 import { ForbiddenError, ValidationError } from '@vire/core';
+import { errorJson } from '@/lib/error-response';
 
 type Ctx = { params: Promise<{ code: string }> };
 
@@ -14,13 +15,13 @@ export async function POST(_req: Request, { params }: Ctx) {
   const codeResult = await service.resolveCode(code);
   if (!codeResult.ok) {
     const status = codeResult.error instanceof ValidationError ? 400 : 404;
-    return NextResponse.json({ error: codeResult.error.message }, { status });
+    return errorJson(codeResult.error, status);
   }
 
   const result = await service.endJam(codeResult.value.id, session.user.id);
   if (!result.ok) {
     const status = result.error instanceof ForbiddenError ? 403 : 404;
-    return NextResponse.json({ error: result.error.message }, { status });
+    return errorJson(result.error, status);
   }
   return NextResponse.json({ ok: true });
 }
