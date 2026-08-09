@@ -1,6 +1,7 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { motion } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import type { PlayerTrack, PlayContext } from '@/store/player';
@@ -91,6 +92,7 @@ function TrackRow({
   const ready = track.status === 'READY';
   const processing = track.status === 'PROCESSING';
 
+  const t = useTranslations('track');
   const { toggle } = usePlay();
   const { isActive, isPlaying } = useTrackPlayState(track.id);
 
@@ -107,7 +109,7 @@ function TrackRow({
         type="button"
         disabled={!ready}
         onClick={isActive ? () => toggle(track.id) : onPlay}
-        aria-label={isActive && isPlaying ? 'Пауза' : `Играть «${track.title}»`}
+        aria-label={isActive && isPlaying ? t('pause') : t('playQuotedAria', { title: track.title })}
         whileTap={ready ? { scale: 0.9 } : undefined}
         transition={spring.snappy}
         className={`w-7 h-7 flex items-center justify-center text-xs font-mono shrink-0 rounded-sm ${
@@ -166,7 +168,7 @@ function TrackRow({
           <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)]">wip</span>
         )}
         {processing && (
-          <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)]">обработка…</span>
+          <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)]">{t('processing')}</span>
         )}
         {track.durationSec != null && ready && (
           <span className="text-xs readout text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)] w-10 text-right">

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { formatCount } from '@/lib/format';
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function FollowButton({ slug, initialFollowing, initialCount }: Props) {
+  const t = useTranslations('artist.followButton');
   const {
     on: following,
     count,
@@ -23,7 +25,7 @@ export function FollowButton({ slug, initialFollowing, initialCount }: Props) {
     initial: initialFollowing,
     initialCount,
     request: (next) => followArtist(slug, next),
-    errorMessage: 'Не удалось обновить подписку',
+    errorMessage: t('updateFailed'),
   });
 
   return (
@@ -55,7 +57,7 @@ export function FollowButton({ slug, initialFollowing, initialCount }: Props) {
             transition={spring.snappy}
             className="block"
           >
-            {following ? 'Подписан' : 'Подписаться'}
+            {following ? t('following') : t('follow')}
           </motion.span>
         </AnimatePresence>
       </motion.button>

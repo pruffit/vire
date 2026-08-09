@@ -3,6 +3,7 @@
 import { useId, useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
@@ -66,6 +67,8 @@ export function ReleaseQuickLook({
   /** Грузить обложку сразу — для первой карточки над сгибом (LCP). */
   priority?: boolean;
 }) {
+  const t = useTranslations('release');
+  const tTrack = useTranslations('track');
   const [open, setOpen] = useState(false);
   const layoutId = useId();
   const yr = year(release.releaseDate);
@@ -86,7 +89,7 @@ export function ReleaseQuickLook({
   // отсчётом, без peek-оверлея и плеера. (Возврат после всех хуков — правило hooks.)
   if (upcoming) {
     return (
-      <Link href={releaseHref} className="block w-full text-left group" aria-label={`${release.title} — скоро`}>
+      <Link href={releaseHref} className="block w-full text-left group" aria-label={t('quickLook.upcomingAria', { title: release.title })}>
         <div className="relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30">
           {release.coverUrl ? (
             <Image src={release.coverUrl} alt={release.title} fill priority={priority} quality={60} sizes="(max-width: 640px) 45vw, 220px" className="object-cover transition-transform duration-500 ease-soft group-hover:scale-[1.04]" />
@@ -116,14 +119,14 @@ export function ReleaseQuickLook({
   function openQuickLook() {
     setOpen(true);
     void load().then((queue) => {
-      if (queue === null) toast.error('Не удалось загрузить треки');
+      if (queue === null) toast.error(t('quickLook.loadFailed'));
     });
   }
 
   async function playFrom(trackId: string) {
     const queue = await load();
     if (queue === null) {
-      toast.error('Не удалось загрузить треки');
+      toast.error(t('quickLook.loadFailed'));
       return;
     }
     const idx = Math.max(0, queue.findIndex((q) => q.id === trackId));
@@ -133,7 +136,7 @@ export function ReleaseQuickLook({
   async function playAll() {
     const queue = await load();
     if (queue === null) {
-      toast.error('Не удалось загрузить треки');
+      toast.error(t('quickLook.loadFailed'));
       return;
     }
     if (queue[0]) controls.playQueue(queue, { context });
@@ -148,7 +151,7 @@ export function ReleaseQuickLook({
         layoutId={layoutId}
         onClick={openQuickLook}
         transition={spring.smooth}
-        aria-label={`Быстрый просмотр: ${release.title}`}
+        aria-label={t('quickLook.previewAria', { title: release.title })}
         className="block w-full text-left group"
       >
         <div className="relative aspect-square rounded-md overflow-hidden bg-muted ring-1 ring-white/5 transition-all duration-300 ease-soft group-hover:ring-white/20 group-hover:shadow-xl group-hover:shadow-black/30">
@@ -229,10 +232,10 @@ export function ReleaseQuickLook({
             className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-30 transition-opacity"
           >
             {isThisReleasePlaying && isPlaying ? <PauseIcon size={13} /> : <PlayIcon size={15} className="translate-x-[1px]" />}
-            {isThisReleasePlaying ? (isPlaying ? 'Пауза' : 'Продолжить') : 'Слушать'}
+            {isThisReleasePlaying ? (isPlaying ? tTrack('pause') : t('quickLook.resume')) : t('listen')}
           </motion.button>
           <Link href={releaseHref} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            К релизу <Icon name="arrow-right" size={14} />
+            {t('quickLook.toRelease')} <Icon name="arrow-right" size={14} />
           </Link>
           <span className="ml-auto">
             <TrackQueueMenu size="md" drop="down" getTracks={() => load()} context={context} />
@@ -246,35 +249,35 @@ export function ReleaseQuickLook({
             </div>
           )}
           {!loading && !tracks && (
-            <p className="py-6 text-center text-sm text-muted-foreground">Не удалось загрузить треки.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">{t('quickLook.loadFailedBody')}</p>
           )}
           {tracks && tracks.length === 0 && (
-            <p className="py-6 text-center text-sm text-muted-foreground">Пока нет треков.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">{t('quickLook.noTracks')}</p>
           )}
-          {tracks && tracks.map((t) => {
-            const ready = t.status === 'READY';
-            const isCurrent = activeTrack?.id === t.id;
+          {tracks && tracks.map((tk) => {
+            const ready = tk.status === 'READY';
+            const isCurrent = activeTrack?.id === tk.id;
             return (
               <button
-                key={t.id}
+                key={tk.id}
                 type="button"
-                onClick={() => ready && (isCurrent ? controls.togglePlay() : void playFrom(t.id))}
+                onClick={() => ready && (isCurrent ? controls.togglePlay() : void playFrom(tk.id))}
                 disabled={!ready}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors pointer-coarse:min-h-11 ${ready ? 'hover:bg-accent/5 cursor-pointer' : 'opacity-40 cursor-default'} ${isCurrent ? 'bg-accent/5' : ''}`}
               >
                 <span className="w-5 text-right text-xs font-mono opacity-30 shrink-0">
-                  {isCurrent ? <MiniEq animate={isPlaying} /> : t.trackNumber}
+                  {isCurrent ? <MiniEq animate={isPlaying} /> : tk.trackNumber}
                 </span>
                 <span className="flex-1 truncate text-sm flex items-center gap-1.5" style={isCurrent ? { color: 'var(--artist-accent, hsl(200 80% 65%))' } : undefined}>
                   <span className="truncate">
-                    <TrackTitleText title={t.title} version={t.version} feat={featuredNames(t.credits)} />
+                    <TrackTitleText title={tk.title} version={tk.version} feat={featuredNames(tk.credits)} />
                   </span>
-                  {t.isExplicit && <ExplicitBadge />}
+                  {tk.isExplicit && <ExplicitBadge />}
                 </span>
-                {t.durationSec != null && ready && (
-                  <span className="text-xs readout opacity-30 shrink-0">{formatDuration(t.durationSec)}</span>
+                {tk.durationSec != null && ready && (
+                  <span className="text-xs readout opacity-30 shrink-0">{formatDuration(tk.durationSec)}</span>
                 )}
-                {t.status === 'PROCESSING' && <span className="text-[10px] font-mono opacity-30 shrink-0">обработка…</span>}
+                {tk.status === 'PROCESSING' && <span className="text-[10px] font-mono opacity-30 shrink-0">{tTrack('processing')}</span>}
               </button>
             );
           })}

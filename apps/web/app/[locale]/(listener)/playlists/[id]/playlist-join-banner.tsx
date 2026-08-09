@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Icon } from '@/components/icon';
 import { toast } from '@/lib/toast';
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function PlaylistJoinBanner({ playlistId, token, inviterName, isAuthenticated }: Props) {
+  const t = useTranslations();
   const [joining, setJoining] = useState(false);
   const router = useRouter();
 
@@ -25,16 +27,16 @@ export function PlaylistJoinBanner({ playlistId, token, inviterName, isAuthentic
       }).catch(() => null);
       if (!res?.ok) {
         const data = res ? await res.json().catch(() => null) : null;
-        toast.error(res?.status === 409 ? (data?.error ?? 'Плейлист заполнен') : 'Не удалось присоединиться');
+        toast.error(res?.status === 409 ? (data?.error ?? t('playlist.join.full')) : t('playlist.join.failed'));
         setJoining(false);
         return;
       }
-      toast('Вы присоединились к плейлисту');
+      toast(t('playlist.join.success'));
       router.replace(`/playlists/${playlistId}`);
       router.refresh();
     } catch {
       setJoining(false);
-      toast.error('Не удалось присоединиться');
+      toast.error(t('playlist.join.failed'));
     }
   }
 
@@ -46,7 +48,7 @@ export function PlaylistJoinBanner({ playlistId, token, inviterName, isAuthentic
         <Icon name="users" size={16} />
       </span>
       <p className="flex-1 min-w-48 text-sm text-foreground/85">
-        <strong className="font-medium">{inviterName}</strong> зовёт вас в совместный плейлист
+        <strong className="font-medium">{inviterName}</strong> {t('playlist.join.invitedText')}
       </p>
       {isAuthenticated ? (
         <button
@@ -55,14 +57,14 @@ export function PlaylistJoinBanner({ playlistId, token, inviterName, isAuthentic
           disabled={joining}
           className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          {joining ? 'Присоединяемся…' : 'Присоединиться'}
+          {joining ? t('playlist.join.joining') : t('playlist.join.cta')}
         </button>
       ) : (
         <Link
           href={`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`}
           className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
         >
-          Войти
+          {t('nav.signIn')}
         </Link>
       )}
     </div>

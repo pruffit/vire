@@ -1,6 +1,7 @@
 'use client';
 import type { ReactNode } from 'react';
 import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '@/components/icon';
@@ -40,12 +41,14 @@ export function SortableTrackRow({
   canDrag,
   canRemove,
   onRemove,
-  removeLabel = 'Удалить',
+  removeLabel,
   subtitle,
   size = 'default',
   avatar,
   actions,
 }: Props) {
+  const t = useTranslations('track.sortable');
+  const removeAria = removeLabel ?? t('removeAria');
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: track.id, disabled: !canDrag });
 
@@ -78,7 +81,7 @@ export function SortableTrackRow({
           {canDrag && (
             <button
               {...attributes} {...listeners}
-              aria-label="Перетащить"
+              aria-label={t('dragAria')}
               className={`grid place-items-center touch-none cursor-grab active:cursor-grabbing transition-opacity shrink-0 text-muted-foreground ${
                 size === 'roomy'
                   ? 'w-11 h-11 -m-1.5 opacity-70 sm:w-auto sm:h-auto sm:m-0 sm:opacity-0 sm:group-hover:opacity-40 sm:hover:!opacity-80'
@@ -103,7 +106,7 @@ export function SortableTrackRow({
           {canRemove && (
             <button
               onClick={() => onRemove?.(track.id)}
-              aria-label={removeLabel}
+              aria-label={removeAria}
               className={`transition-opacity rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive shrink-0 ${
                 size === 'roomy'
                   ? 'w-11 h-11 -m-1.5 opacity-70 sm:m-0 sm:opacity-0 sm:w-7 sm:h-7 sm:group-hover:opacity-100'

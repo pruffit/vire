@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion } from 'motion/react';
 import { spring, Stagger, StaggerItem } from '@vire/ui/motion';
 import { controls } from '@/lib/player/audio-engine';
@@ -21,6 +22,7 @@ export function ArtistPopularTracks({
   tracks: ArtistPopularTrack[];
   initialCount?: number;
 }) {
+  const t = useTranslations('artist.popularTracks');
   const [expanded, setExpanded] = useState(false);
   if (tracks.length === 0) return null;
 
@@ -47,7 +49,7 @@ export function ArtistPopularTracks({
           className="mt-2 self-start min-h-11 px-3 label-wide transition-opacity hover:opacity-80"
           style={{ color: 'var(--artist-accent)' }}
         >
-          {expanded ? 'Свернуть' : `Все треки (${tracks.length})`}
+          {expanded ? t('collapse') : t('showAll', { count: tracks.length })}
         </button>
       )}
     </Stagger>

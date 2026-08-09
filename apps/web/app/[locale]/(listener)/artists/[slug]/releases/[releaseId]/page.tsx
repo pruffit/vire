@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { db, DrizzleReleaseRepository, getPresaveState } from '@vire/db';
 import { ReleaseService, isReleasePubliclyVisible, isCountdownVisible } from '@vire/core';
 import { auth } from '@/auth';
@@ -16,7 +17,7 @@ import { GrainOverlay } from '@/components/grain-overlay';
 import { AmbientBackdrop } from '@/components/ambient-backdrop';
 import { PageContainer } from '@/components/page-container';
 import { musicAlbumJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
-import { pluralTracks, releaseYear, totalDuration } from '@/lib/format';
+import { releaseYear, totalDuration } from '@/lib/format';
 import { releaseMetaDescription } from '@/lib/meta-descriptions';
 import { pageMetadata } from '@/lib/metadata';
 import { artistFontStyle } from '@/lib/fonts';
@@ -50,7 +51,10 @@ async function getPageData(slug: string, releaseId: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, releaseId } = await params;
   const data = await getPageData(slug, releaseId);
-  if (!data) return { title: 'Не найдено' };
+  if (!data) {
+    const t = await getTranslations('release');
+    return { title: t('notFound') };
+  }
 
   const { artist, release, tracks } = data;
   const url = `/artists/${slug}/releases/${releaseId}`;
@@ -75,6 +79,9 @@ export default async function ReleasePage({ params }: Props) {
   const { slug, releaseId } = await params;
   const data = await getPageData(slug, releaseId);
   if (!data) notFound();
+
+  const t = await getTranslations('release');
+  const tCommon = await getTranslations('common');
 
   const { artist, release, tracks, releaseAtMs, isReleased, showCountdown } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
@@ -129,8 +136,8 @@ export default async function ReleasePage({ params }: Props) {
         )}
       />
       <JsonLd data={breadcrumbListJsonLd([
-        { name: 'Главная', url: '/' },
-        { name: 'Артисты', url: '/artists' },
+        { name: t('breadcrumb.home'), url: '/' },
+        { name: tCommon('entity.artists'), url: '/artists' },
         { name: artist.name, url: `/artists/${slug}` },
         { name: release.title, url: `/artists/${slug}/releases/${releaseId}` },
       ])} />
@@ -182,7 +189,7 @@ export default async function ReleasePage({ params }: Props) {
                   </p>
                 )}
                 <p className="text-xs readout text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)]">
-                  {tracks.length} {pluralTracks(tracks.length)}
+                  {tCommon('trackCount', { count: tracks.length })}
                   {totalDuration(tracks) && ` · ${totalDuration(tracks)}`}
                 </p>
                 <div className="pt-2 flex items-center gap-3 flex-wrap">
@@ -195,7 +202,7 @@ export default async function ReleasePage({ params }: Props) {
 
           <div className="min-w-0 space-y-12">
             <section>
-              <SectionHeader label="Треки" />
+              <SectionHeader label={tCommon('entity.tracks')} />
               <TrackList
                 tracks={clientTracks}
                 artistName={artist.name}
@@ -208,7 +215,7 @@ export default async function ReleasePage({ params }: Props) {
 
             {release.linerNotes && (
               <section>
-                <SectionHeader label="Liner notes" />
+                <SectionHeader label={t('linerNotesHeading')} />
                 <p className="text-sm leading-relaxed text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)] max-w-prose whitespace-pre-line">
                   {release.linerNotes}
                 </p>

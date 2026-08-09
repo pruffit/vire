@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
 import { controls, getAudioTime } from '@/lib/player/audio-engine';
 import { WaveformScrubber } from '@/components/player/waveform-scrubber';
@@ -35,6 +36,7 @@ export function TrackWaveformPlayer({
   context,
   seekTo,
 }: Props) {
+  const t = useTranslations('track');
   const didSeek = useRef(false);
 
   const currentTrackId = usePlayerStore((s) => s.track?.id);
@@ -100,7 +102,7 @@ export function TrackWaveformPlayer({
         <button
           onClick={handlePlayPause}
           disabled={isThisTrack && isLoading}
-          aria-label={isThisTrack && isPlaying ? 'Пауза' : 'Играть'}
+          aria-label={isThisTrack && isPlaying ? t('pause') : t('play')}
           className="w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 disabled:opacity-40 shrink-0"
           style={{
             background: 'var(--artist-accent)',
@@ -129,8 +131,8 @@ export function TrackWaveformPlayer({
             whileHover={{ scale: 1.08 }}
             transition={{ type: 'spring', stiffness: 500, damping: 25 }}
             onClick={handleMarkMoment}
-            title="Отметить любимый момент"
-            aria-label="Отметить любимый момент"
+            title={t('markMoment')}
+            aria-label={t('markMoment')}
             className="w-8 h-8 pointer-coarse:w-11 pointer-coarse:h-11 rounded-full flex items-center justify-center opacity-40 hover:opacity-80 transition-opacity"
             style={{ border: '1px solid var(--artist-accent)' }}
           >

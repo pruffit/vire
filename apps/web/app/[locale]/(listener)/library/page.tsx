@@ -1,7 +1,7 @@
 import { Link, redirect } from '@/i18n/navigation';
 import type { Metadata } from 'next';
 import { FadeUp, Stagger, StaggerItem } from '@vire/ui/motion';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { getLikedTracksCached, getFollowedArtistsCached, getUserPlaylistsCached, getLikedPlaylistsCached } from '@/lib/listener-data';
 import type { PlayerTrack } from '@/store/player';
@@ -17,11 +17,15 @@ import { Icon } from '@/components/icon';
 import { PageContainer } from '@/components/page-container';
 import { InstallAppButton } from '@/components/install-app-button';
 
-export const metadata: Metadata = { title: 'Медиатека' };
 export const dynamic = 'force-dynamic';
 
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('library.libraryPage');
+  return { title: t('title') };
+}
+
 export default async function LibraryPage() {
-  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const [session, locale, t] = await Promise.all([auth(), getLocale(), getTranslations('library.libraryPage')]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/library', locale });
 
   const [likedTracks, followedArtists, playlists, likedPlaylists] = await Promise.all([
@@ -36,7 +40,7 @@ export default async function LibraryPage() {
   return (
     <PageContainer spaceY="14">
       <FadeUp>
-        <h1 className="text-2xl font-semibold tracking-tight">Медиатека</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
       </FadeUp>
 
       <div className="flex flex-wrap gap-3">
@@ -49,8 +53,8 @@ export default async function LibraryPage() {
             <Icon name="sliders" size={22} className="text-primary" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-foreground">Джем</span>
-            <span className="block text-xs text-foreground/50">Слушать вместе</span>
+            <span className="block text-sm font-medium text-foreground">{t('jamTile.title')}</span>
+            <span className="block text-xs text-foreground/50">{t('jamTile.subtitle')}</span>
           </span>
           <Icon name="chevron-right" size={18} className="shrink-0 text-primary/50" />
         </Link>
@@ -63,8 +67,8 @@ export default async function LibraryPage() {
             <Icon name="save" size={22} className="text-foreground/70" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-foreground">Скачанное</span>
-            <span className="block text-xs text-foreground/50">Слушать без сети</span>
+            <span className="block text-sm font-medium text-foreground">{t('offlineTile.title')}</span>
+            <span className="block text-xs text-foreground/50">{t('offlineTile.subtitle')}</span>
           </span>
           <Icon name="chevron-right" size={18} className="shrink-0 text-foreground/30" />
         </Link>
@@ -76,9 +80,9 @@ export default async function LibraryPage() {
         </div>
       </div>
 
-      <Section title="Плейлисты" count={playlists.length} action={<CreatePlaylistButton variant="full" />}>
+      <Section title={t('sections.playlists')} count={playlists.length} action={<CreatePlaylistButton variant="full" />}>
         {playlists.length === 0 ? (
-          <EmptyState title="Нет плейлистов" hint='Нажми «Создать плейлист», чтобы собрать первый' />
+          <EmptyState title={t('emptyPlaylists.title')} hint={t('emptyPlaylists.hint')} />
         ) : (
           <Stagger step={0.04} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {playlists.map((p) => (
@@ -91,7 +95,7 @@ export default async function LibraryPage() {
       </Section>
 
       {likedPlaylists.length > 0 && (
-        <Section title="Лайкнутые подборки" count={likedPlaylists.length}>
+        <Section title={t('sections.likedPlaylists')} count={likedPlaylists.length}>
           <Stagger step={0.04} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {likedPlaylists.map((p) => (
               <StaggerItem key={p.id}>
@@ -103,9 +107,9 @@ export default async function LibraryPage() {
       )}
 
       <div id="liked" className="scroll-mt-6">
-        <Section title="Любимые треки" count={likedTracks.length}>
+        <Section title={t('sections.likedTracks')} count={likedTracks.length}>
           {likedTracks.length === 0 ? (
-            <EmptyState title="Ты ещё ничего не лайкал." />
+            <EmptyState title={t('emptyLiked')} />
           ) : (
             <Stagger step={0.035} className="flex flex-col">
               {likedTracks.map((track, i) => (
@@ -126,7 +130,7 @@ export default async function LibraryPage() {
         </Section>
       </div>
 
-      <Section title="Подписки" count={followedArtists.length}>
+      <Section title={t('sections.following')} count={followedArtists.length}>
         <FollowedArtists initial={followedArtists} />
       </Section>
     </PageContainer>

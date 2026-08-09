@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { motion } from 'motion/react';
 import { PresaveButton } from '@/components/presave-button';
 import { Icon } from '@/components/icon';
@@ -50,6 +51,7 @@ export function ReleaseCountdown({
   presaved: boolean;
   isAuthed: boolean;
 }) {
+  const t = useTranslations('release.countdown');
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(releaseAtMs));
 
   useEffect(() => {
@@ -92,33 +94,31 @@ export function ReleaseCountdown({
       </motion.div>
 
       <p className="mt-8 label-wide opacity-50" style={{ color: 'var(--artist-accent)' }}>
-        {type} · скоро
+        {type} · {t('comingSoon')}
       </p>
       <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-balance">{title}</h1>
       <p className="mt-1 text-sm opacity-50">{artistName}</p>
 
       {timeLeft && (
         <div className="mt-8 flex items-start gap-4 readout sm:gap-6">
-          <Unit value={timeLeft.days} label="дней" />
+          <Unit value={timeLeft.days} label={t('days', { count: timeLeft.days })} />
           <Colon />
-          <Unit value={timeLeft.hours} label="часов" />
+          <Unit value={timeLeft.hours} label={t('hours', { count: timeLeft.hours })} />
           <Colon />
-          <Unit value={timeLeft.minutes} label="минут" />
+          <Unit value={timeLeft.minutes} label={t('minutes', { count: timeLeft.minutes })} />
           <Colon />
-          <Unit value={timeLeft.seconds} label="секунд" />
+          <Unit value={timeLeft.seconds} label={t('seconds', { count: timeLeft.seconds })} />
         </div>
       )}
 
-      <p className="mt-8 text-xs opacity-40">Выходит {dateLabel}</p>
+      <p className="mt-8 text-xs opacity-40">{t('releasesOn', { date: dateLabel })}</p>
 
       {/* Пресейв: сохранить релиз заранее — при выходе авто-лайк + письмо */}
       <div className="mt-6">
         <PresaveButton releaseId={releaseId} initialPresaved={presaved} isAuthed={isAuthed} />
       </div>
       <p className="mt-3 max-w-xs text-[11px] leading-relaxed opacity-35">
-        {isAuthed
-          ? 'Добавим релиз в твои «Лайки» и пришлём письмо, когда выйдет.'
-          : 'Пришлём письмо на почту, когда релиз выйдет.'}
+        {isAuthed ? t('presaveHintAuthed') : t('presaveHintGuest')}
       </p>
     </main>
   );

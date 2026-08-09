@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
@@ -25,7 +26,9 @@ interface Props {
   emptyTitle?: string;
 }
 
-export function PlaylistView({ playlist, role, viewerId = null, emptyTitle = 'Плейлист пуст' }: Props) {
+export function PlaylistView({ playlist, role, viewerId = null, emptyTitle }: Props) {
+  const t = useTranslations('playlist');
+  const resolvedEmptyTitle = emptyTitle ?? t('view.emptyDefault');
   const [tracks, setTracks] = useState<PlaylistTrackRow[]>(playlist.tracks);
   const [version, setVersion] = useState(playlist.version);
   const [adding, setAdding] = useState(false);
@@ -65,8 +68,8 @@ export function PlaylistView({ playlist, role, viewerId = null, emptyTitle = 'П
     if (res?.ok) return;
     if (res?.status === 409) { void refetchTracks(); return; }
     setTracks(prev);
-    toast.error('Не удалось сохранить порядок');
-  }, [playlist.id, refetchTracks]);
+    toast.error(t('view.reorderFailed'));
+  }, [playlist.id, refetchTracks, t]);
 
   // updaters must stay pure — StrictMode invokes them twice, double-firing network calls
   function handleDragEnd(e: DragEndEvent) {
@@ -85,9 +88,9 @@ export function PlaylistView({ playlist, role, viewerId = null, emptyTitle = 'П
     const prev = tracks;
     setTracks(prev.filter((t) => t.id !== trackId));
     fetch(`/api/v1/playlists/${playlist.id}/tracks/${trackId}`, { method: 'DELETE' })
-      .then((r) => { if (!r.ok) { setTracks(prev); toast.error('Не удалось убрать трек'); } })
-      .catch(() => { setTracks(prev); toast.error('Не удалось убрать трек'); });
-  }, [playlist.id, tracks]);
+      .then((r) => { if (!r.ok) { setTracks(prev); toast.error(t('view.removeFailed')); } })
+      .catch(() => { setTracks(prev); toast.error(t('view.removeFailed')); });
+  }, [playlist.id, tracks, t]);
 
   const handleAdded = useCallback((t: PlaylistTrackRow) => {
     setTracks((prev) => (prev.some((x) => x.id === t.id) ? prev : [...prev, t]));
@@ -117,16 +120,16 @@ export function PlaylistView({ playlist, role, viewerId = null, emptyTitle = 'П
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={playAll} disabled={!tracks.length}
           className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-30 transition-opacity">
-          <PlayIcon size={15} className="translate-x-[1px]" /> Слушать
+          <PlayIcon size={15} className="translate-x-[1px]" /> {t('view.play')}
         </button>
         <button onClick={shuffle} disabled={!tracks.length}
           className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30">
-          <Icon name="shuffle" size={14} /> Перемешать
+          <Icon name="shuffle" size={14} /> {t('view.shuffle')}
         </button>
         {canEdit && (
           <button onClick={() => setAdding((v) => !v)}
             className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <Icon name="plus" size={14} /> Добавить треки
+            <Icon name="plus" size={14} /> {t('view.addTracks')}
           </button>
         )}
         <PlaylistDownloadButton tracks={queue} />
@@ -143,8 +146,8 @@ export function PlaylistView({ playlist, role, viewerId = null, emptyTitle = 'П
 
       {tracks.length === 0 ? (
         <div className="py-16 text-center space-y-2">
-          <p className="text-muted-foreground text-sm">{emptyTitle}</p>
-          {canEdit && <p className="text-xs text-muted-foreground opacity-60">Нажми «Добавить треки» и найди что-нибудь</p>}
+          <p className="text-muted-foreground text-sm">{resolvedEmptyTitle}</p>
+          {canEdit && <p className="text-xs text-muted-foreground opacity-60">{t('view.emptyHint')}</p>}
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={handleDragEnd}>

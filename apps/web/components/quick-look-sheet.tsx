@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Sheet, SheetDragHandle } from '@/components/sheet';
 
 interface Props {
@@ -20,11 +21,12 @@ export function QuickLookSheet({ open, onClose, children }: Props) {
 export const QuickLookDragHandle = SheetDragHandle;
 
 export function MiniEq({ animate }: { animate: boolean }) {
+  const t = useTranslations('player');
   return (
     <span
       className="inline-flex items-end gap-[1.5px] h-3"
       style={{ color: 'var(--artist-accent, hsl(200 80% 65%))' }}
-      aria-label="Сейчас играет"
+      aria-label={t('nowPlayingSr')}
     >
       {[0, 1, 2].map((i) => (
         <span

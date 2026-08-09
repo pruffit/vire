@@ -1,1 +1,19 @@
-{}
+{
+  "likedTracksPage": {
+    "title": "Любимые треки",
+    "emptyTitle": "Нет любимых треков"
+  },
+  "libraryPage": {
+    "title": "Медиатека",
+    "jamTile": { "title": "Джем", "subtitle": "Слушать вместе" },
+    "offlineTile": { "title": "Скачанное", "subtitle": "Слушать без сети" },
+    "sections": {
+      "playlists": "Плейлисты",
+      "likedPlaylists": "Лайкнутые подборки",
+      "likedTracks": "Любимые треки",
+      "following": "Подписки"
+    },
+    "emptyPlaylists": { "title": "Нет плейлистов", "hint": "Нажми «Создать плейлист», чтобы собрать первый" },
+    "emptyLiked": "Ты ещё ничего не лайкал."
+  }
+}

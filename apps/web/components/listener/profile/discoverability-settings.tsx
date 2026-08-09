@@ -1,9 +1,11 @@
 'use client';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from '@/lib/toast';
 import { SettingToggle } from './setting-toggle';
 
 export function DiscoverabilitySettings({ initial }: { initial: boolean }) {
+  const t = useTranslations('profile.discoverabilitySettings');
   const [on, setOn] = useState(initial);
   const [pending, setPending] = useState(false);
 
@@ -21,7 +23,7 @@ export function DiscoverabilitySettings({ initial }: { initial: boolean }) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       setOn(prev);
-      toast.error('Не удалось сохранить настройку');
+      toast.error(t('saveFailed'));
     } finally {
       setPending(false);
     }
@@ -29,8 +31,8 @@ export function DiscoverabilitySettings({ initial }: { initial: boolean }) {
 
   return (
     <SettingToggle
-      title="Показывать меня в поиске"
-      description={on ? 'Другие могут найти тебя по имени.' : 'Ты скрыт из поиска людей.'}
+      title={t('title')}
+      description={on ? t('onDescription') : t('offDescription')}
       checked={on}
       disabled={pending}
       onToggle={toggle}

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import type { PlaylistCollaborator } from '@vire/core';
@@ -32,33 +33,35 @@ interface CoverSectionProps {
 }
 
 function CoverPreview({ src, onPickFile, onRemove }: CoverSectionProps) {
+  const t = useTranslations('playlist');
   const isBlob = src.startsWith('blob:');
   return (
     <div className="flex items-center gap-2">
       {isBlob ? (
         /* blob: next/image не оптимизирует blob: */
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="Обложка" className="w-10 h-10 rounded-md object-cover border border-border shrink-0" />
+        <img src={src} alt={t('settings.coverAlt')} className="w-10 h-10 rounded-md object-cover border border-border shrink-0" />
       ) : (
-        <Image src={src} alt="Обложка" width={40} height={40} className="rounded-md object-cover border border-border shrink-0" />
+        <Image src={src} alt={t('settings.coverAlt')} width={40} height={40} className="rounded-md object-cover border border-border shrink-0" />
       )}
       <button
         onClick={onPickFile}
         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-secondary"
       >
-        <Icon name="upload" size={13} /> Заменить
+        <Icon name="upload" size={13} /> {t('settings.replace')}
       </button>
       <button
         onClick={onRemove}
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-md hover:bg-secondary"
       >
-        <Icon name="x" size={12} /> Убрать
+        <Icon name="x" size={12} /> {t('settings.remove')}
       </button>
     </div>
   );
 }
 
 export function PlaylistSettingsMenu({ playlist, collaborators: initialCollaborators }: Props) {
+  const t = useTranslations('playlist');
   const { id, visibility } = playlist;
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(playlist.title);
@@ -92,8 +95,8 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: title.trim() }),
     }).catch(() => null);
-    if (!res?.ok) { toast.error('Не удалось переименовать'); return; }
-    toast('Название сохранено');
+    if (!res?.ok) { toast.error(t('settings.renameFailed')); return; }
+    toast(t('settings.titleSaved'));
     router.refresh();
   }
 
@@ -102,8 +105,8 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description: description.trim() || null }),
     }).catch(() => null);
-    if (!res?.ok) { toast.error('Не удалось сохранить описание'); return; }
-    toast('Описание сохранено');
+    if (!res?.ok) { toast.error(t('settings.descriptionSaveFailed')); return; }
+    toast(t('settings.descriptionSaved'));
     router.refresh();
   }
 
@@ -112,7 +115,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ visibility: v }),
     }).catch(() => null);
-    if (!res?.ok) { toast.error('Не удалось изменить доступ'); return; }
+    if (!res?.ok) { toast.error(t('settings.visibilityFailed')); return; }
     router.refresh();
   }
 
@@ -121,8 +124,8 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
     fd.append('cover', file);
     const res = await fetch(`/api/v1/playlists/${id}/cover`, { method: 'POST', body: fd }).catch(() => null);
     const data = res?.ok ? await res.json() : null;
-    if (!data) { toast.error('Не удалось загрузить обложку'); return; }
-    toast('Обложка обновлена');
+    if (!data) { toast.error(t('settings.coverUploadFailed')); return; }
+    toast(t('settings.coverUpdated'));
     router.refresh();
   }
 
@@ -130,17 +133,17 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
     const fd = new FormData();
     fd.append('removeCover', '1');
     const res = await fetch(`/api/v1/playlists/${id}/cover`, { method: 'POST', body: fd }).catch(() => null);
-    if (!res?.ok) { toast.error('Не удалось убрать обложку'); return; }
+    if (!res?.ok) { toast.error(t('settings.coverRemoveFailed')); return; }
     if (blobPreviewRef.current) { URL.revokeObjectURL(blobPreviewRef.current); blobPreviewRef.current = null; }
     setCoverPreview(null);
-    toast('Обложка удалена');
+    toast(t('settings.coverRemoved'));
     router.refresh();
   }
 
   async function handleDelete() {
-    if (!confirm('Удалить плейлист?')) return;
+    if (!confirm(t('settings.deleteConfirm'))) return;
     const res = await fetch(`/api/v1/playlists/${id}`, { method: 'DELETE' }).catch(() => null);
-    if (!res?.ok) { toast.error('Не удалось удалить плейлист'); return; }
+    if (!res?.ok) { toast.error(t('settings.deleteFailed')); return; }
     router.push('/profile');
   }
 
@@ -152,7 +155,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ enabled: next }),
     }).catch(() => null);
-    if (!res?.ok) { setIsCollaborative(!next); toast.error('Не удалось изменить совместность'); return; }
+    if (!res?.ok) { setIsCollaborative(!next); toast.error(t('settings.collabToggleFailed')); return; }
     const data = (await res.json()) as { inviteUrl: string | null };
     setInviteUrl(data.inviteUrl);
     router.refresh();
@@ -163,29 +166,29 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
     if (!url) {
       const res = await fetch(`/api/v1/playlists/${id}/collaboration`).catch(() => null);
       const data = res?.ok ? ((await res.json()) as { inviteUrl: string | null }) : null;
-      if (!data?.inviteUrl) { toast.error('Не удалось получить ссылку'); return; }
+      if (!data?.inviteUrl) { toast.error(t('settings.inviteLinkFetchFailed')); return; }
       url = data.inviteUrl;
       setInviteUrl(url);
     }
     await navigator.clipboard.writeText(url).catch(() => {});
-    toast('Ссылка скопирована');
+    toast(t('settings.linkCopied'));
   }
 
   async function resetInviteLink() {
     const res = await fetch(`/api/v1/playlists/${id}/collaboration`, { method: 'POST' }).catch(() => null);
-    if (!res?.ok) { toast.error('Не удалось сбросить ссылку'); return; }
+    if (!res?.ok) { toast.error(t('settings.resetFailed')); return; }
     const data = (await res.json()) as { inviteUrl: string };
     setInviteUrl(data.inviteUrl);
     await navigator.clipboard.writeText(data.inviteUrl).catch(() => {});
-    toast('Ссылка обновлена и скопирована');
+    toast(t('settings.linkResetCopied'));
   }
 
   function kick(userId: string) {
     const prev = collaborators;
     setCollaborators(prev.filter((c) => c.userId !== userId));
     fetch(`/api/v1/playlists/${id}/collaborators/${userId}`, { method: 'DELETE' })
-      .then((r) => { if (!r.ok) { setCollaborators(prev); toast.error('Не удалось исключить участника'); } })
-      .catch(() => { setCollaborators(prev); toast.error('Не удалось исключить участника'); });
+      .then((r) => { if (!r.ok) { setCollaborators(prev); toast.error(t('settings.kickFailed')); } })
+      .catch(() => { setCollaborators(prev); toast.error(t('settings.kickFailed')); });
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -204,11 +207,11 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label="Настройки плейлиста"
+        aria-label={t('settings.menuAria')}
         className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-secondary"
       >
         <Icon name="more-horizontal" size={15} />
-        Настройки
+        {t('settings.menuLabel')}
       </button>
 
       <AnimatePresence>
@@ -224,7 +227,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
             <div className="p-3 space-y-3">
               {/* Название */}
               <div className="space-y-1">
-                <label htmlFor="playlist-title" className="label-mono text-[10px] text-muted-foreground">Название</label>
+                <label htmlFor="playlist-title" className="label-mono text-[10px] text-muted-foreground">{t('settings.titleLabel')}</label>
                 <div className="flex items-center gap-1">
                   <input
                     id="playlist-title"
@@ -245,14 +248,14 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
 
               {/* Описание */}
               <div className="space-y-1">
-                <label htmlFor="playlist-description" className="label-mono text-[10px] text-muted-foreground">Описание</label>
+                <label htmlFor="playlist-description" className="label-mono text-[10px] text-muted-foreground">{t('settings.descriptionLabel')}</label>
                 <textarea
                   id="playlist-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value.slice(0, 500))}
                   onBlur={() => void saveDescription()}
                   rows={2}
-                  placeholder="Необязательно…"
+                  placeholder={t('settings.descriptionPlaceholder')}
                   className="w-full text-sm bg-secondary/50 border border-border rounded-md px-2 py-1.5 outline-none focus:ring-2 focus:ring-ring resize-none placeholder:text-muted-foreground"
                 />
                 <p className="text-right text-[10px] text-muted-foreground/50">{description.length}/500</p>
@@ -260,26 +263,26 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
 
               {/* Приватность */}
               <div className="space-y-1">
-                <p className="label-mono text-[10px] text-muted-foreground">Доступ</p>
+                <p className="label-mono text-[10px] text-muted-foreground">{t('settings.accessLabel')}</p>
                 <div className="flex gap-1">
                   <button
                     onClick={() => void setVisibility('PRIVATE')}
                     className={`flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-md border transition-colors ${visibility === 'PRIVATE' ? 'border-foreground/30 bg-secondary text-foreground' : 'border-border text-muted-foreground hover:text-foreground'}`}
                   >
-                    <Icon name="lock" size={12} /> Приватный
+                    <Icon name="lock" size={12} /> {t('visibility.private')}
                   </button>
                   <button
                     onClick={() => void setVisibility('PUBLIC')}
                     className={`flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-md border transition-colors ${visibility === 'PUBLIC' ? 'border-foreground/30 bg-secondary text-foreground' : 'border-border text-muted-foreground hover:text-foreground'}`}
                   >
-                    <Icon name="globe" size={12} /> Публичный
+                    <Icon name="globe" size={12} /> {t('visibility.public')}
                   </button>
                 </div>
               </div>
 
               {/* Обложка */}
               <div className="space-y-1">
-                <p className="label-mono text-[10px] text-muted-foreground">Обложка</p>
+                <p className="label-mono text-[10px] text-muted-foreground">{t('settings.coverLabel')}</p>
                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                 {currentCover ? (
                   <CoverPreview
@@ -292,7 +295,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
                     onClick={() => fileRef.current?.click()}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-secondary"
                   >
-                    <Icon name="upload" size={13} /> Загрузить обложку
+                    <Icon name="upload" size={13} /> {t('settings.uploadCover')}
                   </button>
                 )}
               </div>
@@ -305,7 +308,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
                   onClick={() => void toggleCollaboration()}
                   className="flex min-h-11 w-full items-center justify-between"
                 >
-                  <span className="label-mono text-[10px] text-muted-foreground">Совместный плейлист</span>
+                  <span className="label-mono text-[10px] text-muted-foreground">{t('settings.collabToggleLabel')}</span>
                   <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${isCollaborative ? 'bg-primary' : 'bg-secondary'}`}>
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${isCollaborative ? 'translate-x-5' : 'translate-x-0.5'}`} />
                   </span>
@@ -318,13 +321,13 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
                         onClick={() => void copyInviteLink()}
                         className="flex-1 flex items-center justify-center gap-1.5 min-h-11 text-xs text-muted-foreground hover:text-foreground border border-border rounded-md transition-colors"
                       >
-                        <Icon name="link" size={12} /> Скопировать ссылку
+                        <Icon name="link" size={12} /> {t('copyLink')}
                       </button>
                       <button
                         onClick={() => void resetInviteLink()}
                         className="flex-1 flex items-center justify-center gap-1.5 min-h-11 text-xs text-muted-foreground hover:text-foreground border border-border rounded-md transition-colors"
                       >
-                        <Icon name="refresh-cw" size={12} /> Сбросить
+                        <Icon name="refresh-cw" size={12} /> {t('settings.resetLink')}
                       </button>
                     </div>
 
@@ -333,10 +336,10 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
                         {collaborators.map((c) => (
                           <div key={c.userId} className="flex items-center gap-2 px-1 py-1">
                             <ChatAvatar name={c.name} image={c.image} size={22} />
-                            <span className="flex-1 min-w-0 truncate text-xs text-foreground/80">{c.name ?? 'Слушатель'}</span>
+                            <span className="flex-1 min-w-0 truncate text-xs text-foreground/80">{c.name ?? t('defaultListenerName')}</span>
                             <button
                               onClick={() => kick(c.userId)}
-                              aria-label={`Исключить ${c.name ?? 'участника'}`}
+                              aria-label={t('settings.kickAria', { name: c.name ?? t('settings.participantFallback') })}
                               className={`${touchTargetClass('sm')} rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors`}
                             >
                               <Icon name="user-x" size={13} />
@@ -356,7 +359,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
                 onClick={() => void handleDelete()}
                 className="w-full flex items-center gap-2 text-xs text-destructive/70 hover:text-destructive transition-colors py-1"
               >
-                <Icon name="trash" size={13} /> Удалить плейлист
+                <Icon name="trash" size={13} /> {t('settings.deleteMenuItem')}
               </button>
             </div>
           </motion.div>

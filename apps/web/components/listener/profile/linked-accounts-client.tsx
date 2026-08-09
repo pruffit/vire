@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { YandexIcon } from '@/components/provider-icons';
@@ -15,7 +16,7 @@ interface Props {
 }
 
 const PROVIDERS = [
-  { id: 'yandex', label: 'Яндекс', Icon: YandexIcon },
+  { id: 'yandex', Icon: YandexIcon },
 ] as const;
 
 type OAuthLinkAction = (formData: FormData) => void | Promise<void>;
@@ -24,14 +25,12 @@ const LINK_ACTIONS: Record<string, OAuthLinkAction> = {
   yandex: linkYandexAction,
 };
 
-const LINK_ERROR_MESSAGES: Record<string, string> = {
-  taken: 'Этот аккаунт уже привязан к другому пользователю.',
-};
-
 export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }: Props) {
+  const t = useTranslations('profile.linkedAccounts');
   const [showSetPassword, setShowSetPassword] = useState(false);
 
-  const errorMessage = linkError ? (LINK_ERROR_MESSAGES[linkError] ?? 'Не удалось привязать аккаунт.') : null;
+  const errorMessage = linkError ? (linkError === 'taken' ? t('linkErrorTaken') : t('linkErrorDefault')) : null;
+  const providerLabels: Record<string, string> = { yandex: t('providerYandex') };
 
   return (
     <div className="space-y-2">
@@ -45,20 +44,20 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 min-w-0">
             <EmailIcon />
-            <span className="text-sm font-medium">Email и пароль</span>
+            <span className="text-sm font-medium">{t('emailPassword')}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {hasPassword ? (
-              <StatusBadge ok>Настроен</StatusBadge>
+              <StatusBadge ok>{t('configured')}</StatusBadge>
             ) : (
               <>
-                <StatusBadge ok={false}>Не задан</StatusBadge>
+                <StatusBadge ok={false}>{t('notSet')}</StatusBadge>
                 <button
                   type="button"
                   onClick={() => setShowSetPassword((s) => !s)}
                   className="text-xs text-primary underline-offset-2 hover:underline cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
                 >
-                  {showSetPassword ? 'Отмена' : 'Задать'}
+                  {showSetPassword ? t('cancel') : t('setPassword')}
                 </button>
               </>
             )}
@@ -80,7 +79,7 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }
         </AnimatePresence>
       </div>
 
-      {PROVIDERS.map(({ id, label, Icon }) => {
+      {PROVIDERS.map(({ id, Icon }) => {
         const linked = linkedProviders.includes(id);
         const linkAction = LINK_ACTIONS[id];
 
@@ -88,20 +87,20 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }
           <div key={id} className="px-4 py-3.5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5 min-w-0">
               <Icon size={16} />
-              <span className="text-sm font-medium">{label}</span>
+              <span className="text-sm font-medium">{providerLabels[id]}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {linked ? (
-                <StatusBadge ok>Привязан</StatusBadge>
+                <StatusBadge ok>{t('linked')}</StatusBadge>
               ) : linkAction ? (
                 <>
-                  <StatusBadge ok={false}>Не привязан</StatusBadge>
+                  <StatusBadge ok={false}>{t('notLinked')}</StatusBadge>
                   <form action={linkAction}>
                     <button
                       type="submit"
                       className="text-xs text-primary underline-offset-2 hover:underline cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
                     >
-                      Привязать
+                      {t('link')}
                     </button>
                   </form>
                 </>
@@ -116,6 +115,7 @@ export function LinkedAccountsClient({ hasPassword, linkedProviders, linkError }
 }
 
 function SetPasswordForm({ onDone }: { onDone: () => void }) {
+  const t = useTranslations('profile.linkedAccounts');
   const [result, action, pending] = useActionState(setPasswordAction, null);
   const [showPw, setShowPw] = useState(false);
   const [password, setPassword] = useState('');
@@ -123,7 +123,7 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
   if (result === 'ok') {
     return (
       <p className="text-xs text-green-500 py-1">
-        Пароль задан. Теперь можешь входить по email и паролю.
+        {t('passwordSetSuccess')}
       </p>
     );
   }
@@ -131,30 +131,30 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
   return (
     <form action={action} className="pt-2 flex flex-col gap-3">
       <div className="space-y-1.5">
-        <label htmlFor="set-password-new" className="text-xs font-medium text-muted-foreground">Новый пароль</label>
+        <label htmlFor="set-password-new" className="text-xs font-medium text-muted-foreground">{t('newPasswordLabel')}</label>
         <div className="relative">
           <input
             id="set-password-new"
             type={showPw ? 'text' : 'password'} name="password" required minLength={8}
-            autoComplete="new-password" placeholder="Минимум 8 символов"
+            autoComplete="new-password" placeholder={t('newPasswordPlaceholder')}
             value={password} onChange={(e) => setPassword(e.target.value)}
             className={`${inputCn} pr-16`}
           />
           <button type="button" tabIndex={-1} onClick={() => setShowPw((s) => !s)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors text-xs cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
-            {showPw ? 'скрыть' : 'показать'}
+            {showPw ? t('hidePassword') : t('showPassword')}
           </button>
         </div>
         {password.length > 0 && <PasswordStrength password={password} size="sm" />}
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="set-password-confirm" className="text-xs font-medium text-muted-foreground">Повтори пароль</label>
+        <label htmlFor="set-password-confirm" className="text-xs font-medium text-muted-foreground">{t('confirmPasswordLabel')}</label>
         <input
           id="set-password-confirm"
           type={showPw ? 'text' : 'password'} name="confirmPassword" required
-          autoComplete="new-password" placeholder="Повтори пароль" className={inputCn}
+          autoComplete="new-password" placeholder={t('confirmPasswordPlaceholder')} className={inputCn}
         />
       </div>
 
@@ -171,12 +171,12 @@ function SetPasswordForm({ onDone }: { onDone: () => void }) {
 
       <div className="flex gap-2">
         <button type="submit" disabled={pending} className={primaryBtn}>
-          {pending ? 'Сохраняем…' : 'Сохранить'}
+          {pending ? t('saving') : t('save')}
         </button>
         <button type="button" onClick={onDone}
           className="px-4 py-2 rounded-full text-xs text-muted-foreground hover:text-foreground border border-border transition-colors cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
         >
-          Отмена
+          {t('cancel')}
         </button>
       </div>
     </form>

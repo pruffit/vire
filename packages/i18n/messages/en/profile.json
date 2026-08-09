@@ -1,1 +1,126 @@
-{}
+{
+  "metaTitle": "Profile",
+  "purchasedTrackRow": {
+    "downloadFlac": "Download FLAC"
+  },
+  "accountSection": {
+    "appearance": "Appearance",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "musicTaste": "Music taste"
+  },
+  "activityFeed": {
+    "title": "Recent activity",
+    "empty": "Your likes and follows will show up here.",
+    "followedPrefix": "Followed",
+    "createdPlaylistPrefix": "Created playlist"
+  },
+  "appearanceSettings": {
+    "languageTitle": "Interface language",
+    "reduceMotionTitle": "Reduce motion",
+    "reduceMotionDescription": "Fewer animations across the site."
+  },
+  "discoverabilitySettings": {
+    "saveFailed": "Couldn't save the setting",
+    "title": "Show me in search",
+    "onDescription": "Others can find you by name.",
+    "offDescription": "You're hidden from people search."
+  },
+  "lastfmSettings": {
+    "linked": "Linked",
+    "notLinked": "Not linked",
+    "description": "We only use your loved tracks list for party suggestions. Nothing gets posted or played from there.",
+    "usernamePlaceholder": "last.fm username",
+    "usernameAriaLabel": "Last.fm username",
+    "unlink": "Unlink",
+    "save": "Save",
+    "saveFailed": "Couldn't save the Last.fm username",
+    "invalidFormat": "Latin letters, digits, «. _ -» only, 2 to 64 characters"
+  },
+  "libraryPreviews": {
+    "playlistsTitle": "Playlists",
+    "wholeLibrary": "Whole library",
+    "noPlaylists": "No playlists yet",
+    "noPlaylistsHint": "Tap “Create playlist” to make your first one",
+    "likedTracksTitle": "Liked tracks",
+    "allLabel": "All",
+    "noLikedTracks": "You haven't liked anything yet."
+  },
+  "linkedAccounts": {
+    "title": "Sign-in methods",
+    "linkErrorTaken": "This account is already linked to another user.",
+    "linkErrorDefault": "Couldn't link the account.",
+    "emailPassword": "Email and password",
+    "configured": "Set up",
+    "notSet": "Not set",
+    "setPassword": "Set",
+    "cancel": "Cancel",
+    "linked": "Linked",
+    "notLinked": "Not linked",
+    "link": "Link",
+    "providerYandex": "Yandex",
+    "newPasswordLabel": "New password",
+    "newPasswordPlaceholder": "8 characters minimum",
+    "hidePassword": "hide",
+    "showPassword": "show",
+    "confirmPasswordLabel": "Confirm password",
+    "confirmPasswordPlaceholder": "Confirm password",
+    "passwordSetSuccess": "Password set. You can now sign in with email and password.",
+    "saving": "Saving…",
+    "save": "Save"
+  },
+  "notificationSettings": {
+    "saveFailed": "Couldn't save the setting",
+    "emailTitle": "Email notifications",
+    "emailOnDescription": "Emails about important events land in your inbox.",
+    "emailOffDescription": "Emails are turned off.",
+    "pushTitle": "Push notifications",
+    "pushCheckingSupport": "Checking browser support…",
+    "pushUnsupported": "This browser doesn't support push notifications.",
+    "pushDenied": "Unblock notifications in your browser settings.",
+    "pushOnDescription": "Notifications land in your browser.",
+    "pushOffDescription": "Turn on to get notifications in your browser.",
+    "pushPermissionDenied": "Allow notifications in your browser",
+    "pushServiceUnavailable": "The browser couldn't subscribe: push service unavailable",
+    "pushRejected": "The server rejected the subscription",
+    "pushToggleFailed": "Couldn't change push notifications"
+  },
+  "privacySettings": {
+    "saveFailed": "Couldn't save the privacy setting",
+    "title": "Likes visible to friends",
+    "onDescription": "Friends can see your likes.",
+    "offDescription": "Likes are hidden from everyone."
+  },
+  "profileHero": {
+    "anonymousListener": "Listener",
+    "avatarTooLarge": "File is larger than 5 MB",
+    "avatarUploadFailed": "Couldn't upload the photo",
+    "avatarRemoveFailed": "Couldn't remove the photo",
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove",
+    "displayNameAriaLabel": "Display name",
+    "save": "Save",
+    "saving": "…",
+    "cancel": "Cancel",
+    "editName": "Edit name",
+    "joinedSince": "since {date}",
+    "loveHours": "≈ {hours}h of music you love",
+    "loveMinutes": "≈ {minutes}m of music you love",
+    "statLikes": "{count, plural, one {like} other {likes}}",
+    "statFollowing": "{count, plural, one {artist} other {artists}}",
+    "statPlaylists": "{count, plural, one {playlist} other {playlists}}",
+    "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+  },
+  "tasteSection": {
+    "title": "Music taste",
+    "emptyTitle": "Your music portrait is empty for now",
+    "emptyHint": "Like tracks — your favorite genres and artists will show up here."
+  },
+  "signOutButton": {
+    "label": "Sign out"
+  },
+  "followedArtistsSection": {
+    "title": "Following",
+    "allLabel": "All"
+  }
+}

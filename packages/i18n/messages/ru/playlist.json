@@ -1,1 +1,132 @@
-{}
+{
+  "notFound": "Не найдено",
+  "defaultOwnerName": "Автор плейлиста",
+  "defaultListenerName": "Слушатель",
+  "metaDescriptionFallback": "{count, plural, one {# трек} few {# трека} many {# треков} other {# треков}} на VireMusic.",
+  "visibility": {
+    "private": "Приватный",
+    "public": "Публичный"
+  },
+  "copyLink": "Скопировать ссылку",
+  "copied": "Скопировано",
+  "collabBadge": "Совместный",
+  "like": {
+    "add": "В избранное",
+    "remove": "Убрать из избранного"
+  },
+  "view": {
+    "emptyDefault": "Плейлист пуст",
+    "emptyHint": "Нажми «Добавить треки» и найди что-нибудь",
+    "reorderFailed": "Не удалось сохранить порядок",
+    "removeFailed": "Не удалось убрать трек",
+    "play": "Слушать",
+    "shuffle": "Перемешать",
+    "addTracks": "Добавить треки"
+  },
+  "track": {
+    "removeLabel": "Удалить из плейлиста"
+  },
+  "addPanel": {
+    "searchPlaceholder": "Поиск трека…",
+    "nothingFound": "Ничего не найдено",
+    "startTyping": "Начните вводить название трека",
+    "loading": "Загрузка…",
+    "addFailed": "Не удалось добавить трек",
+    "sections": {
+      "liked": "Из ваших лайков",
+      "recent": "Вы недавно слушали",
+      "similar": "Похожее на плейлист"
+    }
+  },
+  "invite": {
+    "eyebrow": "Приглашение в плейлист",
+    "body": "Чтобы посмотреть треки и добавлять свои, войдите в аккаунт."
+  },
+  "join": {
+    "invitedText": "зовёт вас в совместный плейлист",
+    "joining": "Присоединяемся…",
+    "cta": "Присоединиться",
+    "success": "Вы присоединились к плейлисту",
+    "full": "Плейлист заполнен",
+    "failed": "Не удалось присоединиться"
+  },
+  "leave": {
+    "failed": "Не удалось покинуть плейлист",
+    "left": "Вы вышли",
+    "cta": "Покинуть плейлист"
+  },
+  "settings": {
+    "menuAria": "Настройки плейлиста",
+    "menuLabel": "Настройки",
+    "coverAlt": "Обложка",
+    "replace": "Заменить",
+    "remove": "Убрать",
+    "titleLabel": "Название",
+    "descriptionLabel": "Описание",
+    "descriptionPlaceholder": "Необязательно…",
+    "accessLabel": "Доступ",
+    "coverLabel": "Обложка",
+    "uploadCover": "Загрузить обложку",
+    "collabToggleLabel": "Совместный плейлист",
+    "resetLink": "Сбросить",
+    "deleteMenuItem": "Удалить плейлист",
+    "deleteConfirm": "Удалить плейлист?",
+    "participantFallback": "участника",
+    "kickAria": "Исключить {name}",
+    "renameFailed": "Не удалось переименовать",
+    "titleSaved": "Название сохранено",
+    "descriptionSaveFailed": "Не удалось сохранить описание",
+    "descriptionSaved": "Описание сохранено",
+    "visibilityFailed": "Не удалось изменить доступ",
+    "coverUploadFailed": "Не удалось загрузить обложку",
+    "coverUpdated": "Обложка обновлена",
+    "coverRemoveFailed": "Не удалось убрать обложку",
+    "coverRemoved": "Обложка удалена",
+    "deleteFailed": "Не удалось удалить плейлист",
+    "collabToggleFailed": "Не удалось изменить совместность",
+    "inviteLinkFetchFailed": "Не удалось получить ссылку",
+    "linkCopied": "Ссылка скопирована",
+    "resetFailed": "Не удалось сбросить ссылку",
+    "linkResetCopied": "Ссылка обновлена и скопирована",
+    "kickFailed": "Не удалось исключить участника"
+  },
+  "download": {
+    "progress": "Скачиваю {done}/{total}",
+    "done": "Скачано офлайн",
+    "cta": "Скачать плейлист"
+  },
+  "addButton": {
+    "aria": "Добавить в плейлист",
+    "heading": "Плейлисты",
+    "empty": "Нет плейлистов",
+    "namePlaceholder": "Название…",
+    "newPlaylist": "Новый плейлист",
+    "addFailed": "Не удалось добавить в плейлист",
+    "removeFailed": "Не удалось убрать из плейлиста",
+    "added": "Добавлено в «{title}»",
+    "createFailed": "Не удалось создать плейлист",
+    "createdButAddFailed": "Плейлист создан, но трек добавить не удалось"
+  },
+  "share": {
+    "aria": "Поделиться плейлистом",
+    "publishFailed": "Не удалось сделать плейлист публичным",
+    "publishing": "Публикуем…",
+    "makePublic": "Сделать публичным и поделиться"
+  },
+  "quickLook": {
+    "loadFailed": "Не удалось загрузить треки",
+    "loadFailedBody": "Не удалось загрузить треки.",
+    "empty": "Плейлист пуст.",
+    "pause": "Пауза",
+    "resume": "Продолжить",
+    "goToPlaylist": "К плейлисту"
+  },
+  "editorial": {
+    "kindLabels": {
+      "mood": "Настроение",
+      "trending": "В тренде",
+      "relisten": "Снова и снова",
+      "fresh": "Свежее"
+    }
+  }
+}

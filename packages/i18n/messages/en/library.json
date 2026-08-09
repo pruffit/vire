@@ -1,1 +1,19 @@
-{}
+{
+  "likedTracksPage": {
+    "title": "Liked tracks",
+    "emptyTitle": "No liked tracks yet"
+  },
+  "libraryPage": {
+    "title": "Library",
+    "jamTile": { "title": "Jam", "subtitle": "Listen together" },
+    "offlineTile": { "title": "Downloads", "subtitle": "Listen offline" },
+    "sections": {
+      "playlists": "Playlists",
+      "likedPlaylists": "Liked playlists",
+      "likedTracks": "Liked tracks",
+      "following": "Following"
+    },
+    "emptyPlaylists": { "title": "No playlists yet", "hint": "Tap “Create playlist” to make your first one" },
+    "emptyLiked": "You haven't liked anything yet."
+  }
+}

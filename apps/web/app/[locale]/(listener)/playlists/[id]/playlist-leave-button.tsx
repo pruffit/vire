@@ -1,10 +1,12 @@
 'use client';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { Icon } from '@/components/icon';
 import { toast } from '@/lib/toast';
 
 export function PlaylistLeaveButton({ playlistId }: { playlistId: string }) {
+  const t = useTranslations('playlist');
   const [left, setLeft] = useState(false);
   const router = useRouter();
 
@@ -13,7 +15,7 @@ export function PlaylistLeaveButton({ playlistId }: { playlistId: string }) {
     const res = await fetch(`/api/v1/playlists/${playlistId}/collaborators`, { method: 'DELETE' }).catch(() => null);
     if (!res?.ok) {
       setLeft(false);
-      toast.error('Не удалось покинуть плейлист');
+      toast.error(t('leave.failed'));
       return;
     }
     router.push('/library');
@@ -27,7 +29,7 @@ export function PlaylistLeaveButton({ playlistId }: { playlistId: string }) {
       className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-3 text-xs text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
     >
       <Icon name="log-out" size={13} />
-      {left ? 'Вы вышли' : 'Покинуть плейлист'}
+      {left ? t('leave.left') : t('leave.cta')}
     </button>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { useViewportClampX } from '@/lib/use-viewport-clamp-x';
@@ -64,6 +65,7 @@ function clamp01(n: number) {
 }
 
 export function ColorField({ label, name, value, onChange, disabled }: Props) {
+  const t = useTranslations('common.form.colorField');
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const svRef = useRef<HTMLDivElement>(null);
@@ -172,7 +174,7 @@ export function ColorField({ label, name, value, onChange, disabled }: Props) {
           type="button"
           disabled={disabled}
           onClick={() => setOpen((o) => !o)}
-          aria-label={`${label}: выбрать цвет`}
+          aria-label={t('pickColor', { label })}
           className="h-8 w-8 shrink-0 rounded border border-foreground/15 disabled:opacity-50 pointer-coarse:h-11 pointer-coarse:w-11"
           style={{ backgroundColor: valid ? value : 'transparent' }}
         />

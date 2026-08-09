@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/icon';
 import { useOfflineStore } from '@/store/offline';
 import { toDownloadMeta } from '@/lib/offline/to-download-meta';
@@ -22,6 +23,7 @@ function waitUntilSettled(trackId: string): Promise<void> {
 }
 
 export function PlaylistDownloadButton({ tracks }: { tracks: PlayerTrack[] }) {
+  const t = useTranslations('playlist');
   const entries = useOfflineStore((s) => s.entries);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(0);
@@ -71,7 +73,7 @@ export function PlaylistDownloadButton({ tracks }: { tracks: PlayerTrack[] }) {
         onClick={cancel}
         className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors pointer-coarse:min-h-11"
       >
-        <Icon name="x" size={14} /> Скачиваю {done}/{tracks.length}
+        <Icon name="x" size={14} /> {t('download.progress', { done, total: tracks.length })}
       </button>
     );
   }
@@ -79,7 +81,7 @@ export function PlaylistDownloadButton({ tracks }: { tracks: PlayerTrack[] }) {
   if (allDone) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm text-foreground/40 pointer-coarse:min-h-11">
-        <Icon name="check" size={14} /> Скачано офлайн
+        <Icon name="check" size={14} /> {t('download.done')}
       </span>
     );
   }
@@ -90,7 +92,7 @@ export function PlaylistDownloadButton({ tracks }: { tracks: PlayerTrack[] }) {
       onClick={() => void start()}
       className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors pointer-coarse:min-h-11"
     >
-      <Icon name="save" size={14} /> Скачать плейлист
+      <Icon name="save" size={14} /> {t('download.cta')}
     </button>
   );
 }

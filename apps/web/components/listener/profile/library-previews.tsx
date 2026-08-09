@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import type { PlaylistSummary, LikedTrack } from '@vire/db';
 import type { PlayerTrack } from '@/store/player';
 import { likedToPlayerTrack } from '@/lib/player/liked-to-player-track';
@@ -12,7 +13,8 @@ interface Props {
   likedTracks: LikedTrack[];
 }
 
-export function LibraryPreviews({ playlists, likedTracks }: Props) {
+export async function LibraryPreviews({ playlists, likedTracks }: Props) {
+  const t = await getTranslations('profile.libraryPreviews');
   const previewLiked = likedTracks.slice(0, 5);
   const likedQueue: PlayerTrack[] = previewLiked.map(likedToPlayerTrack);
 
@@ -20,13 +22,13 @@ export function LibraryPreviews({ playlists, likedTracks }: Props) {
     <div className="flex flex-col gap-10">
       <section className="animate-fade-up">
         <Section
-          title="Плейлисты"
+          title={t('playlistsTitle')}
           href="/library"
-          hrefLabel="Вся медиатека"
+          hrefLabel={t('wholeLibrary')}
           action={<CreatePlaylistButton variant="icon" />}
         >
           {playlists.length === 0 ? (
-            <EmptyState title="Нет плейлистов" hint='Нажми «Создать плейлист», чтобы собрать первый' />
+            <EmptyState title={t('noPlaylists')} hint={t('noPlaylistsHint')} />
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
               {playlists.slice(0, 8).map((p) => (
@@ -38,9 +40,9 @@ export function LibraryPreviews({ playlists, likedTracks }: Props) {
       </section>
 
       <section className="animate-fade-up">
-        <Section title="Любимые треки" href="/library#liked" hrefLabel="Все">
+        <Section title={t('likedTracksTitle')} href="/library#liked" hrefLabel={t('allLabel')}>
           {previewLiked.length === 0 ? (
-            <EmptyState title="Ты ещё ничего не лайкал." />
+            <EmptyState title={t('noLikedTracks')} />
           ) : (
             <div className="flex flex-col">
               {previewLiked.map((track, i) => (

@@ -1,6 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import { HeartIcon } from '@/components/icons';
 import { likeTrack } from '@vire/api-client';
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function LikeButton({ trackId, initialLiked, initialCount }: Props) {
+  const t = useTranslations('track');
   const {
     on: liked,
     count,
@@ -23,14 +25,14 @@ export function LikeButton({ trackId, initialLiked, initialCount }: Props) {
     initial: initialLiked,
     initialCount,
     request: (next) => likeTrack(trackId, next),
-    errorMessage: 'Не удалось сохранить лайк',
+    errorMessage: t('like.saveFailed'),
   });
 
   return (
     <motion.button
       onClick={toggle}
       disabled={pending}
-      aria-label={liked ? 'Убрать лайк' : 'Лайкнуть'}
+      aria-label={liked ? t('like.removeAria') : t('like.addAria')}
       whileTap={{ scale: 0.85 }}
       transition={spring.snappy}
       className="flex items-center gap-1.5 text-sm pointer-coarse:min-h-11 transition-[color,opacity] duration-200 disabled:opacity-40"

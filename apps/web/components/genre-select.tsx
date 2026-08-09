@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Select, type SelectGroup } from '@/components/select';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 
@@ -13,15 +14,16 @@ export function GenreSelect({
   defaultValue?: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations('common.form.genreSelect');
   const groups = useMemo<SelectGroup[]>(
     () => [
-      { label: '', options: [{ value: '', label: 'Без жанра' }] },
+      { label: '', options: [{ value: '', label: t('none') }] },
       ...GENRE_GROUPS.map((g) => ({
         label: g.label,
         options: g.genres.map((gen) => ({ value: gen, label: GENRE_LABELS[gen] })),
       })),
     ],
-    [],
+    [t],
   );
 
   return (
@@ -31,8 +33,8 @@ export function GenreSelect({
       disabled={disabled}
       groups={groups}
       searchable
-      placeholder="Жанр не выбран"
-      aria-label="Жанр"
+      placeholder={t('placeholder')}
+      aria-label={t('ariaLabel')}
     />
   );
 }

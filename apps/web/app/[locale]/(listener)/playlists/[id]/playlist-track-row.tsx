@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { SortableTrackRow } from '@/components/sortable-track-row';
 import { TrackQueueMenu } from '@/components/track-queue-menu';
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function SortablePlaylistRow({ track, index, queue, queueIndex, context, canDrag, canRemove, showAddedBy, onRemove }: Props) {
+  const t = useTranslations('playlist');
   const { playQueue, toggle } = usePlay();
   const { isActive: isThisTrack, isPlaying } = useTrackPlayState(track.id);
 
@@ -33,10 +35,10 @@ export function SortablePlaylistRow({ track, index, queue, queueIndex, context, 
       canDrag={canDrag}
       canRemove={canRemove}
       onRemove={onRemove}
-      removeLabel="Удалить из плейлиста"
+      removeLabel={t('track.removeLabel')}
       actions={<TrackQueueMenu context={context} track={queue[queueIndex]} />}
       avatar={showAddedBy && track.addedBy && (
-        <span title={track.addedBy.name ?? 'Слушатель'}>
+        <span title={track.addedBy.name ?? t('defaultListenerName')}>
           <ChatAvatar name={track.addedBy.name} image={track.addedBy.image} size={20} />
         </span>
       )}

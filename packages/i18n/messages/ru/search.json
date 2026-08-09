@@ -1,1 +1,9 @@
-{}
+{
+  "metaTitle": {
+    "withQuery": "«{query}» — Поиск · VireMusic",
+    "default": "Поиск — VireMusic"
+  },
+  "startTyping": "Начни вводить — покажем артистов, релизы и треки.",
+  "minChars": "Введи хотя бы 2 символа.",
+  "noResults": "По запросу <styled>«{query}»</styled> ничего не найдено."
+}

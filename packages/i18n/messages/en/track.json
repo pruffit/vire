@@ -1,1 +1,56 @@
-{}
+{
+  "play": "Play",
+  "pause": "Pause",
+  "playAria": "Play {title}",
+  "playQuotedAria": "Play “{title}”",
+  "processing": "processing…",
+  "processingBody": "The track is processing…",
+  "lyricsHeading": "Lyrics",
+  "fromRelease": "From “{title}”",
+  "markMoment": "Mark favorite moment",
+  "explicit": {
+    "title": "Explicit · 18+ — strong language or explicit content",
+    "aria": "Explicit, 18+ content rating"
+  },
+  "like": {
+    "saveFailed": "Couldn't save the like",
+    "removeAria": "Unlike",
+    "addAria": "Like"
+  },
+  "download": {
+    "paymentProcessing": "Payment processing",
+    "check": "Check",
+    "redirecting": "Redirecting to payment…",
+    "buy": "Buy FLAC · 99 ₽"
+  },
+  "share": {
+    "aria": "Share",
+    "link": "Link to track",
+    "fromMoment": "From the current moment",
+    "copied": "Link copied"
+  },
+  "queue": {
+    "title": "Queue",
+    "aria": "Queue actions",
+    "playNext": "Play next",
+    "addToQueue": "Add to queue",
+    "alreadyQueued": "Already queued",
+    "willPlayNext": "Will play next",
+    "queued": "Queued",
+    "loadFailed": "Couldn't load tracks",
+    "downloading": "Saving… {pct}%",
+    "removeOffline": "Remove from offline",
+    "resumeOffline": "Resume offline download",
+    "saveOffline": "Save offline"
+  },
+  "sortable": {
+    "dragAria": "Drag",
+    "removeAria": "Remove"
+  },
+  "liveListeners": {
+    "label": "{count, plural, one {is listening now} other {are listening now}}"
+  },
+  "listeningNow": {
+    "title": "Listening now"
+  }
+}

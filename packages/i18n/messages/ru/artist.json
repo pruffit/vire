@@ -1,1 +1,64 @@
-{}
+{
+  "catalogPage": {
+    "title": "Артисты",
+    "empty": "Пока нет ни одного артиста."
+  },
+  "catalog": {
+    "searchPlaceholder": "Поиск по имени…",
+    "sort": {
+      "default": "новые",
+      "name": "A—Z",
+      "releases": "релизы"
+    },
+    "allGenres": "Все",
+    "empty": "Ничего не найдено.",
+    "filteredOf": "{filtered} из {total}"
+  },
+  "card": {
+    "open": "Открыть"
+  },
+  "collapseBar": {
+    "scrollTopAria": "Наверх страницы",
+    "verifiedAria": "Верифицирован"
+  },
+  "followButton": {
+    "follow": "Подписаться",
+    "following": "Подписан",
+    "updateFailed": "Не удалось обновить подписку"
+  },
+  "followerCount": "{count, plural, one {# слушатель} few {# слушателя} many {# слушателей} other {# слушателей}}",
+  "sections": {
+    "upcoming": "Скоро",
+    "popular": "Популярное",
+    "releases": "Релизы",
+    "platforms": "Площадки",
+    "posts": "Анонсы",
+    "videos": "Видео"
+  },
+  "smartLinks": {
+    "platformCount": "{count, plural, one {# площадка} few {# площадки} many {# площадок} other {# площадок}}",
+    "linksFallback": "ссылки"
+  },
+  "popularTracks": {
+    "collapse": "Свернуть",
+    "showAll": "Все треки ({count})"
+  },
+  "similarArtists": {
+    "title": "Похожие артисты"
+  },
+  "announcements": {
+    "ok": "Понятно",
+    "stage1": {
+      "title": "VireMusic запущен",
+      "body1": "Это <strong>Этап 1 — Friends & Family</strong>. Уже можно слушать артистов, собирать плейлисты, ставить лайки и запускать <strong>Волну</strong> — поток по вкусу.",
+      "body2": "Прямые продажи и поддержка артистов рублём появятся на следующем этапе. Спасибо, что вы с нами с самого начала.",
+      "cta": "Что уже работает"
+    },
+    "auth": {
+      "body1": "Чтобы соответствовать требованиям закона РФ (ФЗ-406), мы убрали вход через <strong>Google</strong> и <strong>Telegram</strong>: российским сайтам нельзя использовать иностранные сервисы авторизации.",
+      "body2": "Войти теперь можно по <strong>email и паролю</strong>, по <strong>ссылке на email</strong> или через <strong>Яндекс</strong>.",
+      "body3": "Если раньше ты заходил через Google или Telegram — на странице входа выбери «Войти по ссылке на email», а затем задай пароль в профиле, раздел «Способы входа».",
+      "cta": "Подробнее"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { PlayerTrack } from '@/store/player';
 import { usePlay, useTrackPlayState } from '@/lib/player/use-play';
 import { TrackRow } from '@/components/track-row';
@@ -26,6 +27,7 @@ export function PurchasedTrackRow({
   releaseId,
   trackId,
 }: Props) {
+  const t = useTranslations('profile.purchasedTrackRow');
   const { playQueue, toggle } = usePlay();
   const { isActive: isThisTrack, isPlaying } = useTrackPlayState(track.id);
 
@@ -51,9 +53,9 @@ export function PurchasedTrackRow({
           <a
             href={`/api/v1/tracks/${trackId}/download`}
             download
-            title="Скачать FLAC"
+            title={t('downloadFlac')}
             className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-            aria-label="Скачать FLAC"
+            aria-label={t('downloadFlac')}
           >
             <DownloadIcon />
           </a>

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
@@ -30,6 +31,7 @@ interface Props {
  * open-state держат карточки-триггеры (EditorialPlaylistCard, PlaylistCard).
  */
 export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open, onClose }: Props) {
+  const t = useTranslations('playlist');
   const activeTrack = usePlayerStore((s) => s.track);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const { load, loading, items: tracks } = useLazyQueue('playlist', playlistId);
@@ -39,10 +41,10 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open,
     // успех кэшируется, сбой нет — повторное открытие после ошибки перезапросит
     if (open) {
       void load().then((queue) => {
-        if (queue === null) toast.error('Не удалось загрузить треки');
+        if (queue === null) toast.error(t('quickLook.loadFailed'));
       });
     }
-  }, [open, load]);
+  }, [open, load, t]);
 
   const isThisPlaying =
     !!activeTrack && !!(tracks ?? []).find((t) => t.id === activeTrack.id);
@@ -50,7 +52,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open,
   async function playAll() {
     const queue = await load();
     if (queue === null) {
-      toast.error('Не удалось загрузить треки');
+      toast.error(t('quickLook.loadFailed'));
       return;
     }
     if (queue[0]) controls.playQueue(queue, { context });
@@ -59,7 +61,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open,
   async function playFrom(trackId: string) {
     const queue = await load();
     if (queue === null) {
-      toast.error('Не удалось загрузить треки');
+      toast.error(t('quickLook.loadFailed'));
       return;
     }
     const idx = Math.max(0, queue.findIndex((q) => q.id === trackId));
@@ -94,14 +96,14 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open,
           ) : (
             <PlayIcon size={15} className="translate-x-[1px]" />
           )}
-          {isThisPlaying ? (isPlaying ? 'Пауза' : 'Продолжить') : 'Слушать'}
+          {isThisPlaying ? (isPlaying ? t('quickLook.pause') : t('quickLook.resume')) : t('view.play')}
         </motion.button>
         <Link
           href={`/playlists/${playlistId}`}
           onClick={onClose}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          К плейлисту <Icon name="arrow-right" size={14} />
+          {t('quickLook.goToPlaylist')} <Icon name="arrow-right" size={14} />
         </Link>
       </div>
 
@@ -112,10 +114,10 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open,
           </div>
         )}
         {tracks === null && !loading && (
-          <p className="py-6 text-center text-sm text-muted-foreground">Не удалось загрузить треки.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t('quickLook.loadFailedBody')}</p>
         )}
         {tracks && tracks.length === 0 && (
-          <p className="py-6 text-center text-sm text-muted-foreground">Плейлист пуст.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t('quickLook.empty')}</p>
         )}
         {tracks &&
           tracks.map((t, i) => {

@@ -1,1 +1,132 @@
-{}
+{
+  "notFound": "Not found",
+  "defaultOwnerName": "Playlist owner",
+  "defaultListenerName": "Listener",
+  "metaDescriptionFallback": "{count, plural, one {# track} other {# tracks}} on VireMusic.",
+  "visibility": {
+    "private": "Private",
+    "public": "Public"
+  },
+  "copyLink": "Copy link",
+  "copied": "Copied",
+  "collabBadge": "Collaborative",
+  "like": {
+    "add": "Add to favorites",
+    "remove": "Remove from favorites"
+  },
+  "view": {
+    "emptyDefault": "Playlist is empty",
+    "emptyHint": "Tap “Add tracks” and find something",
+    "reorderFailed": "Couldn't save the order",
+    "removeFailed": "Couldn't remove the track",
+    "play": "Play",
+    "shuffle": "Shuffle",
+    "addTracks": "Add tracks"
+  },
+  "track": {
+    "removeLabel": "Remove from playlist"
+  },
+  "addPanel": {
+    "searchPlaceholder": "Search for a track…",
+    "nothingFound": "Nothing found",
+    "startTyping": "Start typing a track name",
+    "loading": "Loading…",
+    "addFailed": "Couldn't add the track",
+    "sections": {
+      "liked": "From your likes",
+      "recent": "Recently played",
+      "similar": "Similar to this playlist"
+    }
+  },
+  "invite": {
+    "eyebrow": "Playlist invite",
+    "body": "Sign in to see the tracks and add your own."
+  },
+  "join": {
+    "invitedText": "is inviting you to a collaborative playlist",
+    "joining": "Joining…",
+    "cta": "Join",
+    "success": "You joined the playlist",
+    "full": "Playlist is full",
+    "failed": "Couldn't join"
+  },
+  "leave": {
+    "failed": "Couldn't leave the playlist",
+    "left": "You left",
+    "cta": "Leave playlist"
+  },
+  "settings": {
+    "menuAria": "Playlist settings",
+    "menuLabel": "Settings",
+    "coverAlt": "Cover",
+    "replace": "Replace",
+    "remove": "Remove",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Optional…",
+    "accessLabel": "Access",
+    "coverLabel": "Cover",
+    "uploadCover": "Upload cover",
+    "collabToggleLabel": "Collaborative playlist",
+    "resetLink": "Reset",
+    "deleteMenuItem": "Delete playlist",
+    "deleteConfirm": "Delete this playlist?",
+    "participantFallback": "participant",
+    "kickAria": "Remove {name}",
+    "renameFailed": "Couldn't rename",
+    "titleSaved": "Title saved",
+    "descriptionSaveFailed": "Couldn't save the description",
+    "descriptionSaved": "Description saved",
+    "visibilityFailed": "Couldn't change access",
+    "coverUploadFailed": "Couldn't upload the cover",
+    "coverUpdated": "Cover updated",
+    "coverRemoveFailed": "Couldn't remove the cover",
+    "coverRemoved": "Cover removed",
+    "deleteFailed": "Couldn't delete the playlist",
+    "collabToggleFailed": "Couldn't change collaboration",
+    "inviteLinkFetchFailed": "Couldn't get the link",
+    "linkCopied": "Link copied",
+    "resetFailed": "Couldn't reset the link",
+    "linkResetCopied": "Link reset and copied",
+    "kickFailed": "Couldn't remove the participant"
+  },
+  "download": {
+    "progress": "Downloading {done}/{total}",
+    "done": "Downloaded offline",
+    "cta": "Download playlist"
+  },
+  "addButton": {
+    "aria": "Add to playlist",
+    "heading": "Playlists",
+    "empty": "No playlists yet",
+    "namePlaceholder": "Name…",
+    "newPlaylist": "New playlist",
+    "addFailed": "Couldn't add to the playlist",
+    "removeFailed": "Couldn't remove from the playlist",
+    "added": "Added to “{title}”",
+    "createFailed": "Couldn't create the playlist",
+    "createdButAddFailed": "Playlist created, but couldn't add the track"
+  },
+  "share": {
+    "aria": "Share playlist",
+    "publishFailed": "Couldn't make the playlist public",
+    "publishing": "Publishing…",
+    "makePublic": "Make public and share"
+  },
+  "quickLook": {
+    "loadFailed": "Couldn't load tracks",
+    "loadFailedBody": "Couldn't load tracks.",
+    "empty": "Playlist is empty.",
+    "pause": "Pause",
+    "resume": "Resume",
+    "goToPlaylist": "Go to playlist"
+  },
+  "editorial": {
+    "kindLabels": {
+      "mood": "Mood",
+      "trending": "Trending",
+      "relisten": "On repeat",
+      "fresh": "Fresh"
+    }
+  }
+}

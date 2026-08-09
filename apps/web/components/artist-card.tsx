@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
@@ -63,6 +64,7 @@ function ArtistGridCard({ slug, name, avatarUrl, coverFallbackUrl, verified, sta
 }
 
 function ArtistChipCard({ slug, name, avatarUrl, coverFallbackUrl, verified, stat, sizes }: ArtistCardProps) {
+  const t = useTranslations('artist.card');
   const avatar = resolveAvatarUrl(avatarUrl, coverFallbackUrl);
   const [preview, setPreview] = useState(false);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
@@ -130,7 +132,7 @@ function ArtistChipCard({ slug, name, avatarUrl, coverFallbackUrl, verified, sta
                     {verified && <Icon name="check" size={12} className="text-muted-foreground shrink-0" />}
                   </span>
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    {stat ? stat : <>Открыть <Icon name="arrow-right" size={11} /></>}
+                    {stat ? stat : <>{t('open')} <Icon name="arrow-right" size={11} /></>}
                   </span>
                 </span>
               </motion.div>

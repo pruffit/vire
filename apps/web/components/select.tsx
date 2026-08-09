@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { fieldClass, selectClass } from '@/components/ui-kit';
@@ -49,7 +50,7 @@ export function Select({
   defaultValue = '',
   onValueChange,
   name,
-  placeholder = 'Не выбрано',
+  placeholder,
   searchable = false,
   disabled,
   size = 'md',
@@ -57,6 +58,8 @@ export function Select({
   className,
   'aria-label': ariaLabel,
 }: Props) {
+  const t = useTranslations('common.form.select');
+  const resolvedPlaceholder = placeholder ?? t('placeholder');
   const isControlled = value !== undefined;
   const [internal, setInternal] = useState<string>(defaultValue);
   const current = isControlled ? value : internal;
@@ -144,7 +147,7 @@ export function Select({
         )}
       >
         <span className={cn('truncate', selected ? 'text-foreground' : 'text-foreground/40')}>
-          {selected ? selected.label : placeholder}
+          {selected ? selected.label : resolvedPlaceholder}
         </span>
         <svg
           width={sm ? 12 : 14} height={sm ? 12 : 14} viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -181,7 +184,7 @@ export function Select({
                       type="text"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Поиск…"
+                      placeholder={t('searchPlaceholder')}
                       className="w-full rounded-md bg-foreground/5 border border-foreground/10 px-2.5 py-1.5 text-sm placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring"
                     />
                   </div>
@@ -190,7 +193,7 @@ export function Select({
                 <div className="max-h-64 overflow-y-auto p-1 [scrollbar-width:thin]">
                   {filtered ? (
                     filtered.length === 0 ? (
-                      <p className="px-2 py-3 text-xs text-foreground/30">Ничего не найдено</p>
+                      <p className="px-2 py-3 text-xs text-foreground/30">{t('noResults')}</p>
                     ) : (
                       filtered.map((o) => (
                         <Option key={o.value} active={current === o.value} disabled={o.disabled} onClick={() => pick(o.value)}>

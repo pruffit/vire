@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { listActiveArtists } from '@vire/db';
 import { FadeUp } from '@vire/ui/motion';
 import { ArtistCatalog } from '@/components/artist-catalog';
@@ -14,6 +15,7 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function ArtistsPage() {
+  const t = await getTranslations('artist.catalogPage');
   const artists = await listActiveArtists();
 
   return (
@@ -25,7 +27,7 @@ export default async function ArtistsPage() {
       ])} />
       <FadeUp>
         <header className="flex items-baseline justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Артисты</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           {artists.length > 0 && (
             <span className="text-xs font-mono text-muted-foreground tabular-nums">
               {artists.length}
@@ -36,7 +38,7 @@ export default async function ArtistsPage() {
 
       {artists.length === 0 ? (
         <div className="py-24 text-center text-sm text-muted-foreground">
-          Пока нет ни одного артиста.
+          {t('empty')}
         </div>
       ) : (
         <ArtistCatalog artists={artists} />

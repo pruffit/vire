@@ -1,12 +1,13 @@
 'use client';
 
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useReduceMotionPref, setReduceMotionPref } from '@vire/ui/motion';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { LOCALES, LOCALE_LABELS, type Locale } from '@vire/i18n/config';
 import { cn } from '@/lib/utils';
 
 export function AppearanceSettings() {
+  const t = useTranslations('profile.appearanceSettings');
   const reduce = useReduceMotionPref();
   const locale = useLocale() as Locale;
   const pathname = usePathname();
@@ -27,7 +28,7 @@ export function AppearanceSettings() {
       <div className="rounded-xl border border-border bg-card/60 px-4 py-3.5">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-medium">Язык интерфейса</p>
+            <p className="text-sm font-medium">{t('languageTitle')}</p>
             <p className="text-xs text-muted-foreground">{LOCALE_LABELS[locale]}</p>
           </div>
           <div className="flex gap-1 shrink-0">
@@ -52,14 +53,14 @@ export function AppearanceSettings() {
       <div className="rounded-xl border border-border bg-card/60 px-4 py-3.5">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-medium">Приглушить движение</p>
-            <p className="text-xs text-muted-foreground">Меньше анимаций по всему сайту.</p>
+            <p className="text-sm font-medium">{t('reduceMotionTitle')}</p>
+            <p className="text-xs text-muted-foreground">{t('reduceMotionDescription')}</p>
           </div>
           <button
             type="button"
             role="switch"
             aria-checked={reduce}
-            aria-label="Приглушить движение"
+            aria-label={t('reduceMotionTitle')}
             onClick={() => setReduceMotionPref(!reduce)}
             className="shrink-0 grid place-items-center min-h-11 min-w-11 cursor-pointer"
           >

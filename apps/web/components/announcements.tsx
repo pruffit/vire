@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon, type IconName } from '@/components/icon';
@@ -21,55 +22,41 @@ interface Announcement {
   cta?: { href: string; label: string };
 }
 
-// порядок = очередь авто-показа
-const ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: 'stage1',
-    storageKey: 'vire_notice_stage1_v1',
-    title: 'VireMusic запущен',
-    icon: 'star',
-    body: (
-      <>
-        <p>
-          Это <strong className="text-foreground">Этап 1 — Friends &amp; Family</strong>. Уже можно
-          слушать артистов, собирать плейлисты, ставить лайки и запускать{' '}
-          <strong className="text-foreground">Волну</strong> — поток по вкусу.
-        </p>
-        <p>
-          Прямые продажи и поддержка артистов рублём появятся на следующем этапе. Спасибо, что вы
-          с нами с самого начала.
-        </p>
-      </>
-    ),
-    cta: { href: '/about', label: 'Что уже работает' },
-  },
-  {
-    id: 'auth',
-    storageKey: 'vire_notice_auth_v1',
-    title: 'Изменения во входе',
-    icon: 'lock',
-    body: (
-      <>
-        <p>
-          Чтобы соответствовать требованиям закона РФ (ФЗ-406), мы убрали вход через{' '}
-          <strong className="text-foreground">Google</strong> и{' '}
-          <strong className="text-foreground">Telegram</strong>: российским сайтам нельзя
-          использовать иностранные сервисы авторизации.
-        </p>
-        <p>
-          Войти теперь можно по <strong className="text-foreground">email и паролю</strong>, по{' '}
-          <strong className="text-foreground">ссылке на email</strong> или через{' '}
-          <strong className="text-foreground">Яндекс</strong>.
-        </p>
-        <p>
-          Если раньше ты заходил через Google или Telegram — на странице входа выбери «Войти по
-          ссылке на email», а затем задай пароль в профиле, раздел «Способы входа».
-        </p>
-      </>
-    ),
-    cta: { href: '/privacy', label: 'Подробнее' },
-  },
-];
+function useAnnouncements(): Announcement[] {
+  const t = useTranslations();
+  const strong = (chunks: ReactNode) => <strong className="text-foreground">{chunks}</strong>;
+
+  // порядок = очередь авто-показа
+  return [
+    {
+      id: 'stage1',
+      storageKey: 'vire_notice_stage1_v1',
+      title: t('artist.announcements.stage1.title'),
+      icon: 'star',
+      body: (
+        <>
+          <p>{t.rich('artist.announcements.stage1.body1', { strong })}</p>
+          <p>{t('artist.announcements.stage1.body2')}</p>
+        </>
+      ),
+      cta: { href: '/about', label: t('artist.announcements.stage1.cta') },
+    },
+    {
+      id: 'auth',
+      storageKey: 'vire_notice_auth_v1',
+      title: t('nav.footer.authChanges'),
+      icon: 'lock',
+      body: (
+        <>
+          <p>{t.rich('artist.announcements.auth.body1', { strong })}</p>
+          <p>{t.rich('artist.announcements.auth.body2', { strong })}</p>
+          <p>{t('artist.announcements.auth.body3')}</p>
+        </>
+      ),
+      cta: { href: '/privacy', label: t('artist.announcements.auth.cta') },
+    },
+  ];
+}
 
 function isSeen(key: string): boolean {
   try {
@@ -88,17 +75,19 @@ function markSeen(key: string): void {
 }
 
 export function Announcements() {
+  const t = useTranslations('artist.announcements');
+  const announcements = useAnnouncements();
   // useSyncExternalStore читает localStorage без setState-в-эффекте и рассинхрона с SSR
   const autoActiveId = useSyncExternalStore(
     () => () => {},
-    () => nextAutoAnnouncement(ANNOUNCEMENTS, isSeen)?.id ?? null,
+    () => nextAutoAnnouncement(announcements, isSeen)?.id ?? null,
     () => null,
   );
   const [manualId, setManualId] = useState<string | null>(null);
   const [autoConsumed, setAutoConsumed] = useState(false);
 
   const active =
-    ANNOUNCEMENTS.find((a) => a.id === (manualId ?? (autoConsumed ? null : autoActiveId))) ?? null;
+    announcements.find((a) => a.id === (manualId ?? (autoConsumed ? null : autoActiveId))) ?? null;
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -188,7 +177,7 @@ export function Announcements() {
                 onClick={close}
                 className="rounded-full bg-primary text-primary-foreground px-5 py-2 text-sm font-medium hover:bg-primary/90 transition-opacity cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
               >
-                Понятно
+                {t('ok')}
               </button>
             </div>
           </motion.div>

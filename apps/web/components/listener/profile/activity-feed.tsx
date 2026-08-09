@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { type ActivityItem, activityKey } from '@/lib/activity';
 import { Section } from '@/components/listener/section';
@@ -14,12 +15,13 @@ function formatActivityDate(at: Date): string {
   return new Date(at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
-export function ActivityFeed({ items }: { items: ActivityItem[] }) {
+export async function ActivityFeed({ items }: { items: ActivityItem[] }) {
+  const t = await getTranslations('profile.activityFeed');
   return (
     <section className="animate-fade-up">
-      <Section title="Недавняя активность">
+      <Section title={t('title')}>
         {items.length === 0 ? (
-          <EmptyState title="Здесь появится история твоих лайков и подписок." />
+          <EmptyState title={t('empty')} />
         ) : (
           <div className="flex flex-col">
             {items.map((item) => (
@@ -39,7 +41,7 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
                   )}
                   {item.kind === 'follow' && (
                     <>
-                      Подписка на{' '}
+                      {t('followedPrefix')}{' '}
                       <Link href={`/artists/${item.artistSlug}`} className="font-medium hover:underline">
                         {item.artistName}
                       </Link>
@@ -47,7 +49,7 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
                   )}
                   {item.kind === 'playlist' && (
                     <>
-                      Создан плейлист{' '}
+                      {t('createdPlaylistPrefix')}{' '}
                       <Link href={`/playlists/${item.playlistId}`} className="font-medium hover:underline">
                         {item.title}
                       </Link>

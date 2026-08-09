@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import type { PlayerTrack, PlayContext } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
@@ -13,16 +14,22 @@ import { useOfflineStore } from '@/store/offline';
 import { toDownloadMeta } from '@/lib/offline/to-download-meta';
 
 type Loader = () => Promise<PlayerTrack[] | null> | PlayerTrack[];
+type QueueTranslator = (key: string) => string;
 
-export async function enqueueWithToast(load: Loader, position: 'next' | 'end', context: PlayContext): Promise<void> {
+export async function enqueueWithToast(
+  load: Loader,
+  position: 'next' | 'end',
+  context: PlayContext,
+  t: QueueTranslator,
+): Promise<void> {
   const tracks = await load();
   if (!tracks || tracks.length === 0) {
-    toast.error('Не удалось загрузить треки');
+    toast.error(t('loadFailed'));
     return;
   }
   const inserted = controls.enqueue(tracks, position, context);
-  if (inserted === 0) toast('Уже в очереди');
-  else toast(position === 'next' ? 'Будет следующим' : 'В очереди');
+  if (inserted === 0) toast(t('alreadyQueued'));
+  else toast(position === 'next' ? t('willPlayNext') : t('queued'));
 }
 
 export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto', track, variant = 'platform' }: {
@@ -38,6 +45,7 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto',
   /** 'artist' — страницы с темой артиста: цвет берётся из её токенов, а не платформенных. */
   variant?: 'platform' | 'artist';
 }) {
+  const t = useTranslations('track.queue');
   const [open, setOpen] = useState(false);
   const entries = useOfflineStore((s) => s.entries);
   const download = useOfflineStore((s) => s.download);
@@ -51,12 +59,12 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto',
 
   function pick(position: 'next' | 'end') {
     const load: Loader = getTracks ?? (() => (track ? [track] : []));
-    void enqueueWithToast(load, position, context);
+    void enqueueWithToast(load, position, context, t);
   }
 
   const items: MenuItem[] = [
-    { label: 'Играть следующим', icon: <Icon name="corner-down-right" size={14} />, onClick: () => pick('next') },
-    { label: 'Добавить в очередь', icon: <Icon name="list-plus" size={14} />, onClick: () => pick('end') },
+    { label: t('playNext'), icon: <Icon name="corner-down-right" size={14} />, onClick: () => pick('next') },
+    { label: t('addToQueue'), icon: <Icon name="list-plus" size={14} />, onClick: () => pick('end') },
   ];
 
   if (track) {
@@ -65,19 +73,19 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto',
     if (status === 'downloading') {
       const pct = entry && entry.total > 0 ? Math.round((entry.done / entry.total) * 100) : 0;
       items.push({
-        label: `Сохраняю… ${pct}%`,
+        label: t('downloading', { pct }),
         icon: <Icon name="x" size={14} />,
         onClick: () => cancelDownload(track.id),
       });
     } else if (status === 'done') {
       items.push({
-        label: 'Удалить из офлайна',
+        label: t('removeOffline'),
         icon: <Icon name="trash-2" size={14} />,
         onClick: () => removeDownload(track.id),
       });
     } else {
       items.push({
-        label: status === 'partial' ? 'Докачать офлайн' : 'Сохранить офлайн',
+        label: status === 'partial' ? t('resumeOffline') : t('saveOffline'),
         icon: <Icon name="save" size={14} />,
         onClick: () => download(toDownloadMeta(track)),
       });
@@ -89,14 +97,14 @@ export function TrackQueueMenu({ getTracks, context, size = 'sm', drop = 'auto',
       open={open}
       onOpenChange={setOpen}
       drop={drop}
-      title="Очередь"
+      title={t('title')}
       items={items}
       trigger={({ open: expanded, toggle, ref }) => (
         <motion.button
           ref={ref}
           type="button"
           onClick={toggle}
-          aria-label="Действия с очередью"
+          aria-label={t('aria')}
           aria-expanded={expanded}
           whileTap={{ scale: 0.9 }}
           transition={spring.snappy}

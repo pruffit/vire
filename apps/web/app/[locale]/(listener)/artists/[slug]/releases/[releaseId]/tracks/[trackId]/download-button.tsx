@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function DownloadButton({ trackId, trackTitle, initialOwned, initialPending }: Props) {
+  const t = useTranslations('track');
   const router = useRouter();
   const [owned, setOwned] = useState(initialOwned);
   const [pending] = useState(initialPending);
@@ -79,13 +81,13 @@ export function DownloadButton({ trackId, trackTitle, initialOwned, initialPendi
 
         {state === 'pending' && (
           <span className="inline-flex items-center gap-2">
-            <span className="text-xs opacity-50">Оплата обрабатывается</span>
+            <span className="text-xs opacity-50">{t('download.paymentProcessing')}</span>
             <button
               onClick={handleCheckPayment}
               disabled={busy}
               className="text-xs underline underline-offset-2 opacity-50 hover:opacity-80 transition-opacity disabled:opacity-30"
             >
-              Проверить
+              {t('download.check')}
             </button>
           </span>
         )}
@@ -103,7 +105,7 @@ export function DownloadButton({ trackId, trackTitle, initialOwned, initialPendi
             ) : (
               <DownloadIcon />
             )}
-            {busy ? 'Перехожу к оплате…' : 'Купить FLAC · 99 ₽'}
+            {busy ? t('download.redirecting') : t('download.buy')}
           </motion.button>
         )}
       </motion.span>

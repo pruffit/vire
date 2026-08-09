@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import { ShareIcon, CheckIcon } from '@/components/icons';
 
 export function ReleaseShareButton(_props: { title: string; artistName: string }) {
+  const t = useTranslations('release.share');
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -28,7 +30,7 @@ export function ReleaseShareButton(_props: { title: string; artistName: string }
       <motion.button
         type="button"
         onClick={share}
-        aria-label="Поделиться релизом"
+        aria-label={t('aria')}
         whileTap={{ scale: 0.88 }}
         transition={spring.snappy}
         className="relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-mono border transition-colors"
@@ -63,7 +65,7 @@ export function ReleaseShareButton(_props: { title: string; artistName: string }
             </motion.span>
           )}
         </AnimatePresence>
-        {copied ? 'скопировано' : 'поделиться'}
+        {copied ? t('copied') : t('cta')}
       </motion.button>
     </div>
   );

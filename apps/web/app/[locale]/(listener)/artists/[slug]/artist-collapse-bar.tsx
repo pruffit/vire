@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { getContentScrollArea } from '@/lib/scroll-area';
@@ -15,6 +16,7 @@ export function ArtistCollapseBar({
   avatarUrl: string | null;
   verified: boolean;
 }) {
+  const t = useTranslations('artist.collapseBar');
   const [show, setShow] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +57,7 @@ export function ArtistCollapseBar({
             <button
               type="button"
               onClick={scrollTop}
-              aria-label="Наверх страницы"
+              aria-label={t('scrollTopAria')}
               className="mx-auto max-w-5xl px-6 h-11 flex items-center gap-3 w-full text-left text-[var(--artist-text)]"
             >
               {avatarUrl ? (
@@ -75,7 +77,7 @@ export function ArtistCollapseBar({
                   height="11"
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  aria-label="Верифицирован"
+                  aria-label={t('verifiedAria')}
                   className="shrink-0"
                   style={{ color: 'var(--artist-accent)' }}
                 >

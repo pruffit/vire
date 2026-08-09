@@ -1,1 +1,67 @@
-{}
+{
+  "notFound": "Not found",
+  "breadcrumb": {
+    "home": "Home"
+  },
+  "linerNotesHeading": "Liner notes",
+  "listen": "Listen",
+  "cover": {
+    "zoomAria": "Open cover larger: {alt}"
+  },
+  "share": {
+    "aria": "Share release",
+    "copied": "copied",
+    "cta": "share"
+  },
+  "quickLook": {
+    "upcomingAria": "{title} — coming soon",
+    "previewAria": "Quick look: {title}",
+    "resume": "Resume",
+    "toRelease": "To release",
+    "loadFailed": "Couldn't load tracks",
+    "loadFailedBody": "Couldn't load tracks.",
+    "noTracks": "No tracks yet."
+  },
+  "countdown": {
+    "comingSoon": "coming soon",
+    "days": "{count, plural, one {day} other {days}}",
+    "hours": "{count, plural, one {hour} other {hours}}",
+    "minutes": "{count, plural, one {minute} other {minutes}}",
+    "seconds": "{count, plural, one {second} other {seconds}}",
+    "releasesOn": "Releases {date}",
+    "presaveHintAuthed": "We'll add the release to your Likes and email you when it's out.",
+    "presaveHintGuest": "We'll email you when the release is out."
+  },
+  "countdownBadge": {
+    "aria": "Releases in {days} days",
+    "label": "Coming soon",
+    "unitDays": "d",
+    "unitHours": "h",
+    "unitMinutes": "m",
+    "unitSeconds": "s"
+  },
+  "smartlink": {
+    "metaDescription": "Listen to “{title}” by {artist} on every platform",
+    "listenOnVire": "Listen on VireMusic",
+    "presaveOnVire": "Presave on VireMusic",
+    "allReleases": "All releases by {artist}"
+  },
+  "presave": {
+    "saveFailed": "Couldn't save. Try again",
+    "saveLabel": "Presave",
+    "savedLabel": "Presaved",
+    "guestDoneLabel": "We'll remind you by email when it's out",
+    "savingLabel": "Saving…",
+    "remindLabel": "Remind me",
+    "remindCta": "Remind me when it's out",
+    "presaveShort": "Presave",
+    "savedShort": "Saved",
+    "unsubscribed": {
+      "metaTitle": "Unsubscribe from presave emails",
+      "titleOk": "You're unsubscribed",
+      "titleBad": "Invalid link",
+      "bodyOk": "You won't get emails about presaved releases going live at this address anymore. You can keep listening anytime.",
+      "bodyBad": "Couldn't confirm the unsubscribe — the link looks broken or expired. Open it directly from the email."
+    }
+  }
+}

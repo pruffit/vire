@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@vire/ui';
 import { ReleaseQuickLook, type QuickLookRelease } from '@/components/release-quick-look';
 
@@ -8,6 +9,7 @@ const PAGE_SIZE = 24;
 
 /** Прогрессивный показ каталога — сервер уже отдал (лимит 60), тут только клиентский слайс. */
 export function ReleasesGrid({ releases }: { releases: QuickLookRelease[] }) {
+  const t = useTranslations('catalog');
   const [visible, setVisible] = useState(PAGE_SIZE);
   const shown = releases.slice(0, visible);
   const remaining = releases.length - shown.length;
@@ -22,7 +24,7 @@ export function ReleasesGrid({ releases }: { releases: QuickLookRelease[] }) {
       {remaining > 0 && (
         <div className="flex justify-center">
           <Button variant="outline" onClick={() => setVisible((v) => v + PAGE_SIZE)}>
-            Показать ещё ({remaining})
+            {t('releasesPage.showMore', { count: remaining })}
           </Button>
         </div>
       )}

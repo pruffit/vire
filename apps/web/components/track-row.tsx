@@ -3,6 +3,7 @@
 import { forwardRef, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { PlayIcon, PauseIcon } from '@/components/icons';
 import { ExplicitBadge } from '@/components/explicit-badge';
 import { TrackTitleText } from '@/components/track-title';
@@ -65,6 +66,8 @@ export const TrackRow = forwardRef<HTMLDivElement, TrackRowProps>(function Track
   },
   ref,
 ) {
+  const t = useTranslations('track');
+
   function handleRowKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -72,7 +75,7 @@ export const TrackRow = forwardRef<HTMLDivElement, TrackRowProps>(function Track
     }
   }
 
-  const playAriaLabel = isActive && isPlaying ? 'Пауза' : `Играть ${track.title}`;
+  const playAriaLabel = isActive && isPlaying ? t('pause') : t('playAria', { title: track.title });
   const overlayVisibility = keepOverlayWhilePlaying && isActive
     ? 'opacity-100'
     : 'opacity-0 group-hover:opacity-100';

@@ -3,6 +3,7 @@ import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import {
   db,
   DrizzleReleaseRepository,
@@ -43,7 +44,7 @@ import { PageContainer } from '@/components/page-container';
 import { ArtistCollapseBar } from './artist-collapse-bar';
 import { ReleaseHeroPlay } from '@/components/release-hero-play';
 import type { PlayerTrack } from '@/store/player';
-import { pluralTracks, pluralReleases, totalDuration } from '@/lib/format';
+import { totalDuration } from '@/lib/format';
 import { ArtistPopularTracks, type ArtistPopularTrack } from './artist-popular-tracks';
 import { topByPlays } from '@/lib/artist-tracks';
 import { SimilarArtistsSection } from './similar-artists-section';
@@ -92,6 +93,7 @@ export default async function ArtistPage({ params }: Props) {
   const data = await getArtistData(slug);
   if (!data) notFound();
   await assertArtistVisible(data.artist.id);
+  const tSections = await getTranslations('artist.sections');
 
   const { artist, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
@@ -210,7 +212,7 @@ export default async function ArtistPage({ params }: Props) {
             )}
             {popularTracks.length > 0 && (
               <section className="animate-fade-up">
-                <SectionHeader label="Популярное" />
+                <SectionHeader label={tSections('popular')} />
                 <ArtistPopularTracks tracks={popularTracks} />
               </section>
             )}
@@ -285,7 +287,7 @@ function ArtistBanner({ coverUrl, headerUrl }: { coverUrl: string | null; header
 
 // ─── Identity (левая колонка) ────────────────────────────────────────────────
 
-function ArtistIdentity({
+async function ArtistIdentity({
   artist,
   displayAvatar,
   followButton,
@@ -302,9 +304,10 @@ function ArtistIdentity({
   trackCount: number;
   runtime: string | null;
 }) {
+  const tCommon = await getTranslations('common');
   const readout = [
-    releaseCount > 0 ? `${releaseCount} ${pluralReleases(releaseCount)}` : null,
-    trackCount > 0 ? `${trackCount} ${pluralTracks(trackCount)}` : null,
+    releaseCount > 0 ? tCommon('releaseCount', { count: releaseCount }) : null,
+    trackCount > 0 ? tCommon('trackCount', { count: trackCount }) : null,
     runtime,
   ].filter(Boolean);
   const longestWord = Math.max(1, ...artist.name.split(/\s+/).map((w) => w.length));
@@ -417,7 +420,7 @@ function ArtistIdentity({
 
 // ─── Upcoming ──────────────────────────────────────────────────────────────
 
-function UpcomingSection({
+async function UpcomingSection({
   upcoming,
   artistSlug,
   presavedIds,
@@ -430,10 +433,11 @@ function UpcomingSection({
 }) {
   const withDate = upcoming.filter((r) => r.releaseDate);
   if (withDate.length === 0) return null;
+  const t = await getTranslations('artist.sections');
 
   return (
     <section className="animate-fade-up">
-      <SectionHeader label="Скоро" />
+      <SectionHeader label={t('upcoming')} />
       <div className="flex flex-col gap-3">
         {withDate.map((r) => {
           const href = `/artists/${artistSlug}/releases/${r.id}`;
@@ -458,10 +462,11 @@ function UpcomingSection({
 
 // ─── Smart-links (bandlink-лендинги) ────────────────────────────────────────
 
-function SmartLinksSection({ smartLinks, artistSlug }: { smartLinks: SmartLink[]; artistSlug: string }) {
+async function SmartLinksSection({ smartLinks, artistSlug }: { smartLinks: SmartLink[]; artistSlug: string }) {
+  const t = await getTranslations('artist');
   return (
     <section className="animate-fade-up">
-      <SectionHeader label="Площадки" />
+      <SectionHeader label={t('sections.platforms')} />
       <Stagger className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
         {smartLinks.map((sl) => (
           <StaggerItem key={sl.id}>
@@ -481,7 +486,7 @@ function SmartLinksSection({ smartLinks, artistSlug }: { smartLinks: SmartLink[]
               <div className="min-w-0">
                 <p className="text-sm font-medium leading-snug truncate">{sl.title}</p>
                 <p className="text-xs truncate" style={{ color: 'color-mix(in oklch, var(--artist-text) 50%, transparent)' }}>
-                  {sl.links.length > 0 ? `${sl.links.length} площадок` : 'ссылки'}
+                  {sl.links.length > 0 ? t('smartLinks.platformCount', { count: sl.links.length }) : t('smartLinks.linksFallback')}
                 </p>
               </div>
             </a>
@@ -494,7 +499,7 @@ function SmartLinksSection({ smartLinks, artistSlug }: { smartLinks: SmartLink[]
 
 // ─── Releases ──────────────────────────────────────────────────────────────
 
-function ReleasesSection({
+async function ReleasesSection({
   releases,
   explicitReleaseIds,
   artistSlug,
@@ -508,6 +513,7 @@ function ReleasesSection({
   accentColor: string | null;
 }) {
   if (releases.length === 0) return null;
+  const t = await getTranslations('artist.sections');
 
   function toQL(r: Release) {
     return {
@@ -525,7 +531,7 @@ function ReleasesSection({
 
   return (
     <section className="animate-fade-up">
-      <SectionHeader label="Релизы" />
+      <SectionHeader label={t('releases')} />
       {releases.length === 1 ? (
         <div className="max-w-[200px]">
           <ReleaseQuickLook showArtist={false} release={toQL(releases[0])} priority />
@@ -546,10 +552,11 @@ function ReleasesSection({
 
 // ─── Posts (анонсы) ──────────────────────────────────────────────────────────
 
-function PostsSection({ posts }: { posts: ArtistPost[] }) {
+async function PostsSection({ posts }: { posts: ArtistPost[] }) {
+  const t = await getTranslations('artist.sections');
   return (
     <section className="animate-fade-up">
-      <SectionHeader label="Анонсы" />
+      <SectionHeader label={t('posts')} />
       <div className="space-y-4">
         {posts.map((post) => (
           <article
@@ -612,10 +619,11 @@ async function VideosSection({ videos }: { videos: ArtistVideo[] }) {
   );
 
   if (embeds.length === 0) return null;
+  const t = await getTranslations('artist.sections');
 
   return (
     <section className="animate-fade-up">
-      <SectionHeader label="Видео" />
+      <SectionHeader label={t('videos')} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {embeds.map((v) => (
           <div key={`${v.embed.platform}:${v.embed.id}`} className="space-y-2">
@@ -637,13 +645,14 @@ async function VideosSection({ videos }: { videos: ArtistVideo[] }) {
 
 // ─── Utilities ─────────────────────────────────────────────────────────────
 
-function GuestFollowButton({
+async function GuestFollowButton({
   slug,
   followerCount,
 }: {
   slug: string;
   followerCount: number;
 }) {
+  const t = await getTranslations('artist');
   return (
     <div className="flex items-center gap-3">
       <a
@@ -651,11 +660,11 @@ function GuestFollowButton({
         className="inline-flex min-h-11 items-center justify-center px-4 rounded-full text-sm font-medium transition-opacity hover:opacity-80"
         style={{ background: 'var(--artist-accent)', color: 'var(--artist-bg, var(--background))' }}
       >
-        Подписаться
+        {t('followButton.follow')}
       </a>
       {followerCount > 0 && (
         <span className="text-xs opacity-40 tabular-nums font-mono">
-          {followerCount.toLocaleString('ru')} слушателей
+          {t('followerCount', { count: followerCount })}
         </span>
       )}
     </div>

@@ -2,7 +2,7 @@ import { redirect } from '@/i18n/navigation';
 import type { Metadata } from 'next';
 import { FadeUp } from '@vire/ui/motion';
 import type { PlaylistWithTracks } from '@vire/db';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { getLikedTracksCached } from '@/lib/listener-data';
 import { PlaylistView } from '../../playlists/[id]/playlist-view';
@@ -10,11 +10,15 @@ import { formatListenTime, pluralTracks } from '@/lib/format';
 import { Icon } from '@/components/icon';
 import { PageContainer } from '@/components/page-container';
 
-export const metadata: Metadata = { title: 'Любимые треки' };
 export const dynamic = 'force-dynamic';
 
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('library.likedTracksPage');
+  return { title: t('title') };
+}
+
 export default async function LikedTracksPage() {
-  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const [session, locale, t] = await Promise.all([auth(), getLocale(), getTranslations('library.likedTracksPage')]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/library/liked', locale });
 
   const liked = await getLikedTracksCached(session.user.id);
@@ -22,7 +26,7 @@ export default async function LikedTracksPage() {
 
   const playlist: PlaylistWithTracks = {
     id: 'liked',
-    title: 'Любимые треки',
+    title: t('title'),
     description: null,
     coverUrl: null,
     visibility: 'PUBLIC',
@@ -55,7 +59,7 @@ export default async function LikedTracksPage() {
             <Icon name="heart" size={36} className="text-foreground" />
           </div>
           <div className="min-w-0 flex-1 max-w-2xl space-y-2 pt-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Любимые треки</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
             <p className="text-sm text-muted-foreground">
               {liked.length} {pluralTracks(liked.length)}
               {totalSec > 0 && ` · ${formatListenTime(totalSec)}`}
@@ -64,7 +68,7 @@ export default async function LikedTracksPage() {
         </header>
       </FadeUp>
 
-      <PlaylistView playlist={playlist} role="VIEWER" emptyTitle="Нет любимых треков" />
+      <PlaylistView playlist={playlist} role="VIEWER" emptyTitle={t('emptyTitle')} />
     </PageContainer>
   );
 }

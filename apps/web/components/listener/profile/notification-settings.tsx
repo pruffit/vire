@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from '@/lib/toast';
 import { getPushState, subscribeToPush, unsubscribeFromPush } from '@/lib/push-client';
 import { SettingToggle } from './setting-toggle';
@@ -7,6 +8,7 @@ import { SettingToggle } from './setting-toggle';
 type PushState = 'unsupported' | 'denied' | 'subscribed' | 'unsubscribed' | 'loading';
 
 function EmailToggle({ initial }: { initial: boolean }) {
+  const t = useTranslations('profile.notificationSettings');
   const [on, setOn] = useState(initial);
   const [pending, setPending] = useState(false);
 
@@ -24,7 +26,7 @@ function EmailToggle({ initial }: { initial: boolean }) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       setOn(prev);
-      toast.error('Не удалось сохранить настройку');
+      toast.error(t('saveFailed'));
     } finally {
       setPending(false);
     }
@@ -32,8 +34,8 @@ function EmailToggle({ initial }: { initial: boolean }) {
 
   return (
     <SettingToggle
-      title="Уведомления на почту"
-      description={on ? 'Письма о важных событиях приходят на почту.' : 'Письма на почту отключены.'}
+      title={t('emailTitle')}
+      description={on ? t('emailOnDescription') : t('emailOffDescription')}
       checked={on}
       disabled={pending}
       onToggle={toggle}
@@ -42,6 +44,7 @@ function EmailToggle({ initial }: { initial: boolean }) {
 }
 
 function PushToggle() {
+  const t = useTranslations('profile.notificationSettings');
   const [state, setState] = useState<PushState>('loading');
   const [pending, setPending] = useState(false);
 
@@ -51,17 +54,17 @@ function PushToggle() {
 
   if (state === 'loading') {
     return (
-      <SettingToggle title="Push-уведомления" description="Проверяем поддержку браузером…" checked={false} disabled onToggle={() => {}} />
+      <SettingToggle title={t('pushTitle')} description={t('pushCheckingSupport')} checked={false} disabled onToggle={() => {}} />
     );
   }
   if (state === 'unsupported') {
     return (
-      <SettingToggle title="Push-уведомления" description="Пуши не поддерживаются этим браузером." checked={false} disabled onToggle={() => {}} />
+      <SettingToggle title={t('pushTitle')} description={t('pushUnsupported')} checked={false} disabled onToggle={() => {}} />
     );
   }
   if (state === 'denied') {
     return (
-      <SettingToggle title="Push-уведомления" description="Разблокируй уведомления в настройках браузера." checked={false} disabled onToggle={() => {}} />
+      <SettingToggle title={t('pushTitle')} description={t('pushDenied')} checked={false} disabled onToggle={() => {}} />
     );
   }
 
@@ -76,7 +79,7 @@ function PushToggle() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
-      toast.error('Не удалось сохранить настройку');
+      toast.error(t('saveFailed'));
     }
   }
 
@@ -93,16 +96,16 @@ function PushToggle() {
           setState('subscribed');
           await patchNotifyPush(true);
         } else if (result.reason === 'permission') {
-          toast.error('Разреши уведомления в браузере');
+          toast.error(t('pushPermissionDenied'));
           if (typeof Notification !== 'undefined' && Notification.permission === 'denied') setState('denied');
         } else if (result.reason === 'sw' || result.reason === 'push-service') {
-          toast.error('Браузер не смог подписаться: push-сервис недоступен');
+          toast.error(t('pushServiceUnavailable'));
         } else {
-          toast.error('Сервер не принял подписку');
+          toast.error(t('pushRejected'));
         }
       }
     } catch {
-      toast.error('Не удалось изменить push-уведомления');
+      toast.error(t('pushToggleFailed'));
     } finally {
       setPending(false);
     }
@@ -110,8 +113,8 @@ function PushToggle() {
 
   return (
     <SettingToggle
-      title="Push-уведомления"
-      description={subscribed ? 'Уведомления приходят в браузер.' : 'Включи, чтобы получать уведомления в браузер.'}
+      title={t('pushTitle')}
+      description={subscribed ? t('pushOnDescription') : t('pushOffDescription')}
       checked={subscribed}
       disabled={pending}
       onToggle={toggle}

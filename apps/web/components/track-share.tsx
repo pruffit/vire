@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import { formatDuration } from '@/lib/format';
 import { ShareIcon } from '@/components/icons';
@@ -29,6 +30,7 @@ export function TrackShare({
   align = 'right',
   variant = 'plain',
 }: Props) {
+  const t = useTranslations('track.share');
   const [open, setOpen] = useState(false);
 
   const moment = currentTime && currentTime > 2 ? Math.round(currentTime) : null;
@@ -38,18 +40,18 @@ export function TrackShare({
     const url = kind === 'moment' && moment ? `${base}?t=${moment}` : base;
     try {
       await navigator.clipboard.writeText(url);
-      toast('Ссылка скопирована');
+      toast(t('copied'));
     } catch {
       /* буфер недоступен */
     }
   }
 
   const items: MenuItem[] = [
-    { label: 'Ссылка на трек', icon: <Icon name="link" size={13} />, onClick: () => copy('link') },
+    { label: t('link'), icon: <Icon name="link" size={13} />, onClick: () => copy('link') },
   ];
   if (moment != null) {
     items.push({
-      label: 'С текущего момента',
+      label: t('fromMoment'),
       hint: <span className="text-xs font-mono tabular-nums text-foreground/40">{formatDuration(moment)}</span>,
       onClick: () => copy('moment'),
     });
@@ -65,14 +67,14 @@ export function TrackShare({
       open={open}
       onOpenChange={setOpen}
       align={align}
-      title="Поделиться"
+      title={t('aria')}
       items={items}
       trigger={({ open: expanded, toggle, ref }) => (
         <motion.button
           ref={ref}
           type="button"
           onClick={toggle}
-          aria-label="Поделиться"
+          aria-label={t('aria')}
           aria-expanded={expanded}
           whileTap={{ scale: 0.9 }}
           whileHover={variant === 'bordered' ? { scale: 1.08 } : undefined}

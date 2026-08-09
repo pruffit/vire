@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import type { ListenerTaste } from '@vire/db';
 import { Section } from '@/components/listener/section';
 import { EmptyState } from '@/components/ui-kit';
@@ -9,14 +10,15 @@ interface Props {
   artists: ListenerTaste['topArtists'];
 }
 
-export function TasteSection({ genres, artists }: Props) {
+export async function TasteSection({ genres, artists }: Props) {
+  const t = await getTranslations('profile.tasteSection');
   return (
     <section className="animate-fade-up">
-      <Section title="Музыкальный вкус">
+      <Section title={t('title')}>
         {genres.length === 0 && artists.length === 0 ? (
           <EmptyState
-            title="Твой музыкальный портрет пока пуст"
-            hint="Лайкай треки — здесь появятся любимые жанры и артисты."
+            title={t('emptyTitle')}
+            hint={t('emptyHint')}
           />
         ) : (
           <div className="space-y-6">

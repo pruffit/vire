@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { spring } from '@vire/ui/motion';
 import { HeartIcon } from '@/components/icons';
 import { usePlaylistLike } from '@/components/use-playlist-like';
@@ -14,6 +15,7 @@ export function PlaylistLikeButton({
   initialLiked: boolean;
   initialCount: number;
 }) {
+  const t = useTranslations('playlist');
   const { liked, likes, toggle } = usePlaylistLike(playlistId, initialLiked, initialCount);
 
   return (
@@ -22,7 +24,7 @@ export function PlaylistLikeButton({
       onClick={() => void toggle()}
       whileTap={{ scale: 0.85 }}
       transition={spring.snappy}
-      aria-label={liked ? 'Убрать из избранного' : 'В избранное'}
+      aria-label={liked ? t('like.remove') : t('like.add')}
       className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors cursor-pointer"
     >
       <HeartIcon filled={liked} size={14} strokeWidth={2} className={liked ? '[color:oklch(65%_0.20_25)]' : undefined} />

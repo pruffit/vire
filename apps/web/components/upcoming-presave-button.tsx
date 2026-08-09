@@ -1,6 +1,7 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
@@ -22,6 +23,7 @@ export function UpcomingPresaveButton({
   isAuthed: boolean;
   releaseHref: string;
 }) {
+  const t = useTranslations('release.presave');
   const {
     on: presaved,
     pending: busy,
@@ -30,7 +32,7 @@ export function UpcomingPresaveButton({
     id: releaseId,
     initial: initialPresaved,
     request: (next) => presaveRelease(releaseId, next),
-    errorMessage: 'Не удалось сохранить. Попробуй ещё раз',
+    errorMessage: t('saveFailed'),
   });
 
   const base =
@@ -40,12 +42,12 @@ export function UpcomingPresaveButton({
     return (
       <Link
         href={releaseHref}
-        aria-label="Напомнить о выходе"
+        aria-label={t('remindCta')}
         className={`${base} hover:opacity-90`}
         style={{ background: 'var(--artist-accent)', color: 'var(--artist-bg, #000)' }}
       >
         <Icon name="bell" size={13} />
-        Напомнить
+        {t('remindLabel')}
       </Link>
     );
   }
@@ -66,7 +68,7 @@ export function UpcomingPresaveButton({
       }
     >
       <Icon name={presaved ? 'check' : 'bell'} size={13} />
-      {presaved ? 'Сохранено' : 'Пресейв'}
+      {presaved ? t('savedShort') : t('presaveShort')}
     </motion.button>
   );
 }

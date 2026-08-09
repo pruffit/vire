@@ -1,1 +1,18 @@
-{}
+{
+  "releasesPage": {
+    "metaTitle": "Releases",
+    "metaDescription": "All releases on VireMusic — fresh drops, this week, and the most popular.",
+    "breadcrumbHome": "Home",
+    "breadcrumbReleases": "Releases",
+    "title": "Releases",
+    "tabs": {
+      "fresh": "Fresh",
+      "week": "This week",
+      "popular": "Popular"
+    },
+    "sortAria": "Sort releases",
+    "emptyWeek": "No releases this week yet.",
+    "emptyAll": "No releases yet.",
+    "showMore": "Show more ({count})"
+  }
+}

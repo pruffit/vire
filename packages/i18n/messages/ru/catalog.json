@@ -1,1 +1,18 @@
-{}
+{
+  "releasesPage": {
+    "metaTitle": "Релизы",
+    "metaDescription": "Все релизы на VireMusic — свежее, за неделю и самое популярное.",
+    "breadcrumbHome": "Главная",
+    "breadcrumbReleases": "Релизы",
+    "title": "Релизы",
+    "tabs": {
+      "fresh": "Свежее",
+      "week": "За неделю",
+      "popular": "Популярное"
+    },
+    "sortAria": "Сортировка релизов",
+    "emptyWeek": "За эту неделю релизов пока нет.",
+    "emptyAll": "Пока нет ни одного релиза.",
+    "showMore": "Показать ещё ({count})"
+  }
+}

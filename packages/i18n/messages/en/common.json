@@ -62,5 +62,80 @@
     "learnMore": "Learn more",
     "reject": "Reject",
     "accept": "Accept"
+  },
+  "unsubscribe": {
+    "metaTitle": "Notification unsubscribe",
+    "invalidTitle": "Invalid link",
+    "invalidBody": "Couldn't confirm the unsubscribe — the link looks broken or expired. Open it from the email in full.",
+    "doneTitle": "You're unsubscribed",
+    "doneBody": "Email notifications from VireMusic no longer go to this address. You can turn them back on anytime in profile settings.",
+    "confirmTitle": "Unsubscribe from email notifications?",
+    "confirmBody": "Emails about friend requests and new messages to this address will stop. In-app notifications on VireMusic will stay.",
+    "unsubscribing": "Unsubscribing…",
+    "unsubscribe": "Unsubscribe",
+    "errorBody": "Couldn't unsubscribe. Try again or write to"
+  },
+  "feedback": {
+    "metaTitle": "Feedback",
+    "metaDescription": "Report a bug, share an idea, apply as an artist, or just say hi.",
+    "eyebrow": "VireMusic · Feedback",
+    "becomeArtistTitle": "Become an artist",
+    "title": "Feedback",
+    "becomeArtistSubtitle": "During Stage 1 we set up artist profiles by hand. Tell us about yourself and share links to your music — we'll reach out and open upload access.",
+    "subtitle": "Found a bug, have an idea, or just want to say something — write in. We read everything.",
+    "types": {
+      "bug": { "label": "Bug", "hint": "Something broke or behaves unexpectedly" },
+      "idea": { "label": "Idea", "hint": "A suggestion for improving the platform" },
+      "artist": { "label": "Become an artist", "hint": "I want to publish music on VireMusic" },
+      "other": { "label": "Other", "hint": "Anything else" }
+    },
+    "thanksTitle": "Thanks!",
+    "thanksBody": "Message sent. We'll read it and try to reply.",
+    "sendAnother": "Send another one",
+    "typeLegend": "Type",
+    "messageLabel": "Message",
+    "messageMinHint": "(10 characters minimum)",
+    "messagePlaceholders": {
+      "bug": "Describe what happened: what you were doing, what you expected, what actually happened...",
+      "idea": "Tell us your idea...",
+      "artist": "Tell us about yourself: name/project, links to your music (streaming, social media), a couple words about what you play...",
+      "other": "Write whatever you want..."
+    },
+    "emailLabel": "Email",
+    "emailOptionalHint": "(optional — for a reply)",
+    "sendFailed": "Couldn't send. Try again or write directly to",
+    "consent": "I consent to the processing of personal data under the",
+    "privacyPolicy": "privacy policy",
+    "sending": "Sending…",
+    "charsLeft": "{count} more chars",
+    "send": "Send"
+  },
+  "form": {
+    "select": {
+      "placeholder": "Not selected",
+      "searchPlaceholder": "Search…",
+      "noResults": "Nothing found"
+    },
+    "genreSelect": {
+      "none": "No genre",
+      "placeholder": "Genre not selected",
+      "ariaLabel": "Genre"
+    },
+    "dateField": {
+      "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+      "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      "clear": "Clear",
+      "today": "Today",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "placeholder": "dd.mm.yyyy"
+    },
+    "colorField": {
+      "pickColor": "{label}: pick color"
+    },
+    "numberField": {
+      "increase": "Increase",
+      "decrease": "Decrease"
+    }
   }
 }

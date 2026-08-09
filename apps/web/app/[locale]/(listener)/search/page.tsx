@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { Stagger, StaggerItem } from '@vire/ui/motion';
 import { db, DrizzleSearchRepository } from '@vire/db';
 import { SearchService } from '@vire/core';
@@ -12,7 +13,8 @@ type Props = { searchParams: Promise<{ q?: string }> };
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { q } = await searchParams;
-  return { title: q ? `«${q}» — Поиск · VireMusic` : 'Поиск — VireMusic' };
+  const t = await getTranslations('search');
+  return { title: q ? t('metaTitle.withQuery', { query: q }) : t('metaTitle.default') };
 }
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +22,7 @@ export const dynamic = 'force-dynamic';
 export default async function SearchPage({ searchParams }: Props) {
   const { q } = await searchParams;
   const query = q?.trim() ?? '';
+  const t = await getTranslations();
 
   const searchResult =
     query.length >= 2 ? await new SearchService(new DrizzleSearchRepository(db)).search(query, 20) : null;
@@ -37,19 +40,22 @@ export default async function SearchPage({ searchParams }: Props) {
 
       {!query && (
         <p className="text-sm text-muted-foreground text-center pt-16">
-          Начни вводить — покажем артистов, релизы и треки.
+          {t('search.startTyping')}
         </p>
       )}
 
       {query && query.length < 2 && (
         <p className="text-sm text-muted-foreground text-center pt-16">
-          Введи хотя бы 2 символа.
+          {t('search.minChars')}
         </p>
       )}
 
       {results && total === 0 && (
         <p className="text-sm text-muted-foreground text-center pt-16">
-          По запросу <span className="text-foreground">«{query}»</span> ничего не найдено.
+          {t.rich('search.noResults', {
+            query,
+            styled: (chunks) => <span className="text-foreground">{chunks}</span>,
+          })}
         </p>
       )}
 
@@ -57,7 +63,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <div className="space-y-10">
           {results.artists.length > 0 && (
             <section className="space-y-3">
-              <SectionHeader label="Артисты" count={results.artists.length} />
+              <SectionHeader label={t('common.entity.artists')} count={results.artists.length} />
               <Stagger step={0.035} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-7 2xl:grid-cols-9 gap-x-5 gap-y-6">
                 {results.artists.map((a) => (
                   <StaggerItem key={a.id}>
@@ -78,14 +84,14 @@ export default async function SearchPage({ searchParams }: Props) {
 
           {results.releases.length > 0 && (
             <section className="space-y-2">
-              <SectionHeader label="Релизы" count={results.releases.length} />
+              <SectionHeader label={t('common.entity.releases')} count={results.releases.length} />
               <SearchReleasesSection releases={results.releases} />
             </section>
           )}
 
           {results.tracks.length > 0 && (
             <section className="space-y-2">
-              <SectionHeader label="Треки" count={results.tracks.length} />
+              <SectionHeader label={t('common.entity.tracks')} count={results.tracks.length} />
               <SearchTracksSection tracks={results.tracks} />
             </section>
           )}

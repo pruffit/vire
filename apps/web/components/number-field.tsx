@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { fieldClass, selectClass } from '@/components/ui-kit';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,7 @@ export function NumberField({
   className,
   'aria-label': ariaLabel,
 }: Props) {
+  const t = useTranslations('common.form.numberField');
   const sm = size === 'sm';
 
   const clamp = (n: number) => {
@@ -87,8 +89,8 @@ export function NumberField({
         )}
       />
       <div className="absolute right-1 inset-y-1 flex flex-col justify-center">
-        <Stepper dir="up" disabled={disabled || atMax} onClick={() => bump(1)} />
-        <Stepper dir="down" disabled={disabled || atMin} onClick={() => bump(-1)} />
+        <Stepper dir="up" label={t('increase')} disabled={disabled || atMax} onClick={() => bump(1)} />
+        <Stepper dir="down" label={t('decrease')} disabled={disabled || atMin} onClick={() => bump(-1)} />
       </div>
     </div>
   );
@@ -96,10 +98,12 @@ export function NumberField({
 
 function Stepper({
   dir,
+  label,
   disabled,
   onClick,
 }: {
   dir: 'up' | 'down';
+  label: string;
   disabled?: boolean;
   onClick: () => void;
 }) {
@@ -109,7 +113,7 @@ function Stepper({
       tabIndex={-1}
       disabled={disabled}
       onClick={onClick}
-      aria-label={dir === 'up' ? 'Увеличить' : 'Уменьшить'}
+      aria-label={label}
       className="flex h-3.5 w-5 items-center justify-center rounded text-foreground/40 transition-colors hover:text-foreground hover:bg-foreground/10 disabled:opacity-30 disabled:pointer-events-none"
     >
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

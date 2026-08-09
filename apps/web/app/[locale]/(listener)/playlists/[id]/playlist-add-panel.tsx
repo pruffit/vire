@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
 import { TrackTitleText } from '@/components/track-title';
@@ -64,6 +65,7 @@ function TrackSection({ title, items, added, onAdd }: SectionProps) {
 }
 
 export function PlaylistAddPanel({ playlistId, existingIds, onAdded, onAddFailed }: Props) {
+  const tr = useTranslations('playlist');
   const [q, setQ] = useState('');
   const [results, setResults] = useState<PlaylistAddTrack[] | null>(null);
   const [suggestions, setSuggestions] = useState<PlaylistSuggestions | null>(null);
@@ -109,7 +111,7 @@ export function PlaylistAddPanel({ playlistId, existingIds, onAdded, onAddFailed
     if (!res?.ok) {
       setAdded((prev) => { const n = new Set(prev); n.delete(t.id); return n; });
       onAddFailed(t.id);
-      toast.error('Не удалось добавить трек');
+      toast.error(tr('addPanel.addFailed'));
     }
   }
 
@@ -117,24 +119,24 @@ export function PlaylistAddPanel({ playlistId, existingIds, onAdded, onAddFailed
     <div className="rounded-xl border border-border bg-card/50 p-2 space-y-3">
       <div className="flex items-center gap-2 px-2 pt-1">
         <Icon name="search" size={15} className="text-muted-foreground shrink-0" />
-        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск трека…"
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('addPanel.searchPlaceholder')}
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground py-1" />
       </div>
       <div className="max-h-80 overflow-y-auto space-y-3 pb-1">
         {results !== null ? (
           results.length
             ? results.map((t) => <TrackRow key={t.id} track={t} added={added} onAdd={add} />)
-            : <p className="px-3 py-4 text-sm text-muted-foreground">Ничего не найдено</p>
+            : <p className="px-3 py-4 text-sm text-muted-foreground">{tr('addPanel.nothingFound')}</p>
         ) : suggestions ? (
           <>
-            <TrackSection title="Из ваших лайков" items={suggestions.liked} added={added} onAdd={add} />
-            <TrackSection title="Вы недавно слушали" items={suggestions.recent} added={added} onAdd={add} />
-            <TrackSection title="Похожее на плейлист" items={suggestions.similar} added={added} onAdd={add} />
+            <TrackSection title={tr('addPanel.sections.liked')} items={suggestions.liked} added={added} onAdd={add} />
+            <TrackSection title={tr('addPanel.sections.recent')} items={suggestions.recent} added={added} onAdd={add} />
+            <TrackSection title={tr('addPanel.sections.similar')} items={suggestions.similar} added={added} onAdd={add} />
             {!suggestions.liked.length && !suggestions.recent.length && !suggestions.similar.length &&
-              <p className="px-3 py-4 text-sm text-muted-foreground">Начните вводить название трека</p>}
+              <p className="px-3 py-4 text-sm text-muted-foreground">{tr('addPanel.startTyping')}</p>}
           </>
         ) : (
-          <p className="px-3 py-4 text-sm text-muted-foreground">Загрузка…</p>
+          <p className="px-3 py-4 text-sm text-muted-foreground">{tr('addPanel.loading')}</p>
         )}
       </div>
     </div>

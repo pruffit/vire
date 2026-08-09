@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from '@/lib/toast';
 import { SettingToggle } from './setting-toggle';
 
 type Visibility = 'FRIENDS' | 'PRIVATE';
 
 export function PrivacySettings({ initial }: { initial: Visibility }) {
+  const t = useTranslations('profile.privacySettings');
   const [visibility, setVisibility] = useState<Visibility>(initial);
   const [pending, setPending] = useState(false);
   const isFriends = visibility === 'FRIENDS';
@@ -25,7 +27,7 @@ export function PrivacySettings({ initial }: { initial: Visibility }) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
       setVisibility(prev);
-      toast.error('Не удалось сохранить настройку приватности');
+      toast.error(t('saveFailed'));
     } finally {
       setPending(false);
     }
@@ -33,8 +35,8 @@ export function PrivacySettings({ initial }: { initial: Visibility }) {
 
   return (
     <SettingToggle
-      title="Лайки видны друзьям"
-      description={isFriends ? 'Друзья видят твои лайки.' : 'Лайки скрыты от всех.'}
+      title={t('title')}
+      description={isFriends ? t('onDescription') : t('offDescription')}
       checked={isFriends}
       disabled={pending}
       onToggle={toggle}

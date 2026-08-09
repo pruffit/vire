@@ -1,6 +1,6 @@
 import { redirect } from '@/i18n/navigation';
 import type { Metadata } from 'next';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import {
   getLikedTracksCached,
   getFollowedArtistsCached,
@@ -22,11 +22,15 @@ import { Section } from '@/components/listener/section';
 import { FollowedArtists } from '@/components/listener/followed-artists';
 import { PageContainer } from '@/components/page-container';
 
-export const metadata: Metadata = { title: 'Профиль' };
 export const dynamic = 'force-dynamic';
 
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('profile');
+  return { title: t('metaTitle') };
+}
+
 export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ link_error?: string }> }) {
-  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const [session, locale, t] = await Promise.all([auth(), getLocale(), getTranslations('profile')]);
   if (!session?.user?.id) return redirect({ href: '/sign-in?callbackUrl=/profile', locale });
 
   const { link_error: linkError } = await searchParams;
@@ -66,7 +70,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           <div className="flex flex-col gap-10">
             <ActivityFeed items={activity} />
             <section className="animate-fade-up">
-              <Section title="Подписки" href="/library" hrefLabel="Все">
+              <Section title={t('followedArtistsSection.title')} href="/library" hrefLabel={t('followedArtistsSection.allLabel')}>
                 <FollowedArtists initial={followedArtists.slice(0, 6)} />
               </Section>
             </section>

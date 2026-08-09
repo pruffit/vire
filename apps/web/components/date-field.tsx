@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { fieldClass } from '@/components/ui-kit';
@@ -12,12 +13,6 @@ import { useViewportClampX } from '@/lib/use-viewport-clamp-x';
  * Значение — `yyyy-MM-dd` или ''; вычисления на целых y/m/d, без Date-арифметики с TZ.
  * Режимы: form (`name` → скрытый input) и controlled (`value`+`onValueChange`).
  */
-
-const MONTHS = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
-];
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 interface Props {
   value?: string;
@@ -39,7 +34,7 @@ function toISO(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-function formatRU(s: string): string {
+function formatDisplay(s: string): string {
   const p = parseISO(s);
   if (!p) return '';
   return `${String(p.d).padStart(2, '0')}.${String(p.m + 1).padStart(2, '0')}.${p.y}`;
@@ -54,6 +49,9 @@ export function DateField({
   className,
   'aria-label': ariaLabel,
 }: Props) {
+  const t = useTranslations('common.form.dateField');
+  const months = t.raw('months') as string[];
+  const weekdays = t.raw('weekdays') as string[];
   const isControlled = value !== undefined;
   const [internal, setInternal] = useState<string>(defaultValue);
   const current = isControlled ? value : internal;
@@ -134,7 +132,7 @@ export function DateField({
         className={cn(fieldClass, 'flex w-full items-center justify-between gap-2 text-left tabular-nums')}
       >
         <span className={current ? 'text-foreground' : 'text-foreground/40'}>
-          {current ? formatRU(current) : 'дд.мм.гггг'}
+          {current ? formatDisplay(current) : t('placeholder')}
         </span>
         <svg
           width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -159,20 +157,20 @@ export function DateField({
           >
             <div className="flex items-center justify-between gap-2 px-1">
               <span className="text-sm font-medium tabular-nums">
-                {MONTHS[view.m]} {view.y}
+                {months[view.m]} {view.y}
               </span>
               <div className="flex items-center gap-1">
-                <NavBtn label="Предыдущий месяц" onClick={() => shiftMonth(-1)}>
+                <NavBtn label={t('prevMonth')} onClick={() => shiftMonth(-1)}>
                   <path d="M15 18l-6-6 6-6" />
                 </NavBtn>
-                <NavBtn label="Следующий месяц" onClick={() => shiftMonth(1)}>
+                <NavBtn label={t('nextMonth')} onClick={() => shiftMonth(1)}>
                   <path d="M9 18l6-6-6-6" />
                 </NavBtn>
               </div>
             </div>
 
             <div className="mt-2 grid grid-cols-7 gap-0.5">
-              {WEEKDAYS.map((w) => (
+              {weekdays.map((w) => (
                 <span key={w} className="py-1 text-center font-mono text-[10px] uppercase text-foreground/30">
                   {w}
                 </span>
@@ -207,14 +205,14 @@ export function DateField({
                 onClick={() => { set(''); setOpen(false); }}
                 className="text-foreground/45 transition-colors hover:text-foreground"
               >
-                Очистить
+                {t('clear')}
               </button>
               <button
                 type="button"
                 onClick={() => { set(todayISO); setOpen(false); }}
                 className="text-foreground/45 transition-colors hover:text-foreground"
               >
-                Сегодня
+                {t('today')}
               </button>
             </div>
           </motion.div>

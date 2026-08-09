@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { getPlaylistWithTracks, getPlaylistLikeState, getUserProfile } from '@vire/db';
 import type { PlaylistCollaborator } from '@vire/core';
@@ -18,7 +19,7 @@ import { PlaylistShare } from '@/components/playlist-share';
 import { PageContainer } from '@/components/page-container';
 import { JsonLd } from '@/components/json-ld';
 import { musicPlaylistJsonLd } from '@/lib/structured-data';
-import { formatDuration, pluralTracks } from '@/lib/format';
+import { formatDuration } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
 import { pageMetadata } from '@/lib/metadata';
 
@@ -27,19 +28,20 @@ type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ join?: s
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { id } = await params;
   const playlist = await getPlaylistWithTracks(id);
-  if (!playlist) return { title: 'Не найдено' };
+  const t = await getTranslations('playlist');
+  if (!playlist) return { title: t('notFound') };
 
   if (playlist.visibility === 'PRIVATE') {
     const { join: joinToken } = await searchParams;
     const session = await auth();
     const allowed = await playlistService().getForViewer(id, session?.user?.id ?? null, joinToken);
-    if (!allowed.ok) return { title: 'Не найдено' };
+    if (!allowed.ok) return { title: t('notFound') };
     return { title: playlist.title, robots: { index: false, follow: false } };
   }
 
   const url = `/playlists/${id}`;
   const description = playlist.description
-    ?? `${playlist.tracks.length} ${pluralTracks(playlist.tracks.length)} на VireMusic.`;
+    ?? t('metaDescriptionFallback', { count: playlist.tracks.length });
 
   return pageMetadata({
     url,
@@ -52,6 +54,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 }
 
 export default async function PlaylistPage({ params, searchParams }: Props) {
+  const t = await getTranslations();
   const { id } = await params;
   const { join: joinToken } = await searchParams;
   const session = await auth();
@@ -87,7 +90,7 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
   }
 
   const showJoinBanner = playlist.isCollaborative && invite !== null && role === 'VIEWER';
-  let inviterName = 'Автор плейлиста';
+  let inviterName = t('playlist.defaultOwnerName');
   if (showJoinBanner && playlist.ownerUserId) {
     const owner = await getUserProfile(playlist.ownerUserId);
     if (owner?.name) inviterName = owner.name;
@@ -121,7 +124,7 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-semibold tracking-tight truncate">{playlist.title}</h1>
               {playlist.visibility === 'PRIVATE' && (
-                <span className="shrink-0 label-mono text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground">Приватный</span>
+                <span className="shrink-0 label-mono text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground">{t('playlist.visibility.private')}</span>
               )}
               {playlist.isCollaborative && <PlaylistCollabBadge />}
               {playlist.isCollaborative && collaborators.length > 0 && (
@@ -131,7 +134,7 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
             {playlist.description && <p className="text-sm text-muted-foreground/80 line-clamp-2">{playlist.description}</p>}
             <p className="text-sm text-muted-foreground flex items-center gap-1 flex-wrap tabular-nums">
               <span>
-                {playlist.tracks.length} {pluralTracks(playlist.tracks.length)}{totalSec > 0 && ` · ${formatDuration(totalSec)}`}
+                {t('common.trackCount', { count: playlist.tracks.length })}{totalSec > 0 && ` · ${formatDuration(totalSec)}`}
               </span>
               {!showLikeButton && playlist.likesCount > 0 && (
                 <span className="inline-flex items-center gap-1">

@@ -2,10 +2,10 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
-import { plural } from '@/lib/format';
 
 interface Stats {
   likes: number;
@@ -25,17 +25,15 @@ interface Props {
   likedMinutes: number;
 }
 
-const MONTHS_RU = [
-  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
-];
-
-function formatJoined(date: Date): string {
-  return `с ${MONTHS_RU[date.getMonth()]} ${date.getFullYear()}`;
-}
-
 export function ProfileHero({ user, stats, likedMinutes }: Props) {
-  const displayName = user.name ?? user.email?.split('@')[0] ?? 'Слушатель';
+  const t = useTranslations('profile.profileHero');
+  const months = t.raw('months') as string[];
+
+  function formatJoined(date: Date): string {
+    return t('joinedSince', { date: `${months[date.getMonth()]} ${date.getFullYear()}` });
+  }
+
+  const displayName = user.name ?? user.email?.split('@')[0] ?? t('anonymousListener');
   const initials = displayName.slice(0, 2).toUpperCase();
 
   const [name, setName] = useState(displayName);
@@ -54,7 +52,7 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
     const file = e.target.files?.[0];
     e.target.value = ''; // позволяем выбрать тот же файл повторно
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setAvatarError('Файл больше 5 МБ'); return; }
+    if (file.size > 5 * 1024 * 1024) { setAvatarError(t('avatarTooLarge')); return; }
 
     setUploading(true);
     setAvatarError(null);
@@ -68,7 +66,7 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
       setImgError(false);
     } else {
       const data = await res.json().catch(() => null);
-      setAvatarError(data?.error ?? 'Не удалось загрузить фото');
+      setAvatarError(data?.error ?? t('avatarUploadFailed'));
     }
   }
 
@@ -80,7 +78,7 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
     const res = await fetch('/api/v1/user/profile', { method: 'POST', body: fd });
     setUploading(false);
     if (res.ok) { setImage(null); setImgError(false); }
-    else setAvatarError('Не удалось удалить фото');
+    else setAvatarError(t('avatarRemoveFailed'));
   }
 
   useEffect(() => {
@@ -116,9 +114,9 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
 
   const runtimeReadout =
     likedMinutes >= 60
-      ? `≈ ${Math.round(likedMinutes / 60)} ч любимой музыки`
+      ? t('loveHours', { hours: Math.round(likedMinutes / 60) })
       : likedMinutes > 0
-        ? `≈ ${likedMinutes} мин любимой музыки`
+        ? t('loveMinutes', { minutes: likedMinutes })
         : null;
 
   return (
@@ -134,7 +132,7 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            aria-label="Изменить фото"
+            aria-label={t('changePhoto')}
             className="group relative z-10 w-full h-full rounded-full overflow-hidden ring-1 ring-border cursor-pointer disabled:cursor-wait"
           >
             {image && !imgError ? (
@@ -173,7 +171,7 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
             onClick={handleAvatarRemove}
             className="text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
           >
-            Удалить
+            {t('removePhoto')}
           </button>
         )}
         {avatarError && <p className="text-[11px] text-red-400 text-center max-w-[120px] leading-tight">{avatarError}</p>}
@@ -201,20 +199,20 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
                   }}
                   maxLength={50}
                   className="flex-1 min-w-0 bg-transparent border-b border-primary text-2xl sm:text-4xl font-bold tracking-tight outline-none pb-0.5"
-                  aria-label="Отображаемое имя"
+                  aria-label={t('displayNameAriaLabel')}
                 />
                 <button
                   onClick={handleSave}
                   disabled={isPending || !draft.trim()}
                   className="text-xs font-medium text-primary hover:opacity-70 transition-opacity disabled:opacity-30 shrink-0 pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
                 >
-                  {isPending ? '…' : 'Сохранить'}
+                  {isPending ? t('saving') : t('save')}
                 </button>
                 <button
                   onClick={cancelEdit}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center"
                 >
-                  Отмена
+                  {t('cancel')}
                 </button>
               </motion.div>
             ) : (
@@ -229,7 +227,7 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
                 <h1 className="min-w-0 text-2xl sm:text-4xl font-bold tracking-tight truncate">{name}</h1>
                 <button
                   onClick={startEdit}
-                  aria-label="Изменить имя"
+                  aria-label={t('editName')}
                   className="opacity-0 group-hover:opacity-40 hover:!opacity-100 pointer-coarse:opacity-100 pointer-coarse:w-11 pointer-coarse:h-11 pointer-coarse:-m-1.5 pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:justify-center transition-opacity"
                 >
                   <Icon name="edit-2" size={15} />
@@ -258,9 +256,9 @@ export function ProfileHero({ user, stats, likedMinutes }: Props) {
         )}
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <StatChip value={stats.likes} label={plural(stats.likes, ['лайк', 'лайка', 'лайков'])} />
-          <StatChip value={stats.following} label={plural(stats.following, ['артист', 'артиста', 'артистов'])} />
-          <StatChip value={stats.playlists} label={plural(stats.playlists, ['плейлист', 'плейлиста', 'плейлистов'])} />
+          <StatChip value={stats.likes} label={t('statLikes', { count: stats.likes })} />
+          <StatChip value={stats.following} label={t('statFollowing', { count: stats.following })} />
+          <StatChip value={stats.playlists} label={t('statPlaylists', { count: stats.playlists })} />
         </div>
 
         {runtimeReadout && (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { Icon } from '@/components/icon';
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
+  const t = useTranslations('playlist');
   const desktop = useIsDesktopPointer();
   const [open, setOpen] = useState(false);
   const [playlists, setPlaylists] = useState<PlaylistItem[]>([]);
@@ -82,9 +84,9 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
           if (adding) next.delete(playlistId); else next.add(playlistId);
           return next;
         });
-        toast.error(adding ? 'Не удалось добавить в плейлист' : 'Не удалось убрать из плейлиста');
+        toast.error(adding ? t('addButton.addFailed') : t('addButton.removeFailed'));
       } else if (adding) {
-        toast(`Добавлено в «${title}»`);
+        toast(t('addButton.added', { title }));
       }
     });
   }
@@ -100,7 +102,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
       }).catch(() => null);
       const data = res?.ok ? await res.json() : null;
       if (!data?.id) {
-        toast.error('Не удалось создать плейлист');
+        toast.error(t('addButton.createFailed'));
         return;
       }
 
@@ -114,9 +116,9 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
       }).catch(() => null);
       if (added?.ok) {
         setInPlaylists((prev) => new Set([...prev, data.id]));
-        toast(`Добавлено в «${title}»`);
+        toast(t('addButton.added', { title }));
       } else {
-        toast.error('Плейлист создан, но трек добавить не удалось');
+        toast.error(t('addButton.createdButAddFailed'));
       }
       setNewTitle('');
       setCreating(false);
@@ -127,7 +129,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
     <>
       {playlists.length === 0 && !creating && (
         <div className={cn('text-muted-foreground', dense ? 'px-4 py-3 text-sm' : 'px-3 py-3 text-xs')}>
-          Нет плейлистов
+          {t('addButton.empty')}
         </div>
       )}
 
@@ -173,7 +175,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false); }}
-              placeholder="Название…"
+              placeholder={t('addButton.namePlaceholder')}
               className={cn(
                 'flex-1 bg-transparent border-b border-border outline-none text-foreground placeholder:text-muted-foreground',
                 dense ? 'text-sm py-2' : 'text-xs py-1 px-1',
@@ -199,7 +201,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
             )}
           >
             <Icon name="plus" size={14} />
-            Новый плейлист
+            {t('addButton.newPlaylist')}
           </button>
         )}
       </div>
@@ -213,8 +215,8 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
       whileHover={{ scale: 1.08 }}
       transition={{ type: 'spring', stiffness: 500, damping: 25 }}
       onClick={() => setOpen((v) => !v)}
-      aria-label="Добавить в плейлист"
-      title="Добавить в плейлист"
+      aria-label={t('addButton.aria')}
+      title={t('addButton.aria')}
       className={cn(
         touchTargetClass('md'),
         'rounded-full flex items-center justify-center',
@@ -240,7 +242,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
         {triggerButton}
         <Sheet open={open} onClose={() => { setOpen(false); triggerRef.current?.focus(); }} anchor="bottom">
           <p className="shrink-0 px-4 pt-1 pb-2 label-mono text-muted-foreground">
-            Плейлисты
+            {t('addButton.heading')}
           </p>
           {panelContent(true)}
         </Sheet>
@@ -265,7 +267,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
           >
             <div className="px-3 pt-3 pb-1">
               <p className="label-mono text-[10px] text-muted-foreground">
-                Плейлисты
+                {t('addButton.heading')}
               </p>
             </div>
 

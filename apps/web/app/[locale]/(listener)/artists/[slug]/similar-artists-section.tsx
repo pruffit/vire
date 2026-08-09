@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { buildSimilarArtists } from '@/lib/discovery';
 import { discoveryReasonLabel } from '@/lib/discovery-reason';
 import { SectionHeader } from '@/components/section-header';
@@ -10,10 +11,11 @@ export const SIMILAR_ARTISTS_MIN_CANDIDATES = 3;
 export async function SimilarArtistsSection({ artistProfileId }: { artistProfileId: string }) {
   const artists = await buildSimilarArtists(artistProfileId).catch(() => []);
   if (artists.length < SIMILAR_ARTISTS_MIN_CANDIDATES) return null;
+  const t = await getTranslations('artist.similarArtists');
 
   return (
     <section className="animate-fade-up">
-      <SectionHeader label="Похожие артисты" />
+      <SectionHeader label={t('title')} />
       <ScrollRow bleedClassName="-mx-1 -my-2" className="flex gap-5 px-1 py-2 snap-x">
         {artists.map((a) => (
           <div key={a.artistProfileId} className="flex-[1_0_9rem] max-w-[10rem] min-w-0 snap-start">

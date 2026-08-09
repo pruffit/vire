@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import {
   db, DrizzleReleaseRepository,
   getTrackAudio, getLikeState, getLikeCount,
@@ -59,7 +60,10 @@ async function getPageData(slug: string, releaseId: string, trackId: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, releaseId, trackId } = await params;
   const data = await getPageData(slug, releaseId, trackId);
-  if (!data) return { title: 'Не найдено' };
+  if (!data) {
+    const t = await getTranslations('release');
+    return { title: t('notFound') };
+  }
 
   const { artist, release, track } = data;
   const url = `/artists/${slug}/releases/${releaseId}/tracks/${trackId}`;
@@ -82,11 +86,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function TrackPage({ params, searchParams }: Props) {
   const { slug, releaseId, trackId } = await params;
-  const { t } = await searchParams;
-  const seekTo = t ? parseInt(t, 10) : undefined;
+  const { t: seekParam } = await searchParams;
+  const seekTo = seekParam ? parseInt(seekParam, 10) : undefined;
 
   const data = await getPageData(slug, releaseId, trackId);
   if (!data) notFound();
+
+  const t = await getTranslations('track');
+  const tRelease = await getTranslations('release');
+  const tCommon = await getTranslations('common');
 
   const { artist, release, tracks, track } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
@@ -140,8 +148,8 @@ export default async function TrackPage({ params, searchParams }: Props) {
         )}
       />
       <JsonLd data={breadcrumbListJsonLd([
-        { name: 'Главная', url: '/' },
-        { name: 'Артисты', url: '/artists' },
+        { name: tRelease('breadcrumb.home'), url: '/' },
+        { name: tCommon('entity.artists'), url: '/artists' },
         { name: artist.name, url: `/artists/${slug}` },
         { name: release.title, url: `/artists/${slug}/releases/${releaseId}` },
         { name: track.title, url: `/artists/${slug}/releases/${releaseId}/tracks/${track.id}` },
@@ -238,12 +246,12 @@ export default async function TrackPage({ params, searchParams }: Props) {
             )}
             {track.status === 'PROCESSING' && (
               <div className="rounded-2xl py-10 text-center text-sm font-mono text-[color-mix(in_oklch,var(--artist-text)_40%,transparent)] bg-[color-mix(in_oklch,var(--artist-text)_4%,transparent)] ring-1 ring-[color-mix(in_oklch,var(--artist-text)_8%,transparent)]">
-                Трек обрабатывается…
+                {t('processingBody')}
               </div>
             )}
             {track.lyrics && track.lyrics.length > 0 && (
               <section className="space-y-3">
-                <SectionHeader label="Текст" />
+                <SectionHeader label={t('lyricsHeading')} />
                 <div className="rounded-2xl p-5 sm:p-6 bg-[color-mix(in_oklch,var(--artist-text)_4%,transparent)] ring-1 ring-[color-mix(in_oklch,var(--artist-text)_8%,transparent)]">
                   <TrackLyrics
                     lines={track.lyrics}
@@ -262,12 +270,12 @@ export default async function TrackPage({ params, searchParams }: Props) {
                   href={`/artists/${slug}/releases/${releaseId}`}
                   className="inline-flex items-center gap-2 text-xs font-mono text-[color-mix(in_oklch,var(--artist-text)_55%,transparent)] hover:text-[color-mix(in_oklch,var(--artist-text)_90%,transparent)] transition-colors"
                 >
-                  Из релиза «{release.title}»
+                  {t('fromRelease', { title: release.title })}
                 </Link>
                 <div className="rounded-2xl overflow-hidden bg-[color-mix(in_oklch,var(--artist-text)_4%,transparent)] ring-1 ring-[color-mix(in_oklch,var(--artist-text)_8%,transparent)]">
-                  {tracks.map((t) => {
-                    const isCurrent = t.id === track.id;
-                    const no = t.trackNumber < 10 ? `0${t.trackNumber}` : String(t.trackNumber);
+                  {tracks.map((tk) => {
+                    const isCurrent = tk.id === track.id;
+                    const no = tk.trackNumber < 10 ? `0${tk.trackNumber}` : String(tk.trackNumber);
                     const inner = (
                       <>
                         <span
@@ -283,21 +291,21 @@ export default async function TrackPage({ params, searchParams }: Props) {
                           style={isCurrent ? { color: 'var(--artist-accent)' } : undefined}
                         >
                           <span className="truncate">
-                            <TrackTitleText title={t.title} version={t.version} feat={featuredNames(t.credits)} />
+                            <TrackTitleText title={tk.title} version={tk.version} feat={featuredNames(tk.credits)} />
                           </span>
-                          {t.isExplicit && <ExplicitBadge />}
+                          {tk.isExplicit && <ExplicitBadge />}
                         </span>
-                        {t.status === 'PROCESSING' && (
-                          <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)] shrink-0">обработка…</span>
+                        {tk.status === 'PROCESSING' && (
+                          <span className="text-[10px] font-mono text-[color-mix(in_oklch,var(--artist-text)_30%,transparent)] shrink-0">{t('processing')}</span>
                         )}
-                        {t.durationSec != null && t.status === 'READY' && (
-                          <span className="text-xs readout text-[color-mix(in_oklch,var(--artist-text)_35%,transparent)] shrink-0">{formatDuration(t.durationSec)}</span>
+                        {tk.durationSec != null && tk.status === 'READY' && (
+                          <span className="text-xs readout text-[color-mix(in_oklch,var(--artist-text)_35%,transparent)] shrink-0">{formatDuration(tk.durationSec)}</span>
                         )}
                       </>
                     );
                     return isCurrent ? (
                       <div
-                        key={t.id}
+                        key={tk.id}
                         className="flex items-center gap-3 px-4 py-3 bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)]"
                         aria-current="true"
                       >
@@ -305,8 +313,8 @@ export default async function TrackPage({ params, searchParams }: Props) {
                       </div>
                     ) : (
                       <Link
-                        key={t.id}
-                        href={`/artists/${slug}/releases/${releaseId}/tracks/${t.id}`}
+                        key={tk.id}
+                        href={`/artists/${slug}/releases/${releaseId}/tracks/${tk.id}`}
                         className="flex items-center gap-3 px-4 py-3 hover:bg-[color-mix(in_oklch,var(--artist-text)_7%,transparent)] transition-colors"
                       >
                         {inner}

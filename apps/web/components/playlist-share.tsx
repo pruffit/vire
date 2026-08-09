@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
@@ -22,6 +23,7 @@ function isTouchDevice(): boolean {
 }
 
 export function PlaylistShare({ playlistId, title, visibility: propVisibility, isOwner }: Props) {
+  const t = useTranslations('playlist');
   const [optimisticVisibility, setOptimisticVisibility] = useState<'PRIVATE' | 'PUBLIC' | null>(null);
   const [syncedProp, setSyncedProp] = useState(propVisibility);
   if (propVisibility !== syncedProp) {
@@ -67,7 +69,7 @@ export function PlaylistShare({ playlistId, title, visibility: propVisibility, i
       router.refresh();
       await copyLink();
     } catch {
-      toast.error('Не удалось сделать плейлист публичным');
+      toast.error(t('share.publishFailed'));
     } finally {
       setPublishing(false);
     }
@@ -96,7 +98,7 @@ export function PlaylistShare({ playlistId, title, visibility: propVisibility, i
           ref={ref}
           type="button"
           onClick={() => void handleTrigger(toggle)}
-          aria-label="Поделиться плейлистом"
+          aria-label={t('share.aria')}
           aria-expanded={expanded}
           whileTap={{ scale: 0.9 }}
           transition={spring.snappy}
@@ -108,13 +110,13 @@ export function PlaylistShare({ playlistId, title, visibility: propVisibility, i
     >
       {visibility === 'PUBLIC' ? (
         <PopoverItem
-          label={copied ? 'Скопировано' : 'Скопировать ссылку'}
+          label={copied ? t('copied') : t('copyLink')}
           icon={copied ? <CheckIcon /> : <Icon name="link" size={13} />}
           onClick={() => void copyLink()}
         />
       ) : (
         <PopoverItem
-          label={copied ? 'Скопировано' : publishing ? 'Публикуем…' : 'Сделать публичным и поделиться'}
+          label={copied ? t('copied') : publishing ? t('share.publishing') : t('share.makePublic')}
           icon={copied ? <CheckIcon /> : publishing ? <Icon name="loader" size={13} className="animate-spin" /> : <Icon name="globe" size={13} />}
           onClick={() => void makePublicAndShare()}
           disabled={publishing}

@@ -1,27 +1,29 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'motion/react';
 import { Stagger, StaggerItem } from '@vire/ui/motion';
 import type { ArtistListItem } from '@vire/db';
 import { ALL_GENRES, GENRE_LABELS, type Genre } from '@/lib/genres';
 import { ArtistCard } from '@/components/artist-card';
-import { pluralReleases } from '@/lib/format';
 import { ScrollRow } from '@/components/scroll-row';
 import { touchPill } from '@/components/popover';
 
 type Sort = 'default' | 'name' | 'releases';
 
-const SORT_LABELS: Record<Sort, string> = {
-  default: 'новые',
-  name: 'A—Z',
-  releases: 'релизы',
-};
-
 export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
+  const t = useTranslations('artist.catalog');
+  const tCommon = useTranslations('common');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<Sort>('default');
   const [genre, setGenre] = useState<Genre | null>(null);
+
+  const SORT_LABELS: Record<Sort, string> = {
+    default: t('sort.default'),
+    name: t('sort.name'),
+    releases: t('sort.releases'),
+  };
 
   const availableGenres = useMemo(() => {
     const present = new Set<string>();
@@ -46,7 +48,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
       <div className="flex items-center gap-3">
         <input
           type="text"
-          placeholder="Поиск по имени…"
+          placeholder={t('searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="flex-1 min-w-0 px-3 py-1.5 rounded-md bg-foreground/5 border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors pointer-coarse:h-11"
@@ -78,7 +80,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
                 : 'bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground'
             }`}
           >
-            Все
+            {t('allGenres')}
           </button>
           {availableGenres.map((g) => (
             <button
@@ -105,7 +107,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
             exit={{ opacity: 0 }}
             className="py-16 text-center text-sm text-muted-foreground"
           >
-            Ничего не найдено.
+            {t('empty')}
           </motion.p>
         ) : (
           <Stagger step={0.03} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
@@ -118,7 +120,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
                   avatarUrl={artist.avatarUrl}
                   coverFallbackUrl={artist.firstReleaseCoverUrl}
                   verified={artist.verified}
-                  stat={artist.releaseCount > 0 ? `${artist.releaseCount} ${pluralReleases(artist.releaseCount)}` : undefined}
+                  stat={artist.releaseCount > 0 ? tCommon('releaseCount', { count: artist.releaseCount }) : undefined}
                 />
               </StaggerItem>
             ))}
@@ -128,7 +130,7 @@ export function ArtistCatalog({ artists }: { artists: ArtistListItem[] }) {
 
       {query && filtered.length > 0 && (
         <p className="text-xs text-muted-foreground text-center font-mono">
-          {filtered.length} из {artists.length}
+          {t('filteredOf', { filtered: filtered.length, total: artists.length })}
         </p>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { getUserAuthInfo } from '@vire/db';
 import { LinkedAccountsClient } from './linked-accounts-client';
 
@@ -7,12 +8,12 @@ interface Props {
 }
 
 export async function LinkedAccounts({ userId, linkError }: Props) {
-  const info = await getUserAuthInfo(userId);
+  const [info, t] = await Promise.all([getUserAuthInfo(userId), getTranslations('profile.linkedAccounts')]);
   const linkedProviders = info.providers.map((p) => p.provider);
 
   return (
     <section className="space-y-3">
-      <h2 className="text-base font-semibold">Способы входа</h2>
+      <h2 className="text-base font-semibold">{t('title')}</h2>
       <LinkedAccountsClient
         hasPassword={info.hasPassword}
         linkedProviders={linkedProviders}

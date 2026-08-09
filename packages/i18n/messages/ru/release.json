@@ -1,1 +1,67 @@
-{}
+{
+  "notFound": "Не найдено",
+  "breadcrumb": {
+    "home": "Главная"
+  },
+  "linerNotesHeading": "Liner notes",
+  "listen": "Слушать",
+  "cover": {
+    "zoomAria": "Открыть обложку крупнее: {alt}"
+  },
+  "share": {
+    "aria": "Поделиться релизом",
+    "copied": "скопировано",
+    "cta": "поделиться"
+  },
+  "quickLook": {
+    "upcomingAria": "{title} — скоро",
+    "previewAria": "Быстрый просмотр: {title}",
+    "resume": "Продолжить",
+    "toRelease": "К релизу",
+    "loadFailed": "Не удалось загрузить треки",
+    "loadFailedBody": "Не удалось загрузить треки.",
+    "noTracks": "Пока нет треков."
+  },
+  "countdown": {
+    "comingSoon": "скоро",
+    "days": "{count, plural, one {день} few {дня} many {дней} other {дней}}",
+    "hours": "{count, plural, one {час} few {часа} many {часов} other {часов}}",
+    "minutes": "{count, plural, one {минута} few {минуты} many {минут} other {минут}}",
+    "seconds": "{count, plural, one {секунда} few {секунды} many {секунд} other {секунд}}",
+    "releasesOn": "Выходит {date}",
+    "presaveHintAuthed": "Добавим релиз в твои «Лайки» и пришлём письмо, когда выйдет.",
+    "presaveHintGuest": "Пришлём письмо на почту, когда релиз выйдет."
+  },
+  "countdownBadge": {
+    "aria": "Выходит через {days} дней",
+    "label": "Скоро",
+    "unitDays": "д",
+    "unitHours": "ч",
+    "unitMinutes": "м",
+    "unitSeconds": "с"
+  },
+  "smartlink": {
+    "metaDescription": "Слушай «{title}» от {artist} на всех площадках",
+    "listenOnVire": "Слушать на VireMusic",
+    "presaveOnVire": "Пресейв на VireMusic",
+    "allReleases": "Все релизы {artist}"
+  },
+  "presave": {
+    "saveFailed": "Не удалось сохранить. Попробуй ещё раз",
+    "saveLabel": "Сохранить заранее",
+    "savedLabel": "Сохранено заранее",
+    "guestDoneLabel": "Напомним на email, когда выйдет",
+    "savingLabel": "Сохраняю…",
+    "remindLabel": "Напомнить",
+    "remindCta": "Напомнить о выходе",
+    "presaveShort": "Пресейв",
+    "savedShort": "Сохранено",
+    "unsubscribed": {
+      "metaTitle": "Отписка от пресейв-писем",
+      "titleOk": "Вы отписаны",
+      "titleBad": "Ссылка недействительна",
+      "bodyOk": "Писем о выходе сохранённых заранее релизов на этот адрес больше не будет. Продолжить слушать можно в любой момент.",
+      "bodyBad": "Не удалось подтвердить отписку — похоже, ссылка повреждена или устарела. Откройте её из письма целиком."
+    }
+  }
+}

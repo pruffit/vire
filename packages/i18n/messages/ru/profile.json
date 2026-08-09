@@ -1,1 +1,126 @@
-{}
+{
+  "metaTitle": "Профиль",
+  "purchasedTrackRow": {
+    "downloadFlac": "Скачать FLAC"
+  },
+  "accountSection": {
+    "appearance": "Оформление",
+    "notifications": "Уведомления",
+    "privacy": "Приватность",
+    "musicTaste": "Музыкальный вкус"
+  },
+  "activityFeed": {
+    "title": "Недавняя активность",
+    "empty": "Здесь появится история твоих лайков и подписок.",
+    "followedPrefix": "Подписка на",
+    "createdPlaylistPrefix": "Создан плейлист"
+  },
+  "appearanceSettings": {
+    "languageTitle": "Язык интерфейса",
+    "reduceMotionTitle": "Приглушить движение",
+    "reduceMotionDescription": "Меньше анимаций по всему сайту."
+  },
+  "discoverabilitySettings": {
+    "saveFailed": "Не удалось сохранить настройку",
+    "title": "Показывать меня в поиске",
+    "onDescription": "Другие могут найти тебя по имени.",
+    "offDescription": "Ты скрыт из поиска людей."
+  },
+  "lastfmSettings": {
+    "linked": "Привязано",
+    "notLinked": "Не привязано",
+    "description": "Берём только список любимых треков для предложки на вечеринке. Ничего не публикуем и не проигрываем оттуда.",
+    "usernamePlaceholder": "ник на last.fm",
+    "usernameAriaLabel": "Ник Last.fm",
+    "unlink": "Отвязать",
+    "save": "Сохранить",
+    "saveFailed": "Не удалось сохранить ник Last.fm",
+    "invalidFormat": "Только латиница, цифры, «. _ -», от 2 до 64 символов"
+  },
+  "libraryPreviews": {
+    "playlistsTitle": "Плейлисты",
+    "wholeLibrary": "Вся медиатека",
+    "noPlaylists": "Нет плейлистов",
+    "noPlaylistsHint": "Нажми «Создать плейлист», чтобы собрать первый",
+    "likedTracksTitle": "Любимые треки",
+    "allLabel": "Все",
+    "noLikedTracks": "Ты ещё ничего не лайкал."
+  },
+  "linkedAccounts": {
+    "title": "Способы входа",
+    "linkErrorTaken": "Этот аккаунт уже привязан к другому пользователю.",
+    "linkErrorDefault": "Не удалось привязать аккаунт.",
+    "emailPassword": "Email и пароль",
+    "configured": "Настроен",
+    "notSet": "Не задан",
+    "setPassword": "Задать",
+    "cancel": "Отмена",
+    "linked": "Привязан",
+    "notLinked": "Не привязан",
+    "link": "Привязать",
+    "providerYandex": "Яндекс",
+    "newPasswordLabel": "Новый пароль",
+    "newPasswordPlaceholder": "Минимум 8 символов",
+    "hidePassword": "скрыть",
+    "showPassword": "показать",
+    "confirmPasswordLabel": "Повтори пароль",
+    "confirmPasswordPlaceholder": "Повтори пароль",
+    "passwordSetSuccess": "Пароль задан. Теперь можешь входить по email и паролю.",
+    "saving": "Сохраняем…",
+    "save": "Сохранить"
+  },
+  "notificationSettings": {
+    "saveFailed": "Не удалось сохранить настройку",
+    "emailTitle": "Уведомления на почту",
+    "emailOnDescription": "Письма о важных событиях приходят на почту.",
+    "emailOffDescription": "Письма на почту отключены.",
+    "pushTitle": "Push-уведомления",
+    "pushCheckingSupport": "Проверяем поддержку браузером…",
+    "pushUnsupported": "Пуши не поддерживаются этим браузером.",
+    "pushDenied": "Разблокируй уведомления в настройках браузера.",
+    "pushOnDescription": "Уведомления приходят в браузер.",
+    "pushOffDescription": "Включи, чтобы получать уведомления в браузер.",
+    "pushPermissionDenied": "Разреши уведомления в браузере",
+    "pushServiceUnavailable": "Браузер не смог подписаться: push-сервис недоступен",
+    "pushRejected": "Сервер не принял подписку",
+    "pushToggleFailed": "Не удалось изменить push-уведомления"
+  },
+  "privacySettings": {
+    "saveFailed": "Не удалось сохранить настройку приватности",
+    "title": "Лайки видны друзьям",
+    "onDescription": "Друзья видят твои лайки.",
+    "offDescription": "Лайки скрыты от всех."
+  },
+  "profileHero": {
+    "anonymousListener": "Слушатель",
+    "avatarTooLarge": "Файл больше 5 МБ",
+    "avatarUploadFailed": "Не удалось загрузить фото",
+    "avatarRemoveFailed": "Не удалось удалить фото",
+    "changePhoto": "Изменить фото",
+    "removePhoto": "Удалить",
+    "displayNameAriaLabel": "Отображаемое имя",
+    "save": "Сохранить",
+    "saving": "…",
+    "cancel": "Отмена",
+    "editName": "Изменить имя",
+    "joinedSince": "с {date}",
+    "loveHours": "≈ {hours} ч любимой музыки",
+    "loveMinutes": "≈ {minutes} мин любимой музыки",
+    "statLikes": "{count, plural, one {лайк} few {лайка} many {лайков} other {лайков}}",
+    "statFollowing": "{count, plural, one {артист} few {артиста} many {артистов} other {артистов}}",
+    "statPlaylists": "{count, plural, one {плейлист} few {плейлиста} many {плейлистов} other {плейлистов}}",
+    "months": ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+  },
+  "tasteSection": {
+    "title": "Музыкальный вкус",
+    "emptyTitle": "Твой музыкальный портрет пока пуст",
+    "emptyHint": "Лайкай треки — здесь появятся любимые жанры и артисты."
+  },
+  "signOutButton": {
+    "label": "Выйти из аккаунта"
+  },
+  "followedArtistsSection": {
+    "title": "Подписки",
+    "allLabel": "Все"
+  }
+}

@@ -1,1 +1,56 @@
-{}
+{
+  "play": "Играть",
+  "pause": "Пауза",
+  "playAria": "Играть {title}",
+  "playQuotedAria": "Играть «{title}»",
+  "processing": "обработка…",
+  "processingBody": "Трек обрабатывается…",
+  "lyricsHeading": "Текст",
+  "fromRelease": "Из релиза «{title}»",
+  "markMoment": "Отметить любимый момент",
+  "explicit": {
+    "title": "Explicit · 18+ — ненормативная лексика или откровенный контент",
+    "aria": "Explicit, возрастное ограничение 18 плюс"
+  },
+  "like": {
+    "saveFailed": "Не удалось сохранить лайк",
+    "removeAria": "Убрать лайк",
+    "addAria": "Лайкнуть"
+  },
+  "download": {
+    "paymentProcessing": "Оплата обрабатывается",
+    "check": "Проверить",
+    "redirecting": "Перехожу к оплате…",
+    "buy": "Купить FLAC · 99 ₽"
+  },
+  "share": {
+    "aria": "Поделиться",
+    "link": "Ссылка на трек",
+    "fromMoment": "С текущего момента",
+    "copied": "Ссылка скопирована"
+  },
+  "queue": {
+    "title": "Очередь",
+    "aria": "Действия с очередью",
+    "playNext": "Играть следующим",
+    "addToQueue": "Добавить в очередь",
+    "alreadyQueued": "Уже в очереди",
+    "willPlayNext": "Будет следующим",
+    "queued": "В очереди",
+    "loadFailed": "Не удалось загрузить треки",
+    "downloading": "Сохраняю… {pct}%",
+    "removeOffline": "Удалить из офлайна",
+    "resumeOffline": "Докачать офлайн",
+    "saveOffline": "Сохранить офлайн"
+  },
+  "sortable": {
+    "dragAria": "Перетащить",
+    "removeAria": "Удалить"
+  },
+  "liveListeners": {
+    "label": "{count, plural, one {слушает сейчас} few {слушают сейчас} many {слушают сейчас} other {слушают сейчас}}"
+  },
+  "listeningNow": {
+    "title": "Сейчас слушают"
+  }
+}

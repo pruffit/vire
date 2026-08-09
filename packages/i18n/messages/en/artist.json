@@ -1,1 +1,64 @@
-{}
+{
+  "catalogPage": {
+    "title": "Artists",
+    "empty": "No artists here yet."
+  },
+  "catalog": {
+    "searchPlaceholder": "Search by name…",
+    "sort": {
+      "default": "newest",
+      "name": "A—Z",
+      "releases": "releases"
+    },
+    "allGenres": "All",
+    "empty": "Nothing found.",
+    "filteredOf": "{filtered} of {total}"
+  },
+  "card": {
+    "open": "Open"
+  },
+  "collapseBar": {
+    "scrollTopAria": "Back to top",
+    "verifiedAria": "Verified"
+  },
+  "followButton": {
+    "follow": "Follow",
+    "following": "Following",
+    "updateFailed": "Couldn't update follow"
+  },
+  "followerCount": "{count, plural, one {# listener} other {# listeners}}",
+  "sections": {
+    "upcoming": "Coming soon",
+    "popular": "Popular",
+    "releases": "Releases",
+    "platforms": "Platforms",
+    "posts": "Announcements",
+    "videos": "Videos"
+  },
+  "smartLinks": {
+    "platformCount": "{count, plural, one {# platform} other {# platforms}}",
+    "linksFallback": "links"
+  },
+  "popularTracks": {
+    "collapse": "Collapse",
+    "showAll": "All tracks ({count})"
+  },
+  "similarArtists": {
+    "title": "Similar artists"
+  },
+  "announcements": {
+    "ok": "Got it",
+    "stage1": {
+      "title": "VireMusic is live",
+      "body1": "This is <strong>Stage 1 — Friends & Family</strong>. You can already listen to artists, build playlists, like tracks, and start the <strong>Wave</strong> — a stream tuned to your taste.",
+      "body2": "Direct sales and paying artists directly are coming in the next stage. Thanks for being here from the start.",
+      "cta": "What's already live"
+    },
+    "auth": {
+      "body1": "To comply with Russian law (Federal Law 406), we removed sign-in via <strong>Google</strong> and <strong>Telegram</strong> — Russian sites can no longer use foreign authorization services.",
+      "body2": "You can now sign in with <strong>email and password</strong>, an <strong>email link</strong>, or via <strong>Yandex</strong>.",
+      "body3": "If you used to sign in with Google or Telegram, choose \"Sign in with email link\" on the sign-in page, then set a password in your profile under \"Sign-in methods\".",
+      "cta": "Learn more"
+    }
+  }
+}

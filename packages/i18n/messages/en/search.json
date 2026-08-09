@@ -1,1 +1,9 @@
-{}
+{
+  "metaTitle": {
+    "withQuery": "“{query}” — Search · VireMusic",
+    "default": "Search — VireMusic"
+  },
+  "startTyping": "Start typing — we'll show artists, releases, and tracks.",
+  "minChars": "Enter at least 2 characters.",
+  "noResults": "No results for <styled>“{query}”</styled>."
+}
