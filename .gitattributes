@@ -1,0 +1,5 @@
+.agents/** linguist-vendored
+.claude/** linguist-vendored
+.codex/** linguist-vendored
+.superpowers/** linguist-vendored
+.impeccable/** linguist-vendored
