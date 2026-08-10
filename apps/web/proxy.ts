@@ -58,6 +58,11 @@ export default auth((req) => {
     return NextResponse.redirect(signIn);
   }
 
+  // Next прогоняет proxy повторно на внутреннем rewrite next-intl (`/` → `/ru`): второй
+  // заход канонизировал бы `/ru` → `/` редиректом и зациклил его. Заголовок ставит
+  // next-intl, снаружи он ничего не даёт — auth-гейты выше уже отработали.
+  if (req.headers.get('x-next-intl-locale')) return NextResponse.next();
+
   return handleI18nRouting(req);
 });
 

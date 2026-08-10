@@ -68,11 +68,25 @@ jobs:
             echo "try $i: HTTP $code"
             case "$code" in
               5*) echo "::error::Smoke: $code на /robots.txt — рантайм-ошибка старта/роутера"; cat /tmp/next.log; exit 1 ;;
-              200|3*) echo "Smoke OK ($code)"; exit 0 ;;
+              200|3*) echo "Smoke OK ($code)"; break ;;
             esac
+            if [ "$i" = 30 ]; then echo "::error::Smoke: сервер не ответил 2xx/3xx за 60с"; cat /tmp/next.log; exit 1; fi
             sleep 2
           done
-          echo "::error::Smoke: сервер не ответил 2xx/3xx за 60с"; cat /tmp/next.log; exit 1
+          # Петля редиректов на локализованных путях: rewrite `/` → `/ru` в проде
+          # прогоняет proxy повторно и без защиты канонизируется обратно в `/` (v1.49.0).
+          for path in / /en /artists; do
+            final=$(curl -s -o /dev/null -L --max-redirs 5 -w "%{http_code}" "http://127.0.0.1:3000$path" || echo 000)
+            hops=$(curl -s -o /dev/null -L --max-redirs 5 -w "%{num_redirects}" "http://127.0.0.1:3000$path" || echo 9)
+            echo "$path: HTTP $final после $hops редиректов"
+            if [ "$hops" -gt 1 ]; then
+              echo "::error::Smoke: $path зациклился в редиректах ($hops)"; cat /tmp/next.log; exit 1
+            fi
+            case "$final" in
+              5*|000) echo "::error::Smoke: $path отдал $final"; cat /tmp/next.log; exit 1 ;;
+            esac
+          done
+          echo "Smoke OK: локализованные пути обслуживаются без петли"
         env:
           DATABASE_URL: postgresql://build:build@localhost/build
           S3_PUBLIC_ENDPOINT: https://cdn.viremusic.ru
