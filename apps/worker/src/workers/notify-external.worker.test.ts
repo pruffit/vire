@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Job } from 'bullmq';
 import type { ExternalNotifyJobData } from '@vire/core';
+import { getTranslator } from '@vire/i18n';
 
 const h = vi.hoisted(() => ({
   // SIGNING_SECRET читается на уровне модуля воркера — выставить до его импорта
@@ -112,7 +113,8 @@ describe('notify-external handle', () => {
   it('keeps the chat push body content-free', async () => {
     await handle(makeJob({ kind: 'CHAT_MESSAGE', conversationId: 'conv-1' }));
     const payload = h.sendPush.mock.calls[0][1];
-    expect(payload.body).toBe('Новое сообщение от Актёр');
+    const t = await getTranslator('ru', 'email');
+    expect(payload.body).toBe(t('push.chatMessage.body', { name: 'Актёр' }));
   });
 
   it('tags friend-request push per actor so distinct requesters do not collapse', async () => {
@@ -137,8 +139,9 @@ describe('notify-external handle', () => {
     });
     await handle(makeJob({ kind: 'CHAT_MESSAGE', conversationId: 'conv-1' }));
     const payload = h.sendPush.mock.calls[0][1];
-    expect(payload.title).toBe('New message');
-    expect(payload.body).toBe('New message from Актёр');
+    const t = await getTranslator('en', 'email');
+    expect(payload.title).toBe(t('push.chatMessage.title'));
+    expect(payload.body).toBe(t('push.chatMessage.body', { name: 'Актёр' }));
     expect(payload.url).toContain('/en/messages');
     const [, , html] = h.sendBrevoEmail.mock.calls[0];
     expect(html).toContain('<html lang="en">');

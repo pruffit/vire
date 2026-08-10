@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getTranslator } from '@vire/i18n/translator';
+
+const t = await getTranslator('ru', 'playlist');
+const notFoundTitle = t('notFound');
 
 const { getPlaylistWithTracks, auth, getForViewer } = vi.hoisted(() => ({
   getPlaylistWithTracks: vi.fn(),
@@ -38,7 +42,7 @@ describe('generateMetadata /playlists/[id]', () => {
     auth.mockResolvedValue(null);
     getForViewer.mockResolvedValue(denied);
     const meta = await generateMetadata({ params, searchParams: noQuery });
-    expect(meta.title).toBe('Не найдено');
+    expect(meta.title).toBe(notFoundTitle);
     expect(meta.description).toBeUndefined();
     expect(meta.openGraph).toBeUndefined();
   });
@@ -48,7 +52,7 @@ describe('generateMetadata /playlists/[id]', () => {
     auth.mockResolvedValue({ user: { id: 'other-user' } });
     getForViewer.mockResolvedValue(denied);
     const meta = await generateMetadata({ params, searchParams: noQuery });
-    expect(meta.title).toBe('Не найдено');
+    expect(meta.title).toBe(notFoundTitle);
   });
 
   it('владелец получает название приватного плейлиста + noindex', async () => {
@@ -80,7 +84,7 @@ describe('generateMetadata /playlists/[id]', () => {
   it('несуществующий плейлист — нейтральная метадата', async () => {
     getPlaylistWithTracks.mockResolvedValue(null);
     const meta = await generateMetadata({ params, searchParams: noQuery });
-    expect(meta.title).toBe('Не найдено');
+    expect(meta.title).toBe(notFoundTitle);
     expect(auth).not.toHaveBeenCalled();
   });
 });

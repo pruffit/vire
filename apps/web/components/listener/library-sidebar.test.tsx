@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import { getTranslator } from '@vire/i18n/translator';
 
 vi.mock('@/i18n/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn() }),
@@ -13,6 +14,10 @@ import { LibrarySidebar } from './library-sidebar';
 
 afterEach(() => cleanup());
 
+const t = await getTranslator('ru', 'nav.sidebar');
+const friendsLabel = t('friends');
+const friendsNewRequests = (count: number) => t('friendsNewRequests', { count });
+
 const BASE_PROPS = {
   playlists: [],
   artists: [],
@@ -23,18 +28,18 @@ const BASE_PROPS = {
 describe('LibrarySidebar — подписи строк', () => {
   it('«Друзья» без входящих заявок — без подписи (не дублирует заголовок)', () => {
     render(<LibrarySidebar {...BASE_PROPS} incomingCount={0} />);
-    const row = screen.getByText('Друзья').closest('a');
-    expect(row?.textContent).toBe('Друзья');
+    const row = screen.getByText(friendsLabel).closest('a');
+    expect(row?.textContent).toBe(friendsLabel);
   });
 
   it('«Друзья» с входящими заявками — подпись с числом', () => {
     render(<LibrarySidebar {...BASE_PROPS} incomingCount={3} />);
-    expect(screen.getByText('3 новых заявок')).toBeTruthy();
+    expect(screen.getByText(friendsNewRequests(3))).toBeTruthy();
   });
 
   it('свёрнутый рейл: «Друзья» без заявок — title без дублирования', () => {
     render(<LibrarySidebar {...BASE_PROPS} incomingCount={0} collapsed />);
-    expect(screen.getByTitle('Друзья')).toBeTruthy();
-    expect(screen.queryByTitle('Друзья · Друзья')).toBeNull();
+    expect(screen.getByTitle(friendsLabel)).toBeTruthy();
+    expect(screen.queryByTitle(`${friendsLabel} · ${friendsLabel}`)).toBeNull();
   });
 });

@@ -10,12 +10,16 @@ const g = (genre: Genre, count: number) => ({ genre, count });
 
 const tMoods = await getTranslator('ru', 'moods');
 const tGenres = await getTranslator('ru', 'genres');
+const tHome = await getTranslator('ru', 'home');
 const labels: TagLabelTranslators = {
   moodLabel: (mood) => tMoods(mood),
   genreLabel: (genre) => genreLabel(genre, tGenres),
   groupLabel: (group) => genreGroupLabel(group, tGenres),
 };
-const moodsHeading = 'Настроения';
+const moodsHeading = tHome('moodsHeading');
+const hiphopRnbLabel = tGenres('groups.hiphopRnb');
+const technoLabel = tGenres('groups.techno');
+const ambientLabel = tGenres('labels.AMBIENT');
 
 describe('waveChips', () => {
   it('смешивает mood и genre по убыванию count, без ограничения на длину', () => {
@@ -41,7 +45,7 @@ describe('waveChips', () => {
 
   it('совпадающие лейблы mood/genre («Эмбиент») не дублируются — выигрывает более популярный', () => {
     const chips = waveChips([m('AMBIENT', 3)], [g('AMBIENT', 9), g('ROCK', 1)], labels);
-    const ambient = chips.filter((c) => c.label === 'Эмбиент');
+    const ambient = chips.filter((c) => c.label === ambientLabel);
     expect(ambient).toHaveLength(1);
     expect(ambient[0].kind).toBe('genre');
   });
@@ -56,9 +60,9 @@ describe('groupTagsForSheet', () => {
       moodsHeading,
     );
     const sectionLabels = sections.map((s) => s.label);
-    expect(sectionLabels).toContain('Настроения');
-    expect(sectionLabels).toContain('Хип-хоп и R&B');
-    expect(sectionLabels).toContain('Техно');
+    expect(sectionLabels).toContain(moodsHeading);
+    expect(sectionLabels).toContain(hiphopRnbLabel);
+    expect(sectionLabels).toContain(technoLabel);
   });
 
   it('отбрасывает теги с count = 0 и пустые секции', () => {
@@ -68,9 +72,9 @@ describe('groupTagsForSheet', () => {
       labels,
       moodsHeading,
     );
-    const moodSection = sections.find((s) => s.label === 'Настроения');
+    const moodSection = sections.find((s) => s.label === moodsHeading);
     expect(moodSection?.items.map((i) => i.key)).toEqual(['DARK']);
-    expect(sections.some((s) => s.label === 'Хип-хоп и R&B')).toBe(false);
+    expect(sections.some((s) => s.label === hiphopRnbLabel)).toBe(false);
   });
 
   it('внутри секции сортирует по count desc', () => {
@@ -80,13 +84,13 @@ describe('groupTagsForSheet', () => {
       labels,
       moodsHeading,
     );
-    const hiphop = sections.find((s) => s.label === 'Хип-хоп и R&B');
+    const hiphop = sections.find((s) => s.label === hiphopRnbLabel);
     expect(hiphop?.items.map((i) => i.key)).toEqual(['TRAP', 'DRILL', 'BOOMBAP']);
   });
 
   it('нет тегов с mood — секция «Настроения» отсутствует', () => {
     const sections = groupTagsForSheet([m('HYPE', 0)], [g('TECHNO', 1)], labels, moodsHeading);
-    expect(sections.some((s) => s.label === 'Настроения')).toBe(false);
+    expect(sections.some((s) => s.label === moodsHeading)).toBe(false);
   });
 });
 
@@ -110,8 +114,8 @@ describe('filterTagSections', () => {
 
   it('отбрасывает секции без совпадений', () => {
     const filtered = filterTagSections(sections, 'boom');
-    expect(filtered.some((s) => s.label === 'Настроения')).toBe(false);
-    expect(filtered.some((s) => s.label === 'Техно')).toBe(false);
+    expect(filtered.some((s) => s.label === moodsHeading)).toBe(false);
+    expect(filtered.some((s) => s.label === technoLabel)).toBe(false);
   });
 
   it('нет совпадений — пустой массив', () => {

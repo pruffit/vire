@@ -11,7 +11,9 @@
     "./messages/*": "./messages/*"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "use-intl": "4.13.5"
@@ -19,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^20",
     "@vire/config": "workspace:*",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.8"
   }
 }

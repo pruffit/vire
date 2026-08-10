@@ -4,19 +4,26 @@
  * aria-label/toast(...) внутри локализованной зоны (app/[locale]/**, components/**
  * кроме components/admin/**) должна уйти в словари packages/i18n/messages.
  *
- * Срез 0: режим ОТЧЁТА — печатает находки, exit 0 всегда. Переключается на падение
- * (exit 1) в срезе J, когда срезы A–H перенесут текст в словари.
+ * Срез J: режим ПАДЕНИЯ — любая находка вне ALLOWLIST валит скрипт (exit 1).
  *
  * Запуск: node scripts/check-i18n.mjs   (cwd = apps/web)
  */
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import { join, dirname, relative } from 'node:path';
+import { join, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const WEB_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CYRILLIC = /[а-яёА-ЯЁ]/;
 
 const TARGET_DIRS = [join(WEB_DIR, 'app', '[locale]'), join(WEB_DIR, 'components')];
+
+// /design — внутренняя витрина дизайн-системы для разработки (noindex, не часть продукта
+// для конечного пользователя): переводить дизайн-жаргон демо смысла не имеет.
+const ALLOWLIST_PREFIXES = [join('app', '[locale]', '(listener)', 'design') + sep];
+
+function isAllowlisted(relPath) {
+  return ALLOWLIST_PREFIXES.some((prefix) => relPath.startsWith(prefix));
+}
 
 function collectFiles(dir) {
   const out = [];
@@ -53,6 +60,7 @@ for (const dir of TARGET_DIRS) {
     const src = stripNoise(raw);
     if (!CYRILLIC.test(src)) continue;
     const rel = relative(WEB_DIR, file);
+    if (isAllowlisted(rel)) continue;
     let m;
     while ((m = JSX_TEXT_RE.exec(src))) findings.push({ file: rel, kind: 'jsx-text', snippet: m[1].trim() });
     while ((m = ATTR_RE.exec(src))) findings.push({ file: rel, kind: `attr:${m[1]}`, snippet: m[2].trim() });
@@ -71,7 +79,7 @@ for (const f of findings) {
   byFile.get(f.file).push(f);
 }
 
-console.log(`⚠ check:i18n (режим отчёта, не падает) — ${findings.length} находок в ${byFile.size} файлах:\n`);
+console.log(`✗ check:i18n — ${findings.length} находок в ${byFile.size} файлах:\n`);
 for (const [file, items] of byFile) {
   console.log(`  ${file}`);
   for (const item of items.slice(0, 5)) {
@@ -79,5 +87,5 @@ for (const [file, items] of byFile) {
   }
   if (items.length > 5) console.log(`    …и ещё ${items.length - 5}`);
 }
-console.log('\nПеренос текста в packages/i18n/messages — срезы A–H. check:i18n станет падающим в срезе J.');
-process.exit(0);
+console.log('\nПеренос текста в packages/i18n/messages — строки только в словарях, ru и en одновременно.');
+process.exit(1);

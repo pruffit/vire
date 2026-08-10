@@ -192,6 +192,24 @@ pnpm --filter @vire/db db:make-admin <email> [role]  # выдать роль (de
 
 Компоненты пишутся на `bg-[var(--artist-bg)]`, `text-[var(--artist-text)]` — без форков кода.
 
+## Локализация (ru/en)
+
+Публичная часть, дашборд, соцслой, письма и пуш — на ru (по умолчанию, URL без префикса)
+и en (`/en`-префикс). Детали — `docs/features/i18n.md`.
+
+- Строки только в `packages/i18n/messages/{ru,en}/<namespace>.json`, ru и en заполняются
+  **одновременно** в одном изменении — не оставлять словарь расходящимся между локалями.
+- Внутри `app/[locale]/**` и `components/**` (кроме `components/admin/**`) — навигация
+  только через `Link`/`redirect`/`usePathname`/`useRouter`/`getPathname` из
+  `@/i18n/navigation`, не из `next/navigation`/`next/link`.
+  `useSearchParams`/`notFound`/`useParams` остаются из `next/navigation`.
+- `/admin` и внутренняя витрина `/design` не локализуются (backoffice и dev-инструмент,
+  не продукт для конечного пользователя) — это статус-кво, а не пробел.
+- Выбор языка пользователя — `users.locale` (nullable, фолбэк `ru`); письма/пуш берут
+  локаль получателя из БД на момент отправки, не из JWT (локаль в токен не кладётся).
+- Гейт `pnpm --filter @vire/web check:i18n` (в `prebuild` и CI `gates`) падает на
+  кириллице вне словарей в локализованной зоне — гонять как typecheck/lint/test.
+
 ## Локальная разработка
 
 ```bash
@@ -231,9 +249,10 @@ pnpm --filter @vire/core typecheck     # tsc --noEmit
 pnpm --filter @vire/db typecheck       # tsc --noEmit
 pnpm --filter @vire/web lint           # eslint
 pnpm --filter @vire/web check:routes   # инвариант роутинга (см. ниже)
+pnpm --filter @vire/web check:i18n     # кириллица вне словарей packages/i18n/messages
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов
-pnpm --filter @vire/web build          # прод-сборка (prebuild сам гоняет check:routes)
+pnpm --filter @vire/web build          # прод-сборка (prebuild гоняет check:routes + check:i18n)
 pnpm audit --audit-level=high          # из корня; гейт CI, локально о нём легко забыть
 ```
 

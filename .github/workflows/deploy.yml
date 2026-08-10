@@ -39,7 +39,6 @@ jobs:
       - name: Route slug check
         run: pnpm --filter @vire/web check:routes
       # Барьер: кириллица вне словарей packages/i18n/messages в локализованной зоне.
-      # Пока в режиме отчёта (exit 0) — падающим станет в срезе J.
       - name: i18n check
         run: pnpm --filter @vire/web check:i18n
       - name: Test

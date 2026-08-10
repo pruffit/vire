@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getTranslator } from '@vire/i18n/translator';
+
+const t = await getTranslator('ru', 'auth.errors');
 
 const { auth, getAuthInfo, setPasswordHash, hashFn } = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -39,7 +42,7 @@ describe('setPasswordAction', () => {
 
     const result = await setPasswordAction(null, makeFormData({ password: 'password1', confirmPassword: 'password1' }));
 
-    expect(result).toBe('Необходимо войти в аккаунт.');
+    expect(result).toBe(t('signInRequired'));
     expect(getAuthInfo).not.toHaveBeenCalled();
   });
 
@@ -49,7 +52,7 @@ describe('setPasswordAction', () => {
 
     const result = await setPasswordAction(null, makeFormData({ password: 'password1', confirmPassword: 'password1' }));
 
-    expect(result).toBe('Пароль уже задан. Воспользуйся ссылкой для входа, чтобы изменить его.');
+    expect(result).toBe(t('passwordAlreadySet'));
     expect(setPasswordHash).not.toHaveBeenCalled();
   });
 
@@ -70,7 +73,7 @@ describe('setPasswordAction', () => {
 
     const result = await setPasswordAction(null, makeFormData({ password: 'password1', confirmPassword: 'password2' }));
 
-    expect(result).toBe('Пароли не совпадают.');
+    expect(result).toBe(t('passwordMismatch'));
     expect(getAuthInfo).not.toHaveBeenCalled();
   });
 });

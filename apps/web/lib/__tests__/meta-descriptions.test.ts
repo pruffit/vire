@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import { getTranslator } from '@vire/i18n/translator';
 import { releaseMetaDescription, trackMetaDescription } from '../meta-descriptions';
+
+const t = await getTranslator('ru');
 
 describe('releaseMetaDescription', () => {
   it('varies wording by release type', async () => {
@@ -9,9 +12,9 @@ describe('releaseMetaDescription', () => {
     expect(single).not.toBe(ep);
     expect(ep).not.toBe(album);
     expect(single).not.toBe(album);
-    expect(single.toLowerCase()).toContain('сингл');
+    expect(single.toLowerCase()).toContain(t('common.releaseType.SINGLE').toLowerCase());
     expect(ep.toLowerCase()).toContain('ep');
-    expect(album.toLowerCase()).toContain('альбом');
+    expect(album.toLowerCase()).toContain(t('common.releaseType.ALBUM').toLowerCase());
   });
 
   it('includes the year when provided and omits it otherwise', async () => {

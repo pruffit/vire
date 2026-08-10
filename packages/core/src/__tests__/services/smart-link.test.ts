@@ -105,7 +105,7 @@ describe('SmartLinkService.create', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error).toBeInstanceOf(ValidationError);
-      expect(result.error.message).toBe('Нужно название');
+      expect(result.error.code).toBe('smartLink.titleRequired');
     }
     expect(repo.create).not.toHaveBeenCalled();
   });
@@ -117,7 +117,7 @@ describe('SmartLinkService.create', () => {
     const result = await service.create('artist-1', { ...createInput, slugRaw: '!!!' });
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.message).toBe('Некорректный адрес (slug)');
+    if (!result.ok) expect(result.error.code).toBe('smartLink.invalidSlug');
     expect(repo.create).not.toHaveBeenCalled();
   });
 
@@ -130,7 +130,7 @@ describe('SmartLinkService.create', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error).toBeInstanceOf(ConflictError);
-      expect(result.error.message).toBe('Такой адрес уже занят');
+      expect(result.error.code).toBe('smartLink.slugTaken');
     }
     expect(repo.create).not.toHaveBeenCalled();
   });
@@ -142,7 +142,7 @@ describe('SmartLinkService.create', () => {
     const result = await service.create('artist-1', { ...createInput, releaseIdRaw: 'release-x' });
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.message).toBe('Релиз не найден');
+    if (!result.ok) expect(result.error.code).toBe('smartLink.releaseNotFound');
     expect(repo.create).not.toHaveBeenCalled();
   });
 
@@ -248,7 +248,7 @@ describe('SmartLinkService.update', () => {
     const result = await service.update('link-1', 'artist-1', { ...updateInput, releaseIdRaw: 'release-x' });
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.message).toBe('Релиз не найден');
+    if (!result.ok) expect(result.error.code).toBe('smartLink.releaseNotFound');
   });
 
   it('clears the cover when removeCover is set and no new cover is given', async () => {

@@ -63,7 +63,7 @@ describe('PurchaseService.purchase', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error).toBeInstanceOf(ValidationError);
-      expect(result.error.message).toBe('Платёжный сервис не настроен');
+      expect(result.error.code).toBe('purchase.gatewayNotConfigured');
     }
     expect(repo.getPending).not.toHaveBeenCalled();
     expect(gateway.createPayment).not.toHaveBeenCalled();

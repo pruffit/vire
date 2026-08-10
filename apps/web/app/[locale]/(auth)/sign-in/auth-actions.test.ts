@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getTranslator } from '@vire/i18n/translator';
+
+const t = await getTranslator('ru', 'auth.errors');
 
 const { findByEmail, createWithPassword, hashFn, signIn } = vi.hoisted(() => ({
   findByEmail: vi.fn(),
@@ -42,7 +45,7 @@ describe('registerAction', () => {
 
     const result = await registerAction(null, makeFormData(validFields));
 
-    expect(result).toBe('Аккаунт с этим email уже существует. Войди вместо этого.');
+    expect(result).toBe(t('accountExists'));
     expect(createWithPassword).not.toHaveBeenCalled();
     expect(signIn).not.toHaveBeenCalled();
   });
@@ -63,7 +66,7 @@ describe('registerAction', () => {
   it('rejects invalid input at the edge without touching the db', async () => {
     const result = await registerAction(null, makeFormData({ ...validFields, email: 'not-an-email' }));
 
-    expect(result).toBe('Введи корректный email.');
+    expect(result).toBe(t('invalidEmail'));
     expect(findByEmail).not.toHaveBeenCalled();
   });
 });

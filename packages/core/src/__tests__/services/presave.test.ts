@@ -45,7 +45,7 @@ describe('PresaveService.presaveUser', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error).toBeInstanceOf(ValidationError);
-      expect(result.error.message).toBe('Пресейв недоступен: релиз уже вышел или не запланирован');
+      expect(result.error.code).toBe('presave.notPresavable');
     }
     expect(repo.presaveForUser).not.toHaveBeenCalled();
   });

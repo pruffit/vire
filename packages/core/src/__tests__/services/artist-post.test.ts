@@ -196,12 +196,12 @@ describe('ArtistPostService.adminUpdate', () => {
     expect(empty.ok).toBe(false);
     if (!empty.ok) {
       expect(empty.error).toBeInstanceOf(ValidationError);
-      expect(empty.error.message).toBe('Текст: 1–10000 символов');
+      expect(empty.error.code).toBe('artistPost.textLength');
     }
 
     const tooLong = await service.adminUpdate('post-1', { title: null, body: 'x'.repeat(10001) });
     expect(tooLong.ok).toBe(false);
-    if (!tooLong.ok) expect(tooLong.error.message).toBe('Текст: 1–10000 символов');
+    if (!tooLong.ok) expect(tooLong.error.code).toBe('artistPost.textLength');
 
     expect(repo.update).not.toHaveBeenCalled();
   });
