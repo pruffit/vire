@@ -5,13 +5,15 @@ import { JsonLd } from '@/components/json-ld';
 import { faqPageJsonLd } from '@/lib/structured-data';
 import { getSiteFaq } from '@/lib/faq';
 import { pageMetadata } from '@/lib/metadata';
+import { resolveLocale } from '@/lib/locale';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('about.meta');
+  const [t, locale] = await Promise.all([getTranslations('about.meta'), resolveLocale()]);
   return pageMetadata({
     url: '/about',
     title: t('title'),
     description: t('description'),
+    locale,
   });
 }
 

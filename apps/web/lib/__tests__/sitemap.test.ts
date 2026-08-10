@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SITEMAP_PAGE_SIZE, planShards, parseShardId, shardFileName, type ShardId } from '../sitemap';
+import { SITEMAP_PAGE_SIZE, planShards, parseShardId, shardFileName, localizedSitemapUrls, type ShardId } from '../sitemap';
 
 const zeroCounts = { artists: 0, releases: 0, tracks: 0, smartlinks: 0, playlists: 0 };
 
@@ -85,6 +85,30 @@ describe('shardFileName', () => {
 
   it('renders a sectioned shard', () => {
     expect(shardFileName({ section: 'tracks', page: 7 })).toBe('tracks-7.xml');
+  });
+});
+
+describe('localizedSitemapUrls', () => {
+  it('emits one entry per locale, each carrying the same full alternate set', () => {
+    const urls = localizedSitemapUrls('https://vire.ru', '/artists/nova', { priority: 0.7 });
+    expect(urls).toHaveLength(2);
+    expect(urls.map((u) => u.url)).toEqual([
+      'https://vire.ru/artists/nova',
+      'https://vire.ru/en/artists/nova',
+    ]);
+    for (const u of urls) {
+      expect(u.priority).toBe(0.7);
+      expect(u.alternates).toEqual([
+        { hreflang: 'ru', href: 'https://vire.ru/artists/nova' },
+        { hreflang: 'en', href: 'https://vire.ru/en/artists/nova' },
+        { hreflang: 'x-default', href: 'https://vire.ru/artists/nova' },
+      ]);
+    }
+  });
+
+  it('handles the root path without a trailing slash on the default locale', () => {
+    const urls = localizedSitemapUrls('https://vire.ru', '', { priority: 1 });
+    expect(urls.map((u) => u.url)).toEqual(['https://vire.ru', 'https://vire.ru/en']);
   });
 });
 

@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { getTranslations } from 'next-intl/server';
 import { db, DrizzleArtistRepository, getSmartLinkBySlug, getSmartLinkRelease } from '@vire/db';
 import { ArtistService, resolveSmartLinkDisplay } from '@vire/core';
 import { SITE_NAME } from '@/lib/site';
@@ -28,9 +29,10 @@ export default async function SmartLinkOgImage({
   const release = smartLink.releaseId ? await getSmartLinkRelease(smartLink.releaseId) : null;
   const display = resolveSmartLinkDisplay(smartLink, release, new Date());
   const cover = await fetchCoverThumb(display.coverUrl);
+  const t = await getTranslations('seo.og');
 
   return new ImageResponse(
-    ogCard({ kind: 'СМАРТЛИНК', title: display.title, subtitle: smartLink.subtitle ?? artist.name, cover }),
+    ogCard({ kind: t('kind.smartlink'), title: display.title, subtitle: smartLink.subtitle ?? artist.name, cover }),
     { ...size, headers: OG_CACHE_HEADERS },
   );
 }

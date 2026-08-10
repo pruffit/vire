@@ -1,3 +1,6 @@
+import { LOCALES, DEFAULT_LOCALE, localizedPath } from '@vire/i18n/config';
+import type { SitemapUrl } from './sitemap-xml';
+
 export const SITEMAP_PAGE_SIZE = 10_000;
 
 export type SitemapSection = 'static' | 'artists' | 'releases' | 'tracks' | 'smartlinks' | 'playlists';
@@ -35,4 +38,25 @@ export function parseShardId(raw: string): ShardId | null {
 export function shardFileName(shard: ShardId): string {
   if (shard.section === 'static') return 'static.xml';
   return `${shard.section}-${shard.page}.xml`;
+}
+
+export interface SitemapUrlMeta {
+  lastModified?: Date;
+  changeFrequency?: string;
+  priority?: number;
+}
+
+/** Одна страница → по одной <url>-записи на локаль (as-needed: ru без префикса, en с /en),
+ *  каждая с полным набором xhtml:link alternate (обе локали + x-default) — рекомендация
+ *  Google для мультиязычных сайтмапов, не одна запись с альтернативами-ссылками мимо себя. */
+export function localizedSitemapUrls(siteUrl: string, path: string, meta: SitemapUrlMeta = {}): SitemapUrl[] {
+  const alternates = [
+    ...LOCALES.map((locale) => ({ hreflang: locale, href: `${siteUrl}${localizedPath(locale, path)}` })),
+    { hreflang: 'x-default', href: `${siteUrl}${localizedPath(DEFAULT_LOCALE, path)}` },
+  ];
+  return LOCALES.map((locale) => ({
+    url: `${siteUrl}${localizedPath(locale, path)}`,
+    alternates,
+    ...meta,
+  }));
 }

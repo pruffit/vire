@@ -9,6 +9,10 @@
 - `metadataBase` задаётся из `NEXT_PUBLIC_SITE_URL` → `AUTH_URL` → `http://localhost:3000` (`apps/web/lib/site.ts`)
 - Шаблон заголовков: `%s — VireMusic` (через `title.template` в корневом `layout.tsx`)
 - Дефолтные OG/Twitter в `app/layout.tsx`
+- `SITE_DESCRIPTION`/`SITE_TITLE`/`SITE_LOCALE` — не константы, а `siteDescription(locale)`/
+  `siteTitle(locale)`/`siteLocale(locale)` (`lib/site.ts`), тянут строки из `@vire/i18n`
+  неймспейса `seo`. Фолбэк — `DEFAULT_LOCALE` (ru), нужен вне `app/[locale]` (корневой
+  `opengraph-image.tsx`, `app/manifest.ts`, `app/admin`, где локали запроса нет)
 
 ### `generateMetadata` на страницах
 
@@ -23,6 +27,18 @@
 - Метаданные собираются хелпером `lib/metadata.ts`, а не вручную: Next мёржит их
   **поверхностно** — свой `openGraph` на странице заменяет родительский целиком
   (siteName/locale/файловая картинка теряются)
+- `pageMetadata` принимает обязательный `locale` и проставляет `alternates.canonical`
+  (через `localizedPath` — ru без префикса, en под `/en`), `alternates.languages`
+  (`ru`/`en`/`x-default`) и `openGraph.locale`. Каждая `generateMetadata` на странице
+  сама достаёт локаль — `resolveLocale()` (`lib/locale.ts`, обёртка над next-intl
+  `getLocale()`, сужает generic `Locale` из `use-intl` до строгого `@vire/i18n` союза)
+- `localizedAlternates(locale, url)` — тот же canonical/languages без остального
+  `openGraph`, для страниц, которым нужен только он (`(home)/page.tsx` — своя og не
+  ставится, наследуется из корневого `layout.tsx`, иначе поверхностный мёрж стёр бы её)
+- JSON-LD билдеры (`musicGroupJsonLd` и т.п.) принимают опциональный `locale` (дефолт ru)
+  и проставляют `inLanguage`; `websiteJsonLd`/`artistsCatalogJsonLd` берут `name`/
+  `description` параметрами — тексты не зашиты в билдер, их даёт вызывающая страница
+  из своих словарей
 
 ### OG-картинки — брендовые карточки
 
@@ -52,7 +68,9 @@
 
 ### Технические файлы
 
-- `apps/web/app/robots.ts` — запрещает `/admin`, `/dashboard`, `/api`
+- `apps/web/app/robots.ts` — запрещает `/api/`, `/dashboard`, `/admin`, `/profile`,
+  `/sign-in` и те же пути под `/en` (robots.txt матчит по префиксу — `Disallow: /dashboard`
+  не блокирует `/en/dashboard`)
 - Sitemap — индекс + шарды, потолок 10k URL на файл (протокол ограничивает 50k):
   `GET /sitemap.xml` (`app/sitemap.xml/route.ts`) отдаёт `<sitemapindex>` со ссылками на
   шарды, посчитанными на каждый запрос; `GET /sitemaps/{section}-{page}.xml` и
@@ -69,7 +87,15 @@
   перечислена **без** завершающего слэша: Next для корневого canonical безусловно
   отдаёт origin (`resolve-url.js`), sitemap сверяется с ним. Адрес `/sitemap.xml` не
   менялся при переезде на индекс — уже подтверждён в Яндекс.Вебмастер/Search Console.
-- `apps/web/app/manifest.ts` — PWA-манифест
+  Каждый URL шарда отдаётся дважды — по одной `<url>`-записи на локаль
+  (`lib/sitemap.ts:localizedSitemapUrls`), у каждой полный набор `<xhtml:link
+  rel="alternate" hreflang="…">` (ru/en/x-default) — рекомендация Google для
+  мультиязычных карт сайта, не одна запись со ссылками мимо себя. `<urlset>` объявляет
+  `xmlns:xhtml`, без него валидаторы ругаются на `xhtml:link`
+- `apps/web/app/manifest.ts` — PWA-манифест, один файл на всё приложение (живёт вне
+  `app/[locale]`, `proxy.ts` не пускает пути с точкой в next-intl middleware — локали
+  запроса нет). Отдаёт дефолтную локаль (ru) с корректным `lang`: два манифеста с
+  переключением ссылки в layout по локали не оправданы объёмом PWA-аудитории
 
 ## Где код
 

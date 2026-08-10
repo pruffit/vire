@@ -9,6 +9,7 @@ import {
   faqPageJsonLd,
   artistPostJsonLd,
   musicPlaylistJsonLd,
+  websiteJsonLd,
 } from '../structured-data';
 
 // SITE_URL по умолчанию (без env) = http://localhost:3000
@@ -129,12 +130,22 @@ describe('breadcrumbListJsonLd', () => {
   });
 });
 
+describe('websiteJsonLd', () => {
+  it('builds a WebSite with the given locale', () => {
+    const ld = websiteJsonLd({ name: 'VireMusic', description: 'Описание', locale: 'en' });
+    expect(ld['@type']).toBe('WebSite');
+    expect(ld.url).toBe(BASE);
+    expect(ld.inLanguage).toBe('en');
+  });
+});
+
 describe('artistsCatalogJsonLd', () => {
   it('builds a CollectionPage for the artists catalog', () => {
-    const ld = artistsCatalogJsonLd();
+    const ld = artistsCatalogJsonLd({ name: 'Артисты — VireMusic', description: 'Все артисты', locale: 'ru' });
     expect(ld['@type']).toBe('CollectionPage');
     expect(ld.url).toBe(`${BASE}/artists`);
     expect(ld.name).toBe('Артисты — VireMusic');
+    expect(ld.inLanguage).toBe('ru');
   });
 });
 

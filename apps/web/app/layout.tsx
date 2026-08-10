@@ -22,7 +22,9 @@ import { ScrollRestoration } from '@/components/scroll-restoration';
 import { SitePresence } from '@/components/site-presence';
 import { YandexMetrika } from '@/components/yandex-metrika';
 import { fontVariables } from '@/lib/fonts';
-import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_TITLE, SITE_LOCALE, TITLE_TEMPLATE } from '@/lib/site';
+import { SITE_URL, SITE_NAME, siteDescription, siteTitle, siteLocale, TITLE_TEMPLATE } from '@/lib/site';
+import { localizedAlternates } from '@/lib/metadata';
+import { getTranslator } from '@vire/i18n/translator';
 import './globals.css';
 
 const geistSans = Geist({
@@ -37,67 +39,81 @@ const geistMono = Geist_Mono({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: SITE_TITLE,
-    template: TITLE_TEMPLATE,
-  },
-  description: SITE_DESCRIPTION,
-  applicationName: SITE_NAME,
-  keywords: ['музыка', 'артисты', 'релизы', 'СНГ', 'инди', 'независимая музыка', SITE_NAME],
-  openGraph: {
-    type: 'website',
-    siteName: SITE_NAME,
-    locale: SITE_LOCALE,
-    url: '/',
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-  },
-  robots: { index: true, follow: true },
-  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: SITE_NAME },
-  alternates: { canonical: '/' },
-  // явные icons, иначе Яндекс/Google не всегда подхватывают favicon в выдаче
-  icons: {
-    icon: [
-      { url: '/icon.svg', type: 'image/svg+xml', sizes: 'any' },
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon-96x96.png', type: 'image/png', sizes: '96x96' },
-      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
-      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
-    ],
-    apple: '/apple-icon.png',
-    shortcut: '/favicon.ico',
-  },
-  verification: {
-    yandex: '6fdc9d6fa3807d7b',
-    // подтверждение для Google Search Console
-    ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
-      ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
-      : {}),
-  },
-};
+// /admin и другие нелокализованные ветки не проходят через next-intl middleware —
+// заголовка нет, остаёмся на дефолтной локали (см. proxy.ts). Тот же приём — в RootLayout ниже.
+async function headerLocaleOrDefault(): Promise<Locale> {
+  const requestHeaders = await headers();
+  const headerLocale = requestHeaders.get('x-next-intl-locale');
+  return headerLocale && isLocale(headerLocale) ? headerLocale : DEFAULT_LOCALE;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await headerLocaleOrDefault();
+  const [title, description, tSeo] = await Promise.all([
+    siteTitle(locale),
+    siteDescription(locale),
+    getTranslator(locale, 'seo'),
+  ]);
+  const keywords = [...(tSeo.raw('keywords') as string[]), SITE_NAME];
+  const alternates = localizedAlternates(locale, '/');
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: title,
+      template: TITLE_TEMPLATE,
+    },
+    description,
+    applicationName: SITE_NAME,
+    keywords,
+    openGraph: {
+      type: 'website',
+      siteName: SITE_NAME,
+      locale: siteLocale(locale),
+      url: alternates.canonical as string,
+      title,
+      description,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+    robots: { index: true, follow: true },
+    appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: SITE_NAME },
+    alternates,
+    // явные icons, иначе Яндекс/Google не всегда подхватывают favicon в выдаче
+    icons: {
+      icon: [
+        { url: '/icon.svg', type: 'image/svg+xml', sizes: 'any' },
+        { url: '/favicon.ico', sizes: 'any' },
+        { url: '/favicon-96x96.png', type: 'image/png', sizes: '96x96' },
+        { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+        { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
+      ],
+      apple: '/apple-icon.png',
+      shortcut: '/favicon.ico',
+    },
+    verification: {
+      yandex: '6fdc9d6fa3807d7b',
+      // подтверждение для Google Search Console
+      ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+        ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+        : {}),
+    },
+  };
+}
 
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await auth();
   const userId = session?.user?.id;
-  const [incomingCount, messagesUnread, requestHeaders] = await Promise.all([
+  const [incomingCount, messagesUnread, locale] = await Promise.all([
     userId ? countUnseenIncomingCached(userId) : 0,
     userId ? countUnreadMessagesCached(userId) : 0,
-    headers(),
+    headerLocaleOrDefault(),
   ]);
-
-  // /admin и другие нелокализованные ветки не проходят через next-intl middleware —
-  // заголовка нет, остаёмся на дефолтной локали (см. proxy.ts).
-  const headerLocale = requestHeaders.get('x-next-intl-locale');
-  const locale: Locale = headerLocale && isLocale(headerLocale) ? headerLocale : DEFAULT_LOCALE;
   const messages = await getMessages(locale);
 
   return (

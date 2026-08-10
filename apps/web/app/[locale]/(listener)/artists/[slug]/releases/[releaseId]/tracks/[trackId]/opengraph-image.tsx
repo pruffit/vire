@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { getTranslations } from 'next-intl/server';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { ArtistService, ReleaseService, isReleasePubliclyVisible } from '@vire/core';
 import { SITE_NAME } from '@/lib/site';
@@ -37,9 +38,10 @@ export default async function TrackOgImage({
 
   const cover = await fetchCoverThumb(release.coverUrl);
   const fullTitle = displayTrackTitle(track.title, { version: track.version, credits: track.credits });
+  const t = await getTranslations('seo.og');
 
   return new ImageResponse(
-    ogCard({ kind: 'ТРЕК', title: fullTitle, subtitle: `${release.title} · ${artist.name}`, cover }),
+    ogCard({ kind: t('kind.track'), title: fullTitle, subtitle: `${release.title} · ${artist.name}`, cover }),
     { ...size, headers: OG_CACHE_HEADERS },
   );
 }

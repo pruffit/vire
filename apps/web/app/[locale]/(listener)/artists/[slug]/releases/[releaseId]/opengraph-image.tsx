@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { getTranslations } from 'next-intl/server';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository } from '@vire/db';
 import { ArtistService, ReleaseService, isReleasePubliclyVisible } from '@vire/core';
 import { SITE_NAME } from '@/lib/site';
@@ -30,10 +31,11 @@ export default async function ReleaseOgImage({ params }: { params: Promise<{ slu
 
   const cover = await fetchCoverThumb(release.coverUrl);
   const year = releaseYear(release.releaseDate);
+  const t = await getTranslations('seo.og');
 
   return new ImageResponse(
     ogCard({
-      kind: 'РЕЛИЗ',
+      kind: t('kind.release'),
       title: release.title,
       subtitle: year ? `${artist.name} · ${year}` : artist.name,
       cover,

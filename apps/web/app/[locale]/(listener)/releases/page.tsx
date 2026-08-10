@@ -9,13 +9,15 @@ import { PageContainer } from '@/components/page-container';
 import { breadcrumbListJsonLd } from '@/lib/structured-data';
 import { touchPill } from '@/components/popover';
 import { pageMetadata } from '@/lib/metadata';
+import { resolveLocale } from '@/lib/locale';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('catalog');
+  const [t, locale] = await Promise.all([getTranslations('catalog'), resolveLocale()]);
   return pageMetadata({
     url: '/releases',
     title: t('releasesPage.metaTitle'),
     description: t('releasesPage.metaDescription'),
+    locale,
   });
 }
 

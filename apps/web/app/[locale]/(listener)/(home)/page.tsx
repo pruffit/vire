@@ -7,6 +7,9 @@ import { FlowBlock } from '@/components/home/flow-block';
 import { JsonLd } from '@/components/json-ld';
 import { PageContainer } from '@/components/page-container';
 import { websiteJsonLd } from '@/lib/structured-data';
+import { localizedAlternates } from '@/lib/metadata';
+import { SITE_NAME, siteDescription } from '@/lib/site';
+import { resolveLocale } from '@/lib/locale';
 import { RailSkeleton, TrackListSkeleton } from '@/components/home/skeletons';
 import {
   cachedLatestReleases,
@@ -24,11 +27,15 @@ import {
 } from './home-sections';
 import type { Metadata } from 'next';
 
-// OG-картинка наследуется из app/opengraph-image.tsx, title/description — из layout
-export const metadata: Metadata = { alternates: { canonical: '/' } };
+// OG-картинка наследуется из app/opengraph-image.tsx, title/description — из layout;
+// только canonical/hreflang зависят от локали и проставляются здесь.
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await resolveLocale();
+  return { alternates: localizedAlternates(locale, '/') };
+}
 
 export default async function HomePage() {
-  const t = await getTranslations('home');
+  const [t, locale] = await Promise.all([getTranslations('home'), resolveLocale()]);
   const session = await auth();
   const userId = session?.user?.id;
 
@@ -43,7 +50,7 @@ export default async function HomePage() {
 
   return (
     <PageContainer spaceY="home">
-      <JsonLd data={websiteJsonLd()} />
+      <JsonLd data={websiteJsonLd({ name: SITE_NAME, description: await siteDescription(locale), locale })} />
       <h1 className="sr-only">VireMusic — {t('srHeading')}</h1>
 
       {/* без FadeUp — FeaturedRelease содержит LCP-изображение, opacity-анимация задержала бы LCP */}

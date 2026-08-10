@@ -1,6 +1,5 @@
-// Для поверхностей вне текущего среза локализации: app/admin/** (живёт вне next-intl,
-// proxy.ts не пускает /admin в middleware) и lib/meta-descriptions.ts (SEO, срез H) —
-// остаются русскими до своего среза; не тащим их в общий i18n-слой раньше времени.
+// Только для app/admin/** — бэкофис живёт вне next-intl (proxy.ts не пускает /admin
+// в middleware) и остаётся русским; не тащим его в общий i18n-слой.
 export function pluralRu(n: number, forms: readonly [string, string, string]): string {
   const mod10 = n % 10;
   const mod100 = n % 100;

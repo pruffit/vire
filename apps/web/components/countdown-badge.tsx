@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { useTranslations } from 'next-intl';
 
 interface Props {
   releaseDate: Date;
@@ -26,6 +27,7 @@ function getTimeLeft(target: Date): TimeLeft | null {
 }
 
 export function CountdownBadge({ releaseDate, title }: Props) {
+  const t = useTranslations('release.countdownBadge');
   // null на сервере: время-зависимый рендер (Date.now()) даёт SSR/client-расхождение
   // секунд/минут → hydration mismatch. Считаем только после маунта, useEffect тикает сразу.
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
@@ -47,19 +49,19 @@ export function CountdownBadge({ releaseDate, title }: Props) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="inline-flex items-center gap-3 px-4 py-2 rounded-xl border border-[color-mix(in_oklch,var(--artist-accent)_25%,transparent)] bg-[color-mix(in_oklch,var(--artist-accent)_6%,transparent)]"
-      aria-label={`Выходит через ${days} дней`}
+      aria-label={t('aria', { days })}
     >
       <span className="label-mono text-[10px] opacity-50">
-        Скоро
+        {t('label')}
       </span>
       <div className="flex items-baseline gap-1 font-mono tabular-nums">
         {days > 0 && (
-          <TimeUnit value={days} label="д" />
+          <TimeUnit value={days} label={t('unitDays')} />
         )}
-        <TimeUnit value={hours} label="ч" />
-        <TimeUnit value={minutes} label="м" />
+        <TimeUnit value={hours} label={t('unitHours')} />
+        <TimeUnit value={minutes} label={t('unitMinutes')} />
         {days === 0 && (
-          <TimeUnit value={seconds} label="с" />
+          <TimeUnit value={seconds} label={t('unitSeconds')} />
         )}
       </div>
       <span className="text-xs opacity-60 max-w-[120px] truncate">{title}</span>

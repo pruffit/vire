@@ -27,10 +27,11 @@ export default async function PlaylistOgImage({ params }: { params: Promise<{ id
   const authorName = owner?.name ?? SITE_NAME;
   const count = playlist.tracks.length;
   const tCommon = await getTranslations('common');
+  const tSeo = await getTranslations('seo.og');
 
   return new ImageResponse(
     ogCard({
-      kind: 'ПЛЕЙЛИСТ',
+      kind: tSeo('kind.playlist'),
       title: playlist.title,
       subtitle: `${authorName} · ${tCommon('trackCount', { count })}`,
       cover,

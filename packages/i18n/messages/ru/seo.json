@@ -1,1 +1,22 @@
-{}
+{
+  "siteDescription": "Независимая музыкальная площадка для артистов и слушателей СНГ",
+  "siteTitleSuffix": "независимая музыкальная площадка",
+  "keywords": ["музыка", "артисты", "релизы", "СНГ", "инди", "независимая музыка"],
+  "og": {
+    "kind": {
+      "artist": "АРТИСТ",
+      "release": "РЕЛИЗ",
+      "track": "ТРЕК",
+      "playlist": "ПЛЕЙЛИСТ",
+      "smartlink": "СМАРТЛИНК"
+    },
+    "artistFallbackBio": "Артист на VireMusic"
+  },
+  "release": {
+    "kindFallback": "Релиз",
+    "description": "{kind} «{title}»{hasYear, select, yes { {year} года} other {}} от {artistName}{hasCount, select, yes {, {trackCount}} other {}}. Слушать на VireMusic."
+  },
+  "track": {
+    "description": "«{trackTitle}» — трек {artistName} из релиза «{releaseTitle}»{hasYear, select, yes { ({year})} other {}}. Слушать на VireMusic."
+  }
+}

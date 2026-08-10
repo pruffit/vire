@@ -1,1 +1,22 @@
-{}
+{
+  "siteDescription": "An independent music platform for artists and listeners across the CIS",
+  "siteTitleSuffix": "independent music platform",
+  "keywords": ["music", "artists", "releases", "CIS", "indie music", "independent music"],
+  "og": {
+    "kind": {
+      "artist": "ARTIST",
+      "release": "RELEASE",
+      "track": "TRACK",
+      "playlist": "PLAYLIST",
+      "smartlink": "SMART LINK"
+    },
+    "artistFallbackBio": "Artist on VireMusic"
+  },
+  "release": {
+    "kindFallback": "Release",
+    "description": "Stream the {kind} “{title}”{hasYear, select, yes { ({year})} other {}} by {artistName}{hasCount, select, yes { — {trackCount}} other {}} on VireMusic."
+  },
+  "track": {
+    "description": "Listen to “{trackTitle}” by {artistName} from the release “{releaseTitle}”{hasYear, select, yes { ({year})} other {}} on VireMusic."
+  }
+}

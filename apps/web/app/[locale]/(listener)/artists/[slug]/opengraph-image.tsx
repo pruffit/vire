@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { getTranslations } from 'next-intl/server';
 import { db, DrizzleArtistRepository, DrizzleReleaseRepository, artistHasPublishedTrackById } from '@vire/db';
 import { ArtistService, ReleaseService } from '@vire/core';
 import { SITE_NAME } from '@/lib/site';
@@ -26,9 +27,10 @@ export default async function ArtistOgImage({ params }: { params: Promise<{ slug
   const releases = await new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() }).getPublishedByArtist(artist.id);
   const avatar = resolveAvatarUrl(artist.avatarUrl, releases[0]?.coverUrl ?? null);
   const cover = await fetchCoverThumb(avatar);
+  const t = await getTranslations('seo.og');
 
   return new ImageResponse(
-    ogCard({ kind: 'АРТИСТ', title: artist.name, subtitle: artist.bio ?? 'Артист на VireMusic', cover }),
+    ogCard({ kind: t('kind.artist'), title: artist.name, subtitle: artist.bio ?? t('artistFallbackBio'), cover }),
     { ...size, headers: OG_CACHE_HEADERS },
   );
 }

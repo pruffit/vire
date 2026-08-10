@@ -22,6 +22,7 @@ import { musicPlaylistJsonLd } from '@/lib/structured-data';
 import { formatDuration } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
 import { pageMetadata } from '@/lib/metadata';
+import { resolveLocale } from '@/lib/locale';
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ join?: string }> };
 
@@ -42,11 +43,13 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const url = `/playlists/${id}`;
   const description = playlist.description
     ?? t('metaDescriptionFallback', { count: playlist.tracks.length });
+  const locale = await resolveLocale();
 
   return pageMetadata({
     url,
     title: playlist.title,
     description,
+    locale,
     type: 'music.playlist',
     // своя динамическая og-картинка — mosaic обложек, app/(listener)/playlists/[id]/opengraph-image.tsx
     images: null,
@@ -55,6 +58,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function PlaylistPage({ params, searchParams }: Props) {
   const t = await getTranslations();
+  const locale = await resolveLocale();
   const { id } = await params;
   const { join: joinToken } = await searchParams;
   const session = await auth();
@@ -112,7 +116,7 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
             title: playlist.title,
             description: playlist.description,
             tracks: playlist.tracks,
-          })}
+          }, locale)}
         />
       )}
       <FadeUp>

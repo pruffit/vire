@@ -16,6 +16,7 @@ import { JsonLd } from '@/components/json-ld';
 import { Icon } from '@/components/icon';
 import { abs } from '@/lib/structured-data';
 import { pageMetadata } from '@/lib/metadata';
+import { resolveLocale } from '@/lib/locale';
 
 type Props = { params: Promise<{ artistSlug: string; linkSlug: string }> };
 
@@ -38,15 +39,21 @@ async function getData(artistSlug: string, linkSlug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { artistSlug, linkSlug } = await params;
   const data = await getData(artistSlug, linkSlug);
-  if (!data) return { title: 'Не найдено' };
+  const locale = await resolveLocale();
+  if (!data) {
+    const tRelease = await getTranslations('release');
+    return { title: tRelease('notFound') };
+  }
   const { artist, smartLink } = data;
+  const tSmartlink = await getTranslations('release.smartlink');
   const title = `${smartLink.title} — ${artist.name}`;
-  const description = smartLink.subtitle ?? `Слушай «${smartLink.title}» от ${artist.name} на всех площадках`;
+  const description = smartLink.subtitle ?? tSmartlink('metaDescription', { title: smartLink.title, artist: artist.name });
   const url = `/smartlink/${artistSlug}/${linkSlug}`;
   return pageMetadata({
     url,
     title,
     description,
+    locale,
     type: 'music.album',
     images: null, // своя брендовая карточка — opengraph-image.tsx этого сегмента
   });
@@ -61,11 +68,13 @@ export default async function SmartLinkPage({ params }: Props) {
   const { bg, text, accent, grain } = artist.themeTokens;
   const year = display.releaseDate ? new Date(display.releaseDate).getFullYear() : null;
   const tPlatforms = await getTranslations('platforms');
+  const locale = await resolveLocale();
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'MusicAlbum',
     name: smartLink.title,
+    inLanguage: locale,
     url: abs(`/smartlink/${artist.slug}/${smartLink.slug}`),
     ...(smartLink.coverUrl ? { image: abs(smartLink.coverUrl) } : {}),
     ...(smartLink.releaseDate

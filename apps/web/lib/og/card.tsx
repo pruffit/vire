@@ -5,7 +5,8 @@ export const OG_CACHE_HEADERS = { 'Cache-Control': 'public, max-age=300, stale-w
 
 const BG = 'radial-gradient(ellipse 90% 80% at 50% 0%, #2a2030, #141414)';
 
-export type OgKind = 'РЕЛИЗ' | 'ТРЕК' | 'АРТИСТ' | 'ПЛЕЙЛИСТ' | 'СМАРТЛИНК';
+// Локализуемая подпись (АРТИСТ/ARTIST и т.п.) — источник строки: messages/*/seo.json → og.kind.
+export type OgKind = string;
 
 /** Одна обложка, мозаика ≤4 (playlist) или null (плейсхолдер) — одна карточка на все сегменты. */
 export type OgCover = string | string[] | null;

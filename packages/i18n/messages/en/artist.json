@@ -1,7 +1,12 @@
 {
   "catalogPage": {
     "title": "Artists",
+    "metaDescription": "Browse every independent artist on VireMusic.",
     "empty": "No artists here yet."
+  },
+  "meta": {
+    "notFound": "Not found",
+    "bioFallback": "{name} on VireMusic — releases, tracks, and links."
   },
   "catalog": {
     "searchPlaceholder": "Search by name…",

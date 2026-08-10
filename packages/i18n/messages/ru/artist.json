@@ -1,7 +1,12 @@
 {
   "catalogPage": {
     "title": "Артисты",
+    "metaDescription": "Все артисты на платформе VireMusic",
     "empty": "Пока нет ни одного артиста."
+  },
+  "meta": {
+    "notFound": "Не найдено",
+    "bioFallback": "{name} на VireMusic — релизы, треки и ссылки."
   },
   "catalog": {
     "searchPlaceholder": "Поиск по имени…",

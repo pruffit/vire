@@ -7,23 +7,33 @@ import { JsonLd } from '@/components/json-ld';
 import { PageContainer } from '@/components/page-container';
 import { artistsCatalogJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
 import { pageMetadata } from '@/lib/metadata';
+import { applyTitleTemplate } from '@/lib/site';
+import { resolveLocale } from '@/lib/locale';
 
-export const metadata: Metadata = pageMetadata({
-  url: '/artists',
-  title: 'Артисты',
-  description: 'Все артисты на платформе VireMusic',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const [t, locale] = await Promise.all([getTranslations('artist.catalogPage'), resolveLocale()]);
+  return pageMetadata({
+    url: '/artists',
+    title: t('title'),
+    description: t('metaDescription'),
+    locale,
+  });
+}
 
 export default async function ArtistsPage() {
-  const t = await getTranslations('artist.catalogPage');
+  const [t, tBreadcrumb, locale] = await Promise.all([
+    getTranslations('artist.catalogPage'),
+    getTranslations('release.breadcrumb'),
+    resolveLocale(),
+  ]);
   const artists = await listActiveArtists();
 
   return (
     <PageContainer spaceY="8">
-      <JsonLd data={artistsCatalogJsonLd()} />
+      <JsonLd data={artistsCatalogJsonLd({ name: applyTitleTemplate(t('title')), description: t('metaDescription'), locale })} />
       <JsonLd data={breadcrumbListJsonLd([
-        { name: 'Главная', url: '/' },
-        { name: 'Артисты', url: '/artists' },
+        { name: tBreadcrumb('home'), url: '/' },
+        { name: t('title'), url: '/artists' },
       ])} />
       <FadeUp>
         <header className="flex items-baseline justify-between">

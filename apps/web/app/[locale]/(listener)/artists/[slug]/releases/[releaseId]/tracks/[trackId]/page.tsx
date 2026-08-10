@@ -30,6 +30,7 @@ import { countListening } from '@/lib/presence';
 import { formatDuration, releaseYear } from '@/lib/format';
 import { trackMetaDescription } from '@/lib/meta-descriptions';
 import { pageMetadata } from '@/lib/metadata';
+import { resolveLocale } from '@/lib/locale';
 import { artistFontStyle } from '@/lib/fonts';
 import { SectionHeader } from '@/components/section-header';
 import { TrackLyrics } from './track-lyrics';
@@ -66,19 +67,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const { artist, release, track } = data;
+  const locale = await resolveLocale();
   const url = `/artists/${slug}/releases/${releaseId}/tracks/${trackId}`;
   const fullTitle = displayTrackTitle(track.title, { version: track.version, credits: track.credits });
-  const description = trackMetaDescription({
+  const description = await trackMetaDescription({
     trackTitle: fullTitle,
     releaseTitle: release.title,
     artistName: artist.name,
     year: releaseYear(release.releaseDate),
+    locale,
   });
   const title = `${fullTitle} — ${artist.name}`;
   return pageMetadata({
     url,
     title,
     description,
+    locale,
     type: 'music.song',
     images: null, // своя брендовая карточка — opengraph-image.tsx этого сегмента
   });
@@ -95,6 +99,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
   const t = await getTranslations('track');
   const tRelease = await getTranslations('release');
   const tCommon = await getTranslations('common');
+  const locale = await resolveLocale();
 
   const { artist, release, tracks, track } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
@@ -145,6 +150,7 @@ export default async function TrackPage({ params, searchParams }: Props) {
           },
           { id: release.id, title: release.title, coverUrl: release.coverUrl, releaseDate: release.releaseDate },
           { name: artist.name, slug },
+          locale,
         )}
       />
       <JsonLd data={breadcrumbListJsonLd([

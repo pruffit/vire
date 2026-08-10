@@ -47,15 +47,17 @@ describe('GET /sitemaps/[shard]', () => {
     expect(res.status).toBe(404);
   });
 
-  it('renders the four static routes for static.xml', async () => {
+  it('renders the four static routes for static.xml, doubled for ru+en with hreflang alternates', async () => {
     const res = await GET(req(), ctx('static.xml'));
     const xml = await res.text();
     expect(xml).toContain('<changefreq>daily</changefreq>');
     expect(xml).toContain('<priority>1</priority>');
     expect(xml).toContain('/artists</loc>');
+    expect(xml).toContain('/en/artists</loc>');
     expect(xml).toContain('/releases</loc>');
     expect(xml).toContain('/about</loc>');
-    expect((xml.match(/<url>/g) ?? []).length).toBe(4);
+    expect((xml.match(/<url>/g) ?? []).length).toBe(8);
+    expect(xml).toContain('hreflang="x-default"');
   });
 
   it('renders an empty urlset for a page past the data', async () => {
@@ -67,13 +69,15 @@ describe('GET /sitemaps/[shard]', () => {
     expect(listSitemapArtists).toHaveBeenCalledWith(10_000, 30_000);
   });
 
-  it('builds artist URLs', async () => {
+  it('builds artist URLs for both locales with hreflang alternates', async () => {
     listSitemapArtists.mockResolvedValue([{ slug: 'nova' }]);
     const res = await GET(req(), ctx('artists-0.xml'));
     const xml = await res.text();
-    expect(xml).toContain('/artists/nova</loc>');
+    expect(xml).toContain('<loc>http://localhost:3000/artists/nova</loc>');
+    expect(xml).toContain('<loc>http://localhost:3000/en/artists/nova</loc>');
     expect(xml).toContain('<changefreq>weekly</changefreq>');
     expect(xml).toContain('<priority>0.7</priority>');
+    expect((xml.match(/<url>/g) ?? []).length).toBe(2);
   });
 
   it('builds release URLs with lastmod', async () => {

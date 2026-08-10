@@ -1,13 +1,15 @@
 import { ImageResponse } from 'next/og';
-import { SITE_NAME, SITE_DESCRIPTION } from '@/lib/site';
+import { SITE_NAME, siteDescription } from '@/lib/site';
 
-// fallback OG-картинка для маршрутов без своей openGraph.images
+// fallback OG-картинка для маршрутов без своей openGraph.images — вне app/[locale],
+// запрос без определённой локали (см. app/manifest.ts) — фолбэк на дефолтную (ru).
 export const runtime = 'nodejs';
 export const alt = `${SITE_NAME} — независимая музыкальная площадка`;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-export default function OpengraphImage() {
+export default async function OpengraphImage() {
+  const description = await siteDescription();
   return new ImageResponse(
     (
       <div
@@ -44,7 +46,7 @@ export default function OpengraphImage() {
             lineHeight: 1.2,
           }}
         >
-          {SITE_DESCRIPTION}
+          {description}
         </div>
       </div>
     ),

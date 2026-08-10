@@ -2,11 +2,30 @@ import { describe, expect, it } from 'vitest';
 import { renderUrlSet, renderSitemapIndex } from '../sitemap-xml';
 
 describe('renderUrlSet', () => {
-  it('renders the XML declaration and urlset namespace', () => {
+  it('renders the XML declaration and urlset namespace (incl. xhtml for hreflang alternates)', () => {
     const xml = renderUrlSet([{ url: 'https://vire.ru/artists' }]);
     expect(xml).toMatch(/^<\?xml version="1\.0" encoding="UTF-8"\?>/);
-    expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+    expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">');
     expect(xml).toContain('</urlset>');
+  });
+
+  it('renders xhtml:link alternate entries when provided', () => {
+    const xml = renderUrlSet([{
+      url: 'https://vire.ru/artists/nova',
+      alternates: [
+        { hreflang: 'ru', href: 'https://vire.ru/artists/nova' },
+        { hreflang: 'en', href: 'https://vire.ru/en/artists/nova' },
+        { hreflang: 'x-default', href: 'https://vire.ru/artists/nova' },
+      ],
+    }]);
+    expect(xml).toContain('<xhtml:link rel="alternate" hreflang="ru" href="https://vire.ru/artists/nova"/>');
+    expect(xml).toContain('<xhtml:link rel="alternate" hreflang="en" href="https://vire.ru/en/artists/nova"/>');
+    expect(xml).toContain('<xhtml:link rel="alternate" hreflang="x-default" href="https://vire.ru/artists/nova"/>');
+  });
+
+  it('omits xhtml:link entries when alternates is absent', () => {
+    const xml = renderUrlSet([{ url: 'https://vire.ru/x' }]);
+    expect(xml).not.toContain('xhtml:link');
   });
 
   it('renders lastModified as ISO', () => {
@@ -35,7 +54,7 @@ describe('renderUrlSet', () => {
 
   it('renders an empty urlset for no urls', () => {
     const xml = renderUrlSet([]);
-    expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+    expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml"></urlset>');
   });
 
   it('renders multiple url entries in order', () => {

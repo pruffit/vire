@@ -38,6 +38,7 @@ import { JsonLd } from '@/components/json-ld';
 import { musicGroupJsonLd, breadcrumbListJsonLd, artistPostJsonLd } from '@/lib/structured-data';
 import { resolveAvatarUrl } from '@/lib/avatar';
 import { pageMetadata } from '@/lib/metadata';
+import { resolveLocale } from '@/lib/locale';
 import { artistFontStyle } from '@/lib/fonts';
 import { GrainOverlay } from '@/components/grain-overlay';
 import { PageContainer } from '@/components/page-container';
@@ -73,16 +74,19 @@ const getArtistData = cache(async (slug: string) => {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const data = await getArtistData(slug);
-  if (!data) return { title: 'Не найдено' };
+  const locale = await resolveLocale();
+  const tMeta = await getTranslations('artist.meta');
+  if (!data) return { title: tMeta('notFound') };
   await assertArtistVisible(data.artist.id);
 
   const { artist } = data;
   const url = `/artists/${slug}`;
-  const description = artist.bio ?? `${artist.name} на VireMusic — релизы, треки и ссылки.`;
+  const description = artist.bio ?? tMeta('bioFallback', { name: artist.name });
   return pageMetadata({
     url,
     title: artist.name,
     description,
+    locale,
     type: 'profile',
     images: null, // своя брендовая карточка — opengraph-image.tsx этого сегмента
   });
@@ -94,6 +98,9 @@ export default async function ArtistPage({ params }: Props) {
   if (!data) notFound();
   await assertArtistVisible(data.artist.id);
   const tSections = await getTranslations('artist.sections');
+  const tBreadcrumb = await getTranslations('release.breadcrumb');
+  const tCommon = await getTranslations('common');
+  const locale = await resolveLocale();
 
   const { artist, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
@@ -166,15 +173,15 @@ export default async function ArtistPage({ params }: Props) {
           avatarUrl: artist.avatarUrl,
           bio: artist.bio,
           links: artist.links,
-        })}
+        }, locale)}
       />
       <JsonLd data={breadcrumbListJsonLd([
-        { name: 'Главная', url: '/' },
-        { name: 'Артисты', url: '/artists' },
+        { name: tBreadcrumb('home'), url: '/' },
+        { name: tCommon('entity.artists'), url: '/artists' },
         { name: artist.name, url: `/artists/${artist.slug}` },
       ])} />
       {posts.map((post) => (
-        <JsonLd key={post.id} data={artistPostJsonLd(post, { name: artist.name, slug: artist.slug })} />
+        <JsonLd key={post.id} data={artistPostJsonLd(post, { name: artist.name, slug: artist.slug }, locale)} />
       ))}
       {grain && <GrainOverlay />}
 

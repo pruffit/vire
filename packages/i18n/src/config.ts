@@ -22,5 +22,7 @@ export const LOCALE_OG: Record<Locale, string> = {
 /** Путь с префиксом локали (`as-needed`: ru без префикса) — для писем/пуша,
  *  где next-intl's getPathname недоступен (вне React-дерева apps/web). */
 export function localizedPath(locale: Locale, path: string): string {
-  return locale === DEFAULT_LOCALE ? path : `/${locale}${path}`;
+  if (locale === DEFAULT_LOCALE) return path;
+  // корень: `/en`, а не `/en/` — иначе canonical расходится с реальным URL
+  return path === '/' ? `/${locale}` : `/${locale}${path}`;
 }

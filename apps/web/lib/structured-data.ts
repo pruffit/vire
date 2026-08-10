@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, type Locale } from '@vire/i18n/config';
 import { SITE_URL } from './site';
 
 /**
@@ -58,7 +59,7 @@ const VIRE_PUBLISHER = {
 };
 
 /** MusicGroup — страница артиста. sameAs из внешних ссылок (соцсети). */
-export function musicGroupJsonLd(artist: ArtistLd): Record<string, unknown> {
+export function musicGroupJsonLd(artist: ArtistLd, locale: Locale = DEFAULT_LOCALE): Record<string, unknown> {
   const url = abs(`/artists/${artist.slug}`);
   const sameAs = (artist.links ?? [])
     .map((l) => l.url)
@@ -72,6 +73,7 @@ export function musicGroupJsonLd(artist: ArtistLd): Record<string, unknown> {
     image: artist.avatarUrl ? abs(artist.avatarUrl) : undefined,
     description: artist.bio || undefined,
     sameAs: sameAs.length > 0 ? sameAs : undefined,
+    inLanguage: locale,
     publisher: VIRE_PUBLISHER,
   });
 }
@@ -81,6 +83,7 @@ export function musicAlbumJsonLd(
   release: ReleaseLd,
   artist: ArtistLd,
   tracks: TrackLd[],
+  locale: Locale = DEFAULT_LOCALE,
 ): Record<string, unknown> {
   const artistUrl = abs(`/artists/${artist.slug}`);
   const albumUrl = abs(`/artists/${artist.slug}/releases/${release.id}`);
@@ -94,6 +97,7 @@ export function musicAlbumJsonLd(
     datePublished: yearOrDate(release.releaseDate),
     description: release.description || undefined,
     numTracks: tracks.length || undefined,
+    inLanguage: locale,
     byArtist: {
       '@type': 'MusicGroup',
       name: artist.name,
@@ -118,6 +122,7 @@ export function musicRecordingJsonLd(
   track: TrackLd,
   release: ReleaseLd,
   artist: ArtistLd,
+  locale: Locale = DEFAULT_LOCALE,
 ): Record<string, unknown> {
   const artistUrl = abs(`/artists/${artist.slug}`);
   const albumUrl = abs(`/artists/${artist.slug}/releases/${release.id}`);
@@ -130,6 +135,7 @@ export function musicRecordingJsonLd(
     duration: secondsToISO8601(track.durationSec),
     image: release.coverUrl ? abs(release.coverUrl) : undefined,
     datePublished: yearOrDate(release.releaseDate),
+    inLanguage: locale,
     byArtist: {
       '@type': 'MusicGroup',
       name: artist.name,
@@ -144,25 +150,39 @@ export function musicRecordingJsonLd(
   });
 }
 
+export interface WebsiteLd {
+  name: string;
+  description: string;
+  locale: Locale;
+}
+
 /** WebSite — главная страница платформы (для поисковых чекеров). */
-export function websiteJsonLd(): Record<string, unknown> {
+export function websiteJsonLd(input: WebsiteLd): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'VireMusic',
+    name: input.name,
     url: SITE_URL,
-    description: 'Независимая музыкальная площадка для артистов и слушателей СНГ',
+    description: input.description,
+    inLanguage: input.locale,
   };
 }
 
+export interface ArtistsCatalogLd {
+  name: string;
+  description: string;
+  locale: Locale;
+}
+
 /** CollectionPage — страница каталога артистов. */
-export function artistsCatalogJsonLd(): Record<string, unknown> {
+export function artistsCatalogJsonLd(input: ArtistsCatalogLd): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'Артисты — VireMusic',
-    description: 'Все артисты на платформе VireMusic',
+    name: input.name,
+    description: input.description,
     url: abs('/artists'),
+    inLanguage: input.locale,
   };
 }
 
@@ -214,7 +234,11 @@ export interface ArtistPostLd {
 }
 
 /** Article для анонса артиста — попадает в индекс как датированный контент; headline обязателен для Article. */
-export function artistPostJsonLd(post: ArtistPostLd, artist: ArtistLd): Record<string, unknown> {
+export function artistPostJsonLd(
+  post: ArtistPostLd,
+  artist: ArtistLd,
+  locale: Locale = DEFAULT_LOCALE,
+): Record<string, unknown> {
   const datePublished =
     post.createdAt instanceof Date ? post.createdAt.toISOString() : post.createdAt;
   const headline = post.title?.trim() || post.body.trim().split('\n')[0].slice(0, 110);
@@ -227,6 +251,7 @@ export function artistPostJsonLd(post: ArtistPostLd, artist: ArtistLd): Record<s
     headline,
     articleBody: post.body,
     datePublished,
+    inLanguage: locale,
     url: postUrl,
     mainEntityOfPage: postUrl,
     author: {
@@ -257,7 +282,7 @@ export interface PlaylistLd {
 
 /** MusicPlaylist — публичный плейлист. Только для visibility=PUBLIC, вызывающая сторона гейтит.
  *  Без `author`: страница имени владельца не показывает, разметка не должна утверждать больше. */
-export function musicPlaylistJsonLd(playlist: PlaylistLd): Record<string, unknown> {
+export function musicPlaylistJsonLd(playlist: PlaylistLd, locale: Locale = DEFAULT_LOCALE): Record<string, unknown> {
   const url = abs(`/playlists/${playlist.id}`);
 
   return prune({
@@ -267,6 +292,7 @@ export function musicPlaylistJsonLd(playlist: PlaylistLd): Record<string, unknow
     description: playlist.description || undefined,
     url,
     numTracks: playlist.tracks.length || undefined,
+    inLanguage: locale,
     track: playlist.tracks.length
       ? playlist.tracks.map((t) =>
           prune({

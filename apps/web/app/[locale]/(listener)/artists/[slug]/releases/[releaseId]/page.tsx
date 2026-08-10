@@ -20,6 +20,7 @@ import { musicAlbumJsonLd, breadcrumbListJsonLd } from '@/lib/structured-data';
 import { releaseYear, totalDuration } from '@/lib/format';
 import { releaseMetaDescription } from '@/lib/meta-descriptions';
 import { pageMetadata } from '@/lib/metadata';
+import { resolveLocale } from '@/lib/locale';
 import { artistFontStyle } from '@/lib/fonts';
 import { genreLabel } from '@/lib/genres';
 import { Icon } from '@/components/icon';
@@ -57,19 +58,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const { artist, release, tracks } = data;
+  const locale = await resolveLocale();
   const url = `/artists/${slug}/releases/${releaseId}`;
-  const description = release.description ?? releaseMetaDescription({
+  const description = release.description ?? (await releaseMetaDescription({
     title: release.title,
     artistName: artist.name,
     type: release.type,
     year: releaseYear(release.releaseDate),
     trackCount: tracks.length,
-  });
+    locale,
+  }));
   const title = `${release.title} — ${artist.name}`;
   return pageMetadata({
     url,
     title,
     description,
+    locale,
     type: 'music.album',
     images: null, // своя брендовая карточка — opengraph-image.tsx этого сегмента
   });
@@ -83,6 +87,7 @@ export default async function ReleasePage({ params }: Props) {
   const t = await getTranslations('release');
   const tCommon = await getTranslations('common');
   const tGenres = await getTranslations('genres');
+  const locale = await resolveLocale();
 
   const { artist, release, tracks, releaseAtMs, isReleased, showCountdown } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
@@ -134,6 +139,7 @@ export default async function ReleasePage({ params }: Props) {
           { id: release.id, title: release.title, coverUrl: release.coverUrl, releaseDate: release.releaseDate, description: release.description },
           { name: artist.name, slug },
           clientTracks.map((t) => ({ id: t.id, title: t.title, durationSec: t.durationSec })),
+          locale,
         )}
       />
       <JsonLd data={breadcrumbListJsonLd([
