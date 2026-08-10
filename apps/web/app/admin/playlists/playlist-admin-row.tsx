@@ -31,7 +31,10 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
   const [title, setTitle] = useState(playlist.title);
   const [visibility, setVisibility] = useState(playlist.visibility);
 
-  const dirty = title.trim() !== playlist.title || visibility !== playlist.visibility;
+  // заголовок редакционных подборок генерируется воркером и локализуется на рендере —
+  // ручная правка была бы затёрта следующим прогоном и не видна слушателю
+  const generatedTitle = playlist.isCurated && playlist.kind !== 'USER';
+  const dirty = (!generatedTitle && title.trim() !== playlist.title) || visibility !== playlist.visibility;
 
   function save() {
     if (!dirty || !title.trim()) return;
@@ -56,14 +59,20 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
   return (
     <Tr>
       <Td className="w-full">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && save()}
-          maxLength={200}
-          aria-label="Название плейлиста"
-          className="w-full min-w-[180px] rounded-md border border-transparent bg-transparent px-2 py-1 text-sm transition-colors hover:bg-foreground/5 focus:bg-foreground/5 focus:border-foreground/15 focus:outline-none focus:ring-1 focus:ring-ring"
-        />
+        {generatedTitle ? (
+          <span className="block px-2 py-1 text-sm text-foreground/70" title="Заголовок генерируется и переводится автоматически">
+            {playlist.title}
+          </span>
+        ) : (
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && save()}
+            maxLength={200}
+            aria-label="Название плейлиста"
+            className="w-full min-w-[180px] rounded-md border border-transparent bg-transparent px-2 py-1 text-sm transition-colors hover:bg-foreground/5 focus:bg-foreground/5 focus:border-foreground/15 focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        )}
       </Td>
       <Td label="Тип">
         <Badge tone={playlist.kind === 'USER' ? 'neutral' : 'info'}>

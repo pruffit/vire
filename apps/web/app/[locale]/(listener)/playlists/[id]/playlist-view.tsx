@@ -9,7 +9,7 @@ import { controls } from '@/lib/player/audio-engine';
 import { toPlayerTracks } from '@/lib/player/to-player-track';
 import { toast } from '@/lib/toast';
 import type { PlayerTrack } from '@/store/player';
-import type { PlaylistWithTracks, PlaylistTrackRow } from '@vire/db';
+import type { PlaylistWithTracks, PlaylistTrack } from '@vire/core';
 import { SortablePlaylistRow } from './playlist-track-row';
 import { PlaylistAddPanel } from './playlist-add-panel';
 import { PlaylistRealtimeSync } from './playlist-realtime-sync';
@@ -29,7 +29,7 @@ interface Props {
 export function PlaylistView({ playlist, role, viewerId = null, emptyTitle }: Props) {
   const t = useTranslations('playlist');
   const resolvedEmptyTitle = emptyTitle ?? t('view.emptyDefault');
-  const [tracks, setTracks] = useState<PlaylistTrackRow[]>(playlist.tracks);
+  const [tracks, setTracks] = useState<PlaylistTrack[]>(playlist.tracks);
   const [version, setVersion] = useState(playlist.version);
   const [adding, setAdding] = useState(false);
   const router = useRouter();
@@ -54,13 +54,13 @@ export function PlaylistView({ playlist, role, viewerId = null, emptyTitle }: Pr
   const refetchTracks = useCallback(async () => {
     const res = await fetch(`/api/v1/playlists/${playlist.id}/tracks`).catch(() => null);
     if (!res?.ok) return;
-    const data = (await res.json()) as { tracks: PlaylistTrackRow[]; version: number };
+    const data = (await res.json()) as { tracks: PlaylistTrack[]; version: number };
     if (data.version <= versionRef.current) return;
     setTracks(data.tracks);
     setVersion(data.version);
   }, [playlist.id]);
 
-  const persistOrder = useCallback(async (ordered: PlaylistTrackRow[], prev: PlaylistTrackRow[]) => {
+  const persistOrder = useCallback(async (ordered: PlaylistTrack[], prev: PlaylistTrack[]) => {
     const res = await fetch(`/api/v1/playlists/${playlist.id}/tracks`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ trackIds: ordered.map((t) => t.id) }),
@@ -92,11 +92,11 @@ export function PlaylistView({ playlist, role, viewerId = null, emptyTitle }: Pr
       .catch(() => { setTracks(prev); toast.error(t('view.removeFailed')); });
   }, [playlist.id, tracks, t]);
 
-  const handleAdded = useCallback((t: PlaylistTrackRow) => {
+  const handleAdded = useCallback((t: PlaylistTrack) => {
     setTracks((prev) => (prev.some((x) => x.id === t.id) ? prev : [...prev, t]));
   }, []);
 
-  function canRemoveTrack(track: PlaylistTrackRow): boolean {
+  function canRemoveTrack(track: PlaylistTrack): boolean {
     if (role === 'OWNER') return true;
     if (role === 'COLLABORATOR') return track.addedBy?.id === viewerId;
     return false;

@@ -35,11 +35,17 @@ export interface PlaylistTrack {
   addedBy: PlaylistTrackAddedBy | null;
 }
 
+export interface PlaylistEditorialParams {
+  mood: string;
+}
+
 export interface PlaylistWithTracks {
   id: string;
   title: string;
   description: string | null;
   coverUrl: string | null;
+  kind: string;
+  editorialParams: PlaylistEditorialParams | null;
   visibility: PlaylistVisibility;
   ownerUserId: string | null;
   likesCount: number;

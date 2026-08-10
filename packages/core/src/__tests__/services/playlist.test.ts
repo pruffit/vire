@@ -22,6 +22,8 @@ const mockPlaylist: PlaylistWithTracks = {
   title: 'My Playlist',
   description: null,
   coverUrl: null,
+  kind: 'USER',
+  editorialParams: null,
   visibility: 'PRIVATE',
   ownerUserId: 'owner-1',
   likesCount: 0,

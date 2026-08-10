@@ -1,10 +1,16 @@
 import {
-  pgTable, uuid, text, timestamp, integer, boolean, pgEnum, numeric, unique, index, check
+  pgTable, uuid, text, timestamp, integer, boolean, pgEnum, numeric, unique, index, check, jsonb
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { users } from './users';
-import { tracks, releases } from './releases';
+import { tracks, releases, moodEnum } from './releases';
 import { artistProfiles } from './artists';
+
+// Различение вида общей/личной подборки идёт по kind, не по этой строке. MOOD хранит
+// {mood}, PERSONAL с {mood} — личная mood-подборка, PERSONAL без params — микс «Для тебя».
+export interface EditorialParams {
+  mood: typeof moodEnum.enumValues[number];
+}
 
 export const purchaseItemTypeEnum = pgEnum('purchase_item_type', ['TRACK', 'RELEASE']);
 export const purchaseStatusEnum = pgEnum('purchase_status', ['PENDING', 'PAID', 'FAILED', 'REFUNDED']);
@@ -47,6 +53,9 @@ export const playlists = pgTable('playlists', {
   description: text('description'),
   coverUrl: text('cover_url'),
   kind: playlistKindEnum('kind').notNull().default('USER'),
+  // Идентичность редакционной подборки для upsert/удаления стухших — не заголовок (тот
+  // локализуется на рендере). null для USER и подборок без параметров (TRENDING/RELISTEN/FRESH).
+  editorialParams: jsonb('editorial_params').$type<EditorialParams>(),
   visibility: playlistVisibilityEnum('visibility').notNull().default('PRIVATE'),
   isCollaborative: boolean('is_collaborative').notNull().default(false),
   // Живёт только пока is_collaborative=true: выключение обнуляет, "сбросить ссылку" ротирует.

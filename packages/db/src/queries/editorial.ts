@@ -1,4 +1,4 @@
-import { desc, eq, gte, sql, and, count, inArray, notInArray, isNotNull } from 'drizzle-orm';
+import { desc, eq, gte, sql, and, count, inArray, isNotNull, type SQL } from 'drizzle-orm';
 import { db } from '../client';
 import { tracks, releases, artistProfiles, trackMoods, playEvents, likes, playlists, playlistTracks } from '../schema';
 import { upsertEditorialPlaylist, createPersonalPlaylist, deletePersonalPlaylists } from './playlists';
@@ -129,7 +129,7 @@ async function generateTopMoodPlaylists(pool: PlaylistCandidate[], usedFiller: S
     .orderBy(desc(count()))
     .limit(SHARED_MOOD_COUNT);
 
-  const keepTitles: string[] = [];
+  const keepMoods: Mood[] = [];
   for (const { mood } of moodRows) {
     const title = MOOD_LABELS[mood as Mood];
     const candidates = await selectCandidatesByTaste([mood as Mood], [], []);
@@ -140,12 +140,13 @@ async function generateTopMoodPlaylists(pool: PlaylistCandidate[], usedFiller: S
       kind: 'MOOD',
       title,
       description: `Подборка треков в настроении «${title}»`,
+      editorialParams: { mood: mood as Mood },
       trackIds: full,
     });
-    keepTitles.push(title);
+    keepMoods.push(mood as Mood);
   }
 
-  await deleteStaleMoodPlaylists(keepTitles);
+  await deleteStaleMoodPlaylists(keepMoods);
 }
 
 /** Видимые треки с любым из заданных настроений/жанров, отранжированные по совпадению вкуса и популярности. */
@@ -195,46 +196,42 @@ async function getFillerPool(): Promise<PlaylistCandidate[]> {
   return rows;
 }
 
-async function deleteStaleMoodPlaylists(keepTitles: string[]): Promise<void> {
+/** Общие MOOD-подборки вне keepMoods (и легаси без params). Внешние скобки обязательны:
+ *  drizzle склеивает элементы and() без них, и OR вырвался бы наружу, снося чужие строки. */
+export function staleMoodPlaylistWhere(keepMoods: Mood[]): SQL {
+  const outOfKeep = keepMoods.length > 0
+    ? sql`((${playlists.editorialParams}->>'mood') IS NULL OR (${playlists.editorialParams}->>'mood') <> ALL(${textArrayParam(keepMoods)}))`
+    : sql`true`;
+  return and(
+    eq(playlists.isCurated, true),
+    eq(playlists.kind, 'MOOD'),
+    sql`${playlists.targetUserId} IS NULL`,
+    outOfKeep,
+  )!;
+}
+
+async function deleteStaleMoodPlaylists(keepMoods: Mood[]): Promise<void> {
   const stale = await db
     .select({ id: playlists.id })
     .from(playlists)
-    .where(and(
-      eq(playlists.isCurated, true),
-      eq(playlists.kind, 'MOOD'),
-      sql`${playlists.targetUserId} IS NULL`,
-      keepTitles.length > 0 ? notInArray(playlists.title, keepTitles) : sql`true`,
-    ));
+    .where(staleMoodPlaylistWhere(keepMoods));
   if (stale.length === 0) return;
   const ids = stale.map((r) => r.id);
   await db.delete(playlistTracks).where(inArray(playlistTracks.playlistId, ids));
   await db.delete(playlists).where(inArray(playlists.id, ids));
 }
 
-const MOOD_BY_LABEL: Partial<Record<string, Mood>> = Object.fromEntries(
-  (Object.keys(MOOD_LABELS) as Mood[]).map((mood) => [MOOD_LABELS[mood], mood]),
-);
-
 /** Настроения общих MOOD-подборок — личные их пропускают, иначе дубль общей/личной карточки. */
 async function sharedMoodPlaylistMoods(): Promise<Mood[]> {
   const rows = await db
-    .select({ title: playlists.title })
+    .select({ mood: sql<string | null>`${playlists.editorialParams}->>'mood'` })
     .from(playlists)
     .where(and(
       eq(playlists.isCurated, true),
       eq(playlists.kind, 'MOOD'),
       sql`${playlists.targetUserId} IS NULL`,
     ));
-  const moods: Mood[] = [];
-  for (const { title } of rows) {
-    const mood = MOOD_BY_LABEL[title];
-    if (mood === undefined) {
-      console.warn(`sharedMoodPlaylistMoods: не найдено настроение для заголовка «${title}»`);
-      continue;
-    }
-    moods.push(mood);
-  }
-  return moods;
+  return rows.map((r) => r.mood).filter((m): m is Mood => m !== null);
 }
 
 // Личные подборки: под каждого юзера, обновляются раз в 4 часа
@@ -323,6 +320,7 @@ export async function generatePersonalPlaylists(userId: string, sharedPool?: Pla
       userId,
       title: `${label} — для тебя`,
       description: `Тебе заходит «${label}»`,
+      editorialParams: { mood },
       trackIds: fullTrackIds,
     });
     fullTrackIds.forEach((id) => exclude.add(id));

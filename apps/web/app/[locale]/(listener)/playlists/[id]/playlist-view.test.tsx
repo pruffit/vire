@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
-import type { PlaylistWithTracks, PlaylistTrackRow } from '@vire/db';
+import type { PlaylistWithTracks, PlaylistTrack } from '@vire/core';
 
 const { playQueueMock, toggleMock } = vi.hoisted(() => ({
   playQueueMock: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock('./playlist-realtime-sync', () => ({
 
 import { PlaylistView } from './playlist-view';
 
-function track(id: string, addedById: string | null): PlaylistTrackRow {
+function track(id: string, addedById: string | null): PlaylistTrack {
   return {
     id,
     title: `Track ${id}`,
@@ -46,6 +46,8 @@ function playlist(overrides?: Partial<PlaylistWithTracks>): PlaylistWithTracks {
     title: 'Плейлист',
     description: null,
     coverUrl: null,
+    kind: 'USER',
+    editorialParams: null,
     visibility: 'PRIVATE',
     ownerUserId: 'owner-1',
     likesCount: 0,

@@ -127,6 +127,30 @@
       "trending": "Trending",
       "relisten": "On repeat",
       "fresh": "Fresh"
+    },
+    "trending": {
+      "title": "Trending now",
+      "description": "Tracks with the most plays over the past week"
+    },
+    "relisten": {
+      "title": "On repeat",
+      "description": "Tracks listeners keep coming back to"
+    },
+    "fresh": {
+      "title": "Fresh",
+      "description": "Just-published tracks"
+    },
+    "mood": {
+      "title": "{mood}",
+      "description": "A mix of tracks in a {mood} mood"
+    },
+    "personalMix": {
+      "title": "For you",
+      "description": "Picked from your likes and listening history"
+    },
+    "personalMood": {
+      "title": "{mood} — for you",
+      "description": "You're into “{mood}”"
     }
   }
 }

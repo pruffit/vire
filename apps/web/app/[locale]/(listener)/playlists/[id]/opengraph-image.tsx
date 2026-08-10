@@ -4,6 +4,7 @@ import { getPlaylistWithTracks, getUserProfile } from '@vire/db';
 import { SITE_NAME } from '@/lib/site';
 import { ogCard, ogFallbackCard, OG_SIZE, OG_CACHE_HEADERS } from '@/lib/og/card';
 import { fetchCoverThumb } from '@/lib/og/cover';
+import { editorialPlaylistText } from '@/lib/editorial-playlist';
 import { getHeaderCovers } from './header-cover';
 
 export const runtime = 'nodejs';
@@ -26,13 +27,19 @@ export default async function PlaylistOgImage({ params }: { params: Promise<{ id
   const owner = playlist.ownerUserId ? await getUserProfile(playlist.ownerUserId) : null;
   const authorName = owner?.name ?? SITE_NAME;
   const count = playlist.tracks.length;
+  const tPlaylist = await getTranslations('playlist');
+  const tMoods = await getTranslations('moods');
   const tCommon = await getTranslations('common');
   const tSeo = await getTranslations('seo.og');
+  const { title } = editorialPlaylistText(
+    tPlaylist, tMoods, playlist.kind, playlist.editorialParams,
+    { title: playlist.title, description: playlist.description },
+  );
 
   return new ImageResponse(
     ogCard({
       kind: tSeo('kind.playlist'),
-      title: playlist.title,
+      title,
       subtitle: `${authorName} · ${tCommon('trackCount', { count })}`,
       cover,
     }),

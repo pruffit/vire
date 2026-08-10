@@ -6,19 +6,18 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import type { EditorialPlaylist } from '@vire/db';
+import { editorialPlaylistText } from '@/lib/editorial-playlist';
 import { HeartIcon } from '@/components/icons';
 import { touchTargetClass } from '@/components/popover';
 import { CoverPlaceholder } from './playlist-cover';
 import { usePlaylistLike } from './use-playlist-like';
 import { PlaylistPeekSheet } from './playlist-quick-look';
 
-const KIND_LABELS: Record<string, string | undefined> = {
-  USER: undefined,
-  PERSONAL: undefined,
-  MOOD: 'Настроение',
-  TRENDING: 'В тренде',
-  RELISTEN: 'Снова и снова',
-  FRESH: 'Свежее',
+const KIND_BADGE_KEYS: Record<string, string | undefined> = {
+  MOOD: 'mood',
+  TRENDING: 'trending',
+  RELISTEN: 'relisten',
+  FRESH: 'fresh',
 };
 
 interface FanLayer {
@@ -89,7 +88,9 @@ export function EditorialPlaylistCard({
   playlist: EditorialPlaylist;
   liked: boolean;
 }) {
+  const t = useTranslations('playlist');
   const tCommon = useTranslations('common');
+  const tMoods = useTranslations('moods');
   const [open, setOpen] = useState(false);
   const { liked, likes, toggle } = usePlaylistLike(playlist.id, initialLiked, playlist.likesCount);
 
@@ -98,7 +99,12 @@ export function EditorialPlaylistCard({
     void toggle();
   }
 
-  const kindLabel = KIND_LABELS[playlist.kind];
+  const { title } = editorialPlaylistText(t, tMoods, playlist.kind, playlist.editorialParams, {
+    title: playlist.title,
+    description: playlist.description,
+  });
+  const badgeKey = KIND_BADGE_KEYS[playlist.kind];
+  const kindLabel = badgeKey ? t(`editorial.kindLabels.${badgeKey}`) : undefined;
 
   return (
     <div className="group flex flex-col gap-2.5">
@@ -118,7 +124,7 @@ export function EditorialPlaylistCard({
 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-medium leading-snug truncate">{playlist.title}</p>
+          <p className="text-sm font-medium leading-snug truncate">{title}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {tCommon('trackCount', { count: playlist.trackCount })}
           </p>
@@ -129,7 +135,7 @@ export function EditorialPlaylistCard({
           onClick={toggleLike}
           whileTap={{ scale: 0.85 }}
           transition={spring.snappy}
-          aria-label={liked ? 'Убрать из избранного' : 'В избранное'}
+          aria-label={liked ? t('like.remove') : t('like.add')}
           className={`shrink-0 flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer ${touchTargetClass('sm')}`}
         >
           <HeartIcon filled={liked} size={14} strokeWidth={2} className={liked ? '[color:oklch(65%_0.20_25)]' : undefined} />
@@ -139,7 +145,7 @@ export function EditorialPlaylistCard({
 
       <PlaylistPeekSheet
         playlistId={playlist.id}
-        title={playlist.title}
+        title={title}
         trackCount={playlist.trackCount}
         covers={playlist.covers}
         open={open}

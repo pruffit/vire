@@ -1,7 +1,8 @@
-import { and, asc, count, desc, eq, ilike, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, notInArray, sql, type SQL } from 'drizzle-orm';
 import { isUuid } from '@vire/core';
 import { db } from '../client';
 import { playlists, playlistTracks, playlistLikes, playlistCollaborators, tracks, releases, artistProfiles, likes, playEvents, users } from '../schema';
+import type { EditorialParams } from '../schema';
 import { featFromCredits } from './track-credits';
 
 export interface PlaylistSummary {
@@ -43,6 +44,8 @@ export interface PlaylistWithTracks {
   title: string;
   description: string | null;
   coverUrl: string | null;
+  kind: string;
+  editorialParams: EditorialParams | null;
   visibility: 'PRIVATE' | 'PUBLIC';
   ownerUserId: string | null;
   likesCount: number;
@@ -79,6 +82,7 @@ export interface EditorialPlaylist {
   title: string;
   description: string | null;
   kind: string;
+  editorialParams: EditorialParams | null;
   trackCount: number;
   likesCount: number;
   covers: string[]; // up to 4 cover URLs for collage
@@ -227,6 +231,8 @@ export async function getPlaylistWithTracks(
     title: playlist.title,
     description: playlist.description,
     coverUrl: playlist.coverUrl,
+    kind: playlist.kind,
+    editorialParams: playlist.editorialParams,
     visibility: playlist.visibility,
     ownerUserId: playlist.ownerUserId,
     likesCount: playlist.likesCount,
@@ -555,6 +561,7 @@ interface PlaylistMetaRow {
   title: string;
   description: string | null;
   kind: string;
+  editorialParams: EditorialParams | null;
   likesCount: number;
   coverUrl: string | null;
 }
@@ -637,6 +644,7 @@ async function hydratePlaylists(rows: PlaylistMetaRow[]): Promise<EditorialPlayl
       title: r.title,
       description: r.description,
       kind: r.kind,
+      editorialParams: r.editorialParams,
       trackCount: m?.trackCount ?? 0,
       likesCount: r.likesCount,
       covers: pickCovers(r.coverUrl, m?.covers ?? []),
@@ -649,6 +657,7 @@ const META = {
   title: playlists.title,
   description: playlists.description,
   kind: playlists.kind,
+  editorialParams: playlists.editorialParams,
   likesCount: playlists.likesCount,
   coverUrl: playlists.coverUrl,
 };
@@ -701,22 +710,32 @@ export async function getPopularPlaylists(limit: number, excludeIds: string[] = 
   return hydratePlaylists(rows);
 }
 
-/** Создаёт или обновляет общую редакционную подборку по kind+title (target_user_id IS NULL). */
+/** Идентичность общей подборки: kind+params. Строки до миграции 0051 (params IS NULL)
+ *  подхватываются по прежнему ключу — заголовку, иначе апсерт создал бы дубль, а старую
+ *  строку с её лайками снесло бы как stale. */
+export function editorialPlaylistIdentity(params: EditorialParams | undefined, title: string): SQL {
+  if (!params) return sql`${playlists.editorialParams} IS NULL`;
+  return sql`(${playlists.editorialParams}->>'mood' = ${params.mood} OR (${playlists.editorialParams} IS NULL AND ${playlists.title} = ${title}))`;
+}
+
+/** Создаёт или обновляет общую редакционную подборку по kind+editorialParams (не title —
+ *  тот локализуется на рендере и может не совпадать между прогонами). */
 export async function upsertEditorialPlaylist(opts: {
   kind: 'MOOD' | 'TRENDING' | 'RELISTEN' | 'FRESH';
   title: string;
   description?: string;
+  editorialParams?: EditorialParams;
   trackIds: string[];
 }): Promise<void> {
-  const { kind, title, description, trackIds } = opts;
+  const { kind, title, description, editorialParams, trackIds } = opts;
 
   const existing = await db
     .select({ id: playlists.id })
     .from(playlists)
     .where(and(
       eq(playlists.kind, kind),
-      eq(playlists.title, title),
       sql`${playlists.targetUserId} IS NULL`,
+      editorialPlaylistIdentity(editorialParams, title),
     ))
     .limit(1);
 
@@ -725,7 +744,12 @@ export async function upsertEditorialPlaylist(opts: {
     playlistId = existing[0].id;
     await db
       .update(playlists)
-      .set({ description: description ?? null, updatedAt: new Date() })
+      .set({
+        title,
+        description: description ?? null,
+        editorialParams: editorialParams ?? null,
+        updatedAt: new Date(),
+      })
       .where(eq(playlists.id, playlistId));
     await db.delete(playlistTracks).where(eq(playlistTracks.playlistId, playlistId));
   } else {
@@ -735,6 +759,7 @@ export async function upsertEditorialPlaylist(opts: {
         title,
         description: description ?? null,
         kind,
+        editorialParams: editorialParams ?? null,
         visibility: 'PUBLIC',
         isCurated: true,
       })
@@ -755,9 +780,10 @@ export async function createPersonalPlaylist(opts: {
   userId: string;
   title: string;
   description?: string;
+  editorialParams?: EditorialParams;
   trackIds: string[];
 }): Promise<void> {
-  const { userId, title, description, trackIds } = opts;
+  const { userId, title, description, editorialParams, trackIds } = opts;
   if (trackIds.length === 0) return;
   const [row] = await db
     .insert(playlists)
@@ -765,6 +791,7 @@ export async function createPersonalPlaylist(opts: {
       title,
       description: description ?? null,
       kind: 'PERSONAL',
+      editorialParams: editorialParams ?? null,
       visibility: 'PUBLIC',
       isCurated: true,
       targetUserId: userId,

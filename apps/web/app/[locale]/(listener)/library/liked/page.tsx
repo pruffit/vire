@@ -1,7 +1,7 @@
 import { redirect } from '@/i18n/navigation';
 import type { Metadata } from 'next';
 import { FadeUp } from '@vire/ui/motion';
-import type { PlaylistWithTracks } from '@vire/db';
+import type { PlaylistWithTracks } from '@vire/core';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { getLikedTracksCached } from '@/lib/listener-data';
@@ -34,6 +34,8 @@ export default async function LikedTracksPage() {
     title: t('title'),
     description: null,
     coverUrl: null,
+    kind: 'USER',
+    editorialParams: null,
     visibility: 'PUBLIC',
     ownerUserId: session.user.id,
     likesCount: 0,

@@ -23,6 +23,7 @@ import { formatDuration } from '@/lib/format';
 import { HeartIcon } from '@/components/icons';
 import { pageMetadata } from '@/lib/metadata';
 import { resolveLocale } from '@/lib/locale';
+import { editorialPlaylistText } from '@/lib/editorial-playlist';
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ join?: string }> };
 
@@ -32,22 +33,28 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const t = await getTranslations('playlist');
   if (!playlist) return { title: t('notFound') };
 
+  const tMoods = await getTranslations('moods');
+  const { title, description: editorialDescription } = editorialPlaylistText(
+    t, tMoods, playlist.kind, playlist.editorialParams,
+    { title: playlist.title, description: playlist.description },
+  );
+
   if (playlist.visibility === 'PRIVATE') {
     const { join: joinToken } = await searchParams;
     const session = await auth();
     const allowed = await playlistService().getForViewer(id, session?.user?.id ?? null, joinToken);
     if (!allowed.ok) return { title: t('notFound') };
-    return { title: playlist.title, robots: { index: false, follow: false } };
+    return { title, robots: { index: false, follow: false } };
   }
 
   const url = `/playlists/${id}`;
-  const description = playlist.description
+  const description = editorialDescription
     ?? t('metaDescriptionFallback', { count: playlist.tracks.length });
   const locale = await resolveLocale();
 
   return pageMetadata({
     url,
-    title: playlist.title,
+    title,
     description,
     locale,
     type: 'music.playlist',
@@ -77,6 +84,12 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
     notFound();
   }
   const playlist = result.value;
+  const tPlaylist = await getTranslations('playlist');
+  const tMoods = await getTranslations('moods');
+  const { title, description } = editorialPlaylistText(
+    tPlaylist, tMoods, playlist.kind, playlist.editorialParams,
+    { title: playlist.title, description: playlist.description },
+  );
 
   const isOwner = viewerId !== null && playlist.ownerUserId === viewerId;
   let role: PlaylistViewerRole = isOwner ? 'OWNER' : 'VIEWER';
@@ -113,8 +126,8 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
         <JsonLd
           data={musicPlaylistJsonLd({
             id,
-            title: playlist.title,
-            description: playlist.description,
+            title,
+            description,
             tracks: playlist.tracks,
           }, locale)}
         />
@@ -122,11 +135,11 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
       <FadeUp>
         <header className="flex items-start gap-6">
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl shrink-0 overflow-hidden bg-card border border-border relative">
-            <PlaylistCover covers={headerCovers} title={playlist.title} variant="mosaic" sizes="(max-width: 640px) 96px, 112px" />
+            <PlaylistCover covers={headerCovers} title={title} variant="mosaic" sizes="(max-width: 640px) 96px, 112px" />
           </div>
           <div className="space-y-2 pt-1 min-w-0 flex-1 max-w-2xl">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-semibold tracking-tight truncate">{playlist.title}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight truncate">{title}</h1>
               {playlist.visibility === 'PRIVATE' && (
                 <span className="shrink-0 label-mono text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground">{t('playlist.visibility.private')}</span>
               )}
@@ -135,7 +148,7 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
                 <PlaylistCollaboratorsStack collaborators={collaborators} />
               )}
             </div>
-            {playlist.description && <p className="text-sm text-muted-foreground/80 line-clamp-2">{playlist.description}</p>}
+            {description && <p className="text-sm text-muted-foreground/80 line-clamp-2">{description}</p>}
             <p className="text-sm text-muted-foreground flex items-center gap-1 flex-wrap tabular-nums">
               <span>
                 {t('common.trackCount', { count: playlist.tracks.length })}{totalSec > 0 && ` · ${formatDuration(totalSec)}`}
@@ -157,7 +170,7 @@ export default async function PlaylistPage({ params, searchParams }: Props) {
                 />
               )}
               {role === 'COLLABORATOR' && <PlaylistLeaveButton playlistId={id} />}
-              <PlaylistShare playlistId={id} title={playlist.title} visibility={playlist.visibility} isOwner={isOwner} />
+              <PlaylistShare playlistId={id} title={title} visibility={playlist.visibility} isOwner={isOwner} />
             </div>
           </div>
         </header>
