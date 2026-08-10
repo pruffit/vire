@@ -20,8 +20,18 @@ function stripLocale(pathname: string): { locale: Locale; rest: string } {
   return { locale: DEFAULT_LOCALE, rest: pathname };
 }
 
+// Нелокализованные ветки живут только на корне: /en/admin — мёртвый URL, а не 404.
+const UNLOCALIZED_PREFIXES = ['/admin', '/fwqa688'];
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
+
+  const { locale: urlLocale, rest: unprefixed } = stripLocale(pathname);
+  if (urlLocale !== DEFAULT_LOCALE && UNLOCALIZED_PREFIXES.some((p) => unprefixed.startsWith(p))) {
+    const target = new URL(unprefixed, req.nextUrl.origin);
+    target.search = req.nextUrl.search;
+    return NextResponse.redirect(target);
+  }
 
   // /admin не локализуется — в next-intl middleware не заходит, гейт как раньше.
   if (pathname.startsWith('/admin')) {
@@ -41,10 +51,9 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  const { locale, rest } = stripLocale(pathname);
-  const isProtected = PROTECTED_PREFIXES.some((p) => rest.startsWith(p));
+  const isProtected = PROTECTED_PREFIXES.some((p) => unprefixed.startsWith(p));
   if (isProtected && !req.auth) {
-    const signIn = new URL(getPathname({ href: '/sign-in', locale }), req.nextUrl.origin);
+    const signIn = new URL(getPathname({ href: '/sign-in', locale: urlLocale }), req.nextUrl.origin);
     signIn.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(signIn);
   }
