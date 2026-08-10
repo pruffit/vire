@@ -25,10 +25,10 @@ Realtime-инкремент через тот же SSE, что и чат. Час
 | Схема | `packages/db/src/schema/notifications.ts` (`notifications` + enum `notification_type`) |
 | Миграция | `packages/db/src/migrations/0039_long_dakota_north.sql` |
 | Запросы | `packages/db/src/queries/notifications.ts` (`insertNotification`/`listNotifications`/`countUnreadNotifications`/`markAllNotificationsRead`/`markNotificationRead`) |
-| Порт+репо | `packages/core/src/repositories/notification.ts`, `packages/db/src/repositories/notification.ts` |
-| Сервис | `packages/core/src/services/notification.ts` — `NotificationService` (`notify`/`list`/`countUnread`/`markAllRead`/`markRead`); `notify` пишет строку и публикует realtime-событие через порт `RealtimePublisher` |
+| Порт+репо | `packages/core/src/platform/notifications/repositories/notification.ts`, `packages/db/src/repositories/notification.ts` |
+| Сервис | `packages/core/src/platform/notifications/services/notification.ts` — `NotificationService` (`notify`/`list`/`countUnread`/`markAllRead`/`markRead`); `notify` пишет строку и публикует realtime-событие через порт `RealtimePublisher` |
 | Композиция | `apps/web/lib/notifications.ts` (`notificationService()`) |
-| Проводка | `FriendshipService` (`packages/core/src/services/friendship.ts`) при `request`/`accept` вызывает `notify` |
+| Проводка | `FriendshipService` (`packages/core/src/platform/social/services/friendship.ts`) при `request`/`accept` вызывает `notify` |
 | Роуты | `apps/web/app/api/v1/notifications/route.ts` (GET список+unread), `.../notifications/read/route.ts` (POST) |
 | UI | `apps/web/components/notifications/notification-bell.tsx` (поповер + SSE-подписка через `use-realtime`) |
 
@@ -45,9 +45,9 @@ Realtime-инкремент через тот же SSE, что и чат. Час
 
 - **Producer** — `FriendshipService.request` и `ChatService.send` после успешной записи кладут
   джобу `ExternalNotifyJobData` в очередь через порт `IExternalNotifyQueue`
-  (`packages/core/src/ports/external-notify.ts`); обёртка в `apps/web/lib/queue.ts`.
+  (`packages/core/src/platform/notifications/ports/external-notify.ts`); обёртка в `apps/web/lib/queue.ts`.
 - **Диспетчер** — `apps/worker/src/workers/notify-external.worker.ts`, решение «слать ли по
-  каналу» — чистая функция `decideExternalDelivery` (`packages/core/src/services/external-delivery.ts`):
+  каналу» — чистая функция `decideExternalDelivery` (`packages/core/src/platform/notifications/services/external-delivery.ts`):
   1. **Presence-гард** — получатель онлайн (Redis site-presence, ~40с окно) → оба канала
      пропускаются, он и так увидит в колокольчике. Ошибка Redis — fail-open (шлём).
   2. **Prefs-гейт** — `users.notify_email`/`users.notify_push` получателя (оба по умолчанию `true`).

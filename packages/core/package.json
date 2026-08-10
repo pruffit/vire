@@ -5,8 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./signing": "./src/util/signing.ts",
-    "./notifications/unsubscribe": "./src/notifications/unsubscribe.ts"
+    "./signing": "./src/platform/util/signing.ts",
+    "./notifications/unsubscribe": "./src/platform/notifications/unsubscribe.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -31,8 +31,8 @@
 | Схема | `packages/db/src/schema/interactions.ts` (`friendships`, `friendshipStatusEnum`), `packages/db/src/schema/users.ts` (`socialVisibility`, `userSocialVisibilityEnum`) |
 | Миграция | `packages/db/src/migrations/0037_woozy_rogue.sql` |
 | Запросы Drizzle | `packages/db/src/queries/friendships.ts` (`findEdge`/`insertRequest`/`acceptRequest`/`deleteEdge`/`listFriends`/`listIncoming`/`userExists`/`listEdges`/`countUnseenIncoming`/`markRequestsSeen`), `packages/db/src/queries/user-directory.ts` (`searchUsersByName`), `packages/db/src/queries/profile.ts` (`getUserPublicProfile`, `updateUserSocialVisibility`), `packages/db/src/queries/playlists.ts` (`getPublicPlaylistsByOwner`) |
-| Порт + Drizzle-репо | `packages/core/src/repositories/friendship.ts` (`IFriendshipRepository`, `FriendEdge`/`FriendProfile`/`IncomingRequest`), `packages/db/src/repositories/friendship.ts` (`DrizzleFriendshipRepository`); поиск — `packages/core/src/repositories/user-directory.ts` (`IUserDirectoryRepository`), `packages/db/src/repositories/user-directory.ts` (`DrizzleUserDirectoryRepository`) |
-| Сервис (бизнес-логика) | `packages/core/src/services/friendship.ts` — `FriendshipService` (`request`/`accept`/`decline`/`cancel`/`unfriend`/`getStatus`/`getStatuses`/`listFriends`/`listIncoming`/`countUnseen`/`markSeen`), функция `canSeeLikes(...)`; `packages/core/src/services/user-directory.ts` — `UserDirectoryService.search` (порог 2 символа) |
+| Порт + Drizzle-репо | `packages/core/src/platform/social/repositories/friendship.ts` (`IFriendshipRepository`, `FriendEdge`/`FriendProfile`/`IncomingRequest`), `packages/db/src/repositories/friendship.ts` (`DrizzleFriendshipRepository`); поиск — `packages/core/src/platform/identity/repositories/user-directory.ts` (`IUserDirectoryRepository`), `packages/db/src/repositories/user-directory.ts` (`DrizzleUserDirectoryRepository`) |
+| Сервис (бизнес-логика) | `packages/core/src/platform/social/services/friendship.ts` — `FriendshipService` (`request`/`accept`/`decline`/`cancel`/`unfriend`/`getStatus`/`getStatuses`/`listFriends`/`listIncoming`/`countUnseen`/`markSeen`), функция `canSeeLikes(...)`; `packages/core/src/platform/identity/services/user-directory.ts` — `UserDirectoryService.search` (порог 2 символа) |
 | API-роуты | `apps/web/app/api/v1/friends/request/route.ts` (POST, rate-limit 30/60с), `.../friends/[userId]/route.ts` (DELETE — decline/cancel/unfriend), `.../friends/[userId]/accept/route.ts` (POST), `.../friends/search/route.ts` (GET `?q=`, auth + rate-limit, отдаёт `{id,name,image,status}[]`, email не отдаётся), `.../friends/seen/route.ts` (POST — отметить заявки просмотренными), `.../user/profile/route.ts` (PATCH принимает `socialVisibility`) |
 | Композиция сервиса (веб) | `apps/web/lib/friends.ts` (`friendshipService()`, `userDirectoryService()`) |
 | Гейт видимости профиля | `apps/web/lib/friend-profile.ts` (`loadFriendProfile` — статус дружбы + `canSeeLikes` + подгрузка лайков/плейлистов) |
@@ -64,7 +64,7 @@
   на клиенте (какая кнопка показана).
 
 ## Гейт `canSeeLikes`
-Чистая функция без побочных эффектов (`packages/core/src/services/friendship.ts`):
+Чистая функция без побочных эффектов (`packages/core/src/platform/social/services/friendship.ts`):
 ```
 canSeeLikes(viewerId, ownerId, ownerVisibility, areFriends)
 ```
@@ -103,7 +103,7 @@ canSeeLikes(viewerId, ownerId, ownerVisibility, areFriends)
   `OPEN`/`REVIEWED`/`DISMISSED`). `POST /api/v1/reports` (rate-limit 5/час, анти-дубль одного
   OPEN на пару). Очередь в админке `/admin/reports` (MODERATOR+), resolve, счётчик OPEN в
   обзоре «требует внимания».
-- Код: `packages/core/src/services/{block,report}.ts`, `packages/db/src/queries/{blocks,reports}.ts`,
+- Код: `packages/core/src/platform/social/services/{block,report}.ts`, `packages/db/src/queries/{blocks,reports}.ts`,
   `apps/web/app/api/v1/users/[userId]/block/route.ts`, `.../reports/route.ts`,
   `.../admin/reports/[id]/resolve/route.ts`, `apps/web/components/friends/{profile-more-menu,unblock-button}.tsx`,
   `apps/web/app/admin/reports/`.

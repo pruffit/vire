@@ -93,7 +93,7 @@
   (`title`/`coverUrl`/`releaseDate`) дополнялся релизом без проверки: при пустых полях
   лендинга и `release_id` на DRAFT/ARCHIVED название и обложка черновика уходили на
   страницу и в OG-карточку. Оба потребителя переведены на чистую
-  `resolveSmartLinkDisplay` (`packages/core/src/smart-link-display.ts`) — один гейт
+  `resolveSmartLinkDisplay` (`packages/core/src/music/marketing/smart-link-display.ts`) — один гейт
   на CTA и на подстановку полей, поверх существующих `isReleasePubliclyVisible`/
   `isCountdownVisible`. SCHEDULED с будущей датой остаётся видимым (путь пресейва),
   SCHEDULED без даты трактуется как черновик.
@@ -239,7 +239,7 @@
   оконным алгоритмом (`sliceWindowAroundIndex`), что и `queue`, по позиции текущего
   трека в исходном порядке (`sliceOriginalQueueForPersist`).
 - [x] **Кэш `getTasteProfile`** — TTL-кэш 60с, потолок 500 записей (`createTtlCache`
-  в `packages/core/src/util/ttl-cache.ts`, инъектируемое время); `clearTasteProfileCache()`
+  в `packages/core/src/platform/util/ttl-cache.ts`, инъектируемое время); `clearTasteProfileCache()`
   для тестов; сигнатура и вызывающие не менялись.
 - [x] **Кнопка очереди мини-бара скрыта `<sm`** — добавлена `MobileQueueButton`
   (`sm:hidden`) в мини-баре; очередь теперь доступна без перехода в фуллскрин.

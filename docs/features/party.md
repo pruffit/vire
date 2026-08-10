@@ -196,7 +196,7 @@ LRU-кэш, что у плеера); у внешних и локальных п�
 - **API:** `POST /api/v1/jam/[code]/queue/external` (любой ввод), `POST …/queue/local`
   (файл устройства), `GET /api/v1/party/suggest` (подсказки при наборе; без `q` — вкусовые
   подсказки из Last.fm), `POST …/skip` (голос за пропуск), `POST …/refill` (автодобор из волны).
-- **Резолв:** `packages/core/src/services/external-resolve{,-service}.ts`;
+- **Резолв:** `packages/core/src/music/external/services/external-resolve{,-service}.ts`;
   адаптеры сети — `apps/web/lib/external/` (`providers`, `oembed`, `page-meta`, `youtube`,
   `itunes`, `deezer`, `safe-fetch`, `lastfm`, `taste-suggestions`).
 - **Видео-поверхность:** `components/jam/party-video-dock.tsx` (в app-shell),

@@ -23,7 +23,7 @@ user-invocable: true
 
 ## Паттерн: тест сервиса через мок-репозиторий
 
-`packages/core/src/__tests__/services/release.test.ts`:
+`packages/core/src/music/catalog/services/release.test.ts`:
 
 ```ts
 const makeRepo = (over) => ({

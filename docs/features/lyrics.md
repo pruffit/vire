@@ -22,7 +22,7 @@
 ## Где код
 
 - **Данные:** `tracks.lyrics` JSONB — массив `{ t: число секунд | null, text }`
-  (миграция `0020`). Тип `LyricLine` — `packages/core/src/types/release.ts`.
+  (миграция `0020`). Тип `LyricLine` — `packages/core/src/music/catalog/types/release.ts`.
 - **Парсер/сериализатор LRC:** `apps/web/lib/lrc.ts` (`parseLrc`, `serializeLrc`,
   `isSynced` — чистые функции, тесты в `lib/__tests__/lrc.test.ts`).
 - **Запись:** PATCH `/api/v1/dashboard/tracks/[id]` принимает сырой LRC в поле

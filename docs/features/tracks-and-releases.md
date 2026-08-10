@@ -36,7 +36,7 @@ track_audio.status: PROCESSING → READY (или BLOCKED при ошибке)
 - **Воркер транскодинга:** `apps/worker/src/workers/transcode.worker.ts`
 - **Пайплайн HLS:** `apps/worker/src/lib/ffmpeg.ts`
 - **Waveform peaks:** `apps/worker/src/lib/waveform.ts` — `peaksFromPcm`
-- **Сервисы:** `packages/core/src/services/release.service.ts`, `track.service.ts`
+- **Сервисы:** `packages/core/src/music/catalog/services/release.ts`, `track.ts`
 - **DB таблицы:**
   - `releases` — `status`, `published_at`, `artist_profile_id`
   - `tracks` — метаданные

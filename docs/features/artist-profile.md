@@ -72,8 +72,8 @@ co-listen-выборка не должна ронять страницу) — д
   (`apps/web/app/dashboard/profile/edit-profile-form.tsx`) и **админ-редактора артиста**
   (`/admin/artists/[id]/edit`, минуя ownership-гард дашборда — правит любой профиль)
 - **API профиля:** `apps/web/app/api/v1/dashboard/profile/route.ts`
-- **Сервис:** `packages/core/src/services/artist.service.ts`
-- **Репозиторий:** `packages/core/src/repositories/artist.repository.ts`
+- **Сервис:** `packages/core/src/music/catalog/services/artist.ts`
+- **Репозиторий:** `packages/core/src/music/catalog/repositories/artist.ts`
 - **Загрузка обложки/аватара:** `apps/web/app/api/v1/dashboard/profile/route.ts`
   (multipart; `header`/`removeHeader`, `avatar`/`removeAvatar`); политики — `apps/web/lib/image.ts`
   (`HEADER_POLICY`, `AVATAR_POLICY`); форма — `apps/web/app/dashboard/profile/edit-profile-form.tsx`

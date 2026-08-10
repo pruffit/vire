@@ -77,7 +77,7 @@ hiphop, rock, metal…):
 `play_events.source` весит по-разному в `qualityScore`: скип трека, предложенного
 самой волной, — сильный сигнал «не понравилось»; скип собственного выбора слушателя
 (плейлист/лайк/покупка) говорит о треке меньше. Константы —
-`packages/core/src/services/wave-scoring.ts` (`sourceQualityWeight`,
+`packages/core/src/music/playback/services/wave-scoring.ts` (`sourceQualityWeight`,
 `PLAY_SOURCE_QUALITY_WEIGHTS`): `wave` → 1.0, `playlist`/`liked`/`purchased` → 0.6,
 остальные источники → дефолт 0.8. `qualityScore` в `wave.ts` — взвешенное среднее
 `SUM(w·ratio)/SUM(w)` вместо простого `AVG`, веса вшиваются CASE через `sql.raw`
@@ -91,7 +91,7 @@ seed-режиме вошедшего слушателя; анонимный ре
 
 ### Тональность (Camelot)
 
-`packages/core/src/services/musical-key.ts` парсит `track_audio.musical_key` (буквенная
+`packages/core/src/music/audio/services/musical-key.ts` парсит `track_audio.musical_key` (буквенная
 запись `C#m`/`Dbmin` или Camelot `8B`), строит колесо квинт и возвращает
 `keyMatchSets(raw)` → `{ exact: string[], neighbor: string[] }` — все написания точной
 и соседних (параллельная/квинта вверх/вниз) тональностей. Кандидат сравнивается по
@@ -155,7 +155,7 @@ grow не срабатывает, `shrink: 0` держит basis, ряд лис�
   PK), пересчитанную первым шагом editorial-крона `personal-4h`; L1 TTL-кэш (60с)
   сверху, живой расчёт (`fetchTasteProfile`) — только фолбэк для юзера без строки
   (новый, до ближайшего крона), с write-through upsert'ом
-- **Тональность:** `packages/core/src/services/musical-key.ts` (`parseMusicalKey`,
+- **Тональность:** `packages/core/src/music/audio/services/musical-key.ts` (`parseMusicalKey`,
   `keySpellings`, `neighborKeys`, `keyMatchSets`)
 - **Redis-сессия:** `apps/web/lib/wave-session.ts` (`getWaveSession`,
   `appendWaveServed`, `setWaveSessionSeed`)

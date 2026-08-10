@@ -16,10 +16,10 @@
 
 ## Где код
 - **Данные:** `tracks.version` (text, «Radio Edit», «Slowed + Reverb») и
-  `tracks.credits` (jsonb `TrackCredit[]`, `packages/core/src/types/release.ts`).
+  `tracks.credits` (jsonb `TrackCredit[]`, `packages/core/src/music/catalog/types/release.ts`).
   Фит — кредиты с ролью `FEATURED`.
 - **Хелперы:**
-  - `packages/core/src/track-display.ts` — `featuredNames(credits)`: имена
+  - `packages/core/src/music/catalog/track-display.ts` — `featuredNames(credits)`: имена
     FEATURED-кредитов, общий источник правды для web-UI и БД-запросов.
   - `apps/web/lib/track-display.ts` — реэкспорт `featuredNames`, `featLabel`
     (строка «feat. A, B»), `displayTrackTitle` — склеенная строка

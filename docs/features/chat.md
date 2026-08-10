@@ -134,9 +134,9 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
 | Схема | `packages/db/src/schema/chat.ts` (`conversations`, `messages`) |
 | Миграция | `packages/db/src/migrations/0039_long_dakota_north.sql` |
 | Запросы | `packages/db/src/queries/chat.ts` (`upsertConversation`/`insertMessage`/`listMessages`/`listConversations`/`markConversationRead`/`countUnreadConversations`) |
-| Порт+репо | `packages/core/src/repositories/chat.ts`, `packages/db/src/repositories/chat.ts` |
-| Сервис | `packages/core/src/services/chat.ts` — `ChatService` (`openOrGet`/`send`/`history`/`markRead`/`listConversations`/`countUnread`/`getConversationMeta`), `canonicalPair`; `send` принимает `senderName`, `markRead` публикует `chat:read`, `getConversationMeta` отдаёт `otherLastReadAt` |
-| Realtime | `apps/web/lib/realtime.ts` (publish/subscribe, порт `RealtimePublisher` в `packages/core/src/ports/realtime.ts`), клиент `apps/web/lib/use-realtime.ts` |
+| Порт+репо | `packages/core/src/platform/messaging/repositories/chat.ts`, `packages/db/src/repositories/chat.ts` |
+| Сервис | `packages/core/src/platform/messaging/services/chat.ts` — `ChatService` (`openOrGet`/`send`/`history`/`markRead`/`listConversations`/`countUnread`/`getConversationMeta`), `canonicalPair`; `send` принимает `senderName`, `markRead` публикует `chat:read`, `getConversationMeta` отдаёт `otherLastReadAt` |
+| Realtime | `apps/web/lib/realtime.ts` (publish/subscribe, порт `RealtimePublisher` в `packages/core/src/platform/ports/realtime.ts`), клиент `apps/web/lib/use-realtime.ts` |
 | Композиция | `apps/web/lib/chat.ts` (`chatService()`) |
 | Роуты | `apps/web/app/api/v1/chat/{messages,open,conversations,unread-count,[conversationId]/messages,[conversationId]/read,[conversationId]/typing}/route.ts`, `apps/web/app/api/v1/realtime/stream/route.ts` |
 | Страницы | `apps/web/app/(listener)/messages/layout.tsx` (двухпанельный shell, auth-гейт, список диалогов), `.../messages/page.tsx` (заглушка «Выберите диалог»), `.../messages/[conversationId]/page.tsx` (тред) |

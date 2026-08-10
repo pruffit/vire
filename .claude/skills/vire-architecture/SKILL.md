@@ -77,7 +77,7 @@ class NotFoundError extends Error { readonly _tag = 'NotFoundError'; ... }
 
 ## Репозиторий — границы
 
-- Реализует интерфейс из `packages/core/src/repositories/*` (порт).
+- Реализует интерфейс из `packages/core/src/{platform,music}/*/repositories/*` (порт).
 - Маппит строки Drizzle → доменные типы (`mapToRelease`, `mapRow`) — наружу не
   утекает форма таблицы.
 - Гард синтаксиса id перед запросом по uuid-PK (`if (!isUuid(id)) return null`).

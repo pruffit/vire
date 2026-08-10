@@ -132,7 +132,7 @@
   (`speaker_participant_id`, `null` = хост), остальные — пульт: очередь и транспорт
   работают как обычно, но `audioEnabled` в `usePlaybackSync` гасится, движок не создаётся
   вовсе. Чистые функции `resolveSpeakerParticipantId`/`isAudioDevice`
-  (`packages/core/src/services/jam-mode.ts`) резолвят звуковое устройство: назначенный
+  (`packages/core/src/music/jam/services/jam-mode.ts`) резолвят звуковое устройство: назначенный
   участник, если ещё в комнате, иначе фолбэк на HOST. На звуковом устройстве в SPEAKER
   периодическая коррекция дрейфа выключается целиком (`usePlaybackSync`, проп
   `driftCorrection`) — синхронизировать не с кем, источник один. Режим меняет только
@@ -157,7 +157,7 @@
   `jam/[code]/{join,queue,playback,mode,speaker,heartbeat,end,stream,qr,save-playlist,invite,skip,refill}`
   (`queue`/`playback`/`mode`/`speaker`/`skip`/`refill` резолвят идентичность через
   `resolveJamIdentity` — user или подписанный guest `sessionId`, не только `auth()`), `GET /api/v1/friends`
-- **Сервисы/логика:** `packages/core/src/services/{jam,jam-sync,jam-queue,jam-code,jam-mode,jam-skip}.ts`
+- **Сервисы/логика:** `packages/core/src/music/jam/services/{jam,jam-sync,jam-queue,jam-code,jam-mode,jam-skip}.ts`
   (чистые: права участия, лимиты, `applyQueueMutation` вкл. `shuffle`,
   `derivePositionMs`, `decideDriftCorrection`, `pickClockOffset`,
   `resolveSpeakerParticipantId`/`isAudioDevice`, `resolveSkip` (порог голосования за скип);

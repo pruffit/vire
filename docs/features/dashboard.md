@@ -67,7 +67,7 @@
 - **API постов:** `apps/web/app/api/v1/dashboard/posts/route.ts`, `[id]/route.ts`
 - **API загрузки:** `apps/web/app/api/v1/dashboard/releases/[id]/tracks/upload/route.ts`
 - **Аналитика:** `apps/web/app/api/v1/dashboard/stats/route.ts`
-- **Сервисы:** `packages/core/src/services/` — `artist`, `release`, `track`
+- **Сервисы:** `packages/core/src/music/catalog/services/` — `artist`, `release`, `track`
 - **DB таблицы:** `releases`, `tracks`, `track_audio`, `artist_posts`, `play_events`
 
 ## Env-переменные

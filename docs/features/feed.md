@@ -48,8 +48,8 @@
 
 ## Где код
 
-- **Ранжирование/состав (чистые функции):** `packages/core/src/services/feed-ranking.ts`,
-  типы — `packages/core/src/types/feed.ts`
+- **Ранжирование/состав (чистые функции):** `packages/core/src/music/discovery/services/feed-ranking.ts`,
+  типы — `packages/core/src/music/discovery/types/feed.ts`
 - **Кандидаты (БД):** `packages/db/src/queries/feed.ts` — `getFeedCandidates`
   (релизы подписок + вкуса, анонсы подписок за 30д, скорые релизы подписок,
   агрегат `plays30d`), `getFreshFeedCandidates` (добивка)

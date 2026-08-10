@@ -31,7 +31,7 @@
 - **Схема:** `packages/db/src/schema/artists.ts` (`smart_links`, миграция `0018`;
   `release_id` FK → `releases` `onDelete: set null`, миграция `0023` — привязка к
   релизу VireMusic), `target` — артист, `slug` уникален в пределах артиста.
-- **Тип:** `packages/core/src/types/artist.ts` (`SmartLink`, `ArtistLink.label` → опционально).
+- **Тип:** `packages/core/src/music/catalog/types/artist.ts` (`SmartLink`, `ArtistLink.label` → опционально).
 - **Запросы:** `packages/db/src/queries/smart-links.ts` (get/list/create/update/delete + slug-проверка).
 - **Площадки/иконки:** `apps/web/lib/platforms.ts` (`detectPlatform`, `linkLabel`).
   Распознанная площадка → цветное бренд-лого `BrandIcon` без текста (название
@@ -39,7 +39,7 @@
   монохромный глиф `platform-icon.tsx` + подпись (своя или хост). Маппинг
   `PLATFORM_BRAND` (`@/components/brand-icon`). См. `icons.md`.
 - **Валидация:** `apps/web/lib/smart-link.ts` (`normalizeSlug`, `isValidSlug`, `parseSmartLinkLinks`).
-- **Видимость привязанного релиза:** `packages/core/src/smart-link-display.ts`
+- **Видимость привязанного релиза:** `packages/core/src/music/marketing/smart-link-display.ts`
   (`resolveSmartLinkDisplay` — CTA и подстановка полей из одного гейта).
 - **Публичная страница:** `apps/web/app/smartlink/[artistSlug]/[linkSlug]/page.tsx`.
 - **Дашборд:** `apps/web/app/dashboard/links/*` (список, форма, new, [id]).

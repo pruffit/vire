@@ -31,7 +31,7 @@
 
 ## Композиция
 
-`composeDiscovery` (чистая функция, `packages/core/src/services/discovery-scoring.ts`):
+`composeDiscovery` (чистая функция, `packages/core/src/music/discovery/services/discovery-scoring.ts`):
 дедуп по артисту (оставляет лучший score), кап **1 карточка на источник похожести**
 (`sourceArtistId`) — иначе вся выдача может оказаться «похоже на одного и того же
 артиста», срез до лимита. На странице артиста кап отключён (`buildSimilarArtists`
@@ -53,9 +53,9 @@
 
 ## Где код
 
-- **Типы:** `packages/core/src/types/discovery.ts` (`DiscoveryReason`,
+- **Типы:** `packages/core/src/music/discovery/types/discovery.ts` (`DiscoveryReason`,
   `DiscoveryCandidate`, `RankedDiscoveryArtist`)
-- **Ранжирование (чистые функции):** `packages/core/src/services/discovery-scoring.ts`
+- **Ранжирование (чистые функции):** `packages/core/src/music/discovery/services/discovery-scoring.ts`
   (`friendSignal`, `tasteOverlapScore`, `scoreDiscoveryArtist`, `discoveryReason`,
   `composeDiscovery`)
 - **Кандидаты (БД):** `packages/db/src/queries/similarity.ts`

@@ -66,7 +66,7 @@
   `docs/superpowers/specs/2026-07-13-purchase-core-design.md`). Боевая настройка
   YooKassa и возврат purchase-UI на витрину — по-прежнему отдельно, вне скоупа.
 - **1.2 Чистота `packages/core`** ✅ (18.07.2026) — аудит показал ~95% соответствия; закрыты
-  реальные нарушения: `Clock`/`IdGenerator` вынесены в порты (`packages/core/src/ports/effects.ts`)
+  реальные нарушения: `Clock`/`IdGenerator` вынесены в порты (`packages/core/src/platform/ports/effects.ts`)
   и сделаны **обязательными** инъекциями у Presave/Artist/Release/Track/SmartLink (убраны 5 прямых
   фолбэков `?? Date.now()`/`?? crypto.randomUUID()` — фолбэк переехал в композицию web/worker);
   `ReleaseService.changeStatus` больше не кидает throw в середине мутации (инвариант `notifyQueue`
@@ -163,7 +163,7 @@ redirect на `/`), а её контент стал **секцией главн�
   источники: релизы/скорые релизы/анонсы подписок + релизы по профилю вкуса (артист/жанр/
   настроение); холодный старт добивается свежими релизами платформы.
 - **4.3 Ранжирование** ✅ (28.07.2026) — `score = recency·0.45 + affinity·0.40 + popularity·0.15 + kindBonus`
-  (`packages/core/src/services/feed-ranking.ts`); защита малых артистов — кап 2 элемента
+  (`packages/core/src/music/discovery/services/feed-ranking.ts`); защита малых артистов — кап 2 элемента
   на артиста + квота 30% слотов артистам ниже медианы прослушиваний, явным шагом композиции,
   не пожеланием.
 
@@ -198,7 +198,7 @@ redirect на `/`), а её контент стал **секцией главн�
 - **7.1 Волна** ✅ — доводка ступени 2: профиль вкуса материализован в таблице
   `taste_profiles` (пересчёт первым шагом editorial-крона `personal-4h`), скоринг
   учитывает источник запуска (взвешенный `qualityScore` + `waveSkipPenalty`,
-  `packages/core/src/services/wave-scoring.ts`). Детали — [wave](../features/wave.md).
+  `packages/core/src/music/playback/services/wave-scoring.ts`). Детали — [wave](../features/wave.md).
 - **7.2 Кураторские и редакционные подборки** ✅ (17.07.2026) — качество и разнообразие
   генерации (`editorial.ts`): (P1) RELISTEN честно считает возвраты **одного** слушателя
   (`COALESCE(user_id, session_id)`, 2+ разных дня), а не глобальные дни-по-треку, и
