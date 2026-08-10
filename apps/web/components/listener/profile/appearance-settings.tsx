@@ -1,27 +1,15 @@
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useReduceMotionPref, setReduceMotionPref } from '@vire/ui/motion';
-import { usePathname, useRouter } from '@/i18n/navigation';
-import { LOCALES, LOCALE_LABELS, type Locale } from '@vire/i18n/config';
+import { LOCALES, LOCALE_LABELS } from '@vire/i18n/config';
+import { useLocaleSwitch } from '@/lib/use-locale-switch';
 import { cn } from '@/lib/utils';
 
 export function AppearanceSettings() {
   const t = useTranslations('profile.appearanceSettings');
   const reduce = useReduceMotionPref();
-  const locale = useLocale() as Locale;
-  const pathname = usePathname();
-  const router = useRouter();
-
-  function switchLocale(next: Locale) {
-    if (next === locale) return;
-    fetch('/api/v1/user/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale: next }),
-    }).catch(() => {});
-    router.replace(pathname, { locale: next });
-  }
+  const { locale, switchLocale, pending } = useLocaleSwitch();
 
   return (
     <div className="space-y-3">
@@ -37,9 +25,10 @@ export function AppearanceSettings() {
                 key={l}
                 type="button"
                 aria-pressed={l === locale}
+                disabled={pending}
                 onClick={() => switchLocale(l)}
                 className={cn(
-                  'px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer',
+                  'px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer disabled:opacity-50',
                   l === locale ? 'bg-primary text-primary-foreground' : 'bg-foreground/5 text-foreground/60 hover:bg-foreground/10',
                 )}
               >

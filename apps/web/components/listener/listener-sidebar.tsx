@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/icon';
 import { cn } from '@/lib/utils';
-import { usePathname, useRouter } from '@/i18n/navigation';
-import { LOCALES, type Locale } from '@vire/i18n/config';
+import { LOCALES } from '@vire/i18n/config';
+import { useLocaleSwitch } from '@/lib/use-locale-switch';
 import { SidebarPrimaryNav } from './sidebar-primary-nav';
 import { LibrarySidebar } from './library-sidebar';
 import { SidebarUser } from './sidebar-user';
@@ -38,27 +38,21 @@ export function ListenerSidebar({
 }) {
   const t = useTranslations('nav.sidebar');
   const [collapsed, setCollapsed] = useState(initialCollapsed);
-  const locale = useLocale() as Locale;
-  const pathname = usePathname();
-  const router = useRouter();
+  const { locale, switchLocale, pending: localePending } = useLocaleSwitch();
 
-  const switchLocale = useCallback(() => {
-    const next = LOCALES.find((l) => l !== locale) ?? locale;
-    fetch('/api/v1/user/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale: next }),
-    }).catch(() => {});
-    router.replace(pathname, { locale: next });
-  }, [locale, pathname, router]);
+  const toggleLocale = useCallback(() => {
+    switchLocale(LOCALES.find((l) => l !== locale) ?? locale);
+  }, [locale, switchLocale]);
 
   const localeButton = (
     <button
       type="button"
-      onClick={switchLocale}
+      onClick={toggleLocale}
+      disabled={localePending}
+      aria-busy={localePending}
       aria-label={t('switchLocaleAria', { target: locale === 'ru' ? t('localeEn') : t('localeRu') })}
       title={locale.toUpperCase()}
-      className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-xs font-medium text-foreground/45 transition-colors hover:bg-foreground/5 hover:text-foreground"
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-xs font-medium text-foreground/45 transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50"
     >
       {locale.toUpperCase()}
     </button>
