@@ -58,6 +58,7 @@ jobs:
       # (robots.txt). Ошибки старта/роутера/middleware (как слаг-конфликт) дают
       # 5xx на любой запрос: здесь это красит CI, а не прод. 2xx/3xx = обслуживает.
       - name: Smoke (prod standalone server boots & serves)
+        timeout-minutes: 6
         run: |
           cd apps/web/.next/standalone
           HOSTNAME=0.0.0.0 PORT=3000 node apps/web/server.js > /tmp/next.log 2>&1 &
@@ -76,7 +77,7 @@ jobs:
           # Петля редиректов на локализованных путях: rewrite `/` → `/ru` в проде
           # прогоняет proxy повторно и без защиты канонизируется обратно в `/` (v1.49.0).
           for path in / /en /artists /releases; do
-            out=$(curl -s -o /dev/null -L --max-redirs 5 -w "%{http_code} %{num_redirects}" "http://127.0.0.1:3000$path" || echo "000 9")
+            out=$(curl -s --max-time 25 -o /dev/null -L --max-redirs 5 -w "%{http_code} %{num_redirects}" "http://127.0.0.1:3000$path" || echo "000 9")
             final=${out% *}; hops=${out#* }
             echo "$path: HTTP $final после $hops редиректов"
             if [ "$hops" -gt 1 ]; then
@@ -89,6 +90,8 @@ jobs:
             fi
           done
           echo "Smoke OK: локализованные пути обслуживаются без петли"
+          # exit, а не выход по концу скрипта: иначе шаг ждёт закрытия stdout фоновым сервером
+          exit 0
         env:
           DATABASE_URL: postgresql://build:build@localhost/build
           S3_PUBLIC_ENDPOINT: https://cdn.viremusic.ru
