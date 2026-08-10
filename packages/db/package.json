@@ -28,8 +28,8 @@
     "@vire/config": "workspace:*",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
-    "tsx": "^4.22.4",
+    "tsx": "^4.23.11",
     "typescript": "^5.8.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.10"
   }
 }
