@@ -41,6 +41,9 @@ jobs:
       # Барьер: кириллица вне словарей packages/i18n/messages в локализованной зоне.
       - name: i18n check
         run: pnpm --filter @vire/web check:i18n
+      # Барьер: границы @vire/core — platform/** не знает о music/**, core чист от db/next/react.
+      - name: Layer check
+        run: pnpm turbo run check:layers
       - name: Test
         run: pnpm turbo run test
       - name: Security audit

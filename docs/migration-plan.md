@@ -29,7 +29,7 @@
 Смысл: зафиксировать границы **раньше**, чем начнём их двигать. Иначе первая же миграция
 размоет то, что пытаемся выстроить.
 
-### 0.1 Разделить `@vire/core` на `platform/` и `music/` — S
+### 0.1 Разделить `@vire/core` на `platform/` и `music/` — S ✅
 
 **Что меняется:** файлы `packages/core/src/services/*` и `repositories/*` раскладываются
 по `platform/**` и `music/**` согласно `platform-core.md` §2. Barrel `index.ts` сохраняет
@@ -39,10 +39,12 @@
 
 **Откат:** revert коммита. Поведение не менялось — риск нулевой.
 
-### 0.2 Барьер `check:layers` — S
+### 0.2 Барьер `check:layers` — S ✅
 
-**Что меняется:** ESLint-правило: `core/src/platform/**` не импортирует `core/src/music/**`
-и не импортирует `@vire/db`. Скрипт в `prebuild` и в job `gates`, рядом с `check:routes`.
+**Сделано:** `packages/core/scripts/check-layers.mjs` — статический детектор (по образцу
+`check-route-slugs.mjs`, без ESLint: у core своего конфига нет). Ловит два класса:
+`platform/**` → `music/**` и импорт `@vire/db`/`next`/`react` из любого файла core.
+Таск `check:layers` в `turbo.json` (фанаутится, как typecheck), шаг `Layer check` в job `gates`.
 
 **Проверка:** намеренно добавить запрещённый импорт → гейт красный → убрать.
 

@@ -87,6 +87,13 @@ PostgreSQL
 - Репозиторий не знает про бизнес-правила
 - `packages/core` не импортирует ничего из Next.js
 
+Внутри `packages/core` — две зоны: `platform/**` (переиспользуемые capability: identity,
+billing, notifications, search, social, messaging, storage, util) и `music/**` (доменное:
+catalog, curation, discovery, engagement, playback, jam, marketing, external, audio).
+`music/**` может опираться на `platform/**`, обратное запрещено; общее ядро (`errors.ts`,
+`jobs.ts`) лежит в корне `src`. Барьер — `pnpm turbo run check:layers`, он же в CI `gates`.
+Раскладка и целевые контракты — `docs/platform-core.md`, порядок работ — `docs/migration-plan.md`.
+
 ### FSD на фронтенде
 
 ```
@@ -250,6 +257,7 @@ pnpm --filter @vire/db typecheck       # tsc --noEmit
 pnpm --filter @vire/web lint           # eslint
 pnpm --filter @vire/web check:routes   # инвариант роутинга (см. ниже)
 pnpm --filter @vire/web check:i18n     # кириллица вне словарей packages/i18n/messages
+pnpm turbo run check:layers            # границы @vire/core: platform/** не знает о music/**
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов
 pnpm --filter @vire/web build          # прод-сборка (prebuild гоняет check:routes + check:i18n)
