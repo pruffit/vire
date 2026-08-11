@@ -19,6 +19,17 @@ export class DrizzleArtistRepository implements IArtistRepository {
     return mapToArtistProfile(row);
   }
 
+  async findById(id: string): Promise<ArtistProfile | null> {
+    const [row] = await this.db
+      .select()
+      .from(artistProfiles)
+      .where(and(eq(artistProfiles.id, id), eq(artistProfiles.isActive, true)))
+      .limit(1);
+
+    if (!row) return null;
+    return mapToArtistProfile(row);
+  }
+
   // Доступ к дашборду = членство в artist_members (несколько аккаунтов на профиль).
   async findByUserId(userId: string): Promise<ArtistProfile | null> {
     const [row] = await this.db

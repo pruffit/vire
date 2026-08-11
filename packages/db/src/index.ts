@@ -6,6 +6,7 @@ export * from './repositories/artist-post';
 export * from './repositories/artist-read';
 export * from './repositories/smart-link';
 export * from './repositories/release';
+export * from './repositories/release-read';
 export * from './repositories/track';
 export * from './repositories/follow';
 export * from './repositories/user-directory';

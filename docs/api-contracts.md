@@ -106,8 +106,8 @@ packages/api-contracts/src/
 
 | # | Ресурс | Эндпоинты | Статус сегодня |
 |---|---|---|---|
-| 1 | **Artist** | `GET /v1/artists`, `GET /v1/artists/{slug}` | Детальный **есть**, построен через core, но страница его не использует. Списка нет |
-| 2 | **Release** | `GET /v1/releases`, `GET /v1/releases/{id}` | То же самое |
+| 1 | **Artist** | `GET /v1/artists/{slug}/page` | ✅ Экран через core (шаг 2.1), контракт `artistPageResponseSchema`. Списка нет |
+| 2 | **Release** | `GET /v1/releases/{id}/page` | ✅ Экран через core (шаг 2.2), контракт `releasePageResponseSchema`. Ресурсный `GET /v1/releases/{id}` остаётся отдельно — потребитель плеер, не экран. Списка нет |
 | 3 | **Track** | `GET /v1/tracks/{id}`, `GET /v1/tracks/{id}/manifest` | Манифест есть |
 | 4 | **Playlist** | `GET /v1/playlists/{id}`, CRUD | Частично |
 | 5 | **Feed** | `GET /v1/feed` | **Нет вообще** |

@@ -2,10 +2,8 @@ import { notFound } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { db, DrizzleReleaseRepository, getPresaveState } from '@vire/db';
-import { ReleaseService, isReleasePubliclyVisible, isCountdownVisible } from '@vire/core';
 import { auth } from '@/auth';
-import { getArtist } from '../../artist-guard';
+import { getReleasePage } from '@/lib/release-page';
 import { ZoomableCover } from '@/components/zoomable-cover';
 import { ReleaseHeroPlay } from '@/components/release-hero-play';
 import { ReleaseShareButton } from '@/components/release-share-button';
@@ -28,30 +26,9 @@ import { SectionHeader } from '@/components/section-header';
 
 type Props = { params: Promise<{ slug: string; releaseId: string }> };
 
-async function getPageData(slug: string, releaseId: string) {
-  const [artist, releaseResult] = await Promise.all([
-    getArtist(slug),
-    new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() }).getWithTracks(releaseId),
-  ]);
-
-  if (!artist || !releaseResult.ok) return null;
-
-  const { release, tracks } = releaseResult.value;
-
-  if (release.artistProfileId !== artist.id) return null;
-
-  // Считаем здесь, не в компоненте — иначе react-hooks/purity ругается на Date.now() в рендере.
-  const now = new Date();
-  const releaseAtMs = release.releaseDate ? new Date(release.releaseDate).getTime() : null;
-  const isReleased = isReleasePubliclyVisible(release, now);
-  const showCountdown = isCountdownVisible(release, now);
-
-  return { artist, release, tracks, releaseAtMs, isReleased, showCountdown };
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, releaseId } = await params;
-  const data = await getPageData(slug, releaseId);
+  const data = await getReleasePage(slug, releaseId);
   if (!data) {
     const t = await getTranslations('release');
     return { title: t('notFound') };
@@ -81,7 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ReleasePage({ params }: Props) {
   const { slug, releaseId } = await params;
-  const data = await getPageData(slug, releaseId);
+  const data = await getReleasePage(slug, releaseId);
   if (!data) notFound();
 
   const t = await getTranslations('release');
@@ -89,14 +66,14 @@ export default async function ReleasePage({ params }: Props) {
   const tGenres = await getTranslations('genres');
   const locale = await resolveLocale();
 
-  const { artist, release, tracks, releaseAtMs, isReleased, showCountdown } = data;
+  const { artist, release, tracks, isReleased, showCountdown, presaved } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
+  const releaseAtMs = release.releaseDate ? new Date(release.releaseDate).getTime() : null;
 
   // SCHEDULED в будущем — обратный отсчёт; черновик/архив/без даты — 404
   if (!isReleased) {
     if (!showCountdown || releaseAtMs == null) notFound();
     const session = await auth();
-    const presaved = session?.user?.id ? await getPresaveState(session.user.id, release.id) : false;
     return (
       <div
         style={{ '--artist-bg': bg, '--artist-text': text, '--artist-accent': accent, ...artistFontStyle(artist.themeTokens) } as React.CSSProperties}
