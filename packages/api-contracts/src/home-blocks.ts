@@ -1,0 +1,50 @@
+import { z } from 'zod';
+import { releaseCardSchema } from './catalog';
+
+export const freshReleasesResponseSchema = z.object({
+  items: z.array(releaseCardSchema),
+});
+export type FreshReleasesResponse = z.infer<typeof freshReleasesResponseSchema>;
+
+export const upcomingResponseSchema = z.object({
+  items: z.array(releaseCardSchema),
+});
+export type UpcomingResponse = z.infer<typeof upcomingResponseSchema>;
+
+export const homeChartTrackSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  artistName: z.string(),
+  artistSlug: z.string(),
+  releaseId: z.string(),
+  coverUrl: z.string().nullable(),
+  accentColor: z.string().nullable(),
+  isExplicit: z.boolean(),
+  plays: z.number(),
+  version: z.string().nullable(),
+  feat: z.array(z.string()),
+});
+export type HomeChartTrackDTO = z.infer<typeof homeChartTrackSchema>;
+
+export const hotTracksResponseSchema = z.object({
+  items: z.array(homeChartTrackSchema),
+});
+export type HotTracksResponse = z.infer<typeof hotTracksResponseSchema>;
+
+export const homePlaylistCardSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  kind: z.string(),
+  editorialParams: z.object({ mood: z.string() }).nullable(),
+  trackCount: z.number(),
+  likesCount: z.number(),
+  covers: z.array(z.string()),
+});
+export type HomePlaylistCardDTO = z.infer<typeof homePlaylistCardSchema>;
+
+export const homePlaylistsResponseSchema = z.object({
+  playlists: z.array(homePlaylistCardSchema),
+  likedPlaylistIds: z.array(z.string()),
+});
+export type HomePlaylistsResponse = z.infer<typeof homePlaylistsResponseSchema>;

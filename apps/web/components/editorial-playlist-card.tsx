@@ -5,8 +5,7 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
-import type { EditorialPlaylist } from '@vire/db';
-import { editorialPlaylistText } from '@/lib/editorial-playlist';
+import { editorialPlaylistText, type EditorialPlaylistParams } from '@/lib/editorial-playlist';
 import { HeartIcon } from '@/components/icons';
 import { touchTargetClass } from '@/components/popover';
 import { CoverPlaceholder } from './playlist-cover';
@@ -81,11 +80,24 @@ function CoverFan({ covers }: { covers: string[] }) {
   );
 }
 
+// Структурный тип, не импорт EditorialPlaylist из @vire/db: секции главной отдают
+// playlist через packages/core, где mood — string, а не узкий union (см. lib/editorial-playlist.ts).
+export interface EditorialPlaylistCardData {
+  id: string;
+  title: string;
+  description: string | null;
+  kind: string;
+  editorialParams: EditorialPlaylistParams | null;
+  trackCount: number;
+  likesCount: number;
+  covers: string[];
+}
+
 export function EditorialPlaylistCard({
   playlist,
   liked: initialLiked,
 }: {
-  playlist: EditorialPlaylist;
+  playlist: EditorialPlaylistCardData;
   liked: boolean;
 }) {
   const t = useTranslations('playlist');

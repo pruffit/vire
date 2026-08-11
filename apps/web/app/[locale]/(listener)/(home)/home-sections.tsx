@@ -2,19 +2,14 @@ import { cache } from 'react';
 import { getTranslations } from 'next-intl/server';
 import {
   getLatestReleases,
-  listReleases,
   getUpcomingReleases,
   listActiveArtists,
-  getEditorialPlaylists,
-  getPersonalPlaylists,
-  getPopularPlaylists,
-  getPublicUserPlaylists,
-  getLikedPlaylistIds,
-  getPopularTracks,
   getRecentlyPlayed,
   getPersonalTrackPicks,
   getFriendsActivity,
+  DrizzleHomeBlocksRepository,
 } from '@vire/db';
+import { HomeBlocksService, type IHomeBlocksRepository, type HomePlaylistsBlock } from '@vire/core';
 import { mergeFriendsActivity } from '@/lib/activity';
 import { FriendsActivityFeed } from '@/components/friends/friends-activity-feed';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
@@ -34,6 +29,22 @@ export { DiscoverySection } from '@/components/home/discovery-section';
 export const cachedLatestReleases = cache(() => getLatestReleases(19).catch(() => []));
 const cachedUpcoming = cache(() => getUpcomingReleases(8).catch(() => []));
 const cachedArtists = cache(() => listActiveArtists().catch(() => []));
+
+// latestReleases/upcomingReleases идут через те же cache()-обёртки, что и CatalogEmptyNotice
+// — иначе блок и уведомление о пустом каталоге читают одни и те же таблицы дважды за рендер.
+const homeBlocksDb = new DrizzleHomeBlocksRepository();
+const homeBlocksRepo: IHomeBlocksRepository = {
+  latestReleases: () => cachedLatestReleases(),
+  upcomingReleases: () => cachedUpcoming(),
+  freshReleases: (params) => homeBlocksDb.freshReleases(params),
+  popularTracks: (sinceDays, limit) => homeBlocksDb.popularTracks(sinceDays, limit),
+  editorialPlaylists: (limit) => homeBlocksDb.editorialPlaylists(limit),
+  personalPlaylists: (userId, limit) => homeBlocksDb.personalPlaylists(userId, limit),
+  popularPlaylists: (limit, excludeIds) => homeBlocksDb.popularPlaylists(limit, excludeIds),
+  publicUserPlaylists: (limit) => homeBlocksDb.publicUserPlaylists(limit),
+  likedPlaylistIds: (userId) => homeBlocksDb.likedPlaylistIds(userId),
+};
+const homeBlocks = new HomeBlocksService(homeBlocksRepo);
 
 export async function PersonalBlock({ userId }: { userId: string }) {
   const t = await getTranslations('home.sections');
@@ -70,20 +81,13 @@ export async function FriendsActivitySection({ userId }: { userId: string }) {
 }
 
 export async function HotTracksSection() {
-  const hotTracks = await getPopularTracks(30, 20).catch(() => []);
+  const hotTracks = await homeBlocks.hotTracksBlock().catch(() => []);
   return <HotTracks tracks={hotTracks} />;
 }
 
 export async function FreshReleasesSection() {
   const t = await getTranslations('home.sections');
-  const [freshWeek, latest] = await Promise.all([
-    listReleases({ sort: 'fresh', sinceDays: 7, limit: 18 }).catch(() => []),
-    cachedLatestReleases(),
-  ]);
-  const featured = latest[0] ?? null;
-  // на маленьком каталоге неделя бывает пустой — добиваем общим списком свежего
-  const weekFresh = freshWeek.filter((r) => r.id !== featured?.id);
-  const rest = (weekFresh.length >= 4 ? weekFresh : latest.slice(1)).slice(0, 18);
+  const rest = await homeBlocks.freshReleasesBlock().catch(() => []);
   if (rest.length === 0) return null;
 
   return (
@@ -102,7 +106,7 @@ export async function FreshReleasesSection() {
 
 export async function UpcomingSection() {
   const t = await getTranslations('home.sections');
-  const upcoming = await cachedUpcoming();
+  const upcoming = await homeBlocks.upcomingBlock().catch(() => []);
   if (upcoming.length === 0) return null;
   return (
     <Section title={t('comingSoon')} count={upcoming.length}>
@@ -124,23 +128,9 @@ export async function ListeningNowSection() {
 
 export async function PlaylistsSection({ userId }: { userId?: string }) {
   const t = await getTranslations('home.sections');
-  const [sharedPlaylists, personalRaw, publicPlaylists, likedPlaylistIds] = await Promise.all([
-    getEditorialPlaylists(4).catch(() => []),
-    userId ? getPersonalPlaylists(userId, 4).catch(() => []) : Promise.resolve([]),
-    getPublicUserPlaylists(12).catch(() => []),
-    userId ? getLikedPlaylistIds(userId).catch(() => []) : Promise.resolve([] as string[]),
-  ]);
-
-  // Подборки: 4 общих + 4 личных (добор популярным при нехватке), плюс плейлисты слушателей — в одной секции.
-  let personalPlaylists = personalRaw;
-  if (personalPlaylists.length < 4) {
-    const exclude = [...sharedPlaylists, ...personalPlaylists].map((p) => p.id);
-    const fill = await getPopularPlaylists(4 - personalPlaylists.length, exclude).catch(() => []);
-    personalPlaylists = [...personalPlaylists, ...fill];
-  }
-  const seen = new Set<string>();
-  const allPlaylists = [...sharedPlaylists, ...personalPlaylists, ...publicPlaylists]
-    .filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
+  const { playlists: allPlaylists, likedPlaylistIds } = await homeBlocks
+    .playlistsBlock({ viewerId: userId })
+    .catch((): HomePlaylistsBlock => ({ playlists: [], likedPlaylistIds: [] }));
 
   if (allPlaylists.length === 0) return null;
   return (
