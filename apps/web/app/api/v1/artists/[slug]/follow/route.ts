@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleArtistRepository, DrizzleFollowRepository } from '@vire/db';
 import { FollowService, NotFoundError } from '@vire/core';
+import type { FollowResponse } from '@vire/api-contracts';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
 
@@ -26,7 +27,7 @@ export async function POST(_req: Request, { params }: Ctx) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ following: true });
+  return NextResponse.json({ following: true } satisfies FollowResponse);
 }
 
 export async function DELETE(_req: Request, { params }: Ctx) {
@@ -41,5 +42,5 @@ export async function DELETE(_req: Request, { params }: Ctx) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ following: false });
+  return NextResponse.json({ following: false } satisfies FollowResponse);
 }

@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
 import { db, DrizzleArtistRepository } from '@vire/db';
-import { ArtistService, NotFoundError } from '@vire/core';
+import { ArtistService, NotFoundError, type ArtistProfile } from '@vire/core';
+import type { ArtistDetailResponse } from '@vire/api-contracts';
 import { errorJson } from '@/lib/error-response';
+
+function toResponse(artist: ArtistProfile): ArtistDetailResponse {
+  return {
+    ...artist,
+    createdAt: artist.createdAt.toISOString(),
+    updatedAt: artist.updatedAt.toISOString(),
+  };
+}
 
 export async function GET(
   _req: Request,
@@ -19,5 +28,5 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
-  return NextResponse.json(result.value);
+  return NextResponse.json(toResponse(result.value));
 }

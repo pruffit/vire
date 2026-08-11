@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { presaveResponseSchema } from '@vire/api-contracts';
 
 const { getReleasePresaveInfo, presaveForUser, unpresaveForUser, presaveForGuest, getPresaveState } =
   vi.hoisted(() => ({
@@ -107,7 +108,9 @@ describe('POST /api/v1/releases/[id]/presave', () => {
     mockedAuth.mockResolvedValue(null as never);
     const res = await POST(req({ email: 'Fan@Example.COM' }), ctx);
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ presaved: true, guest: true });
+    const body = await res.json();
+    expect(body).toEqual({ presaved: true, guest: true });
+    expect(presaveResponseSchema.safeParse(body).success).toBe(true);
     expect(presaveForGuest).toHaveBeenCalledWith('fan@example.com', RELEASE_ID);
   });
 

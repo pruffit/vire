@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { likeResponseSchema } from '@vire/api-contracts';
 
 const { like, unlike, getLikeState } = vi.hoisted(() => ({
   like: vi.fn(),
@@ -63,7 +64,9 @@ describe('POST /api/v1/playlists/[id]/like', () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     const res = await POST(req('POST'), ctx);
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ liked: true });
+    const body = await res.json();
+    expect(body).toEqual({ liked: true });
+    expect(likeResponseSchema.safeParse(body).success).toBe(true);
     expect(like).toHaveBeenCalledWith('u1', PLAYLIST_ID);
   });
 });

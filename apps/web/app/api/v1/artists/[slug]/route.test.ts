@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { artistDetailResponseSchema } from '@vire/api-contracts';
 
 const { getBySlug } = vi.hoisted(() => ({ getBySlug: vi.fn() }));
 
@@ -40,11 +41,32 @@ describe('GET /api/v1/artists/[slug]', () => {
   });
 
   it('happy path: returns the artist profile', async () => {
-    const artist = { id: 'a1', slug: 'danya', name: 'Danya' };
+    const artist = {
+      id: 'a1',
+      userId: 'u1',
+      slug: 'danya',
+      name: 'Danya',
+      bio: null,
+      avatarUrl: null,
+      headerUrl: null,
+      themeTokens: { bg: '#000', text: '#fff', accent: '#123', grain: true, fontSans: 'Inter', fontMono: 'Mono' },
+      links: [],
+      videos: [],
+      verified: false,
+      isActive: true,
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-02T00:00:00.000Z'),
+    };
     getBySlug.mockResolvedValue({ ok: true, value: artist });
     const res = await GET(req(), ctx('danya'));
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual(artist);
+    const body = await res.json();
+    expect(body).toEqual({
+      ...artist,
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-01-02T00:00:00.000Z',
+    });
+    expect(artistDetailResponseSchema.safeParse(body).success).toBe(true);
     expect(getBySlug).toHaveBeenCalledWith('danya');
   });
 });

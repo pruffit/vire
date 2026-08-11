@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { artistProfileSchema, releaseSchema } from './catalog';
 
-const trackSchema = z.object({
+export const trackSchema = z.object({
   id: z.string(),
   releaseId: z.string(),
   title: z.string(),

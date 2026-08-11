@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { followResponseSchema } from '@vire/api-contracts';
 
 const { findBySlug, follow, unfollow } = vi.hoisted(() => ({
   findBySlug: vi.fn(),
@@ -52,7 +53,9 @@ describe('POST /api/v1/artists/[slug]/follow', () => {
     findBySlug.mockResolvedValue({ id: 'artist1' });
     const res = await POST(req(), ctx);
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ following: true });
+    const body = await res.json();
+    expect(body).toEqual({ following: true });
+    expect(followResponseSchema.safeParse(body).success).toBe(true);
     expect(follow).toHaveBeenCalledWith('u1', 'artist1');
   });
 });

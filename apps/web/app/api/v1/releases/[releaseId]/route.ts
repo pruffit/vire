@@ -1,7 +1,24 @@
 import { NextResponse } from 'next/server';
 import { db, DrizzleReleaseRepository } from '@vire/db';
-import { ReleaseService, NotFoundError, isReleasePubliclyVisible } from '@vire/core';
+import { ReleaseService, NotFoundError, isReleasePubliclyVisible, type ReleaseWithTracks } from '@vire/core';
+import type { ReleaseDetailResponse } from '@vire/api-contracts';
 import { errorJson } from '@/lib/error-response';
+
+function toResponse(data: ReleaseWithTracks): ReleaseDetailResponse {
+  return {
+    release: {
+      ...data.release,
+      releaseDate: data.release.releaseDate?.toISOString() ?? null,
+      createdAt: data.release.createdAt.toISOString(),
+      updatedAt: data.release.updatedAt.toISOString(),
+    },
+    tracks: data.tracks.map((t) => ({
+      ...t,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+    })),
+  };
+}
 
 export async function GET(
   _req: Request,
@@ -25,5 +42,5 @@ export async function GET(
     return NextResponse.json({ error: 'Release not found', code: 'release.notFound' }, { status: 404 });
   }
 
-  return NextResponse.json(result.value);
+  return NextResponse.json(toResponse(result.value));
 }

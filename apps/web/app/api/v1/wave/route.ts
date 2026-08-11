@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { waveQuerySchema } from '@vire/api-contracts';
+import { waveQuerySchema, type WaveResponse } from '@vire/api-contracts';
 import { db, DrizzleWaveRepository, ALL_MOODS, ALL_TRACK_GENRES } from '@vire/db';
 import { WaveService } from '@vire/core';
 import { auth } from '@/auth';
@@ -39,5 +39,5 @@ export async function GET(req: Request) {
     limit: count,
   });
 
-  return NextResponse.json({ tracks: result.ok ? result.value.tracks : [] });
+  return NextResponse.json({ tracks: result.ok ? result.value.tracks : [] } satisfies WaveResponse);
 }

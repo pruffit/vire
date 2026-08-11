@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { releaseDetailResponseSchema } from '@vire/api-contracts';
 
 const { findWithTracks } = vi.hoisted(() => ({ findWithTracks: vi.fn() }));
 
@@ -20,8 +21,36 @@ const FUTURE = new Date(Date.now() + 86_400_000);
 
 function release(status: string, releaseDate: Date | null = null) {
   return {
-    release: { id: RELEASE_ID, artistProfileId: 'a1', title: 'Secret', status, releaseDate },
-    tracks: [{ id: 't1', title: 'Leak', status: 'READY' }],
+    release: {
+      id: RELEASE_ID,
+      artistProfileId: 'a1',
+      title: 'Secret',
+      type: 'SINGLE',
+      genre: null,
+      coverUrl: null,
+      releaseDate,
+      status,
+      description: null,
+      linerNotes: null,
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-02T00:00:00.000Z'),
+    },
+    tracks: [{
+      id: 't1',
+      releaseId: RELEASE_ID,
+      title: 'Leak',
+      version: null,
+      trackNumber: 1,
+      durationSec: 180,
+      status: 'READY',
+      isExclusive: false,
+      isWip: false,
+      isExplicit: false,
+      credits: [],
+      lyrics: null,
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-02T00:00:00.000Z'),
+    }],
   };
 }
 
@@ -37,7 +66,9 @@ describe('GET /api/v1/releases/[releaseId]', () => {
     findWithTracks.mockResolvedValue(release('PUBLISHED'));
     const res = await GET(req(), ctx);
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toMatchObject({ tracks: [{ id: 't1' }] });
+    const body = await res.json();
+    expect(body).toMatchObject({ tracks: [{ id: 't1' }] });
+    expect(releaseDetailResponseSchema.safeParse(body).success).toBe(true);
   });
 
   it('отдаёт SCHEDULED-релиз, дата которого уже наступила', async () => {

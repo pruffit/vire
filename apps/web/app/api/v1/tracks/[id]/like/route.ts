@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, DrizzleListenerTrackRepository } from '@vire/db';
 import { ListenerTrackService, NotFoundError } from '@vire/core';
+import type { LikeResponse } from '@vire/api-contracts';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
 
@@ -16,7 +17,7 @@ export async function GET(_req: Request, { params }: Params) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
   const result = await listenerTrackService().getLikeState(session.user.id, id);
-  return NextResponse.json({ liked: result.ok ? result.value : false });
+  return NextResponse.json({ liked: result.ok ? result.value : false } satisfies LikeResponse);
 }
 
 export async function POST(_req: Request, { params }: Params) {
@@ -32,7 +33,7 @@ export async function POST(_req: Request, { params }: Params) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ liked: true });
+  return NextResponse.json({ liked: true } satisfies LikeResponse);
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
@@ -44,5 +45,5 @@ export async function DELETE(_req: Request, { params }: Params) {
 
   const { id } = await params;
   await listenerTrackService().unlike(session.user.id, id);
-  return NextResponse.json({ liked: false });
+  return NextResponse.json({ liked: false } satisfies LikeResponse);
 }

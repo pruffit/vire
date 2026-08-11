@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { waveResponseSchema } from '@vire/api-contracts';
 
 const { getWaveTracks, getTrackMusicalKey, getArtistIdsForTracks, getTasteProfile } = vi.hoisted(() => ({
   getWaveTracks: vi.fn(),
@@ -53,11 +54,11 @@ const TRACK: {
   accentColor: string | null;
   isExplicit: boolean;
 } = {
-  id: 'track-1',
+  id: '11111111-1111-1111-1111-111111111111',
   title: 'Title',
   artistName: 'Artist',
   artistSlug: 'artist',
-  releaseId: 'release-1',
+  releaseId: '22222222-2222-2222-2222-222222222222',
   coverUrl: null,
   accentColor: null,
   isExplicit: false,
@@ -111,13 +112,14 @@ describe('GET /api/v1/wave', () => {
 
     const body = (await res.json()) as { tracks: unknown[] };
     expect(body.tracks).toEqual([TRACK]);
+    expect(waveResponseSchema.safeParse(body).success).toBe(true);
 
     expect(getSession).toHaveBeenCalledWith('session-abc123');
     const call = getWaveTracks.mock.calls[0][0] as { excludeIds: string[] };
     expect(call.excludeIds).toEqual(
       expect.arrayContaining(['served-1', 'served-2', 'played-1', 'played-2']),
     );
-    expect(appendServed).toHaveBeenCalledWith('session-abc123', ['track-1']);
+    expect(appendServed).toHaveBeenCalledWith('session-abc123', [TRACK.id]);
   });
 
   it('without sessionId, served is not read (stateless)', async () => {

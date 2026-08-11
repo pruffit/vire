@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextResponse } from 'next/server';
+import { likeResponseSchema } from '@vire/api-contracts';
 
 const { trackExists, getLikeState, like, unlike } = vi.hoisted(() => ({
   trackExists: vi.fn(),
@@ -75,7 +76,9 @@ describe('POST /api/v1/tracks/[id]/like', () => {
     trackExists.mockResolvedValue(true);
     const res = await POST(req('POST'), ctx);
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ liked: true });
+    const body = await res.json();
+    expect(body).toEqual({ liked: true });
+    expect(likeResponseSchema.safeParse(body).success).toBe(true);
     expect(like).toHaveBeenCalledWith('u1', TRACK_ID);
   });
 });

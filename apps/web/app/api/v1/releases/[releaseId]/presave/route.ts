@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { db, DrizzlePresaveRepository } from '@vire/db';
 import { PresaveService, NotFoundError, type ValidationError } from '@vire/core';
+import type { PresaveResponse } from '@vire/api-contracts';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
 
@@ -23,10 +24,10 @@ function presaveErrorResponse(error: NotFoundError | ValidationError): NextRespo
 
 export async function GET(_req: Request, { params }: Params) {
   const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ presaved: false });
+  if (!session?.user?.id) return NextResponse.json({ presaved: false } satisfies PresaveResponse);
   const { releaseId } = await params;
   const result = await presaveService().getState(session.user.id, releaseId);
-  return NextResponse.json({ presaved: result.ok ? result.value.presaved : false });
+  return NextResponse.json({ presaved: result.ok ? result.value.presaved : false } satisfies PresaveResponse);
 }
 
 export async function POST(req: Request, { params }: Params) {
@@ -39,7 +40,7 @@ export async function POST(req: Request, { params }: Params) {
     if (!rl.ok) return tooManyRequests(rl.retryAfter);
     const result = await service.presaveUser(session.user.id, releaseId);
     if (!result.ok) return presaveErrorResponse(result.error);
-    return NextResponse.json({ presaved: true });
+    return NextResponse.json({ presaved: true } satisfies PresaveResponse);
   }
 
   // Гость: пресейв по email.
@@ -58,7 +59,7 @@ export async function POST(req: Request, { params }: Params) {
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
   const result = await service.presaveGuest(email, releaseId);
   if (!result.ok) return presaveErrorResponse(result.error);
-  return NextResponse.json({ presaved: true, guest: true });
+  return NextResponse.json({ presaved: true, guest: true } satisfies PresaveResponse);
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
@@ -66,5 +67,5 @@ export async function DELETE(_req: Request, { params }: Params) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { releaseId } = await params;
   await presaveService().unpresave(session.user.id, releaseId);
-  return NextResponse.json({ presaved: false });
+  return NextResponse.json({ presaved: false } satisfies PresaveResponse);
 }
