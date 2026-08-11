@@ -1,7 +1,4 @@
-import type {
-  LikedTrack, FollowedArtist, PlaylistSummary,
-  FriendActor, FriendLikeActivity, FriendFollowActivity, FriendPlaylistActivity,
-} from '@vire/db';
+import type { LikedTrack, FollowedArtist, PlaylistSummary } from '@vire/db';
 
 export type ActivityItem =
   | { kind: 'like'; at: Date; trackTitle: string; artistName: string; artistSlug: string; releaseId: string }
@@ -44,29 +41,5 @@ export function activityKey(item: ActivityItem): string {
   return `${item.kind}:${id}:${item.at.getTime()}`;
 }
 
-export type FriendActivityItem =
-  | { kind: 'like'; actor: FriendActor; at: Date; trackTitle: string; artistName: string; artistSlug: string; releaseId: string }
-  | { kind: 'follow'; actor: FriendActor; at: Date; artistName: string; artistSlug: string }
-  | { kind: 'playlist'; actor: FriendActor; at: Date; playlistId: string; title: string };
-
-export function mergeFriendsActivity(
-  likes: FriendLikeActivity[],
-  follows: FriendFollowActivity[],
-  playlists: FriendPlaylistActivity[],
-  limit = 12,
-): FriendActivityItem[] {
-  const items: FriendActivityItem[] = [
-    ...likes.map((l): FriendActivityItem => ({ kind: 'like', ...l })),
-    ...follows.map((f): FriendActivityItem => ({ kind: 'follow', ...f })),
-    ...playlists.map((p): FriendActivityItem => ({ kind: 'playlist', ...p })),
-  ];
-  return items.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, limit);
-}
-
-export function friendActivityKey(item: FriendActivityItem): string {
-  const id =
-    item.kind === 'like' ? `${item.releaseId}:${item.trackTitle}`
-    : item.kind === 'follow' ? item.artistSlug
-    : item.playlistId;
-  return `${item.kind}:${item.actor.id}:${id}:${item.at.getTime()}`;
-}
+export { mergeFriendsActivity, friendActivityKey } from '@vire/core';
+export type { FriendActivityItem } from '@vire/core';

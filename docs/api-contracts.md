@@ -114,6 +114,7 @@ packages/api-contracts/src/
 | 6 | **User/Profile** | `GET /v1/user/profile`, `PATCH` | Частично |
 | 7 | **Auth** | `POST /v1/auth/token`, `/refresh`, `DELETE /devices/{id}` | **Нет** — волна 4 |
 | 8 | **Interactions** | like, follow, presave | Есть, уже в контрактах |
+| 9 | **Home blocks** (доп. к Playlist из #4) | `GET /v1/home/{fresh-releases,upcoming,hot-tracks,playlists,personal,friends-activity}` | ✅ `HomeBlocksService` через core (шаг 2.7), контракты `freshReleasesResponseSchema`/`upcomingResponseSchema`/`hotTracksResponseSchema`/`homePlaylistsResponseSchema`/`personalBlockResponseSchema`/`friendsActivityResponseSchema`. `personal`/`friends-activity` — 401 без сессии, `userId` только из сессии, не из query (тот же контракт, что и Feed) |
 
 Порядок совпадает с волной 2 `migration-plan.md` — контракт пишется **вместе** с переводом
 ресурса на read-сервис, не отдельной кампанией. Это то, что не даёт работе превратиться

@@ -1,6 +1,7 @@
-import type { IHomeBlocksRepository, ReleaseCard, HomeChartTrack, HomePlaylistCard } from '@vire/core';
-import { getLatestReleases, listReleases, getUpcomingReleases, getPopularTracks } from '../queries/discovery';
+import type { IHomeBlocksRepository, ReleaseCard, HomeChartTrack, HomePlaylistCard, FriendsActivity } from '@vire/core';
+import { getLatestReleases, listReleases, getUpcomingReleases, getPopularTracks, getRecentlyPlayed, getPersonalTrackPicks } from '../queries/discovery';
 import { getEditorialPlaylists, getPersonalPlaylists, getPopularPlaylists, getPublicUserPlaylists, getLikedPlaylistIds } from '../queries/playlists';
+import { getFriendsActivity } from '../queries/friends-activity';
 
 /** Тонкая обёртка над queries/discovery.ts и queries/playlists.ts — SQL живёт там, не здесь. */
 export class DrizzleHomeBlocksRepository implements IHomeBlocksRepository {
@@ -38,5 +39,17 @@ export class DrizzleHomeBlocksRepository implements IHomeBlocksRepository {
 
   likedPlaylistIds(userId: string): Promise<string[]> {
     return getLikedPlaylistIds(userId);
+  }
+
+  recentlyPlayed(userId: string, limit: number): Promise<HomeChartTrack[]> {
+    return getRecentlyPlayed(userId, limit);
+  }
+
+  personalTrackPicks(userId: string, limit: number): Promise<HomeChartTrack[]> {
+    return getPersonalTrackPicks(userId, limit);
+  }
+
+  friendsActivity(userId: string, limit: number): Promise<FriendsActivity> {
+    return getFriendsActivity(userId, limit);
   }
 }

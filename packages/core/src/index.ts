@@ -104,6 +104,7 @@ export * from './music/discovery/services/feed-ranking';
 export * from './music/discovery/services/discovery-scoring';
 export * from './music/discovery/services/feed';
 export * from './music/discovery/services/home-blocks';
+export * from './music/discovery/services/friends-activity-merge';
 export * from './platform/search/services/search';
 export * from './music/engagement/services/presave';
 export * from './platform/billing/services/purchase';

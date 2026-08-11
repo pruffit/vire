@@ -1,6 +1,7 @@
 import type { ReleaseCard } from '../../catalog/types/release-card';
 import type { IHomeBlocksRepository } from '../repositories/home-blocks';
-import type { HomeChartTrack, HomePlaylistsBlock } from '../types/home-blocks';
+import type { HomeChartTrack, HomePlaylistsBlock, HomePersonalBlock, FriendActivityItem } from '../types/home-blocks';
+import { mergeFriendsActivity, FRIENDS_ACTIVITY_LIMIT } from './friends-activity-merge';
 
 export const FRESH_RELEASES_LATEST_LIMIT = 19;
 export const FRESH_RELEASES_WEEK_SINCE_DAYS = 7;
@@ -16,6 +17,10 @@ export const HOT_TRACKS_LIMIT = 20;
 export const PLAYLISTS_EDITORIAL_LIMIT = 4;
 export const PLAYLISTS_PERSONAL_LIMIT = 4;
 export const PLAYLISTS_PUBLIC_LIMIT = 12;
+
+export const PERSONAL_RECENT_LIMIT = 12;
+export const PERSONAL_PICKS_LIMIT = 12;
+export const PERSONAL_PICKS_MIN_COUNT = 4;
 
 export interface PlaylistsBlockInput {
   viewerId?: string;
@@ -66,5 +71,21 @@ export class HomeBlocksService {
       .filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
 
     return { playlists, likedPlaylistIds };
+  }
+
+  /** «Продолжить слушать» + «Для тебя» минус пересечение с недавним; «для тебя» скрыт при <4 после дедупа. */
+  async personalBlock({ userId }: { userId: string }): Promise<HomePersonalBlock> {
+    const [recentlyPlayed, personalPicksRaw] = await Promise.all([
+      this.repo.recentlyPlayed(userId, PERSONAL_RECENT_LIMIT),
+      this.repo.personalTrackPicks(userId, PERSONAL_PICKS_LIMIT),
+    ]);
+    const recentIds = new Set(recentlyPlayed.map((t) => t.id));
+    const deduped = personalPicksRaw.filter((t) => !recentIds.has(t.id));
+    return { recentlyPlayed, personalPicks: deduped.length >= PERSONAL_PICKS_MIN_COUNT ? deduped : [] };
+  }
+
+  async friendsActivityBlock({ userId }: { userId: string }): Promise<FriendActivityItem[]> {
+    const raw = await this.repo.friendsActivity(userId, FRIENDS_ACTIVITY_LIMIT);
+    return mergeFriendsActivity(raw.likes, raw.follows, raw.playlists);
   }
 }

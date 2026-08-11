@@ -1,16 +1,7 @@
 import { cache } from 'react';
 import { getTranslations } from 'next-intl/server';
-import {
-  getLatestReleases,
-  getUpcomingReleases,
-  listActiveArtists,
-  getRecentlyPlayed,
-  getPersonalTrackPicks,
-  getFriendsActivity,
-  DrizzleHomeBlocksRepository,
-} from '@vire/db';
-import { HomeBlocksService, type IHomeBlocksRepository, type HomePlaylistsBlock } from '@vire/core';
-import { mergeFriendsActivity } from '@/lib/activity';
+import { getLatestReleases, getUpcomingReleases, listActiveArtists, DrizzleHomeBlocksRepository } from '@vire/db';
+import { HomeBlocksService, type IHomeBlocksRepository, type HomePlaylistsBlock, type HomePersonalBlock } from '@vire/core';
 import { FriendsActivityFeed } from '@/components/friends/friends-activity-feed';
 import { ReleaseQuickLook } from '@/components/release-quick-look';
 import { ScrollRow } from '@/components/scroll-row';
@@ -43,24 +34,24 @@ const homeBlocksRepo: IHomeBlocksRepository = {
   popularPlaylists: (limit, excludeIds) => homeBlocksDb.popularPlaylists(limit, excludeIds),
   publicUserPlaylists: (limit) => homeBlocksDb.publicUserPlaylists(limit),
   likedPlaylistIds: (userId) => homeBlocksDb.likedPlaylistIds(userId),
+  recentlyPlayed: (userId, limit) => homeBlocksDb.recentlyPlayed(userId, limit),
+  personalTrackPicks: (userId, limit) => homeBlocksDb.personalTrackPicks(userId, limit),
+  friendsActivity: (userId, limit) => homeBlocksDb.friendsActivity(userId, limit),
 };
 const homeBlocks = new HomeBlocksService(homeBlocksRepo);
 
 export async function PersonalBlock({ userId }: { userId: string }) {
   const t = await getTranslations('home.sections');
-  const [recent, personalPicks] = await Promise.all([
-    getRecentlyPlayed(userId, 12).catch(() => []),
-    getPersonalTrackPicks(userId, 12).catch(() => []),
-  ]);
-  const recentIds = new Set(recent.map((t) => t.id));
-  const personalPicksDeduped = personalPicks.filter((t) => !recentIds.has(t.id));
+  const { recentlyPlayed, personalPicks } = await homeBlocks
+    .personalBlock({ userId })
+    .catch((): HomePersonalBlock => ({ recentlyPlayed: [], personalPicks: [] }));
 
   return (
     <>
-      <RecentRail tracks={recent} />
-      {personalPicksDeduped.length >= 4 && (
+      <RecentRail tracks={recentlyPlayed} />
+      {personalPicks.length > 0 && (
         <Section title={t('forYou')}>
-          <PlayableTrackList variant="plain" columns={2} tracks={personalPicksDeduped} context={{ source: 'home' }} />
+          <PlayableTrackList variant="plain" columns={2} tracks={personalPicks} context={{ source: 'home' }} />
         </Section>
       )}
     </>
@@ -69,9 +60,7 @@ export async function PersonalBlock({ userId }: { userId: string }) {
 
 export async function FriendsActivitySection({ userId }: { userId: string }) {
   const t = await getTranslations('home.sections');
-  const raw = await getFriendsActivity(userId, 12).catch(() => null);
-  if (!raw) return null;
-  const items = mergeFriendsActivity(raw.likes, raw.follows, raw.playlists);
+  const items = await homeBlocks.friendsActivityBlock({ userId }).catch(() => []);
   if (items.length === 0) return null;
   return (
     <Section title={t('friendsActivity')}>

@@ -10,9 +10,12 @@ import {
   PLAYLISTS_EDITORIAL_LIMIT,
   PLAYLISTS_PERSONAL_LIMIT,
   PLAYLISTS_PUBLIC_LIMIT,
+  PERSONAL_RECENT_LIMIT,
+  PERSONAL_PICKS_LIMIT,
 } from './home-blocks';
+import { FRIENDS_ACTIVITY_LIMIT } from './friends-activity-merge';
 import type { IHomeBlocksRepository } from '../repositories/home-blocks';
-import type { HomePlaylistCard } from '../types/home-blocks';
+import type { HomeChartTrack, HomePlaylistCard, FriendsActivity } from '../types/home-blocks';
 import type { ReleaseCard } from '../../catalog/types/release-card';
 
 function makeCard(overrides?: Partial<ReleaseCard>): ReleaseCard {
@@ -56,6 +59,26 @@ function makeRepo(overrides?: Partial<IHomeBlocksRepository>): IHomeBlocksReposi
     popularPlaylists: vi.fn().mockResolvedValue([]),
     publicUserPlaylists: vi.fn().mockResolvedValue([]),
     likedPlaylistIds: vi.fn().mockResolvedValue([]),
+    recentlyPlayed: vi.fn().mockResolvedValue([]),
+    personalTrackPicks: vi.fn().mockResolvedValue([]),
+    friendsActivity: vi.fn().mockResolvedValue({ likes: [], follows: [], playlists: [] }),
+    ...overrides,
+  };
+}
+
+function makeTrack(overrides?: Partial<HomeChartTrack>): HomeChartTrack {
+  return {
+    id: 'track-1',
+    title: 'Test Track',
+    artistName: 'Test Artist',
+    artistSlug: 'test-artist',
+    releaseId: 'release-1',
+    coverUrl: null,
+    accentColor: null,
+    isExplicit: false,
+    plays: 0,
+    version: null,
+    feat: [],
     ...overrides,
   };
 }
@@ -208,5 +231,75 @@ describe('HomeBlocksService.playlistsBlock — дедуп', () => {
     expect(repo.publicUserPlaylists).toHaveBeenCalledWith(PLAYLISTS_PUBLIC_LIMIT);
     expect(repo.likedPlaylistIds).toHaveBeenCalledWith('user-1');
     expect(result.likedPlaylistIds).toEqual(['liked-1']);
+  });
+});
+
+describe('HomeBlocksService.personalBlock', () => {
+  it('requests recently-played and personal picks with their limits, in parallel', async () => {
+    const repo = makeRepo();
+    await new HomeBlocksService(repo).personalBlock({ userId: 'user-1' });
+
+    expect(repo.recentlyPlayed).toHaveBeenCalledWith('user-1', PERSONAL_RECENT_LIMIT);
+    expect(repo.personalTrackPicks).toHaveBeenCalledWith('user-1', PERSONAL_PICKS_LIMIT);
+  });
+
+  it('deduplicates personal picks against recently-played by id', async () => {
+    const recent = [makeTrack({ id: 'r1' }), makeTrack({ id: 'r2' })];
+    const picks = [makeTrack({ id: 'r1' }), makeTrack({ id: 'p1' }), makeTrack({ id: 'p2' }), makeTrack({ id: 'p3' }), makeTrack({ id: 'p4' })];
+    const repo = makeRepo({
+      recentlyPlayed: vi.fn().mockResolvedValue(recent),
+      personalTrackPicks: vi.fn().mockResolvedValue(picks),
+    });
+
+    const result = await new HomeBlocksService(repo).personalBlock({ userId: 'user-1' });
+
+    expect(result.recentlyPlayed).toEqual(recent);
+    expect(result.personalPicks.map((t) => t.id)).toEqual(['p1', 'p2', 'p3', 'p4']);
+  });
+
+  it('hides the "for you" picks when fewer than 4 remain after dedup (boundary: 3 → empty)', async () => {
+    const picks = Array.from({ length: 3 }, (_, i) => makeTrack({ id: `p${i}` }));
+    const repo = makeRepo({ personalTrackPicks: vi.fn().mockResolvedValue(picks) });
+
+    const result = await new HomeBlocksService(repo).personalBlock({ userId: 'user-1' });
+
+    expect(result.personalPicks).toEqual([]);
+  });
+
+  it('shows the "for you" picks once 4 remain after dedup (boundary: 4 → shown)', async () => {
+    const picks = Array.from({ length: 4 }, (_, i) => makeTrack({ id: `p${i}` }));
+    const repo = makeRepo({ personalTrackPicks: vi.fn().mockResolvedValue(picks) });
+
+    const result = await new HomeBlocksService(repo).personalBlock({ userId: 'user-1' });
+
+    expect(result.personalPicks.map((t) => t.id)).toEqual(['p0', 'p1', 'p2', 'p3']);
+  });
+});
+
+describe('HomeBlocksService.friendsActivityBlock', () => {
+  it('requests friends activity with the block limit', async () => {
+    const repo = makeRepo();
+    await new HomeBlocksService(repo).friendsActivityBlock({ userId: 'user-1' });
+
+    expect(repo.friendsActivity).toHaveBeenCalledWith('user-1', FRIENDS_ACTIVITY_LIMIT);
+  });
+
+  it('returns an empty array when the friend has no activity', async () => {
+    const repo = makeRepo();
+    const result = await new HomeBlocksService(repo).friendsActivityBlock({ userId: 'user-1' });
+    expect(result).toEqual([]);
+  });
+
+  it('merges likes/follows/playlists sorted by recency, most recent first', async () => {
+    const raw: FriendsActivity = {
+      likes: [{ actor: { id: 'a', name: null, image: null }, at: new Date('2026-01-01T00:00:00Z'), trackTitle: 'T', artistName: 'Ar', artistSlug: 'ar', releaseId: 'r' }],
+      follows: [{ actor: { id: 'b', name: null, image: null }, at: new Date('2026-01-03T00:00:00Z'), artistName: 'Ar2', artistSlug: 'ar2' }],
+      playlists: [{ actor: { id: 'a', name: null, image: null }, at: new Date('2026-01-02T00:00:00Z'), playlistId: 'p', title: 'P' }],
+    };
+    const repo = makeRepo({ friendsActivity: vi.fn().mockResolvedValue(raw) });
+
+    const result = await new HomeBlocksService(repo).friendsActivityBlock({ userId: 'user-1' });
+
+    expect(result.map((r) => r.kind)).toEqual(['follow', 'playlist', 'like']);
   });
 });

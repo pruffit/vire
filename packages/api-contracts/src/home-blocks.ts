@@ -48,3 +48,47 @@ export const homePlaylistsResponseSchema = z.object({
   likedPlaylistIds: z.array(z.string()),
 });
 export type HomePlaylistsResponse = z.infer<typeof homePlaylistsResponseSchema>;
+
+export const personalBlockResponseSchema = z.object({
+  recentlyPlayed: z.array(homeChartTrackSchema),
+  personalPicks: z.array(homeChartTrackSchema),
+});
+export type PersonalBlockResponse = z.infer<typeof personalBlockResponseSchema>;
+
+const friendActorSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  image: z.string().nullable(),
+});
+
+const friendActivityItemSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('like'),
+    actor: friendActorSchema,
+    at: z.string(),
+    trackTitle: z.string(),
+    artistName: z.string(),
+    artistSlug: z.string(),
+    releaseId: z.string(),
+  }),
+  z.object({
+    kind: z.literal('follow'),
+    actor: friendActorSchema,
+    at: z.string(),
+    artistName: z.string(),
+    artistSlug: z.string(),
+  }),
+  z.object({
+    kind: z.literal('playlist'),
+    actor: friendActorSchema,
+    at: z.string(),
+    playlistId: z.string(),
+    title: z.string(),
+  }),
+]);
+export type FriendActivityItemDTO = z.infer<typeof friendActivityItemSchema>;
+
+export const friendsActivityResponseSchema = z.object({
+  items: z.array(friendActivityItemSchema),
+});
+export type FriendsActivityResponse = z.infer<typeof friendsActivityResponseSchema>;
