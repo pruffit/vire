@@ -8,6 +8,7 @@ export * from './repositories/smart-link';
 export * from './repositories/release';
 export * from './repositories/release-read';
 export * from './repositories/release-catalog';
+export * from './repositories/artist-catalog';
 export * from './repositories/track';
 export * from './repositories/follow';
 export * from './repositories/user-directory';

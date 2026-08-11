@@ -1,20 +1,9 @@
 import { count, eq, ilike, and, sql } from 'drizzle-orm';
+import type { ArtistCard } from '@vire/core';
 import { db } from '../client';
 import { artistProfiles, releases, artistMembers } from '../schema';
 
-export interface ArtistListItem {
-  id: string;
-  slug: string;
-  name: string;
-  bio: string | null;
-  avatarUrl: string | null;
-  /** Обложка первого опубликованного релиза: fallback-аватар когда avatarUrl null. */
-  firstReleaseCoverUrl: string | null;
-  verified: boolean;
-  releaseCount: number;
-  // Жанры артиста: distinct по жанрам его опубликованных релизов (для фильтра в каталоге)
-  genres: string[];
-}
+export type ArtistListItem = ArtistCard;
 
 // Артист виден слушателям только если у него есть хотя бы один трек в
 // опубликованном релизе. Пустые профили скрываем из каталога, поиска и sitemap.
@@ -25,7 +14,18 @@ export const artistHasPublishedTrack = sql`exists (
     and r.status = 'PUBLISHED'
 )`;
 
-export async function listActiveArtists(query?: string): Promise<ArtistListItem[]> {
+export async function listActiveArtists({
+  query,
+  limit = 200,
+  offset = 0,
+}: {
+  query?: string | null;
+  limit?: number;
+  offset?: number;
+} = {}): Promise<ArtistListItem[]> {
+  // Запрос приходит из публичного роута: без экранирования `%`/`_` поиск по «%» совпал бы со всеми.
+  const pattern = query ? `%${query.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
+
   const rows = await db
     .select({
       id: artistProfiles.id,
@@ -54,8 +54,8 @@ export async function listActiveArtists(query?: string): Promise<ArtistListItem[
       ),
     )
     .where(
-      query
-        ? and(eq(artistProfiles.isActive, true), artistHasPublishedTrack, ilike(artistProfiles.name, `%${query}%`))
+      pattern
+        ? and(eq(artistProfiles.isActive, true), artistHasPublishedTrack, ilike(artistProfiles.name, pattern))
         : and(eq(artistProfiles.isActive, true), artistHasPublishedTrack),
     )
     .groupBy(
@@ -66,7 +66,9 @@ export async function listActiveArtists(query?: string): Promise<ArtistListItem[
       artistProfiles.avatarUrl,
       artistProfiles.verified,
     )
-    .orderBy(sql`lower(${artistProfiles.name})`);
+    .orderBy(sql`lower(${artistProfiles.name})`, artistProfiles.id)
+    .limit(limit)
+    .offset(offset);
 
   return rows.map((r) => ({
     ...r,

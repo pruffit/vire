@@ -64,3 +64,16 @@ export const releaseCardSchema = z.object({
   accentColor: z.string().nullable(),
 });
 export type ReleaseCardDTO = z.infer<typeof releaseCardSchema>;
+
+export const artistCardSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  bio: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+  firstReleaseCoverUrl: z.string().nullable(),
+  verified: z.boolean(),
+  releaseCount: z.number(),
+  genres: z.array(z.string()),
+});
+export type ArtistCardDTO = z.infer<typeof artistCardSchema>;

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { listActiveArtists } from '@vire/db';
+import { DrizzleArtistCatalogRepository } from '@vire/db';
+import { ArtistCatalogService } from '@vire/core';
 import { FadeUp } from '@vire/ui/motion';
 import { ArtistCatalog } from '@/components/artist-catalog';
 import { JsonLd } from '@/components/json-ld';
@@ -26,7 +27,8 @@ export default async function ArtistsPage() {
     getTranslations('release.breadcrumb'),
     resolveLocale(),
   ]);
-  const artists = await listActiveArtists();
+  const catalog = new ArtistCatalogService(new DrizzleArtistCatalogRepository());
+  const { items: artists, hasMore } = await catalog.list({ limit: 200 });
 
   return (
     <PageContainer spaceY="8">
@@ -40,7 +42,7 @@ export default async function ArtistsPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           {artists.length > 0 && (
             <span className="text-xs font-mono text-muted-foreground tabular-nums">
-              {artists.length}
+              {artists.length}{hasMore ? '+' : ''}
             </span>
           )}
         </header>

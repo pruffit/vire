@@ -106,7 +106,7 @@ packages/api-contracts/src/
 
 | # | Ресурс | Эндпоинты | Статус сегодня |
 |---|---|---|---|
-| 1 | **Artist** | `GET /v1/artists/{slug}/page` | ✅ Экран через core (шаг 2.1), контракт `artistPageResponseSchema`. Списка нет |
+| 1 | **Artist** | `GET /v1/artists/{slug}/page`, `GET /v1/artists` | ✅ Экран через core (шаг 2.1), контракт `artistPageResponseSchema`. ✅ Каталог (шаг 2.4): `artistCatalogQuerySchema` / `artistCatalogResponseSchema`, пагинация `limit`/`offset` + `hasMore` |
 | 2 | **Release** | `GET /v1/releases/{id}/page`, `GET /v1/releases` | ✅ Экран через core (шаг 2.2), контракт `releasePageResponseSchema`. ✅ Каталог (шаг 2.3): `releaseCatalogQuerySchema` / `releaseCatalogResponseSchema`, пагинация `limit`/`offset` + `hasMore`. Ресурсный `GET /v1/releases/{id}` остаётся отдельно — потребитель плеер, не экран |
 | 3 | **Track** | `GET /v1/tracks/{id}`, `GET /v1/tracks/{id}/manifest` | Манифест есть |
 | 4 | **Playlist** | `GET /v1/playlists/{id}`, CRUD | Частично |
