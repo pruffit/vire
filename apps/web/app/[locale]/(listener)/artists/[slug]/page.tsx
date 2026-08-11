@@ -1,31 +1,16 @@
-import { cache, Suspense, type ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { Link } from '@/i18n/navigation';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { getTranslations, getFormatter } from 'next-intl/server';
-import {
-  db,
-  DrizzleReleaseRepository,
-  getFollowState,
-  getFollowerCount,
-  getUpcomingByArtist,
-  getExplicitReleaseIds,
-  getPresaveStates,
-  listArtistPosts,
-  getPublishedSmartLinks,
-  getArtistPlayableTracks,
-} from '@vire/db';
-import type { ArtistPost } from '@vire/db';
-import { ReleaseService } from '@vire/core';
-import type { ArtistProfile, ArtistLink, ArtistVideo, Release, SmartLink } from '@vire/core';
+import type { ArtistProfile, ArtistLink, ArtistVideo, ArtistPost, Release, SmartLink } from '@vire/core';
 import { SectionHeader } from '@/components/section-header';
 import { PlatformIcon } from '@/components/platform-icon';
 import { BrandIcon, PLATFORM_BRAND, isBrandWordmark } from '@/components/brand-icon';
 import { detectPlatform, linkLabel } from '@/lib/platforms';
 import { Stagger, StaggerItem } from '@vire/ui/motion';
 import { auth } from '@/auth';
-import { getArtist, assertArtistVisible } from './artist-guard';
 import { FollowButton } from './follow-button';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { parseEmbed, type EmbedInfo } from '@/lib/embed';
@@ -37,6 +22,7 @@ import { UpcomingPresaveButton } from '@/components/upcoming-presave-button';
 import { JsonLd } from '@/components/json-ld';
 import { musicGroupJsonLd, breadcrumbListJsonLd, artistPostJsonLd } from '@/lib/structured-data';
 import { resolveAvatarUrl } from '@/lib/avatar';
+import { getArtistPage } from '@/lib/artist-page';
 import { pageMetadata } from '@/lib/metadata';
 import { resolveLocale } from '@/lib/locale';
 import { artistFontStyle } from '@/lib/fonts';
@@ -52,32 +38,13 @@ import { SimilarArtistsSection } from './similar-artists-section';
 
 type Props = { params: Promise<{ slug: string }> };
 
-// cache(): generateMetadata и page читают одно и то же на одном рендере
-const getArtistData = cache(async (slug: string) => {
-  const artist = await getArtist(slug);
-  if (!artist) return null;
-
-  const releaseService = new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() });
-  const [releases, upcoming, posts, smartLinks, playableTracks] = await Promise.all([
-    releaseService.getPublishedByArtist(artist.id),
-    getUpcomingByArtist(artist.id),
-    listArtistPosts(artist.id, 5),
-    getPublishedSmartLinks(artist.id),
-    getArtistPlayableTracks(artist.id),
-  ]);
-
-  const explicitReleaseIds = await getExplicitReleaseIds(releases.map((r) => r.id));
-
-  return { artist, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks };
-});
-
+// cache(): generateMetadata и page читают одно и то же на одном рендере, включая гейт видимости
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const data = await getArtistData(slug);
+  const data = await getArtistPage(slug);
   const locale = await resolveLocale();
   const tMeta = await getTranslations('artist.meta');
   if (!data) return { title: tMeta('notFound') };
-  await assertArtistVisible(data.artist.id);
 
   const { artist } = data;
   const url = `/artists/${slug}`;
@@ -94,28 +61,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ArtistPage({ params }: Props) {
   const { slug } = await params;
-  const data = await getArtistData(slug);
+  const session = await auth();
+  const data = await getArtistPage(slug);
   if (!data) notFound();
-  await assertArtistVisible(data.artist.id);
   const tSections = await getTranslations('artist.sections');
   const tBreadcrumb = await getTranslations('release.breadcrumb');
   const tCommon = await getTranslations('common');
   const locale = await resolveLocale();
 
-  const { artist, releases, upcoming, posts, smartLinks, explicitReleaseIds, playableTracks } = data;
+  const {
+    artist,
+    releases,
+    upcoming,
+    posts,
+    smartLinks,
+    explicitReleaseIds,
+    playableTracks,
+    following,
+    followerCount,
+    presavedReleaseIds: presavedIds,
+  } = data;
   const { bg, text, accent, grain } = artist.themeTokens;
 
   const displayAvatar = resolveAvatarUrl(artist.avatarUrl, releases[0]?.coverUrl ?? null);
 
-  const session = await auth();
   const isAuthed = !!session?.user;
-  // гостю кнопка ведёт на страницу релиза (там email-флоу) — presave-состояние нужно только вошедшим
-  const upcomingIds = upcoming.filter((r) => r.releaseDate).map((r) => r.id);
-  const [following, followerCount, presavedIds] = await Promise.all([
-    session?.user?.id ? getFollowState(session.user.id, artist.id) : Promise.resolve(false),
-    getFollowerCount(artist.id),
-    session?.user?.id ? getPresaveStates(session.user.id, upcomingIds) : Promise.resolve(new Set<string>()),
-  ]);
 
   const followButton = session?.user ? (
     <FollowButton slug={artist.slug} initialFollowing={following} initialCount={followerCount} />

@@ -1,20 +1,18 @@
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
-import { db, DrizzleArtistRepository, artistHasPublishedTrackById, isArtistMember } from '@vire/db';
-import { ArtistService, type ArtistProfile } from '@vire/core';
+import { isArtistMember } from '@vire/db';
+import { type ArtistProfile } from '@vire/core';
 import { auth } from '@/auth';
 import { canViewEmptyArtist } from '@/lib/artist-visibility';
+import { findArtistBySlug, artistHasPublishedTrack } from '@/lib/artist-page';
 
 // Один загрузчик артиста на весь сегмент: layout, страница артиста, релиз и трек читают его
-// отсюда — cache() схлопывает это в один запрос за рендер.
-export const getArtist = cache(async (slug: string): Promise<ArtistProfile | null> => {
-  const result = await new ArtistService(new DrizzleArtistRepository(db), { now: () => Date.now() }).getBySlug(slug);
-  return result.ok ? result.value : null;
-});
+// отсюда — cache() схлопывает это в один запрос за рендер, общий с агрегатом экрана.
+export const getArtist = cache(async (slug: string): Promise<ArtistProfile | null> => findArtistBySlug(slug));
 
 // пустой артист скрыт с витрины (каталог/поиск/sitemap) — прямой заход должен отвечать так же
 export const assertArtistVisible = cache(async (artistProfileId: string): Promise<void> => {
-  if (await artistHasPublishedTrackById(artistProfileId)) return;
+  if (await artistHasPublishedTrack(artistProfileId)) return;
   const session = await auth();
   const userId = session?.user?.id;
   const isMember = userId ? await isArtistMember(artistProfileId, userId) : false;
