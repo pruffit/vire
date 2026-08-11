@@ -3,6 +3,7 @@ import { db, DrizzleTrackRepository, getTrackAudioMeta, getTrackMoods, getTrackG
 import { isGenre, type Genre } from '@/lib/genres';
 import { serializeLrc } from '@/lib/lrc';
 import { TrackEditForm } from './track-edit-form';
+import { getAdminAccess } from '@/lib/admin-access';
 import { DetailHeader } from '@/components/admin/ui';
 
 export const dynamic = 'force-dynamic';
@@ -10,12 +11,13 @@ export const dynamic = 'force-dynamic';
 export default async function AdminTrackEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const repo = new DrizzleTrackRepository(db);
-  const [track, meta, moods, genres, genreSuggestionsMap] = await Promise.all([
+  const [track, meta, moods, genres, genreSuggestionsMap, { canModerate }] = await Promise.all([
     repo.findById(id),
     getTrackAudioMeta([id]),
     getTrackMoods(id),
     getTrackGenres(id),
     getGenreSuggestionsForTracks([id]),
+    getAdminAccess(),
   ]);
   if (!track) notFound();
   const m = meta[id] ?? { bpm: null, musicalKey: null };
@@ -42,6 +44,7 @@ export default async function AdminTrackEditPage({ params }: { params: Promise<{
         genreSuggestions={(genreSuggestionsMap[id] ?? []).filter(
           (s): s is { genre: Genre; confidence: number } => isGenre(s.genre),
         )}
+        canMutate={canModerate}
       />
     </div>
   );

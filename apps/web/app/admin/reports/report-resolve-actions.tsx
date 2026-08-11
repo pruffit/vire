@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export function ReportResolveActions({ reportId }: { reportId: string }) {
+export function ReportResolveActions({ reportId, canMutate }: { reportId: string; canMutate: boolean }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+
+  if (!canMutate) return null;
 
   async function resolve(status: 'REVIEWED' | 'DISMISSED') {
     setPending(true);

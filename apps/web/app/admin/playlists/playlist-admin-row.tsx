@@ -25,7 +25,7 @@ interface Playlist {
   createdAt: string | Date;
 }
 
-export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
+export function PlaylistAdminRow({ playlist, canMutate }: { playlist: Playlist; canMutate: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [title, setTitle] = useState(playlist.title);
@@ -59,8 +59,8 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
   return (
     <Tr>
       <Td className="w-full">
-        {generatedTitle ? (
-          <span className="block px-2 py-1 text-sm text-foreground/70" title="Заголовок генерируется и переводится автоматически">
+        {generatedTitle || !canMutate ? (
+          <span className="block px-2 py-1 text-sm text-foreground/70" title={generatedTitle ? 'Заголовок генерируется и переводится автоматически' : undefined}>
             {playlist.title}
           </span>
         ) : (
@@ -80,13 +80,17 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
         </Badge>
       </Td>
       <Td label="Видимость">
-        <Select
-          options={VISIBILITY_OPTIONS}
-          value={visibility}
-          onValueChange={(v) => setVisibility(v as 'PRIVATE' | 'PUBLIC')}
-          aria-label="Видимость"
-          className="w-32"
-        />
+        {canMutate ? (
+          <Select
+            options={VISIBILITY_OPTIONS}
+            value={visibility}
+            onValueChange={(v) => setVisibility(v as 'PRIVATE' | 'PUBLIC')}
+            aria-label="Видимость"
+            className="w-32"
+          />
+        ) : (
+          <Badge tone="neutral">{VISIBILITY_OPTIONS.find((o) => o.value === visibility)?.label ?? visibility}</Badge>
+        )}
       </Td>
       <Td label="Треки" align="right" nums mono tone="soft">{playlist.trackCount}</Td>
       <Td label="Лайки" align="right" nums mono tone="soft">{playlist.likesCount}</Td>
@@ -107,7 +111,7 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
       </Td>
       <Td align="right">
         <div className="flex items-center justify-end gap-1.5">
-          {dirty && (
+          {canMutate && dirty && (
             <button
               onClick={save}
               disabled={pending || !title.trim()}
@@ -126,14 +130,16 @@ export function PlaylistAdminRow({ playlist }: { playlist: Playlist }) {
           >
             <Icon name="external-link" size={15} />
           </a>
-          <button
-            onClick={del}
-            disabled={pending}
-            aria-label="Удалить плейлист"
-            className="pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40 active:scale-[0.98]"
-          >
-            <Icon name="trash-2" size={15} />
-          </button>
+          {canMutate && (
+            <button
+              onClick={del}
+              disabled={pending}
+              aria-label="Удалить плейлист"
+              className="pointer-coarse:min-w-11 pointer-coarse:min-h-11 inline-flex items-center justify-center rounded-md p-1.5 text-foreground/40 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40 active:scale-[0.98]"
+            >
+              <Icon name="trash-2" size={15} />
+            </button>
+          )}
         </div>
       </Td>
     </Tr>

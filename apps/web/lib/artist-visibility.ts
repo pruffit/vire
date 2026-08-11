@@ -1,5 +1,6 @@
-const PRIVILEGED_ROLES = new Set(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
+import { can, type PlatformRole } from '@vire/core/access';
 
 export function canViewEmptyArtist(opts: { isMember: boolean; role: string | null | undefined }): boolean {
-  return opts.isMember || (opts.role != null && PRIVILEGED_ROLES.has(opts.role));
+  if (opts.isMember) return true;
+  return can(opts.role != null ? { id: '', role: opts.role as PlatformRole } : null, 'staff.content.preview');
 }

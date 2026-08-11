@@ -17,7 +17,7 @@ interface Post {
 
 const inputCls = `w-full ${fieldClass}`;
 
-export function PostAdminRow({ post }: { post: Post }) {
+export function PostAdminRow({ post, canMutate }: { post: Post; canMutate: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
@@ -55,15 +55,21 @@ export function PostAdminRow({ post }: { post: Post }) {
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-[11px] text-foreground/30 font-mono">{new Date(post.createdAt).toLocaleDateString('ru-RU')}</span>
           <button onClick={() => setOpen((s) => !s)} className="rounded-md border border-foreground/10 bg-foreground/5 px-2 py-1 text-xs font-mono transition-colors hover:bg-foreground/10 hover:border-foreground/20 active:scale-[0.98]">
-            {open ? 'Свернуть' : 'Изм.'}
+            {open ? 'Свернуть' : canMutate ? 'Изм.' : 'Читать'}
           </button>
-          <button onClick={del} disabled={pending} className="rounded-md bg-red-500/10 border border-red-500/20 text-red-300 px-2 py-1 text-xs font-mono transition-colors hover:bg-red-500/20 disabled:opacity-40 active:scale-[0.98]">
-            Удалить
-          </button>
+          {canMutate && (
+            <button onClick={del} disabled={pending} className="rounded-md bg-red-500/10 border border-red-500/20 text-red-300 px-2 py-1 text-xs font-mono transition-colors hover:bg-red-500/20 disabled:opacity-40 active:scale-[0.98]">
+              Удалить
+            </button>
+          )}
         </div>
       </div>
 
-      {open && (
+      {open && !canMutate && (
+        <p className="mt-3 text-sm text-foreground/60 whitespace-pre-wrap">{post.body}</p>
+      )}
+
+      {open && canMutate && (
         <div className="mt-3 flex flex-col gap-2">
           <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Заголовок (необязательно)" maxLength={200} />
           <Textarea className={`${inputCls} min-h-24`} value={body} onChange={(e) => setBody(e.target.value)} maxLength={10000} />

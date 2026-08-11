@@ -26,30 +26,29 @@ beforeEach(() => {
 });
 
 describe('GET /api/v1/admin/system', () => {
-  // Роут не различает анонима и не-админа — оба получают 403, отдельного 401 нет.
-  it('403 when not authenticated', async () => {
+  it('401 when not authenticated', async () => {
     mockedAuth.mockResolvedValue(null as never);
     const res = await GET();
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
     expect(getSystemMetrics).not.toHaveBeenCalled();
   });
 
   it('403 for a non-admin role', async () => {
-    mockedAuth.mockResolvedValue({ user: { role: 'LISTENER' } } as never);
+    mockedAuth.mockResolvedValue({ user: { id: 'u1', role: 'LISTENER' } } as never);
     const res = await GET();
     expect(res.status).toBe(403);
     expect(getSystemMetrics).not.toHaveBeenCalled();
   });
 
   it('VIEWER is allowed through (read-only admin role)', async () => {
-    mockedAuth.mockResolvedValue({ user: { role: 'VIEWER' } } as never);
+    mockedAuth.mockResolvedValue({ user: { id: 'u1', role: 'VIEWER' } } as never);
     const res = await GET();
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ system: SYSTEM, health: HEALTH, siteOnline: 5, ts: expect.any(Number) });
   });
 
   it('ADMIN gets the full system snapshot', async () => {
-    mockedAuth.mockResolvedValue({ user: { role: 'ADMIN' } } as never);
+    mockedAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } } as never);
     const res = await GET();
     expect(res.status).toBe(200);
     const body = await res.json();

@@ -15,6 +15,7 @@ export * from './platform/util/throttle-gate';
 // поддержан. Импорт — через подпуть '@vire/core/signing' (только серверные потребители).
 // По той же причине notifications/unsubscribe (зависит от util/signing) — тоже
 // только подпуть '@vire/core/notifications/unsubscribe'.
+// platform/access тоже только подпуть '@vire/core/access' — исполняется в middleware (Edge).
 export * from './music/catalog/types/artist';
 export * from './music/catalog/types/artist-post';
 export * from './music/catalog/types/release';

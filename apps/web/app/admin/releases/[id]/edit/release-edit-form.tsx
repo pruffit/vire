@@ -34,7 +34,7 @@ interface Initial {
 
 const inputCls = `w-full ${fieldClass}`;
 
-export function ReleaseEditForm({ releaseId, initial }: { releaseId: string; initial: Initial }) {
+export function ReleaseEditForm({ releaseId, initial, canMutate }: { releaseId: string; initial: Initial; canMutate: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
@@ -67,15 +67,15 @@ export function ReleaseEditForm({ releaseId, initial }: { releaseId: string; ini
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <Field label="Название">
-        <input className={inputCls} value={f.title} onChange={(e) => set('title', e.target.value)} maxLength={200} />
+        <input className={inputCls} value={f.title} onChange={(e) => set('title', e.target.value)} maxLength={200} disabled={!canMutate} />
       </Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Тип">
-          <Select options={TYPE_OPTIONS} value={f.type} onValueChange={(v) => set('type', v)} aria-label="Тип" />
+          <Select options={TYPE_OPTIONS} value={f.type} onValueChange={(v) => set('type', v)} aria-label="Тип" disabled={!canMutate} />
         </Field>
         <Field label="Дата релиза">
-          <DateField value={f.releaseDate} onValueChange={(v) => set('releaseDate', v)} aria-label="Дата релиза" />
+          <DateField value={f.releaseDate} onValueChange={(v) => set('releaseDate', v)} aria-label="Дата релиза" disabled={!canMutate} />
         </Field>
       </div>
 
@@ -86,27 +86,30 @@ export function ReleaseEditForm({ releaseId, initial }: { releaseId: string; ini
           value={f.genre ?? ''}
           onValueChange={(v) => set('genre', v || null)}
           aria-label="Жанр"
+          disabled={!canMutate}
         />
       </Field>
 
       <Field label="Описание">
-        <Textarea className={`${inputCls} min-h-20`} value={f.description} onChange={(e) => set('description', e.target.value)} maxLength={5000} />
+        <Textarea className={`${inputCls} min-h-20`} value={f.description} onChange={(e) => set('description', e.target.value)} maxLength={5000} disabled={!canMutate} />
       </Field>
 
       <Field label="Liner notes">
-        <Textarea className={`${inputCls} min-h-24`} value={f.linerNotes} onChange={(e) => set('linerNotes', e.target.value)} maxLength={10000} />
+        <Textarea className={`${inputCls} min-h-24`} value={f.linerNotes} onChange={(e) => set('linerNotes', e.target.value)} maxLength={10000} disabled={!canMutate} />
       </Field>
 
-      <div className="flex items-center gap-3 pt-1">
-        <button
-          type="submit"
-          disabled={pending}
-          className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 transition-opacity"
-        >
-          {pending ? 'Сохраняю…' : 'Сохранить'}
-        </button>
-        {msg && <span className={`text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</span>}
-      </div>
+      {canMutate && (
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={pending}
+            className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 transition-opacity"
+          >
+            {pending ? 'Сохраняю…' : 'Сохранить'}
+          </button>
+          {msg && <span className={`text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</span>}
+        </div>
+      )}
     </form>
   );
 }

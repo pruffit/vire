@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const {
   auth, revalidatePath, transcodeAdd,
   trackUpdate, trackGetSourceKey, trackGetArtistTrackSources, trackSetStatus,
-  releaseUpdate, moodsSet, moodsSetGenres,
+  releaseUpdate, moodsSet, moodsSetGenres, insertAuditEntry,
 } = vi.hoisted(() => ({
   auth: vi.fn(),
   revalidatePath: vi.fn(),
@@ -15,6 +15,7 @@ const {
   releaseUpdate: vi.fn(),
   moodsSet: vi.fn(),
   moodsSetGenres: vi.fn(),
+  insertAuditEntry: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth }));
@@ -31,6 +32,7 @@ vi.mock('@vire/db', () => ({
   addArtistMember: vi.fn(),
   removeArtistMember: vi.fn(),
   listArtistMembers: vi.fn(),
+  insertAuditEntry,
   ALL_MOODS: ['CHILL', 'NIGHT'],
   ALL_TRACK_GENRES: ['ROCK', 'POP'],
   DrizzleReleaseRepository: class {
@@ -53,11 +55,15 @@ vi.mock('@vire/db', () => ({
 
 import {
   actionAdminUpdateTrack, actionAdminUpdateRelease, actionRetranscodeTrack, actionRetranscodeArtist,
+  actionSetUserRole,
 } from './actions';
 
 const mockedAuth = vi.mocked(auth);
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  insertAuditEntry.mockResolvedValue(undefined);
+});
 
 const MUTATE_SESSION = { user: { id: 'admin-1', role: 'ADMIN' } };
 const VIEW_ONLY_SESSION = { user: { id: 'viewer-1', role: 'VIEWER' } };
@@ -87,13 +93,12 @@ const releaseInput = {
 };
 
 describe('actionAdminUpdateTrack', () => {
-  it('is a silent no-op when canMutate is false', async () => {
+  it('throws Forbidden for VIEWER (no admin.content.moderate)', async () => {
     mockedAuth.mockResolvedValue(VIEW_ONLY_SESSION as never);
 
-    const result = await actionAdminUpdateTrack('track-1', trackInput);
-
-    expect(result).toEqual({});
+    await expect(actionAdminUpdateTrack('track-1', trackInput)).rejects.toThrow('Forbidden');
     expect(trackUpdate).not.toHaveBeenCalled();
+    expect(insertAuditEntry).not.toHaveBeenCalled();
   });
 
   it('returns the validation error and does not touch the repo', async () => {
@@ -116,16 +121,18 @@ describe('actionAdminUpdateTrack', () => {
     expect(moodsSet).toHaveBeenCalledWith('track-1', ['CHILL']);
     expect(moodsSetGenres).toHaveBeenCalledWith('track-1', ['ROCK']);
     expect(revalidatePath).toHaveBeenCalledWith('/admin/tracks');
+    expect(insertAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+      actorUserId: 'admin-1', actorRole: 'ADMIN', permission: 'admin.content.moderate',
+      action: 'track.update', targetType: 'track', targetId: 'track-1',
+    }));
   });
 });
 
 describe('actionAdminUpdateRelease', () => {
-  it('is a silent no-op when canMutate is false', async () => {
+  it('throws Forbidden for VIEWER (no admin.content.moderate)', async () => {
     mockedAuth.mockResolvedValue(VIEW_ONLY_SESSION as never);
 
-    const result = await actionAdminUpdateRelease('release-1', releaseInput);
-
-    expect(result).toEqual({});
+    await expect(actionAdminUpdateRelease('release-1', releaseInput)).rejects.toThrow('Forbidden');
     expect(releaseUpdate).not.toHaveBeenCalled();
   });
 
@@ -151,12 +158,10 @@ describe('actionAdminUpdateRelease', () => {
 });
 
 describe('actionRetranscodeTrack', () => {
-  it('is a silent no-op when canMutate is false', async () => {
+  it('throws Forbidden for VIEWER (no admin.content.moderate)', async () => {
     mockedAuth.mockResolvedValue(VIEW_ONLY_SESSION as never);
 
-    const result = await actionRetranscodeTrack('track-1');
-
-    expect(result).toEqual({});
+    await expect(actionRetranscodeTrack('track-1')).rejects.toThrow('Forbidden');
     expect(trackGetSourceKey).not.toHaveBeenCalled();
   });
 
@@ -184,12 +189,10 @@ describe('actionRetranscodeTrack', () => {
 });
 
 describe('actionRetranscodeArtist', () => {
-  it('is a silent no-op when canMutate is false', async () => {
+  it('throws Forbidden for VIEWER (no admin.content.moderate)', async () => {
     mockedAuth.mockResolvedValue(VIEW_ONLY_SESSION as never);
 
-    const result = await actionRetranscodeArtist('artist-1');
-
-    expect(result).toEqual({});
+    await expect(actionRetranscodeArtist('artist-1')).rejects.toThrow('Forbidden');
     expect(trackGetArtistTrackSources).not.toHaveBeenCalled();
   });
 
@@ -216,5 +219,47 @@ describe('actionRetranscodeArtist', () => {
     expect(transcodeAdd).toHaveBeenCalledTimes(2);
     expect(revalidatePath).toHaveBeenCalledWith('/admin/artists');
     expect(revalidatePath).toHaveBeenCalledWith('/admin/tracks');
+  });
+});
+
+describe('actionSetUserRole', () => {
+  const MODERATOR_SESSION = { user: { id: 'mod-1', role: 'MODERATOR' } };
+
+  // admin.users.manage — фикс эскалации: MODERATOR больше не может назначить себе SUPERADMIN.
+  it('throws Forbidden for MODERATOR (admin.users.manage is ADMIN+)', async () => {
+    mockedAuth.mockResolvedValue(MODERATOR_SESSION as never);
+
+    await expect(actionSetUserRole('user-1', 'SUPERADMIN')).rejects.toThrow('Forbidden');
+    expect(insertAuditEntry).not.toHaveBeenCalled();
+  });
+
+  it('throws Forbidden for VIEWER', async () => {
+    mockedAuth.mockResolvedValue(VIEW_ONLY_SESSION as never);
+
+    await expect(actionSetUserRole('user-1', 'ADMIN')).rejects.toThrow('Forbidden');
+    expect(insertAuditEntry).not.toHaveBeenCalled();
+  });
+
+  it('sets the role for ADMIN, revalidates, and writes an audit entry', async () => {
+    mockedAuth.mockResolvedValue(MUTATE_SESSION as never);
+
+    await actionSetUserRole('user-1', 'MODERATOR');
+
+    expect(revalidatePath).toHaveBeenCalledWith('/admin/users');
+    expect(insertAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+      actorUserId: 'admin-1', actorRole: 'ADMIN', permission: 'admin.users.manage',
+      action: 'user.role.set', targetType: 'user', targetId: 'user-1', meta: { role: 'MODERATOR' },
+    }));
+  });
+
+  it('a failed audit write does not throw or block the mutation result', async () => {
+    mockedAuth.mockResolvedValue(MUTATE_SESSION as never);
+    insertAuditEntry.mockRejectedValue(new Error('db down'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(actionSetUserRole('user-1', 'MODERATOR')).resolves.toBeUndefined();
+
+    expect(revalidatePath).toHaveBeenCalledWith('/admin/users');
+    errorSpy.mockRestore();
   });
 });

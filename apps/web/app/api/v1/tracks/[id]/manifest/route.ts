@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db, getPlayableTrackAudio, getTrackAudio, getTrackArtistProfileId, DrizzleArtistRepository, type TrackAudioData } from '@vire/db';
 import { auth } from '@/auth';
+import { can } from '@vire/core/access';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
-
-const STAFF_ROLES = new Set(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -18,9 +17,8 @@ export async function GET(req: Request, { params }: Params) {
   if (!audio) {
     const session = await auth();
     const userId = session?.user?.id;
-    const role = session?.user?.role;
 
-    let allowed = !!role && STAFF_ROLES.has(role);
+    let allowed = !!session?.user && can(session.user, 'staff.content.preview');
     if (!allowed && userId) {
       const artistProfileId = await getTrackArtistProfileId(id);
       allowed = artistProfileId != null && !!(await new DrizzleArtistRepository(db).findByIdForUser(artistProfileId, userId));

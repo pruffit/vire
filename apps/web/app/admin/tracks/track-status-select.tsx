@@ -2,6 +2,7 @@
 
 import { actionSetTrackStatus } from '../actions';
 import { ActionSelect } from '@/components/action-select';
+import { TrackStatusBadge } from '@/components/admin/ui';
 
 type TrackStatus = 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED';
 
@@ -11,9 +12,12 @@ const STATUS_OPTIONS = STATUSES.map((s) => ({ value: s, label: s }));
 interface Props {
   trackId: string;
   currentStatus: TrackStatus;
+  canMutate: boolean;
 }
 
-export function TrackStatusSelect({ trackId, currentStatus }: Props) {
+export function TrackStatusSelect({ trackId, currentStatus, canMutate }: Props) {
+  if (!canMutate) return <TrackStatusBadge status={currentStatus} />;
+
   return (
     <ActionSelect
       options={STATUS_OPTIONS}

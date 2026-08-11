@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./signing": "./src/platform/util/signing.ts",
-    "./notifications/unsubscribe": "./src/platform/notifications/unsubscribe.ts"
+    "./notifications/unsubscribe": "./src/platform/notifications/unsubscribe.ts",
+    "./access": "./src/platform/access/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

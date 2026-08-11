@@ -37,10 +37,12 @@ export function TrackEditForm({
   trackId,
   initial,
   genreSuggestions: initialGenreSuggestions = [],
+  canMutate,
 }: {
   trackId: string;
   initial: Initial;
   genreSuggestions?: GenreSuggestion[];
+  canMutate: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -96,6 +98,7 @@ export function TrackEditForm({
   const analyzingAudio = audioAnalysisStatus === 'running';
 
   function toggleMood(m: string) {
+    if (!canMutate) return;
     setF((p) => {
       if (p.moods.includes(m)) return { ...p, moods: p.moods.filter((x) => x !== m) };
       if (p.moods.length >= 5) return p;
@@ -104,6 +107,7 @@ export function TrackEditForm({
   }
 
   function toggleGenre(gen: string) {
+    if (!canMutate) return;
     setF((p) => {
       if (p.genres.includes(gen)) return { ...p, genres: p.genres.filter((x) => x !== gen) };
       if (p.genres.length >= MAX_TRACK_GENRES) return p;
@@ -126,7 +130,7 @@ export function TrackEditForm({
         key={gen}
         type="button"
         onClick={() => toggleGenre(gen)}
-        disabled={full}
+        disabled={full || !canMutate}
         className={`rounded-full border px-3 py-1 text-xs transition-colors active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed ${
           on
             ? 'border-primary bg-primary/15 text-foreground'
@@ -139,6 +143,7 @@ export function TrackEditForm({
   };
 
   function addSuggestedGenre(gen: Genre) {
+    if (!canMutate) return;
     setF((p) => {
       if (p.genres.includes(gen) || p.genres.length >= MAX_TRACK_GENRES) return p;
       return { ...p, genres: [...p.genres, gen] };
@@ -175,7 +180,7 @@ export function TrackEditForm({
     <form onSubmit={submit} className="flex flex-col gap-4">
       <div className="grid grid-cols-[1fr_auto] gap-4">
         <Field label="Название">
-          <input className={inputCls} value={f.title} onChange={(e) => set('title', e.target.value)} maxLength={200} />
+          <input className={inputCls} value={f.title} onChange={(e) => set('title', e.target.value)} maxLength={200} disabled={!canMutate} />
         </Field>
         <Field label="№">
           <NumberField
@@ -184,6 +189,7 @@ export function TrackEditForm({
             min={1}
             className="w-24"
             aria-label="Номер трека"
+            disabled={!canMutate}
           />
         </Field>
       </div>
@@ -194,18 +200,21 @@ export function TrackEditForm({
           hint="Мат/контент 18+ — бейдж «E» на витрине"
           checked={f.isExplicit}
           onChange={(v) => set('isExplicit', v)}
+          disabled={!canMutate}
         />
         <Check
           label="Эксклюзив"
           hint="Метка «excl» в трек-листе релиза"
           checked={f.isExclusive}
           onChange={(v) => set('isExclusive', v)}
+          disabled={!canMutate}
         />
         <Check
           label="WIP (демо)"
           hint="Черновик/демо — метка «wip»"
           checked={f.isWip}
           onChange={(v) => set('isWip', v)}
+          disabled={!canMutate}
         />
       </div>
 
@@ -217,21 +226,24 @@ export function TrackEditForm({
             min={20}
             max={500}
             aria-label="BPM"
+            disabled={!canMutate}
           />
         </Field>
         <Field label="Тональность">
-          <input className={inputCls} value={f.musicalKey} onChange={(e) => set('musicalKey', e.target.value)} maxLength={20} placeholder="напр. Am" />
+          <input className={inputCls} value={f.musicalKey} onChange={(e) => set('musicalKey', e.target.value)} maxLength={20} placeholder="напр. Am" disabled={!canMutate} />
         </Field>
       </div>
-      <button
-        type="button"
-        onClick={startAudioAnalysis}
-        disabled={analyzingAudio || pending}
-        className="inline-flex items-center gap-1.5 self-start text-xs text-foreground/50 transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <Icon name="refresh-cw" size={12} className={cn(analyzingAudio && 'animate-spin')} />
-        {analyzingAudio ? 'Анализирую…' : 'Переанализировать BPM/тональность'}
-      </button>
+      {canMutate && (
+        <button
+          type="button"
+          onClick={startAudioAnalysis}
+          disabled={analyzingAudio || pending}
+          className="inline-flex items-center gap-1.5 self-start text-xs text-foreground/50 transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Icon name="refresh-cw" size={12} className={cn(analyzingAudio && 'animate-spin')} />
+          {analyzingAudio ? 'Анализирую…' : 'Переанализировать BPM/тональность'}
+        </button>
+      )}
 
       <Field label="Версия (необязательно)">
         <input
@@ -240,6 +252,7 @@ export function TrackEditForm({
           onChange={(e) => set('version', e.target.value)}
           maxLength={80}
           placeholder="Radio Edit · Slowed + Reverb · Sped Up · Acoustic…"
+          disabled={!canMutate}
         />
       </Field>
 
@@ -252,7 +265,8 @@ export function TrackEditForm({
                 key={m}
                 type="button"
                 onClick={() => toggleMood(m)}
-                className={`rounded-full border px-3 py-1 text-xs transition-colors active:scale-[0.97] ${
+                disabled={!canMutate}
+                className={`rounded-full border px-3 py-1 text-xs transition-colors active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed ${
                   on ? 'border-primary bg-primary/15 text-foreground' : 'border-foreground/10 text-foreground/50 hover:text-foreground hover:border-foreground/30'
                 }`}
               >
@@ -296,15 +310,17 @@ export function TrackEditForm({
           <span className="label-mono text-foreground/45">
             Предложено моделью
           </span>
-          <button
-            type="button"
-            onClick={startAnalysis}
-            disabled={analyzing}
-            className="inline-flex items-center gap-1.5 text-xs text-foreground/50 transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Icon name="refresh-cw" size={12} className={cn(analyzing && 'animate-spin')} />
-            {analyzing ? 'Анализирую…' : 'Проанализировать'}
-          </button>
+          {canMutate && (
+            <button
+              type="button"
+              onClick={startAnalysis}
+              disabled={analyzing}
+              className="inline-flex items-center gap-1.5 text-xs text-foreground/50 transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Icon name="refresh-cw" size={12} className={cn(analyzing && 'animate-spin')} />
+              {analyzing ? 'Анализирую…' : 'Проанализировать'}
+            </button>
+          )}
         </div>
         {genreSuggestions.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -316,7 +332,7 @@ export function TrackEditForm({
                   key={s.genre}
                   type="button"
                   onClick={() => addSuggestedGenre(s.genre)}
-                  disabled={added || full}
+                  disabled={added || full || !canMutate}
                   className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-foreground/15 px-3 py-1 text-xs text-foreground/50 transition-colors hover:border-foreground/30 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   {!added && <Icon name="plus" size={11} className="opacity-60" />}
@@ -342,19 +358,22 @@ export function TrackEditForm({
           onChange={(e) => set('lyrics', e.target.value)}
           maxLength={20000}
           placeholder={'[00:15.20]первая строка\n[00:18.50]вторая строка'}
+          disabled={!canMutate}
         />
       </Field>
 
-      <div className="flex items-center gap-3 pt-1">
-        <button
-          type="submit"
-          disabled={pending}
-          className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 transition-opacity"
-        >
-          {pending ? 'Сохраняю…' : 'Сохранить'}
-        </button>
-        {msg && <span className={`text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</span>}
-      </div>
+      {canMutate && (
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={pending}
+            className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 transition-opacity"
+          >
+            {pending ? 'Сохраняю…' : 'Сохранить'}
+          </button>
+          {msg && <span className={`text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</span>}
+        </div>
+      )}
     </form>
   );
 }
@@ -373,11 +392,13 @@ function Check({
   hint,
   checked,
   onChange,
+  disabled,
 }: {
   label: string;
   hint?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <label className="flex items-start gap-2.5 cursor-pointer select-none">
@@ -386,7 +407,8 @@ function Check({
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="peer size-4 appearance-none rounded border border-foreground/30 bg-foreground/5 transition-colors checked:bg-primary checked:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+          disabled={disabled}
+          className="peer size-4 appearance-none rounded border border-foreground/30 bg-foreground/5 transition-colors checked:bg-primary checked:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
         />
         <svg
           viewBox="0 0 12 12"

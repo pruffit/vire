@@ -87,6 +87,13 @@ PostgreSQL
 - Репозиторий не знает про бизнес-правила
 - `packages/core` не импортирует ничего из Next.js
 
+**Права — только через `can()`.** Матрица «роль → право» живёт в
+`packages/core/src/platform/access` (вход — подпуть `@vire/core/access`, barrel не годится для
+edge-middleware). В роутах — `requireAccess(permission)` из `apps/web/lib/require-access.ts`,
+в server actions — `requireAction`, в Server Components — `getAdminAccess()`. Своих списков
+ролей не заводить. Роль `ARTIST` прав не имеет намеренно: артист-периметр — ownership через
+`getActiveArtist`, не роль. Мутации бэкофиса пишутся в `audit_log`. Детали — `docs/features/rbac.md`.
+
 Внутри `packages/core` — две зоны: `platform/**` (переиспользуемые capability: identity,
 billing, notifications, search, social, messaging, storage, util) и `music/**` (доменное:
 catalog, curation, discovery, engagement, playback, jam, marketing, external, audio).

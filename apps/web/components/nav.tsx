@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { auth } from '@/auth';
+import { can } from '@vire/core/access';
 import { listUserArtists } from '@/lib/active-artist';
 import { NavSearch } from './nav-search';
 import { NavLink } from './nav-link';
@@ -14,7 +15,7 @@ export async function Nav() {
   const session = await auth();
   const user = session?.user;
   const isArtist = user?.role === 'ARTIST' || user?.role === 'MODERATOR' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
-  const isAdmin = user?.role === 'VIEWER' || user?.role === 'MODERATOR' || user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
+  const isAdmin = can(user, 'admin.panel.view');
 
   // членство (artist_members) проверяем только для VIEWER — не вешать запрос на каждого слушателя
   const showDashboard = isArtist || (user?.role === 'VIEWER' && (await listUserArtists(user.id)).length > 0);

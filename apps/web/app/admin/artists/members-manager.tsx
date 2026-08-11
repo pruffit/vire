@@ -15,7 +15,7 @@ import { clampPanelX } from '@/lib/clamp-panel-x';
 const PANEL_MARGIN = 8;
 
 // поповер в портале с position:fixed — иначе его обрезает таблица-родитель с overflow:auto
-export function MembersManager({ artistProfileId }: { artistProfileId: string }) {
+export function MembersManager({ artistProfileId, canMutate }: { artistProfileId: string; canMutate: boolean }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number; offsetX: number } | null>(null);
   const [members, setMembers] = useState<ArtistMemberRow[] | null>(null);
@@ -146,6 +146,8 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
                   </span>
                   {m.role === 'OWNER' ? (
                     <span className="shrink-0 text-[10px] font-mono uppercase text-foreground/30">owner</span>
+                  ) : !canMutate ? (
+                    <span className="shrink-0 text-[10px] font-mono uppercase text-foreground/30">{m.role.toLowerCase()}</span>
                   ) : (
                     <button
                       type="button"
@@ -162,23 +164,25 @@ export function MembersManager({ artistProfileId }: { artistProfileId: string })
             </ul>
           )}
 
-          <form onSubmit={add} className="flex gap-1.5 pt-1 border-t border-foreground/10">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email участника"
-              disabled={pending}
-              className="flex-1 min-w-0 rounded-md bg-foreground/5 border border-foreground/10 px-2 py-1.5 text-xs transition-colors placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={pending || !email.trim()}
-              className="shrink-0 px-2.5 py-1.5 rounded-md bg-foreground/10 hover:bg-foreground/15 text-xs transition-colors disabled:opacity-40 active:scale-[0.98]"
-            >
-              +
-            </button>
-          </form>
+          {canMutate && (
+            <form onSubmit={add} className="flex gap-1.5 pt-1 border-t border-foreground/10">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email участника"
+                disabled={pending}
+                className="flex-1 min-w-0 rounded-md bg-foreground/5 border border-foreground/10 px-2 py-1.5 text-xs transition-colors placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={pending || !email.trim()}
+                className="shrink-0 px-2.5 py-1.5 rounded-md bg-foreground/10 hover:bg-foreground/15 text-xs transition-colors disabled:opacity-40 active:scale-[0.98]"
+              >
+                +
+              </button>
+            </form>
+          )}
         </div>,
         document.body,
       )}

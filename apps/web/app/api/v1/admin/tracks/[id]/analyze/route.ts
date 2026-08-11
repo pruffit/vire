@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { requireAccess } from '@/lib/require-access';
 import { trackExists, getTrackSourceKey } from '@vire/db';
 import { isUuid } from '@/lib/upload';
 import { analyzeQueue } from '@/lib/queue';
 
-const ADMIN_MUTATE_ROLES = new Set(['MODERATOR', 'ADMIN', 'SUPERADMIN']);
-
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(_req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.role || !ADMIN_MUTATE_ROLES.has(session.user.role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const access = await requireAccess('admin.content.moderate');
+  if (!access.ok) return access.response;
 
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: 'Invalid track id' }, { status: 400 });
@@ -23,5 +19,6 @@ export async function POST(_req: Request, { params }: Params) {
   if (!flacKey) return NextResponse.json({ error: 'No source file' }, { status: 409 });
 
   await analyzeQueue.add({ trackId: id, flacKey });
+  await access.audit('track.analyze', { type: 'track', id });
   return NextResponse.json({ queued: true }, { status: 202 });
 }

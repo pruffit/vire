@@ -5,12 +5,15 @@ import { actionRetranscodeArtist } from '../actions';
 
 interface Props {
   artistProfileId: string;
+  canMutate: boolean;
 }
 
 // массовый пере-транскод HLS всех треков артиста — при системно битом HLS (напр. вшитая обложка-видео)
-export function RetranscodeArtistButton({ artistProfileId }: Props) {
+export function RetranscodeArtistButton({ artistProfileId, canMutate }: Props) {
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+
+  if (!canMutate) return null;
 
   function handleClick() {
     setMsg(null);

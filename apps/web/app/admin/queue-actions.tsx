@@ -3,8 +3,10 @@
 import { useTransition } from 'react';
 import { actionRetryQueueFailed, actionCleanQueueFailed } from './actions';
 
-export function QueueFailedActions({ queueName }: { queueName: string }) {
+export function QueueFailedActions({ queueName, canMutate }: { queueName: string; canMutate: boolean }) {
   const [pending, startTransition] = useTransition();
+
+  if (!canMutate) return null;
 
   return (
     <div className="flex items-center gap-2">

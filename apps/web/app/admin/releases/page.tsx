@@ -1,5 +1,6 @@
 import { listReleasesAdmin } from '@vire/db';
 import { ReleaseStatusSelect } from './release-status-select';
+import { getAdminAccess } from '@/lib/admin-access';
 import {
   PageHeader, FilterTabs, Table, Thead, Th, Tr, Td, ReleaseStatusBadge, ActionLink, EmptyState,
 } from '@/components/admin/ui';
@@ -18,7 +19,7 @@ type Props = { searchParams: Promise<{ status?: string }> };
 
 export default async function AdminReleasesPage({ searchParams }: Props) {
   const { status } = await searchParams;
-  const releases = await listReleasesAdmin({ status });
+  const [releases, { canModerate }] = await Promise.all([listReleasesAdmin({ status }), getAdminAccess()]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -76,6 +77,7 @@ export default async function AdminReleasesPage({ searchParams }: Props) {
                     <ReleaseStatusSelect
                       releaseId={release.id}
                       currentStatus={release.status as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'}
+                      canMutate={canModerate}
                     />
                   )}
                   <ActionLink href={`/admin/releases/${release.id}/edit`}>Изм.</ActionLink>

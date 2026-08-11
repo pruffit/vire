@@ -3,6 +3,7 @@ import { VerifyButton } from '../users/verify-button';
 import { ActiveToggle } from './active-toggle';
 import { MembersManager } from './members-manager';
 import { RetranscodeArtistButton } from './retranscode-artist-button';
+import { getAdminAccess } from '@/lib/admin-access';
 import {
   PageHeader, SearchForm, Table, Thead, Th, Tr, Td, ActionLink, EmptyState,
 } from '@/components/admin/ui';
@@ -13,7 +14,7 @@ type Props = { searchParams: Promise<{ q?: string }> };
 
 export default async function AdminArtistsPage({ searchParams }: Props) {
   const { q } = await searchParams;
-  const artists = await listArtistsAdmin({ search: q });
+  const [artists, { canModerate }] = await Promise.all([listArtistsAdmin({ search: q }), getAdminAccess()]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,10 +57,10 @@ export default async function AdminArtistsPage({ searchParams }: Props) {
               <Td>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <ActionLink href={`/admin/artists/${a.id}/edit`}>Изм.</ActionLink>
-                  <RetranscodeArtistButton artistProfileId={a.id} />
-                  <MembersManager artistProfileId={a.id} />
-                  <VerifyButton artistProfileId={a.id} verified={a.verified} />
-                  <ActiveToggle artistProfileId={a.id} isActive={a.isActive} />
+                  <RetranscodeArtistButton artistProfileId={a.id} canMutate={canModerate} />
+                  <MembersManager artistProfileId={a.id} canMutate={canModerate} />
+                  <VerifyButton artistProfileId={a.id} verified={a.verified} canMutate={canModerate} />
+                  <ActiveToggle artistProfileId={a.id} isActive={a.isActive} canMutate={canModerate} />
                 </div>
               </Td>
             </Tr>

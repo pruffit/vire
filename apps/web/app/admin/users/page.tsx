@@ -3,6 +3,7 @@ import type { UserRole } from '@vire/db';
 import { UserRoleSelect } from './user-role-select';
 import { VerifyButton } from './verify-button';
 import { CreateArtistForm } from './create-artist-form';
+import { getAdminAccess } from '@/lib/admin-access';
 import {
   PageHeader, SearchForm, Table, Thead, Th, Tr, Td, RoleBadge, EmptyState,
 } from '@/components/admin/ui';
@@ -13,13 +14,13 @@ type Props = { searchParams: Promise<{ q?: string }> };
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   const { q } = await searchParams;
-  const users = await listUsersAdmin({ search: q });
+  const [users, { canModerate, canManageUsers }] = await Promise.all([listUsersAdmin({ search: q }), getAdminAccess()]);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Пользователи" count={users.length} />
 
-      <CreateArtistForm />
+      <CreateArtistForm canManageUsers={canManageUsers} />
 
       <SearchForm defaultValue={q} placeholder="Поиск по email или имени…" />
 
@@ -54,6 +55,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                       <VerifyButton
                         artistProfileId={user.artistProfileId}
                         verified={user.artistVerified ?? false}
+                        canMutate={canModerate}
                       />
                     )}
                   </div>
@@ -69,6 +71,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                   userId={user.id}
                   currentRole={user.role as UserRole}
                   artistProfileId={user.artistProfileId ?? undefined}
+                  canManageUsers={canManageUsers}
                 />
               </Td>
             </Tr>

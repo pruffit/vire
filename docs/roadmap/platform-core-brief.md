@@ -290,7 +290,7 @@ Analytics/API с нуля.
 | 0 — Audit | ✅ завершена | 10.08.2026 | `docs/architecture-audit.md` |
 | 1 — Target Architecture | ✅ завершена | 10.08.2026 | `architecture.md` · `platform-core.md` · `sdui.md` · `multiplatform.md` |
 | 2 — Migration Plan | ✅ завершена | 10.08.2026 | `migration-plan.md` (+ `api-contracts.md` написан авансом) |
-| 3 — First Extraction | 🟡 в работе | 10.08.2026 | Волна 0 ✅ (0.1 раскладка core, 0.2 барьер `check:layers`) · Волна 1 — следующая |
+| 3 — First Extraction | 🟡 в работе | 11.08.2026 | Волна 0 ✅ (0.1 раскладка core, 0.2 барьер `check:layers`) · Волна 1 ✅ (`platform/access`, единый гейт на admin-периметре, `audit_log` — `docs/features/rbac.md`) · Волна 2 (read-path в HTTP) — следующая |
 | 4 — API Contracts | ⬜ | | Волна 3 (идёт вместе с волной 2) |
 | 5 — Shared UI | ⬜ | | |
 | 6 — SDUI Foundation | ⬜ | | |
@@ -311,7 +311,11 @@ Analytics/API с нуля.
    в одном образе.
 5. **Главный блокер — не абстракции, а read-path:** 27/53 страниц читают БД напрямую,
    HTTP-эквивалента нет.
-6. **`search` и `billing` остаются в `platform/`** несмотря на доменную форму
+6. **Права — только роли, ownership отдельно.** Матрица `can(actor, permission)` не знает
+   о владении ресурсом: ownership зависит от данных и живёт в сервисах core. Роль `ARTIST`
+   намеренно без прав — артист-периметр держится на `artist_profiles`, иначе ломаются
+   несколько аккаунтов на артиста.
+7. **`search` и `billing` остаются в `platform/`** несмотря на доменную форму
    (`SearchResults = {artists, releases, tracks}`, `TRACK_PRICE` в `PurchaseService`):
    механизм нейтрален, мешают только значения. Обобщение — отдельным шагом по
    `platform-core.md` §2.6–2.7, не перекладыванием файлов.

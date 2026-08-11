@@ -1,4 +1,5 @@
 import { reportService } from '@/lib/reports';
+import { getAdminAccess } from '@/lib/admin-access';
 import { PageHeader, Section, Table, Thead, Th, Tr, Td, EmptyState, Badge } from '@/components/admin/ui';
 import { ReportResolveActions } from './report-resolve-actions';
 
@@ -7,7 +8,7 @@ export const dynamic = 'force-dynamic';
 const TARGET_LABEL: Record<string, string> = { USER: 'Пользователь', MESSAGE: 'Сообщение' };
 
 export default async function AdminReportsPage() {
-  const reports = await reportService().listOpen(100);
+  const [reports, { canModerate }] = await Promise.all([reportService().listOpen(100), getAdminAccess()]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -44,7 +45,7 @@ export default async function AdminReportsPage() {
                   <Td label="От кого" tone="muted" className="text-xs">{r.reporterName ?? r.reporterId}</Td>
                   <Td label="Дата" align="right" tone="faint" mono>{new Date(r.createdAt).toLocaleDateString('ru-RU')}</Td>
                   <Td align="right">
-                    <ReportResolveActions reportId={r.id} />
+                    <ReportResolveActions reportId={r.id} canMutate={canModerate} />
                   </Td>
                 </Tr>
               ))}

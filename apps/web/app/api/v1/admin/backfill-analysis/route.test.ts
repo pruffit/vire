@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { listTracksNeedingAnalysis, analyzeAdd } = vi.hoisted(() => ({
+const { listTracksNeedingAnalysis, analyzeAdd, insertAuditEntry } = vi.hoisted(() => ({
   listTracksNeedingAnalysis: vi.fn(),
   analyzeAdd: vi.fn(),
+  insertAuditEntry: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
-vi.mock('@vire/db', () => ({ listTracksNeedingAnalysis }));
+vi.mock('@vire/db', () => ({ listTracksNeedingAnalysis, insertAuditEntry }));
 vi.mock('@/lib/queue', () => ({ analyzeQueue: { add: analyzeAdd } }));
 
 import { auth } from '@/auth';
@@ -21,50 +22,64 @@ const TRACKS = [
 beforeEach(() => {
   vi.clearAllMocks();
   listTracksNeedingAnalysis.mockResolvedValue(TRACKS);
+  insertAuditEntry.mockResolvedValue(undefined);
 });
 
 describe('POST /api/v1/admin/backfill-analysis', () => {
-  // Роут не различает анонима и не-админа: обе ветки схлопываются в один
-  // Forbidden-ответ (нет отдельного 401 для отсутствующей сессии).
-  it('403 when not authenticated', async () => {
+  it('401 when not authenticated', async () => {
     mockedAuth.mockResolvedValue(null as never);
     const res = await POST();
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
     expect(listTracksNeedingAnalysis).not.toHaveBeenCalled();
     expect(analyzeAdd).not.toHaveBeenCalled();
   });
 
   it('403 for a non-admin role', async () => {
-    mockedAuth.mockResolvedValue({ user: { role: 'LISTENER' } } as never);
+    mockedAuth.mockResolvedValue({ user: { id: 'u1', role: 'LISTENER' } } as never);
     const res = await POST();
     expect(res.status).toBe(403);
     expect(listTracksNeedingAnalysis).not.toHaveBeenCalled();
   });
 
-  it('VIEWER is a silent no-op: 200 with queued:0, nothing enqueued', async () => {
-    mockedAuth.mockResolvedValue({ user: { role: 'VIEWER' } } as never);
+  it('403 for VIEWER — admin.jobs.run is ADMIN+, no more silent no-op', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1', role: 'VIEWER' } } as never);
     const res = await POST();
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ queued: 0 });
+    expect(res.status).toBe(403);
     expect(listTracksNeedingAnalysis).not.toHaveBeenCalled();
     expect(analyzeAdd).not.toHaveBeenCalled();
+    expect(insertAuditEntry).not.toHaveBeenCalled();
   });
 
-  it('ADMIN enqueues all tracks needing analysis', async () => {
-    mockedAuth.mockResolvedValue({ user: { role: 'ADMIN' } } as never);
+  it('ADMIN enqueues all tracks needing analysis and writes an audit entry', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } } as never);
     const res = await POST();
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ queued: 2 });
     expect(analyzeAdd).toHaveBeenCalledTimes(2);
     expect(analyzeAdd).toHaveBeenCalledWith(TRACKS[0]);
     expect(analyzeAdd).toHaveBeenCalledWith(TRACKS[1]);
+    expect(insertAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+      actorUserId: 'u1', actorRole: 'ADMIN', permission: 'admin.jobs.run', action: 'analysis.backfill',
+    }));
   });
 
   it('SUPERADMIN enqueues all tracks needing analysis', async () => {
-    mockedAuth.mockResolvedValue({ user: { role: 'SUPERADMIN' } } as never);
+    mockedAuth.mockResolvedValue({ user: { id: 'u1', role: 'SUPERADMIN' } } as never);
     const res = await POST();
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ queued: 2 });
     expect(analyzeAdd).toHaveBeenCalledTimes(2);
+  });
+
+  it('a failed audit write does not change the response', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } } as never);
+    insertAuditEntry.mockRejectedValue(new Error('db down'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await POST();
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ queued: 2 });
+    errorSpy.mockRestore();
   });
 });

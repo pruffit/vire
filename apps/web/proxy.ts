@@ -4,10 +4,10 @@ import createMiddleware from 'next-intl/middleware';
 import { routing } from '@/i18n/routing';
 import { getPathname } from '@/i18n/navigation';
 import { LOCALES, DEFAULT_LOCALE, type Locale } from '@vire/i18n/config';
+import { can } from '@vire/core/access';
 
 const handleI18nRouting = createMiddleware(routing);
 
-const ADMIN_ROLES = new Set(['VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN']);
 const PROTECTED_PREFIXES = ['/dashboard', '/settings', '/upload'];
 
 function stripLocale(pathname: string): { locale: Locale; rest: string } {
@@ -40,7 +40,7 @@ export default auth((req) => {
       signIn.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(signIn);
     }
-    if (!ADMIN_ROLES.has(req.auth.user.role)) {
+    if (!can(req.auth.user, 'admin.panel.view')) {
       return NextResponse.redirect(new URL('/', req.nextUrl.origin));
     }
     return NextResponse.next();

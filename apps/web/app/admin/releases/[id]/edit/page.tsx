@@ -1,13 +1,17 @@
 import { notFound } from 'next/navigation';
 import { db, DrizzleReleaseRepository } from '@vire/db';
 import { ReleaseEditForm } from './release-edit-form';
+import { getAdminAccess } from '@/lib/admin-access';
 import { DetailHeader } from '@/components/admin/ui';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminReleaseEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const release = await new DrizzleReleaseRepository(db).findById(id);
+  const [release, { canModerate }] = await Promise.all([
+    new DrizzleReleaseRepository(db).findById(id),
+    getAdminAccess(),
+  ]);
   if (!release) notFound();
 
   return (
@@ -23,6 +27,7 @@ export default async function AdminReleaseEditPage({ params }: { params: Promise
           description: release.description ?? '',
           linerNotes: release.linerNotes ?? '',
         }}
+        canMutate={canModerate}
       />
     </div>
   );

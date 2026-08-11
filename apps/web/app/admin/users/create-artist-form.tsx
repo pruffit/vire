@@ -14,7 +14,7 @@ function toSlug(value: string): string {
     .replace(/^-|-$/g, '');
 }
 
-export function CreateArtistForm() {
+export function CreateArtistForm({ canManageUsers }: { canManageUsers: boolean }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -47,6 +47,8 @@ export function CreateArtistForm() {
       }
     });
   }
+
+  if (!canManageUsers) return null;
 
   if (!open) {
     return (

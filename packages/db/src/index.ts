@@ -264,4 +264,6 @@ export {
   countSitemapPlaylists, listSitemapPlaylists,
 } from './queries/sitemap';
 export type { SitemapArtistRow, SitemapReleaseRow, SitemapTrackRow, SitemapSmartLinkRow } from './queries/sitemap';
+export { insertAuditEntry } from './queries/audit';
+export type { AuditEntry } from './queries/audit';
 export type { InferSelectModel, InferInsertModel } from 'drizzle-orm';

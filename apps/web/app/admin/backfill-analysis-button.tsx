@@ -5,9 +5,11 @@ import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
 
-export function BackfillAnalysisButton() {
+export function BackfillAnalysisButton({ canRun }: { canRun: boolean }) {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [queued, setQueued] = useState(0);
+
+  if (!canRun) return null;
 
   async function run() {
     if (state === 'loading') return;

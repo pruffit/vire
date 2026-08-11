@@ -5,8 +5,10 @@ import { motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { Icon } from '@/components/icon';
 
-export function EditorialGenerateButton() {
+export function EditorialGenerateButton({ canRun }: { canRun: boolean }) {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+
+  if (!canRun) return null;
 
   async function generate() {
     if (state === 'loading') return;

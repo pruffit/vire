@@ -6,6 +6,7 @@ import {
 import type { AdminAttention, AdminRecentRelease, AdminStats, AdminPlatformMetrics } from '@vire/db';
 import { getAdminHealth, type AdminHealth } from '@/lib/admin-health';
 import { reportService } from '@/lib/reports';
+import { getAdminAccess } from '@/lib/admin-access';
 import { QueueFailedActions } from './queue-actions';
 import { EditorialGenerateButton } from './editorial-generate-button';
 import {
@@ -16,13 +17,14 @@ import { pluralRu } from '@/lib/ru-plural';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
-  const [stats, attention, recent, metrics, health, openReports] = await Promise.all([
+  const [stats, attention, recent, metrics, health, openReports, access] = await Promise.all([
     getAdminStats(),
     getAdminAttention(),
     getRecentPublishedReleases(8),
     getAdminPlatformMetrics(),
     getAdminHealth(),
     reportService().countOpen().catch(() => 0),
+    getAdminAccess(),
   ]);
 
   const hasIssues =
@@ -38,7 +40,7 @@ export default async function AdminPage() {
 
       {hasIssues && <AttentionPanel attention={attention} openReports={openReports} />}
 
-      <HealthPanel health={health} />
+      <HealthPanel health={health} canModerate={access.canModerate} />
 
       <CatalogPanel stats={stats} metrics={metrics} />
 
@@ -48,7 +50,7 @@ export default async function AdminPage() {
 
       <Section
         label="Подборки"
-        action={<EditorialGenerateButton />}
+        action={<EditorialGenerateButton canRun={access.canRunJobs} />}
       >
         <p className="text-xs text-foreground/45 leading-relaxed max-w-prose">
           Алгоритмические плейлисты на главной: по mood-тегам, трендам, переслушиваниям и свежести.
@@ -61,7 +63,7 @@ export default async function AdminPage() {
 
 // ─── Система ───────────────────────────────────────────────────────────────
 
-function HealthPanel({ health }: { health: AdminHealth }) {
+function HealthPanel({ health, canModerate }: { health: AdminHealth; canModerate: boolean }) {
   const failedTotal = health.queues.reduce((s, q) => s + q.failed, 0);
   return (
     <Section label="Система">
@@ -130,7 +132,7 @@ function HealthPanel({ health }: { health: AdminHealth }) {
                 хранятся в Redis, при повторе нужен запущенный worker
               </span>
             </span>
-            <QueueFailedActions queueName={q.name} />
+            <QueueFailedActions queueName={q.name} canMutate={canModerate} />
           </div>
           <div className="divide-y divide-red-500/10">
             {q.failedJobs.map((j) => (

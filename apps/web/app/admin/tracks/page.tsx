@@ -4,6 +4,7 @@ import { RetranscodeButton } from './retranscode-button';
 import { BackfillAnalysisButton } from '../backfill-analysis-button';
 import { TracksLiveRefresh } from './live-refresh';
 import { formatDuration } from '@/lib/format';
+import { getAdminAccess } from '@/lib/admin-access';
 import {
   PageHeader, FilterTabs, Table, Thead, Th, Tr, Td, TrackStatusBadge, ActionLink, EmptyState,
 } from '@/components/admin/ui';
@@ -22,14 +23,14 @@ type Props = { searchParams: Promise<{ status?: string }> };
 
 export default async function AdminTracksPage({ searchParams }: Props) {
   const { status } = await searchParams;
-  const tracks = await listTracksAdmin({ status });
+  const [tracks, access] = await Promise.all([listTracksAdmin({ status }), getAdminAccess()]);
   const processing = tracks.filter((t) => t.status === 'PROCESSING').length;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Треки" count={tracks.length}>
         <TracksLiveRefresh processing={processing} />
-        <BackfillAnalysisButton />
+        <BackfillAnalysisButton canRun={access.canRunJobs} />
       </PageHeader>
 
       <FilterTabs
@@ -101,8 +102,12 @@ export default async function AdminTracksPage({ searchParams }: Props) {
               </Td>
               <Td>
                 <div className="flex flex-wrap items-center gap-2">
-                  <TrackStatusSelect trackId={track.id} currentStatus={track.status as 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED'} />
-                  <RetranscodeButton trackId={track.id} />
+                  <TrackStatusSelect
+                    trackId={track.id}
+                    currentStatus={track.status as 'READY' | 'BLOCKED' | 'PROCESSING' | 'FAILED'}
+                    canMutate={access.canModerate}
+                  />
+                  <RetranscodeButton trackId={track.id} canMutate={access.canModerate} />
                   <ActionLink href={`/admin/tracks/${track.id}/edit`}>Изм.</ActionLink>
                 </div>
               </Td>

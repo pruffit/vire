@@ -1,13 +1,12 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
+import { can } from '@vire/core/access';
 import { AdminNav } from './admin-nav';
 import { RoleBadge } from '@/components/admin/ui';
 
-const ADMIN_ROLES = new Set(['VIEWER', 'MODERATOR', 'ADMIN', 'SUPERADMIN']);
-
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session?.user?.id || !ADMIN_ROLES.has(session.user.role)) {
+  if (!session?.user?.id || !can(session.user, 'admin.panel.view')) {
     redirect('/');
   }
 

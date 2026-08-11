@@ -1,11 +1,12 @@
 import { listPlaylistsAdmin } from '@vire/db';
 import { PlaylistAdminRow } from './playlist-admin-row';
+import { getAdminAccess } from '@/lib/admin-access';
 import { PageHeader, Table, Thead, Th, Tr, Td, EmptyState } from '@/components/admin/ui';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPlaylistsPage() {
-  const playlists = await listPlaylistsAdmin();
+  const [playlists, { canModerate }] = await Promise.all([listPlaylistsAdmin(), getAdminAccess()]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -24,7 +25,7 @@ export default async function AdminPlaylistsPage() {
         </Thead>
         <tbody>
           {playlists.map((p) => (
-            <PlaylistAdminRow key={p.id} playlist={p} />
+            <PlaylistAdminRow key={p.id} playlist={p} canMutate={canModerate} />
           ))}
           {playlists.length === 0 && (
             <Tr>

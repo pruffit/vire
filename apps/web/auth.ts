@@ -8,9 +8,11 @@ import { cookies } from 'next/headers';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db, findUserByEmail, tryClaimOAuthAccount, getUserById } from '@vire/db';
 import { applyJwt, isNodeRuntime, type JwtLike } from '@/lib/jwt-refresh';
+import type { PlatformRole } from '@vire/core/access';
 import { accounts, sessions, verificationTokens, users } from '@vire/db/schema';
 
-export type UserRole = 'LISTENER' | 'ARTIST' | 'VIEWER' | 'MODERATOR' | 'ADMIN' | 'SUPERADMIN';
+// Источник правды по ролям — матрица прав в core; сессия не заводит свой список.
+export type UserRole = PlatformRole;
 
 declare module 'next-auth' {
   interface Session {

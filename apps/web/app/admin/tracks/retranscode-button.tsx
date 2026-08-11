@@ -5,12 +5,15 @@ import { actionRetranscodeTrack } from '../actions';
 
 interface Props {
   trackId: string;
+  canMutate: boolean;
 }
 
 // пересобрать HLS из исходника — когда трек READY, но HLS-файлы в бакете битые/отсутствуют
-export function RetranscodeButton({ trackId }: Props) {
+export function RetranscodeButton({ trackId, canMutate }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  if (!canMutate) return null;
 
   function handleClick() {
     setError(null);
