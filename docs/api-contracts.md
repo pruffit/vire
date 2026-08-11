@@ -110,7 +110,7 @@ packages/api-contracts/src/
 | 2 | **Release** | `GET /v1/releases/{id}/page`, `GET /v1/releases` | ✅ Экран через core (шаг 2.2), контракт `releasePageResponseSchema`. ✅ Каталог (шаг 2.3): `releaseCatalogQuerySchema` / `releaseCatalogResponseSchema`, пагинация `limit`/`offset` + `hasMore`. Ресурсный `GET /v1/releases/{id}` остаётся отдельно — потребитель плеер, не экран |
 | 3 | **Track** | `GET /v1/tracks/{id}`, `GET /v1/tracks/{id}/manifest` | Манифест есть |
 | 4 | **Playlist** | `GET /v1/playlists/{id}/page`, `GET /v1/playlists/{id}`, CRUD | ✅ Экран через core (шаг 2.5), контракт `playlistPageResponseSchema` (discriminated union по `kind`). Ресурсный `GET /v1/playlists/{id}` остаётся отдельно — свой контракт, PATCH/DELETE рядом |
-| 5 | **Feed** | `GET /v1/feed` | **Нет вообще** |
+| 5 | **Feed** | `GET /v1/feed` | ✅ `FeedService` через core (шаг 2.6), контракт `feedResponseSchema`. Персонально — 401 без сессии, `userId` только из сессии, не из query |
 | 6 | **User/Profile** | `GET /v1/user/profile`, `PATCH` | Частично |
 | 7 | **Auth** | `POST /v1/auth/token`, `/refresh`, `DELETE /devices/{id}` | **Нет** — волна 4 |
 | 8 | **Interactions** | like, follow, presave | Есть, уже в контрактах |
