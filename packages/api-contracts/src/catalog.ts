@@ -50,3 +50,17 @@ export const releaseSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
 });
+
+export const releaseCardSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  type: z.string(),
+  coverUrl: z.string().nullable(),
+  releaseDate: z.string().nullable(),
+  artistName: z.string(),
+  artistSlug: z.string(),
+  artistAvatarUrl: z.string().nullable(),
+  hasExplicit: z.boolean(),
+  accentColor: z.string().nullable(),
+});
+export type ReleaseCardDTO = z.infer<typeof releaseCardSchema>;

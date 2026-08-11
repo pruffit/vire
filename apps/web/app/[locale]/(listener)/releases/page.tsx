@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
-import { listReleases } from '@vire/db';
+import { DrizzleReleaseCatalogRepository } from '@vire/db';
+import { ReleaseCatalogService } from '@vire/core';
 import { FadeUp } from '@vire/ui/motion';
 import { JsonLd } from '@/components/json-ld';
 import { ReleasesGrid } from './releases-grid';
@@ -36,7 +37,8 @@ export default async function ReleasesPage({ searchParams }: Props) {
   const { tab: tabParam } = await searchParams;
   const tab: Tab = TABS.some((x) => x.key === tabParam) ? (tabParam as Tab) : 'fresh';
 
-  const releases = await listReleases(
+  const catalog = new ReleaseCatalogService(new DrizzleReleaseCatalogRepository());
+  const { items: releases } = await catalog.list(
     tab === 'week'
       ? { sort: 'fresh', sinceDays: 7, limit: 60 }
       : tab === 'popular'

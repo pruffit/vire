@@ -1,18 +1,5 @@
 import { z } from 'zod';
-import { artistProfileSchema, artistLinkSchema, releaseSchema } from './catalog';
-
-const artistUpcomingReleaseSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  type: z.string(),
-  coverUrl: z.string().nullable(),
-  releaseDate: z.string().nullable(),
-  artistName: z.string(),
-  artistSlug: z.string(),
-  artistAvatarUrl: z.string().nullable(),
-  hasExplicit: z.boolean(),
-  accentColor: z.string().nullable(),
-});
+import { artistProfileSchema, artistLinkSchema, releaseSchema, releaseCardSchema } from './catalog';
 
 const artistPostSchema = z.object({
   id: z.string(),
@@ -53,7 +40,7 @@ const artistPlayableTrackSchema = z.object({
 export const artistPageResponseSchema = z.object({
   artist: artistProfileSchema,
   releases: z.array(releaseSchema),
-  upcoming: z.array(artistUpcomingReleaseSchema),
+  upcoming: z.array(releaseCardSchema),
   posts: z.array(artistPostSchema),
   smartLinks: z.array(smartLinkSchema),
   playableTracks: z.array(artistPlayableTrackSchema),

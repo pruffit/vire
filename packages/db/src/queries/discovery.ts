@@ -1,21 +1,11 @@
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, lte, notInArray, or, sql } from 'drizzle-orm';
+import type { ReleaseCard } from '@vire/core';
 import { db } from '../client';
 import { artistProfiles, playEvents, releases, tracks, likes, follows } from '../schema';
 import { getTasteProfile } from './taste';
 import { featFromCredits } from './track-credits';
 
-export interface DiscoveryRelease {
-  id: string;
-  title: string;
-  type: string;
-  coverUrl: string | null;
-  releaseDate: Date | null;
-  artistName: string;
-  artistSlug: string;
-  artistAvatarUrl: string | null;
-  hasExplicit: boolean;
-  accentColor: string | null;
-}
+export type DiscoveryRelease = ReleaseCard;
 
 const releaseCardColumns = {
   id: releases.id,
@@ -177,10 +167,12 @@ export async function listReleases({
   sort = 'fresh',
   sinceDays,
   limit = 60,
+  offset = 0,
 }: {
   sort?: ReleaseSort;
   sinceDays?: number;
   limit?: number;
+  offset?: number;
 } = {}): Promise<DiscoveryRelease[]> {
   const conds = [eq(artistProfiles.isActive, true), releaseIsAired];
   if (sinceDays) {
@@ -201,8 +193,9 @@ export async function listReleases({
       .leftJoin(playEvents, eq(playEvents.trackId, tracks.id))
       .where(and(...conds))
       .groupBy(releases.id, artistProfiles.id)
-      .orderBy(desc(count(playEvents.id)), desc(releaseFreshness))
-      .limit(limit);
+      .orderBy(desc(count(playEvents.id)), desc(releaseFreshness), desc(releases.id))
+      .limit(limit)
+      .offset(offset);
   }
 
   return db
@@ -210,8 +203,9 @@ export async function listReleases({
     .from(releases)
     .innerJoin(artistProfiles, eq(artistProfiles.id, releases.artistProfileId))
     .where(and(...conds))
-    .orderBy(desc(releaseFreshness))
-    .limit(limit);
+    .orderBy(desc(releaseFreshness), desc(releases.id))
+    .limit(limit)
+    .offset(offset);
 }
 
 /** Грядущие релизы конкретного артиста (для страницы артиста / countdown). */

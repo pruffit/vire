@@ -1,20 +1,9 @@
 import type { ArtistProfile, SmartLink } from './artist';
 import type { Release } from './release';
 import type { ArtistPost } from './artist-post';
+import type { ReleaseCard } from './release-card';
 
-/** Форма — зеркало DiscoveryRelease (packages/db/src/queries/discovery.ts): порт отдаёт те же поля. */
-export interface ArtistUpcomingRelease {
-  id: string;
-  title: string;
-  type: string;
-  coverUrl: string | null;
-  releaseDate: Date | null;
-  artistName: string;
-  artistSlug: string;
-  artistAvatarUrl: string | null;
-  hasExplicit: boolean;
-  accentColor: string | null;
-}
+export type ArtistUpcomingRelease = ReleaseCard;
 
 /** Форма — зеркало ArtistPlayableTrack (packages/db/src/queries/discovery.ts). */
 export interface ArtistPlayableTrack {
