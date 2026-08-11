@@ -15,6 +15,7 @@ export * from './repositories/user-directory';
 export * from './repositories/listener-track';
 export * from './repositories/track-moods';
 export * from './repositories/playlist';
+export * from './repositories/playlist-page';
 export * from './repositories/wave';
 export * from './repositories/search';
 export * from './repositories/presave';

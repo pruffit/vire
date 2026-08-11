@@ -124,7 +124,7 @@
 | 2.2 ✅ | Релиз (`/v1/releases/[releaseId]/page`) | M | Отклонение от плана: старый `/v1/releases/[releaseId]` — ресурсный роут плеера (другой контракт, живой потребитель `lib/player/lazy-queue-fetchers.ts`), не трогали; экран получил отдельный `.../page` роут, как у артиста |
 | 2.3 ✅ | Каталог релизов `GET /v1/releases` | M | Эндпоинт заведён: `sort`/`sinceDays`/`limit`/`offset` в контракте, `hasMore` через запрос `limit + 1`. Вкладки (fresh/week/popular) остались UI-состоянием страницы |
 | 2.4 ✅ | Каталог артистов `GET /v1/artists` | M | Эндпоинт заведён: `query`/`limit`/`offset` в контракте, `hasMore` через запрос `limit + 1` |
-| 2.5 | Плейлист `/v1/playlists/[id]` | M | |
+| 2.5 ✅ | Плейлист `/v1/playlists/[id]` | M | `PlaylistPageService` поверх существующего `PlaylistService` (композиция, не копия правил доступа); ответ размечен по `kind` (`invite`/`playlist`); ресурсный `GET /v1/playlists/[id]` не тронут — свой контракт, PATCH/DELETE рядом |
 | 2.6 | Лента `GET /v1/feed` | L | Персонализирована; `lib/feed.ts` уже тонкий оркестратор над чистыми `composeFeed`/`scoreFeedItem` из core — переносится легко |
 | 2.7 | Блоки главной | L | Каждый блок = свой эндпоинт. Прямое предусловие SDUI |
 
