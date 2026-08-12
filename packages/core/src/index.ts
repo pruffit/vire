@@ -11,6 +11,7 @@ export * from './music/external/ports/external';
 export * from './platform/util/uuid';
 export * from './platform/util/ttl-cache';
 export * from './platform/util/throttle-gate';
+export * from './platform/util/format';
 // util/signing НЕ реэкспортим: баррель тянется в Edge-runtime, где node:crypto не
 // поддержан. Импорт — через подпуть '@vire/core/signing' (только серверные потребители).
 // По той же причине notifications/unsubscribe (зависит от util/signing) — тоже
@@ -100,6 +101,7 @@ export * from './music/external/services/external-resolve';
 export * from './music/external/services/external-resolve-service';
 export * from './music/playback/services/wave-scoring';
 export * from './music/playback/services/wave';
+export * from './music/playback/services/queue';
 export * from './music/discovery/services/feed-ranking';
 export * from './music/discovery/services/discovery-scoring';
 export * from './music/discovery/services/feed';

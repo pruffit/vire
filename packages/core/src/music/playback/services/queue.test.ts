@@ -1,8 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { fisherYates, shuffleOn, shuffleOff, dedupeQueue, nextQueueIndex, capLiveQueue, LIVE_QUEUE_LIMIT, insertIntoQueue } from './queue';
-import type { PlayerTrack } from '@/store/player';
 
-function track(id: string): PlayerTrack {
+interface Track {
+  id: string;
+  title: string;
+  artistName: string;
+  coverUrl: string | null;
+}
+
+function track(id: string): Track {
   return { id, title: `title-${id}`, artistName: 'artist', coverUrl: null };
 }
 

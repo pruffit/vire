@@ -1,0 +1,120 @@
+export type Repeat = 'off' | 'all' | 'one';
+
+/** Режет `items` окном `limit` вокруг `index`, оставляя `windowBefore` элементов перед ним. */
+export function sliceWindowAroundIndex<T>(
+  items: T[],
+  index: number,
+  limit: number,
+  windowBefore: number,
+): { items: T[]; index: number } {
+  if (items.length <= limit) {
+    return { items, index: Math.max(0, index) };
+  }
+  const start = Math.max(0, index - windowBefore);
+  return { items: items.slice(start, start + limit), index: index - start };
+}
+
+export const LIVE_QUEUE_LIMIT = 300;
+export const LIVE_QUEUE_WINDOW_BEFORE = 20;
+
+/** Кап бесконечно растущей live-очереди волны; originalQueue режем той же логикой
+ *  по позиции текущего трека — иначе shuffleOff() после обрезки терял бы согласованность. */
+export function capLiveQueue<T extends { id: string }>(
+  queue: T[],
+  queueIndex: number,
+  originalQueue: T[] | null,
+): { queue: T[]; queueIndex: number; originalQueue: T[] | null } {
+  if (queue.length <= LIVE_QUEUE_LIMIT) {
+    return { queue, queueIndex, originalQueue };
+  }
+
+  const currentId = queue[queueIndex]?.id;
+  const { items: cappedQueue, index: cappedIndex } = sliceWindowAroundIndex(
+    queue,
+    queueIndex,
+    LIVE_QUEUE_LIMIT,
+    LIVE_QUEUE_WINDOW_BEFORE,
+  );
+
+  let cappedOriginal = originalQueue;
+  if (originalQueue && originalQueue.length > LIVE_QUEUE_LIMIT) {
+    const originalIndex = currentId ? originalQueue.findIndex((t) => t.id === currentId) : -1;
+    cappedOriginal = sliceWindowAroundIndex(
+      originalQueue,
+      originalIndex >= 0 ? originalIndex : 0,
+      LIVE_QUEUE_LIMIT,
+      LIVE_QUEUE_WINDOW_BEFORE,
+    ).items;
+  }
+
+  return { queue: cappedQueue, queueIndex: cappedIndex, originalQueue: cappedOriginal };
+}
+
+/** Следующий индекс очереди с учётом повтора. null — очередь кончилась (repeat='one'
+ *  сюда не попадает: залипание на одном треке обрабатывается отдельно в audio-engine). */
+export function nextQueueIndex(queueIndex: number, queueLength: number, repeat: Repeat): number | null {
+  if (queueIndex + 1 < queueLength) return queueIndex + 1;
+  if (repeat === 'all' && queueLength > 0) return 0;
+  return null;
+}
+
+/** Перестановка Фишера — Йетса. rand переопределим в тестах для детерминизма. */
+export function fisherYates<T>(arr: T[], rand: () => number = Math.random): T[] {
+  const result = arr.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/** Включение шаффла: текущий трек фиксируется первым, остаток честно перемешан. */
+export function shuffleOn<T extends { id: string }>(
+  queue: T[],
+  currentIndex: number,
+  rand: () => number = Math.random,
+): { queue: T[]; index: number } {
+  if (queue.length === 0) return { queue: [], index: 0 };
+
+  const safeIndex = currentIndex >= 0 && currentIndex < queue.length ? currentIndex : 0;
+  const current = queue[safeIndex];
+  const rest = queue.filter((_, i) => i !== safeIndex);
+  const shuffledRest = fisherYates(rest, rand);
+
+  return { queue: [current, ...shuffledRest], index: 0 };
+}
+
+/** Выключение шаффла: восстанавливаем исходный порядок, индекс — позиция текущего трека. */
+export function shuffleOff<T extends { id: string }>(
+  original: T[],
+  currentId: string,
+): { queue: T[]; index: number } {
+  const index = original.findIndex((t) => t.id === currentId);
+  return { queue: original, index: index >= 0 ? index : 0 };
+}
+
+/** Вставка в очередь без дублей: треки, уже стоящие в ней, не вставляются повторно. */
+export function insertIntoQueue<T extends { id: string }>(
+  queue: T[],
+  queueIndex: number,
+  tracks: T[],
+  position: 'next' | 'end',
+): { queue: T[]; inserted: number } {
+  const existing = new Set(queue.map((t) => t.id));
+  const incoming = dedupeQueue(tracks).filter((t) => !existing.has(t.id));
+  if (incoming.length === 0) return { queue, inserted: 0 };
+  const at = position === 'next' ? Math.min(queueIndex + 1, queue.length) : queue.length;
+  return { queue: [...queue.slice(0, at), ...incoming, ...queue.slice(at)], inserted: incoming.length };
+}
+
+/** Убирает дубликаты по id, первое вхождение выигрывает. */
+export function dedupeQueue<T extends { id: string }>(tracks: T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const t of tracks) {
+    if (seen.has(t.id)) continue;
+    seen.add(t.id);
+    result.push(t);
+  }
+  return result;
+}

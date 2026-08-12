@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDuration, formatListenTime, formatCount, releaseYear, totalDuration } from '../format';
+import { formatDuration, formatListenTime, formatCount, releaseYear, totalDuration } from './format';
 
 const unit = { seconds: 'с', minutes: 'м', hours: 'ч' };
 
