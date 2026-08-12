@@ -1,6 +1,7 @@
 # API-контракты — конвенции и первая группа
 
-**Статус:** предложение (Phase 1, реализация — Phase 4) · **Основание:** `architecture-audit.md` §Б5
+**Статус:** реализовано (Phase 4, волна 3, 12.08.2026) · **Основание:** `architecture-audit.md` §Б5,
+`migration-plan.md` §волна 3
 
 ---
 
@@ -37,17 +38,24 @@ OpenAPI **не вводится сейчас**: при TS-клиенте (`multi
 
 ### 3.1 Форма ответа
 
-```ts
-// успех
-{ data: T }
-{ data: T[], meta: { total, limit, offset } }     // коллекции
+Факт (принято волной 3): роут отдаёт **ресурсный объект напрямую**, не обёртку `{ data }`.
+`{ items, hasMore }`, `{ liked }`, `{ playlist }` — форма определяется ресурсом, схема
+живёт в `packages/api-contracts`. Обёртка не даёт типизированному клиенту ничего, а
+миграция 119 роутов и всех фетчеров — ломающее изменение без выигрыша.
 
-// ошибка
-{ error: { code: string, message: string, details?: unknown } }
+```ts
+// успех — ресурсный объект (пример: LikeResponse)
+{ liked: boolean }
+
+// ошибка — errorResponseSchema, common.ts
+{ error: string, code?: string }
 ```
 
-`code` — машиночитаемый (`not_found`, `forbidden`, `validation_failed`, `rate_limited`),
-`message` — человекочитаемый, локализованный по локали пользователя.
+`error` — техническое сообщение (обычно русское, для логов), сериализуется в
+`apps/web/lib/error-response.ts` (`errorJson`) из `Result<T,E>` сервиса core. `code` —
+**необязательное** машиночитаемое поле для клиентского перевода
+(`apps/web/lib/api-error.ts` → `packages/i18n/messages/*/errors.json`) — совместимое
+расширение поверх факта, наполняется по мере надобности (волна 4, мобильный клиент).
 
 ### 3.2 Коды статусов
 
@@ -86,16 +94,30 @@ OpenAPI **не вводится сейчас**: при TS-клиенте (`multi
 
 ## 4. Структура пакета
 
+Плоская, не `common/platform/music`: 17 файлов сегодня, порог для раскладки по
+подпапкам — 30 (`migration-plan.md` §волна 3, решение 2). Реэкспорт — `src/index.ts`.
+
 ```
 packages/api-contracts/src/
-├── common/        error, pagination, sorting, id, date
-├── platform/      auth, users, devices, organizations, media,
-│                  notifications, search, billing
-└── music/         artists, releases, tracks, playlists, feed, wave
+├── common.ts            errorResponseSchema, okResponseSchema, uuidSchema
+├── artist.ts             GET /v1/artists/{slug} (ресурсный)
+├── artist-page.ts         GET /v1/artists/{slug}/page (экран)
+├── artist-catalog.ts      GET /v1/artists (каталог)
+├── release.ts             GET /v1/releases/{id} (ресурсный)
+├── release-page.ts        GET /v1/releases/{id}/page (экран)
+├── release-catalog.ts     GET /v1/releases (каталог)
+├── catalog.ts             общие схемы каталога (artistProfileSchema, releaseSchema, ...)
+├── playlist.ts             CRUD плейлиста, tracks, collaborators, add-search, cover, suggestions
+├── playlist-page.ts        GET /v1/playlists/{id}/page (экран) + переиспользуемые
+│                           playlistTrackSchema/playlistCollaboratorSchema/playlistWithTracksSchema
+├── toggle.ts               follow/like/presave (общая форма { <flag>: boolean })
+├── wave.ts                 GET /v1/wave
+├── feed.ts                 GET /v1/feed
+├── home-blocks.ts          6 эндпоинтов GET /v1/home/*
+├── chat.ts                 chat/** — сообщения, беседы, unread-count
+├── notifications.ts        notifications/**
+└── index.ts                barrel — export * из всех файлов выше
 ```
-
-Зеркалит деление `@vire/core` (`architecture.md` §5), чтобы граница Core/Domain читалась
-одинаково на всех уровнях.
 
 ---
 
@@ -108,10 +130,10 @@ packages/api-contracts/src/
 |---|---|---|---|
 | 1 | **Artist** | `GET /v1/artists/{slug}/page`, `GET /v1/artists` | ✅ Экран через core (шаг 2.1), контракт `artistPageResponseSchema`. ✅ Каталог (шаг 2.4): `artistCatalogQuerySchema` / `artistCatalogResponseSchema`, пагинация `limit`/`offset` + `hasMore` |
 | 2 | **Release** | `GET /v1/releases/{id}/page`, `GET /v1/releases` | ✅ Экран через core (шаг 2.2), контракт `releasePageResponseSchema`. ✅ Каталог (шаг 2.3): `releaseCatalogQuerySchema` / `releaseCatalogResponseSchema`, пагинация `limit`/`offset` + `hasMore`. Ресурсный `GET /v1/releases/{id}` остаётся отдельно — потребитель плеер, не экран |
-| 3 | **Track** | `GET /v1/tracks/{id}`, `GET /v1/tracks/{id}/manifest` | Манифест есть |
-| 4 | **Playlist** | `GET /v1/playlists/{id}/page`, `GET /v1/playlists/{id}`, CRUD | ✅ Экран через core (шаг 2.5), контракт `playlistPageResponseSchema` (discriminated union по `kind`). Ресурсный `GET /v1/playlists/{id}` остаётся отдельно — свой контракт, PATCH/DELETE рядом |
+| 3 | **Track** | `GET /v1/tracks/{id}`, `GET /v1/tracks/{id}/manifest` | Манифест есть. `like` — ✅ `likeResponseSchema` (`toggle.ts`). Остальное (`manifest`, `download`, `lyrics`, `moments`, `moods`, `purchase`, `listening`) — allowlist `check:contracts`, точечный остаток волны 3 |
+| 4 | **Playlist** | `GET /v1/playlists/{id}/page`, `GET /v1/playlists/{id}`, CRUD | ✅ Экран через core (шаг 2.5), контракт `playlistPageResponseSchema` (discriminated union по `kind`). ✅ Весь `playlists/**` кроме SSE-стрима на контрактах (`playlist.ts`, срез 2 волны 3) |
 | 5 | **Feed** | `GET /v1/feed` | ✅ `FeedService` через core (шаг 2.6), контракт `feedResponseSchema`. Персонально — 401 без сессии, `userId` только из сессии, не из query |
-| 6 | **User/Profile** | `GET /v1/user/profile`, `PATCH` | Частично |
+| 6 | **User/Profile** | `GET /v1/user/profile`, `PATCH` | Не переведён — allowlist `check:contracts` |
 | 7 | **Auth** | `POST /v1/auth/token`, `/refresh`, `DELETE /devices/{id}` | **Нет** — волна 4 |
 | 8 | **Interactions** | like, follow, presave | Есть, уже в контрактах |
 | 9 | **Home blocks** (доп. к Playlist из #4) | `GET /v1/home/{fresh-releases,upcoming,hot-tracks,playlists,personal,friends-activity}` | ✅ `HomeBlocksService` через core (шаг 2.7), контракты `freshReleasesResponseSchema`/`upcomingResponseSchema`/`hotTracksResponseSchema`/`homePlaylistsResponseSchema`/`personalBlockResponseSchema`/`friendsActivityResponseSchema`. `personal`/`friends-activity` — 401 без сессии, `userId` только из сессии, не из query (тот же контракт, что и Feed) |
@@ -122,7 +144,7 @@ packages/api-contracts/src/
 
 ---
 
-## 6. Contract-тесты
+## 6. Contract-тесты и барьер `check:contracts`
 
 ```ts
 const res = await GET(request);
@@ -132,8 +154,29 @@ expect(ArtistDetailResponse.safeParse(await res.json()).success).toBe(true);
 Тот же импорт использует клиент. Расхождение сервера и клиента падает в CI, а не в проде
 на телефоне.
 
-Барьер `check:contracts` (роут под `/v1` без схемы → красный гейт) вводится, когда переведена
-первая группа — раньше он был бы красным с первого дня и его бы отключили.
+**Барьер введён волной 3** (`apps/web/scripts/check-contracts.mjs`, по образцу
+`check-route-slugs.mjs`): каждый `app/api/v1/**/route.ts` обязан импортировать хотя бы
+один символ из `@vire/api-contracts`, иначе гейт красный. Регистрация — `check:contracts`
+в `apps/web/package.json` (+ `prebuild`), таск в `turbo.json`, шаг в job `gates`
+(`.github/workflows/deploy.yml`).
+
+Роут без схемы — тоже находка, а не обход: **allowlist** перечисляет непереведённые
+группы явно, с причиной у каждой строки:
+
+| Allowlist | Причина |
+|---|---|
+| `admin/**` | Backoffice, единственный потребитель — веб |
+| `dashboard/**` | Мультипарт + ручная валидация входа, отдельный подпроект (18 роутов) |
+| `jam/**` | Union-типы + SSE, отдельный подпроект (18 роутов) |
+| `keys/**` | E2EE-протокол, не JSON REST контракт |
+| `webhooks/**` | Форму задаёт провайдер (YooKassa), не мы |
+| `**/stream/route.ts` | SSE-поток, не запрос-ответ |
+| `health/route.ts` | Служебный пинг, не ресурс |
+| `search`, `friends/**`, `tracks/**` (кроме `like`), `user/**`, `users/**`, `feedback`, `reports`, `session`, `presence`, `push/**`, `presave/**`, `party/**`, `listening-now`, `realtime/**` | Точечный остаток волны 3, не переведён |
+
+Allowlist не гниёт сам: гейт красный, если запись матчит роут, который **уже**
+импортирует контракты (запись пора убрать), или матчит **несуществующий** путь.
+На волне 3: 40/119 роутов `/api/v1` на контрактах, 79 — в allowlist (27 записей).
 
 ---
 

@@ -264,10 +264,11 @@ pnpm --filter @vire/db typecheck       # tsc --noEmit
 pnpm --filter @vire/web lint           # eslint
 pnpm --filter @vire/web check:routes   # инвариант роутинга (см. ниже)
 pnpm --filter @vire/web check:i18n     # кириллица вне словарей packages/i18n/messages
+pnpm --filter @vire/web check:contracts  # роут /api/v1 без схемы @vire/api-contracts вне allowlist
 pnpm turbo run check:layers            # границы @vire/core: platform/** не знает о music/**
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов
-pnpm --filter @vire/web build          # прод-сборка (prebuild гоняет check:routes + check:i18n)
+pnpm --filter @vire/web build          # прод-сборка (prebuild гоняет check:routes + check:i18n + check:contracts)
 pnpm audit --audit-level=high          # из корня; гейт CI, локально о нём легко забыть
 ```
 

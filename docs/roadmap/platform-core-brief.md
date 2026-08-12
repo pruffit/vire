@@ -290,8 +290,8 @@ Analytics/API с нуля.
 | 0 — Audit | ✅ завершена | 10.08.2026 | `docs/architecture-audit.md` |
 | 1 — Target Architecture | ✅ завершена | 10.08.2026 | `architecture.md` · `platform-core.md` · `sdui.md` · `multiplatform.md` |
 | 2 — Migration Plan | ✅ завершена | 10.08.2026 | `migration-plan.md` (+ `api-contracts.md` написан авансом) |
-| 3 — First Extraction | 🟡 в работе | 12.08.2026 | Волна 0 ✅ (0.1 раскладка core, 0.2 барьер `check:layers`) · Волна 1 ✅ (`platform/access`, единый гейт на admin-периметре, `audit_log` — `docs/features/rbac.md`) · Волна 2 ✅ завершена (read-path в HTTP): 2.1 артист, 2.2 релиз, 2.3 каталог релизов, 2.4 каталог артистов, 2.5 плейлист, 2.6 лента, 2.7 блоки главной (6 эндпоинтов `/v1/home/*`, предусловие SDUI выполнено) — следующая волна 3 (контракты) по плану |
-| 4 — API Contracts | ⬜ | | Волна 3 (идёт вместе с волной 2) |
+| 3 — First Extraction | 🟡 в работе | 12.08.2026 | Волна 0 ✅ (0.1 раскладка core, 0.2 барьер `check:layers`) · Волна 1 ✅ (`platform/access`, единый гейт на admin-периметре, `audit_log` — `docs/features/rbac.md`) · Волна 2 ✅ завершена (read-path в HTTP): 2.1 артист, 2.2 релиз, 2.3 каталог релизов, 2.4 каталог артистов, 2.5 плейлист, 2.6 лента, 2.7 блоки главной (6 эндпоинтов `/v1/home/*`, предусловие SDUI выполнено) · Волна 3 ✅ завершена (контракты, см. фаза 4) |
+| 4 — API Contracts | ✅ завершена | 12.08.2026 | Волна 3 (4 среза): `common.ts` + follow/like/presave + artist/release ресурсные (срез 1); весь `playlists/**` кроме SSE (срез 2); `chat/**`+`notifications/**` (срез 3); барьер `check:contracts` (роут `/api/v1` без схемы в `@vire/api-contracts` вне allowlist → красный) + доки (срез 4). Итог: 40/119 роутов на контрактах, 79 в allowlist (`docs/api-contracts.md`) |
 | 5 — Shared UI | ⬜ | | |
 | 6 — SDUI Foundation | ⬜ | | |
 | 7 — VireMusic Migration | ⬜ | | |
