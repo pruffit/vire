@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { playlistCollaboratorsResponseSchema, playlistJoinResponseSchema, okResponseSchema } from '@vire/api-contracts';
 
 const { getCollabState, isCollaborator, listCollaborators, joinCollaborator, removeCollaborator, getWithTracks } = vi.hoisted(() => ({
   getCollabState: vi.fn(),
@@ -75,6 +76,8 @@ describe('GET /api/v1/playlists/[id]/collaborators', () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.collaborators).toHaveLength(1);
+    expect(json.collaborators[0].joinedAt).toBe('2026-01-01T00:00:00.000Z');
+    expect(playlistCollaboratorsResponseSchema.safeParse(json).success).toBe(true);
   });
 });
 
@@ -138,6 +141,20 @@ describe('POST /api/v1/playlists/[id]/collaborators (join)', () => {
     expect(insert).toHaveBeenCalledWith('owner-1', 'PLAYLIST_COLLAB_JOIN', 'collab-1', 'p1');
     expect(publishChannel).toHaveBeenCalledWith('rt:playlist:p1', { type: 'playlist:collaborators', playlistId: 'p1', actorId: 'collab-1' });
   });
+
+  it('response matches the contract schema', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'collab-1' } } as never);
+    getCollabState.mockResolvedValue(collabState);
+    joinCollaborator.mockResolvedValue('joined');
+    getWithTracks.mockResolvedValue({
+      id: 'p1', title: 'A', description: null, coverUrl: null, kind: 'USER',
+      editorialParams: null, visibility: 'PRIVATE', ownerUserId: 'owner-1',
+      likesCount: 0, isCollaborative: true, version: 1, tracks: [],
+    });
+    const res = await POST(req({ token: 'good-token' }), ctx);
+    expect(res.status).toBe(200);
+    expect(playlistJoinResponseSchema.safeParse(await res.json()).success).toBe(true);
+  });
 });
 
 describe('DELETE /api/v1/playlists/[id]/collaborators (leave)', () => {
@@ -163,5 +180,6 @@ describe('DELETE /api/v1/playlists/[id]/collaborators (leave)', () => {
     const res = await DELETE(req(), ctx);
     expect(res.status).toBe(200);
     expect(removeCollaborator).toHaveBeenCalledWith('p1', 'collab-1');
+    expect(okResponseSchema.safeParse(await res.json()).success).toBe(true);
   });
 });

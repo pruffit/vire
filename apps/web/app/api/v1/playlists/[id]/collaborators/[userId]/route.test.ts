@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { okResponseSchema } from '@vire/api-contracts';
 
 const { getCollabState, removeCollaborator } = vi.hoisted(() => ({
   getCollabState: vi.fn(),
@@ -63,5 +64,6 @@ describe('DELETE /api/v1/playlists/[id]/collaborators/[userId] (kick)', () => {
     expect(res.status).toBe(200);
     expect(removeCollaborator).toHaveBeenCalledWith('p1', 'collab-1');
     expect(publishChannel).toHaveBeenCalledWith('rt:playlist:p1', { type: 'playlist:collaborators', playlistId: 'p1', actorId: 'owner-1' });
+    expect(okResponseSchema.safeParse(await res.json()).success).toBe(true);
   });
 });

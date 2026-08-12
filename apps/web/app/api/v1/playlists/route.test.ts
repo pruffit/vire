@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { playlistListResponseSchema, createPlaylistResponseSchema } from '@vire/api-contracts';
 
 const { listByUser, trackMembership, create } = vi.hoisted(() => ({
   listByUser: vi.fn(),
@@ -39,24 +40,32 @@ describe('GET /api/v1/playlists', () => {
 
   it('200 returns playlists without trackId', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    listByUser.mockResolvedValue([{ id: 'p1', title: 'A', trackCount: 0 }]);
+    listByUser.mockResolvedValue([{
+      id: 'p1', title: 'A', visibility: 'PRIVATE', trackCount: 0, coverUrl: null,
+      createdAt: new Date('2026-01-01'), updatedAt: new Date('2026-01-01'),
+    }]);
     const res = await GET(makeReq());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.playlists).toHaveLength(1);
     expect(body.inPlaylists).toBeUndefined();
     expect(trackMembership).not.toHaveBeenCalled();
+    expect(playlistListResponseSchema.safeParse(body).success).toBe(true);
   });
 
   it('200 includes inPlaylists when trackId is a valid uuid', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
-    listByUser.mockResolvedValue([{ id: 'p1', title: 'A', trackCount: 1 }]);
+    listByUser.mockResolvedValue([{
+      id: 'p1', title: 'A', visibility: 'PRIVATE', trackCount: 1, coverUrl: null,
+      createdAt: new Date('2026-01-01'), updatedAt: new Date('2026-01-01'),
+    }]);
     trackMembership.mockResolvedValue(['p1']);
     const res = await GET(makeReq(`http://localhost/api/v1/playlists?trackId=${TRACK}`));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.inPlaylists).toEqual(['p1']);
     expect(trackMembership).toHaveBeenCalledWith('u1', TRACK);
+    expect(playlistListResponseSchema.safeParse(body).success).toBe(true);
   });
 
   it('400 when trackId is not a uuid', async () => {
@@ -93,7 +102,9 @@ describe('POST /api/v1/playlists', () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(201);
-    await expect(res.json()).resolves.toEqual({ id: 'p1' });
+    const body = await res.json();
+    expect(body).toEqual({ id: 'p1' });
+    expect(createPlaylistResponseSchema.safeParse(body).success).toBe(true);
     expect(create).toHaveBeenCalledWith('u1', 'New');
   });
 });

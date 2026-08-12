@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { NotFoundError } from '@vire/core';
+import type { PlaylistSuggestionsResponse } from '@vire/api-contracts';
 import { playlistService } from '@/lib/playlist';
 import { errorJson } from '@/lib/error-response';
 
@@ -16,5 +17,5 @@ export async function GET(_req: Request, { params }: Params) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json(result.value);
+  return NextResponse.json(result.value satisfies PlaylistSuggestionsResponse);
 }

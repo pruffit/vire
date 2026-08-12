@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { playlistCoverResponseSchema } from '@vire/api-contracts';
 
 const { getWithTracks, setCover } = vi.hoisted(() => ({
   getWithTracks: vi.fn(),
@@ -64,7 +65,9 @@ describe('POST /api/v1/playlists/[id]/cover', () => {
     const res = await POST(makeFormReq({ removeCover: '1' }), ctx);
     expect(res.status).toBe(200);
     expect(setCover).toHaveBeenCalledWith('p1', 'u1', null);
-    await expect(res.json()).resolves.toEqual({ ok: true, coverUrl: null });
+    const json = await res.json();
+    expect(json).toEqual({ ok: true, coverUrl: null });
+    expect(playlistCoverResponseSchema.safeParse(json).success).toBe(true);
   });
   it('400 when no file provided', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);

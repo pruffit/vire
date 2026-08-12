@@ -6,7 +6,7 @@ const playlistTrackAddedBySchema = z.object({
   image: z.string().nullable(),
 });
 
-const playlistTrackSchema = z.object({
+export const playlistTrackSchema = z.object({
   id: z.string(),
   title: z.string(),
   durationSec: z.number().nullable(),
@@ -22,7 +22,7 @@ const playlistTrackSchema = z.object({
   addedBy: playlistTrackAddedBySchema.nullable(),
 });
 
-const playlistWithTracksSchema = z.object({
+export const playlistWithTracksSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().nullable(),
@@ -37,7 +37,7 @@ const playlistWithTracksSchema = z.object({
   tracks: z.array(playlistTrackSchema),
 });
 
-const playlistCollaboratorSchema = z.object({
+export const playlistCollaboratorSchema = z.object({
   userId: z.string(),
   name: z.string().nullable(),
   image: z.string().nullable(),

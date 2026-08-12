@@ -1,14 +1,21 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { auth } from '@/auth';
-import { NotFoundError, ConflictError } from '@vire/core';
+import { NotFoundError, ConflictError, type PlaylistCollaborator } from '@vire/core';
+import {
+  joinPlaylistSchema,
+  type PlaylistCollaboratorsResponse,
+  type PlaylistJoinResponse,
+  type OkResponse,
+} from '@vire/api-contracts';
 import { playlistService } from '@/lib/playlist';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ id: string }> };
 
-const joinSchema = z.object({ token: z.string().min(1) });
+function toResponse(collaborators: PlaylistCollaborator[]): PlaylistCollaboratorsResponse {
+  return { collaborators: collaborators.map((c) => ({ ...c, joinedAt: c.joinedAt.toISOString() })) };
+}
 
 export async function GET(_req: Request, { params }: Params) {
   const session = await auth();
@@ -20,7 +27,7 @@ export async function GET(_req: Request, { params }: Params) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ collaborators: result.value });
+  return NextResponse.json(toResponse(result.value));
 }
 
 export async function POST(req: Request, { params }: Params) {
@@ -32,7 +39,7 @@ export async function POST(req: Request, { params }: Params) {
 
   const { id } = await params;
   const body = await req.json().catch(() => null);
-  const parsed = joinSchema.safeParse(body);
+  const parsed = joinPlaylistSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
 
   const result = await playlistService().join(id, session.user.id, parsed.data.token);
@@ -41,7 +48,7 @@ export async function POST(req: Request, { params }: Params) {
     if (result.error instanceof ConflictError) return errorJson(result.error, 409);
     return errorJson(result.error, 403);
   }
-  return NextResponse.json({ playlist: result.value.playlist });
+  return NextResponse.json({ playlist: result.value.playlist } satisfies PlaylistJoinResponse);
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
@@ -54,5 +61,5 @@ export async function DELETE(_req: Request, { params }: Params) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true } satisfies OkResponse);
 }

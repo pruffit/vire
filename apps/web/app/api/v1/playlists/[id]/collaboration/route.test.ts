@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  collaborationInviteResponseSchema,
+  collaborationPatchResponseSchema,
+  collaborationRotateResponseSchema,
+} from '@vire/api-contracts';
 
 const { getWithTracks, setCollaboration, getCollabState } = vi.hoisted(() => ({
   getWithTracks: vi.fn(),
@@ -56,8 +61,10 @@ describe('GET /api/v1/playlists/[id]/collaboration (действующая сс�
     getCollabState.mockResolvedValue({ ownerUserId: 'owner-1', isCollaborative: true, collabToken: 'tok' });
     const res = await GET(getReq(), ctx);
     expect(res.status).toBe(200);
-    expect((await res.json()).inviteUrl).toMatch(/\/playlists\/p1\?join=tok$/);
+    const json = await res.json();
+    expect(json.inviteUrl).toMatch(/\/playlists\/p1\?join=tok$/);
     expect(setCollaboration).not.toHaveBeenCalled();
+    expect(collaborationInviteResponseSchema.safeParse(json).success).toBe(true);
   });
 
   it('null, когда совместность выключена', async () => {
@@ -101,6 +108,7 @@ describe('PATCH /api/v1/playlists/[id]/collaboration', () => {
     expect(json.isCollaborative).toBe(true);
     expect(json.inviteUrl).toMatch(/\/playlists\/p1\?join=.+$/);
     expect(setCollaboration).toHaveBeenCalledWith('p1', 'owner-1', { isCollaborative: true, collabToken: expect.any(String) });
+    expect(collaborationPatchResponseSchema.safeParse(json).success).toBe(true);
   });
 
   it('200 disabling nulls the invite URL', async () => {
@@ -147,5 +155,6 @@ describe('POST /api/v1/playlists/[id]/collaboration (rotate token)', () => {
     const json = await res.json();
     expect(json.inviteUrl).toMatch(/\/playlists\/p1\?join=.+$/);
     expect(setCollaboration).toHaveBeenCalledWith('p1', 'owner-1', { isCollaborative: true, collabToken: expect.any(String) });
+    expect(collaborationRotateResponseSchema.safeParse(json).success).toBe(true);
   });
 });

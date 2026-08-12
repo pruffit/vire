@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { NotFoundError } from '@vire/core';
+import type { PlaylistCoverResponse } from '@vire/api-contracts';
 import { playlistService } from '@/lib/playlist';
 import { validateImageUpload, PLAYLIST_COVER_POLICY } from '@/lib/image';
 import { errorJson } from '@/lib/error-response';
@@ -23,7 +24,7 @@ export async function POST(req: Request, { params }: Params) {
       const status = result.error instanceof NotFoundError ? 404 : 403;
       return errorJson(result.error, status);
     }
-    return NextResponse.json({ ok: true, coverUrl: null });
+    return NextResponse.json({ ok: true, coverUrl: null } satisfies PlaylistCoverResponse);
   }
 
   const file = formData.get('cover');
@@ -39,5 +40,5 @@ export async function POST(req: Request, { params }: Params) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ ok: true, coverUrl: result.value });
+  return NextResponse.json({ ok: true, coverUrl: result.value } satisfies PlaylistCoverResponse);
 }

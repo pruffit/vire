@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { auth } from '@/auth';
 import { NotFoundError, type PlaylistUpdatePatch } from '@vire/core';
+import { updatePlaylistSchema, type PlaylistDetailResponse, type OkResponse } from '@vire/api-contracts';
 import { playlistService } from '@/lib/playlist';
 import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ id: string }> };
-
-const patchSchema = z.object({
-  title: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).nullish(),
-  visibility: z.enum(['PRIVATE', 'PUBLIC']).optional(),
-});
 
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
@@ -22,7 +16,7 @@ export async function GET(_req: Request, { params }: Params) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ playlist: result.value });
+  return NextResponse.json({ playlist: result.value } satisfies PlaylistDetailResponse);
 }
 
 export async function PATCH(req: Request, { params }: Params) {
@@ -31,7 +25,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const { id } = await params;
   const body = await req.json().catch(() => null);
-  const parsed = patchSchema.safeParse(body);
+  const parsed = updatePlaylistSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
 
   const patch: PlaylistUpdatePatch = {};
@@ -44,7 +38,7 @@ export async function PATCH(req: Request, { params }: Params) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true } satisfies OkResponse);
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
@@ -54,5 +48,5 @@ export async function DELETE(_req: Request, { params }: Params) {
   const { id } = await params;
   const result = await playlistService().delete(id, session.user.id);
   if (!result.ok) return errorJson(result.error, 404);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true } satisfies OkResponse);
 }

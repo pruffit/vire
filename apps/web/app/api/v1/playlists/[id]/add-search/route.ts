@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { NotFoundError } from '@vire/core';
+import { playlistSearchQuerySchema, type PlaylistSearchResponse } from '@vire/api-contracts';
 import { playlistService } from '@/lib/playlist';
 import { errorJson } from '@/lib/error-response';
 
@@ -11,11 +12,11 @@ export async function GET(req: Request, { params }: Params) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
 
-  const q = new URL(req.url).searchParams.get('q') ?? '';
+  const { q } = playlistSearchQuerySchema.parse({ q: new URL(req.url).searchParams.get('q') ?? '' });
   const result = await playlistService().searchForAdding(id, session.user.id, q);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ tracks: result.value });
+  return NextResponse.json({ tracks: result.value } satisfies PlaylistSearchResponse);
 }

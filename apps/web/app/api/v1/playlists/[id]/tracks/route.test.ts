@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { playlistTracksResponseSchema, okResponseSchema } from '@vire/api-contracts';
 
 const { reorder, getWithTracks, addTrack, trackExists, isCollaborator, getCollabState } =
   vi.hoisted(() => ({
@@ -69,6 +70,20 @@ describe('GET /api/v1/playlists/[id]/tracks', () => {
     await expect(res.json()).resolves.toEqual({ tracks: [{ id: 't1' }], version: 2 });
   });
 
+  it('response matches the contract schema', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'owner-1' } } as never);
+    getWithTracks.mockResolvedValue({
+      id: 'p1', visibility: 'PRIVATE', ownerUserId: 'owner-1', isCollaborative: false, version: 2,
+      tracks: [{
+        id: 't1', title: 'Track', durationSec: 180, position: 0, artistName: 'A', artistSlug: 'a',
+        releaseId: 'r1', coverUrl: null, accentColor: null, isExplicit: false, version: null, feat: [], addedBy: null,
+      }],
+    });
+    const res = await GET(req(), ctx);
+    expect(res.status).toBe(200);
+    expect(playlistTracksResponseSchema.safeParse(await res.json()).success).toBe(true);
+  });
+
   it('403 анониму даже с валидным токеном — состав не отдаём без аккаунта', async () => {
     mockedAuth.mockResolvedValue(null as never);
     getWithTracks.mockResolvedValue({ id: 'p1', visibility: 'PRIVATE', ownerUserId: 'owner-1', isCollaborative: true, version: 5, tracks: [] });
@@ -122,6 +137,7 @@ describe('PUT /api/v1/playlists/[id]/tracks (reorder)', () => {
     const res = await PUT(makeReq('PUT', { trackIds: [B, A] }), ctx);
     expect(res.status).toBe(200);
     expect(reorder).toHaveBeenCalledWith('p1', 'u1', [B, A]);
+    expect(okResponseSchema.safeParse(await res.json()).success).toBe(true);
   });
   it('a collaborator can reorder on a collaborative playlist', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'collab-1' } } as never);
@@ -181,6 +197,7 @@ describe('POST /api/v1/playlists/[id]/tracks (add)', () => {
     expect(res.status).toBe(200);
     expect(addTrack).toHaveBeenCalledWith('p1', A, 'u1');
     expect(publishChannel).toHaveBeenCalledWith('rt:playlist:p1', { type: 'playlist:changed', playlistId: 'p1', version: 3, actorId: 'u1' });
+    expect(okResponseSchema.safeParse(await res.json()).success).toBe(true);
   });
   it('a collaborator can add a track on a collaborative playlist', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'collab-1' } } as never);

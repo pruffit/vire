@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { playlistDetailResponseSchema, okResponseSchema } from '@vire/api-contracts';
 
 const { getWithTracks, deletePlaylist, update } = vi.hoisted(() => ({
   getWithTracks: vi.fn(),
@@ -68,6 +69,18 @@ describe('GET /api/v1/playlists/[id]', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ playlist: { id: 'p1', visibility: 'PUBLIC', ownerUserId: 'owner-1', tracks: [] } });
   });
+
+  it('response matches the contract schema', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'owner-1' } } as never);
+    getWithTracks.mockResolvedValue({
+      id: 'p1', title: 'A', description: null, coverUrl: null, kind: 'USER',
+      editorialParams: null, visibility: 'PRIVATE', ownerUserId: 'owner-1',
+      likesCount: 0, isCollaborative: false, version: 1, tracks: [],
+    });
+    const res = await GET(new Request('http://localhost/api/v1/playlists/p1'), ctx);
+    expect(res.status).toBe(200);
+    expect(playlistDetailResponseSchema.safeParse(await res.json()).success).toBe(true);
+  });
 });
 
 describe('PATCH /api/v1/playlists/[id]', () => {
@@ -93,6 +106,7 @@ describe('PATCH /api/v1/playlists/[id]', () => {
     const res = await PATCH(makeReq({ title: '  New name  ' }), ctx);
     expect(res.status).toBe(200);
     expect(update).toHaveBeenCalledWith('p1', 'u1', { title: 'New name' });
+    expect(okResponseSchema.safeParse(await res.json()).success).toBe(true);
   });
   it('403 when non-owner', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);

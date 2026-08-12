@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { okResponseSchema } from '@vire/api-contracts';
 
 const { getWithTracks, removeTrack, isCollaborator, getTrackAddedBy } = vi.hoisted(() => ({
   getWithTracks: vi.fn(),
@@ -62,6 +63,7 @@ describe('DELETE /api/v1/playlists/[id]/tracks/[trackId]', () => {
     expect(res.status).toBe(200);
     expect(removeTrack).toHaveBeenCalledWith('p1', 't1');
     expect(publishChannel).toHaveBeenCalledWith('rt:playlist:p1', { type: 'playlist:changed', playlistId: 'p1', version: 5, actorId: 'u1' });
+    expect(okResponseSchema.safeParse(await res.json()).success).toBe(true);
   });
 
   it('a collaborator can remove their own added track', async () => {

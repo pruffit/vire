@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { auth } from '@/auth';
 import { NotFoundError, ConflictError } from '@vire/core';
+import {
+  setCollaborationSchema,
+  type CollaborationInviteResponse,
+  type CollaborationPatchResponse,
+  type CollaborationRotateResponse,
+} from '@vire/api-contracts';
 import { playlistService } from '@/lib/playlist';
 import { SITE_URL } from '@/lib/site';
 import { errorJson } from '@/lib/error-response';
 
 type Params = { params: Promise<{ id: string }> };
-
-const patchSchema = z.object({ enabled: z.boolean() });
 
 function inviteUrl(id: string, token: string): string {
   return `${SITE_URL}/playlists/${id}?join=${token}`;
@@ -25,7 +28,9 @@ export async function GET(_req: Request, { params }: Params) {
     return errorJson(result.error, status);
   }
   const { collabToken } = result.value;
-  return NextResponse.json({ inviteUrl: collabToken ? inviteUrl(id, collabToken) : null });
+  return NextResponse.json({
+    inviteUrl: collabToken ? inviteUrl(id, collabToken) : null,
+  } satisfies CollaborationInviteResponse);
 }
 
 export async function PATCH(req: Request, { params }: Params) {
@@ -34,7 +39,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const { id } = await params;
   const body = await req.json().catch(() => null);
-  const parsed = patchSchema.safeParse(body);
+  const parsed = setCollaborationSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
 
   const result = await playlistService().setCollaboration(id, session.user.id, parsed.data.enabled);
@@ -46,7 +51,7 @@ export async function PATCH(req: Request, { params }: Params) {
   return NextResponse.json({
     isCollaborative: parsed.data.enabled,
     inviteUrl: collabToken ? inviteUrl(id, collabToken) : null,
-  });
+  } satisfies CollaborationPatchResponse);
 }
 
 export async function POST(_req: Request, { params }: Params) {
@@ -60,5 +65,7 @@ export async function POST(_req: Request, { params }: Params) {
     if (result.error instanceof ConflictError) return errorJson(result.error, 409);
     return errorJson(result.error, 403);
   }
-  return NextResponse.json({ inviteUrl: inviteUrl(id, result.value.collabToken) });
+  return NextResponse.json({
+    inviteUrl: inviteUrl(id, result.value.collabToken),
+  } satisfies CollaborationRotateResponse);
 }

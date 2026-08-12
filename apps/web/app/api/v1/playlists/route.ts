@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
+import type { PlaylistSummary } from '@vire/core';
+import { createPlaylistSchema, type PlaylistListResponse, type CreatePlaylistResponse } from '@vire/api-contracts';
 import { playlistService } from '@/lib/playlist';
 
-const createSchema = z.object({
-  title: z.string().min(1).max(100),
-});
+function toSummary(p: PlaylistSummary): PlaylistListResponse['playlists'][number] {
+  return { ...p, createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() };
+}
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -22,7 +24,13 @@ export async function GET(req: Request) {
   }
 
   const result = await playlistService().listForUser(session.user.id, trackId);
-  return NextResponse.json(result.ok ? result.value : { playlists: [] });
+  if (!result.ok) return NextResponse.json({ playlists: [] } satisfies PlaylistListResponse);
+
+  const { playlists, inPlaylists } = result.value;
+  return NextResponse.json({
+    playlists: playlists.map(toSummary),
+    ...(inPlaylists !== undefined ? { inPlaylists } : {}),
+  } satisfies PlaylistListResponse);
 }
 
 export async function POST(req: Request) {
@@ -30,10 +38,10 @@ export async function POST(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json().catch(() => null);
-  const parsed = createSchema.safeParse(body);
+  const parsed = createPlaylistSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
 
   const result = await playlistService().create(session.user.id, parsed.data.title);
   if (!result.ok) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
-  return NextResponse.json({ id: result.value.id }, { status: 201 });
+  return NextResponse.json({ id: result.value.id } satisfies CreatePlaylistResponse, { status: 201 });
 }

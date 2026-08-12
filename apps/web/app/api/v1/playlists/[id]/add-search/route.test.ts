@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { playlistSearchResponseSchema } from '@vire/api-contracts';
 
 const { getWithTracks, searchTracks } = vi.hoisted(() => ({
   getWithTracks: vi.fn(),
@@ -71,5 +72,18 @@ describe('GET /api/v1/playlists/[id]/add-search', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ tracks: mockTracks });
     expect(searchTracks).toHaveBeenCalledWith('rock', ['track1'], 20);
+  });
+
+  it('response matches the contract schema', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    getWithTracks.mockResolvedValue({ ownerUserId: 'u1', tracks: [] });
+    searchTracks.mockResolvedValue([{
+      id: 'track2', title: 'Rock Song', durationSec: 180, releaseId: 'r1',
+      artistName: 'A', artistSlug: 'a', coverUrl: null, accentColor: null,
+      isExplicit: false, version: null, feat: [],
+    }]);
+    const res = await GET(makeReq('rock'), ctx);
+    expect(res.status).toBe(200);
+    expect(playlistSearchResponseSchema.safeParse(await res.json()).success).toBe(true);
   });
 });

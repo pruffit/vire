@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { playlistSuggestionsResponseSchema } from '@vire/api-contracts';
 
 const { getWithTracks, suggestions } = vi.hoisted(() => ({
   getWithTracks: vi.fn(),
@@ -51,7 +52,9 @@ describe('GET /api/v1/playlists/[id]/suggestions', () => {
     const req = new Request('http://localhost/api/v1/playlists/p1/suggestions');
     const res = await GET(req, ctx);
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual(payload);
+    const json = await res.json();
+    expect(json).toEqual(payload);
     expect(suggestions).toHaveBeenCalledWith('p1', 'u1');
+    expect(playlistSuggestionsResponseSchema.safeParse(json).success).toBe(true);
   });
 });
