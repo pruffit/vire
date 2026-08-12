@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { chatService } from '@/lib/chat';
 import { publish } from '@/lib/realtime';
 import { NotFoundError } from '@vire/core';
+import type { OkResponse } from '@vire/api-contracts';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
 
@@ -33,5 +34,5 @@ export async function POST(_req: Request, { params }: Ctx) {
     conversationId: parsedParams.data.conversationId,
     userId: session.user.id,
   });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true } satisfies OkResponse);
 }

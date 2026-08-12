@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { okResponseSchema } from '@vire/api-contracts';
 
 const { updateUserNotifyEmail, rateLimit } = vi.hoisted(() => ({
   updateUserNotifyEmail: vi.fn(),
@@ -82,6 +83,7 @@ describe('POST /api/v1/notifications/unsubscribe', () => {
     const token = signNotifyUnsub('test-secret', UID);
     const res = await POST(reqFor('POST', UID, token));
     expect(res.status).toBe(200);
+    expect(okResponseSchema.safeParse(await res.json()).success).toBe(true);
     expect(updateUserNotifyEmail).toHaveBeenCalledWith(UID, false);
   });
 

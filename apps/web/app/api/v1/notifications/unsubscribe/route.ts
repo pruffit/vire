@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { updateUserNotifyEmail } from '@vire/db';
 import { isLocale, localizedPath, DEFAULT_LOCALE } from '@vire/i18n';
+import { notifyUnsubscribeQuerySchema, type OkResponse } from '@vire/api-contracts';
 import { verifyNotifyUnsub } from '@/lib/notify-unsubscribe';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
-
-const schema = z.object({ uid: z.string().min(1).max(128), token: z.string().min(1).max(128) });
 
 // locale приходит из письма (см. apps/worker notify-external.worker.ts) — ссылка сама
 // не локализована (api вне [locale]), поэтому редиректим на локаль получателя вручную.
@@ -29,7 +27,7 @@ export async function GET(req: Request) {
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const { locale, ...raw } = readTokenParams(req);
-  const parsed = schema.safeParse(raw);
+  const parsed = notifyUnsubscribeQuerySchema.safeParse(raw);
   if (!parsed.success || !verifyNotifyUnsub(parsed.data.uid, parsed.data.token)) {
     return confirmPage(req, locale, { status: 'bad' });
   }
@@ -41,11 +39,11 @@ export async function POST(req: Request) {
   const rl = await rateLimit(clientKey(req, 'notify-unsub'), 20, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
-  const parsed = schema.safeParse(readTokenParams(req));
+  const parsed = notifyUnsubscribeQuerySchema.safeParse(readTokenParams(req));
   if (!parsed.success || !verifyNotifyUnsub(parsed.data.uid, parsed.data.token)) {
     return NextResponse.json({ error: 'Неверная ссылка отписки' }, { status: 400 });
   }
 
   await updateUserNotifyEmail(parsed.data.uid, false);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true } satisfies OkResponse);
 }

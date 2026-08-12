@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { auth } from '@/auth';
 import { chatService } from '@/lib/chat';
 import { ValidationError } from '@vire/core';
+import { openChatSchema, type OpenChatResponse } from '@vire/api-contracts';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
-
-const schema = z.object({ userId: z.string().uuid() });
 
 /** Открыть (или получить существующий) диалог с другом — вход из кнопки «Написать» на профиле. */
 export async function POST(req: Request) {
@@ -17,7 +15,7 @@ export async function POST(req: Request) {
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const json = await req.json().catch(() => null);
-  const parsed = schema.safeParse(json);
+  const parsed = openChatSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
 
   const result = await chatService().openOrGet(session.user.id, parsed.data.userId);
@@ -25,5 +23,5 @@ export async function POST(req: Request) {
     const status = result.error instanceof ValidationError ? 422 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json(result.value);
+  return NextResponse.json(result.value satisfies OpenChatResponse);
 }

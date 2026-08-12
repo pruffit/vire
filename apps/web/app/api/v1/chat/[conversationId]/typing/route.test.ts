@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundError, ForbiddenError } from '@vire/core';
+import { okResponseSchema } from '@vire/api-contracts';
 
 const { getConversationMeta, publish } = vi.hoisted(() => ({
   getConversationMeta: vi.fn(),
@@ -63,6 +64,7 @@ describe('POST /api/v1/chat/[conversationId]/typing', () => {
     getConversationMeta.mockResolvedValue({ ok: true, value: { otherUserId: OTHER_ID, otherLastReadAt: null } });
     const res = await POST(req(), ctx(CONV_ID));
     expect(res.status).toBe(200);
+    expect(okResponseSchema.safeParse(await res.json()).success).toBe(true);
     expect(publish).toHaveBeenCalledWith(OTHER_ID, { type: 'chat:typing', conversationId: CONV_ID, userId: SELF_ID });
   });
 });

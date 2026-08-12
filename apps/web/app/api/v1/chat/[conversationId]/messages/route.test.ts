@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundError, ForbiddenError } from '@vire/core';
+import { chatMessagesResponseSchema } from '@vire/api-contracts';
 
 const { history } = vi.hoisted(() => ({ history: vi.fn() }));
 
@@ -85,10 +86,16 @@ describe('GET /api/v1/chat/[conversationId]/messages', () => {
 
   it('returns messages', async () => {
     mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
-    history.mockResolvedValue({ ok: true, value: [{ id: 'm1' }] });
+    const createdAt = new Date('2026-01-01T00:00:00.000Z');
+    history.mockResolvedValue({
+      ok: true,
+      value: [{ id: 'm1', conversationId: CONV_ID, senderId: SELF_ID, body: 'ct', nonce: 'nc', createdAt }],
+    });
     const res = await GET(req(), ctx(CONV_ID));
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ messages: [{ id: 'm1' }] });
+    const body = await res.json();
+    expect(body).toEqual({ messages: [{ id: 'm1', conversationId: CONV_ID, senderId: SELF_ID, body: 'ct', nonce: 'nc', createdAt: createdAt.toISOString() }] });
+    expect(chatMessagesResponseSchema.safeParse(body).success).toBe(true);
     expect(history).toHaveBeenCalledWith(SELF_ID, CONV_ID, null, 50);
   });
 });

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { notificationsResponseSchema } from '@vire/api-contracts';
 
 const { list, countUnread } = vi.hoisted(() => ({ list: vi.fn(), countUnread: vi.fn() }));
 
@@ -23,11 +24,21 @@ describe('GET /api/v1/notifications', () => {
 
   it('returns notifications and unread count', async () => {
     mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
-    list.mockResolvedValue([{ id: 'n1' }]);
+    const createdAt = new Date('2026-01-01T00:00:00.000Z');
+    list.mockResolvedValue([
+      { id: 'n1', type: 'FRIEND_REQUEST', actorId: 'u1', actorName: 'Аня', actorImage: null, entityId: null, createdAt, readAt: null },
+    ]);
     countUnread.mockResolvedValue(3);
     const res = await GET();
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ notifications: [{ id: 'n1' }], unread: 3 });
+    const body = await res.json();
+    expect(body).toEqual({
+      notifications: [
+        { id: 'n1', type: 'FRIEND_REQUEST', actorId: 'u1', actorName: 'Аня', actorImage: null, entityId: null, createdAt: createdAt.toISOString(), readAt: null },
+      ],
+      unread: 3,
+    });
+    expect(notificationsResponseSchema.safeParse(body).success).toBe(true);
     expect(list).toHaveBeenCalledWith(SELF_ID, 20);
   });
 });

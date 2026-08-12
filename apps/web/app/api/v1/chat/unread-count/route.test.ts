@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { chatUnreadCountResponseSchema } from '@vire/api-contracts';
 
 const { countUnread } = vi.hoisted(() => ({ countUnread: vi.fn() }));
 
@@ -27,7 +28,9 @@ describe('GET /api/v1/chat/unread-count', () => {
     countUnread.mockResolvedValue(4);
     const res = await GET();
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ count: 4 });
+    const body = await res.json();
+    expect(body).toEqual({ count: 4 });
+    expect(chatUnreadCountResponseSchema.safeParse(body).success).toBe(true);
     expect(countUnread).toHaveBeenCalledWith(SELF_ID);
   });
 });

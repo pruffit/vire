@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { okResponseSchema } from '@vire/api-contracts';
 
 const { markAllRead } = vi.hoisted(() => ({ markAllRead: vi.fn() }));
 
@@ -26,6 +27,7 @@ describe('POST /api/v1/notifications/read', () => {
     markAllRead.mockResolvedValue(undefined);
     const res = await POST();
     expect(res.status).toBe(200);
+    expect(okResponseSchema.safeParse(await res.json()).success).toBe(true);
     expect(markAllRead).toHaveBeenCalledWith(SELF_ID);
   });
 });

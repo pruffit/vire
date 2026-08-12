@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextResponse } from 'next/server';
 import { ValidationError, ForbiddenError } from '@vire/core';
+import { sendChatMessageResponseSchema } from '@vire/api-contracts';
 
 const { send } = vi.hoisted(() => ({ send: vi.fn() }));
 
@@ -75,9 +76,15 @@ describe('POST /api/v1/chat/messages', () => {
 
   it('sends and returns the message', async () => {
     mockedAuth.mockResolvedValue({ user: { id: SELF_ID, name: 'Аня' } } as never);
-    send.mockResolvedValue({ ok: true, value: { conversationId: 'c1', message: { id: 'm1' } } });
+    const createdAt = new Date('2026-01-01T00:00:00.000Z');
+    send.mockResolvedValue({
+      ok: true,
+      value: { conversationId: 'c1', message: { id: 'm1', conversationId: 'c1', senderId: SELF_ID, body: 'ct', nonce: 'nc', createdAt } },
+    });
     const res = await POST(req({ toUserId: OTHER_ID, ciphertext: 'ct', nonce: 'nc' }));
     expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(sendChatMessageResponseSchema.safeParse(body).success).toBe(true);
     expect(send).toHaveBeenCalledWith(SELF_ID, OTHER_ID, { ciphertext: 'ct', nonce: 'nc' }, 'Аня');
   });
 });

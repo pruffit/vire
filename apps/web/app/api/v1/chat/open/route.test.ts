@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextResponse } from 'next/server';
 import { ValidationError, ForbiddenError } from '@vire/core';
+import { openChatResponseSchema } from '@vire/api-contracts';
 
 const { openOrGet } = vi.hoisted(() => ({ openOrGet: vi.fn() }));
 
@@ -70,7 +71,9 @@ describe('POST /api/v1/chat/open', () => {
     openOrGet.mockResolvedValue({ ok: true, value: { conversationId: 'c1' } });
     const res = await POST(req({ userId: OTHER_ID }));
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ conversationId: 'c1' });
+    const body = await res.json();
+    expect(body).toEqual({ conversationId: 'c1' });
+    expect(openChatResponseSchema.safeParse(body).success).toBe(true);
     expect(openOrGet).toHaveBeenCalledWith(SELF_ID, OTHER_ID);
   });
 });
