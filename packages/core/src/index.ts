@@ -103,6 +103,7 @@ export * from './music/external/services/external-resolve-service';
 export * from './music/playback/services/wave-scoring';
 export * from './music/playback/services/wave';
 export * from './music/playback/services/queue';
+export * from './music/playback/services/engine-policy';
 export * from './music/discovery/services/feed-ranking';
 export * from './music/discovery/services/discovery-scoring';
 export * from './music/discovery/services/feed';

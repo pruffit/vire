@@ -1,10 +1,11 @@
 import Redis from 'ioredis';
+import { WAVE_SESSION_TTL_SEC, WAVE_SESSION_MAX_SERVED, waveServedKey, waveSeedKey } from '@vire/core';
 
 // Состояние волны на Redis: анти-повтор выданных треков + seed mood/genre сессии.
 // TTL 6ч; любая ошибка Redis деградирует до пустого состояния, выдачу не роняет.
 
-const TTL_SEC = 6 * 60 * 60;
-const MAX_SERVED_IDS = 300;
+const TTL_SEC = WAVE_SESSION_TTL_SEC;
+const MAX_SERVED_IDS = WAVE_SESSION_MAX_SERVED;
 
 const globalForRedis = globalThis as unknown as { _waveRedis?: Redis };
 
@@ -19,8 +20,8 @@ function getRedis(): Redis {
   return globalForRedis._waveRedis;
 }
 
-const servedKey = (sessionId: string) => `wave:served:${sessionId}`;
-const seedKey = (sessionId: string) => `wave:seed:${sessionId}`;
+const servedKey = waveServedKey;
+const seedKey = waveSeedKey;
 
 export interface WaveSession {
   servedIds: string[];

@@ -1,4 +1,12 @@
 import type HlsType from 'hls.js';
+import {
+  shouldGiveUpOnWave,
+  shouldStopLocalRetries,
+  shouldPrefetchNext,
+  shouldRunTick,
+  clampRestoredQueueIndex as clampRestoredQueueIndexPure,
+  playedIdsWindow,
+} from '@vire/core';
 import { usePlayerStore, type PlayerTrack, type PlayContext } from '@/store/player';
 import { getSessionId } from '@/lib/session-id';
 import { getLocalFile } from '@/lib/local-files';
@@ -24,7 +32,6 @@ async function getHls(): Promise<typeof HlsType> {
 let loadedTrackId: string | null = null;
 // Один object URL на движок — держим единственный, чтобы освободить предыдущий перед следующим (как в local-source.ts).
 let localObjectUrl: string | null = null;
-const MAX_LOCAL_MISSES = 3;
 let consecutiveLocalMisses = 0;
 
 function releaseLocalObjectUrl(): void {
@@ -132,7 +139,7 @@ function getWaveSessionId(): string {
 /** «Проигранное» для анти-повтора волны — id очереди до текущего трека включительно. */
 function playedIdsForWaveRequest(): string[] {
   const { queue, queueIndex } = usePlayerStore.getState();
-  return queue.slice(0, queueIndex + 1).map((t) => t.id).slice(-100);
+  return playedIdsWindow(queue.slice(0, queueIndex + 1).map((t) => t.id));
 }
 
 async function growWaveBuffer(): Promise<PlayerTrack[]> {
@@ -182,7 +189,7 @@ async function maybeFetchWaveBuffer(): Promise<void> {
 
 function handleWaveLoadError(): void {
   consecutiveWaveErrors += 1;
-  if (consecutiveWaveErrors >= 3) {
+  if (shouldGiveUpOnWave(consecutiveWaveErrors)) {
     consecutiveWaveErrors = 0;
     usePlayerStore.getState()._setState({ audioError: true, isLoading: false });
     return;
@@ -195,7 +202,7 @@ let prefetchedAheadFor: string | null = null;
 function maybePrefetchNextManifest(): void {
   const { queue, queueIndex, duration, currentTime, track } = usePlayerStore.getState();
   if (!track || duration <= 0) return;
-  if (duration - currentTime >= 15) return;
+  if (!shouldPrefetchNext(currentTime, duration)) return;
   if (prefetchedAheadFor === track.id) return;
   const next = queue[queueIndex + 1];
   if (!next || next.localFileId) return;
@@ -204,12 +211,11 @@ function maybePrefetchNextManifest(): void {
 }
 
 // throttle для буфера волны/префетча манифеста/персиста currentTime — живой UI тикает через useAudioTime.
-const TICK_INTERVAL_MS = 5_000;
 let lastTickAt = 0;
 
 function runThrottledTick(): void {
   const now = Date.now();
-  if (now - lastTickAt < TICK_INTERVAL_MS) return;
+  if (!shouldRunTick(now, lastTickAt)) return;
   lastTickAt = now;
 
   if (!usePlayerStore.getState().isPlaying) return;
@@ -292,7 +298,7 @@ function attachLocalTrack(track: PlayerTrack, opts: { seekTo?: number }): void {
     // Перезагрузка страницы или чужое устройство — файла в памяти вкладки больше нет.
     // Счётчик обязателен: очередь из одних пропавших файлов при repeat='all' крутила бы next() вечно.
     consecutiveLocalMisses += 1;
-    const exhausted = consecutiveLocalMisses >= MAX_LOCAL_MISSES;
+    const exhausted = shouldStopLocalRetries(consecutiveLocalMisses);
     usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
     if (exhausted) consecutiveLocalMisses = 0;
     else void controls.next();
@@ -417,7 +423,7 @@ function clampRestoredQueueIndex(): void {
   const atIndex = queue[queueIndex];
   if (atIndex && atIndex.id === track.id) return;
   const found = queue.findIndex((t) => t.id === track.id);
-  usePlayerStore.getState()._setState({ queueIndex: found >= 0 ? found : 0 });
+  usePlayerStore.getState()._setState({ queueIndex: clampRestoredQueueIndexPure(found, queue.length) });
 }
 
 export function getAudioTime(): number {

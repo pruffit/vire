@@ -13,3 +13,9 @@ export interface IWaveSessionStore {
   appendServed(sessionId: string, trackIds: string[]): Promise<void>;
   setSeed(sessionId: string, seed: { mood?: string; genre?: string }): Promise<void>;
 }
+
+export const WAVE_SESSION_TTL_SEC = 6 * 60 * 60;
+export const WAVE_SESSION_MAX_SERVED = 300;
+
+export const waveServedKey = (sessionId: string): string => `wave:served:${sessionId}`;
+export const waveSeedKey = (sessionId: string): string => `wave:seed:${sessionId}`;
