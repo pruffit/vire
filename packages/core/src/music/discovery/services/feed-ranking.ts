@@ -1,4 +1,5 @@
 import type { FeedCandidate, FeedItemKind, FeedReason, FeedScoringContext, RankedFeedItem } from '../types/feed';
+import { saturateLog } from '../../../platform/util/scoring';
 
 export const W_RECENCY = 0.45;
 export const W_AFFINITY = 0.4;
@@ -28,8 +29,7 @@ export function recencyScore(ageDays: number, halfLifeDays: number): number {
 }
 
 export function popularityScore(plays30d: number, k: number = POPULARITY_SATURATION_K): number {
-  if (plays30d <= 0) return 0;
-  return Math.log1p(plays30d) / Math.log1p(plays30d + k);
+  return saturateLog(plays30d, k);
 }
 
 function halfLifeDaysFor(kind: FeedItemKind): number {

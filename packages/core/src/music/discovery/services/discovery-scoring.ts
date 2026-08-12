@@ -1,4 +1,5 @@
 import type { DiscoveryCandidate, DiscoveryReason, RankedDiscoveryArtist, TasteSignature } from '../types/discovery';
+import { saturateLinear } from '../../../platform/util/scoring';
 
 export const W_CO_LISTEN = 0.45;
 export const W_TASTE_OVERLAP = 0.35;
@@ -12,7 +13,7 @@ export const DEFAULT_DISCOVERY_LIMIT = 12;
 export const DEFAULT_MAX_PER_SOURCE = 1;
 
 export function friendSignal(friendListeners: number): number {
-  return Math.min(1, Math.max(0, friendListeners) / FRIEND_SIGNAL_SATURATION);
+  return saturateLinear(friendListeners, FRIEND_SIGNAL_SATURATION);
 }
 
 // доля пересечения по тегам жанр+настроение вместе (Jaccard) — не два отдельных

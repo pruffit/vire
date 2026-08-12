@@ -3,7 +3,7 @@ import { PgDialect } from 'drizzle-orm/pg-core';
 
 vi.mock('../client', () => ({ db: {} }));
 
-const { waveSkipPenaltyFor, qualityScore } = await import('./wave');
+const { waveSkipPenaltyFor, qualityScore, momentScore } = await import('./wave');
 
 describe('waveSkipPenaltyFor', () => {
   const dialect = new PgDialect();
@@ -41,5 +41,17 @@ describe('qualityScore', () => {
     expect(q.sql).toContain(`interval '90 days'`);
     expect(q.sql).toContain('* 0.3');
     expect(q.sql).toMatch(/^COALESCE\(/);
+  });
+});
+
+describe('momentScore', () => {
+  const dialect = new PgDialect();
+  const q = dialect.sqlToQuery(momentScore);
+
+  it('насыщение и вес — литералы из core (WAVE_MOMENT_SATURATION/WAVE_MOMENT_WEIGHT), не bind-параметры', () => {
+    expect(q.params).toEqual([]);
+    expect(q.sql).toBe(`LEAST(1.0, (
+    SELECT COUNT(*)::float FROM favorite_moments fm WHERE fm.track_id = tracks.id
+  ) / 5.0) * 0.2`);
   });
 });

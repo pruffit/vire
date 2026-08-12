@@ -5,6 +5,8 @@ import {
   WAVE_SKIP_PENALTY,
   WAVE_SKIP_COMPLETION_THRESHOLD,
   WAVE_SKIP_WINDOW_DAYS,
+  WAVE_MOMENT_SATURATION,
+  WAVE_MOMENT_WEIGHT,
   type WaveTrack,
 } from '@vire/core';
 import { db } from '../client';
@@ -157,10 +159,13 @@ export function waveSkipPenaltyFor(userId: string | null): SQL<number> {
     ) THEN ${penalty} ELSE 0 END`;
 }
 
-// Вовлечённость: число «любимых моментов», насыщается к 5, вес до 0.2
-const momentScore = sql<number>`LEAST(1.0, (
+// Вовлечённость: число «любимых моментов», насыщается к WAVE_MOMENT_SATURATION, вес до WAVE_MOMENT_WEIGHT
+// веса — sql.raw, не bind-параметры: тот же трюк, что в genreOverlapTerm (integer-вывод округлил бы 0.2 → 0)
+const momentSaturation = sql.raw(WAVE_MOMENT_SATURATION.toFixed(1));
+const momentWeight = sql.raw(WAVE_MOMENT_WEIGHT.toString());
+export const momentScore = sql<number>`LEAST(1.0, (
     SELECT COUNT(*)::float FROM favorite_moments fm WHERE fm.track_id = tracks.id
-  ) / 5.0) * 0.2`;
+  ) / ${momentSaturation}) * ${momentWeight}`;
 
 export async function getTrackMusicalKey(trackId: string): Promise<string | null> {
   const rows = await db

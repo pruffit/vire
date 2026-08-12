@@ -12,6 +12,7 @@ export * from './platform/util/uuid';
 export * from './platform/util/ttl-cache';
 export * from './platform/util/throttle-gate';
 export * from './platform/util/format';
+export * from './platform/util/scoring';
 // util/signing НЕ реэкспортим: баррель тянется в Edge-runtime, где node:crypto не
 // поддержан. Импорт — через подпуть '@vire/core/signing' (только серверные потребители).
 // По той же причине notifications/unsubscribe (зависит от util/signing) — тоже

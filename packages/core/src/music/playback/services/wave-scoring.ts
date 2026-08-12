@@ -16,3 +16,6 @@ export function sourceQualityWeight(source: string): number {
 export const WAVE_SKIP_PENALTY = 0.4;
 export const WAVE_SKIP_COMPLETION_THRESHOLD = 0.3;
 export const WAVE_SKIP_WINDOW_DAYS = 30;
+
+export const WAVE_MOMENT_SATURATION = 5;
+export const WAVE_MOMENT_WEIGHT = 0.2;
