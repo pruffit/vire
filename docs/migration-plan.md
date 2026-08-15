@@ -207,19 +207,36 @@ contract-тест роута; отсутствие регресса TTFB — н�
 
 ---
 
-## Волна 5 — перенос чистой логики
+## Волна 5 — перенос чистой логики ✅ завершена (16.08.2026)
 
-Дёшево, отдача сразу, риск минимальный.
+Дёшево, отдача сразу, риск минимальный. Спека и план:
+`docs/superpowers/specs/2026-08-12-pure-logic-wave5.md`,
+`docs/superpowers/plans/2026-08-12-pure-logic-wave5.md`. Три среза.
 
-| # | Что | Куда | Сложность |
+| # | Что | Куда | Срез |
 |---|---|---|---|
-| 5.1 | `lib/player/queue.ts` — 100% чистые функции | `core/.../playback` | S |
-| 5.2 | `lib/format.ts` — форматтеры | `core/.../util` | S |
-| 5.3 | Три параллельные реализации «насыщения» (`discovery-scoring`, `feed-ranking`, `wave-scoring`) | общая утилита в `core/util` | S |
-| 5.4 | `lib/wave-session.ts` — Redis-политика анти-повтора | `core` за портом | M |
-| 5.5 | Расщепление `audio-engine.ts` (663 строки: логика решений + вебовый I/O + мутабельное состояние модуля) | логика в core, I/O за `IAudioEngine` | L |
+| 5.1 ✅ | `lib/player/queue.ts` — 8 функций + `Repeat`, обобщены по `T extends { id: string }`; `LIVE_QUEUE_WINDOW_BEFORE` стала экспортной | `music/playback/services/queue.ts` | A |
+| 5.2 ✅ | `lib/format.ts` — форматтеры + `ListenTimeUnit` | `platform/util/format.ts` | A |
+| 5.3 ✅ | Три реализации «насыщения» сведены к `saturateLinear`/`saturateLog`; `WAVE_MOMENT_SATURATION`/`WAVE_MOMENT_WEIGHT` экспортированы и подставляются в `sql`-шаблон `momentScore` | `platform/util/scoring.ts` | B |
+| 5.4 ✅ | Константы и формат ключей сессии волны (`WAVE_SESSION_TTL_SEC`, `WAVE_SESSION_MAX_SERVED`, `waveServedKey`, `waveSeedKey`) — рядом с портом `IWaveSessionStore`; сам Redis-адаптер остался в web | `music/playback/repositories/wave.ts` | C |
+| 5.5 ⚠️ сужен | Шесть чистых предикатов решений (`shouldGiveUpOnWave`, `shouldStopLocalRetries`, `shouldPrefetchNext`, `shouldRunTick`, `clampRestoredQueueIndex`, `playedIdsWindow`) + пороги как именованные константы | `music/playback/services/engine-policy.ts` | C |
 
-**Проверка:** тесты переезжают вместе с кодом и остаются зелёными.
+**Отклонение от плана:** 5.5 сужен сознательно — вынесены только чистые решения, а
+мутабельные счётчики движка, драйвер HLS и работа со стором остались в
+`apps/web/lib/player/audio-engine.ts`. Порт `IAudioEngine` **отложен по условию**:
+абстракция драйвера оправдана появлением второго (нативный плеер мобильного клиента),
+до него это абстракция без второго use case — прямой запрет §3 брифа.
+
+**Механика переноса:** тело функции при переезде не переписывалось; старый путь
+(`apps/web/lib/player/queue.ts`, `apps/web/lib/format.ts`) остался файлом-реэкспортом —
+ни один потребитель не правился. Тесты переехали в `packages/core` рядом с кодом;
+`audio-engine.test.ts` остался в web (он про I/O-драйвер).
+
+**Проверка:** гейты зелёные — `typecheck` (все пакеты), `check:layers`, `lint`,
+`test` (core 966, web 1912), `check:routes`, `check:i18n`, `check:contracts`, прод-сборка.
+Доказательство неизменности поведения: тесты `discovery-scoring`/`feed-ranking` не
+правились, а `wave-scoring-sql.test.ts` ассертит ту же строку SQL.
+
 **Откат:** реэкспорт со старого пути на время перехода — вызывающая сторона не ломается.
 
 ---
