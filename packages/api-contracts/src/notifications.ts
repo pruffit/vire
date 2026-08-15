@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-export const notificationTypeSchema = z.enum(['FRIEND_REQUEST', 'FRIEND_ACCEPT', 'JAM_INVITE', 'PLAYLIST_COLLAB_JOIN']);
+// Открытый список: набор типов держит реестр в @vire/core, клиент обязан пережить
+// незнакомый тип, а не падать на нём (иначе новый тип = синхронный релиз всех клиентов).
+export const notificationTypeSchema = z.string().min(1).max(64);
 export type NotificationType = z.infer<typeof notificationTypeSchema>;
 
 export const notificationSchema = z.object({

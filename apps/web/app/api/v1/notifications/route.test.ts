@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { notificationsResponseSchema } from '@vire/api-contracts';
+import { notificationsResponseSchema, notificationTypeSchema } from '@vire/api-contracts';
+import { NOTIFICATION_TYPE_IDS } from '@vire/core';
 
 const { list, countUnread } = vi.hoisted(() => ({ list: vi.fn(), countUnread: vi.fn() }));
 
@@ -40,5 +41,11 @@ describe('GET /api/v1/notifications', () => {
     });
     expect(notificationsResponseSchema.safeParse(body).success).toBe(true);
     expect(list).toHaveBeenCalledWith(SELF_ID, 20);
+  });
+
+  it('каждый тип из реестра core проходит контракт ответа', () => {
+    for (const type of NOTIFICATION_TYPE_IDS) {
+      expect(notificationTypeSchema.safeParse(type).success).toBe(true);
+    }
   });
 });

@@ -1,8 +1,10 @@
-export type NotificationType = 'FRIEND_REQUEST' | 'FRIEND_ACCEPT' | 'JAM_INVITE' | 'PLAYLIST_COLLAB_JOIN';
+import type { NotificationTypeId } from '../registry';
+
+export type NotificationType = NotificationTypeId;
 
 export type NotificationItem = {
   id: string;
-  type: NotificationType;
+  type: NotificationTypeId;
   actorId: string | null;
   actorName: string | null;
   actorImage: string | null;
@@ -12,7 +14,7 @@ export type NotificationItem = {
 };
 
 export interface INotificationRepository {
-  insert(userId: string, type: NotificationType, actorId: string | null, entityId: string | null): Promise<void>;
+  insert(userId: string, type: NotificationTypeId, actorId: string | null, entityId: string | null): Promise<void>;
   list(userId: string, limit: number): Promise<NotificationItem[]>;
   countUnread(userId: string): Promise<number>;
   markAllRead(userId: string): Promise<void>;

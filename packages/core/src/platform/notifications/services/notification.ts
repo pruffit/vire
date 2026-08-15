@@ -1,5 +1,6 @@
-import type { INotificationRepository, NotificationType, NotificationItem } from '../repositories/notification';
+import type { INotificationRepository, NotificationItem } from '../repositories/notification';
 import type { RealtimePublisher } from '../../ports/realtime';
+import { isKnownNotificationType, type NotificationTypeId } from '../registry';
 
 export class NotificationService {
   constructor(
@@ -7,7 +8,10 @@ export class NotificationService {
     private readonly publisher: RealtimePublisher,
   ) {}
 
-  async notify(userId: string, type: NotificationType, actorId: string | null, entityId: string | null): Promise<void> {
+  async notify(userId: string, type: NotificationTypeId, actorId: string | null, entityId: string | null): Promise<void> {
+    // Тип вне реестра — ошибка кода, а не пользовательского ввода: колонка теперь text,
+    // и без проверки в БД молча уехал бы неотображаемый тип.
+    if (!isKnownNotificationType(type)) throw new Error(`Unknown notification type: ${type}`);
     await this.repo.insert(userId, type, actorId, entityId);
     await this.publisher.publish(userId, { type: 'notification', notificationType: type, actorId, entityId });
   }

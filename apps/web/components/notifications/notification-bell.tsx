@@ -2,16 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { notificationTargetOf } from '@vire/core';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { Icon } from '@/components/icon';
 import { AdaptivePopover } from '@/components/adaptive-popover';
 import { useRealtime } from '@/lib/use-realtime';
 
-type NotificationType = 'FRIEND_REQUEST' | 'FRIEND_ACCEPT' | 'JAM_INVITE' | 'PLAYLIST_COLLAB_JOIN';
 type NotificationItem = {
   id: string;
-  type: NotificationType;
+  type: string;
   actorId: string | null;
   actorName: string | null;
   actorImage: string | null;
@@ -21,8 +21,9 @@ type NotificationItem = {
 };
 
 function notificationHref(n: NotificationItem): string {
-  if (n.type === 'JAM_INVITE') return n.entityId ? `/jam/id/${n.entityId}` : '/';
-  if (n.type === 'PLAYLIST_COLLAB_JOIN') return n.entityId ? `/playlists/${n.entityId}` : '/library';
+  const target = notificationTargetOf(n.type);
+  if (target === 'jam') return n.entityId ? `/jam/id/${n.entityId}` : '/';
+  if (target === 'playlist') return n.entityId ? `/playlists/${n.entityId}` : '/library';
   return n.actorId ? `/u/${n.actorId}` : '/friends';
 }
 

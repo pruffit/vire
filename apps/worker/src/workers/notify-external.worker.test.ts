@@ -27,8 +27,7 @@ vi.mock('@vire/core', async () => {
   return {
     QUEUE_NOTIFY_EXTERNAL: actual.QUEUE_NOTIFY_EXTERNAL,
     decideExternalDelivery: actual.decideExternalDelivery,
-    friendRequestEmail: actual.friendRequestEmail,
-    chatMessageEmail: actual.chatMessageEmail,
+    EXTERNAL_NOTIFY_EVENTS: actual.EXTERNAL_NOTIFY_EVENTS,
   };
 });
 vi.mock('@vire/core/notifications/unsubscribe', () => ({

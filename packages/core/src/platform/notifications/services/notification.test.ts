@@ -31,6 +31,14 @@ describe('NotificationService.notify', () => {
     expect(repo.insert).toHaveBeenCalledWith('u1', 'FRIEND_REQUEST', 'u2', null);
     expect(publisher.publish).toHaveBeenCalledWith('u1', expect.objectContaining({ type: 'notification', notificationType: 'FRIEND_REQUEST', actorId: 'u2' }));
   });
+
+  it('отклоняет тип вне реестра, ничего не записав', async () => {
+    const repo = makeRepo();
+    const publisher = makePublisher();
+    await expect(new NotificationService(repo, publisher).notify('u1', 'NOPE', 'u2', null)).rejects.toThrow(/Unknown notification type/);
+    expect(repo.insert).not.toHaveBeenCalled();
+    expect(publisher.publish).not.toHaveBeenCalled();
+  });
 });
 
 describe('NotificationService — делегирование', () => {

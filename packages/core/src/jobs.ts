@@ -66,8 +66,10 @@ export interface FulfillPresaveJobData {
 
 export const QUEUE_NOTIFY_EXTERNAL = 'notify-external' as const;
 
+export type ExternalNotifyKind = 'FRIEND_REQUEST' | 'CHAT_MESSAGE';
+
 export interface ExternalNotifyJobData {
-  kind: 'FRIEND_REQUEST' | 'CHAT_MESSAGE';
+  kind: ExternalNotifyKind;
   recipientId: string;
   actorId: string;
   conversationId?: string;

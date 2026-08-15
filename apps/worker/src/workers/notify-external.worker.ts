@@ -1,8 +1,8 @@
 import { Worker, type Job } from 'bullmq';
-import { QUEUE_NOTIFY_EXTERNAL, type ExternalNotifyJobData, decideExternalDelivery, friendRequestEmail, chatMessageEmail } from '@vire/core';
+import { QUEUE_NOTIFY_EXTERNAL, type ExternalNotifyJobData, decideExternalDelivery, EXTERNAL_NOTIFY_EVENTS } from '@vire/core';
 import { signNotifyUnsub } from '@vire/core/notifications/unsubscribe'; // субпуть: node:crypto не в edge-safe корневом barrel (Task 15)
 import { getUserNotifyContext, getUserDisplayName, listPushSubscriptions, deletePushSubscriptionsByEndpoints } from '@vire/db';
-import { getTranslator, isLocale, localizedPath, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
+import { isLocale, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
 import { connection } from '../queues/connection.js';
 import { sendBrevoEmail } from '../lib/brevo.js';
 import { sendPush } from '../lib/webpush.js';
@@ -14,6 +14,8 @@ const SIGNING_SECRET = process.env.LINK_SIGNING_SECRET || process.env.AUTH_SECRE
 
 export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
   const { kind, recipientId, actorId, conversationId } = job.data;
+  const event = EXTERNAL_NOTIFY_EVENTS[kind];
+  if (!event) return;
 
   const ctx = await getUserNotifyContext(recipientId);
   if (!ctx) return;
@@ -33,7 +35,7 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
 
   // Дебаунс-ключ ставится только в момент реальной отправки письма, не раньше.
   let sendEmail = decision.email;
-  if (decision.email && kind === 'CHAT_MESSAGE' && conversationId) {
+  if (decision.email && event.debounce === 'conversation' && conversationId) {
     const already = await chatEmailDebounced(recipientId, conversationId);
     if (already) sendEmail = false;
   }
@@ -48,9 +50,7 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
     const unsubscribeUrl = token
       ? `${APP_URL}/api/v1/notifications/unsubscribe?uid=${recipientId}&token=${token}&locale=${locale}`
       : null;
-    const tpl = kind === 'FRIEND_REQUEST'
-      ? await friendRequestEmail({ actorName, appUrl: APP_URL, unsubscribeUrl, locale })
-      : await chatMessageEmail({ actorName, appUrl: APP_URL, unsubscribeUrl, locale });
+    const tpl = await event.email({ actorId, actorName, appUrl: APP_URL, unsubscribeUrl, locale, conversationId });
     const unsubHeaders = unsubscribeUrl
       ? { 'List-Unsubscribe': `<${unsubscribeUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }
       : undefined;
@@ -58,21 +58,7 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
   }
 
   if (decision.push) {
-    const t = await getTranslator(locale, 'email');
-    const who = actorName ?? t('someone');
-    const payload = kind === 'FRIEND_REQUEST'
-      ? {
-          title: t('push.friendRequest.title'),
-          body: t('push.friendRequest.body', { name: who }),
-          url: `${APP_URL}${localizedPath(locale, '/friends')}`,
-          tag: `friend-request:${actorId}`,
-        }
-      : {
-          title: t('push.chatMessage.title'),
-          body: t('push.chatMessage.body', { name: who }),
-          url: `${APP_URL}${localizedPath(locale, '/messages')}`,
-          tag: conversationId ?? 'chat',
-        };
+    const payload = await event.push({ actorId, actorName, appUrl: APP_URL, locale, unsubscribeUrl: null, conversationId });
     const dead = await sendPush(subs, payload);
     if (dead.length) {
       try { await deletePushSubscriptionsByEndpoints(dead); } catch { /* пруна не должна валить джобу и триггерить ретрай письма */ }

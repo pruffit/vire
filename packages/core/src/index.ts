@@ -86,6 +86,8 @@ export * from './platform/social/services/block';
 export * from './platform/social/services/report';
 export * from './platform/notifications/services/notification';
 export * from './platform/notifications/email-templates';
+export * from './platform/notifications/registry';
+export * from './platform/notifications/events';
 export * from './platform/messaging/services/chat';
 export * from './platform/identity/services/user-directory';
 export * from './music/engagement/services/listener-track';

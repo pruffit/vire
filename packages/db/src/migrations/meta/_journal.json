@@ -372,6 +372,13 @@
       "when": 1786435228627,
       "tag": "0052_purple_kulan_gath",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1786831704400,
+      "tag": "0053_misty_northstar",
+      "breakpoints": true
     }
   ]
 }
