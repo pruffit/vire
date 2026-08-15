@@ -3,8 +3,9 @@ import { and, eq } from 'drizzle-orm';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { db, tracks, trackAudio, getTrackOwnerContact, setTrackGenresIfEmpty, type TrackOwnerContact } from '@vire/db';
-import { QUEUE_TRANSCODE, type TranscodeJobData } from '@vire/core';
+import { db, tracks, trackAudio, getTrackOwnerContact, setTrackGenresIfEmpty } from '@vire/db';
+import { QUEUE_TRANSCODE, transcodeFailedEmail, type TranscodeJobData } from '@vire/core';
+import { isLocale, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
 import { VAULT, STREAM, downloadToFile, uploadFile } from '../lib/s3.js';
 import { transcodeToHls, computeWaveformPeaks, probeDuration } from '../lib/ffmpeg.js';
 import { readAudioMetadata } from '../lib/metadata.js';
@@ -130,24 +131,6 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
   }
 }
 
-function failureEmailHtml(contact: TrackOwnerContact, dashboardUrl: string): string {
-  const greeting = contact.name ? `Привет, ${contact.name}!` : 'Привет!';
-  return `<!DOCTYPE html>
-<html lang="ru">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0d0d0d;font-family:Inter,sans-serif;color:#f5f2eb">
-  <div style="max-width:480px;margin:0 auto;padding:40px 24px">
-    <p style="font-size:13px;color:#666;margin:0 0 24px">VireMusic</p>
-    <h1 style="font-size:20px;font-weight:600;margin:0 0 16px;line-height:1.3">Не удалось обработать трек</h1>
-    <p style="margin:0 0 16px;font-size:14px;color:#aaa">${greeting} При обработке трека <strong style="color:#f5f2eb">«${contact.trackTitle}»</strong> произошла ошибка — мы не смогли подготовить его к воспроизведению после нескольких попыток.</p>
-    <p style="margin:0 0 24px;font-size:14px;color:#aaa">Попробуй перезалить файл в дашборде. Если ошибка повторится — напиши нам, разберёмся.</p>
-    <a href="${dashboardUrl}" style="display:inline-block;background:#f5f2eb;color:#0d0d0d;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:500">Открыть релиз →</a>
-    <p style="margin:40px 0 0;font-size:12px;color:#444">Это служебное уведомление VireMusic.</p>
-  </div>
-</body>
-</html>`;
-}
-
 /**
  * Финальное падение транскодинга (после исчерпания всех попыток), вызывается
  * из transcodeWorker.on('failed'). Идемпотентна и best-effort: PROCESSING → FAILED
@@ -173,12 +156,14 @@ export async function handleTerminalTranscodeFailure(
 
     const contact = await getTrackOwnerContact(trackId);
     if (contact?.email) {
-      await sendMail({
-        to: contact.email,
-        toName: contact.name,
-        subject: `Не удалось обработать трек «${contact.trackTitle}»`,
-        html: failureEmailHtml(contact, `${APP_URL}/dashboard/releases/${contact.releaseId}`),
+      const locale: Locale = isLocale(contact.locale ?? '') ? (contact.locale as Locale) : DEFAULT_LOCALE;
+      const { subject, html } = await transcodeFailedEmail({
+        trackTitle: contact.trackTitle,
+        dashboardUrl: `${APP_URL}/dashboard/releases/${contact.releaseId}`,
+        recipientName: contact.name,
+        locale,
       });
+      await sendMail({ to: contact.email, toName: contact.name, subject, html });
       await job.log(`Artist notified at ${contact.email}`);
     }
   } catch (err) {

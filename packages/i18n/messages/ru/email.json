@@ -34,6 +34,17 @@
     "footer": "Ты получил это письмо, потому что подписан на {artistName} на VireMusic.",
     "manageSubscriptions": "Управлять подписками"
   },
+  "transcodeFailed": {
+    "subject": "Не удалось обработать трек «{trackTitle}»",
+    "heading": "Не удалось обработать трек",
+    "greeting": "Привет, {name}!",
+    "greetingAnonymous": "Привет!",
+    "trackQuoted": "«{trackTitle}»",
+    "body": "{greeting} При обработке трека {track} произошла ошибка — мы не смогли подготовить его к воспроизведению после нескольких попыток.",
+    "hint": "Попробуй перезалить файл в дашборде. Если ошибка повторится — напиши нам, разберёмся.",
+    "cta": "Открыть релиз",
+    "footer": "Это служебное уведомление VireMusic."
+  },
   "presaveOut": {
     "subject": "{artistName} — {releaseTitle} уже вышел",
     "heading": "{releaseTitle} уже вышел",

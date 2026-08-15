@@ -1,4 +1,4 @@
-function brevoSender(): { name?: string; email: string } {
+export function brevoSender(): { name?: string; email: string } {
   const raw = process.env.SMTP_FROM ?? 'VireMusic <noreply@viremusic.ru>';
   const m = raw.match(/^(.+?)\s*<(.+?)>$/);
   return m ? { name: m[1].trim(), email: m[2].trim() } : { email: raw };

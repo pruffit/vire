@@ -2,11 +2,7 @@
 // и notify-release.worker.ts) — SMTP на проде заблокирован хостингом.
 // Используется для сервисных уведомлений артисту (например, падение транскодинга).
 
-function brevoSender(): { name?: string; email: string } {
-  const raw = process.env.SMTP_FROM ?? 'VireMusic <noreply@viremusic.ru>';
-  const m = raw.match(/^(.+?)\s*<(.+?)>$/);
-  return m ? { name: m[1].trim(), email: m[2].trim() } : { email: raw };
-}
+import { brevoSender } from './brevo.js';
 
 export async function sendMail(opts: {
   to: string;

@@ -34,6 +34,17 @@
     "footer": "You're receiving this because you follow {artistName} on VireMusic.",
     "manageSubscriptions": "Manage subscriptions"
   },
+  "transcodeFailed": {
+    "subject": "We couldn't process the track “{trackTitle}”",
+    "heading": "We couldn't process the track",
+    "greeting": "Hi, {name}!",
+    "greetingAnonymous": "Hi!",
+    "trackQuoted": "“{trackTitle}”",
+    "body": "{greeting} We ran into an error processing the track {track} — we couldn't prepare it for playback after several attempts.",
+    "hint": "Try re-uploading the file from the dashboard. If the error happens again, let us know and we'll take a look.",
+    "cta": "Open release",
+    "footer": "This is a service notification from VireMusic."
+  },
   "presaveOut": {
     "subject": "{artistName} — {releaseTitle} is out",
     "heading": "{releaseTitle} is out",

@@ -23,6 +23,7 @@ export async function getFollowerEmails(artistProfileId: string): Promise<Follow
 export interface TrackOwnerContact {
   email: string;
   name: string | null;
+  locale: string | null;
   trackTitle: string;
   releaseId: string;
   artistSlug: string;
@@ -34,6 +35,7 @@ export async function getTrackOwnerContact(trackId: string): Promise<TrackOwnerC
     .select({
       email: users.email,
       name: users.name,
+      locale: users.locale,
       trackTitle: tracks.title,
       releaseId: tracks.releaseId,
       artistSlug: artistProfiles.slug,
@@ -49,6 +51,7 @@ export async function getTrackOwnerContact(trackId: string): Promise<TrackOwnerC
   return {
     email: row.email,
     name: row.name,
+    locale: row.locale,
     trackTitle: row.trackTitle,
     releaseId: row.releaseId,
     artistSlug: row.artistSlug,

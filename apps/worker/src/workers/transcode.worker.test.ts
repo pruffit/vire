@@ -37,7 +37,10 @@ vi.mock('@vire/db', () => ({
   getTrackOwnerContact: h.getTrackOwnerContact,
   setTrackGenresIfEmpty: h.setTrackGenresIfEmpty,
 }));
-vi.mock('@vire/core', () => ({ QUEUE_TRANSCODE: 'transcode' }));
+vi.mock('@vire/core', async () => {
+  const actual = await vi.importActual<typeof import('@vire/core')>('@vire/core');
+  return { QUEUE_TRANSCODE: 'transcode', transcodeFailedEmail: actual.transcodeFailedEmail };
+});
 vi.mock('../lib/mailer.js', () => ({ sendMail: h.sendMail }));
 vi.mock('../lib/genre-classifier.js', () => ({ classifyTrackGenre: h.classifyTrackGenre }));
 vi.mock('../lib/genre-policy.js', () => ({ decideAutoApplyGenres: h.decideAutoApplyGenres }));
@@ -98,6 +101,7 @@ beforeEach(() => {
   h.getTrackOwnerContact.mockResolvedValue({
     email: 'artist@example.com',
     name: 'Artist',
+    locale: 'en',
     trackTitle: 'Song',
     releaseId: 'rel-1',
     artistSlug: 'artist',
@@ -126,13 +130,29 @@ describe('handleTerminalTranscodeFailure', () => {
     expect(h.sendMail).not.toHaveBeenCalled();
   });
 
-  it('marks the track FAILED and emails the artist on the final attempt', async () => {
+  it('marks the track FAILED and emails the artist on the final attempt, in the owner locale', async () => {
     await handleTerminalTranscodeFailure(makeFailJob({ attemptsMade: 3, attempts: 3 }));
     expect(h.dbUpdate).toHaveBeenCalledTimes(1);
     expect(h.sendMail).toHaveBeenCalledTimes(1);
     const arg = (h.sendMail as Mock).mock.calls[0][0];
     expect(arg.to).toBe('artist@example.com');
     expect(arg.subject).toContain('Song');
+    expect(arg.subject).toContain("couldn't process");
+    expect(arg.html).toContain('<html lang="en">');
+  });
+
+  it('falls back to the default locale when the owner has none set', async () => {
+    h.getTrackOwnerContact.mockResolvedValue({
+      email: 'artist@example.com',
+      name: 'Artist',
+      locale: null,
+      trackTitle: 'Song',
+      releaseId: 'rel-1',
+      artistSlug: 'artist',
+    });
+    await handleTerminalTranscodeFailure(makeFailJob({ attemptsMade: 3, attempts: 3 }));
+    const arg = (h.sendMail as Mock).mock.calls[0][0];
+    expect(arg.html).toContain('<html lang="ru">');
   });
 
   it('does not email when the track was no longer PROCESSING (race with success)', async () => {

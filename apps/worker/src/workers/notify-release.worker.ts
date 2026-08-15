@@ -1,19 +1,14 @@
 import { Worker, type Job } from 'bullmq';
 import { getFollowerEmails } from '@vire/db';
-import { QUEUE_NOTIFY_RELEASE, type NotifyReleaseJobData } from '@vire/core';
+import { QUEUE_NOTIFY_RELEASE, emailShell, type NotifyReleaseJobData } from '@vire/core';
 import { getTranslator, isLocale, localizedPath, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
 import { connection } from '../queues/connection.js';
+import { brevoSender } from '../lib/brevo.js';
 
 // Brevo HTTP API — SMTP на проде заблокирован хостингом. messageVersions — батч:
 // каждый адресат получает отдельное письмо на своей локали.
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-
-function brevoSender(): { name?: string; email: string } {
-  const raw = process.env.SMTP_FROM ?? 'VireMusic <noreply@viremusic.ru>';
-  const m = raw.match(/^(.+?)\s*<(.+?)>$/);
-  return m ? { name: m[1].trim(), email: m[2].trim() } : { email: raw };
-}
 
 interface BrevoMessageVersion {
   to: Array<{ email: string; name?: string }>;
@@ -63,34 +58,16 @@ async function buildEmail(
   const footer = t('release.footer', { artistName: data.artistName });
   const manageLabel = t('release.manageSubscriptions');
 
-  const html = `<!DOCTYPE html>
-<html lang="${locale}">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0d0d0d;font-family:Inter,sans-serif;color:#f5f2eb">
-  <div style="max-width:480px;margin:0 auto;padding:40px 24px">
-    <p style="font-size:13px;color:#666;margin:0 0 24px">VireMusic</p>
-
-    <h1 style="font-size:22px;font-weight:600;margin:0 0 6px;line-height:1.3">
-      ${heading}
-    </h1>
-
-    ${data.coverUrl ? `<img src="${data.coverUrl}" alt="${data.releaseTitle}" width="200" height="200" style="display:block;border-radius:6px;margin:20px 0;object-fit:cover">` : ''}
-
-    <p style="font-size:20px;font-weight:500;margin:0 0 24px">${data.releaseTitle}</p>
-
-    <p style="margin:0 0 32px;font-size:14px;color:#aaa">${body}</p>
-
-    <a href="${releaseUrl}" style="display:inline-block;background:#f5f2eb;color:#0d0d0d;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:500">
-      ${cta} →
-    </a>
-
-    <p style="margin:40px 0 0;font-size:12px;color:#444">
-      ${footer}<br>
-      <a href="${manageUrl}" style="color:#666">${manageLabel}</a>
-    </p>
-  </div>
-</body>
-</html>`;
+  const html = emailShell({
+    locale,
+    heading,
+    subheading: data.releaseTitle,
+    imageUrl: data.coverUrl ?? undefined,
+    bodyHtml: body,
+    ctaLabel: cta,
+    ctaUrl: releaseUrl,
+    footerHtml: `${footer}<br><a href="${manageUrl}" style="color:#666">${manageLabel}</a>`,
+  });
 
   return { subject, html };
 }

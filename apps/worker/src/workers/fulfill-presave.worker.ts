@@ -6,7 +6,7 @@ import {
   getPresaverContacts,
   markPresavesFulfilled,
 } from '@vire/db';
-import { QUEUE_FULFILL_PRESAVE, type FulfillPresaveJobData } from '@vire/core';
+import { QUEUE_FULFILL_PRESAVE, emailShell, type FulfillPresaveJobData } from '@vire/core';
 import { getTranslator, isLocale, localizedPath, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
 import { connection } from '../queues/connection.js';
 import { sendMail } from '../lib/mailer.js';
@@ -32,34 +32,20 @@ async function buildEmail(
     releaseTitle: data.releaseTitle,
   });
 
-  const html = `<!DOCTYPE html>
-<html lang="${locale}">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0d0d0d;font-family:Inter,sans-serif;color:#f5f2eb">
-  <div style="max-width:480px;margin:0 auto;padding:40px 24px">
-    <p style="font-size:13px;color:#666;margin:0 0 24px">VireMusic</p>
+  const footerHtml = unsubscribeUrl
+    ? `${t('presaveOut.footer')} <a href="${unsubscribeUrl}" style="color:#666">${t('presaveOut.unsubscribe')}</a>`
+    : t('presaveOut.footer');
 
-    <h1 style="font-size:22px;font-weight:600;margin:0 0 6px;line-height:1.3">
-      ${t('presaveOut.heading', { releaseTitle: data.releaseTitle })}
-    </h1>
-
-    ${data.coverUrl ? `<img src="${data.coverUrl}" alt="${data.releaseTitle}" width="200" height="200" style="display:block;border-radius:6px;margin:20px 0;object-fit:cover">` : ''}
-
-    <p style="margin:0 0 32px;font-size:14px;color:#aaa">
-      ${t('presaveOut.body', { greeting, type: data.releaseType, releaseTitle: data.releaseTitle, artistName: data.artistName })}
-    </p>
-
-    <a href="${releaseUrl}" style="display:inline-block;background:#f5f2eb;color:#0d0d0d;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:500">
-      ${t('presaveOut.cta')} →
-    </a>
-
-    <p style="margin:40px 0 0;font-size:12px;color:#444">
-      ${t('presaveOut.footer')}
-      ${unsubscribeUrl ? `<a href="${unsubscribeUrl}" style="color:#666">${t('presaveOut.unsubscribe')}</a>` : ''}
-    </p>
-  </div>
-</body>
-</html>`;
+  const html = emailShell({
+    locale,
+    heading: t('presaveOut.heading', { releaseTitle: data.releaseTitle }),
+    subheading: data.releaseTitle,
+    imageUrl: data.coverUrl ?? undefined,
+    bodyHtml: t('presaveOut.body', { greeting, type: data.releaseType, releaseTitle: data.releaseTitle, artistName: data.artistName }),
+    ctaLabel: t('presaveOut.cta'),
+    ctaUrl: releaseUrl,
+    footerHtml,
+  });
 
   return { subject, html };
 }
