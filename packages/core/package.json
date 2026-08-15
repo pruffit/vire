@@ -16,7 +16,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@vire/i18n": "workspace:*"
+    "@vire/i18n": "workspace:*",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/node": "^20",

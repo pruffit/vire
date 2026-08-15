@@ -293,6 +293,9 @@ importers:
       '@vire/i18n':
         specifier: workspace:*
         version: link:../i18n
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^20

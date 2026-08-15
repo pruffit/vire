@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Queue } from 'bullmq';
-import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH, QUEUE_METRICS, QUEUE_JAM_REAPER } from '@vire/core';
+import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH, QUEUE_METRICS, QUEUE_JAM_REAPER, parseEnv } from '@vire/core';
 import { createTranscodeWorker, handleTerminalTranscodeFailure } from './workers/transcode.worker.js';
 import { createPlayEventsWorker } from './workers/play-events.worker.js';
 import { createNotifyReleaseWorker } from './workers/notify-release.worker.js';
@@ -14,6 +14,16 @@ import { createNotifyExternalWorker } from './workers/notify-external.worker.js'
 import { createJamReaperWorker } from './workers/jam-reaper.worker.js';
 import { connection } from './queues/connection.js';
 import { alertJobFailure, alertWorkerError, alertCrash } from './lib/alert.js';
+
+const envResult = parseEnv(process.env, 'worker');
+if (!envResult.ok) {
+  const missing = envResult.error.issues.map((i) => i.variable).join(', ');
+  throw new Error(`Некорректная конфигурация окружения (worker): не заданы ${missing}`);
+}
+if (envResult.value.degraded.length > 0) {
+  const features = envResult.value.degraded.map((d) => `${d.feature} (нет ${d.missing.join(', ')})`).join('; ');
+  console.warn(`[env] фичи выключены из-за отсутствующих переменных: ${features}`);
+}
 
 const transcodeWorker = createTranscodeWorker();
 const playEventsWorker = createPlayEventsWorker();
