@@ -7,9 +7,10 @@
 медиа-клавиши» ниже. Срез 2 — `navigator.mediaSession` в веб-плеере
 (`docs/superpowers/specs/2026-08-16-desktop-shell-slice-2-design.md`, скоуп сужен до
 раздела 1 — раздел про Tauri IPC-команду синка подписи трея отложен), см. «Media
-Session» ниже. Проверяет связку Tauri + существующий веб на реальной
-не-браузерной платформе — дешевле и раньше мобильного клиента
-(`docs/multiplatform.md` §3.2, §12 п.7).
+Session» ниже. Срез 3 — автозапуск при входе в систему
+(`docs/superpowers/specs/2026-08-16-desktop-shell-slice-3-design.md`), см. «Автозапуск»
+ниже. Проверяет связку Tauri + существующий веб на реальной не-браузерной платформе —
+дешевле и раньше мобильного клиента (`docs/multiplatform.md` §3.2, §12 п.7).
 
 ## Что делает
 
@@ -25,6 +26,8 @@ Session» ниже. Проверяет связку Tauri + существующ
 - Текущий трек в системном виджете «Сейчас играет» (Windows SMTC) с обложкой/названием/
   артистом и управлением play/pause/next/prev оттуда — срез 2, подробности в «Media
   Session» ниже.
+- Автозапуск при входе в систему, переключается чекбоксом в трее, по умолчанию
+  выключен — срез 3, подробности в «Автозапуск» ниже.
 
 ## Трей и медиа-клавиши (срез 1)
 
@@ -95,6 +98,29 @@ side-effect импорт `desktop-bridge`.
   убирать регистрацию медиа-клавиш из `tauri-plugin-global-shortcut` не за что, реального
   конфликта нет.
 
+## Автозапуск (срез 3)
+
+Официальный `tauri-plugin-autostart` v2 (`apps/desktop/src-tauri/Cargo.toml`) —
+регистрирует/снимает автозапуск через штатный Windows-механизм (registry-ключ
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`), ничего своего руками не пишет.
+Управление — чекбокс-пункт «Запускать при входе в систему» (`CheckMenuItem`) в
+существующем трей-меню (`apps/desktop/src-tauri/src/main.rs`), других поверхностей
+управления нет (настроек-окна у приложения нет и не планируется). По умолчанию (первый
+запуск) — выключен: состояние читается из `app.autolaunch().is_enabled()` при
+построении меню, ничего не включается автоматически.
+
+Обработчик клика — toggle через `app.autolaunch().enable()`/`.disable()`, затем
+`CheckMenuItem::set_checked` на актуальное состояние. Плагин управляется целиком из
+Rust (не через `invoke` со стороны веб-страницы) — новых записей в
+`capabilities/default.json` не потребовалось, как и для трея/`global-shortcut` из
+среза 1.
+
+**Проверено эмпирически (16.08.2026, `cargo tauri dev`, реальное взаимодействие с
+чекбоксом трея через физический клик, не программный вызов):** включение чекбокса
+добавило запись `VireMusic` в `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+(значение — путь к `vire-desktop.exe`), выключение — запись пропала. Оба перехода
+подтверждены через `reg query`, не только по отсутствию ошибки в консоли плагина.
+
 ## Скачивание и дистрибуция
 
 Публичная сторона: страница `/download`, короткий баннер на сайте, и CI-пайплайн,
@@ -155,9 +181,11 @@ tauri-cli` + `cargo tauri build` (не `tauri-apps/tauri-action`: проект �
 ## Где код
 
 - `apps/desktop/src-tauri/Cargo.toml` — крейт `vire-desktop`, зависимости `tauri` `^2`
-  (фича `tray-icon`), `tauri-plugin-global-shortcut` `^2`, `tauri-build` `^2`.
+  (фича `tray-icon`), `tauri-plugin-global-shortcut` `^2`, `tauri-plugin-autostart` `^2`,
+  `tauri-build` `^2`.
 - `apps/desktop/src-tauri/src/main.rs` — `shell_url()`, `WebviewWindowBuilder` с
-  `WebviewUrl::External`, трей и глобальные медиа-шорткаты (срез 1).
+  `WebviewUrl::External`, трей и глобальные медиа-шорткаты (срез 1), чекбокс автозапуска
+  в трее (срез 3).
 - `apps/desktop/src-tauri/src/bridge.rs` — `call_bridge`, см. выше.
 - `apps/web/lib/desktop-bridge.ts`, `apps/web/lib/player/media-session.ts`,
   `apps/web/components/player/index.tsx` — веб-мост и Media Session, см. выше.
@@ -236,7 +264,6 @@ cargo tauri icon ../../web/public/icon-512.png
 - Мини-плеер поверх других окон (отдельное окно/оверлей)
 - Глобальные хоткеи произвольных сочетаний (`Ctrl+Shift+P` и т.п.) — только сами
   медиа-клавиши Play/Pause/Next/Previous
-- Автозапуск при входе в систему
 - Нативный доступ к локальной библиотеке файлов сверх того, что уже даёт веб
 - Код-сайнинг, автообновление, полировка инсталлятора
 - Bearer/device-auth для десктопа (нужен только нативному UI вне webview; пока

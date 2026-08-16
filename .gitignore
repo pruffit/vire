@@ -39,3 +39,6 @@ apps/worker/models/
 
 # Изолированные рабочие копии сабагентов (git worktree) — эфемерны, не в git
 .claude/worktrees/
+
+# Личные permission-оверрайды (напр. доступ к конкретному прод-хосту) — не для команды
+.claude/settings.local.json

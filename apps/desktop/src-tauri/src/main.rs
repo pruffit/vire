@@ -3,9 +3,10 @@
 mod bridge;
 
 use bridge::call_bridge;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_global_shortcut::{Code, Shortcut, ShortcutState};
 
 // Срез 0: оболочка грузит уже готовый веб-фронт по URL, нового UI нет.
@@ -45,6 +46,7 @@ fn main() {
                 })
                 .build(),
         )
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .setup(|app| {
             WebviewWindowBuilder::new(app, "main", WebviewUrl::External(shell_url().parse()?))
                 .title("VireMusic")
@@ -57,6 +59,15 @@ fn main() {
             let play_pause = MenuItem::with_id(app, "play_pause", "Play/Pause", true, None::<&str>)?;
             let next = MenuItem::with_id(app, "next", "Следующий трек", true, None::<&str>)?;
             let prev = MenuItem::with_id(app, "prev", "Предыдущий трек", true, None::<&str>)?;
+            let autostart_enabled = app.autolaunch().is_enabled().unwrap_or(false);
+            let autostart = CheckMenuItem::with_id(
+                app,
+                "autostart",
+                "Запускать при входе в систему",
+                true,
+                autostart_enabled,
+                None::<&str>,
+            )?;
             let quit = MenuItem::with_id(app, "quit", "Выход", true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
@@ -67,6 +78,8 @@ fn main() {
                     &next,
                     &prev,
                     &PredefinedMenuItem::separator(app)?,
+                    &autostart,
+                    &PredefinedMenuItem::separator(app)?,
                     &quit,
                 ],
             )?;
@@ -74,7 +87,7 @@ fn main() {
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
-                .on_menu_event(|app, event| {
+                .on_menu_event(move |app, event| {
                     let Some(window) = app.get_webview_window("main") else { return };
                     match event.id.as_ref() {
                         "show" => {
@@ -84,6 +97,18 @@ fn main() {
                         "play_pause" => call_bridge(&window, "togglePlay"),
                         "next" => call_bridge(&window, "next"),
                         "prev" => call_bridge(&window, "prev"),
+                        "autostart" => {
+                            let manager = app.autolaunch();
+                            let currently_enabled = manager.is_enabled().unwrap_or(false);
+                            let toggled = if currently_enabled {
+                                manager.disable()
+                            } else {
+                                manager.enable()
+                            };
+                            if toggled.is_ok() {
+                                let _ = autostart.set_checked(!currently_enabled);
+                            }
+                        }
                         "quit" => app.exit(0),
                         _ => {}
                     }
