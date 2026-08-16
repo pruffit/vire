@@ -63,6 +63,7 @@ packages/
   api-contracts/ — zod-схемы запросов/ответов, общие типы
   api-client/ — типизированный fetch-клиент
   ui/         — общий UI-кит (Radix + кастомный Tailwind)
+  storage/    — S3-адаптер (@vire/storage): один клиент на web и worker, реализует IFileStorage
   media/      — утилиты HLS, waveform
   config/     — tsconfig, eslint, tailwind preset
 docs/         — концепция, архитектура, схема данных

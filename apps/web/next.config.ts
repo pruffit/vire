@@ -103,7 +103,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/**': ['../../node_modules/.pnpm/@img+sharp-*/node_modules/@img/**'],
   },
-  transpilePackages: ['@vire/core', '@vire/db', '@vire/ui', '@vire/i18n'],
+  transpilePackages: ['@vire/core', '@vire/db', '@vire/ui', '@vire/i18n', '@vire/storage'],
   images: {
     formats: ['image/avif', 'image/webp'],
     // Только нужные брейкпоинты — меньше вариантов кешируется на сервере.

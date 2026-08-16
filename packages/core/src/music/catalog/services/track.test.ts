@@ -3,7 +3,7 @@ import { TrackService } from './track';
 import { NotFoundError, ValidationError } from '../../../errors';
 import type { ITrackRepository } from '../repositories/track';
 import type { IReleaseRepository } from '../repositories/release';
-import type { IFileStorage } from '../../../platform/storage/repositories/storage';
+import type { IFileUploader } from '../../../platform/storage/repositories/storage';
 import type { ITrackMoodsRepository } from '../../curation/repositories/track-moods';
 import type { ITranscodeQueue, TrackServiceDeps } from './track';
 import type { Release, Track } from '../types/release';
@@ -81,7 +81,7 @@ function makeMoodsRepo(overrides?: Partial<ITrackMoodsRepository>): ITrackMoodsR
   };
 }
 
-function makeAudioStorage(overrides?: Partial<IFileStorage>): IFileStorage {
+function makeAudioStorage(overrides?: Partial<IFileUploader>): IFileUploader {
   return { upload: vi.fn().mockResolvedValue('s3://vault/tracks/track-1/source.flac'), ...overrides };
 }
 

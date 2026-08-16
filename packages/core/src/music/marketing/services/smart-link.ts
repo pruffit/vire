@@ -1,6 +1,6 @@
 import { err, ok, NotFoundError, ValidationError, ConflictError, type Result } from '../../../errors';
 import type { ISmartLinkRepository } from '../repositories/smart-link';
-import type { IFileStorage } from '../../../platform/storage/repositories/storage';
+import type { IFileUploader } from '../../../platform/storage/repositories/storage';
 import type { IdGenerator } from '../../../platform/ports/effects';
 import type { ArtistLink, SmartLinkInput } from '../../catalog/types/artist';
 
@@ -63,7 +63,7 @@ export interface SmartLinkFileInput {
 
 export interface SmartLinkServiceDeps {
   uuid: IdGenerator;
-  coverStorage?: IFileStorage;
+  coverStorage?: IFileUploader;
 }
 
 export interface CreateSmartLinkInput {

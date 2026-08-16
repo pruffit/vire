@@ -1,7 +1,7 @@
 import { err, ok, NotFoundError, ValidationError, ForbiddenError, type Result } from '../../../errors';
 import type { ITrackRepository, UpdateTrackParams } from '../repositories/track';
 import type { IReleaseRepository } from '../repositories/release';
-import type { IFileStorage } from '../../../platform/storage/repositories/storage';
+import type { IFileUploader } from '../../../platform/storage/repositories/storage';
 import type { ITrackMoodsRepository } from '../../curation/repositories/track-moods';
 import type { TranscodeJobData } from '../../../jobs';
 import type { IdGenerator } from '../../../platform/ports/effects';
@@ -22,7 +22,7 @@ const AUDIO_CONTENT_TYPE: Record<AudioExt, string> = {
 
 export interface TrackServiceDeps {
   uuid: IdGenerator;
-  audioStorage?: IFileStorage;
+  audioStorage?: IFileUploader;
   moodsRepo?: ITrackMoodsRepository;
   parseLrc?: (raw: string) => LyricLine[];
 }

@@ -1,74 +1,38 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import {
+  S3ObjectStorage, createS3Client, s3ConfigFromEnv, bucketsFromEnv, S3_UPLOAD_REQUEST_TIMEOUT_MS,
+} from '@vire/storage';
 
-export const s3 = new S3Client({
-  endpoint: process.env.S3_ENDPOINT ?? 'http://localhost:9000',
-  region: process.env.S3_REGION ?? 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY ?? 'minioadmin',
-    secretAccessKey: process.env.S3_SECRET_KEY ?? 'minioadmin',
-  },
-  forcePathStyle: true,
+// Веб грузит мастер целиком одним PUT (до 300 МБ) — таймаут запроса с запасом,
+// иначе загрузка крупного трека обрывалась бы на медленном диске.
+const client = createS3Client(s3ConfigFromEnv(process.env), { requestTimeoutMs: S3_UPLOAD_REQUEST_TIMEOUT_MS });
+const signer = createS3Client(s3ConfigFromEnv(process.env, 'public'));
+const buckets = bucketsFromEnv(process.env);
+
+export const VAULT = buckets.vault;
+export const STREAM = buckets.stream;
+
+export const vaultStorage = new S3ObjectStorage({ client, signerClient: signer, bucket: VAULT });
+export const streamStorage = new S3ObjectStorage({
+  client,
+  signerClient: signer,
+  bucket: STREAM,
+  publicBaseUrl: process.env.S3_PUBLIC_ENDPOINT,
 });
 
-// Отдельный клиент для подписи скачиваемых ссылок: SigV4 привязана к хосту, а на проде
-// S3_ENDPOINT внутренний — подписываем публичным (Caddy → MinIO); локально оба совпадают.
-const s3Signer = new S3Client({
-  endpoint: process.env.S3_PUBLIC_ENDPOINT ?? process.env.S3_ENDPOINT ?? 'http://localhost:9000',
-  region: process.env.S3_REGION ?? 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY ?? 'minioadmin',
-    secretAccessKey: process.env.S3_SECRET_KEY ?? 'minioadmin',
-  },
-  forcePathStyle: true,
-});
-
-export const VAULT = process.env.S3_BUCKET_VAULT ?? 'vire-vault';
-export const STREAM = process.env.S3_BUCKET_STREAM ?? 'vire-stream';
-
-export async function uploadBuffer(
-  key: string,
-  buffer: Buffer,
-  contentType: string,
-): Promise<void> {
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: VAULT,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-      ContentLength: buffer.length,
-    }),
-  );
+export function uploadBuffer(key: string, buffer: Buffer, contentType: string): Promise<void> {
+  return vaultStorage.upload(key, buffer, contentType).then(() => undefined);
 }
 
-export async function getSourceDownloadUrl(key: string, filename: string): Promise<string> {
-  // key points at the master in vault, e.g. tracks/{id}/source.wav | source.flac
+export function uploadToStream(key: string, buffer: Buffer, contentType: string): Promise<string> {
+  return streamStorage.upload(key, buffer, contentType);
+}
+
+export function getSourceDownloadUrl(key: string, filename: string): Promise<string> {
+  // key указывает на мастер в vault, например tracks/{id}/source.wav | source.flac
   const ext = key.split('.').pop() || 'flac';
-  const contentType = ext === 'wav' ? 'audio/wav' : 'audio/flac';
-  const command = new GetObjectCommand({
-    Bucket: VAULT,
-    Key: key,
-    ResponseContentDisposition: `attachment; filename="${encodeURIComponent(filename)}.${ext}"`,
-    ResponseContentType: contentType,
+  return vaultStorage.presignDownload(key, {
+    filename: `${encodeURIComponent(filename)}.${ext}`,
+    contentType: ext === 'wav' ? 'audio/wav' : 'audio/flac',
+    expiresInSec: 900,
   });
-  // 15 minutes — enough to start the download. Подписываем публичным клиентом.
-  return getSignedUrl(s3Signer, command, { expiresIn: 900 });
-}
-
-export async function uploadToStream(
-  key: string,
-  buffer: Buffer,
-  contentType: string,
-): Promise<string> {
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: STREAM,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-      ContentLength: buffer.length,
-    }),
-  );
-  return `${process.env.S3_PUBLIC_ENDPOINT}/${STREAM}/${key}`;
 }

@@ -1,4 +1,4 @@
 import type { IPlaylistCoverStorage } from '@vire/core';
-import { S3FileStorage } from './file-storage';
+import { fileStorage } from './file-storage';
 
-export const playlistCoverStorage: IPlaylistCoverStorage = new S3FileStorage();
+export const playlistCoverStorage: IPlaylistCoverStorage = fileStorage;

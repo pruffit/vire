@@ -1,5 +1,5 @@
 import type { PlaylistSummary, PlaylistWithTracks, TrackSearchResult, PlaylistSuggestions, PlaylistCollaborator, PlaylistInvitePreview } from '../types/playlist';
-import type { IFileStorage } from '../../../platform/storage/repositories/storage';
+import type { IFileUploader } from '../../../platform/storage/repositories/storage';
 
 export interface PlaylistUpdatePatch {
   title?: string;
@@ -59,4 +59,4 @@ export interface IPlaylistRepository {
   removeMembershipBetween(userA: string, userB: string): Promise<string[]>;
 }
 
-export type IPlaylistCoverStorage = IFileStorage;
+export type IPlaylistCoverStorage = IFileUploader;

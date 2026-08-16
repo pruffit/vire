@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { ReleaseService } from './release';
 import { NotFoundError, ValidationError } from '../../../errors';
 import type { IReleaseRepository } from '../repositories/release';
-import type { IFileStorage } from '../../../platform/storage/repositories/storage';
+import type { IFileUploader } from '../../../platform/storage/repositories/storage';
 import type { INotifyReleaseQueue } from './release';
 import type { Release, ReleaseWithTracks } from '../types/release';
 
@@ -151,7 +151,7 @@ describe('ReleaseService.deleteRelease', () => {
   });
 });
 
-function makeCoverStorage(overrides?: Partial<IFileStorage>): IFileStorage {
+function makeCoverStorage(overrides?: Partial<IFileUploader>): IFileUploader {
   return { upload: vi.fn().mockResolvedValue('https://cdn.example/covers/release-1.jpg'), ...overrides };
 }
 

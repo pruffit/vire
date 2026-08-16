@@ -1,6 +1,6 @@
 import { err, ok, NotFoundError, ValidationError, ForbiddenError, type Result } from '../../../errors';
 import type { IReleaseRepository } from '../repositories/release';
-import type { IFileStorage } from '../../../platform/storage/repositories/storage';
+import type { IFileUploader } from '../../../platform/storage/repositories/storage';
 import type { NotifyReleaseJobData } from '../../../jobs';
 import type { IdGenerator } from '../../../platform/ports/effects';
 import { ALL_GENRES, type Genre, type Release, type ReleaseStatus, type ReleaseType, type ReleaseWithTracks } from '../types/release';
@@ -13,7 +13,7 @@ export interface INotifyReleaseQueue {
 
 export interface ReleaseServiceDeps {
   uuid: IdGenerator;
-  coverStorage?: IFileStorage;
+  coverStorage?: IFileUploader;
   notifyQueue?: INotifyReleaseQueue;
 }
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { SmartLinkService, normalizeSlug, isValidSlug, parseSmartLinkLinks } from './smart-link';
 import { NotFoundError, ValidationError, ConflictError } from '../../../errors';
 import type { ISmartLinkRepository } from '../repositories/smart-link';
-import type { IFileStorage } from '../../../platform/storage/repositories/storage';
+import type { IFileUploader } from '../../../platform/storage/repositories/storage';
 import type { SmartLink } from '../../catalog/types/artist';
 
 const mockLink: SmartLink = {
@@ -32,7 +32,7 @@ function makeRepo(overrides?: Partial<ISmartLinkRepository>): ISmartLinkReposito
   };
 }
 
-function makeStorage(overrides?: Partial<IFileStorage>): IFileStorage {
+function makeStorage(overrides?: Partial<IFileUploader>): IFileUploader {
   return { upload: vi.fn().mockResolvedValue('https://cdn.example/covers/smartlinks/x.jpg'), ...overrides };
 }
 

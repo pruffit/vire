@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { ArtistService } from './artist';
 import { NotFoundError, ValidationError, ConflictError } from '../../../errors';
 import type { IArtistRepository } from '../repositories/artist';
-import type { IFileStorage } from '../../../platform/storage/repositories/storage';
+import type { IFileUploader } from '../../../platform/storage/repositories/storage';
 import type { ArtistServiceDeps, IVideoTitleResolver, UpdateArtistProfileInput } from './artist';
 import type { ArtistProfile } from '../types/artist';
 
@@ -78,7 +78,7 @@ describe('ArtistService.getBySlug', () => {
   });
 });
 
-function makeImageStorage(overrides?: Partial<IFileStorage>): IFileStorage {
+function makeImageStorage(overrides?: Partial<IFileUploader>): IFileUploader {
   return { upload: vi.fn().mockResolvedValue('https://cdn.example/avatars/artist-1.jpg'), ...overrides };
 }
 

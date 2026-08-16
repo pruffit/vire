@@ -30,6 +30,7 @@
     "@vire/core": "workspace:*",
     "@vire/db": "workspace:*",
     "@vire/i18n": "workspace:*",
+    "@vire/storage": "workspace:*",
     "@vire/ui": "workspace:*",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.34.0",

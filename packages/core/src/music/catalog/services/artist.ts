@@ -1,6 +1,6 @@
 import { err, ok, NotFoundError, ValidationError, ConflictError, type Result } from '../../../errors';
 import type { IArtistRepository } from '../repositories/artist';
-import type { IFileStorage } from '../../../platform/storage/repositories/storage';
+import type { IFileUploader } from '../../../platform/storage/repositories/storage';
 import type { Clock } from '../../../platform/ports/effects';
 import type { ArtistProfile, ArtistLink, ArtistVideo, ThemeTokens } from '../types/artist';
 
@@ -12,7 +12,7 @@ export interface ArtistServiceDeps {
   now: Clock;
   fonts?: { sans: readonly string[]; mono: readonly string[] };
   videoTitleResolver?: IVideoTitleResolver;
-  imageStorage?: IFileStorage;
+  imageStorage?: IFileUploader;
 }
 
 export interface ArtistImageInput {

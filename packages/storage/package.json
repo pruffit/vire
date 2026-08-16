@@ -1,0 +1,26 @@
+{
+  "name": "@vire/storage",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.726.0",
+    "@aws-sdk/s3-request-presigner": "^3.726.0",
+    "@smithy/node-http-handler": "^4.7.7",
+    "@vire/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@vire/config": "workspace:*",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.8"
+  }
+}
