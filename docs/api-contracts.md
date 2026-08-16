@@ -173,7 +173,7 @@ expect(ArtistDetailResponse.safeParse(await res.json()).success).toBe(true);
 | `**/stream/route.ts` | SSE-поток, не запрос-ответ |
 | `health/route.ts` | Служебный пинг, не ресурс |
 | `tracks/[id]/download` | Редирект на presigned URL, тела ответа нет |
-| `push/**`, `presave/**`, `party/**`, `realtime/**` | Точечный остаток волны 3, не переведён |
+| `presave/unsubscribe` | Редирект 303 на страницу подтверждения, тела ответа нет |
 
 `friends/**` из allowlist убран 16.08.2026: схемы в `packages/api-contracts/src/friends.ts`
 (`friendsResponseSchema`, `friendSearchResponseSchema`, `friendRequestBodySchema`), `since`
@@ -192,8 +192,15 @@ Allowlist не гниёт сам: гейт красный, если запись
 **64/123 на контрактах, 59 в allowlist (12 записей)**.
 
 Схемы точечных: `discovery-misc.ts` (поиск, присутствие, сессия подписи, «слушают сейчас»),
-`moderation.ts` (жалобы, обратная связь). Валидация входа в `reports`/`feedback` теперь
-берётся из контракта, а не дублируется в роуте — расходиться форме больше негде.
+`moderation.ts` (жалобы, обратная связь), `push.ts` (подписка web-push), `party.ts`
+(кандидаты для очереди вечеринки — размеченное объединение `VIRE`/`EXTERNAL`/`HINT`).
+Валидация входа в `reports`/`feedback`/`push` теперь берётся из контракта, а не дублируется
+в роуте — расходиться форме больше негде.
+
+**Итог 16.08.2026: 66/123 на контрактах, 57 в allowlist (9 записей).** В allowlist остались
+только группы с постоянной причиной: `admin/**` (backoffice), `dashboard/**` и `jam/**`
+(подпроекты), `keys/**` (E2EE), `webhooks/**` (форма провайдера), SSE-стримы, `health`
+и два редиректа без тела. «Точечных остатков волны 3» больше нет.
 
 `tracks/**` (`track-media.ts`): манифест, текст, моменты, настроения, счётчик слушателей,
 покупка. По ходу перевода нашлось расхождение — `POST /v1/tracks/{id}/purchase` мог отдать

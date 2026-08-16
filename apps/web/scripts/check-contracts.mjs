@@ -27,10 +27,7 @@ const ALLOWLIST = [
   { pattern: 'health/route.ts', reason: 'служебный пинг, не ресурс' },
   { pattern: '**/stream/route.ts', reason: 'SSE-поток, не запрос-ответ' },
   { pattern: 'tracks/[id]/download/route.ts', reason: 'редирект на presigned URL, тела ответа нет' },
-  { pattern: 'push/**', reason: 'точечный остаток волны 3, не переведён' },
-  { pattern: 'presave/**', reason: 'точечный остаток волны 3 (releases/[id]/presave уже на контрактах)' },
-  { pattern: 'party/**', reason: 'точечный остаток волны 3, не переведён' },
-  { pattern: 'realtime/**', reason: 'SSE + точечный остаток волны 3, не переведён' },
+  { pattern: 'presave/unsubscribe/route.ts', reason: 'редирект 303 на страницу подтверждения, тела ответа нет' },
 ];
 
 /** Конвертирует pattern (`*`, `**`) в RegExp. `[`/`]` в наших роутах литеральные — не char class. */
