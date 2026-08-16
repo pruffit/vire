@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, DrizzleSearchRepository } from '@vire/db';
 import { SearchService } from '@vire/core';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
+import type { SearchResponse } from '@vire/api-contracts';
 
 const DEFAULT_LIMIT = 4;
 const MAX_LIMIT = 20;
@@ -21,5 +22,7 @@ export async function GET(req: Request) {
 
   const service = new SearchService(new DrizzleSearchRepository(db));
   const result = await service.search(q, limit);
-  return NextResponse.json(result.ok ? result.value : { artists: [], releases: [], tracks: [] });
+  return NextResponse.json(
+    (result.ok ? result.value : { artists: [], releases: [], tracks: [] }) satisfies SearchResponse,
+  );
 }

@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getCaller } from '@/lib/caller';
 import { reportService } from '@/lib/reports';
 import { ValidationError } from '@vire/core';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
+import { createReportRequestSchema, type CreateReportResponse } from '@vire/api-contracts';
 
-const schema = z.object({
-  targetType: z.enum(['USER', 'MESSAGE']),
-  targetId: z.string().uuid(),
-  reason: z.string().min(1).max(500),
-});
+const schema = createReportRequestSchema;
 
 export async function POST(req: Request) {
   const caller = await getCaller();
@@ -33,5 +29,5 @@ export async function POST(req: Request) {
     const status = result.error instanceof ValidationError ? 422 : 409;
     return errorJson(result.error, status);
   }
-  return NextResponse.json(result.value);
+  return NextResponse.json(result.value satisfies CreateReportResponse);
 }

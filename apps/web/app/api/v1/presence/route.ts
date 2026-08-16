@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { recordSitePresence } from '@/lib/presence';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { verifySessionId, SESSION_ID_MAX_LEN } from '@/lib/session-signing';
+import type { PresenceResponse } from '@vire/api-contracts';
 
 /**
  * Heartbeat присутствия на сайте (шлёт SitePresence из layout с любой страницы).
@@ -26,8 +27,8 @@ export async function POST(req: Request) {
   }
   try {
     const online = await recordSitePresence(sessionId);
-    return NextResponse.json({ online });
+    return NextResponse.json({ online } satisfies PresenceResponse);
   } catch {
-    return NextResponse.json({ online: 0 });
+    return NextResponse.json({ online: 0 } satisfies PresenceResponse);
   }
 }

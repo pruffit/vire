@@ -26,16 +26,10 @@ const ALLOWLIST = [
   { pattern: 'webhooks/**', reason: 'форму задаёт провайдер (YooKassa), не мы' },
   { pattern: 'health/route.ts', reason: 'служебный пинг, не ресурс' },
   { pattern: '**/stream/route.ts', reason: 'SSE-поток, не запрос-ответ' },
-  { pattern: 'search/route.ts', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'tracks/[id]/download/route.ts', reason: 'редирект на presigned URL, тела ответа нет' },
-  { pattern: 'feedback/route.ts', reason: 'точечный остаток волны 3, не переведён' },
-  { pattern: 'reports/route.ts', reason: 'точечный остаток волны 3, не переведён' },
-  { pattern: 'session/route.ts', reason: 'точечный остаток волны 3, не переведён' },
-  { pattern: 'presence/route.ts', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'push/**', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'presave/**', reason: 'точечный остаток волны 3 (releases/[id]/presave уже на контрактах)' },
   { pattern: 'party/**', reason: 'точечный остаток волны 3, не переведён' },
-  { pattern: 'listening-now/route.ts', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'realtime/**', reason: 'SSE + точечный остаток волны 3, не переведён' },
 ];
 

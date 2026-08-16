@@ -173,7 +173,7 @@ expect(ArtistDetailResponse.safeParse(await res.json()).success).toBe(true);
 | `**/stream/route.ts` | SSE-поток, не запрос-ответ |
 | `health/route.ts` | Служебный пинг, не ресурс |
 | `tracks/[id]/download` | Редирект на presigned URL, тела ответа нет |
-| `search`, `feedback`, `reports`, `session`, `presence`, `push/**`, `presave/**`, `party/**`, `listening-now`, `realtime/**` | Точечный остаток волны 3, не переведён |
+| `push/**`, `presave/**`, `party/**`, `realtime/**` | Точечный остаток волны 3, не переведён |
 
 `friends/**` из allowlist убран 16.08.2026: схемы в `packages/api-contracts/src/friends.ts`
 (`friendsResponseSchema`, `friendSearchResponseSchema`, `friendRequestBodySchema`), `since`
@@ -187,8 +187,13 @@ expect(ArtistDetailResponse.safeParse(await res.json()).success).toBe(true);
 Allowlist не гниёт сам: гейт красный, если запись матчит роут, который **уже**
 импортирует контракты (запись пора убрать), или матчит **несуществующий** путь.
 На волне 3: 40/119 роутов `/api/v1` на контрактах, 79 — в allowlist (27 записей).
-На 16.08.2026 после волн 4/8 и перевода `friends/**`, `user/**`, `users/**`, `tracks/**`:
-**58/123 на контрактах, 65 в allowlist (18 записей)**.
+На 16.08.2026 после волн 4/8 и перевода `friends/**`, `user/**`, `users/**`, `tracks/**`,
+`search`, `presence`, `session`, `listening-now`, `feedback`, `reports`:
+**64/123 на контрактах, 59 в allowlist (12 записей)**.
+
+Схемы точечных: `discovery-misc.ts` (поиск, присутствие, сессия подписи, «слушают сейчас»),
+`moderation.ts` (жалобы, обратная связь). Валидация входа в `reports`/`feedback` теперь
+берётся из контракта, а не дублируется в роуте — расходиться форме больше негде.
 
 `tracks/**` (`track-media.ts`): манифест, текст, моменты, настроения, счётчик слушателей,
 покупка. По ходу перевода нашлось расхождение — `POST /v1/tracks/{id}/purchase` мог отдать

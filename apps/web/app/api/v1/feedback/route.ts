@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { sendMail } from '@/lib/mailer';
+import { feedbackRequestSchema, type OkResponse } from '@vire/api-contracts';
 
-const schema = z.object({
-  type: z.enum(['bug', 'idea', 'artist', 'other']),
-  message: z.string().min(10).max(2000),
-  page: z.string().max(200).optional(),
-  email: z.string().email().optional().or(z.literal('')),
-});
+const schema = feedbackRequestSchema;
 
 export async function POST(req: Request) {
   const rl = await rateLimit(clientKey(req, 'feedback'), 5, 3600);
@@ -55,5 +50,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Не удалось отправить сообщение' }, { status: 502 });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true } satisfies OkResponse);
 }
