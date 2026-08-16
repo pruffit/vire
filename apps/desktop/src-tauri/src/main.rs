@@ -7,7 +7,7 @@ use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
-use tauri_plugin_global_shortcut::{Code, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
 
 // Срез 0: оболочка грузит уже готовый веб-фронт по URL, нового UI нет.
 // devUrl/frontendDist в tauri.conf.json намеренно не используются — URL решается
@@ -25,12 +25,15 @@ fn main() {
     let play_pause = Shortcut::new(None, Code::MediaPlayPause);
     let media_next = Shortcut::new(None, Code::MediaTrackNext);
     let media_prev = Shortcut::new(None, Code::MediaTrackPrevious);
+    // Ctrl+Alt+V: verified empirically (cargo tauri dev) not to conflict with
+    // Windows/Chrome/VS Code bindings on this machine — registers and toggles cleanly.
+    let toggle_window = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyV);
 
     tauri::Builder::default()
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_shortcuts([play_pause, media_next, media_prev])
-                .expect("media key shortcut strings are valid")
+                .with_shortcuts([play_pause, media_next, media_prev, toggle_window])
+                .expect("shortcut strings are valid")
                 .with_handler(move |app, shortcut, event| {
                     if event.state() != ShortcutState::Pressed {
                         return;
@@ -42,18 +45,35 @@ fn main() {
                         call_bridge(&window, "next");
                     } else if shortcut == &media_prev {
                         call_bridge(&window, "prev");
+                    } else if shortcut == &toggle_window {
+                        if window.is_visible().unwrap_or(false) {
+                            let _ = window.hide();
+                        } else {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
                     }
                 })
                 .build(),
         )
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .setup(|app| {
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::External(shell_url().parse()?))
+            let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(shell_url().parse()?))
                 .title("VireMusic")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(960.0, 600.0)
                 .resizable(true)
                 .build()?;
+
+            // Крестик прячет в трей вместо закрытия — полный выход только через
+            // пункт трея «Выход» (app.exit(0) ниже).
+            let close_target = window.clone();
+            window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = close_target.hide();
+                }
+            });
 
             let show = MenuItem::with_id(app, "show", "Показать VireMusic", true, None::<&str>)?;
             let play_pause = MenuItem::with_id(app, "play_pause", "Play/Pause", true, None::<&str>)?;
