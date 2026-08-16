@@ -5,7 +5,7 @@ mod bridge;
 use bridge::call_bridge;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
 
@@ -21,6 +21,12 @@ fn shell_url() -> &'static str {
     }
 }
 
+// Общий show+focus для трея, хоткея и single-instance колбэка — не дублировать по местам.
+fn show_and_focus(window: &WebviewWindow) {
+    let _ = window.show();
+    let _ = window.set_focus();
+}
+
 fn main() {
     let play_pause = Shortcut::new(None, Code::MediaPlayPause);
     let media_next = Shortcut::new(None, Code::MediaTrackNext);
@@ -30,6 +36,13 @@ fn main() {
     let toggle_window = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyV);
 
     tauri::Builder::default()
+        // Плагин требует регистрации первым в цепочке builder'а (см. его README).
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                show_and_focus(&window);
+            }
+        }))
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_shortcuts([play_pause, media_next, media_prev, toggle_window])
@@ -49,8 +62,7 @@ fn main() {
                         if window.is_visible().unwrap_or(false) {
                             let _ = window.hide();
                         } else {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                            show_and_focus(&window);
                         }
                     }
                 })
@@ -110,10 +122,7 @@ fn main() {
                 .on_menu_event(move |app, event| {
                     let Some(window) = app.get_webview_window("main") else { return };
                     match event.id.as_ref() {
-                        "show" => {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
+                        "show" => show_and_focus(&window),
                         "play_pause" => call_bridge(&window, "togglePlay"),
                         "next" => call_bridge(&window, "next"),
                         "prev" => call_bridge(&window, "prev"),
@@ -136,8 +145,7 @@ fn main() {
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
                         if let Some(window) = tray.app_handle().get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                            show_and_focus(&window);
                         }
                     }
                 })
