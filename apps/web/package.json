@@ -61,7 +61,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "fake-indexeddb": "^6.0.0",
-    "impeccable": "2.3.2",
+    "impeccable": "3.6.0",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "typescript": "^5",
