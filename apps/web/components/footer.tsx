@@ -28,6 +28,7 @@ export async function Footer() {
             <FooterCol title={t('footer.platform')}>
               <FooterLink href="/artists">{t('footer.artists')}</FooterLink>
               <FooterLink href="/releases">{t('footer.releases')}</FooterLink>
+              <FooterLink href="/download">{t('footer.download')}</FooterLink>
               <FooterLink href="/about">{t('footer.about')}</FooterLink>
               <FooterLink href="/design">{t('footer.design')}</FooterLink>
               <li>

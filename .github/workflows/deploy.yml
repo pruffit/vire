@@ -172,19 +172,19 @@ jobs:
             apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
 
       # Стабильный (без версии) ключ — на него ссылается кнопка «Скачать» на /download,
-      # перезаписывается каждым тегом. Секретов S3_UPLOAD_* в репозитории ещё нет
-      # (заводятся вручную в GitHub → Settings → Secrets, см. docs/features/desktop-app.md) —
-      # шаг ожидаемо красный до этого момента, continue-on-error не валит остальной job.
+      # перезаписывается каждым тегом. Секреты S3_UPLOAD_* заведены (16.08.2026) — шаг
+      # больше не continue-on-error: молчаливый провал этого шага один раз уже случился
+      # (v1.51.0, невалидный --endpoint-url утонул в зелёном job'е) и не должен повториться.
       - name: Upload installer to MinIO (stable URL)
         shell: bash
-        continue-on-error: true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.S3_UPLOAD_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_UPLOAD_SECRET_KEY }}
+          S3_UPLOAD_ENDPOINT: ${{ secrets.S3_UPLOAD_ENDPOINT }}
         run: |
           aws s3 cp apps/desktop/src-tauri/target/release/bundle/nsis/VireMusic-Setup-x64.exe \
             s3://vire-stream/downloads/desktop/windows/VireMusic-Setup-x64.exe \
-            --endpoint-url "${{ secrets.S3_UPLOAD_ENDPOINT }}"
+            --endpoint-url "$S3_UPLOAD_ENDPOINT"
 
       # tauri-plugin-updater манифест: версия — тег без "v" (semver, как ждёт апдейтер),
       # signature — содержимое .sig рядом с инсталлятором (createUpdaterArtifacts в
@@ -206,14 +206,14 @@ jobs:
 
       - name: Upload updater manifest to MinIO (stable URL)
         shell: bash
-        continue-on-error: true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.S3_UPLOAD_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_UPLOAD_SECRET_KEY }}
+          S3_UPLOAD_ENDPOINT: ${{ secrets.S3_UPLOAD_ENDPOINT }}
         run: |
           aws s3 cp latest.json \
             s3://vire-stream/downloads/desktop/windows/latest.json \
-            --endpoint-url "${{ secrets.S3_UPLOAD_ENDPOINT }}"
+            --endpoint-url "$S3_UPLOAD_ENDPOINT"
 
   build-and-push:
     needs: gates
