@@ -82,7 +82,9 @@ export function ListenerSidebar({
   return (
     <aside
       className={cn(
-        'hidden shrink-0 flex-col overflow-hidden border-r border-border transition-[width] duration-200 ease-soft md:flex',
+        // overflow-clip, не hidden: hidden оставляет панель программно-скроллируемой,
+        // и фокус на элементе за краем уводит её вбок без возможности вернуть.
+        'hidden shrink-0 flex-col overflow-clip border-r border-border transition-[width] duration-200 ease-soft md:flex',
         collapsed ? 'w-[72px]' : 'w-64',
       )}
     >

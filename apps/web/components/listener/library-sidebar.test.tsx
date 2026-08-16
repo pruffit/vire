@@ -43,3 +43,20 @@ describe('LibrarySidebar — подписи строк', () => {
     expect(screen.queryByTitle(`${friendsLabel} · ${friendsLabel}`)).toBeNull();
   });
 });
+
+describe('LibrarySidebar — скролл', () => {
+  it('список библиотеки клипает ось X: рядом с overflow-y-auto она иначе считается auto и даёт лишнюю полосу', () => {
+    const { container } = render(<LibrarySidebar {...BASE_PROPS} />);
+    const scrollPane = container.querySelector('.overflow-y-auto');
+
+    expect(scrollPane).toBeTruthy();
+    expect(scrollPane?.className).toContain('overflow-x-clip');
+  });
+
+  it('то же в свёрнутом рейле — там бейджи и ring вылезают за край сильнее всего', () => {
+    const { container } = render(<LibrarySidebar {...BASE_PROPS} incomingCount={3} collapsed />);
+    const scrollPane = container.querySelector('.overflow-y-auto');
+
+    expect(scrollPane?.className).toContain('overflow-x-clip');
+  });
+});

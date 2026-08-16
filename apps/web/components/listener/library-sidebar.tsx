@@ -87,7 +87,9 @@ export function LibrarySidebar({
       ) : (
         <div
           className={cn(
-            'flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-2 [scrollbar-width:thin]',
+            // overflow-x-clip обязателен рядом с overflow-y-auto: иначе ось X считается
+            // как auto, и вылезающие за край бейджи/ring дают горизонтальную полосу.
+            'flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-clip pb-2 [scrollbar-width:thin]',
             collapsed ? 'items-center px-2' : 'px-1.5',
           )}
         >

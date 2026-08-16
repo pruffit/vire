@@ -8,6 +8,7 @@
     "./signing": "./src/platform/util/signing.ts",
     "./notifications/unsubscribe": "./src/platform/notifications/unsubscribe.ts",
     "./notifications/registry": "./src/platform/notifications/registry.ts",
+    "./identity/device-tokens": "./src/platform/identity/device-tokens.ts",
     "./access": "./src/platform/access/index.ts"
   },
   "scripts": {
