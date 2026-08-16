@@ -62,7 +62,7 @@ export function JamAddPanel({ onAdd, suggestions = [], autoFocus = true, addedTr
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground py-1"
         />
       </div>
-      <div className={cn('space-y-1 pb-1', dense ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-72 overflow-y-auto')}>
+      <div className={cn('space-y-1 pb-1', dense ? 'flex-1 min-h-0 overflow-y-auto overflow-x-clip' : 'max-h-72 overflow-y-auto overflow-x-clip')}>
         {isSuggesting && list.length > 0 && (
           <p className="px-3 pb-1 pt-1 label-mono text-muted-foreground">{t('fromLiked')}</p>
         )}

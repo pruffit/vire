@@ -309,7 +309,7 @@ export function ChatThread({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <div ref={scrollRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4">
+        <div ref={scrollRef} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto overflow-x-clip px-3 py-4 sm:px-4">
           {blocked ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
               <Icon name={blocked.icon} size={28} className="text-foreground/25" />

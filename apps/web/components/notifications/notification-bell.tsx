@@ -92,7 +92,7 @@ export function NotificationBell({ initialUnread = 0 }: { initialUnread?: number
         </button>
       )}
     >
-      <div className="max-h-[70vh] overflow-y-auto">
+      <div className="max-h-[70vh] overflow-y-auto overflow-x-clip">
         {items.length === 0 ? (
           <p className="px-3 py-6 text-center text-sm text-muted-foreground">{t('empty')}</p>
         ) : (

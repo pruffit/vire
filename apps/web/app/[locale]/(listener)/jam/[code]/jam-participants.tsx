@@ -40,7 +40,7 @@ export function JamParticipants({ participants, variant = 'popover' }: Props) {
         <p className="flex items-center gap-1.5 px-2 pt-1 pb-2 label-mono text-muted-foreground">
           <Icon name="users" size={12} /> {t('title')} <span className="tabular-nums">· {participants.length}</span>
         </p>
-        <div className="max-h-64 overflow-y-auto">
+        <div className="max-h-64 overflow-y-auto overflow-x-clip">
           {participants.map((p) => (
             <ParticipantRow key={p.id} participant={p} />
           ))}
@@ -71,7 +71,7 @@ export function JamParticipants({ participants, variant = 'popover' }: Props) {
         </button>
       )}
     >
-      <div className="max-h-72 overflow-y-auto py-1">
+      <div className="max-h-72 overflow-y-auto overflow-x-clip py-1">
         {participants.map((p) => (
           <ParticipantRow key={p.id} participant={p} />
         ))}

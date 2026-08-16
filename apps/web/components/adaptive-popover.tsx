@@ -50,7 +50,7 @@ export function AdaptivePopover({
             {title}
           </p>
         )}
-        <div className="flex-1 min-h-0 overflow-y-auto pb-2">{children}</div>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-clip pb-2">{children}</div>
       </Sheet>
     </div>
   );

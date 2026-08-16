@@ -286,7 +286,7 @@ export function TrackEditForm({
             placeholder="Поиск жанра…"
             className={inputCls}
           />
-          <div className="flex flex-col gap-3 max-h-72 overflow-y-auto">
+          <div className="flex flex-col gap-3 max-h-72 overflow-y-auto overflow-x-clip">
             {genreMatches ? (
               genreMatches.length === 0 ? (
                 <span className="font-mono text-xs text-foreground/30 py-2">Ничего не найдено</span>

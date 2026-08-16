@@ -38,7 +38,7 @@ export function QueuePanel({ onJump }: { onJump: () => void }) {
 
   return (
     <div className="w-full">
-      <div className="max-h-[46vh] overflow-y-auto overscroll-contain min-h-0 -mx-1 px-1">
+      <div className="max-h-[46vh] overflow-y-auto overflow-x-clip overscroll-contain min-h-0 -mx-1 px-1">
         <Reorder.Group
           as="div"
           axis="y"

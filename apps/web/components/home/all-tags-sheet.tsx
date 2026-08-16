@@ -57,7 +57,7 @@ export function AllTagsSheet({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-5 space-y-5" data-scroll-area>
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-clip overscroll-contain px-5 pb-5 space-y-5" data-scroll-area>
         {filtered.length === 0 && (
           <p className="py-6 text-center text-sm text-muted-foreground">{t('empty')}</p>
         )}

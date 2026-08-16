@@ -63,7 +63,7 @@ export function FullscreenPlayer({
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0, bottom: 0.7 }}
       onDragEnd={handleDragEnd}
-      className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto px-6 py-8 sm:py-12"
+      className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto overflow-x-clip px-6 py-8 sm:py-12"
       style={
         {
           '--artist-accent': track.accentColor ?? undefined,

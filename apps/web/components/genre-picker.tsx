@@ -177,7 +177,7 @@ export function GenrePicker({ trackId, initial, suggestions: initialSuggestions 
         className="w-full min-w-0 px-3 py-1.5 rounded-md bg-foreground/5 border border-foreground/10 text-xs font-mono placeholder:text-foreground/35 focus:outline-none focus:ring-1 focus:ring-ring pointer-coarse:min-h-11"
       />
 
-      <div className="max-h-64 overflow-y-auto pr-1 space-y-4 [scrollbar-width:thin]">
+      <div className="max-h-64 overflow-y-auto overflow-x-clip pr-1 space-y-4 [scrollbar-width:thin]">
         {matches ? (
           matches.length === 0 ? (
             <p className="text-xs font-mono text-foreground/30 py-2">{t('noResults')}</p>

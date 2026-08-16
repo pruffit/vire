@@ -332,7 +332,7 @@ export function PlaylistSettingsMenu({ playlist, collaborators: initialCollabora
                     </div>
 
                     {collaborators.length > 0 && (
-                      <div className="max-h-40 space-y-0.5 overflow-y-auto">
+                      <div className="max-h-40 space-y-0.5 overflow-y-auto overflow-x-clip">
                         {collaborators.map((c) => (
                           <div key={c.userId} className="flex items-center gap-2 px-1 py-1">
                             <ChatAvatar name={c.name} image={c.image} size={22} />

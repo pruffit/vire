@@ -122,7 +122,7 @@ export function PlaylistAddPanel({ playlistId, existingIds, onAdded, onAddFailed
         <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('addPanel.searchPlaceholder')}
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground py-1" />
       </div>
-      <div className="max-h-80 overflow-y-auto space-y-3 pb-1">
+      <div className="max-h-80 overflow-y-auto overflow-x-clip space-y-3 pb-1">
         {results !== null ? (
           results.length
             ? results.map((t) => <TrackRow key={t.id} track={t} added={added} onAdd={add} />)

@@ -50,7 +50,7 @@ export function LyricsScroll({ lines, variant = 'player', trackId, onSeekTo = co
   return (
     <div
       ref={containerRef}
-      className="relative mt-3 max-h-[40vh] md:max-h-64 overflow-y-auto overscroll-contain touch-pan-y no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)]"
+      className="relative mt-3 max-h-[40vh] md:max-h-64 overflow-y-auto overflow-x-clip overscroll-contain touch-pan-y no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)]"
     >
       {/* паддинг на спейсере, не на контейнере — иначе крайние строки не доскролливаются
           в центр и попадают в фейд маски */}

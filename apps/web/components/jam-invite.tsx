@@ -83,7 +83,7 @@ export function JamInvite({ code }: Props) {
         </button>
       )}
     >
-      <div className="max-h-72 w-full overflow-y-auto py-1">
+      <div className="max-h-72 w-full overflow-y-auto overflow-x-clip py-1">
         {loading ? (
           <p className="px-3 py-4 text-center text-sm text-muted-foreground">{t('loading')}</p>
         ) : !friends || friends.length === 0 ? (

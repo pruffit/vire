@@ -268,7 +268,7 @@ export function PartyAddPanel({ onAddVire, addExternal, suggestions = [], autoFo
         </button>
       </form>
 
-      <div className={cn('space-y-1 pb-1', dense ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-72 overflow-y-auto')}>
+      <div className={cn('space-y-1 pb-1', dense ? 'flex-1 min-h-0 overflow-y-auto overflow-x-clip' : 'max-h-72 overflow-y-auto overflow-x-clip')}>
         {postCandidates && (
           <div className="flex items-center justify-between px-3 pb-1">
             <SectionTitle>{idleTitle}</SectionTitle>

@@ -143,7 +143,7 @@ export function CommandPalette() {
               <kbd className="text-[10px] font-mono text-muted-foreground border border-border rounded px-1.5 py-0.5">esc</kbd>
             </div>
 
-            <div className="max-h-[52vh] overflow-y-auto py-1.5" data-scroll-area>
+            <div className="max-h-[52vh] overflow-y-auto overflow-x-clip py-1.5" data-scroll-area>
               {items.length === 0 ? (
                 <p className="px-4 py-6 text-center text-sm text-muted-foreground">
                   {query.trim().length >= 2 ? t('commandPalette.nothingFound') : t('commandPalette.startTyping')}

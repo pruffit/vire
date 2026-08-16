@@ -190,7 +190,7 @@ export function Select({
                   </div>
                 )}
 
-                <div className="max-h-64 overflow-y-auto p-1 [scrollbar-width:thin]">
+                <div className="max-h-64 overflow-y-auto overflow-x-clip p-1 [scrollbar-width:thin]">
                   {filtered ? (
                     filtered.length === 0 ? (
                       <p className="px-2 py-3 text-xs text-foreground/30">{t('noResults')}</p>

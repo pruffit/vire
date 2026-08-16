@@ -39,6 +39,29 @@ describe('app-shell layout invariants', () => {
     expect(offenders).toEqual([]);
   });
 
+  // Регрессия (16.08.2026, полосы прокрутки в сайдбаре): по спеке `overflow-x: visible`
+  // рядом с `overflow-y: auto` вычисляется в auto, и любой вылезающий за край элемент
+  // (бейдж на absolute, ring, тень) рисует лишнюю горизонтальную полосу.
+  it('у каждой вертикальной скролл-области задана и ось X', () => {
+    const offenders: string[] = [];
+    // components/ тоже: большинство скролл-панелей (меню, поповеры, очередь плеера) там.
+    // Тесты исключены — они ищут эти же классы в селекторах.
+    const files = [...collectTsx(APP_DIR), ...collectTsx(path.join(APP_DIR, '..', 'components'))]
+      .filter((file) => !file.endsWith('.test.tsx'));
+
+    for (const file of files) {
+      stripComments(readFileSync(file, 'utf8'))
+        .split('\n')
+        .forEach((line, i) => {
+          if (!/overflow-y-auto/.test(line)) return;
+          if (/overflow-x-(clip|auto|hidden|scroll)/.test(line)) return;
+          offenders.push(`${path.relative(APP_DIR, file)}:${i + 1}`);
+        });
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
   it('корневой layout задаёт app-shell: фиксированное окно + одна скролл-область', () => {
     const layout = readFileSync(path.join(APP_DIR, 'layout.tsx'), 'utf8');
     // <body> фиксированной высоты без скролла документа

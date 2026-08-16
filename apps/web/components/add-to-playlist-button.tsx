@@ -133,7 +133,7 @@ export function AddToPlaylistButton({ trackId, variant = 'platform' }: Props) {
         </div>
       )}
 
-      <div className={dense ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-40 overflow-y-auto'}>
+      <div className={dense ? 'flex-1 min-h-0 overflow-y-auto overflow-x-clip' : 'max-h-40 overflow-y-auto overflow-x-clip'}>
         {playlists.map((p) => {
           const inIt = inPlaylists.has(p.id);
           return (

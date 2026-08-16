@@ -14,7 +14,7 @@ export function MessagesShell({ sidebar, children }: { sidebar: ReactNode; child
     <div className="flex h-full min-h-0 flex-1 flex-col md:flex-row">
       <aside
         className={cn(
-          'min-h-0 flex-col overflow-y-auto border-border/40 md:flex md:w-80 md:flex-none md:border-r xl:w-96',
+          'min-h-0 flex-col overflow-y-auto overflow-x-clip border-border/40 md:flex md:w-80 md:flex-none md:border-r xl:w-96',
           isIndex ? 'flex flex-1' : 'hidden',
         )}
       >

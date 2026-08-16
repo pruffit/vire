@@ -108,7 +108,7 @@ export function PlaylistPeekSheet({ playlistId, title, trackCount, covers, open,
         </Link>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 pb-3" data-scroll-area>
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-clip overscroll-contain px-2 pb-3" data-scroll-area>
         {tracks === null && loading && (
           <div className="py-8 grid place-items-center">
             <span className="w-6 h-6 border-2 border-foreground/30 border-t-transparent rounded-full animate-spin" />

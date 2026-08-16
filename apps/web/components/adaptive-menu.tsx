@@ -57,7 +57,7 @@ export function AdaptiveMenu({ open, onOpenChange, items, trigger, title, align,
             {title}
           </p>
         )}
-        <div role="menu" className="flex-1 min-h-0 overflow-y-auto pb-2">
+        <div role="menu" className="flex-1 min-h-0 overflow-y-auto overflow-x-clip pb-2">
           {items.map((it, i) => (
             <button
               key={i}

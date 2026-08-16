@@ -279,7 +279,7 @@ export function PartyRoom({ code, title, hostDisplayName, initialEnded, isLogged
         )}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-clip">
         <PageContainer as="div" variant="compact">
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">
             <div className="min-w-0 space-y-4">

@@ -81,7 +81,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         )}
       </aside>
 
-      <main data-scroll-area className="flex-1 min-w-0 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
+      {/* ось X клипаем только на md+: на узком экране широкие таблицы дашборда должны
+      прокручиваться, а без явной оси X она считается auto и даёт лишнюю полосу */}
+  <main data-scroll-area className="flex-1 min-w-0 overflow-y-auto md:overflow-x-clip px-4 py-6 md:px-8 md:py-8">
         {children}
       </main>
     </div>
