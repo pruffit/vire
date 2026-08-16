@@ -26,8 +26,8 @@ async function requireAction(permission: Permission) {
   if (!session?.user?.id || !can(session.user, permission)) {
     throw new Error('Forbidden');
   }
-  const audit = makeAudit({ id: session.user.id, role: session.user.role }, permission);
-  return { session, audit };
+  const actor = { id: session.user.id, role: session.user.role };
+  return { session, actor, audit: makeAudit(actor, permission) };
 }
 
 function trackService() {
@@ -62,9 +62,9 @@ export async function actionSetArtistActive(artistProfileId: string, isActive: b
 }
 
 export async function actionSetFeatureFlag(key: string, enabled: boolean): Promise<{ error?: string }> {
-  const { session, audit } = await requireAction('admin.flags.manage');
+  const { actor, audit } = await requireAction('admin.flags.manage');
   if (!isKnownFeatureFlag(key)) return { error: 'Неизвестный флаг' };
-  await featureFlagService().setEnabled(key, enabled, session.user!.id!);
+  await featureFlagService().setEnabled(key, enabled, actor.id);
   await audit('flag.set', { type: 'flag', id: key }, { enabled });
   revalidatePath('/admin/flags');
   return {};

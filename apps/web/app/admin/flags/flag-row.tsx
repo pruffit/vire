@@ -24,14 +24,19 @@ export function FlagRow({ flag, canMutate }: { flag: Flag; canMutate: boolean })
     const previous = enabled;
     setEnabled(next);
     start(async () => {
-      const res = await actionSetFeatureFlag(flag.key, next);
-      if (res?.error) {
+      try {
+        const res = await actionSetFeatureFlag(flag.key, next);
+        if (res?.error) {
+          setEnabled(previous);
+          toast.error(res.error);
+          return;
+        }
+        toast(next ? 'Флаг включён' : 'Флаг выключен');
+        router.refresh();
+      } catch {
         setEnabled(previous);
-        toast.error(res.error);
-        return;
+        toast.error('Не удалось переключить флаг');
       }
-      toast(next ? 'Флаг включён' : 'Флаг выключен');
-      router.refresh();
     });
   }
 

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { notificationTargetOf } from '@vire/core';
+// субпуть: barrel тянет в клиентский бандл всё ядро, реестру достаточно своего модуля
+import { notificationTargetOf } from '@vire/core/notifications/registry';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { Icon } from '@/components/icon';

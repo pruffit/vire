@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./signing": "./src/platform/util/signing.ts",
     "./notifications/unsubscribe": "./src/platform/notifications/unsubscribe.ts",
+    "./notifications/registry": "./src/platform/notifications/registry.ts",
     "./access": "./src/platform/access/index.ts"
   },
   "scripts": {

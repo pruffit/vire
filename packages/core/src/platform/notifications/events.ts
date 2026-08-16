@@ -25,8 +25,9 @@ export interface ExternalNotifyEventDef {
   debounce?: 'conversation';
 }
 
-async function actorLabel(locale: Locale, actorName: string | null): Promise<string> {
-  const t = await getTranslator(locale, 'email');
+type Translator = Awaited<ReturnType<typeof getTranslator>>;
+
+function actorLabel(t: Translator, actorName: string | null): string {
   return actorName ?? t('someone');
 }
 
@@ -42,7 +43,7 @@ export const EXTERNAL_NOTIFY_EVENTS: Record<ExternalNotifyKind, ExternalNotifyEv
       const t = await getTranslator(ctx.locale, 'email');
       return {
         title: t('push.friendRequest.title'),
-        body: t('push.friendRequest.body', { name: await actorLabel(ctx.locale, ctx.actorName) }),
+        body: t('push.friendRequest.body', { name: actorLabel(t, ctx.actorName) }),
         url: `${ctx.appUrl}${localizedPath(ctx.locale, '/friends')}`,
         tag: `friend-request:${ctx.actorId}`,
       };
@@ -59,7 +60,7 @@ export const EXTERNAL_NOTIFY_EVENTS: Record<ExternalNotifyKind, ExternalNotifyEv
       const t = await getTranslator(ctx.locale, 'email');
       return {
         title: t('push.chatMessage.title'),
-        body: t('push.chatMessage.body', { name: await actorLabel(ctx.locale, ctx.actorName) }),
+        body: t('push.chatMessage.body', { name: actorLabel(t, ctx.actorName) }),
         url: `${ctx.appUrl}${localizedPath(ctx.locale, '/messages')}`,
         tag: ctx.conversationId ?? 'chat',
       };

@@ -14,6 +14,14 @@ Realtime-инкремент через тот же SSE, что и чат. Час
 уведомления НЕ пишутся — у чата свой per-conversation unread (иначе строка на каждое
 сообщение = шум).
 
+**Реестр типов** (волна 7). Колонка `type` — `text`, а не enum: набор типов держит реестр
+`NOTIFICATION_TYPES` (`packages/core/src/platform/notifications/registry.ts`), где у каждого
+типа есть `target` (`actor` | `jam` | `playlist`) — из него колокольчик строит ссылку.
+Новый тип = запись в реестре + ключ `social.notifications.types.<ID>` в словарях; миграция
+БД и правка клиентов не нужны. `NotificationService.notify` отклоняет тип вне реестра
+(иначе в text-колонку молча уехал бы неотображаемый тип), а контракт ответа
+(`notificationTypeSchema`) намеренно открытый — клиент обязан пережить незнакомый тип.
+
 ## Отношение к seen-бейджу `/friends`
 Оба оставлены, они про разное: seen-бейдж (`users.friend_requests_seen_at`) — счётчик
 непросмотренных PENDING-заявок на вкладке «Друзья»; колокольчик — общий инбокс (заявки +
@@ -22,8 +30,9 @@ Realtime-инкремент через тот же SSE, что и чат. Час
 ## Где код
 | Слой | Путь |
 |---|---|
-| Схема | `packages/db/src/schema/notifications.ts` (`notifications` + enum `notification_type`) |
-| Миграция | `packages/db/src/migrations/0039_long_dakota_north.sql` |
+| Схема | `packages/db/src/schema/notifications.ts` (`notifications`, `type` — `text`) |
+| Миграция | `packages/db/src/migrations/0039_long_dakota_north.sql`, `0053_misty_northstar.sql` (enum → text) |
+| Реестр типов | `packages/core/src/platform/notifications/registry.ts` (`NOTIFICATION_TYPES`, `notificationTargetOf`) |
 | Запросы | `packages/db/src/queries/notifications.ts` (`insertNotification`/`listNotifications`/`countUnreadNotifications`/`markAllNotificationsRead`/`markNotificationRead`) |
 | Порт+репо | `packages/core/src/platform/notifications/repositories/notification.ts`, `packages/db/src/repositories/notification.ts` |
 | Сервис | `packages/core/src/platform/notifications/services/notification.ts` — `NotificationService` (`notify`/`list`/`countUnread`/`markAllRead`/`markRead`); `notify` пишет строку и публикует realtime-событие через порт `RealtimePublisher` |
@@ -46,6 +55,10 @@ Realtime-инкремент через тот же SSE, что и чат. Час
 - **Producer** — `FriendshipService.request` и `ChatService.send` после успешной записи кладут
   джобу `ExternalNotifyJobData` в очередь через порт `IExternalNotifyQueue`
   (`packages/core/src/platform/notifications/ports/external-notify.ts`); обёртка в `apps/web/lib/queue.ts`.
+- **Реестр событий** (волна 7) — `EXTERNAL_NOTIFY_EVENTS`
+  (`packages/core/src/platform/notifications/events.ts`): по каждому `kind` объявлены билдер
+  письма, билдер пуша и политика дебаунса. Воркер не ветвится по `kind` — берёт определение
+  и шлёт по разрешённым каналам; новое событие = запись в реестре.
 - **Диспетчер** — `apps/worker/src/workers/notify-external.worker.ts`, решение «слать ли по
   каналу» — чистая функция `decideExternalDelivery` (`packages/core/src/platform/notifications/services/external-delivery.ts`):
   1. **Presence-гард** — получатель онлайн (Redis site-presence, ~40с окно) → оба канала
@@ -59,7 +72,9 @@ Realtime-инкремент через тот же SSE, что и чат. Час
   («Новое сообщение от X»), без текста сообщения — сервер намеренно остаётся слепым к содержимому
   (задел под грядущий E2EE чата, чтобы не строить то, что придётся выкидывать).
 - **Email** — Brevo HTTP API (тонкий вызов из воркера, `apps/worker/src/lib/brevo.ts`), шаблоны
-  `friendRequestEmail`/`chatMessageEmail` в `@vire/core`. Ссылка «отписаться» в футере —
+  `friendRequestEmail`/`chatMessageEmail` в `@vire/core` поверх общей оболочки `emailShell`
+  (одна вёрстка на все транзакционные письма платформы, включая релиз, пресейв и падение
+  транскодинга). Ссылка «отписаться» в футере —
   HMAC-подписанный линк (`signNotifyUnsub` из `@vire/core/notifications/unsubscribe`, секрет
   `LINK_SIGNING_SECRET`/`AUTH_SECRET`), без таблицы токенов.
   - `GET /api/v1/notifications/unsubscribe` не мутирует (RFC 8058 — префетч/сканер почтового
