@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getCaller } from '@/lib/caller';
 import {
   updateUserName,
@@ -11,30 +10,20 @@ import {
   updateUserLastfmUsername,
   updateUserLocale,
 } from '@vire/db';
-import { LOCALES } from '@vire/i18n/config';
 import { uploadToStream } from '@/lib/s3';
 import { validateImageUpload, AVATAR_POLICY } from '@/lib/image';
-
-const LASTFM_USERNAME_RE = /^[a-zA-Z0-9_.-]{2,64}$/;
-
-const schema = z
-  .object({
-    name: z.string().trim().min(1).max(50).optional(),
-    socialVisibility: z.enum(['FRIENDS', 'PRIVATE']).optional(),
-    discoverable: z.boolean().optional(),
-    notifyEmail: z.boolean().optional(),
-    notifyPush: z.boolean().optional(),
-    lastfmUsername: z.string().regex(LASTFM_USERNAME_RE).max(64).nullable().optional(),
-    locale: z.enum(LOCALES).optional(),
-  })
-  .refine((d) => Object.values(d).some((v) => v !== undefined), { message: 'Nothing to update' });
+import {
+  updateProfileRequestSchema,
+  type UpdateProfileResponse,
+  type AvatarResponse,
+} from '@vire/api-contracts';
 
 export async function PATCH(req: Request) {
   const caller = await getCaller();
   if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json().catch(() => null);
-  const parsed = schema.safeParse(body);
+  const parsed = updateProfileRequestSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
 
   const { name, socialVisibility, discoverable, notifyEmail, notifyPush, lastfmUsername, locale } = parsed.data;
@@ -47,7 +36,7 @@ export async function PATCH(req: Request) {
   if (locale !== undefined) await updateUserLocale(caller.id, locale);
 
   return NextResponse.json({
-    ok: true,
+    ok: true as const,
     ...(name !== undefined ? { name } : {}),
     ...(socialVisibility !== undefined ? { socialVisibility } : {}),
     ...(discoverable !== undefined ? { discoverable } : {}),
@@ -55,7 +44,7 @@ export async function PATCH(req: Request) {
     ...(notifyPush !== undefined ? { notifyPush } : {}),
     ...(lastfmUsername !== undefined ? { lastfmUsername } : {}),
     ...(locale !== undefined ? { locale } : {}),
-  });
+  } satisfies UpdateProfileResponse);
 }
 
 // Загрузка / удаление собственного аватара (multipart: avatar | removeAvatar=1)
@@ -72,7 +61,7 @@ export async function POST(req: Request) {
 
   if (formData.get('removeAvatar') === '1') {
     await updateUserImage(caller.id, null);
-    return NextResponse.json({ ok: true, image: null });
+    return NextResponse.json({ ok: true, image: null } satisfies AvatarResponse);
   }
 
   const avatar = formData.get('avatar');
@@ -88,5 +77,5 @@ export async function POST(req: Request) {
   const image = `${url}?v=${Date.now()}`;
   await updateUserImage(caller.id, image);
 
-  return NextResponse.json({ ok: true, image });
+  return NextResponse.json({ ok: true, image } satisfies AvatarResponse);
 }

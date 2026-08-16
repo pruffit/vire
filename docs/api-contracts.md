@@ -172,17 +172,22 @@ expect(ArtistDetailResponse.safeParse(await res.json()).success).toBe(true);
 | `webhooks/**` | Форму задаёт провайдер (YooKassa), не мы |
 | `**/stream/route.ts` | SSE-поток, не запрос-ответ |
 | `health/route.ts` | Служебный пинг, не ресурс |
-| `search`, `tracks/**` (кроме `like`), `user/**`, `users/**`, `feedback`, `reports`, `session`, `presence`, `push/**`, `presave/**`, `party/**`, `listening-now`, `realtime/**` | Точечный остаток волны 3, не переведён |
+| `search`, `tracks/**` (кроме `like`), `feedback`, `reports`, `session`, `presence`, `push/**`, `presave/**`, `party/**`, `listening-now`, `realtime/**` | Точечный остаток волны 3, не переведён |
 
 `friends/**` из allowlist убран 16.08.2026: схемы в `packages/api-contracts/src/friends.ts`
 (`friendsResponseSchema`, `friendSearchResponseSchema`, `friendRequestBodySchema`), `since`
 маппится в ISO в роуте — DTO-граница соблюдена, contract-тесты в `route.test.ts`.
 
+`user/**` и `users/**` — там же: `user-profile.ts` (`updateProfileRequestSchema`,
+`updateProfileResponseSchema`, `avatarResponseSchema`). Ответ PATCH намеренно содержит
+**только применённые поля** — это зафиксировано схемой и тестом, иначе клиент решит,
+что неотправленные настройки сброшены.
+
 Allowlist не гниёт сам: гейт красный, если запись матчит роут, который **уже**
 импортирует контракты (запись пора убрать), или матчит **несуществующий** путь.
 На волне 3: 40/119 роутов `/api/v1` на контрактах, 79 — в allowlist (27 записей).
-На 16.08.2026 после волн 4/8 и перевода `friends/**`: **50/123 на контрактах, 73 в allowlist
-(26 записей)**.
+На 16.08.2026 после волн 4/8 и перевода `friends/**`, `user/**`, `users/**`:
+**52/123 на контрактах, 71 в allowlist (24 записи)**.
 
 ---
 

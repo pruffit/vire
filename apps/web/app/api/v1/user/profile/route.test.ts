@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { updateProfileResponseSchema, avatarResponseSchema } from '@vire/api-contracts';
 
 const {
   updateUserName,
@@ -236,5 +237,28 @@ describe('POST /api/v1/user/profile', () => {
     const body = await res.json();
     expect(body.image).toMatch(/^https:\/\/cdn\.example\.com\/avatars\/users\/u1\.png\?v=\d+$/);
     expect(updateUserImage).toHaveBeenCalledWith('u1', body.image);
+    expect(avatarResponseSchema.safeParse(body).success).toBe(true);
+  });
+});
+
+describe('контракт ответов профиля', () => {
+  it('PATCH возвращает только применённые поля и проходит схему', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+
+    const body = await (await PATCH(patchReq({ name: 'Аня', locale: 'en' }))).json();
+
+    expect(updateProfileResponseSchema.safeParse(body).success).toBe(true);
+    expect(body).toEqual({ ok: true, name: 'Аня', locale: 'en' });
+    // поля, которых не было в запросе, не приходят: иначе клиент решит, что их сбросили
+    expect(body).not.toHaveProperty('notifyEmail');
+  });
+
+  it('удаление аватара отдаёт image: null по контракту', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+
+    const body = await (await POST(postReq({ removeAvatar: '1' }))).json();
+
+    expect(avatarResponseSchema.safeParse(body).success).toBe(true);
+    expect(body.image).toBeNull();
   });
 });

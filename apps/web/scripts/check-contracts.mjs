@@ -34,8 +34,6 @@ const ALLOWLIST = [
   { pattern: 'tracks/[id]/moments/route.ts', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'tracks/[id]/moods/route.ts', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'tracks/[id]/purchase/route.ts', reason: 'точечный остаток волны 3, не переведён' },
-  { pattern: 'user/**', reason: 'точечный остаток волны 3, не переведён' },
-  { pattern: 'users/**', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'feedback/route.ts', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'reports/route.ts', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'session/route.ts', reason: 'точечный остаток волны 3, не переведён' },
