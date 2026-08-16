@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "title": "Download VireMusic",
+    "description": "The VireMusic desktop app for Windows — the same player, a system tray, and OS media keys. macOS, Linux, and mobile clients are in development."
+  },
+  "hero": {
+    "badge": "Desktop app",
+    "title": "VireMusic on your computer",
+    "subtitle": "A native window, system tray, Play/Pause/Next/Previous media keys, and a \"Now Playing\" widget — the same music as in your browser."
+  },
+  "platforms": {
+    "windows": {
+      "title": "Windows",
+      "text": "An .exe installer, x64. Requires Windows 10 or later.",
+      "cta": "Download for Windows",
+      "meta": "VireMusic-Setup-x64.exe"
+    },
+    "macos": {
+      "title": "macOS",
+      "text": "A Mac build is in development.",
+      "badge": "Coming soon"
+    },
+    "linux": {
+      "title": "Linux",
+      "text": "A Linux build is in development.",
+      "badge": "Coming soon"
+    },
+    "ios": {
+      "title": "iOS",
+      "text": "A mobile app is on the backlog, not the top priority right now.",
+      "badge": "Coming soon"
+    },
+    "android": {
+      "title": "Android",
+      "text": "A mobile app is on the backlog, not the top priority right now.",
+      "badge": "Coming soon"
+    }
+  },
+  "pwa": {
+    "title": "Available today — a web app",
+    "text": "While there's no native client for your platform yet, you can install VireMusic as a PWA right from your browser: its own icon, a separate window, and offline track downloads.",
+    "cta": "Install as a web app"
+  },
+  "banner": {
+    "text": "Get VireMusic for Windows — a native app with a system tray and media keys",
+    "cta": "Download",
+    "closeAria": "Close"
+  }
+}

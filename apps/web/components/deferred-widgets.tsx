@@ -11,6 +11,10 @@ const CookieBanner = dynamic(() => import('./cookie-banner').then((m) => m.Cooki
 const Announcements = dynamic(() => import('./announcements').then((m) => m.Announcements), {
   ssr: false,
 });
+const DesktopDownloadBanner = dynamic(
+  () => import('./desktop-download-banner').then((m) => m.DesktopDownloadBanner),
+  { ssr: false },
+);
 const EasterEggs = dynamic(() => import('./easter-eggs').then((m) => m.EasterEggs), {
   ssr: false,
 });
@@ -28,6 +32,7 @@ export function DeferredWidgets({ userId }: { userId?: string | null }) {
       <CommandPalette />
       <CookieBanner />
       <Announcements />
+      <DesktopDownloadBanner />
       <EasterEggs />
       <LocalFileDrop />
       <ServiceWorkerRegistrar userId={userId} />

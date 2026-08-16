@@ -95,6 +95,63 @@ side-effect импорт `desktop-bridge`.
   убирать регистрацию медиа-клавиш из `tauri-plugin-global-shortcut` не за что, реального
   конфликта нет.
 
+## Скачивание и дистрибуция
+
+Публичная сторона: страница `/download`, короткий баннер на сайте, и CI-пайплайн,
+который после каждого тега `vX.Y.Z` собирает `.msi`/`.exe` и публикует его туда, куда
+реально ведёт кнопка «Скачать».
+
+- **`apps/web/lib/platform-detect.ts`** — чистая `detectPlatform(userAgent, maxTouchPoints?)`
+  по эвристикам UA (Android раньше Linux — Android UA содержит "Linux"; iPadOS 13+ шлёт
+  UA обычного Mac, отличается только по multi-touch).
+- **`apps/web/lib/desktop-download.ts`** — `getWindowsDownloadUrl()` строит стабильный URL
+  из `process.env.S3_PUBLIC_ENDPOINT` + бакета `STREAM` (`@/lib/s3`) тем же паттерном, что
+  `S3ObjectStorage.upload()`: `${publicBaseUrl}/${bucket}/downloads/desktop/windows/VireMusic-Setup-x64.exe`.
+  `null`, если `S3_PUBLIC_ENDPOINT` не задан.
+- **`app/[locale]/(listener)/download/page.tsx`** — Server Component. Windows — рабочая
+  кнопка на реальный URL выше; macOS/Linux/iOS/Android — честные карточки «скоро», без
+  фейковых кнопок (мобильный клиент не в приоритете, `docs/multiplatform.md` §12 п.8);
+  внизу — заметка про PWA как уже доступную сегодня альтернативу (`InstallAppButton`).
+- **`apps/web/components/desktop-download-banner.tsx`** — клиентский баннер, показывается
+  только посетителям с Windows (детекция на маунте), ведёт на `/download#windows`.
+  Разовое закрытие — `localStorage` (`vire_desktop_banner_dismissed_v1`), тот же паттерн
+  isSeen/markSeen, что у `CookieBanner`/`Announcements`. Смонтирован один раз в
+  `DeferredWidgets` (`apps/web/components/deferred-widgets.tsx`), не на каждой странице.
+- **`packages/i18n/messages/{ru,en}/download.json`** — строки страницы и баннера,
+  неймспейс `download` в `packages/i18n/src/messages.ts`.
+
+### Дистрибуция: GitHub Release + публичный MinIO
+
+Репозиторий приватный — прямая ссылка на GitHub Release не откроется анонимному
+посетителю сайта, поэтому CI публикует собранный инсталлятор в двух местах:
+
+1. **GitHub Release** тега `vX.Y.Z` — версионированный файл (`VireMusic_x.y.z_x64-setup.exe`
+   /`.msi`), доступен только тем, кто видит репозиторий.
+2. **MinIO `vire-stream`** — тот же файл под стабильным (без версии) ключом
+   `downloads/desktop/windows/VireMusic-Setup-x64.exe`, перезаписывается каждым релизом.
+   Бакет уже отдаётся анонимно (`mc anonymous set download`, `docker-compose.yml`) — на
+   этот URL и ссылается кнопка «Скачать» на `/download`
+   (`${S3_PUBLIC_ENDPOINT}/vire-stream/downloads/desktop/windows/VireMusic-Setup-x64.exe`,
+   в проде — `https://cdn.viremusic.ru/vire-stream/downloads/desktop/windows/...`).
+
+Job `build-desktop` в `.github/workflows/deploy.yml` — `windows-latest`, `needs: gates`,
+тот же триггер тегом, параллельно `build-and-push`/`deploy`. Сборка — `cargo install
+tauri-cli` + `cargo tauri build` (не `tauri-apps/tauri-action`: проект без npm-скрипта
+`tauri`, только Rust CLI, а сами артефакты и их пути уже подтверждены локально — см.
+«Прод-сборка» выше; ручной путь предсказуемее для конфигурации, которую нельзя было
+прогнать вживую в этом заходе). Публикация в Release — `softprops/action-gh-release`;
+загрузка в MinIO — `aws s3 cp --endpoint-url` (CLI уже стоит на `windows-latest`).
+
+**Нужны новые repo secrets (заводятся вручную, GitHub → Settings → Secrets → Actions;
+значения — те же, что в `.env` на проде):**
+- `S3_UPLOAD_ACCESS_KEY`, `S3_UPLOAD_SECRET_KEY` — доступ к MinIO на запись.
+- `S3_UPLOAD_ENDPOINT` — MinIO endpoint, доступный из GitHub Actions (вероятно тот же
+  `cdn.viremusic.ru`, раз Caddy проксирует туда порт 9000 — не проверено вживую).
+
+Пока секретов нет, шаг загрузки в MinIO красный (`continue-on-error: true` — не валит
+остальной job, GitHub Release публикуется как обычно) — ожидаемо до того, как секреты
+заведут вручную.
+
 ## Где код
 
 - `apps/desktop/src-tauri/Cargo.toml` — крейт `vire-desktop`, зависимости `tauri` `^2`

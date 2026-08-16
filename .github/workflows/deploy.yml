@@ -121,6 +121,59 @@ jobs:
           S3_BUCKET_VAULT: ci-smoke-vault
           S3_BUCKET_STREAM: ci-smoke-stream
 
+  # Десктоп не зависит от образов веба — собирается параллельно build-and-push/deploy.
+  # windows-latest уже несёт MSVC build tools и WebView2 (см. docs/features/desktop-app.md
+  # «Как собрать и запустить» — на голой машине их пришлось доставлять руками, раннер их даёт из коробки).
+  build-desktop:
+    needs: gates
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build desktop app
+        working-directory: apps/desktop/src-tauri
+        run: cargo tauri build
+
+      # NSIS-инсталлятор рождается с версией в имени (VireMusic_0.1.0_x64-setup.exe) —
+      # копия под стабильным именем идёт в MinIO, оригинал — в GitHub Release как есть.
+      - name: Copy installer under a stable filename
+        shell: bash
+        run: |
+          cp apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe \
+            apps/desktop/src-tauri/target/release/bundle/nsis/VireMusic-Setup-x64.exe
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+
+      # Стабильный (без версии) ключ — на него ссылается кнопка «Скачать» на /download,
+      # перезаписывается каждым тегом. Секретов S3_UPLOAD_* в репозитории ещё нет
+      # (заводятся вручную в GitHub → Settings → Secrets, см. docs/features/desktop-app.md) —
+      # шаг ожидаемо красный до этого момента, continue-on-error не валит остальной job.
+      - name: Upload installer to MinIO (stable URL)
+        shell: bash
+        continue-on-error: true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_UPLOAD_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_UPLOAD_SECRET_KEY }}
+        run: |
+          aws s3 cp apps/desktop/src-tauri/target/release/bundle/nsis/VireMusic-Setup-x64.exe \
+            s3://vire-stream/downloads/desktop/windows/VireMusic-Setup-x64.exe \
+            --endpoint-url "${{ secrets.S3_UPLOAD_ENDPOINT }}"
+
   build-and-push:
     needs: gates
     runs-on: ubuntu-latest
