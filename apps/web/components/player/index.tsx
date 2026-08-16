@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
 import { initAudioEngine } from '@/lib/player/audio-engine';
+import '@/lib/desktop-bridge';
 import { usePlayerHotkeys } from './use-player-hotkeys';
 import { MiniBar } from './mini-bar';
 import { FullscreenPlayer } from './fullscreen';
