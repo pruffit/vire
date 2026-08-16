@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capabilities for the main window — срез 0 не вызывает Tauri-команд, только базовый core",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
