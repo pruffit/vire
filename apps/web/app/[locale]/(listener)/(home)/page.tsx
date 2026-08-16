@@ -11,6 +11,9 @@ import { localizedAlternates } from '@/lib/metadata';
 import { SITE_NAME, siteDescription } from '@/lib/site';
 import { resolveLocale } from '@/lib/locale';
 import { RailSkeleton, TrackListSkeleton } from '@/components/home/skeletons';
+import { composeHomeScreen } from '@vire/core';
+import { isFeatureEnabled } from '@/lib/feature-flags';
+import { renderHomeBlock } from '@/components/sdui/home-registry';
 import {
   cachedLatestReleases,
   PersonalBlock,
@@ -39,19 +42,53 @@ export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [latest, moodCounts, genreCounts] = await Promise.all([
+  const [latest, moodCounts, genreCounts, sduiEnabled] = await Promise.all([
     cachedLatestReleases(),
     getMoodCounts().catch(() => []),
     getGenreCounts().catch(() => []),
+    isFeatureEnabled('sdui.home').catch(() => false),
   ]);
 
   const featured = latest[0] ?? null;
   const featuredStats = featured ? await getReleaseCardStats(featured.id).catch(() => null) : null;
 
-  return (
-    <PageContainer spaceY="home">
+  const head = (
+    <>
       <JsonLd data={websiteJsonLd({ name: SITE_NAME, description: await siteDescription(locale), locale })} />
       <h1 className="sr-only">VireMusic — {t('srHeading')}</h1>
+    </>
+  );
+
+  if (sduiEnabled) {
+    const ts = await getTranslations('home.sections');
+    const screen = composeHomeScreen({ isAuthenticated: Boolean(userId) });
+    const ctx = {
+      userId,
+      featured,
+      featuredStats,
+      moods: moodCounts,
+      genres: genreCounts,
+      labels: {
+        hotTracks: t('sections.hotTracks'),
+        wholeCatalog: t('sections.wholeCatalog'),
+        freshReleases: t('sections.freshReleases'),
+        viewAll: t('sections.viewAll'),
+        playlists: ts('playlists'),
+        artists: ts('artists'),
+        allArtists: ts('allArtists'),
+      },
+    };
+    return (
+      <PageContainer spaceY="home">
+        {head}
+        {screen.blocks.map((block) => renderHomeBlock(block, ctx))}
+      </PageContainer>
+    );
+  }
+
+  return (
+    <PageContainer spaceY="home">
+      {head}
 
       {/* без FadeUp — FeaturedRelease содержит LCP-изображение, opacity-анимация задержала бы LCP */}
       {featured && <FeaturedRelease release={featured} stats={featuredStats} />}

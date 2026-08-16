@@ -15,6 +15,7 @@ export * from './platform/util/format';
 export * from './platform/util/scoring';
 export * from './platform/config/env';
 export * from './platform/config/feature-flags';
+export * from './platform/sdui/home-screen';
 export * from './platform/storage/repositories/orphan';
 export * from './platform/storage/services/cleanup';
 export * from './music/catalog/services/storage-keys';

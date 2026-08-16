@@ -62,6 +62,7 @@
 - [x] [Backoffice (/admin)](admin.md) — модерация, health, аналитика
 - [x] [История метрик платформы](platform-metrics.md) — ежедневные снапшоты в Postgres, графики роста в `/admin/analytics`
 - [x] [Письма и рассылки](mailings.md) — Brevo (magic-link, обратная связь, нотификации о релизах)
+- [x] [SDUI на главной](sdui-home.md) — состав и порядок секций с сервера, за флагом `sdui.home`
 - [x] [Уборка файлов удалённых сущностей](storage-cleanup.md) — `storage_orphans` + часовой воркер, grace-период сутки
 - [x] [Feature flags](feature-flags.md) — реестр флагов в core, переключение в `/admin/flags` без деплоя
 - [x] [Мониторинг и алерты](monitoring.md) — `/api/health`, крэш-алерты воркера, Telegram через CF Worker
