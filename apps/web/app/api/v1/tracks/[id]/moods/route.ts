@@ -8,6 +8,7 @@ import {
 import { TrackMoodsService, NotFoundError, ValidationError } from '@vire/core';
 import { getActiveArtist } from '@/lib/active-artist';
 import { errorJson } from '@/lib/error-response';
+import type { TrackMoodsResponse } from '@vire/api-contracts';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -25,7 +26,7 @@ export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
   const result = await trackMoodsService().getMoods(id);
   if (!result.ok) return errorJson(result.error, 404);
-  return NextResponse.json({ moods: result.value });
+  return NextResponse.json({ moods: result.value } satisfies TrackMoodsResponse);
 }
 
 export async function PUT(req: Request, { params }: Params) {
@@ -49,5 +50,5 @@ export async function PUT(req: Request, { params }: Params) {
     }
     return errorJson(result.error, 403);
   }
-  return NextResponse.json({ moods: parsed.data });
+  return NextResponse.json({ moods: parsed.data } satisfies TrackMoodsResponse);
 }

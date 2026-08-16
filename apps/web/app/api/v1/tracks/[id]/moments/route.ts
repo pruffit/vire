@@ -5,9 +5,11 @@ import { db, DrizzleListenerTrackRepository } from '@vire/db';
 import { ListenerTrackService, NotFoundError } from '@vire/core';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
+import type { TrackMomentsResponse, OkResponse } from '@vire/api-contracts';
 
 type Params = { params: Promise<{ id: string }> };
 
+// Верхняя граница — сутки: длиннее трека не бывает, а без неё в БД летит любое число.
 const momentSchema = z.object({
   positionSec: z.number().int().min(0).max(86400),
 });
@@ -20,7 +22,7 @@ export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
   const result = await listenerTrackService().getMoments(id);
   if (!result.ok) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({ moments: result.value });
+  return NextResponse.json({ moments: result.value } satisfies TrackMomentsResponse);
 }
 
 export async function POST(req: Request, { params }: Params) {
@@ -41,5 +43,5 @@ export async function POST(req: Request, { params }: Params) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true } satisfies OkResponse);
 }

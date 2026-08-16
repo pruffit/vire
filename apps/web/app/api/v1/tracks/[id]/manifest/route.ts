@@ -3,6 +3,7 @@ import { db, getPlayableTrackAudio, getTrackAudio, getTrackArtistProfileId, Driz
 import { getCaller } from '@/lib/caller';
 import { can } from '@vire/core/access';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
+import type { TrackManifestResponse } from '@vire/api-contracts';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -38,5 +39,5 @@ export async function GET(req: Request, { params }: Params) {
   return NextResponse.json({
     hlsUrl: `${base}/${audio.hlsManifestKey}`,
     waveformPeaks: audio.waveformPeaks,
-  });
+  } satisfies TrackManifestResponse);
 }

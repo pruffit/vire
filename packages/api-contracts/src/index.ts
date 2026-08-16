@@ -18,3 +18,4 @@ export * from './sdui';
 export * from './device-auth';
 export * from './friends';
 export * from './user-profile';
+export * from './track-media';

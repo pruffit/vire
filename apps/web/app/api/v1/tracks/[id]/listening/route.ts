@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { recordListening, countListening } from '@/lib/presence';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { verifySessionId, SESSION_ID_MAX_LEN } from '@/lib/session-signing';
+import type { ListeningCountResponse } from '@vire/api-contracts';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -24,10 +25,10 @@ export async function POST(req: Request, { params }: Params) {
 
   try {
     const count = await recordListening(trackId, sessionId);
-    return NextResponse.json({ count });
+    return NextResponse.json({ count } satisfies ListeningCountResponse);
   } catch {
     // Redis недоступен: не роняем воспроизведение, просто 0.
-    return NextResponse.json({ count: 0 });
+    return NextResponse.json({ count: 0 } satisfies ListeningCountResponse);
   }
 }
 
@@ -39,8 +40,8 @@ export async function GET(req: Request, { params }: Params) {
   const { id: trackId } = await params;
   try {
     const count = await countListening(trackId);
-    return NextResponse.json({ count });
+    return NextResponse.json({ count } satisfies ListeningCountResponse);
   } catch {
-    return NextResponse.json({ count: 0 });
+    return NextResponse.json({ count: 0 } satisfies ListeningCountResponse);
   }
 }

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { purchaseResponseSchema } from '@vire/api-contracts';
 
 const {
   trackExists, hasPurchased, getPending, createPending, getTrackTitle,
@@ -128,5 +129,34 @@ describe('POST /api/v1/tracks/[id]/purchase', () => {
       externalPaymentId: 'ext-1',
       paymentProvider: 'yookassa',
     }));
+  });
+});
+
+describe('POST /api/v1/tracks/[id]/purchase — контракт ответа', () => {
+  it('успех проходит схему покупки', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+
+    const body = await (await POST(req(), ctx)).json();
+
+    expect(purchaseResponseSchema.safeParse(body).success).toBe(true);
+  });
+
+  it('провайдер не дал ссылку → 503, а не 200 с пустым полем', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    createPayment.mockResolvedValue({ id: 'ext-1', confirmationUrl: null });
+
+    const res = await POST(req(), ctx);
+
+    expect(res.status).toBe(503);
+  });
+
+  it('уже купленный трек отдаёт alreadyOwned по схеме', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    hasPurchased.mockResolvedValue(true);
+
+    const body = await (await POST(req(), ctx)).json();
+
+    expect(purchaseResponseSchema.safeParse(body).success).toBe(true);
+    expect(body).toEqual({ ok: true, alreadyOwned: true });
   });
 });

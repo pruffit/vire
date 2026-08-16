@@ -4,6 +4,7 @@ import { db, DrizzlePurchaseRepository } from '@vire/db';
 import { PurchaseService, NotFoundError, ValidationError } from '@vire/core';
 import { YookassaPaymentGateway } from '@/lib/payment-gateway';
 import { errorJson } from '@/lib/error-response';
+import type { PurchaseResponse } from '@vire/api-contracts';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
@@ -38,7 +39,12 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   if ('alreadyOwned' in result.value) {
-    return NextResponse.json({ ok: true, alreadyOwned: true });
+    return NextResponse.json({ ok: true, alreadyOwned: true } satisfies PurchaseResponse);
   }
-  return NextResponse.json({ confirmationUrl: result.value.confirmationUrl });
+  // Провайдер не дал ссылку на оплату — платить негде; для клиента это тот же сбой оплаты,
+  // что и недоступный провайдер, а не успех с пустым полем.
+  if (!result.value.confirmationUrl) {
+    return NextResponse.json({ error: 'Payment provider unavailable' }, { status: 503 });
+  }
+  return NextResponse.json({ confirmationUrl: result.value.confirmationUrl } satisfies PurchaseResponse);
 }

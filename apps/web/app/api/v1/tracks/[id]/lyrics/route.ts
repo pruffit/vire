@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, DrizzleListenerTrackRepository } from '@vire/db';
 import { ListenerTrackService, isUuid } from '@vire/core';
+import type { TrackLyricsResponse } from '@vire/api-contracts';
 
 /** Текст трека для плеера. Отдаётся только для опубликованных релизов. */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -9,7 +10,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const result = await new ListenerTrackService(new DrizzleListenerTrackRepository(db)).getPublicLyrics(id);
   return NextResponse.json(
-    { lyrics: result.ok ? result.value : null },
+    { lyrics: result.ok ? result.value : null } satisfies TrackLyricsResponse,
     { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } },
   );
 }

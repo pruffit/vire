@@ -4,6 +4,7 @@ import { getCaller } from '@/lib/caller';
 import { playEventQueue } from '@/lib/queue';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { verifySessionId, SESSION_ID_MAX_LEN } from '@/lib/session-signing';
+import type { OkResponse } from '@vire/api-contracts';
 
 const VALID_SOURCES = new Set<string>(PLAY_SOURCES);
 
@@ -47,5 +48,5 @@ export async function POST(req: Request, { params }: Params) {
     startedAt,
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true } satisfies OkResponse);
 }
