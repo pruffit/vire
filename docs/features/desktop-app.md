@@ -15,6 +15,8 @@ Session» ниже. Срез 3 — автозапуск при входе в с�
 размера/позиции окна (`docs/superpowers/specs/2026-08-16-desktop-shell-slice-5-design.md`),
 см. «Единственный экземпляр и память окна» ниже. Срез 6 — сплэш-экран на холодном старте
 (`docs/superpowers/specs/2026-08-16-desktop-shell-slice-6-design.md`), см. «Сплэш-экран»
+ниже. Срез 7 — автообновление через `tauri-plugin-updater`
+(`docs/superpowers/specs/2026-08-16-desktop-shell-slice-7-design.md`), см. «Автообновление»
 ниже. Проверяет связку Tauri + существующий веб на реальной
 не-браузерной платформе — дешевле и раньше мобильного клиента (`docs/multiplatform.md`
 §3.2, §12 п.7).
@@ -44,6 +46,8 @@ Session» ниже. Срез 3 — автозапуск при входе в с�
 - На холодном старте вместо пустого окна ОС сразу виден маленький сплэш с логотипом,
   закрывающийся ровно в момент реальной готовности страницы — срез 6, подробности в
   «Сплэш-экран» ниже.
+- Тихая проверка обновлений при старте и пункт трея «Проверить обновления» — срез 7,
+  подробности в «Автообновление» ниже.
 
 ## Трей и медиа-клавиши (срез 1)
 
@@ -270,6 +274,89 @@ Rust (не через `invoke` со стороны веб-страницы) — 
   (`GetForegroundWindow` → PID первого процесса) в момент запуска второго —
   единственный оставшийся процесс после теста: 1.
 
+## Автообновление (срез 7)
+
+`tauri-plugin-updater` — официальный плагин: проверяет манифест `latest.json` на CDN,
+скачивает подписанный NSIS-инсталлятор, ставит его и перезапускает приложение.
+Криптография — minisign-ключ (не связан с прод-S3-креденшлами): публичный ключ
+закоммичен в `apps/desktop/src-tauri/tauri.conf.json` (`plugins.updater.pubkey`),
+приватный — только в GitHub Secrets (`TAURI_SIGNING_PRIVATE_KEY`, без пароля, `--ci`
+режим), никогда не был на диске дольше момента генерации.
+
+- **`main.rs`, `check_for_updates(app, manual)`** — единая функция на тихую проверку при
+  старте и на пункт трея «Проверить обновления», не продублирована по двум местам.
+  `manual` управляет только тем, показывать ли диалог, когда обновлений нет или сеть
+  недоступна — тихый старт не должен беспокоить пользователя сетевой ошибкой, ручная
+  проверка обязана дать видимый ответ в любом случае (иначе клик выглядит как
+  ничего-не-произошло).
+  - `app.updater()` (`tauri_plugin_updater::UpdaterExt`) → `.check().await`. `Ok(Some(update))`
+    — диалог подтверждения (`tauri_plugin_dialog`, `MessageDialogButtons::YesNo`) → согласие
+    → `update.download_and_install(...)` → `app.restart()` (метод `AppHandle::restart()` из
+    самого `tauri`, не из `tauri-plugin-process` — плагин process нужен только для
+    JS-invoked команд `exit`/`restart`, здесь весь путь идёт из Rust). `Ok(None)` — диалог
+    «последняя версия» только если `manual`. `Err(_)` (включая недоступность/фейковый
+    endpoint) — диалог с текстом ошибки только если `manual`, тихий возврат иначе; ни один
+    путь не паникует.
+  - Тихый старт запускается не из `setup()` напрямую, а из `on_page_load` главного окна
+    (после `PageLoadEvent::Finished`, тот же колбэк, что закрывает сплэш, срез 6) —
+    проверка не задерживает показ окна/сплэша сетевым запросом.
+- **Пункт трея «Проверить обновления»** — между «Запускать при входе в систему» и
+  разделителем перед «Выход» (`apps/desktop/src-tauri/src/main.rs`, тот же
+  `TrayIconBuilder`/`on_menu_event`, что и остальные пункты, срез 1). Обработчик —
+  `tauri::async_runtime::spawn(check_for_updates(app.clone(), true))`.
+- **`tauri.conf.json`** — `bundle.createUpdaterArtifacts: true` обязателен: без него
+  `cargo tauri build` не создаёт `.sig`-файлы вообще, даже если
+  `TAURI_SIGNING_PRIVATE_KEY` присутствует в окружении (проверено эмпирически — сборка
+  без этого флага тихо пропускает подпись, без ошибки). `plugins.updater.endpoints` —
+  `https://cdn.viremusic.ru/vire-stream/downloads/desktop/windows/latest.json`, тот же
+  бакет и путь, что и стабильный URL инсталлятора (см. «Скачивание и дистрибуция» ниже).
+
+**CI (`build-desktop` job, `.github/workflows/deploy.yml`)** — расширен, не переписан:
+`TAURI_SIGNING_PRIVATE_KEY` в `env` шага «Build desktop app» (`cargo tauri build` сам
+подписывает и кладёт `.sig` рядом с инсталлятором благодаря `createUpdaterArtifacts`);
+два новых шага после существующей загрузки `.exe` в MinIO — «Generate updater manifest
+(latest.json)» (версия — тег без `v`, `pub_date` — текущее UTC-время, `signature` —
+содержимое `.sig`-файла как есть, `url` — тот же стабильный путь инсталлятора; собирается
+через `jq -n`, не ручной heredoc, чтобы не словить проблему с экранированием) и «Upload
+updater manifest to MinIO» — тот же `aws s3 cp --endpoint-url` и те же секреты
+`S3_UPLOAD_*` с `continue-on-error: true`, что и загрузка `.exe` (пока секретов нет,
+шаг красный и не валит job — см. «Скачивание и дистрибуция» ниже).
+
+**Версия из тега.** `tauri.conf.json` → `version` в git — плейсхолдер `0.1.0`; шаг
+«Set desktop version from tag» (перед сборкой) переписывает его на `${GITHUB_REF_NAME#v}`
+через `jq` прямо в CI-раннере, так что собранный `.exe` несёт в себе реальную версию тега,
+а не плейсхолдер — сравнение версий апдейтером (`current_version` бинарника vs `version`
+в `latest.json`) самосогласовано с первого реального релиза. Локальная сборка вне CI
+по-прежнему даёт `.exe` с версией `0.1.0` — это не проблема, апдейтер локальных сборок
+не касается.
+
+**Проверено эмпирически (16-17.08.2026):**
+- `cargo tauri build` с одноразовым локально сгенерированным тестовым minisign-ключом
+  (`cargo tauri signer generate --ci`, удалён с диска сразу после проверки, никак не
+  связан с прод-ключом в секретах) — `.sig`-файлы реально появляются рядом с обоими
+  бандлами только после добавления `createUpdaterArtifacts: true`; без этого флага их
+  нет, несмотря на переменную окружения. Формат `.sig` — однострочный base64 (при
+  декодировании — стандартный minisign-файл: `untrusted comment` + подпись +
+  `trusted comment: timestamp:...\tfile:...` + вторая подпись) — именно эта строка как
+  есть идёт в поле `signature` манифеста.
+- `cargo tauri dev` + пункт трея «Проверить обновления» (реальный клик через нативный
+  UI, System.Windows.Automation + синтетический `mouse_event` по найденным координатам
+  иконки/меню, не программный вызов Tauri API) — открылось системное меню трея с новым
+  пунктом, клик по нему дал диалог `VireMusic` / «Не удалось проверить обновления: Could
+  not fetch a valid release JSON from the remote» (ожидаемо: `endpoints` в dev-сборке
+  указывает на реальный прод-CDN-путь, `latest.json` там ещё не существует, потому что
+  ни один тег с этим срезом ещё не выпущен) — обработчик ошибки сработал, диалог с OK,
+  процесс `vire-desktop.exe` остался жив и отзывчив после закрытия диалога.
+- YAML-диф `deploy.yml` распарсен `js-yaml` без ошибок, оба новых шага — на своих местах
+  в `build-desktop` после существующей загрузки инсталлятора.
+- **Не проверялось в этом заходе (осознанное ограничение, не пропуск):** полный цикл
+  реального обновления — скачивание настоящего `latest.json` с CDN, `download_and_install`
+  на реальном подписанном артефакте, рестарт на действительно новой версии. Это требует
+  живого тега и второго тега поверх него (переход N→N+1), то есть минимум одного реального
+  релиза этого среза в проде — не воспроизводимо локально по построению. Каждый компонент
+  цепочки (подпись/формат `.sig`, обработка успеха/ошибки в диалогах, CI-генерация
+  манифеста, отсутствие паники на сетевой ошибке) проверен по отдельности.
+
 ## Скачивание и дистрибуция
 
 Публичная сторона: страница `/download`, короткий баннер на сайте, и CI-пайплайн,
@@ -332,12 +419,14 @@ tauri-cli` + `cargo tauri build` (не `tauri-apps/tauri-action`: проект �
 - `apps/desktop/src-tauri/Cargo.toml` — крейт `vire-desktop`, зависимости `tauri` `^2`
   (фича `tray-icon`), `tauri-plugin-global-shortcut` `^2`, `tauri-plugin-autostart` `^2`,
   `tauri-plugin-single-instance` `^2.4.3`, `tauri-plugin-window-state` `^2.4.1`,
-  `tauri-build` `^2`.
+  `tauri-plugin-updater` `^2.10.1`, `tauri-plugin-process` `^2.3.1`,
+  `tauri-plugin-dialog` `^2.7.2`, `tauri-build` `^2`.
 - `apps/desktop/src-tauri/src/main.rs` — `shell_url()`, `show_and_focus()` (общая
   show+focus, срез 5), `WebviewWindowBuilder` с `WebviewUrl::External`, трей и
   глобальные медиа-шорткаты (срез 1), чекбокс автозапуска в трее (срез 3),
   close-to-tray обработчик и хоткей `Ctrl+Alt+V` (срез 4), single-instance колбэк и
-  window-state плагин (срез 5), сплэш-окно + `on_page_load` на главном окне (срез 6).
+  window-state плагин (срез 5), сплэш-окно + `on_page_load` на главном окне (срез 6),
+  `check_for_updates()` и пункт трея «Проверить обновления» (срез 7).
 - `apps/desktop/frontend-stub/splash.html` — контент сплэша (срез 6), см. выше.
 - `apps/desktop/src-tauri/src/bridge.rs` — `call_bridge`, см. выше.
 - `apps/web/lib/desktop-bridge.ts`, `apps/web/lib/player/media-session.ts`,
@@ -388,6 +477,13 @@ cargo tauri build
 - `apps/desktop/src-tauri/target/release/bundle/msi/VireMusic_0.1.0_x64_en-US.msi`
 - `apps/desktop/src-tauri/target/release/bundle/nsis/VireMusic_0.1.0_x64-setup.exe`
 
+**С среза 7: без `TAURI_SIGNING_PRIVATE_KEY` в окружении обычный `cargo tauri build`
+падает** (`Error A public key has been found, but no private key`) — `plugins.updater.pubkey`
+в конфиге плюс `bundle.createUpdaterArtifacts: true` требуют подписи для каждой сборки.
+Для локальной сборки без ключа (CI всегда передаёт ключ через секрет) — флаг
+`cargo tauri build --no-sign`, пропускает подпись, оба бандла собираются как обычно
+(проверено эмпирически 17.08.2026, exit code 0).
+
 Иконки перегенерировать (после смены исходника):
 ```bash
 cd apps/desktop/src-tauri
@@ -418,7 +514,9 @@ cargo tauri icon ../../web/public/icon-512.png
 - Пользовательские настройки хоткеев (смена комбинации) — `Ctrl+Alt+V` (показать/
   скрыть окно, срез 4) и медиа-клавиши (срез 1) захардкожены
 - Нативный доступ к локальной библиотеке файлов сверх того, что уже даёт веб
-- Код-сайнинг, автообновление, полировка инсталлятора
+- Код-сайнинг (Authenticode-подпись `.exe`/`.msi`, отдельно от minisign-подписи
+  апдейтера), UI прогресса скачивания обновления, каналы обновлений (stable/beta),
+  дельта-обновления, полировка инсталлятора
 - Bearer/device-auth для десктопа (нужен только нативному UI вне webview; пока
   webview использует ту же cookie-сессию, что и браузер)
 - `dangerousRemoteDomainIpcAccess` / любой Tauri IPC-доступ веб-странице — сознательно

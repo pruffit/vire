@@ -6,9 +6,11 @@ use bridge::call_bridge;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::PageLoadEvent;
-use tauri::{Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
+use tauri_plugin_updater::UpdaterExt;
 use tauri_plugin_window_state::StateFlags;
 
 // Срез 0: оболочка грузит уже готовый веб-фронт по URL, нового UI нет.
@@ -27,6 +29,71 @@ fn shell_url() -> &'static str {
 fn show_and_focus(window: &WebviewWindow) {
     let _ = window.show();
     let _ = window.set_focus();
+}
+
+// Общая для стартовой тихой проверки и пункта трея — не дублировать логику апдейтера
+// по двум местам. `manual` управляет только тем, показывать ли диалог, когда обновлений
+// нет/проверка не удалась — тихий старт не должен беспокоить пользователя сетевой ошибкой.
+async fn check_for_updates(app: AppHandle, manual: bool) {
+    let updater = match app.updater() {
+        Ok(updater) => updater,
+        Err(err) => {
+            if manual {
+                app.dialog()
+                    .message(format!("Не удалось проверить обновления: {err}"))
+                    .kind(MessageDialogKind::Error)
+                    .title("VireMusic")
+                    .blocking_show();
+            }
+            return;
+        }
+    };
+
+    match updater.check().await {
+        Ok(Some(update)) => {
+            let should_install = app
+                .dialog()
+                .message(format!(
+                    "Доступна новая версия {}. Установить и перезапустить VireMusic?",
+                    update.version
+                ))
+                .title("Обновление VireMusic")
+                .buttons(MessageDialogButtons::YesNo)
+                .blocking_show();
+
+            if !should_install {
+                return;
+            }
+
+            if let Err(err) = update.download_and_install(|_, _| {}, || {}).await {
+                app.dialog()
+                    .message(format!("Не удалось установить обновление: {err}"))
+                    .kind(MessageDialogKind::Error)
+                    .title("VireMusic")
+                    .blocking_show();
+                return;
+            }
+
+            app.restart();
+        }
+        Ok(None) => {
+            if manual {
+                app.dialog()
+                    .message("У вас последняя версия VireMusic.")
+                    .title("VireMusic")
+                    .blocking_show();
+            }
+        }
+        Err(err) => {
+            if manual {
+                app.dialog()
+                    .message(format!("Не удалось проверить обновления: {err}"))
+                    .kind(MessageDialogKind::Error)
+                    .title("VireMusic")
+                    .blocking_show();
+            }
+        }
+    }
 }
 
 fn main() {
@@ -80,6 +147,9 @@ fn main() {
                 .build(),
         )
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let splash = WebviewWindowBuilder::new(app, "splash", WebviewUrl::App("splash.html".into()))
                 .title("VireMusic")
@@ -91,6 +161,7 @@ fn main() {
                 .skip_taskbar(true)
                 .build()?;
 
+            let updater_handle = app.handle().clone();
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(shell_url().parse()?))
                 .title("VireMusic")
                 .inner_size(1280.0, 800.0)
@@ -102,6 +173,10 @@ fn main() {
                         let _ = window.show();
                         let _ = window.set_focus();
                         let _ = splash.close();
+                        // Тихая проверка при старте — только после того, как главное окно
+                        // уже показано, чтобы не задерживать сплэш сетевым запросом.
+                        let handle = updater_handle.clone();
+                        tauri::async_runtime::spawn(check_for_updates(handle, false));
                     }
                 })
                 .build()?;
@@ -129,6 +204,8 @@ fn main() {
                 autostart_enabled,
                 None::<&str>,
             )?;
+            let check_updates =
+                MenuItem::with_id(app, "check_updates", "Проверить обновления", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Выход", true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
@@ -140,6 +217,7 @@ fn main() {
                     &prev,
                     &PredefinedMenuItem::separator(app)?,
                     &autostart,
+                    &check_updates,
                     &PredefinedMenuItem::separator(app)?,
                     &quit,
                 ],
@@ -166,6 +244,10 @@ fn main() {
                             if toggled.is_ok() {
                                 let _ = autostart.set_checked(!currently_enabled);
                             }
+                        }
+                        "check_updates" => {
+                            let handle = app.clone();
+                            tauri::async_runtime::spawn(check_for_updates(handle, true));
                         }
                         "quit" => app.exit(0),
                         _ => {}
