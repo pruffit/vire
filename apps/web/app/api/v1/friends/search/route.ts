@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCaller } from '@/lib/caller';
 import { friendshipService, userDirectoryService } from '@/lib/friends';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
+import type { FriendSearchResponse } from '@vire/api-contracts';
 
 const RESULT_LIMIT = 10;
 
@@ -20,7 +21,8 @@ export async function GET(req: Request) {
   const hits = searchResult.ok ? searchResult.value : [];
   const statuses = await friendshipService().getStatuses(viewerId, hits.map((h) => h.id));
 
-  return NextResponse.json({
+  const body: FriendSearchResponse = {
     results: hits.map((h) => ({ id: h.id, name: h.name, image: h.image, status: statuses.get(h.id) ?? 'NONE' })),
-  });
+  };
+  return NextResponse.json(body);
 }

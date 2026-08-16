@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getCaller } from '@/lib/caller';
 import { friendshipService } from '@/lib/friends';
 import { NotFoundError, ValidationError } from '@vire/core';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
-
-const schema = z.object({ userId: z.string().uuid() });
+import { friendRequestBodySchema, type FriendRequestResponse } from '@vire/api-contracts';
 
 export async function POST(req: Request) {
   const caller = await getCaller();
@@ -16,7 +14,7 @@ export async function POST(req: Request) {
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const body = await req.json().catch(() => null);
-  const parsed = schema.safeParse(body);
+  const parsed = friendRequestBodySchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
 
   const result = await friendshipService().request(caller.id, parsed.data.userId);
@@ -25,5 +23,5 @@ export async function POST(req: Request) {
     if (result.error instanceof ValidationError) return errorJson(result.error, 422);
     return errorJson(result.error, 403);
   }
-  return NextResponse.json({ status: result.value });
+  return NextResponse.json({ status: result.value } satisfies FriendRequestResponse);
 }

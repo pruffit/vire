@@ -16,3 +16,4 @@ export * from './chat';
 export * from './notifications';
 export * from './sdui';
 export * from './device-auth';
+export * from './friends';

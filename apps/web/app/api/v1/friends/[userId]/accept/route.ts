@@ -5,6 +5,7 @@ import { friendshipService } from '@/lib/friends';
 import { NotFoundError } from '@vire/core';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
+import { type OkResponse } from '@vire/api-contracts';
 
 const paramsSchema = z.object({ userId: z.string().uuid() });
 type Ctx = { params: Promise<{ userId: string }> };
@@ -24,5 +25,5 @@ export async function POST(_req: Request, { params }: Ctx) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true } satisfies OkResponse);
 }

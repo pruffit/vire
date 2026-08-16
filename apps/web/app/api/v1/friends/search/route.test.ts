@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextResponse } from 'next/server';
+import { friendSearchResponseSchema } from '@vire/api-contracts';
 
 const { search, getStatuses } = vi.hoisted(() => ({
   search: vi.fn(),
@@ -84,5 +85,15 @@ describe('GET /api/v1/friends/search', () => {
     const res = await GET(req('ан'));
     const body = await res.json();
     expect(body.results[0].status).toBe('NONE');
+  });
+
+  it('ответ соответствует контракту поиска', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
+    search.mockResolvedValue({ ok: true, value: [{ id: OTHER_ID, name: 'Аня', image: null }] });
+    getStatuses.mockResolvedValue(new Map([[OTHER_ID, 'FRIENDS']]));
+
+    const body = await (await GET(req('ан'))).json();
+
+    expect(friendSearchResponseSchema.safeParse(body).success).toBe(true);
   });
 });

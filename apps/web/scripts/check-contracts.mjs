@@ -27,7 +27,6 @@ const ALLOWLIST = [
   { pattern: 'health/route.ts', reason: 'служебный пинг, не ресурс' },
   { pattern: '**/stream/route.ts', reason: 'SSE-поток, не запрос-ответ' },
   { pattern: 'search/route.ts', reason: 'точечный остаток волны 3, не переведён' },
-  { pattern: 'friends/**', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'tracks/[id]/download/route.ts', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'tracks/[id]/listening/route.ts', reason: 'точечный остаток волны 3, не переведён' },
   { pattern: 'tracks/[id]/lyrics/route.ts', reason: 'точечный остаток волны 3, не переведён' },

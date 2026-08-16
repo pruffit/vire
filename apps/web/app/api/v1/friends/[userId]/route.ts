@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getCaller } from '@/lib/caller';
 import { friendshipService } from '@/lib/friends';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
+import { uuidSchema, type OkResponse } from '@vire/api-contracts';
 
-const paramsSchema = z.object({ userId: z.string().uuid() });
 type Ctx = { params: Promise<{ userId: string }> };
 
 // decline/cancel/unfriend — одно и то же удаление ребра; сервис не различает по контракту REST.
@@ -15,9 +14,9 @@ export async function DELETE(_req: Request, { params }: Ctx) {
   const rl = await rateLimit(`friend-remove:${caller.id}`, 30, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
-  const parsed = paramsSchema.safeParse(await params);
+  const parsed = uuidSchema.safeParse((await params).userId);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid userId' }, { status: 400 });
 
-  await friendshipService().unfriend(caller.id, parsed.data.userId);
-  return NextResponse.json({ ok: true });
+  await friendshipService().unfriend(caller.id, parsed.data);
+  return NextResponse.json({ ok: true } satisfies OkResponse);
 }
