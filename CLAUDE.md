@@ -186,10 +186,20 @@ body (h-full, overflow-clip, flex flex-col)
 Команды:
 ```bash
 pnpm --filter @vire/db db:generate   # сгенерировать миграцию
-pnpm --filter @vire/db db:migrate    # применить миграции
+pnpm --filter @vire/db db:migrate    # применить миграции (существующая база)
+pnpm --filter @vire/db db:migrate:fresh  # накат с нуля: по транзакции на миграцию
 pnpm --filter @vire/db db:studio     # открыть Drizzle Studio
 pnpm --filter @vire/db db:make-admin <email> [role]  # выдать роль (default SUPERADMIN); юзер должен перелогиниться
 ```
+
+> ⚠️ **Накат миграций с нуля требует `db:migrate:fresh`, не `db:migrate`.** Штатный
+> мигратор drizzle оборачивает весь набор в ОДНУ транзакцию, а Postgres запрещает
+> использовать значение enum в той же транзакции, где оно добавлено. На чистой базе
+> 0017 (`ADD VALUE 'PERSONAL'`) и 0051 (использование этого значения в бэкфилле)
+> попадают в одну транзакцию → `unsafe use of new value "PERSONAL"`. На проде не
+> всплывает: там миграции приезжают порциями по релизам. `db:migrate:fresh` кладёт
+> каждую миграцию в свою транзакцию и пишет тот же журнал, что drizzle, — после него
+> обычный мигратор считает базу актуальной.
 
 ## Медиа и аудио
 
