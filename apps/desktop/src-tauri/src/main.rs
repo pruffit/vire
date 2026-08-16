@@ -5,9 +5,11 @@ mod bridge;
 use bridge::call_bridge;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::webview::PageLoadEvent;
 use tauri::{Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
+use tauri_plugin_window_state::StateFlags;
 
 // Срез 0: оболочка грузит уже готовый веб-фронт по URL, нового UI нет.
 // devUrl/frontendDist в tauri.conf.json намеренно не используются — URL решается
@@ -42,7 +44,16 @@ fn main() {
                 show_and_focus(&window);
             }
         }))
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // VISIBLE отключён: иначе плагин сам вызывает show() на "main" в on_window_ready
+        // (сразу после создания окна, до загрузки страницы) по кэшированному состоянию —
+        // это гонка со сплэшем, который должен закрыть окно только по on_page_load.
+        // "splash" — в денилисте, чтобы короткоживущее окно не засоряло window-state.json.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
+                .with_denylist(&["splash"])
+                .build(),
+        )
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_shortcuts([play_pause, media_next, media_prev, toggle_window])
@@ -70,11 +81,29 @@ fn main() {
         )
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .setup(|app| {
+            let splash = WebviewWindowBuilder::new(app, "splash", WebviewUrl::App("splash.html".into()))
+                .title("VireMusic")
+                .inner_size(220.0, 220.0)
+                .resizable(false)
+                .decorations(false)
+                .center()
+                .always_on_top(true)
+                .skip_taskbar(true)
+                .build()?;
+
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(shell_url().parse()?))
                 .title("VireMusic")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(960.0, 600.0)
                 .resizable(true)
+                .visible(false)
+                .on_page_load(move |window, payload| {
+                    if payload.event() == PageLoadEvent::Finished {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                        let _ = splash.close();
+                    }
+                })
                 .build()?;
 
             // Крестик прячет в трей вместо закрытия — полный выход только через
