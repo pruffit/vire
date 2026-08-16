@@ -4,7 +4,10 @@
 веб-страницу по URL. Срез 0 — сама оболочка (`docs/superpowers/specs/2026-08-16-desktop-shell-slice-0-design.md`).
 Срез 1 — системный трей и OS-медиа-клавиши поверх неё
 (`docs/superpowers/specs/2026-08-16-desktop-shell-slice-1-design.md`), см. «Трей и
-медиа-клавиши» ниже. Проверяет связку Tauri + существующий веб на реальной
+медиа-клавиши» ниже. Срез 2 — `navigator.mediaSession` в веб-плеере
+(`docs/superpowers/specs/2026-08-16-desktop-shell-slice-2-design.md`, скоуп сужен до
+раздела 1 — раздел про Tauri IPC-команду синка подписи трея отложен), см. «Media
+Session» ниже. Проверяет связку Tauri + существующий веб на реальной
 не-браузерной платформе — дешевле и раньше мобильного клиента
 (`docs/multiplatform.md` §3.2, §12 п.7).
 
@@ -19,6 +22,9 @@
 - Системный трей (левый клик — показать/сфокусировать окно; правый — меню Play/Pause/
   Следующий/Предыдущий/Выход) и OS-медиа-клавиши Play/Pause/Next/Previous — срез 1,
   подробности в «Трей и медиа-клавиши» ниже.
+- Текущий трек в системном виджете «Сейчас играет» (Windows SMTC) с обложкой/названием/
+  артистом и управлением play/pause/next/prev оттуда — срез 2, подробности в «Media
+  Session» ниже.
 
 ## Трей и медиа-клавиши (срез 1)
 
@@ -57,6 +63,38 @@ IPC-канал ради fire-and-forget команд плеера — несор
 и соседние варианты существуют в API плагина и реально перехватываются `RegisterHotKey`
 на Windows.
 
+## Media Session (срез 2)
+
+`apps/web/lib/player/media-session.ts` — обычный веб-код, не Tauri-специфика: подписка
+на `usePlayerStore` (track/isPlaying) синкает `navigator.mediaSession.playbackState`
+(`'playing'`/`'paused'`/`'none'`) и `.metadata` (title/artist/artwork), плюс
+`setActionHandler('play'|'pause'|'previoustrack'|'nexttrack', …)` на существующие
+`controls.togglePlay()/prev()/next()` (`apps/web/lib/player/audio-engine.ts`). Гард на
+`'mediaSession' in navigator`. Инициализация — `initMediaSession()` рядом с
+`initAudioEngine()` в `useEffect` координатора плеера (`apps/web/components/player/index.tsx`),
+по тому же паттерну «эффект на верхнем всегда смонтированном компоненте», что и
+side-effect импорт `desktop-bridge`.
+
+**Проверено эмпирически (16.08.2026, `cargo tauri dev` + реальный трек через UI, CDP
+`--remote-debugging-port` + WinRT `GlobalSystemMediaTransportControlsSessionManager`):**
+
+- **SMTC подхватывает трек по факту.** Windows-сессия `msedgewebview2.exe` реально
+  появляется с `Title`/`Artist`/`PlaybackStatus`, синхронно с `isPlaying` в сторе —
+  WebView2 проксирует `navigator.mediaSession` в SMTC из коробки, без какого-либо
+  Tauri-кода.
+- **Дублирования медиа-клавиш с `tauri-plugin-global-shortcut` (срез 1) не обнаружено.**
+  Три подряд эмуляции `keybd_event(VK_MEDIA_PLAY_PAUSE)` дали три чистых одиночных
+  тоггла (playing→paused→playing→paused), без «двойного» переключения. Причина —
+  оба пути физически не конкурируют: с обнулёнными `mediaSession`-обработчиками
+  (`setActionHandler(..., null)`) физическая клавиша **по-прежнему** переключала
+  воспроизведение — то есть на этой связке Windows-клавишу реально ловит только
+  `tauri-plugin-global-shortcut` (`RegisterHotKey`), путь через `mediaSession`
+  `setActionHandler` для той же физической клавиши не срабатывает вовсе. `mediaSession`
+  в этой конфигурации даёт SMTC-виджет (метаданные/статус), а не альтернативный
+  обработчик клавиш. **Решение: оба пути оставлены как есть**, `main.rs` не менялся —
+  убирать регистрацию медиа-клавиш из `tauri-plugin-global-shortcut` не за что, реального
+  конфликта нет.
+
 ## Где код
 
 - `apps/desktop/src-tauri/Cargo.toml` — крейт `vire-desktop`, зависимости `tauri` `^2`
@@ -64,7 +102,8 @@ IPC-канал ради fire-and-forget команд плеера — несор
 - `apps/desktop/src-tauri/src/main.rs` — `shell_url()`, `WebviewWindowBuilder` с
   `WebviewUrl::External`, трей и глобальные медиа-шорткаты (срез 1).
 - `apps/desktop/src-tauri/src/bridge.rs` — `call_bridge`, см. выше.
-- `apps/web/lib/desktop-bridge.ts`, `apps/web/components/player/index.tsx` — веб-мост, см. выше.
+- `apps/web/lib/desktop-bridge.ts`, `apps/web/lib/player/media-session.ts`,
+  `apps/web/components/player/index.tsx` — веб-мост и Media Session, см. выше.
 - `apps/desktop/src-tauri/tauri.conf.json` — `productName`, `identifier`
   (`ru.viremusic.desktop`), `app.windows: []` (окно создаётся вручную в `main.rs`,
   не статическим конфигом — проще переключать dev/prod URL).
@@ -129,8 +168,14 @@ cargo tauri icon ../../web/public/icon-512.png
 
 Список — сознательно не в этих срезах (см. `docs/multiplatform.md` §3.2 «что даёт
 десктоп поверх PWA практически», следующие срезы):
-- Синхронизация состояния — подпись «Play»/«Пауза» в трее и на медиа-клавишах не
-  отражает реальное воспроизведение (fire-and-forget команды, без канала веб→Rust)
+- **Подпись «Play»/«Пауза» в кастомном меню трея по-прежнему статична** — SMTC (срез 2)
+  показывает реальное состояние в системном виджете «Сейчас играет», но не умеет
+  дотянуться до нашего Rust-`MenuItem` в трее (это не системный SMTC-элемент). Нужен
+  отдельный канал веб→Rust (Tauri IPC-команда `report_playback_state` +
+  точечный `dangerousRemoteDomainIpcAccess`) — сознательно отложено отдельным заходом:
+  это первое место в проекте, где прод-домену открывается прямой IPC-канал в нативный
+  код, решение с реальным весом, не принимается в потоке одного среза
+  (`docs/superpowers/specs/2026-08-16-desktop-shell-slice-2-design.md`, раздел 2).
 - Мини-плеер поверх других окон (отдельное окно/оверлей)
 - Глобальные хоткеи произвольных сочетаний (`Ctrl+Shift+P` и т.п.) — только сами
   медиа-клавиши Play/Pause/Next/Previous
