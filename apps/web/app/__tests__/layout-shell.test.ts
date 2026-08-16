@@ -42,6 +42,21 @@ describe('app-shell layout invariants', () => {
   // Регрессия (16.08.2026, полосы прокрутки в сайдбаре): по спеке `overflow-x: visible`
   // рядом с `overflow-y: auto` вычисляется в auto, и любой вылезающий за край элемент
   // (бейдж на absolute, ring, тень) рисует лишнюю горизонтальную полосу.
+  // Регрессия (16.08.2026, полоса со стрелками в рейле): стандартное `scrollbar-width`
+  // переключает Chromium на нативный скроллбар и отменяет кастомный ::-webkit-scrollbar
+  // из globals.css — вместе с `::-webkit-scrollbar-button { display: none }`, поэтому
+  // возвращаются системные стрелки. Прячем полосу через `no-scrollbar` либо не трогаем.
+  it('в компонентах нет [scrollbar-width:...] — он отменяет кастомный скроллбар', () => {
+    const files = [...collectTsx(APP_DIR), ...collectTsx(path.join(APP_DIR, '..', 'components'))]
+      .filter((file) => !file.endsWith('.test.tsx'));
+
+    const offenders = files
+      .filter((file) => /\[scrollbar-width:/.test(stripComments(readFileSync(file, 'utf8'))))
+      .map((file) => path.relative(APP_DIR, file));
+
+    expect(offenders).toEqual([]);
+  });
+
   it('у каждой вертикальной скролл-области задана и ось X', () => {
     const offenders: string[] = [];
     // components/ тоже: большинство скролл-панелей (меню, поповеры, очередь плеера) там.

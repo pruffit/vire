@@ -190,7 +190,9 @@ export function Select({
                   </div>
                 )}
 
-                <div className="max-h-64 overflow-y-auto overflow-x-clip p-1 [scrollbar-width:thin]">
+                {/* без scrollbar-width: он переключает Chromium на нативную полосу
+                    и отменяет кастомный ::-webkit-scrollbar из globals.css */}
+                <div className="max-h-64 overflow-y-auto overflow-x-clip p-1">
                   {filtered ? (
                     filtered.length === 0 ? (
                       <p className="px-2 py-3 text-xs text-foreground/30">{t('noResults')}</p>

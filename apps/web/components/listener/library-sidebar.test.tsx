@@ -59,4 +59,12 @@ describe('LibrarySidebar — скролл', () => {
 
     expect(scrollPane?.className).toContain('overflow-x-clip');
   });
+
+  it('полоса прокрутки в панели скрыта: узкий рейл не место для системного скроллбара', () => {
+    const { container } = render(<LibrarySidebar {...BASE_PROPS} collapsed />);
+    const scrollPane = container.querySelector('.overflow-y-auto');
+
+    expect(scrollPane?.className).toContain('no-scrollbar');
+    expect(scrollPane?.className).not.toContain('scrollbar-width');
+  });
 });

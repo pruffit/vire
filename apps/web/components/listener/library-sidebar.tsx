@@ -89,7 +89,9 @@ export function LibrarySidebar({
           className={cn(
             // overflow-x-clip обязателен рядом с overflow-y-auto: иначе ось X считается
             // как auto, и вылезающие за край бейджи/ring дают горизонтальную полосу.
-            'flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-clip pb-2 [scrollbar-width:thin]',
+            // no-scrollbar, а не scrollbar-width:thin — стандартное свойство переключает
+            // Chromium на нативный скроллбар (со стрелками), игнорируя ::-webkit-* из globals.
+            'flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-clip pb-2 no-scrollbar',
             collapsed ? 'items-center px-2' : 'px-1.5',
           )}
         >
