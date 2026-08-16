@@ -107,6 +107,15 @@ jobs:
           NEXT_PUBLIC_SITE_URL: https://viremusic.ru
           AUTH_SECRET: ci-smoke-secret-0000000000000000000000000000
           AUTH_URL: http://localhost:3000
+          # Обязательные для старта процесса (parseEnv в instrumentation.ts): без них
+          # register() бросает и сервер не поднимается вовсе. Значения фиктивные —
+          # smoke проверяет старт и роутер, реальных запросов в Redis/S3 тут нет.
+          REDIS_URL: redis://localhost:6379
+          S3_ENDPOINT: http://localhost:9000
+          S3_ACCESS_KEY: ci-smoke
+          S3_SECRET_KEY: ci-smoke
+          S3_BUCKET_VAULT: ci-smoke-vault
+          S3_BUCKET_STREAM: ci-smoke-stream
 
   build-and-push:
     needs: gates
