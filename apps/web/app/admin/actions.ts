@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import {
   db, setUserRole, verifyArtist, setArtistActive, setTrackStatus, setReleaseStatus,
   createArtistForUser, addArtistMember, removeArtistMember, listArtistMembers,
@@ -22,12 +22,12 @@ import { SANS_FONTS, MONO_FONTS } from '@/lib/font-catalog';
 import { makeAudit } from '@/lib/require-access';
 
 async function requireAction(permission: Permission) {
-  const session = await auth();
-  if (!session?.user?.id || !can(session.user, permission)) {
+  const caller = await getCaller();
+  if (!caller || !can(caller, permission)) {
     throw new Error('Forbidden');
   }
-  const actor = { id: session.user.id, role: session.user.role };
-  return { session, actor, audit: makeAudit(actor, permission) };
+  const actor = { id: caller.id, role: caller.role };
+  return { caller, actor, audit: makeAudit(actor, permission) };
 }
 
 function trackService() {

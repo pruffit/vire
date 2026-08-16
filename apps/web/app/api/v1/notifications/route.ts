@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { notificationService } from '@/lib/notifications';
 import type { NotificationItem } from '@vire/core';
 import type { NotificationsResponse } from '@vire/api-contracts';
@@ -14,13 +14,13 @@ function toResponse(notifications: NotificationItem[], unread: number): Notifica
 }
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const svc = notificationService();
   const [notifications, unread] = await Promise.all([
-    svc.list(session.user.id, LIST_LIMIT),
-    svc.countUnread(session.user.id),
+    svc.list(caller.id, LIST_LIMIT),
+    svc.countUnread(caller.id),
   ]);
   return NextResponse.json(toResponse(notifications, unread));
 }

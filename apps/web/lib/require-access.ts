@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { can, type Actor, type Permission } from '@vire/core/access';
 import { insertAuditEntry } from '@vire/db';
 
@@ -35,12 +35,12 @@ export function makeAudit(actor: Actor, permission: Permission): AuditFn {
 }
 
 export async function requireAccess(permission: Permission): Promise<AccessResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
 
-  const actor: Actor = { id: session.user.id, role: session.user.role };
+  const actor: Actor = { id: caller.id, role: caller.role };
   if (!can(actor, permission)) {
     return { ok: false, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
   }
@@ -49,10 +49,10 @@ export async function requireAccess(permission: Permission): Promise<AccessResul
 }
 
 export async function requireUser(): Promise<UserResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
 
-  return { ok: true, actor: { id: session.user.id, role: session.user.role } };
+  return { ok: true, actor: { id: caller.id, role: caller.role } };
 }

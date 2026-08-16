@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { getArtistTrackIds } from '@vire/db';
 import { countListeningMany } from '@/lib/presence';
 import { getActiveArtist } from '@/lib/active-artist';
 
 /** Сколько слушателей прямо сейчас слушают треки этого артиста (для дашборда). */
 export async function GET(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }

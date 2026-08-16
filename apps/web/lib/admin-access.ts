@@ -1,5 +1,5 @@
-import { auth } from '@/auth';
 import { can } from '@vire/core/access';
+import { getCaller } from '@/lib/caller';
 
 export interface AdminAccess {
   canModerate: boolean;
@@ -10,8 +10,7 @@ export interface AdminAccess {
 
 // Собирает флаги для условного рендера мутаций в админке (VIEWER читает всё, мутирует ничего).
 export async function getAdminAccess(): Promise<AdminAccess> {
-  const session = await auth();
-  const actor = session?.user ?? null;
+  const actor = await getCaller();
   return {
     canModerate: can(actor, 'admin.content.moderate'),
     canManageUsers: can(actor, 'admin.users.manage'),

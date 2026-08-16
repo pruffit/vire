@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { composeHomeScreen } from '@vire/core';
 import { screenSchema, type Screen } from '@vire/api-contracts';
 
@@ -12,9 +12,9 @@ function supportedBlocks(req: Request): string[] {
 }
 
 export async function GET(req: Request) {
-  const session = await auth();
+  const caller = await getCaller();
   const screen = composeHomeScreen({
-    isAuthenticated: Boolean(session?.user?.id),
+    isAuthenticated: Boolean(caller),
     supportedBlocks: supportedBlocks(req),
   });
 
