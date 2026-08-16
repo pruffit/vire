@@ -1,38 +1,12 @@
-/* VireMusic design tokens — always dark platform shell.
+/* VireMusic design tokens — always dark platform shell. Значения переменных
+   (background/foreground/card/.../ring, radius) — из packages/design-tokens
+   (docs/features/design-tokens.md), это единственное место, где их меняют.
    Нейтраль НЕ чистый серый (chroma 0), а с едва заметной тёплой подкраской
    (hue ~75, низкая chroma) — «не чистый чёрный, с лёгкой теплотой», пыльный беж
    из концепта. Принцип Impeccable: «tint your grays», не использовать pure gray. */
+@import "@vire/design-tokens/tokens.css";
+
 :root {
-  --background: oklch(0.085 0.006 75);
-  --foreground: oklch(0.93 0.008 83);
-
-  --card: oklch(0.115 0.006 75);
-  --card-foreground: oklch(0.93 0.008 83);
-
-  --popover: oklch(0.115 0.006 75);
-  --popover-foreground: oklch(0.93 0.008 83);
-
-  /* Primary = inverted (тёплый кремовый «белый» на тёмном) */
-  --primary: oklch(0.93 0.008 83);
-  --primary-foreground: oklch(0.085 0.006 75);
-
-  --secondary: oklch(0.165 0.006 75);
-  --secondary-foreground: oklch(0.93 0.008 83);
-
-  --muted: oklch(0.165 0.006 75);
-  --muted-foreground: oklch(0.57 0.009 80);
-
-  --accent: oklch(0.165 0.006 75);
-  --accent-foreground: oklch(0.93 0.008 83);
-
-  --destructive: oklch(0.55 0.22 27);
-
-  --border: oklch(0.225 0.006 75);
-  --input: oklch(0.225 0.006 75);
-  --ring: oklch(0.44 0.01 78);
-
-  --radius: 0.375rem;
-
   /* Artist layer — injected per artist page, fallback to platform tokens */
   --artist-bg: var(--background);
   --artist-text: var(--foreground);

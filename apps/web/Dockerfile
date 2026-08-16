@@ -14,6 +14,11 @@ COPY . .
 # Ставим только подграф web (+ core/db/ui/config), с devDeps — нужны для сборки.
 RUN pnpm install --frozen-lockfile --filter @vire/web...
 
+# @vire/ui импортирует dist/tokens.css из @vire/design-tokens — генерируется build-скриптом
+# пакета, не собирается автоматически: `pnpm --filter @vire/web build` ниже не идёт через
+# turbo-граф ^build.
+RUN pnpm --filter @vire/design-tokens build
+
 # DATABASE_URL нужен при сборке: db-клиент инициализируется на уровне модуля.
 # S3_PUBLIC_ENDPOINT нужен: next/image бакает remotePatterns в next.config.ts при сборке.
 # Dummy-значения безопасны — реальные запросы идут только в рантайме.

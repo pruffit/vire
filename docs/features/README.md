@@ -76,6 +76,7 @@
 - [x] [PWA и офлайн](pwa-offline.md) — установка приложения, кэш оболочки, скачивание треков и экран «Скачанное»
 - [x] [Дизайн-система: роли и границы китов](design-system.md) — `label-mono`/`readout`, `packages/ui` vs `ui-kit`/`content-kit`, статический гейт
 - [x] [Локализация (ru/en)](i18n.md) — словари `packages/i18n`, `/en`-префикс, `users.locale`, письма/пуш по локали получателя, гейт `check:i18n`
+- [x] [Дизайн-токены](design-tokens.md) — `packages/design-tokens`: `tokens.json` источник правды, генераторы CSS (веб) и TS-объекта (будущий RN-клиент)
 - [ ] Этап 2 — продажи (YooKassa)
 
 См. также: [`docs/security/owasp-top-10.md`](../security/owasp-top-10.md).

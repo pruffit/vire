@@ -56,6 +56,10 @@ jobs:
         run: pnpm audit --audit-level=high
       - name: Design audit (Impeccable)
         run: pnpm --filter @vire/web audit:design
+      # @vire/ui импортирует dist/tokens.css из @vire/design-tokens — `pnpm --filter @vire/web
+      # build` не проходит turbo-граф ^build (не через `turbo run build`), сборка токенов нужна отдельным шагом.
+      - name: Build design tokens
+        run: pnpm --filter @vire/design-tokens build
       - name: Build
         run: pnpm --filter @vire/web build
         env:
