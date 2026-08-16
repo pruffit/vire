@@ -52,38 +52,27 @@ export function LibrarySidebar({
         </div>
       )}
 
-      <div className={cn(collapsed ? 'flex justify-center px-2 pt-2 pb-0.5' : 'px-1.5 pt-1 pb-0.5', 'shrink-0')}>
-        <LibraryRow
-          collapsed={collapsed}
-          href="/jam"
-          title={t('jamTitle')}
-          subtitle={t('jamSubtitle')}
-          leading={
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
-              <Icon name="sliders" size={18} className="text-foreground" />
-            </span>
-          }
-        />
-      </div>
-
       {isGuest ? (
-        collapsed ? (
-          <Link
-            href="/sign-in"
-            aria-label={t('signInAria')}
-            title={t('signInAria')}
-            className="mx-auto grid h-10 w-10 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
-          >
-            <Icon name="log-in" size={18} />
-          </Link>
-        ) : (
-          <div className="mx-2 rounded-lg border border-border bg-foreground/[0.03] p-4 text-sm">
-            <p className="text-foreground/70">{t('guestPrompt')}</p>
-            <Link href="/sign-in" className="mt-2 inline-block text-sm font-medium text-foreground hover:underline">
-              {t('signInCta')}
+        <div className={cn('flex flex-col gap-0.5', collapsed ? 'items-center px-2' : 'px-1.5')}>
+          <JamRow collapsed={collapsed} title={t('jamTitle')} subtitle={t('jamSubtitle')} />
+          {collapsed ? (
+            <Link
+              href="/sign-in"
+              aria-label={t('signInAria')}
+              title={t('signInAria')}
+              className="mx-auto grid h-10 w-10 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              <Icon name="log-in" size={18} />
             </Link>
-          </div>
-        )
+          ) : (
+            <div className="mt-1 rounded-lg border border-border bg-foreground/[0.03] p-4 text-sm">
+              <p className="text-foreground/70">{t('guestPrompt')}</p>
+              <Link href="/sign-in" className="mt-2 inline-block text-sm font-medium text-foreground hover:underline">
+                {t('signInCta')}
+              </Link>
+            </div>
+          )}
+        </div>
       ) : (
         <div
           className={cn(
@@ -139,6 +128,10 @@ export function LibrarySidebar({
             }
           />
 
+          {/* Джем — разовый сценарий, а не накопленное: стоит в общем списке после
+              постоянных разделов, а не закреплён над ним. */}
+          <JamRow collapsed={collapsed} title={t('jamTitle')} subtitle={t('jamSubtitle')} />
+
           {playlists.map((p) => (
             <LibraryRow
               key={p.id}
@@ -185,6 +178,22 @@ export function LibrarySidebar({
         </div>
       )}
     </div>
+  );
+}
+
+function JamRow({ collapsed, title, subtitle }: { collapsed: boolean; title: string; subtitle: string }) {
+  return (
+    <LibraryRow
+      collapsed={collapsed}
+      href="/jam"
+      title={title}
+      subtitle={subtitle}
+      leading={
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-linear-to-br from-foreground/20 to-foreground/[0.06]">
+          <Icon name="sliders" size={18} className="text-foreground" />
+        </span>
+      }
+    />
   );
 }
 

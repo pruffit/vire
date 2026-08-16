@@ -68,3 +68,34 @@ describe('LibrarySidebar — скролл', () => {
     expect(scrollPane?.className).not.toContain('scrollbar-width');
   });
 });
+
+describe('LibrarySidebar — джем в общем списке', () => {
+  it('джем стоит внутри прокручиваемого списка, а не закреплён над ним', () => {
+    const { container } = render(<LibrarySidebar {...BASE_PROPS} />);
+    const scrollPane = container.querySelector('.overflow-y-auto');
+    const jam = container.querySelector('a[href="/jam"]');
+
+    expect(jam).toBeTruthy();
+    expect(scrollPane?.contains(jam!)).toBe(true);
+  });
+
+  it('идёт после постоянных разделов, перед накопленным контентом', () => {
+    const { container } = render(
+      <LibrarySidebar {...BASE_PROPS} playlists={[{ id: 'p1', name: 'Мой', coverUrl: null }]} />,
+    );
+    const hrefs = [...container.querySelectorAll('a[href]')].map((a) => a.getAttribute('href'));
+
+    expect(hrefs.indexOf('/jam')).toBeGreaterThan(hrefs.indexOf('/messages'));
+    expect(hrefs.indexOf('/jam')).toBeLessThan(hrefs.indexOf('/playlists/p1'));
+  });
+
+  it('гость по-прежнему может попасть в джем', () => {
+    const { container } = render(<LibrarySidebar {...BASE_PROPS} isGuest />);
+    expect(container.querySelector('a[href="/jam"]')).toBeTruthy();
+  });
+
+  it('в свёрнутом рейле у гостя джем тоже доступен', () => {
+    const { container } = render(<LibrarySidebar {...BASE_PROPS} isGuest collapsed />);
+    expect(container.querySelector('a[href="/jam"]')).toBeTruthy();
+  });
+});
