@@ -15,6 +15,9 @@ export * from './platform/util/format';
 export * from './platform/util/scoring';
 export * from './platform/config/env';
 export * from './platform/config/feature-flags';
+export * from './platform/storage/repositories/orphan';
+export * from './platform/storage/services/cleanup';
+export * from './music/catalog/services/storage-keys';
 // util/signing НЕ реэкспортим: баррель тянется в Edge-runtime, где node:crypto не
 // поддержан. Импорт — через подпуть '@vire/core/signing' (только серверные потребители).
 // По той же причине notifications/unsubscribe (зависит от util/signing) — тоже

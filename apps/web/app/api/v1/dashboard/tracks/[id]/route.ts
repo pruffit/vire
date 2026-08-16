@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
+import { db, DrizzleReleaseRepository, DrizzleTrackRepository, DrizzleOrphanedStorageRepository } from '@vire/db';
 import { TrackService, NotFoundError, type UpdateTrackParams } from '@vire/core';
 import { transcodeQueue } from '@/lib/queue';
 import { isUuid, sanitizeCredits } from '@/lib/upload';
@@ -13,7 +13,7 @@ function trackService() {
     new DrizzleTrackRepository(db),
     new DrizzleReleaseRepository(db),
     transcodeQueue,
-    { uuid: () => crypto.randomUUID() },
+    { uuid: () => crypto.randomUUID(), orphanStorage: new DrizzleOrphanedStorageRepository() },
   );
 }
 

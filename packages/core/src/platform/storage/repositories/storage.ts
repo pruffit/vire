@@ -22,6 +22,8 @@ export interface IFileStorage extends IFileUploader {
   uploadFile(key: string, sourcePath: string, contentType: string): Promise<void>;
   downloadToFile(key: string, destinationPath: string): Promise<void>;
   presignDownload(key: string, options: PresignDownloadOptions): Promise<string>;
+  /** Все ключи под префиксом; пагинация внутри реализации. */
+  listKeys(prefix: string): Promise<string[]>;
   /** Нет объекта — не ошибка: удаление идемпотентно. */
   remove(keys: string[]): Promise<void>;
   stat(key: string): Promise<StorageObjectInfo | null>;

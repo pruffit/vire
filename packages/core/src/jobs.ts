@@ -9,6 +9,7 @@ export const QUEUE_SCHEDULED_PUBLISH = 'scheduled-publish' as const;
 export const QUEUE_FULFILL_PRESAVE = 'fulfill-presave' as const;
 export const QUEUE_METRICS = 'metrics-daily' as const;
 export const QUEUE_JAM_REAPER = 'jam-reaper' as const;
+export const QUEUE_STORAGE_CLEANUP = 'storage-cleanup' as const;
 
 export interface TranscodeJobData {
   trackId: string;

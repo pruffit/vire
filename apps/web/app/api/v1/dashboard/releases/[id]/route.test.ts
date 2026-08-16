@@ -17,6 +17,7 @@ vi.mock('@vire/db', () => ({
     findById = findById;
     update = update;
   },
+  DrizzleOrphanedStorageRepository: class {},
 }));
 vi.mock('@/lib/s3', () => ({ uploadToStream }));
 

@@ -149,6 +149,28 @@ describe('ReleaseService.deleteRelease', () => {
     expect(repo.delete).toHaveBeenCalledOnce();
     expect(repo.delete).toHaveBeenCalledWith('release-1');
   });
+
+  it('регистрирует обложку и файлы всех треков до удаления — потом id треков не узнать', async () => {
+    const calls: string[] = [];
+    const repo = makeRepo({
+      findById: vi.fn().mockResolvedValue(mockRelease),
+      findWithTracks: vi.fn().mockResolvedValue({ ...mockRelease, tracks: [{ id: 'track-1' }, { id: 'track-2' }] }),
+      delete: vi.fn().mockImplementation(async () => { calls.push('delete'); }),
+    });
+    const orphanStorage = {
+      enqueue: vi.fn().mockImplementation(async () => { calls.push('enqueue'); }),
+      listDue: vi.fn(), markCleaned: vi.fn(), markFailed: vi.fn(),
+    };
+    const service = new ReleaseService(repo, { uuid: () => 'release-1', orphanStorage });
+
+    await service.deleteRelease({ releaseId: 'release-1', artistProfileId: 'artist-1' });
+
+    expect(calls).toEqual(['enqueue', 'delete']);
+    const entries = orphanStorage.enqueue.mock.calls[0][0];
+    expect(entries).toHaveLength(5);
+    expect(entries[0]).toMatchObject({ bucket: 'stream', prefix: 'covers/release-1.' });
+    expect(entries.filter((e: { entityId: string }) => e.entityId === 'track-2')).toHaveLength(2);
+  });
 });
 
 function makeCoverStorage(overrides?: Partial<IFileUploader>): IFileUploader {

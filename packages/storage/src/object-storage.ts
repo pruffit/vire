@@ -2,6 +2,7 @@ import {
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   type S3Client,
 } from '@aws-sdk/client-s3';
@@ -74,6 +75,21 @@ export class S3ObjectStorage implements IFileStorage {
       ResponseContentType: options.contentType,
     });
     return getSignedUrl(this.signer, command, { expiresIn: options.expiresInSec });
+  }
+
+  async listKeys(prefix: string): Promise<string[]> {
+    const keys: string[] = [];
+    let continuationToken: string | undefined;
+    do {
+      const res = await this.client.send(
+        new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ContinuationToken: continuationToken }),
+      );
+      for (const item of res.Contents ?? []) {
+        if (item.Key) keys.push(item.Key);
+      }
+      continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+    } while (continuationToken);
+    return keys;
   }
 
   async remove(keys: string[]): Promise<void> {

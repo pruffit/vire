@@ -288,15 +288,36 @@ describe('TrackService.deleteTrack', () => {
     expect(trackRepo.delete).toHaveBeenCalledWith('track-1');
   });
 
+  it('регистрирует файлы трека в уборке до удаления строки', async () => {
+    const calls: string[] = [];
+    const trackRepo = makeTrackRepo({ delete: vi.fn().mockImplementation(async () => { calls.push('delete'); }) });
+    const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue(mockRelease) });
+    const orphanStorage = {
+      enqueue: vi.fn().mockImplementation(async () => { calls.push('enqueue'); }),
+      listDue: vi.fn(), markCleaned: vi.fn(), markFailed: vi.fn(),
+    };
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps({ orphanStorage }));
+
+    await service.deleteTrack({ trackId: 'track-1', artistProfileId: 'artist-1' });
+
+    expect(calls).toEqual(['enqueue', 'delete']);
+    expect(orphanStorage.enqueue).toHaveBeenCalledWith([
+      { bucket: 'vault', prefix: 'tracks/track-1/', reason: 'track.deleted', entityId: 'track-1' },
+      { bucket: 'stream', prefix: 'tracks/track-1/', reason: 'track.deleted', entityId: 'track-1' },
+    ]);
+  });
+
   it('does not delete when track belongs to another artist', async () => {
     const trackRepo = makeTrackRepo();
     const releaseRepo = makeReleaseRepo({ findById: vi.fn().mockResolvedValue({ ...mockRelease, artistProfileId: 'other' }) });
-    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps());
+    const orphanStorage = { enqueue: vi.fn(), listDue: vi.fn(), markCleaned: vi.fn(), markFailed: vi.fn() };
+    const service = new TrackService(trackRepo, releaseRepo, makeQueue(), makeDeps({ orphanStorage }));
 
     const result = await service.deleteTrack({ trackId: 'track-1', artistProfileId: 'artist-1' });
 
     expect(result.ok).toBe(false);
     expect(trackRepo.delete).not.toHaveBeenCalled();
+    expect(orphanStorage.enqueue).not.toHaveBeenCalled();
   });
 });
 

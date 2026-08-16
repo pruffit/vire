@@ -1,6 +1,8 @@
 import { err, ok, NotFoundError, ValidationError, ForbiddenError, type Result } from '../../../errors';
 import type { IReleaseRepository } from '../repositories/release';
 import type { IFileUploader } from '../../../platform/storage/repositories/storage';
+import type { IOrphanedStorageRepository } from '../../../platform/storage/repositories/orphan';
+import { releaseStoragePrefixes } from './storage-keys';
 import type { NotifyReleaseJobData } from '../../../jobs';
 import type { IdGenerator } from '../../../platform/ports/effects';
 import { ALL_GENRES, type Genre, type Release, type ReleaseStatus, type ReleaseType, type ReleaseWithTracks } from '../types/release';
@@ -15,6 +17,7 @@ export interface ReleaseServiceDeps {
   uuid: IdGenerator;
   coverStorage?: IFileUploader;
   notifyQueue?: INotifyReleaseQueue;
+  orphanStorage?: IOrphanedStorageRepository;
 }
 
 export interface ReleaseCoverInput {
@@ -143,6 +146,14 @@ export class ReleaseService {
     if (release.artistProfileId !== params.artistProfileId) {
       return err(new ForbiddenError('Forbidden: release does not belong to this artist', 'release.forbidden'));
     }
+
+    // Ключи регистрируются ДО удаления строк: после них id треков уже не узнать.
+    if (this.deps.orphanStorage) {
+      const withTracks = await this.repo.findWithTracks(params.releaseId);
+      const trackIds = withTracks?.tracks.map((t) => t.id) ?? [];
+      await this.deps.orphanStorage.enqueue(releaseStoragePrefixes(params.releaseId, trackIds));
+    }
+
     await this.repo.delete(params.releaseId);
     return ok(undefined);
   }

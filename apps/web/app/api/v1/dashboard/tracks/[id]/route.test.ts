@@ -14,6 +14,7 @@ vi.mock('@vire/db', () => ({
   },
   DrizzleReleaseRepository: class {},
   DrizzleTrackRepository: class {},
+  DrizzleOrphanedStorageRepository: class {},
 }));
 vi.mock('@vire/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@vire/core')>();

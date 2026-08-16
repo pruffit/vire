@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, DrizzleReleaseRepository } from '@vire/db';
+import { db, DrizzleReleaseRepository, DrizzleOrphanedStorageRepository } from '@vire/db';
 import { fileStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
 import { validateImageUpload, COVER_POLICY } from '@/lib/image';
@@ -103,7 +103,10 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const service = new ReleaseService(new DrizzleReleaseRepository(db), { uuid: () => crypto.randomUUID() });
+  const service = new ReleaseService(new DrizzleReleaseRepository(db), {
+    uuid: () => crypto.randomUUID(),
+    orphanStorage: new DrizzleOrphanedStorageRepository(),
+  });
   const result = await service.deleteRelease({ releaseId: id, artistProfileId: artist.id });
 
   if (!result.ok) {

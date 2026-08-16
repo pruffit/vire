@@ -251,6 +251,7 @@ export {
 } from './queries/reports';
 export * from './repositories/notification';
 export * from './repositories/feature-flag';
+export * from './repositories/orphan-storage';
 export {
   insertNotification, listNotifications, countUnreadNotifications, markAllNotificationsRead, markNotificationRead,
 } from './queries/notifications';

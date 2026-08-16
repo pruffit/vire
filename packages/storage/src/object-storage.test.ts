@@ -64,6 +64,31 @@ describe('S3ObjectStorage.remove', () => {
   });
 });
 
+describe('S3ObjectStorage.listKeys', () => {
+  it('собирает ключи по префиксу', async () => {
+    const send = vi.fn().mockResolvedValue({ Contents: [{ Key: 'a' }, { Key: 'b' }], IsTruncated: false });
+    const { subject } = storage({ send });
+
+    await expect(subject.listKeys('tracks/t1/')).resolves.toEqual(['a', 'b']);
+    expect(send.mock.calls[0][0].input).toMatchObject({ Bucket: 'vire-stream', Prefix: 'tracks/t1/' });
+  });
+
+  it('идёт по страницам, пока IsTruncated', async () => {
+    const send = vi.fn()
+      .mockResolvedValueOnce({ Contents: [{ Key: 'a' }], IsTruncated: true, NextContinuationToken: 'tok' })
+      .mockResolvedValueOnce({ Contents: [{ Key: 'b' }], IsTruncated: false });
+    const { subject } = storage({ send });
+
+    await expect(subject.listKeys('p/')).resolves.toEqual(['a', 'b']);
+    expect(send.mock.calls[1][0].input.ContinuationToken).toBe('tok');
+  });
+
+  it('пустой префикс — пустой список, а не падение', async () => {
+    const { subject } = storage({ send: vi.fn().mockResolvedValue({ IsTruncated: false }) });
+    await expect(subject.listKeys('nope/')).resolves.toEqual([]);
+  });
+});
+
 describe('S3ObjectStorage.stat', () => {
   it('отдаёт метаданные объекта', async () => {
     const lastModified = new Date('2026-08-16T00:00:00Z');

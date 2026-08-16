@@ -2,6 +2,8 @@ import { err, ok, NotFoundError, ValidationError, ForbiddenError, type Result } 
 import type { ITrackRepository, UpdateTrackParams } from '../repositories/track';
 import type { IReleaseRepository } from '../repositories/release';
 import type { IFileUploader } from '../../../platform/storage/repositories/storage';
+import type { IOrphanedStorageRepository } from '../../../platform/storage/repositories/orphan';
+import { trackStoragePrefixes } from './storage-keys';
 import type { ITrackMoodsRepository } from '../../curation/repositories/track-moods';
 import type { TranscodeJobData } from '../../../jobs';
 import type { IdGenerator } from '../../../platform/ports/effects';
@@ -25,6 +27,7 @@ export interface TrackServiceDeps {
   audioStorage?: IFileUploader;
   moodsRepo?: ITrackMoodsRepository;
   parseLrc?: (raw: string) => LyricLine[];
+  orphanStorage?: IOrphanedStorageRepository;
 }
 
 export class TrackService {
@@ -94,6 +97,8 @@ export class TrackService {
     );
     if (!authorized.ok) return authorized;
 
+    // Ключи регистрируются ДО удаления строки — иначе о файлах уже некому вспомнить.
+    await this.deps.orphanStorage?.enqueue(trackStoragePrefixes(params.trackId));
     await this.trackRepo.delete(params.trackId);
     return ok(undefined);
   }

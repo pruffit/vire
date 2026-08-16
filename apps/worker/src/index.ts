@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Queue } from 'bullmq';
-import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH, QUEUE_METRICS, QUEUE_JAM_REAPER, parseEnv } from '@vire/core';
+import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH, QUEUE_METRICS, QUEUE_JAM_REAPER, QUEUE_STORAGE_CLEANUP, parseEnv } from '@vire/core';
 import { createTranscodeWorker, handleTerminalTranscodeFailure } from './workers/transcode.worker.js';
 import { createPlayEventsWorker } from './workers/play-events.worker.js';
 import { createNotifyReleaseWorker } from './workers/notify-release.worker.js';
@@ -12,6 +12,7 @@ import { createFulfillPresaveWorker } from './workers/fulfill-presave.worker.js'
 import { createMetricsWorker } from './workers/metrics.worker.js';
 import { createNotifyExternalWorker } from './workers/notify-external.worker.js';
 import { createJamReaperWorker } from './workers/jam-reaper.worker.js';
+import { createStorageCleanupWorker } from './workers/storage-cleanup.worker.js';
 import { connection } from './queues/connection.js';
 import { alertJobFailure, alertWorkerError, alertCrash } from './lib/alert.js';
 
@@ -36,6 +37,7 @@ const fulfillPresaveWorker = createFulfillPresaveWorker();
 const metricsWorker = createMetricsWorker();
 const notifyExternalWorker = createNotifyExternalWorker();
 const jamReaperWorker = createJamReaperWorker();
+const storageCleanupWorker = createStorageCleanupWorker();
 
 // upsertJobScheduler идемпотентен: повторный запуск воркера не плодит дубли, обновляет расписание.
 const editorialQueue = new Queue(QUEUE_EDITORIAL, { connection });
@@ -64,6 +66,12 @@ const jamReaperQueue = new Queue(QUEUE_JAM_REAPER, { connection });
 jamReaperQueue
   .upsertJobScheduler('jam-reaper-15m', { pattern: '*/15 * * * *', tz: 'Europe/Moscow' }, { name: 'reap', data: {} })
   .catch((err) => void alertWorkerError('jam-reaper', err as Error));
+
+// Уборка файлов удалённых треков/релизов — раз в час; сами записи ждут grace-периода (сутки).
+const storageCleanupQueue = new Queue(QUEUE_STORAGE_CLEANUP, { connection });
+storageCleanupQueue
+  .upsertJobScheduler('storage-cleanup-hourly', { pattern: '30 * * * *', tz: 'Europe/Moscow' }, { name: 'sweep', data: {} })
+  .catch((err) => void alertWorkerError('storage-cleanup', err as Error));
 
 editorialWorker.on('completed', (job) => {
   console.log(`[editorial] ✓ job=${job.id} scope=${job.data.scope}`);
@@ -179,6 +187,13 @@ jamReaperWorker.on('error', (err) => {
   void alertWorkerError('jam-reaper', err);
 });
 
+storageCleanupWorker.on('failed', (job, err) => {
+  void alertJobFailure('storage-cleanup', job?.id, err);
+});
+storageCleanupWorker.on('error', (err) => {
+  void alertWorkerError('storage-cleanup', err);
+});
+
 // Алертим (дождавшись доставки) и выходим с кодом 1 — иначе воркер умирал бы молча,
 // а загрузки застревали бы в PROCESSING без уведомления.
 process.on('uncaughtException', (err) => {
@@ -206,6 +221,8 @@ async function shutdown() {
     notifyExternalWorker.close(),
     jamReaperWorker.close(),
     jamReaperQueue.close(),
+    storageCleanupWorker.close(),
+    storageCleanupQueue.close(),
   ]);
   process.exit(0);
 }
