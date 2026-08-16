@@ -15,3 +15,4 @@ export * from './common';
 export * from './chat';
 export * from './notifications';
 export * from './sdui';
+export * from './device-auth';

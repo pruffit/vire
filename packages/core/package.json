@@ -9,6 +9,8 @@
     "./notifications/unsubscribe": "./src/platform/notifications/unsubscribe.ts",
     "./notifications/registry": "./src/platform/notifications/registry.ts",
     "./identity/device-tokens": "./src/platform/identity/device-tokens.ts",
+    "./identity/device": "./src/platform/identity/repositories/device.ts",
+    "./identity/device-auth": "./src/platform/identity/services/device-auth.ts",
     "./access": "./src/platform/access/index.ts"
   },
   "scripts": {

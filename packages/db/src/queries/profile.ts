@@ -156,3 +156,9 @@ export async function getUserDisplayName(userId: string): Promise<string | null>
   const [row] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
   return row?.name ?? null;
 }
+
+/** Роль пользователя на текущий момент; null — пользователя больше нет. */
+export async function getUserRoleById(userId: string): Promise<string | null> {
+  const [row] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+  return row?.role ?? null;
+}

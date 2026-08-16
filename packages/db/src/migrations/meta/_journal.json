@@ -393,6 +393,13 @@
       "when": 1786864137555,
       "tag": "0055_illegal_human_robot",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1786868916644,
+      "tag": "0056_bright_bloodstrike",
+      "breakpoints": true
     }
   ]
 }
