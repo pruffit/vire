@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { jamService } from '@/lib/jam';
 import { ConflictError } from '@vire/core';
 import { errorJson } from '@/lib/error-response';
@@ -12,17 +12,17 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body ?? {});
   if (!parsed.success) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
 
   const result = await jamService().create(
-    session.user.id,
+    caller.id,
     parsed.data.title ?? null,
-    session.user.name ?? 'Хост',
+    caller.name ?? 'Хост',
     parsed.data.mode ?? 'SYNCED',
     parsed.data.kind ?? 'JAM',
   );

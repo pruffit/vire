@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { chatService } from '@/lib/chat';
 import { NotFoundError, type ChatMessage } from '@vire/core';
 import { chatHistoryCursorSchema, type ChatMessagesResponse } from '@vire/api-contracts';
@@ -16,8 +16,8 @@ function toResponse(messages: ChatMessage[]): ChatMessagesResponse {
 }
 
 export async function GET(req: Request, { params }: Ctx) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const parsedParams = paramsSchema.safeParse(await params);
   if (!parsedParams.success) return NextResponse.json({ error: 'Invalid conversationId' }, { status: 400 });
@@ -29,7 +29,7 @@ export async function GET(req: Request, { params }: Ctx) {
   });
   if (!parsedCursor.success) return NextResponse.json({ error: 'Invalid before' }, { status: 400 });
 
-  const result = await chatService().history(session.user.id, parsedParams.data.conversationId, parsedCursor.data, HISTORY_LIMIT);
+  const result = await chatService().history(caller.id, parsedParams.data.conversationId, parsedCursor.data, HISTORY_LIMIT);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);

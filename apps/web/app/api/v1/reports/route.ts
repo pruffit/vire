@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { reportService } from '@/lib/reports';
 import { ValidationError } from '@vire/core';
 import { rateLimit, tooManyRequests } from '@/lib/rate-limit';
@@ -13,10 +13,10 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const rl = await rateLimit(`report:${session.user.id}`, 5, 3600);
+  const rl = await rateLimit(`report:${caller.id}`, 5, 3600);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const json = await req.json().catch(() => null);
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
 
   const result = await reportService().submit(
-    session.user.id,
+    caller.id,
     parsed.data.targetType,
     parsed.data.targetId,
     parsed.data.reason,

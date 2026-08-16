@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { chatService } from '@/lib/chat';
 import { ValidationError, type ChatMessage } from '@vire/core';
 import { sendChatMessageSchema, type SendChatMessageResponse } from '@vire/api-contracts';
@@ -11,10 +11,10 @@ function toResponse(value: { conversationId: string; message: ChatMessage }): Se
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const rl = await rateLimit(`chat-send:${session.user.id}`, 60, 60);
+  const rl = await rateLimit(`chat-send:${caller.id}`, 60, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const json = await req.json().catch(() => null);
@@ -22,10 +22,10 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
 
   const result = await chatService().send(
-    session.user.id,
+    caller.id,
     parsed.data.toUserId,
     { ciphertext: parsed.data.ciphertext, nonce: parsed.data.nonce },
-    session.user.name,
+    caller.name,
   );
   if (!result.ok) {
     const status = result.error instanceof ValidationError ? 422 : 403;

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { NotFoundError } from '@vire/core';
 import type { PlaylistCoverResponse } from '@vire/api-contracts';
 import { playlistService } from '@/lib/playlist';
@@ -9,8 +9,8 @@ import { errorJson } from '@/lib/error-response';
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
 
@@ -19,7 +19,7 @@ export async function POST(req: Request, { params }: Params) {
   catch { return NextResponse.json({ error: 'Invalid form data' }, { status: 400 }); }
 
   if (formData.get('removeCover') === '1') {
-    const result = await playlistService().setCover(id, session.user.id, null);
+    const result = await playlistService().setCover(id, caller.id, null);
     if (!result.ok) {
       const status = result.error instanceof NotFoundError ? 404 : 403;
       return errorJson(result.error, status);
@@ -35,7 +35,7 @@ export async function POST(req: Request, { params }: Params) {
   const v = validateImageUpload(file.size, buffer, PLAYLIST_COVER_POLICY);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
 
-  const result = await playlistService().setCover(id, session.user.id, { buffer, contentType: v.info.mime, ext: v.info.ext });
+  const result = await playlistService().setCover(id, caller.id, { buffer, contentType: v.info.mime, ext: v.info.ext });
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);

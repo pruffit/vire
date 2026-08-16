@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { NotFoundError, type PlaylistUpdatePatch } from '@vire/core';
 import { updatePlaylistSchema, type PlaylistDetailResponse, type OkResponse } from '@vire/api-contracts';
 import { playlistService } from '@/lib/playlist';
@@ -9,9 +9,9 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
-  const session = await auth();
+  const caller = await getCaller();
 
-  const result = await playlistService().getForViewer(id, session?.user?.id ?? null);
+  const result = await playlistService().getForViewer(id, caller?.id ?? null);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
@@ -20,8 +20,8 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 export async function PATCH(req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
   const body = await req.json().catch(() => null);
@@ -33,7 +33,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if (parsed.data.description !== undefined) patch.description = parsed.data.description;
   if (parsed.data.visibility !== undefined) patch.visibility = parsed.data.visibility;
 
-  const result = await playlistService().update(id, session.user.id, patch);
+  const result = await playlistService().update(id, caller.id, patch);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
@@ -42,11 +42,11 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const result = await playlistService().delete(id, session.user.id);
+  const result = await playlistService().delete(id, caller.id);
   if (!result.ok) return errorJson(result.error, 404);
   return NextResponse.json({ ok: true } satisfies OkResponse);
 }

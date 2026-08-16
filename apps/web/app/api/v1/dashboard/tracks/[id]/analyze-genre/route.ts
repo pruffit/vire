@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzleTrackRepository, DrizzleReleaseRepository } from '@vire/db';
 import { isUuid } from '@/lib/upload';
 import { getActiveArtist } from '@/lib/active-artist';
@@ -8,13 +8,13 @@ import { analyzeGenreQueue } from '@/lib/queue';
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: 'Invalid track id' }, { status: 400 });
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const track = await new DrizzleTrackRepository(db).findById(id);

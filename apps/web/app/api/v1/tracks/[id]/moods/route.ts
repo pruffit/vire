@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import {
   ALL_MOODS, db,
   DrizzleTrackRepository, DrizzleReleaseRepository, DrizzleTrackMoodsRepository,
@@ -29,12 +29,12 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 export async function PUT(req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json().catch(() => null);

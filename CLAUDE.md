@@ -266,6 +266,7 @@ pnpm --filter @vire/web lint           # eslint
 pnpm --filter @vire/web check:routes   # инвариант роутинга (см. ниже)
 pnpm --filter @vire/web check:i18n     # кириллица вне словарей packages/i18n/messages
 pnpm --filter @vire/web check:contracts  # роут /api/v1 без схемы @vire/api-contracts вне allowlist
+pnpm --filter @vire/web check:caller   # роут app/api берёт актора через getCaller(), не через auth()
 pnpm turbo run check:layers            # границы @vire/core: platform/** не знает о music/**
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов

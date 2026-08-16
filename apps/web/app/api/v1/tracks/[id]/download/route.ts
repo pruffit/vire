@@ -1,14 +1,14 @@
 import { redirect } from 'next/navigation';
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { hasPurchasedTrack, getTrackAudio, trackExists } from '@vire/db';
 import { getSourceDownloadUrl } from '@/lib/s3';
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -18,7 +18,7 @@ export async function GET(req: Request, { params }: Params) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  if (!(await hasPurchasedTrack(session.user.id, trackId))) {
+  if (!(await hasPurchasedTrack(caller.id, trackId))) {
     return NextResponse.json({ error: 'Not purchased' }, { status: 403 });
   }
 

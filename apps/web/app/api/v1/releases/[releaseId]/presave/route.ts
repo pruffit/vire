@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzlePresaveRepository } from '@vire/db';
 import { PresaveService, NotFoundError, type ValidationError } from '@vire/core';
 import type { PresaveResponse } from '@vire/api-contracts';
@@ -23,22 +23,22 @@ function presaveErrorResponse(error: NotFoundError | ValidationError): NextRespo
 }
 
 export async function GET(_req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ presaved: false } satisfies PresaveResponse);
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ presaved: false } satisfies PresaveResponse);
   const { releaseId } = await params;
-  const result = await presaveService().getState(session.user.id, releaseId);
+  const result = await presaveService().getState(caller.id, releaseId);
   return NextResponse.json({ presaved: result.ok ? result.value.presaved : false } satisfies PresaveResponse);
 }
 
 export async function POST(req: Request, { params }: Params) {
   const { releaseId } = await params;
   const service = presaveService();
-  const session = await auth();
+  const caller = await getCaller();
 
-  if (session?.user?.id) {
-    const rl = await rateLimit(`presave:${session.user.id}`, 30, 60);
+  if (caller?.id) {
+    const rl = await rateLimit(`presave:${caller.id}`, 30, 60);
     if (!rl.ok) return tooManyRequests(rl.retryAfter);
-    const result = await service.presaveUser(session.user.id, releaseId);
+    const result = await service.presaveUser(caller.id, releaseId);
     if (!result.ok) return presaveErrorResponse(result.error);
     return NextResponse.json({ presaved: true } satisfies PresaveResponse);
   }
@@ -63,9 +63,9 @@ export async function POST(req: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { releaseId } = await params;
-  await presaveService().unpresave(session.user.id, releaseId);
+  await presaveService().unpresave(caller.id, releaseId);
   return NextResponse.json({ presaved: false } satisfies PresaveResponse);
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { playlistService } from '@/lib/playlist';
 import { subscribeChannel, playlistChannel } from '@/lib/realtime';
 import { NotFoundError } from '@vire/core';
@@ -12,11 +12,11 @@ const HEARTBEAT_MS = 25_000;
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(req: Request, { params }: Ctx) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const result = await playlistService().assertStreamAccess(id, session.user.id);
+  const result = await playlistService().assertStreamAccess(id, caller.id);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);

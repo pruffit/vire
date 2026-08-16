@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import {
   db, DrizzleTrackRepository, DrizzleReleaseRepository,
   setTrackGenres, ALL_TRACK_GENRES,
@@ -13,13 +13,13 @@ type Params = { params: Promise<{ id: string }> };
 const genreSchema = z.array(z.enum(ALL_TRACK_GENRES)).max(3);
 
 export async function PUT(req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: 'Invalid track id' }, { status: 400 });
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const track = await new DrizzleTrackRepository(db).findById(id);

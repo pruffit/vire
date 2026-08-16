@@ -192,13 +192,15 @@ contract-тест роута; отсутствие регресса TTFB — н�
 `Caller` (актор + профиль + `source`), отсутствующие поля нормализованы в `null`.
 
 **Переведены:** общие гейты — `requireAccess`/`requireUser` (`lib/require-access.ts`),
-`getAdminAccess`, `requireAction` в `app/admin/actions.ts` (то есть весь admin-периметр
-и все роуты, ходящие через гейты), плюс первая пачка роутов: `notifications`,
-`notifications/read`, `feed`, `screens/home`, `dashboard/live`.
+`getAdminAccess`, `requireAction` в `app/admin/actions.ts` — и **все 121 роут `app/api/**`**.
+Единственное исключение — сам обработчик Auth.js (`api/auth/[...nextauth]`).
 
-**Осталось:** ~85 файлов с прямым `await auth()` (121 вызов на 16.08.2026). Переводятся
-пачками по разделам, как в волне 1.2, а не одним дифом. Server Components и `layout.tsx`
-остаются на `auth()` осознанно: там cookie-сессия, Bearer им не нужен.
+**Барьер `check:caller`** (`apps/web/scripts/check-caller.mjs`, в `prebuild` и CI `gates`):
+прямой импорт `@/auth` в роуте `app/api/**` красит гейт. Без него дрейф вернулся бы
+первым же новым роутом, а Bearer-запрос молча прошёл бы мимо.
+
+**Не переводятся осознанно:** Server Components, `layout.tsx`, `nav.tsx` и server actions
+вне админки — там cookie-сессия, Bearer им не нужен.
 
 **Откат:** тривиальный, адаптер прозрачен.
 

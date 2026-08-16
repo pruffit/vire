@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
 import { TrackService, NotFoundError } from '@vire/core';
 import { audioStorage } from '@/lib/file-storage';
@@ -10,15 +10,15 @@ import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { errorJson } from '@/lib/error-response';
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const rl = await rateLimit(clientKey(req, 'upload'), 20, 3600);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }

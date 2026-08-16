@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { waveQuerySchema, type WaveResponse } from '@vire/api-contracts';
 import { db, DrizzleWaveRepository, ALL_MOODS, ALL_TRACK_GENRES } from '@vire/db';
 import { WaveService } from '@vire/core';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { WaveSessionStore } from '@/lib/wave-session-store';
 
@@ -25,8 +25,8 @@ export async function GET(req: Request) {
 
   const playedIds = (played?.split(',').filter(Boolean) ?? []).slice(0, 100);
 
-  const authSession = await auth();
-  const userId = authSession?.user?.id ?? null;
+  const caller = await getCaller();
+  const userId = caller?.id ?? null;
 
   const service = new WaveService(new DrizzleWaveRepository(db), new WaveSessionStore());
   const result = await service.next({

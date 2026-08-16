@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PLAY_SOURCES } from '@vire/api-contracts';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { playEventQueue } from '@/lib/queue';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
 import { verifySessionId, SESSION_ID_MAX_LEN } from '@/lib/session-signing';
@@ -36,12 +36,12 @@ export async function POST(req: Request, { params }: Params) {
 
   const resolvedSource = typeof source === 'string' && VALID_SOURCES.has(source) ? source : 'direct';
 
-  const session = await auth();
+  const caller = await getCaller();
 
   await playEventQueue.add({
     trackId,
     sessionId: verifiedSessionId,
-    userId: session?.user?.id ?? null,
+    userId: caller?.id ?? null,
     source: resolvedSource,
     durationPlayedSec,
     startedAt,

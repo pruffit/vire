@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzlePurchaseRepository } from '@vire/db';
 import { PurchaseService, NotFoundError, ValidationError } from '@vire/core';
 import { YookassaPaymentGateway } from '@/lib/payment-gateway';
@@ -16,8 +16,8 @@ function purchaseService(): PurchaseService {
 }
 
 export async function POST(req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -26,7 +26,7 @@ export async function POST(req: Request, { params }: Params) {
   const body = await req.json().catch(() => ({})) as { returnUrl?: string };
   const returnUrl = body.returnUrl ?? `${APP_URL}/`;
 
-  const result = await purchaseService().purchase(session.user.id, trackId, returnUrl);
+  const result = await purchaseService().purchase(caller.id, trackId, returnUrl);
   if (!result.ok) {
     if (result.error instanceof NotFoundError) {
       return errorJson(result.error, 404);

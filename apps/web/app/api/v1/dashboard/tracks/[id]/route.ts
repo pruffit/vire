@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzleReleaseRepository, DrizzleTrackRepository, DrizzleOrphanedStorageRepository } from '@vire/db';
 import { TrackService, NotFoundError, type UpdateTrackParams } from '@vire/core';
 import { transcodeQueue } from '@/lib/queue';
@@ -18,9 +18,9 @@ function trackService() {
 }
 
 async function authorizeArtist(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: 'Unauthorized', status: 401 as const };
-  const artist = await getActiveArtist(session.user.id, req);
+  const caller = await getCaller();
+  if (!caller) return { error: 'Unauthorized', status: 401 as const };
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) return { error: 'Artist profile not found', status: 403 as const };
   return { artistId: artist.id };
 }

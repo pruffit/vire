@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { jamService } from '@/lib/jam';
 import { ForbiddenError, ValidationError } from '@vire/core';
 import { errorJson } from '@/lib/error-response';
@@ -7,8 +7,8 @@ import { errorJson } from '@/lib/error-response';
 type Ctx = { params: Promise<{ code: string }> };
 
 export async function POST(_req: Request, { params }: Ctx) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { code } = await params;
   const service = jamService();
@@ -18,7 +18,7 @@ export async function POST(_req: Request, { params }: Ctx) {
     return errorJson(codeResult.error, status);
   }
 
-  const result = await service.endJam(codeResult.value.id, session.user.id);
+  const result = await service.endJam(codeResult.value.id, caller.id);
   if (!result.ok) {
     const status = result.error instanceof ForbiddenError ? 403 : 404;
     return errorJson(result.error, status);

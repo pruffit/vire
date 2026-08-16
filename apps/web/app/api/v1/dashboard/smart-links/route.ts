@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzleSmartLinkRepository } from '@vire/db';
 import { SmartLinkService, ConflictError } from '@vire/core';
 import { fileStorage } from '@/lib/file-storage';
@@ -8,12 +8,12 @@ import { validateImageUpload, COVER_POLICY } from '@/lib/image';
 import { errorJson } from '@/lib/error-response';
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }

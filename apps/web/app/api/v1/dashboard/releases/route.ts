@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzleReleaseRepository } from '@vire/db';
 import { fileStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
@@ -11,12 +11,12 @@ const VALID_TYPES = new Set<ReleaseType>(['ALBUM', 'EP', 'SINGLE']);
 const VALID_GENRES = new Set<string>(ALL_GENRES);
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }

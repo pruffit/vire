@@ -1,4 +1,4 @@
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { markUserOnline } from '@/lib/presence';
 import { subscribe } from '@/lib/realtime';
 
@@ -8,9 +8,9 @@ const HEARTBEAT_MS = 25_000;
 
 /** Один SSE-стрим на пользователя: несёт и чат-события, и уведомления (различаются `type`). */
 export async function GET(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) return new Response('Unauthorized', { status: 401 });
-  const userId = session.user.id;
+  const caller = await getCaller();
+  if (!caller) return new Response('Unauthorized', { status: 401 });
+  const userId = caller.id;
 
   const encoder = new TextEncoder();
   let unsubscribe: (() => void) | null = null;

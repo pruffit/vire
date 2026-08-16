@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzleReleaseRepository, DrizzleTrackRepository } from '@vire/db';
 import { TrackService, NotFoundError } from '@vire/core';
 import { transcodeQueue } from '@/lib/queue';
@@ -16,10 +16,10 @@ export async function GET(
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: 'Invalid release id' }, { status: 400 });
 
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
 
   const releaseRepo = new DrizzleReleaseRepository(db);
@@ -43,10 +43,10 @@ export async function PUT(
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: 'Invalid release id' }, { status: 400 });
 
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
 
   let body: unknown;

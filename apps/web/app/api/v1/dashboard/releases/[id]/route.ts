@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzleReleaseRepository, DrizzleOrphanedStorageRepository } from '@vire/db';
 import { fileStorage } from '@/lib/file-storage';
 import { getActiveArtist } from '@/lib/active-artist';
@@ -13,12 +13,12 @@ const VALID_GENRES = new Set<string>(ALL_GENRES);
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }
@@ -92,12 +92,12 @@ export async function DELETE(
   req: Request,
   { params }: Params,
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const artist = await getActiveArtist(session.user.id, req);
+  const artist = await getActiveArtist(caller.id, req);
   if (!artist) {
     return NextResponse.json({ error: 'Artist profile not found' }, { status: 403 });
   }

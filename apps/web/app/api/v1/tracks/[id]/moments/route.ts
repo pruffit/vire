@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzleListenerTrackRepository } from '@vire/db';
 import { ListenerTrackService, NotFoundError } from '@vire/core';
 import { rateLimit, clientKey, tooManyRequests } from '@/lib/rate-limit';
@@ -35,8 +35,8 @@ export async function POST(req: Request, { params }: Params) {
   const parsed = momentSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
 
-  const session = await auth();
-  const result = await listenerTrackService().addMoment(id, parsed.data.positionSec, session?.user?.id ?? null);
+  const caller = await getCaller();
+  const result = await listenerTrackService().addMoment(id, parsed.data.positionSec, caller?.id ?? null);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);

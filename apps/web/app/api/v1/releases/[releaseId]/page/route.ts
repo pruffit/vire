@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, DrizzleReleaseReadRepository } from '@vire/db';
 import { ReleasePageService, NotFoundError, type ReleasePageView } from '@vire/core';
 import type { ReleasePageResponse } from '@vire/api-contracts';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { errorJson } from '@/lib/error-response';
 
 function toResponse(view: ReleasePageView): ReleasePageResponse {
@@ -34,14 +34,14 @@ export async function GET(
   { params }: { params: Promise<{ releaseId: string }> },
 ) {
   const { releaseId } = await params;
-  const session = await auth();
+  const caller = await getCaller();
 
   const service = new ReleasePageService(new DrizzleReleaseReadRepository(db), Date.now);
   const result = await service.getPage({
     releaseId,
     artistSlug: null,
-    viewerId: session?.user?.id ?? null,
-    viewerRole: session?.user?.role ?? null,
+    viewerId: caller?.id ?? null,
+    viewerRole: caller?.role ?? null,
   });
 
   if (!result.ok) {

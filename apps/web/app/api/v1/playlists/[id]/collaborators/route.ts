@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { NotFoundError, ConflictError, type PlaylistCollaborator } from '@vire/core';
 import {
   joinPlaylistSchema,
@@ -18,11 +18,11 @@ function toResponse(collaborators: PlaylistCollaborator[]): PlaylistCollaborator
 }
 
 export async function GET(_req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const result = await playlistService().listCollaborators(id, session.user.id);
+  const result = await playlistService().listCollaborators(id, caller.id);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
@@ -31,10 +31,10 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 export async function POST(req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const rl = await rateLimit(`playlist-collab-join:${session.user.id}`, 20, 60);
+  const rl = await rateLimit(`playlist-collab-join:${caller.id}`, 20, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const { id } = await params;
@@ -42,7 +42,7 @@ export async function POST(req: Request, { params }: Params) {
   const parsed = joinPlaylistSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 400 });
 
-  const result = await playlistService().join(id, session.user.id, parsed.data.token);
+  const result = await playlistService().join(id, caller.id, parsed.data.token);
   if (!result.ok) {
     if (result.error instanceof NotFoundError) return errorJson(result.error, 404);
     if (result.error instanceof ConflictError) return errorJson(result.error, 409);
@@ -52,11 +52,11 @@ export async function POST(req: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const result = await playlistService().leave(id, session.user.id);
+  const result = await playlistService().leave(id, caller.id);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);

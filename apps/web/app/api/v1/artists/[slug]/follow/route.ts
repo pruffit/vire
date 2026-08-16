@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzleArtistRepository, DrizzleFollowRepository } from '@vire/db';
 import { FollowService, NotFoundError } from '@vire/core';
 import type { FollowResponse } from '@vire/api-contracts';
@@ -13,16 +13,16 @@ function followService() {
 }
 
 export async function POST(_req: Request, { params }: Ctx) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const rl = await rateLimit(`follow:${session.user.id}`, 30, 60);
+  const rl = await rateLimit(`follow:${caller.id}`, 30, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const { slug } = await params;
-  const result = await followService().follow(session.user.id, slug);
+  const result = await followService().follow(caller.id, slug);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
@@ -31,13 +31,13 @@ export async function POST(_req: Request, { params }: Ctx) {
 }
 
 export async function DELETE(_req: Request, { params }: Ctx) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const caller = await getCaller();
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const { slug } = await params;
-  const result = await followService().unfollow(session.user.id, slug);
+  const result = await followService().unfollow(caller.id, slug);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);

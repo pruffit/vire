@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { chatService } from '@/lib/chat';
 import type { ConversationSummary } from '@vire/core';
 import type { ChatConversationsResponse } from '@vire/api-contracts';
@@ -9,9 +9,9 @@ function toResponse(conversations: ConversationSummary[]): ChatConversationsResp
 }
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const conversations = await chatService().listConversations(session.user.id);
+  const conversations = await chatService().listConversations(caller.id);
   return NextResponse.json(toResponse(conversations));
 }

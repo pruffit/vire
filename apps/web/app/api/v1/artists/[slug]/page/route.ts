@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, DrizzleArtistReadRepository } from '@vire/db';
 import { ArtistPageService, NotFoundError, type ArtistPageView } from '@vire/core';
 import type { ArtistPageResponse } from '@vire/api-contracts';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { errorJson } from '@/lib/error-response';
 
 function toResponse(view: ArtistPageView): ArtistPageResponse {
@@ -46,13 +46,13 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const session = await auth();
+  const caller = await getCaller();
 
   const service = new ArtistPageService(new DrizzleArtistReadRepository(db));
   const result = await service.getPage({
     slug,
-    viewerId: session?.user?.id ?? null,
-    viewerRole: session?.user?.role ?? null,
+    viewerId: caller?.id ?? null,
+    viewerRole: caller?.role ?? null,
   });
 
   if (!result.ok) {

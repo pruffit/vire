@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, DrizzlePlaylistPageRepository } from '@vire/db';
 import { PlaylistPageService, NotFoundError, type PlaylistPageView } from '@vire/core';
 import type { PlaylistPageResponse } from '@vire/api-contracts';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { playlistService } from '@/lib/playlist';
 import { errorJson } from '@/lib/error-response';
 
@@ -25,11 +25,11 @@ function toResponse(view: PlaylistPageView): PlaylistPageResponse {
 
 export async function GET(req: Request, { params }: Params) {
   const { id } = await params;
-  const session = await auth();
+  const caller = await getCaller();
   const joinToken = new URL(req.url).searchParams.get('join') ?? undefined;
 
   const service = new PlaylistPageService(playlistService(), new DrizzlePlaylistPageRepository(db));
-  const result = await service.getPage({ playlistId: id, viewerId: session?.user?.id ?? null, joinToken });
+  const result = await service.getPage({ playlistId: id, viewerId: caller?.id ?? null, joinToken });
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getCaller } from '@/lib/caller';
 import { db, DrizzleListenerTrackRepository } from '@vire/db';
 import { ListenerTrackService, NotFoundError } from '@vire/core';
 import type { LikeResponse } from '@vire/api-contracts';
@@ -13,22 +13,22 @@ function listenerTrackService() {
 }
 
 export async function GET(_req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
-  const result = await listenerTrackService().getLikeState(session.user.id, id);
+  const result = await listenerTrackService().getLikeState(caller.id, id);
   return NextResponse.json({ liked: result.ok ? result.value : false } satisfies LikeResponse);
 }
 
 export async function POST(_req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const rl = await rateLimit(`like:${session.user.id}`, 60, 60);
+  const rl = await rateLimit(`like:${caller.id}`, 60, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const { id } = await params;
-  const result = await listenerTrackService().like(session.user.id, id);
+  const result = await listenerTrackService().like(caller.id, id);
   if (!result.ok) {
     const status = result.error instanceof NotFoundError ? 404 : 403;
     return errorJson(result.error, status);
@@ -37,13 +37,13 @@ export async function POST(_req: Request, { params }: Params) {
 }
 
 export async function DELETE(_req: Request, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const caller = await getCaller();
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const rl = await rateLimit(`unlike:${session.user.id}`, 60, 60);
+  const rl = await rateLimit(`unlike:${caller.id}`, 60, 60);
   if (!rl.ok) return tooManyRequests(rl.retryAfter);
 
   const { id } = await params;
-  await listenerTrackService().unlike(session.user.id, id);
+  await listenerTrackService().unlike(caller.id, id);
   return NextResponse.json({ liked: false } satisfies LikeResponse);
 }
