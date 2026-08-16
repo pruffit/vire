@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/icon';
+import { isDesktopApp } from '@/lib/desktop-app';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -20,6 +21,7 @@ export function InstallAppButton() {
   // SSR: matchMedia недоступен, но deferred=null всё равно скрывает кнопку до первого
   // клиентского события — начальное значение installed на гидратацию не влияет.
   const [installed, setInstalled] = useState(() => (typeof window === 'undefined' ? false : isStandalone()));
+  const [isDesktop] = useState(() => isDesktopApp());
 
   useEffect(() => {
     function onBeforeInstallPrompt(e: Event) {
@@ -39,7 +41,7 @@ export function InstallAppButton() {
     };
   }, []);
 
-  if (installed || !deferred) return null;
+  if (isDesktop || installed || !deferred) return null;
 
   async function handleClick() {
     if (!deferred) return;

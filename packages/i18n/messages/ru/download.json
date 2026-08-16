@@ -13,7 +13,8 @@
       "title": "Windows",
       "text": "Установщик .exe, x64. Требуется Windows 10 или новее.",
       "cta": "Скачать для Windows",
-      "meta": "VireMusic-Setup-x64.exe"
+      "meta": "VireMusic-Setup-x64.exe",
+      "alreadyInstalled": "Вы уже используете это приложение"
     },
     "macos": {
       "title": "macOS",

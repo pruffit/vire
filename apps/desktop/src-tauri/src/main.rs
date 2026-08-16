@@ -168,6 +168,7 @@ fn main() {
                 .min_inner_size(960.0, 600.0)
                 .resizable(true)
                 .visible(false)
+                .initialization_script("window.__VIRE_DESKTOP__ = true;")
                 .on_page_load(move |window, payload| {
                     if payload.event() == PageLoadEvent::Finished {
                         let _ = window.show();

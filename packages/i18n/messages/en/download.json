@@ -13,7 +13,8 @@
       "title": "Windows",
       "text": "An .exe installer, x64. Requires Windows 10 or later.",
       "cta": "Download for Windows",
-      "meta": "VireMusic-Setup-x64.exe"
+      "meta": "VireMusic-Setup-x64.exe",
+      "alreadyInstalled": "You're already using this app"
     },
     "macos": {
       "title": "macOS",

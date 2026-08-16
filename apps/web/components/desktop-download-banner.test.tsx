@@ -31,7 +31,10 @@ describe('DesktopDownloadBanner', () => {
   const windowsUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
 
   beforeEach(() => localStorage.clear());
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    delete (window as unknown as { __VIRE_DESKTOP__?: boolean }).__VIRE_DESKTOP__;
+  });
 
   it('показывается посетителю с Windows', () => {
     setUserAgent(windowsUa);
@@ -59,6 +62,13 @@ describe('DesktopDownloadBanner', () => {
     fireEvent.click(screen.getByRole('button'));
     first.unmount();
 
+    render(<DesktopDownloadBanner />);
+    expect(screen.queryByRole('region')).toBeNull();
+  });
+
+  it('не показывается внутри десктоп-приложения даже с Windows UA', () => {
+    setUserAgent(windowsUa);
+    (window as unknown as { __VIRE_DESKTOP__?: boolean }).__VIRE_DESKTOP__ = true;
     render(<DesktopDownloadBanner />);
     expect(screen.queryByRole('region')).toBeNull();
   });

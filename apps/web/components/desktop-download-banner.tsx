@@ -7,6 +7,7 @@ import { spring } from '@vire/ui/motion';
 import { Link } from '@/i18n/navigation';
 import { Icon } from '@/components/icon';
 import { detectPlatform } from '@/lib/platform-detect';
+import { isDesktopApp } from '@/lib/desktop-app';
 
 const STORAGE_KEY = 'vire_desktop_banner_dismissed_v1';
 
@@ -27,7 +28,7 @@ export function DesktopDownloadBanner() {
   const [dismissed, setDismissed] = useState(false);
   const storageNotDismissed = useSyncExternalStore(() => () => {}, getStorageSnapshot, getServerSnapshot);
   const [isWindows] = useState(
-    () => typeof navigator !== 'undefined' && detectPlatform(navigator.userAgent, navigator.maxTouchPoints) === 'windows',
+    () => !isDesktopApp() && typeof navigator !== 'undefined' && detectPlatform(navigator.userAgent, navigator.maxTouchPoints) === 'windows',
   );
 
   const visible = isWindows && storageNotDismissed && !dismissed;

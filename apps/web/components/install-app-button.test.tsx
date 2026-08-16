@@ -24,7 +24,10 @@ function fireBeforeInstallPrompt(overrides: Partial<{ prompt: () => Promise<void
 }
 
 beforeEach(() => stubMatchMedia(false));
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  delete (window as unknown as { __VIRE_DESKTOP__?: boolean }).__VIRE_DESKTOP__;
+});
 
 describe('InstallAppButton', () => {
   it('уже установлено (standalone) — ничего не рендерит и на событие не реагирует', () => {
@@ -65,5 +68,12 @@ describe('InstallAppButton', () => {
 
     act(() => { window.dispatchEvent(new Event('appinstalled')); });
     expect(screen.queryByText('Установить приложение')).toBeNull();
+  });
+
+  it('внутри десктоп-приложения — не рендерится даже после beforeinstallprompt', () => {
+    (window as unknown as { __VIRE_DESKTOP__?: boolean }).__VIRE_DESKTOP__ = true;
+    const { container } = render(<InstallAppButton />);
+    act(() => { fireBeforeInstallPrompt(); });
+    expect(container.firstChild).toBeNull();
   });
 });

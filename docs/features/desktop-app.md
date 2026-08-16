@@ -382,6 +382,14 @@ updater manifest to MinIO» — тот же `aws s3 cp --endpoint-url` и те �
 - **`packages/i18n/messages/{ru,en}/download.json`** — строки страницы и баннера,
   неймспейс `download` в `packages/i18n/src/messages.ts`.
 
+Внутри самого десктоп-приложения эти подсказки скачать/установить не нужны — главное окно
+(`apps/desktop/src-tauri/src/main.rs`) выставляет `window.__VIRE_DESKTOP__ = true` через
+`initialization_script` до загрузки страницы, ещё до гидратации React. `apps/web/lib/desktop-app.ts`
+(`isDesktopApp()`) — единая точка чтения этого сигнала на вебе. Баннер
+(`desktop-download-banner.tsx`), PWA install-nudge (`install-app-button.tsx`) и Windows-CTA на
+`/download` (`windows-download-cta.tsx`) все проверяют сигнал, чтобы не предлагать скачать или
+установить приложение внутри самого приложения.
+
 ### Дистрибуция: GitHub Release + публичный MinIO
 
 Репозиторий приватный — прямая ссылка на GitHub Release не откроется анонимному

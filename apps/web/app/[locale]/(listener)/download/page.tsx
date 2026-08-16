@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { ContentHero, StatusPill } from '@/components/content-kit';
 import { Icon, type IconName } from '@/components/icon';
 import { InstallAppButton } from '@/components/install-app-button';
+import { WindowsDownloadCta } from '@/components/windows-download-cta';
 import { pageMetadata } from '@/lib/metadata';
 import { resolveLocale } from '@/lib/locale';
 import { getWindowsDownloadUrl } from '@/lib/desktop-download';
@@ -45,22 +46,7 @@ export default async function DownloadPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {windowsUrl ? (
-            <a
-              href={windowsUrl}
-              className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium hover:bg-primary/90 transition-opacity"
-            >
-              <Icon name="arrow-right" size={15} />
-              {t('platforms.windows.cta')}
-            </a>
-          ) : (
-            <span
-              aria-disabled="true"
-              className="inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-foreground/10 px-5 py-2.5 text-sm font-medium text-muted-foreground"
-            >
-              {t('platforms.windows.cta')}
-            </span>
-          )}
+          <WindowsDownloadCta windowsUrl={windowsUrl} />
           <span className="label-mono text-xs text-muted-foreground">{t('platforms.windows.meta')}</span>
         </div>
       </section>
