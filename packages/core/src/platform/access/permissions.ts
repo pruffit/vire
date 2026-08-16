@@ -6,6 +6,7 @@ export type Permission =
   | 'admin.content.moderate'
   | 'admin.users.manage'
   | 'admin.jobs.run'
+  | 'admin.flags.manage'
   | 'staff.content.preview';
 
 export interface Actor {
@@ -19,6 +20,7 @@ const ADMIN_ALL: readonly Permission[] = [
   'admin.content.moderate',
   'admin.users.manage',
   'admin.jobs.run',
+  'admin.flags.manage',
   'staff.content.preview',
 ];
 

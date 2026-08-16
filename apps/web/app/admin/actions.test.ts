@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const {
   auth, revalidatePath, transcodeAdd,
   trackUpdate, trackGetSourceKey, trackGetArtistTrackSources, trackSetStatus,
-  releaseUpdate, moodsSet, moodsSetGenres, insertAuditEntry,
+  releaseUpdate, moodsSet, moodsSetGenres, insertAuditEntry, flagSetEnabled,
 } = vi.hoisted(() => ({
   auth: vi.fn(),
   revalidatePath: vi.fn(),
@@ -16,6 +16,7 @@ const {
   moodsSet: vi.fn(),
   moodsSetGenres: vi.fn(),
   insertAuditEntry: vi.fn(),
+  flagSetEnabled: vi.fn(),
 }));
 
 vi.mock('@/auth', () => ({ auth }));
@@ -51,11 +52,13 @@ vi.mock('@vire/db', () => ({
   DrizzleArtistPostRepository: class {},
   DrizzlePlaylistRepository: class {},
   DrizzleArtistRepository: class {},
+  DrizzleFeatureFlagRepository: class {},
 }));
+vi.mock('@/lib/feature-flags', () => ({ featureFlagService: () => ({ setEnabled: flagSetEnabled }) }));
 
 import {
   actionAdminUpdateTrack, actionAdminUpdateRelease, actionRetranscodeTrack, actionRetranscodeArtist,
-  actionSetUserRole,
+  actionSetUserRole, actionSetFeatureFlag,
 } from './actions';
 
 const mockedAuth = vi.mocked(auth);
@@ -261,5 +264,36 @@ describe('actionSetUserRole', () => {
 
     expect(revalidatePath).toHaveBeenCalledWith('/admin/users');
     errorSpy.mockRestore();
+  });
+});
+
+describe('actionSetFeatureFlag', () => {
+  it('throws Forbidden for MODERATOR (no admin.flags.manage)', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: 'mod-1', role: 'MODERATOR' } } as never);
+
+    await expect(actionSetFeatureFlag('sdui.home', true)).rejects.toThrow('Forbidden');
+    expect(flagSetEnabled).not.toHaveBeenCalled();
+    expect(insertAuditEntry).not.toHaveBeenCalled();
+  });
+
+  it('rejects a flag outside the registry without writing', async () => {
+    mockedAuth.mockResolvedValue(MUTATE_SESSION as never);
+
+    await expect(actionSetFeatureFlag('nope', true)).resolves.toEqual({ error: 'Неизвестный флаг' });
+    expect(flagSetEnabled).not.toHaveBeenCalled();
+    expect(insertAuditEntry).not.toHaveBeenCalled();
+  });
+
+  it('sets the flag and writes an audit entry', async () => {
+    mockedAuth.mockResolvedValue(MUTATE_SESSION as never);
+
+    await expect(actionSetFeatureFlag('sdui.home', true)).resolves.toEqual({});
+
+    expect(flagSetEnabled).toHaveBeenCalledWith('sdui.home', true, 'admin-1');
+    expect(revalidatePath).toHaveBeenCalledWith('/admin/flags');
+    expect(insertAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+      actorUserId: 'admin-1', actorRole: 'ADMIN', permission: 'admin.flags.manage',
+      action: 'flag.set', targetType: 'flag', targetId: 'sdui.home', meta: { enabled: true },
+    }));
   });
 });

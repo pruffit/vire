@@ -10,7 +10,8 @@ import {
   ALL_MOODS, ALL_TRACK_GENRES,
 } from '@vire/db';
 import type { UserRole, ArtistMemberRow } from '@vire/db';
-import { ArtistPostService, ArtistService, ReleaseService, TrackService } from '@vire/core';
+import { ArtistPostService, ArtistService, ReleaseService, TrackService, isKnownFeatureFlag } from '@vire/core';
+import { featureFlagService } from '@/lib/feature-flags';
 import { can, type Permission } from '@vire/core/access';
 import { retryFailedJobs, cleanFailedJobs, MANAGED_QUEUES } from '@/lib/admin-health';
 import { transcodeQueue } from '@/lib/queue';
@@ -58,6 +59,15 @@ export async function actionSetArtistActive(artistProfileId: string, isActive: b
   await setArtistActive(artistProfileId, isActive);
   await audit('artist.set_active', { type: 'artist', id: artistProfileId }, { isActive });
   revalidatePath('/admin/artists');
+}
+
+export async function actionSetFeatureFlag(key: string, enabled: boolean): Promise<{ error?: string }> {
+  const { session, audit } = await requireAction('admin.flags.manage');
+  if (!isKnownFeatureFlag(key)) return { error: 'Неизвестный флаг' };
+  await featureFlagService().setEnabled(key, enabled, session.user!.id!);
+  await audit('flag.set', { type: 'flag', id: key }, { enabled });
+  revalidatePath('/admin/flags');
+  return {};
 }
 
 function assertManagedQueue(name: string) {

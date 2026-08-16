@@ -12,6 +12,7 @@ const NAV: SideNavItem[] = [
   { href: '/admin/reports', label: 'Жалобы' },
   { href: '/admin/posts', label: 'Посты' },
   { href: '/admin/playlists', label: 'Плейлисты' },
+  { href: '/admin/flags', label: 'Флаги' },
   { href: '/admin/system', label: 'Система' },
 ];
 

@@ -250,6 +250,7 @@ export {
   hasOpenReport, insertReport, listOpenReports, countOpenReports, getReportContext, resolveReport,
 } from './queries/reports';
 export * from './repositories/notification';
+export * from './repositories/feature-flag';
 export {
   insertNotification, listNotifications, countUnreadNotifications, markAllNotificationsRead, markNotificationRead,
 } from './queries/notifications';

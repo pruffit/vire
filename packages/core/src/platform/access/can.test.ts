@@ -9,6 +9,7 @@ const PERMISSIONS: Permission[] = [
   'admin.content.moderate',
   'admin.users.manage',
   'admin.jobs.run',
+  'admin.flags.manage',
   'staff.content.preview',
 ];
 
@@ -37,6 +38,13 @@ describe('can', () => {
     const actor = { id: 'u1', role: 'MODERATOR' as const };
     expect(can(actor, 'admin.users.manage')).toBe(false);
     expect(can(actor, 'admin.jobs.run')).toBe(false);
+  });
+
+  it('флаги переключают только ADMIN/SUPERADMIN', () => {
+    expect(can({ id: 'u1', role: 'ADMIN' }, 'admin.flags.manage')).toBe(true);
+    expect(can({ id: 'u1', role: 'SUPERADMIN' }, 'admin.flags.manage')).toBe(true);
+    expect(can({ id: 'u1', role: 'MODERATOR' }, 'admin.flags.manage')).toBe(false);
+    expect(can({ id: 'u1', role: 'VIEWER' }, 'admin.flags.manage')).toBe(false);
   });
 
   it('VIEWER имеет admin.read, но не admin.content.moderate', () => {

@@ -379,6 +379,13 @@
       "when": 1786831704400,
       "tag": "0053_misty_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1786832284120,
+      "tag": "0054_fast_pestilence",
+      "breakpoints": true
     }
   ]
 }
