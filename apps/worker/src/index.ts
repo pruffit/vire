@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Queue } from 'bullmq';
-import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH, QUEUE_METRICS, QUEUE_JAM_REAPER, QUEUE_STORAGE_CLEANUP, parseEnv } from '@vire/core';
+import { QUEUE_EDITORIAL, QUEUE_SCHEDULED_PUBLISH, QUEUE_METRICS, QUEUE_JAM_REAPER, QUEUE_STORAGE_CLEANUP, parseEnv, normalizeMediaJob } from '@vire/core';
 import { createTranscodeWorker, handleTerminalTranscodeFailure } from './workers/transcode.worker.js';
 import { createPlayEventsWorker } from './workers/play-events.worker.js';
 import { createNotifyReleaseWorker } from './workers/notify-release.worker.js';
@@ -84,11 +84,12 @@ editorialWorker.on('error', (err) => {
 });
 
 transcodeWorker.on('completed', (job) => {
-  console.log(`[transcode] ✓ job=${job.id} track=${job.data.trackId}`);
+  console.log(`[transcode] ✓ job=${job.id} asset=${normalizeMediaJob(job.data)?.assetId ?? '?'}`);
 });
 
 transcodeWorker.on('failed', (job, err) => {
-  void alertJobFailure('transcode', job?.id, err, { trackId: job?.data.trackId });
+  const assetId = job ? normalizeMediaJob(job.data)?.assetId : undefined;
+  void alertJobFailure('transcode', job?.id, err, { trackId: assetId });
   // На окончательном падении (исчерпаны попытки) — пометить трек FAILED и
   // уведомить артиста письмом. Функция сама проверяет, что это финал.
   void handleTerminalTranscodeFailure(job);

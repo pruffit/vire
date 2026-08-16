@@ -17,6 +17,37 @@ export interface TranscodeJobData {
   sourceKey: string;
 }
 
+/** Имя конвейера выбирает обработчик: у видео он будет другим при том же контракте джобы. */
+export const MEDIA_PIPELINES = ['audio-hls'] as const;
+export type MediaPipeline = (typeof MEDIA_PIPELINES)[number];
+
+export interface ProcessMediaJobData {
+  pipeline: MediaPipeline;
+  /** Идентификатор обрабатываемого ассета; сейчас совпадает с trackId. */
+  assetId: string;
+  sourceKey: string;
+}
+
+export interface NormalizedMediaJob {
+  pipeline: MediaPipeline;
+  assetId: string;
+  sourceKey: string;
+}
+
+/**
+ * Очередь переживает деплой: в Redis могут лежать джобы, положенные прошлой версией
+ * в формате TranscodeJobData. Воркер читает оба формата через эту функцию.
+ */
+export function normalizeMediaJob(data: TranscodeJobData | ProcessMediaJobData): NormalizedMediaJob | null {
+  if ('pipeline' in data) {
+    if (!(MEDIA_PIPELINES as readonly string[]).includes(data.pipeline)) return null;
+    if (!data.assetId || !data.sourceKey) return null;
+    return { pipeline: data.pipeline, assetId: data.assetId, sourceKey: data.sourceKey };
+  }
+  if (!data?.trackId || !data?.sourceKey) return null;
+  return { pipeline: 'audio-hls', assetId: data.trackId, sourceKey: data.sourceKey };
+}
+
 export interface TranscodeJobResult {
   hlsManifestKey: string;
   durationSec: number;

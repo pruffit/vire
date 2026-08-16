@@ -39,7 +39,11 @@ vi.mock('@vire/db', () => ({
 }));
 vi.mock('@vire/core', async () => {
   const actual = await vi.importActual<typeof import('@vire/core')>('@vire/core');
-  return { QUEUE_TRANSCODE: 'transcode', transcodeFailedEmail: actual.transcodeFailedEmail };
+  return {
+    QUEUE_TRANSCODE: 'transcode',
+    transcodeFailedEmail: actual.transcodeFailedEmail,
+    normalizeMediaJob: actual.normalizeMediaJob,
+  };
 });
 vi.mock('../lib/mailer.js', () => ({ sendMail: h.sendMail }));
 vi.mock('../lib/genre-classifier.js', () => ({ classifyTrackGenre: h.classifyTrackGenre }));
@@ -280,5 +284,38 @@ describe('processTranscodeJob', () => {
 
     expect(h.decideAutoApplyGenres).not.toHaveBeenCalled();
     expect(h.setTrackGenresIfEmpty).not.toHaveBeenCalled();
+  });
+});
+
+describe('processTranscodeJob — формат payload', () => {
+  function makeMediaJob(data: unknown): Job<never> {
+    return { data, log: vi.fn(), updateProgress: vi.fn() } as unknown as Job<never>;
+  }
+
+  it('новый payload с pipeline обрабатывается как аудио', async () => {
+    h.selectRows = [{ status: 'READY' }];
+    const job = makeMediaJob({ pipeline: 'audio-hls', assetId: TRACK_ID, sourceKey: `tracks/${TRACK_ID}/source.wav` });
+
+    await processTranscodeJob(job);
+
+    expect(job.log).toHaveBeenCalledWith('Already processed, skipping');
+  });
+
+  it('старый payload из очереди (trackId без pipeline) обрабатывается — джобы переживают деплой', async () => {
+    h.selectRows = [{ status: 'READY' }];
+    const job = makeMediaJob({ trackId: TRACK_ID, sourceKey: `tracks/${TRACK_ID}/source.wav` });
+
+    await processTranscodeJob(job);
+
+    expect(job.log).toHaveBeenCalledWith('Already processed, skipping');
+  });
+
+  it('незнакомый конвейер пропускается, а не обрабатывается аудио-обработчиком', async () => {
+    const job = makeMediaJob({ pipeline: 'video-hls', assetId: TRACK_ID, sourceKey: 'k' });
+
+    await processTranscodeJob(job);
+
+    expect(job.log).toHaveBeenCalledWith('Unsupported media job payload, skipping');
+    expect(h.downloadToFile).not.toHaveBeenCalled();
   });
 });

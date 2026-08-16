@@ -4,7 +4,10 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { db, tracks, trackAudio, getTrackOwnerContact, setTrackGenresIfEmpty } from '@vire/db';
-import { QUEUE_TRANSCODE, transcodeFailedEmail, type TranscodeJobData } from '@vire/core';
+import {
+  QUEUE_TRANSCODE, transcodeFailedEmail, normalizeMediaJob,
+  type TranscodeJobData, type ProcessMediaJobData,
+} from '@vire/core';
 import { isLocale, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
 import { VAULT, STREAM, downloadToFile, uploadFile } from '../lib/s3.js';
 import { transcodeToHls, computeWaveformPeaks, probeDuration } from '../lib/ffmpeg.js';
@@ -19,8 +22,14 @@ import { sendMail } from '../lib/mailer.js';
 const APP_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? process.env.AUTH_URL ?? 'http://localhost:3000';
 
-export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<void> {
-  const { trackId, sourceKey } = job.data;
+export async function processTranscodeJob(job: Job<TranscodeJobData | ProcessMediaJobData>): Promise<void> {
+  const normalized = normalizeMediaJob(job.data);
+  if (!normalized) {
+    await job.log('Unsupported media job payload, skipping');
+    return;
+  }
+  // assetId сейчас равен trackId: расщепление track_audio на MediaAsset ещё не сделано.
+  const { assetId: trackId, sourceKey } = normalized;
 
   // Идемпотентность: если трек уже обработан, ничего не делаем
   const [track] = await db
@@ -137,13 +146,15 @@ export async function processTranscodeJob(job: Job<TranscodeJobData>): Promise<v
  * (не затирая READY/BLOCKED при гонке) + письмо артисту. Никогда не бросает.
  */
 export async function handleTerminalTranscodeFailure(
-  job: Job<TranscodeJobData> | undefined,
+  job: Job<TranscodeJobData | ProcessMediaJobData> | undefined,
 ): Promise<void> {
   if (!job) return;
   const maxAttempts = job.opts.attempts ?? 1;
   if (job.attemptsMade < maxAttempts) return; // ещё будут ретраи, не финал
 
-  const { trackId } = job.data;
+  const normalized = normalizeMediaJob(job.data);
+  if (!normalized) return;
+  const trackId = normalized.assetId;
   try {
     // FAILED только если трек ещё в PROCESSING: не перетираем поздний READY/BLOCKED.
     const updated = await db
@@ -178,7 +189,7 @@ const LOCK_DURATION_MS = 10 * 60 * 1000;
 
 export function createTranscodeWorker() {
   // defaultJobOptions: опция Queue, не Worker; retry задаётся при постановке задачи в очередь
-  const worker = new Worker<TranscodeJobData>(QUEUE_TRANSCODE, processTranscodeJob, {
+  const worker = new Worker<TranscodeJobData | ProcessMediaJobData>(QUEUE_TRANSCODE, processTranscodeJob, {
     connection,
     concurrency: 2,
     lockDuration: LOCK_DURATION_MS,

@@ -1,11 +1,11 @@
 import { Queue } from 'bullmq';
-import { QUEUE_TRANSCODE, QUEUE_PLAY_EVENTS, QUEUE_NOTIFY_RELEASE, QUEUE_ANALYZE, QUEUE_ANALYZE_GENRE, QUEUE_NOTIFY_EXTERNAL, type TranscodeJobData, type PlayEventJobData, type NotifyReleaseJobData, type AnalyzeJobData, type AnalyzeGenreJobData, type ExternalNotifyJobData } from '@vire/core';
+import { QUEUE_TRANSCODE, QUEUE_PLAY_EVENTS, QUEUE_NOTIFY_RELEASE, QUEUE_ANALYZE, QUEUE_ANALYZE_GENRE, QUEUE_NOTIFY_EXTERNAL, type TranscodeJobData, type ProcessMediaJobData, type PlayEventJobData, type NotifyReleaseJobData, type AnalyzeJobData, type AnalyzeGenreJobData, type ExternalNotifyJobData } from '@vire/core';
 
 // Синглтон — переиспользуется между запросами в рамках процесса Next.js
 const globalForQueue = globalThis as unknown as { _transcodeQueue?: TranscodeQueue };
 
 class TranscodeQueue {
-  private q = new Queue<TranscodeJobData>(QUEUE_TRANSCODE, {
+  private q = new Queue<ProcessMediaJobData>(QUEUE_TRANSCODE, {
     connection: {
       url: process.env.REDIS_URL ?? 'redis://localhost:6379',
       maxRetriesPerRequest: null as unknown as number,
@@ -18,8 +18,14 @@ class TranscodeQueue {
     },
   });
 
+  // Вход остаётся «про трек» — сервисы каталога не знают о конвейерах; наружу
+  // в очередь уходит нейтральный payload, который умеет ветвиться по pipeline.
   async add(data: TranscodeJobData): Promise<void> {
-    await this.q.add('transcode', data);
+    await this.q.add('transcode', {
+      pipeline: 'audio-hls',
+      assetId: data.trackId,
+      sourceKey: data.sourceKey,
+    });
   }
 }
 
