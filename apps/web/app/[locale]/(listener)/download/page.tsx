@@ -3,19 +3,18 @@ import { getTranslations } from 'next-intl/server';
 import { ContentHero, StatusPill } from '@/components/content-kit';
 import { Icon, type IconName } from '@/components/icon';
 import { InstallAppButton } from '@/components/install-app-button';
-import { WindowsDownloadCta } from '@/components/windows-download-cta';
+import { DesktopPlatformCta } from '@/components/desktop-platform-cta';
 import { pageMetadata } from '@/lib/metadata';
 import { resolveLocale } from '@/lib/locale';
-import { getWindowsDownloadUrl } from '@/lib/desktop-download';
+import { getLinuxDownloadUrl, getWindowsDownloadUrl } from '@/lib/desktop-download';
 
 export async function generateMetadata(): Promise<Metadata> {
   const [t, locale] = await Promise.all([getTranslations('download.meta'), resolveLocale()]);
   return pageMetadata({ url: '/download', title: t('title'), description: t('description'), locale });
 }
 
-const COMING_SOON: { key: 'macos' | 'linux' | 'ios' | 'android'; icon: IconName }[] = [
+const COMING_SOON: { key: 'macos' | 'ios' | 'android'; icon: IconName }[] = [
   { key: 'macos', icon: 'square' },
-  { key: 'linux', icon: 'terminal' },
   { key: 'ios', icon: 'phone' },
   { key: 'android', icon: 'phone' },
 ];
@@ -23,6 +22,7 @@ const COMING_SOON: { key: 'macos' | 'linux' | 'ios' | 'android'; icon: IconName 
 export default async function DownloadPage() {
   const t = await getTranslations('download');
   const windowsUrl = getWindowsDownloadUrl();
+  const linuxUrl = getLinuxDownloadUrl();
 
   return (
     <main className="mx-auto min-h-full max-w-3xl px-6 py-16 sm:py-20 space-y-14">
@@ -46,12 +46,29 @@ export default async function DownloadPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <WindowsDownloadCta windowsUrl={windowsUrl} />
+          <DesktopPlatformCta platform="windows" downloadUrl={windowsUrl} />
           <span className="label-mono text-xs text-muted-foreground">{t('platforms.windows.meta')}</span>
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <section id="linux" className="relative overflow-hidden rounded-2xl border border-primary/30 bg-card p-6 sm:p-8 space-y-5">
+        <div className="flex items-center gap-3.5">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/10">
+            <Icon name="terminal" size={22} className="text-primary" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold">{t('platforms.linux.title')}</h2>
+            <p className="text-sm text-muted-foreground">{t('platforms.linux.text')}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <DesktopPlatformCta platform="linux" downloadUrl={linuxUrl} />
+          <span className="label-mono text-xs text-muted-foreground">{t('platforms.linux.meta')}</span>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {COMING_SOON.map(({ key, icon }) => (
           <div key={key} className="space-y-3 rounded-xl border border-dashed border-border bg-card/60 p-4">
             <div className="flex items-center justify-between gap-2">

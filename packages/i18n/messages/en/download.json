@@ -23,8 +23,10 @@
     },
     "linux": {
       "title": "Linux",
-      "text": "A Linux build is in development.",
-      "badge": "Coming soon"
+      "text": "A portable x64 AppImage. Download and run — no installation needed.",
+      "cta": "Download for Linux",
+      "meta": "VireMusic-x86_64.AppImage",
+      "alreadyInstalled": "You're already using this app"
     },
     "ios": {
       "title": "iOS",
@@ -43,7 +45,7 @@
     "cta": "Install as a web app"
   },
   "banner": {
-    "text": "Get VireMusic for Windows — a native app with a system tray and media keys",
+    "text": "Get VireMusic for {os} — a native app with a system tray and media keys",
     "cta": "Download",
     "closeAria": "Close"
   }

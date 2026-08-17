@@ -27,11 +27,15 @@ export function DesktopDownloadBanner() {
   const t = useTranslations('download.banner');
   const [dismissed, setDismissed] = useState(false);
   const storageNotDismissed = useSyncExternalStore(() => () => {}, getStorageSnapshot, getServerSnapshot);
-  const [isWindows] = useState(
-    () => !isDesktopApp() && typeof navigator !== 'undefined' && detectPlatform(navigator.userAgent, navigator.maxTouchPoints) === 'windows',
+  const [platform] = useState(() =>
+    !isDesktopApp() && typeof navigator !== 'undefined'
+      ? detectPlatform(navigator.userAgent, navigator.maxTouchPoints)
+      : 'unknown',
   );
+  const isDesktopPlatform = platform === 'windows' || platform === 'linux';
+  const os = platform === 'windows' ? 'Windows' : 'Linux';
 
-  const visible = isWindows && storageNotDismissed && !dismissed;
+  const visible = isDesktopPlatform && storageNotDismissed && !dismissed;
 
   function close() {
     try {
@@ -45,7 +49,7 @@ export function DesktopDownloadBanner() {
       {visible && (
         <motion.div
           role="region"
-          aria-label={t('text')}
+          aria-label={t('text', { os })}
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
@@ -57,10 +61,10 @@ export function DesktopDownloadBanner() {
               <Icon name="layout" size={16} className="text-primary" />
             </span>
             <div className="min-w-0 flex-1 space-y-2">
-              <p className="text-xs text-foreground/90 leading-relaxed">{t('text')}</p>
+              <p className="text-xs text-foreground/90 leading-relaxed">{t('text', { os })}</p>
               <div className="flex items-center gap-2">
                 <Link
-                  href="/download#windows"
+                  href={platform === 'windows' ? '/download#windows' : '/download#linux'}
                   onClick={close}
                   className="rounded-full bg-primary text-primary-foreground px-3.5 py-1.5 text-xs font-medium hover:bg-primary/90 transition-opacity"
                 >

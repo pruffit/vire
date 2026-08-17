@@ -29,6 +29,7 @@ function setUserAgent(ua: string) {
 
 describe('DesktopDownloadBanner', () => {
   const windowsUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
+  const linuxUa = 'Mozilla/5.0 (X11; Linux x86_64)';
 
   beforeEach(() => localStorage.clear());
   afterEach(() => {
@@ -40,6 +41,16 @@ describe('DesktopDownloadBanner', () => {
     setUserAgent(windowsUa);
     render(<DesktopDownloadBanner />);
     expect(screen.getByRole('region')).toBeTruthy();
+  });
+
+  it('показывается посетителю с Linux, текст и ссылка — под Linux', () => {
+    setUserAgent(linuxUa);
+    render(<DesktopDownloadBanner />);
+    const region = screen.getByRole('region');
+    expect(region).toBeTruthy();
+    expect(region.textContent).toContain('Linux');
+    const link = screen.getByRole('link');
+    expect(link.getAttribute('href')).toBe('/download#linux');
   });
 
   it('не показывается на других платформах', () => {
@@ -68,6 +79,13 @@ describe('DesktopDownloadBanner', () => {
 
   it('не показывается внутри десктоп-приложения даже с Windows UA', () => {
     setUserAgent(windowsUa);
+    (window as unknown as { __VIRE_DESKTOP__?: boolean }).__VIRE_DESKTOP__ = true;
+    render(<DesktopDownloadBanner />);
+    expect(screen.queryByRole('region')).toBeNull();
+  });
+
+  it('не показывается внутри десктоп-приложения даже с Linux UA', () => {
+    setUserAgent(linuxUa);
     (window as unknown as { __VIRE_DESKTOP__?: boolean }).__VIRE_DESKTOP__ = true;
     render(<DesktopDownloadBanner />);
     expect(screen.queryByRole('region')).toBeNull();

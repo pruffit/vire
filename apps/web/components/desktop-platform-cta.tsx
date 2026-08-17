@@ -9,8 +9,14 @@ function getServerSnapshot(): boolean {
   return false; // на сервере сигнал недоступен — рендерим как в браузере до маунта
 }
 
-export function WindowsDownloadCta({ windowsUrl }: { windowsUrl: string | null }) {
-  const t = useTranslations('download.platforms.windows');
+export function DesktopPlatformCta({
+  platform,
+  downloadUrl,
+}: {
+  platform: 'windows' | 'linux';
+  downloadUrl: string | null;
+}) {
+  const t = useTranslations(`download.platforms.${platform}`);
   const desktop = useSyncExternalStore(() => () => {}, isDesktopApp, getServerSnapshot);
 
   if (desktop) {
@@ -22,7 +28,7 @@ export function WindowsDownloadCta({ windowsUrl }: { windowsUrl: string | null }
     );
   }
 
-  if (!windowsUrl) {
+  if (!downloadUrl) {
     return (
       <span aria-disabled="true" className="inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-foreground/10 px-5 py-2.5 text-sm font-medium text-muted-foreground">
         {t('cta')}
@@ -32,7 +38,7 @@ export function WindowsDownloadCta({ windowsUrl }: { windowsUrl: string | null }
 
   return (
     <a
-      href={windowsUrl}
+      href={downloadUrl}
       className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium hover:bg-primary/90 transition-opacity"
     >
       <Icon name="arrow-right" size={15} />

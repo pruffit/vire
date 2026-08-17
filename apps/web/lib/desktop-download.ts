@@ -9,3 +9,11 @@ export function getWindowsDownloadUrl(): string | null {
   if (!base) return null;
   return `${base.replace(/\/$/, '')}/${STREAM}/${WINDOWS_INSTALLER_KEY}`;
 }
+
+export const LINUX_INSTALLER_KEY = 'downloads/desktop/linux/VireMusic-x86_64.AppImage';
+
+export function getLinuxDownloadUrl(): string | null {
+  const base = process.env.S3_PUBLIC_ENDPOINT;
+  if (!base) return null;
+  return `${base.replace(/\/$/, '')}/${STREAM}/${LINUX_INSTALLER_KEY}`;
+}

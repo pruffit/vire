@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { getWindowsDownloadUrl } from './desktop-download';
+import { getLinuxDownloadUrl, getWindowsDownloadUrl } from './desktop-download';
 
 const ORIGINAL_ENDPOINT = process.env.S3_PUBLIC_ENDPOINT;
 
@@ -26,5 +26,26 @@ describe('getWindowsDownloadUrl', () => {
   it('без S3_PUBLIC_ENDPOINT возвращает null', () => {
     delete process.env.S3_PUBLIC_ENDPOINT;
     expect(getWindowsDownloadUrl()).toBeNull();
+  });
+});
+
+describe('getLinuxDownloadUrl', () => {
+  it('строит стабильный URL из S3_PUBLIC_ENDPOINT и стрим-бакета', () => {
+    process.env.S3_PUBLIC_ENDPOINT = 'https://cdn.viremusic.ru';
+    expect(getLinuxDownloadUrl()).toBe(
+      'https://cdn.viremusic.ru/vire-stream/downloads/desktop/linux/VireMusic-x86_64.AppImage',
+    );
+  });
+
+  it('снимает завершающий слэш из endpoint', () => {
+    process.env.S3_PUBLIC_ENDPOINT = 'https://cdn.viremusic.ru/';
+    expect(getLinuxDownloadUrl()).toBe(
+      'https://cdn.viremusic.ru/vire-stream/downloads/desktop/linux/VireMusic-x86_64.AppImage',
+    );
+  });
+
+  it('без S3_PUBLIC_ENDPOINT возвращает null', () => {
+    delete process.env.S3_PUBLIC_ENDPOINT;
+    expect(getLinuxDownloadUrl()).toBeNull();
   });
 });
