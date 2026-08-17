@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { devicesResponseSchema, okResponseSchema, type DeviceDTO } from '@vire/api-contracts';
 import { apiRequest } from '../lib/api-client';
 import { clearAuthTokens } from '../lib/secure-store';
+import { Screen } from '../components/screen';
 import { colors, radius } from '../lib/theme';
 
 type LoadState = 'loading' | 'error' | 'ready';
@@ -60,7 +61,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <Screen style={styles.container}>
       <Text style={styles.title}>Устройства</Text>
 
       {state === 'loading' && (
@@ -117,7 +118,7 @@ export default function ProfileScreen() {
           <Text style={styles.signOutText}>Выйти</Text>
         )}
       </Pressable>
-    </View>
+    </Screen>
   );
 }
 

@@ -3,9 +3,17 @@
 React Native + Expo клиент: auth → навигация → каталог → воспроизведение звука → SDUI-главная
 + нативная полировка. Инкремент 1 — дизайн в
 `docs/superpowers/specs/2026-08-17-mobile-app-increment-1-design.md`; инкремент 3 (звук) —
-`docs/superpowers/specs/2026-08-17-mobile-playback-design.md`. Инкремент 4 закрыл главную
-причину «не работает на реальном телефоне» (сеть на `localhost` недостижима с устройства)
-и перевёл главную на SDUI-протокол (`docs/sdui.md`).
+`docs/superpowers/specs/2026-08-17-mobile-playback-design.md`. Инкремент 4 закрыл ДВЕ причины
+«не работает на реальном телефоне» — обе воспроизведены владельцем продукта вживую на
+Android через Expo Go, обе бы полностью блокировали вход и работу приложения независимо
+друг от друга:
+1. Хардкод redirect-схемы `vire://auth-callback` в мосте входа — в обычном Expo Go (без
+   кастомного dev-client/EAS-сборки) эта схема не зарегистрирована в ОС, редиректу после
+   входа физически некуда было прилететь обратно в приложение (вход не заканчивался никогда).
+2. Сеть на `localhost` — на физическом телефоне резолвится в сам телефон, а не в dev-машину.
+
+Заодно инкремент 4 перевёл главную на SDUI-протокол (`docs/sdui.md`) и добавил нативную
+полировку (иконки вместо эмодзи, haptics, pull-to-refresh, predictive back).
 
 ## Что делает
 
@@ -41,11 +49,21 @@ React Native + Expo клиент: auth → навигация → каталог
   см. обоснование в спеке инкремента 3): работает в обычном Expo Go и имеет
   веб-реализацию, что и позволяет проверять поверх `expo start --web`. Shuffle/repeat,
   оффлайн, лайки/плейлисты из мобилки — вне скоупа (см. ниже).
-- Экран входа: `expo-web-browser` открывает `/mobile-auth-bridge` в изолированной
-  системной сессии (`openAuthSessionAsync`, не `<WebView>` — пароль вводится вне контекста
-  приложения), редирект `vire://auth-callback?accessToken&refreshToken&deviceId` разбирается
-  `expo-linking`, токены — в `expo-secure-store`. При старте с уже сохранёнными токенами
-  экран входа пропускается.
+- **Экран входа (инкремент 4: фикс redirect для Expo Go).** `expo-web-browser` открывает
+  `/mobile-auth-bridge` в изолированной системной сессии (`openAuthSessionAsync`, не
+  `<WebView>` — пароль вводится вне контекста приложения). Redirect URI — не хардкод
+  `vire://auth-callback`, а `Linking.createURL('auth-callback')`: в Expo Go это
+  `exp://<host>:8081/--/auth-callback` (единственный адрес, который сама Expo Go умеет
+  перехватить), в собранном приложении — `vire://auth-callback` (схема из `app.json`).
+  Передаётся мосту входа параметром `redirectUri`; сервер (`mobile-auth-bridge/page.tsx`)
+  проверяет схему по белому списку (`vire:`/`exp:`) перед редиректом — иначе это
+  open-redirect пары токенов на произвольный домен. Ответ разбирается `expo-linking`,
+  токены — в `expo-secure-store`. При старте с уже сохранёнными токенами экран входа
+  пропускается.
+- **Иконки (инкремент 4).** Таб-бар, мини-плеер, полный плеер, explicit-маркеры — раньше
+  emoji-текстом (🏠🔍📚👤⏸▶⏮⏭🅴), теперь `lib/icon.tsx`: свой SVG-рендерер поверх
+  `react-native-svg`, пути 1:1 скопированы из `apps/web/public/icons/system-sprite.svg` —
+  единый визуальный язык с сайтом, не отдельный иконочный пак под мобилку.
 - Тёмная тема, цвета из `packages/design-tokens` (OKLCH → hex на этапе генерации — RN не
   ест `oklch()` в JS).
 
@@ -53,7 +71,9 @@ React Native + Expo клиент: auth → навигация → каталог
 
 - **Веб-мост входа:** `apps/web/app/mobile-auth-bridge/page.tsx` + `layout.tsx` — тот же
   core-сервис, что `POST /api/v1/auth/devices` (`docs/features/device-auth.md`); гейт в
-  `apps/web/proxy.ts` (`UNLOCALIZED_PREFIXES`).
+  `apps/web/proxy.ts` (`UNLOCALIZED_PREFIXES`). **Инкремент 4:** принимает `redirectUri` из
+  query (`resolveRedirectBase()` — белый список схем `vire:`/`exp:`, иначе дефолт
+  `vire://auth-callback`) — см. «Экран входа» выше.
 - **Пакет:** `apps/mobile/` (`@vire/mobile`, Expo managed + TS).
   - `App.tsx`, `index.ts` — точка входа.
   - `navigation/root-navigator.tsx` — native-stack (SignIn/Main/Player-модалка), решение о
@@ -92,10 +112,12 @@ React Native + Expo клиент: auth → навигация → каталог
     `root-navigator.tsx` также ловит отказ `hasStoredSession()` в `.catch()` — без него
     web-превью зависал на спиннере навсегда.
   - `lib/api-client.ts` — `apiRequest()`: Bearer из secure store + один повтор через
-    `POST /api/v1/auth/refresh` на 401. Первый реальный вызывающий — `profile-screen.tsx`
-    (список/отзыв устройств); Главная бьёт в публичные SDUI-эндпоинты напрямую через
-    `request()` из `@vire/api-client` (не нужен Bearer — композиция главной для
-    `fresh-releases`/`hot-tracks` не требует авторизации).
+    `POST /api/v1/auth/refresh` на 401. **Инкремент 4:** все запросы данных переведены на
+    `apiRequest()`, не только `profile-screen.tsx` — главная (`GET /api/v1/screens/home` +
+    оба блок-эндпоинта), релиз (`GET /api/v1/releases/{id}`) и манифест трека
+    (`GET /api/v1/tracks/{id}/manifest`) теперь тоже шлют Bearer. Сами эти роуты публичные
+    для READY-контента, но релиз/трек могут быть черновиком/WIP — тогда сервер отдаёт их
+    только владельцу/стаффу по личности вызывающего; голый `request()` эту личность терял.
   - `lib/audio-engine.ts` — `ExpoAudioEngine implements IAudioEngine` (`@vire/core/playback/audio-engine`)
     поверх `expo-audio`: один переиспользуемый `AudioPlayer` (`createAudioPlayer`), `load()`
     подменяет источник через `replace()` и резолвится по `playbackStatusUpdate.isLoaded`;
@@ -104,7 +126,13 @@ React Native + Expo клиент: auth → навигация → каталог
     `durationSec`), транспорт через `nextQueueIndex` из `@vire/core/playback/queue` (та же
     логика очереди, что и в вебе, не переписана). Гонки: если `queueIndex` сменился, пока
     летел запрос манифеста, устаревший ответ отбрасывается; если `audioEngine.load()`
-    отклоняется — статус `error`, а не бесконечный `loading`.
+    отклоняется — статус `error`, а не бесконечный `loading`. **Инкремент 4:** тап на play в
+    состоянии `error` — повторная попытка того же трека (`loadAndPlay`), не молчание;
+    seek-guard (`SEEK_GUARD_MS=500`) — `expo-audio` может отдать `timeupdate` со старой
+    позицией в короткое окно сразу после `seek()`, пока нативный плеер ещё не догнал
+    `seekTo()` (гонка на поиске HLS-сегмента) — такие тики игнорируются, иначе слайдер
+    визуально дёргался обратно после перемотки; ошибки манифеста/load/audioEngine логируются
+    через `console.error` (раньше падали молча в `status: 'error'` без диагностики).
   - `lib/format.ts` — `formatDuration()` (m:ss) для трек-листа и полного плеера.
   - `lib/theme.ts` — реэкспорт `@vire/design-tokens/native`.
   - `metro.config.js` — монорепо: `watchFolders` на корень репозитория,
@@ -176,7 +204,11 @@ Metro, поэтому LAN-хост совпадает.
 - `EXPO_PUBLIC_API_BASE_URL` / `EXPO_PUBLIC_WEB_BASE_URL` — задавать явно только когда
   автоопределение не подходит: dev-сервер `@vire/web` слушает не на 3000, Wi-Fi изолирует
   клиентов друг от друга (client isolation), или тестируешь против удалённого стенда.
-  Шаблон — `apps/mobile/.env.example`.
+  Шаблон — `apps/mobile/.env.example`. **Android-эмулятор — отдельный случай, где
+  автоопределение НЕ подходит по умолчанию:** `Constants.expoConfig?.hostUri` внутри
+  эмулятора не указывает на хост-машину напрямую — нужен явный
+  `EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:<порт>` (`10.0.2.2` — стандартный алиас
+  хост-машины для Android-эмулятора, не LAN IP).
 
 ## Проверено в инкременте 1
 
@@ -245,14 +277,26 @@ Metro, поэтому LAN-хост совпадает.
   `S3_ENDPOINT`/`S3_PUBLIC_ENDPOINT` (`apps/web/.env.local`, не в git) чинит стабильно.
   Если это повторится — тот же фикс.
 
-## Проверено в инкременте 4 (сеть для устройства, SDUI-главная, нативная полировка)
+## Проверено в инкременте 4 (сеть для устройства, вход в Expo Go, SDUI-главная, нативная полировка)
 
-- `pnpm --filter @vire/mobile typecheck`/`test` — зелёные (47 тестов: +6
+Инкремент собирался в две волны в одной ветке: первая (агент, изолированный worktree)
+закрыла сеть/SDUI/haptics/pull-to-refresh/predictive-back с нуля на чистой базе
+инкремента 3; при сведении в основную ветку обнаружилось, что более ранний черновик той
+же сессии (не сохранённый как отдельный инкремент) уже независимо решал часть тех же
+проблем и содержал критичный фикс входа в Expo Go (redirect-схема) и SVG-иконки, которых
+не было в первой волне — оба набора правок сведены вручную во вторую волну, конфликт имён
+стилей (`explicitBadge`/`explicitText` — уже занято карточкой релиза) найден и переименован
+(`trackExplicitBadge`/`trackExplicitText`) при сведении.
+
+- `pnpm --filter @vire/mobile typecheck`/`test` — зелёные (49 тестов: +6
   `lan-host.test.ts` на `baseUrlFromHostUri()` — host:port, отсутствие `hostUri`
   (фолбэк), пустая строка, схема `exp://` отбрасывается, путь после хоста отбрасывается,
   голый хост без порта; +5 `sdui.test.ts` на `findBlock`/`endpointOf` — блок найден,
   блока нет, `inline`-источник не отдаёт endpoint, блок без `source` не отдаёт endpoint;
-  35 прежних тестов инкремента 3 не задеты). `pnpm --filter @vire/web typecheck`,
+  +2 seek-guard теста в `player-store.test.ts` (устаревший `timeupdate` после `seek()` не
+  перетирает позицию; после сброса guard — обновляет как обычно); 35 прежних тестов
+  инкремента 3 не задеты, кроме мока `@vire/api-client`→`../api-client` под переход
+  `player-store.ts` на `apiRequest`). `pnpm --filter @vire/web typecheck`,
   `pnpm --filter @vire/core typecheck` — зелёные. Дополнительно (не входило в обязательный
   список гейтов, но задето правкой `packages/api-client`): `pnpm --filter @vire/web test`
   (2004 теста) и `pnpm --filter @vire/core test` (1058 тестов) — зелёные;
@@ -299,17 +343,30 @@ Metro, поэтому LAN-хост совпадает.
   сымитировать touch-свайп мышью в headless Chromium приводит к выделению текста, а не к
   нативному pull-жесту `RefreshControl` (ограничение симуляции тача мышью в браузере, не
   баг кода) — честный визуальный прогон свайпа остаётся на реальном устройстве.
-- **Predictive back gesture (Android), нативная сборка, реальный телефон/эмулятор — не
-  проверялись** (нет SDK/эмулятора/телефона на машине разработки, как и в инкрементах 1 и
-  3). `android.predictiveBackGestureEnabled: true` включён осознанно (стек это
-  поддерживает), но первая реальная проверка жеста — на следующем прогоне через Expo Go
-  на телефоне.
-- `@expo/vector-icons` — в `apps/mobile/package.json` этой зависимости **не оказалось**
-  (в отличие от предположения в задании на инкремент 4): `lib/icon.tsx` из более раннего
-  черновика инкремента, который не попал в этот прогон, тоже отсутствует в кодовой базе.
-  Иконки таб-бара и остальные — на месте (эмодзи-текст в `main-tabs.tsx`, как и раньше).
-  Нечего было убирать; если `lib/icon.tsx` (свой SVG-рендерер поверх `react-native-svg`)
-  и `@expo/vector-icons` появятся в будущей сессии — тогда и разбирать дубликат.
+- **Фикс входа в Expo Go (redirect-схема) — проверен по построению URL и логике
+  белого списка, НЕ проверен end-to-end через реальный `WebBrowser.openAuthSessionAsync`.**
+  `Linking.createURL('auth-callback')` и разбор `redirectUri` на мосте входа прочитаны и
+  соответствуют документированному поведению Expo Go (`exp://<host>:8081/--/auth-callback`);
+  `resolveRedirectBase()` на сервере проверен как чистая логика (схема `vire:`/`exp:` → как
+  есть, иначе дефолт). Сам системный переход в браузер и обратно — нативный API, не
+  воспроизводится в `expo start --web`; как и раньше, в локальной БД нет пользователя с
+  паролем для end-to-end входа. **Первая настоящая проверка — на следующем прогоне через
+  Expo Go на реальном устройстве или эмуляторе.**
+- **Android-эмулятор на машине разработки теперь есть** (поднят параллельно этому
+  инкременту, независимая задача) — `VireMusic_Test` (API 36, Pixel 7, WHPX-ускорение),
+  `ANDROID_HOME=C:\Android`. Sign-in экран (дореформенная версия кода, до фиксов этого
+  инкремента) реально отрисован на нём через Expo Go — подтверждает, что связка
+  Metro↔эмулятор↔Expo Go в принципе работает на этой машине. Следующий прогон мобилки
+  должен подтвердить фиксы этого инкремента (redirect, LAN-сеть, predictive back, haptics,
+  pull-to-refresh) уже на нём, не откладывать на «когда-нибудь появится телефон».
+- **Predictive back gesture (Android) — не проверен визуально** в этом инкременте (гейты
+  гонялись до полной интеграции с эмулятором). `android.predictiveBackGestureEnabled: true`
+  включён осознанно (стек `react-native-screens ~4.26`/RN `0.86.2`/`native-stack ^7` это
+  поддерживает) — первая визуальная проверка жеста на эмуляторе/телефоне из пункта выше.
+- `@expo/vector-icons` в `apps/mobile/package.json` не появлялся ни в одной из волн —
+  иконки решены `lib/icon.tsx` (свой SVG-рендерер поверх `react-native-svg`, добавлен
+  `npx expo install react-native-svg` — версия резолвится под установленный Expo SDK 57
+  автоматически). Нечего убирать, дубликата нет.
 - Лимиты серверных списков SDUI-блоков проверены чтением кода, не менялись:
   `FRESH_RELEASES_RESULT_LIMIT=18`, `HOT_TRACKS_LIMIT=20`
   (`packages/core/src/music/discovery/services/home-blocks.ts`) — клиентской обрезки
@@ -326,10 +383,12 @@ Metro, поэтому LAN-хост совпадает.
 - Shuffle/repeat-UI, оффлайн-скачивание, лайки/добавление в плейлист из мобилки — сами
   функции очереди в `@vire/core` уже есть на будущее, UI сознательно не добавлен.
 - Пуши, диплинки на конкретный трек/релиз, биометрия, шеринг, виджеты.
-- iOS-сборка и запуск на реальном устройстве через Expo Go — не проверялись (нет Mac и
-  физического телефона на машине разработки); `app.json` пишет конфиг под обе платформы, но
-  реально верифицирован только веб-превью (`react-native-web`).
-- Android SDK/эмулятор — не установлены и не проверялись (нет `adb`/`java` на машине).
-- Реальное устройство: воспроизведение, фоновый режим, lock-screen, predictive back gesture,
-  визуальный pull-to-refresh — первая проверка через Expo Go на телефоне (см. «Проверено
-  в инкременте 3» и «Проверено в инкременте 4» выше).
+- iOS-сборка и запуск на реальном устройстве через Expo Go — не проверялись (нет Mac);
+  `app.json` пишет конфиг под обе платформы, но реально верифицирован только веб-превью
+  (`react-native-web`) и, для Android, эмулятор (см. ниже).
+- **Android SDK/эмулятор — с инкремента 4 есть** (`VireMusic_Test`, API 36, `ANDROID_HOME=
+  C:\Android`, `pnpm --filter @vire/mobile mobile:android`). Следующая сессия должна
+  использовать его по умолчанию для проверки мобилки, а не откладывать на «появится
+  телефон» — реальное воспроизведение, фоновый режим, lock-screen, predictive back gesture,
+  визуальный pull-to-refresh, end-to-end вход через Expo Go всё ещё не проверены этой
+  сессией и остаются первым шагом следующей.

@@ -4,7 +4,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import { usePlayerStore } from '../lib/player-store';
 import type { RootStackParamList } from '../navigation/root-navigator';
-import { TAB_BAR_HEIGHT } from '../navigation/main-tabs';
+import { useTabBarHeight, MINI_PLAYER_HEIGHT } from '../lib/layout';
+import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 
 export function MiniPlayer() {
@@ -12,11 +13,12 @@ export function MiniPlayer() {
   const track = usePlayerStore((s) => s.queue[s.queueIndex]);
   const status = usePlayerStore((s) => s.status);
   const togglePlayPause = usePlayerStore((s) => s.togglePlayPause);
+  const tabBarHeight = useTabBarHeight();
 
   if (!track) return null;
 
   return (
-    <Pressable style={styles.bar} onPress={() => navigation.navigate('Player')}>
+    <Pressable style={[styles.bar, { bottom: tabBarHeight }]} onPress={() => navigation.navigate('Player')}>
       {track.coverUrl ? (
         <Image source={{ uri: track.coverUrl }} style={styles.cover} />
       ) : (
@@ -41,7 +43,7 @@ export function MiniPlayer() {
         {status === 'loading' ? (
           <ActivityIndicator color={colors.foreground} size="small" />
         ) : (
-          <Text style={styles.playIcon}>{status === 'playing' ? '⏸' : '▶'}</Text>
+          <Icon name={status === 'playing' ? 'pause' : 'play'} size={20} color={colors.foreground} />
         )}
       </Pressable>
     </Pressable>
@@ -53,8 +55,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: TAB_BAR_HEIGHT,
-    height: 60,
+    height: MINI_PLAYER_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -69,5 +70,4 @@ const styles = StyleSheet.create({
   title: { color: colors.cardForeground, fontSize: 14, fontWeight: '700' },
   artist: { color: colors.mutedForeground, fontSize: 12, fontWeight: '500' },
   playButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  playIcon: { color: colors.foreground, fontSize: 20 },
 });

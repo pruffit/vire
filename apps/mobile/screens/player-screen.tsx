@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { nextQueueIndex } from '@vire/core/playback/queue';
 import { usePlayerStore } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
+import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 
 export default function PlayerScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const queue = usePlayerStore((s) => s.queue);
   const queueIndex = usePlayerStore((s) => s.queueIndex);
   const status = usePlayerStore((s) => s.status);
@@ -29,9 +32,9 @@ export default function PlayerScreen() {
   const hasNext = nextQueueIndex(queueIndex, queue.length, 'off') !== null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: 24 + insets.bottom }]}>
       <Pressable style={styles.closeButton} onPress={() => navigation.goBack()} hitSlop={12}>
-        <Text style={styles.closeIcon}>︾</Text>
+        <Icon name="chevron-down" size={22} color={colors.mutedForeground} />
       </Pressable>
 
       {track.coverUrl ? (
@@ -46,6 +49,7 @@ export default function PlayerScreen() {
       <Text style={styles.artist} numberOfLines={1}>
         {track.artistName}
       </Text>
+      {status === 'error' && <Text style={styles.errorText}>Не удалось воспроизвести — нажмите play ещё раз</Text>}
 
       <PositionSlider position={positionSec} duration={durationSec} onSeek={seek} />
       <View style={styles.timeRow}>
@@ -55,7 +59,7 @@ export default function PlayerScreen() {
 
       <View style={styles.transportRow}>
         <Pressable style={styles.transportButton} onPress={prev} disabled={queueIndex <= 0} hitSlop={12}>
-          <Text style={[styles.transportIcon, queueIndex <= 0 && styles.transportDisabled]}>⏮</Text>
+          <Icon name="skip-back" size={26} color={queueIndex <= 0 ? colors.mutedForeground : colors.foreground} />
         </Pressable>
         <Pressable
           style={styles.playButton}
@@ -68,11 +72,11 @@ export default function PlayerScreen() {
           {status === 'loading' ? (
             <ActivityIndicator color={colors.primaryForeground} size="small" />
           ) : (
-            <Text style={styles.playIcon}>{status === 'playing' ? '⏸' : '▶'}</Text>
+            <Icon name={status === 'playing' ? 'pause' : 'play'} size={26} color={colors.primaryForeground} />
           )}
         </Pressable>
         <Pressable style={styles.transportButton} onPress={next} disabled={!hasNext} hitSlop={12}>
-          <Text style={[styles.transportIcon, !hasNext && styles.transportDisabled]}>⏭</Text>
+          <Icon name="skip-forward" size={26} color={!hasNext ? colors.mutedForeground : colors.foreground} />
         </Pressable>
       </View>
     </View>
@@ -138,16 +142,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     alignItems: 'center',
-    padding: 24,
-    paddingTop: 16,
+    paddingHorizontal: 24,
     gap: 8,
   },
   closeButton: { alignSelf: 'flex-end', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  closeIcon: { color: colors.mutedForeground, fontSize: 22 },
   cover: { width: '100%', aspectRatio: 1, borderRadius: radius.xl, marginTop: 8 },
   coverPlaceholder: { backgroundColor: colors.secondary },
   title: { color: colors.foreground, fontSize: 22, fontWeight: '800', textAlign: 'center', marginTop: 24 },
   artist: { color: colors.mutedForeground, fontSize: 16, fontWeight: '500', textAlign: 'center' },
+  errorText: { color: colors.destructive, fontSize: 13, textAlign: 'center', marginTop: 4 },
   track: { width: '100%', height: 24, justifyContent: 'center', marginTop: 32 },
   trackBase: { position: 'absolute', left: 0, right: 0, height: 4, borderRadius: 2, backgroundColor: colors.secondary },
   trackFill: { position: 'absolute', left: 0, height: 4, borderRadius: 2, backgroundColor: colors.primary },
@@ -166,11 +169,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 32,
     marginTop: 'auto',
-    marginBottom: 24,
   },
   transportButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  transportIcon: { color: colors.foreground, fontSize: 28 },
-  transportDisabled: { color: colors.mutedForeground, opacity: 0.4 },
   playButton: {
     width: 68,
     height: 68,
@@ -179,5 +179,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playIcon: { color: colors.primaryForeground, fontSize: 26 },
 });

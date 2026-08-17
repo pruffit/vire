@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
@@ -7,6 +7,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/root-navigator';
 import { WEB_BASE_URL } from '../lib/env';
 import { setAuthTokens } from '../lib/secure-store';
+import { Screen } from '../components/screen';
 import { colors, radius } from '../lib/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SignIn'>;
@@ -17,10 +18,10 @@ function resolvePlatformParam(): 'ios' | 'android' | 'other' {
   return 'other';
 }
 
-function buildBridgeUrl(): string {
+function buildBridgeUrl(redirectUri: string): string {
   const platform = resolvePlatformParam();
   const name = Constants.deviceName ?? 'Мобильное устройство';
-  return `${WEB_BASE_URL}/mobile-auth-bridge?platform=${encodeURIComponent(platform)}&name=${encodeURIComponent(name)}`;
+  return `${WEB_BASE_URL}/mobile-auth-bridge?platform=${encodeURIComponent(platform)}&name=${encodeURIComponent(name)}&redirectUri=${encodeURIComponent(redirectUri)}`;
 }
 
 export default function SignInScreen({ navigation }: Props) {
@@ -31,7 +32,12 @@ export default function SignInScreen({ navigation }: Props) {
     setPending(true);
     setError(null);
     try {
-      const result = await WebBrowser.openAuthSessionAsync(buildBridgeUrl(), 'vire://auth-callback');
+      // Linking.createURL — не хардкод: в Expo Go это exp://<host>:8081/--/auth-callback
+      // (единственный адрес, который сама Expo Go умеет перехватить и вернуть в проект),
+      // в собранном приложении — vire://auth-callback (схема из app.json). Хардкод vire://
+      // ломал вход в Expo Go целиком — редирект после логина просто некуда было ловить.
+      const redirectUri = Linking.createURL('auth-callback');
+      const result = await WebBrowser.openAuthSessionAsync(buildBridgeUrl(redirectUri), redirectUri);
 
       if (result.type !== 'success' || !result.url) {
         if (result.type !== 'cancel' && result.type !== 'dismiss') {
@@ -58,7 +64,7 @@ export default function SignInScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <Screen style={styles.container}>
       <Text style={styles.logo}>VireMusic</Text>
       <Text style={styles.subtitle}>Независимая музыкальная площадка</Text>
       <Pressable style={styles.button} onPress={handleSignIn} disabled={pending}>
@@ -69,7 +75,7 @@ export default function SignInScreen({ navigation }: Props) {
         )}
       </Pressable>
       {error !== null && <Text style={styles.error}>{error}</Text>}
-    </View>
+    </Screen>
   );
 }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { request } = vi.hoisted(() => ({ request: vi.fn() }));
-vi.mock('@vire/api-client', () => ({ request }));
+vi.mock('../api-client', () => ({ apiRequest: request }));
 
 const { audioEngine, emit } = vi.hoisted(() => {
   const listeners: Record<string, Array<(payload?: unknown) => void>> = {};
@@ -25,7 +25,7 @@ const { audioEngine, emit } = vi.hoisted(() => {
 });
 vi.mock('../audio-engine', () => ({ audioEngine }));
 
-import { usePlayerStore, type QueueTrack } from '../player-store';
+import { usePlayerStore, __resetSeekGuardForTests, type QueueTrack } from '../player-store';
 
 const track = (id: string): QueueTrack => ({
   id,
@@ -39,6 +39,7 @@ const manifestOk = (id: string) => ({ ok: true, data: { hlsUrl: `https://cdn/${i
 
 function resetStore() {
   usePlayerStore.setState({ queue: [], queueIndex: -1, status: 'idle', positionSec: 0, durationSec: 0 });
+  __resetSeekGuardForTests();
 }
 
 beforeEach(() => {
@@ -180,6 +181,27 @@ describe('usePlayerStore.seek', () => {
     usePlayerStore.getState().seek(42);
     expect(audioEngine.seek).toHaveBeenCalledWith(42);
     expect(usePlayerStore.getState().positionSec).toBe(42);
+  });
+
+  it('устаревший timeupdate сразу после seek не перетирает выставленную позицию', async () => {
+    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    usePlayerStore.getState().seek(42);
+
+    // expo-audio может отдать статус со старой позицией, пока нативный плеер ещё не
+    // догнал seekTo() — такой тик должен быть проигнорирован в течение guard-окна.
+    emit('timeupdate', { currentTime: 3, duration: 120 });
+
+    expect(usePlayerStore.getState().positionSec).toBe(42);
+  });
+
+  it('timeupdate после сброса guard (следующий трек) обновляет позицию как обычно', async () => {
+    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    usePlayerStore.getState().seek(42);
+    __resetSeekGuardForTests();
+
+    emit('timeupdate', { currentTime: 7, duration: 120 });
+
+    expect(usePlayerStore.getState().positionSec).toBe(7);
   });
 });
 

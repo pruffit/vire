@@ -11,6 +11,23 @@ function resolvePlatform(value: string | undefined): RegisterDeviceRequest['plat
     : 'other';
 }
 
+const DEFAULT_REDIRECT = 'vire://auth-callback';
+
+// В Expo Go (dev, без кастомного dev-client) схема `vire://` не зарегистрирована в ОС —
+// приложение передаёт свой реальный redirect URI через Linking.createURL() (в Expo Go это
+// `exp://<host>:8081/--/auth-callback`, в собранном приложении — тот же `vire://auth-callback`).
+// Схема ограничена белым списком (vire/exp), а не произвольным URL — иначе это open-redirect
+// для пары токенов на чужой домен.
+function resolveRedirectBase(value: string | undefined): string {
+  if (!value) return DEFAULT_REDIRECT;
+  try {
+    const scheme = new URL(value).protocol;
+    return scheme === 'vire:' || scheme === 'exp:' ? value : DEFAULT_REDIRECT;
+  } catch {
+    return DEFAULT_REDIRECT;
+  }
+}
+
 async function bridgeRateLimitKey(): Promise<string> {
   const h = await headers();
   const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? h.get('x-real-ip') ?? 'unknown';
@@ -20,13 +37,15 @@ async function bridgeRateLimitKey(): Promise<string> {
 /**
  * Веб-мост входа для мобильного приложения: `expo-web-browser` открывает эту страницу в
  * системном браузере на доказанной cookie-сессии и получает пару токенов редиректом на
- * `vire://auth-callback`. Тот же core-сервис, что `POST /api/v1/auth/devices`
- * (docs/features/device-auth.md) — не отдельная реализация выдачи токенов.
+ * `redirectUri` приложения (по умолчанию `vire://auth-callback`, в Expo Go — свой
+ * `exp://` адрес, см. resolveRedirectBase). Тот же core-сервис, что
+ * `POST /api/v1/auth/devices` (docs/features/device-auth.md) — не отдельная реализация
+ * выдачи токенов.
  */
 export default async function MobileAuthBridgePage({
   searchParams,
 }: {
-  searchParams: Promise<{ platform?: string; name?: string }>;
+  searchParams: Promise<{ platform?: string; name?: string; redirectUri?: string }>;
 }) {
   const caller = await getCaller();
   if (!caller || caller.source !== 'session') {
@@ -42,7 +61,7 @@ export default async function MobileAuthBridgePage({
     );
   }
 
-  const { platform, name } = await searchParams;
+  const { platform, name, redirectUri } = await searchParams;
   const result = await deviceAuthService().register({
     userId: caller.id,
     role: caller.role,
@@ -59,7 +78,7 @@ export default async function MobileAuthBridgePage({
   }
 
   const { accessToken, refreshToken, deviceId } = result.value;
-  const callback = new URL('vire://auth-callback');
+  const callback = new URL(resolveRedirectBase(redirectUri));
   callback.searchParams.set('accessToken', accessToken);
   callback.searchParams.set('refreshToken', refreshToken);
   callback.searchParams.set('deviceId', deviceId);

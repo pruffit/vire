@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
-import { request } from '@vire/api-client';
 import { releaseDetailResponseSchema, type ReleaseDetailResponse } from '@vire/api-contracts';
 import type { HomeStackParamList } from '../navigation/home-stack';
-import { API_BASE_URL } from '../lib/env';
+import { apiRequest } from '../lib/api-client';
 import { colors, radius } from '../lib/theme';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
+import { Screen } from '../components/screen';
 
 type LoadState = 'loading' | 'error' | 'ready';
 type TrackItem = ReleaseDetailResponse['tracks'][number];
@@ -31,7 +31,8 @@ export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStac
   const currentTrackId = usePlayerStore((s) => s.queue[s.queueIndex]?.id ?? null);
 
   const load = useCallback(async () => {
-    const result = await request(`${API_BASE_URL}/api/v1/releases/${releaseId}`, {
+    // apiRequest — релиз может быть черновиком/WIP, виден только владельцу/стаффу.
+    const result = await apiRequest(`/api/v1/releases/${releaseId}`, {
       schema: releaseDetailResponseSchema,
     });
     if (!result.ok) return false;
@@ -67,7 +68,7 @@ export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStac
   };
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <View style={styles.header}>
         {coverUrl ? (
           <Image source={{ uri: coverUrl }} style={styles.cover} />
@@ -110,7 +111,7 @@ export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStac
           }
         />
       )}
-    </View>
+    </Screen>
   );
 }
 
@@ -124,10 +125,16 @@ function TrackRow({ track, playing, onPress }: { track: TrackItem; playing: bool
     >
       <Text style={[styles.trackNumber, disabled && styles.trackDisabled]}>{track.trackNumber}</Text>
       <View style={styles.trackInfo}>
-        <Text style={[styles.trackTitle, disabled && styles.trackDisabled]} numberOfLines={1}>
-          {track.title}
-          {track.isExplicit ? ' 🅴' : ''}
-        </Text>
+        <View style={styles.trackTitleRow}>
+          <Text style={[styles.trackTitle, disabled && styles.trackDisabled]} numberOfLines={1}>
+            {track.title}
+          </Text>
+          {track.isExplicit && (
+            <View style={styles.explicitBadge}>
+              <Text style={styles.explicitText}>E</Text>
+            </View>
+          )}
+        </View>
         {disabled && <Text style={styles.trackStatus}>Недоступен</Text>}
       </View>
       <Text style={[styles.trackDuration, disabled && styles.trackDisabled]}>{formatDuration(track.durationSec)}</Text>
@@ -136,7 +143,6 @@ function TrackRow({ track, playing, onPress }: { track: TrackItem; playing: bool
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
   header: { padding: 16, alignItems: 'center', gap: 6 },
   cover: { width: 180, height: 180, borderRadius: radius.lg, marginBottom: 8 },
   coverPlaceholder: { backgroundColor: colors.secondary },
@@ -165,7 +171,17 @@ const styles = StyleSheet.create({
   trackRowActive: { backgroundColor: colors.secondary },
   trackNumber: { color: colors.mutedForeground, fontSize: 14, minWidth: 20, textAlign: 'center' },
   trackInfo: { flex: 1, gap: 2 },
-  trackTitle: { color: colors.foreground, fontSize: 15, fontWeight: '600' },
+  trackTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  trackTitle: { color: colors.foreground, fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  explicitBadge: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 3,
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  explicitText: { color: colors.mutedForeground, fontSize: 9, fontWeight: '800' },
   trackStatus: { color: colors.mutedForeground, fontSize: 12 },
   trackDuration: { color: colors.mutedForeground, fontSize: 13, fontVariant: ['tabular-nums'] },
   trackDisabled: { color: colors.mutedForeground, opacity: 0.5 },

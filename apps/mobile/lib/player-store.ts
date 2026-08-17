@@ -1,8 +1,7 @@
 import { create } from 'zustand';
-import { request } from '@vire/api-client';
 import { trackManifestResponseSchema } from '@vire/api-contracts';
 import { nextQueueIndex } from '@vire/core/playback/queue';
-import { API_BASE_URL } from './env';
+import { apiRequest } from './api-client';
 import { audioEngine, type AudioTimeUpdate } from './audio-engine';
 
 export interface QueueTrack {
@@ -43,13 +42,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   togglePlayPause: () => {
-    const { status } = get();
+    const { status, queueIndex } = get();
     if (status === 'playing') {
       audioEngine.pause();
       set({ status: 'paused' });
     } else if (status === 'paused') {
       audioEngine.play();
       set({ status: 'playing' });
+    } else if (status === 'error') {
+      // Тап по play в состоянии ошибки — повторная попытка того же трека, не молчание.
+      loadAndPlay(queueIndex);
     }
   },
 
@@ -74,21 +76,38 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   seek: (sec) => {
     audioEngine.seek(sec);
+    seekGuardUntil = Date.now() + SEEK_GUARD_MS;
     set({ positionSec: sec });
   },
 }));
+
+// expo-audio может отдать один-два playbackStatusUpdate со старой позицией в момент,
+// когда seekTo() уже вызван, но нативный плеер ещё не догнал новую позицию (гонка на
+// HLS — поиск нужного сегмента не мгновенный). Короткое окно после ручного seek —
+// timeupdate из движка не перетирает оптимистично выставленную позицию.
+const SEEK_GUARD_MS = 500;
+let seekGuardUntil = 0;
+
+/** Только для тестов — модульное состояние guard'а не входит в zustand-стор и не
+ * сбрасывается обычным usePlayerStore.setState(). */
+export function __resetSeekGuardForTests(): void {
+  seekGuardUntil = 0;
+}
 
 async function loadAndPlay(index: number): Promise<void> {
   const track = usePlayerStore.getState().queue[index];
   if (!track) return;
   usePlayerStore.setState({ status: 'loading', positionSec: 0, durationSec: track.durationSec ?? 0 });
 
-  const result = await request(`${API_BASE_URL}/api/v1/tracks/${track.id}/manifest`, {
+  // apiRequest (Bearer + refresh), не голый request — трек может быть непубличным
+  // (черновик/WIP), тогда манифест отдаётся только владельцу/стаффу по личности вызывающего.
+  const result = await apiRequest(`/api/v1/tracks/${track.id}/manifest`, {
     schema: trackManifestResponseSchema,
   });
   // За время запроса индекс мог смениться (быстрый next/prev) — устаревший ответ не проигрываем.
   if (usePlayerStore.getState().queueIndex !== index) return;
   if (!result.ok) {
+    console.error('[player] не удалось получить манифест трека', track.id, result.error);
     usePlayerStore.setState({ status: 'error' });
     return;
   }
@@ -98,12 +117,14 @@ async function loadAndPlay(index: number): Promise<void> {
     if (usePlayerStore.getState().queueIndex !== index) return;
     await audioEngine.play();
     usePlayerStore.setState({ status: 'playing' });
-  } catch {
+  } catch (err) {
+    console.error('[player] load/play упал', track.id, err);
     if (usePlayerStore.getState().queueIndex === index) usePlayerStore.setState({ status: 'error' });
   }
 }
 
 audioEngine.on('timeupdate', (payload) => {
+  if (Date.now() < seekGuardUntil) return;
   const { currentTime, duration } = payload as AudioTimeUpdate;
   usePlayerStore.setState({ positionSec: currentTime, durationSec: duration });
 });
@@ -112,6 +133,7 @@ audioEngine.on('ended', () => {
   usePlayerStore.getState().next();
 });
 
-audioEngine.on('error', () => {
+audioEngine.on('error', (payload) => {
+  console.error('[player] audioEngine error-событие', payload);
   usePlayerStore.setState({ status: 'error' });
 });

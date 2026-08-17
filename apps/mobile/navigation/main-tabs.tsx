@@ -1,10 +1,12 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { HomeStackNavigator } from './home-stack';
 import SearchScreen from '../screens/search-screen';
 import LibraryScreen from '../screens/library-screen';
 import ProfileScreen from '../screens/profile-screen';
+import { Icon, type IconName } from '../lib/icon';
+import { TAB_BAR_CONTENT_HEIGHT } from '../lib/layout';
 import { colors } from '../lib/theme';
 
 export type MainTabsParamList = {
@@ -14,18 +16,18 @@ export type MainTabsParamList = {
   Profile: undefined;
 };
 
-export const TAB_BAR_HEIGHT = 64;
-
 const Tab = createBottomTabNavigator<MainTabsParamList>();
 
-const TAB_ICONS: Record<keyof MainTabsParamList, string> = {
-  Home: '🏠',
-  Search: '🔍',
-  Library: '📚',
-  Profile: '👤',
+const TAB_ICONS: Record<keyof MainTabsParamList, IconName> = {
+  Home: 'home',
+  Search: 'search',
+  Library: 'list',
+  Profile: 'user',
 };
 
 export function MainTabs() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenListeners={{
@@ -40,16 +42,14 @@ export function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          height: TAB_BAR_HEIGHT,
-          paddingBottom: 10,
+          height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
+          paddingBottom: 10 + insets.bottom,
           paddingTop: 8,
         },
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         tabBarItemStyle: { minHeight: 44 },
-        tabBarIcon: ({ focused }) => (
-          <Text style={{ fontSize: 24, opacity: focused ? 1 : 0.55 }}>
-            {TAB_ICONS[route.name as keyof MainTabsParamList]}
-          </Text>
+        tabBarIcon: ({ focused, color }) => (
+          <Icon name={TAB_ICONS[route.name as keyof MainTabsParamList]} size={22} color={focused ? color : colors.mutedForeground} />
         ),
       })}
     >

@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { request } from '@vire/api-client';
 import {
   freshReleasesResponseSchema,
   hotTracksResponseSchema,
@@ -21,9 +21,10 @@ import {
   type ReleaseCardDTO,
 } from '@vire/api-contracts';
 import type { HomeStackParamList } from '../navigation/home-stack';
-import { API_BASE_URL } from '../lib/env';
+import { apiRequest } from '../lib/api-client';
 import { colors, radius } from '../lib/theme';
 import { endpointOf } from '../lib/sdui';
+import { Icon } from '../lib/icon';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 
 type LoadState = 'loading' | 'error' | 'ready';
@@ -35,6 +36,7 @@ const SUPPORTED_BLOCKS = 'fresh-releases,hot-tracks';
 
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'HomeList'>>();
+  const insets = useSafeAreaInsets();
   const [freshReleases, setFreshReleases] = useState<ReleaseCardDTO[]>([]);
   const [hotTracks, setHotTracks] = useState<HomeChartTrackDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
@@ -43,7 +45,7 @@ export default function HomeScreen() {
   const currentTrackId = usePlayerStore((s) => s.queue[s.queueIndex]?.id ?? null);
 
   const load = useCallback(async () => {
-    const screenResult = await request(`${API_BASE_URL}/api/v1/screens/home`, {
+    const screenResult = await apiRequest('/api/v1/screens/home', {
       schema: screenSchema,
       headers: { 'X-Vire-Blocks': SUPPORTED_BLOCKS },
     });
@@ -53,12 +55,8 @@ export default function HomeScreen() {
     const hotEndpoint = endpointOf(screenResult.data.blocks, 'hot-tracks');
 
     const [freshResult, hotResult] = await Promise.all([
-      freshEndpoint
-        ? request(`${API_BASE_URL}${freshEndpoint}`, { schema: freshReleasesResponseSchema })
-        : Promise.resolve(null),
-      hotEndpoint
-        ? request(`${API_BASE_URL}${hotEndpoint}`, { schema: hotTracksResponseSchema })
-        : Promise.resolve(null),
+      freshEndpoint ? apiRequest(freshEndpoint, { schema: freshReleasesResponseSchema }) : Promise.resolve(null),
+      hotEndpoint ? apiRequest(hotEndpoint, { schema: hotTracksResponseSchema }) : Promise.resolve(null),
     ]);
 
     // Оба источника блока отвалились — честная ошибка. Один из двух — показываем то, что есть.
@@ -106,7 +104,7 @@ export default function HomeScreen() {
 
   if (state === 'loading') {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
         <ActivityIndicator color={colors.foreground} size="large" />
       </View>
     );
@@ -114,7 +112,7 @@ export default function HomeScreen() {
 
   if (state === 'error') {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
         <Text style={styles.messageText}>Не удалось загрузить главную</Text>
         <Pressable style={styles.retryButton} onPress={initialLoad}>
           <Text style={styles.retryText}>Повторить</Text>
@@ -125,7 +123,7 @@ export default function HomeScreen() {
 
   if (freshReleases.length === 0 && hotTracks.length === 0) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
         <Text style={styles.messageText}>Пока нечего показать</Text>
       </View>
     );
@@ -133,7 +131,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      style={styles.screen}
+      style={[styles.screen, { paddingTop: insets.top }]}
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />
@@ -232,15 +230,21 @@ function HotTrackRow({
         <View style={[styles.trackCover, styles.coverPlaceholder]} />
       )}
       <View style={styles.trackInfo}>
-        <Text style={styles.trackTitle} numberOfLines={1}>
-          {track.title}
-          {track.isExplicit ? ' 🅴' : ''}
-        </Text>
+        <View style={styles.trackTitleRow}>
+          <Text style={styles.trackTitle} numberOfLines={1}>
+            {track.title}
+          </Text>
+          {track.isExplicit && (
+            <View style={styles.trackExplicitBadge}>
+              <Text style={styles.trackExplicitText}>E</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.trackArtist} numberOfLines={1}>
           {track.artistName}
         </Text>
       </View>
-      {playing && <Text style={styles.nowPlayingIcon}>▶</Text>}
+      {playing && <Icon name="play" size={14} color={colors.primary} />}
     </Pressable>
   );
 }
@@ -301,7 +305,16 @@ const styles = StyleSheet.create({
   trackRank: { color: colors.mutedForeground, fontSize: 14, fontWeight: '700', minWidth: 20, textAlign: 'center' },
   trackCover: { width: 44, height: 44, borderRadius: radius.sm },
   trackInfo: { flex: 1, gap: 2 },
-  trackTitle: { color: colors.foreground, fontSize: 15, fontWeight: '600' },
+  trackTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  trackTitle: { color: colors.foreground, fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  trackExplicitBadge: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 3,
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trackExplicitText: { color: colors.mutedForeground, fontSize: 9, fontWeight: '800' },
   trackArtist: { color: colors.mutedForeground, fontSize: 13, fontWeight: '500' },
-  nowPlayingIcon: { color: colors.primary, fontSize: 14 },
 });
