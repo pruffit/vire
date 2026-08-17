@@ -192,6 +192,25 @@ fn main() {
                 }
             });
 
+            // Второе окно, независимое от главного: не форсирует его скрытие/показ.
+            // Скрыто по умолчанию — открывается только через пункт трея «Мини-плеер».
+            // Та же страница/origin, что у главного окна — синк состояния через
+            // BroadcastChannel на веб-стороне (apps/web/lib/player/desktop-sync.ts),
+            // без Tauri IPC (см. design doc).
+            let mini_player_window = WebviewWindowBuilder::new(
+                app,
+                "mini-player",
+                WebviewUrl::External(format!("{}/desktop/mini-player", shell_url()).parse()?),
+            )
+            .title("VireMusic — мини-плеер")
+            .inner_size(300.0, 110.0)
+            .resizable(false)
+            .decorations(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .visible(false)
+            .build()?;
+
             let show = MenuItem::with_id(app, "show", "Показать VireMusic", true, None::<&str>)?;
             let play_pause = MenuItem::with_id(app, "play_pause", "Play/Pause", true, None::<&str>)?;
             let next = MenuItem::with_id(app, "next", "Следующий трек", true, None::<&str>)?;
@@ -205,6 +224,18 @@ fn main() {
                 autostart_enabled,
                 None::<&str>,
             )?;
+            // Скрыт по умолчанию (visible(false) выше) — чекбокс стартует непроверенным.
+            let mini_player_item =
+                CheckMenuItem::with_id(app, "mini_player", "Мини-плеер", true, false, None::<&str>)?;
+            // Alt+F4/системное закрытие безрамочного окна — тоже прячет, не закрывает
+            // (тот же паттерн, что у главного окна), и снимает чекбокс в трее.
+            let mini_player_check = mini_player_item.clone();
+            mini_player_window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = mini_player_check.set_checked(false);
+                }
+            });
             let check_updates =
                 MenuItem::with_id(app, "check_updates", "Проверить обновления", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Выход", true, None::<&str>)?;
@@ -212,6 +243,7 @@ fn main() {
                 app,
                 &[
                     &show,
+                    &mini_player_item,
                     &PredefinedMenuItem::separator(app)?,
                     &play_pause,
                     &next,
@@ -231,6 +263,16 @@ fn main() {
                     let Some(window) = app.get_webview_window("main") else { return };
                     match event.id.as_ref() {
                         "show" => show_and_focus(&window),
+                        "mini_player" => {
+                            let Some(mini) = app.get_webview_window("mini-player") else { return };
+                            if mini.is_visible().unwrap_or(false) {
+                                let _ = mini.hide();
+                                let _ = mini_player_item.set_checked(false);
+                            } else {
+                                let _ = mini.show();
+                                let _ = mini_player_item.set_checked(true);
+                            }
+                        }
                         "play_pause" => call_bridge(&window, "togglePlay"),
                         "next" => call_bridge(&window, "next"),
                         "prev" => call_bridge(&window, "prev"),

@@ -47,6 +47,13 @@ async function headerLocaleOrDefault(): Promise<Locale> {
   return headerLocale && isLocale(headerLocale) ? headerLocale : DEFAULT_LOCALE;
 }
 
+// Мини-плеер (proxy.ts, x-desktop-chrome: none) — отдельное окно Tauri без фокуса на
+// главном окне: не монтирует Nav/PlayerWrapper/чат и т.п., только сама страница.
+async function hasDesktopChrome(): Promise<boolean> {
+  const requestHeaders = await headers();
+  return requestHeaders.get('x-desktop-chrome') !== 'none';
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await headerLocaleOrDefault();
   const [title, description, tSeo] = await Promise.all([
@@ -109,10 +116,11 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await auth();
   const userId = session?.user?.id;
-  const [incomingCount, messagesUnread, locale] = await Promise.all([
+  const [incomingCount, messagesUnread, locale, desktopChrome] = await Promise.all([
     userId ? countUnseenIncomingCached(userId) : 0,
     userId ? countUnreadMessagesCached(userId) : 0,
     headerLocaleOrDefault(),
+    hasDesktopChrome(),
   ]);
   const messages = await getMessages(locale);
 
@@ -126,37 +134,45 @@ export default async function RootLayout({
       <body className="h-full flex flex-col bg-background text-foreground font-sans overflow-clip">
         {/* ставит vire-reduce-motion на <html> до пейнта, чтобы CSS-анимации не мигнули */}
         <script dangerouslySetInnerHTML={{ __html: REDUCE_MOTION_INIT_SCRIPT }} />
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-3 focus:left-3 focus:rounded-md focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
-        >
-          {messages.common.skipLink as string}
-        </a>
+        {desktopChrome && (
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-3 focus:left-3 focus:rounded-md focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+          >
+            {messages.common.skipLink as string}
+          </a>
+        )}
         <NextIntlClientProvider locale={locale} messages={messages}>
           <MotionProvider>
-            <Nav />
-            <ScrollState />
-            <ScrollRestoration />
-            <SitePresence />
-            <JamSessionProvider>
-              {/* suppressHydrationWarning: ScrollState вешает is-scrolling через classList напрямую */}
-              <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-clip">
-                {children}
-              </div>
-              <PartyVideoDock />
-              <PlayerWrapper />
-            </JamSessionProvider>
-            <MobileTabBar incomingCount={incomingCount} messagesUnread={messagesUnread} />
-            <DeferredWidgets userId={userId} />
-            <Toaster />
-            {userId && (
+            {desktopChrome ? (
               <>
-                <E2eeBootstrap userId={userId} />
-                <LinkApprove viewerId={userId} />
-                <ChatEventsBridge viewerId={userId} />
+                <Nav />
+                <ScrollState />
+                <ScrollRestoration />
+                <SitePresence />
+                <JamSessionProvider>
+                  {/* suppressHydrationWarning: ScrollState вешает is-scrolling через classList напрямую */}
+                  <div id="main-content" suppressHydrationWarning className="flex-1 min-h-0 overflow-y-auto overflow-x-clip">
+                    {children}
+                  </div>
+                  <PartyVideoDock />
+                  <PlayerWrapper />
+                </JamSessionProvider>
+                <MobileTabBar incomingCount={incomingCount} messagesUnread={messagesUnread} />
+                <DeferredWidgets userId={userId} />
+                <Toaster />
+                {userId && (
+                  <>
+                    <E2eeBootstrap userId={userId} />
+                    <LinkApprove viewerId={userId} />
+                    <ChatEventsBridge viewerId={userId} />
+                  </>
+                )}
+                <YandexMetrika />
               </>
+            ) : (
+              children
             )}
-            <YandexMetrika />
           </MotionProvider>
         </NextIntlClientProvider>
       </body>

@@ -21,7 +21,7 @@ function stripLocale(pathname: string): { locale: Locale; rest: string } {
 }
 
 // Нелокализованные ветки живут только на корне: /en/admin — мёртвый URL, а не 404.
-const UNLOCALIZED_PREFIXES = ['/admin', '/fwqa688'];
+const UNLOCALIZED_PREFIXES = ['/admin', '/fwqa688', '/desktop'];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
@@ -49,6 +49,15 @@ export default auth((req) => {
   // Секретный вход в режим "вечеринка" — тоже вне локализации.
   if (pathname.startsWith('/fwqa688')) {
     return NextResponse.next();
+  }
+
+  // Окно мини-плеера десктоп-клиента (Tauri) — top-level страница без chrome,
+  // тоже вне локализации. Заголовок читает app/layout.tsx — не монтирует
+  // Nav/PlayerWrapper/etc (см. docs/superpowers/specs/2026-08-17-desktop-mini-player-design.md).
+  if (pathname.startsWith('/desktop/mini-player')) {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-desktop-chrome', 'none');
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   const isProtected = PROTECTED_PREFIXES.some((p) => unprefixed.startsWith(p));

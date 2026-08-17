@@ -186,6 +186,14 @@ textarea.vire-textarea:focus::-webkit-resizer {
   }
 }
 
+/* Бегущая строка переполненного названия/артиста в окне мини-плеера (~300px,
+   отдельное Tauri-окно без общей скролл-области — инвариант «0 слоёв» на неё не
+   распространяется). Дублированный текст + translateX(-50%) — бесшовный цикл. */
+@keyframes vire-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
 /* backwards, не both/forwards: filling-анимация держит композит-слой навсегда
    (и каскадом промоутит перекрывающихся соседей) → джиттер при скролле. */
 @utility animate-fade-up {
@@ -199,6 +207,9 @@ textarea.vire-textarea:focus::-webkit-resizer {
 }
 @utility animate-breathe {
   animation: vire-breathe 2.2s var(--ease-soft) infinite;
+}
+@utility animate-mini-player-marquee {
+  animation: vire-marquee 7s linear infinite;
 }
 
 @media (prefers-reduced-motion: no-preference) {

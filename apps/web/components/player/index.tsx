@@ -6,6 +6,7 @@ import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
 import { initAudioEngine } from '@/lib/player/audio-engine';
 import { initMediaSession } from '@/lib/player/media-session';
+import { initDesktopPlayerPublisher } from '@/lib/player/desktop-sync';
 import '@/lib/desktop-bridge';
 import { usePlayerHotkeys } from './use-player-hotkeys';
 import { MiniBar } from './mini-bar';
@@ -19,6 +20,7 @@ export function Player() {
   useEffect(() => {
     initAudioEngine();
     initMediaSession();
+    initDesktopPlayerPublisher();
   }, []);
   usePlayerHotkeys();
 
