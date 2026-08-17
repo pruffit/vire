@@ -78,6 +78,7 @@
 - [x] [Локализация (ru/en)](i18n.md) — словари `packages/i18n`, `/en`-префикс, `users.locale`, письма/пуш по локали получателя, гейт `check:i18n`
 - [x] [Дизайн-токены](design-tokens.md) — `packages/design-tokens`: `tokens.json` источник правды, генераторы CSS (веб) и TS-объекта (будущий RN-клиент)
 - [x] [Десктоп-клиент (срез 0)](desktop-app.md) — Tauri v2 оболочка вокруг веб-фронта, без нового UI и нативных фич
+- [x] [Мобильное приложение (инкремент 1)](mobile-app.md) — RN+Expo walking skeleton: веб-мост входа, secure-store, таб-бар, Главная на реальных данных
 - [ ] Этап 2 — продажи (YooKassa)
 
 См. также: [`docs/security/owasp-top-10.md`](../security/owasp-top-10.md).

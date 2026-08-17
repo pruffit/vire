@@ -83,4 +83,43 @@ describe('request', () => {
 
     expect(result).toEqual({ ok: true, data: { ok: true } });
   });
+
+  it('кастомные headers доходят до fetch, Content-Type не перетирается при наличии body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ ok: true }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await request('/api/x', {
+      schema,
+      method: 'POST',
+      body: { a: 1 },
+      headers: { Authorization: 'Bearer abc' },
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/x',
+      expect.objectContaining({
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer abc' },
+      }),
+    );
+  });
+
+  it('кастомные headers работают без body (GET)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ ok: true }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await request('/api/x', { schema, headers: { Authorization: 'Bearer abc' } });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/x',
+      expect.objectContaining({ headers: { Authorization: 'Bearer abc' } }),
+    );
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateCss, generateTs, type Tokens } from './generate';
+import { generateCss, generateTs, generateNative, oklchToHex, type Tokens } from './generate';
 import tokensJson from './tokens.json';
 
 const tokens = tokensJson as Tokens;
@@ -70,6 +70,40 @@ describe('generateTs round-trip', () => {
       const m = ts.match(block);
       expect(m).not.toBeNull();
       expect({ l: Number(m![1]), c: Number(m![2]), h: Number(m![3]) }).toEqual(tokens.color[key]);
+    }
+  });
+
+  it('sm/md/lg/xl воспроизводят формулу base-2/base/base+4/base+8 из tokens.json', () => {
+    expect(parseTsNumber(ts, /sm:\s*(-?\d+)/)).toBe(tokens.radius - 2);
+    expect(parseTsNumber(ts, /md:\s*(-?\d+)/)).toBe(tokens.radius);
+    expect(parseTsNumber(ts, /lg:\s*(-?\d+)/)).toBe(tokens.radius + 4);
+    expect(parseTsNumber(ts, /xl:\s*(-?\d+)/)).toBe(tokens.radius + 8);
+  });
+});
+
+describe('oklchToHex', () => {
+  it('конвертирует тёмный фон в ожидаемый почти-чёрный тёплый оттенок', () => {
+    expect(oklchToHex({ l: 0.085, c: 0.006, h: 75 })).toBe('#030201');
+  });
+
+  it('конвертирует destructive-красный в ожидаемый насыщенный красный', () => {
+    expect(oklchToHex({ l: 0.55, c: 0.22, h: 27 })).toBe('#d40c1a');
+  });
+
+  it('формат — #rrggbb, ровно 7 символов, только hex-цифры', () => {
+    expect(oklchToHex({ l: 0.93, c: 0.008, h: 83 })).toMatch(/^#[0-9a-f]{6}$/);
+  });
+});
+
+describe('generateNative round-trip', () => {
+  const ts = generateNative(tokens);
+
+  it('содержит все 18 цветов как hex-строки, совпадающие с oklchToHex', () => {
+    for (const key of Object.keys(tokens.color) as (keyof Tokens['color'])[]) {
+      const re = new RegExp(`${key}:\\s*'(#[0-9a-f]{6})'`);
+      const m = ts.match(re);
+      expect(m).not.toBeNull();
+      expect(m![1]).toBe(oklchToHex(tokens.color[key]));
     }
   });
 

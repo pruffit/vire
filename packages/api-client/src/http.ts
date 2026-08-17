@@ -5,6 +5,7 @@ export interface RequestOptions<T> {
   method?: string;
   schema: z.ZodType<T>;
   body?: unknown;
+  headers?: Record<string, string>;
 }
 
 const NETWORK_ERROR_MESSAGE = 'Нет соединения';
@@ -25,13 +26,16 @@ async function extractErrorMessage(res: Response): Promise<string> {
 
 /** Никогда не бросает наружу: сетевой сбой, HTTP-ошибка и невалидный ответ — все сводятся к `{ok:false}`. */
 export async function request<T>(url: string, options: RequestOptions<T>): Promise<ApiResult<T>> {
-  const { method = 'GET', schema, body } = options;
+  const { method = 'GET', schema, body, headers } = options;
 
   let res: Response;
   try {
     res = await fetch(url, {
       method,
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      headers: {
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : undefined),
+        ...headers,
+      },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {

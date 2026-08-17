@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./dist/tokens.ts",
-    "./tokens.css": "./dist/tokens.css"
+    "./tokens.css": "./dist/tokens.css",
+    "./native": "./dist/tokens.native.ts"
   },
   "scripts": {
     "build": "tsx scripts/build.mjs",

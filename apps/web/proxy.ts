@@ -21,7 +21,7 @@ function stripLocale(pathname: string): { locale: Locale; rest: string } {
 }
 
 // Нелокализованные ветки живут только на корне: /en/admin — мёртвый URL, а не 404.
-const UNLOCALIZED_PREFIXES = ['/admin', '/fwqa688', '/desktop'];
+const UNLOCALIZED_PREFIXES = ['/admin', '/fwqa688', '/desktop', '/mobile-auth-bridge'];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
@@ -48,6 +48,12 @@ export default auth((req) => {
 
   // Секретный вход в режим "вечеринка" — тоже вне локализации.
   if (pathname.startsWith('/fwqa688')) {
+    return NextResponse.next();
+  }
+
+  // Веб-мост входа мобильного приложения — top-level страница, гейт сессии делает сама
+  // страница (redirect на /sign-in), next-intl её трогать не должен.
+  if (pathname.startsWith('/mobile-auth-bridge')) {
     return NextResponse.next();
   }
 
