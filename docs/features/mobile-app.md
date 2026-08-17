@@ -92,9 +92,13 @@ pnpm --filter @vire/mobile mobile:android   # expo start --android — нуже�
   «Профиль» произойдёт при первом запуске через Expo Go на реальном телефоне.
 - Все гейты веба (`typecheck`/`lint`/`check:routes`/`check:i18n`/`check:contracts`/`test`/
   `build`) и `apps/mobile`/`packages/design-tokens`/`packages/api-client` — зелёные.
-- Юнит-тестов на `apiRequest()` (Bearer/401-рефреш-повтор) пока нет — `apps/mobile` не имеет
-  тестового раннера (только `typecheck`). Логика прочитана и код-ревьюнута вручную, не
-  покрыта автотестом — честный технический долг, не забыть при следующем заходе на мобилку.
+- `apps/mobile` получил тестовый раннер (`vitest`, `test`/`test:watch`, конфиг как у
+  `packages/api-client` — plain node environment, RN-рендеринг не нужен). 7 тестов на
+  `apiRequest()` (`lib/__tests__/api-client.test.ts`): Bearer из store, отсутствие токена,
+  успех без рефреша, 401→рефреш→повтор с новым токеном, неудачный рефреш → очистка токенов
+  без повтора, отсутствие `refreshToken` → рефреш не вызывается, single-flight на два
+  конкурентных 401 (диспетчер мока по URL, не по порядку вызовов — порядок реальных
+  конкурентных микротасков не детерминирован).
 
 ## Вне скоупа (следующие шаги)
 
