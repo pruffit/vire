@@ -35,6 +35,7 @@ export * from './music/curation/types/playlist';
 export * from './music/curation/types/playlist-page';
 export * from './music/engagement/types/moment';
 export * from './music/playback/types/wave';
+export * from './music/playback/ports/audio-engine';
 export * from './platform/search/types/search';
 export * from './music/jam/types/jam';
 export * from './music/external/types/external';
