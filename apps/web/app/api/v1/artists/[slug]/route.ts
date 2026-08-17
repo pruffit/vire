@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
-import { db, DrizzleArtistRepository } from '@vire/db';
+import { db, DrizzleArtistRepository, isArtistMember } from '@vire/db';
 import { ArtistService, NotFoundError, type ArtistProfile } from '@vire/core';
 import type { ArtistDetailResponse } from '@vire/api-contracts';
+import { getCaller } from '@/lib/caller';
+import { canViewEmptyArtist } from '@/lib/artist-visibility';
+import { artistHasPublishedTrack } from '@/lib/artist-page';
 import { errorJson } from '@/lib/error-response';
 
 function toResponse(artist: ArtistProfile): ArtistDetailResponse {
@@ -28,5 +31,18 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
-  return NextResponse.json(toResponse(result.value));
+  const artist = result.value;
+
+  // Пустой артист скрыт с витрины (каталог/поиск/sitemap) — этот ресурсный роут должен
+  // отвечать так же, тем же 404, что и отсутствующий артист (см. TODO.md, тот же гейт,
+  // что apps/web/app/[locale]/(listener)/artists/[slug]/artist-guard.ts::assertArtistVisible).
+  if (!(await artistHasPublishedTrack(artist.id))) {
+    const caller = await getCaller();
+    const isMember = caller ? await isArtistMember(artist.id, caller.id) : false;
+    if (!canViewEmptyArtist({ isMember, role: caller?.role ?? null })) {
+      return errorJson(new NotFoundError('ArtistProfile', slug, 'artist.notFound'), 404);
+    }
+  }
+
+  return NextResponse.json(toResponse(artist));
 }
