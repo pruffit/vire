@@ -6,8 +6,9 @@ React Native + Expo клиент, walking skeleton: связка auth → нав
 ## Что делает
 
 - Таб-бар (native-stack → bottom-tabs): Главная — реальный список свежих релизов с
-  `GET /api/v1/releases`; Поиск/Медиатека/Профиль — честные заглушки-стабы («Скоро»), не
-  притворяются функциональными.
+  `GET /api/v1/releases`; Профиль — список устройств аккаунта (`GET /api/v1/auth/devices`),
+  отзыв чужого устройства, выход (отзыв текущего + очистка secure store); Поиск/Медиатека —
+  честные заглушки-стабы («Скоро»), не притворяются функциональными.
 - Экран входа: `expo-web-browser` открывает `/mobile-auth-bridge` в изолированной
   системной сессии (`openAuthSessionAsync`, не `<WebView>` — пароль вводится вне контекста
   приложения), редирект `vire://auth-callback?accessToken&refreshToken&deviceId` разбирается
@@ -26,15 +27,15 @@ React Native + Expo клиент, walking skeleton: связка auth → нав
   - `navigation/root-navigator.tsx` — native-stack (SignIn/Main), решение о стартовом
     экране по наличию токенов в secure store.
   - `navigation/main-tabs.tsx` — bottom-tabs, 4 вкладки.
-  - `screens/sign-in-screen.tsx`, `screens/home-screen.tsx` — рабочие экраны.
-  - `screens/{search,library,profile}-screen.tsx` + `components/stub-screen.tsx` — заглушки.
+  - `screens/sign-in-screen.tsx`, `screens/home-screen.tsx`, `screens/profile-screen.tsx` —
+    рабочие экраны.
+  - `screens/{search,library}-screen.tsx` + `components/stub-screen.tsx` — заглушки.
   - `lib/env.ts` — `EXPO_PUBLIC_API_BASE_URL`/`EXPO_PUBLIC_WEB_BASE_URL`, фолбэк localhost:3000.
   - `lib/secure-store.ts` — обёртка над `expo-secure-store` (accessToken/refreshToken/deviceId).
   - `lib/api-client.ts` — `apiRequest()`: Bearer из secure store + один повтор через
-    `POST /api/v1/auth/refresh` на 401. Ни один экран инкремента 1 её не вызывает (Главная
-    бьёт в публичный `/api/v1/releases` напрямую через `request()` из `@vire/api-client`,
-    авторизованных вызовов пока нет) — модуль готов для первого экрана, которому
-    понадобятся приватные данные.
+    `POST /api/v1/auth/refresh` на 401. Первый реальный вызывающий — `profile-screen.tsx`
+    (список/отзыв устройств); Главная по-прежнему бьёт в публичный `/api/v1/releases`
+    напрямую через `request()` из `@vire/api-client` (не нужен Bearer).
   - `lib/theme.ts` — реэкспорт `@vire/design-tokens/native`.
   - `metro.config.js` — монорепо: `watchFolders` на корень репозитория,
     `unstable_enablePackageExports` (для `@vire/design-tokens/native`). **Без
@@ -76,18 +77,24 @@ pnpm --filter @vire/mobile mobile:android   # expo start --android — нуже�
 - `npx expo start --web`: Metro поднимается без ошибок бандлинга, `GET /` отдаёт HTML с
   `<title>VireMusic</title>`, JS-бандл (`/apps/mobile/index.ts.bundle?platform=web...`)
   компилируется в 200 (~3.2 МБ) и содержит реальные строки кода (URL `/api/v1/releases`,
-  hex-цвета темы, `vire://auth-callback`, ярлыки вкладок).
+  `/api/v1/auth/devices`, hex-цвета темы, `vire://auth-callback`, ярлыки вкладок, тексты
+  экрана «Устройства») — подтверждено `grep` по скомпилированному бандлу.
 - `GET /api/v1/releases?sort=fresh&limit=24` на реальном `pnpm --filter @vire/web dev` —
   200, реальные 2 релиза из локальной БД (не заглушка).
 - `mobile-auth-bridge` без cookie-сессии — `307` → `/sign-in?callbackUrl=/mobile-auth-bridge`
   (проверено `curl` на реальном dev-сервере). **Авторизованная ветка (реальный
-  `vire://auth-callback?accessToken=...`) не проверена** — в локальной БД нет пользователя
-  с паролем (единственный юзер вошёл через OAuth/magic-link), настраивать его ради этой
-  проверки не стали (укладываемся в решение design-документа «не тратить на это больше
-  15–20 минут — задокументировать как ограничение»). Код прочитан целиком и соответствует
-  контракту `deviceAuthService().register()`.
+  `vire://auth-callback?accessToken=...`, и следом реальный список устройств на экране
+  «Профиль») по-прежнему не проверена end-to-end** — в локальной БД нет пользователя с
+  паролем (единственный юзер вошёл через OAuth/magic-link). Код прочитан целиком и
+  соответствует контракту `deviceAuthService().register()`/`.list()`/`.revoke()`; реальный
+  клик через `openAuthSessionAsync` в принципе не воспроизводим в `expo start --web` (это
+  нативный API системного браузера) — первая настоящая проверка обеих веток входа и экрана
+  «Профиль» произойдёт при первом запуске через Expo Go на реальном телефоне.
 - Все гейты веба (`typecheck`/`lint`/`check:routes`/`check:i18n`/`check:contracts`/`test`/
   `build`) и `apps/mobile`/`packages/design-tokens`/`packages/api-client` — зелёные.
+- Юнит-тестов на `apiRequest()` (Bearer/401-рефреш-повтор) пока нет — `apps/mobile` не имеет
+  тестового раннера (только `typecheck`). Логика прочитана и код-ревьюнута вручную, не
+  покрыта автотестом — честный технический долг, не забыть при следующем заходе на мобилку.
 
 ## Вне скоупа (следующие шаги)
 
