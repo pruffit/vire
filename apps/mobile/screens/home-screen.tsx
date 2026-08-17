@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { request } from '@vire/api-client';
 import { releaseCatalogResponseSchema, type ReleaseCardDTO } from '@vire/api-contracts';
+import type { HomeStackParamList } from '../navigation/home-stack';
 import { API_BASE_URL } from '../lib/env';
 import { colors, radius } from '../lib/theme';
 
 type LoadState = 'loading' | 'error' | 'ready';
 
 export default function HomeScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'HomeList'>>();
   const [items, setItems] = useState<ReleaseCardDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
 
@@ -61,17 +65,30 @@ export default function HomeScreen() {
       contentContainerStyle={styles.listContent}
       data={items}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <ReleaseCard release={item} />}
+      renderItem={({ item }) => (
+        <ReleaseCard
+          release={item}
+          onPress={() =>
+            navigation.navigate('ReleaseDetail', {
+              releaseId: item.id,
+              title: item.title,
+              artistName: item.artistName,
+              coverUrl: item.coverUrl,
+            })
+          }
+        />
+      )}
     />
   );
 }
 
-function ReleaseCard({ release }: { release: ReleaseCardDTO }) {
+function ReleaseCard({ release, onPress }: { release: ReleaseCardDTO; onPress: () => void }) {
   const [pressed, setPressed] = useState(false);
   return (
     <Pressable
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
+      onPress={onPress}
       style={[styles.card, pressed && styles.cardPressed]}
     >
       {release.coverUrl ? (

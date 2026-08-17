@@ -11,7 +11,9 @@
     "./identity/device-tokens": "./src/platform/identity/device-tokens.ts",
     "./identity/device": "./src/platform/identity/repositories/device.ts",
     "./identity/device-auth": "./src/platform/identity/services/device-auth.ts",
-    "./access": "./src/platform/access/index.ts"
+    "./access": "./src/platform/access/index.ts",
+    "./playback/queue": "./src/music/playback/services/queue.ts",
+    "./playback/audio-engine": "./src/music/playback/ports/audio-engine.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

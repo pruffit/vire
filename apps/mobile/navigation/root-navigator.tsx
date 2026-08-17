@@ -3,13 +3,15 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import SignInScreen from '../screens/sign-in-screen';
-import { MainTabs } from './main-tabs';
+import PlayerScreen from '../screens/player-screen';
+import { MainScreen } from './main-screen';
 import { hasStoredSession } from '../lib/secure-store';
 import { colors } from '../lib/theme';
 
 export type RootStackParamList = {
   SignIn: undefined;
   Main: undefined;
+  Player: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -30,7 +32,11 @@ export function RootNavigator() {
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList | null>(null);
 
   useEffect(() => {
-    hasStoredSession().then((has) => setInitialRoute(has ? 'Main' : 'SignIn'));
+    // expo-secure-store не имеет веб-реализации (getValueWithKeyAsync бросает) — без catch
+    // web-превью зависает на спиннере навсегда. На web/без сессии считаем неавторизованным.
+    hasStoredSession()
+      .then((has) => setInitialRoute(has ? 'Main' : 'SignIn'))
+      .catch(() => setInitialRoute('SignIn'));
   }, []);
 
   if (initialRoute === null) {
@@ -47,7 +53,8 @@ export function RootNavigator() {
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="SignIn" component={SignInScreen} />
-        <Stack.Screen name="Main" component={MainTabs} />
+        <Stack.Screen name="Main" component={MainScreen} />
+        <Stack.Screen name="Player" component={PlayerScreen} options={{ presentation: 'modal' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

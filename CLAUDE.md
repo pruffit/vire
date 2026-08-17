@@ -260,6 +260,14 @@ pnpm --filter @vire/web dev
 Переменные окружения: скопируй `.env.example` в `.env` и заполни.
 DATABASE_URL для локалки: `postgresql://vire:vire@localhost:5432/vire`
 
+> ⚠️ **Windows: `pnpm dev` вдруг падает `ECONNRESET` на любом запросе к Postgres/Redis/MinIO**
+> (TCP-хендшейк на порт проходит, данные — нет), хотя `docker compose ps` показывает
+> контейнеры здоровыми и `docker exec ... psql` работает? Похоже на баг Docker Desktop с
+> port-forwarding по IPv6-loopback (`::1`) после сна хоста — `localhost` резолвится в
+> `::1` первым. Фикс: замени `localhost` на `127.0.0.1` в `DATABASE_URL`/`REDIS_URL`/
+> `S3_ENDPOINT`/`S3_PUBLIC_ENDPOINT` (в `.env`/`.env.local`, не в git) и перезапусти
+> `pnpm dev`. Перезапуск контейнеров/`docker compose down && up -d` сам по себе не чинит.
+
 ## Документация фич
 
 Каждая фича описывается файлом в `docs/features/` (что делает, где код, env,

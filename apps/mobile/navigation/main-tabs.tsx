@@ -1,6 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
-import HomeScreen from '../screens/home-screen';
+import { HomeStackNavigator } from './home-stack';
 import SearchScreen from '../screens/search-screen';
 import LibraryScreen from '../screens/library-screen';
 import ProfileScreen from '../screens/profile-screen';
@@ -12,6 +12,8 @@ export type MainTabsParamList = {
   Library: undefined;
   Profile: undefined;
 };
+
+export const TAB_BAR_HEIGHT = 64;
 
 const Tab = createBottomTabNavigator<MainTabsParamList>();
 
@@ -32,7 +34,7 @@ export function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
-          height: 64,
+          height: TAB_BAR_HEIGHT,
           paddingBottom: 10,
           paddingTop: 8,
         },
@@ -45,7 +47,7 @@ export function MainTabs() {
         ),
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Главная' }} />
+      <Tab.Screen name="Home" component={HomeStackNavigator} options={{ title: 'Главная' }} />
       <Tab.Screen name="Search" component={SearchScreen} options={{ title: 'Поиск' }} />
       <Tab.Screen name="Library" component={LibraryScreen} options={{ title: 'Медиатека' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Профиль' }} />
