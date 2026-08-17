@@ -3,7 +3,10 @@ import type { ApiResult } from './result';
 
 export interface RequestOptions<T> {
   method?: string;
-  schema: z.ZodType<T>;
+  // Третий параметр (Input) намеренно `any`: нас интересует только распарсенный вывод T,
+  // а не то, что схема принимает на входе — иначе схемы с `.default()` на вложенных полях
+  // (вход шире выхода, напр. `screenSchema`) не проходят структурную проверку `ZodType<T>`.
+  schema: z.ZodType<T, z.ZodTypeDef, any>;
   body?: unknown;
   headers?: Record<string, string>;
 }

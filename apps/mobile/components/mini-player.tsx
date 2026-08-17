@@ -1,6 +1,7 @@
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Haptics from 'expo-haptics';
 import { usePlayerStore } from '../lib/player-store';
 import type { RootStackParamList } from '../navigation/root-navigator';
 import { TAB_BAR_HEIGHT } from '../navigation/main-tabs';
@@ -29,7 +30,14 @@ export function MiniPlayer() {
           {track.artistName}
         </Text>
       </View>
-      <Pressable style={styles.playButton} onPress={togglePlayPause} hitSlop={12}>
+      <Pressable
+        style={styles.playButton}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          togglePlayPause();
+        }}
+        hitSlop={12}
+      >
         {status === 'loading' ? (
           <ActivityIndicator color={colors.foreground} size="small" />
         ) : (

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import { nextQueueIndex } from '@vire/core/playback/queue';
 import { usePlayerStore } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
@@ -56,7 +57,14 @@ export default function PlayerScreen() {
         <Pressable style={styles.transportButton} onPress={prev} disabled={queueIndex <= 0} hitSlop={12}>
           <Text style={[styles.transportIcon, queueIndex <= 0 && styles.transportDisabled]}>⏮</Text>
         </Pressable>
-        <Pressable style={styles.playButton} onPress={togglePlayPause} hitSlop={12}>
+        <Pressable
+          style={styles.playButton}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            togglePlayPause();
+          }}
+          hitSlop={12}
+        >
           {status === 'loading' ? (
             <ActivityIndicator color={colors.primaryForeground} size="small" />
           ) : (

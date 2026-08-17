@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { HomeStackNavigator } from './home-stack';
 import SearchScreen from '../screens/search-screen';
 import LibraryScreen from '../screens/library-screen';
@@ -27,6 +28,11 @@ const TAB_ICONS: Record<keyof MainTabsParamList, string> = {
 export function MainTabs() {
   return (
     <Tab.Navigator
+      screenListeners={{
+        tabPress: () => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        },
+      }}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.foreground,

@@ -1,30 +1,46 @@
-# Мобильное приложение (инкременты 1–3)
+# Мобильное приложение (инкременты 1–4)
 
-React Native + Expo клиент: auth → навигация → каталог → воспроизведение звука.
-Инкремент 1 — дизайн в `docs/superpowers/specs/2026-08-17-mobile-app-increment-1-design.md`;
-инкремент 3 (звук) — `docs/superpowers/specs/2026-08-17-mobile-playback-design.md`.
+React Native + Expo клиент: auth → навигация → каталог → воспроизведение звука → SDUI-главная
++ нативная полировка. Инкремент 1 — дизайн в
+`docs/superpowers/specs/2026-08-17-mobile-app-increment-1-design.md`; инкремент 3 (звук) —
+`docs/superpowers/specs/2026-08-17-mobile-playback-design.md`. Инкремент 4 закрыл главную
+причину «не работает на реальном телефоне» (сеть на `localhost` недостижима с устройства)
+и перевёл главную на SDUI-протокол (`docs/sdui.md`).
 
 ## Что делает
 
-- Таб-бар (native-stack → bottom-tabs): Главная — реальный список свежих релизов с
-  `GET /api/v1/releases`, тап по релизу открывает трек-лист (вложенный стек внутри
-  таба, см. «Воспроизведение звука» ниже); Профиль — список устройств аккаунта
+- Таб-бар (native-stack → bottom-tabs): Главная — SDUI-композиция с сервера (инкремент 4,
+  см. ниже), тап по релизу открывает трек-лист (вложенный стек внутри таба, см.
+  «Воспроизведение звука» ниже); Профиль — список устройств аккаунта
   (`GET /api/v1/auth/devices`), отзыв чужого устройства, выход (отзыв текущего + очистка
   secure store); Поиск/Медиатека — честные заглушки-стабы («Скоро»), не притворяются
-  функциональными.
+  функциональными. Переключение вкладки — лёгкий haptic-impact.
+- **Главная на SDUI (инкремент 4).** Экран больше не бьёт напрямую в
+  `GET /api/v1/releases` — грузит композицию `GET /api/v1/screens/home` с заголовком
+  `X-Vire-Blocks: fresh-releases,hot-tracks` (клиент объявляет, что умеет рендерить, —
+  `docs/sdui.md` §5), достаёт `source.endpoint` двух блоков и параллельно тянет
+  `GET /api/v1/home/fresh-releases`/`GET /api/v1/home/hot-tracks`. Два раздела: «Новые
+  релизы» (горизонтальная лента карточек, тап открывает трек-лист релиза) и «В топе»
+  (нумерованный список; тап на трек ставит его в очередь плеера как отдельный трек и
+  сразу играет — переиспользует тот же `usePlayerStore.playQueue`, что и релизный
+  трек-лист). Оба серверных списка уже ограничены (`FRESH_RELEASES_RESULT_LIMIT=18`,
+  `HOT_TRACKS_LIMIT=20` в `packages/core/.../home-blocks.ts`) — клиентского лимита не
+  требуется. Pull-to-refresh (`RefreshControl`) перезагружает композицию + оба блока,
+  с лёгким haptic-impact на срабатывание.
 - **Воспроизведение звука (инкремент 3).** Экран релиза (`GET /api/v1/releases/{id}`) —
-  трек-лист с длительностью, недоступные (не `READY`) треки некликабельны. Тап по треку
-  запускает весь трек-лист релиза как очередь через zustand-стор (`lib/player-store.ts`),
-  который переиспользует чистые функции очереди из `@vire/core` (`nextQueueIndex` и т.п.,
-  та же логика, что и в вебе) и грузит HLS-манифест трека
-  (`GET /api/v1/tracks/{id}/manifest`, публичный роут). Мини-плеер — над таб-баром, когда
-  очередь не пуста (обложка, название/артист, play/pause, тап открывает полный плеер).
-  Полный плеер — модальный экран поверх корневого стека: крупная обложка, транспорт
-  prev/play-pause/next, кастомный слайдер позиции (`PanResponder`, без сторонних нативных
-  зависимостей) с реальной перемоткой через `seek()`. Библиотека — `expo-audio` (не
-  `react-native-track-player`, см. обоснование в спеке инкремента 3): работает в обычном
-  Expo Go и имеет веб-реализацию, что и позволяет проверять поверх `expo start --web`.
-  Shuffle/repeat, оффлайн, лайки/плейлисты из мобилки — вне скоупа (см. ниже).
+  трек-лист с длительностью, недоступные (не `READY`) треки некликабельны, pull-to-refresh
+  (инкремент 4). Тап по треку запускает весь трек-лист релиза как очередь через
+  zustand-стор (`lib/player-store.ts`), который переиспользует чистые функции очереди из
+  `@vire/core` (`nextQueueIndex` и т.п., та же логика, что и в вебе) и грузит HLS-манифест
+  трека (`GET /api/v1/tracks/{id}/manifest`, публичный роут). Мини-плеер — над таб-баром,
+  когда очередь не пуста (обложка, название/артист, play/pause с haptic-impact, тап
+  открывает полный плеер). Полный плеер — модальный экран поверх корневого стека: крупная
+  обложка, транспорт prev/play-pause/next (play/pause тоже с haptic-impact), кастомный
+  слайдер позиции (`PanResponder`, без сторонних нативных зависимостей) с реальной
+  перемоткой через `seek()`. Библиотека — `expo-audio` (не `react-native-track-player`,
+  см. обоснование в спеке инкремента 3): работает в обычном Expo Go и имеет
+  веб-реализацию, что и позволяет проверять поверх `expo start --web`. Shuffle/repeat,
+  оффлайн, лайки/плейлисты из мобилки — вне скоупа (см. ниже).
 - Экран входа: `expo-web-browser` открывает `/mobile-auth-bridge` в изолированной
   системной сессии (`openAuthSessionAsync`, не `<WebView>` — пароль вводится вне контекста
   приложения), редирект `vire://auth-callback?accessToken&refreshToken&deviceId` разбирается
@@ -48,12 +64,27 @@ React Native + Expo клиент: auth → навигация → каталог
     вложенных навигаторов).
   - `navigation/main-screen.tsx` — обёртка `MainTabs` + `MiniPlayer` (мини-плеер рисуется
     поверх таб-бара как оверлей, не элемент вкладки).
-  - `screens/sign-in-screen.tsx`, `screens/home-screen.tsx`, `screens/profile-screen.tsx`,
-    `screens/release-screen.tsx` (трек-лист релиза, тап запускает очередь),
-    `screens/player-screen.tsx` (полноэкранный модальный плеер) — рабочие экраны.
+  - `screens/sign-in-screen.tsx`, `screens/home-screen.tsx` (SDUI-главная, инкремент 4),
+    `screens/profile-screen.tsx`, `screens/release-screen.tsx` (трек-лист релиза, тап
+    запускает очередь, pull-to-refresh), `screens/player-screen.tsx` (полноэкранный
+    модальный плеер) — рабочие экраны.
   - `screens/{search,library}-screen.tsx` + `components/stub-screen.tsx` — заглушки.
-  - `components/mini-player.tsx` — мини-бар над таб-баром.
-  - `lib/env.ts` — `EXPO_PUBLIC_API_BASE_URL`/`EXPO_PUBLIC_WEB_BASE_URL`, фолбэк localhost:3000.
+  - `components/mini-player.tsx` — мини-бар над таб-баром, play/pause с haptic-impact.
+  - **`lib/sdui.ts` (инкремент 4).** Переиспользуемый разбор SDUI-ответа: `findBlock(blocks,
+    type)` — первый блок заданного типа; `endpointOf(blocks, type)` — `source.endpoint`
+    блока или `null` (нет блока / `inline`-источник вместо `endpoint`). Чистые функции от
+    `Screen['blocks']` (`@vire/api-contracts`), тестами покрыты изолированно
+    (`lib/__tests__/sdui.test.ts`) — общий парсер для будущих SDUI-экранов мобилки, не
+    только главной.
+  - **`lib/env.ts` + `lib/lan-host.ts` (инкремент 4, сеть для реального устройства).**
+    Приоритет: явный `EXPO_PUBLIC_API_BASE_URL`/`EXPO_PUBLIC_WEB_BASE_URL` → LAN-хост,
+    выведенный из `Constants.expoConfig?.hostUri` (адрес, на котором Metro раздаёт бандл
+    телефону, `192.168.x.x:8081`) на порту 3000 → `http://localhost:3000` (фолбэк для
+    `expo start --web`, где `hostUri` не задан). Чистое преобразование строки вынесено в
+    `lib/lan-host.ts` (`baseUrlFromHostUri`) отдельно от чтения `Constants` — тестируется
+    как чистая функция (`lib/__tests__/lan-host.test.ts`), сам `Constants` замокан только
+    в `lib/__mocks__/expo-constants.ts` (глобальный alias в `vitest.config.ts` — см.
+    «Проверено в инкременте 4» ниже).
   - `lib/secure-store.ts` — обёртка над `expo-secure-store` (accessToken/refreshToken/deviceId).
     На web `expo-secure-store` не реализован вообще (`getValueWithKeyAsync` отсутствует,
     падает синхронно) — обёртка фолбэчит на `localStorage` при `Platform.OS==='web'` (только
@@ -62,8 +93,9 @@ React Native + Expo клиент: auth → навигация → каталог
     web-превью зависал на спиннере навсегда.
   - `lib/api-client.ts` — `apiRequest()`: Bearer из secure store + один повтор через
     `POST /api/v1/auth/refresh` на 401. Первый реальный вызывающий — `profile-screen.tsx`
-    (список/отзыв устройств); Главная по-прежнему бьёт в публичный `/api/v1/releases`
-    напрямую через `request()` из `@vire/api-client` (не нужен Bearer).
+    (список/отзыв устройств); Главная бьёт в публичные SDUI-эндпоинты напрямую через
+    `request()` из `@vire/api-client` (не нужен Bearer — композиция главной для
+    `fresh-releases`/`hot-tracks` не требует авторизации).
   - `lib/audio-engine.ts` — `ExpoAudioEngine implements IAudioEngine` (`@vire/core/playback/audio-engine`)
     поверх `expo-audio`: один переиспользуемый `AudioPlayer` (`createAudioPlayer`), `load()`
     подменяет источник через `replace()` и резолвится по `playbackStatusUpdate.isLoaded`;
@@ -97,8 +129,21 @@ React Native + Expo клиент: auth → навигация → каталог
   опции его отключают. Фоновое воспроизведение (`UIBackgroundModes: audio` на iOS,
   `FOREGROUND_SERVICE_MEDIA_PLAYBACK` на Android) включено дефолтом плагина
   (`enableBackgroundPlayback: true`) — отдельно настраивать не пришлось.
+  `android.predictiveBackGestureEnabled: true` (инкремент 4, было `false` без объяснения с
+  первого коммита) — стек (`react-native-screens ~4.26`, RN `0.86.2`,
+  `@react-navigation/native-stack ^7`) поддерживает predictive back корректно; см.
+  «Проверено в инкременте 4» — сам жест не проверялся на реальном устройстве.
+- **Haptics (инкремент 4):** `expo-haptics` — лёгкий impact (`Haptics.impactAsync(Light)`)
+  на play/pause в `components/mini-player.tsx` и `screens/player-screen.tsx`, на смену
+  вкладки (`screenListeners.tabPress` в `navigation/main-tabs.tsx`), на pull-to-refresh
+  в `screens/home-screen.tsx` и `screens/release-screen.tsx`. Точечно — не на каждый тап.
 - **`@vire/api-client`:** `packages/api-client/src/http.ts` — `RequestOptions.headers?`
-  мёржится в fetch-заголовки, не перетирая `Content-Type`.
+  мёржится в fetch-заголовки, не перетирая `Content-Type`. **Инкремент 4:**
+  `RequestOptions<T>.schema` — `z.ZodType<T, z.ZodTypeDef, any>` вместо `z.ZodType<T>`.
+  Без явного `Input=any` схема с `.default()` на вложенном поле (например,
+  `screenSchema.blocks[].props`, где вход у поля шире вывода) структурно не проходит
+  проверку `ZodType<T>` (третий параметр по умолчанию равен `Output`, а не `any`) — первый
+  реальный кейс такой схемы в мобильном клиенте, `apps/web` до сих пор его не задевал.
 - **`packages/config/package.json`:** добавлен явный `devDependencies.typescript` —
   без него pnpm резолвил peer `typescript` для `typescript-eslint` неоднозначно (разные
   версии TS в разных углах монорепо после появления `apps/mobile`), и получались два разных
@@ -119,8 +164,19 @@ pnpm --filter @vire/mobile mobile:android   # expo start --android — нуже�
 
 ## Env
 
-- `EXPO_PUBLIC_API_BASE_URL` — базовый URL API, фолбэк `http://localhost:3000`.
-- `EXPO_PUBLIC_WEB_BASE_URL` — базовый URL веб-моста входа, фолбэк `http://localhost:3000`.
+**Обычно ничего задавать не нужно.** На физическом телефоне через Expo Go `localhost`
+резолвится в сам телефон — сеть до dev-машины физически недостижима без LAN-адреса
+(вероятная главная причина, по которой всё сетевое молчаливо падало до инкремента 4).
+`lib/env.ts` теперь выводит базовый URL автоматически: `EXPO_PUBLIC_*` env (если задан) →
+LAN-хост из `Constants.expoConfig?.hostUri` (адрес, на котором Metro раздаёт бандл
+телефону) на порту 3000 → `http://localhost:3000` (фолбэк для `expo start --web`, где
+`hostUri` не заполняется). Next dev-сервер почти всегда поднят на той же машине, что и
+Metro, поэтому LAN-хост совпадает.
+
+- `EXPO_PUBLIC_API_BASE_URL` / `EXPO_PUBLIC_WEB_BASE_URL` — задавать явно только когда
+  автоопределение не подходит: dev-сервер `@vire/web` слушает не на 3000, Wi-Fi изолирует
+  клиентов друг от друга (client isolation), или тестируешь против удалённого стенда.
+  Шаблон — `apps/mobile/.env.example`.
 
 ## Проверено в инкременте 1
 
@@ -189,17 +245,91 @@ pnpm --filter @vire/mobile mobile:android   # expo start --android — нуже�
   `S3_ENDPOINT`/`S3_PUBLIC_ENDPOINT` (`apps/web/.env.local`, не в git) чинит стабильно.
   Если это повторится — тот же фикс.
 
+## Проверено в инкременте 4 (сеть для устройства, SDUI-главная, нативная полировка)
+
+- `pnpm --filter @vire/mobile typecheck`/`test` — зелёные (47 тестов: +6
+  `lan-host.test.ts` на `baseUrlFromHostUri()` — host:port, отсутствие `hostUri`
+  (фолбэк), пустая строка, схема `exp://` отбрасывается, путь после хоста отбрасывается,
+  голый хост без порта; +5 `sdui.test.ts` на `findBlock`/`endpointOf` — блок найден,
+  блока нет, `inline`-источник не отдаёт endpoint, блок без `source` не отдаёт endpoint;
+  35 прежних тестов инкремента 3 не задеты). `pnpm --filter @vire/web typecheck`,
+  `pnpm --filter @vire/core typecheck` — зелёные. Дополнительно (не входило в обязательный
+  список гейтов, но задето правкой `packages/api-client`): `pnpm --filter @vire/web test`
+  (2004 теста) и `pnpm --filter @vire/core test` (1058 тестов) — зелёные;
+  `packages/api-client` typecheck+test (12 тестов) — зелёные.
+- **Обнаружено и починено по ходу:** `expo-constants` (используется в `lib/env.ts` для
+  вывода LAN-хоста) тянет `react-native`, чей входной файл использует Flow-синтаксис —
+  vitest (node-окружение без RN-трансформа) не может его распарсить, и уже существующие
+  тесты `api-client.test.ts`/`player-store.test.ts` (транзитивно импортируют `lib/env.ts`)
+  начали падать `RolldownError: Flow is not supported`. Фикс — глобальный alias в
+  `vitest.config.ts`, подменяющий `expo-constants` лёгким стабом
+  (`lib/__mocks__/expo-constants.ts`) для всех тестов; `lib/lan-host.ts` тестируется как
+  чистая функция без обращения к `Constants` вообще.
+- **Обнаружено и починено по ходу:** передача `screenSchema` в дженерик `request<T>()`
+  (`@vire/api-client`) не тайпчекалась — см. правку `packages/api-client/src/http.ts` выше
+  («Где код»). Без неё `apps/mobile typecheck` падал на `screenResult.data.blocks` ещё до
+  того, как дошло до реальной логики SDUI-экрана.
+- `npx expo start --web` + реальный `pnpm --filter @vire/web dev` (локальная БД:
+  `docker compose up -d`, `.env`/`apps/web/.env` с `127.0.0.1` вместо `localhost` — см.
+  предупреждение про Docker Desktop/IPv6 в корневом `CLAUDE.md`): бандл собирается (200,
+  ~3.4 МБ, 654 модуля, без ошибок), grep по скомпилированному бандлу подтверждает новый код
+  (`X-Vire-Blocks`, `fresh-releases`, `hot-tracks`, `screens/home`, `endpointOf`,
+  `baseUrlFromHostUri`, `screenListeners`/`impactAsync` на 5 точках haptics, экранированные
+  `\uXXXX`-строки «Новые релизы»/«В топе»/«Пока нечего показать»).
+- **SDUI-главная реально проверена интерактивно, не только по бандлу.** Драйвером был
+  Playwright (`npm install playwright` + `npx playwright install chromium` в scratchpad —
+  в репозитории Playwright не установлен; headless Chromium, реальный процесс, не MCP).
+  `GET /api/v1/screens/home` с `X-Vire-Blocks: fresh-releases,hot-tracks` на реальном
+  dev-сервере отдал реальную композицию (`{"screen":"home","blocks":[...]}`, 2 блока с
+  `source.endpoint`); `GET /api/v1/home/fresh-releases`/`/hot-tracks` — реальные данные
+  из локальной БД (1 релиз, 2 трека). Открыт `http://localhost:8081` с предзаполненным
+  фиктивным токеном в `localStorage` (обходит экран входа — SDUI-эндпоинты главной
+  публичные, `Bearer` не проверяют) и Chromium, запущенным с
+  `--disable-web-security` (Metro-веб на 8081 и Next-дев на 3000 — разные origin;
+  браузер блокирует `fetch()` без `Access-Control-Allow-Origin`, которого у API нет и не
+  должно быть для прод-CORS ради локального теста; нативный клиент такого ограничения не
+  знает вообще — флаг воспроизводит именно это, не маскирует баг). Результат на скриншоте:
+  секция «Новые релизы» с реальной карточкой релиза («Сигналы», Kotlaev Danil), секция
+  «В топе» с двумя реальными треками по рангу. Тап по треку «В топе» — трек встаёт в
+  очередь плеера и **реально начинает играть** (мини-плеер снизу показывает название/
+  артиста и иконку паузы, трек-строка подсвечена активной). Переключение вкладки
+  Главная → Поиск → рендерит стаб-экран «Скоро» корректно.
+- **Pull-to-refresh — код проверен (bundle + unit), визуально свайп не воспроизведён.**
+  `RefreshControl` на обоих экранах подключён и типизируется корректно; попытка
+  сымитировать touch-свайп мышью в headless Chromium приводит к выделению текста, а не к
+  нативному pull-жесту `RefreshControl` (ограничение симуляции тача мышью в браузере, не
+  баг кода) — честный визуальный прогон свайпа остаётся на реальном устройстве.
+- **Predictive back gesture (Android), нативная сборка, реальный телефон/эмулятор — не
+  проверялись** (нет SDK/эмулятора/телефона на машине разработки, как и в инкрементах 1 и
+  3). `android.predictiveBackGestureEnabled: true` включён осознанно (стек это
+  поддерживает), но первая реальная проверка жеста — на следующем прогоне через Expo Go
+  на телефоне.
+- `@expo/vector-icons` — в `apps/mobile/package.json` этой зависимости **не оказалось**
+  (в отличие от предположения в задании на инкремент 4): `lib/icon.tsx` из более раннего
+  черновика инкремента, который не попал в этот прогон, тоже отсутствует в кодовой базе.
+  Иконки таб-бара и остальные — на месте (эмодзи-текст в `main-tabs.tsx`, как и раньше).
+  Нечего было убирать; если `lib/icon.tsx` (свой SVG-рендерер поверх `react-native-svg`)
+  и `@expo/vector-icons` появятся в будущей сессии — тогда и разбирать дубликат.
+- Лимиты серверных списков SDUI-блоков проверены чтением кода, не менялись:
+  `FRESH_RELEASES_RESULT_LIMIT=18`, `HOT_TRACKS_LIMIT=20`
+  (`packages/core/src/music/discovery/services/home-blocks.ts`) — клиентской обрезки
+  не требуется, `ScrollView` с двумя секциями остаётся адекватным выбором (не бесконечный
+  список).
+
 ## Вне скоупа (следующие шаги)
 
+- **Переход `expo-audio` → `react-native-track-player`/EAS dev-client — отдельный следующий
+  срез, сознательно не тронут в инкременте 4.** Богатые lock-screen/Control Center
+  контролы, Android Auto специфичны для RNTP (не используется, см.
+  `docs/superpowers/specs/2026-08-17-mobile-playback-design.md`); `expo-audio` даёт только
+  базовый `MediaSession`/Now Playing.
 - Shuffle/repeat-UI, оффлайн-скачивание, лайки/добавление в плейлист из мобилки — сами
   функции очереди в `@vire/core` уже есть на будущее, UI сознательно не добавлен.
-- Богатые lock-screen/Control Center контролы, Android Auto — специфично для
-  `react-native-track-player` (не используется, см. `docs/superpowers/specs/2026-08-17-mobile-playback-design.md`);
-  `expo-audio` даёт только базовый `MediaSession`/Now Playing.
-- Пуши, диплинки на конкретный трек/релиз.
+- Пуши, диплинки на конкретный трек/релиз, биометрия, шеринг, виджеты.
 - iOS-сборка и запуск на реальном устройстве через Expo Go — не проверялись (нет Mac и
   физического телефона на машине разработки); `app.json` пишет конфиг под обе платформы, но
   реально верифицирован только веб-превью (`react-native-web`).
 - Android SDK/эмулятор — не установлены и не проверялись (нет `adb`/`java` на машине).
-- Реальное устройство: воспроизведение, фоновый режим, lock-screen — первая проверка через
-  Expo Go на телефоне (см. «Проверено в инкременте 3» выше).
+- Реальное устройство: воспроизведение, фоновый режим, lock-screen, predictive back gesture,
+  визуальный pull-to-refresh — первая проверка через Expo Go на телефоне (см. «Проверено
+  в инкременте 3» и «Проверено в инкременте 4» выше).

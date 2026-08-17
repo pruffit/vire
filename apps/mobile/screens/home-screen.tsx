@@ -1,36 +1,108 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Haptics from 'expo-haptics';
 import { request } from '@vire/api-client';
-import { releaseCatalogResponseSchema, type ReleaseCardDTO } from '@vire/api-contracts';
+import {
+  freshReleasesResponseSchema,
+  hotTracksResponseSchema,
+  screenSchema,
+  type HomeChartTrackDTO,
+  type ReleaseCardDTO,
+} from '@vire/api-contracts';
 import type { HomeStackParamList } from '../navigation/home-stack';
 import { API_BASE_URL } from '../lib/env';
 import { colors, radius } from '../lib/theme';
+import { endpointOf } from '../lib/sdui';
+import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 
 type LoadState = 'loading' | 'error' | 'ready';
 
+// Экран умеет рендерить только эти два типа блоков — сервер отфильтрует композицию
+// под них (docs/sdui.md §5), остальные блоки главной (персонализация, лента, друзья)
+// мобилке пока не нужны.
+const SUPPORTED_BLOCKS = 'fresh-releases,hot-tracks';
+
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'HomeList'>>();
-  const [items, setItems] = useState<ReleaseCardDTO[]>([]);
+  const [freshReleases, setFreshReleases] = useState<ReleaseCardDTO[]>([]);
+  const [hotTracks, setHotTracks] = useState<HomeChartTrackDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
+  const [refreshing, setRefreshing] = useState(false);
+  const playQueue = usePlayerStore((s) => s.playQueue);
+  const currentTrackId = usePlayerStore((s) => s.queue[s.queueIndex]?.id ?? null);
 
   const load = useCallback(async () => {
-    setState('loading');
-    const result = await request(`${API_BASE_URL}/api/v1/releases?sort=fresh&limit=24`, {
-      schema: releaseCatalogResponseSchema,
+    const screenResult = await request(`${API_BASE_URL}/api/v1/screens/home`, {
+      schema: screenSchema,
+      headers: { 'X-Vire-Blocks': SUPPORTED_BLOCKS },
     });
-    if (!result.ok) {
-      setState('error');
-      return;
-    }
-    setItems(result.data.items);
-    setState('ready');
+    if (!screenResult.ok) return false;
+
+    const freshEndpoint = endpointOf(screenResult.data.blocks, 'fresh-releases');
+    const hotEndpoint = endpointOf(screenResult.data.blocks, 'hot-tracks');
+
+    const [freshResult, hotResult] = await Promise.all([
+      freshEndpoint
+        ? request(`${API_BASE_URL}${freshEndpoint}`, { schema: freshReleasesResponseSchema })
+        : Promise.resolve(null),
+      hotEndpoint
+        ? request(`${API_BASE_URL}${hotEndpoint}`, { schema: hotTracksResponseSchema })
+        : Promise.resolve(null),
+    ]);
+
+    // Оба источника блока отвалились — честная ошибка. Один из двух — показываем то, что есть.
+    if (!freshResult?.ok && !hotResult?.ok) return false;
+
+    setFreshReleases(freshResult?.ok ? freshResult.data.items : []);
+    setHotTracks(hotResult?.ok ? hotResult.data.items : []);
+    return true;
   }, []);
 
-  useEffect(() => {
-    load();
+  const initialLoad = useCallback(async () => {
+    setState('loading');
+    setState((await load()) ? 'ready' : 'error');
   }, [load]);
+
+  useEffect(() => {
+    initialLoad();
+  }, [initialLoad]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    await load();
+    setRefreshing(false);
+  }, [load]);
+
+  const openRelease = (release: ReleaseCardDTO) =>
+    navigation.navigate('ReleaseDetail', {
+      releaseId: release.id,
+      title: release.title,
+      artistName: release.artistName,
+      coverUrl: release.coverUrl,
+    });
+
+  const playHotTrack = (track: HomeChartTrackDTO) => {
+    const queueTrack: QueueTrack = {
+      id: track.id,
+      title: track.title,
+      artistName: track.artistName,
+      coverUrl: track.coverUrl,
+      durationSec: null,
+    };
+    playQueue([queueTrack], 0);
+  };
 
   if (state === 'loading') {
     return (
@@ -43,42 +115,69 @@ export default function HomeScreen() {
   if (state === 'error') {
     return (
       <View style={styles.centered}>
-        <Text style={styles.messageText}>Не удалось загрузить релизы</Text>
-        <Pressable style={styles.retryButton} onPress={load}>
+        <Text style={styles.messageText}>Не удалось загрузить главную</Text>
+        <Pressable style={styles.retryButton} onPress={initialLoad}>
           <Text style={styles.retryText}>Повторить</Text>
         </Pressable>
       </View>
     );
   }
 
-  if (items.length === 0) {
+  if (freshReleases.length === 0 && hotTracks.length === 0) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.messageText}>Пока нет релизов</Text>
+        <Text style={styles.messageText}>Пока нечего показать</Text>
       </View>
     );
   }
 
   return (
-    <FlatList
-      style={styles.list}
-      contentContainerStyle={styles.listContent}
-      data={items}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <ReleaseCard
-          release={item}
-          onPress={() =>
-            navigation.navigate('ReleaseDetail', {
-              releaseId: item.id,
-              title: item.title,
-              artistName: item.artistName,
-              coverUrl: item.coverUrl,
-            })
-          }
-        />
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />
+      }
+    >
+      {freshReleases.length > 0 && (
+        <Section title="Новые релизы">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.row}
+          >
+            {freshReleases.map((release) => (
+              <ReleaseCard key={release.id} release={release} onPress={() => openRelease(release)} />
+            ))}
+          </ScrollView>
+        </Section>
       )}
-    />
+
+      {hotTracks.length > 0 && (
+        <Section title="В топе">
+          <View style={styles.trackList}>
+            {hotTracks.map((track, index) => (
+              <HotTrackRow
+                key={track.id}
+                rank={index + 1}
+                track={track}
+                playing={track.id === currentTrackId}
+                onPress={() => playHotTrack(track)}
+              />
+            ))}
+          </View>
+        </Section>
+      )}
+    </ScrollView>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {children}
+    </View>
   );
 }
 
@@ -113,9 +212,42 @@ function ReleaseCard({ release, onPress }: { release: ReleaseCardDTO; onPress: (
   );
 }
 
+function HotTrackRow({
+  rank,
+  track,
+  playing,
+  onPress,
+}: {
+  rank: number;
+  track: HomeChartTrackDTO;
+  playing: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={[styles.trackRow, playing && styles.trackRowActive]} onPress={onPress}>
+      <Text style={styles.trackRank}>{rank}</Text>
+      {track.coverUrl ? (
+        <Image source={{ uri: track.coverUrl }} style={styles.trackCover} />
+      ) : (
+        <View style={[styles.trackCover, styles.coverPlaceholder]} />
+      )}
+      <View style={styles.trackInfo}>
+        <Text style={styles.trackTitle} numberOfLines={1}>
+          {track.title}
+          {track.isExplicit ? ' 🅴' : ''}
+        </Text>
+        <Text style={styles.trackArtist} numberOfLines={1}>
+          {track.artistName}
+        </Text>
+      </View>
+      {playing && <Text style={styles.nowPlayingIcon}>▶</Text>}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  list: { flex: 1, backgroundColor: colors.background },
-  listContent: { padding: 16, gap: 16 },
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { paddingVertical: 16, gap: 28 },
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -134,23 +266,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   retryText: { color: colors.foreground, fontWeight: '700' },
-  card: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.card },
+  section: { gap: 12 },
+  sectionTitle: { color: colors.foreground, fontSize: 20, fontWeight: '800', paddingHorizontal: 16 },
+  row: { paddingHorizontal: 16, gap: 12 },
+  card: { width: 148, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.card },
   cardPressed: { opacity: 0.75, transform: [{ scale: 0.99 }] },
   cover: { width: '100%', aspectRatio: 1 },
   coverPlaceholder: { backgroundColor: colors.secondary },
-  cardInfo: { padding: 14, gap: 4 },
-  cardTitle: { color: colors.cardForeground, fontSize: 17, fontWeight: '700' },
-  cardArtist: { color: colors.mutedForeground, fontSize: 14, fontWeight: '500' },
+  cardInfo: { padding: 10, gap: 4 },
+  cardTitle: { color: colors.cardForeground, fontSize: 14, fontWeight: '700' },
+  cardArtist: { color: colors.mutedForeground, fontSize: 12, fontWeight: '500' },
   explicitBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 8,
+    right: 8,
     backgroundColor: 'rgba(0,0,0,0.65)',
     borderRadius: 4,
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  explicitText: { color: colors.foreground, fontSize: 11, fontWeight: '800' },
+  explicitText: { color: colors.foreground, fontSize: 10, fontWeight: '800' },
+  trackList: { paddingHorizontal: 16, gap: 4 },
+  trackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 56,
+    paddingHorizontal: 8,
+    borderRadius: radius.md,
+  },
+  trackRowActive: { backgroundColor: colors.secondary },
+  trackRank: { color: colors.mutedForeground, fontSize: 14, fontWeight: '700', minWidth: 20, textAlign: 'center' },
+  trackCover: { width: 44, height: 44, borderRadius: radius.sm },
+  trackInfo: { flex: 1, gap: 2 },
+  trackTitle: { color: colors.foreground, fontSize: 15, fontWeight: '600' },
+  trackArtist: { color: colors.mutedForeground, fontSize: 13, fontWeight: '500' },
+  nowPlayingIcon: { color: colors.primary, fontSize: 14 },
 });

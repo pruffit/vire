@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as Haptics from 'expo-haptics';
 import { request } from '@vire/api-client';
 import { releaseDetailResponseSchema, type ReleaseDetailResponse } from '@vire/api-contracts';
 import type { HomeStackParamList } from '../navigation/home-stack';
@@ -16,24 +26,33 @@ export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStac
   const { releaseId, title, artistName, coverUrl } = route.params;
   const [tracks, setTracks] = useState<TrackItem[]>([]);
   const [state, setState] = useState<LoadState>('loading');
+  const [refreshing, setRefreshing] = useState(false);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const currentTrackId = usePlayerStore((s) => s.queue[s.queueIndex]?.id ?? null);
 
   const load = useCallback(async () => {
-    setState('loading');
     const result = await request(`${API_BASE_URL}/api/v1/releases/${releaseId}`, {
       schema: releaseDetailResponseSchema,
     });
-    if (!result.ok) {
-      setState('error');
-      return;
-    }
+    if (!result.ok) return false;
     setTracks(result.data.tracks);
-    setState('ready');
+    return true;
   }, [releaseId]);
 
+  const initialLoad = useCallback(async () => {
+    setState('loading');
+    setState((await load()) ? 'ready' : 'error');
+  }, [load]);
+
   useEffect(() => {
-    load();
+    initialLoad();
+  }, [initialLoad]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    await load();
+    setRefreshing(false);
   }, [load]);
 
   const play = (index: number) => {
@@ -72,7 +91,7 @@ export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStac
       {state === 'error' && (
         <View style={styles.centered}>
           <Text style={styles.messageText}>Не удалось загрузить трек-лист</Text>
-          <Pressable style={styles.retryButton} onPress={load}>
+          <Pressable style={styles.retryButton} onPress={initialLoad}>
             <Text style={styles.retryText}>Повторить</Text>
           </Pressable>
         </View>
@@ -86,6 +105,9 @@ export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStac
           renderItem={({ item, index }) => (
             <TrackRow track={item} playing={item.id === currentTrackId} onPress={() => play(index)} />
           )}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />
+          }
         />
       )}
     </View>
