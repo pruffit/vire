@@ -21,7 +21,6 @@
     "@vire/core": "workspace:*",
     "@vire/design-tokens": "workspace:*",
     "expo": "~57.0.13",
-    "expo-audio": "~57.0.3",
     "expo-constants": "~57.0.11",
     "expo-haptics": "~57.0.1",
     "expo-linking": "~57.0.6",
@@ -34,6 +33,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.2",
     "react-native-svg": "15.15.4",
+    "react-native-track-player": "^4.1.2",
     "react-native-web": "^0.21.2",
     "zustand": "^5.0.14"
   },

@@ -7,6 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
@@ -17,7 +18,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": true
+      "predictiveBackGestureEnabled": true,
+      "package": "com.anonymous.viremobile"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -26,14 +28,7 @@
     "plugins": [
       "expo-web-browser",
       "expo-secure-store",
-      "expo-status-bar",
-      [
-        "expo-audio",
-        {
-          "microphonePermission": false,
-          "recordAudioAndroid": false
-        }
-      ]
+      "expo-status-bar"
     ]
   }
 }

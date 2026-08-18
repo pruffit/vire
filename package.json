@@ -43,6 +43,9 @@
         "GHSA-mh99-v99m-4gvg",
         "GHSA-4cwx-7wf7-3272"
       ]
+    },
+    "patchedDependencies": {
+      "react-native-track-player@4.1.2": "patches/react-native-track-player@4.1.2.patch"
     }
   }
 }

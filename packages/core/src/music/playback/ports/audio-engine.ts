@@ -1,9 +1,20 @@
-export type AudioEngineEvent = 'timeupdate' | 'ended' | 'stalled' | 'error';
+export type AudioEngineEvent =
+  | 'timeupdate'
+  | 'ended'
+  | 'stalled'
+  | 'error'
+  | 'remoteNext'
+  | 'remotePrevious'
+  | 'statechange';
 export type Unsubscribe = () => void;
 
 export interface AudioEngineSource {
   manifestUrl: string;
   startAt?: number;
+  /** Now Playing / lock-screen метаданные — опциональны, движки без OS-интеграции их игнорируют. */
+  title?: string;
+  artist?: string;
+  artworkUrl?: string;
 }
 
 /**

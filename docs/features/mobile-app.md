@@ -1,4 +1,4 @@
-# Мобильное приложение (инкременты 1–4)
+# Мобильное приложение (инкременты 1–5)
 
 React Native + Expo клиент: auth → навигация → каталог → воспроизведение звука → SDUI-главная
 + нативная полировка. Инкремент 1 — дизайн в
@@ -13,7 +13,10 @@ Android через Expo Go, обе бы полностью блокировал�
 2. Сеть на `localhost` — на физическом телефоне резолвится в сам телефон, а не в dev-машину.
 
 Заодно инкремент 4 перевёл главную на SDUI-протокол (`docs/sdui.md`) и добавил нативную
-полировку (иконки вместо эмодзи, haptics, pull-to-refresh, predictive back).
+полировку (иконки вместо эмодзи, haptics, pull-to-refresh, predictive back). Инкремент 5
+заменил `expo-audio` на `react-native-track-player` (RNTP) ради настоящего lock-screen/
+Now Playing/фонового воспроизведения — см. секцию ниже, **сборка на эмуляторе упёрлась в
+конфликт нативных модулей, live-проверка на устройстве не завершена**.
 
 ## Что делает
 
@@ -45,10 +48,11 @@ Android через Expo Go, обе бы полностью блокировал�
   открывает полный плеер). Полный плеер — модальный экран поверх корневого стека: крупная
   обложка, транспорт prev/play-pause/next (play/pause тоже с haptic-impact), кастомный
   слайдер позиции (`PanResponder`, без сторонних нативных зависимостей) с реальной
-  перемоткой через `seek()`. Библиотека — `expo-audio` (не `react-native-track-player`,
-  см. обоснование в спеке инкремента 3): работает в обычном Expo Go и имеет
-  веб-реализацию, что и позволяет проверять поверх `expo start --web`. Shuffle/repeat,
-  оффлайн, лайки/плейлисты из мобилки — вне скоупа (см. ниже).
+  перемоткой через `seek()`. Библиотека — **`react-native-track-player` (RNTP) с
+  инкремента 5** (была `expo-audio` в инкрементах 3–4, см. смену ниже) — foreground-service
+  и lock-screen/Now Playing контролы, работает через локальную (не Expo Go) сборку. Play/
+  pause/next/prev с lock-screen/наушников применяются к тому же стору, что и тап в
+  приложении. Shuffle/repeat, оффлайн, лайки/плейлисты из мобилки — вне скоупа (см. ниже).
 - **Экран входа (инкремент 4: фикс redirect для Expo Go).** `expo-web-browser` открывает
   `/mobile-auth-bridge` в изолированной системной сессии (`openAuthSessionAsync`, не
   `<WebView>` — пароль вводится вне контекста приложения). Redirect URI — не хардкод
@@ -118,21 +122,41 @@ Android через Expo Go, обе бы полностью блокировал�
     (`GET /api/v1/tracks/{id}/manifest`) теперь тоже шлют Bearer. Сами эти роуты публичные
     для READY-контента, но релиз/трек могут быть черновиком/WIP — тогда сервер отдаёт их
     только владельцу/стаффу по личности вызывающего; голый `request()` эту личность терял.
-  - `lib/audio-engine.ts` — `ExpoAudioEngine implements IAudioEngine` (`@vire/core/playback/audio-engine`)
-    поверх `expo-audio`: один переиспользуемый `AudioPlayer` (`createAudioPlayer`), `load()`
-    подменяет источник через `replace()` и резолвится по `playbackStatusUpdate.isLoaded`;
-    `didJustFinish`/`isBuffering`-edge/`error` маппятся в `ended`/`stalled`/`error`.
+  - **`lib/audio-engine.ts` (инкремент 5) — `TrackPlayerAudioEngine implements IAudioEngine`**
+    поверх `react-native-track-player`, заменил `ExpoAudioEngine`/`expo-audio`. Очередь
+    остаётся в `player-store.ts` — движок проигрывает один трек за раз через `load()`, тот
+    же контракт `load/play/pause/seek/on`. Прогресс — поллинг `TrackPlayer.getProgress()`
+    каждые 500мс (`Event.PlaybackProgressUpdated` не гарантированно шлётся с нужной
+    частотой на всех версиях/платформах — тот же подход, что и в официальном хуке
+    `useProgress()` самой RNTP). `setupPlayer()` вызывается лениво при первом `load()`/
+    `play()`, не в конструкторе — Android 12+ запрещает стартовать foreground-service, пока
+    Activity ещё не по-настоящему foreground; окно между стартом JS-бандла и `onResume()`
+    под это не подходит (`ForegroundServiceStartNotAllowedException`). Remote-команды с
+    lock-screen/наушников: `RemotePlay`/`RemotePause`/`RemoteSeek` применяются к нативному
+    плееру напрямую, `RemoteNext`/`RemotePrevious` эмитятся портом наружу как `'remoteNext'`/
+    `'remotePrevious'` — очередью владеет `player-store`, не движок. `Event.PlaybackState`
+    (Playing/Paused) эмитится как `'statechange'` — синхронизирует `status` стора, откуда бы
+    смена ни пришла (в т.ч. с лок-скрина).
+  - `lib/playback-service.ts` (инкремент 5) — headless-таск RNTP, обязателен для Android
+    (без него foreground-service/lock-screen не поднимаются); регистрируется в `index.ts`
+    (`TrackPlayer.registerPlaybackService`) до рендера `App`. Реальные слушатели живут в
+    конструкторе `TrackPlayerAudioEngine` — импорт `audio-engine` в этом файле гарантирует,
+    что singleton уже создан к моменту вызова таска.
   - `lib/player-store.ts` — zustand-стор (`queue`/`queueIndex`/`status`/`positionSec`/
     `durationSec`), транспорт через `nextQueueIndex` из `@vire/core/playback/queue` (та же
     логика очереди, что и в вебе, не переписана). Гонки: если `queueIndex` сменился, пока
     летел запрос манифеста, устаревший ответ отбрасывается; если `audioEngine.load()`
     отклоняется — статус `error`, а не бесконечный `loading`. **Инкремент 4:** тап на play в
     состоянии `error` — повторная попытка того же трека (`loadAndPlay`), не молчание;
-    seek-guard (`SEEK_GUARD_MS=500`) — `expo-audio` может отдать `timeupdate` со старой
-    позицией в короткое окно сразу после `seek()`, пока нативный плеер ещё не догнал
-    `seekTo()` (гонка на поиске HLS-сегмента) — такие тики игнорируются, иначе слайдер
-    визуально дёргался обратно после перемотки; ошибки манифеста/load/audioEngine логируются
-    через `console.error` (раньше падали молча в `status: 'error'` без диагностики).
+    seek-guard (`SEEK_GUARD_MS=500`) — движок может отдать `timeupdate` со старой позицией в
+    короткое окно сразу после `seek()`, пока нативный плеер ещё не догнал `seekTo()` (гонка
+    на поиске HLS-сегмента) — такие тики игнорируются, иначе слайдер визуально дёргался
+    обратно после перемотки; ошибки манифеста/load/audioEngine логируются через
+    `console.error` (раньше падали молча в `status: 'error'` без диагностики). **Инкремент 5:**
+    `load()` передаёт движку `title`/`artist`/`artworkUrl` трека (Now Playing/lock-screen
+    метаданные); слушает `'remoteNext'`/`'remotePrevious'` (те же переходы, что и тап по
+    кнопкам) и `'statechange'` (не перетирает `loading`/`error` — транзитный статус от
+    предыдущего трека может прилететь уже после того, как стор ушёл в загрузку следующего).
   - `lib/format.ts` — `formatDuration()` (m:ss) для трек-листа и полного плеера.
   - `lib/theme.ts` — реэкспорт `@vire/design-tokens/native`.
   - `metro.config.js` — монорепо: `watchFolders` на корень репозитория,
@@ -151,16 +175,25 @@ Android через Expo Go, обе бы полностью блокировал�
   динамическим `import()` от рантайм-строки; Metro (в отличие от Next.js/tsc) это не
   резолвит статически и валит весь мобильный бандл. `apps/mobile` импортирует очередь и
   порт только через эти подпути, не через баррель.
-- **`apps/mobile/app.json`:** плагин `expo-audio` с опциями
-  `{ microphonePermission: false, recordAudioAndroid: false }` — сам плагин безусловно
-  запрашивает разрешение на микрофон (нужно только для записи, которой в приложении нет),
-  опции его отключают. Фоновое воспроизведение (`UIBackgroundModes: audio` на iOS,
-  `FOREGROUND_SERVICE_MEDIA_PLAYBACK` на Android) включено дефолтом плагина
-  (`enableBackgroundPlayback: true`) — отдельно настраивать не пришлось.
+- **`apps/mobile/app.json`:** плагин `expo-audio` (был в инкрементах 3–4) убран — заменён
+  переходом на RNTP в инкременте 5 (`react-native-track-player` конфигурируется через
+  `TrackPlayer.updateOptions()` в коде, отдельного config-плагина не требует; foreground-
+  service на Android поднимается самим RNTP при `setupPlayer()`). `newArchEnabled: false`
+  (инкремент 5) — New Architecture (Fabric/TurboModules) отключена явно; понадобилось для
+  локальной сборки, детали — см. «Инкремент 5» ниже. `android.package:
+  "com.anonymous.viremobile"` (инкремент 5) — обязателен для `expo prebuild`, дефолтное имя
+  пакета Expo-шаблона, не сменено осознанно (сменить перед реальным релизом в стор).
   `android.predictiveBackGestureEnabled: true` (инкремент 4, было `false` без объяснения с
   первого коммита) — стек (`react-native-screens ~4.26`, RN `0.86.2`,
   `@react-navigation/native-stack ^7`) поддерживает predictive back корректно; см.
   «Проверено в инкременте 4» — сам жест не проверялся на реальном устройстве.
+- **`patches/react-native-track-player@4.1.2.patch` (инкремент 5, pnpm patch).** Единственный
+  файл — `android/.../MusicModule.kt`: методы вида `fun x(...) = scope.launch { ... }`
+  (expression-body, возвращающие `Job` от `scope.launch`) не компилировались текущим
+  Kotlin-тулчейном как `@ReactMethod` (ожидается `Unit`/void) — переведены в block-body
+  `fun x(...) { scope.launch { ... } }`. Зарегистрирован в `pnpm.patchedDependencies`
+  корневого `package.json` — применяется автоматически при `pnpm install`, апстриму не
+  отправлялся (не проверено, актуальна ли проблема на других версиях Kotlin/Gradle).
 - **Haptics (инкремент 4):** `expo-haptics` — лёгкий impact (`Haptics.impactAsync(Light)`)
   на play/pause в `components/mini-player.tsx` и `screens/player-screen.tsx`, на смену
   вкладки (`screenListeners.tabPress` в `navigation/main-tabs.tsx`), на pull-to-refresh
@@ -373,22 +406,69 @@ Metro, поэтому LAN-хост совпадает.
   не требуется, `ScrollView` с двумя секциями остаётся адекватным выбором (не бесконечный
   список).
 
+## Инкремент 5: react-native-track-player — лок-скрин и фон на Android
+
+**Код написан, типизирован, покрыт тестами и прошёл ревью — живая проверка на устройстве
+НЕ завершена.** Не заявлять «работает на лок-скрине», пока это не подтверждено фактом на
+следующем прогоне.
+
+### Что сделано
+
+- `lib/audio-engine.ts` — `TrackPlayerAudioEngine implements IAudioEngine` поверх RNTP,
+  `lib/playback-service.ts` — headless-таск, регистрация в `index.ts` до рендера. Порт
+  `@vire/core/playback/audio-engine` расширен событиями `'remoteNext'`/`'remotePrevious'`/
+  `'statechange'` и полями Now Playing (`title`/`artist`/`artworkUrl`) в `AudioEngineSource`
+  — обратно совместимо (веб-драйвер их просто не эмитит/игнорирует). Подробности реализации
+  — секция «Где код» выше.
+- `patches/react-native-track-player@4.1.2.patch` (pnpm patch) — фикс несовместимости
+  `MusicModule.kt` с текущим Kotlin-тулчейном (см. «Где код»).
+- `app.json`: `expo-audio` и его плагин убраны, `newArchEnabled: false`, `android.package`
+  проставлен (нужен для `expo prebuild`).
+- Тесты: `lib/__tests__/audio-engine.test.ts` переписан под RNTP (мок `react-native-track-
+  player`) — load/play/pause/seek, статус-маппинг, remote-команды, поллинг прогресса.
+  `player-store.test.ts` — новые тесты на `remoteNext`/`remotePrevious`/`statechange`
+  (включая «не перетирает `loading`/`error`») и передачу метаданных трека в `load()`.
+
+### Проверено фактом
+
+- `pnpm --filter @vire/mobile typecheck`/`test` — зелёные (59 тестов). `pnpm --filter
+  @vire/core typecheck`/`test` (1058 тестов) — зелёные, границы порта не нарушены.
+- Локальный prebuild (`npx expo prebuild --platform android`) и `npx expo run:android` на
+  эмуляторе `VireMusic_Test` — собрались, приложение установилось
+  (`com.anonymous.viremobile`). В процессе воспроизведение **один раз подтверждено
+  реальным** (иконка паузы вместо play, без краша сразу после тапа на трек).
+
+### НЕ проверено / известный блокер
+
+- **Дублирующая регистрация нативных модулей `react-native-svg`
+  (`Invariant Violation: Tried to register two views with the same name RNSVGCircle`
+  и далее по всем RNSVG-компонентам)** — поймано в логе (`mobile-android3.log`) и на
+  скриншоте (экран «Something went wrong» после серии перезапусков в течение сессии).
+  `pnpm why react-native-svg` внутри `apps/mobile` показывает ровно одну версию в дереве
+  зависимостей — дубликат скорее всего **не в резолюции пакета**, а в самой сгенерированной
+  `android/`-директории: за сессию `expo prebuild` запускался несколько раз подряд из-за
+  повторных обрывов (лимиты API/сессии), и без `--clean` autolinking мог задвоить записи в
+  native-проекте. **Следующий шаг:** `npx expo prebuild --platform android --clean` (удаляет
+  и генерирует `android/` заново) → `npx expo run:android` набело, проверить что ошибка
+  ушла, только затем переходить к живой проверке лок-скрина/фона.
+- Lock-screen/Now Playing контролы, фоновое воспроизведение при свёрнутом приложении,
+  Android Auto — не проверялись живьём (заблокировано пунктом выше).
+- iOS — вне скоупа (нет Mac), `app.json` не тронут под iOS специально под RNTP.
+
 ## Вне скоупа (следующие шаги)
 
-- **Переход `expo-audio` → `react-native-track-player`/EAS dev-client — отдельный следующий
-  срез, сознательно не тронут в инкременте 4.** Богатые lock-screen/Control Center
-  контролы, Android Auto специфичны для RNTP (не используется, см.
-  `docs/superpowers/specs/2026-08-17-mobile-playback-design.md`); `expo-audio` даёт только
-  базовый `MediaSession`/Now Playing.
+- **Живая проверка инкремента 5 на эмуляторе** — см. «НЕ проверено» выше, первый шаг
+  следующей сессии.
 - Shuffle/repeat-UI, оффлайн-скачивание, лайки/добавление в плейлист из мобилки — сами
   функции очереди в `@vire/core` уже есть на будущее, UI сознательно не добавлен.
 - Пуши, диплинки на конкретный трек/релиз, биометрия, шеринг, виджеты.
-- iOS-сборка и запуск на реальном устройстве через Expo Go — не проверялись (нет Mac);
-  `app.json` пишет конфиг под обе платформы, но реально верифицирован только веб-превью
-  (`react-native-web`) и, для Android, эмулятор (см. ниже).
+- iOS-сборка и запуск на реальном устройстве — не проверялись (нет Mac); `app.json` пишет
+  конфиг под обе платформы, но реально верифицирован только веб-превью (`react-native-web`)
+  и, для Android, эмулятор.
 - **Android SDK/эмулятор — с инкремента 4 есть** (`VireMusic_Test`, API 36, `ANDROID_HOME=
-  C:\Android`, `pnpm --filter @vire/mobile mobile:android`). Следующая сессия должна
-  использовать его по умолчанию для проверки мобилки, а не откладывать на «появится
+  C:\Android`, `pnpm --filter @vire/mobile mobile:android` для managed-запуска через Expo
+  Go/dev-client, `npx expo run:android` для локальной сборки с нативными зависимостями типа
+  RNTP). Следующая сессия должна использовать его по умолчанию, не откладывать на «появится
   телефон» — реальное воспроизведение, фоновый режим, lock-screen, predictive back gesture,
   визуальный pull-to-refresh, end-to-end вход через Expo Go всё ещё не проверены этой
   сессией и остаются первым шагом следующей.

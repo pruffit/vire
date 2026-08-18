@@ -81,10 +81,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 }));
 
-// expo-audio может отдать один-два playbackStatusUpdate со старой позицией в момент,
-// когда seekTo() уже вызван, но нативный плеер ещё не догнал новую позицию (гонка на
-// HLS — поиск нужного сегмента не мгновенный). Короткое окно после ручного seek —
-// timeupdate из движка не перетирает оптимистично выставленную позицию.
+// Драйвер может отдать один-два timeupdate со старой позицией в момент, когда seekTo()
+// уже вызван, но нативный плеер ещё не догнал новую позицию (гонка на HLS — поиск нужного
+// сегмента не мгновенный). Короткое окно после ручного seek — timeupdate из движка не
+// перетирает оптимистично выставленную позицию.
 const SEEK_GUARD_MS = 500;
 let seekGuardUntil = 0;
 
@@ -113,7 +113,12 @@ async function loadAndPlay(index: number): Promise<void> {
   }
 
   try {
-    await audioEngine.load({ manifestUrl: result.data.hlsUrl });
+    await audioEngine.load({
+      manifestUrl: result.data.hlsUrl,
+      title: track.title,
+      artist: track.artistName,
+      artworkUrl: track.coverUrl ?? undefined,
+    });
     if (usePlayerStore.getState().queueIndex !== index) return;
     await audioEngine.play();
     usePlayerStore.setState({ status: 'playing' });
@@ -136,4 +141,26 @@ audioEngine.on('ended', () => {
 audioEngine.on('error', (payload) => {
   console.error('[player] audioEngine error-событие', payload);
   usePlayerStore.setState({ status: 'error' });
+});
+
+// Команды next/prev с lock-screen/уведомления/наушников — очередью владеет стор, не
+// движок (см. докстринг IAudioEngine), поэтому remote-события транслируются в те же
+// переходы, что и тап по кнопкам в приложении.
+audioEngine.on('remoteNext', () => {
+  usePlayerStore.getState().next();
+});
+
+audioEngine.on('remotePrevious', () => {
+  usePlayerStore.getState().prev();
+});
+
+// Play/Pause с lock-screen применяются движком напрямую к нативному плееру (не через
+// togglePlayPause) — statechange синхронизирует status стора с реальным состоянием,
+// откуда бы оно ни пришло. loading/error не перетираем: транзитное статус-событие от
+// предыдущего трека может прилететь уже после того, как стор ушёл в загрузку следующего.
+audioEngine.on('statechange', (payload) => {
+  const { status } = usePlayerStore.getState();
+  if (status === 'loading' || status === 'error') return;
+  const { isPlaying } = payload as { isPlaying: boolean };
+  usePlayerStore.setState({ status: isPlaying ? 'playing' : 'paused' });
 });

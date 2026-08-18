@@ -61,9 +61,20 @@ describe('usePlayerStore.playQueue', () => {
       expect.stringContaining('/api/v1/tracks/t2/manifest'),
       expect.objectContaining({ schema: expect.anything() }),
     );
-    expect(audioEngine.load).toHaveBeenCalledWith({ manifestUrl: 'https://cdn/t2.m3u8' });
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t2.m3u8' }));
     expect(audioEngine.play).toHaveBeenCalledTimes(1);
     expect(usePlayerStore.getState().status).toBe('playing');
+  });
+
+  it('передаёт движку метаданные трека (title/artist/artworkUrl) — для Now Playing/lock-screen', async () => {
+    await usePlayerStore.getState().playQueue([track('t1')], 0);
+
+    expect(audioEngine.load).toHaveBeenCalledWith({
+      manifestUrl: 'https://cdn/t1.m3u8',
+      title: 'Track t1',
+      artist: 'Artist',
+      artworkUrl: undefined,
+    });
   });
 
   it('startIndex зажимается в границы очереди', async () => {
@@ -101,7 +112,7 @@ describe('usePlayerStore.next/prev', () => {
     await flush();
 
     expect(usePlayerStore.getState().queueIndex).toBe(1);
-    expect(audioEngine.load).toHaveBeenCalledWith({ manifestUrl: 'https://cdn/t2.m3u8' });
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t2.m3u8' }));
   });
 
   it('next() на последнем треке очереди — останавливается, индекс не двигается', async () => {
@@ -135,7 +146,7 @@ describe('usePlayerStore.next/prev', () => {
     await flush();
 
     expect(usePlayerStore.getState().queueIndex).toBe(0);
-    expect(audioEngine.load).toHaveBeenCalledWith({ manifestUrl: 'https://cdn/t1.m3u8' });
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t1.m3u8' }));
   });
 
   it('устаревший ответ манифеста (индекс уже сменился) не проигрывается', async () => {
@@ -153,7 +164,7 @@ describe('usePlayerStore.next/prev', () => {
     await flush();
 
     expect(usePlayerStore.getState().queueIndex).toBe(2);
-    expect(audioEngine.load).not.toHaveBeenCalledWith({ manifestUrl: 'https://cdn/t2.m3u8' });
+    expect(audioEngine.load).not.toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t2.m3u8' }));
   });
 });
 
@@ -187,8 +198,8 @@ describe('usePlayerStore.seek', () => {
     await usePlayerStore.getState().playQueue([track('t1')], 0);
     usePlayerStore.getState().seek(42);
 
-    // expo-audio может отдать статус со старой позицией, пока нативный плеер ещё не
-    // догнал seekTo() — такой тик должен быть проигнорирован в течение guard-окна.
+    // Драйвер может отдать тик со старой позицией, пока нативный плеер ещё не догнал
+    // seekTo() — такой тик должен быть проигнорирован в течение guard-окна.
     emit('timeupdate', { currentTime: 3, duration: 120 });
 
     expect(usePlayerStore.getState().positionSec).toBe(42);
@@ -220,11 +231,53 @@ describe('события audioEngine', () => {
     await flush();
 
     expect(usePlayerStore.getState().queueIndex).toBe(1);
-    expect(audioEngine.load).toHaveBeenCalledWith({ manifestUrl: 'https://cdn/t2.m3u8' });
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t2.m3u8' }));
   });
 
   it('error переводит статус в error', () => {
     emit('error', 'boom');
+    expect(usePlayerStore.getState().status).toBe('error');
+  });
+
+  it('remoteNext (lock-screen) переходит к следующему треку — та же логика, что и next()', async () => {
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0);
+    vi.clearAllMocks();
+
+    emit('remoteNext');
+    await flush();
+
+    expect(usePlayerStore.getState().queueIndex).toBe(1);
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t2.m3u8' }));
+  });
+
+  it('remotePrevious (lock-screen) переходит к предыдущему треку', async () => {
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1);
+    vi.clearAllMocks();
+
+    emit('remotePrevious');
+    await flush();
+
+    expect(usePlayerStore.getState().queueIndex).toBe(0);
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t1.m3u8' }));
+  });
+
+  it('statechange синхронизирует status с реальным плеером (в т.ч. remote play/pause)', async () => {
+    await usePlayerStore.getState().playQueue([track('t1')], 0);
+
+    emit('statechange', { isPlaying: false });
+    expect(usePlayerStore.getState().status).toBe('paused');
+
+    emit('statechange', { isPlaying: true });
+    expect(usePlayerStore.getState().status).toBe('playing');
+  });
+
+  it('statechange не перетирает loading/error — только playing/paused', async () => {
+    usePlayerStore.setState({ status: 'loading' });
+    emit('statechange', { isPlaying: true });
+    expect(usePlayerStore.getState().status).toBe('loading');
+
+    usePlayerStore.setState({ status: 'error' });
+    emit('statechange', { isPlaying: false });
     expect(usePlayerStore.getState().status).toBe('error');
   });
 });
