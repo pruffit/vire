@@ -15,8 +15,9 @@ Android через Expo Go, обе бы полностью блокировал�
 Заодно инкремент 4 перевёл главную на SDUI-протокол (`docs/sdui.md`) и добавил нативную
 полировку (иконки вместо эмодзи, haptics, pull-to-refresh, predictive back). Инкремент 5
 заменил `expo-audio` на `react-native-track-player` (RNTP) ради настоящего lock-screen/
-Now Playing/фонового воспроизведения — см. секцию ниже, **сборка на эмуляторе упёрлась в
-конфликт нативных модулей, live-проверка на устройстве не завершена**.
+Now Playing/фонового воспроизведения — см. секцию ниже, **локальная Android-сборка падает
+на Windows `MAX_PATH` (глубокий путь pnpm-хранилища + CMake native-модулей), live-проверка
+на устройстве не завершена**.
 
 ## Что делает
 
@@ -433,26 +434,57 @@ Metro, поэтому LAN-хост совпадает.
 
 - `pnpm --filter @vire/mobile typecheck`/`test` — зелёные (59 тестов). `pnpm --filter
   @vire/core typecheck`/`test` (1058 тестов) — зелёные, границы порта не нарушены.
-- Локальный prebuild (`npx expo prebuild --platform android`) и `npx expo run:android` на
-  эмуляторе `VireMusic_Test` — собрались, приложение установилось
-  (`com.anonymous.viremobile`). В процессе воспроизведение **один раз подтверждено
-  реальным** (иконка паузы вместо play, без краша сразу после тапа на трек).
+- В одном из промежуточных прогонов (до чистого `--clean` ребилда, дальше в этой же сессии)
+  сборка на эмуляторе `VireMusic_Test` один раз дошла до установки и воспроизведение
+  **было подтверждено реальным** (иконка паузы вместо play, без краша сразу после тапа на
+  трек) — то есть код драйвера рабочий. Тот прогон, вероятно, использовал закешированные
+  от предыдущих (не-`--clean`) `expo prebuild` артефакты, у которых пути до объектных
+  файлов CMake ещё укладывались в лимит. **Чистый `--clean` ребилд (правильный baseline)
+  детерминированно падает** — см. «НЕ проверено» ниже, это не флуктуация.
 
 ### НЕ проверено / известный блокер
 
-- **Дублирующая регистрация нативных модулей `react-native-svg`
-  (`Invariant Violation: Tried to register two views with the same name RNSVGCircle`
-  и далее по всем RNSVG-компонентам)** — поймано в логе (`mobile-android3.log`) и на
-  скриншоте (экран «Something went wrong» после серии перезапусков в течение сессии).
-  `pnpm why react-native-svg` внутри `apps/mobile` показывает ровно одну версию в дереве
-  зависимостей — дубликат скорее всего **не в резолюции пакета**, а в самой сгенерированной
-  `android/`-директории: за сессию `expo prebuild` запускался несколько раз подряд из-за
-  повторных обрывов (лимиты API/сессии), и без `--clean` autolinking мог задвоить записи в
-  native-проекте. **Следующий шаг:** `npx expo prebuild --platform android --clean` (удаляет
-  и генерирует `android/` заново) → `npx expo run:android` набело, проверить что ошибка
-  ушла, только затем переходить к живой проверке лок-скрина/фона.
-- Lock-screen/Now Playing контролы, фоновое воспроизведение при свёрнутом приложении,
-  Android Auto — не проверялись живьём (заблокировано пунктом выше).
+**Диагноз уточнён после первой версии этой секции.** Изначальная гипотеза («дублирующая
+регистрация `react-native-svg` из-за повторных `expo prebuild` без `--clean`») была
+неверной. `npx expo prebuild --platform android --clean` (удаление и чистая генерация
+`android/`) выполнен, `adb uninstall` для обеих старых установок (`com.anonymous.
+viremobile`, `host.exp.exponent`) сделан — сборка **всё равно падает**, но с другой,
+конкретной ошибкой:
+
+```
+CMake Warning: The object file directory
+  .../node_modules/.pnpm/expo-modules-core@57.0.11_.../node_modules/expo-modules-core/
+  android/.cxx/Debug/.../CMakeFiles/expo-modules-core.dir/./
+has 203 characters. The maximum full path to an object file is 250 characters
+ninja: error: manifest 'build.ninja' still dirty after 100 tries
+BUILD FAILED
+```
+
+**Реальная причина — Windows `MAX_PATH`, а не код проекта.** pnpm кладёт зависимости в
+`node_modules/.pnpm/<pkg>@<version>_<hash>/node_modules/<pkg>/...` — путь до native C++
+исходников `expo-modules-core` (транзитивная зависимость RNTP и других expo-модулей)
+получается настолько длинным, что CMake отказывается размещать под ним объектные файлы
+(жёсткий лимит 250 символов, не связан с настройкой Windows `LongPathsEnabled` — это
+защитная проверка самого CMake). Более ранняя находка в этой же сессии («move
+`virtual-store-dir` сломал резолюцию Metro») была попыткой решить ровно эту проблему
+(укоротить путь до `.pnpm`-хранилища) — попытка не была доведена до конца и отменена. Это
+и есть тот самый следующий шаг, не «дубликат SVG»:
+
+- **Вариант A (вероятно правильный):** укоротить путь до pnpm virtual store —
+  `.npmrc` → `virtual-store-dir=C:\.pnpm-store\vire` (короткий абсолютный путь вне
+  `node_modules`) **или** `pnpm config set virtual-store-dir-max-length <N>` (если версия
+  pnpm поддерживает — хеширует длинные имена пакетов вместо полного `name@version_hash`).
+  Требует переустановки зависимостей (`pnpm install` после смены) и **обязательной
+  повторной проверки Metro** (веб-превью инкрементов 1–4 гоняли именно из-под
+  `node_modules/.pnpm/...` — не отменять фикс из-за первой же ошибки, разобраться, что
+  именно ломает Metro, конфиг `metro.config.js` уже не трогает hierarchical lookup вручную).
+- **Вариант B (обходной, без переустройства монорепо):** включить Windows long paths
+  (`LongPathsEnabled=1`) на уровне ОС/Git **и** проверить, есть ли у используемой версии
+  CMake/Ninja флаг снятия 250-символьного лимита (`-DCMAKE_OBJECT_PATH_MAX=1024` или
+  аналог) — не проверялось, нужно исследование версии CMake, которую тянет Android NDK/
+  Gradle в этом проекте.
+- Live-проверка (lock-screen/Now Playing/фон/Android Auto) заблокирована этим и не может
+  быть пройдена, пока сборка не проходит вообще.
 - iOS — вне скоупа (нет Mac), `app.json` не тронут под iOS специально под RNTP.
 
 ## Вне скоупа (следующие шаги)
