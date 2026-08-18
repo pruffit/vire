@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { DrizzleArtistCatalogRepository } from '@vire/db';
 import { ArtistCatalogService } from '@vire/core';
+import type { ArtistListItem } from '@vire/db';
 import { FadeUp } from '@vire/ui/motion';
 import { ArtistCatalog } from '@/components/artist-catalog';
 import { JsonLd } from '@/components/json-ld';
@@ -10,6 +11,23 @@ import { artistsCatalogJsonLd, breadcrumbListJsonLd } from '@/lib/structured-dat
 import { pageMetadata } from '@/lib/metadata';
 import { applyTitleTemplate } from '@/lib/site';
 import { resolveLocale } from '@/lib/locale';
+
+// Клиентский фильтр (жанр/поиск/сортировка) в ArtistCatalog работает по всему списку —
+// значит серверу нужен ВЕСЬ каталог, не первая страница. Сервис отдаёт максимум 200 за
+// вызов (MAX_LIMIT), поэтому здесь дозапрашиваем страницами, пока hasMore не станет false.
+// Потолок 25 страниц (5000 артистов) — защита от бага/аномалии, не ожидаемый сценарий.
+const PAGE_SIZE = 200;
+const MAX_PAGES = 25;
+
+async function listAllArtists(catalog: ArtistCatalogService): Promise<ArtistListItem[]> {
+  const all: ArtistListItem[] = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { items, hasMore } = await catalog.list({ limit: PAGE_SIZE, offset: page * PAGE_SIZE });
+    all.push(...items);
+    if (!hasMore) break;
+  }
+  return all;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const [t, locale] = await Promise.all([getTranslations('artist.catalogPage'), resolveLocale()]);
@@ -28,7 +46,7 @@ export default async function ArtistsPage() {
     resolveLocale(),
   ]);
   const catalog = new ArtistCatalogService(new DrizzleArtistCatalogRepository());
-  const { items: artists, hasMore } = await catalog.list({ limit: 200 });
+  const artists = await listAllArtists(catalog);
 
   return (
     <PageContainer spaceY="8">
@@ -42,7 +60,7 @@ export default async function ArtistsPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           {artists.length > 0 && (
             <span className="text-xs font-mono text-muted-foreground tabular-nums">
-              {artists.length}{hasMore ? '+' : ''}
+              {artists.length}
             </span>
           )}
         </header>
