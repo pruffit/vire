@@ -15,3 +15,15 @@ export function baseUrlFromHostUri(
   if (!host) return fallback;
   return `http://${host}:${port}`;
 }
+
+/**
+ * `Constants.expoConfig?.hostUri` — пусто в кастомном dev-client (prebuild + expo run:android),
+ * заполняется только в классическом Expo Go. `NativeModules.SourceCode.scriptURL` — URL,
+ * с которого React Native реально загрузил JS-бандл (`http://192.168.1.5:8081/index.bundle?...`),
+ * работает в обоих режимах — запасной источник LAN-хоста, когда `hostUri` не задан.
+ */
+export function hostUriFromScriptUrl(scriptURL: string | null | undefined): string | undefined {
+  if (!scriptURL) return undefined;
+  const match = /^[a-z]+:\/\/([^/]+)/i.exec(scriptURL);
+  return match?.[1];
+}

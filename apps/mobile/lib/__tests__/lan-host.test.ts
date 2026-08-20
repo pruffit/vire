@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { baseUrlFromHostUri } from '../lan-host';
+import { baseUrlFromHostUri, hostUriFromScriptUrl } from '../lan-host';
 
 describe('baseUrlFromHostUri', () => {
   it('строит http-URL из host:port на порту сервера', () => {
@@ -34,5 +34,23 @@ describe('baseUrlFromHostUri', () => {
     expect(baseUrlFromHostUri('192.168.1.5', 3000, 'http://localhost:3000')).toBe(
       'http://192.168.1.5:3000',
     );
+  });
+});
+
+describe('hostUriFromScriptUrl', () => {
+  it('достаёт host:port из URL бандла dev-client', () => {
+    expect(hostUriFromScriptUrl('http://192.168.2.9:8081/index.bundle?platform=android')).toBe(
+      '192.168.2.9:8081',
+    );
+  });
+
+  it('scriptURL отсутствует — undefined', () => {
+    expect(hostUriFromScriptUrl(undefined)).toBeUndefined();
+    expect(hostUriFromScriptUrl(null)).toBeUndefined();
+    expect(hostUriFromScriptUrl('')).toBeUndefined();
+  });
+
+  it('URL без пути — тоже работает', () => {
+    expect(hostUriFromScriptUrl('http://192.168.2.9:8081')).toBe('192.168.2.9:8081');
   });
 });
