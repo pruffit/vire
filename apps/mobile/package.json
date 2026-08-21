@@ -12,7 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~57.0.10",
+    "@expo/metro-runtime": "~57.0.11",
     "@react-navigation/bottom-tabs": "^7.18.16",
     "@react-navigation/native": "^7.3.16",
     "@react-navigation/native-stack": "^7.18.8",
@@ -20,26 +20,26 @@
     "@vire/api-contracts": "workspace:*",
     "@vire/core": "workspace:*",
     "@vire/design-tokens": "workspace:*",
-    "expo": "~57.0.13",
-    "expo-constants": "~57.0.11",
+    "expo": "~57.0.14",
+    "expo-constants": "~57.0.12",
     "expo-haptics": "~57.0.1",
     "expo-linking": "~57.0.6",
     "expo-secure-store": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "expo-web-browser": "~57.0.2",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.86.2",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.2",
-    "react-native-svg": "15.15.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-native": "0.87.0",
+    "react-native-safe-area-context": "~5.9.1",
+    "react-native-screens": "~4.27.0",
+    "react-native-svg": "15.15.5",
     "react-native-track-player": "^4.1.2",
     "react-native-web": "^0.21.2",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
+    "@types/react": "~19.2.18",
     "typescript": "^5.8.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.11"
   }
 }
