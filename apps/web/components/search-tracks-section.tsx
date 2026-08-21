@@ -14,6 +14,7 @@ export function SearchTracksSection({ tracks }: { tracks: SearchTrack[] }) {
         version: t.version, feat: t.feat,
       }))}
       context={{ source: 'search' }}
+      quickAdd
     />
   );
 }
