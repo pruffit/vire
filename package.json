@@ -1,6 +1,6 @@
 {
   "name": "vire",
-  "version": "1.51.4",
+  "version": "1.51.5",
   "private": true,
   "packageManager": "pnpm@10.17.1",
   "engines": {
@@ -42,6 +42,10 @@
       "ignoreGhsas": [
         "GHSA-mh99-v99m-4gvg",
         "GHSA-4cwx-7wf7-3272"
+      ],
+      "ignoreCves": [
+        "CVE-2025-71330",
+        "CVE-2025-71329"
       ]
     },
     "patchedDependencies": {
