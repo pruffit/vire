@@ -11,7 +11,7 @@ class FakePlayer {
   loadVideoById = vi.fn();
   getCurrentTime = vi.fn(() => 0);
   getIframe = vi.fn(() => ({ style: {} }) as unknown as HTMLIFrameElement);
-  events: { onReady?: (e: unknown) => void; onStateChange?: (e: unknown) => void };
+  events: { onReady?: (e: unknown) => void; onStateChange?: (e: unknown) => void; onError?: (e: unknown) => void };
 
   constructor(public el: HTMLElement, public opts: { videoId: string; events?: typeof FakePlayer.prototype.events }) {
     this.events = opts.events ?? {};
@@ -162,6 +162,46 @@ describe('createYoutubeSource', () => {
     expect(playingListener).toHaveBeenCalledTimes(1);
 
     player.events.onStateChange?.({ target: player, data: PlayerState.ENDED });
+    expect(endedListener).toHaveBeenCalledTimes(1);
+  });
+
+  it('onError (недоступный/битый ролик) уведомляет как ended — джем не виснет на нём', async () => {
+    const { createYoutubeSource } = await import('./youtube-source');
+    const { setPartyVideoContainer } = await import('./video-container');
+    setPartyVideoContainer(document.createElement('div'));
+    const engine = createYoutubeSource();
+    const endedListener = vi.fn();
+    engine.onEnded(endedListener);
+
+    const loadPromise = engine.load('vid-1');
+    fireApiReady();
+    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
+    const player = FakePlayer.instances[0]!;
+    player.events.onReady?.({ target: player });
+    await loadPromise;
+
+    player.events.onStateChange?.({ target: player, data: PlayerState.BUFFERING });
+    player.events.onError?.({ target: player });
+
+    expect(engine.isBuffering()).toBe(false);
+    expect(endedListener).toHaveBeenCalledTimes(1);
+  });
+
+  it('onError до onReady — load() всё равно резолвится, не виснет навсегда', async () => {
+    const { createYoutubeSource } = await import('./youtube-source');
+    const { setPartyVideoContainer } = await import('./video-container');
+    setPartyVideoContainer(document.createElement('div'));
+    const engine = createYoutubeSource();
+    const endedListener = vi.fn();
+    engine.onEnded(endedListener);
+
+    const loadPromise = engine.load('vid-1');
+    fireApiReady();
+    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
+    const player = FakePlayer.instances[0]!;
+    player.events.onError?.({ target: player });
+
+    await expect(loadPromise).resolves.toBeUndefined();
     expect(endedListener).toHaveBeenCalledTimes(1);
   });
 

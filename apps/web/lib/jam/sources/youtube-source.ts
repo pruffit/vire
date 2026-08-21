@@ -23,6 +23,7 @@ interface YTNamespace {
       events?: {
         onReady?: (e: YTPlayerEvent) => void;
         onStateChange?: (e: YTPlayerEvent) => void;
+        onError?: (e: YTPlayerEvent) => void;
       };
     },
   ) => YTPlayer;
@@ -126,6 +127,15 @@ export function createYoutubeSource(): JamSourceEngine {
             userToggleListeners.forEach((l) => l(false));
           }
           if (state === YT.PlayerState.ENDED) endedListeners.forEach((l) => l());
+        },
+        // Битый/недоступный ролик (embedding disabled, приватный, снят, транзитная ошибка
+        // сети) — YouTube рисует собственный экран ошибки внутри iframe и молчит: без этого
+        // трек виснет на весь durationSec, пока его не снимет watchdog в jam-session-provider.
+        // Реагируем как на ended — джем сразу идёт дальше по очереди.
+        onError: () => {
+          buffering = false;
+          resolvePendingLoad();
+          endedListeners.forEach((l) => l());
         },
       },
     });
