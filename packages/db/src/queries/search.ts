@@ -51,6 +51,8 @@ export async function searchAll(query: string, limit = 5): Promise<SearchResults
         type: releases.type,
         genre: releases.genre,
         coverUrl: releases.coverUrl,
+        status: releases.status,
+        releaseDate: releases.releaseDate,
         artistSlug: artistProfiles.slug,
         artistName: artistProfiles.name,
       })

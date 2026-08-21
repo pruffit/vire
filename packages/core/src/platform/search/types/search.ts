@@ -13,6 +13,8 @@ export interface SearchRelease {
   type: string;
   genre: string | null;
   coverUrl: string | null;
+  status: string;
+  releaseDate: Date | null;
   artistSlug: string;
   artistName: string;
 }

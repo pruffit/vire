@@ -15,6 +15,8 @@ export const searchReleaseSchema = z.object({
   type: z.string(),
   genre: z.string().nullable(),
   coverUrl: z.string().nullable(),
+  status: z.string(),
+  releaseDate: z.coerce.date().nullable(),
   artistSlug: z.string(),
   artistName: z.string(),
 });

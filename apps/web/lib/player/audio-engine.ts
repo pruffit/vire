@@ -29,6 +29,19 @@ async function getHls(): Promise<typeof HlsType> {
   if (!HlsClass) HlsClass = (await import('hls.js')).default;
   return HlsClass;
 }
+
+// hls.js может бросить при destroy(), если соединение оборвалось с незавершёнными сетевыми
+// запросами (нестабильный wifi) — непойманное исключение здесь раньше замораживало движок
+// навсегда: следующий attachAndPlay падал на destroy() того же битого инстанса.
+function destroyHls(): void {
+  if (!hls) return;
+  try {
+    hls.destroy();
+  } catch (err) {
+    console.error('[player] hls destroy failed', err);
+  }
+  hls = null;
+}
 let loadedTrackId: string | null = null;
 // Один object URL на движок — держим единственный, чтобы освободить предыдущий перед следующим (как в local-source.ts).
 let localObjectUrl: string | null = null;
@@ -57,7 +70,8 @@ function armLoadWatchdog(): void {
     const s = usePlayerStore.getState();
     if (s.isLoading && !s.isPlaying) {
       usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
-      if (hls) { hls.destroy(); hls = null; }
+      destroyHls();
+      loadedTrackId = null;
     }
   }, LOAD_TIMEOUT_MS);
 }
@@ -291,7 +305,7 @@ export function initAudioEngine(): void {
 /** Файл с устройства слушателя: манифест не запрашиваем, hls.js не поднимаем — прямой blob на `<audio>`. */
 function attachLocalTrack(track: PlayerTrack, opts: { seekTo?: number }): void {
   if (!audio || !track.localFileId) return;
-  if (hls) { hls.destroy(); hls = null; }
+  destroyHls();
 
   const file = getLocalFile(track.localFileId);
   if (!file) {
@@ -339,61 +353,73 @@ async function attachAndPlay(track: PlayerTrack, opts: { seekTo?: number } = {})
 
   armLoadWatchdog();
 
-  const manifest = await fetchManifest(track.id);
+  try {
+    const manifest = await fetchManifest(track.id);
 
-  // Staleness guard: пока ждали сеть, loadedTrackId мог смениться на другой трек.
-  if (loadedTrackId !== track.id) return;
+    // Staleness guard: пока ждали сеть, loadedTrackId мог смениться на другой трек.
+    if (loadedTrackId !== track.id) return;
 
-  if (!manifest) {
-    clearLoadWatchdog();
-    usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
-    if (usePlayerStore.getState().waveMode) handleWaveLoadError();
-    return;
-  }
+    if (!manifest) {
+      clearLoadWatchdog();
+      usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
+      loadedTrackId = null;
+      if (usePlayerStore.getState().waveMode) handleWaveLoadError();
+      return;
+    }
 
-  // На резюме hasAudio=true выставляем только после применения seekTo к элементу
-  // (ниже, в MANIFEST_PARSED/canPlayType) — иначе useAudioTime мелькнёт 0:00 раньше seek.
-  usePlayerStore.getState()._setState({
-    waveformPeaks: manifest.waveformPeaks ?? null,
-    ...(isResume ? {} : { hasAudio: true }),
-  });
+    // На резюме hasAudio=true выставляем только после применения seekTo к элементу
+    // (ниже, в MANIFEST_PARSED/canPlayType) — иначе useAudioTime мелькнёт 0:00 раньше seek.
+    usePlayerStore.getState()._setState({
+      waveformPeaks: manifest.waveformPeaks ?? null,
+      ...(isResume ? {} : { hasAudio: true }),
+    });
 
-  if (hls) { hls.destroy(); hls = null; }
+    destroyHls();
 
-  const Hls = await getHls();
-  if (loadedTrackId !== track.id) return;
-  if (Hls.isSupported()) {
-    hls = new Hls(HLS_TUNING);
-    hls.loadSource(manifest.hlsUrl);
-    hls.attachMedia(audio);
-    hls.once(Hls.Events.MANIFEST_PARSED, () => {
-      if (opts.seekTo) audio!.currentTime = opts.seekTo;
+    const Hls = await getHls();
+    if (loadedTrackId !== track.id) return;
+    if (Hls.isSupported()) {
+      hls = new Hls(HLS_TUNING);
+      hls.loadSource(manifest.hlsUrl);
+      hls.attachMedia(audio);
+      hls.once(Hls.Events.MANIFEST_PARSED, () => {
+        if (opts.seekTo) audio!.currentTime = opts.seekTo;
+        if (isResume) usePlayerStore.getState()._setState({ hasAudio: true });
+        audio?.play().catch(() => {});
+      });
+      attachStallRecovery(hls, audio, Hls);
+      hls.on(Hls.Events.ERROR, (_evt, data) => {
+        // bufferSeekOverHole/bufferNudgeOnStall — hls.js успешно перепрыгнул дыру, не сбой.
+        const benign = data.details === 'bufferSeekOverHole' || data.details === 'bufferNudgeOnStall';
+        if (!benign) {
+          console.warn('[player] HLS error', data.type, data.details, 'fatal:', data.fatal);
+        }
+
+        if (data.fatal) {
+          clearLoadWatchdog();
+          usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
+          destroyHls();
+          loadedTrackId = null;
+          if (usePlayerStore.getState().waveMode) handleWaveLoadError();
+        }
+      });
+    } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+      audio.src = manifest.hlsUrl;
+      if (opts.seekTo) audio.currentTime = opts.seekTo;
       if (isResume) usePlayerStore.getState()._setState({ hasAudio: true });
-      audio?.play().catch(() => {});
-    });
-    attachStallRecovery(hls, audio, Hls);
-    hls.on(Hls.Events.ERROR, (_evt, data) => {
-      // bufferSeekOverHole/bufferNudgeOnStall — hls.js успешно перепрыгнул дыру, не сбой.
-      const benign = data.details === 'bufferSeekOverHole' || data.details === 'bufferNudgeOnStall';
-      if (!benign) {
-        console.warn('[player] HLS error', data.type, data.details, 'fatal:', data.fatal);
-      }
-
-      if (data.fatal) {
-        clearLoadWatchdog();
-        usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
-        hls?.destroy();
-        hls = null;
-        if (usePlayerStore.getState().waveMode) handleWaveLoadError();
-      }
-    });
-  } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
-    audio.src = manifest.hlsUrl;
-    if (opts.seekTo) audio.currentTime = opts.seekTo;
-    if (isResume) usePlayerStore.getState()._setState({ hasAudio: true });
-    audio.play().catch(() => {});
-  } else {
-    usePlayerStore.getState()._setState({ hasAudio: false, isLoading: false });
+      audio.play().catch(() => {});
+    } else {
+      usePlayerStore.getState()._setState({ hasAudio: false, isLoading: false });
+    }
+  } catch (err) {
+    // Флаки-сеть может уронить любой шаг выше (загрузку чанка hls.js, разбор манифеста) —
+    // без этого перехвата исключение молча зависало бы в isLoading:true навсегда, а битый
+    // loadedTrackId блокировал бы все следующие попытки играть вообще что угодно.
+    console.error('[player] attachAndPlay failed', err);
+    clearLoadWatchdog();
+    destroyHls();
+    usePlayerStore.getState()._setState({ isLoading: false, hasAudio: false, audioError: true });
+    loadedTrackId = null;
   }
 }
 
