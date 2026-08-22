@@ -38,7 +38,16 @@ const track = (id: string): QueueTrack => ({
 const manifestOk = (id: string) => ({ ok: true, data: { hlsUrl: `https://cdn/${id}.m3u8`, waveformPeaks: null } });
 
 function resetStore() {
-  usePlayerStore.setState({ queue: [], queueIndex: -1, status: 'idle', positionSec: 0, durationSec: 0 });
+  usePlayerStore.setState({
+    queue: [],
+    queueIndex: -1,
+    status: 'idle',
+    positionSec: 0,
+    durationSec: 0,
+    shuffle: false,
+    repeat: 'off',
+    originalQueue: null,
+  });
   __resetSeekGuardForTests();
 }
 
@@ -279,6 +288,121 @@ describe('события audioEngine', () => {
     usePlayerStore.setState({ status: 'error' });
     emit('statechange', { isPlaying: false });
     expect(usePlayerStore.getState().status).toBe('error');
+  });
+});
+
+describe('usePlayerStore.toggleShuffle', () => {
+  it('вкл: текущий трек остаётся первым, оригинальный порядок сохраняется в originalQueue', async () => {
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 1);
+    const before = usePlayerStore.getState().queue;
+
+    usePlayerStore.getState().toggleShuffle();
+
+    const state = usePlayerStore.getState();
+    expect(state.shuffle).toBe(true);
+    expect(state.queueIndex).toBe(0);
+    expect(state.queue[0].id).toBe('t2');
+    expect(state.queue).toHaveLength(3);
+    expect(state.originalQueue).toEqual(before);
+  });
+
+  it('выкл: восстанавливает исходный порядок, обнуляет originalQueue, индекс указывает на текущий трек', async () => {
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 1);
+    usePlayerStore.getState().toggleShuffle();
+
+    usePlayerStore.getState().toggleShuffle();
+
+    const state = usePlayerStore.getState();
+    expect(state.shuffle).toBe(false);
+    expect(state.originalQueue).toBeNull();
+    expect(state.queue.map((t) => t.id)).toEqual(['t1', 't2', 't3']);
+    expect(state.queueIndex).toBe(1);
+  });
+});
+
+describe('usePlayerStore.cycleRepeat', () => {
+  it('off -> all -> one -> off', () => {
+    expect(usePlayerStore.getState().repeat).toBe('off');
+
+    usePlayerStore.getState().cycleRepeat();
+    expect(usePlayerStore.getState().repeat).toBe('all');
+
+    usePlayerStore.getState().cycleRepeat();
+    expect(usePlayerStore.getState().repeat).toBe('one');
+
+    usePlayerStore.getState().cycleRepeat();
+    expect(usePlayerStore.getState().repeat).toBe('off');
+  });
+});
+
+describe('usePlayerStore.next() с учётом repeat', () => {
+  it("repeat='off' на последнем треке — как раньше, индекс не двигается, status paused", async () => {
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1);
+    vi.clearAllMocks();
+
+    usePlayerStore.getState().next();
+    await flush();
+
+    expect(usePlayerStore.getState().queueIndex).toBe(1);
+    expect(usePlayerStore.getState().status).toBe('paused');
+    expect(audioEngine.load).not.toHaveBeenCalled();
+  });
+
+  it("repeat='all' на последнем треке многотрековой очереди — переходит на индекс 0 и грузит его манифест", async () => {
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 2);
+    usePlayerStore.setState({ repeat: 'all' });
+    vi.clearAllMocks();
+
+    usePlayerStore.getState().next();
+    await flush();
+
+    expect(usePlayerStore.getState().queueIndex).toBe(0);
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t1.m3u8' }));
+  });
+
+  it("repeat='all' с одним треком в очереди — не перезапрашивает манифест, а сикает на 0 и продолжает играть", async () => {
+    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    usePlayerStore.setState({ repeat: 'all' });
+    vi.clearAllMocks();
+
+    usePlayerStore.getState().next();
+    await flush();
+
+    expect(request).not.toHaveBeenCalled();
+    expect(audioEngine.load).not.toHaveBeenCalled();
+    expect(audioEngine.seek).toHaveBeenCalledWith(0);
+    expect(audioEngine.play).toHaveBeenCalledTimes(1);
+    expect(usePlayerStore.getState().status).toBe('playing');
+    expect(usePlayerStore.getState().queueIndex).toBe(0);
+  });
+});
+
+describe("событие audioEngine 'ended' с учётом repeat", () => {
+  it("repeat='one' — рестарт того же трека (seek+play), манифест не перезапрашивается", async () => {
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0);
+    usePlayerStore.setState({ repeat: 'one' });
+    vi.clearAllMocks();
+
+    emit('ended');
+    await flush();
+
+    expect(audioEngine.seek).toHaveBeenCalledWith(0);
+    expect(audioEngine.play).toHaveBeenCalledTimes(1);
+    expect(request).not.toHaveBeenCalled();
+    expect(audioEngine.load).not.toHaveBeenCalled();
+    expect(usePlayerStore.getState().queueIndex).toBe(0);
+    expect(usePlayerStore.getState().status).toBe('playing');
+  });
+
+  it("repeat != 'one' — обычное поведение, переход на следующий трек", async () => {
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0);
+    vi.clearAllMocks();
+
+    emit('ended');
+    await flush();
+
+    expect(usePlayerStore.getState().queueIndex).toBe(1);
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t2.m3u8' }));
   });
 });
 

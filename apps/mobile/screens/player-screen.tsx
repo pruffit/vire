@@ -21,6 +21,10 @@ export default function PlayerScreen() {
   const next = usePlayerStore((s) => s.next);
   const prev = usePlayerStore((s) => s.prev);
   const seek = usePlayerStore((s) => s.seek);
+  const shuffle = usePlayerStore((s) => s.shuffle);
+  const repeat = usePlayerStore((s) => s.repeat);
+  const toggleShuffle = usePlayerStore((s) => s.toggleShuffle);
+  const cycleRepeat = usePlayerStore((s) => s.cycleRepeat);
   const track = queue[queueIndex];
 
   useEffect(() => {
@@ -29,7 +33,7 @@ export default function PlayerScreen() {
 
   if (!track) return null;
 
-  const hasNext = nextQueueIndex(queueIndex, queue.length, 'off') !== null;
+  const hasNext = nextQueueIndex(queueIndex, queue.length, repeat) !== null;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: 24 + insets.bottom }]}>
@@ -58,6 +62,16 @@ export default function PlayerScreen() {
       </View>
 
       <View style={styles.transportRow}>
+        <Pressable
+          style={styles.transportButton}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            toggleShuffle();
+          }}
+          hitSlop={12}
+        >
+          <Icon name="shuffle" size={20} color={shuffle ? colors.primary : colors.mutedForeground} />
+        </Pressable>
         <Pressable style={styles.transportButton} onPress={prev} disabled={queueIndex <= 0} hitSlop={12}>
           <Icon name="skip-back" size={26} color={queueIndex <= 0 ? colors.mutedForeground : colors.foreground} />
         </Pressable>
@@ -77,6 +91,21 @@ export default function PlayerScreen() {
         </Pressable>
         <Pressable style={styles.transportButton} onPress={next} disabled={!hasNext} hitSlop={12}>
           <Icon name="skip-forward" size={26} color={!hasNext ? colors.mutedForeground : colors.foreground} />
+        </Pressable>
+        <Pressable
+          style={styles.transportButton}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            cycleRepeat();
+          }}
+          hitSlop={12}
+        >
+          <Icon name="repeat" size={20} color={repeat !== 'off' ? colors.primary : colors.mutedForeground} />
+          {repeat === 'one' && (
+            <View style={styles.repeatBadge}>
+              <Text style={styles.repeatBadgeText}>1</Text>
+            </View>
+          )}
         </Pressable>
       </View>
     </View>
@@ -166,11 +195,23 @@ const styles = StyleSheet.create({
   transportRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 32,
+    justifyContent: 'space-between',
+    width: '100%',
     marginTop: 'auto',
   },
   transportButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  repeatBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  repeatBadgeText: { color: colors.primaryForeground, fontSize: 9, fontWeight: '800', lineHeight: 11 },
   playButton: {
     width: 68,
     height: 68,

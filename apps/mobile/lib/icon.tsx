@@ -70,9 +70,28 @@ const PATHS: Record<IconName, { translate: [number, number]; d: string[] }> = {
     translate: [-737, -376.38],
     d: ['M765 387.5L751.25 401.25L745 395'],
   },
+  shuffle: {
+    translate: [-437.63, -137],
+    d: [
+      'M460 143.75H466.25V150',
+      'M445 165L466.25 143.75',
+      'M466.25 160V166.25H460',
+      'M458.75 158.75L466.25 166.25',
+      'M445 145L451.25 151.25',
+    ],
+  },
+  repeat: {
+    translate: [-797, -17],
+    d: [
+      'M821.25 21.25L826.25 26.25L821.25 31.25',
+      'M803.75 33.75V31.25C803.75 29.9239 804.277 28.6521 805.214 27.7145C806.152 26.7768 807.424 26.25 808.75 26.25H826.25',
+      'M808.75 48.75L803.75 43.75L808.75 38.75',
+      'M826.25 36.25V38.75C826.25 40.0761 825.723 41.3479 824.786 42.2855C823.848 43.2232 822.576 43.75 821.25 43.75H803.75',
+    ],
+  },
 };
 
-export type IconName = 'home' | 'search' | 'list' | 'user' | 'play' | 'pause' | 'skip-back' | 'skip-forward' | 'chevron-down' | 'heart' | 'plus' | 'check';
+export type IconName = 'home' | 'search' | 'list' | 'user' | 'play' | 'pause' | 'skip-back' | 'skip-forward' | 'chevron-down' | 'heart' | 'plus' | 'check' | 'shuffle' | 'repeat';
 
 export function Icon({
   name,

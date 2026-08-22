@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { trackManifestResponseSchema } from '@vire/api-contracts';
-import { nextQueueIndex } from '@vire/core/playback/queue';
+import { nextQueueIndex, shuffleOn, shuffleOff, type Repeat } from '@vire/core/playback/queue';
 import { apiRequest } from './api-client';
 import { audioEngine, type AudioTimeUpdate } from './audio-engine';
 
@@ -20,11 +20,19 @@ interface PlayerState {
   status: PlaybackStatus;
   positionSec: number;
   durationSec: number;
+  /** Случайный порядок внутри очереди — зеркалит apps/web/store/player.ts */
+  shuffle: boolean;
+  /** Повтор: off — обычная очередь, all — очередь зацикливается, one — зацикливается трек */
+  repeat: Repeat;
+  /** Очередь до шаффла — хранится, только пока shuffle=true, чтобы честно выключить его назад */
+  originalQueue: QueueTrack[] | null;
   playQueue: (tracks: QueueTrack[], startIndex: number) => Promise<void>;
   togglePlayPause: () => void;
   next: () => void;
   prev: () => void;
   seek: (sec: number) => void;
+  toggleShuffle: () => void;
+  cycleRepeat: () => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -33,11 +41,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   status: 'idle',
   positionSec: 0,
   durationSec: 0,
+  shuffle: false,
+  repeat: 'off',
+  originalQueue: null,
 
   playQueue: async (tracks, startIndex) => {
     if (tracks.length === 0) return;
     const index = Math.min(Math.max(startIndex, 0), tracks.length - 1);
-    set({ queue: tracks, queueIndex: index });
+    // Новая очередь — новый заезд: шаффл предыдущего проигрывания сбрасывается, repeat остаётся
+    // (это постоянная настройка слушателя, не привязана к конкретной очереди).
+    set({ queue: tracks, queueIndex: index, shuffle: false, originalQueue: null });
     await loadAndPlay(index);
   },
 
@@ -56,10 +69,19 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   next: () => {
-    const { queue, queueIndex } = get();
-    const index = nextQueueIndex(queueIndex, queue.length, 'off');
+    const { queue, queueIndex, repeat } = get();
+    const index = nextQueueIndex(queueIndex, queue.length, repeat);
     if (index === null) {
       set({ status: 'paused' });
+      return;
+    }
+    if (index === queueIndex) {
+      // repeat='all' с одним треком в очереди зацикливается на тот же index — loadAndPlay
+      // на неизменившемся index не перезапустит трек (staleness guard срежет как устаревший),
+      // поэтому рестарт явный: сик на 0 и play уже загруженного трека, без ре-фетча манифеста.
+      audioEngine.seek(0);
+      audioEngine.play();
+      set({ status: 'playing', positionSec: 0 });
       return;
     }
     set({ queueIndex: index });
@@ -78,6 +100,25 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     audioEngine.seek(sec);
     seekGuardUntil = Date.now() + SEEK_GUARD_MS;
     set({ positionSec: sec });
+  },
+
+  toggleShuffle: () => {
+    const { shuffle, queue, queueIndex, originalQueue } = get();
+    if (shuffle) {
+      const base = originalQueue ?? queue;
+      const currentId = queue[queueIndex]?.id ?? '';
+      const result = shuffleOff(base, currentId);
+      set({ shuffle: false, queue: result.queue, queueIndex: result.index, originalQueue: null });
+    } else {
+      const result = shuffleOn(queue, queueIndex);
+      set({ shuffle: true, queue: result.queue, queueIndex: result.index, originalQueue: queue });
+    }
+  },
+
+  cycleRepeat: () => {
+    const { repeat } = get();
+    const next = repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off';
+    set({ repeat: next });
   },
 }));
 
@@ -135,6 +176,14 @@ audioEngine.on('timeupdate', (payload) => {
 });
 
 audioEngine.on('ended', () => {
+  // Только естественное завершение трека зацикливает его при repeat='one' — ручные
+  // prev/next не подпадают под этот кейс (та же граница поведения, что и на вебе).
+  if (usePlayerStore.getState().repeat === 'one') {
+    audioEngine.seek(0);
+    audioEngine.play();
+    usePlayerStore.setState({ status: 'playing', positionSec: 0 });
+    return;
+  }
   usePlayerStore.getState().next();
 });
 
