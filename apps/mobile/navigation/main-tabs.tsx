@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { HomeStackNavigator } from './home-stack';
 import SearchScreen from '../screens/search-screen';
 import LibraryScreen from '../screens/library-screen';
-import ProfileScreen from '../screens/profile-screen';
+import { ProfileStackNavigator } from './profile-stack';
 import { Icon, type IconName } from '../lib/icon';
 import { TAB_BAR_CONTENT_HEIGHT } from '../lib/layout';
 import { colors } from '../lib/theme';
@@ -56,7 +56,7 @@ export function MainTabs() {
       <Tab.Screen name="Home" component={HomeStackNavigator} options={{ title: 'Главная' }} />
       <Tab.Screen name="Search" component={SearchScreen} options={{ title: 'Поиск' }} />
       <Tab.Screen name="Library" component={LibraryScreen} options={{ title: 'Медиатека' }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Профиль' }} />
+      <Tab.Screen name="Profile" component={ProfileStackNavigator} options={{ title: 'Профиль' }} />
     </Tab.Navigator>
   );
 }

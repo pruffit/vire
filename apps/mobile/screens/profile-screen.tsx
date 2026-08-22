@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { devicesResponseSchema, okResponseSchema, type DeviceDTO } from '@vire/api-contracts';
+import type { ProfileStackParamList } from '../navigation/profile-stack';
 import { apiRequest } from '../lib/api-client';
 import { clearAuthTokens } from '../lib/secure-store';
 import { Screen } from '../components/screen';
+import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 
 type LoadState = 'loading' | 'error' | 'ready';
@@ -21,7 +24,7 @@ function formatLastUsed(iso: string): string {
 }
 
 export default function ProfileScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>>();
   const [devices, setDevices] = useState<DeviceDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [revokingId, setRevokingId] = useState<string | null>(null);
@@ -57,12 +60,21 @@ export default function ProfileScreen() {
       await apiRequest(`/api/v1/auth/devices/${current.id}`, { method: 'DELETE', schema: okResponseSchema });
     }
     await clearAuthTokens();
-    navigation.getParent()?.reset({ index: 0, routes: [{ name: 'SignIn' }] });
+    // Инкремент 9 вложил ProfileScreen в ProfileStackNavigator — до RootStack теперь два
+    // уровня navigator'ов (ProfileStack -> MainTabs -> RootStack), не один.
+    navigation.getParent()?.getParent()?.reset({ index: 0, routes: [{ name: 'SignIn' }] });
   };
 
   return (
     <Screen style={styles.container}>
-      <Text style={styles.title}>Устройства</Text>
+      <Text style={styles.title}>Профиль</Text>
+
+      <Pressable style={styles.navRow} onPress={() => navigation.navigate('Friends')}>
+        <Icon name="user-check" size={18} color={colors.foreground} />
+        <Text style={styles.navRowText}>Друзья</Text>
+      </Pressable>
+
+      <Text style={styles.sectionTitle}>Устройства</Text>
 
       {state === 'loading' && (
         <View style={styles.centered}>
@@ -125,6 +137,17 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
   title: { color: colors.foreground, fontSize: 20, fontWeight: '800', marginTop: 8, marginBottom: 4 },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    minHeight: 52,
+    paddingHorizontal: 14,
+  },
+  navRowText: { color: colors.foreground, fontSize: 15, fontWeight: '700' },
+  sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginTop: 8 },
   centered: { alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 32 },
   messageText: { color: colors.mutedForeground, fontSize: 15, textAlign: 'center' },
   retryButton: {

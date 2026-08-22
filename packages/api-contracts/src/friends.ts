@@ -13,7 +13,18 @@ export const friendSchema = z.object({
 });
 export type FriendDTO = z.infer<typeof friendSchema>;
 
-export const friendsResponseSchema = z.object({ friends: z.array(friendSchema) });
+export const incomingRequestSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  image: z.string().nullable(),
+  requestedAt: z.string(),
+});
+export type IncomingRequestDTO = z.infer<typeof incomingRequestSchema>;
+
+export const friendsResponseSchema = z.object({
+  friends: z.array(friendSchema),
+  incoming: z.array(incomingRequestSchema),
+});
 export type FriendsResponse = z.infer<typeof friendsResponseSchema>;
 
 export const friendSearchHitSchema = z.object({
