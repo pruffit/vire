@@ -18,6 +18,8 @@ import { colors, radius } from '../lib/theme';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
 import { Screen } from '../components/screen';
+import { LikeButton } from '../components/like-button';
+import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
 
 type LoadState = 'loading' | 'error' | 'ready';
 type TrackItem = ReleaseDetailResponse['tracks'][number];
@@ -138,6 +140,8 @@ function TrackRow({ track, playing, onPress }: { track: TrackItem; playing: bool
         {disabled && <Text style={styles.trackStatus}>Недоступен</Text>}
       </View>
       <Text style={[styles.trackDuration, disabled && styles.trackDisabled]}>{formatDuration(track.durationSec)}</Text>
+      <LikeButton trackId={track.id} />
+      <AddToPlaylistSheet trackId={track.id} />
     </Pressable>
   );
 }

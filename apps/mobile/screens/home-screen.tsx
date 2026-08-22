@@ -26,6 +26,8 @@ import { colors, radius } from '../lib/theme';
 import { endpointOf } from '../lib/sdui';
 import { Icon } from '../lib/icon';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
+import { LikeButton } from '../components/like-button';
+import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
 
 type LoadState = 'loading' | 'error' | 'ready';
 
@@ -245,6 +247,8 @@ function HotTrackRow({
         </Text>
       </View>
       {playing && <Icon name="play" size={14} color={colors.primary} />}
+      <LikeButton trackId={track.id} />
+      <AddToPlaylistSheet trackId={track.id} />
     </Pressable>
   );
 }

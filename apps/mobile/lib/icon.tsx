@@ -56,17 +56,49 @@ const PATHS: Record<IconName, { translate: [number, number]; d: string[] }> = {
     translate: [-497, -377],
     d: ['M507.5 391.25L515 398.75L522.5 391.25'],
   },
+  heart: {
+    translate: [-77, -317.14],
+    d: [
+      'M106.05 325.761C105.412 325.122 104.654 324.615 103.819 324.27C102.985 323.924 102.091 323.746 101.188 323.746C100.284 323.746 99.3902 323.924 98.5558 324.27C97.7215 324.615 96.9635 325.122 96.325 325.761L95 327.086L93.675 325.761C92.3854 324.471 90.6363 323.747 88.8125 323.747C86.9887 323.747 85.2396 324.471 83.95 325.761C82.6604 327.05 81.9359 328.8 81.9359 330.623C81.9359 332.447 82.6604 334.196 83.95 335.486L85.275 336.811L95 346.536L104.725 336.811L106.05 335.486C106.689 334.847 107.195 334.089 107.541 333.255C107.887 332.421 108.065 331.526 108.065 330.623C108.065 329.72 107.887 328.826 107.541 327.992C107.195 327.157 106.689 326.399 106.05 325.761Z',
+    ],
+  },
+  plus: {
+    translate: [-77, -197],
+    d: ['M95 206.25V223.75', 'M86.25 215H103.75'],
+  },
+  check: {
+    translate: [-737, -376.38],
+    d: ['M765 387.5L751.25 401.25L745 395'],
+  },
 };
 
-export type IconName = 'home' | 'search' | 'list' | 'user' | 'play' | 'pause' | 'skip-back' | 'skip-forward' | 'chevron-down';
+export type IconName = 'home' | 'search' | 'list' | 'user' | 'play' | 'pause' | 'skip-back' | 'skip-forward' | 'chevron-down' | 'heart' | 'plus' | 'check';
 
-export function Icon({ name, size = 20, color }: { name: IconName; size?: number; color: string }) {
+export function Icon({
+  name,
+  size = 20,
+  color,
+  filled = false,
+}: {
+  name: IconName;
+  size?: number;
+  color: string;
+  filled?: boolean;
+}) {
   const { translate, d } = PATHS[name];
   return (
     <Svg width={size} height={size} viewBox="0 0 36 36" fill="none">
       <G transform={`translate(${translate[0]} ${translate[1]})`}>
         {d.map((path) => (
-          <Path key={path} d={path} stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          <Path
+            key={path}
+            d={path}
+            fill={filled ? color : 'none'}
+            stroke={color}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         ))}
       </G>
     </Svg>
