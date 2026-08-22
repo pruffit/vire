@@ -1,4 +1,4 @@
-import { DarkTheme, NavigationContainer, type Theme } from '@react-navigation/native';
+import { DarkTheme, NavigationContainer, type LinkingOptions, type Theme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -15,6 +15,26 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Только vire://release/:releaseId (инкремент 8). Работает лишь при уже сохранённой
+// сессии — SignIn-стек не участвует в linking, поэтому анонимный холодный старт
+// диплинк теряет и просто показывает экран входа (см. docs/features/mobile-app.md).
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: ['vire://'],
+  config: {
+    screens: {
+      Main: {
+        screens: {
+          Home: {
+            screens: {
+              ReleaseDetail: 'release/:releaseId',
+            },
+          },
+        },
+      },
+    },
+  },
+};
 
 const navTheme: Theme = {
   ...DarkTheme,
@@ -50,7 +70,7 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} linking={linking}>
       <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="SignIn" component={SignInScreen} />
         <Stack.Screen name="Main" component={MainScreen} />

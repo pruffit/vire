@@ -17,6 +17,7 @@ import { apiRequest } from '../lib/api-client';
 import { colors, radius } from '../lib/theme';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
+import { resolveReleaseHeader } from '../lib/release-header';
 import { Screen } from '../components/screen';
 import { LikeButton } from '../components/like-button';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
@@ -25,12 +26,14 @@ type LoadState = 'loading' | 'error' | 'ready';
 type TrackItem = ReleaseDetailResponse['tracks'][number];
 
 export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStackParamList, 'ReleaseDetail'>) {
-  const { releaseId, title, artistName, coverUrl } = route.params;
+  const { releaseId } = route.params;
   const [tracks, setTracks] = useState<TrackItem[]>([]);
+  const [release, setRelease] = useState<ReleaseDetailResponse['release'] | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const currentTrackId = usePlayerStore((s) => s.queue[s.queueIndex]?.id ?? null);
+  const { title, artistName, coverUrl } = resolveReleaseHeader(route.params, release);
 
   const load = useCallback(async () => {
     // apiRequest — релиз может быть черновиком/WIP, виден только владельцу/стаффу.
@@ -39,6 +42,7 @@ export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStac
     });
     if (!result.ok) return false;
     setTracks(result.data.tracks);
+    setRelease(result.data.release);
     return true;
   }, [releaseId]);
 
@@ -80,9 +84,11 @@ export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStac
         <Text style={styles.title} numberOfLines={2}>
           {title}
         </Text>
-        <Text style={styles.artist} numberOfLines={1}>
-          {artistName}
-        </Text>
+        {artistName !== '' && (
+          <Text style={styles.artist} numberOfLines={1}>
+            {artistName}
+          </Text>
+        )}
       </View>
 
       {state === 'loading' && (

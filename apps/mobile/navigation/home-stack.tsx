@@ -4,7 +4,7 @@ import ReleaseScreen from '../screens/release-screen';
 
 export type HomeStackParamList = {
   HomeList: undefined;
-  ReleaseDetail: { releaseId: string; title: string; artistName: string; coverUrl: string | null };
+  ReleaseDetail: { releaseId: string; title?: string; artistName?: string; coverUrl?: string | null };
 };
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
