@@ -467,14 +467,37 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   HLS-загрузка, READY-транзакция, fallback на ffprobe) + waveform-пики (`peaksFromPcm`)
 - [x] Route handlers Этап 2 (purchase, webhooks/yookassa) — покрыты (1-J)
 
+### Мультиплатформа (`apps/desktop`, `apps/mobile`)
+
+- [x] **Десктоп** (Tauri v2) — window shell, tray + OS media keys, Media Session/SMTC,
+  autostart, close-to-tray + глобальный хоткей, single-instance, splash, автообновление,
+  мини-плеер поверх других окон, сборка под Windows/Linux (AppImage). Раздача — `/download`
+  + GitHub Release + публичный MinIO. Детали — `docs/features/desktop-app.md`.
+- [~] **Мобилка** (React Native + Expo, Android) — инкременты 1–5: вход (device-auth,
+  редирект-фикс для Expo Go), воспроизведение звука, SDUI-главная + нативная полировка
+  (иконки/haptics/pull-to-refresh/predictive-back — все подтверждены живьём на эмуляторе),
+  `react-native-track-player` для лок-скрина/Now Playing/фона на Android — краш
+  `MusicService.emit()` найден и исправлен 22.08.2026 (патч `MusicService.kt`), воспроизведение
+  и системные Now Playing-контролы подтверждены живым прогоном на эмуляторе `VireMusic_Test`.
+  Открыто: реальное физическое устройство (только эмулятор), лок-скрин с включённым PIN,
+  Android Auto, iOS (нет Mac). Детали и честная разбивка проверено/не проверено —
+  `docs/features/mobile-app.md`.
+
 ## Что делать дальше (следующий шаг)
 
 Этап 1 закрыт, включая все взаимодействия слушателя из концепта, смартлинки,
 пресейвы (Фаза A+B) и несколько аккаунтов на артиста (`docs/features/multi-artist.md`).
-Открытый бэклог — в `docs/roadmap/TODO.md` (Observability/Sentry — отложено до апгрейда
-VPS, контент-SEO) и `docs/roadmap/stage-2.md` (второй виток); Этап 2 — только по команде:
+`docs/roadmap/stage-2.md` закрыт целиком (все пункты ✅). `docs/roadmap/TODO.md` —
+практически пуст: из открытого только «Запрос "vire"» (вопрос внешних ссылок/возраста
+домена, не кода) и два осознанно отложенных пункта (Observability/Sentry — до апгрейда
+VPS; CSP `unsafe-inline` — nonce ломает статику/ISR, отдельная задача не под стабильную
+версию). Этап 2 — только по команде:
 1. **YooKassa боевая настройка** — по команде
-2. Открытые хвосты stage-2: §7.2 (editorial)
+
+Если открытого бэклога по вебу нет — следующий содержательный трек это мобилка
+(`docs/features/mobile-app.md` → «Вне скоупа»): реальное Android-устройство вместо
+эмулятора (когда появится), либо продуктовые фичи вне скоупа инкрементов 1–5 (shuffle/
+repeat-UI, оффлайн, лайки/плейлисты с мобилки, пуши, диплинки, биометрия).
 
 Сделано в доводке:
 - Форматтеры (`formatDuration`, `formatCount`, `pluralTracks`, `releaseYear`, `totalDuration`)
