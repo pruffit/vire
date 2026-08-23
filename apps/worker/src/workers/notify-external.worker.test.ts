@@ -10,8 +10,11 @@ const h = vi.hoisted(() => ({
   getUserDisplayName: vi.fn(),
   listPushSubscriptions: vi.fn(),
   deletePushSubscriptionsByEndpoints: vi.fn(),
+  listExpoPushTokens: vi.fn(),
+  deleteExpoPushTokensByTokens: vi.fn(),
   sendBrevoEmail: vi.fn(),
   sendPush: vi.fn(),
+  sendExpoPush: vi.fn(),
   isUserOnline: vi.fn(),
   chatEmailDebounced: vi.fn(),
 }));
@@ -21,6 +24,8 @@ vi.mock('@vire/db', () => ({
   getUserDisplayName: h.getUserDisplayName,
   listPushSubscriptions: h.listPushSubscriptions,
   deletePushSubscriptionsByEndpoints: h.deletePushSubscriptionsByEndpoints,
+  listExpoPushTokens: h.listExpoPushTokens,
+  deleteExpoPushTokensByTokens: h.deleteExpoPushTokensByTokens,
 }));
 vi.mock('@vire/core', async () => {
   const actual = await vi.importActual<typeof import('@vire/core')>('@vire/core');
@@ -35,6 +40,7 @@ vi.mock('@vire/core/notifications/unsubscribe', () => ({
 }));
 vi.mock('../lib/brevo.js', () => ({ sendBrevoEmail: h.sendBrevoEmail }));
 vi.mock('../lib/webpush.js', () => ({ sendPush: h.sendPush }));
+vi.mock('../lib/expo-push.js', () => ({ sendExpoPush: h.sendExpoPush }));
 vi.mock('../lib/user-presence.js', () => ({ isUserOnline: h.isUserOnline }));
 vi.mock('../lib/notify-debounce.js', () => ({ chatEmailDebounced: h.chatEmailDebounced }));
 vi.mock('../queues/connection.js', () => ({ connection: {} }));
@@ -60,11 +66,14 @@ beforeEach(() => {
   });
   h.getUserDisplayName.mockResolvedValue('Актёр');
   h.listPushSubscriptions.mockResolvedValue([{ endpoint: 'https://push/1', p256dh: 'p1', auth: 'a1' }]);
+  h.listExpoPushTokens.mockResolvedValue([]);
   h.isUserOnline.mockResolvedValue(false);
   h.chatEmailDebounced.mockResolvedValue(false);
   h.sendPush.mockResolvedValue([]);
+  h.sendExpoPush.mockResolvedValue([]);
   h.sendBrevoEmail.mockResolvedValue(undefined);
   h.deletePushSubscriptionsByEndpoints.mockResolvedValue(undefined);
+  h.deleteExpoPushTokensByTokens.mockResolvedValue(undefined);
 });
 
 describe('notify-external handle', () => {
@@ -126,6 +135,34 @@ describe('notify-external handle', () => {
     h.sendPush.mockResolvedValue(['https://push/dead']);
     h.deletePushSubscriptionsByEndpoints.mockRejectedValue(new Error('db down'));
     await expect(handle(makeJob())).resolves.toBeUndefined();
+  });
+
+  it('sends expo push alongside web push when tokens exist', async () => {
+    h.listExpoPushTokens.mockResolvedValue([{ token: 'expo-1' }, { token: 'expo-2' }]);
+    await handle(makeJob());
+    expect(h.sendExpoPush).toHaveBeenCalledTimes(1);
+    expect(h.sendExpoPush).toHaveBeenCalledWith(['expo-1', 'expo-2'], h.sendPush.mock.calls[0][1]);
+  });
+
+  it('prunes dead expo tokens returned by sendExpoPush', async () => {
+    h.listExpoPushTokens.mockResolvedValue([{ token: 'expo-dead' }]);
+    h.sendExpoPush.mockResolvedValue(['expo-dead']);
+    await handle(makeJob());
+    expect(h.deleteExpoPushTokensByTokens).toHaveBeenCalledWith(['expo-dead']);
+  });
+
+  it('does not fail the job when pruning dead expo tokens throws', async () => {
+    h.listExpoPushTokens.mockResolvedValue([{ token: 'expo-dead' }]);
+    h.sendExpoPush.mockResolvedValue(['expo-dead']);
+    h.deleteExpoPushTokensByTokens.mockRejectedValue(new Error('db down'));
+    await expect(handle(makeJob())).resolves.toBeUndefined();
+  });
+
+  it('counts expo tokens toward the push-enabled decision even with no web subs', async () => {
+    h.listPushSubscriptions.mockResolvedValue([]);
+    h.listExpoPushTokens.mockResolvedValue([{ token: 'expo-only' }]);
+    await handle(makeJob());
+    expect(h.sendExpoPush).toHaveBeenCalledWith(['expo-only'], expect.any(Object));
   });
 
   it('renders push and email in the recipient locale (en), with /en-prefixed links', async () => {

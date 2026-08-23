@@ -67,3 +67,7 @@ export async function getCurrentUserId(): Promise<string | null> {
   const accessToken = await getStored('accessToken');
   return accessToken ? decodeAccessTokenUserId(accessToken) : null;
 }
+
+export function getDeviceId(): Promise<string | null> {
+  return getStored('deviceId');
+}

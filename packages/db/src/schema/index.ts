@@ -9,6 +9,7 @@ export * from './taste';
 export * from './notifications';
 export * from './chat';
 export * from './push-subscriptions';
+export * from './expo-push-tokens';
 export * from './user-identity-keys';
 export * from './jam';
 export * from './external';

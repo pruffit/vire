@@ -5,7 +5,8 @@ import { ActivityIndicator, View } from 'react-native';
 import SignInScreen from '../screens/sign-in-screen';
 import PlayerScreen from '../screens/player-screen';
 import { MainScreen } from './main-screen';
-import { hasStoredSession } from '../lib/secure-store';
+import { hasStoredSession, getDeviceId } from '../lib/secure-store';
+import { registerForPushNotifications } from '../lib/push';
 import { colors } from '../lib/theme';
 
 export type RootStackParamList = {
@@ -55,7 +56,12 @@ export function RootNavigator() {
     // expo-secure-store не имеет веб-реализации (getValueWithKeyAsync бросает) — без catch
     // web-превью зависает на спиннере навсегда. На web/без сессии считаем неавторизованным.
     hasStoredSession()
-      .then((has) => setInitialRoute(has ? 'Main' : 'SignIn'))
+      .then(async (has) => {
+        setInitialRoute(has ? 'Main' : 'SignIn');
+        if (!has) return;
+        const deviceId = await getDeviceId();
+        if (deviceId) void registerForPushNotifications(deviceId);
+      })
       .catch(() => setInitialRoute('SignIn'));
   }, []);
 

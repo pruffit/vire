@@ -7,6 +7,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/root-navigator';
 import { WEB_BASE_URL } from '../lib/env';
 import { setAuthTokens } from '../lib/secure-store';
+import { registerForPushNotifications } from '../lib/push';
 import { Screen } from '../components/screen';
 import { colors, radius } from '../lib/theme';
 
@@ -57,6 +58,7 @@ export default function SignInScreen({ navigation }: Props) {
       }
 
       await setAuthTokens({ accessToken, refreshToken, deviceId });
+      void registerForPushNotifications(deviceId);
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } finally {
       setPending(false);

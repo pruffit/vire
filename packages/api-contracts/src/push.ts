@@ -10,3 +10,13 @@ export type PushSubscriptionRequest = z.infer<typeof pushSubscriptionSchema>;
 
 export const pushUnsubscribeSchema = z.object({ endpoint: z.string().url() });
 export type PushUnsubscribeRequest = z.infer<typeof pushUnsubscribeSchema>;
+
+export const expoPushTokenSchema = z.object({
+  token: z.string().min(1),
+  platform: z.enum(['ios', 'android']),
+  deviceId: z.string().uuid().optional(),
+});
+export type ExpoPushTokenRequest = z.infer<typeof expoPushTokenSchema>;
+
+export const expoPushUnregisterSchema = z.object({ token: z.string().min(1) });
+export type ExpoPushUnregisterRequest = z.infer<typeof expoPushUnregisterSchema>;

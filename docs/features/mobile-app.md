@@ -1823,3 +1823,96 @@ REST-эндпоинт для `otherLastReadAt` (начальное состоя�
 сейчас. Typing/read где-либо, кроме открытого экрана треда (список диалогов, пуши) —
 не строилось. Индикатор печати не показывается самому себе (нет петли — `chat:typing`
 приходит только от `otherUserId`, сервер не эхо'ит инициатору).
+
+## Инкремент 17: пуш-уведомления (Expo → FCM)
+
+Реалтайм (чат, заявки в друзья) работает только пока приложение на переднем плане —
+пробел, отмеченный ещё в инкрементах 13/14/16. Инкремент добавляет третий канал доставки
+поверх уже существующего пайплайна "внешней доставки офлайн-пользователю"
+(`packages/core/src/platform/notifications/**`, очередь `notify-external`), который до
+этого слал только email (Brevo) и веб-пуш (VAPID) — бизнес-логика (`decideExternalDelivery`,
+presence-гард, реестр `EXTERNAL_NOTIFY_EVENTS`) не менялась, только источник токенов и
+транспорт отправки. Спека — `docs/superpowers/specs/2026-08-23-mobile-push-notifications-increment-17-design.md`.
+
+### Что построено
+
+- **`packages/db/src/schema/expo-push-tokens.ts`** — таблица `expo_push_tokens`
+  (`userId` → `users` cascade, `token` unique, `platform`, `deviceId` → `devices.id`
+  `ON DELETE SET NULL`, `createdAt`/`lastUsedAt`). Отдельная от `devices` — та моделирует
+  пару сессионных токенов с ротацией/отзывом, push-токен живёт своим циклом независимо от
+  логина/логаута. Миграция `0057_dapper_vapor.sql`.
+- **`packages/db/src/queries/expo-push-tokens.ts`** — `upsertExpoPushToken`/
+  `deleteExpoPushToken`/`deleteExpoPushTokensByTokens`/`deleteExpoPushTokensByDeviceId`/
+  `listExpoPushTokens`, 1:1 паттерн с `push-subscriptions.ts`.
+- **`apps/web/app/api/v1/mobile/push-token/route.ts`** — `POST`/`DELETE`, `getCaller()` →
+  401 → zod (`expoPushTokenSchema`/`expoPushUnregisterSchema` в `@vire/api-contracts`) →
+  запрос. Без `can()`/RBAC — действие пользователя над своими данными, не бэкофис
+  (прецедент — `/api/v1/push/subscribe`).
+- **`apps/worker/src/lib/expo-push.ts`** — `sendExpoPush(tokens, payload)`: POST на
+  `https://exp.host/--/api/v2/push/send`, чанки по 100 (лимит Expo API), возвращает токены
+  с тикет-ошибкой `DeviceNotRegistered` для последующей пруны. Упрощение v1: без опроса
+  `/getReceipts` — часть протухших токенов Expo сообщает только асинхронной квитанцией,
+  такие переживут до следующего неудачного тикета.
+- **`apps/worker/src/workers/notify-external.worker.ts`** — рядом с
+  `listPushSubscriptions`/`sendPush` добавлены `listExpoPushTokens`/`sendExpoPush` (оба
+  чтения и обе отправки — параллельно через `Promise.all`, не последовательно). Один и тот
+  же тумблер `notifyPush` управляет обоими каналами — отдельная настройка "пуш на телефон"
+  не заводилась, пользователь не различает браузер/телефон.
+- **`apps/web/app/api/v1/auth/devices/[deviceId]/route.ts`** — отзыв устройства каскадом
+  чистит `expo_push_tokens` по `deviceId` (best-effort, ошибка прунинга не роняет сам
+  отзыв). **Находка ревью**: `devices`-строка никогда не удаляется при отзыве (остаётся
+  ради истории входов, только `revokedAt`), поэтому FK `ON DELETE SET NULL` на
+  `expo_push_tokens.deviceId` в этом потоке не срабатывает сам по себе — без явного вызова
+  отозванный телефон продолжал бы получать чужие пуши после выхода из аккаунта (мобильный
+  `signOut()` в `profile-screen.tsx` уже отзывает текущее устройство при выходе, так что
+  один этот каскад закрывает и logout, и явный отзыв из списка устройств).
+- **`apps/mobile/lib/push.ts`** — `registerForPushNotifications(deviceId)`: Android
+  notification channel → запрос разрешения → `getExpoPushTokenAsync({projectId})` →
+  `POST /api/v1/mobile/push-token`. Полностью best-effort — нет разрешения, нет
+  `projectId`, сетевая ошибка — тихий возврат, экран/вход не блокируется (тот же уровень,
+  что `sendTyping`/`markConversationRead`). Вызывается из `sign-in-screen.tsx` (после
+  `setAuthTokens`) и из `root-navigator.tsx` при холодном старте с уже сохранённой сессией
+  (`getDeviceId()` — новый геттер в `lib/secure-store.ts`; токен Expo может обновиться
+  независимо от логина).
+- **`apps/mobile/app.json`** — плагин `expo-notifications` добавлен в `plugins`.
+  **`extra.eas.projectId` НЕ добавлен** — см. блокер ниже.
+- **Deep-link по тапу на уведомление — вне скоупа.** Открывает приложение на последнем
+  экране, не конкретный тред (диплинк есть только на релиз, инкремент 8).
+
+### Блокер: нет Expo/EAS-проекта
+
+`getExpoPushTokenAsync()` на Expo SDK 57 требует `projectId` в конфиге —
+`apps/mobile/app.json` без `extra.eas.projectId`, EAS-проект не заведён, доступа к
+аккаунту expo.dev у сессии не было. Для реальной доставки на Android дополнительно нужны
+FCM-креды (Firebase-проект), загруженные в EAS credentials. **Решение по итогам
+обсуждения с Даней (2026-08-23): построить весь код полностью, привязку
+`projectId`/EAS/FCM оставить документированным ручным шагом** — тот же класс пробела, что
+"нет Mac для iOS". Без него `registerForPushNotifications()` детерминированно уходит по
+ветке "нет projectId" и ничего не отправляет — код рабочий и протестирован юнит-тестами,
+но **живая проверка на эмуляторе (свернуть → прислать сообщение → увидеть системный
+пуш) не проводилась и не могла быть проведена** в этой сессии. Следующий шаг: завести
+привязку EAS-проекта (например `eas init` с Personal Access Token в `apps/mobile/.env`
+как `EXPO_TOKEN`, не пастить токен в чат) + Firebase-проект для FCM, затем повторить
+живой прогон.
+
+### Тесты и гейты
+
+`packages/db` typecheck ✓, `db:generate` — миграция `0057_dapper_vapor.sql`.
+`packages/api-contracts` typecheck ✓. `apps/web`: typecheck/lint/check:routes/
+check:contracts/check:caller ✓, test ✓ (2026 тестов, включая новые
+`push-token/route.test.ts` и `devices/[deviceId]/route.test.ts` — 401/400/404/успех/
+устойчивость к сбою прунинга). `apps/worker`: typecheck ✓, test ✓ (111 тестов, включая
+`expo-push.test.ts` — пустой список, успех, `DeviceNotRegistered` → в пруну, чанкинг
+>100 токенов, сетевая ошибка чанка не бросает и не метит токены мёртвыми — и расширенный
+`notify-external.worker.test.ts`). `apps/mobile`: typecheck ✓, test ✓ (204 теста, включая
+`push.test.ts` — нет projectId/нет разрешения/бросок `getExpoPushTokenAsync`/успешный
+путь). `pnpm turbo run check:layers` ✓.
+
+### Осознанно не в этом инкременте
+
+Живая проверка на эмуляторе (блокер выше). Опрос `/getReceipts` Expo API для полной
+пруны протухших токенов. Отдельная настройка "пуш на телефон" вместо телефона отдельно
+от браузера. Deep-link по тапу на конкретный чат/экран. Каскад пруны `expo_push_tokens`
+при массовом отзыве всех устройств (`DeviceAuthService.refresh()` → `revokeAllForUser`
+при обнаружении компрометации refresh-токена) — закрыт только явный отзыв одного
+устройства и logout, не сценарий "утечка токена".

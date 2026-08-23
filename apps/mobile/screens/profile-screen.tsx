@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { devicesResponseSchema, okResponseSchema, type DeviceDTO } from '@vire/api-contracts';
 import type { ProfileStackParamList } from '../navigation/profile-stack';
 import { apiRequest } from '../lib/api-client';
-import { clearAuthTokens } from '../lib/secure-store';
+import { clearAuthTokens, getDeviceId } from '../lib/secure-store';
 import { Screen } from '../components/screen';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
@@ -54,10 +54,14 @@ export default function ProfileScreen() {
 
   const signOut = async () => {
     setSigningOut(true);
-    const current = devices.find((d) => d.current);
-    if (current) {
+    // Берём deviceId из secure store, а не из ещё не загруженного списка `devices` —
+    // список зависит от сети (GET .../devices), а deviceId уже лежит локально с логина.
+    // Иначе быстрый тап "Выйти" до ответа GET пропускает отзыв на сервере, и отозванный
+    // локально телефон продолжает быть активным устройством (и получать пуши) на сервере.
+    const deviceId = await getDeviceId();
+    if (deviceId) {
       // Лучшая попытка — отзыв текущего устройства на сервере; выходим локально в любом случае.
-      await apiRequest(`/api/v1/auth/devices/${current.id}`, { method: 'DELETE', schema: okResponseSchema });
+      await apiRequest(`/api/v1/auth/devices/${deviceId}`, { method: 'DELETE', schema: okResponseSchema });
     }
     await clearAuthTokens();
     // Инкремент 9 вложил ProfileScreen в ProfileStackNavigator — до RootStack теперь два

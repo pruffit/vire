@@ -1,11 +1,12 @@
 import { Worker, type Job } from 'bullmq';
 import { QUEUE_NOTIFY_EXTERNAL, type ExternalNotifyJobData, decideExternalDelivery, EXTERNAL_NOTIFY_EVENTS } from '@vire/core';
 import { signNotifyUnsub } from '@vire/core/notifications/unsubscribe'; // субпуть: node:crypto не в edge-safe корневом barrel (Task 15)
-import { getUserNotifyContext, getUserDisplayName, listPushSubscriptions, deletePushSubscriptionsByEndpoints } from '@vire/db';
+import { getUserNotifyContext, getUserDisplayName, listPushSubscriptions, deletePushSubscriptionsByEndpoints, listExpoPushTokens, deleteExpoPushTokensByTokens } from '@vire/db';
 import { isLocale, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
 import { connection } from '../queues/connection.js';
 import { sendBrevoEmail } from '../lib/brevo.js';
 import { sendPush } from '../lib/webpush.js';
+import { sendExpoPush } from '../lib/expo-push.js';
 import { isUserOnline } from '../lib/user-presence.js';
 import { chatEmailDebounced } from '../lib/notify-debounce.js';
 
@@ -22,7 +23,10 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
 
   if (await isUserOnline(recipientId)) return;
 
-  const subs = await listPushSubscriptions(recipientId);
+  const [subs, expoTokens] = await Promise.all([
+    listPushSubscriptions(recipientId),
+    listExpoPushTokens(recipientId),
+  ]);
 
   const decision = decideExternalDelivery({
     notifyEmail: ctx.notifyEmail,
@@ -30,7 +34,7 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
     recipientOnline: false,
     emailDebounced: false,
     hasEmail: !!ctx.email,
-    pushSubscriptionCount: subs.length,
+    pushSubscriptionCount: subs.length + expoTokens.length,
   });
 
   // Дебаунс-ключ ставится только в момент реальной отправки письма, не раньше.
@@ -59,9 +63,15 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
 
   if (decision.push) {
     const payload = await event.push({ actorId, actorName, appUrl: APP_URL, locale, unsubscribeUrl: null, conversationId });
-    const dead = await sendPush(subs, payload);
+    const [dead, deadExpo] = await Promise.all([
+      sendPush(subs, payload),
+      sendExpoPush(expoTokens.map((t) => t.token), payload),
+    ]);
     if (dead.length) {
       try { await deletePushSubscriptionsByEndpoints(dead); } catch { /* пруна не должна валить джобу и триггерить ретрай письма */ }
+    }
+    if (deadExpo.length) {
+      try { await deleteExpoPushTokensByTokens(deadExpo); } catch { /* пруна не должна валить джобу */ }
     }
   }
 }
