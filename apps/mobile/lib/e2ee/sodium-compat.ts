@@ -56,10 +56,13 @@ export function encryptMessage(
   return { ciphertext: toB64(c), nonce: toB64(nonce) };
 }
 
+// tweetnacl throws (not returns null) on malformed nonce/ciphertext byte length — web's
+// libsodium-wrappers equivalent (lib/e2ee/conversation.ts) already wraps the whole call for
+// this reason; mirrored here so a corrupted/malformed row degrades to null, not a crash.
 export function decryptMessage(ciphertext: string, nonce: string, ck: Uint8Array): string | null {
-  const opened = nacl.secretbox.open(fromB64(ciphertext), fromB64(nonce), ck);
-  if (!opened) return null;
   try {
+    const opened = nacl.secretbox.open(fromB64(ciphertext), fromB64(nonce), ck);
+    if (!opened) return null;
     return fromUtf8(opened);
   } catch {
     return null;

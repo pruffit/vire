@@ -3,7 +3,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { request } = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock('../api-client', () => ({ apiRequest: request }));
 
-import { openConversation, fetchMessages, sendMessage, fetchPeerKey, fetchConversations } from '../chat';
+import {
+  openConversation,
+  fetchMessages,
+  sendMessage,
+  fetchPeerKey,
+  fetchConversations,
+  sendTyping,
+  markConversationRead,
+} from '../chat';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -106,6 +114,54 @@ describe('fetchConversations', () => {
     expect(request).toHaveBeenCalledWith(
       '/api/v1/chat/conversations',
       expect.objectContaining({ schema: expect.anything() }),
+    );
+  });
+});
+
+describe('sendTyping', () => {
+  it('POST /api/v1/chat/{conversationId}/typing без тела', async () => {
+    request.mockResolvedValue({ ok: true, data: { ok: true } });
+
+    await sendTyping('c1');
+
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/chat/c1/typing',
+      expect.objectContaining({ method: 'POST', schema: expect.anything() }),
+    );
+  });
+
+  it('экранирует conversationId', async () => {
+    request.mockResolvedValue({ ok: true, data: { ok: true } });
+
+    await sendTyping('a b/c');
+
+    expect(request).toHaveBeenCalledWith(
+      `/api/v1/chat/${encodeURIComponent('a b/c')}/typing`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+});
+
+describe('markConversationRead', () => {
+  it('POST /api/v1/chat/{conversationId}/read без тела', async () => {
+    request.mockResolvedValue({ ok: true, data: { ok: true } });
+
+    await markConversationRead('c1');
+
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/chat/c1/read',
+      expect.objectContaining({ method: 'POST', schema: expect.anything() }),
+    );
+  });
+
+  it('экранирует conversationId', async () => {
+    request.mockResolvedValue({ ok: true, data: { ok: true } });
+
+    await markConversationRead('a b/c');
+
+    expect(request).toHaveBeenCalledWith(
+      `/api/v1/chat/${encodeURIComponent('a b/c')}/read`,
+      expect.objectContaining({ method: 'POST' }),
     );
   });
 });

@@ -4,11 +4,13 @@ import {
   sendChatMessageResponseSchema,
   getKeyResponseSchema,
   chatConversationsResponseSchema,
+  okResponseSchema,
   type OpenChatResponse,
   type ChatMessagesResponse,
   type SendChatMessageResponse,
   type GetKeyResponse,
   type ChatConversationsResponse,
+  type OkResponse,
 } from '@vire/api-contracts';
 import type { ApiResult } from '@vire/api-client';
 import { apiRequest } from './api-client';
@@ -52,4 +54,12 @@ export function fetchPeerKey(userId: string): Promise<ApiResult<GetKeyResponse>>
 
 export function fetchConversations(): Promise<ApiResult<ChatConversationsResponse>> {
   return apiRequest('/api/v1/chat/conversations', { schema: chatConversationsResponseSchema });
+}
+
+export function sendTyping(conversationId: string): Promise<ApiResult<OkResponse>> {
+  return apiRequest(`/api/v1/chat/${seg(conversationId)}/typing`, { method: 'POST', schema: okResponseSchema });
+}
+
+export function markConversationRead(conversationId: string): Promise<ApiResult<OkResponse>> {
+  return apiRequest(`/api/v1/chat/${seg(conversationId)}/read`, { method: 'POST', schema: okResponseSchema });
 }

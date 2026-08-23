@@ -1713,3 +1713,113 @@ Native-зависимостей не добавилось (`react-native-sse` �
 Бейдж непрочитанного на самом пункте навигации в Профиле — тот же принцип, что инкремент 9
 применил к заявкам в друзья: не заводить лишний источник рассинхрона без явного запроса.
 Вызов «отметить прочитанным» при открытии — не делали; экран остаётся чисто читающим.
+
+## Инкремент 16: typing-индикатор и «прочитано» в треде
+
+Два полигонных сигнала поверх готового треда (инкремент 14): «печатает…» и статус
+«Отправлено»/«Прочитано» под своим последним сообщением. Бэкенд не тронут — оба REST-роута
+(`POST /chat/{id}/typing`, `POST /chat/{id}/read`) и оба SSE-события (`chat:typing`,
+`chat:read`) уже существовали и уже использовались web'ом (`components/chat/typing-
+indicator.tsx`, `components/chat/chat-thread.tsx`).
+
+### Что построено
+
+- **`apps/mobile/lib/chat.ts`** — `sendTyping`/`markConversationRead`, шестая и седьмая тонкие
+  обёртки над `apiRequest` (тот же паттерн, `okResponseSchema`).
+- **`apps/mobile/lib/chat-typing.ts`** — две чистые функции, вынесенные по прецеденту
+  инкрементов 8/10/15 (нет компонентных тестов в проекте): `shouldSendTypingPing(lastSentAt,
+  now)` — троттлинг `TYPING_THROTTLE_MS=2500` (1:1 с web's `message-composer.tsx`);
+  `isReadByPeer(lastOwnMessageCreatedAt, peerReadAt)` — сравнение таймстемпов для
+  «Прочитано»/«Отправлено» (1:1 с web's `chat-thread.tsx`: `new Date(m.createdAt) <= readAt`).
+- **`apps/mobile/lib/chat-realtime.ts`** — диспатч расширен с одного `type === 'message'` на
+  множество `DISPATCHABLE_TYPES = {message, chat:typing, chat:read}` (чистая функция
+  `isDispatchableChatEventType`, тестируется изолированно). `parseChatRealtimeEvent` уже был
+  типово-нейтральным (не требовал правки) — фильтрация по типу жила только на стороне
+  `connectChatRealtime`.
+- **`apps/mobile/screens/chat-thread-screen.tsx`**:
+  - `useEffect` на маунт — `markConversationRead(conversationId)` best-effort, ошибка
+    игнорируется, рендер не блокируется.
+  - `onChangeDraft` (заменил прямой `setDraft`) — троттлит `sendTyping` через
+    `shouldSendTypingPing`, шлёт только когда `text.trim()` непусто.
+  - `onRealtimeMessage` — три ветки по `event.type` вместо одной: `message` (как раньше, плюс
+    сброс индикатора печати, если отправитель — `otherUserId`), `chat:typing` (фильтр по
+    `conversationId`+`userId===otherUserId`, `setPeerTyping(true)` + таймер 4с на автосброс),
+    `chat:read` (фильтр по `conversationId`, `chat:read`-payload несёт `readAt`, не `userId` —
+    адресность уже обеспечена сервером через `publish(otherUserId, ...)`, см.
+    `packages/core/.../chat.ts:87-98`).
+  - `lastOwnMessage` (`useMemo`) + `ownStatusLabel` — «Прочитано» когда
+    `isReadByPeer(lastOwnMessage.createdAt, peerReadAt)`, иначе «Отправлено»; рендерится
+    подписью под бабблом только у сообщения с `id === lastOwnMessage.id` (не у каждого
+    своего). «печатает…» — под именем собеседника в шапке треда.
+  - Скоуп статуса «прочитано» — **только в рамках текущей сессии экрана**. Нет запроса
+    начального `otherLastReadAt` при открытии (web берёт его из
+    `chatService().getConversationMeta()`, вызываемого только server-side из RSC — REST-роута
+    для этого нет, тот же класс пробела, что нашёл инкремент 10 для `/u/[userId]`, не
+    закрывать сейчас). Практическое следствие: переоткрытие треда/приложения сбрасывает
+    статус на «Отправлено», пока не придёт новый живой `chat:read`. Это осознанное упрощение
+    v1, не баг.
+
+### Находка и фикс по ходу: `decryptMessage` бросал, а не возвращал `null`
+
+Живая проверка обнаружила краш (не из кода этого инкремента — регрессия порта инкремента 13):
+`apps/mobile/lib/e2ee/sodium-compat.ts`'s `decryptMessage` оборачивал в `try/catch` только
+`fromUtf8(opened)`, а не сам `nacl.secretbox.open(...)`. tweetnacl **бросает** на неверную
+длину nonce/ключа (в отличие от неверного содержимого при верной длине — тогда просто
+возвращает `null`, штатный путь «Не удалось расшифровать»). Web's эквивалент
+(`apps/web/lib/e2ee/conversation.ts:44-50`) уже оборачивает весь вызов целиком — мобильный
+порт этот случай упустил. Один битый (по длине) `nonce`/`ciphertext` в истории — и падает
+рендер и треда, и списка диалогов (превью тоже зовёт `decryptMessage`), без пути восстановления
+кроме удаления строки из БД. Пойман собственным тестовым сообщением с неверной длиной nonce во
+время живой проверки этого инкремента — не гипотетический кейс. Фикс — обернуть весь вызов
+(теперь 1:1 с web), плюс два регресс-теста на `sodium-compat.test.ts` (неверная длина
+nonce/ключа не бросает, возвращает `null`).
+
+### Тесты и гейты
+
+`apps/mobile`: +17 тестов (200 всего, было 183) — `chat.test.ts` (+4: `sendTyping`/
+`markConversationRead`, URL/метод + экранирование), `chat-realtime.test.ts` (+2:
+`isDispatchableChatEventType` — message/chat:typing/chat:read пропускает, notification/
+link-request/пустая строка — нет), `chat-typing.test.ts` (+9, новый файл: throttle-граница
+`shouldSendTypingPing`, все исходы `isReadByPeer` включая границу равенства), `sodium-
+compat.test.ts` (+2: регресс на краш decryptMessage). `pnpm --filter @vire/mobile typecheck`/
+`test` — зелёные. Бэкенд не трогали — `git diff --stat` подтверждает: только `apps/mobile/**`
++ этот документ, `apps/web`-гейты не гоняли.
+
+### Живая проверка на эмуляторе
+
+Сессия `mobiletest@vire.local` (эмулятор `VireMusic_Test`, тред с `rntp-friend2@
+viremusic.local` из инкрементов 14–15), встречная сторона — `curl`-эквивалент на реальную
+Auth.js cookie-сессию friend2 (тот же приём, что в инкрементах 9/11/14: `/api/auth/csrf` →
+`/api/auth/callback/credentials` → cookie jar). Force-stop + релонч активности хватило
+(чистый JS/TS, native-зависимостей не добавилось).
+
+- **Typing — живой, гаснет по таймауту.** `POST /chat/{id}/typing` от friend2 → следующий
+  скриншот устройства (доля секунды спустя) показал «печатает…» под именем «Friend Two
+  Mobile» в шапке треда. После 5с без повторных пингов — индикатор пропал сам (следующий
+  скриншот header чистый, только имя).
+- **Typing гаснет сразу по приходу message, не только по таймауту.** Пинг `typing` → сразу
+  следом (без паузы) реальный `POST /chat/messages` от friend2 → скриншот менее чем через
+  секунду после ответа сервера показал индикатор уже пропавшим (притом что 4с ещё не истекли)
+  — подтверждает ветку `event.message.senderId === otherUserId → clearPeerTyping()`, а не
+  только таймер.
+- **Статус «Отправлено» → «Прочитано».** Открытый тред сразу показал «Отправлено» под своим
+  последним сообщением (сессия только что открыта — начального `otherLastReadAt` по дизайну
+  нет). `POST /chat/{id}/read` от friend2 → следующий скриншот показал подпись, сменившуюся
+  на **«Прочитано»** — живой `chat:read` дошёл по тому же SSE-соединению, `isReadByPeer`
+  сравнил `readAt` с таймстемпом `12:26` и признал прочитанным.
+- **Найденный краш (`decryptMessage`) — воспроизведён и исправлен той же сессией**, см.
+  секцию выше; тестовые сообщения с этим багом удалены из БД (`docker exec vire-postgres
+  psql -U vire -d vire -c "delete from messages where id = ..."`) после подтверждения фикса —
+  переписка вернулась к состоянию инкрементов 14/15 плюс валидные тестовые сообщения этого
+  инкремента (тоже удалены после проверки, тред пуст от мусора этой сессии).
+- `adb logcat -d | grep "FATAL EXCEPTION"` — пусто за весь прогон **после** фикса
+  `decryptMessage` (до фикса — два воспроизведённых краша, оба задокументированы выше как
+  находка, не как остаточная проблема).
+
+### Осознанно не в этом инкременте
+
+REST-эндпоинт для `otherLastReadAt` (начальное состояние «прочитано» без ожидания живого
+события) — реальный пробел, тот же класс, что и `/u/[userId]` в инкременте 10, не закрыт
+сейчас. Typing/read где-либо, кроме открытого экрана треда (список диалогов, пуши) —
+не строилось. Индикатор печати не показывается самому себе (нет петли — `chat:typing`
+приходит только от `otherUserId`, сервер не эхо'ит инициатору).

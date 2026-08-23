@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 // node-окружении vitest нет (тот же паттерн, что e2ee/__tests__/identity.test.ts).
 vi.mock('../secure-store', () => ({ getStored: () => Promise.resolve(null) }));
 
-import { parseChatRealtimeEvent } from '../chat-realtime';
+import { parseChatRealtimeEvent, isDispatchableChatEventType } from '../chat-realtime';
 
 describe('parseChatRealtimeEvent', () => {
   it('парсит валидный JSON с полем type', () => {
@@ -30,5 +30,19 @@ describe('parseChatRealtimeEvent', () => {
 
   it('пропускает не-message типы наравне (фильтрация — на стороне вызывающего)', () => {
     expect(parseChatRealtimeEvent(JSON.stringify({ type: 'notification' }))).toEqual({ type: 'notification' });
+  });
+});
+
+describe('isDispatchableChatEventType', () => {
+  it('message/chat:typing/chat:read диспатчатся', () => {
+    expect(isDispatchableChatEventType('message')).toBe(true);
+    expect(isDispatchableChatEventType('chat:typing')).toBe(true);
+    expect(isDispatchableChatEventType('chat:read')).toBe(true);
+  });
+
+  it('notification/link-request и прочие — нет', () => {
+    expect(isDispatchableChatEventType('notification')).toBe(false);
+    expect(isDispatchableChatEventType('link-request')).toBe(false);
+    expect(isDispatchableChatEventType('')).toBe(false);
   });
 });

@@ -94,4 +94,22 @@ describe('e2ee/sodium-compat round-trip (own-generated keys, sanity)', () => {
     const corrupted = enc.ciphertext.slice(0, -4) + 'AAAA';
     expect(decryptMessage(corrupted, enc.nonce, ck)).toBeNull();
   });
+
+  // Найдено живой проверкой инкремента 16: tweetnacl.secretbox.open БРОСАЕТ (не возвращает
+  // null) на неверную длину nonce/ключа — в отличие от неверного содержимого, которое просто
+  // не проходит аутентификацию. Регрессия на краш экрана треда/списка диалогов на битой строке.
+  it('не бросает, а возвращает null при неверной длине nonce', () => {
+    const ck = hexToBytes(VECTOR.ck);
+    const enc = encryptMessage('привет', ck);
+    const badLengthNonce = toB64(new Uint8Array(8));
+    expect(() => decryptMessage(enc.ciphertext, badLengthNonce, ck)).not.toThrow();
+    expect(decryptMessage(enc.ciphertext, badLengthNonce, ck)).toBeNull();
+  });
+
+  it('не бросает, а возвращает null при неверной длине ключа', () => {
+    const enc = encryptMessage('привет', hexToBytes(VECTOR.ck));
+    const badLengthKey = new Uint8Array(8);
+    expect(() => decryptMessage(enc.ciphertext, enc.nonce, badLengthKey)).not.toThrow();
+    expect(decryptMessage(enc.ciphertext, enc.nonce, badLengthKey)).toBeNull();
+  });
 });

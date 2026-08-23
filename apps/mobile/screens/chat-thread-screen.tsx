@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,8 +13,9 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ChatMessageDTO } from '@vire/api-contracts';
 import type { ProfileStackParamList } from '../navigation/profile-stack';
-import { fetchPeerKey, fetchMessages, sendMessage } from '../lib/chat';
+import { fetchPeerKey, fetchMessages, sendMessage, sendTyping, markConversationRead } from '../lib/chat';
 import { useChatRealtime, type ChatRealtimeEvent } from '../lib/chat-realtime';
+import { shouldSendTypingPing, isReadByPeer, TYPING_INDICATOR_TIMEOUT_MS } from '../lib/chat-typing';
 import { getCurrentUserId } from '../lib/secure-store';
 import { getOrCreateIdentity } from '../lib/e2ee/identity';
 import { deriveCK, encryptMessage, decryptMessage, fromB64 } from '../lib/e2ee/sodium-compat';
@@ -54,6 +55,7 @@ function isChatMessageEvent(
 ): event is ChatRealtimeEvent & { conversationId: string; message: ChatMessageDTO } {
   const message = event.message as ChatMessageDTO | undefined;
   return (
+    event.type === 'message' &&
     typeof event.conversationId === 'string' &&
     !!message &&
     typeof message.id === 'string' &&
@@ -63,6 +65,15 @@ function isChatMessageEvent(
   );
 }
 
+function isChatTypingEvent(event: ChatRealtimeEvent): event is ChatRealtimeEvent & { conversationId: string; userId: string } {
+  return event.type === 'chat:typing' && typeof event.conversationId === 'string' && typeof event.userId === 'string';
+}
+
+// readAt публикуется адресно только другому участнику (packages/core/.../chat.ts) — userId в payload не несётся.
+function isChatReadEvent(event: ChatRealtimeEvent): event is ChatRealtimeEvent & { conversationId: string; readAt: string } {
+  return event.type === 'chat:read' && typeof event.conversationId === 'string' && typeof event.readAt === 'string';
+}
+
 export default function ChatThreadScreen({ route }: NativeStackScreenProps<ProfileStackParamList, 'ChatThread'>) {
   const { conversationId, otherUserId, otherUserName } = route.params;
 
@@ -70,10 +81,14 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [peerTyping, setPeerTyping] = useState(false);
+  const [peerReadAt, setPeerReadAt] = useState<string | null>(null);
 
   const myUserIdRef = useRef<string | null>(null);
   const ckRef = useRef<Uint8Array | null>(null);
   const listRef = useRef<FlatList<ThreadMessage>>(null);
+  const lastTypingSentRef = useRef(0);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -112,18 +127,48 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
     load();
   }, [load]);
 
+  // Best-effort — отметка прочтения не блокирует рендер и не проверяется на ошибку.
+  useEffect(() => {
+    void markConversationRead(conversationId);
+  }, [conversationId]);
+
+  useEffect(() => () => clearTimeout(typingTimeoutRef.current), []);
+
+  const clearPeerTyping = useCallback(() => {
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = undefined;
+    setPeerTyping(false);
+  }, []);
+
   const onRealtimeMessage = useCallback(
     (event: ChatRealtimeEvent) => {
-      if (!isChatMessageEvent(event) || event.conversationId !== conversationId) return;
-      const ck = ckRef.current;
-      if (!ck) return;
+      if (isChatMessageEvent(event)) {
+        if (event.conversationId !== conversationId) return;
+        if (event.message.senderId === otherUserId) clearPeerTyping();
 
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === event.message.id)) return prev;
-        return [...prev, decryptDTO(event.message, ck)];
-      });
+        const ck = ckRef.current;
+        if (!ck) return;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === event.message.id)) return prev;
+          return [...prev, decryptDTO(event.message, ck)];
+        });
+        return;
+      }
+
+      if (isChatTypingEvent(event)) {
+        if (event.conversationId !== conversationId || event.userId !== otherUserId) return;
+        setPeerTyping(true);
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(clearPeerTyping, TYPING_INDICATOR_TIMEOUT_MS);
+        return;
+      }
+
+      if (isChatReadEvent(event)) {
+        if (event.conversationId !== conversationId) return;
+        setPeerReadAt(event.readAt);
+      }
     },
-    [conversationId],
+    [conversationId, otherUserId, clearPeerTyping],
   );
 
   useChatRealtime(onRealtimeMessage);
@@ -131,6 +176,31 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
   useEffect(() => {
     if (messages.length > 0) requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
   }, [messages.length]);
+
+  const onChangeDraft = useCallback(
+    (text: string) => {
+      setDraft(text);
+      if (!text.trim()) return;
+      const now = Date.now();
+      if (!shouldSendTypingPing(lastTypingSentRef.current, now)) return;
+      lastTypingSentRef.current = now;
+      void sendTyping(conversationId);
+    },
+    [conversationId],
+  );
+
+  const lastOwnMessage = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i]!.senderId === myUserIdRef.current) return messages[i]!;
+    }
+    return null;
+  }, [messages]);
+
+  const ownStatusLabel = lastOwnMessage
+    ? isReadByPeer(lastOwnMessage.createdAt, peerReadAt)
+      ? 'Прочитано'
+      : 'Отправлено'
+    : null;
 
   const onSend = useCallback(async () => {
     const text = draft.trim();
@@ -157,6 +227,7 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
         <Text style={styles.headerName} numberOfLines={1}>
           {otherUserName ?? 'Собеседник'}
         </Text>
+        {peerTyping && <Text style={styles.typingCaption}>печатает…</Text>}
       </View>
 
       {state === 'loading' && (
@@ -191,14 +262,20 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
             data={messages}
             keyExtractor={(m) => m.id}
             contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => <Bubble message={item} own={item.senderId === myUserIdRef.current} />}
+            renderItem={({ item }) => (
+              <Bubble
+                message={item}
+                own={item.senderId === myUserIdRef.current}
+                statusLabel={item.id === lastOwnMessage?.id ? ownStatusLabel : null}
+              />
+            )}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
           />
 
           <View style={styles.composer}>
             <TextInput
               value={draft}
-              onChangeText={setDraft}
+              onChangeText={onChangeDraft}
               placeholder="Сообщение…"
               placeholderTextColor={colors.mutedForeground}
               style={styles.input}
@@ -218,20 +295,31 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
   );
 }
 
-function Bubble({ message, own }: { message: ThreadMessage; own: boolean }) {
+function Bubble({
+  message,
+  own,
+  statusLabel,
+}: {
+  message: ThreadMessage;
+  own: boolean;
+  statusLabel?: string | null;
+}) {
   return (
     <View style={[styles.bubbleRow, own && styles.bubbleRowOwn]}>
-      <View style={[styles.bubble, own ? styles.bubbleOwn : styles.bubbleOther]}>
-        <Text
-          style={[
-            styles.bubbleText,
-            own ? styles.bubbleTextOwn : styles.bubbleTextOther,
-            message.plaintext === null && styles.bubbleTextFailed,
-          ]}
-        >
-          {message.plaintext ?? 'Не удалось расшифровать'}
-        </Text>
-        <Text style={styles.bubbleTime}>{formatClockTime(message.createdAt)}</Text>
+      <View style={styles.bubbleColumn}>
+        <View style={[styles.bubble, own ? styles.bubbleOwn : styles.bubbleOther]}>
+          <Text
+            style={[
+              styles.bubbleText,
+              own ? styles.bubbleTextOwn : styles.bubbleTextOther,
+              message.plaintext === null && styles.bubbleTextFailed,
+            ]}
+          >
+            {message.plaintext ?? 'Не удалось расшифровать'}
+          </Text>
+          <Text style={styles.bubbleTime}>{formatClockTime(message.createdAt)}</Text>
+        </View>
+        {statusLabel && <Text style={styles.statusCaption}>{statusLabel}</Text>}
       </View>
     </View>
   );
@@ -241,6 +329,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   header: { paddingHorizontal: 16, paddingVertical: 12 },
   headerName: { color: colors.foreground, fontSize: 18, fontWeight: '800' },
+  typingCaption: { color: colors.mutedForeground, fontSize: 12, marginTop: 2 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
   messageText: { color: colors.mutedForeground, fontSize: 15, textAlign: 'center' },
   retryButton: {
@@ -255,7 +344,9 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
   bubbleRow: { flexDirection: 'row', justifyContent: 'flex-start' },
   bubbleRowOwn: { justifyContent: 'flex-end' },
-  bubble: { maxWidth: '80%', borderRadius: radius.lg, paddingHorizontal: 12, paddingVertical: 8, gap: 2 },
+  bubbleColumn: { maxWidth: '80%' },
+  statusCaption: { alignSelf: 'flex-end', color: colors.mutedForeground, fontSize: 11, marginTop: 2 },
+  bubble: { borderRadius: radius.lg, paddingHorizontal: 12, paddingVertical: 8, gap: 2 },
   bubbleOther: { backgroundColor: colors.card },
   bubbleOwn: { backgroundColor: colors.primary },
   bubbleText: { fontSize: 15 },
