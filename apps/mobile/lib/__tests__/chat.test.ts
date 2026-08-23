@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { request } = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock('../api-client', () => ({ apiRequest: request }));
 
-import { openConversation, fetchMessages, sendMessage, fetchPeerKey } from '../chat';
+import { openConversation, fetchMessages, sendMessage, fetchPeerKey, fetchConversations } from '../chat';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -93,6 +93,19 @@ describe('fetchPeerKey', () => {
     expect(request).toHaveBeenCalledWith(
       `/api/v1/keys?userId=${encodeURIComponent('a b/c')}`,
       expect.anything(),
+    );
+  });
+});
+
+describe('fetchConversations', () => {
+  it('GET /api/v1/chat/conversations с нужной схемой', async () => {
+    request.mockResolvedValue({ ok: true, data: { conversations: [] } });
+
+    await fetchConversations();
+
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/chat/conversations',
+      expect.objectContaining({ schema: expect.anything() }),
     );
   });
 });

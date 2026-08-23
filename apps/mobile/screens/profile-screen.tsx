@@ -74,6 +74,11 @@ export default function ProfileScreen() {
         <Text style={styles.navRowText}>Друзья</Text>
       </Pressable>
 
+      <Pressable style={styles.navRow} onPress={() => navigation.navigate('Conversations')}>
+        <Icon name="message-square" size={18} color={colors.foreground} />
+        <Text style={styles.navRowText}>Сообщения</Text>
+      </Pressable>
+
       <Text style={styles.sectionTitle}>Устройства</Text>
 
       {state === 'loading' && (

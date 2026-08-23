@@ -129,6 +129,13 @@ const PATHS: Record<IconName, { translate: [number, number]; d: string[] }> = {
       'M18 6.75V21.75',
     ],
   },
+  // Инкремент 15 (чат): vire-message-square, тот же принцип извлечения 1:1 из system-sprite.svg.
+  'message-square': {
+    translate: [-17, -257],
+    d: [
+      'M46.25 278.75C46.25 279.413 45.9866 280.049 45.5178 280.518C45.0489 280.987 44.413 281.25 43.75 281.25H28.75L23.75 286.25V266.25C23.75 265.587 24.0134 264.951 24.4822 264.482C24.9511 264.013 25.587 263.75 26.25 263.75H43.75C44.413 263.75 45.0489 264.013 45.5178 264.482C45.9866 264.951 46.25 265.587 46.25 266.25V278.75Z',
+    ],
+  },
 };
 
 export type IconName =
@@ -150,7 +157,8 @@ export type IconName =
   | 'user-check'
   | 'user-plus'
   | 'user-x'
-  | 'download';
+  | 'download'
+  | 'message-square';
 
 export function Icon({
   name,
