@@ -21,6 +21,7 @@ import { resolveReleaseHeader } from '../lib/release-header';
 import { Screen } from '../components/screen';
 import { LikeButton } from '../components/like-button';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
+import { DownloadButton } from '../components/download-button';
 
 type LoadState = 'loading' | 'error' | 'ready';
 type TrackItem = ReleaseDetailResponse['tracks'][number];
@@ -112,7 +113,13 @@ export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStac
           data={tracks}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
-            <TrackRow track={item} playing={item.id === currentTrackId} onPress={() => play(index)} />
+            <TrackRow
+              track={item}
+              playing={item.id === currentTrackId}
+              onPress={() => play(index)}
+              artistName={artistName}
+              coverUrl={coverUrl}
+            />
           )}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />
@@ -123,7 +130,19 @@ export default function ReleaseScreen({ route }: NativeStackScreenProps<HomeStac
   );
 }
 
-function TrackRow({ track, playing, onPress }: { track: TrackItem; playing: boolean; onPress: () => void }) {
+function TrackRow({
+  track,
+  playing,
+  onPress,
+  artistName,
+  coverUrl,
+}: {
+  track: TrackItem;
+  playing: boolean;
+  onPress: () => void;
+  artistName: string;
+  coverUrl: string | null;
+}) {
   const disabled = track.status !== 'READY';
   return (
     <Pressable
@@ -148,6 +167,11 @@ function TrackRow({ track, playing, onPress }: { track: TrackItem; playing: bool
       <Text style={[styles.trackDuration, disabled && styles.trackDisabled]}>{formatDuration(track.durationSec)}</Text>
       <LikeButton trackId={track.id} />
       <AddToPlaylistSheet trackId={track.id} />
+      {!disabled && (
+        <DownloadButton
+          meta={{ id: track.id, title: track.title, artistName, coverUrl, durationSec: track.durationSec }}
+        />
+      )}
     </Pressable>
   );
 }

@@ -3,6 +3,7 @@ import { trackManifestResponseSchema } from '@vire/api-contracts';
 import { nextQueueIndex, shuffleOn, shuffleOff, type Repeat } from '@vire/core/playback/queue';
 import { apiRequest } from './api-client';
 import { audioEngine, type AudioTimeUpdate } from './audio-engine';
+import { getDownloadedTrack } from './offline/download-manager';
 
 export interface QueueTrack {
   id: string;
@@ -140,22 +141,32 @@ async function loadAndPlay(index: number): Promise<void> {
   if (!track) return;
   usePlayerStore.setState({ status: 'loading', positionSec: 0, durationSec: track.durationSec ?? 0 });
 
-  // apiRequest (Bearer + refresh), не голый request — трек может быть непубличным
-  // (черновик/WIP), тогда манифест отдаётся только владельцу/стаффу по личности вызывающего.
-  const result = await apiRequest(`/api/v1/tracks/${track.id}/manifest`, {
-    schema: trackManifestResponseSchema,
-  });
-  // За время запроса индекс мог смениться (быстрый next/prev) — устаревший ответ не проигрываем.
+  // Скачанный трек (инкремент 12) — играем локальный файл, без единого сетевого запроса.
+  const downloaded = await getDownloadedTrack(track.id);
   if (usePlayerStore.getState().queueIndex !== index) return;
-  if (!result.ok) {
-    console.error('[player] не удалось получить манифест трека', track.id, result.error);
-    usePlayerStore.setState({ status: 'error' });
-    return;
+
+  let manifestUrl: string;
+  if (downloaded) {
+    manifestUrl = downloaded.localPlaylistPath;
+  } else {
+    // apiRequest (Bearer + refresh), не голый request — трек может быть непубличным
+    // (черновик/WIP), тогда манифест отдаётся только владельцу/стаффу по личности вызывающего.
+    const result = await apiRequest(`/api/v1/tracks/${track.id}/manifest`, {
+      schema: trackManifestResponseSchema,
+    });
+    // За время запроса индекс мог смениться (быстрый next/prev) — устаревший ответ не проигрываем.
+    if (usePlayerStore.getState().queueIndex !== index) return;
+    if (!result.ok) {
+      console.error('[player] не удалось получить манифест трека', track.id, result.error);
+      usePlayerStore.setState({ status: 'error' });
+      return;
+    }
+    manifestUrl = result.data.hlsUrl;
   }
 
   try {
     await audioEngine.load({
-      manifestUrl: result.data.hlsUrl,
+      manifestUrl,
       title: track.title,
       artist: track.artistName,
       artworkUrl: track.coverUrl ?? undefined,

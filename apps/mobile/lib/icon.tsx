@@ -119,6 +119,16 @@ const PATHS: Record<IconName, { translate: [number, number]; d: string[] }> = {
       'M588.75 90L582.5 96.25',
     ],
   },
+  // Инкремент 12 (офлайн): зеркальный разворот vire-upload (та же лоток-форма, стрелка
+  // перевёрнута вниз) — своего "download" в apps/web/public/icons/system-sprite.svg нет.
+  download: {
+    translate: [0, 0],
+    d: [
+      'M29.25 21.75V26.75C29.25 27.413 28.987 28.049 28.518 28.518C28.049 28.987 27.413 29.25 26.75 29.25H9.25C8.587 29.25 7.951 28.987 7.482 28.518C7.013 28.049 6.75 27.413 6.75 26.75V21.75',
+      'M11.25 15.5L18 21.75L24.25 15.5',
+      'M18 6.75V21.75',
+    ],
+  },
 };
 
 export type IconName =
@@ -139,7 +149,8 @@ export type IconName =
   | 'x'
   | 'user-check'
   | 'user-plus'
-  | 'user-x';
+  | 'user-x'
+  | 'download';
 
 export function Icon({
   name,

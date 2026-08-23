@@ -1227,3 +1227,139 @@ HLS (`Desktop shell test tone`) — «Понравившиеся треки» п
   и pull-to-refresh теперь проверены (см. «Добито тем же прогоном» выше) — визуальный кадр
   predictive-анимации остаётся не пойманным, но это уже полировка, не открытый вопрос.
   «Вход через Expo Go» снят как неприменимый (см. там же).
+
+## Инкремент 12: офлайн-скачивание треков
+
+Технически более рискованный инкремент, чем 6–11 (чистый перенос бизнес-логики) — новая
+нативная зависимость (`expo-file-system`, первосортный Expo SDK-модуль, не рискованный
+сторонний нативный модуль вроде RNTP в инкременте 5) и первый случай, когда HLS проигрывается
+не с CDN, а с локального файла. План явно предписывал сначала доказать этот механизм спайком
+(bypass `player-store`, прямой вызов `audioEngine.load()`), и только потом строить UI вокруг
+него — **механизм подтверждён живьём дважды** (см. ниже), после чего собран полный срез.
+
+### Что сделано
+
+- **`packages/media`** (`@vire/media`, новый пакет, был зарезервирован в корневом
+  `CLAUDE.md` как пустой `.gitkeep`) — `src/hls.ts`: `parseHlsSegments` (скопирован 1:1 из
+  `apps/web/lib/offline/hls.ts`, уже был чистой функцией без браузерных API) и новая
+  `rewritePlaylistForLocalSegments(playlistText, localFilenames)` — переписывает плейлист на
+  локальные относительные имена сегментов, построчно в том же порядке, что и
+  `parseHlsSegments` (комментарии/`#EXT-X-*`/пустые строки не трогает; бросает при
+  несовпадении числа сегментов и `localFilenames`). Относительные имена, не абсолютные
+  `file://`-пути — `Paths.document` не гарантированно стабилен между обновлениями/
+  переустановками приложения, а относительный путь резолвится HLS от самого `.m3u8`, где бы
+  он физически ни лежал. 6 тестов (`src/hls.test.ts`), включая round-trip через
+  `parseHlsSegments` с фейковым `file://`-базовым URL. `apps/web` не тронут — веб продолжает
+  использовать свой `lib/offline/*`, `@vire/media` пока только для мобилки.
+- **`apps/mobile/lib/offline/download-manager.ts`** — `downloadTrack(meta, onProgress?)`,
+  `removeDownload(trackId)`, `listDownloads()`, `getDownloadedTrack(trackId)`,
+  `estimateUsage()`. Индекс скачанных треков — один плоский JSON-файл
+  (`documentDirectory + 'offline/index.json'`) через `expo-file-system`, без AsyncStorage/
+  SQLite (тот же принцип, что и кастомный bottom-sheet в инкременте 6 вместо библиотеки —
+  не тащить зависимость ради одной нужды, скачанных треков мало, читать/писать индекс
+  целиком дешевле). Каждый трек — своя папка `offline/{trackId}/` с сегментами
+  `seg-000.ts…` и переписанным `playlist.m3u8`. **Без резюмируемых докачек и без отмены** —
+  осознанный урезанный первый срез («скачать всё → % → готово/ошибка»): у веба резюмируемость
+  бесплатна благодаря Cache Storage, для файловой системы RN это отдельная задача, не
+  оправданная для первого среза.
+- **`apps/mobile/lib/player-store.ts`** — `loadAndPlay()` перед сетевым запросом манифеста
+  зовёт `getDownloadedTrack(track.id)`; если запись есть — `manifestUrl` берётся из
+  `localPlaylistPath` без единого сетевого вызова, иначе (и только тогда) идёт прежний путь
+  через `apiRequest`. Обе ветки сходятся в один и тот же `audioEngine.load()` — RNTP не
+  различает `file://` и `https://` в HLS-манифесте (см. «Почему это сработало» ниже).
+- **UI:** `components/download-button.tsx` — три состояния (не скачан: иконка `download`,
+  тап начинает скачивание; идёт скачивание: `%` вместо иконки; скачан: иконка `check`, тап
+  удаляет без подтверждения — осознанно просто). Подключена в `screens/release-screen.tsx`
+  только для `READY`-треков (недоступным сначала нечего скачивать). `screens/library-screen.tsx`
+  — вкладка «Медиатека» перестала быть заглушкой: список скачанных (обложка/название/
+  артист/длительность/размер), тап — очередь плеера через тот же `playQueue`, что и везде,
+  крестик — удаление, сводка использования (`estimateUsage()` + `formatBytes`) сверху, пустое
+  состояние вместо списка, если ничего не скачано. `navigation/main-tabs.tsx` не менялся —
+  `Library` уже указывал на этот экран напрямую, без вложенного стека.
+- **Новая иконка `download`** в `lib/icon.tsx` — своего download в
+  `apps/web/public/icons/system-sprite.svg` нет, поэтому взят существующий `vire-upload`
+  (тот же лоток) и стрелка отражена по вертикали (апекс вниз вместо вверх), координаты
+  посчитаны вручную из raw path исходного символа.
+- **Осознанно не в этом инкременте:** скачивание обложек (офлайн-трек показывает то, что
+  успело закешироваться обычным `<Image>`, либо ничего — честно задокументированный пробел,
+  не недосмотр), кнопка скачивания где-либо кроме трек-листа релиза (не в «Понравившихся»,
+  не в профиле пользователя — отдельный будущий инкремент), Wi-Fi-only, выбор качества.
+
+### Почему это сработало — технический механизм
+
+`TrackPlayer.load()` в `lib/audio-engine.ts` получает `Track.url` с явным `type: 'hls'`;
+ExoPlayer (RNTP на Android) резолвит DataSource по схеме URI — `file://` идёт через
+`FileDataSource`, `https://` через `HttpDataSource`, дальше оба ведут в один и тот же
+HLS-экстрактор. Именно поэтому `audio-engine.ts` не потребовал ни единой правки — разница
+целиком инкапсулирована в том, какой `manifestUrl` ему передают.
+
+### Живая проверка
+
+**Спайк (до UI) — подтверждён дважды на реальном устройстве.** Реальный трек
+(`b6a8d20e-b808-4ede-8ace-7b8177e90948`, «Desktop shell test tone 2», уже известный по
+инкременту 5) — манифест → `.m3u8` → `parseHlsSegments` → все 11 сегментов через
+`File.downloadFileAsync` в `documentDirectory/offline-spike/{id}/` → `rewritePlaylistForLocalSegments`
+→ `audioEngine.load({ manifestUrl: 'file://...' })` напрямую (в обход `player-store`, как
+предписывал план) → `play()`. `dumpsys media_session`: `state=PlaybackState
+{state=PLAYING(3), ...}`, метаданные совпадают. **Второй прогон — с `cmd connectivity
+airplane-mode enable` + `svc wifi disable` (подтверждено иконкой самолётика в статус-баре и
+`settings get global airplane_mode_on` = 1)** — идемпотентная ветка спайка обнаружила уже
+скачанные локальные файлы, пропустила сеть целиком, и `load()`/`play()` повторно отдали
+`state=PLAYING` с растущей позицией — без единого сетевого вызова. `adb logcat -d | grep
+"FATAL EXCEPTION"` — пусто за оба прогона.
+
+**Реальный (не спайковый) `download-manager.ts` + `player-store.ts` — тоже подтверждены
+живьём на устройстве**, отдельным прогоном через тот же приём (временный авто-триггер в
+`App.tsx`, без единого тапа — см. «Известная проблема окружения» ниже): `removeDownload` →
+`getDownloadedTrack` = `null` → `downloadTrack()` с прогрессом `0/11…11/11` → `bytes=1562148`,
+`localPlaylistPath` указывает на `offline/{id}/playlist.m3u8` → `listDownloads()` = 1 запись →
+`usePlayerStore.getState().playQueue(...)` реально взял офлайн-ветку (`status: 'playing'`) →
+`dumpsys media_session` подтвердил `state=PLAYING`, верные метаданные → `removeDownload()` →
+`getDownloadedTrack()` снова `null`. Временный код удалён из `App.tsx` после прогона (нет в
+финальном коммите), `git diff` перед коммитом это подтверждает.
+
+**Известная проблема окружения — не проверено тапами.** Touch-инъекция через
+`adb shell input tap`/`motionevent`/`swipe` не работала всю сессию на всех тестовых
+координатах, включая после `adb kill-server`/`start-server` и **после полного чистого
+перезапуска эмулятора** (`adb emu kill` + новый `emulator -avd VireMusic_Test`,
+подтверждено пустым `adb devices` между ними) — на свежесобранном системном ANR-диалоге
+(«Process system isn't responding», всплывал независимо от кода этой сессии) `KEYCODE_
+DPAD_CENTER` сработал (нативный `AlertDialog` уважает hardware-фокус), но тот же дпад/`TAB`
+не сдвигал фокус внутри RN-экранов приложения — то есть это ограничение именно
+touch/pointer-инъекции на уровне эмулятора/хоста в этой сессии, не код фичи и не первый раз
+встреченный класс проблемы (сравнимо с прошлыми блокерами окружения — Smart App Control,
+Docker/IPv6, см. выше). Прямое следствие: кнопка скачивания на экране релиза и список
+«Медиатека» не проверены тапом — визуально код прочитан, `formatBytes`/список/пустое
+состояние тестами покрыты, а вся логика, которую они дёргают, подтверждена реальным
+устройством описанным выше обходным путём (авто-триггер вместо тапа). Реальный тап на
+кнопку скачивания и «Медиатека» — первая проверка следующей сессии, когда/если окружение
+восстановится.
+
+### Тесты и гейты
+
+- `packages/media`: 6 тестов (`parseHlsSegments`, `rewritePlaylistForLocalSegments`),
+  typecheck — зелёные.
+- `apps/mobile`: +17 тестов (132 всего, было 115) — `download-manager.test.ts` (13: чистые
+  `parseIndex`/`serializeIndex`/`sumBytes`, I/O-функции с полностью замоканным
+  `expo-file-system` по тому же принципу, что RNTP в `audio-engine.test.ts`), `format.test.ts`
+  (+2 на `formatBytes`), `player-store.test.ts` (+2 на офлайн-ветку `loadAndPlay` — скачанный
+  трек не зовёт `apiRequest`, не скачанный работает как раньше; существующий тест на гонку
+  устаревшего ответа манифеста адаптирован под новую точку гонки — `getDownloadedTrack`,
+  не `apiRequest`, вызывается первым). `pnpm --filter @vire/mobile typecheck`/`test` —
+  зелёные.
+- `pnpm --filter @vire/web typecheck` — зелёный (не должен был задеться, `apps/web` не
+  трогался этим инкрементом; проверено на всякий случай, т.к. `packages/media` — новый
+  workspace-пакет).
+
+### Где код
+
+- `packages/media/src/hls.ts`, `src/index.ts`, `package.json`/`tsconfig.json`/
+  `vitest.config.ts` — мирят boilerplate `packages/api-client`.
+- `apps/mobile/lib/offline/download-manager.ts`, `lib/__tests__/download-manager.test.ts`.
+- `apps/mobile/lib/player-store.ts` (офлайн-ветка `loadAndPlay`), `lib/format.ts`
+  (`formatBytes`).
+- `apps/mobile/components/download-button.tsx`, `screens/release-screen.tsx` (подключение),
+  `screens/library-screen.tsx` (реальный экран вместо `StubScreen`).
+- `apps/mobile/lib/icon.tsx` — иконка `download`.
+- `apps/mobile/package.json` — `expo-file-system` (`~57.0.5`), `@vire/media`
+  (`workspace:*`).

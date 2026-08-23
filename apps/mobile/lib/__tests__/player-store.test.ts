@@ -25,6 +25,9 @@ const { audioEngine, emit } = vi.hoisted(() => {
 });
 vi.mock('../audio-engine', () => ({ audioEngine }));
 
+const { getDownloadedTrack } = vi.hoisted(() => ({ getDownloadedTrack: vi.fn() }));
+vi.mock('../offline/download-manager', () => ({ getDownloadedTrack }));
+
 import { usePlayerStore, __resetSeekGuardForTests, type QueueTrack } from '../player-store';
 
 const track = (id: string): QueueTrack => ({
@@ -57,6 +60,7 @@ beforeEach(() => {
     const id = url.split('/').at(-2);
     return Promise.resolve(manifestOk(id ?? ''));
   });
+  getDownloadedTrack.mockResolvedValue(null);
   resetStore();
 });
 
@@ -112,6 +116,38 @@ describe('usePlayerStore.playQueue', () => {
   });
 });
 
+describe('usePlayerStore.playQueue — скачанный трек (офлайн)', () => {
+  it('трек скачан — играет локальный файл, apiRequest не вызывается', async () => {
+    getDownloadedTrack.mockResolvedValue({
+      id: 't1',
+      title: 'Track t1',
+      artistName: 'Artist',
+      coverUrl: null,
+      durationSec: 120,
+      bytes: 1000,
+      addedAt: 0,
+      localPlaylistPath: 'file:///offline/t1/playlist.m3u8',
+    });
+
+    await usePlayerStore.getState().playQueue([track('t1')], 0);
+
+    expect(request).not.toHaveBeenCalled();
+    expect(audioEngine.load).toHaveBeenCalledWith(
+      expect.objectContaining({ manifestUrl: 'file:///offline/t1/playlist.m3u8' }),
+    );
+    expect(audioEngine.play).toHaveBeenCalledTimes(1);
+    expect(usePlayerStore.getState().status).toBe('playing');
+  });
+
+  it('трек не скачан — обычный сетевой путь, как раньше', async () => {
+    await usePlayerStore.getState().playQueue([track('t1')], 0);
+
+    expect(getDownloadedTrack).toHaveBeenCalledWith('t1');
+    expect(request).toHaveBeenCalled();
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t1.m3u8' }));
+  });
+});
+
 describe('usePlayerStore.next/prev', () => {
   it('next() переходит к следующему треку и грузит его манифест', async () => {
     await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 0);
@@ -161,15 +197,18 @@ describe('usePlayerStore.next/prev', () => {
   it('устаревший ответ манифеста (индекс уже сменился) не проигрывается', async () => {
     await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 0);
     vi.clearAllMocks();
+    getDownloadedTrack.mockResolvedValue(null);
 
+    // Гонка теперь начинается на getDownloadedTrack — первый вызов (t2) зависает, второй
+    // (t3) резолвится сразу через дефолт выше.
     let resolveFirst: (v: unknown) => void = () => {};
-    request.mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }));
+    getDownloadedTrack.mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }));
 
     usePlayerStore.getState().next(); // запрашивает манифест t2, не резолвится сразу
     usePlayerStore.getState().next(); // сразу переходит на t3
     await flush();
 
-    resolveFirst(manifestOk('t2'));
+    resolveFirst(null);
     await flush();
 
     expect(usePlayerStore.getState().queueIndex).toBe(2);
