@@ -1879,21 +1879,22 @@ presence-гард, реестр `EXTERNAL_NOTIFY_EVENTS`) не менялась,
 - **Deep-link по тапу на уведомление — вне скоупа.** Открывает приложение на последнем
   экране, не конкретный тред (диплинк есть только на релиз, инкремент 8).
 
-### Блокер: нет Expo/EAS-проекта
+### Блокер снят: EAS-проект и FCM привязаны, живая проверка пройдена
 
-`getExpoPushTokenAsync()` на Expo SDK 57 требует `projectId` в конфиге —
-`apps/mobile/app.json` без `extra.eas.projectId`, EAS-проект не заведён, доступа к
-аккаунту expo.dev у сессии не было. Для реальной доставки на Android дополнительно нужны
-FCM-креды (Firebase-проект), загруженные в EAS credentials. **Решение по итогам
-обсуждения с Даней (2026-08-23): построить весь код полностью, привязку
-`projectId`/EAS/FCM оставить документированным ручным шагом** — тот же класс пробела, что
-"нет Mac для iOS". Без него `registerForPushNotifications()` детерминированно уходит по
-ветке "нет projectId" и ничего не отправляет — код рабочий и протестирован юнит-тестами,
-но **живая проверка на эмуляторе (свернуть → прислать сообщение → увидеть системный
-пуш) не проводилась и не могла быть проведена** в этой сессии. Следующий шаг: завести
-привязку EAS-проекта (например `eas init` с Personal Access Token в `apps/mobile/.env`
-как `EXPO_TOKEN`, не пастить токен в чат) + Firebase-проект для FCM, затем повторить
-живой прогон.
+Блокер из первой версии этого раздела («нет Expo/EAS-проекта») закрыт в отдельной сессии
+(2026-08-23, вручную через веб-панель expo.dev с Даней): создан EAS-проект
+`@pruffit/vire-mobile` (`projectId f538ec6c-0032-4ce5-b661-dae649001774`, прописан в
+`apps/mobile/app.json` → `extra.eas.projectId` + `owner: "pruffit"`), загружен Android
+upload keystore (`vire-upload-keystore.jks`, alias `vire-upload` — не в git) и FCM V1
+service account key (загружен через дашборд expo.dev, JSON-файл `*-firebase-adminsdk-*.json`
+локальный, не в git). `google-services.json` — на месте, прописан в `app.json` →
+`android.googleServicesFile`. Все секретные файлы — под паттернами в
+`apps/mobile/.gitignore` (`google-services.json`, `*-firebase-adminsdk-*.json`,
+`*.password.txt`).
+
+**Живая проверка пройдена целиком** — свернуть приложение → прислать сообщение с другого
+аккаунта → получить настоящий системный пуш через Google Play Services эмулятора. Детали
+и находки по ходу — секция «Живая проверка на эмуляторе» ниже.
 
 ### Тесты и гейты
 
@@ -1908,11 +1909,92 @@ check:contracts/check:caller ✓, test ✓ (2026 тестов, включая н
 `push.test.ts` — нет projectId/нет разрешения/бросок `getExpoPushTokenAsync`/успешный
 путь). `pnpm turbo run check:layers` ✓.
 
+### Живая проверка на эмуляторе
+
+Проведена в отдельной сессии (2026-08-23) после привязки EAS/FCM. `app.json` изменился
+материально (`googleServicesFile`, `extra.eas.projectId`) — понадобился чистый ребилд:
+`npx expo prebuild --platform android --clean` + `npx expo run:android` на
+`VireMusic_Test` (эмулятор `android-36`, тег `google_apis` — Google Play Services есть,
+Play Store-приложения нет; `PlayStore.enabled = no` в `config.ini`, для FCM это не
+помеха, Play Store и Play Services — разные компоненты). Prebuild подтвердил
+`google-services.json` скопирован в `android/app/`, `com.google.gms:google-services`
+подключён в `android/build.gradle`, плагин применён в `android/app/build.gradle`.
+Сборка (`BUILD SUCCESSFUL in 10m 26s`) и установка прошли без ошибок.
+
+- **Находка по ходу: локальная база отстала от git на одну миграцию.**
+  `apps/worker` падал на старте (`DATABASE_URL is not set`, затем `AUTH_SECRET`
+  не задан) — у `apps/worker` не было своего `.env` (штатный `dotenv/config` в
+  `src/index.ts` читает `.env` из cwd пакета, не из корня монорепо); создан локальный
+  `apps/worker/.env` (не в git, по прецеденту `apps/web/.env.local`) с теми же
+  `127.0.0.1`-адресами. После этого воркер поднялся, но `notify-external` валился на
+  каждой job: `select "token" from "expo_push_tokens"` — **таблицы не было**, хотя
+  миграция `0057_dapper_vapor.sql` (инкремент 17) в git уже есть. Причина —
+  `drizzle.__drizzle_migrations` пуст (0 строк) на локальной базе, при этом схема
+  фактически на уровне 0056 (`devices`/`audit_log`/`feature_flags`/`storage_orphans`
+  существуют, `expo_push_tokens` — нет): журнал разъехался со схемой, не тот случай,
+  что описан в предупреждении CLAUDE.md про enum в одной транзакции (`db:migrate:fresh`
+  на разъехавшемся, не пустом журнале падает на `type "role" already exists`, пытаясь
+  переиграть 0000 с нуля). Исправлено разовым скриптом (не закоммичен): бэкфилл 57 строк
+  журнала для 0000–0056 (хеш файла + `when` из `meta/_journal.json`, БЕЗ повторного
+  выполнения их SQL — объекты уже существуют), затем штатный `drizzle-kit migrate`
+  накатил ровно 0057. После этого `\d expo_push_tokens` в психке подтвердил таблицу.
+- **Находка по ходу: три параллельных инстанса воркера.** Три последовательных фоновых
+  запуска `pnpm --filter @vire/worker dev` (первые два упали на переменных окружения
+  выше, но `tsx watch` не завершает процесc при необработанной ошибке верхнего уровня —
+  остаётся висеть в режиме ожидания) оставили три живых `tsx watch`-рантайма
+  одновременно, все слушающие одну и ту же BullMQ-очередь. Обнаружено по повторяющимся
+  логам одних и тех же `jobId` — исправлено `taskkill /T /F` по всем трём деревьям
+  процессов и повторным чистым запуском одного инстанса.
+- **Регистрация токена подтверждена фактом.** После выдачи разрешения на уведомления
+  (Android 16/API 36 требует рантайм-permission `POST_NOTIFICATIONS`; выдано
+  `adb shell pm grant … POST_NOTIFICATIONS`, `dumpsys package` подтвердил
+  `granted=true`) лог dev-сервера показал `POST /api/v1/mobile/push-token 200`. Прямой
+  запрос к Postgres: `expo_push_tokens` получила строку
+  `token=ExponentPushToken[JyY1M5NnRgtldooutMD0lV]`, `platform=android`,
+  `email=mobiletest@vire.local` — реальный токен от реального `getExpoPushTokenAsync()`
+  с валидным `projectId`, не веткой деградации.
+- **Находка окружения: SystemUI на эмуляторе ловил повторяющийся ANR** сразу после
+  тяжёлой Gradle/CMake-сборки (native-компиляция грузила тот же хост-CPU, что и
+  виртуализация эмулятора) — диалог «System UI isn't responding» переоткрывался заново
+  после каждого «Wait» несколько раз подряд (logcat подтверждает `Slow dispatch`/
+  `Slow delivery … NotifInflation` на 100–1900мс в это окно). «Wait» не помогал,
+  **«Close app» (форс-рестарт процесса SystemUI) вылечил** — штатное восстановление
+  Android, не баг проекта, но стоит закладывать время на это в следующих сессиях с
+  тяжёлым нативным ребилдом непосредственно перед проверкой уведомлений.
+- **Сценарий пуша — пройден целиком.** Сессия `mobiletest@vire.local` на устройстве,
+  переписка с `rntp-friend2@viremusic.local` из инкрементов 14–16. Приложение свёрнуто
+  (`adb shell input keyevent KEYCODE_HOME`, подтверждено `topResumedActivity` = launcher).
+  Встречная сторона — одноразовый Node-скрипт (`tweetnacl`+`blakejs`, та же математика,
+  что и раньше; не закоммичен): логин `rntp-friend2` через настоящий Auth.js
+  credentials-флоу (`/api/auth/csrf` → `/api/auth/callback/credentials` → cookie jar),
+  публикация свежего identity-ключа (`POST /api/v1/keys`, upsert — старый ключ инкремента
+  13 в базе не мешает), деривация CK против реального `ikPub` `mobiletest`
+  (не менялся с инкремента 13), шифрование `crypto_secretbox`, `POST
+  /api/v1/chat/messages` → `200`. Redis-ключ `presence:user:{id}` (TTL 40с, живёт только
+  пока держится SSE-хартбит) на момент отправки отсутствовал — переписка была свёрнута
+  на несколько минут, `isUserOnline` корректно вернул `false` без дополнительных
+  ухищрений. Лог воркера: `[notify-external] ✓ job=9 kind=CHAT_MESSAGE` — без ошибки, в
+  отличие от прогонов до фикса миграции. `adb logcat` того же окна: `FirebaseMessaging`
+  (процесс `com.anonymous.viremobile`) обработал входящее сообщение через ~0.3с после
+  ответа API, следом `NotificationListener: received notification posted event -
+  com.anonymous.viremobile`. **Главное доказательство** — скриншот развёрнутой шторки
+  уведомлений (`adb shell cmd statusbar expand-notifications`):
+  карточка «VireMusic · 1m / Новое сообщение / Новое сообщение от Friend Two Mobile» —
+  настоящий системный пуш, доставленный Expo Push API → FCM → Google Play Services
+  эмулятора, приложение всё это время было в фоне. `adb logcat -d | grep "FATAL
+  EXCEPTION"` по всему буферу сессии — пусто.
+- Тело пуша — общий переведённый текст (`push.chatMessage.body`), не расшифрованное
+  содержимое: сервер физически не видит plaintext (E2EE), поэтому корректность
+  собственно шифровки в этом конкретном прогоне не проверялась заново — это уже
+  доказано инкрементами 13–16, и не могло повлиять на результат этой проверки при любом
+  исходе.
+
 ### Осознанно не в этом инкременте
 
-Живая проверка на эмуляторе (блокер выше). Опрос `/getReceipts` Expo API для полной
-пруны протухших токенов. Отдельная настройка "пуш на телефон" вместо телефона отдельно
-от браузера. Deep-link по тапу на конкретный чат/экран. Каскад пруны `expo_push_tokens`
-при массовом отзыве всех устройств (`DeviceAuthService.refresh()` → `revokeAllForUser`
-при обнаружении компрометации refresh-токена) — закрыт только явный отзыв одного
-устройства и logout, не сценарий "утечка токена".
+Опрос `/getReceipts` Expo API для полной пруны протухших токенов. Отдельная настройка
+"пуш на телефон" вместо телефона отдельно от браузера. Deep-link по тапу на конкретный
+чат/экран. Каскад пруны `expo_push_tokens` при массовом отзыве всех устройств
+(`DeviceAuthService.refresh()` → `revokeAllForUser` при обнаружении компрометации
+refresh-токена) — закрыт только явный отзыв одного устройства и logout, не сценарий
+"утечка токена". Реальное физическое Android-устройство (только эмулятор) и лок-скрин
+с включённым PIN — не проверялись.

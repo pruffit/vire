@@ -33,6 +33,11 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Firebase — секреты, не для git (см. docs/features/mobile-app.md, инкремент 17)
+google-services.json
+*-firebase-adminsdk-*.json
+*.password.txt
+
 # typescript
 *.tsbuildinfo
 
