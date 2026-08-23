@@ -10,8 +10,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import type { FriendDTO, FriendSearchHitDTO, IncomingRequestDTO } from '@vire/api-contracts';
+import type { ProfileStackParamList } from '../navigation/profile-stack';
 import { fetchFriends, searchUsers } from '../lib/friends';
 import { FriendButton } from '../components/friend-button';
 import { Screen } from '../components/screen';
@@ -24,6 +27,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 type LoadState = 'loading' | 'error' | 'ready';
 
 export default function FriendsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'Friends'>>();
   const [friends, setFriends] = useState<FriendDTO[]>([]);
   const [incoming, setIncoming] = useState<IncomingRequestDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
@@ -126,7 +130,7 @@ export default function FriendsScreen() {
                 <Text style={styles.emptyText}>Никого не нашли</Text>
               ) : (
                 results.map((hit) => (
-                  <PersonRow key={hit.id} name={hit.name} image={hit.image}>
+                  <PersonRow key={hit.id} name={hit.name} image={hit.image} onPress={() => navigation.navigate('UserProfile', { userId: hit.id })}>
                     <FriendButton userId={hit.id} initialStatus={hit.status} />
                   </PersonRow>
                 ))
@@ -137,7 +141,7 @@ export default function FriendsScreen() {
           {incoming.length > 0 && (
             <Section title={`Заявки в друзья (${incoming.length})`}>
               {incoming.map((r) => (
-                <PersonRow key={r.id} name={r.name} image={r.image}>
+                <PersonRow key={r.id} name={r.name} image={r.image} onPress={() => navigation.navigate('UserProfile', { userId: r.id })}>
                   <FriendButton userId={r.id} initialStatus="INCOMING" />
                 </PersonRow>
               ))}
@@ -149,7 +153,7 @@ export default function FriendsScreen() {
               <Text style={styles.emptyText}>Пока никого нет</Text>
             ) : (
               friends.map((f) => (
-                <PersonRow key={f.id} name={f.name} image={f.image}>
+                <PersonRow key={f.id} name={f.name} image={f.image} onPress={() => navigation.navigate('UserProfile', { userId: f.id })}>
                   <FriendButton userId={f.id} initialStatus="FRIENDS" />
                 </PersonRow>
               ))
@@ -170,9 +174,19 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function PersonRow({ name, image, children }: { name: string | null; image: string | null; children: React.ReactNode }) {
+function PersonRow({
+  name,
+  image,
+  onPress,
+  children,
+}: {
+  name: string | null;
+  image: string | null;
+  onPress: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <View style={styles.row}>
+    <Pressable style={styles.row} onPress={onPress}>
       {image ? (
         <Image source={{ uri: image }} style={styles.avatar} />
       ) : (
@@ -184,7 +198,7 @@ function PersonRow({ name, image, children }: { name: string | null; image: stri
         {name ?? 'Слушатель'}
       </Text>
       {children}
-    </View>
+    </Pressable>
   );
 }
 

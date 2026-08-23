@@ -9,7 +9,10 @@ import {
   sendFriendRequest,
   acceptFriendRequest,
   removeFriendEdge,
+  fetchUserProfile,
+  likedTracksToQueue,
 } from '../friends';
+import type { LikedTrackDTO } from '@vire/api-contracts';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -85,5 +88,59 @@ describe('removeFriendEdge', () => {
       '/api/v1/friends/u1',
       expect.objectContaining({ method: 'DELETE' }),
     );
+  });
+});
+
+describe('fetchUserProfile', () => {
+  it('GET /api/v1/users/{userId}/profile с нужной схемой', async () => {
+    request.mockResolvedValue({ ok: true, data: { id: 'u1' } });
+
+    await fetchUserProfile('u1');
+
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/users/u1/profile',
+      expect.objectContaining({ schema: expect.anything() }),
+    );
+  });
+
+  it('экранирует userId', async () => {
+    request.mockResolvedValue({ ok: true, data: {} });
+
+    await fetchUserProfile('a b/c');
+
+    expect(request).toHaveBeenCalledWith(
+      `/api/v1/users/${encodeURIComponent('a b/c')}/profile`,
+      expect.anything(),
+    );
+  });
+});
+
+describe('likedTracksToQueue', () => {
+  const track: LikedTrackDTO = {
+    id: 't1',
+    title: 'Track',
+    version: null,
+    durationSec: 180,
+    releaseId: 'r1',
+    releaseCoverUrl: 'https://cdn.viremusic.ru/cover.jpg',
+    artistName: 'Artist',
+    artistSlug: 'artist',
+    isExplicit: false,
+    likedAt: '2026-08-20T10:00:00.000Z',
+    feat: [],
+  };
+
+  it('маппит id/title/artistName/durationSec напрямую, coverUrl — из releaseCoverUrl', () => {
+    expect(likedTracksToQueue([track])).toEqual([
+      { id: 't1', title: 'Track', artistName: 'Artist', coverUrl: 'https://cdn.viremusic.ru/cover.jpg', durationSec: 180 },
+    ]);
+  });
+
+  it('releaseCoverUrl=null — coverUrl тоже null', () => {
+    expect(likedTracksToQueue([{ ...track, releaseCoverUrl: null }])[0].coverUrl).toBeNull();
+  });
+
+  it('пустой список — пустая очередь', () => {
+    expect(likedTracksToQueue([])).toEqual([]);
   });
 });
