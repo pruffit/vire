@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { decodeAccessTokenUserId } from './access-token';
 
 const KEYS = {
   accessToken: 'vire_access_token',
@@ -60,4 +61,9 @@ export async function hasStoredSession(): Promise<boolean> {
     getStored('refreshToken'),
   ]);
   return Boolean(accessToken || refreshToken);
+}
+
+export async function getCurrentUserId(): Promise<string | null> {
+  const accessToken = await getStored('accessToken');
+  return accessToken ? decodeAccessTokenUserId(accessToken) : null;
 }

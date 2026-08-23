@@ -1,3 +1,7 @@
+// Полифилл crypto.getRandomValues (Hermes не даёт его нативно) — первый импорт, до любого
+// кода, который трогает крипту (tweetnacl/blakejs, см. lib/e2ee/sodium-compat.ts).
+import 'react-native-get-random-values';
+
 import { registerRootComponent } from 'expo';
 import TrackPlayer from 'react-native-track-player';
 

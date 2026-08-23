@@ -1363,3 +1363,139 @@ Docker/IPv6, см. выше). Прямое следствие: кнопка ск
 - `apps/mobile/lib/icon.tsx` — иконка `download`.
 - `apps/mobile/package.json` — `expo-file-system` (`~57.0.5`), `@vire/media`
   (`workspace:*`).
+
+## Инкремент 13: E2EE-совместимость и identity bootstrap (первый срез чата)
+
+Первый срез переноса чата (`docs/features/chat.md`) на мобилку, намеренно урезан до
+единственной вещи, которую нельзя проверить «на глаз»: криптографии. **UI сообщений,
+список диалогов, экран треда, композер и SSE-клиент в этом инкременте НЕ строились** —
+следующий инкремент, после того как этот фундамент подтверждён. Веб использует
+`libsodium-wrappers` (WASM); нативный `react-native-libsodium` расценён как риск, сравнимый
+с сагой RNTP инкремента 5 — вместо него **`tweetnacl`** (чистый JS, реализует те же
+примитивы NaCl, что оборачивает libsodium — X25519 и XSalsa20-Poly1305/secretbox) +
+**`blakejs`** (keyed BLAKE2b для `crypto_generichash`, чего в tweetnacl нет) +
+**`react-native-get-random-values`** (полифилл `crypto.getRandomValues`, единственная из
+трёх зависимостей с нативной прослойкой — de facto стандарт RN-экосистемы).
+
+### Phase 1 — доказательство побитового совпадения с libsodium (пройдено)
+
+**Результат: byte-for-byte совпадение подтверждено.** Не «похоже работает» — реальные
+hex-векторы совпали значение-в-значение с выводом настоящего `libsodium-wrappers`.
+
+Метод: одноразовый (не закоммиченный, удалён после прогона) Node-скрипт в `apps/web`
+использовал уже установленный `libsodium-wrappers` с **фиксированными**, не случайными
+32-байтными скалярами (`privA = [1..32]`, `privB = [32..1]`) и фиксированным нонсом
+(`[1..24]`) — вызывал `crypto_scalarmult_base`/`crypto_scalarmult`/`crypto_generichash`
+(с тем же `CK_KEY`/порядком конкатенации, что и `apps/web/lib/e2ee/conversation.ts`'s
+`deriveCK`) и `crypto_secretbox_easy` напрямую (в обход `encryptMessage`'s
+авто-случайного нонса — нужен был предсказуемый шифротекст). Полученный вектор
+(`pubA`/`pubB`/`ck`/`nonce`/`ciphertext` в hex и base64, plaintext `привет`) захардкожен
+в `apps/mobile/lib/e2ee/__tests__/sodium-compat.test.ts`.
+
+`apps/mobile/lib/e2ee/sodium-compat.ts` реализует `deriveCK`/`encryptMessage`/
+`decryptMessage` (то же API, что веб's `{sodium,conversation}.ts`) на tweetnacl (`nacl.
+scalarMult`/`nacl.scalarMult.base` вместо `crypto_scalarmult`/`_base`, `nacl.secretbox`/
+`.open` вместо `crypto_secretbox_easy`/`_open_easy`) и blakejs (`blake2b(input, key,
+outlen)` вместо `crypto_generichash(outlen, input, key)` — порядок аргументов другой,
+семантика та же) — тот же `CK_KEY` (`'vire-chat-ck-v1\0'`, 16 байт), тот же порядок
+`low`/`high` по сравнению байтов, тот же `concat(shared, low, high)`. Тест против
+вектора: `deriveCK` с обеих сторон даёт ровно `ck` из вектора; `decryptMessage` на
+записанных `ciphertext`+`nonce` восстанавливает `привет` дословно; отдельно проверен
+кодек base64 (собственная реализация — `sodium.base64_variants.ORIGINAL`, стандартный
+алфавит с паддингом, Hermes не даёт `Buffer`/`btoa` гарантированно) против known-vectors
+RFC 4648 §10. Веб не тронут — `pnpm --filter @vire/web test -- e2ee` (реально прогоняет
+весь набор, 2014 тестов, `apps/web`'s `test` script не фильтрует по имени через `--`)
+зелёный без изменений.
+
+### Phase 2 — identity bootstrap
+
+- **`apps/mobile/lib/e2ee/identity.ts`** — `getIdentity`/`getOrCreateIdentity`/
+  `clearIdentity`/`getIdentityPubB64`, зеркалит `apps/web/lib/e2ee/identity.ts` по форме.
+  Хранилище — `expo-secure-store` (уже используется для токенов с инкремента 1), не
+  IndexedDB (в RN её нет). Скоуп по userId — тот же принцип, что у веба
+  (`identity:{userId}` в IndexedDB), но **не тот же буквальный ключ**: `expo-secure-store`
+  требует `/^[\w.-]+$/` (двоеточие запрещено) — ключ `vire_identity_{userId}`. Пара
+  `pub`/`priv` пакуется в одну строку `pubB64.privB64` (SecureStore хранит только строки).
+  Генерация — `nacl.box.keyPair()` (байт-совместим с `sodium.crypto_box_keypair()` — то же
+  X25519). **Однодевайсно в этом инкременте** — `importIdentity`/`resetIdentity` и весь
+  протокол привязки устройства (`linking.ts`, SAS-обмен) осознанно не перенесены,
+  отложены на будущий инкремент.
+- **Откуда берётся userId.** У мобилки нигде не было текущего userId — `secure-store.ts`
+  хранит только `accessToken`/`refreshToken`/`deviceId`. Access-токен устройства
+  (`packages/core/src/platform/identity/device-tokens.ts`, `signAccessToken`) — не JWT
+  (нет header-сегмента), но по форме близко: `base64url(JSON{sub,role,did,iat,exp}).
+  base64url(hmac)`. Новый `apps/mobile/lib/access-token.ts` (`decodeAccessTokenUserId`)
+  читает `sub` из тела клиентски, без проверки подписи — секрет серверный, клиенту
+  нечем проверять, да и незачем: он уже доверяет токену, который сам получил от сервера
+  по TLS (тот же периметр доверия, что при отправке его же Bearer'ом). `secure-store.ts`
+  получил `getCurrentUserId()` поверх этого. Отсюда же родился `apps/mobile/lib/codec.ts` —
+  base64/UTF-8 кодек, вынесенный из `sodium-compat.ts` в отдельный модуль, потому что
+  `access-token.ts` тоже в нём нуждается (декодирует base64url-тело), а тянуть e2ee-модуль
+  ради кодека из авторизационного кода — не тот слой.
+- **`apps/mobile/lib/e2ee/publish-key.ts`** — `publishIdentityKey(ikPub)`, POST
+  `/api/v1/keys` (контракт прочитан из `apps/web/app/api/v1/keys/route.ts`: `{ ikPub }` →
+  `{ ok: true }`, тело регексом `^[A-Za-z0-9+/]{43}=$` — то же самое, что даёт base64 32
+  байт с паддингом). Схема ответа — `okResponseSchema` из `@vire/api-contracts` (роут
+  `keys/**` намеренно вне `check:contracts` — «E2EE-протокол, не JSON REST контракт», см.
+  `apps/web/scripts/check-contracts.mjs` — поэтому под POST-тело зодовской схемы в
+  контрактах нет, `zod` добавлен в `apps/mobile` напрямую для лёгкого локального объекта
+  запроса). Идемпотентно — дедуп по значению ключа в module-level `Set` (мирроринг
+  `publishPub` в `apps/web/lib/e2ee-client.ts`), неудача не кешируется.
+- **`apps/mobile/lib/e2ee/bootstrap.ts`** (`bootstrapE2eeIdentity`) — склеивает три шага:
+  `getCurrentUserId()` → (нет — выходим тихо, юзер не залогинен) → `getOrCreateIdentity`
+  → `publishIdentityKey(toB64(pub))`; целиком в `try/catch` — сбой не должен ронять
+  запуск приложения, следующий холодный старт повторит. Вызывается из `App.tsx` (`useEffect`
+  на монтировании, mirroring веб's `E2eeBootstrap` — публикует при каждом заходе
+  залогиненного юзера, не только при явном открытии чата). `index.ts` получил
+  `import 'react-native-get-random-values'` самой первой строкой — до `registerRootComponent`,
+  до любого кода, трогающего крипту (тот же паттерн, что `TrackPlayer.registerPlaybackService`
+  чуть ниже — «сделать один раз до рендера `App`»).
+
+### Тесты и гейты
+
+- `apps/mobile`: +30 тестов (162 всего, было 132) — `sodium-compat.test.ts` (8: два
+  cross-platform теста против вектора из Phase 1 — сердце инкремента, + кодек-проверка,
+  + round-trip на собственных ключах, + отказ на неверном ключе/шифротексте),
+  `identity.test.ts` (7: генерация/персист/idempotent-повтор/скоуп по userId/`clearIdentity`
+  только для своего юзера/формат pubB64/SecureStore-ключ без двоеточия), `publish-key.test.ts`
+  (4: успех/идемпотентность/неудача не кешируется/разные ключи публикуются независимо),
+  `bootstrap.test.ts` (3: нет юзера → тишина, есть юзер → генерация+паблиш, сбой зависимости
+  не бросает), `codec.test.ts` (3: round-trip произвольных байт, RFC 4648 §10 vectors,
+  UTF-8 round-trip с кириллицей), `access-token.test.ts` (5: извлечение `sub`, паддинг
+  base64url без родного padding, malformed без точки, невалидный base64/JSON, отсутствующий/
+  нестроковый `sub`). `pnpm --filter @vire/mobile typecheck`/`test` — зелёные.
+- `pnpm --filter @vire/web test -- e2ee` — зелёный (полный прогон, `apps/web` не тронут).
+
+### Живая проверка на эмуляторе
+
+Native-зависимость (`react-native-get-random-values`) потребовала чистый ребилд:
+`npx expo prebuild --platform android --clean` + `npx expo run:android` на
+`VireMusic_Test` (Docker-инфра и веб-дев-сервер были уже подняты, `adb reverse
+tcp:3000 tcp:3000`/`tcp:9000` уже стояли с прошлой сессии).
+
+- **Приложение стартует без краша на реальном Hermes.** Установлено, автозапущено
+  (`topResumedActivity=…MainActivity`), SDUI-главная отрисовалась с реальными данными
+  («Сигналы», «В топе»). `adb logcat -d | grep "FATAL EXCEPTION"` по всему буферу — пусто
+  (единственные найденные ошибки — `ExoPlayer FileNotFoundException` на офлайн-сегменте и
+  `WindowManager`-предупреждения из **предыдущих**, не связанных с этим инкрементом
+  сессий/таймстампов, не из текущего запуска).
+- **Ключ реально опубликован в базу.** У приложения уже была сохранённая сессия
+  (`mobiletest@vire.local`, secure-store пережил ребилд) — `bootstrapE2eeIdentity()`
+  отработал на холодном старте без единого тапа. Прямой запрос к БД:
+  `user_identity_keys` получила свежую строку для этого `user_id`
+  (`created_at = updated_at`, таймстамп секунда-в-секунду с моментом запуска) —
+  `ik_pub = EbOz6c3u/h0EA+lGSYkRSNERpfuKzBfO2wT/P+IqDB8=`, ровно формат `^[A-Za-z0-9+/]
+  {43}=$` из роута. Это реальный `nacl.box.keyPair()`, сгенерированный на устройстве
+  Hermes-рантаймом (не в Vitest/Node) через полифилл `react-native-get-random-values`,
+  и реально доставленный на сервер `POST /api/v1/keys` — весь путь Phase 1+Phase 2
+  подтверждён фактом, не только тестами.
+- Отдельный вход (`mobile-auth-bridge` → форма) не понадобился — сохранённая с прошлой
+  сессии сессия уже была залогинена под тестового юзера, что для цели проверки
+  («работает ли бутстрап для залогиненного юзера») эквивалентно свежему логину.
+
+### Осознанно не в этом инкременте
+
+Никакого UI сообщений: список диалогов, экран треда, композер, SSE-клиент, индикатор
+«печатает», статус «прочитано» — всё это `docs/features/chat.md`'s функциональность,
+которую следующий инкремент строит поверх уже доказанного здесь фундамента. Мультидевайс
+(привязка нового устройства по SAS-коду, `resetIdentity`) — тоже отложены, однодевайсно.
