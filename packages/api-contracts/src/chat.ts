@@ -67,3 +67,6 @@ export type OpenChatResponse = z.infer<typeof openChatResponseSchema>;
 
 export const chatUnreadCountResponseSchema = z.object({ count: z.number() });
 export type ChatUnreadCountResponse = z.infer<typeof chatUnreadCountResponseSchema>;
+
+export const getKeyResponseSchema = z.object({ ikPub: z.string().nullable() });
+export type GetKeyResponse = z.infer<typeof getKeyResponseSchema>;

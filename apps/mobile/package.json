@@ -36,6 +36,7 @@
     "react-native-get-random-values": "~1.11.0",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.2",
+    "react-native-sse": "^1.2.1",
     "react-native-svg": "15.15.4",
     "react-native-track-player": "^4.1.2",
     "react-native-web": "^0.21.2",

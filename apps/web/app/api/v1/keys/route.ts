@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCaller } from '@/lib/caller';
 import { upsertIdentityKey, getIdentityKey } from '@vire/db';
+import type { GetKeyResponse } from '@vire/api-contracts';
 
 const postSchema = z.object({ ikPub: z.string().regex(/^[A-Za-z0-9+/]{43}=$/) });
 const getSchema = z.object({ userId: z.string().uuid() });
@@ -25,5 +26,5 @@ export async function GET(req: Request) {
   const parsed = getSchema.safeParse({ userId: new URL(req.url).searchParams.get('userId') });
   if (!parsed.success) return NextResponse.json({ error: 'Invalid userId' }, { status: 400 });
 
-  return NextResponse.json({ ikPub: await getIdentityKey(parsed.data.userId) });
+  return NextResponse.json({ ikPub: await getIdentityKey(parsed.data.userId) } satisfies GetKeyResponse);
 }

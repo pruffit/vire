@@ -9,11 +9,13 @@ import {
   Text,
   View,
 } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import type { UserProfileResponse } from '@vire/api-contracts';
 import type { ProfileStackParamList } from '../navigation/profile-stack';
 import { fetchUserProfile, likedTracksToQueue, blockUser, unblockUser } from '../lib/friends';
+import { openConversation } from '../lib/chat';
 import { usePlayerStore } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
 import { Screen } from '../components/screen';
@@ -27,10 +29,12 @@ type PlaylistSummary = UserProfileResponse['playlists'][number];
 
 export default function UserProfileScreen({ route }: NativeStackScreenProps<ProfileStackParamList, 'UserProfile'>) {
   const { userId } = route.params;
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'UserProfile'>>();
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const [blockPending, setBlockPending] = useState(false);
+  const [messagePending, setMessagePending] = useState(false);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const currentTrackId = usePlayerStore((s) => s.queue[s.queueIndex]?.id ?? null);
 
@@ -78,6 +82,20 @@ export default function UserProfileScreen({ route }: NativeStackScreenProps<Prof
     setBlockPending(false);
   }, [userId, load]);
 
+  const doMessage = useCallback(async () => {
+    if (!profile) return;
+    setMessagePending(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const result = await openConversation(profile.id);
+    setMessagePending(false);
+    if (!result.ok) return;
+    navigation.navigate('ChatThread', {
+      conversationId: result.data.conversationId,
+      otherUserId: profile.id,
+      otherUserName: profile.name,
+    });
+  }, [profile, navigation]);
+
   return (
     <Screen>
       {state === 'loading' && (
@@ -124,6 +142,11 @@ export default function UserProfileScreen({ route }: NativeStackScreenProps<Prof
             {!profile.blocked && (
               <>
                 <FriendButton userId={profile.id} initialStatus={profile.status} />
+                {profile.status === 'FRIENDS' && (
+                  <Pressable style={styles.messageButton} disabled={messagePending} onPress={doMessage}>
+                    <Text style={styles.messageButtonText}>Написать</Text>
+                  </Pressable>
+                )}
                 <Pressable style={styles.blockLink} disabled={blockPending} onPress={doBlock} hitSlop={8}>
                   <Text style={styles.blockLinkText}>Заблокировать</Text>
                 </Pressable>
@@ -238,6 +261,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
   },
   unblockText: { color: colors.foreground, fontSize: 13, fontWeight: '700' },
+  messageButton: {
+    minHeight: 40,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    backgroundColor: colors.secondary,
+  },
+  messageButtonText: { color: colors.foreground, fontSize: 13, fontWeight: '700' },
   blockLink: { marginTop: 4, paddingVertical: 4, paddingHorizontal: 8 },
   blockLinkText: { color: colors.mutedForeground, fontSize: 12 },
   section: { gap: 8 },

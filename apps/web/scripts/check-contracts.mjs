@@ -22,7 +22,7 @@ const ALLOWLIST = [
   { pattern: 'admin/**', reason: 'backoffice, единственный потребитель — веб (api-contracts.md §7)' },
   { pattern: 'dashboard/**', reason: 'мультипарт + ручная валидация входа, отдельный подпроект' },
   { pattern: 'jam/**', reason: 'union-типы + SSE, отдельный подпроект' },
-  { pattern: 'keys/**', reason: 'E2EE-протокол, не JSON REST контракт' },
+  { pattern: 'keys/link/**', reason: 'E2EE-протокол привязки устройства, не JSON REST контракт' },
   { pattern: 'webhooks/**', reason: 'форму задаёт провайдер (YooKassa), не мы' },
   { pattern: 'health/route.ts', reason: 'служебный пинг, не ресурс' },
   { pattern: '**/stream/route.ts', reason: 'SSE-поток, не запрос-ответ' },
