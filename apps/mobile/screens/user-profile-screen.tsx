@@ -13,11 +13,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import type { UserProfileResponse } from '@vire/api-contracts';
 import type { ProfileStackParamList } from '../navigation/profile-stack';
-import { fetchUserProfile, likedTracksToQueue } from '../lib/friends';
+import { fetchUserProfile, likedTracksToQueue, blockUser, unblockUser } from '../lib/friends';
 import { usePlayerStore } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
 import { Screen } from '../components/screen';
 import { FriendButton } from '../components/friend-button';
+import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 
 type LoadState = 'loading' | 'error' | 'ready';
@@ -29,6 +30,7 @@ export default function UserProfileScreen({ route }: NativeStackScreenProps<Prof
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
+  const [blockPending, setBlockPending] = useState(false);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const currentTrackId = usePlayerStore((s) => s.queue[s.queueIndex]?.id ?? null);
 
@@ -59,6 +61,22 @@ export default function UserProfileScreen({ route }: NativeStackScreenProps<Prof
     if (!profile) return;
     playQueue(likedTracksToQueue(profile.likes), index);
   };
+
+  const doBlock = useCallback(async () => {
+    setBlockPending(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const result = await blockUser(userId);
+    if (result.ok) await load();
+    setBlockPending(false);
+  }, [userId, load]);
+
+  const doUnblock = useCallback(async () => {
+    setBlockPending(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const result = await unblockUser(userId);
+    if (result.ok) await load();
+    setBlockPending(false);
+  }, [userId, load]);
 
   return (
     <Screen>
@@ -94,10 +112,22 @@ export default function UserProfileScreen({ route }: NativeStackScreenProps<Prof
               {profile.name ?? 'Слушатель'}
             </Text>
 
-            {profile.blocked ? (
-              <Text style={styles.blockedText}>Действия недоступны</Text>
-            ) : (
-              <FriendButton userId={profile.id} initialStatus={profile.status} />
+            {profile.blocked && profile.iBlockedThem && (
+              <Pressable style={styles.unblockButton} disabled={blockPending} onPress={doUnblock}>
+                <Icon name="user-x" size={14} color={colors.foreground} />
+                <Text style={styles.unblockText}>Разблокировать</Text>
+              </Pressable>
+            )}
+
+            {profile.blocked && !profile.iBlockedThem && <Text style={styles.blockedText}>Действия недоступны</Text>}
+
+            {!profile.blocked && (
+              <>
+                <FriendButton userId={profile.id} initialStatus={profile.status} />
+                <Pressable style={styles.blockLink} disabled={blockPending} onPress={doBlock} hitSlop={8}>
+                  <Text style={styles.blockLinkText}>Заблокировать</Text>
+                </Pressable>
+              </>
             )}
           </View>
 
@@ -198,6 +228,18 @@ const styles = StyleSheet.create({
   avatarInitial: { color: colors.mutedForeground, fontSize: 24, fontWeight: '700' },
   name: { color: colors.foreground, fontSize: 20, fontWeight: '800' },
   blockedText: { color: colors.mutedForeground, fontSize: 13, marginTop: 4 },
+  unblockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: radius.md,
+    backgroundColor: colors.secondary,
+  },
+  unblockText: { color: colors.foreground, fontSize: 13, fontWeight: '700' },
+  blockLink: { marginTop: 4, paddingVertical: 4, paddingHorizontal: 8 },
+  blockLinkText: { color: colors.mutedForeground, fontSize: 12 },
   section: { gap: 8 },
   sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
   sectionBody: { gap: 2 },

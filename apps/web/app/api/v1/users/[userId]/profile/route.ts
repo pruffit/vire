@@ -21,6 +21,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     image: profile.image,
     status: profile.status,
     blocked: profile.blocked,
+    iBlockedThem: profile.iBlockedThem,
     likesVisible: profile.likesVisible,
     likes: profile.likes.map((t) => ({
       id: t.id,

@@ -47,6 +47,14 @@ export function fetchUserProfile(userId: string): Promise<ApiResult<UserProfileR
   return apiRequest(`/api/v1/users/${seg(userId)}/profile`, { schema: userProfileResponseSchema });
 }
 
+export function blockUser(userId: string): Promise<ApiResult<OkResponse>> {
+  return apiRequest(`/api/v1/users/${seg(userId)}/block`, { method: 'POST', schema: okResponseSchema });
+}
+
+export function unblockUser(userId: string): Promise<ApiResult<OkResponse>> {
+  return apiRequest(`/api/v1/users/${seg(userId)}/block`, { method: 'DELETE', schema: okResponseSchema });
+}
+
 // coverUrl берётся из releaseCoverUrl трека — releases.coverUrl, не с самого плейлиста/лайка.
 export function likedTracksToQueue(tracks: LikedTrackDTO[]): QueueTrack[] {
   return tracks.map((t) => ({

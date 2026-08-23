@@ -11,6 +11,8 @@ import {
   removeFriendEdge,
   fetchUserProfile,
   likedTracksToQueue,
+  blockUser,
+  unblockUser,
 } from '../friends';
 import type { LikedTrackDTO } from '@vire/api-contracts';
 
@@ -111,6 +113,43 @@ describe('fetchUserProfile', () => {
     expect(request).toHaveBeenCalledWith(
       `/api/v1/users/${encodeURIComponent('a b/c')}/profile`,
       expect.anything(),
+    );
+  });
+});
+
+describe('blockUser', () => {
+  it('POST /api/v1/users/{userId}/block', async () => {
+    request.mockResolvedValue({ ok: true, data: { ok: true } });
+
+    await blockUser('u1');
+
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/users/u1/block',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('экранирует userId', async () => {
+    request.mockResolvedValue({ ok: true, data: { ok: true } });
+
+    await blockUser('a b/c');
+
+    expect(request).toHaveBeenCalledWith(
+      `/api/v1/users/${encodeURIComponent('a b/c')}/block`,
+      expect.anything(),
+    );
+  });
+});
+
+describe('unblockUser', () => {
+  it('DELETE /api/v1/users/{userId}/block', async () => {
+    request.mockResolvedValue({ ok: true, data: { ok: true } });
+
+    await unblockUser('u1');
+
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/users/u1/block',
+      expect.objectContaining({ method: 'DELETE' }),
     );
   });
 });

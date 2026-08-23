@@ -98,9 +98,9 @@ describe('GET /api/v1/users/[userId]/profile', () => {
     expect(body.likes[0].likedAt).toBe(baseProfile.likes[0].likedAt.toISOString());
     expect(body.playlists[0].createdAt).toBe(baseProfile.playlists[0].createdAt.toISOString());
     expect(body.playlists[0].updatedAt).toBe(baseProfile.playlists[0].updatedAt.toISOString());
-    // canChat/iBlockedThem — не часть DTO этого инкремента (чат на мобилке пока не строится).
+    // canChat — не часть DTO (чат на мобилке не строится); iBlockedThem — часть DTO с инкремента 11.
     expect(body.canChat).toBeUndefined();
-    expect(body.iBlockedThem).toBeUndefined();
+    expect(body.iBlockedThem).toBe(false);
   });
 
   it('hides likes when the viewer cannot see them', async () => {
@@ -114,7 +114,7 @@ describe('GET /api/v1/users/[userId]/profile', () => {
     expect(body.likes).toEqual([]);
   });
 
-  it('surfaces blocked without leaking chat/block-direction fields', async () => {
+  it('surfaces blocked and iBlockedThem when I blocked them, without leaking canChat', async () => {
     mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
     loadFriendProfile.mockResolvedValue({
       ...baseProfile,
@@ -128,6 +128,24 @@ describe('GET /api/v1/users/[userId]/profile', () => {
     const body = await res.json();
 
     expect(body.blocked).toBe(true);
-    expect(body.iBlockedThem).toBeUndefined();
+    expect(body.iBlockedThem).toBe(true);
+    expect(body.canChat).toBeUndefined();
+  });
+
+  it('surfaces blocked with iBlockedThem=false when they blocked me', async () => {
+    mockedAuth.mockResolvedValue({ user: { id: SELF_ID } } as never);
+    loadFriendProfile.mockResolvedValue({
+      ...baseProfile,
+      blocked: true,
+      iBlockedThem: false,
+      likesVisible: false,
+      likes: [],
+    });
+
+    const res = await GET(req(), ctx(OTHER_ID));
+    const body = await res.json();
+
+    expect(body.blocked).toBe(true);
+    expect(body.iBlockedThem).toBe(false);
   });
 });

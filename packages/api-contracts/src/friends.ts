@@ -67,6 +67,7 @@ export const userProfileResponseSchema = z.object({
   image: z.string().nullable(),
   status: friendshipStatusSchema,
   blocked: z.boolean(),
+  iBlockedThem: z.boolean(),
   likesVisible: z.boolean(),
   likes: z.array(likedTrackSchema),
   playlists: z.array(playlistSummarySchema),
