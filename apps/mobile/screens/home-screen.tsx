@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { BlurTargetView } from 'expo-blur';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +27,7 @@ import { colors, radius } from '../lib/theme';
 import { endpointOf } from '../lib/sdui';
 import { Icon } from '../lib/icon';
 import { useContentBottomPadding } from '../lib/layout';
+import { useRegisterBlurTarget } from '../lib/blur-target';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { LikeButton } from '../components/like-button';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
@@ -39,6 +41,8 @@ const SUPPORTED_BLOCKS = 'fresh-releases,hot-tracks';
 
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'HomeList'>>();
+  const blurTargetRef = useRef<View>(null);
+  useRegisterBlurTarget(blurTargetRef);
   const insets = useSafeAreaInsets();
   const bottomPadding = useContentBottomPadding();
   const [freshReleases, setFreshReleases] = useState<ReleaseCardDTO[]>([]);
@@ -110,16 +114,18 @@ export default function HomeScreen() {
     playQueue(queue, index);
   };
 
+  // Один BlurTargetView на все состояния экрана (не только «ready») — таб-бар/мини-плеер
+  // всегда должны находить актуальную цель блюра, пока HomeScreen в фокусе, иначе на
+  // loading/error/empty `blurTarget` окажется ни на что не указывающим ref.
+  let content: ReactNode;
   if (state === 'loading') {
-    return (
+    content = (
       <View style={[styles.centered, { paddingTop: insets.top }]}>
         <ActivityIndicator color={colors.foreground} size="large" />
       </View>
     );
-  }
-
-  if (state === 'error') {
-    return (
+  } else if (state === 'error') {
+    content = (
       <View style={[styles.centered, { paddingTop: insets.top }]}>
         <Text style={styles.messageText}>Не удалось загрузить главную</Text>
         <Pressable style={styles.retryButton} onPress={initialLoad}>
@@ -127,55 +133,59 @@ export default function HomeScreen() {
         </Pressable>
       </View>
     );
-  }
-
-  if (freshReleases.length === 0 && hotTracks.length === 0) {
-    return (
+  } else if (freshReleases.length === 0 && hotTracks.length === 0) {
+    content = (
       <View style={[styles.centered, { paddingTop: insets.top }]}>
         <Text style={styles.messageText}>Пока нечего показать</Text>
       </View>
     );
+  } else {
+    content = (
+      <ScrollView
+        style={[styles.screen, { paddingTop: insets.top }]}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />
+        }
+      >
+        {freshReleases.length > 0 && (
+          <Section title="Новые релизы">
+            <ScrollView
+              horizontal
+              nestedScrollEnabled
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.row}
+            >
+              {freshReleases.map((release) => (
+                <ReleaseCard key={release.id} release={release} onPress={() => openRelease(release)} />
+              ))}
+            </ScrollView>
+          </Section>
+        )}
+
+        {hotTracks.length > 0 && (
+          <Section title="В топе">
+            <View style={styles.trackList}>
+              {hotTracks.map((track, index) => (
+                <HotTrackRow
+                  key={track.id}
+                  rank={index + 1}
+                  track={track}
+                  playing={track.id === currentTrackId}
+                  onPress={() => playHotTrack(index)}
+                />
+              ))}
+            </View>
+          </Section>
+        )}
+      </ScrollView>
+    );
   }
 
   return (
-    <ScrollView
-      style={[styles.screen, { paddingTop: insets.top }]}
-      contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />
-      }
-    >
-      {freshReleases.length > 0 && (
-        <Section title="Новые релизы">
-          <ScrollView
-            horizontal
-            nestedScrollEnabled
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.row}
-          >
-            {freshReleases.map((release) => (
-              <ReleaseCard key={release.id} release={release} onPress={() => openRelease(release)} />
-            ))}
-          </ScrollView>
-        </Section>
-      )}
-
-      {hotTracks.length > 0 && (
-        <Section title="В топе">
-          <View style={styles.trackList}>
-            {hotTracks.map((track, index) => (
-              <HotTrackRow
-                key={track.id}
-                rank={index + 1}
-                track={track}
-                playing={track.id === currentTrackId}
-                onPress={() => playHotTrack(index)}
-              />
-            ))}
-          </View>
-        </Section>
-      )}
-    </ScrollView>
+    <BlurTargetView style={styles.blurTarget} ref={blurTargetRef}>
+      {content}
+    </BlurTargetView>
   );
 }
 
@@ -261,6 +271,7 @@ function HotTrackRow({
 }
 
 const styles = StyleSheet.create({
+  blurTarget: { flex: 1, backgroundColor: colors.background },
   screen: { flex: 1, backgroundColor: colors.background },
   // paddingBottom задаётся динамически — useContentBottomPadding() (lib/layout.ts):
   // резервирует место под мини-плеер И под плавающий (position:absolute) таб-бар.

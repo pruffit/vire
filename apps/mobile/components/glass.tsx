@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useBlurTarget } from '../lib/blur-target';
 
 // «Дым» — единственная стеклянная поверхность кита (design-канвасы этой сессии: «VireMusic
 // UI Kit» §02 + «VireMusic Glass» turn 4 «единые правила стекла»): нейтральное графитовое
@@ -10,14 +11,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 // мини-плеер, шапки на скролле, sheets, composer, поиск) — максимум 2–3 стеклянные
 // поверхности на экран одновременно, Android blur дороже iOS (см. §07 кита).
 //
-// Реальный блюр на Android (`blurMethod="dimezisBlurView"` + `blurTarget`) ЗАВЕДОМО ВЫКЛЮЧЕН —
-// живой прогон на эмуляторе поймал нативный краш (SIGSEGV в RenderThread) при оборачивании
-// навигатора в `BlurTargetView`: её кастомный `ViewGroup` (переопределяет addView/removeView)
-// несовместим с Fabric-рендерингом `react-native-screens`, который обязателен в этой версии
-// RN (`newArchEnabled:false` в app.json больше ни на что не влияет — New Architecture
-// единственная). `BlurView` без `blurMethod` по документации сама деградирует до
-// полупрозрачной плашки без блюра — это ровно состояние «reduced», уже описанное в ките как
-// легитимный фолбэк, не полумера. См. docs/features/mobile-app.md «Инкремент 19»/«21».
+// Реальный блюр на Android (`blurMethod="dimezisBlurView"` + `blurTarget`) — живой прогон на
+// эмуляторе поймал нативный краш (SIGSEGV в RenderThread), когда `BlurTargetView` оборачивала
+// ВЕСЬ навигатор: её кастомный `ViewGroup` (переопределяет addView/removeView) конфликтует
+// с Fabric-рендерингом `react-native-screens` на уровне стеков/экранов. Тот же прогон
+// подтвердил: обёртка ТОЛЬКО вокруг контента одного экрана (лист, без вложенных
+// Screen-контейнеров) не крашит и реально блюрит. Поэтому `blurTarget` берётся из
+// `useBlurTarget()` (`lib/blur-target.tsx`) — общий контекст, в который каждый экран
+// регистрирует свой ЛОКАЛЬНЫЙ `BlurTargetView` через `useRegisterBlurTarget` при фокусе; до
+// первого рендера/регистрации `target` — `null`, и `BlurView` по документации сама
+// деградирует до полупрозрачной плашки без блюра (состояние «reduced» из кита, легитимный
+// фолбэк, не полумера). См. docs/features/mobile-app.md «Инкремент 19»/«21»/«22».
 const GLASS_TINT = 'rgba(18,16,14,0.4)';
 const SHEEN_TOP = 'rgba(255,255,255,0.11)';
 const EDGE = 'rgba(255,255,255,0.10)';
@@ -44,11 +48,15 @@ export function Glass({
   edge?: boolean | 'top';
   shadow?: boolean;
 }) {
+  const blurTarget = useBlurTarget();
+
   return (
     <View style={[styles.container, { borderRadius: radius }, edge === true && styles.fullEdge, shadow && styles.shadow, style]}>
       <BlurView
         intensity={intensity}
         tint="dark"
+        blurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
+        blurTarget={blurTarget ?? undefined}
         style={StyleSheet.absoluteFill}
       />
       <View style={[StyleSheet.absoluteFill, styles.tint]} />
