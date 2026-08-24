@@ -52,9 +52,12 @@ export default auth((req) => {
   }
 
   // Веб-мост входа мобильного приложения — top-level страница, гейт сессии делает сама
-  // страница (redirect на /sign-in), next-intl её трогать не должен.
+  // страница (redirect на /sign-in), next-intl её трогать не должен. Без chrome: это голый
+  // экран внутри WebBrowser.openAuthSessionAsync — cookie-баннер/анонсы/Nav тут не к месту.
   if (pathname.startsWith('/mobile-auth-bridge')) {
-    return NextResponse.next();
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-desktop-chrome', 'none');
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Окно мини-плеера десктоп-клиента (Tauri) — top-level страница без chrome,
@@ -77,6 +80,13 @@ export default auth((req) => {
   // заход канонизировал бы `/ru` → `/` редиректом и зациклил его. Заголовок ставит
   // next-intl, снаружи он ничего не даёт — auth-гейты выше уже отработали.
   if (req.headers.get('x-next-intl-locale')) return NextResponse.next();
+
+  // /sign-in?chrome=none — редирект из /mobile-auth-bridge (embedded-браузер мобильного
+  // моста входа): мутируем req.headers ДО next-intl, чтобы x-desktop-chrome доехал через
+  // её собственный rewrite/next() до app/layout.tsx (тот же приём, что у mini-player).
+  if (req.nextUrl.searchParams.get('chrome') === 'none') {
+    req.headers.set('x-desktop-chrome', 'none');
+  }
 
   return handleI18nRouting(req);
 });

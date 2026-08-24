@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
@@ -11,6 +12,7 @@ import { getCurrentUserId } from '../lib/secure-store';
 import { getOrCreateIdentity, type Identity } from '../lib/e2ee/identity';
 import { deriveCK, decryptMessage, fromB64 } from '../lib/e2ee/sodium-compat';
 import { Screen } from '../components/screen';
+import { useContentBottomPadding } from '../lib/layout';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 
@@ -32,6 +34,7 @@ function formatConversationTimestamp(iso: string, now: Date = new Date()): strin
 
 export default function ConversationsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'Conversations'>>();
+  const bottomPadding = useContentBottomPadding();
   const [state, setState] = useState<LoadState>('loading');
   const [conversations, setConversations] = useState<ChatConversationDTO[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -108,7 +111,7 @@ export default function ConversationsScreen() {
         <FlatList
           data={conversations}
           keyExtractor={(c) => c.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />}
           renderItem={({ item }) => (
             <ConversationRow
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   retryText: { color: colors.foreground, fontWeight: '700' },
-  listContent: { paddingBottom: 96, gap: 2 },
+  listContent: { gap: 2 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

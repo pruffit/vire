@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -9,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +25,7 @@ import { apiRequest } from '../lib/api-client';
 import { colors, radius } from '../lib/theme';
 import { endpointOf } from '../lib/sdui';
 import { Icon } from '../lib/icon';
+import { useContentBottomPadding } from '../lib/layout';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { LikeButton } from '../components/like-button';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
@@ -39,6 +40,7 @@ const SUPPORTED_BLOCKS = 'fresh-releases,hot-tracks';
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'HomeList'>>();
   const insets = useSafeAreaInsets();
+  const bottomPadding = useContentBottomPadding();
   const [freshReleases, setFreshReleases] = useState<ReleaseCardDTO[]>([]);
   const [hotTracks, setHotTracks] = useState<HomeChartTrackDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
@@ -93,15 +95,19 @@ export default function HomeScreen() {
       coverUrl: release.coverUrl,
     });
 
-  const playHotTrack = (track: HomeChartTrackDTO) => {
-    const queueTrack: QueueTrack = {
-      id: track.id,
-      title: track.title,
-      artistName: track.artistName,
-      coverUrl: track.coverUrl,
+  // Очередь — весь чарт «В топе», не сингл-трек: иначе next/prev в плеере всегда
+  // disabled (nextQueueIndex на очереди из одного элемента отдаёт null) — трек играет,
+  // а кнопки переключения выглядят сломанными. Сравни с release-screen.tsx/library-screen.tsx,
+  // где очередь строится из всего видимого списка так же, изначально.
+  const playHotTrack = (index: number) => {
+    const queue: QueueTrack[] = hotTracks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      artistName: t.artistName,
+      coverUrl: t.coverUrl,
       durationSec: null,
-    };
-    playQueue([queueTrack], 0);
+    }));
+    playQueue(queue, index);
   };
 
   if (state === 'loading') {
@@ -134,7 +140,7 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={[styles.screen, { paddingTop: insets.top }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />
       }
@@ -143,6 +149,7 @@ export default function HomeScreen() {
         <Section title="Новые релизы">
           <ScrollView
             horizontal
+            nestedScrollEnabled
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.row}
           >
@@ -162,7 +169,7 @@ export default function HomeScreen() {
                 rank={index + 1}
                 track={track}
                 playing={track.id === currentTrackId}
-                onPress={() => playHotTrack(track)}
+                onPress={() => playHotTrack(index)}
               />
             ))}
           </View>
@@ -255,7 +262,9 @@ function HotTrackRow({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  content: { paddingVertical: 16, gap: 28 },
+  // paddingBottom задаётся динамически — useContentBottomPadding() (lib/layout.ts):
+  // резервирует место под мини-плеер И под плавающий (position:absolute) таб-бар.
+  content: { paddingTop: 16, gap: 28 },
   centered: {
     flex: 1,
     alignItems: 'center',

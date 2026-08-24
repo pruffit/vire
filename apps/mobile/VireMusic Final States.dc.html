@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><style>
+body{margin:0;background:#030201}
+a{color:#4fd1a5}a:hover{color:#8fe6c8}
+@keyframes vm-shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+.vm-skel{background:linear-gradient(90deg,rgba(255,255,255,.05) 0%,rgba(255,255,255,.11) 50%,rgba(255,255,255,.05) 100%);background-size:200px 100%;animation:vm-shimmer 1.3s infinite linear}
+@keyframes vm-spin{to{transform:rotate(360deg)}}
+.vm-spin{animation:vm-spin 1s linear infinite}
+</style></helmet>
+
+<div style="min-height:100vh;background:#030201;color:#eae7e2;font-family:Manrope,system-ui,sans-serif;--acc:#4fd1a5;padding:0 0 100px">
+
+<div style="position:relative;overflow:hidden;padding:64px 40px 40px;border-bottom:1px solid rgba(255,255,255,.07)">
+  <div style="position:absolute;top:-140px;left:-80px;width:520px;height:420px;background:radial-gradient(circle at 45% 45%,rgba(79,209,165,.18),transparent 62%);filter:blur(50px)"></div>
+  <div style="position:relative;font:500 10px/1 JetBrains Mono;letter-spacing:.16em;color:var(--acc)">VIREMUSIC · MOBILE · FINAL</div>
+  <div style="position:relative;font:800 40px/1.05 Manrope;letter-spacing:-.03em;margin-top:16px;max-width:700px">Экраны приложения во всех состояниях</div>
+  <div style="position:relative;font:400 14px/1.6 Manrope;color:rgba(234,231,226,.6);margin-top:14px;max-width:640px;text-wrap:pretty">8 экранов × ключевые состояния: пусто, загрузка, ошибка/офлайн, нажатие, успех. Токены — из <a href="#" style="text-decoration:none">UI-кита</a>: стекло #12100e @22%, blur 30 / sat 175%, кнопки-иконки — круги без подписи.</div>
+</div>
+
+<!-- 1 ГЛАВНАЯ -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">01 · ГЛАВНАЯ</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Default → Загрузка → Офлайн</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;align-items:flex-start">
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">DEFAULT</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6)">
+    <div style="position:absolute;top:0;left:0;right:0;height:340px;background:linear-gradient(165deg,#12312a,#0a1a18 55%,#030201)"></div>
+    <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:54px 20px 0"><div style="font:800 19px/1 Manrope;letter-spacing:-.02em">Vire<span style="color:var(--acc)">Music</span></div><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    <div style="position:relative;margin:18px 16px 0;height:150px;border-radius:20px;overflow:hidden;background:linear-gradient(150deg,#2e3a33,#6b6f63 60%,#1c211e)">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 2px,transparent 2px 11px)"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;top:40%;background:linear-gradient(180deg,transparent,rgba(3,2,1,.85))"></div>
+      <div style="position:absolute;left:14px;right:14px;bottom:12px"><div style="font:500 9px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.7)">KOTLAEV DANIL</div><div style="font:800 21px/1.1 Manrope;margin-top:6px">Interference</div>
+        <div style="display:flex;gap:8px;margin-top:10px"><div style="height:34px;padding:0 14px;border-radius:17px;background:#eae7e2;color:#030201;display:flex;align-items:center;font:700 12px/1 Manrope">Слушать</div></div></div>
+    </div>
+    <div style="position:relative;margin:12px 16px 0;height:52px;border-radius:16px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;gap:11px;padding:0 14px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><div style="position:relative;display:flex;align-items:flex-end;gap:2px;height:14px"><div style="width:2px;height:6px;background:var(--acc)"></div><div style="width:2px;height:12px;background:var(--acc)"></div><div style="width:2px;height:9px;background:var(--acc)"></div></div><div style="position:relative;flex:1"><div style="font:700 12.5px/1.2 Manrope">Поток</div></div><div style="position:relative;height:32px;padding:0 12px;border-radius:11px;background:rgba(79,209,165,.16);display:flex;align-items:center;font:700 11.5px/1 Manrope;color:var(--acc)">Запустить</div></div>
+    <div style="position:relative;font:700 14px/1 Manrope;padding:20px 20px 0">Продолжить слушать</div>
+    <div style="position:relative;display:flex;gap:11px;padding:12px 0 0 16px;overflow:hidden">
+      <div style="flex:none;width:88px"><div style="width:88px;height:88px;border-radius:12px;background:linear-gradient(140deg,#4a5b52,#9ab0a2)"></div></div>
+      <div style="flex:none;width:88px"><div style="width:88px;height:88px;border-radius:12px;background:linear-gradient(140deg,#3a4a5b,#7a95b0)"></div></div>
+      <div style="flex:none;width:88px"><div style="width:88px;height:88px;border-radius:12px;background:linear-gradient(140deg,#5b4a3a,#b09a7a)"></div></div>
+    </div>
+    <div style="position:relative;font:700 14px/1 Manrope;padding:22px 20px 0">Для тебя</div>
+    <div style="position:relative;display:flex;flex-direction:column;gap:2px;padding:11px 12px 0">
+      <div style="display:flex;gap:11px;align-items:center;padding:8px;border-radius:12px;background:#060503"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(140deg,#5b3a2f,#b06b4a)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">Бесплатное мясо</div><div style="font:400 11px/1.3 Manrope;color:rgba(234,231,226,.45)">AVOCADICK</div></div></div>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:150px;background:linear-gradient(180deg,rgba(3,2,1,0),rgba(3,2,1,.9) 50%,#030201)"></div>
+    <div style="position:absolute;left:16px;right:16px;bottom:96px;height:56px;border-radius:18px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;gap:11px;padding:0 12px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><div style="position:relative;width:36px;height:36px;border-radius:9px;background:linear-gradient(140deg,#2e3a33,#6b6f63)"></div><div style="position:relative;flex:1"><div style="font:600 12.5px/1.3 Manrope">Interference</div><div style="font:400 11px/1.3 Manrope;color:rgba(234,231,226,.55)">KOTLAEV DANIL</div></div><div style="position:relative;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center"><div style="display:flex;gap:3px"><div style="width:3px;height:11px;background:#eae7e2"></div><div style="width:3px;height:11px;background:#eae7e2"></div></div></div></div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><div style="position:relative;width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ЗАГРУЗКА</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6)">
+    <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:54px 20px 0"><div style="font:800 19px/1 Manrope;letter-spacing:-.02em">Vire<span style="color:var(--acc)">Music</span></div><div class="vm-skel" style="width:30px;height:30px;border-radius:50%"></div></div>
+    <div class="vm-skel" style="margin:18px 16px 0;height:150px;border-radius:20px"></div>
+    <div class="vm-skel" style="margin:12px 16px 0;height:52px;border-radius:16px"></div>
+    <div style="font:700 14px/1 Manrope;padding:20px 20px 0;color:rgba(234,231,226,.3)">Продолжить слушать</div>
+    <div style="display:flex;gap:11px;padding:12px 0 0 16px">
+      <div class="vm-skel" style="width:88px;height:88px;border-radius:12px"></div>
+      <div class="vm-skel" style="width:88px;height:88px;border-radius:12px"></div>
+      <div class="vm-skel" style="width:88px;height:88px;border-radius:12px"></div>
+    </div>
+    <div style="font:700 14px/1 Manrope;padding:22px 20px 0;color:rgba(234,231,226,.3)">Для тебя</div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:14px 12px 0">
+      <div class="vm-skel" style="height:54px;border-radius:12px"></div>
+      <div class="vm-skel" style="height:54px;border-radius:12px"></div>
+      <div class="vm-skel" style="height:54px;border-radius:12px"></div>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(180deg,rgba(3,2,1,0),#030201 60%)"></div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div class="vm-skel" style="width:28px;height:28px;border-radius:50%"></div></div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ОФЛАЙН</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);filter:grayscale(.5) brightness(.8)">
+    <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:54px 20px 0"><div style="font:800 19px/1 Manrope;letter-spacing:-.02em">Vire<span style="color:var(--acc)">Music</span></div><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    <div style="margin:16px 16px 0;padding:12px 14px;border-radius:14px;background:rgba(216,98,47,.10);border:1px solid rgba(216,98,47,.28);display:flex;align-items:center;gap:10px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e0a074" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M8.5 8.5a11 11 0 0 1 13 2M2 12.5a15 15 0 0 1 4-3M12 20h.01"/></svg><div style="font:600 12px/1.3 Manrope;color:#e0a074">Нет сети · показываем скачанное</div></div>
+    <div style="margin:16px 16px 0;height:150px;border-radius:20px;overflow:hidden;background:linear-gradient(150deg,#2e3a33,#6b6f63 60%,#1c211e);opacity:.55"></div>
+    <div style="font:700 14px/1 Manrope;padding:20px 20px 0;color:rgba(234,231,226,.5)">Скачанное</div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:12px 12px 0">
+      <div style="display:flex;gap:11px;align-items:center;padding:8px;border-radius:12px;background:#060503;opacity:.7"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(140deg,#2e3a33,#8a8a7a)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">Interference</div><div style="font:400 11px/1.3 Manrope;color:rgba(234,231,226,.45)">KOTLAEV DANIL</div></div><div style="width:32px;height:32px;border-radius:50%;background:rgba(79,209,165,.12);display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg></div></div>
+    </div>
+    <div style="margin:22px 16px 0;padding:16px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.06);text-align:center"><div style="font:400 12px/1.5 Manrope;color:rgba(234,231,226,.5)">Поток и «Для тебя» появятся, когда вернётся связь</div></div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);opacity:.4;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.6)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.85)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);opacity:.4;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.6)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  </div>
+</div>
+
+<!-- 2 ПЛЕЕР -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">02 · ПЛЕЕР</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Играет → Пауза → Буферизация</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;align-items:flex-start">
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ИГРАЕТ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:absolute;inset:0;background:radial-gradient(120% 60% at 50% 22%,rgba(79,209,165,.18),transparent 62%),linear-gradient(180deg,#0a1a17,#030201 60%)"></div>
+    <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:52px 22px 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9 12 15 6 9"/></svg><div style="font:600 12px/1.3 Manrope">Interference</div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="6" r="2.3"/><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="m8 11 8-4M8 13l8 4"/></svg></div>
+    <div style="position:relative;margin:34px auto 0;width:286px;height:286px;border-radius:18px;overflow:hidden;background:linear-gradient(150deg,#2e3a33,#8a8a7a 60%,#1c211e);box-shadow:0 30px 70px rgba(0,0,0,.6)"></div>
+    <div style="text-align:center;margin-top:26px"><div style="font:800 23px/1.15 Manrope">Interference</div><div style="font:500 13px/1.3 Manrope;color:rgba(234,231,226,.55);margin-top:6px">KOTLAEV DANIL</div></div>
+    <div style="position:absolute;left:16px;right:16px;bottom:190px;display:flex;align-items:center;gap:11px"><div style="font:500 10.5px/1 JetBrains Mono;color:rgba(234,231,226,.5)">0:41</div><div style="flex:1;display:flex;align-items:center;gap:1.5px;height:30px"><div style="flex:1;height:20px;background:var(--acc);border-radius:1px"></div><div style="flex:1;height:12px;background:rgba(234,231,226,.22);border-radius:1px"></div><div style="flex:1;height:26px;background:rgba(234,231,226,.22);border-radius:1px"></div></div><div style="font:500 10.5px/1 JetBrains Mono;color:rgba(234,231,226,.5)">2:18</div></div>
+    <div style="position:absolute;left:12px;right:12px;bottom:86px;height:88px;border-radius:26px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:space-between;padding:0 22px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+      <svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-2.5-3M20 16H7l2.5 3"/></svg>
+      <svg style="position:relative" width="25" height="25" viewBox="0 0 24 24" fill="#eae7e2"><path d="M20 5v14l-11-7z"/></svg>
+      <div style="position:relative;width:60px;height:60px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px rgba(0,0,0,.5)"><div style="display:flex;gap:5px"><div style="width:5px;height:21px;background:#030201;border-radius:1px"></div><div style="width:5px;height:21px;background:#030201;border-radius:1px"></div></div></div>
+      <svg style="position:relative" width="25" height="25" viewBox="0 0 24 24" fill="#eae7e2"><path d="M4 5v14l11-7z"/></svg>
+      <svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h12a4 4 0 0 1 0 8H7"/><path d="m7 4 3 3-3 3"/></svg>
+    </div>
+    <div style="position:absolute;left:12px;right:12px;bottom:24px;height:52px;border-radius:18px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+      <div style="position:relative;flex:1;text-align:center;font:600 12px/1 Manrope">Текст</div><div style="width:1px;height:22px;background:rgba(255,255,255,.1)"></div><div style="position:relative;flex:1;text-align:center;font:600 12px/1 Manrope;color:rgba(234,231,226,.75)">Очередь · 5</div><div style="width:1px;height:22px;background:rgba(255,255,255,.1)"></div><div style="position:relative;flex:1;text-align:center;font:600 12px/1 Manrope;color:rgba(234,231,226,.75)">Ещё</div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ПАУЗА (кнопка нажата)</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:absolute;inset:0;background:radial-gradient(120% 60% at 50% 22%,rgba(79,209,165,.10),transparent 62%),linear-gradient(180deg,#0a1a17,#030201 60%);filter:saturate(.7)"></div>
+    <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:52px 22px 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9 12 15 6 9"/></svg><div style="font:600 12px/1.3 Manrope">Interference</div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="6" r="2.3"/><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="m8 11 8-4M8 13l8 4"/></svg></div>
+    <div style="position:relative;margin:34px auto 0;width:286px;height:286px;border-radius:18px;overflow:hidden;background:linear-gradient(150deg,#2e3a33,#8a8a7a 60%,#1c211e);box-shadow:0 30px 70px rgba(0,0,0,.6);opacity:.75"></div>
+    <div style="text-align:center;margin-top:26px"><div style="font:800 23px/1.15 Manrope;color:rgba(234,231,226,.7)">Interference</div><div style="font:500 13px/1.3 Manrope;color:rgba(234,231,226,.4);margin-top:6px">на паузе</div></div>
+    <div style="position:absolute;left:16px;right:16px;bottom:190px;display:flex;align-items:center;gap:11px"><div style="font:500 10.5px/1 JetBrains Mono;color:rgba(234,231,226,.5)">0:41</div><div style="flex:1;display:flex;align-items:center;gap:1.5px;height:30px"><div style="flex:1;height:20px;background:rgba(234,231,226,.4);border-radius:1px"></div><div style="flex:1;height:12px;background:rgba(234,231,226,.22);border-radius:1px"></div></div><div style="font:500 10.5px/1 JetBrains Mono;color:rgba(234,231,226,.5)">2:18</div></div>
+    <div style="position:absolute;left:12px;right:12px;bottom:86px;height:88px;border-radius:26px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:space-between;padding:0 22px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+      <svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.5)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-2.5-3M20 16H7l2.5 3"/></svg>
+      <svg style="position:relative" width="25" height="25" viewBox="0 0 24 24" fill="rgba(234,231,226,.6)"><path d="M20 5v14l-11-7z"/></svg>
+      <div style="position:relative;width:60px;height:60px;border-radius:50%;background:rgba(234,231,226,.85);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,.4);transform:scale(.92)"><div style="width:0;height:0;border-left:16px solid #030201;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:4px"></div></div>
+      <svg style="position:relative" width="25" height="25" viewBox="0 0 24 24" fill="rgba(234,231,226,.6)"><path d="M4 5v14l11-7z"/></svg>
+      <svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.5)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h12a4 4 0 0 1 0 8H7"/><path d="m7 4 3 3-3 3"/></svg>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">БУФЕРИЗАЦИЯ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:absolute;inset:0;background:radial-gradient(120% 60% at 50% 22%,rgba(79,209,165,.14),transparent 62%),linear-gradient(180deg,#0a1a17,#030201 60%)"></div>
+    <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:52px 22px 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9 12 15 6 9"/></svg><div style="font:600 12px/1.3 Manrope">Interference</div><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="6" r="2.3"/><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="m8 11 8-4M8 13l8 4"/></svg></div>
+    <div style="position:relative;margin:34px auto 0;width:286px;height:286px;border-radius:18px;overflow:hidden;background:linear-gradient(150deg,#2e3a33,#8a8a7a 60%,#1c211e);box-shadow:0 30px 70px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center"><svg class="vm-spin" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="2" stroke-linecap="round" stroke-dasharray="14 40"><circle cx="12" cy="12" r="9"/></svg></div>
+    <div style="text-align:center;margin-top:26px"><div style="font:800 23px/1.15 Manrope">Interference</div><div style="font:500 13px/1.3 Manrope;color:rgba(234,231,226,.55);margin-top:6px">буферизация…</div></div>
+    <div style="position:absolute;left:16px;right:16px;bottom:190px;display:flex;align-items:center;gap:11px"><div style="font:500 10.5px/1 JetBrains Mono;color:rgba(234,231,226,.5)">0:41</div><div style="flex:1;height:3px;border-radius:2px;background:rgba(234,231,226,.16);position:relative"><div class="vm-skel" style="position:absolute;left:0;top:0;bottom:0;width:20%;border-radius:2px"></div></div><div style="font:500 10.5px/1 JetBrains Mono;color:rgba(234,231,226,.5)">2:18</div></div>
+    <div style="position:absolute;left:12px;right:12px;bottom:86px;height:88px;border-radius:26px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:space-between;padding:0 22px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+      <svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-2.5-3M20 16H7l2.5 3"/></svg>
+      <svg style="position:relative" width="25" height="25" viewBox="0 0 24 24" fill="rgba(234,231,226,.4)"><path d="M20 5v14l-11-7z"/></svg>
+      <div style="position:relative;width:60px;height:60px;border-radius:50%;background:rgba(234,231,226,.2);display:flex;align-items:center;justify-content:center"><svg class="vm-spin" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="12 30"><circle cx="12" cy="12" r="8"/></svg></div>
+      <svg style="position:relative" width="25" height="25" viewBox="0 0 24 24" fill="rgba(234,231,226,.4)"><path d="M4 5v14l11-7z"/></svg>
+      <svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h12a4 4 0 0 1 0 8H7"/><path d="m7 4 3 3-3 3"/></svg>
+    </div>
+  </div></div>
+
+  </div>
+</div>
+
+<!-- 3 ПОИСК -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">03 · ПОИСК</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Пусто (история) → Результаты → Ничего не найдено</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;align-items:flex-start">
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ДО ВВОДА · ИСТОРИЯ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="padding:54px 20px 0;font:800 25px/1 Manrope;letter-spacing:-.02em">Поиск</div>
+    <div style="margin:16px 16px 0;height:50px;border-radius:25px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;gap:11px;padding:0 16px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.55)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><div style="position:relative;font:400 13px/1 Manrope;color:rgba(234,231,226,.42)">Артисты, релизы, треки</div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 20px 0"><div style="font:700 14px/1 Manrope">Недавнее</div><div style="font:500 10px/1 JetBrains Mono;color:rgba(234,231,226,.4)">ОЧИСТИТЬ</div></div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:12px 12px 0">
+      <div style="display:flex;gap:11px;align-items:center;padding:9px 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.4)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><div style="font:500 13px/1.3 Manrope;color:rgba(234,231,226,.75)">йцукен</div></div>
+      <div style="display:flex;gap:11px;align-items:center;padding:9px 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.4)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><div style="font:500 13px/1.3 Manrope;color:rgba(234,231,226,.75)">Interference</div></div>
+      <div style="display:flex;gap:11px;align-items:center;padding:9px 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.4)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><div style="font:500 13px/1.3 Manrope;color:rgba(234,231,226,.75)">AVOCADICK</div></div>
+    </div>
+    <div style="font:700 14px/1 Manrope;padding:22px 20px 0">Попробуй</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;padding:12px 20px 0"><div style="height:30px;padding:0 12px;border-radius:15px;background:#0a0908;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;font:500 11px/1 Manrope;color:rgba(234,231,226,.65)">Энергия</div><div style="height:30px;padding:0 12px;border-radius:15px;background:#0a0908;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;font:500 11px/1 Manrope;color:rgba(234,231,226,.65)">Мечтательное</div></div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">РЕЗУЛЬТАТЫ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="padding:54px 20px 0;display:flex;align-items:center;gap:12px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><div style="font:800 20px/1 Manrope;letter-spacing:-.02em">йцукен</div></div>
+    <div style="margin:14px 16px 0;height:50px;border-radius:25px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 0 0 1.5px rgba(79,209,165,.3);display:flex;align-items:center;gap:11px;padding:0 16px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.55)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><div style="position:relative;font:500 13px/1 Manrope">йцукен</div></div>
+    <div style="font:700 14px/1 Manrope;padding:22px 20px 0">Артисты</div>
+    <div style="display:flex;gap:11px;align-items:center;padding:12px 20px 0"><div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(150deg,#3a4a5b,#7a95b0)"></div><div style="font:700 13px/1.3 Manrope">йцукен</div></div>
+    <div style="font:700 14px/1 Manrope;padding:20px 20px 0">Треки</div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:12px 12px 0">
+      <div style="display:flex;gap:11px;align-items:center;padding:8px;border-radius:12px;background:#060503"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(140deg,#5b4a3a,#b09a7a)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">safety third</div><div style="font:400 11px/1.3 Manrope;color:rgba(234,231,226,.45)">йцукен</div></div></div>
+      <div style="display:flex;gap:11px;align-items:center;padding:8px;border-radius:12px;background:#060503"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(140deg,#3a5b2f,#7ab04a)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">дождусь весну</div><div style="font:400 11px/1.3 Manrope;color:rgba(234,231,226,.45)">йцукен</div></div></div>
+    </div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">НИЧЕГО НЕ НАЙДЕНО</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="padding:54px 20px 0;display:flex;align-items:center;gap:12px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><div style="font:800 20px/1 Manrope;letter-spacing:-.02em">zzzqqq111</div></div>
+    <div style="margin:14px 16px 0;height:50px;border-radius:25px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;gap:11px;padding:0 16px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.55)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><div style="position:relative;font:500 13px/1 Manrope">zzzqqq111</div></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:120px 40px 0;text-align:center">
+      <div style="width:64px;height:64px;border-radius:50%;background:#060503;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="font:700 15px/1.3 Manrope">Ничего не нашлось</div>
+      <div style="font:400 12px/1.5 Manrope;color:rgba(234,231,226,.5)">Проверь написание или поищи по тегам настроения ниже</div>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;padding:22px 30px 0"><div style="height:30px;padding:0 12px;border-radius:15px;background:#0a0908;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;font:500 11px/1 Manrope;color:rgba(234,231,226,.65)">Энергия</div><div style="height:30px;padding:0 12px;border-radius:15px;background:#0a0908;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;font:500 11px/1 Manrope;color:rgba(234,231,226,.65)">Glitch</div></div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  </div>
+</div>
+
+<!-- 4 МЕДИАТЕКА -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">04 · МЕДИАТЕКА</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Заполнена → Пустая</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;align-items:flex-start">
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ЗАПОЛНЕНА</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:54px 20px 0"><div style="font:800 25px/1 Manrope;letter-spacing:-.02em">Медиатека</div><div style="width:44px;height:44px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div></div>
+    <div style="margin:20px 16px 0;height:70px;border-radius:20px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;gap:13px;padding:0 14px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><div style="position:relative;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg></div><div style="position:relative;flex:1"><div style="font:700 13.5px/1.25 Manrope">Скачанное</div><div style="font:400 11.5px/1.3 Manrope;color:rgba(234,231,226,.5);margin-top:4px">14 треков</div></div></div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;padding:22px 20px 0"><div style="font:700 14px/1 Manrope">Плейлисты</div></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:11px;padding:13px 16px 0">
+      <div><div style="aspect-ratio:1;border-radius:14px;background:linear-gradient(140deg,#2f4a44,#7aa89a)"></div></div>
+      <div><div style="aspect-ratio:1;border-radius:14px;background:linear-gradient(140deg,#3a3a4a,#8a8aa0)"></div></div>
+      <div><div style="aspect-ratio:1;border-radius:14px;border:1px dashed rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div></div>
+    </div>
+    <div style="font:700 14px/1 Manrope;padding:24px 20px 0">Любимые треки</div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:12px 12px 0">
+      <div style="display:flex;gap:11px;align-items:center;padding:8px;border-radius:12px;background:#060503"><div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(140deg,#2e3a33,#8a8a7a)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">Interference</div><div style="font:400 11px/1.3 Manrope;color:rgba(234,231,226,.45)">KOTLAEV DANIL</div></div></div>
+    </div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ПУСТАЯ (новый пользователь)</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:54px 20px 0"><div style="font:800 25px/1 Manrope;letter-spacing:-.02em">Медиатека</div><div style="width:44px;height:44px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;opacity:.4"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:150px 40px 0;text-align:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:#060503;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V7a3 3 0 0 1 6 0v11a5 5 0 0 1-10 0V9"/></svg></div>
+      <div style="font:800 18px/1.3 Manrope">Здесь будет твоя музыка</div>
+      <div style="font:400 12.5px/1.55 Manrope;color:rgba(234,231,226,.5)">Лайкай треки и подписывайся на артистов — они появятся тут</div>
+      <div style="height:44px;padding:0 22px;border-radius:22px;background:#eae7e2;color:#030201;display:flex;align-items:center;font:700 13px/1 Manrope;margin-top:6px">Найти артистов</div>
+    </div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  </div>
+</div>
+
+<!-- 5 АРТИСТ -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">05 · АРТИСТ</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Загрузка → Не подписан → Подписан (нажатие)</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;align-items:flex-start">
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ЗАГРУЗКА</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div class="vm-skel" style="position:absolute;top:0;left:0;right:0;height:300px"></div>
+    <div style="position:relative;display:flex;gap:14px;align-items:flex-end;padding:150px 20px 0"><div class="vm-skel" style="width:82px;height:82px;border-radius:50%"></div></div>
+    <div class="vm-skel" style="width:180px;height:26px;border-radius:6px;margin:20px 20px 0"></div>
+    <div class="vm-skel" style="width:260px;height:14px;border-radius:6px;margin:14px 20px 0"></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:20px 20px 0"><div class="vm-skel" style="width:60px;height:60px;border-radius:50%"></div><div class="vm-skel" style="width:52px;height:52px;border-radius:50%"></div><div class="vm-skel" style="width:52px;height:52px;border-radius:50%"></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:34px 12px 0"><div class="vm-skel" style="height:54px;border-radius:12px"></div><div class="vm-skel" style="height:54px;border-radius:12px"></div></div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">НЕ ПОДПИСАН</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:absolute;top:0;left:0;right:0;height:300px;background:linear-gradient(160deg,#1a2a26,#3a4a44 55%,#0d1512)"></div>
+    <div style="position:absolute;top:0;left:0;right:0;height:300px;background:linear-gradient(180deg,rgba(3,2,1,.35),rgba(3,2,1,.05) 40%,#030201)"></div>
+    <div style="position:relative;display:flex;gap:14px;align-items:flex-end;padding:150px 20px 0"><div style="width:82px;height:82px;border-radius:50%;background:linear-gradient(150deg,#22221f,#7a7a6b)"></div><div style="padding-bottom:4px"><div style="font:800 24px/1.05 Manrope">KOTLAEV<br>DANIL</div></div></div>
+    <div style="font:500 10px/1 JetBrains Mono;color:rgba(234,231,226,.42);padding:16px 20px 0">4 РЕЛИЗА · 15 ТРЕКОВ</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:18px 20px 0">
+      <div style="width:60px;height:60px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center;flex:none"><div style="width:0;height:0;border-left:15px solid #030201;border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:4px"></div></div>
+      <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;flex:none"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      <div style="width:52px;height:52px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="6" r="2.3"/><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="m8 11 8-4M8 13l8 4"/></svg></div>
+      <div style="margin-left:auto;font:400 10.5px/1.3 Manrope;color:rgba(234,231,226,.4);text-align:right;max-width:70px">без подписки — только публичное</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:34px 12px 0">
+      <div style="display:flex;gap:11px;align-items:center;padding:8px;border-radius:12px;background:#060503"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(140deg,#4a5b52,#9ab0a2)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">Home</div></div></div>
+    </div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ПОДПИСКА · НАЖАТИЕ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:absolute;top:0;left:0;right:0;height:300px;background:linear-gradient(160deg,#1a2a26,#3a4a44 55%,#0d1512)"></div>
+    <div style="position:absolute;top:0;left:0;right:0;height:300px;background:linear-gradient(180deg,rgba(3,2,1,.35),rgba(3,2,1,.05) 40%,#030201)"></div>
+    <div style="position:relative;display:flex;gap:14px;align-items:flex-end;padding:150px 20px 0"><div style="width:82px;height:82px;border-radius:50%;background:linear-gradient(150deg,#22221f,#7a7a6b)"></div><div style="padding-bottom:4px"><div style="font:800 24px/1.05 Manrope">KOTLAEV<br>DANIL</div></div></div>
+    <div style="font:500 10px/1 JetBrains Mono;color:rgba(234,231,226,.42);padding:16px 20px 0">4 РЕЛИЗА · 15 ТРЕКОВ</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:18px 20px 0">
+      <div style="width:60px;height:60px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center;flex:none"><div style="width:0;height:0;border-left:15px solid #030201;border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:4px"></div></div>
+      <div style="width:52px;height:52px;border-radius:50%;background:rgba(79,209,165,.16);box-shadow:inset 0 0 0 1.5px rgba(79,209,165,.5);display:flex;align-items:center;justify-content:center;flex:none;transform:scale(.94)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17l9-10"/></svg></div>
+      <div style="width:52px;height:52px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="6" r="2.3"/><circle cx="6" cy="12" r="2.3"/><circle cx="18" cy="18" r="2.3"/><path d="m8 11 8-4M8 13l8 4"/></svg></div>
+      <div style="margin-left:auto;height:30px;padding:0 12px;border-radius:15px;background:rgba(79,209,165,.14);display:flex;align-items:center;font:600 11px/1 Manrope;color:var(--acc)">Подписан ✓</div>
+    </div>
+    <div style="margin:18px 20px 0;padding:12px 14px;border-radius:14px;background:rgba(79,209,165,.08);border:1px solid rgba(79,209,165,.24);font:400 11.5px/1.5 Manrope;color:rgba(234,231,226,.7)">Теперь тебе придут письма о новых релизах и посты в ленту</div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:22px 12px 0">
+      <div style="display:flex;gap:11px;align-items:center;padding:8px;border-radius:12px;background:#060503"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(140deg,#4a5b52,#9ab0a2)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">Home</div></div></div>
+    </div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  </div>
+</div>
+
+<!-- 6 ДЖЕМ -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">06 · ДЖЕМ</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Лобби (ждём) → Активна → Завершена</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;align-items:flex-start">
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ЛОББИ · ЖДЁМ УЧАСТНИКОВ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:absolute;inset:0;background:linear-gradient(165deg,#123028,#0a1a18 45%,#030201)"></div>
+    <div style="position:relative;padding:64px 30px 0;text-align:center"><div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:var(--acc)">ДЖЕМ СОЗДАН</div><div style="font:800 40px/1 JetBrains Mono;letter-spacing:.1em;margin-top:20px">GD9MBF</div><div style="font:400 12px/1.5 Manrope;color:rgba(234,231,226,.5);margin-top:14px">Отправь код друзьям или поделись ссылкой</div></div>
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:26px"><div style="height:44px;padding:0 18px;border-radius:22px;background:#eae7e2;color:#030201;display:flex;align-items:center;font:700 13px/1 Manrope">Поделиться</div><div style="width:44px;height:44px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div></div>
+    <div style="display:flex;justify-content:center;margin-top:40px"><div class="vm-spin" style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(79,209,165,.25);border-top-color:var(--acc)"></div></div>
+    <div style="text-align:center;font:400 12px/1.5 Manrope;color:rgba(234,231,226,.4);margin-top:14px">Ждём, пока кто-то присоединится…</div>
+    <div style="display:flex;justify-content:center;padding-top:26px"><div style="padding:12px 8px;border-radius:16px;background:rgba(79,209,165,.10);border:1px solid rgba(79,209,165,.28);text-align:center;width:74px"><div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60);margin:0 auto"></div><div style="font:600 11px/1.2 Manrope;margin-top:8px">Данил</div><div style="font:500 8.5px/1 JetBrains Mono;color:var(--acc);margin-top:5px">ХОСТ</div></div></div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">АКТИВНА</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:absolute;inset:0;background:linear-gradient(165deg,#123028,#0a1a18 45%,#030201)"></div>
+    <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:54px 20px 0"><div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:50%;background:var(--acc)"></div><div style="font:500 9px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.55)">В СЕТИ</div></div><div style="height:34px;padding:0 12px;border-radius:11px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;font:600 12px/1 JetBrains Mono">GD9MBF</div></div>
+    <div style="margin:20px 14px 0;padding:16px;border-radius:24px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+      <div style="position:relative;display:flex;gap:13px;align-items:center"><div style="width:62px;height:62px;border-radius:14px;background:linear-gradient(140deg,#2e3a33,#8a8a7a)"></div><div style="flex:1"><div style="font:500 9px/1 JetBrains Mono;letter-spacing:.1em;color:var(--acc)">ИГРАЕТ СЕЙЧАС</div><div style="font:700 15px/1.25 Manrope;margin-top:7px">Interference</div></div><div style="width:46px;height:46px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><div style="display:flex;gap:4px"><div style="width:4px;height:16px;background:#030201"></div><div style="width:4px;height:16px;background:#030201"></div></div></div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:22px 20px 0"><div style="font:600 10.5px/1 JetBrains Mono;letter-spacing:.1em;color:rgba(234,231,226,.5)">УЧАСТНИКИ · 3</div></div>
+    <div style="display:flex;gap:8px;padding:12px 0 0 16px">
+      <div style="width:74px;padding:12px 8px;border-radius:16px;background:rgba(79,209,165,.10);border:1px solid rgba(79,209,165,.28);text-align:center"><div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60);margin:0 auto"></div><div style="font:600 11px/1.2 Manrope;margin-top:8px">Данил</div></div>
+      <div style="width:74px;padding:12px 8px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.07);text-align:center"><div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(150deg,#5b3a4a,#b07a8a);margin:0 auto"></div><div style="font:600 11px/1.2 Manrope;margin-top:8px">Maria</div></div>
+    </div>
+    <div style="font:600 10.5px/1 JetBrains Mono;letter-spacing:.1em;color:rgba(234,231,226,.5);padding:22px 20px 0">ОБЩАЯ ОЧЕРЕДЬ · 4</div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:12px 12px 0">
+      <div style="display:flex;gap:11px;align-items:center;padding:9px 8px;border-radius:12px;background:#060503"><div style="width:38px;height:38px;border-radius:9px;background:linear-gradient(140deg,#4a5b52,#9ab0a2)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">Home</div></div></div>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;bottom:26px;height:54px;border-radius:18px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;gap:10px;padding:0 14px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.6)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><div style="position:relative;flex:1;font:400 12.5px/1 Manrope;color:rgba(234,231,226,.45)">Добавить трек…</div></div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ЗАВЕРШЕНА</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:relative;display:flex;flex-direction:column;align-items:center;padding:90px 30px 0;text-align:center">
+      <div style="width:64px;height:64px;border-radius:50%;background:rgba(79,209,165,.14);box-shadow:inset 0 0 0 1px rgba(79,209,165,.4);display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17l9-10"/></svg></div>
+      <div style="font:800 22px/1.2 Manrope;margin-top:20px">Джем завершён</div>
+      <div style="font:400 12.5px/1.5 Manrope;color:rgba(234,231,226,.55);margin-top:8px">42 минуты · 3 участника · 6 треков</div>
+    </div>
+    <div style="margin:30px 16px 0;padding:16px;border-radius:18px;background:#060503;border:1px solid rgba(255,255,255,.07)">
+      <div style="font:600 10.5px/1 JetBrains Mono;letter-spacing:.1em;color:rgba(234,231,226,.45)">ЗВУЧАЛО СЕГОДНЯ</div>
+      <div style="display:flex;flex-direction:column;gap:2px;margin-top:12px">
+        <div style="display:flex;gap:11px;align-items:center;padding:6px 0"><div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(140deg,#4a5b52,#9ab0a2)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">Home</div><div style="font:400 10.5px/1.3 Manrope;color:rgba(234,231,226,.45)">добавил Данил</div></div></div>
+        <div style="display:flex;gap:11px;align-items:center;padding:6px 0"><div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(140deg,#3a3a4a,#7a7a95)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">vertigo</div><div style="font:400 10.5px/1.3 Manrope;color:rgba(234,231,226,.45)">добавила Maria</div></div></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;padding:22px 16px 0"><div style="flex:1;height:46px;border-radius:16px;background:#eae7e2;color:#030201;display:flex;align-items:center;justify-content:center;font:700 13px/1 Manrope">Сохранить в плейлист</div><div style="width:46px;height:46px;border-radius:16px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div></div>
+    <div style="text-align:center;margin-top:22px;font:500 11px/1 Manrope;color:rgba(234,231,226,.45)">Начать новый джем</div>
+  </div></div>
+
+  </div>
+</div>
+
+<!-- 7 СООБЩЕНИЯ -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">07 · СООБЩЕНИЯ</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Список пуст → Список с диалогами → Чат: печатает → Вложения → Стикеры/эмодзи</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;align-items:flex-start">
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">СПИСОК · ПУСТО</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:56px 20px 0"><div style="font:800 25px/1 Manrope;letter-spacing:-.02em">Сообщения</div><div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:140px 40px 0;text-align:center">
+      <div style="width:64px;height:64px;border-radius:50%;background:#060503;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="font:700 15px/1.3 Manrope">Пока нет диалогов</div>
+      <div style="font:400 12px/1.5 Manrope;color:rgba(234,231,226,.5)">Написать можно только тем, кто у тебя в друзьях</div>
+      <div style="height:44px;padding:0 22px;border-radius:22px;background:#eae7e2;color:#030201;display:flex;align-items:center;font:700 13px/1 Manrope;margin-top:6px">Найти друзей</div>
+    </div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">СПИСОК · С ДИАЛОГАМИ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:56px 20px 0"><div style="font:800 25px/1 Manrope;letter-spacing:-.02em">Сообщения</div><div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div></div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:20px 12px 0">
+      <div style="display:flex;gap:12px;align-items:center;padding:11px 8px;border-radius:14px;background:#060503">
+        <div style="position:relative;flex:none"><div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(150deg,#5b3a4a,#b07a8a)"></div><div style="position:absolute;right:1px;bottom:1px;width:11px;height:11px;border-radius:50%;background:var(--acc);border:2px solid #060503"></div></div>
+        <div style="flex:1"><div style="display:flex;align-items:baseline;justify-content:space-between"><div style="font:700 13px/1.3 Manrope">Maria Kotlaeva</div><div style="font:500 9.5px/1 JetBrains Mono;color:rgba(234,231,226,.35)">23 АВГ</div></div><div style="font:400 11.5px/1.35 Manrope;color:rgba(234,231,226,.5);margin-top:4px">Тим спирит трижды чемпионы</div></div>
+        <div style="width:20px;height:20px;border-radius:10px;background:var(--acc);color:#03110d;display:flex;align-items:center;justify-content:center;font:700 10px/1 Manrope;flex:none">2</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;padding:11px 8px;border-radius:14px">
+        <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(150deg,#3a4a5b,#7a95b0);flex:none"></div>
+        <div style="flex:1"><div style="display:flex;align-items:baseline;justify-content:space-between"><div style="font:600 13px/1.3 Manrope">йцукен</div><div style="font:500 9.5px/1 JetBrains Mono;color:rgba(234,231,226,.3)">16 АВГ</div></div><div style="font:400 11.5px/1.35 Manrope;color:rgba(234,231,226,.4);margin-top:4px">кинул тебе трек, послушай</div></div>
+      </div>
+    </div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ЧАТ · СОБЕСЕДНИК ПЕЧАТАЕТ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:absolute;left:0;right:0;top:0;height:106px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 -1px 0 rgba(255,255,255,.08);z-index:5;display:flex;align-items:flex-end;gap:11px;padding:0 16px 12px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+      <svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:9px"><path d="M15 6l-6 6 6 6"/></svg>
+      <div style="position:relative;width:38px;height:38px;border-radius:50%;background:linear-gradient(150deg,#5b3a4a,#b07a8a)"></div>
+      <div style="position:relative;flex:1"><div style="font:700 13.5px/1.25 Manrope">Maria Kotlaeva</div><div style="font:400 10.5px/1.3 Manrope;color:var(--acc);margin-top:3px">печатает…</div></div>
+    </div>
+    <div style="position:absolute;left:0;right:0;top:106px;bottom:0;padding:16px 14px 0;display:flex;flex-direction:column;gap:9px">
+      <div style="align-self:flex-start;max-width:74%;padding:10px 13px;border-radius:16px 16px 16px 5px;background:#0d0c0b;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)"><div style="font:400 13px/1.4 Manrope">Здарова</div></div>
+      <div style="align-self:flex-end;max-width:74%;padding:10px 13px;border-radius:16px 16px 5px 16px;background:#eae7e2;color:#030201"><div style="font:500 13px/1.4 Manrope">Что как</div></div>
+      <div style="align-self:flex-start;display:flex;gap:4px;align-items:center;padding:12px 14px;border-radius:16px 16px 16px 5px;background:#0d0c0b;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)"><div style="width:5px;height:5px;border-radius:50%;background:rgba(234,231,226,.6);animation:vm-spin 1s ease-in-out infinite alternate"></div><div style="width:5px;height:5px;border-radius:50%;background:rgba(234,231,226,.4)"></div><div style="width:5px;height:5px;border-radius:50%;background:rgba(234,231,226,.25)"></div></div>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(180deg,rgba(3,2,1,0),rgba(3,2,1,.9) 45%,#030201)"></div>
+    <div style="position:absolute;left:12px;right:12px;bottom:24px;height:56px;border-radius:20px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;gap:10px;padding:0 8px 0 14px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.6)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V7a3 3 0 0 1 6 0v11a5 5 0 0 1-10 0V9"/></svg><div style="position:relative;flex:1;font:400 13px/1 Manrope;color:rgba(234,231,226,.4)">Сообщение…</div><div style="position:relative;width:42px;height:42px;border-radius:14px;background:var(--acc);display:flex;align-items:center;justify-content:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03110d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div></div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ЧАТ · ТРЕК / ФОТО / ФАЙЛ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:absolute;left:0;right:0;top:0;height:106px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 -1px 0 rgba(255,255,255,.08);z-index:5;display:flex;align-items:flex-end;gap:11px;padding:0 16px 12px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+      <svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:9px"><path d="M15 6l-6 6 6 6"/></svg>
+      <div style="position:relative;width:38px;height:38px;border-radius:50%;background:linear-gradient(150deg,#3a4a5b,#7a95b0)"></div>
+      <div style="position:relative;flex:1"><div style="font:700 13.5px/1.25 Manrope">йцукен</div><div style="font:400 10.5px/1.3 Manrope;color:rgba(234,231,226,.4);margin-top:3px">был(а) в сети недавно</div></div>
+    </div>
+    <div style="position:absolute;left:0;right:0;top:106px;bottom:0;padding:16px 14px 0;display:flex;flex-direction:column;gap:9px">
+      <div style="align-self:flex-start;max-width:82%;padding:9px;border-radius:16px 16px 16px 5px;background:#0d0c0b;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)">
+        <div style="display:flex;gap:10px;align-items:center;padding:3px 4px 3px 3px"><div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(140deg,#5b4a3a,#b09a7a);flex:none"></div><div style="min-width:0"><div style="font:500 8.5px/1 JetBrains Mono;letter-spacing:.1em;color:var(--acc)">ТРЕК</div><div style="font:700 12.5px/1.3 Manrope;margin-top:5px">safety third</div><div style="font:400 11px/1.3 Manrope;color:rgba(234,231,226,.5);margin-top:2px">йцукен · 2:04</div></div><div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex:none;margin-left:6px"><div style="width:0;height:0;border-left:9px solid #eae7e2;border-top:5.5px solid transparent;border-bottom:5.5px solid transparent;margin-left:2px"></div></div></div>
+      </div>
+      <div style="align-self:flex-end;width:190px;max-width:60%;border-radius:16px 16px 5px 16px;overflow:hidden"><div style="width:100%;height:150px;background:linear-gradient(140deg,#5b3a4a,#c98a5a);position:relative"><div style="position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 2px,transparent 2px 11px)"></div><div style="position:absolute;left:8px;top:8px;font:500 8px/1 JetBrains Mono;color:rgba(255,255,255,.6);background:rgba(0,0,0,.3);padding:4px 6px;border-radius:4px">ФОТО</div></div></div>
+      <div style="align-self:flex-end;max-width:74%;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:16px 16px 5px 16px;background:#eae7e2;color:#030201"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><div><div style="font:600 12px/1.3 Manrope">setlist.pdf</div><div style="font:400 10px/1.3 Manrope;color:rgba(3,2,1,.5)">240 КБ</div></div></div>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(180deg,rgba(3,2,1,0),rgba(3,2,1,.9) 45%,#030201)"></div>
+    <div style="position:absolute;left:12px;right:12px;bottom:24px;height:56px;border-radius:20px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;gap:10px;padding:0 8px 0 8px;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+      <div style="position:relative;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      <div style="position:relative;flex:1;font:400 13px/1 Manrope;color:rgba(234,231,226,.4)">Сообщение…</div>
+      <div style="position:relative;width:40px;height:40px;border-radius:14px;background:var(--acc);display:flex;align-items:center;justify-content:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03110d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ЧАТ · СТИКЕРЫ / ЭМОДЗИ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="position:absolute;left:0;right:0;top:0;height:106px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 -1px 0 rgba(255,255,255,.08);z-index:5;display:flex;align-items:flex-end;gap:11px;padding:0 16px 12px"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+      <svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:9px"><path d="M15 6l-6 6 6 6"/></svg>
+      <div style="position:relative;width:38px;height:38px;border-radius:50%;background:linear-gradient(150deg,#5b3a4a,#b07a8a)"></div>
+      <div style="position:relative;flex:1"><div style="font:700 13.5px/1.25 Manrope">Maria Kotlaeva</div></div>
+    </div>
+    <div style="position:absolute;left:0;right:0;top:106px;bottom:260px;padding:16px 14px 0;display:flex;flex-direction:column;gap:9px;overflow:hidden">
+      <div style="align-self:flex-start;max-width:74%;padding:10px 13px;border-radius:16px 16px 16px 5px;background:#0d0c0b;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)"><div style="font:400 13px/1.4 Manrope">го джем сегодня?</div></div>
+      <div style="align-self:flex-end;position:relative"><div style="width:76px;height:76px;font-size:52px;line-height:76px;text-align:center">🔥</div></div>
+      <div style="align-self:flex-start;position:relative"><div style="width:76px;height:76px;border-radius:16px;background:linear-gradient(140deg,#c9a227,#6b4a10);display:flex;align-items:center;justify-content:center;font-size:34px">😎</div><div style="position:absolute;left:8px;top:8px;font:500 7px/1 JetBrains Mono;color:rgba(255,255,255,.55)">СТИКЕР</div></div>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:260px;background:rgba(18,16,14,.22);backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 1px 0 rgba(255,255,255,.1);overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 30%)"></div>
+      <div style="position:relative;display:flex;gap:18px;padding:14px 16px 0;font:600 12px/1 Manrope"><span style="color:#eae7e2;position:relative">Эмодзи<div style="position:absolute;left:0;right:0;bottom:-11px;height:2px;background:var(--acc)"></div></span><span style="color:rgba(234,231,226,.45)">Стикеры</span><span style="color:rgba(234,231,226,.45)">GIF</span></div>
+      <div style="position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:16px 14px 0;font-size:24px;text-align:center">
+        <div>😀</div><div>😂</div><div>😍</div><div>🥲</div><div>🔥</div><div>👍</div><div>🎧</div>
+        <div>🙏</div><div>😭</div><div>🤝</div><div>💀</div><div>✨</div><div>😴</div><div>👀</div>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;gap:10px;padding:16px 14px 0">
+        <div style="flex:1;height:44px;border-radius:22px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);display:flex;align-items:center;padding:0 16px;font:400 13px/1 Manrope;color:rgba(234,231,226,.4)">Сообщение…</div>
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03110d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+      </div>
+    </div>
+  </div></div>
+
+  </div>
+</div>
+
+<!-- 8 ПРОФИЛЬ -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">08 · ПРОФИЛЬ / НАСТРОЙКИ</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Обычный → Стекло выключено (fallback)</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;align-items:flex-start">
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">ОБЫЧНЫЙ</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="display:flex;gap:16px;align-items:center;padding:56px 20px 0"><div style="width:76px;height:76px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#7a8a80)"></div><div><div style="font:800 21px/1.15 Manrope">Котлаев Данил</div><div style="font:400 11px/1.45 Manrope;color:rgba(234,231,226,.5);margin-top:6px">@danil · с июня 2026</div></div></div>
+    <div style="display:flex;gap:10px;padding:20px 16px 0"><div style="flex:1;padding:14px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.06)"><div style="font:800 19px/1 Manrope">4</div><div style="font:400 10.5px/1 Manrope;color:rgba(234,231,226,.5);margin-top:7px">лайка</div></div><div style="flex:1;padding:14px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.06)"><div style="font:800 19px/1 Manrope">3</div><div style="font:400 10.5px/1 Manrope;color:rgba(234,231,226,.5);margin-top:7px">артиста</div></div><div style="flex:1;padding:14px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.06)"><div style="font:800 19px/1 Manrope">12</div><div style="font:400 10.5px/1 Manrope;color:rgba(234,231,226,.5);margin-top:7px">друзей</div></div></div>
+    <div style="font:700 14px/1 Manrope;padding:22px 20px 0">Настройки</div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:12px 12px 0">
+      <div style="display:flex;align-items:center;gap:12px;padding:13px 10px;border-radius:14px;background:#060503"><div style="font:500 12.5px/1 Manrope;flex:1">Стеклянный интерфейс</div><div style="width:40px;height:23px;border-radius:12px;background:var(--acc);position:relative"><div style="position:absolute;right:2px;top:2px;width:19px;height:19px;border-radius:50%;background:#fff"></div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:13px 10px;border-radius:14px;background:#060503"><div style="font:500 12.5px/1 Manrope;flex:1">Приглушить движение</div><div style="width:40px;height:23px;border-radius:12px;background:rgba(255,255,255,.12);position:relative"><div style="position:absolute;left:2px;top:2px;width:19px;height:19px;border-radius:50%;background:rgba(234,231,226,.7)"></div></div></div>
+    </div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.22);backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  <div><div style="font:600 11px/1 JetBrains Mono;color:rgba(234,231,226,.45);margin-bottom:10px;text-align:center">СТЕКЛО ВЫКЛЮЧЕНО</div>
+  <div style="width:390px;height:844px;position:relative;overflow:hidden;background:#030201;border-radius:38px;box-shadow:0 30px 80px rgba(0,0,0,.6);color:#eae7e2">
+    <div style="display:flex;gap:16px;align-items:center;padding:56px 20px 0"><div style="width:76px;height:76px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#7a8a80)"></div><div><div style="font:800 21px/1.15 Manrope">Котлаев Данил</div><div style="font:400 11px/1.45 Manrope;color:rgba(234,231,226,.5);margin-top:6px">@danil · с июня 2026</div></div></div>
+    <div style="font:700 14px/1 Manrope;padding:24px 20px 0">Настройки</div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:12px 12px 0">
+      <div style="display:flex;align-items:center;gap:12px;padding:13px 10px;border-radius:14px;background:#060503"><div style="font:500 12.5px/1 Manrope;flex:1">Стеклянный интерфейс</div><div style="width:40px;height:23px;border-radius:12px;background:rgba(255,255,255,.12);position:relative"><div style="position:absolute;left:2px;top:2px;width:19px;height:19px;border-radius:50%;background:rgba(234,231,226,.7)"></div></div></div>
+    </div>
+    <div style="margin:16px 16px 0;padding:12px 14px;border-radius:14px;background:#060503;border:1px solid rgba(255,255,255,.07);font:400 11.5px/1.5 Manrope;color:rgba(234,231,226,.6)">Панели стали непрозрачными #0b0908 — экономит батарею и держит частоту кадров на слабых устройствах</div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:120px;background:#030201"></div>
+    <div style="position:absolute;left:16px;right:16px;bottom:96px;height:56px;border-radius:18px;background:#0b0908;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);display:flex;align-items:center;gap:11px;padding:0 12px"><div style="width:36px;height:36px;border-radius:9px;background:linear-gradient(140deg,#2e3a33,#6b6f63)"></div><div style="flex:1"><div style="font:600 12.5px/1.3 Manrope">Interference</div></div></div>
+    <div style="position:absolute;left:22px;right:22px;bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      <div style="width:56px;height:56px;border-radius:50%;background:#0b0908;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#0b0908;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#0b0908;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#0b0908;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center"><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+    </div>
+  </div></div>
+
+  </div>
+</div>
+
+</div>
+</x-dc>
+</body>
+</html>

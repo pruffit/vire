@@ -4,7 +4,9 @@ const { request } = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock('../api-client', () => ({ apiRequest: request }));
 
 import {
+  fetchPlaylists,
   fetchPlaylistsForTrack,
+  fetchPlaylistDetail,
   addTrackToPlaylist,
   removeTrackFromPlaylist,
   createPlaylist,
@@ -12,6 +14,40 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe('fetchPlaylists', () => {
+  it('GET /api/v1/playlists без query-параметров', async () => {
+    request.mockResolvedValue({ ok: true, data: { playlists: [] } });
+
+    await fetchPlaylists();
+
+    expect(request).toHaveBeenCalledWith('/api/v1/playlists', expect.objectContaining({ schema: expect.anything() }));
+  });
+});
+
+describe('fetchPlaylistDetail', () => {
+  it('GET /api/v1/playlists/{id} с нужной схемой', async () => {
+    request.mockResolvedValue({ ok: true, data: { playlist: {} } });
+
+    await fetchPlaylistDetail('p1');
+
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/playlists/p1',
+      expect.objectContaining({ schema: expect.anything() }),
+    );
+  });
+
+  it('экранирует id', async () => {
+    request.mockResolvedValue({ ok: true, data: { playlist: {} } });
+
+    await fetchPlaylistDetail('a b/c');
+
+    expect(request).toHaveBeenCalledWith(
+      `/api/v1/playlists/${encodeURIComponent('a b/c')}`,
+      expect.anything(),
+    );
+  });
 });
 
 describe('fetchPlaylistsForTrack', () => {

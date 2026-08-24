@@ -1,23 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { releaseDetailResponseSchema, type ReleaseDetailResponse } from '@vire/api-contracts';
-import type { HomeStackParamList } from '../navigation/home-stack';
-import { apiRequest } from '../lib/api-client';
+import type { PlaylistDetailResponse } from '@vire/api-contracts';
+import type { LibraryStackParamList } from '../navigation/library-stack';
+import { fetchPlaylistDetail } from '../lib/playlists';
 import { colors, radius } from '../lib/theme';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
-import { resolveReleaseHeader } from '../lib/release-header';
 import { Screen } from '../components/screen';
 import { useContentBottomPadding } from '../lib/layout';
 import { LikeButton } from '../components/like-button';
@@ -25,38 +16,36 @@ import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
 import { DownloadButton } from '../components/download-button';
 
 type LoadState = 'loading' | 'error' | 'ready';
-type TrackItem = ReleaseDetailResponse['tracks'][number];
+type PlaylistTrackItem = PlaylistDetailResponse['playlist']['tracks'][number];
 
-// Полноразмерная размытая обложка фоном шапки — «ARTIST HEADER»/«COVER FULL-BLEED» из
-// мокапов design-канвасов (та же затея, что и в стеклянной системе инкремента 19, просто
-// без blur-стекла: тут размывается сама картинка через blurRadius, не контент под стеклом).
+// Тот же приём полноразмерного размытого фона шапки, что в release-screen.tsx.
 const HEADER_SCRIM = ['rgba(3,2,1,0.35)', 'rgba(3,2,1,0.55)', '#030201'] as const;
 
-// Экран не читает `navigation` (только `route.params`) — типизируем узко по params,
-// чтобы его можно было переиспользовать под 'ReleaseDetail' сразу из нескольких стеков
-// (home-stack.tsx, search-stack.tsx) без конфликта NativeStackNavigationProp<ParamList>
-// между ними (разные списки роутов — разные типы navigate()).
-export default function ReleaseScreen({ route }: { route: { params: HomeStackParamList['ReleaseDetail'] } }) {
-  const { releaseId } = route.params;
+// Узкая типизация по route.params — тот же приём, что в screens/release-screen.tsx
+// (экран не читает `navigation`, не завязан на конкретный список роутов стека).
+export default function PlaylistScreen({
+  route,
+}: {
+  route: { params: LibraryStackParamList['PlaylistDetail'] };
+}) {
+  const { playlistId } = route.params;
   const bottomPadding = useContentBottomPadding();
-  const [tracks, setTracks] = useState<TrackItem[]>([]);
-  const [release, setRelease] = useState<ReleaseDetailResponse['release'] | null>(null);
+  const [playlist, setPlaylist] = useState<PlaylistDetailResponse['playlist'] | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const currentTrackId = usePlayerStore((s) => s.queue[s.queueIndex]?.id ?? null);
-  const { title, artistName, coverUrl } = resolveReleaseHeader(route.params, release);
+
+  const title = playlist?.title ?? route.params.title ?? 'Плейлист';
+  const coverUrl = playlist?.coverUrl ?? route.params.coverUrl ?? null;
+  const tracks = playlist?.tracks ?? [];
 
   const load = useCallback(async () => {
-    // apiRequest — релиз может быть черновиком/WIP, виден только владельцу/стаффу.
-    const result = await apiRequest(`/api/v1/releases/${releaseId}`, {
-      schema: releaseDetailResponseSchema,
-    });
+    const result = await fetchPlaylistDetail(playlistId);
     if (!result.ok) return false;
-    setTracks(result.data.tracks);
-    setRelease(result.data.release);
+    setPlaylist(result.data.playlist);
     return true;
-  }, [releaseId]);
+  }, [playlistId]);
 
   const initialLoad = useCallback(async () => {
     setState('loading');
@@ -78,8 +67,8 @@ export default function ReleaseScreen({ route }: { route: { params: HomeStackPar
     const queue: QueueTrack[] = tracks.map((t) => ({
       id: t.id,
       title: t.title,
-      artistName,
-      coverUrl,
+      artistName: t.artistName,
+      coverUrl: t.coverUrl,
       durationSec: t.durationSec,
     }));
     playQueue(queue, index);
@@ -100,9 +89,9 @@ export default function ReleaseScreen({ route }: { route: { params: HomeStackPar
         <Text style={styles.title} numberOfLines={2}>
           {title}
         </Text>
-        {artistName !== '' && (
-          <Text style={styles.artist} numberOfLines={1}>
-            {artistName}
+        {tracks.length > 0 && (
+          <Text style={styles.count}>
+            {tracks.length} {tracks.length === 1 ? 'трек' : 'треков'}
           </Text>
         )}
       </View>
@@ -115,26 +104,26 @@ export default function ReleaseScreen({ route }: { route: { params: HomeStackPar
 
       {state === 'error' && (
         <View style={styles.centered}>
-          <Text style={styles.messageText}>Не удалось загрузить трек-лист</Text>
+          <Text style={styles.messageText}>Не удалось загрузить плейлист</Text>
           <Pressable style={styles.retryButton} onPress={initialLoad}>
             <Text style={styles.retryText}>Повторить</Text>
           </Pressable>
         </View>
       )}
 
-      {state === 'ready' && (
+      {state === 'ready' && tracks.length === 0 && (
+        <View style={styles.centered}>
+          <Text style={styles.messageText}>В плейлисте пока нет треков</Text>
+        </View>
+      )}
+
+      {state === 'ready' && tracks.length > 0 && (
         <FlatList
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
           data={tracks}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
-            <TrackRow
-              track={item}
-              playing={item.id === currentTrackId}
-              onPress={() => play(index)}
-              artistName={artistName}
-              coverUrl={coverUrl}
-            />
+            <TrackRow track={item} playing={item.id === currentTrackId} onPress={() => play(index)} />
           )}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />
@@ -149,26 +138,21 @@ function TrackRow({
   track,
   playing,
   onPress,
-  artistName,
-  coverUrl,
 }: {
-  track: TrackItem;
+  track: PlaylistTrackItem;
   playing: boolean;
   onPress: () => void;
-  artistName: string;
-  coverUrl: string | null;
 }) {
-  const disabled = track.status !== 'READY';
   return (
-    <Pressable
-      style={[styles.trackRow, playing && styles.trackRowActive]}
-      onPress={onPress}
-      disabled={disabled}
-    >
-      <Text style={[styles.trackNumber, disabled && styles.trackDisabled]}>{track.trackNumber}</Text>
+    <Pressable style={[styles.trackRow, playing && styles.trackRowActive]} onPress={onPress}>
+      {track.coverUrl ? (
+        <Image source={{ uri: track.coverUrl }} style={styles.trackCover} />
+      ) : (
+        <View style={[styles.trackCover, styles.coverPlaceholder]} />
+      )}
       <View style={styles.trackInfo}>
         <View style={styles.trackTitleRow}>
-          <Text style={[styles.trackTitle, disabled && styles.trackDisabled]} numberOfLines={1}>
+          <Text style={styles.trackTitle} numberOfLines={1}>
             {track.title}
           </Text>
           {track.isExplicit && (
@@ -177,26 +161,26 @@ function TrackRow({
             </View>
           )}
         </View>
-        {disabled && <Text style={styles.trackStatus}>Недоступен</Text>}
+        <Text style={styles.trackArtist} numberOfLines={1}>
+          {track.artistName}
+        </Text>
       </View>
-      <Text style={[styles.trackDuration, disabled && styles.trackDisabled]}>{formatDuration(track.durationSec)}</Text>
+      <Text style={styles.trackDuration}>{formatDuration(track.durationSec)}</Text>
       <LikeButton trackId={track.id} />
       <AddToPlaylistSheet trackId={track.id} />
-      {!disabled && (
-        <DownloadButton
-          meta={{ id: track.id, title: track.title, artistName, coverUrl, durationSec: track.durationSec }}
-        />
-      )}
+      <DownloadButton
+        meta={{ id: track.id, title: track.title, artistName: track.artistName, coverUrl: track.coverUrl, durationSec: track.durationSec }}
+      />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   header: { padding: 16, alignItems: 'center', gap: 6, overflow: 'hidden' },
-  cover: { width: 180, height: 180, borderRadius: radius.lg, marginBottom: 8 },
+  cover: { width: 160, height: 160, borderRadius: radius.lg, marginBottom: 8 },
   coverPlaceholder: { backgroundColor: colors.secondary },
   title: { color: colors.foreground, fontSize: 20, fontWeight: '800', textAlign: 'center' },
-  artist: { color: colors.mutedForeground, fontSize: 15, fontWeight: '500', textAlign: 'center' },
+  count: { color: colors.mutedForeground, fontSize: 13, fontWeight: '500' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
   messageText: { color: colors.mutedForeground, fontSize: 15, textAlign: 'center' },
   retryButton: {
@@ -212,16 +196,17 @@ const styles = StyleSheet.create({
   trackRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     minHeight: 56,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderRadius: radius.md,
   },
   trackRowActive: { backgroundColor: colors.secondary },
-  trackNumber: { color: colors.mutedForeground, fontSize: 14, minWidth: 20, textAlign: 'center' },
-  trackInfo: { flex: 1, gap: 2 },
+  trackCover: { width: 40, height: 40, borderRadius: radius.sm },
+  trackInfo: { flex: 1, gap: 2, minWidth: 0 },
   trackTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   trackTitle: { color: colors.foreground, fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  trackArtist: { color: colors.mutedForeground, fontSize: 12.5, fontWeight: '500' },
   explicitBadge: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 3,
@@ -231,7 +216,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   explicitText: { color: colors.mutedForeground, fontSize: 9, fontWeight: '800' },
-  trackStatus: { color: colors.mutedForeground, fontSize: 12 },
   trackDuration: { color: colors.mutedForeground, fontSize: 13, fontVariant: ['tabular-nums'] },
-  trackDisabled: { color: colors.mutedForeground, opacity: 0.5 },
 });

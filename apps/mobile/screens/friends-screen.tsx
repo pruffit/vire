@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
@@ -18,6 +18,8 @@ import type { ProfileStackParamList } from '../navigation/profile-stack';
 import { fetchFriends, searchUsers } from '../lib/friends';
 import { FriendButton } from '../components/friend-button';
 import { Screen } from '../components/screen';
+import { Glass } from '../components/glass';
+import { useContentBottomPadding } from '../lib/layout';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 
@@ -28,6 +30,7 @@ type LoadState = 'loading' | 'error' | 'ready';
 
 export default function FriendsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'Friends'>>();
+  const bottomPadding = useContentBottomPadding();
   const [friends, setFriends] = useState<FriendDTO[]>([]);
   const [incoming, setIncoming] = useState<IncomingRequestDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
@@ -89,7 +92,7 @@ export default function FriendsScreen() {
     <Screen style={styles.container}>
       <Text style={styles.heading}>Друзья</Text>
 
-      <View style={styles.searchBox}>
+      <Glass style={styles.searchBox} radius={radius.md}>
         <Icon name="search" size={16} color={colors.mutedForeground} />
         <TextInput
           value={query}
@@ -100,7 +103,7 @@ export default function FriendsScreen() {
           autoCorrect={false}
           style={styles.searchInput}
         />
-      </View>
+      </Glass>
 
       {state === 'loading' && (
         <View style={styles.centered}>
@@ -119,7 +122,7 @@ export default function FriendsScreen() {
 
       {state === 'ready' && (
         <ScrollView
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />}
         >
           {showSearchPanel && (
@@ -209,8 +212,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
     paddingHorizontal: 12,
     minHeight: 44,
     marginBottom: 8,
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   retryText: { color: colors.foreground, fontWeight: '700' },
-  listContent: { paddingBottom: 96, gap: 20 },
+  listContent: { gap: 20 },
   section: { gap: 8 },
   sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
   sectionBody: { gap: 2 },

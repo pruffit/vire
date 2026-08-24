@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -7,7 +9,13 @@ import { nextQueueIndex } from '@vire/core/playback/queue';
 import { usePlayerStore } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
 import { Icon } from '../lib/icon';
+import { Glass } from '../components/glass';
 import { colors, radius } from '../lib/theme';
+
+// Полноразмерная размытая обложка фоном — тот же приём, что в release-screen.tsx/
+// playlist-screen.tsx, только сильнее (blurRadius 80) и на весь экран: мокапы полного
+// плеера («2 · ЭКРАН») строятся вокруг этой размытой обложки, не плоского фона.
+const PLAYER_SCRIM = ['rgba(3,2,1,0.6)', 'rgba(3,2,1,0.35)', 'rgba(3,2,1,0.75)'] as const;
 
 export default function PlayerScreen() {
   const navigation = useNavigation();
@@ -37,8 +45,15 @@ export default function PlayerScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: 24 + insets.bottom }]}>
+      {track.coverUrl && (
+        <Image source={{ uri: track.coverUrl }} style={StyleSheet.absoluteFill} blurRadius={80} contentFit="cover" />
+      )}
+      <LinearGradient colors={PLAYER_SCRIM} style={StyleSheet.absoluteFill} />
+
       <Pressable style={styles.closeButton} onPress={() => navigation.goBack()} hitSlop={12}>
-        <Icon name="chevron-down" size={22} color={colors.mutedForeground} />
+        <Glass style={styles.closeButtonGlass} radius={18} intensity={30} shadow={false}>
+          <Icon name="chevron-down" size={20} color={colors.foreground} />
+        </Glass>
       </Pressable>
 
       {track.coverUrl ? (
@@ -61,7 +76,7 @@ export default function PlayerScreen() {
         <Text style={styles.timeText}>{formatDuration(durationSec)}</Text>
       </View>
 
-      <View style={styles.transportRow}>
+      <Glass style={styles.transportRow} radius={28}>
         <Pressable
           style={styles.transportButton}
           onPress={() => {
@@ -107,7 +122,7 @@ export default function PlayerScreen() {
             </View>
           )}
         </Pressable>
-      </View>
+      </Glass>
     </View>
   );
 }
@@ -173,8 +188,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     gap: 8,
+    overflow: 'hidden',
   },
   closeButton: { alignSelf: 'flex-end', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  closeButtonGlass: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   cover: { width: '100%', aspectRatio: 1, borderRadius: radius.xl, marginTop: 8 },
   coverPlaceholder: { backgroundColor: colors.secondary },
   title: { color: colors.foreground, fontSize: 22, fontWeight: '800', textAlign: 'center', marginTop: 24 },
@@ -198,6 +215,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginTop: 'auto',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   transportButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   repeatBadge: {

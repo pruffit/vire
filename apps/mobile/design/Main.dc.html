@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><style>body{margin:0;background:#030201}a{color:#eae7e2}a:hover{color:#c9c6c1}</style></helmet>
+
+<div style="min-height:100vh;background:#030201;color:#eae7e2;font-family:Manrope,system-ui,sans-serif;padding:0 0 90px">
+
+<div style="position:relative;overflow:hidden;padding:64px 40px 44px;border-bottom:1px solid rgba(255,255,255,.07)">
+  <div style="position:absolute;top:-140px;left:-80px;width:520px;height:420px;background:radial-gradient(circle at 45% 45%,{{acc}}22,transparent 62%);filter:blur(50px)"></div>
+  <div style="position:relative;font:500 10px/1 JetBrains Mono;letter-spacing:.16em;color:rgba(234,231,226,.45)">VIREMUSIC · MOBILE · UI-КИТ</div>
+  <div style="position:relative;font:800 42px/1.02 Manrope;letter-spacing:-.03em;margin-top:16px;max-width:640px">UI-кит мобильного приложения</div>
+  <div style="position:relative;font:400 14px/1.6 Manrope;color:rgba(234,231,226,.6);margin-top:16px;max-width:640px;text-wrap:pretty">Тёмная база веба + слой liquid glass, который живёт только на мобиле. У платформы нет своего фирменного цвета — акцент всегда контекстный (см. 00). Три закона кита: панель — всегда одно и то же прозрачное стекло; кнопка с иконкой — всегда круг без подписи; свет идёт из контента, а не из абстрактного источника сверху.</div>
+  <div style="position:relative;display:flex;gap:10px;margin-top:26px;flex-wrap:wrap">
+    <div style="height:34px;padding:0 13px;border-radius:17px;background:rgba(18,16,14,.42);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);display:flex;align-items:center;font:600 11.5px/1 Manrope;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 52%)"></div><div style="position:absolute;left:14px;right:14px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent)"></div><span style="position:relative">Android · Expo</span></div>
+    <div style="height:34px;padding:0 13px;border-radius:17px;background:#0a0908;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;font:600 11.5px/1 Manrope;color:rgba(234,231,226,.65)">390 × 844 · @3x</div>
+    <div style="height:34px;padding:0 13px;border-radius:17px;background:#0a0908;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;font:600 11.5px/1 Manrope;color:rgba(234,231,226,.65)">Тёмная тема · единственная</div>
+  </div>
+</div>
+
+<!-- 00 ПРАВИЛО АКЦЕНТА -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">00 · ГЛАВНОЕ ПРАВИЛО</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">У платформы нет своего цвета</div>
+  <div style="max-width:760px;font:400 13px/1.65 Manrope;color:rgba(234,231,226,.65);margin-top:14px;text-wrap:pretty">Веб уже так живёт (<span style="font-family:JetBrains Mono;font-size:11.5px;color:rgba(234,231,226,.5)">packages/design-tokens</span> не содержит поля accent) — платформенная оболочка нейтральна. Мобилка наследует это буквально: <b style="color:#eae7e2">никакого фирменного мятного/любого другого «цвета бренда» нет</b>. Цвет появляется только вместе с контекстом — профилем артиста (<span style="font-family:JetBrains Mono;font-size:11.5px;color:rgba(234,231,226,.5)">theme_tokens</span>) или играющим сейчас релизом в плеере. Везде, где контекста нет (главная вне артиста, поиск, медиатека, настройки) — интерфейс полностью ахроматичный: только текст и подложки из палитры ниже.</div>
+  <div style="margin-top:26px;padding:22px;border-radius:20px;background:#060503;border:1px solid rgba(255,255,255,.07)">
+    <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.4)">ЖИВОЙ ПРИМЕР — ПОТЯНИ ЗА ТВИК ВЫШЕ АРТБОРДА</div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;align-items:center">
+      <div style="width:220px;padding:16px;border-radius:16px;background:rgba(18,16,14,.4);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 0 0 1.5px {{acc}}55;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div><div style="position:absolute;left:16px;right:16px;bottom:0;height:1px;background:linear-gradient(90deg,transparent,{{acc}}80,transparent)"></div><div style="position:relative;font:600 12.5px/1.3 Manrope">Панель со стеклом</div><div style="position:relative;font:400 11px/1.4 Manrope;color:rgba(234,231,226,.5);margin-top:4px">rim и обводка — {{acc}}</div></div>
+      <div style="width:52px;height:52px;border-radius:50%;background:{{acc}}22;box-shadow:inset 0 0 0 1.5px {{acc}}80;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{acc}}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17l9-10"/></svg></div>
+      <div style="height:38px;padding:0 16px;border-radius:19px;background:{{acc}}22;box-shadow:inset 0 0 0 1px {{acc}}60;display:flex;align-items:center;font:700 12px/1 Manrope;color:{{acc}}">Кнопка-акцент</div>
+      <div style="flex:1;min-width:160px"><div style="font:600 11px/1.3 Manrope;color:rgba(234,231,226,.5)">Прогресс трека</div><div style="height:3px;border-radius:2px;background:rgba(234,231,226,.16);margin-top:8px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:38%;border-radius:2px;background:{{acc}}"></div></div></div>
+    </div>
+    <div style="margin-top:16px;font:400 11.5px/1.5 Manrope;color:rgba(234,231,226,.55)"><sc-if value="{{isNeutral}}" hint-placeholder-val="{{true}}">Твик стоит на «Нейтрально» — это стандартное состояние 90% экранов. Ни один hex здесь не зашит платформой.</sc-if><sc-if value="{{isContext}}" hint-placeholder-val="{{false}}">Твик стоит на реальном примере из каталога — так эти же элементы выглядят внутри профиля артиста или в плеере на его релизе.</sc-if></div>
+  </div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:18px">
+    <div style="flex:1;min-width:280px;padding:16px;border-radius:16px;background:rgba(79,255,180,.05);border:1px solid rgba(120,255,180,.18)"><div style="font:700 11.5px/1.3 Manrope;color:#8fe0b8">Где акцент есть</div><div style="font:400 11.5px/1.55 Manrope;color:rgba(234,231,226,.65);margin-top:8px">Профиль артиста и всё внутри его контекста (посты, релизы на его странице) — цвет из <span style="font-family:JetBrains Mono">theme_tokens</span>. Полноэкранный и мини-плеер — цвет текущего релиза, гаснет при паузе/смене на трек без акцента.</div></div>
+    <div style="flex:1;min-width:280px;padding:16px;border-radius:16px;background:rgba(216,98,47,.06);border:1px solid rgba(216,98,47,.22)"><div style="font:700 11.5px/1.3 Manrope;color:#e08a63">Где акцента нет</div><div style="font:400 11.5px/1.55 Manrope;color:rgba(234,231,226,.65);margin-top:8px">Главная лента, поиск, медиатека, друзья/сообщения, настройки, любой список из разных артистов сразу. «Активное» состояние там красится нейтральным <span style="font-family:JetBrains Mono">foreground #eae7e2</span> (сплошной круг), не цветом.</div></div>
+  </div>
+</div>
+
+<!-- 01 ЦВЕТ -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">01 · ЦВЕТ</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Палитра — 1:1 с вебом</div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:22px">
+    <div style="width:150px"><div style="height:82px;border-radius:14px;background:#030201;border:1px solid rgba(255,255,255,.08)"></div><div style="font:600 12px/1.2 Manrope;margin-top:10px">bg.base</div><div style="font:500 10.5px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">#030201</div></div>
+    <div style="width:150px"><div style="height:82px;border-radius:14px;background:#060503;border:1px solid rgba(255,255,255,.08)"></div><div style="font:600 12px/1.2 Manrope;margin-top:10px">surface.card</div><div style="font:500 10.5px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">#060503</div></div>
+    <div style="width:150px"><div style="height:82px;border-radius:14px;background:#0a0908;border:1px solid rgba(255,255,255,.08)"></div><div style="font:600 12px/1.2 Manrope;margin-top:10px">surface.raised</div><div style="font:500 10.5px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">#0a0908</div></div>
+    <div style="width:150px"><div style="height:82px;border-radius:14px;background:#eae7e2"></div><div style="font:600 12px/1.2 Manrope;margin-top:10px">text.primary</div><div style="font:500 10.5px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">#eae7e2</div></div>
+    <div style="width:150px"><div style="height:82px;border-radius:14px;background:#7a7772"></div><div style="font:600 12px/1.2 Manrope;margin-top:10px">text.muted</div><div style="font:500 10.5px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">#7a7772</div></div>
+    <div style="width:150px"><div style="height:82px;border-radius:14px;background:#d40c1a"></div><div style="font:600 12px/1.2 Manrope;margin-top:10px">destructive</div><div style="font:500 10.5px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">#d40c1a</div></div>
+    <div style="width:150px"><div style="height:82px;border-radius:14px;background:linear-gradient(120deg,#ff5c39,#5f7ae0 50%,#c9a227)"></div><div style="font:600 12px/1.2 Manrope;margin-top:10px">accent.контекст</div><div style="font:500 10.5px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">theme_tokens / релиз</div></div>
+  </div>
+  <div style="margin-top:18px;padding:16px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.07);max-width:660px"><div style="font:600 11.5px/1.3 Manrope">Прозрачности текста</div><div style="display:flex;flex-direction:column;gap:7px;margin-top:12px;font:500 10.5px/1.4 JetBrains Mono"><div style="display:flex;justify-content:space-between"><span style="color:#eae7e2">primary</span><span style="color:rgba(234,231,226,.45)">100%</span></div><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.6)">secondary</span><span style="color:rgba(234,231,226,.45)">60%</span></div><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.45)">tertiary</span><span style="color:rgba(234,231,226,.45)">45%</span></div><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.3)">disabled</span><span style="color:rgba(234,231,226,.45)">30%</span></div></div></div>
+</div>
+
+<!-- 02 СТЕКЛО -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">02 · СТЕКЛО</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Анатомия панели</div>
+  <div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:22px;align-items:flex-start">
+    <div style="width:420px;height:260px;border-radius:20px;position:relative;overflow:hidden;background:linear-gradient(140deg,#2e3a33,#8a8a7a 55%,#1c211e)">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 2px,transparent 2px 11px)"></div>
+      <div style="position:absolute;left:14px;top:14px;font:500 9px/1 JetBrains Mono;letter-spacing:.08em;color:rgba(255,255,255,.55);background:rgba(0,0,0,.3);padding:5px 7px;border-radius:4px">КОНТЕНТ = ИСТОЧНИК СВЕТА</div>
+      <div style="position:absolute;left:24px;right:24px;top:78px;height:104px;border-radius:22px;background:rgba(18,16,14,.4);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 22px 50px rgba(0,0,0,.55);overflow:hidden">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+        <div style="position:absolute;left:28px;right:28px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent)"></div>
+        <div style="position:absolute;left:44px;right:44px;bottom:0;height:1px;background:linear-gradient(90deg,transparent,{{acc}}70,transparent)"></div>
+        <div style="position:relative;padding:20px 22px;font:700 15px/1.3 Manrope">Панель</div>
+        <div style="position:relative;padding:0 22px;font:400 11.5px/1.4 Manrope;color:rgba(234,231,226,.6)">blur 30 · sat 175% · #12100e @40%</div>
+      </div>
+    </div>
+    <div style="width:330px;display:flex;flex-direction:column;gap:9px;font:500 10.5px/1.4 JetBrains Mono">
+      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:rgba(234,231,226,.5)">glass.bg</span><span>#12100e @40%</span></div>
+      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:rgba(234,231,226,.5)">glass.blur</span><span>30px</span></div>
+      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:rgba(234,231,226,.5)">glass.saturate</span><span>175%</span></div>
+      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:rgba(234,231,226,.5)">glass.edge</span><span>inset 1px #fff@10%</span></div>
+      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:rgba(234,231,226,.5)">glass.specular</span><span>1px #fff@55–60% top</span></div>
+      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:rgba(234,231,226,.5)">glass.rim</span><span>1px — neutral #fff@18% ИЛИ контекст-акцент@45%</span></div>
+      <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:rgba(234,231,226,.5)">glass.shadow</span><span>0 18 40 #000@50%</span></div>
+      <div style="font:400 11.5px/1.55 Manrope;color:rgba(234,231,226,.6);margin-top:10px">Rim по умолчанию — нейтральный белый блик 18%. Он становится цветным только когда панель физически лежит внутри контекста (профиль артиста / плеер с играющим релизом) — иначе это была бы скрытая протечка «фирменного цвета», которого не существует.</div>
+    </div>
+  </div>
+
+  <div style="font:800 16px/1.1 Manrope;letter-spacing:-.01em;margin-top:34px">Состояния</div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:16px">
+    <div style="width:200px;padding:14px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.07)"><div style="height:52px;border-radius:16px;background:rgba(18,16,14,.4);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div></div><div style="font:600 11.5px/1.3 Manrope;margin-top:11px">rest</div><div style="font:500 10px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">blur 30 · scale 1</div></div>
+    <div style="width:200px;padding:14px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.07)"><div style="height:52px;border-radius:16px;background:rgba(18,16,14,.48);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);transform:scale(.96);position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 52%)"></div></div><div style="font:600 11.5px/1.3 Manrope;margin-top:11px">pressed</div><div style="font:500 10px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">blur 22 · scale .96 · 120мс</div></div>
+    <div style="width:200px;padding:14px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.07)"><div style="height:52px;border-radius:16px;background:{{acc}}1e;backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);box-shadow:inset 0 0 0 1px {{acc}}66;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 52%)"></div></div><div style="font:600 11.5px/1.3 Manrope;margin-top:11px">active / selected</div><div style="font:500 10px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">только с контекстом; иначе — solid foreground</div></div>
+    <div style="width:200px;padding:14px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.07)"><div style="height:52px;border-radius:16px;background:#0b0908;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)"></div><div style="font:600 11.5px/1.3 Manrope;margin-top:11px">reduced (fallback)</div><div style="font:500 10px/1.3 JetBrains Mono;color:rgba(234,231,226,.45);margin-top:5px">blur 0 · #0b0908 непрозр.</div></div>
+  </div>
+
+  <div style="font:800 16px/1.1 Manrope;letter-spacing:-.01em;margin-top:34px">Android · инженерная спека</div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:16px">
+    <div style="flex:1;min-width:300px;padding:16px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.07)"><div style="font:700 11.5px/1.3 Manrope">Реализация</div><div style="font:400 11.5px/1.6 Manrope;color:rgba(234,231,226,.65);margin-top:8px">CSS <span style="font-family:JetBrains Mono">backdrop-filter</span> в RN не существует. Панель = <span style="font-family:JetBrains Mono">expo-blur</span>'s <span style="font-family:JetBrains Mono">&lt;BlurView intensity=60 tint="dark"&gt;</span> + оверлей-заливка поверх (даёт opacity/saturate, которых у BlurView нет отдельным параметром) + верхний градиент-блик + нижний rim — все три уже готовые CSS-слои из анатомии выше просто переносятся 1:1 как вложенные View. На Android — обязательно <span style="font-family:JetBrains Mono">experimentalBlurMethod="dimezisBlurView"</span>, иначе на многих устройствах BlurView рендерит сплошной цвет без размытия.</div></div>
+    <div style="flex:1;min-width:300px;padding:16px;border-radius:16px;background:rgba(216,98,47,.06);border:1px solid rgba(216,98,47,.22)"><div style="font:700 11.5px/1.3 Manrope;color:#e08a63">Лимиты</div><div style="font:400 11.5px/1.6 Manrope;color:rgba(234,231,226,.65);margin-top:8px"><b style="color:#eae7e2">Максимум 2</b> одновременных BlurView на экране (не 3 — Android дороже веба). Типичная пара — нав + мини-плеер; если открыт ещё и sheet поверх них, нижний слой на время открытия снэпшотится в статичную картинку (blur «замораживается»), а не остаётся живым. Blur ставится на паузу во время скролла списка под ним — восстанавливается через ~150мс после остановки.</div></div>
+  </div>
+
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:14px">
+    <div style="flex:1;min-width:400px;padding:16px;border-radius:16px;background:rgba(79,209,165,.07);border:1px solid rgba(79,209,165,.22)"><div style="font:700 11.5px/1.3 Manrope;color:#8fe0b8">ДА</div><div style="font:400 11.5px/1.6 Manrope;color:rgba(234,231,226,.68);margin-top:8px">Стекло — только на плавающих слоях: навигация, мини-плеер, шапки на скролле, sheets, composer, поиск, Поток, панели джема.</div></div>
+    <div style="flex:1;min-width:400px;padding:16px;border-radius:16px;background:rgba(216,98,47,.06);border:1px solid rgba(216,98,47,.22)"><div style="font:700 11.5px/1.3 Manrope;color:#e08a63">НЕТ</div><div style="font:400 11.5px/1.6 Manrope;color:rgba(234,231,226,.68);margin-top:8px">Стекло на карточках списков, пузырях чата, строках треков, любом плотном контенте. Стекло на стекле. Больше 2 BlurView разом.</div></div>
+  </div>
+  <div style="margin-top:14px;padding:16px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.07);max-width:980px;font:400 12px/1.6 Manrope;color:rgba(234,231,226,.65)">Тумблер «Стеклянный интерфейс» в настройках (см. 05 · КОМПОНЕНТЫ) выключает BlurView разом на всём приложении — заливка становится непрозрачной #0b0908. Это и ручной opt-out, и автоматический fallback, если замер на устройстве показывает &lt;50fps на живом экране с двумя блюрами.</div>
+</div>
+
+<!-- 03 ТИПОГРАФИКА -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">03 · ТИПОГРАФИКА</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Manrope + JetBrains Mono</div>
+  <div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:22px;align-items:flex-start">
+    <div style="flex:1;min-width:460px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:baseline;gap:18px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.06)"><div style="font:800 30px/1.05 Manrope;letter-spacing:-.02em;flex:1">Заголовок экрана</div><div style="font:500 10px/1.3 JetBrains Mono;color:rgba(234,231,226,.4);width:150px;text-align:right">800 · 25–30 / -2%</div></div>
+      <div style="display:flex;align-items:baseline;gap:18px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.06)"><div style="font:800 22px/1.15 Manrope;letter-spacing:-.01em;flex:1">Название релиза</div><div style="font:500 10px/1.3 JetBrains Mono;color:rgba(234,231,226,.4);width:150px;text-align:right">800 · 22 / -1%</div></div>
+      <div style="display:flex;align-items:baseline;gap:18px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.06)"><div style="font:700 14px/1.2 Manrope;flex:1">Заголовок секции</div><div style="font:500 10px/1.3 JetBrains Mono;color:rgba(234,231,226,.4);width:150px;text-align:right">700 · 14</div></div>
+      <div style="display:flex;align-items:baseline;gap:18px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.06)"><div style="font:600 12.5px/1.3 Manrope;flex:1">Строка списка · трек</div><div style="font:500 10px/1.3 JetBrains Mono;color:rgba(234,231,226,.4);width:150px;text-align:right">600 · 12.5</div></div>
+      <div style="display:flex;align-items:baseline;gap:18px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.06)"><div style="font:400 11.5px/1.4 Manrope;color:rgba(234,231,226,.6);flex:1">Подпись · артист, мета, описание</div><div style="font:500 10px/1.3 JetBrains Mono;color:rgba(234,231,226,.4);width:150px;text-align:right">400 · 11–11.5 @60%</div></div>
+      <div style="display:flex;align-items:baseline;gap:18px"><div style="font:500 10px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.5);flex:1">МЕТКА · ТАЙМКОД · СТАТУС</div><div style="font:500 10px/1.3 JetBrains Mono;color:rgba(234,231,226,.4);width:150px;text-align:right">mono 500 · 9–10.5 / +12%</div></div>
+    </div>
+    <div style="width:314px;padding:16px;border-radius:16px;background:#060503;border:1px solid rgba(255,255,255,.07)"><div style="font:600 11.5px/1.3 Manrope">Правила</div><div style="font:400 11.5px/1.6 Manrope;color:rgba(234,231,226,.6);margin-top:10px">Mono — только для меты: таймкоды, счётчики, статусы, коды, теги в верхнем регистре. Никогда для контента. Минимальный кегль — 10px (mono) и 11px (Manrope); на стекле — не ниже 11px и не легче 500.</div></div>
+  </div>
+</div>
+
+<!-- 04 КНОПКИ -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">04 · КНОПКИ</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Иконка = круг. Текст = пилюля.</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:24px;align-items:flex-start">
+
+    <div style="padding:22px;border-radius:20px;background:#060503;border:1px solid rgba(255,255,255,.07);position:relative;overflow:hidden">
+      <div style="position:relative;font:500 10px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.45)">ICON · GLASS</div>
+      <div style="position:relative;display:flex;gap:16px;align-items:center;margin-top:18px">
+        <div style="text-align:center"><div style="width:48px;height:48px;border-radius:50%;background:rgba(18,16,14,.4);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 52%)"></div><div style="position:absolute;left:13px;right:13px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent)"></div><svg style="position:relative" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div><div style="font:500 9.5px/1 JetBrains Mono;color:rgba(234,231,226,.4);margin-top:9px">48</div></div>
+        <div style="text-align:center"><div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.4);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 18px 40px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 52%)"></div><div style="position:absolute;left:16px;right:16px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent)"></div><svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#eae7e2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div><div style="font:500 9.5px/1 JetBrains Mono;color:rgba(234,231,226,.4);margin-top:9px">56 · nav</div></div>
+      </div>
+      <div style="position:relative;font:500 10px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.45);margin-top:24px">ICON · SOLID (нейтральный active) / ACCENT (контекст) / DISABLED</div>
+      <div style="position:relative;display:flex;gap:16px;align-items:center;margin-top:18px">
+        <div style="text-align:center"><div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px rgba(0,0,0,.5)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div><div style="font:500 9.5px/1 JetBrains Mono;color:rgba(234,231,226,.4);margin-top:9px">nav active</div></div>
+        <div style="text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:{{acc}}22;box-shadow:inset 0 0 0 1px {{acc}}66;display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="{{acc}}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17l9-10"/></svg></div><div style="font:500 9.5px/1 JetBrains Mono;color:rgba(234,231,226,.4);margin-top:9px">в контексте</div></div>
+        <div style="text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.3)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg></div><div style="font:500 9.5px/1 JetBrains Mono;color:rgba(234,231,226,.4);margin-top:9px">disabled</div></div>
+      </div>
+    </div>
+
+    <div style="padding:22px;border-radius:20px;background:#060503;border:1px solid rgba(255,255,255,.07);min-width:300px">
+      <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.45)">TEXT · PILL</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:center">
+        <div style="height:46px;padding:0 20px;border-radius:23px;background:#eae7e2;color:#030201;display:flex;align-items:center;font:800 13px/1 Manrope">Слушать</div>
+        <div style="height:46px;padding:0 20px;border-radius:23px;background:rgba(18,16,14,.4);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);display:flex;align-items:center;font:700 13px/1 Manrope;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 52%)"></div><span style="position:relative">К релизу</span></div>
+        <div style="height:38px;padding:0 14px;border-radius:19px;background:{{acc}}22;box-shadow:inset 0 0 0 1px {{acc}}5c;display:flex;align-items:center;font:700 12px/1 Manrope;color:{{acc}}">Запустить</div>
+      </div>
+      <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.45);margin-top:26px">CHIPS · ФИЛЬТРЫ (всегда нейтральные)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+        <div style="height:30px;padding:0 12px;border-radius:15px;background:#eae7e2;color:#030201;display:flex;align-items:center;font:700 11px/1 Manrope">Все теги</div>
+        <div style="height:30px;padding:0 12px;border-radius:15px;background:#0a0908;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;font:500 11px/1 Manrope;color:rgba(234,231,226,.65)">Энергия</div>
+      </div>
+      <div style="font:400 11.5px/1.6 Manrope;color:rgba(234,231,226,.6);margin-top:22px">Фильтры/чипы — категориальные, а не персональные, поэтому всегда нейтральны, даже внутри профиля артиста. Минимальная тач-зона — 44px даже у кнопки 40px.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 05 КОМПОНЕНТЫ -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">05 · КОМПОНЕНТЫ</div>
+  <div style="font:800 22px/1.1 Manrope;letter-spacing:-.02em;margin-top:12px">Блоки экранов</div>
+  <div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:24px;align-items:flex-start">
+
+    <div style="width:390px;padding:20px;border-radius:20px;background:#0a0908;border:1px solid rgba(255,255,255,.07)">
+      <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.45)">МИНИ-ПЛЕЕР · СТЕКЛО</div>
+      <div style="margin-top:14px;height:56px;border-radius:28px;background:rgba(18,16,14,.4);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 18px 40px rgba(0,0,0,.5);display:flex;align-items:center;gap:11px;padding:0 8px;position:relative;overflow:hidden">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,0) 52%)"></div>
+        <div style="position:absolute;left:26px;right:26px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent)"></div>
+        <div style="position:absolute;left:40px;right:40px;bottom:0;height:1px;background:linear-gradient(90deg,transparent,{{acc}}66,transparent)"></div>
+        <div style="position:relative;width:40px;height:40px;border-radius:12px;background:linear-gradient(140deg,#2e3a33,#8a8a7a);flex:none"></div>
+        <div style="position:relative;flex:1;min-width:0"><div style="font:600 12.5px/1.3 Manrope">Interference</div><div style="font:400 11px/1.3 Manrope;color:rgba(234,231,226,.55);margin-top:2px">KOTLAEV DANIL</div></div>
+        <div style="position:relative;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;flex:none"><div style="display:flex;gap:3px"><div style="width:3.5px;height:13px;background:#eae7e2"></div><div style="width:3.5px;height:13px;background:#eae7e2"></div></div></div>
+      </div>
+      <div style="font:400 11px/1.5 Manrope;color:rgba(234,231,226,.45);margin-top:12px">56px, радиус = h/2. Rim снизу — акцент релиза, если он есть, иначе нейтральный блик 18%.</div>
+    </div>
+
+    <div style="width:390px;padding:20px;border-radius:20px;background:#0a0908;border:1px solid rgba(255,255,255,.07)">
+      <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.45)">НАВИГАЦИЯ · 5 КРУГОВ · ВСЕГДА НЕЙТРАЛЬНА</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
+        <div style="width:56px;height:56px;border-radius:50%;background:#eae7e2;display:flex;align-items:center;justify-content:center;box-shadow:0 14px 30px rgba(0,0,0,.5)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#030201" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg></div>
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.4);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 18px 40px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></div>
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.4);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 18px 40px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5v14M10 5v14M15 6l4 13"/></svg></div>
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.4);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 18px 40px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 52%)"></div><svg style="position:relative" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(234,231,226,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v10H9l-5 4z"/></svg><div style="position:absolute;top:13px;right:14px;width:8px;height:8px;border-radius:50%;background:#eae7e2;border:1.5px solid #0b0908"></div></div>
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(18,16,14,.4);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 18px 40px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 52%)"></div><div style="position:relative;width:28px;height:28px;border-radius:50%;background:linear-gradient(150deg,#2a3a34,#5a6a60)"></div></div>
+      </div>
+      <div style="font:400 11px/1.5 Manrope;color:rgba(234,231,226,.45);margin-top:14px">Главная · Поиск · Медиатека · Сообщения · Профиль. Непрочитанное — нейтральная точка #eae7e2, не акцентная (нав не привязана ни к какому артисту). Активная — сплошная светлая, остальные стеклянные. Без подписей.</div>
+    </div>
+
+    <div style="width:390px;padding:20px;border-radius:20px;background:#0a0908;border:1px solid rgba(255,255,255,.07)">
+      <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.12em;color:rgba(234,231,226,.45)">ПЕРЕКЛЮЧАТЕЛЬ · НАСТРОЙКИ</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:13px 10px;border-radius:14px;background:#060503;margin-top:12px"><div style="flex:1"><div style="font:500 12.5px/1 Manrope">Стеклянный интерфейс</div><div style="font:400 10.5px/1.4 Manrope;color:rgba(234,231,226,.45);margin-top:4px">Выключает BlurView во всём приложении</div></div><div style="width:40px;height:23px;border-radius:12px;background:#eae7e2;position:relative;flex:none"><div style="position:absolute;right:2px;top:2px;width:19px;height:19px;border-radius:50%;background:#030201"></div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:13px 10px;border-radius:14px;margin-top:2px"><div style="font:500 12.5px/1 Manrope;flex:1">Приглушить движение</div><div style="width:40px;height:23px;border-radius:12px;background:rgba(255,255,255,.12);position:relative"><div style="position:absolute;left:2px;top:2px;width:19px;height:19px;border-radius:50%;background:rgba(234,231,226,.7)"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 06 СЕТКА, РАДИУСЫ, ДВИЖЕНИЕ -->
+<div style="padding:44px 40px 0">
+  <div style="font:500 10px/1 JetBrains Mono;letter-spacing:.14em;color:rgba(234,231,226,.4)">06 · СЕТКА, РАДИУСЫ, ДВИЖЕНИЕ</div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:22px">
+    <div style="width:314px;padding:18px;border-radius:18px;background:#060503;border:1px solid rgba(255,255,255,.07)">
+      <div style="font:600 12px/1.2 Manrope">Сетка</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:13px;font:500 10.5px/1.4 JetBrains Mono"><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.5)">поля экрана</span><span>20 (списки — 12)</span></div><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.5)">шаг</span><span>4 / 8 / 12 / 16 / 22</span></div><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.5)">низ контента</span><span>≥ 160 под плеер+nav</span></div></div>
+    </div>
+    <div style="width:314px;padding:18px;border-radius:18px;background:#060503;border:1px solid rgba(255,255,255,.07)">
+      <div style="font:600 12px/1.2 Manrope">Радиусы</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:13px;font:500 10.5px/1.4 JetBrains Mono"><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.5)">обложка в списке</span><span>9–12</span></div><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.5)">карточка</span><span>12–16</span></div><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.5)">стеклянная панель</span><span>h/2 или 22–28</span></div><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.5)">sheet</span><span>30 сверху</span></div></div>
+    </div>
+    <div style="width:314px;padding:18px;border-radius:18px;background:#060503;border:1px solid rgba(255,255,255,.07)">
+      <div style="font:600 12px/1.2 Manrope">Движение</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:13px;font:500 10.5px/1.4 JetBrains Mono"><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.5)">нажатие</span><span>120мс · scale .96</span></div><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.5)">панель появляется</span><span>220мс · blur 0→30</span></div><div style="display:flex;justify-content:space-between"><span style="color:rgba(234,231,226,.5)">reduce motion</span><span>всё → 0мс, blur off</span></div></div>
+    </div>
+  </div>
+</div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"acc":{"editor":"color","default":"#eae7e2","options":["#eae7e2","#ff5c39","#5f7ae0","#c9a227"]}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const acc = this.props.acc ?? '#eae7e2';
+    const isNeutral = acc === '#eae7e2';
+    return { acc, isNeutral, isContext: !isNeutral };
+  }
+}
+</script>
+</body>
+</html>

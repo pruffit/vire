@@ -49,7 +49,10 @@ export default async function MobileAuthBridgePage({
 }) {
   const caller = await getCaller();
   if (!caller || caller.source !== 'session') {
-    redirect('/sign-in?callbackUrl=/mobile-auth-bridge');
+    // chrome=none доезжает через proxy.ts до app/layout.tsx (тот же x-desktop-chrome,
+    // что у /desktop/mini-player) — /sign-in внутри embedded-браузера мобильного моста
+    // не должен показывать Nav/cookie-баннер/анонсы.
+    redirect('/sign-in?callbackUrl=/mobile-auth-bridge&chrome=none');
   }
 
   const rl = await rateLimit(await bridgeRateLimitKey(), 10, 3600);

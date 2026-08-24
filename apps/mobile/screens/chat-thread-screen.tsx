@@ -20,6 +20,8 @@ import { getCurrentUserId } from '../lib/secure-store';
 import { getOrCreateIdentity } from '../lib/e2ee/identity';
 import { deriveCK, encryptMessage, decryptMessage, fromB64 } from '../lib/e2ee/sodium-compat';
 import { Screen } from '../components/screen';
+import { Glass } from '../components/glass';
+import { useContentBottomPadding } from '../lib/layout';
 import { colors, radius } from '../lib/theme';
 
 type LoadState = 'loading' | 'error' | 'blocked' | 'ready';
@@ -76,6 +78,7 @@ function isChatReadEvent(event: ChatRealtimeEvent): event is ChatRealtimeEvent &
 
 export default function ChatThreadScreen({ route }: NativeStackScreenProps<ProfileStackParamList, 'ChatThread'>) {
   const { conversationId, otherUserId, otherUserName } = route.params;
+  const composerBottomMargin = useContentBottomPadding();
 
   const [state, setState] = useState<LoadState>('loading');
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
@@ -189,6 +192,13 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
     [conversationId],
   );
 
+  // Différencie «пара повреждённых сообщений» от «на этом устройстве другой ключ —
+  // вся история нечитаема» (типично после переустановки: SecureStore/identity
+  // сбрасывается, см. lib/e2ee/identity.ts "single-device only"). Одна фраза вместо
+  // N одинаковых бабблов «Не удалось расшифровать» — тот же сигнал, но не читается
+  // как «фича сломана».
+  const allMessagesUndecryptable = messages.length > 0 && messages.every((m) => m.plaintext === null);
+
   const lastOwnMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i]!.senderId === myUserIdRef.current) return messages[i]!;
@@ -257,6 +267,15 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
         >
+          {allMessagesUndecryptable && (
+            <View style={styles.keyMismatchBanner}>
+              <Text style={styles.keyMismatchText}>
+                Ключ шифрования на этом устройстве не совпадает с историей переписки — прежние
+                сообщения недоступны. Новые сообщения будут читаться нормально.
+              </Text>
+            </View>
+          )}
+
           <FlatList
             ref={listRef}
             data={messages}
@@ -272,7 +291,7 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
           />
 
-          <View style={styles.composer}>
+          <Glass style={[styles.composer, { marginBottom: composerBottomMargin }]} radius={22}>
             <TextInput
               value={draft}
               onChangeText={onChangeDraft}
@@ -288,7 +307,7 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
             >
               <Text style={styles.sendButtonText}>↑</Text>
             </Pressable>
-          </View>
+          </Glass>
         </KeyboardAvoidingView>
       )}
     </Screen>
@@ -342,6 +361,14 @@ const styles = StyleSheet.create({
   },
   retryText: { color: colors.foreground, fontWeight: '700' },
   listContent: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  keyMismatchBanner: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 12,
+    borderRadius: radius.md,
+    backgroundColor: colors.secondary,
+  },
+  keyMismatchText: { color: colors.mutedForeground, fontSize: 12.5, lineHeight: 18 },
   bubbleRow: { flexDirection: 'row', justifyContent: 'flex-start' },
   bubbleRowOwn: { justifyContent: 'flex-end' },
   bubbleColumn: { maxWidth: '80%' },
@@ -358,17 +385,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    marginHorizontal: 12,
+    // marginBottom задаётся динамически (useContentBottomPadding) — резерв под
+    // плавающий таб-бар/мини-плеер, composer сидит в обычном потоке под FlatList,
+    // а не absolute, поэтому сам должен себя отодвинуть от низа экрана.
+    padding: 6,
   },
   input: {
     flex: 1,
     maxHeight: 120,
     color: colors.foreground,
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     fontSize: 15,
   },
   sendButton: {

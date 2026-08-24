@@ -41,6 +41,13 @@ google-services.json
 # typescript
 *.tsbuildinfo
 
+# локальные сборки APK для sideload — не для git
+*.apk
+
+# Claude Design canvas — сид-пейлоад редактора (~2МБ), не исходник; исходники — *.dc.html
+design/*.html
+!design/*.dc.html
+
 # generated native folders
 /ios
 /android

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { devicesResponseSchema, okResponseSchema, type DeviceDTO } from '@vire/api-contracts';
@@ -7,6 +7,7 @@ import type { ProfileStackParamList } from '../navigation/profile-stack';
 import { apiRequest } from '../lib/api-client';
 import { clearAuthTokens, getDeviceId } from '../lib/secure-store';
 import { Screen } from '../components/screen';
+import { useContentBottomPadding } from '../lib/layout';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 
@@ -25,6 +26,7 @@ function formatLastUsed(iso: string): string {
 
 export default function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>>();
+  const bottomPadding = useContentBottomPadding();
   const [devices, setDevices] = useState<DeviceDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [revokingId, setRevokingId] = useState<string | null>(null);
@@ -70,7 +72,8 @@ export default function ProfileScreen() {
   };
 
   return (
-    <Screen style={styles.container}>
+    <Screen>
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: bottomPadding }]}>
       <Text style={styles.title}>Профиль</Text>
 
       <Pressable style={styles.navRow} onPress={() => navigation.navigate('Friends')}>
@@ -139,12 +142,17 @@ export default function ProfileScreen() {
           <Text style={styles.signOutText}>Выйти</Text>
         )}
       </Pressable>
+      </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 12 },
+  // Раньше был обычный (не скроллящийся) View с marginTop:'auto' на кнопке «Выйти» — при
+  // нескольких устройствах контент упирался в таб-бар/мини-плеер без возможности докрутить
+  // (та же причина, что чинили в home-screen.tsx). paddingBottom задаётся динамически —
+  // useContentBottomPadding().
+  container: { padding: 16, gap: 12 },
   title: { color: colors.foreground, fontSize: 20, fontWeight: '800', marginTop: 8, marginBottom: 4 },
   navRow: {
     flexDirection: 'row',
@@ -185,7 +193,7 @@ const styles = StyleSheet.create({
   revokeButton: { minHeight: 44, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
   revokeText: { color: colors.destructive, fontWeight: '700' },
   signOutButton: {
-    marginTop: 'auto',
+    marginTop: 8,
     backgroundColor: colors.card,
     borderRadius: radius.lg,
     minHeight: 44,

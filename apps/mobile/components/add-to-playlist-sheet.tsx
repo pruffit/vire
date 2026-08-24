@@ -17,6 +17,7 @@ import {
   createPlaylist,
 } from '../lib/playlists';
 import { Icon } from '../lib/icon';
+import { Glass } from './glass';
 import { colors, radius } from '../lib/theme';
 
 export function AddToPlaylistSheet({ trackId }: { trackId: string }) {
@@ -110,7 +111,7 @@ export function AddToPlaylistSheet({ trackId }: { trackId: string }) {
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={close}>
         <Pressable style={styles.overlay} onPress={close} />
-        <View style={[styles.panel, { paddingBottom: insets.bottom + 12 }]}>
+        <Glass style={[styles.panel, { paddingBottom: insets.bottom + 12 }]} radius={24} intensity={55}>
           <Text style={styles.heading}>Добавить в плейлист</Text>
 
           {playlists.length === 0 ? (
@@ -145,7 +146,7 @@ export function AddToPlaylistSheet({ trackId }: { trackId: string }) {
               <Text style={styles.createButtonText}>Создать</Text>
             </Pressable>
           </View>
-        </View>
+        </Glass>
       </Modal>
     </>
   );
@@ -177,9 +178,6 @@ const styles = StyleSheet.create({
   trigger: { minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   panel: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
     paddingTop: 16,
     paddingHorizontal: 16,
     maxHeight: '70%',

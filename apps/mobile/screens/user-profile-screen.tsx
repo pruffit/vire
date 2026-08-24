@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -9,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
@@ -20,6 +20,7 @@ import { usePlayerStore } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
 import { Screen } from '../components/screen';
 import { FriendButton } from '../components/friend-button';
+import { useContentBottomPadding } from '../lib/layout';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 
@@ -30,6 +31,7 @@ type PlaylistSummary = UserProfileResponse['playlists'][number];
 export default function UserProfileScreen({ route }: NativeStackScreenProps<ProfileStackParamList, 'UserProfile'>) {
   const { userId } = route.params;
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'UserProfile'>>();
+  const bottomPadding = useContentBottomPadding();
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
@@ -115,7 +117,7 @@ export default function UserProfileScreen({ route }: NativeStackScreenProps<Prof
 
       {state === 'ready' && profile && (
         <ScrollView
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />}
         >
           <View style={styles.header}>
@@ -244,7 +246,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   retryText: { color: colors.foreground, fontWeight: '700' },
-  listContent: { paddingHorizontal: 16, paddingBottom: 96, gap: 20 },
+  listContent: { paddingHorizontal: 16, gap: 20 },
   header: { alignItems: 'center', gap: 8, paddingVertical: 16 },
   avatar: { width: 72, height: 72, borderRadius: 36 },
   avatarPlaceholder: { backgroundColor: colors.secondary, alignItems: 'center', justifyContent: 'center' },
