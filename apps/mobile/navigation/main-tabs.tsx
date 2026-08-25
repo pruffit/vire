@@ -1,12 +1,12 @@
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { HomeStackNavigator } from './home-stack';
 import { SearchStackNavigator } from './search-stack';
 import { LibraryStackNavigator } from './library-stack';
 import { ProfileStackNavigator } from './profile-stack';
-import { Glass } from '../components/glass';
+import { LiquidGlassButton } from '../components/liquid-glass';
 import { Icon, type IconName } from '../lib/icon';
 import { TAB_BAR_CONTENT_HEIGHT } from '../lib/layout';
 import { colors } from '../lib/theme';
@@ -28,6 +28,8 @@ const TAB_ICONS: Record<keyof MainTabsParamList, IconName> = {
 };
 
 const CIRCLE_SIZE = 56;
+const IDLE_TINT = [0.08, 0.075, 0.07, 0.1] as const;
+const ACTIVE_TINT = [0.5, 0.49, 0.47, 0.12] as const;
 
 // Кит («05 · КОМПОНЕНТЫ», навигация) требует раздельные круглые кнопки без подписи —
 // не одну сплошную капсулу с иконкой+текстом, которую строит `tabBarStyle`/`tabBarIcon`
@@ -56,23 +58,18 @@ function CircleTabBar({ state, navigation }: BottomTabBarProps) {
         };
 
         return (
-          <Pressable
+          <LiquidGlassButton
             key={route.key}
+            size={CIRCLE_SIZE}
+            active={focused}
             onPress={onPress}
-            accessibilityRole="button"
-            accessibilityState={focused ? { selected: true } : {}}
-            style={styles.button}
+            // Активная — светлая подсвеченная капля, неактивная — тёмное стекло; в обоих
+            // случаях это тонировка преломлённого света, а не заливка (шейдер добавляет
+            // Френель/блик/аберрацию поверх).
+            tint={focused ? ACTIVE_TINT : IDLE_TINT}
           >
-            {focused ? (
-              <View style={[styles.circle, styles.circleActive]}>
-                <Icon name={iconName} size={21} color={colors.background} />
-              </View>
-            ) : (
-              <Glass radius={CIRCLE_SIZE / 2} style={styles.circle} edge shadow>
-                <Icon name={iconName} size={21} color={colors.mutedForeground} />
-              </Glass>
-            )}
-          </Pressable>
+            <Icon name={iconName} size={21} color={focused ? colors.background : colors.foreground} />
+          </LiquidGlassButton>
         );
       })}
     </View>
@@ -107,13 +104,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  button: { alignItems: 'center', justifyContent: 'center' },
-  circle: {
-    width: CIRCLE_SIZE,
-    height: CIRCLE_SIZE,
-    borderRadius: CIRCLE_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  circleActive: { backgroundColor: colors.foreground },
 });
