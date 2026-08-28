@@ -1,10 +1,11 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePlayerStore } from './player-store';
 
 // Общие константы лейаута таб-бара/мини-плеера — отдельно от navigation/main-tabs.tsx
 // и components/mini-player.tsx, иначе цикл: main-tabs -> home-stack -> home-screen ->
 // mini-player -> main-tabs (require cycle, RN разрешает, но с риском undefined на старте).
 export const MINI_PLAYER_HEIGHT = 60;
-export const TAB_BAR_CONTENT_HEIGHT = 54;
+export const TAB_BAR_CONTENT_HEIGHT = 68;
 // Мини-плеер сидит на 10px над таб-баром (components/mini-player.tsx), плюс запас на
 // читаемость под ним.
 const MINI_PLAYER_GAP = 10;
@@ -21,5 +22,11 @@ export function useTabBarHeight(): number {
 // insets.bottom≈0 — на устройствах с жестовой навигацией снизу считал бы неверно). Один
 // хук вместо копипасты формулы по всем экранам.
 export function useContentBottomPadding(): number {
-  return useTabBarHeight() + MINI_PLAYER_HEIGHT + MINI_PLAYER_GAP + CONTENT_BREATHING_ROOM;
+  // Место под мини-плеер резервируется, только когда он реально на экране (условие 1:1 с
+  // components/mini-player.tsx). Безусловный отступ давал 70 dp пустоты внизу каждого
+  // списка: список улистывается далеко за контент, а под кнопками навигации оказывается
+  // голый фон — преломлять нечего, и стекло выглядит выключенным.
+  const hasTrack = usePlayerStore((s) => s.queue[s.queueIndex] !== undefined);
+  const playerRoom = hasTrack ? MINI_PLAYER_HEIGHT + MINI_PLAYER_GAP : 0;
+  return useTabBarHeight() + playerRoom + CONTENT_BREATHING_ROOM;
 }

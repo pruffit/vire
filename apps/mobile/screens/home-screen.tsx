@@ -27,7 +27,7 @@ import { colors, radius } from '../lib/theme';
 import { endpointOf } from '../lib/sdui';
 import { Icon } from '../lib/icon';
 import { useContentBottomPadding } from '../lib/layout';
-import { useRegisterBlurTarget } from '../lib/blur-target';
+import { BlurTargetScope, useRegisterBlurTarget } from '../lib/blur-target';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { LikeButton } from '../components/like-button';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
@@ -184,7 +184,7 @@ export default function HomeScreen() {
 
   return (
     <BlurTargetView style={styles.blurTarget} ref={blurTargetRef}>
-      {content}
+      <BlurTargetScope target={blurTargetRef}>{content}</BlurTargetScope>
     </BlurTargetView>
   );
 }

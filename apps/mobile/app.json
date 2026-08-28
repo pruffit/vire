@@ -20,7 +20,8 @@
       },
       "predictiveBackGestureEnabled": true,
       "package": "com.anonymous.viremobile",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "backgroundColor": "#030201"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -38,6 +39,7 @@
         "projectId": "f538ec6c-0032-4ce5-b661-dae649001774"
       }
     },
-    "owner": "pruffit"
+    "owner": "pruffit",
+    "backgroundColor": "#030201"
   }
 }

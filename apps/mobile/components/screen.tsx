@@ -3,7 +3,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurTargetView } from 'expo-blur';
 import { colors } from '../lib/theme';
-import { useRegisterBlurTarget } from '../lib/blur-target';
+import { BlurTargetScope, useRegisterBlurTarget } from '../lib/blur-target';
 
 // Единая точка safe-area для всех экранов — верхний инсет (статус-бар) закрывал контент
 // на каждом экране по отдельности, потому что headerShown:false везде (свой UI, не
@@ -22,7 +22,7 @@ export function Screen({ children, style }: { children: React.ReactNode; style?:
   // шорткатом (перекрывает paddingTop), инсет всё равно должен победить.
   return (
     <BlurTargetView style={[styles.container, style, { paddingTop: insets.top }]} ref={blurTargetRef}>
-      {children}
+      <BlurTargetScope target={blurTargetRef}>{children}</BlurTargetScope>
     </BlurTargetView>
   );
 }

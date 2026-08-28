@@ -3,7 +3,7 @@ import Svg, { G, Path } from 'react-native-svg';
 // Path'ы 1:1 из apps/web/public/icons/system-sprite.svg (Feather-набор платформы) —
 // не отдельный иконочный пак под мобилку, тот же визуальный язык, что на сайте.
 // viewBox 0 0 36 36, каждая иконка — свой translate(x y) на <g>, как в исходном спрайте.
-const PATHS: Record<IconName, { translate: [number, number]; d: string[] }> = {
+export const ICON_PATHS: Record<IconName, { translate: [number, number]; d: string[] }> = {
   home: {
     translate: [-917, -257],
     d: [
@@ -171,7 +171,7 @@ export function Icon({
   color: string;
   filled?: boolean;
 }) {
-  const { translate, d } = PATHS[name];
+  const { translate, d } = ICON_PATHS[name];
   return (
     <Svg width={size} height={size} viewBox="0 0 36 36" fill="none">
       <G transform={`translate(${translate[0]} ${translate[1]})`}>

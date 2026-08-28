@@ -1,15 +1,16 @@
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { HomeStackNavigator } from './home-stack';
 import { SearchStackNavigator } from './search-stack';
 import { LibraryStackNavigator } from './library-stack';
 import { ProfileStackNavigator } from './profile-stack';
 import { LiquidGlassButton } from '../components/liquid-glass';
-import { Icon, type IconName } from '../lib/icon';
+import { type IconName } from '../lib/icon';
+import { useBlurTarget } from '../lib/blur-target';
 import { TAB_BAR_CONTENT_HEIGHT } from '../lib/layout';
-import { colors } from '../lib/theme';
 
 export type MainTabsParamList = {
   Home: undefined;
@@ -27,9 +28,17 @@ const TAB_ICONS: Record<keyof MainTabsParamList, IconName> = {
   Profile: 'user',
 };
 
-const CIRCLE_SIZE = 56;
-const IDLE_TINT = [0.08, 0.075, 0.07, 0.1] as const;
-const ACTIVE_TINT = [0.5, 0.49, 0.47, 0.12] as const;
+const CIRCLE_SIZE = 68;
+
+// Кнопки плавают над контентом, который под них уезжает: без затемняющей подложки строчки
+// трека проходят прямо сквозь ряд и стекло читается наклейкой. Скрим — длинный мягкий
+// градиент от прозрачного, никакой видимой границы у него нет.
+const SCRIM_HEIGHT = 96;
+const SCRIM = ['rgba(3,2,1,0)', 'rgba(3,2,1,0.12)', 'rgba(3,2,1,0.32)', 'rgba(3,2,1,0.46)'] as const;
+const SCRIM_STOPS = [0, 0.5, 0.8, 1] as const;
+/** `BlurView` линзы целится в контент экрана напрямую и скрима над ним не видит — линза
+ *  обязана погасить себя на ту же величину, что скрим на высоте ряда кнопок. */
+const LENS_DIM = 0.10;
 
 // Кит («05 · КОМПОНЕНТЫ», навигация) требует раздельные круглые кнопки без подписи —
 // не одну сплошную капсулу с иконкой+текстом, которую строит `tabBarStyle`/`tabBarIcon`
@@ -37,42 +46,49 @@ const ACTIVE_TINT = [0.5, 0.49, 0.47, 0.12] as const;
 // `tabBarStyle`/`tabBarLabelStyle`/`tabBarIcon` из screenOptions больше не участвуют.
 function CircleTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  // Живой фон линзы — контент сфокусированного экрана; преломление считается покадрово.
+  const blurTarget = useBlurTarget();
 
   return (
-    <View
-      style={[
-        styles.row,
-        { height: TAB_BAR_CONTENT_HEIGHT + insets.bottom, paddingBottom: insets.bottom, bottom: 6 },
-      ]}
-    >
-      {state.routes.map((route, index) => {
-        const focused = state.index === index;
-        const iconName = TAB_ICONS[route.name as keyof MainTabsParamList];
+    <>
+      <LinearGradient
+        pointerEvents="none"
+        colors={SCRIM}
+        locations={SCRIM_STOPS}
+        style={[styles.scrim, { height: TAB_BAR_CONTENT_HEIGHT + insets.bottom + SCRIM_HEIGHT }]}
+      />
+      <View
+        style={[
+          styles.row,
+          { height: TAB_BAR_CONTENT_HEIGHT + insets.bottom, paddingBottom: insets.bottom, bottom: 6 },
+        ]}
+      >
+        {state.routes.map((route, index) => {
+          const focused = state.index === index;
+          const iconName = TAB_ICONS[route.name as keyof MainTabsParamList];
 
-        const onPress = () => {
-          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (!focused && !event.defaultPrevented) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            navigation.navigate(route.name);
-          }
-        };
+          const onPress = () => {
+            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (!focused && !event.defaultPrevented) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              navigation.navigate(route.name);
+            }
+          };
 
-        return (
-          <LiquidGlassButton
-            key={route.key}
-            size={CIRCLE_SIZE}
-            active={focused}
-            onPress={onPress}
-            // Активная — светлая подсвеченная капля, неактивная — тёмное стекло; в обоих
-            // случаях это тонировка преломлённого света, а не заливка (шейдер добавляет
-            // Френель/блик/аберрацию поверх).
-            tint={focused ? ACTIVE_TINT : IDLE_TINT}
-          >
-            <Icon name={iconName} size={21} color={focused ? colors.background : colors.foreground} />
-          </LiquidGlassButton>
-        );
-      })}
-    </View>
+          return (
+            <LiquidGlassButton
+              key={route.key}
+              size={CIRCLE_SIZE}
+              icon={iconName}
+              active={focused}
+              blurTarget={blurTarget}
+              dim={LENS_DIM}
+              onPress={onPress}
+            />
+          );
+        })}
+      </View>
+    </>
   );
 }
 
@@ -96,6 +112,12 @@ export function MainTabs() {
 }
 
 const styles = StyleSheet.create({
+  scrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   row: {
     position: 'absolute',
     left: 22,

@@ -1,0 +1,30 @@
+package expo.modules.glasslens
+
+import android.os.Build
+import expo.modules.kotlin.modules.Module
+import expo.modules.kotlin.modules.ModuleDefinition
+
+class GlassLensModule : Module() {
+  override fun definition() = ModuleDefinition {
+    Name("GlassLens")
+
+    // `createRuntimeShaderEffect` появился в Android 13. Ниже — вьюха работает как обычный
+    // контейнер, а JS оставляет прежнее аффинное увеличение как фолбэк.
+    Constants("isSupported" to (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU))
+
+    View(GlassLensView::class) {
+      Name("GlassLensView")
+
+      Prop("glassWidth") { view: GlassLensView, value: Float -> view.glassWidth = value }
+      Prop("glassHeight") { view: GlassLensView, value: Float -> view.glassHeight = value }
+      Prop("cornerRadius") { view: GlassLensView, value: Float -> view.cornerRadius = value }
+      Prop("bevel") { view: GlassLensView, value: Float -> view.bevel = value }
+      Prop("magnify") { view: GlassLensView, value: Float -> view.magnify = value }
+      Prop("edgePush") { view: GlassLensView, value: Float -> view.edgePush = value }
+      Prop("chroma") { view: GlassLensView, value: Float -> view.chroma = value }
+      Prop("spherical") { view: GlassLensView, value: Float -> view.spherical = value }
+
+      OnViewDidUpdateProps { view: GlassLensView -> view.applyEffect() }
+    }
+  }
+}

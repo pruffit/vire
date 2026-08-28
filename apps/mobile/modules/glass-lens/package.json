@@ -1,0 +1,7 @@
+{
+  "name": "glass-lens",
+  "version": "0.1.0",
+  "description": "Преломление живого фона через AGSL RenderEffect (Android 13+)",
+  "main": "index.ts",
+  "private": true
+}
