@@ -2,11 +2,20 @@ name: CI
 
 # Гейты для ветки dev и PRs в main/dev.
 # На теги и прямые пуши в main не вешаем — там всё делает deploy.yml.
+#
+# paths-ignore пропускает прогон, только если в коммите НЕТ ничего, кроме
+# документации и картинок. Фильтровать тоньше (по изменённым пакетам) намеренно
+# не стали: правка в packages/* задевает и web, и worker, и мобилку, а гейты
+# здесь существуют ровно затем, чтобы ловить то, что не видно локально —
+# пропущенный по ошибке гейт дороже сэкономленных минут. В deploy.yml фильтров
+# нет вообще: релиз по тегу обязан прогнать всё.
 on:
   push:
     branches: [dev]
+    paths-ignore: ['docs/**', '**/*.md', 'icons/**', '.gitignore', 'LICENSE']
   pull_request:
     branches: [main, dev]
+    paths-ignore: ['docs/**', '**/*.md', 'icons/**', '.gitignore', 'LICENSE']
 
 jobs:
   gates:
@@ -31,8 +40,15 @@ jobs:
         run: pnpm turbo run typecheck
       - name: Lint
         run: pnpm turbo run lint
+      # Барьер: параллелизм turbo не складывается с параллелизмом vitest.
+      - name: Test concurrency check
+        run: node scripts/check-test-concurrency.mjs
+      # `pnpm test`, не `turbo run test`: корневой скрипт держит --concurrency=1.
+      # Vitest сам параллелит файлы внутри пакета; второй, нескоординированный
+      # слой параллелизма от turbo перепрописывает ядра и роняет тесты по таймауту
+      # (docs/foundation/TECHNICAL_DEBT.md → «turbo run test флейкал»).
       - name: Test
-        run: pnpm turbo run test
+        run: pnpm test
       - name: Security audit
         run: pnpm audit --audit-level=high
       - name: Design audit (Impeccable)
