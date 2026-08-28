@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurTargetView } from 'expo-blur';
 import { LiquidGlassButton } from '../components/liquid-glass';
 import type { IconName } from '../lib/icon';
@@ -20,7 +21,10 @@ import type { IconName } from '../lib/icon';
 //
 // Протокол замера — docs/vireglass/benchmarks/README.md.
 
-const COUNTS = [1, 3, 6, 10] as const;
+// 2 — рабочая точка продукта: таб-бар + мини-плеер, столько стеклянных поверхностей
+// видно одновременно в реальном UI. Остальные значения нужны, чтобы увидеть форму
+// зависимости, а не только рабочую точку.
+const COUNTS = [1, 2, 3, 6, 10] as const;
 const ICONS: IconName[] = ['home', 'search', 'list', 'user'];
 
 function MovingBackdrop() {
@@ -48,6 +52,9 @@ export function GlassBench() {
   // молча не включается — и замер уходит мимо самой дорогой части конвейера.
   const targetRef = useRef<View>(null);
   const [count, setCount] = useState<number>(1);
+  // Без отступа на системную навигацию панель управления оказывается ПОД ней и не
+  // нажимается: тап уходит в системные кнопки, сцена молча не переключается.
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.root}>
@@ -71,7 +78,7 @@ export function GlassBench() {
         ))}
       </View>
 
-      <ScrollView horizontal contentContainerStyle={styles.controls}>
+      <ScrollView horizontal style={[styles.controlsWrap, { bottom: insets.bottom + 12 }]} contentContainerStyle={styles.controls}>
         {COUNTS.map((c) => (
           <Pressable
             key={c}
@@ -107,7 +114,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     justifyContent: 'center',
   },
-  controls: { gap: 8, padding: 12, position: 'absolute', bottom: 0 },
+  controlsWrap: { position: 'absolute', left: 0, right: 0, flexGrow: 0 },
+  controls: { gap: 8, paddingHorizontal: 12, alignItems: 'center' },
   btn: { backgroundColor: '#1b2328', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
   btnActive: { backgroundColor: '#14322f', borderWidth: 1, borderColor: '#5ecfc6' },
   btnText: { color: '#e6ecef', fontSize: 12 },
