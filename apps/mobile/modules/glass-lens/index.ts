@@ -36,6 +36,26 @@ const native = (() => {
   }
 })();
 
+/** Диагностический зонд: что именно приходит в createRuntimeShaderEffect.
+ *  Только для стенда (screens/glass-lab), в продовом UI не используется. */
+export type GlassProbeProps = {
+  /** 0 — сырая выборка, 1 — выборка + маркер живости шейдера. */
+  mode?: number;
+  style?: StyleProp<ViewStyle>;
+  children?: ReactNode;
+};
+
+export const GlassProbe: ComponentType<GlassProbeProps> | null =
+  Platform.OS === 'android'
+    ? (() => {
+        try {
+          return requireNativeView('GlassLens', 'GlassProbeView') as ComponentType<GlassProbeProps>;
+        } catch {
+          return null;
+        }
+      })()
+    : null;
+
 /** `RenderEffect.createRuntimeShaderEffect` — Android 13+. Ниже вызывающий обязан остаться на
  *  прежнем аффинном увеличении: вьюха там работает обычным контейнером. */
 export const isGlassLensSupported: boolean = native?.supported ?? false;

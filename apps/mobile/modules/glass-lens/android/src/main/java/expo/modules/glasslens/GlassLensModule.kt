@@ -26,5 +26,13 @@ class GlassLensModule : Module() {
 
       OnViewDidUpdateProps { view: GlassLensView -> view.applyEffect() }
     }
+
+    // Диагностический зонд (docs/vireglass/ADR-001): показывает, какие пиксели реально
+    // приходят в createRuntimeShaderEffect. В продовом UI не используется.
+    View(GlassProbeView::class) {
+      Name("GlassProbeView")
+      Prop("mode") { view: GlassProbeView, value: Float -> view.mode = value }
+      OnViewDidUpdateProps { view: GlassProbeView -> view.applyEffect() }
+    }
   }
 }
