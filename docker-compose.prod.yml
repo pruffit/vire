@@ -1,6 +1,11 @@
-# Прод-стек на одном VPS (1 vCPU / 1 ГБ + swap / 40 ГБ).
-# Образы vire-web/vire-worker собираются НЕ здесь (1 ГБ не тянет next build), а
+# Прод-стек на одном VPS (2 ядра x 3.3 ГГц / 2 ГБ + 4 ГБ swap / 40 ГБ).
+# Образы vire-web/vire-worker собираются НЕ здесь (2 ГБ не тянет next build), а
 # тянутся из GHCR — их собирает и пушит CI/CD (.github/workflows/deploy.yml).
+#
+# mem_limit у каждого сервиса: без них OOM-killer выбирает жертву сам и может
+# снять Postgres из-за пика в воркере. Сумма лимитов (~2.3 ГБ) намеренно больше
+# RAM — цель не поделить память, а не дать одному сервису утащить остальные;
+# одновременного пика всех шести не бывает, а подушка — swap.
 # Ручной фолбэк — scripts/ship.ps1. Наружу торчит только Caddy (80/443).
 #
 # Запуск:   docker compose -f docker-compose.prod.yml --env-file .env up -d
@@ -11,6 +16,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    mem_limit: 64m
     env_file: .env   # DOMAIN, CDN_DOMAIN, ACME_EMAIL для Caddyfile
     ports:
       - "80:80"
@@ -26,6 +32,7 @@ services:
   web:
     image: ghcr.io/pruffit/vire-web:latest
     restart: unless-stopped
+    mem_limit: 768m
     env_file: .env
     depends_on:
       - postgres
@@ -42,6 +49,9 @@ services:
   worker:
     image: ghcr.io/pruffit/vire-worker:latest
     restart: unless-stopped
+    # Самый прожорливый и самый пиковый сервис (ONNX-инференс + ffmpeg).
+    # Именно его лимит защищает Postgres от вытеснения.
+    mem_limit: 640m
     env_file: .env
     depends_on:
       - postgres
@@ -51,17 +61,22 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    mem_limit: 448m
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    # Тюнинг под мелкую машину
+    # Тюнинг под 2 ГБ RAM на разделяемой машине (шесть контейнеров).
+    # effective_cache_size — не аллокация, а подсказка планировщику о размере
+    # кэша ОС: заниженная заставляет его избегать index scan там, где тот выгоден.
+    # Проверять EXPLAIN (ANALYZE, BUFFERS) на запросах ленты и волны.
     command: >
       postgres
-      -c shared_buffers=96MB
-      -c effective_cache_size=256MB
-      -c work_mem=4MB
-      -c max_connections=50
+      -c shared_buffers=256MB
+      -c effective_cache_size=768MB
+      -c work_mem=8MB
+      -c maintenance_work_mem=64MB
+      -c max_connections=30
     volumes:
       - vire-pg-data:/var/lib/postgresql/data
     healthcheck:
@@ -74,7 +89,10 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    # noeviction (дефолт) обязателен для BullMQ; лёгкий снапшот раз в минуту
+    mem_limit: 128m
+    # noeviction (дефолт) обязателен для BullMQ; лёгкий снапшот раз в минуту.
+    # maxmemory НЕ задаём: при noeviction упор в него = ошибки записи в очередь.
+    # Границу держит mem_limit контейнера.
     command: redis-server --save 60 1 --appendonly no
     volumes:
       - vire-redis-data:/data
@@ -82,6 +100,7 @@ services:
   minio:
     image: minio/minio:latest
     restart: unless-stopped
+    mem_limit: 256m
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY}
