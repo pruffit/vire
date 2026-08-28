@@ -129,7 +129,7 @@
 | 2.7 ✅ | Блоки главной | L | `HomeBlocksService` в core за портом `IHomeBlocksRepository`, 6 эндпоинтов `/v1/home/*` (fresh-releases, upcoming, hot-tracks, playlists, personal, friends-activity); `mergeFriendsActivity` переехала из `apps/web/lib/activity.ts` в core (реэкспорт в web сохранён — на неё ссылается компонент ленты активности). Прямое предусловие SDUI |
 
 **Проверка на каждом шаге:** снапшот ответа страницы до и после (набор и порядок сущностей);
-contract-тест роута; отсутствие регресса TTFB — на 1 ГБ это не формальность.
+contract-тест роута; отсутствие регресса TTFB — на одном небольшом VPS это не формальность.
 
 **Откат:** страница возвращается на старую query-функцию (она ещё не удалена) — один revert.
 

@@ -42,29 +42,42 @@ Haiku — поиск/маппинг/тривиал.
 ## Стек
 
 - **Монорепо:** Turborepo + pnpm workspaces
-- **Фронт + API:** Next.js 15 (App Router), TypeScript strict
-- **UI:** Radix Primitives / shadcn (headless) + Tailwind — кастомные токены, не дефолтный shadcn
-- **База:** PostgreSQL + Drizzle ORM (`packages/db`)
+- **Фронт + API:** Next.js 16 (App Router), React 19, TypeScript strict
+- **UI:** свой headless-кит на Tailwind v4 с OKLCH-токенами. **UI-фреймворка НЕТ:** из Radix
+  стоит только `react-slot` (утилита composition). Диалоги, поповеры, шиты — свои,
+  в `apps/web/components`. Не тащить shadcn/Radix-примитивы, не спросив
+- **База:** PostgreSQL 16 + Drizzle ORM (`packages/db`)
 - **Очередь:** Redis + BullMQ
 - **Хранилище:** S3-совместимое — MinIO (и на проде за Caddy на `cdn.viremusic.ru`, и локально)
 - **Транскодинг:** ffmpeg-воркер (`apps/worker`), HLS-нарезка
-- **Аутентификация:** Auth.js (NextAuth)
+- **Аутентификация:** Auth.js (NextAuth) + Bearer-токены устройств для нативных клиентов
+- **Клиенты:** веб, Android (React Native + Expo), десктоп (Tauri v2)
 - **Деплой:** Timeweb Cloud VPS + Docker (Caddy → web/worker из GHCR); CI/CD по тегу `vX.Y.Z`
+
+**Прод — один VPS: 2 ядра × 3.3 ГГц / 2 ГБ RAM / 40 ГБ + 4 ГБ swap, шесть контейнеров.**
+Это объясняет половину решений в проекте (`concurrency: 2`, `lockDuration` 10 мин, лимиты
+памяти контейнеров, тюнинг Postgres, отсутствие внешнего APM). Спека живёт здесь и в
+`docs/ops/deployment.md` — при апгрейде править оба, иначе выводы разъедутся с железом
+(так уже было: апгрейд с 1 ГБ прошёл мимо 16 документов).
 
 ## Структура монорепо
 
 ```
 apps/
   web/        — Next.js: фронт + API (Route Handlers /api/v1/*)
-  worker/     — BullMQ воркеры: транскодинг, рассылки
+  worker/     — BullMQ воркеры: транскодинг, анализ аудио, рассылки, крон
+  mobile/     — React Native + Expo (Android)
+  desktop/    — Tauri v2 (Windows/Linux), UI через системный WebView
 packages/
   core/       — бизнес-логика, use-cases (чистый TS, НЕ зависит от Next)
-  db/         — Drizzle схема + миграции + клиент (@vire/db)
+  db/         — Drizzle схема + миграции + репозитории + queries/ (чтение)
   api-contracts/ — zod-схемы запросов/ответов, общие типы
   api-client/ — типизированный fetch-клиент
-  ui/         — общий UI-кит (Radix + кастомный Tailwind)
+  ui/         — общие UI-примитивы (тонкий; основной кит — apps/web/components/ui-kit.tsx)
   storage/    — S3-адаптер (@vire/storage): один клиент на web и worker, реализует IFileStorage
-  media/      — утилиты HLS, waveform
+  media/      — утилиты HLS
+  i18n/       — словари ru/en и хелперы локали
+  design-tokens/ — токены дизайна в платформо-нейтральном формате
   config/     — tsconfig, eslint, tailwind preset
 docs/         — концепция, архитектура, схема данных
 ```
@@ -73,7 +86,11 @@ docs/         — концепция, архитектура, схема дан�
 
 ### Слои — строго сверху вниз
 
+**Путей два, и они разные. Выбор пути определяется тем, мутация это или чтение.**
+
 ```
+ЗАПИСЬ (мутации) — через сервис, всегда:
+
 Route Handler (apps/web/app/api)     — только HTTP: валидация входа, вызов сервиса, ответ
         ↓
 Service / Use-case (packages/core)   — вся бизнес-логика
@@ -83,10 +100,27 @@ Repository (packages/db)             — запросы к БД
 PostgreSQL
 ```
 
-- Хендлер не знает про БД
+```
+ЧТЕНИЕ — напрямую в query-функцию, без сервиса:
+
+Server Component  ─┐
+Route Handler     ─┴─► packages/db/src/queries/*.ts ──► PostgreSQL
+```
+
+- Хендлер не знает про БД **на пути записи**
 - Сервис не знает про HTTP
 - Репозиторий не знает про бизнес-правила
 - `packages/core` не импортирует ничего из Next.js
+
+**Про чтение — важное.** `packages/db/src/queries` (50 файлов, ~7 200 строк, ~150 функций) —
+это **основной и принятый в проекте способ читать данные**: ранжирование, агрегации,
+фильтры видимости, джойны популярности живут там. Не заводи для нового чтения сервис
+в `core` и репозиторий — пиши query-функцию рядом с существующими и вызывай её напрямую.
+
+Цена этого решения известна и принята: логика чтения непереносима на нативные клиенты,
+поэтому мобилка ходит через HTTP-эндпоинты, а не через общий код. Если чтение нужно
+**и** вебу, **и** мобилке — эндпоинт обязателен, но внутри него всё равно query-функция.
+Разбор — `docs/architecture/audit-2026-08.md` §1.
 
 **Права — только через `can()`.** Матрица «роль → право» живёт в
 `packages/core/src/platform/access` (вход — подпуть `@vire/core/access`, barrel не годится для
@@ -338,7 +372,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 
 ### Фундамент
 - [x] Монорепо (Turborepo + pnpm), docker-compose (postgres/redis/minio)
-- [x] `packages/db` — Drizzle схема + миграции 0000–0044
+- [x] `packages/db` — Drizzle схема + миграции 0000–0057
 - [x] `packages/core` — Result<T,E>, domain types, сервисы (Artist/Release/Track,
   Follow/ListenerTrack/TrackMoods/Playlist, ArtistPost/SmartLink, Wave/Search/Presave,
   Auth, Purchase), репозитории
@@ -453,7 +487,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Скачивание FLAC по presigned S3 URL
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
-### Тесты (apps/web — 1777, гонять `pnpm --filter @vire/web test`)
+### Тесты (3405 всего: web 2026 · core 1058 · mobile 210 · worker 111)
 - [x] `packages/core` — сервисы artist/release/track, follow/listener-track/track-moods/playlist, Result/errors (Vitest)
 - [x] `apps/web/lib` — `embed` (YouTube/VK), `upload` (валидация), `format`, `structured-data` (JSON-LD билдеры)
 - [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),
@@ -473,17 +507,20 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   autostart, close-to-tray + глобальный хоткей, single-instance, splash, автообновление,
   мини-плеер поверх других окон, сборка под Windows/Linux (AppImage). Раздача — `/download`
   + GitHub Release + публичный MinIO. Детали — `docs/features/desktop-app.md`.
-- [~] **Мобилка** (React Native + Expo, Android) — инкременты 1–17: вход, воспроизведение
+- [~] **Мобилка** (React Native + Expo, Android) — инкременты 1–28: вход, воспроизведение
   звука (`react-native-track-player`, лок-скрин/Now Playing/фон), SDUI-главная + нативная
   полировка, лайки/плейлисты, shuffle/repeat, диплинк на релиз, друзья (список/заявки/
   поиск/блокировка), просмотр чужого профиля, офлайн-скачивание треков, E2EE-чат
   (веб-совместимый, тред + список диалогов + typing/read), пуш-уведомления (Expo→FCM,
-  переиспользует существующий канал `notify-external`, EAS-проект `@pruffit/vire-mobile`
-  + FCM-креды привязаны) — все подтверждены живьём на эмуляторе `VireMusic_Test`, включая
-  реальный системный пуш при свёрнутом приложении (инкремент 17). Открыто: реальное
-  физическое устройство (только эмулятор), лок-скрин с включённым PIN, Android Auto, iOS
-  (нет Mac). Детали и честная разбивка проверено/не проверено по каждому инкременту —
-  `docs/features/mobile-app.md`.
+  EAS-проект `@pruffit/vire-mobile` + FCM-креды привязаны), **liquid glass** —
+  нативный Expo-модуль `modules/glass-lens` (Kotlin + AGSL `RenderEffect`) для настоящего
+  преломления фона + Skia-шейдер поверхности (фаска, Френель, блик, кромка), Android 13+.
+  Всё подтверждено живьём на эмуляторе `VireMusic_Test`.
+  **Открыто:** реальное физическое устройство (только эмулятор), **производительность
+  стекла не измерена ни разу** (эмулятор с `hw.gpu.enabled=no` для этого непригоден),
+  лок-скрин с PIN, Android Auto, iOS (нет Mac). Детали и честная разбивка
+  проверено/не проверено по каждому инкременту — `docs/features/mobile-app.md`.
+  Спецификация стекла и план работ — `docs/architecture/vireglass-spec.md`.
 
 ## Что делать дальше (следующий шаг)
 
