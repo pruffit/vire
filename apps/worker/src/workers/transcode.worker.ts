@@ -18,6 +18,7 @@ import { decideAutoApplyGenres } from '../lib/genre-policy.js';
 import type { GenreSuggestion } from '../lib/discogs-genre-map.js';
 import { connection } from '../queues/connection.js';
 import { sendMail } from '../lib/mailer.js';
+import { createStageTimer } from '../lib/timing.js';
 
 const APP_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? process.env.AUTH_URL ?? 'http://localhost:3000';
@@ -48,9 +49,10 @@ export async function processTranscodeJob(job: Job<TranscodeJobData | ProcessMed
   const sourceExt = sourceKey.split('.').pop() || 'flac';
 
   const tmpDir = mkdtempSync(path.join(tmpdir(), `vire-${trackId}-`));
+  const timer = createStageTimer();
   try {
     const sourcePath = path.join(tmpDir, `source.${sourceExt}`);
-    await downloadToFile(VAULT, sourceKey, sourcePath);
+    await timer.run('download', () => downloadToFile(VAULT, sourceKey, sourcePath));
     await job.updateProgress(20);
 
     const metadata = await readAudioMetadata(sourcePath);
@@ -59,7 +61,8 @@ export async function processTranscodeJob(job: Job<TranscodeJobData | ProcessMed
     await job.updateProgress(30);
 
     // BPM/тональность: всегда, перезаписывает теги.
-    const analyzed = await analyzeAudioFeatures(sourcePath, { bpm: true, key: true });
+    // Этап `dsp` — единственный CPU-bound JS в пайплайне, остальные тяжёлые нативные.
+    const analyzed = await timer.run('dsp', () => analyzeAudioFeatures(sourcePath, { bpm: true, key: true }));
     const bpm = analyzed.bpm ?? metadata.bpm;
     const musicalKey = analyzed.musicalKey ?? metadata.musicalKey;
     await job.updateProgress(45);
@@ -67,7 +70,7 @@ export async function processTranscodeJob(job: Job<TranscodeJobData | ProcessMed
     // За флагом AUTO_GENRE, ошибка не блокирует переход в READY, только логируется.
     let genreSuggestions: GenreSuggestion[] | null = null;
     try {
-      genreSuggestions = await classifyTrackGenre(sourcePath);
+      genreSuggestions = await timer.run('genre', () => classifyTrackGenre(sourcePath));
       if (genreSuggestions && genreSuggestions.length > 0) {
         const autoApply = decideAutoApplyGenres(genreSuggestions);
         if (autoApply.length > 0) {
@@ -81,25 +84,27 @@ export async function processTranscodeJob(job: Job<TranscodeJobData | ProcessMed
 
     const hlsDir = path.join(tmpDir, 'hls');
     mkdirSync(hlsDir);
-    const { manifestPath, segmentPaths } = await transcodeToHls(sourcePath, hlsDir);
+    const { manifestPath, segmentPaths } = await timer.run('hls', () => transcodeToHls(sourcePath, hlsDir));
     await job.updateProgress(75);
 
-    const waveformPeaks = await computeWaveformPeaks(sourcePath);
+    const waveformPeaks = await timer.run('waveform', () => computeWaveformPeaks(sourcePath));
     await job.updateProgress(88);
 
     // Исходник уже на постоянном ключе: отдаём sourceKey как есть.
     const hlsManifestKey = `tracks/${trackId}/hls/index.m3u8`;
     const sourceVaultKey = sourceKey;
 
-    await uploadFile(STREAM, hlsManifestKey, manifestPath, 'application/vnd.apple.mpegurl');
-    for (const seg of segmentPaths) {
-      await uploadFile(
-        STREAM,
-        `tracks/${trackId}/hls/${path.basename(seg)}`,
-        seg,
-        'video/mp2t',
-      );
-    }
+    await timer.run('upload', async () => {
+      await uploadFile(STREAM, hlsManifestKey, manifestPath, 'application/vnd.apple.mpegurl');
+      for (const seg of segmentPaths) {
+        await uploadFile(
+          STREAM,
+          `tracks/${trackId}/hls/${path.basename(seg)}`,
+          seg,
+          'video/mp2t',
+        );
+      }
+    });
     await job.updateProgress(95);
 
     // flacKey хранит ключ исходного мастера (wav или flac).
@@ -137,6 +142,13 @@ export async function processTranscodeJob(job: Job<TranscodeJobData | ProcessMed
     await job.updateProgress(100);
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
+    // В job.log — чтобы разбивка была видна в админке рядом с самим джобом,
+    // в stdout — чтобы попадала в journalctl вместе с остальными логами воркера.
+    const breakdown = `[transcode] track=${trackId} ${timer.summary()} total=${timer.totalMs()}ms`;
+    console.log(breakdown);
+    // Замер — диагностика: его сбой не должен подменять настоящую ошибку джоба,
+    // ради которой мы попали в finally.
+    try { await job.log(breakdown); } catch { /* no-op */ }
   }
 }
 
@@ -184,7 +196,7 @@ export async function handleTerminalTranscodeFailure(
 }
 
 // lockDuration поднят с дефолтных 30с: BPM/key и жанр (JS-циклы, ONNX-инференс)
-// блокируют event loop, тот же риск потери лока на 1ГБ VPS, что в analyze/analyze-genre.
+// блокируют event loop, тот же риск потери лока, что в analyze/analyze-genre.
 const LOCK_DURATION_MS = 10 * 60 * 1000;
 
 export function createTranscodeWorker() {

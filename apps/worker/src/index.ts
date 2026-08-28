@@ -15,6 +15,15 @@ import { createJamReaperWorker } from './workers/jam-reaper.worker.js';
 import { createStorageCleanupWorker } from './workers/storage-cleanup.worker.js';
 import { connection } from './queues/connection.js';
 import { alertJobFailure, alertWorkerError, alertCrash } from './lib/alert.js';
+import { jobDurationMs } from './lib/timing.js';
+
+/** Один формат строки успеха на все очереди: без длительности нельзя ответить,
+ *  почему медленно — алерты ловят только факт падения. */
+function logDone(queue: string, job: { id?: string; processedOn?: number | null; finishedOn?: number | null }, extra = '') {
+  const ms = jobDurationMs(job);
+  const took = ms === null ? '' : ` took=${ms}ms`;
+  console.log(`[${queue}] ✓ job=${job.id ?? '?'}${extra}${took}`);
+}
 
 const envResult = parseEnv(process.env, 'worker');
 if (!envResult.ok) {
@@ -74,7 +83,7 @@ storageCleanupQueue
   .catch((err) => void alertWorkerError('storage-cleanup', err as Error));
 
 editorialWorker.on('completed', (job) => {
-  console.log(`[editorial] ✓ job=${job.id} scope=${job.data.scope}`);
+  logDone('editorial', job, ` scope=${job.data.scope}`);
 });
 editorialWorker.on('failed', (job, err) => {
   void alertJobFailure('editorial', job?.id, err, { scope: job?.data.scope });
@@ -84,7 +93,7 @@ editorialWorker.on('error', (err) => {
 });
 
 transcodeWorker.on('completed', (job) => {
-  console.log(`[transcode] ✓ job=${job.id} asset=${normalizeMediaJob(job.data)?.assetId ?? '?'}`);
+  logDone('transcode', job, ` asset=${normalizeMediaJob(job.data)?.assetId ?? '?'}`);
 });
 
 transcodeWorker.on('failed', (job, err) => {
@@ -108,7 +117,7 @@ playEventsWorker.on('error', (err) => {
 });
 
 notifyReleaseWorker.on('completed', (job) => {
-  console.log(`[notify-release] ✓ job=${job.id} release=${job.data.releaseId}`);
+  logDone('notify-release', job, ` release=${job.data.releaseId}`);
 });
 
 notifyReleaseWorker.on('failed', (job, err) => {
@@ -127,7 +136,7 @@ scheduledPublishWorker.on('error', (err) => {
 });
 
 fulfillPresaveWorker.on('completed', (job) => {
-  console.log(`[fulfill-presave] ✓ job=${job.id} release=${job.data.releaseId}`);
+  logDone('fulfill-presave', job, ` release=${job.data.releaseId}`);
 });
 fulfillPresaveWorker.on('failed', (job, err) => {
   void alertJobFailure('fulfill-presave', job?.id, err, { releaseId: job?.data.releaseId });
@@ -137,7 +146,7 @@ fulfillPresaveWorker.on('error', (err) => {
 });
 
 metricsWorker.on('completed', (job) => {
-  console.log(`[metrics-daily] ✓ job=${job.id}`);
+  logDone('metrics-daily', job);
 });
 metricsWorker.on('failed', (job, err) => {
   void alertJobFailure('metrics-daily', job?.id, err);
@@ -149,7 +158,7 @@ metricsWorker.on('error', (err) => {
 console.log('[worker] transcode + analyze + analyze-genre + play-events + notify-release + editorial + scheduled-publish + fulfill-presave + metrics-daily + notify-external + jam-reaper workers started');
 
 analyzeWorker.on('completed', (job) => {
-  console.log(`[analyze] ✓ job=${job.id} track=${job.data.trackId}`);
+  logDone('analyze', job, ` track=${job.data.trackId}`);
 });
 analyzeWorker.on('failed', (job, err) => {
   void alertJobFailure('analyze', job?.id, err, { trackId: job?.data.trackId });
@@ -159,7 +168,7 @@ analyzeWorker.on('error', (err) => {
 });
 
 analyzeGenreWorker.on('completed', (job) => {
-  console.log(`[analyze-genre] ✓ job=${job.id} track=${job.data.trackId}`);
+  logDone('analyze-genre', job, ` track=${job.data.trackId}`);
 });
 analyzeGenreWorker.on('failed', (job, err) => {
   void alertJobFailure('analyze-genre', job?.id, err, { trackId: job?.data.trackId });
@@ -169,7 +178,7 @@ analyzeGenreWorker.on('error', (err) => {
 });
 
 notifyExternalWorker.on('completed', (job) => {
-  console.log(`[notify-external] ✓ job=${job.id} kind=${job.data.kind}`);
+  logDone('notify-external', job, ` kind=${job.data.kind}`);
 });
 notifyExternalWorker.on('failed', (job, err) => {
   void alertJobFailure('notify-external', job?.id, err, { kind: job?.data.kind });
@@ -179,7 +188,7 @@ notifyExternalWorker.on('error', (err) => {
 });
 
 jamReaperWorker.on('completed', (job) => {
-  console.log(`[jam-reaper] ✓ job=${job.id}`);
+  logDone('jam-reaper', job);
 });
 jamReaperWorker.on('failed', (job, err) => {
   void alertJobFailure('jam-reaper', job?.id, err);
