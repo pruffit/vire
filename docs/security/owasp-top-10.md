@@ -76,7 +76,8 @@
 
 - **Dependabot** (`.github/dependabot.yml`) — еженедельные PR (npm/pnpm + GitHub Actions).
 - `pnpm audit --audit-level=high` в гейтах CI/CD.
-- Pinned-версии через pnpm lockfile; обновления проходят через PR + гейты.
+- Pinned-версии через pnpm lockfile; обновления проходят гейты CI, включая
+  `pnpm audit --audit-level=high` (валит job до сборки образов).
 
 ## A07:2021 — Identification and Authentication Failures ✅
 
