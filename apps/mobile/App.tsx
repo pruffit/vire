@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { RootNavigator } from './navigation/root-navigator';
 import { bootstrapE2eeIdentity } from './lib/e2ee/bootstrap';
+import { subscribePlayerEffects } from './lib/player-store';
 import { BlurTargetProvider } from './lib/blur-target';
 import { useKitFonts } from './lib/design/use-fonts';
 import { colors } from './lib/theme';
@@ -35,6 +36,10 @@ export default function App() {
   useEffect(() => {
     if (!GLASS_LAB) bootstrapE2eeIdentity();
   }, []);
+
+  // Отчёт о прослушивании при уходе в фон — подписка живёт в эффекте, чтобы фаст-рефреш
+  // не плодил слушателей (живой прогон дал из-за этого дубли в play_events).
+  useEffect(() => (GLASS_LAB ? undefined : subscribePlayerEffects()), []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

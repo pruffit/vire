@@ -128,7 +128,11 @@ export class TrackPlayerAudioEngine implements IAudioEngine {
   // тапу пользователя — Activity к этому моменту точно в foreground.
   private ensureReady(): Promise<void> {
     if (!this.setupPromise) {
-      this.setupPromise = TrackPlayer.setupPlayer()
+      this.setupPromise = TrackPlayer.setupPlayer({
+        // Звонок, будильник, чужой плеер: без этого RNTP не отпускает аудиофокус и
+        // приложение продолжает играть поверх — для музыкального продукта это отказ.
+        autoHandleInterruptions: true,
+      })
         .catch((err) => {
           // setupPlayer() бросает, если плеер уже инициализирован (hot reload/повторный
           // импорт модуля) — не фатально, дальнейшие вызовы всё равно работают с тем же плеером.
@@ -146,6 +150,9 @@ export class TrackPlayerAudioEngine implements IAudioEngine {
             progressUpdateEventInterval: 1,
             android: {
               appKilledPlaybackBehavior: AppKilledPlaybackBehavior.ContinuePlayback,
+              // Короткое чужое уведомление (навигатор, сообщение) глушит нас паузой, а не
+              // притишиванием: музыку под голосовую подсказку слушать всё равно нельзя.
+              alwaysPauseOnInterruption: true,
             },
           }),
         );

@@ -60,7 +60,7 @@ export default function LibraryScreen() {
       coverUrl: d.coverUrl,
       durationSec: d.durationSec,
     }));
-    playQueue(queue, index);
+    playQueue(queue, index, { source: 'liked' });
   };
 
   const remove = async (trackId: string) => {

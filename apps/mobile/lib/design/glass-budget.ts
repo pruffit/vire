@@ -38,6 +38,14 @@ export const SUPPRESSED_BY_SHEET: readonly GlassElement[] = [
   'contentPlate',
 ];
 
+/**
+ * Фуллскрин-плеер перекрывает всё приложение, но таб-бар и мини-плеер остаются
+ * смонтированными под ним (он — модальный экран корневого стека). Без подавления
+ * получалось бы 4 + 1 + 2 = 7 поверхностей — за пределами измеренной зелёной зоны.
+ * Поэтому плеер поднимает тот же счётчик, что и лист.
+ */
+export const FULLSCREEN_PLAYER: readonly GlassElement[] = ['sheet', 'playerControls'];
+
 export function countSurfaces(elements: readonly GlassElement[]): number {
   const sheetOpen = elements.includes('sheet');
   return elements
@@ -55,4 +63,6 @@ export const REACHABLE_SCENARIOS: Record<string, readonly GlassElement[]> = {
   'артист + шит': ['tabBar', 'miniPlayer', 'contentPlate', 'sheet'],
   'фуллскрин-плеер': ['playerControls'],
   'фуллскрин-плеер + шит': ['playerControls', 'sheet'],
+  // Плеер открыт поверх табов и мини-плеера — те остаются смонтированными.
+  'фуллскрин-плеер поверх табов': ['tabBar', 'miniPlayer', ...FULLSCREEN_PLAYER],
 };

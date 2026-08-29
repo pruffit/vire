@@ -82,7 +82,7 @@ export default function ReleaseScreen({ route }: { route: { params: HomeStackPar
       coverUrl,
       durationSec: t.durationSec,
     }));
-    playQueue(queue, index);
+    playQueue(queue, index, { source: 'release', sourceId: releaseId });
   };
 
   return (

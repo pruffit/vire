@@ -65,7 +65,7 @@ export default function UserProfileScreen({ route }: NativeStackScreenProps<Prof
 
   const play = (index: number) => {
     if (!profile) return;
-    playQueue(likedTracksToQueue(profile.likes), index);
+    playQueue(likedTracksToQueue(profile.likes), index, { source: 'liked', sourceId: userId });
   };
 
   const doBlock = useCallback(async () => {

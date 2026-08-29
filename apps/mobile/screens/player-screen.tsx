@@ -1,242 +1,217 @@
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { nextQueueIndex } from '@vire/core/playback/queue';
 import { usePlayerStore } from '../lib/player-store';
+import { usePreferences } from '../lib/design/preferences';
+import { WEB_BASE_URL } from '../lib/env';
 import { formatDuration } from '../lib/format';
+import { colors } from '../lib/theme';
+import { type } from '../lib/design/typography';
+import { space, layout, radii } from '../lib/design/scales';
 import { Icon } from '../lib/icon';
-import { Glass } from '../components/glass';
-import { colors, radius } from '../lib/theme';
+import { Cover } from '../components/ui/cover';
+import { GlassPanel } from '../components/ui/glass-panel';
+import { LikeButton } from '../components/like-button';
+import { Waveform } from '../components/player/waveform';
+import { QueuePanel, LyricsPanel, TrackPanel } from '../components/player/panels';
 
-// Полноразмерная размытая обложка фоном — тот же приём, что в release-screen.tsx/
-// playlist-screen.tsx, только сильнее (blurRadius 80) и на весь экран: мокапы полного
-// плеера («2 · ЭКРАН») строятся вокруг этой размытой обложки, не плоского фона.
-const PLAYER_SCRIM = ['rgba(3,2,1,0.6)', 'rgba(3,2,1,0.35)', 'rgba(3,2,1,0.75)'] as const;
+type Panel = 'queue' | 'lyrics' | 'track';
 
+const PANELS: { key: Panel; label: string }[] = [
+  { key: 'queue', label: 'Очередь' },
+  { key: 'lyrics', label: 'Текст' },
+  { key: 'track', label: 'Трек' },
+];
+
+/**
+ * Основная поверхность текущего трека.
+ *
+ * Совмещает то, что на вебе разнесено между плеером и страницей трека: панель «Трек»
+ * заменяет отдельный экран (`MOBILE_PRODUCT_ARCHITECTURE.md` §5.3). На телефоне уходить
+ * от воспроизведения, чтобы почитать о том, что играет, — веб-логика.
+ */
 export default function PlayerScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
   const queue = usePlayerStore((s) => s.queue);
   const queueIndex = usePlayerStore((s) => s.queueIndex);
   const status = usePlayerStore((s) => s.status);
   const positionSec = usePlayerStore((s) => s.positionSec);
   const durationSec = usePlayerStore((s) => s.durationSec);
+  const waveformPeaks = usePlayerStore((s) => s.waveformPeaks);
+  const shuffle = usePlayerStore((s) => s.shuffle);
+  const repeat = usePlayerStore((s) => s.repeat);
   const togglePlayPause = usePlayerStore((s) => s.togglePlayPause);
   const next = usePlayerStore((s) => s.next);
   const prev = usePlayerStore((s) => s.prev);
   const seek = usePlayerStore((s) => s.seek);
-  const shuffle = usePlayerStore((s) => s.shuffle);
-  const repeat = usePlayerStore((s) => s.repeat);
   const toggleShuffle = usePlayerStore((s) => s.toggleShuffle);
   const cycleRepeat = usePlayerStore((s) => s.cycleRepeat);
+
+  const [panel, setPanel] = useState<Panel>('queue');
   const track = queue[queueIndex];
 
+  // Плеер перекрывает таб-бар и мини-плеер целиком: их стеклу под ним преломлять нечего,
+  // а бюджет поверхностей иначе выходит за измеренную зелёную зону (4+1+2 = 7).
+  const pushSheet = usePreferences((s) => s.pushSheet);
+  const popSheet = usePreferences((s) => s.popSheet);
   useEffect(() => {
-    if (!track) navigation.goBack();
-  }, [track, navigation]);
+    pushSheet();
+    return popSheet;
+  }, [pushSheet, popSheet]);
 
   if (!track) return null;
 
   const hasNext = nextQueueIndex(queueIndex, queue.length, repeat) !== null;
+  const playing = status === 'playing';
+  const artSize = Math.min(width - space.xl * 2, 360);
 
-  return (
-    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: 24 + insets.bottom }]}>
-      {track.coverUrl && (
-        <Image source={{ uri: track.coverUrl }} style={StyleSheet.absoluteFill} blurRadius={80} contentFit="cover" />
-      )}
-      <LinearGradient colors={PLAYER_SCRIM} style={StyleSheet.absoluteFill} />
-
-      <Pressable style={styles.closeButton} onPress={() => navigation.goBack()} hitSlop={12}>
-        <Glass style={styles.closeButtonGlass} radius={18} intensity={30} shadow={false}>
-          <Icon name="chevron-down" size={20} color={colors.foreground} />
-        </Glass>
-      </Pressable>
-
-      {track.coverUrl ? (
-        <Image source={{ uri: track.coverUrl }} style={styles.cover} />
-      ) : (
-        <View style={[styles.cover, styles.coverPlaceholder]} />
-      )}
-
-      <Text style={styles.title} numberOfLines={2}>
-        {track.title}
-      </Text>
-      <Text style={styles.artist} numberOfLines={1}>
-        {track.artistName}
-      </Text>
-      {status === 'error' && <Text style={styles.errorText}>Не удалось воспроизвести — нажмите play ещё раз</Text>}
-
-      <PositionSlider position={positionSec} duration={durationSec} onSeek={seek} />
-      <View style={styles.timeRow}>
-        <Text style={styles.timeText}>{formatDuration(positionSec)}</Text>
-        <Text style={styles.timeText}>{formatDuration(durationSec)}</Text>
-      </View>
-
-      <Glass style={styles.transportRow} radius={28}>
-        <Pressable
-          style={styles.transportButton}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            toggleShuffle();
-          }}
-          hitSlop={12}
-        >
-          <Icon name="shuffle" size={20} color={shuffle ? colors.primary : colors.mutedForeground} />
-        </Pressable>
-        <Pressable style={styles.transportButton} onPress={prev} disabled={queueIndex <= 0} hitSlop={12}>
-          <Icon name="skip-back" size={26} color={queueIndex <= 0 ? colors.mutedForeground : colors.foreground} />
-        </Pressable>
-        <Pressable
-          style={styles.playButton}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            togglePlayPause();
-          }}
-          hitSlop={12}
-        >
-          {status === 'loading' ? (
-            <ActivityIndicator color={colors.primaryForeground} size="small" />
-          ) : (
-            <Icon name={status === 'playing' ? 'pause' : 'play'} size={26} color={colors.primaryForeground} />
-          )}
-        </Pressable>
-        <Pressable style={styles.transportButton} onPress={next} disabled={!hasNext} hitSlop={12}>
-          <Icon name="skip-forward" size={26} color={!hasNext ? colors.mutedForeground : colors.foreground} />
-        </Pressable>
-        <Pressable
-          style={styles.transportButton}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            cycleRepeat();
-          }}
-          hitSlop={12}
-        >
-          <Icon name="repeat" size={20} color={repeat !== 'off' ? colors.primary : colors.mutedForeground} />
-          {repeat === 'one' && (
-            <View style={styles.repeatBadge}>
-              <Text style={styles.repeatBadgeText}>1</Text>
-            </View>
-          )}
-        </Pressable>
-      </Glass>
-    </View>
-  );
-}
-
-function PositionSlider({
-  position,
-  duration,
-  onSeek,
-}: {
-  position: number;
-  duration: number;
-  onSeek: (sec: number) => void;
-}) {
-  const [width, setWidth] = useState(0);
-  const [dragSec, setDragSec] = useState<number | null>(null);
-  const widthRef = useRef(0);
-  const durationRef = useRef(duration);
-  durationRef.current = duration;
-
-  const clampFromTouch = (x: number) => {
-    if (widthRef.current <= 0 || durationRef.current <= 0) return 0;
-    const ratio = Math.min(Math.max(x / widthRef.current, 0), 1);
-    return ratio * durationRef.current;
+  const tap = (fn: () => void) => () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    fn();
   };
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => durationRef.current > 0,
-      onMoveShouldSetPanResponder: () => durationRef.current > 0,
-      onPanResponderGrant: (e) => setDragSec(clampFromTouch(e.nativeEvent.locationX)),
-      onPanResponderMove: (e) => setDragSec(clampFromTouch(e.nativeEvent.locationX)),
-      onPanResponderRelease: (e) => {
-        const sec = clampFromTouch(e.nativeEvent.locationX);
-        onSeek(sec);
-        setDragSec(null);
-      },
-    }),
-  ).current;
-
-  const shownSec = dragSec ?? position;
-  const ratio = duration > 0 ? Math.min(shownSec / duration, 1) : 0;
+  const share = () => {
+    Share.share({
+      message: `${track.title} — ${track.artistName}`,
+      url: `${WEB_BASE_URL}/`,
+    }).catch(() => {});
+  };
 
   return (
-    <View
-      style={styles.track}
-      onLayout={(e) => {
-        widthRef.current = e.nativeEvent.layout.width;
-        setWidth(e.nativeEvent.layout.width);
-      }}
-      {...panResponder.panHandlers}
-    >
-      <View style={styles.trackBase} />
-      <View style={[styles.trackFill, { width: width * ratio }]} />
-      <View style={[styles.thumb, { left: Math.max(0, width * ratio - 7) }]} />
+    <View style={[styles.screen, { paddingTop: insets.top + space.sm, paddingBottom: insets.bottom }]}>
+      <LinearGradient colors={SCRIM} style={StyleSheet.absoluteFill} pointerEvents="none" />
+
+      <View style={styles.topBar}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Свернуть плеер">
+          <Icon name="chevron-down" size={22} color={colors.foreground} />
+        </Pressable>
+        <View style={styles.topActions}>
+          <LikeButton trackId={track.id} />
+          <Pressable onPress={share} hitSlop={12} accessibilityRole="button" accessibilityLabel="Поделиться">
+            <Icon name="share" size={18} color={colors.mutedForeground} />
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.art}>
+        <Cover uri={track.coverUrl} size={artSize} radius={radii.card} />
+      </View>
+
+      <View style={styles.titles}>
+        <Text style={type.releaseTitle} numberOfLines={2}>
+          {track.title}
+        </Text>
+        <Text style={type.caption} numberOfLines={1}>
+          {track.artistName}
+        </Text>
+      </View>
+
+      <View style={styles.scrubber}>
+        <Waveform peaks={waveformPeaks} positionSec={positionSec} durationSec={durationSec} onSeek={seek} />
+        <View style={styles.times}>
+          <Text style={type.mono}>{formatDuration(positionSec)}</Text>
+          <Text style={type.mono}>{formatDuration(durationSec)}</Text>
+        </View>
+      </View>
+
+      {status === 'error' && <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>}
+
+      <GlassPanel radius={radii.glass} style={styles.transport} contentStyle={styles.transportRow}>
+        <Pressable onPress={tap(toggleShuffle)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Перемешать">
+          <Icon name="shuffle" size={19} color={shuffle ? colors.foreground : colors.mutedForeground} />
+        </Pressable>
+        <Pressable onPress={tap(prev)} disabled={queueIndex <= 0} hitSlop={10} accessibilityRole="button" accessibilityLabel="Предыдущий">
+          <Icon name="skip-back" size={25} color={queueIndex <= 0 ? colors.mutedForeground : colors.foreground} />
+        </Pressable>
+        <Pressable style={styles.playButton} onPress={tap(togglePlayPause)} accessibilityRole="button" accessibilityLabel={playing ? 'Пауза' : 'Играть'}>
+          {status === 'loading' ? (
+            <ActivityIndicator color={colors.background} />
+          ) : (
+            <Icon name={playing ? 'pause' : 'play'} size={24} color={colors.background} />
+          )}
+        </Pressable>
+        <Pressable onPress={tap(next)} disabled={!hasNext} hitSlop={10} accessibilityRole="button" accessibilityLabel="Следующий">
+          <Icon name="skip-forward" size={25} color={hasNext ? colors.foreground : colors.mutedForeground} />
+        </Pressable>
+        <Pressable onPress={tap(cycleRepeat)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Повтор">
+          <Icon name="repeat" size={19} color={repeat !== 'off' ? colors.foreground : colors.mutedForeground} />
+          {repeat === 'one' && <View style={styles.repeatDot} />}
+        </Pressable>
+      </GlassPanel>
+
+      <View style={styles.tabs}>
+        {PANELS.map((p) => (
+          <Pressable
+            key={p.key}
+            onPress={() => setPanel(p.key)}
+            style={styles.tab}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: panel === p.key }}
+          >
+            <Text style={[styles.tabLabel, panel === p.key && styles.tabLabelActive]}>{p.label}</Text>
+            {panel === p.key && <View style={styles.tabUnderline} />}
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={styles.panelBody}>
+        {panel === 'queue' && <QueuePanel />}
+        {panel === 'lyrics' && <LyricsPanel trackId={track.id} />}
+        {panel === 'track' && <TrackPanel track={track} />}
+      </View>
     </View>
   );
 }
 
+// Обложка — источник света экрана: мягкое затемнение сверху вниз, чтобы транспорт и
+// панели читались, а картинка не выглядела вырезанной.
+const SCRIM = ['rgba(3,2,1,0)', 'rgba(3,2,1,0.55)', 'rgba(3,2,1,0.92)'] as const;
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    gap: 8,
-    overflow: 'hidden',
-  },
-  closeButton: { alignSelf: 'flex-end', minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  closeButtonGlass: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  cover: { width: '100%', aspectRatio: 1, borderRadius: radius.xl, marginTop: 8 },
-  coverPlaceholder: { backgroundColor: colors.secondary },
-  title: { color: colors.foreground, fontSize: 22, fontWeight: '800', textAlign: 'center', marginTop: 24 },
-  artist: { color: colors.mutedForeground, fontSize: 16, fontWeight: '500', textAlign: 'center' },
-  errorText: { color: colors.destructive, fontSize: 13, textAlign: 'center', marginTop: 4 },
-  track: { width: '100%', height: 24, justifyContent: 'center', marginTop: 32 },
-  trackBase: { position: 'absolute', left: 0, right: 0, height: 4, borderRadius: 2, backgroundColor: colors.secondary },
-  trackFill: { position: 'absolute', left: 0, height: 4, borderRadius: 2, backgroundColor: colors.primary },
-  thumb: {
-    position: 'absolute',
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: colors.primary,
-  },
-  timeRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
-  timeText: { color: colors.mutedForeground, fontSize: 12, fontVariant: ['tabular-nums'] },
+  screen: { flex: 1, backgroundColor: colors.background, paddingHorizontal: layout.screenPadding },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: layout.touchTarget },
+  topActions: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
+  art: { alignItems: 'center', paddingVertical: space.md },
+  titles: { gap: 4, paddingBottom: space.md },
+  scrubber: { gap: space.xs },
+  times: { flexDirection: 'row', justifyContent: 'space-between' },
+  error: { ...type.caption, color: colors.destructive, paddingTop: space.sm },
+  transport: { marginTop: space.md, height: 64 },
   transportRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 'auto',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    justifyContent: 'space-around',
+    paddingHorizontal: space.lg,
   },
-  transportButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  repeatBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 6,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  repeatBadgeText: { color: colors.primaryForeground, fontSize: 9, fontWeight: '800', lineHeight: 11 },
   playButton: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: colors.primary,
+    width: 52,
+    height: 52,
+    borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.foreground,
   },
+  repeatDot: {
+    position: 'absolute',
+    right: -2,
+    top: -2,
+    width: 5,
+    height: 5,
+    borderRadius: radii.full,
+    backgroundColor: colors.foreground,
+  },
+  tabs: { flexDirection: 'row', gap: space.xl, paddingTop: space.lg, paddingHorizontal: space.xs },
+  tab: { paddingVertical: space.sm, gap: 6 },
+  tabLabel: { ...type.sectionTitle, color: colors.mutedForeground },
+  tabLabelActive: { color: colors.foreground },
+  tabUnderline: { height: 2, borderRadius: radii.full, backgroundColor: colors.foreground },
+  panelBody: { flex: 1, minHeight: 0, paddingTop: space.sm },
 });

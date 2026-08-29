@@ -111,7 +111,7 @@ export default function HomeScreen() {
       coverUrl: t.coverUrl,
       durationSec: null,
     }));
-    playQueue(queue, index);
+    playQueue(queue, index, { source: 'home' });
   };
 
   // Один BlurTargetView на все состояния экрана (не только «ready») — таб-бар/мини-плеер

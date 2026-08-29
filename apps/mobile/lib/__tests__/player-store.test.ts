@@ -1,7 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { request } = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock('../api-client', () => ({ apiRequest: request }));
+
+// Персист стора ходит в файловую систему, а `expo-file-system` в node-окружении не
+// поднимается (нативный EventEmitter). Хранилище в памяти — того же интерфейса.
+const persisted = vi.hoisted(() => new Map<string, string>());
+vi.mock('../storage/file-store', () => ({
+  fileStore: {
+    getItem: (k: string) => persisted.get(k) ?? null,
+    setItem: (k: string, v: string) => void persisted.set(k, v),
+    removeItem: (k: string) => void persisted.delete(k),
+  },
+}));
 
 const { audioEngine, emit } = vi.hoisted(() => {
   const listeners: Record<string, Array<(payload?: unknown) => void>> = {};
@@ -28,7 +39,9 @@ vi.mock('../audio-engine', () => ({ audioEngine }));
 const { getDownloadedTrack } = vi.hoisted(() => ({ getDownloadedTrack: vi.fn() }));
 vi.mock('../offline/download-manager', () => ({ getDownloadedTrack }));
 
-import { usePlayerStore, __resetSeekGuardForTests, type QueueTrack } from '../player-store';
+import { usePlayerStore, __resetSeekGuardForTests, type QueueTrack, subscribePlayerEffects } from '../player-store';
+
+const CTX = { source: 'release' } as const;
 
 const track = (id: string): QueueTrack => ({
   id,
@@ -50,9 +63,17 @@ function resetStore() {
     shuffle: false,
     repeat: 'off',
     originalQueue: null,
+    context: null,
+    restored: false,
+    waveformPeaks: null,
   });
+  persisted.clear();
   __resetSeekGuardForTests();
 }
+
+// Подписки стора больше не висят на уровне модуля (фаст-рефреш плодил их и дублировал
+// отчёты о прослушивании) — поднимаем их явно на каждый тест и снимаем после.
+let unsubscribe: (() => void) | null = null;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -62,11 +83,17 @@ beforeEach(() => {
   });
   getDownloadedTrack.mockResolvedValue(null);
   resetStore();
+  unsubscribe = subscribePlayerEffects();
+});
+
+afterEach(() => {
+  unsubscribe?.();
+  unsubscribe = null;
 });
 
 describe('usePlayerStore.playQueue', () => {
   it('ставит очередь, грузит манифест стартового трека и запускает воспроизведение', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 1);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 1, CTX);
 
     expect(usePlayerStore.getState().queueIndex).toBe(1);
     expect(usePlayerStore.getState().queue).toHaveLength(3);
@@ -80,7 +107,7 @@ describe('usePlayerStore.playQueue', () => {
   });
 
   it('передаёт движку метаданные трека (title/artist/artworkUrl) — для Now Playing/lock-screen', async () => {
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
 
     expect(audioEngine.load).toHaveBeenCalledWith({
       manifestUrl: 'https://cdn/t1.m3u8',
@@ -91,26 +118,26 @@ describe('usePlayerStore.playQueue', () => {
   });
 
   it('startIndex зажимается в границы очереди', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 99);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 99, CTX);
     expect(usePlayerStore.getState().queueIndex).toBe(1);
   });
 
   it('пустая очередь — no-op', async () => {
-    await usePlayerStore.getState().playQueue([], 0);
+    await usePlayerStore.getState().playQueue([], 0, CTX);
     expect(usePlayerStore.getState().queueIndex).toBe(-1);
     expect(audioEngine.load).not.toHaveBeenCalled();
   });
 
   it('манифест не грузится — status error', async () => {
     request.mockResolvedValueOnce({ ok: false, error: { status: 404, message: 'not found' } });
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
     expect(usePlayerStore.getState().status).toBe('error');
     expect(audioEngine.load).not.toHaveBeenCalled();
   });
 
   it('audioEngine.load() отклоняется (источник не воспроизводим) — status error, не бесконечный loading', async () => {
     audioEngine.load.mockRejectedValueOnce(new Error('unsupported source'));
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
     expect(usePlayerStore.getState().status).toBe('error');
     expect(audioEngine.play).not.toHaveBeenCalled();
   });
@@ -129,7 +156,7 @@ describe('usePlayerStore.playQueue — скачанный трек (офлайн
       localPlaylistPath: 'file:///offline/t1/playlist.m3u8',
     });
 
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
 
     expect(request).not.toHaveBeenCalled();
     expect(audioEngine.load).toHaveBeenCalledWith(
@@ -140,7 +167,7 @@ describe('usePlayerStore.playQueue — скачанный трек (офлайн
   });
 
   it('трек не скачан — обычный сетевой путь, как раньше', async () => {
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
 
     expect(getDownloadedTrack).toHaveBeenCalledWith('t1');
     expect(request).toHaveBeenCalled();
@@ -150,7 +177,7 @@ describe('usePlayerStore.playQueue — скачанный трек (офлайн
 
 describe('usePlayerStore.next/prev', () => {
   it('next() переходит к следующему треку и грузит его манифест', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 0);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 0, CTX);
     vi.clearAllMocks();
 
     usePlayerStore.getState().next();
@@ -161,7 +188,7 @@ describe('usePlayerStore.next/prev', () => {
   });
 
   it('next() на последнем треке очереди — останавливается, индекс не двигается', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1, CTX);
     vi.clearAllMocks();
 
     usePlayerStore.getState().next();
@@ -173,7 +200,7 @@ describe('usePlayerStore.next/prev', () => {
   });
 
   it('prev() на первом треке — no-op', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0, CTX);
     vi.clearAllMocks();
 
     usePlayerStore.getState().prev();
@@ -184,7 +211,7 @@ describe('usePlayerStore.next/prev', () => {
   });
 
   it('prev() переходит к предыдущему треку', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1, CTX);
     vi.clearAllMocks();
 
     usePlayerStore.getState().prev();
@@ -195,7 +222,7 @@ describe('usePlayerStore.next/prev', () => {
   });
 
   it('устаревший ответ манифеста (индекс уже сменился) не проигрывается', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 0);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 0, CTX);
     vi.clearAllMocks();
     getDownloadedTrack.mockResolvedValue(null);
 
@@ -218,14 +245,14 @@ describe('usePlayerStore.next/prev', () => {
 
 describe('usePlayerStore.togglePlayPause', () => {
   it('playing -> paused вызывает audioEngine.pause', async () => {
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
     usePlayerStore.getState().togglePlayPause();
     expect(audioEngine.pause).toHaveBeenCalledTimes(1);
     expect(usePlayerStore.getState().status).toBe('paused');
   });
 
   it('paused -> playing вызывает audioEngine.play', async () => {
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
     usePlayerStore.getState().togglePlayPause();
     vi.clearAllMocks();
     usePlayerStore.getState().togglePlayPause();
@@ -236,14 +263,14 @@ describe('usePlayerStore.togglePlayPause', () => {
 
 describe('usePlayerStore.seek', () => {
   it('вызывает audioEngine.seek и сразу обновляет positionSec', async () => {
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
     usePlayerStore.getState().seek(42);
     expect(audioEngine.seek).toHaveBeenCalledWith(42);
     expect(usePlayerStore.getState().positionSec).toBe(42);
   });
 
   it('устаревший timeupdate сразу после seek не перетирает выставленную позицию', async () => {
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
     usePlayerStore.getState().seek(42);
 
     // Драйвер может отдать тик со старой позицией, пока нативный плеер ещё не догнал
@@ -254,7 +281,7 @@ describe('usePlayerStore.seek', () => {
   });
 
   it('timeupdate после сброса guard (следующий трек) обновляет позицию как обычно', async () => {
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
     usePlayerStore.getState().seek(42);
     __resetSeekGuardForTests();
 
@@ -272,7 +299,7 @@ describe('события audioEngine', () => {
   });
 
   it('ended переключает на следующий трек очереди', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0, CTX);
     vi.clearAllMocks();
 
     emit('ended');
@@ -288,7 +315,7 @@ describe('события audioEngine', () => {
   });
 
   it('remoteNext (lock-screen) переходит к следующему треку — та же логика, что и next()', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0, CTX);
     vi.clearAllMocks();
 
     emit('remoteNext');
@@ -299,7 +326,7 @@ describe('события audioEngine', () => {
   });
 
   it('remotePrevious (lock-screen) переходит к предыдущему треку', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1, CTX);
     vi.clearAllMocks();
 
     emit('remotePrevious');
@@ -310,7 +337,7 @@ describe('события audioEngine', () => {
   });
 
   it('statechange синхронизирует status с реальным плеером (в т.ч. remote play/pause)', async () => {
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
 
     emit('statechange', { isPlaying: false });
     expect(usePlayerStore.getState().status).toBe('paused');
@@ -332,7 +359,7 @@ describe('события audioEngine', () => {
 
 describe('usePlayerStore.toggleShuffle', () => {
   it('вкл: текущий трек остаётся первым, оригинальный порядок сохраняется в originalQueue', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 1);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 1, CTX);
     const before = usePlayerStore.getState().queue;
 
     usePlayerStore.getState().toggleShuffle();
@@ -346,7 +373,7 @@ describe('usePlayerStore.toggleShuffle', () => {
   });
 
   it('выкл: восстанавливает исходный порядок, обнуляет originalQueue, индекс указывает на текущий трек', async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 1);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 1, CTX);
     usePlayerStore.getState().toggleShuffle();
 
     usePlayerStore.getState().toggleShuffle();
@@ -376,7 +403,7 @@ describe('usePlayerStore.cycleRepeat', () => {
 
 describe('usePlayerStore.next() с учётом repeat', () => {
   it("repeat='off' на последнем треке — как раньше, индекс не двигается, status paused", async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1, CTX);
     vi.clearAllMocks();
 
     usePlayerStore.getState().next();
@@ -388,7 +415,7 @@ describe('usePlayerStore.next() с учётом repeat', () => {
   });
 
   it("repeat='all' на последнем треке многотрековой очереди — переходит на индекс 0 и грузит его манифест", async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 2);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2'), track('t3')], 2, CTX);
     usePlayerStore.setState({ repeat: 'all' });
     vi.clearAllMocks();
 
@@ -400,7 +427,7 @@ describe('usePlayerStore.next() с учётом repeat', () => {
   });
 
   it("repeat='all' с одним треком в очереди — не перезапрашивает манифест, а сикает на 0 и продолжает играть", async () => {
-    await usePlayerStore.getState().playQueue([track('t1')], 0);
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
     usePlayerStore.setState({ repeat: 'all' });
     vi.clearAllMocks();
 
@@ -418,7 +445,7 @@ describe('usePlayerStore.next() с учётом repeat', () => {
 
 describe("событие audioEngine 'ended' с учётом repeat", () => {
   it("repeat='one' — рестарт того же трека (seek+play), манифест не перезапрашивается", async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0, CTX);
     usePlayerStore.setState({ repeat: 'one' });
     vi.clearAllMocks();
 
@@ -434,7 +461,7 @@ describe("событие audioEngine 'ended' с учётом repeat", () => {
   });
 
   it("repeat != 'one' — обычное поведение, переход на следующий трек", async () => {
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0);
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0, CTX);
     vi.clearAllMocks();
 
     emit('ended');
@@ -448,3 +475,71 @@ describe("событие audioEngine 'ended' с учётом repeat", () => {
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
+
+describe('восстановление после перезапуска', () => {
+  it('очередь и позиция переживают перезапуск', async () => {
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 1, CTX);
+    usePlayerStore.setState({ positionSec: 42 });
+    await flush();
+
+    const raw = persisted.get('vire-player');
+    expect(raw, 'состояние не записано в хранилище').toBeTruthy();
+    const saved = JSON.parse(raw!).state;
+    expect(saved.queue).toHaveLength(2);
+    expect(saved.queueIndex).toBe(1);
+    expect(saved.positionSec).toBe(42);
+    expect(saved.context).toEqual(CTX);
+  });
+
+  // Восстановленный плеер намеренно НЕ подключён к движку: холодный старт не должен тянуть
+  // сеть ради трека, который пользователь мог и не собираться слушать.
+  it('первый play после восстановления догружает манифест и продолжает с сохранённой секунды', async () => {
+    usePlayerStore.setState({
+      queue: [track('t1'), track('t2')],
+      queueIndex: 1,
+      positionSec: 30,
+      status: 'paused',
+      restored: true,
+    });
+
+    usePlayerStore.getState().togglePlayPause();
+    await flush();
+
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ startAt: 30 }));
+    expect(usePlayerStore.getState().restored).toBe(false);
+    expect(usePlayerStore.getState().status).toBe('playing');
+  });
+
+  it('в восстановленном состоянии play не ставит паузу вместо загрузки', async () => {
+    usePlayerStore.setState({ queue: [track('t1')], queueIndex: 0, status: 'paused', restored: true });
+
+    usePlayerStore.getState().togglePlayPause();
+    await flush();
+
+    expect(audioEngine.pause).not.toHaveBeenCalled();
+    expect(audioEngine.load).toHaveBeenCalled();
+  });
+});
+
+describe('данные трека из манифеста', () => {
+  it('пики волны берутся из манифеста — отдельного запроса нет', async () => {
+    request.mockResolvedValue({ ok: true, data: { hlsUrl: 'https://cdn/x.m3u8', waveformPeaks: [0.1, 0.9, 0.4] } });
+
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
+
+    expect(usePlayerStore.getState().waveformPeaks).toEqual([0.1, 0.9, 0.4]);
+    expect(request.mock.calls.filter(([u]) => String(u).includes('/manifest'))).toHaveLength(1);
+  });
+
+  it('смена трека сбрасывает пики предыдущего', async () => {
+    request.mockResolvedValueOnce({ ok: true, data: { hlsUrl: 'a', waveformPeaks: [1, 2] } });
+    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0, CTX);
+    expect(usePlayerStore.getState().waveformPeaks).toEqual([1, 2]);
+
+    request.mockImplementation(() => new Promise(() => {})); // манифест второго висит
+    usePlayerStore.getState().next();
+    await flush();
+
+    expect(usePlayerStore.getState().waveformPeaks).toBeNull();
+  });
+});

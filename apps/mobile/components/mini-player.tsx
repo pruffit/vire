@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
@@ -28,8 +30,34 @@ export function MiniPlayer() {
   const positionSec = usePlayerStore((s) => s.positionSec);
   const durationSec = usePlayerStore((s) => s.durationSec);
   const togglePlayPause = usePlayerStore((s) => s.togglePlayPause);
+  const next = usePlayerStore((s) => s.next);
+  const prev = usePlayerStore((s) => s.prev);
   const tabBarHeight = useTabBarHeight();
   const blurTarget = useBlurTarget();
+
+  // Жесты кита: свайп вверх — фуллскрин, вбок — переключение трека, тап — фуллскрин.
+  // Переключать музыку, не открывая плеер, — главный выигрыш мини-плеера на телефоне.
+  const gesture = useMemo(() => {
+    const open = () => navigation.navigate('Player');
+    const swipe = Gesture.Pan()
+      .runOnJS(true)
+      .minDistance(SWIPE_MIN)
+      .onEnd((e) => {
+        const horizontal = Math.abs(e.translationX) > Math.abs(e.translationY);
+        if (!horizontal) {
+          if (e.translationY < -SWIPE_MIN) open();
+          return;
+        }
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        if (e.translationX < 0) next();
+        else prev();
+      });
+    // runOnJS обязателен и здесь: без него `open()` зовётся синхронно с UI-рантайма и
+    // ворклет падает («Tried to synchronously call a Remote Function»). Та же грабля
+    // RNGH 2.32 + reanimated 4, что описана в components/liquid-glass.tsx.
+    const tap = Gesture.Tap().runOnJS(true).maxDistance(SWIPE_MIN).onEnd(() => open());
+    return Gesture.Exclusive(swipe, tap);
+  }, [navigation, next, prev]);
 
   if (!track) return null;
 
@@ -37,12 +65,12 @@ export function MiniPlayer() {
   const playing = status === 'playing';
 
   return (
-    <Pressable
-      style={[styles.wrap, { bottom: tabBarHeight + 10 }]}
-      onPress={() => navigation.navigate('Player')}
-      accessibilityRole="button"
-      accessibilityLabel={`${track.title}, ${track.artistName}. Открыть плеер`}
-    >
+    <GestureDetector gesture={gesture}>
+      <View
+        style={[styles.wrap, { bottom: tabBarHeight + 10 }]}
+        accessibilityRole="button"
+        accessibilityLabel={`${track.title}, ${track.artistName}. Открыть плеер`}
+      >
       <GlassPanel radius={radii.glass} blurTarget={blurTarget} style={styles.panel} contentStyle={styles.content}>
         <Cover uri={track.coverUrl} size={40} radius={radii.coverSm} />
         <View style={styles.info}>
@@ -70,12 +98,16 @@ export function MiniPlayer() {
           )}
         </Pressable>
       </GlassPanel>
-      <View style={styles.rimTrack} pointerEvents="none">
-        <View style={[styles.rimFill, { width: `${progress * 100}%` }]} />
+        <View style={styles.rimTrack} pointerEvents="none">
+          <View style={[styles.rimFill, { width: `${progress * 100}%` }]} />
+        </View>
       </View>
-    </Pressable>
+    </GestureDetector>
   );
 }
+
+/** Порог жеста: ниже него это дрожание пальца, а не свайп. */
+const SWIPE_MIN = 24;
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: space.md, right: space.md, height: MINI_PLAYER_HEIGHT },
