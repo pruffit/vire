@@ -1,12 +1,19 @@
-import { DarkTheme, NavigationContainer, type LinkingOptions, type Theme } from '@react-navigation/native';
+import {
+  DarkTheme,
+  NavigationContainer,
+  createNavigationContainerRef,
+  type LinkingOptions,
+  type Theme,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import SignInScreen from '../screens/sign-in-screen';
 import PlayerScreen from '../screens/player-screen';
 import { MainScreen } from './main-screen';
-import { hasStoredSession, getDeviceId } from '../lib/secure-store';
+import { hasStoredSession, getDeviceId, clearAuthTokens } from '../lib/secure-store';
 import { registerForPushNotifications } from '../lib/push';
+import { onSessionExpired } from '../lib/session-events';
 import { colors } from '../lib/theme';
 
 export type RootStackParamList = {
@@ -16,6 +23,10 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Ref, а не хук: выкинуть на экран входа надо из слоя API-клиента, который про навигацию
+// не знает и знать не должен (см. lib/session-events.ts).
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 // Только vire://release/:releaseId (инкремент 8). Работает лишь при уже сохранённой
 // сессии — SignIn-стек не участвует в linking, поэтому анонимный холодный старт
@@ -65,6 +76,22 @@ export function RootNavigator() {
       .catch(() => setInitialRoute('SignIn'));
   }, []);
 
+  // Refresh отклонён сервером — сессию не восстановить. Токены к этому моменту уже
+  // вычищены в api-client; добиваем их ещё раз на случай, если событие пришло из ветки
+  // «refreshToken отсутствует», и уводим на вход, а не оставляем экран в ошибке.
+  useEffect(
+    () =>
+      onSessionExpired(() => {
+        void clearAuthTokens();
+        if (navigationRef.isReady()) {
+          navigationRef.reset({ index: 0, routes: [{ name: 'SignIn' }] });
+        } else {
+          setInitialRoute('SignIn');
+        }
+      }),
+    [],
+  );
+
   if (initialRoute === null) {
     return (
       <View
@@ -76,7 +103,7 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer theme={navTheme} linking={linking}>
+    <NavigationContainer ref={navigationRef} theme={navTheme} linking={linking}>
       <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="SignIn" component={SignInScreen} />
         <Stack.Screen name="Main" component={MainScreen} />

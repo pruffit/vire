@@ -12,6 +12,7 @@ export * from './platform/util/uuid';
 export * from './platform/util/ttl-cache';
 export * from './platform/util/throttle-gate';
 export * from './platform/util/format';
+export * from './platform/util/sentry-envelope';
 export * from './platform/util/scoring';
 export * from './platform/config/env';
 export * from './platform/config/feature-flags';

@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": true,
-      "package": "com.anonymous.viremobile",
+      "package": "com.virespace.viremusic",
+      "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "backgroundColor": "#030201"
     },
@@ -32,12 +33,18 @@
       "expo-secure-store",
       "expo-status-bar",
       "expo-notifications",
-      "expo-image"
+      "expo-image",
+      "./plugins/with-android-release-signing",
+      "./plugins/with-native-build-dir",
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {
         "projectId": "f538ec6c-0032-4ce5-b661-dae649001774"
-      }
+      },
+      "apiBaseUrl": "https://viremusic.ru",
+      "webBaseUrl": "https://viremusic.ru",
+      "sentryDsn": "https://viremusic@viremusic.ru/1"
     },
     "owner": "pruffit",
     "backgroundColor": "#030201"

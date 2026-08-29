@@ -12,6 +12,7 @@ import { getCurrentUserId } from '../lib/secure-store';
 import { getOrCreateIdentity, type Identity } from '../lib/e2ee/identity';
 import { deriveCK, decryptMessage, fromB64 } from '../lib/e2ee/sodium-compat';
 import { Screen } from '../components/screen';
+import { ChatLockedNotice, useChatLocked } from '../components/chat-locked-notice';
 import { useContentBottomPadding } from '../lib/layout';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
@@ -35,6 +36,7 @@ function formatConversationTimestamp(iso: string, now: Date = new Date()): strin
 export default function ConversationsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'Conversations'>>();
   const bottomPadding = useContentBottomPadding();
+  const locked = useChatLocked();
   const [state, setState] = useState<LoadState>('loading');
   const [conversations, setConversations] = useState<ChatConversationDTO[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -79,6 +81,15 @@ export default function ConversationsScreen() {
       return decryptMessage(body, nonce, ck);
     });
   }, []);
+
+  if (locked) {
+    return (
+      <Screen style={styles.container}>
+        <Text style={styles.heading}>Сообщения</Text>
+        <ChatLockedNotice />
+      </Screen>
+    );
+  }
 
   return (
     <Screen style={styles.container}>

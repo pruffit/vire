@@ -487,7 +487,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 - [x] Скачивание FLAC по presigned S3 URL
 - [ ] **YooKassa боевая настройка** — SHOP_ID/SECRET_KEY + вебхук в кабинете ЮKassa
 
-### Тесты (3405 всего: web 2026 · core 1058 · mobile 210 · worker 111)
+### Тесты (3653 всего: web 2034 · core 1070 · mobile 247 · worker 118 · остальные пакеты 184)
 - [x] `packages/core` — сервисы artist/release/track, follow/listener-track/track-moods/playlist, Result/errors (Vitest)
 - [x] `apps/web/lib` — `embed` (YouTube/VK), `upload` (валидация), `format`, `structured-data` (JSON-LD билдеры)
 - [x] Route handlers Этап 1 (права + валидация): upload, dashboard releases (create/edit/status),
@@ -512,15 +512,31 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
   полировка, лайки/плейлисты, shuffle/repeat, диплинк на релиз, друзья (список/заявки/
   поиск/блокировка), просмотр чужого профиля, офлайн-скачивание треков, E2EE-чат
   (веб-совместимый, тред + список диалогов + typing/read), пуш-уведомления (Expo→FCM,
-  EAS-проект `@pruffit/vire-mobile` + FCM-креды привязаны), **liquid glass** —
+  EAS-проект `@pruffit/vire-mobile` + FCM-креды привязаны), **VireGlass** —
   нативный Expo-модуль `modules/glass-lens` (Kotlin + AGSL `RenderEffect`) для настоящего
-  преломления фона + Skia-шейдер поверхности (фаска, Френель, блик, кромка), Android 13+.
-  Всё подтверждено живьём на эмуляторе `VireMusic_Test`.
-  **Открыто:** реальное физическое устройство (только эмулятор), **производительность
-  стекла не измерена ни разу** (эмулятор с `hw.gpu.enabled=no` для этого непригоден),
+  преломления фона + Skia-поверхность, Android 13+. Стекло описывается **моделью материала**
+  (`lib/vireglass`, дефолт `VIREGLASS_MATERIAL_V1`), геометрия у линзы и поверхности — один
+  текст SDF, стенд — `EXPO_PUBLIC_GLASS_LAB=material`.
+  Проверено на устройстве (Xiaomi 2311DRK48G, Android 16, release, 120 Гц): преломление
+  связно, регресса по кадрам нет — v1 совпадает с конвейером без преломления во всех сценах.
+  Диапазон измерен: **до 6 одновременных стеклянных поверхностей** — 113–120 кадров/с,
+  с 7-й насыщение. Цена в ЧИСЛЕ поверхностей, не в площади (панель ×11.4 по площади держит
+  120 кадров/с). Реальный максимум продукта — 3.
+  **Открыто:** механизм порога на 7-й; слабое железо (порог наверняка ниже);
   лок-скрин с PIN, Android Auto, iOS (нет Mac). Детали и честная разбивка
   проверено/не проверено по каждому инкременту — `docs/features/mobile-app.md`.
-  Спецификация стекла и план работ — `docs/architecture/vireglass-spec.md`.
+  Материал, замеры и решения по рендерингу — `docs/vireglass/`.
+
+  **P0 «Доставка» закрыт** (`docs/features/mobile-app.md` → «Доставка (P0)»): пакет
+  `com.virespace.viremusic`, release подписан upload-ключом, прод-URL из `app.json`
+  (не из `.env`), `versionCode` в конфиге, крашрепортинг через СВОЙ Sentry-совместимый приёмник (sentry.io отдаёт 403 из России), барьер
+  `check:release-config`, сборка одной командой `pnpm --filter @vire/mobile build:android`.
+  Подпись, набор ABI и вынос `.cxx` из pnpm-стора живут в config-плагинах
+  (`apps/mobile/plugins/`) и переживают `expo prebuild --clean` — сама папка `android/`
+  по-прежнему вне git. Два предохранителя первой установки: протухшая сессия уводит на
+  экран входа; мобильный E2EE-ключ больше не затирает ключ веб-сессии.
+  **Аудит продукта и план реконструкции — `docs/product/`** (матрица паритета
+  веб→мобилка, архитектура, дорожная карта P0–P6).
 
 ## Что делать дальше (следующий шаг)
 

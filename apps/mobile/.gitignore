@@ -55,3 +55,6 @@ design/*.html
 # Артефакты сборки локальных нативных модулей (modules/*/android/build)
 modules/*/android/build/
 modules/*/android/.cxx/
+
+# Каталог нативной сборки, вынесенный из pnpm-стора (plugins/with-native-build-dir.js)
+.cxx/

@@ -1,5 +1,17 @@
-import { okResponseSchema } from '@vire/api-contracts';
+import { okResponseSchema, getKeyResponseSchema } from '@vire/api-contracts';
 import { apiRequest } from '../api-client';
+
+/**
+ * Ключ, который сервер сейчас считает ключом пользователя. `null` — ключа нет,
+ * `undefined` — узнать не удалось (сеть/ошибка): это РАЗНЫЕ случаи, и вызывающий код
+ * обязан их различать, иначе «не смогли проверить» превратится в «можно публиковать».
+ */
+export async function fetchIdentityKey(userId: string): Promise<string | null | undefined> {
+  const result = await apiRequest(`/api/v1/keys?userId=${encodeURIComponent(userId)}`, {
+    schema: getKeyResponseSchema,
+  });
+  return result.ok ? result.data.ikPub : undefined;
+}
 
 // Idempotent, safe to call repeatedly (mirrors web's E2eeBootstrap/publishPub,
 // apps/web/lib/e2ee-client.ts) — dedupes by pubB64 so re-mounts/re-logins with the same

@@ -42,3 +42,6 @@ apps/worker/models/
 
 # Личные permission-оверрайды (напр. доступ к конкретному прод-хосту) — не для команды
 .claude/settings.local.json
+
+# Ключи сервисных аккаунтов Firebase — секреты, никогда не в git
+*-firebase-adminsdk-*.json

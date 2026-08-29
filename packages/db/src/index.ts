@@ -254,6 +254,7 @@ export * from './repositories/notification';
 export * from './repositories/feature-flag';
 export * from './repositories/orphan-storage';
 export * from './repositories/device';
+export * from './repositories/mobile-crash';
 export {
   insertNotification, listNotifications, countUnreadNotifications, markAllNotificationsRead, markNotificationRead,
 } from './queries/notifications';

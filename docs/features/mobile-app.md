@@ -232,11 +232,22 @@ pnpm --filter @vire/mobile mobile:android   # expo start --android — нуже�
 **Обычно ничего задавать не нужно.** На физическом телефоне через Expo Go `localhost`
 резолвится в сам телефон — сеть до dev-машины физически недостижима без LAN-адреса
 (вероятная главная причина, по которой всё сетевое молчаливо падало до инкремента 4).
-`lib/env.ts` теперь выводит базовый URL автоматически: `EXPO_PUBLIC_*` env (если задан) →
-LAN-хост из `Constants.expoConfig?.hostUri` (адрес, на котором Metro раздаёт бандл
-телефону) на порту 3000 → `http://localhost:3000` (фолбэк для `expo start --web`, где
-`hostUri` не заполняется). Next dev-сервер почти всегда поднят на той же машине, что и
-Metro, поэтому LAN-хост совпадает.
+
+Порядок разрешения (чистая `resolveBaseUrl` в `lib/base-url.ts`, покрыта тестами;
+`lib/env.ts` — только проводка):
+
+1. `EXPO_PUBLIC_API_BASE_URL` / `EXPO_PUBLIC_WEB_BASE_URL` — явный override;
+2. **только в `__DEV__`** — LAN-хост из `Constants.expoConfig?.hostUri` (адрес, на котором
+   Metro раздаёт бандл телефону) на порту 3000, затем `NativeModules.SourceCode.scriptURL`,
+   затем `http://localhost:3000`;
+3. иначе — `app.json` → `extra.apiBaseUrl` / `extra.webBaseUrl` (`https://viremusic.ru`).
+
+> ⚠️ **LAN и localhost существуют только в dev — это не стилистика, а блокер релиза.**
+> До P0 фолбэк на `http://localhost:3000` был общим для всех режимов и приезжал в
+> release-бандл из `.env`. Release-манифест разрешает cleartext **только в debug**
+> (`android/app/src/debug/AndroidManifest.xml`), поэтому собранное приложение не выполняло
+> ни одного успешного запроса. Если прод-URL не сконфигурирован, `resolveBaseUrl` **бросает**,
+> а не подставляет догадку — тихий фолбэк ровно так этот баг и породил.
 
 - `EXPO_PUBLIC_API_BASE_URL` / `EXPO_PUBLIC_WEB_BASE_URL` — задавать явно только когда
   автоопределение не подходит: dev-сервер `@vire/web` слушает не на 3000, Wi-Fi изолирует
@@ -246,6 +257,236 @@ Metro, поэтому LAN-хост совпадает.
   эмулятора не указывает на хост-машину напрямую — нужен явный
   `EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:<порт>` (`10.0.2.2` — стандартный алиас
   хост-машины для Android-эмулятора, не LAN IP).
+
+## Доставка (P0)
+
+Сборка релизного APK, который можно поставить на чужой телефон. Обоснование фазы —
+`docs/product/MOBILE_RECONSTRUCTION_ROADMAP.md` §P0, план —
+`docs/superpowers/plans/2026-08-29-mobile-p0-delivery.md`.
+
+```bash
+cd apps/mobile
+ORG_GRADLE_PROJECT_VIRE_UPLOAD_STORE_PASSWORD=$(cat vire-upload-keystore.password.txt) \
+ORG_GRADLE_PROJECT_VIRE_UPLOAD_KEY_PASSWORD=$(cat vire-upload-keystore.password.txt) \
+pnpm --filter @vire/mobile build:android
+```
+
+`build:android` = `check:release-config` (барьер) → `expo prebuild` → `gradlew assembleRelease`.
+Отдельно барьер гоняется как `pnpm --filter @vire/mobile check:release-config`.
+
+### Идентичность и версия
+
+| Что | Где | Правило |
+|---|---|---|
+| `applicationId` | `app.json` → `android.package` = `com.virespace.viremusic` | **После публикации в сторе не меняется никогда** |
+| Версия | `app.json` → `version` + `android.versionCode` | Оба поднимать на каждый релиз; `versionCode` строго возрастает |
+| Firebase | `google-services.json` | Проект `virespace-viremusic`, пакет обязан совпадать с `android.package` |
+
+Версия мобилки **не связана** с версией монорепо (`package.json` → 1.51.x): это отдельный
+артефакт со своим циклом выпуска, как и десктоп.
+
+### Почему `android/` не в git и как это не разъезжается
+
+Папка генерируется (`expo prebuild`), в ней нет ручного кода: `MainActivity`,
+`MainApplication`, `settings.gradle` — стоковые шаблоны, `modules/glass-lens` подключается
+автолинком. Поэтому всё, что раньше правилось руками, живёт в
+**`plugins/with-android-release-signing.js`** и переживает регенерацию:
+
+- `signingConfigs.release` читает `VIRE_UPLOAD_*` из свойств Gradle;
+- `reactNativeArchitectures=arm64-v8a,x86_64`.
+
+> ⚠️ До P0 `buildTypes.release` подписывался **debug-ключом** — так делает шаблон Expo, и
+> ручная правка исчезала при следующем `prebuild`. Debug-подпись нельзя обновлять поверх
+> и нельзя публиковать.
+
+Keystore (`vire-upload-keystore.jks`, алиас `vire-upload`, до 2054) и пароли в git не
+попадают: `*.jks` и `*.password.txt` в `.gitignore`, пароли приходят через
+`ORG_GRADLE_PROJECT_*` — Gradle сам мапит их в свойства проекта, поэтому та же команда
+работает и в CI без изменений.
+
+> ⚠️ **`.cxx` обязан лежать вне pnpm-стора** — `plugins/with-native-build-dir.js`
+> переносит его в `apps/mobile/.cxx/<модуль>`. По умолчанию AGP кладёт его рядом с
+> исходниками модуля, то есть в `node_modules/.pnpm/_<хеш>/…/android/`, что даёт
+> **252 символа** до объектного файла при лимите Windows в 260 и вдобавок путь через
+> симлинки — CMake и ninja нормализуют их по-разному, и регенерация `build.ninja`
+> перестаёт сходиться (`still dirty after 100 tries`). Набор ABI (`arm64-v8a,x86_64`)
+> фиксируется тем же механизмом: 32-битных ARM-устройств в целевом парке нет,
+> `x86_64` нужен эмулятору.
+
+> ⚠️ **`newArchEnabled` в `app.json` был `false`, а `prebuild` всё равно писал `true`** —
+> поле не соблюдается на Expo 57 / RN 0.86 (старой архитектуры там уже нет). Приведено к
+> `true`, чтобы конфиг не расходился с тем, что реально собирается: приложение всё это
+> время работало на новой архитектуре.
+
+### Прод-конфигурация приходит только из git
+
+`extra.apiBaseUrl` / `extra.webBaseUrl` в `app.json`, не в `.env`: `.env` вне репозитория,
+и сборка с ним невоспроизводима.
+
+> ⚠️ Локальный `.env` задаёт `EXPO_PUBLIC_API_BASE_URL` для разработки, Expo грузит его
+> **при любой сборке**, а в резолвере явный override сильнее `app.json`. То есть
+> release унёс бы в бандл `localhost` с машины сборщика. `scripts/build-release.mjs`
+> гасит эти переменные и `.env` на время релизной сборки (`EXPO_NO_DOTENV=1`);
+> `expo start` не задет.
+
+### Барьер `check:release-config`
+
+`scripts/check-release-config.mjs` падает до сборки, если: пакет остался плейсхолдером
+`com.anonymous.*`; нет `versionCode`; базовый URL не `https://` или локальный;
+`google-services.json` не содержит клиента под текущий пакет; нет keystore или паролей.
+Пустой `extra.sentryDsn` — предупреждение, не блокер: репозиторий обязан собираться до
+того, как заведут проект в Sentry.
+
+### Крашрепортинг — свой приёмник, не sentry.io
+
+> ⚠️ **sentry.io недоступен из России.** Отдаёт `403 Forbidden` на любой путь, включая
+> страницу входа; ответ в 134 байта с заголовком `via: 1.1 google` — блокировка на
+> пограничном балансировщике, до приложения Sentry. Проверено `curl` с машины разработчика.
+
+Поэтому приёмник свой — `apps/web/app/api/1/envelope`, — а **SDK остался стоковым**
+`@sentry/react-native`. Меняется только хост в DSN, поэтому переезд на self-hosted
+GlitchTip (он говорит на том же протоколе) позже не потребует правок клиента.
+
+Почему не self-hosted Sentry или GlitchTip сразу: на проде 2 ГБ RAM и уже шесть
+контейнеров. Свой эндпоинт стоит ноль контейнеров и ноль мегабайт — таблица в уже
+работающем Postgres.
+
+```
+app.json → extra.sentryDsn = https://viremusic@viremusic.ru/1
+                                                  ↓ SDK сам выводит путь
+POST https://viremusic.ru/api/1/envelope/
+                                                  ↓
+parseSentryEnvelope + extractCrashEvent   (packages/core, чистые, 12 тестов)
+                                                  ↓
+insertMobileCrash → таблица mobile_crashes (дедуп по event_id)
+```
+
+| Где | Что |
+|---|---|
+| Клиент | `apps/mobile/lib/crash-reporting.ts` — init из `extra.sentryDsn`, override `EXPO_PUBLIC_SENTRY_DSN` для разработки |
+| Протокол | `packages/core/src/platform/util/sentry-envelope.ts` — чистый разбор, без сети и БД |
+| Хранение | `packages/db` — схема `mobile-crashes.ts`, репозиторий `mobile-crash.ts`, миграция 0058 |
+| Приём | `apps/web/app/api/1/envelope/route.ts` — без аутентификации (краш случается и до входа), rate limit 60/мин, потолок тела 512 КБ |
+
+Настройки SDK: `tracesSampleRate: 0` (нужны падения, а не трассировка — трафик на телефоне
+платный), `sendDefaultPii: false` (в приложении токены устройства и E2EE-переписка),
+`enableAutoSessionTracking: false` (приёмник хранит только события).
+
+**Пустой DSN — легитимное состояние:** SDK не инициализируется, приложение работает как
+раньше. Так репозиторий остаётся собираемым, даже если приёмник ещё не раскатан.
+
+**Путь `/api/1/envelope` выглядит странно не случайно** — его диктует SDK: из DSN
+`https://<key>@<host>/<projectId>` он выводит `/api/<projectId>/envelope/`. Менять нельзя,
+не отказавшись от стокового SDK. Next редиректит завершающий слэш через `308`; POST с телом
+это переживает (проверено `curl -L`, OkHttp под RN ведёт себя так же), ценой одного лишнего
+round-trip на краш.
+
+Ответ **всегда `200`, если событие разобрано** — даже когда в envelope только сессия или
+транзакция. На неуспех SDK кладёт событие в очередь и шлёт снова; повторять то, что мы
+осознанно не храним, смысла нет. `500` отдаётся только при отказе БД — тогда повтор нужен.
+
+### Предохранители первой установки
+
+Оба срабатывают в момент, когда сборку впервые ставит живой тестировщик.
+
+**Протухшая сессия.** Провал `/auth/refresh` означает конец сессии, а не ошибку одного
+запроса. `lib/api-client.ts` шлёт событие (`lib/session-events.ts`), `RootNavigator`
+сбрасывает стек на `SignIn`. До P0 токены чистились, но приложение оставалось на месте и
+показывало ошибку на каждом экране — состояние, из которого выходили переустановкой.
+
+**Ключ E2EE.** `/api/v1/keys` хранит **один `ik_pub` на пользователя**, а личность у веба
+и телефона своя — мобильный бутстрап публиковал свой ключ на каждом старте и затирал
+ключ веб-сессии, молча ломая человеку веб-чат. Теперь `lib/e2ee/bootstrap.ts` сначала
+читает серверный ключ:
+
+| Серверный ключ | Действие |
+|---|---|
+| нет | публикуем, чат доступен |
+| наш же | публикуем (идемпотентно), чат доступен |
+| **чужой** | **не публикуем**, чат заблокирован на устройстве (`ChatLockedNotice`) |
+| не прочитался (нет сети) | не публикуем, состояние `unknown` — чат не блокируем |
+
+Это предохранитель от будущего ущерба; **уже перетёртые ключи он не чинит**. Настоящее
+решение — привязка устройств через `keys/link/*` (на клиенте не реализовано), см.
+`docs/product/MOBILE_PARITY_MATRIX.md` §16.
+
+### ⚠️ Старый пакет обязан быть удалён с устройства
+
+Смена `applicationId` не заменяет приложение, а ставит **второе**: `com.anonymous.viremobile`
+и `com.virespace.viremusic` сосуществуют. Обе сборки объявляют схему `vire://`, поэтому
+редирект после входа становится неоднозначным — Android показывает выбор из двух одинаково
+названных «VireMusic», и логин может завершиться в старое приложение.
+
+Проверено на устройстве:
+
+```
+pm query-activities -a android.intent.action.VIEW -d 'vire://auth-callback'
+  → com.anonymous.viremobile.MainActivity
+  → com.virespace.viremusic.MainActivity     ← оба
+```
+
+Лечится только удалением старого пакета (`adb uninstall com.anonymous.viremobile`).
+**Удаление стирает его локальные данные** — E2EE-личность, сессию, скачанные треки.
+
+### Проверено на устройстве (2026-08-29)
+
+Xiaomi 2311DRK48G, Android 16, release-APK, установка поверх чистого пакета `[DEVICE]`:
+
+| Что | Результат |
+|---|---|
+| Установка | `Success` |
+| Запуск | процесс жив, `0` FATAL за сессию |
+| Экран входа | отрисован |
+| **Базовый URL** | «Войти» открывает `https://viremusic.ru/mobile-auth-bridge?platform=android&name=…` — прод по HTTPS, localhost отсутствует |
+| Подпись | `CN=VireMusic` (upload-ключ), не debug |
+| Манифест | `com.virespace.viremusic` v1.0.0 (1), ABI `arm64-v8a` + `x86_64` |
+| Хардненинг | `flags=[HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP]` — без `DEBUGGABLE` |
+| Нативный Sentry | загрузился, `io.sentry.auto-init read: false` — при пустом DSN простаивает, не роняет |
+
+**Не проверено:** вход до конца (нужны учётные данные), воспроизведение, фон, пуши —
+это предмет валидации следующих фаз, не P0.
+
+Мелочь, замеченная попутно и не входящая в P0: подпись на экране входа обрезается до
+«Независимая музыкальная» при появлении спиннера — вёрстка, чинится в фазе UI.
+
+### EAS: профили и пуш-креды
+
+`eas.json` описывает профили сборки. Сборка у нас **локальная** (`build:android` →
+`prebuild` + `gradlew`), поэтому файл нужен не для EAS Build, а чтобы работали команды
+`eas credentials` / `eas config`, и как заготовка под сборку в CI (P5).
+
+> `appVersionSource: "local"` — версией управляет `app.json`, а не сервер Expo. Иначе EAS
+> начал бы назначать `versionCode` сам и разошёлся бы с решением P0.
+
+**FCM V1 привязан** (2026-08-29): ключ сервисного аккаунта проекта `virespace-viremusic`
+загружен в EAS и назначен на `com.virespace.viremusic`. Ключ лежит в
+`apps/mobile/virespace-viremusic-firebase-adminsdk-*.json` и закрыт `.gitignore`.
+
+Если понадобится повторить (смена проекта Firebase, ротация ключа):
+
+```powershell
+cd apps/mobile
+npx.cmd eas-cli credentials -p android
+# production → Google Service Account
+# → Manage your Google Service Account Key for Push Notifications (FCM V1)
+# → Set up a Google Service Account Key → Upload a new service account key
+```
+
+Три грабли, каждая ловилась вживую:
+- **`npx.cmd`, не `npx`** — PowerShell по умолчанию `Restricted` и не грузит обёртку `npx.ps1`;
+- **`Upload a new`, не `Choose an existing`** — в списке существующих лежит ключ старого проекта;
+- неинтерактивного режима у команды нет (`--non-interactive` не принимается, eas-cli 23.0.0).
+
+**Пуши всё равно не доедут до пользователя до фазы P1** — креды тут ни при чём: на клиенте
+нет `setNotificationHandler` (показ в форграунде), нет `addNotificationResponseReceivedListener`
+(реакция на тап), а воркер шлёт `data.url` веб-адресом, который схема `vire://` не понимает.
+Разбор — `docs/product/MOBILE_PARITY_MATRIX.md` §12.
+
+### Что осталось вне репозитория
+
+Ничего из P0. Открыт только деплой: приёмник падений `/api/1/envelope` живёт в коде, но на
+проде появится со следующим релизом по тегу (проверено — сейчас отдаёт 404). До этого SDK
+складывает краши в свою офлайн-очередь и переотправляет, ничего не теряя.
 
 ## Проверено в инкременте 1
 
@@ -2270,6 +2511,16 @@ E2EE-identity) и не заводить ещё один цикл «переус�
 `armeabi-v7a`-тулчейна на этой машине не диагностирована глубже (не Windows Defender/
 антивирус-специфично — не проверялось так далеко), но воспроизводится детерминированно.
 
+> ⚠️ **Диагноз выше опровергнут в P0 — дело не в ABI.** То же падение
+> (`manifest 'build.ninja' still dirty`) воспроизвелось на `arm64-v8a` после добавления
+> одной зависимости, причём **полная очистка всех `.cxx`** его не сняла. Настоящая
+> причина — расположение `.cxx` внутри pnpm-стора: замерено **252 символа** до объектного
+> файла при лимите Windows в 260, плюс стор состоит из симлинков, которые CMake и ninja
+> нормализуют по-разному. `armeabi-v7a` был лишь корреляцией: триплет
+> `arm-linux-androideabi` длиннее `aarch64-linux-android`, поэтому упирался в лимит
+> первым. Лечится `plugins/with-native-build-dir.js` — выносит `.cxx` в `apps/mobile/.cxx`.
+> После этого сборка проходит целиком (`BUILD SUCCESSFUL in 23m 35s`).
+
 **Практический вывод:** `armeabi-v7a` (32-битный ARM) на реальных устройствах 2026 года
 практически не встречается, эмулятору (`x86_64`) не нужен — собирать под
 `arm64-v8a,x86_64` можно постоянно, а не только как обходной путь. APK получился
@@ -2837,3 +3088,47 @@ blurView.setupWith(dimezisBlurTarget).setFrameClearDrawable(decorView.background
   Порог `0.004` вместо `> 0`: деление на околонулевую альфу раздувает шум half-точности.
 - Тинт поверхности приглушён (0.60 → 0.40, кромка 0.82 → 0.62, блик 1.05 → 0.80) — уже
   по картинке, а не вслепую.
+
+---
+
+## VireGlass Phase 3 — модель материала и Material Lab
+
+Полная документация вынесена в `docs/vireglass/` (`README.md` — статусы и ограничения,
+`architecture.md` — карта слоёв, `material-lab.md` — журнал экспериментов над оптикой).
+Здесь — только то, что меняет работу с мобильным приложением.
+
+**Стекло описывается объектом, а не набором пропов.** `VireGlassMaterial`
+(`lib/vireglass/material.ts`) — оптические понятия (преломление, толщина, Френель, блик,
+дисперсия, тинт, кромка), геометрия отдельно (`{width, height, cornerRadius}`, круг и
+капсула — частные случаи). Дефолт — `VIREGLASS_MATERIAL_V1`. `LiquidGlassButton` принимает
+опциональный проп `material`; остальной публичный API кнопки не изменился.
+
+**Общая поверхность.** `components/vireglass/glass-surface.tsx` (`VireGlassSurface`) —
+композиция бэкдропа, линзы и Skia-канваса на произвольном скруглённом прямоугольнике.
+`LiquidGlassButton` теперь построен на ней; поверхностная оптика больше не ограничена кругом.
+
+**Геометрия считается один раз.** Текст SDF живёт в `lib/vireglass/sdf.ts` и подставляется
+в оба шейдера; исходник AGSL собирается в TypeScript и уезжает в `GlassLensView` пропом
+`shaderSource`. Копии SDF в Kotlin больше нет.
+
+> ⚠️ **Рассинхрон имён пропов JS↔Kotlin Expo проглатывает молча.** Так преломление было
+> выключено в проде с инкремента 24: JS слал `lensRadius`/`edgeReach`, натив ждал
+> `glassWidth`/`glassHeight`/`cornerRadius`/`edgePush`, `applyEffect()` выходил по проверке
+> `glassWidth <= 0f` до `setRenderEffect`. Симптом почти невидим (`intensity=9`,
+> `tint="dark"` на тёмном фоне). Класс ошибки закрыт тестом-паритетом в
+> `lib/__tests__/vireglass-material.test.ts`: он разбирает `GlassLensModule.kt` и
+> `GlassLensView.kt` и падает на любом расхождении имён пропов и униформ.
+
+**Стенд материала.** `EXPO_PUBLIC_GLASS_LAB=material` заменяет приложение экраном
+`screens/material-lab.tsx`: тумблер на каждое оптическое явление, слайдеры по всем
+параметрам, пресеты, debug-режимы (SDF, маска, кромка, Френель, нормали, …), выбор формы,
+морфинг двух поверхностей. Тумблер **обнуляет параметр**, а не переключает вариант шейдера.
+
+**Отклик на ориентацию** (`lib/vireglass/environment.ts`) реализован — акселерометр →
+фильтр низких частот → мёртвая зона → направление света, — но в Material v1 выключен
+(`environment: 0`) и на сенсор при нуле не подписывается. Зависимость `expo-sensors`
+добавлена; **сборка dev-client/APK обязательна** — нативный модуль новый.
+
+**Что не проверено.** Оптика Material v1 не смотрелась на устройстве, стоимость не
+измерена. Прежний замер мерил конвейер без преломления — см. поправку в
+`docs/vireglass/benchmarks/2026-08-28-scaling-device-release.md`.

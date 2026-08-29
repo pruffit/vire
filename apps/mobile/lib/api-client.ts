@@ -2,13 +2,20 @@ import { request, type ApiResult, type RequestOptions } from '@vire/api-client';
 import { tokenPairSchema } from '@vire/api-contracts';
 import { API_BASE_URL } from './env';
 import { getStored, setAuthTokens, clearAuthTokens } from './secure-store';
+import { emitSessionExpired } from './session-events';
 
 // Один рефреш на несколько параллельных 401 — не гонять /auth/refresh N раз подряд.
 let refreshInFlight: Promise<boolean> | null = null;
 
+// Провал рефреша означает конец сессии, а не единичную ошибку запроса: восстановить её
+// клиент уже ничем не может. Сообщаем событием (см. lib/session-events.ts) — иначе
+// приложение остаётся на месте и показывает ошибку на каждом экране.
 async function performRefresh(): Promise<boolean> {
   const refreshToken = await getStored('refreshToken');
-  if (!refreshToken) return false;
+  if (!refreshToken) {
+    emitSessionExpired();
+    return false;
+  }
 
   const result = await request(`${API_BASE_URL}/api/v1/auth/refresh`, {
     method: 'POST',
@@ -18,6 +25,7 @@ async function performRefresh(): Promise<boolean> {
 
   if (!result.ok) {
     await clearAuthTokens();
+    emitSessionExpired();
     return false;
   }
 

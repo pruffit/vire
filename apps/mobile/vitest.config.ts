@@ -2,6 +2,9 @@ import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // `__DEV__` — глобал RN-рантайма, в node его нет. `lib/env.ts` по нему выбирает между
+  // LAN-автоопределением и прод-адресом из app.json; в тестах ведём себя как dev-сборка.
+  define: { __DEV__: 'true' },
   test: {
     environment: 'node',
     alias: {

@@ -7,6 +7,11 @@ import TrackPlayer from 'react-native-track-player';
 
 import App from './App';
 import { playbackService } from './lib/playback-service';
+import { initCrashReporting } from './lib/crash-reporting';
+
+// Первым делом после полифилла: падение на старте — самое ценное и самое трудноуловимое,
+// ловить его надо до регистрации сервисов и рендера.
+initCrashReporting();
 
 // registerPlaybackService — обязателен для RNTP на Android (foreground-service/lock-screen),
 // регистрируется один раз до рендера, не внутри компонента.

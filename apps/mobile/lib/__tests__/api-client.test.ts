@@ -19,6 +19,7 @@ vi.mock('../secure-store', () => ({
 }));
 
 import { apiRequest } from '../api-client';
+import { onSessionExpired, __resetSessionListenersForTests } from '../session-events';
 
 const okSchema = { safeParse: (v: unknown) => ({ success: true, data: v }) } as never;
 
@@ -144,5 +145,83 @@ describe('apiRequest', () => {
     expect(r1).toEqual({ ok: true, data: { n: 1 } });
     expect(r2).toEqual({ ok: true, data: { n: 1 } });
     expect(refreshCalls).toBe(1);
+  });
+});
+
+describe('сигнал о конце сессии', () => {
+  beforeEach(() => {
+    __resetSessionListenersForTests();
+  });
+
+  it('рефреш отклонён сервером — событие уходит один раз', async () => {
+    store.set('accessToken', 'stale');
+    store.set('refreshToken', 'refresh-1');
+    const expired = vi.fn();
+    onSessionExpired(expired);
+    request
+      .mockResolvedValueOnce({ ok: false, error: { status: 401, message: 'expired' } })
+      .mockResolvedValueOnce({ ok: false, error: { status: 400, message: 'invalid refresh' } });
+
+    await apiRequest('/api/v1/auth/devices', { schema: okSchema });
+
+    expect(expired).toHaveBeenCalledTimes(1);
+  });
+
+  it('нет refreshToken — сессии тоже нет, событие уходит', async () => {
+    store.set('accessToken', 'stale');
+    const expired = vi.fn();
+    onSessionExpired(expired);
+    request.mockResolvedValueOnce({ ok: false, error: { status: 401, message: 'expired' } });
+
+    await apiRequest('/api/v1/auth/devices', { schema: okSchema });
+
+    expect(expired).toHaveBeenCalledTimes(1);
+  });
+
+  it('успешный рефреш события НЕ шлёт — сессия жива', async () => {
+    store.set('accessToken', 'stale');
+    store.set('refreshToken', 'refresh-1');
+    const expired = vi.fn();
+    onSessionExpired(expired);
+    request
+      .mockResolvedValueOnce({ ok: false, error: { status: 401, message: 'expired' } })
+      .mockResolvedValueOnce({ ok: true, data: { accessToken: 'fresh', refreshToken: 'refresh-2', deviceId: 'd1', expiresInSec: 900 } })
+      .mockResolvedValueOnce({ ok: true, data: { n: 2 } });
+
+    await apiRequest('/api/v1/auth/devices', { schema: okSchema });
+
+    expect(expired).not.toHaveBeenCalled();
+  });
+
+  it('два конкурентных 401 при мёртвом рефреше дают одно событие, не два', async () => {
+    store.set('accessToken', 'stale');
+    store.set('refreshToken', 'refresh-1');
+    const expired = vi.fn();
+    onSessionExpired(expired);
+    request.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.endsWith('/api/v1/auth/refresh')
+          ? { ok: false, error: { status: 400, message: 'invalid refresh' } }
+          : { ok: false, error: { status: 401, message: 'expired' } },
+      ),
+    );
+
+    await Promise.all([
+      apiRequest('/api/v1/auth/devices', { schema: okSchema }),
+      apiRequest('/api/v1/auth/devices', { schema: okSchema }),
+    ]);
+
+    expect(expired).toHaveBeenCalledTimes(1);
+  });
+
+  it('отписка снимает слушателя', async () => {
+    store.set('accessToken', 'stale');
+    const expired = vi.fn();
+    onSessionExpired(expired)();
+    request.mockResolvedValueOnce({ ok: false, error: { status: 401, message: 'expired' } });
+
+    await apiRequest('/api/v1/auth/devices', { schema: okSchema });
+
+    expect(expired).not.toHaveBeenCalled();
   });
 });

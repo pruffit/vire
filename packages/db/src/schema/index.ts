@@ -17,3 +17,4 @@ export * from './audit';
 export * from './feature-flags';
 export * from './storage-orphans';
 export * from './devices';
+export * from './mobile-crashes';

@@ -20,6 +20,7 @@ import { getCurrentUserId } from '../lib/secure-store';
 import { getOrCreateIdentity } from '../lib/e2ee/identity';
 import { deriveCK, encryptMessage, decryptMessage, fromB64 } from '../lib/e2ee/sodium-compat';
 import { Screen } from '../components/screen';
+import { ChatLockedNotice, useChatLocked } from '../components/chat-locked-notice';
 import { Glass } from '../components/glass';
 import { useContentBottomPadding } from '../lib/layout';
 import { colors, radius } from '../lib/theme';
@@ -79,6 +80,7 @@ function isChatReadEvent(event: ChatRealtimeEvent): event is ChatRealtimeEvent &
 export default function ChatThreadScreen({ route }: NativeStackScreenProps<ProfileStackParamList, 'ChatThread'>) {
   const { conversationId, otherUserId, otherUserName } = route.params;
   const composerBottomMargin = useContentBottomPadding();
+  const locked = useChatLocked();
 
   const [state, setState] = useState<LoadState>('loading');
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
@@ -230,6 +232,17 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
       return [...prev, { id: result.data.message.id, senderId: myUserId, plaintext: text, createdAt: result.data.message.createdAt }];
     });
   }, [draft, otherUserId, sending]);
+
+  if (locked) {
+    return (
+      <Screen>
+        <View style={styles.header}>
+          <Text style={styles.headerName} numberOfLines={1}>{otherUserName ?? 'Собеседник'}</Text>
+        </View>
+        <ChatLockedNotice />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
