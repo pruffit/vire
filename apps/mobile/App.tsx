@@ -7,13 +7,21 @@ import { bootstrapE2eeIdentity } from './lib/e2ee/bootstrap';
 import { BlurTargetProvider } from './lib/blur-target';
 import { GlassLab } from './screens/glass-lab';
 import { GlassBench } from './screens/glass-bench';
+import { MaterialLab } from './screens/material-lab';
 
 // Стенд VireGlass вместо приложения. Выключен по умолчанию, продовый путь не задевает:
-//   EXPO_PUBLIC_GLASS_LAB=1     — зонды доступа к бэкдропу (§9)
-//   EXPO_PUBLIC_GLASS_LAB=bench — сцены замера масштабирования
+//   EXPO_PUBLIC_GLASS_LAB=1        — зонды доступа к бэкдропу (§9)
+//   EXPO_PUBLIC_GLASS_LAB=bench    — сцены замера масштабирования
+//   EXPO_PUBLIC_GLASS_LAB=material — стенд материала: тумблеры, слайдеры, пресеты, debug
 // Зачем нужен — docs/vireglass/README.md.
 const LAB_MODE = process.env.EXPO_PUBLIC_GLASS_LAB;
-const GLASS_LAB = LAB_MODE === '1' || LAB_MODE === 'bench';
+const GLASS_LAB = LAB_MODE === '1' || LAB_MODE === 'bench' || LAB_MODE === 'material';
+
+function Lab() {
+  if (LAB_MODE === 'bench') return <GlassBench />;
+  if (LAB_MODE === 'material') return <MaterialLab />;
+  return <GlassLab />;
+}
 
 export default function App() {
   useEffect(() => {
@@ -24,9 +32,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <BlurTargetProvider>
-          {LAB_MODE === 'bench' ? <GlassBench /> : GLASS_LAB ? <GlassLab /> : <RootNavigator />}
-        </BlurTargetProvider>
+        <BlurTargetProvider>{GLASS_LAB ? <Lab /> : <RootNavigator />}</BlurTargetProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

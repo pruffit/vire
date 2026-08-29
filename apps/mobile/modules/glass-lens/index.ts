@@ -4,22 +4,42 @@ import { Platform, type StyleProp, type ViewStyle } from 'react-native';
 // транзитивная зависимость, и pnpm её не поднимает в node_modules приложения.
 import { requireNativeModule, requireNativeView } from 'expo';
 
+/**
+ * Пропы нативной линзы. Имена ОБЯЗАНЫ совпадать с `Prop("…")` в `GlassLensModule.kt`:
+ * неизвестный проп Expo проглатывает молча, и линза просто не включается — так преломление
+ * и оказалось выключенным в проде целую фазу. Паритет закреплён тестом
+ * `lib/__tests__/vireglass-material.test.ts`.
+ *
+ * Значения материала сюда не собираются вручную — их даёт `toLensProps`
+ * (`lib/vireglass/adapters.ts`).
+ */
 export type GlassLensProps = {
-  /** Радиус ВИДИМОГО круга в dp. Сама вьюха обязана быть заметно больше него: шейдер у кромки
-   *  тянется за пределы круга (`edgeReach`), и без запаса ему там нечего семплировать. */
-  lensRadius: number;
-  /** Доля радиуса, занятая фаской. Должна совпадать с `BEVEL` шейдера поверхности, иначе
-   *  оптика подложки и нарисованная поверх кромка описывают разные стёкла. */
+  /** Исходник AGSL. Собирается в JS, чтобы геометрия у линзы и поверхности была одной строкой. */
+  shaderSource: string;
+  /** Размер ВИДИМОГО стекла в dp. Сама вьюха обязана быть больше него: у кромки выборка
+   *  уходит наружу (`edgePush`), и без запаса шейдеру там нечего семплировать. */
+  glassWidth: number;
+  glassHeight: number;
+  cornerRadius: number;
+  /** Доля полуразмера под фаской (`material.thickness`). */
   bevel?: number;
-  /** Увеличение в плоской середине — толщина стекла. */
+  /** Увеличение в плоской середине. */
   magnify?: number;
-  /** Докуда дотягивается выборка у самой кромки, в долях радиуса (>1 — видно то, что за
-   *  пределами круга, сжатое в тонкое кольцо). */
-  edgeReach?: number;
-  /** Хроматическая аберрация: расхождение каналов на кромке, dp. */
+  /** Смещение выборки у самой кромки, dp. */
+  edgePush?: number;
+  /** Хроматическая аберрация на кромке, dp. */
   chroma?: number;
-  /** Сферическая аберрация: размазывание выборки на кромке, dp. */
+  /** Сферическая аберрация на кромке, dp. */
   spherical?: number;
+  /** Вторая форма для морфинг-эксперимента; `morphSmoothing` = 0 её выключает. */
+  morphX?: number;
+  morphY?: number;
+  morphWidth?: number;
+  morphHeight?: number;
+  morphCorner?: number;
+  morphSmoothing?: number;
+  /** Индекс режима из `DEBUG_MODES`. */
+  debug?: number;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 };
@@ -31,7 +51,7 @@ const native = (() => {
     const constants = requireNativeModule('GlassLens') as { isSupported?: boolean };
     return { view, supported: constants.isSupported === true };
   } catch (e) {
-    console.warn("GlassLens: нативная вьюха не загрузилась", e);
+    console.warn('GlassLens: нативная вьюха не загрузилась', e);
     return null;
   }
 })();
@@ -39,7 +59,7 @@ const native = (() => {
 /** Диагностический зонд: что именно приходит в createRuntimeShaderEffect.
  *  Только для стенда (screens/glass-lab), в продовом UI не используется. */
 export type GlassProbeProps = {
-  /** 0 — сырая выборка, 1 — выборка + маркер живости шейдера. */
+  /** 0 — сырая выборка, 1 — выборка + маркер живости шейдера, 2 — карта альфы. */
   mode?: number;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;

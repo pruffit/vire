@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -10,22 +10,50 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurTargetView } from 'expo-blur';
 import { LiquidGlassButton } from '../components/liquid-glass';
+import { VireGlassSurface } from '../components/vireglass/glass-surface';
+import { useEnvironmentLight } from '../lib/vireglass/environment';
+import { capsuleGeometry, circleGeometry, roundedRectGeometry } from '../lib/vireglass/geometry';
+import { applyToggles, resolveMaterial, VIREGLASS_MATERIAL_V1 } from '../lib/vireglass/material';
 import type { IconName } from '../lib/icon';
 
-// Сцены для замера масштабирования (docs/vireglass/benchmarks/). Меряется ПРОДОВЫЙ
-// компонент LiquidGlassButton, а не упрощённая модель — иначе цифры не о том.
+// Сцены замера (docs/vireglass/benchmarks/). Эксперимент «счёт» гоняет ПРОДОВЫЙ
+// LiquidGlassButton, чтобы цифры были сравнимы с прежними прогонами; эксперимент «площадь»
+// работает через VireGlassSurface, потому что кнопка умеет только круг.
 //
 // Фон анимирован постоянно: без непрерывной перерисовки gfxinfo не наберёт кадров, а
-// dimezisBlurView не станет перезахватывать контент. Высокочастотный фон (полосы + текст)
-// выбран намеренно: на плоской заливке блюр не даёт нагрузки, характерной для реального UI.
+// dimezisBlurView не станет перезахватывать контент.
 //
 // Протокол замера — docs/vireglass/benchmarks/README.md.
 
-// 2 — рабочая точка продукта: таб-бар + мини-плеер, столько стеклянных поверхностей
-// видно одновременно в реальном UI. Остальные значения нужны, чтобы увидеть форму
-// зависимости, а не только рабочую точку.
-const COUNTS = [1, 2, 3, 6, 10] as const;
+const COUNTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 const ICONS: IconName[] = ['home', 'search', 'list', 'user'];
+
+/** Продовый размер круглой кнопки таб-бара (navigation/main-tabs.tsx). */
+const BUTTON = 68;
+/** Высота полосы мини-плеера (lib/layout.ts) и её боковые отступы. */
+const MINI_PLAYER_H = 60;
+const SIDE_MARGIN = 12;
+
+// Опорная точка изолирует ровно смещение выборки: RenderEffect накладывается в обоих
+// материалах, но здесь оно вырождено (magnify 1, edgePush 0, аберрации 0). Это НЕ конвейер
+// до Phase 3 — там линза не включалась вовсе, и воспроизвести то состояние отсюда нечем
+// (material-lab.md E-01).
+const MATERIALS = {
+  'без преломления': resolveMaterial({
+    ...applyToggles(VIREGLASS_MATERIAL_V1, { refraction: false, dispersion: false }),
+    blur: 9,
+  }),
+  'Material v1': VIREGLASS_MATERIAL_V1,
+};
+
+type MaterialName = keyof typeof MATERIALS;
+const MATERIAL_NAMES = Object.keys(MATERIALS) as MaterialName[];
+
+type SizeName = 'кнопка' | 'мини-плеер' | 'таб-бар' | 'панель';
+const SIZE_NAMES: SizeName[] = ['кнопка', 'мини-плеер', 'таб-бар', 'панель'];
+
+type Mode = 'счёт' | 'площадь';
+const MODES: Mode[] = ['счёт', 'площадь'];
 
 function MovingBackdrop() {
   const t = useSharedValue(0);
@@ -46,15 +74,49 @@ function MovingBackdrop() {
   );
 }
 
+function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable style={[styles.btn, on && styles.btnActive]} onPress={onPress}>
+      <Text style={styles.btnText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function GlassBench() {
   // Цель блюра обязана быть BlurTargetView из expo-blur, а не обычной View: на обычной
   // нативный проп blurTargetId не ставится («Cannot set prop blurTargetId»), захват фона
   // молча не включается — и замер уходит мимо самой дорогой части конвейера.
   const targetRef = useRef<View>(null);
   const [count, setCount] = useState<number>(1);
+  const [material, setMaterial] = useState<MaterialName>('Material v1');
+  const [size, setSize] = useState<SizeName>('кнопка');
+  const [mode, setMode] = useState<Mode>('счёт');
   // Без отступа на системную навигацию панель управления оказывается ПОД ней и не
   // нажимается: тап уходит в системные кнопки, сцена молча не переключается.
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  const wide = Math.round(width - SIDE_MARGIN * 2);
+  const geometry = useMemo(() => {
+    switch (size) {
+      case 'мини-плеер':
+        return roundedRectGeometry(wide, MINI_PLAYER_H, 18);
+      case 'таб-бар':
+        return capsuleGeometry(wide, 76);
+      case 'панель':
+        return roundedRectGeometry(wide, 320, 24);
+      default:
+        return circleGeometry(BUTTON);
+    }
+  }, [size, wide]);
+
+  const shiftX = useSharedValue(0);
+  const shiftY = useSharedValue(0);
+  const press = useSharedValue(0);
+  const active = useSharedValue(0);
+  const light = useEnvironmentLight(0);
+
+  const items = Array.from({ length: count }, (_, i) => i);
 
   return (
     <View style={styles.root}>
@@ -66,34 +128,55 @@ export function GlassBench() {
         <MovingBackdrop />
       </BlurTargetView>
 
-      <View style={styles.glassRow}>
-        {Array.from({ length: count }, (_, i) => (
-          <LiquidGlassButton
-            key={i}
-            size={58}
-            icon={ICONS[i % ICONS.length]}
-            blurTarget={targetRef}
-            active={i === 0}
-          />
-        ))}
+      <View style={[styles.glassRow, mode === 'площадь' && styles.glassColumn]}>
+        {items.map((i) =>
+          mode === 'счёт' ? (
+            <LiquidGlassButton
+              key={i}
+              size={BUTTON}
+              icon={ICONS[i % ICONS.length]}
+              blurTarget={targetRef}
+              active={i === 0}
+              material={MATERIALS[material]}
+            />
+          ) : (
+            <VireGlassSurface
+              key={i}
+              geometry={geometry}
+              material={MATERIALS[material]}
+              dynamics={{ shiftX, shiftY, press, active, light }}
+              blurTarget={targetRef}
+            />
+          ),
+        )}
       </View>
 
-      <ScrollView horizontal style={[styles.controlsWrap, { bottom: insets.bottom + 12 }]} contentContainerStyle={styles.controls}>
-        {COUNTS.map((c) => (
-          <Pressable
-            key={c}
-            style={[styles.btn, count === c && styles.btnActive]}
-            onPress={() => setCount(c)}
-          >
-            <Text style={styles.btnText}>{c} стекол</Text>
-          </Pressable>
-        ))}
-        <Pressable style={styles.btn} onPress={() => setCount(0)}>
-          <Text style={styles.btnText}>0 (контроль)</Text>
-        </Pressable>
-      </ScrollView>
+      <Text style={styles.hud}>
+        {mode} · {mode === 'счёт' ? 'кнопка' : size} · стёкол {count} · {material}
+        {'\n'}
+        {geometry.width}×{geometry.height} dp
+      </Text>
 
-      <Text style={styles.hud}>стекол на сцене: {count}</Text>
+      <View style={[styles.controls, { paddingBottom: insets.bottom + 10 }]}>
+        <View style={styles.row}>
+          {MODES.map((m) => (
+            <Chip key={m} label={m} on={mode === m} onPress={() => setMode(m)} />
+          ))}
+          {MATERIAL_NAMES.map((n) => (
+            <Chip key={n} label={n} on={material === n} onPress={() => setMaterial(n)} />
+          ))}
+        </View>
+        <View style={styles.row}>
+          {COUNTS.map((c) => (
+            <Chip key={c} label={String(c)} on={count === c} onPress={() => setCount(c)} />
+          ))}
+        </View>
+        <View style={styles.row}>
+          {SIZE_NAMES.map((s) => (
+            <Chip key={s} label={s} on={size === s} onPress={() => setSize(s)} />
+          ))}
+        </View>
+      </View>
     </View>
   );
 }
@@ -107,16 +190,26 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 160,
+    top: 150,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 18,
-    paddingHorizontal: 20,
+    gap: 14,
+    paddingHorizontal: SIDE_MARGIN,
     justifyContent: 'center',
   },
-  controlsWrap: { position: 'absolute', left: 0, right: 0, flexGrow: 0 },
-  controls: { gap: 8, paddingHorizontal: 12, alignItems: 'center' },
-  btn: { backgroundColor: '#1b2328', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
+  glassColumn: { flexDirection: 'column', alignItems: 'center' },
+  controls: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    gap: 6,
+    paddingHorizontal: 10,
+    backgroundColor: '#0a0e11f2',
+    paddingTop: 8,
+  },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  btn: { backgroundColor: '#1b2328', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8 },
   btnActive: { backgroundColor: '#14322f', borderWidth: 1, borderColor: '#5ecfc6' },
   btnText: { color: '#e6ecef', fontSize: 12 },
   hud: { position: 'absolute', top: 44, left: 16, color: '#5ecfc6', fontSize: 12, fontWeight: '600' },

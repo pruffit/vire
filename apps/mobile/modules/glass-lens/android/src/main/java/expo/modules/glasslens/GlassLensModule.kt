@@ -15,6 +15,7 @@ class GlassLensModule : Module() {
     View(GlassLensView::class) {
       Name("GlassLensView")
 
+      Prop("shaderSource") { view: GlassLensView, value: String -> view.shaderSource = value }
       Prop("glassWidth") { view: GlassLensView, value: Float -> view.glassWidth = value }
       Prop("glassHeight") { view: GlassLensView, value: Float -> view.glassHeight = value }
       Prop("cornerRadius") { view: GlassLensView, value: Float -> view.cornerRadius = value }
@@ -23,6 +24,13 @@ class GlassLensModule : Module() {
       Prop("edgePush") { view: GlassLensView, value: Float -> view.edgePush = value }
       Prop("chroma") { view: GlassLensView, value: Float -> view.chroma = value }
       Prop("spherical") { view: GlassLensView, value: Float -> view.spherical = value }
+      Prop("morphX") { view: GlassLensView, value: Float -> view.morphX = value }
+      Prop("morphY") { view: GlassLensView, value: Float -> view.morphY = value }
+      Prop("morphWidth") { view: GlassLensView, value: Float -> view.morphWidth = value }
+      Prop("morphHeight") { view: GlassLensView, value: Float -> view.morphHeight = value }
+      Prop("morphCorner") { view: GlassLensView, value: Float -> view.morphCorner = value }
+      Prop("morphSmoothing") { view: GlassLensView, value: Float -> view.morphSmoothing = value }
+      Prop("debug") { view: GlassLensView, value: Float -> view.debug = value }
 
       OnViewDidUpdateProps { view: GlassLensView -> view.applyEffect() }
     }

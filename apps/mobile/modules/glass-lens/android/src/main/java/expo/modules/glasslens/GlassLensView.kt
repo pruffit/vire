@@ -16,106 +16,51 @@ import kotlin.math.min
 // на Android способ отдать AGSL-шейдеру УЖЕ отрисованное содержимое вьюхи: сюда приходит
 // размытый бэкдроп от BlurView-ребёнка, и шейдер семплирует его по смещённой координате.
 //
-// Форма задаётся знаковым расстоянием до скруглённого прямоугольника, поэтому круг — его
-// частный случай (`corner` = половина меньшей стороны), и кнопка навигации с панелью
-// мини-плеера используют один и тот же шейдер.
-//
-// Ход луча: в плоской середине — равномерное увеличение (толщина стекла), в фаске выборка
-// уходит НАРУЖУ по нормали к кромке, и у самого края видно то, что лежит за стеклом, сжатое
-// в тонкую полосу. Отсюда же обе аберрации: хроматическая (каналы расходятся) и сферическая
-// (у кромки луч «промахивается», картинка смазывается) — обе живут только в фаске.
-private const val AGSL = """
-uniform shader content;
-
-uniform float2 u_center;
-uniform float2 u_half;
-uniform float  u_corner;
-uniform float  u_bevel;
-uniform float  u_magnify;
-uniform float  u_edgePush;
-uniform float  u_chroma;
-uniform float  u_spherical;
-
-const float FALLOFF = 2.6;
-
-// Деление на околонулевую альфу раздувает шум half-точности до единицы, поэтому порог, а не > 0.
-half3 straight(half4 c) {
-  return c.a > 0.004 ? c.rgb / c.a : half3(0.0);
-}
-
-float sdRect(float2 p) {
-  float2 q = abs(p) - u_half + u_corner;
-  return min(max(q.x, q.y), 0.0) + length(max(q, float2(0.0))) - u_corner;
-}
-
-// Нормаль к кромке — градиент SDF: на скруглении радиальная, на прямых участках осевая.
-float2 edgeNormal(float2 p) {
-  float2 q = abs(p) - u_half + u_corner;
-  float2 g = (q.x > 0.0 && q.y > 0.0)
-    ? normalize(max(q, float2(0.0001)))
-    : (q.x > q.y ? float2(1.0, 0.0) : float2(0.0, 1.0));
-  return g * sign(p);
-}
-
-half4 main(float2 xy) {
-  float2 p = xy - u_center;
-  float sd = sdRect(p);
-  if (sd > 1.0) { return half4(0.0); }
-
-  float t = clamp((sd + u_bevel) / u_bevel, 0.0, 1.0);
-  float2 n = edgeNormal(p);
-
-  float2 s = u_center + p / u_magnify + n * (u_edgePush * pow(t, FALLOFF));
-
-  float spread = u_spherical * t * t;
-  float chroma = u_chroma * t * t;
-
-  // `content.eval` отдаёт PREMULTIPLIED цвет. Брать .r/.g/.b из РАЗНЫХ точек и склеивать
-  // напрямую нельзя: там, где альфа между выборками отличается, каналы делятся на разный
-  // множитель и на границах содержимого вылезает цветная кайма — линия, которой в контенте нет.
-  half4 c0 = content.eval(s - n * (chroma + spread));
-  half4 c1 = content.eval(s - n * (chroma - spread));
-  half4 c2 = content.eval(s - n * spread);
-  half4 c3 = content.eval(s + n * spread);
-  half4 c4 = content.eval(s + n * (chroma - spread));
-  half4 c5 = content.eval(s + n * (chroma + spread));
-
-  half3 rgb = half3(
-    (straight(c0).r + straight(c1).r) * 0.5,
-    (straight(c2).g + straight(c3).g) * 0.5,
-    (straight(c4).b + straight(c5).b) * 0.5);
-
-  // Альфа выборок обязана дожить до результата: развернуть цвет по исходной альфе, а вернуть
-  // с чужой (маской формы) — значит сделать прозрачный бэкдроп непрозрачным и засветить его.
-  half srcA = (c0.a + c1.a + c2.a + c3.a + c4.a + c5.a) / 6.0;
-  half alpha = srcA * half(1.0 - smoothstep(-1.0, 1.0, sd));
-  return half4(rgb * alpha, alpha);
-}
-"""
-
+// Исходник шейдера приходит ПРОПОМ из JS (`lib/vireglass/lens-shader.ts`): AGSL и SKSL — один
+// язык, поэтому геометрия у линзы и у поверхности буквально одна строка. Держать вторую копию
+// SDF здесь значит вернуть расхождение, которое эта фаза и закрывает.
 @SuppressLint("ViewConstructor")
 class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
-  // Ошибка компиляции AGSL прилетает исключением из конструктора `RuntimeShader` и без
-  // перехвата валит создание всей вьюхи. Но молчать нельзя: без эффекта BlurView рисует свой
-  // ПРЯМОУГОЛЬНИК во всю вьюху (она заметно больше стекла), а симптом с текстом ошибки никак
-  // не связан — поэтому её обязательно в лог.
-  private val shader = try {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) RuntimeShader(AGSL) else null
-  } catch (e: Throwable) {
-    Log.e("GlassLens", "AGSL не скомпилировался, линза выключена", e)
-    null
-  }
-
   private val density = context.resources.displayMetrics.density
 
+  private var shader: RuntimeShader? = null
+  private var compiledSource: String? = null
+
+  var shaderSource: String? = null
   var glassWidth = 0f
   var glassHeight = 0f
   var cornerRadius = 0f
   var bevel = 0.18f
-  var magnify = 1.22f
+  var magnify = 1f
   var edgePush = 0f
   var chroma = 0f
   var spherical = 0f
+  var morphX = 0f
+  var morphY = 0f
+  var morphWidth = 0f
+  var morphHeight = 0f
+  var morphCorner = 0f
+  var morphSmoothing = 0f
+  var debug = 0f
+
+  // Компиляция AGSL стоит дорого и обязана происходить только на смену исходника: пропы
+  // прилетают пачкой на каждый рендер, а строка при этом та же самая.
+  private fun ensureShader(): RuntimeShader? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+    val src = shaderSource ?: return null
+    if (src == compiledSource) return shader
+    compiledSource = src
+    // Ошибка компиляции прилетает исключением из конструктора и без перехвата валит вьюху.
+    // Но молчать нельзя: без эффекта BlurView рисует свой ПРЯМОУГОЛЬНИК во всю вьюху, а
+    // симптом с текстом ошибки никак не связан.
+    shader = try {
+      RuntimeShader(src)
+    } catch (e: Throwable) {
+      Log.e("GlassLens", "AGSL не скомпилировался, линза выключена", e)
+      null
+    }
+    return shader
+  }
 
   /** Единственный вызов после смены любого пропа — униформы применяются только через повторный
    *  `setRenderEffect`, мутации самого `RuntimeShader` вьюху не инвалидируют. */
@@ -123,25 +68,39 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
     // Прятать вьюху можно ТОЛЬКО когда шейдера нет совсем: `dimezisBlurView` внутри прекращает
     // захват фона, если его спрятать, и обратно сам не оживает — вместо преломления остаётся
     // ровная плашка. Переходное состояние просто ждёт следующего вызова.
-    val effect = shader
+    val effect = ensureShader()
     if (effect == null) {
       visibility = INVISIBLE
       return
     }
+    visibility = VISIBLE
     if (width <= 0 || height <= 0 || glassWidth <= 0f || glassHeight <= 0f) return
 
     val halfW = glassWidth * density / 2f
     val halfH = glassHeight * density / 2f
     val halfMin = min(halfW, halfH)
 
-    effect.setFloatUniform("u_center", width / 2f, height / 2f)
-    effect.setFloatUniform("u_half", halfW, halfH)
-    effect.setFloatUniform("u_corner", min(cornerRadius * density, halfMin))
-    effect.setFloatUniform("u_bevel", maxOf(bevel * halfMin, 1f))
-    effect.setFloatUniform("u_magnify", magnify)
-    effect.setFloatUniform("u_edgePush", edgePush * density)
-    effect.setFloatUniform("u_chroma", chroma * density)
-    effect.setFloatUniform("u_spherical", spherical * density)
+    // Имена униформ задаёт JS-исходник. Рассинхрон здесь — IllegalArgumentException, который
+    // без перехвата валит вьюху вместо того, чтобы деградировать до плашки.
+    try {
+      effect.setFloatUniform("u_center", width / 2f, height / 2f)
+      effect.setFloatUniform("u_halfSize", halfW, halfH)
+      effect.setFloatUniform("u_corner", min(cornerRadius * density, halfMin))
+      effect.setFloatUniform("u_bevel", maxOf(bevel * halfMin, 1f))
+      effect.setFloatUniform("u_magnify", maxOf(magnify, 0.01f))
+      effect.setFloatUniform("u_edgePush", edgePush * density)
+      effect.setFloatUniform("u_chroma", chroma * density)
+      effect.setFloatUniform("u_spherical", spherical * density)
+      effect.setFloatUniform("u_morphOffset", morphX * density, morphY * density)
+      effect.setFloatUniform("u_morphHalf", morphWidth * density / 2f, morphHeight * density / 2f)
+      effect.setFloatUniform("u_morphCorner", morphCorner * density)
+      effect.setFloatUniform("u_morphK", morphSmoothing * density)
+      effect.setFloatUniform("u_debug", debug)
+    } catch (e: Throwable) {
+      Log.e("GlassLens", "униформы линзы разошлись с шейдером", e)
+      setRenderEffect(null)
+      return
+    }
 
     setRenderEffect(RenderEffect.createRuntimeShaderEffect(effect, "content"))
   }
