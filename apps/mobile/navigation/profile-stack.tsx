@@ -4,6 +4,7 @@ import FriendsScreen from '../screens/friends-screen';
 import UserProfileScreen from '../screens/user-profile-screen';
 import ConversationsScreen from '../screens/conversations-screen';
 import ChatThreadScreen from '../screens/chat-thread-screen';
+import SettingsScreen from '../screens/settings-screen';
 
 export type ProfileStackParamList = {
   ProfileMain: undefined;
@@ -11,6 +12,7 @@ export type ProfileStackParamList = {
   UserProfile: { userId: string };
   Conversations: undefined;
   ChatThread: { conversationId: string; otherUserId: string; otherUserName: string | null };
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -23,6 +25,7 @@ export function ProfileStackNavigator() {
       <Stack.Screen name="UserProfile" component={UserProfileScreen} />
       <Stack.Screen name="Conversations" component={ConversationsScreen} />
       <Stack.Screen name="ChatThread" component={ChatThreadScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );
 }

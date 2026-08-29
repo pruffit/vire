@@ -9,6 +9,11 @@ vi.mock('@/auth', () => ({ auth: vi.fn() }));
 vi.mock('@vire/db', () => ({ upsertPushSubscription, deletePushSubscription }));
 
 import { auth } from '@/auth';
+// Статический импорт, а не `await import('./route')` в каждом тесте: роут читает
+// VAPID_PUBLIC_KEY внутри обработчика, поэтому переимпорт ничего не давал, а стоимость
+// холодной трансформации графа модулей попадала в измеряемое время ПЕРВОГО теста и
+// валила его по таймауту в 5 с (запас съели подросшие баррели @vire/core и @vire/db).
+import { POST, DELETE } from './route';
 
 const mockedAuth = vi.mocked(auth);
 
@@ -21,7 +26,6 @@ beforeEach(() => {
 describe('POST /api/v1/push/subscribe', () => {
   it('без сессии → 401', async () => {
     mockedAuth.mockResolvedValueOnce(null as never);
-    const { POST } = await import('./route');
     const res = await POST(new Request('http://x', { method: 'POST', body: '{}' }));
     expect(res.status).toBe(401);
     expect(upsertPushSubscription).not.toHaveBeenCalled();
@@ -29,7 +33,6 @@ describe('POST /api/v1/push/subscribe', () => {
 
   it('без VAPID_PUBLIC_KEY → 503', async () => {
     delete process.env.VAPID_PUBLIC_KEY;
-    const { POST } = await import('./route');
     const body = { endpoint: 'https://push/abc', keys: { p256dh: 'k', auth: 'a' } };
     const res = await POST(
       new Request('http://x', {
@@ -43,7 +46,6 @@ describe('POST /api/v1/push/subscribe', () => {
   });
 
   it('невалидное тело → 400', async () => {
-    const { POST } = await import('./route');
     const res = await POST(
       new Request('http://x', {
         method: 'POST',
@@ -56,7 +58,6 @@ describe('POST /api/v1/push/subscribe', () => {
   });
 
   it('валидной подписки → 200 + upsert', async () => {
-    const { POST } = await import('./route');
     const body = { endpoint: 'https://push/abc', keys: { p256dh: 'k', auth: 'a' } };
     const res = await POST(
       new Request('http://x', {
@@ -77,7 +78,6 @@ describe('POST /api/v1/push/subscribe', () => {
 describe('DELETE /api/v1/push/subscribe', () => {
   it('без сессии → 401', async () => {
     mockedAuth.mockResolvedValueOnce(null as never);
-    const { DELETE } = await import('./route');
     const res = await DELETE(
       new Request('http://x', {
         method: 'DELETE',
@@ -90,7 +90,6 @@ describe('DELETE /api/v1/push/subscribe', () => {
   });
 
   it('невалидный endpoint → 400', async () => {
-    const { DELETE } = await import('./route');
     const res = await DELETE(
       new Request('http://x', {
         method: 'DELETE',
@@ -103,7 +102,6 @@ describe('DELETE /api/v1/push/subscribe', () => {
   });
 
   it('удаляет по endpoint → 200', async () => {
-    const { DELETE } = await import('./route');
     const res = await DELETE(
       new Request('http://x', {
         method: 'DELETE',

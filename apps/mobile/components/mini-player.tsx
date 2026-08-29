@@ -1,72 +1,108 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import { usePlayerStore } from '../lib/player-store';
 import type { RootStackParamList } from '../navigation/root-navigator';
 import { useTabBarHeight, MINI_PLAYER_HEIGHT } from '../lib/layout';
-import { Glass } from './glass';
+import { useBlurTarget } from '../lib/blur-target';
+import { GlassPanel } from './ui/glass-panel';
+import { Cover } from './ui/cover';
 import { Icon } from '../lib/icon';
-import { colors, radius } from '../lib/theme';
+import { colors } from '../lib/theme';
+import { type } from '../lib/design/typography';
+import { space, layout, radii } from '../lib/design/scales';
 
+/**
+ * Мини-плеер — самая заметная стеклянная поверхность продукта и единственное, что связывает
+ * играющее с любым экраном. Живёт на общем материале (`GlassPanel`), а не на отдельной
+ * системе стекла.
+ *
+ * Прогресс — нижняя линия по кромке, а не отдельная полоска: кит требует показывать его
+ * rim'ом, и это же экономит высоту, которой у мини-плеера нет.
+ */
 export function MiniPlayer() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const track = usePlayerStore((s) => s.queue[s.queueIndex]);
   const status = usePlayerStore((s) => s.status);
+  const positionSec = usePlayerStore((s) => s.positionSec);
+  const durationSec = usePlayerStore((s) => s.durationSec);
   const togglePlayPause = usePlayerStore((s) => s.togglePlayPause);
   const tabBarHeight = useTabBarHeight();
+  const blurTarget = useBlurTarget();
 
   if (!track) return null;
 
+  const progress = durationSec > 0 ? Math.min(1, Math.max(0, positionSec / durationSec)) : 0;
+  const playing = status === 'playing';
+
   return (
-    <Pressable style={[styles.wrap, { bottom: tabBarHeight + 10 }]} onPress={() => navigation.navigate('Player')}>
-      <Glass style={styles.bar} radius={18}>
-        {track.coverUrl ? (
-          <Image source={{ uri: track.coverUrl }} style={styles.cover} />
-        ) : (
-          <View style={[styles.cover, styles.coverPlaceholder]} />
-        )}
+    <Pressable
+      style={[styles.wrap, { bottom: tabBarHeight + 10 }]}
+      onPress={() => navigation.navigate('Player')}
+      accessibilityRole="button"
+      accessibilityLabel={`${track.title}, ${track.artistName}. Открыть плеер`}
+    >
+      <GlassPanel radius={radii.glass} blurTarget={blurTarget} style={styles.panel} contentStyle={styles.content}>
+        <Cover uri={track.coverUrl} size={40} radius={radii.coverSm} />
         <View style={styles.info}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={type.row} numberOfLines={1}>
             {track.title}
           </Text>
-          <Text style={styles.artist} numberOfLines={1}>
+          <Text style={type.caption} numberOfLines={1}>
             {track.artistName}
           </Text>
         </View>
         <Pressable
           style={styles.playButton}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={playing ? 'Пауза' : 'Играть'}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
             togglePlayPause();
           }}
-          hitSlop={12}
         >
           {status === 'loading' ? (
             <ActivityIndicator color={colors.foreground} size="small" />
           ) : (
-            <Icon name={status === 'playing' ? 'pause' : 'play'} size={20} color={colors.foreground} />
+            <Icon name={playing ? 'pause' : 'play'} size={20} color={colors.foreground} />
           )}
         </Pressable>
-      </Glass>
+      </GlassPanel>
+      <View style={styles.rimTrack} pointerEvents="none">
+        <View style={[styles.rimFill, { width: `${progress * 100}%` }]} />
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 12, right: 12, height: MINI_PLAYER_HEIGHT },
-  bar: {
+  wrap: { position: 'absolute', left: space.md, right: space.md, height: MINI_PLAYER_HEIGHT },
+  panel: { flex: 1 },
+  content: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 12,
+    gap: space.md,
+    paddingHorizontal: space.md,
   },
-  cover: { width: 40, height: 40, borderRadius: radius.sm },
-  coverPlaceholder: { backgroundColor: colors.secondary },
-  info: { flex: 1, gap: 2 },
-  title: { color: colors.foreground, fontSize: 14, fontWeight: '700' },
-  artist: { color: colors.mutedForeground, fontSize: 12, fontWeight: '500' },
-  playButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  info: { flex: 1, gap: 2, minWidth: 0 },
+  playButton: {
+    minWidth: layout.touchTarget,
+    minHeight: layout.touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Кромка прогресса: не поверх контента, а по нижнему краю панели — читается как
+  // подсветка стекла снизу, а не как виджет.
+  rimTrack: {
+    position: 'absolute',
+    left: space.lg,
+    right: space.lg,
+    bottom: 0,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  rimFill: { height: 1, backgroundColor: 'rgba(255,255,255,0.55)' },
 });

@@ -76,6 +76,11 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={[styles.container, { paddingBottom: bottomPadding }]}>
       <Text style={styles.title}>Профиль</Text>
 
+      <Pressable style={styles.navRow} onPress={() => navigation.navigate('Settings')}>
+        <Icon name="sliders" size={18} color={colors.foreground} />
+        <Text style={styles.navRowText}>Настройки</Text>
+      </Pressable>
+
       <Pressable style={styles.navRow} onPress={() => navigation.navigate('Friends')}>
         <Icon name="user-check" size={18} color={colors.foreground} />
         <Text style={styles.navRowText}>Друзья</Text>

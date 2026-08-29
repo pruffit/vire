@@ -20,6 +20,8 @@ import { toLensProps, toSurfaceUniforms, type VireGlassMorph } from '../../lib/v
 import { lensPadDp, surfacePadDp, type VireGlassGeometry } from '../../lib/vireglass/geometry';
 import type { VireGlassDebugMode, VireGlassMaterial } from '../../lib/vireglass/material';
 import { SURFACE_SHADER } from '../../lib/vireglass/surface-shader';
+import { useBackdropEnabled } from '../../lib/design/preferences';
+import { useGlassSurfaceRegistration } from '../../lib/design/surface-registry';
 
 function compile(src: string) {
   const effect = Skia.RuntimeEffect.Make(src);
@@ -154,13 +156,31 @@ export function VireGlassSurface({
 
   const refracting = isGlassLensSupported && GlassLensNative !== null;
 
+  // Единственная точка, где решается, живёт ли бэкдроп. Через неё проходит ВСЁ стекло
+  // приложения, поэтому и тумблер настроек, и подавление под открытым листом стоят здесь,
+  // а не размазаны по потребителям. Подавление под листом предписывает сам кит: нижние
+  // слои за скримом преломлять нечего, и оно же удерживает бюджет поверхностей в зелёной
+  // зоне (`lib/design/glass-budget.ts`).
+  const backdropAllowed = useBackdropEnabled();
+  const liveBackdrop = backdrop && backdropAllowed;
+
+  // Сторожит ФАКТИЧЕСКОЕ число живых поверхностей; тест стережёт объявленную модель.
+  useGlassSurfaceRegistration(liveBackdrop && hasTarget);
+
   return (
     <View collapsable={false} style={[styles.host, style, { width, height }]}>
+      {/* Состояние «reduced» из кита: стекло выключено — панель непрозрачна, blur снят. */}
+      {!backdropAllowed && (
+        <View
+          style={[styles.opaque, { width, height, borderRadius: cornerRadius }]}
+          pointerEvents="none"
+        />
+      )}
       {/* Снимок экрана (makeImageFromView) для бэкдропа не годится в принципе: ~1000 мс на
           кадр, любое преломление по нему отстаёт. BlurView с blurTarget рисует контент
           экрана покадрово нативно и выровнен с ним по построению. */}
       <Animated.View style={[styles.lens, { width, height }, lensStyle]}>
-        {backdrop && hasTarget && blurTarget?.current ? (
+        {liveBackdrop && hasTarget && blurTarget?.current ? (
           refracting && GlassLensNative ? (
             // Вьюха линзы НАМЕРЕННО больше стекла — у кромки выборка уходит за его пределы,
             // форму вырезает сам шейдер.
@@ -237,4 +257,6 @@ const styles = StyleSheet.create({
   clip: { position: 'absolute', overflow: 'hidden' },
   canvas: { position: 'absolute' },
   scrim: { position: 'absolute', backgroundColor: '#0d0b09' },
+  // Непрозрачная подложка режима «стекло выключено» — цвет из кита (§02, состояние reduced).
+  opaque: { position: 'absolute', backgroundColor: '#0b0908' },
 });

@@ -18,11 +18,14 @@ import {
 } from '../lib/playlists';
 import { Icon } from '../lib/icon';
 import { Glass } from './glass';
+import { usePreferences } from '../lib/design/preferences';
 import { colors, radius } from '../lib/theme';
 
 export function AddToPlaylistSheet({ trackId }: { trackId: string }) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const pushSheet = usePreferences((s) => s.pushSheet);
+  const popSheet = usePreferences((s) => s.popSheet);
   const [playlists, setPlaylists] = useState<PlaylistSummaryDTO[]>([]);
   const [inPlaylists, setInPlaylists] = useState<Set<string>>(new Set());
   const [newTitle, setNewTitle] = useState('');
@@ -36,6 +39,17 @@ export function AddToPlaylistSheet({ trackId }: { trackId: string }) {
       setInPlaylists(new Set(result.data.inPlaylists ?? []));
     });
   }, [open, trackId]);
+
+  // Пока лист открыт, нижние стеклянные поверхности гасят живой бэкдроп: они за скримом,
+  // преломлять им нечего. Это предписывает кит и это же держит бюджет поверхностей в
+  // зелёной зоне — без подавления «поиск + мини-плеер + таб-бар + лист» давали 7
+  // (`lib/design/glass-budget.ts`). Через эффект, а не через обработчики: размонтирование
+  // с открытым листом иначе оставило бы счётчик навсегда поднятым.
+  useEffect(() => {
+    if (!open) return;
+    pushSheet();
+    return popSheet;
+  }, [open, pushSheet, popSheet]);
 
   function close() {
     setOpen(false);
