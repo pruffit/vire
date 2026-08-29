@@ -100,8 +100,14 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: repoRoot,
   // Трейсер не тащит libvips: sharp грузит его через dlopen по RPATH из соседней папки
   // внутри @img, а не require'ом. Без этого в musl-образе ERR_DLOPEN_FAILED (прод v1.34.0).
+  //
+  // Глоб НЕ должен зависеть от имени папки в pnpm-сторе. Прежний
+  // `@img+sharp-*/node_modules/@img/**` перестал совпадать, когда в `.npmrc` появился
+  // `virtual-store-dir-max-length=20` (мобильный фикс Windows MAX_PATH, коммит 7d1ae6a7):
+  // длинные имена pnpm заменяет хешем `_<...>`, и libvips молча переставал попадать в
+  // standalone. Поймал барьер в apps/web/Dockerfile, а не прод.
   outputFileTracingIncludes: {
-    '/**': ['../../node_modules/.pnpm/@img+sharp-*/node_modules/@img/**'],
+    '/**': ['../../node_modules/.pnpm/*/node_modules/@img/**'],
   },
   transpilePackages: ['@vire/core', '@vire/db', '@vire/ui', '@vire/i18n', '@vire/storage'],
   images: {

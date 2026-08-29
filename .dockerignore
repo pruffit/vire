@@ -25,3 +25,11 @@ docker-compose.yml
 # ONNX-модель автожанра качается RUN-слоем в apps/worker/Dockerfile —
 # локальная копия не должна перетирать её через COPY . .
 apps/worker/models
+
+# Нативная сборка мобилки: в git её нет (генерируется), но локально она раздувает
+# контекст до гигабайтов — сборка образа на машине разработчика становится бессмысленной.
+apps/mobile/android
+apps/mobile/ios
+apps/mobile/.cxx
+**/*.apk
+**/*.aab
