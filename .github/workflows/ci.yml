@@ -43,6 +43,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # dist/ у @vire/design-tokens не в git (build-артефакт) — @vire/mobile импортирует
+      # dist/tokens.native.ts, @vire/ui импортирует dist/tokens.css. Нужны раньше самого
+      # первого шага, который их читает (Typecheck), иначе чистый чекаут падает на "Cannot
+      # find module '@vire/design-tokens/native'" (turbo-граф typecheck не тянет ^build).
+      # Шаг был только в deploy.yml; локально не воспроизводится, потому что dist/ уже
+      # лежит на диске. Вскрылось первым же пушем в main после появления этого workflow.
+      - name: Build design tokens
+        run: pnpm --filter @vire/design-tokens build
+
       - name: Typecheck
         run: pnpm turbo run typecheck
       - name: Lint
