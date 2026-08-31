@@ -1,3 +1,4 @@
+import { PixelRatio } from 'react-native';
 import {
   bevelDp,
   bevelFraction,
@@ -25,48 +26,91 @@ export type VireGlassMorph = {
 
 const NO_MORPH = { offsetX: 0, offsetY: 0, width: 0, height: 0, cornerRadius: 0, smoothing: 0 };
 
-/** Пропы нативной вьюхи. Имена обязаны совпадать с `Prop("…")` в `GlassLensModule.kt` —
- *  расхождение Expo проглатывает молча, и линза просто не включается (см. тест паритета). */
+/** Увеличение в плоской середине. Отдельно от канала униформ: его же берёт фолбэк ниже
+ *  Android 13, где оптики нет и остаётся аффинная лупа. */
+export const lensMagnify = (o: VireGlassOptics) => 1 + (o.refractionScale - 1) * o.refraction;
+
+/**
+ * Униформы линзы. Собираются ОДНИМ каналом: имя, размер и значения уезжают вместе, поэтому
+ * несовпадение с шейдером ловится сразу и с именем в логе. Раньше на каждую величину был
+ * свой `Prop` в Kotlin — неизвестный проп Expo проглатывает молча, и линза просто не
+ * включалась (material-lab.md E-01, из-за этого преломление было выключено целую фазу).
+ *
+ * Всё, что имеет размерность, переводится в ПИКСЕЛИ здесь. У нативной вьюхи остаются только
+ * те униформы, которые знает она одна: свой размер и своё место на экране.
+ */
+// Имена и размеры у линзы всегда одни и те же — набор униформ фиксирован. Отдаём их ОДНИМ
+// экземпляром на весь процесс: иначе каждый кадр перетаскивания шлёт на нативную сторону
+// три десятка новых строк, React не может отличить «не изменилось» от нового массива, и
+// движение идёт ступенями. Значения — единственное, что действительно меняется.
+let shape: { names: string[]; sizes: number[] } | null = null;
+
+function channel(entries: [string, number | readonly number[]][]) {
+  const uniformValues: number[] = [];
+  let same = shape !== null && shape.names.length === entries.length;
+  for (let i = 0; i < entries.length; i += 1) {
+    const [name, value] = entries[i];
+    const v = typeof value === 'number' ? [value] : value;
+    if (same && (shape!.names[i] !== name || shape!.sizes[i] !== v.length)) same = false;
+    for (const x of v) uniformValues.push(x);
+  }
+  if (!same) {
+    shape = {
+      names: entries.map((e) => e[0]),
+      sizes: entries.map((e) => (typeof e[1] === 'number' ? 1 : e[1].length)),
+    };
+  }
+  return { uniformNames: shape!.names, uniformSizes: shape!.sizes, uniformValues };
+}
+
+/** Пропы нативной вьюхи. Кроме канала униформ здесь только то, что вьюха использует сама:
+ *  исходник шейдера и габарит видимого стекла (по нему берётся прямоугольник зонда). */
 export function toLensProps(
   optics: VireGlassOptics,
   geometry: VireGlassGeometry,
   options: { debug?: VireGlassDebugMode; morph?: VireGlassMorph } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
+  const d = PixelRatio.get();
+  const halfW = (geometry.width * d) / 2;
+  const halfH = (geometry.height * d) / 2;
+  const halfMin = Math.min(halfW, halfH);
+
   return {
     shaderSource: LENS_SHADER,
     glassWidth: geometry.width,
     glassHeight: geometry.height,
-    cornerRadius: geometry.cornerRadius,
-    bevel: bevelFraction(geometry, optics),
-    magnify: 1 + (optics.refractionScale - 1) * optics.refraction,
-    edgePush: edgePushDp(geometry, optics),
-    chroma: chromaDp(geometry, optics),
-    spherical: sphericalDp(geometry, optics),
-    // ВЫКЛЮЧЕНО. Своё размытие уводит выборку в площадной сбор: дисперсия там не считается
-    // вовсе, а по всему телу появляется смаз, которого в центре быть не должно, — оптика
-    // становится вялой. Зерно снято самим захватом, размытие тут больше не нужно.
-    frost: 0,
-    ink: optics.ink,
-    legibility: optics.legibility,
-    adaptRadius: optics.adaptRadius,
-    bodyDensity: optics.bodyDensity,
-    edgeLight: optics.edgeLight,
-    // Оттенок среды уезжает тремя числами: пропы нативной вьюхи плоские.
-    bodyTintR: optics.tint.r,
-    bodyTintG: optics.tint.g,
-    bodyTintB: optics.tint.b,
-    fresnel: optics.fresnel,
-    fresnelPower: optics.fresnelPower,
-    // Кромка собирает свет в окрестности детали — это радиус вокруг формы, а не её фаска.
-    reflectReach: optics.gatherRadiusDp,
-    morphX: morph.offsetX,
-    morphY: morph.offsetY,
-    morphWidth: morph.width,
-    morphHeight: morph.height,
-    morphCorner: morph.cornerRadius,
-    morphSmoothing: morph.smoothing,
-    debug: debugIndex(options.debug ?? 'normal'),
+    ...channel([
+      ['u_halfSize', [halfW, halfH]],
+      ['u_corner', Math.min(geometry.cornerRadius * d, halfMin)],
+      ['u_bevel', Math.max(bevelDp(geometry, optics) * d, 1)],
+      ['u_magnify', lensMagnify(optics)],
+      ['u_edgePush', edgePushDp(geometry, optics) * d],
+      ['u_chroma', chromaDp(geometry, optics) * d],
+      ['u_spherical', sphericalDp(geometry, optics) * d],
+      // Мутность от шероховатости поверхности. Живёт в том же дисковом сборе, что и
+      // адаптивное рассеяние, и гасится к фаске: там работа другая — гнуть луч и расщеплять.
+      ['u_frost', optics.blur * d],
+      ['u_ink', optics.ink],
+      ['u_legibility', optics.legibility],
+      ['u_adaptRadius', optics.adaptRadius * d],
+      ['u_bodyTint', [optics.tint.r, optics.tint.g, optics.tint.b]],
+      ['u_bodyDensity', optics.bodyDensity],
+      ['u_edgeLight', optics.edgeLight],
+      ['u_fresnel', optics.fresnel],
+      ['u_fresnelPower', optics.fresnelPower],
+      // Кромка собирает свет в окрестности детали — это радиус вокруг формы, а не её фаска.
+      ['u_reflectReach', optics.gatherRadiusDp * d],
+      ['u_film', optics.film],
+      ['u_iridescence', optics.iridescence],
+      ['u_diffraction', optics.diffraction],
+      ['u_colorPickup', optics.colorPickup],
+      ['u_morphOffset', [morph.offsetX * d, morph.offsetY * d]],
+      ['u_morphHalf', [(morph.width * d) / 2, (morph.height * d) / 2]],
+      ['u_morphCorner', morph.cornerRadius * d],
+      ['u_morphK', morph.smoothing * d],
+      ['u_debug', debugIndex(options.debug ?? 'normal')],
+    ]),
   };
 }
 
@@ -132,3 +176,36 @@ export const DYNAMIC_UNIFORMS = [
 ] as const;
 
 export const ICON_UNIFORMS = ['u_iconOn', 'u_iconScale', 'u_inkIdle', 'u_inkActive'] as const;
+
+/**
+ * Слияние двух поверхностей в одну непрерывную среду.
+ *
+ * Вторая форма описывается ОТНОСИТЕЛЬНО центра первой, потому что обе живут в одном шейдере:
+ * у объединения нет «двух стёкол», есть одно тело с двумя выпуклостями — и маска, и
+ * преломление, и кромка считаются по общей сцене.
+ *
+ * `t` — насколько формы слиты: 0 отключает вторую форму до всех вычислений, 1 даёт общую
+ * среду. Радиус сглаживания стыка берётся долей меньшего полуразмера: у крупных деталей
+ * перемычка обязана быть шире, иначе на стыке остаётся острый угол, которого у жидкости
+ * не бывает.
+ */
+const MORPH_NECK = 0.35;
+
+export function morphBetween(
+  a: VireGlassGeometry,
+  b: VireGlassGeometry,
+  offsetX: number,
+  offsetY: number,
+  t: number,
+): VireGlassMorph | undefined {
+  if (t <= 0) return undefined;
+  const half = Math.min(halfMinDp(a), halfMinDp(b));
+  return {
+    offsetX,
+    offsetY,
+    width: b.width,
+    height: b.height,
+    cornerRadius: b.cornerRadius,
+    smoothing: half * MORPH_NECK * Math.min(t, 1),
+  };
+}

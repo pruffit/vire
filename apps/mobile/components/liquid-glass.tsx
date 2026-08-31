@@ -1,19 +1,21 @@
 import { useEffect, useMemo, type RefObject } from 'react';
 import { PixelRatio, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import {
-  BlurStyle,
   PaintStyle,
   Skia,
   StrokeCap,
   StrokeJoin,
   type SkImage,
 } from '@shopify/react-native-skia';
+import * as Haptics from 'expo-haptics';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { ICON_PATHS, type IconName } from '../lib/icon';
 import { colors } from '../lib/theme';
 import { VireGlassSurface } from './vireglass/glass-surface';
 import { circleGeometry, surfacePadDp } from '../lib/vireglass/geometry';
+import { useGlassAdaptation } from '../lib/vireglass/adaptation';
+import { inkColor } from '../lib/vireglass/glass-ink';
 import { useEnvironmentLight } from '../lib/vireglass/environment';
 import {
   resolveOptics,
@@ -22,18 +24,36 @@ import {
 
 const DEFAULT_OPTICS = resolveOptics();
 
-const DRAG_LIMIT = 7;
+/** Тёмный конец шкалы штриха. Кит держит светлый текст на `colors.foreground`; для
+ *  обратной полярности нужен такой же «почти, но не совсем» тёмный. */
+const INK_ON_LIGHT = '#14120f';
+
+/** Ход тяги как доля размера детали. Фиксированные 12 dp на кнопке 68 dp не давали капле
+ *  выйти за тело, и шейке было неоткуда взяться. */
+const DRAG_LIMIT_RATIO = 0.62;
 const TAP_SLOP = 10;
 
 const DRAG_SPRING = { mass: 1, damping: 28, stiffness: 340 };
+// Возврат намеренно недодемпфирован (ζ ≈ 0.5): капля проскакивает мимо покоя и качается
+// назад. Это и есть отдача — критически задемпфированный возврат читается как «отпустило»,
+// а не как упругий материал.
 const RELEASE_SPRING = { mass: 0.9, damping: 17, stiffness: 300 };
 const PRESS_SPRING = { mass: 0.6, damping: 16, stiffness: 260 };
 
+/** Отдача в руку. Стекло — материал, а не картинка: касание обязано ощущаться, иначе
+ *  вся упругость остаётся только на экране. Сбой тактильного движка глушим: на части
+ *  устройств его нет вовсе, и падать из-за этого кнопка не должна. */
+function tick(style: Haptics.ImpactFeedbackStyle) {
+  Haptics.impactAsync(style).catch(() => {});
+}
+
 /** Жёсткое сопротивление: за палец капля идёт крайне неохотно — стекло, а не резинка.
  *  tanh(t / (LIMIT*4)) означает, что даже на 100 dp протяжки капля уезжает лишь на ~7 dp. */
-function pull(t: number) {
+function pull(t: number, limit: number) {
   'worklet';
-  return DRAG_LIMIT * Math.tanh(t / (DRAG_LIMIT * 4));
+  // Делитель 1.6, а не 4: при четырёх пальцу надо пройти четыре хода, чтобы вытянуть каплю
+  // целиком, и на обычном движении она выходила из тела едва наполовину.
+  return limit * Math.tanh(t / (limit * 1.6));
 }
 
 function rgba(hex: string): number[] {
@@ -79,9 +99,8 @@ function useIconMask(name: IconName, box: number, iconSize: number, dpr: number)
       return paint;
     };
 
-    const halo = stroke('red', 2.75 * scale + 3.4);
-    halo.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Normal, 3.0, true));
-    canvas.drawPath(path, halo);
+    // Один штрих и ничего под ним. Размытая тёмная подложка, которая тут стояла, читалась
+    // грязным свечением вокруг каждого значка; разводить светлоту обязано тело стекла.
     canvas.drawPath(path, stroke('white', 2.75 * scale));
 
     surface.flush();
@@ -98,9 +117,9 @@ export function LiquidGlassButton({
   active = false,
   onPress,
   blurTarget,
-  ink = colors.foreground,
-  inkActive = colors.foreground,
-  optics = DEFAULT_OPTICS,
+  ink,
+  inkActive,
+  optics: opticsProp = DEFAULT_OPTICS,
   dim = 0,
   style,
 }: {
@@ -110,6 +129,8 @@ export function LiquidGlassButton({
   onPress?: () => void;
   /** Цель живого блюра — контент текущего экрана (lib/blur-target.tsx). */
   blurTarget?: RefObject<View | null> | null;
+  /** Цвет штриха. Не задан — кнопка ведёт его сама по тому, что лежит под стеклом:
+   *  над светлой обложкой иконка темнеет, над тёмным списком светлеет. */
   ink?: string;
   inkActive?: string;
   optics?: VireGlassOptics;
@@ -118,8 +139,19 @@ export function LiquidGlassButton({
   style?: StyleProp<ViewStyle>;
 }) {
   const dpr = PixelRatio.get();
+  // Полярность штриха ведёт сама кнопка: только она видит, что под ней лежит. Явно
+  // заданный цвет её отключает — вызывающий знает свой контент лучше.
+  const auto = ink === undefined && inkActive === undefined;
+  const adaptation = useGlassAdaptation(opticsProp, { enabled: auto });
+  const optics = useMemo(
+    () => (auto ? { ...opticsProp, ink: adaptation.ink } : opticsProp),
+    [opticsProp, auto, adaptation.ink],
+  );
+  const strokeIdle = ink ?? inkColor(adaptation.ink, colors.foreground, INK_ON_LIGHT);
+  const strokeActive = inkActive ?? strokeIdle;
   const geometry = useMemo(() => circleGeometry(size), [size]);
-  const box = size + surfacePadDp(geometry, DRAG_LIMIT) * 2;
+  const dragLimit = size * DRAG_LIMIT_RATIO;
+  const box = size + surfacePadDp(geometry, dragLimit) * 2;
   const mask = useIconMask(icon, box, Math.round(size * 0.42), dpr);
 
   const shiftX = useSharedValue(0);
@@ -135,10 +167,10 @@ export function LiquidGlassButton({
     () => ({
       image: mask,
       scale: dpr,
-      inkIdle: rgba(ink),
-      inkActive: rgba(inkActive),
+      inkIdle: rgba(strokeIdle),
+      inkActive: rgba(strokeActive),
     }),
-    [mask, dpr, ink, inkActive],
+    [mask, dpr, strokeIdle, strokeActive],
   );
 
   // Pan отвечает только за деформацию и на коротком тапе может вообще не активироваться,
@@ -151,10 +183,11 @@ export function LiquidGlassButton({
       .minDistance(0)
       .onBegin(() => {
         press.value = withSpring(1, PRESS_SPRING);
+        tick(Haptics.ImpactFeedbackStyle.Light);
       })
       .onChange((e) => {
-        shiftX.value = withSpring(pull(e.translationX), DRAG_SPRING);
-        shiftY.value = withSpring(pull(e.translationY), DRAG_SPRING);
+        shiftX.value = withSpring(pull(e.translationX, dragLimit), DRAG_SPRING);
+        shiftY.value = withSpring(pull(e.translationY, dragLimit), DRAG_SPRING);
       })
       .onFinalize(() => {
         shiftX.value = withSpring(0, RELEASE_SPRING);
@@ -165,6 +198,9 @@ export function LiquidGlassButton({
     const tap = Gesture.Tap()
       .maxDistance(TAP_SLOP)
       .onEnd(() => {
+        // Вторая отдача — на срабатывании, и она заметнее первой: касание и действие это
+        // разные события, и различать их на ощупь важнее, чем экономить вибрацию.
+        runOnJS(tick)(Haptics.ImpactFeedbackStyle.Medium);
         if (onPress) runOnJS(onPress)();
       });
 
@@ -179,9 +215,10 @@ export function LiquidGlassButton({
           optics={optics}
           dynamics={{ shiftX, shiftY, press, active: lit, light }}
           blurTarget={blurTarget}
-          dragLimit={DRAG_LIMIT}
+          dragLimit={dragLimit}
           icon={iconLayer}
           dim={dim}
+          onBackdropSample={auto ? adaptation.onBackdropSample : undefined}
         />
       </View>
     </GestureDetector>

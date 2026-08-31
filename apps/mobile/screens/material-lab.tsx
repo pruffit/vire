@@ -1,11 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Dimensions,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Backdrop } from '../components/backdrop';
 import { VireGlassSurface } from '../components/vireglass/glass-surface';
-import { MaterialLabScene } from './material-lab-scene';
+import { MaterialLabScene, ZONE_NAMES } from './material-lab-scene';
 import {
   LabMiniPlayer,
   LabSheet,
@@ -14,7 +23,9 @@ import {
   type LabSurfaceProps,
 } from './material-lab-elements';
 import { MINI_PLAYER_HEIGHT, PLAYER_TRANSPORT_HEIGHT, TAB_BAR_CONTENT_HEIGHT } from '../lib/layout';
-import type { VireGlassMorph } from '../lib/vireglass/adapters';
+import { morphBetween, type VireGlassMorph } from '../lib/vireglass/adapters';
+import { useFrameThrottle } from '../lib/frame-throttle';
+import { INK_DARK, INK_LIGHT, useGlassAdaptation } from '../lib/vireglass/adaptation';
 import { useEnvironmentLight } from '../lib/vireglass/environment';
 import {
   bevelDp,
@@ -63,6 +74,11 @@ const SHAPE_NAMES = Object.keys(SHAPES) as ShapeName[];
 const STAGES = ['фигуры', 'транспорт', 'мини-плеер', 'таб-бар', 'лист', 'всё вместе'] as const;
 type StageName = (typeof STAGES)[number];
 
+const SCREEN_H = Dimensions.get('window').height;
+/** Экранная высота, куда сцена паркует выбранную зону. Совпадает с центром судимой
+ *  поверхности: фигуры стоят на 18% сверху, продуктовые — над системной навигацией. */
+const FIGURES_TOP = SCREEN_H * 0.18;
+
 const SLIDER_KEYS = Object.keys(MATERIAL_RANGES) as VireGlassNumericKey[];
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -102,6 +118,16 @@ function opticsTable(o: VireGlassOptics): string {
   ].join('\n');
 }
 
+/** Стенд показывает либо выведенную из материала оптику, либо замороженный снимок старой
+ *  модели — второе в причины не переводится, поэтому идёт мимо resolveOptics. */
+function base0Optics(
+  legacy: LegacyOpticsName | null,
+  base: VireGlassMaterial,
+  toggles: VireGlassToggles,
+): VireGlassOptics {
+  return applyToggles(legacy ? LEGACY_OPTICS[legacy] : resolveOptics(base), toggles);
+}
+
 function Chip({
   label,
   on,
@@ -115,6 +141,27 @@ function Chip({
     <Pressable style={[styles.chip, on && styles.chipOn]} onPress={onPress}>
       <Text style={[styles.chipText, on && styles.chipTextOn]}>{label}</Text>
     </Pressable>
+  );
+}
+
+/** Серый той светлоты, что кодирует величину 0…1. Крайние значения не берём: чистый чёрный
+ *  и чистый белый встречаются в самой сцене, а метка обязана отличаться от неё. */
+const grey = (v: number) => {
+  const g = Math.round(16 + Math.max(0, Math.min(1, v)) * 220);
+  return `rgb(${g}, ${g}, ${g})`;
+};
+
+function Stepper({ label, onPrev, onNext }: { label: string; onPrev: () => void; onNext: () => void }) {
+  return (
+    <View style={styles.stepper}>
+      <Pressable style={styles.stepBtn} onPress={onPrev} hitSlop={8}>
+        <Text style={styles.stepBtnText}>{'◀'}</Text>
+      </Pressable>
+      <Text style={styles.stepLabel} numberOfLines={1}>{label}</Text>
+      <Pressable style={styles.stepBtn} onPress={onNext} hitSlop={8}>
+        <Text style={styles.stepBtnText}>{'▶'}</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -132,6 +179,9 @@ function Slider({
   onChange: (v: number) => void;
 }) {
   const [width, setWidth] = useState(0);
+  // Значение отдаётся раз в кадр: без этого каждое событие Pan тянуло за собой отдельный
+  // рендер стенда, и ползунок ехал ступенями.
+  const emit = useFrameThrottle(onChange);
   // runOnJS: ворклет-колбэки Pan в связке RNGH 2.32 + reanimated 4 молча не выполняются.
   // activeOffsetX обязателен: без него слайдер перехватывает вертикальный свайп и панель
   // перестаёт прокручиваться — вместо прокрутки уезжает значение под пальцем.
@@ -144,12 +194,12 @@ function Slider({
         // Значение ставится с активации, а не с касания: иначе попытка прокрутить панель
         // успевала сдвинуть ползунок ещё до того, как жест признан горизонтальным.
         .onStart((e) => {
-          if (width > 0) onChange(min + ((max - min) * Math.min(Math.max(e.x, 0), width)) / width);
+          if (width > 0) emit(min + ((max - min) * Math.min(Math.max(e.x, 0), width)) / width);
         })
         .onChange((e) => {
-          if (width > 0) onChange(min + ((max - min) * Math.min(Math.max(e.x, 0), width)) / width);
+          if (width > 0) emit(min + ((max - min) * Math.min(Math.max(e.x, 0), width)) / width);
         }),
-    [width, min, max, onChange],
+    [width, min, max, emit],
   );
 
   const fill = max > min ? (value - min) / (max - min) : 0;
@@ -183,21 +233,27 @@ export function MaterialLab() {
   const [debug, setDebug] = useState<VireGlassDebugMode>('normal');
   const [shape, setShape] = useState<ShapeName>('круг');
   const [count, setCount] = useState(1);
-  const [moving, setMoving] = useState(true);
+  const [moving, setMoving] = useState(false);
+  const [zone, setZone] = useState(0);
   const [morphOn, setMorphOn] = useState(false);
   const [morphT, setMorphT] = useState(0);
   const [lit, setLit] = useState(false);
   const [panel, setPanel] = useState(true);
   const [stage, setStage] = useState<StageName>('фигуры');
   const [dim, setDim] = useState(0);
+  const [autoInk, setAutoInk] = useState(true);
 
-  // Стенд показывает либо выведенную из материала оптику, либо замороженный снимок старой
-  // модели — второе в причины не переводится, поэтому идёт мимо resolveOptics.
+  // Полярность надписи ведёт себя как в продукте: её выбирает автоматика по замеру фона
+  // из нативного зонда. Ползунок ink остаётся ручным управлением, когда автоматика снята.
+  const manual = useMemo(() => base0Optics(legacy, base, toggles), [legacy, base, toggles]);
+  const adaptation = useGlassAdaptation(manual, { enabled: autoInk });
   const optics = useMemo(
-    () => applyToggles(legacy ? LEGACY_OPTICS[legacy] : resolveOptics(base), toggles),
-    [legacy, base, toggles],
+    () => (autoInk ? { ...manual, ink: adaptation.ink } : manual),
+    [manual, autoInk, adaptation.ink],
   );
   const geometry = SHAPES[shape];
+  const focusY =
+    stage === 'фигуры' ? FIGURES_TOP + geometry.height / 2 : SCREEN_H - insets.bottom - 110;
 
   const shiftX = useSharedValue(0);
   const shiftY = useSharedValue(0);
@@ -220,6 +276,68 @@ export function MaterialLab() {
       smoothing: half * 0.35 * morphT,
     };
   }, [morphOn, morphT, geometry]);
+
+  // Стенд управляется ИЗВНЕ по диплинку:
+  //   adb shell am start -a android.intent.action.VIEW -d "vire://lab?zone=11&preset=2"
+  // Тапами это делать нельзя: `input tap` приходит с опозданием и иногда теряется, а замер,
+  // сделанный не в том состоянии, — ровно та ошибка, из-за которой пришлось выбросить ночь
+  // выводов (material-lab.md E-27). Ползунки и чипы остаются для работы руками.
+  useEffect(() => {
+    const apply = (url: string | null) => {
+      if (!url || !url.includes('lab')) return;
+      const q = new URLSearchParams(url.split('?')[1] ?? '');
+      const num = (key: string) => {
+        const v = q.get(key);
+        return v === null ? null : Number(v);
+      };
+      const moveAt = num('move');
+      if (moveAt !== null) setMoving(moveAt > 0);
+      const zoneAt = num('zone');
+      if (zoneAt !== null) {
+        setMoving(false);
+        setZone(Math.max(0, Math.min(ZONE_NAMES.length - 1, zoneAt)));
+      }
+      // Сеттеры, а не applyPreset: тот объявлен НИЖЕ этого эффекта, и обращение к нему из
+      // колбэка Linking рвалось молча — всё, что стоит после, просто не применялось.
+      const presetAt = num('preset');
+      const presetName = presetAt === null ? undefined : PRESET_NAMES[presetAt];
+      if (presetName) {
+        setPreset(presetName);
+        setLegacy(null);
+        setBase(MATERIAL_PRESETS[presetName]);
+      }
+      const debugAt = num('debug');
+      if (debugAt !== null && DEBUG_MODES[debugAt]) setDebug(DEBUG_MODES[debugAt]);
+      const stageAt = num('stage');
+      if (stageAt !== null && STAGES[stageAt]) setStage(STAGES[stageAt]);
+      const panelAt = num('panel');
+      if (panelAt !== null) setPanel(panelAt > 0);
+      const autoAt = num('auto');
+      if (autoAt !== null) setAutoInk(autoAt > 0);
+      const morphAt = num('morph');
+      if (morphAt !== null) {
+        setMorphOn(morphAt > 0);
+        setMorphT(Math.max(0, Math.min(1, morphAt)));
+      }
+      const shapeAt = num('shape');
+      if (shapeAt !== null && SHAPE_NAMES[shapeAt]) setShape(SHAPE_NAMES[shapeAt]);
+      const countAt = num('count');
+      if (countAt !== null) setCount(Math.max(1, Math.min(6, countAt)));
+      // Любой параметр материала — тем же ключом, что в модели: ?ior=1.7&film=620
+      const patch: Partial<VireGlassMaterial> = {};
+      for (const key of SLIDER_KEYS) {
+        const v = num(key);
+        if (v !== null) patch[key] = v;
+      }
+      if (Object.keys(patch).length > 0) {
+        setLegacy(null);
+        setBase((m) => resolveMaterial({ ...m, ...patch }));
+      }
+    };
+    Linking.getInitialURL().then(apply);
+    const sub = Linking.addEventListener('url', ({ url }) => apply(url));
+    return () => sub.remove();
+  }, []);
 
   const applyPreset = (name: MaterialPresetName) => {
     setPreset(name);
@@ -247,7 +365,7 @@ export function MaterialLab() {
       {/* Цель блюра оборачивает ТОЛЬКО фон. Стекло внутри своей же цели замыкает дерево
           RenderNode и роняет рантайм переполнением стека в prepareTreeImpl. */}
       <Backdrop style={StyleSheet.absoluteFill} targetRef={targetRef}>
-        <MaterialLabScene moving={moving} />
+        <MaterialLabScene zone={zone} focusY={focusY} moving={moving} />
       </Backdrop>
 
       {stage === 'фигуры' ? (
@@ -262,8 +380,22 @@ export function MaterialLab() {
               morph={morph}
               backdrop={toggles.backdrop}
               blurTarget={targetRef}
+              onBackdropSample={i === 0 ? adaptation.onBackdropSample : undefined}
             />
           ))}
+          {/* Надпись ПОВЕРХ стекла: ровно то, ради чего вся адаптация и существует. Её цвет
+              ведёт автоматика — если стекло дошло до предела, полярность переворачивается. */}
+          <Text
+            style={[
+              styles.overInk,
+              {
+                top: geometry.height / 2 - 9,
+                color: `rgb(${Math.round(255 * (INK_DARK + (INK_LIGHT - INK_DARK) * optics.ink))}, ${Math.round(255 * (INK_DARK + (INK_LIGHT - INK_DARK) * optics.ink))}, ${Math.round(255 * (INK_DARK + (INK_LIGHT - INK_DARK) * optics.ink))})`,
+              },
+            ]}
+          >
+            Читаемость
+          </Text>
         </View>
       ) : null}
 
@@ -278,10 +410,30 @@ export function MaterialLab() {
         </View>
       ) : null}
 
-      <Text style={[styles.hud, { top: insets.top + 8 }]}>
-        {legacy ?? preset} · {shape} · {debug}
-        {morphOn ? ` · морфинг ${morphT.toFixed(2)}` : ''}
-      </Text>
+      {/* Строка стоит НЕПОДВИЖНО и вне прокрутки: повторный замер требует, чтобы состояние
+          менялось по фиксированным координатам, иначе тап уезжает в соседний чип (E-27). */}
+      <View style={[styles.steppers, { top: insets.top + 4 }]} pointerEvents="box-none">
+        <Stepper
+          label={moving ? 'движение' : ZONE_NAMES[zone]}
+          onPrev={() => { setMoving(false); setZone((z) => (z + ZONE_NAMES.length - 1) % ZONE_NAMES.length); }}
+          onNext={() => { setMoving(false); setZone((z) => (z + 1) % ZONE_NAMES.length); }}
+        />
+        <Stepper
+          label={legacy ?? preset}
+          onPrev={() => applyPreset(PRESET_NAMES[(PRESET_NAMES.indexOf(preset) + PRESET_NAMES.length - 1) % PRESET_NAMES.length])}
+          onNext={() => applyPreset(PRESET_NAMES[(PRESET_NAMES.indexOf(preset) + 1) % PRESET_NAMES.length])}
+        />
+        <Stepper
+          label={debug}
+          onPrev={() => setDebug(DEBUG_MODES[(DEBUG_MODES.indexOf(debug) + DEBUG_MODES.length - 1) % DEBUG_MODES.length])}
+          onNext={() => setDebug(DEBUG_MODES[(DEBUG_MODES.indexOf(debug) + 1) % DEBUG_MODES.length])}
+        />
+        <Stepper
+          label={stage}
+          onPrev={() => setStage(STAGES[(STAGES.indexOf(stage) + STAGES.length - 1) % STAGES.length])}
+          onNext={() => setStage(STAGES[(STAGES.indexOf(stage) + 1) % STAGES.length])}
+        />
+      </View>
 
       {/* Панель уезжает наверх, когда мешает снизу: лист выезжает ровно оттуда же, а
           свёрнутая кнопка иначе ложится на таб-бар и мини-плеер, которые и оцениваются. */}
@@ -344,6 +496,15 @@ export function MaterialLab() {
               ))}
             </View>
             <Slider label="dim (затемнение линзы)" value={dim} min={0} max={1} onChange={setDim} />
+            <View style={styles.wrap}>
+              <Chip label="автополярность" on={autoInk} onPress={() => setAutoInk((v) => !v)} />
+            </View>
+            <Text style={styles.code} selectable>
+              {adaptation.sample
+                ? `фон ${adaptation.sample.luma.toFixed(3)}  пестрота ${adaptation.sample.busy.toFixed(3)}
+полярность ${optics.ink.toFixed(2)}`
+                : 'зонд молчит'}
+            </Text>
 
             <Text style={styles.section}>сцена</Text>
             <View style={styles.wrap}>
@@ -363,6 +524,13 @@ export function MaterialLab() {
               ))}
               <Chip label="движение фона" on={moving} onPress={() => setMoving((v) => !v)} />
               <Chip label="активное" on={lit} onPress={() => setLit((v) => !v)} />
+            </View>
+
+            <Text style={styles.section}>зона под стеклом</Text>
+            <View style={styles.wrap}>
+              {ZONE_NAMES.map((n, i) => (
+                <Chip key={n} label={n} on={!moving && zone === i} onPress={() => { setMoving(false); setZone(i); }} />
+              ))}
             </View>
 
             <Text style={styles.section}>морфинг</Text>
@@ -415,6 +583,27 @@ export function MaterialLab() {
           </ScrollView>
         ) : null}
       </View>
+      {/* Метка состояния для скриптов замера (scripts/glass-probe.mjs). Слева маркер
+          фиксированного цвета — по нему скрипт находит метку на снимке, не зная ни плотности
+          экрана, ни вырезов. Дальше данные, каждое СЕРЫМ: экран телефона гонит скриншот через
+          цветовой профиль, и насыщенные цвета приезжают искажёнными (маджента как 234,51,247),
+          а серые проходят один в один. */}
+      <View style={styles.stateTag} pointerEvents="none">
+        <View style={styles.stateMark} />
+        {[
+          zone / 16,
+          PRESET_NAMES.indexOf(preset) / 16,
+          DEBUG_MODES.indexOf(debug) / 16,
+          optics.ink,
+          adaptation.sample?.luma ?? 0,
+          Math.min(adaptation.sample?.busy ?? 0, 1),
+        ].map((v, i) => (
+          <View
+            key={i}
+            style={[styles.stateCell, { backgroundColor: grey(v) }]}
+          />
+        ))}
+      </View>
     </View>
   );
 }
@@ -430,6 +619,7 @@ const styles = StyleSheet.create({
     gap: 22,
   },
   productStack: { position: 'absolute', left: 0, right: 0, gap: 10 },
+  overInk: { position: 'absolute', fontSize: 15, fontWeight: '700', letterSpacing: 0.5 },
   code: {
     color: '#b3c1c8',
     fontSize: 10,
@@ -439,6 +629,21 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 8,
   },
+  stateTag: { position: 'absolute', left: 0, top: 96, flexDirection: 'row' },
+  stateMark: { width: 12, height: 12, backgroundColor: '#ff00ff' },
+  stateCell: { width: 12, height: 12 },
+  steppers: { position: 'absolute', left: 8, right: 8, flexDirection: 'row', gap: 6 },
+  stepper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0a0e11d8',
+    borderRadius: 7,
+    paddingVertical: 3,
+  },
+  stepBtn: { paddingHorizontal: 8, paddingVertical: 4 },
+  stepBtnText: { color: '#5ecfc6', fontSize: 12 },
+  stepLabel: { flex: 1, color: '#e6ecef', fontSize: 9, textAlign: 'center' },
   hud: {
     position: 'absolute',
     left: 16,

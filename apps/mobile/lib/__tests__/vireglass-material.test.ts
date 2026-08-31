@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PixelRatio } from 'react-native';
 import { describe, expect, it } from 'vitest';
 import {
   DYNAMIC_UNIFORMS,
@@ -199,8 +200,12 @@ describe('геометрия', () => {
   // Непрерывно плывущий запас пере-раскладывает нативную вьюху каждый кадр — отсюда рывки
   // при перетаскивании и морфинге. Квантование делает размер ступенчатым.
   it('запас квантован, а не плывёт на каждый пиксель', () => {
-    expect(lensPadDp(circle, optics, undefined, 10)).toBe(lensPadDp(circle, optics, undefined, 12));
-    expect(surfacePadDp(circle, 10)).toBe(surfacePadDp(circle, 12));
+    // Проверяется СТУПЕНЧАТОСТЬ, а не конкретные значения: сравнение двух чисел ломалось
+    // каждый раз, когда предел растяжения менялся и они расходились по соседним ступеням.
+    const lens = new Set([8, 9, 10, 11, 12, 13, 14, 15, 16].map((d) => lensPadDp(circle, optics, undefined, d)));
+    const surface = new Set([8, 9, 10, 11, 12, 13, 14, 15, 16].map((d) => surfacePadDp(circle, d)));
+    expect(lens.size).toBeLessThanOrEqual(3);
+    expect(surface.size).toBeLessThanOrEqual(3);
   });
 
   it('радиус сбора шире фаски — это окрестность детали, а не её кромка', () => {
@@ -212,22 +217,35 @@ describe('геометрия', () => {
   });
 });
 
+/** Значение униформы из общего канала. Канал плоский: имя ↔ размер ↔ срез значений. */
+function lensUniform(props: ReturnType<typeof toLensProps>, name: string): number[] {
+  const i = props.uniformNames.indexOf(name);
+  if (i < 0) throw new Error(`униформы ${name} нет в канале`);
+  const at = props.uniformSizes.slice(0, i).reduce((a, b) => a + b, 0);
+  return props.uniformValues.slice(at, at + props.uniformSizes[i]);
+}
+
 describe('адаптеры', () => {
   it('выключенное преломление не смещает выборку и не увеличивает середину', () => {
     const props = toLensProps(applyToggles(optics, { refraction: false }), circle);
-    expect(props.magnify).toBe(1);
-    expect(props.edgePush).toBe(0);
-    expect(props.spherical).toBe(0);
+    expect(lensUniform(props, 'u_magnify')).toEqual([1]);
+    expect(lensUniform(props, 'u_edgePush')).toEqual([0]);
+    expect(lensUniform(props, 'u_spherical')).toEqual([0]);
   });
 
   it('выключенная дисперсия убирает хроматическое расхождение', () => {
-    expect(toLensProps(applyToggles(optics, { dispersion: false }), circle).chroma).toBe(0);
+    expect(
+      lensUniform(toLensProps(applyToggles(optics, { dispersion: false }), circle), 'u_chroma'),
+    ).toEqual([0]);
   });
 
   // Тот же класс, что и рассинхрон имён пропов: долю фаски видят ОБЕ программы, и разойтись
   // им нельзя — иначе линза и поверхность рисуют разную форму.
-  it('обе программы видят одну и ту же долю фаски', () => {
-    expect(toLensProps(optics, circle).bevel).toBe(toSurfaceUniforms(optics, circle).u_thickness);
+  it('обе программы видят одну и ту же фаску', () => {
+    // Линза получает фаску в пикселях, поверхность — в dp: одна и та же величина среды,
+    // разные единицы. Разъехаться им нельзя — иначе две программы рисуют разную форму.
+    const px = lensUniform(toLensProps(optics, circle), 'u_bevel')[0];
+    expect(px / PixelRatio.get()).toBeCloseTo(toSurfaceUniforms(optics, circle).u_bevel, 5);
   });
 
   // Отражение — функция окружения, а окружение видно только линзе. Пока Френель считался в
@@ -240,23 +258,25 @@ describe('адаптеры', () => {
     expect(SURFACE_SHADER).not.toContain('u_edgeStrength');
 
     const props = toLensProps(optics, circle);
-    expect(props.fresnel).toBe(optics.fresnel);
-    expect(props.reflectReach).toBeGreaterThan(0);
+    expect(lensUniform(props, 'u_fresnel')).toEqual([optics.fresnel]);
+    expect(lensUniform(props, 'u_reflectReach')[0]).toBeGreaterThan(0);
   });
 
   it('выключенный френель убирает отражение целиком', () => {
-    expect(toLensProps(applyToggles(optics, { fresnel: false }), circle).fresnel).toBe(0);
+    expect(
+      lensUniform(toLensProps(applyToggles(optics, { fresnel: false }), circle), 'u_fresnel'),
+    ).toEqual([0]);
   });
 
   it('вторая форма выключена, пока морфинг не задан', () => {
-    expect(toLensProps(optics, circle).morphSmoothing).toBe(0);
+    expect(lensUniform(toLensProps(optics, circle), 'u_morphK')).toEqual([0]);
     expect(toSurfaceUniforms(optics, circle).u_morphK).toBe(0);
   });
 
   it('debug-режим уезжает в шейдеры одним и тем же индексом', () => {
     expect(debugIndex('normal')).toBe(0);
     expect(debugIndex('backdrop')).toBe(6);
-    expect(toLensProps(optics, circle, { debug: 'backdrop' }).debug).toBe(6);
+    expect(lensUniform(toLensProps(optics, circle, { debug: 'backdrop' }), 'u_debug')).toEqual([6]);
     expect(toSurfaceUniforms(optics, circle, { debug: 'backdrop' }).u_debug).toBe(6);
   });
 
@@ -287,19 +307,31 @@ describe('контракт с нативным слоем', () => {
     const names = [...view.matchAll(/setFloatUniform\("(\w+)"/g)].map((m) => m[1]);
     expect(names.length).toBeGreaterThan(0);
     for (const name of names) {
-      expect(LENS_SHADER, `униформа ${name} отсутствует в шейдере линзы`).toContain(
-        `uniform float`,
-      );
       expect(new RegExp(`uniform\\s+\\w+\\s+${name};`).test(LENS_SHADER)).toBe(true);
     }
   });
 
-  it('каждая униформа AGSL-исходника получает значение из Kotlin', () => {
+  // Униформу ставит либо сама вьюха (то, что знает только она — свой размер и место), либо
+  // общий канал из JS. Незаполненных быть не должно ни одной: в AGSL это молчаливый ноль.
+  it('каждая униформа AGSL-исходника кем-то заполняется', () => {
     const declared = [...LENS_SHADER.matchAll(/uniform\s+\w+\s+(u_\w+);/g)].map((m) => m[1]);
-    const set = new Set([...view.matchAll(/setFloatUniform\("(\w+)"/g)].map((m) => m[1]));
+    const native = [...view.matchAll(/setFloatUniform\("(\w+)"/g)].map((m) => m[1]);
+    const provided = new Set([...native, ...toLensProps(optics, circle).uniformNames]);
     for (const name of declared) {
-      expect(set, `униформа ${name} нигде не выставляется`).toContain(name);
+      expect(provided, `униформа ${name} нигде не выставляется`).toContain(name);
     }
+  });
+
+  it('канал не шлёт униформ, которых в шейдере нет', () => {
+    for (const name of toLensProps(optics, circle).uniformNames) {
+      expect(new RegExp(`uniform\\s+\\w+\\s+${name};`).test(LENS_SHADER)).toBe(true);
+    }
+  });
+
+  it('размеры канала совпадают с числом значений', () => {
+    const props = toLensProps(optics, circle);
+    expect(props.uniformNames.length).toBe(props.uniformSizes.length);
+    expect(props.uniformSizes.reduce((x, y) => x + y, 0)).toBe(props.uniformValues.length);
   });
 });
 
@@ -390,5 +422,16 @@ describe('капканы исходника', () => {
         at = src.indexOf(`${hook}(`, at + 1);
       }
     }
+  });
+});
+
+describe('деформация живёт в одном месте', () => {
+  // Линза — нативная вьюха, шейдер её не гнёт: её деформацию несёт трансформ. Если ту же
+  // деформацию продублировать в SKSL поверхности, получаются два конвейера на одно движение
+  // (Reanimated и Skia коммитят в разных кадрах) — и на протяжке слои видно по отдельности.
+  it('поверхность не гнёт себя сама — ни тягой, ни нажатием', () => {
+    expect(SURFACE_SHADER).not.toContain('p *= 1.0 - u_press');
+    expect(SURFACE_SHADER).not.toContain('u_stretch');
+    expect(SURFACE_SHADER).not.toContain('u_dir');
   });
 });

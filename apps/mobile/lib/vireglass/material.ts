@@ -29,6 +29,9 @@ import {
   specularPower as specularPowerFrom,
   bodyDensity as bodyDensityFrom,
   edgeLight as edgeLightFrom,
+  iridescence as iridescenceFrom,
+  diffraction as diffractionFrom,
+  colorPickup as colorPickupFrom,
   specularStrength,
 } from './optics';
 
@@ -51,6 +54,9 @@ export type VireGlassMaterial = {
   /** Светлота того, что приложение рисует ПОВЕРХ стекла: 1 — светлые иконки и текст,
    *  0 — тёмные. Причина, а не ручка: её знает вызывающий экран. */
   ink: number;
+  /** Толщина поверхностной плёнки, нм. Отсюда интерференция: разность хода в плёнке
+   *  сравнима с длиной волны, и отражение окрашивается переливами. 0 — плёнки нет. */
+  film: number;
 };
 
 export const MATERIAL_RANGES = {
@@ -61,6 +67,7 @@ export const MATERIAL_RANGES = {
   environment: [0, 1],
   legibility: [0, 1],
   ink: [0, 1],
+  film: [0, 900],
 } as const satisfies Record<string, readonly [number, number]>;
 
 export type VireGlassNumericKey = keyof typeof MATERIAL_RANGES;
@@ -102,6 +109,14 @@ export type VireGlassOptics = {
   adaptRadius: number;
   bodyDensity: number;
   edgeLight: number;
+  /** Толщина плёнки, нм — прямо в шейдер: разность хода считается в тех же единицах. */
+  film: number;
+  /** Сила переливов на отражении. */
+  iridescence: number;
+  /** Сила краевых дифракционных полос. */
+  diffraction: number;
+  /** Насколько тело красится цветом окружения. */
+  colorPickup: number;
 };
 
 // Продовый дефолт — «вода»: ниже показатель преломления, тоньше среда и фаска, почти
@@ -114,6 +129,7 @@ export const VIREGLASS_MATERIAL_V4: VireGlassMaterial = {
   environment: 0.27,
   legibility: 0.26,
   ink: 1,
+  film: 340,
 };
 
 /** Материал продукта. Потребители берут его, а не версию поимённо. */
@@ -153,6 +169,10 @@ export function resolveOptics(patch: Partial<VireGlassMaterial> = {}): VireGlass
     adaptRadius: ADAPT_RADIUS,
     bodyDensity: bodyDensityFrom(m.thickness),
     edgeLight: edgeLightFrom(m.ior),
+    film: m.film,
+    iridescence: iridescenceFrom(m.ior, m.film),
+    diffraction: diffractionFrom(m.ior),
+    colorPickup: colorPickupFrom(m.ior),
   };
 }
 
@@ -183,6 +203,10 @@ export const LEGACY_OPTICS = {
     adaptRadius: ADAPT_RADIUS,
     bodyDensity: 0.14,
     edgeLight: 0.35,
+    film: 0,
+    iridescence: 0,
+    diffraction: 0,
+    colorPickup: 0,
   },
   'v2': {
     blur: 5,
@@ -205,6 +229,10 @@ export const LEGACY_OPTICS = {
     adaptRadius: ADAPT_RADIUS,
     bodyDensity: 0.14,
     edgeLight: 0.35,
+    film: 0,
+    iridescence: 0,
+    diffraction: 0,
+    colorPickup: 0,
   },
   'v1': {
     blur: 12,
@@ -227,6 +255,10 @@ export const LEGACY_OPTICS = {
     adaptRadius: ADAPT_RADIUS,
     bodyDensity: 0.14,
     edgeLight: 0.35,
+    film: 0,
+    iridescence: 0,
+    diffraction: 0,
+    colorPickup: 0,
   },
 } as const satisfies Record<string, VireGlassOptics>;
 
@@ -241,6 +273,7 @@ export const MATERIAL_PRESETS = {
   Матовое: { ...VIREGLASS_MATERIAL_V4, roughness: 0.55 },
   Толстое: { ...VIREGLASS_MATERIAL_V4, thickness: 48, bevel: 22 },
   Плёнка: { ...VIREGLASS_MATERIAL_V4, thickness: 4, bevel: 3 },
+  Бензин: { ...VIREGLASS_MATERIAL_V4, ior: 1.5, thickness: 8, bevel: 6, film: 620 },
 } as const satisfies Record<string, VireGlassMaterial>;
 
 export type MaterialPresetName = keyof typeof MATERIAL_PRESETS;
@@ -257,6 +290,8 @@ export const EFFECTS = [
   'tint',
   'environment',
   'legibility',
+  'interference',
+  'diffraction',
 ] as const;
 
 export type VireGlassEffect = (typeof EFFECTS)[number];
@@ -292,6 +327,8 @@ export function applyToggles(
   if (!on.tint) o.tintStrength = 0;
   if (!on.environment) o.environment = 0;
   if (!on.legibility) o.legibility = 0;
+  if (!on.interference) o.iridescence = 0;
+  if (!on.diffraction) o.diffraction = 0;
   return o;
 }
 
@@ -307,6 +344,8 @@ export const DEBUG_MODES = [
   'specular',
   'dispersion',
   'normals',
+  'spectral',
+  'adapt',
 ] as const;
 
 export type VireGlassDebugMode = (typeof DEBUG_MODES)[number];

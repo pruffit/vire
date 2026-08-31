@@ -58,3 +58,6 @@ modules/*/android/.cxx/
 
 # Каталог нативной сборки, вынесенный из pnpm-стора (plugins/with-native-build-dir.js)
 .cxx/
+
+# Снимки стенда для scripts/glass-probe.mjs
+.glass-shots

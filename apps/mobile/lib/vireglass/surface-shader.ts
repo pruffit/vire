@@ -14,9 +14,6 @@ uniform float2 u_morphHalf;
 uniform float  u_morphCorner;
 uniform float  u_morphK;
 
-uniform float2 u_shift;
-uniform float2 u_dir;
-uniform float  u_stretch;
 uniform float  u_press;
 uniform float  u_active;
 uniform float2 u_light;
@@ -39,7 +36,6 @@ uniform float4 u_inkActive;
 ${VG_SDF}
 
 const float VG_FALLOFF = ${VG_FALLOFF};
-const float ICON_LAG = 0.5;
 /* Толщина, на которой откалибровано поглощение: при ней полоса совпадает с прежним стеклом. */
 const float VG_REF_THICKNESS = 0.18;
 // Плотность тинта в плоской середине; у фаски она множится на u_edgeDensity.
@@ -55,17 +51,13 @@ half3 vgHeat(float v) {
 }
 
 half4 main(float2 xy) {
-  float2 p = xy - u_center - u_shift;
+  float2 p = xy - u_center;
 
   // Обратная деформация: вдоль вектора тяги растяжение A, поперёк сжатие 1/sqrt(A). Ровно
   // этот закон повторяет трансформ живой подложки под канвасом, иначе они разъезжаются.
-  if (u_stretch > 0.001) {
-    float along = dot(p, u_dir);
-    float2 perp = p - u_dir * along;
-    float A = 1.0 + u_stretch;
-    p = u_dir * (along / A) + perp * sqrt(A);
-  }
-  p *= 1.0 - u_press * 0.05;
+  // Геометрии движения здесь НЕТ — ни тяги, ни вздутия от нажатия. Всё это делает один
+  // трансформ обёртки, он же несёт нативную линзу: шейдер её не достаёт, а два конвейера
+  // на одно движение расходятся на кадр, и слои становится видно по отдельности.
 
   float halfMin = max(min(u_halfSize.x, u_halfSize.y), 1.0);
   float bevel = max(u_bevel, 1.0);
@@ -116,7 +108,9 @@ half4 main(float2 xy) {
     if (u_debug < 7.5) { return vgPack(half3(1.0), spec * inMask); }
     // Расщепление считает линза; здесь — поле, по которому оно нарастает.
     if (u_debug < 8.5) { return vgPack(vgHeat(u_dispersion * t * t), inMask); }
-    return vgPack(half3(N * 0.5 + 0.5), inMask);
+    if (u_debug < 9.5) { return vgPack(half3(N * 0.5 + 0.5), inMask); }
+    // spectral и adapt показывает ЛИНЗА — поверхность обязана уйти с дороги.
+    return half4(0.0);
   }
 
   // Тень и ореол живут СНАРУЖИ формы: внутри их место занимает само стекло. Отрыв от
@@ -160,13 +154,9 @@ half4 main(float2 xy) {
 
   col += half3(spec) * half3(0.98, 0.99, 1.0);
 
-  float2 ip = u_center + p + u_shift * (1.0 - ICON_LAG);
-  half4 ink = u_icon.eval(ip * u_iconScale) * half(u_iconOn);
-  // Маска двухслойная: штрих в зелёном канале, размытый красный ореол под ним. Разность
-  // каналов даёт тень под иконкой — без неё светлый штрих тонет в светлой обложке.
-  half halation = ink.a - ink.g;
-  col *= 1.0 - halation * 0.92;
-  a = max(a, float(halation) * 0.72);
+  // Значок едет вместе со стеклом: перенос и деформацию несёт трансформ обёртки, здесь
+  // остаётся только его место на детали.
+  half4 ink = u_icon.eval((u_center + p) * u_iconScale) * half(u_iconOn);
   half inkA = ink.g * half(mix(0.82, 1.0, u_active));
   half3 inkCol = mix(half3(u_inkIdle.rgb), half3(u_inkActive.rgb), half(u_active));
   col = col * (1.0 - inkA) + inkCol * inkA;

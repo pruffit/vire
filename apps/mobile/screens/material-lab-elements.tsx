@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type RefObject } from 'react';
+import { memo, useMemo, useRef, useState, type RefObject } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassPanel } from '../components/ui/glass-panel';
 import { LiquidGlassButton } from '../components/liquid-glass';
 import { Icon } from '../lib/icon';
+import { useFrameThrottle } from '../lib/frame-throttle';
+import { useInkColor } from '../lib/vireglass/glass-ink';
 import { colors } from '../lib/theme';
 import { type } from '../lib/design/typography';
 import { space, layout, radii } from '../lib/design/scales';
@@ -29,6 +31,81 @@ export type LabSurfaceProps = {
 /** Обложка в стенде — не сеть, а яркий градиент: стекло над светлым проверяется тяжелее. */
 const COVER = ['#7ee3c8', '#4aa3ff', '#b06cff'] as const;
 
+/** Тёмный конец шкалы надписи. Кит держит светлый текст на `colors.foreground`; для обратной
+ *  полярности нужен такой же «почти, но не совсем» тёмный. */
+const INK_ON_LIGHT = '#14120f';
+
+/** Содержимое поверхностей спрашивает цвет У СТЕКЛА, а не берёт его из кита: полярность
+ *  решает сама поверхность, и надпись обязана ехать вместе с ней. Хук работает только внутри
+ *  `GlassPanel` — поэтому содержимое вынесено в отдельные компоненты. */
+function useInk() {
+  return useInkColor(colors.foreground, INK_ON_LIGHT);
+}
+
+/** Цвет НА заливке цвета надписи: аргументы те же, порядок обратный. Иначе при развороте
+ *  полярности диск play темнеет вместе с надписью, а треугольник на нём остаётся тёмным. */
+function useOnInk() {
+  return useInkColor(colors.background, colors.foreground);
+}
+
+function TransportRow() {
+  const ink = useInk();
+  const onInk = useOnInk();
+  return (
+    <>
+      <Icon name="heart" size={24} color={ink} />
+      <Icon name="skip-back" size={24} color={ink} />
+      <View style={[styles.play, { backgroundColor: ink }]}>
+        <Icon name="play" size={26} color={onInk} />
+      </View>
+      <Icon name="skip-forward" size={24} color={ink} />
+      <Icon name="share" size={20} color={ink} />
+    </>
+  );
+}
+
+function MiniRow() {
+  const ink = useInk();
+  return (
+    <>
+      <LinearGradient colors={COVER} style={styles.miniCover} />
+      <View style={styles.miniInfo}>
+        <Text style={[type.sectionTitle, { color: ink }]} numberOfLines={1}>
+          Groove Geometry
+        </Text>
+        <Text style={[type.caption, { color: ink, opacity: 0.62 }]} numberOfLines={1}>
+          KOTLAEV DANIL
+        </Text>
+      </View>
+      <Icon name="pause" size={20} color={ink} />
+    </>
+  );
+}
+
+const SheetContent = memo(function SheetContent({ bottom }: { bottom: number }) {
+  const ink = useInk();
+  return (
+    <>
+      <View style={[styles.grabber, { backgroundColor: ink, opacity: 0.28 }]} />
+      <Text style={[type.screenTitle, { color: ink }]}>Очередь</Text>
+      {SHEET_ROWS.map((title) => (
+        <View key={title} style={styles.sheetRow}>
+          <LinearGradient colors={COVER} style={styles.sheetCover} />
+          <View style={styles.miniInfo}>
+            <Text style={[type.row, { color: ink }]} numberOfLines={1}>
+              {title}
+            </Text>
+            <Text style={[type.caption, { color: ink, opacity: 0.62 }]} numberOfLines={1}>
+              KOTLAEV DANIL
+            </Text>
+          </View>
+        </View>
+      ))}
+      <View style={{ height: bottom }} />
+    </>
+  );
+});
+
 const TAB_ICONS = ['home', 'search', 'list', 'user'] as const;
 const TAB_CIRCLE = 68;
 
@@ -43,13 +120,7 @@ export function LabTransport({ optics, debug, blurTarget, dim }: LabSurfaceProps
       style={styles.transport}
       contentStyle={styles.transportRow}
     >
-      <Icon name="heart" size={24} color={colors.foreground} />
-      <Icon name="skip-back" size={24} color={colors.foreground} />
-      <View style={styles.play}>
-        <Icon name="play" size={26} color={colors.background} />
-      </View>
-      <Icon name="skip-forward" size={24} color={colors.foreground} />
-      <Icon name="share" size={20} color={colors.foreground} />
+      <TransportRow />
     </GlassPanel>
   );
 }
@@ -66,16 +137,7 @@ export function LabMiniPlayer({ optics, debug, blurTarget, dim }: LabSurfaceProp
         style={styles.mini}
         contentStyle={styles.miniRow}
       >
-        <LinearGradient colors={COVER} style={styles.miniCover} />
-        <View style={styles.miniInfo}>
-          <Text style={type.sectionTitle} numberOfLines={1}>
-            Groove Geometry
-          </Text>
-          <Text style={type.caption} numberOfLines={1}>
-            KOTLAEV DANIL
-          </Text>
-        </View>
-        <Icon name="pause" size={20} color={colors.foreground} />
+        <MiniRow />
       </GlassPanel>
       <View style={styles.miniTrack} pointerEvents="none">
         <View style={styles.miniFill} />
@@ -118,6 +180,9 @@ export function LabSheet({ optics, debug, blurTarget, dim }: LabSurfaceProps) {
   const { height: windowHeight } = useWindowDimensions();
   const max = windowHeight - insets.top - space.xl;
   const [height, setHeight] = useState(SHEET_MIN * 2);
+  // Высота меняет геометрию стекла, а с ней путь Skia и весь набор униформ линзы. Одно
+  // такое пересобирание на кадр шторка держит; по событию на каждое движение пальца — нет.
+  const emitHeight = useFrameThrottle(setHeight);
   // Высота ещё и в ref: держать её в зависимостях жеста нельзя — объект жеста
   // пересоздавался бы на каждом кадре тяги, и GestureDetector срывал бы перетаскивание.
   const heightRef = useRef(SHEET_MIN * 2);
@@ -133,9 +198,9 @@ export function LabSheet({ optics, debug, blurTarget, dim }: LabSurfaceProps) {
         .onChange((e) => {
           const next = Math.min(max, Math.max(SHEET_MIN, startRef.current - e.translationY));
           heightRef.current = next;
-          setHeight(next);
+          emitHeight(next);
         }),
-    [max],
+    [max, emitHeight],
   );
 
   return (
@@ -148,23 +213,9 @@ export function LabSheet({ optics, debug, blurTarget, dim }: LabSurfaceProps) {
           blurTarget={blurTarget}
           dim={dim}
           style={styles.sheet}
-          contentStyle={[styles.sheetContent, { paddingBottom: insets.bottom + radii.sheet }]}
+          contentStyle={[styles.sheetContent, { paddingBottom: radii.sheet }]}
         >
-          <View style={styles.grabber} />
-          <Text style={type.screenTitle}>Очередь</Text>
-          {SHEET_ROWS.map((title) => (
-            <View key={title} style={styles.sheetRow}>
-              <LinearGradient colors={COVER} style={styles.sheetCover} />
-              <View style={styles.miniInfo}>
-                <Text style={type.row} numberOfLines={1}>
-                  {title}
-                </Text>
-                <Text style={type.caption} numberOfLines={1}>
-                  KOTLAEV DANIL
-                </Text>
-              </View>
-            </View>
-          ))}
+          <SheetContent bottom={insets.bottom} />
         </GlassPanel>
       </View>
     </GestureDetector>
@@ -222,14 +273,7 @@ const styles = StyleSheet.create({
   sheetWrap: { position: 'absolute', left: 0, right: 0 },
   sheet: { flex: 1 },
   sheetContent: { flex: 1, overflow: 'hidden', paddingHorizontal: layout.screenPadding, gap: space.md },
-  grabber: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: radii.full,
-    backgroundColor: 'rgba(255,255,255,0.28)',
-    marginTop: space.md,
-  },
+  grabber: { alignSelf: 'center', width: 36, height: 4, borderRadius: radii.full, marginTop: space.md },
   sheetRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   sheetCover: { width: 44, height: 44, borderRadius: radii.coverSm },
 

@@ -6,3 +6,7 @@ export const NativeModules = { SourceCode: { scriptURL: null as string | null } 
 
 // Стор плеера подписывается на уход в фон, чтобы отчитаться о прослушивании.
 export const AppState = { addEventListener: () => ({ remove: () => {} }) };
+
+// Адаптеры VireGlass переводят dp в пиксели устройства ещё в JS (`toLensProps`) — в тестах
+// плотность фиксируем единицей, чтобы проверять сами величины, а не масштаб экрана.
+export const PixelRatio = { get: () => 1 };

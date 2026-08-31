@@ -2,6 +2,8 @@ import { useMemo, useState, type ReactNode, type RefObject } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { VireGlassSurface } from '../vireglass/glass-surface';
+import { useGlassAdaptation } from '../../lib/vireglass/adaptation';
+import { GlassInkProvider } from '../../lib/vireglass/glass-ink';
 import { useEnvironmentLight } from '../../lib/vireglass/environment';
 import {
   resolveOptics,
@@ -30,6 +32,7 @@ export function GlassPanel({
   blurTarget,
   dim = 0,
   optics: opticsOverride,
+  adaptive = true,
   debug,
   style,
   contentStyle,
@@ -43,6 +46,9 @@ export function GlassPanel({
   dim?: number;
   /** Только для стенда материала: продукт всегда берёт дефолт. */
   optics?: VireGlassOptics;
+  /** Панель сама решает, светлыми или тёмными обязаны быть надписи на ней, и раздаёт это
+   *  решение детям через useInkColor. Выключать там, где экран знает свой контент лучше. */
+  adaptive?: boolean;
   debug?: VireGlassDebugMode;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
@@ -61,7 +67,13 @@ export function GlassPanel({
     () => (size ? { width: size.width, height: size.height, cornerRadius: radius } : null),
     [size, radius],
   );
-  const optics = opticsOverride ?? DEFAULT_OPTICS;
+  const base = opticsOverride ?? DEFAULT_OPTICS;
+  // Полярность надписей ведёт сама панель: только она видит, что под ней лежит.
+  const adaptation = useGlassAdaptation(base, { enabled: adaptive });
+  const optics = useMemo(
+    () => (adaptive ? { ...base, ink: adaptation.ink } : base),
+    [base, adaptive, adaptation.ink],
+  );
   const light = useEnvironmentLight(optics.environment);
 
   // Панель неподвижна: деформации и нажатия у неё нет, но контракт поверхности требует
@@ -82,10 +94,13 @@ export function GlassPanel({
             blurTarget={blurTarget}
             dim={dim}
             debug={debug ?? 'normal'}
+            onBackdropSample={adaptive ? adaptation.onBackdropSample : undefined}
           />
         </View>
       )}
-      <View style={[styles.content, contentStyle]}>{children}</View>
+      <View style={[styles.content, contentStyle]}>
+        <GlassInkProvider ink={optics.ink}>{children}</GlassInkProvider>
+      </View>
     </View>
   );
 }

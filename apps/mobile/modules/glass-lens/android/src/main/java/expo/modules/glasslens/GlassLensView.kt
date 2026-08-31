@@ -10,7 +10,10 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import expo.modules.kotlin.AppContext
+import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
+import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.min
 
 // Преломление живого фона нельзя посчитать ни трансформом вьюхи, ни Skia-шейдером поверх неё:
@@ -25,6 +28,11 @@ import kotlin.math.min
 @SuppressLint("ViewConstructor")
 class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
   private val density = context.resources.displayMetrics.density
+
+  /** Светлота, пестрота и цвет фона под этим стеклом. Приложение слушает это событие,
+   *  чтобы перекрасить надпись, когда стекло уже отработало свой предел (см. зонд в
+   *  GlassBackdropView). */
+  private val onBackdropSample by EventDispatcher()
 
   private val screenAt = IntArray(2)
   private val selfAt = IntArray(2)
@@ -63,33 +71,20 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
   private var compiledSource: String? = null
 
   var shaderSource: String? = null
+
+  /** Габарит ВИДИМОГО стекла в dp: по нему считается прямоугольник для зонда светлоты.
+   *  Всё остальное про материал приходит общим каналом ниже. */
   var glassWidth = 0f
   var glassHeight = 0f
-  var cornerRadius = 0f
-  var bevel = 0.18f
-  var magnify = 1f
-  var edgePush = 0f
-  var chroma = 0f
-  var spherical = 0f
-  var frost = 0f
-  var ink = 1f
-  var legibility = 0f
-  var adaptRadius = 22f
-  var bodyDensity = 0f
-  var edgeLight = 0f
-  var bodyTintR = 1f
-  var bodyTintG = 1f
-  var bodyTintB = 1f
-  var fresnel = 0f
-  var fresnelPower = 5f
-  var reflectReach = 0f
-  var morphX = 0f
-  var morphY = 0f
-  var morphWidth = 0f
-  var morphHeight = 0f
-  var morphCorner = 0f
-  var morphSmoothing = 0f
-  var debug = 0f
+
+  // ОБЩИЙ КАНАЛ УНИФОРМ. Раньше каждая величина материала была отдельным Prop, и добавление
+  // явления в шейдер требовало правки Kotlin, пересборки APK и — при опечатке — молчаливого
+  // отключения линзы: неизвестный проп Expo проглатывает без единого слова (material-lab.md
+  // E-01, из-за этого преломление было выключено в проде целую фазу). Теперь имя, размер и
+  // значение приезжают ВМЕСТЕ, а несовпадение с шейдером пишется в лог с именем.
+  var uniformNames: List<String> = emptyList()
+  var uniformValues: List<Double> = emptyList()
+  var uniformSizes: List<Int> = emptyList()
 
   // Компиляция AGSL стоит дорого и обязана происходить только на смену исходника: пропы
   // прилетают пачкой на каждый рендер, а строка при этом та же самая.
@@ -124,22 +119,9 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
     visibility = VISIBLE
     if (width <= 0 || height <= 0 || glassWidth <= 0f || glassHeight <= 0f) return
 
-    val halfW = glassWidth * density / 2f
-    val halfH = glassHeight * density / 2f
-    val halfMin = min(halfW, halfH)
-
-    // Имена униформ задаёт JS-исходник. Рассинхрон здесь — IllegalArgumentException, который
-    // без перехвата валит вьюху вместо того, чтобы деградировать до плашки.
     try {
+      // Вьюха задаёт ТОЛЬКО то, что знает она одна: свой размер и своё место на экране.
       effect.setFloatUniform("u_center", width / 2f, height / 2f)
-      effect.setFloatUniform("u_halfSize", halfW, halfH)
-      effect.setFloatUniform("u_corner", min(cornerRadius * density, halfMin))
-      effect.setFloatUniform("u_bevel", maxOf(bevel * halfMin, 1f))
-      effect.setFloatUniform("u_magnify", maxOf(magnify, 0.01f))
-      effect.setFloatUniform("u_edgePush", edgePush * density)
-      effect.setFloatUniform("u_chroma", chroma * density)
-      effect.setFloatUniform("u_spherical", spherical * density)
-      effect.setFloatUniform("u_frost", frost * density)
       // Докуда вообще есть содержимое: вьюха линзы шире стекла на запас, дальше пусто.
       effect.setFloatUniform("u_reach", min(width, height) / 2f)
 
@@ -154,20 +136,17 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
       val maxY = minOf(metrics.heightPixels - screenAt[1], height).toFloat() - 1f
       effect.setFloatUniform("u_contentMin", minX, minY)
       effect.setFloatUniform("u_contentMax", maxX, maxY)
-      effect.setFloatUniform("u_ink", ink)
-      effect.setFloatUniform("u_legibility", legibility)
-      effect.setFloatUniform("u_adaptRadius", adaptRadius * density)
-      effect.setFloatUniform("u_bodyDensity", bodyDensity)
-      effect.setFloatUniform("u_edgeLight", edgeLight)
-      effect.setFloatUniform("u_bodyTint", bodyTintR, bodyTintG, bodyTintB)
-      effect.setFloatUniform("u_fresnel", fresnel)
-      effect.setFloatUniform("u_fresnelPower", fresnelPower)
-      effect.setFloatUniform("u_reflectReach", reflectReach * density)
-      effect.setFloatUniform("u_morphOffset", morphX * density, morphY * density)
-      effect.setFloatUniform("u_morphHalf", morphWidth * density / 2f, morphHeight * density / 2f)
-      effect.setFloatUniform("u_morphCorner", morphCorner * density)
-      effect.setFloatUniform("u_morphK", morphSmoothing * density)
-      effect.setFloatUniform("u_debug", debug)
+      // Оценка фона под стеклом. Считать её в шейдере по нескольким отсчётам нельзя:
+      // плотность тела — нелинейная функция светлоты, и на изломе разброс оценки между
+      // соседними пикселями превращался в ПРИЗРАЧНЫЕ КОПИИ текста, лежащего под стеклом,
+      // на расстоянии радиуса выборки. Здесь величина одна на всю поверхность, приходит из
+      // зонда и сглажена по времени — гребёнке взяться неоткуда.
+      effect.setFloatUniform("u_probeLuma", probeLuma)
+      effect.setFloatUniform("u_probeBusy", probeBusy)
+      effect.setFloatUniform("u_probeRange", probeLo, probeHi)
+      effect.setFloatUniform("u_probeSlope", probeSlopeX, probeSlopeY)
+      effect.setFloatUniform("u_probe", probeR, probeG, probeB)
+      applyChannel(effect)
     } catch (e: Throwable) {
       Log.e("GlassLens", "униформы линзы разошлись с шейдером", e)
       setRenderEffect(null)
@@ -175,6 +154,40 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
     }
 
     setRenderEffect(RenderEffect.createRuntimeShaderEffect(effect, "content"))
+  }
+
+  /** Общий канал: имя, размер и значения уже согласованы на стороне JS (adapters.ts).
+   *  Ошибку не глотаем — иначе линза выключается молча и симптом ни на что не похож. */
+  private fun applyChannel(effect: RuntimeShader) {
+    var at = 0
+    for (k in uniformNames.indices) {
+      val name = uniformNames[k]
+      val size = uniformSizes.getOrElse(k) { 1 }
+      if (at + size > uniformValues.size) break
+      try {
+        val v0 = uniformValues[at].toFloat()
+        when (size) {
+          1 -> effect.setFloatUniform(name, v0)
+          2 -> effect.setFloatUniform(name, v0, uniformValues[at + 1].toFloat())
+          3 -> effect.setFloatUniform(
+            name,
+            v0,
+            uniformValues[at + 1].toFloat(),
+            uniformValues[at + 2].toFloat(),
+          )
+          4 -> effect.setFloatUniform(
+            name,
+            v0,
+            uniformValues[at + 1].toFloat(),
+            uniformValues[at + 2].toFloat(),
+            uniformValues[at + 3].toFloat(),
+          )
+        }
+      } catch (e: Throwable) {
+        Log.e("GlassLens", "униформа $name (размер $size) не принята шейдером", e)
+      }
+      at += size
+    }
   }
 
   /** Содержимое линзы — снимок фона, и рисует его она сама: RenderEffect работает по тому,
@@ -194,6 +207,149 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
     canvas.restore()
   }
 
+  /** Зонд снял свежую сетку. Берём из неё СВОЙ прямоугольник — у таб-бара и мини-плеера
+   *  под ними разное — и сообщаем наружу, только если сдвинулось заметно: событие в JS
+   *  стоит дороже самого замера. */
+  fun onBackdropProbed() {
+    val source = backdrop ?: return
+    val luma = source.lumaGrid ?: return
+    val color = source.colorGrid ?: return
+    if (source.width <= 0 || source.height <= 0) return
+
+    getLocationOnScreen(selfAt)
+    source.getLocationOnScreen(backdropAt)
+    val halfW = glassWidth * density / 2f
+    val halfH = glassHeight * density / 2f
+    val cx = (selfAt[0] - backdropAt[0]) + width / 2f
+    val cy = (selfAt[1] - backdropAt[1]) + height / 2f
+
+    val gw = GlassBackdropView.PROBE_W
+    val gh = GlassBackdropView.PROBE_H
+    val sx = gw / source.width.toFloat()
+    val sy = gh / source.height.toFloat()
+    val x0 = max(((cx - halfW) * sx).toInt(), 0)
+    val x1 = min(((cx + halfW) * sx).toInt() + 1, gw)
+    val y0 = max(((cy - halfH) * sy).toInt(), 0)
+    val y1 = min(((cy + halfH) * sy).toInt() + 1, gh)
+    if (x1 <= x0 || y1 <= y0) return
+
+    var sum = 0f
+    var r = 0f
+    var g = 0f
+    var b = 0f
+    var count = 0
+    val bins = IntArray(BINS)
+    // Наклон светлоты по поверхности. Тонирование обязано быть ГРАДИЕНТНЫМ: там, где под
+    // стеклом одна половина светлая, а другая тёмная, одна плотность на всю деталь не даёт
+    // разделения ни на одной из них. Плоскость — самая грубая модель, которая это описывает,
+    // и единственная, которая гладка по построению: точечная оценка на изломе плотности
+    // превращалась в призрачные копии текста (material-lab.md E-36).
+    var sumU = 0f
+    var sumV = 0f
+    var uu = 0f
+    var vv = 0f
+    val midX = (x0 + x1 - 1) * 0.5f
+    val midY = (y0 + y1 - 1) * 0.5f
+    val halfCellsX = max((x1 - 1 - x0) * 0.5f, 0.5f)
+    val halfCellsY = max((y1 - 1 - y0) * 0.5f, 0.5f)
+    for (y in y0 until y1) {
+      for (x in x0 until x1) {
+        val i = y * gw + x
+        val l = luma[i]
+        sum += l
+        bins[((l * (BINS - 1)).toInt()).coerceIn(0, BINS - 1)]++
+        val u = (x - midX) / halfCellsX
+        val v = (y - midY) / halfCellsY
+        sumU += l * u
+        sumV += l * v
+        uu += u * u
+        vv += v * v
+        r += color[i * 3]
+        g += color[i * 3 + 1]
+        b += color[i * 3 + 2]
+        count++
+      }
+    }
+    val n = count.toFloat()
+    val mean = sum / n
+    // Координаты центрированы, поэтому нормальные уравнения распадаются: наклон по каждой
+    // оси считается независимо.
+    val slopeX = if (uu > 0.001f) sumU / uu else 0f
+    val slopeY = if (vv > 0.001f) sumV / vv else 0f
+
+    // Края берутся ПЕРЦЕНТИЛЯМИ, а не min/max: одна белая точка под краем стекла не должна
+    // выглядеть как «под стеклом есть белое поле». Судить по среднему нельзя тем более —
+    // над границей чёрного и белого оно даёт серый, при котором формально всё в порядке,
+    // а надпись тонет над светлой половиной.
+    var lo = 0f
+    var hi = 1f
+    var acc = 0
+    val loAt = (count * 0.1f).toInt()
+    val hiAt = (count * 0.9f).toInt()
+    var loSet = false
+    for (k in 0 until BINS) {
+      val next = acc + bins[k]
+      if (!loSet && next > loAt) {
+        lo = k / (BINS - 1f)
+        loSet = true
+      }
+      if (next > hiAt) {
+        hi = k / (BINS - 1f)
+        break
+      }
+      acc = next
+    }
+
+    // Пестрота — среднее отклонение от средней светлоты, удвоенное (у поля из половины
+    // чёрного и половины белого получается ровно 1). Размах для этого не годится: у
+    // страницы тёмного текста он такой же, как у шахматки, хотя светлого там доли процента.
+    var dev = 0f
+    for (k in 0 until BINS) {
+      dev += bins[k] * kotlin.math.abs(k / (BINS - 1f) - mean)
+    }
+    val busy = (2f * dev / n).coerceIn(0f, 1f)
+
+    // Цель сглаживания. Само значение едет к ней по кадрам (см. settle): шаг зонда 180 мс,
+    // и без промежуточных кадров адаптация читается ступеньками.
+    targetLuma = mean
+    targetBusy = busy
+    targetLo = lo
+    targetHi = hi
+    targetSlopeX = slopeX
+    targetSlopeY = slopeY
+    targetR = r / n
+    targetG = g / n
+    targetB = b / n
+    if (probeLuma < 0f) {
+      probeLuma = mean
+      probeBusy = busy
+      probeLo = lo
+      probeHi = hi
+      probeSlopeX = slopeX
+      probeSlopeY = slopeY
+      probeR = targetR
+      probeG = targetG
+      probeB = targetB
+    }
+    settle()
+
+    // Событие уходит на КАЖДЫЙ замер, а не только на изменение. Раньше здесь стоял порог, и
+    // на статичном экране события прекращались вовсе — а решение о перекраске контента
+    // требует нескольких подтверждений подряд и потому не набиралось никогда. Частота и так
+    // низкая (PROBE_INTERVAL_MS), фильтровать её должен потребитель.
+    onBackdropSample(
+      mapOf(
+        "luma" to mean,
+        "busy" to busy,
+        "lo" to lo,
+        "hi" to hi,
+        "r" to r / n,
+        "g" to g / n,
+        "b" to b / n,
+      ),
+    )
+  }
+
   override fun onDetachedFromWindow() {
     backdrop?.unregister(this)
     super.onDetachedFromWindow()
@@ -202,5 +358,64 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
   override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
     super.onSizeChanged(w, h, oldw, oldh)
     applyEffect()
+  }
+
+
+  // Сглаженная оценка фона. Отрицательная светлота = зонд ещё ничего не сказал, и шейдер
+  // держится на собственных отсчётах.
+  private var probeLuma = -1f
+  private var probeBusy = 0f
+  private var probeLo = 0f
+  private var probeHi = 0f
+  private var probeSlopeX = 0f
+  private var probeSlopeY = 0f
+  private var probeR = 0f
+  private var probeG = 0f
+  private var probeB = 0f
+  private var targetLuma = 0f
+  private var targetBusy = 0f
+  private var targetLo = 0f
+  private var targetHi = 0f
+  private var targetSlopeX = 0f
+  private var targetSlopeY = 0f
+  private var targetR = 0f
+  private var targetG = 0f
+  private var targetB = 0f
+  private var settling = false
+
+  /** Экспоненциальный подъезд к последнему замеру по кадрам. Останавливается сам, когда
+   *  ехать больше некуда: пока значение стоит, эффект не пересоздаётся вовсе. */
+  private fun settle() {
+    if (settling) return
+    settling = true
+    post(object : Runnable {
+      override fun run() {
+        val d = abs(targetLuma - probeLuma) + abs(targetBusy - probeBusy)
+        probeLuma += (targetLuma - probeLuma) * SETTLE
+        probeBusy += (targetBusy - probeBusy) * SETTLE
+        probeLo += (targetLo - probeLo) * SETTLE
+        probeHi += (targetHi - probeHi) * SETTLE
+        probeSlopeX += (targetSlopeX - probeSlopeX) * SETTLE
+        probeSlopeY += (targetSlopeY - probeSlopeY) * SETTLE
+        probeR += (targetR - probeR) * SETTLE
+        probeG += (targetG - probeG) * SETTLE
+        probeB += (targetB - probeB) * SETTLE
+        applyEffect()
+        if (d > SETTLE_EPS) postOnAnimation(this) else settling = false
+      }
+    })
+  }
+
+  private companion object {
+    /** Число корзин гистограммы. Хватает и на перцентили, и на среднее отклонение: точнее
+     *  этого статистика всё равно не нужна — она управляет плавными величинами. */
+    const val BINS = 32
+
+    /** Доля пути к цели за кадр. Постоянная времени около трети секунды — адаптация обязана
+     *  быть незаметной, а не мгновенной. */
+    const val SETTLE = 0.08f
+
+    /** Ниже этой разницы значение считается доехавшим, и покадровый подъезд останавливается. */
+    const val SETTLE_EPS = 0.002f
   }
 }

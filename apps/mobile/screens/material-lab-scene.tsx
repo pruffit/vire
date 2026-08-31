@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, memo } from 'react';
 import { Dimensions, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
@@ -7,21 +7,21 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Фон намеренно недружелюбный к рендереру: мелкий кегль, 1px-линии, резкие границы и
 // градиенты в одном кадре. Красивый градиент для стенда не годится — он прячет артефакты.
+//
+// Сцена ПАРКУЕТСЯ: зона выбирается по имени и встаёт ровно под стекло. Движение осталось
+// отдельным режимом, но судить по нему нельзя — замер по кадру, в котором зона под стеклом
+// оказалась случайно, ничего не значит (material-lab.md E-27).
 
-// Сцена длиннее экрана и проходит МИМО стекла целиком: короткий проезд показывал только
-// пару зон, а половина сценариев (чистый чёрный, чистый белый, резкая граница) не
-// доезжала. Скорость прежняя — важно видеть артефакты на движении, а не быстро пролистать.
 const { height: SCREEN_H } = Dimensions.get('window');
-const EXTRA = Math.round(SCREEN_H * 1.6);
-const CONTENT_H = SCREEN_H + EXTRA;
-const TRAVEL = EXTRA;
-// Скорость подобрана так, чтобы весь набор зон проходил мимо стекла за ~8 секунд в одну
-// сторону: медленнее — ждать нужную зону дольше, чем смотреть на неё.
-const SPEED_MS_PER_DP = 6;
+
+/** Высота одной зоны. Фиксированная, а не flex: парковка обязана быть арифметикой, а не
+ *  измерением лейаута — иначе смещение зависит от того, когда сработал onLayout. */
+export const ZONE_H = Math.round(SCREEN_H * 0.42);
 
 const CHECKER_CELL = 8;
 const CHECKER_COLS = 24;
@@ -79,59 +79,11 @@ function LineGrid({ color, hCount, vCount }: { color: string; hCount: number; vC
   );
 }
 
-function SaturatedZones() {
-  const zones = [
-    { color: '#ee0000', label: 'RED' },
-    { color: '#00c853', label: 'GREEN' },
-    { color: '#2962ff', label: 'BLUE' },
-    { color: '#ffd600', label: 'YELLOW' },
-  ];
+function Flat({ color, label, labelColor }: { color: string; label: string; labelColor: string }) {
   return (
-    <View style={styles.row}>
-      {zones.map((z) => (
-        <View key={z.label} style={[styles.flexCell, { backgroundColor: z.color }]}>
-          <Text style={styles.zoneLabel}>{z.label}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function HardEdgeBlocks() {
-  const colors = ['#ff6b35', '#2ec4b6', '#ffbf00', '#e71d36', '#011627', '#7209b7'];
-  return (
-    <View style={styles.blockGrid}>
-      {colors.map((c) => (
-        <View key={c} style={[styles.blockCell, { backgroundColor: c }]} />
-      ))}
-    </View>
-  );
-}
-
-/**
- * Крайние случаи, на которых стекло и ломается. Чистый чёрный — самый частый фон продукта
- * и единственное место, где отражать нечего: если поверхность на нём исчезает, это видно
- * только здесь. Чистый белый — обратный предел. Резкая граница между ними ловит алиасинг
- * и хроматику, которых на градиенте не разглядеть.
- */
-function ExtremeZone({ color, label, labelColor }: { color: string; label: string; labelColor: string }) {
-  return (
-    <View style={[styles.extreme, { backgroundColor: color }]}>
-      <Text style={[styles.extremeLabel, { color: labelColor }]}>{label}</Text>
+    <View style={[styles.zone, { backgroundColor: color }]}>
+      <Text style={[styles.zoneLabel, { color: labelColor }]}>{label}</Text>
       <View style={[styles.hairline, { backgroundColor: labelColor }]} />
-    </View>
-  );
-}
-
-function SplitZone() {
-  return (
-    <View style={styles.row}>
-      <View style={[styles.flexCell, { backgroundColor: '#000000' }]}>
-        <Text style={[styles.extremeLabel, { color: '#ffffff' }]}>#000</Text>
-      </View>
-      <View style={[styles.flexCell, { backgroundColor: '#ffffff' }]}>
-        <Text style={[styles.extremeLabel, { color: '#000000' }]}>#fff</Text>
-      </View>
     </View>
   );
 }
@@ -141,7 +93,7 @@ function SplitZone() {
 function ListRows() {
   const rows = ['Groove Geometry', 'Cleared Cache', 'Moss Memory', 'Untouchable'];
   return (
-    <View style={styles.listZone}>
+    <View style={[styles.zone, styles.listZone]}>
       {rows.map((title, i) => (
         <View key={title} style={styles.listRow}>
           <LinearGradient
@@ -158,16 +110,14 @@ function ListRows() {
   );
 }
 
-function CoreSection() {
+function TypeAndChecker() {
   return (
-    <View style={styles.core}>
+    <View style={[styles.zone, styles.core]}>
       <Checkerboard />
       <View style={styles.coreText}>
-        <Text style={[styles.text, { fontSize: 32, fontWeight: '800' }]}>Aa Стекло 32</Text>
-        <Text style={[styles.text, { fontSize: 18 }]}>Строка кегля 18px</Text>
+        <Text style={[styles.text, { fontSize: 28, fontWeight: '800' }]}>Aa Стекло 28</Text>
         <Text style={[styles.text, { fontSize: 14 }]}>Строка кегля 14px</Text>
         <Text style={[styles.text, { fontSize: 11 }]}>Мелкий текст 11px читаемость</Text>
-        <Text style={[styles.text, { fontSize: 10 }]}>Мелкий текст 10px читаемость края</Text>
         <View style={styles.contrastChip}>
           <Text style={styles.contrastChipText}>чёрный на белом 11px</Text>
         </View>
@@ -176,125 +126,238 @@ function CoreSection() {
   );
 }
 
-export function MaterialLabScene({ moving }: { moving: boolean }) {
+function SaturatedZones() {
+  const zones = [
+    { color: '#ee0000', label: 'RED' },
+    { color: '#00c853', label: 'GREEN' },
+    { color: '#2962ff', label: 'BLUE' },
+    { color: '#ffd600', label: 'YELLOW' },
+  ];
+  return (
+    <View style={[styles.zone, styles.row]}>
+      {zones.map((z) => (
+        <View key={z.label} style={[styles.flexCell, { backgroundColor: z.color }]}>
+          <Text style={styles.satLabel}>{z.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function HardEdgeBlocks() {
+  const colors = ['#ff6b35', '#2ec4b6', '#ffbf00', '#e71d36', '#011627', '#7209b7'];
+  return (
+    <View style={[styles.zone, styles.blockGrid]}>
+      {colors.map((c) => (
+        <View key={c} style={[styles.blockCell, { backgroundColor: c }]} />
+      ))}
+    </View>
+  );
+}
+
+function SplitZone() {
+  return (
+    <View style={[styles.zone, styles.row]}>
+      <View style={[styles.flexCell, { backgroundColor: '#000000' }]}>
+        <Text style={[styles.zoneLabel, { color: '#ffffff' }]}>#000</Text>
+      </View>
+      <View style={[styles.flexCell, { backgroundColor: '#ffffff' }]}>
+        <Text style={[styles.zoneLabel, { color: '#000000' }]}>#fff</Text>
+      </View>
+    </View>
+  );
+}
+
+/** Почти-чёрный градиент: единственное место, где видно БАНДИНГ. На плоской заливке его нет
+ *  по построению, на пёстром фоне он тонет в деталях. */
+function NearBlackRamp() {
+  return (
+    <View style={styles.zone}>
+      <LinearGradient colors={['#000000', '#141a1e']} style={StyleSheet.absoluteFill} />
+      <Text style={[styles.zoneLabel, styles.centered, { color: '#39434a' }]}>
+        почти чёрный градиент · бандинг
+      </Text>
+    </View>
+  );
+}
+
+function NearWhiteRamp() {
+  return (
+    <View style={styles.zone}>
+      <LinearGradient colors={['#ffffff', '#e8ecef']} style={StyleSheet.absoluteFill} />
+      <Text style={[styles.zoneLabel, styles.centered, { color: '#9aa7ad' }]}>
+        почти белый градиент · бандинг
+      </Text>
+    </View>
+  );
+}
+
+/** Зоны стенда. Порядок = порядок в сцене; имя = то, что выбирается чипом. */
+export const LAB_ZONES = [
+  { name: 'чёрный', render: () => <Flat color="#000000" label="чистый чёрный · отражать нечего" labelColor="#6a7a82" /> },
+  { name: 'чёрн.градиент', render: () => <NearBlackRamp /> },
+  { name: 'тёмный+линии', render: () => (
+      <View style={[styles.zone, styles.darkZone]}>
+        <Text style={[styles.text, { fontSize: 11 }]}>тёмная зона · тонкие линии · 11px</Text>
+        <LineGrid color="#3a4750" hCount={7} vCount={10} />
+      </View>
+    ) },
+  { name: 'список', render: () => <ListRows /> },
+  { name: 'текст+шахматка', render: () => <TypeAndChecker /> },
+  { name: 'граница ч/б', render: () => <SplitZone /> },
+  { name: 'блоки', render: () => <HardEdgeBlocks /> },
+  { name: 'спектр', render: () => (
+      <View style={styles.zone}>
+        <LinearGradient
+          colors={['#ff3d81', '#ff8a3d', '#ffe23d', '#3dff8a', '#3d8aff', '#8a3dff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+    ) },
+  { name: 'насыщенные', render: () => <SaturatedZones /> },
+  { name: 'светлый+линии', render: () => (
+      <View style={[styles.zone, styles.lightZone]}>
+        <Text style={[styles.text, styles.darkText, { fontSize: 11 }]}>
+          светлая зона · тонкие линии · 11px
+        </Text>
+        <LineGrid color="#9aa7ad" hCount={6} vCount={9} />
+      </View>
+    ) },
+  { name: 'бел.градиент', render: () => <NearWhiteRamp /> },
+  { name: 'белый', render: () => <Flat color="#ffffff" label="чистый белый" labelColor="#5a6a72" /> },
+  { name: 'серый 50%', render: () => <Flat color="#808080" label="средний серый 50%" labelColor="#1a1a1a" /> },
+] as const;
+
+export type LabZoneName = (typeof LAB_ZONES)[number]['name'];
+export const ZONE_NAMES = LAB_ZONES.map((z) => z.name) as LabZoneName[];
+
+const CONTENT_H = ZONE_H * LAB_ZONES.length;
+
+/** Смещение сцены, при котором середина зоны `index` встаёт на экранную высоту `focusY`. */
+export function parkOffset(index: number, focusY: number): number {
+  // Ворклет: величину читает и ручная прокрутка с UI-потока, и обычный код стенда.
+  'worklet';
+  return focusY - (index * ZONE_H + ZONE_H / 2);
+}
+
+function MaterialLabSceneImpl({
+  zone,
+  focusY,
+  moving,
+}: {
+  zone: number;
+  focusY: number;
+  moving: boolean;
+}) {
   const t = useSharedValue(0);
+  // Ручная прокрутка фона пальцем. Стекло стоит на месте, под ним едет содержимое — это
+  // единственный способ увидеть адаптацию как непрерывный процесс, а не набор поз: по
+  // зонам можно только прыгать, а тут видно, КАК тело догоняет фон и где полярность
+  // перекидывается.
+  const drag = useSharedValue(0);
+  const dragFrom = useSharedValue(0);
+
+  const scroll = useMemo(
+    () =>
+      Gesture.Pan()
+        .runOnJS(true)
+        .activeOffsetY([-6, 6])
+        .onBegin(() => {
+          dragFrom.value = drag.value;
+        })
+        .onChange((e) => {
+          drag.value = dragFrom.value + e.translationY;
+        }),
+    [drag, dragFrom],
+  );
+
+  // Смена зоны — абсолютная: накопленное пальцем смещение сбрасывается. Иначе `zone=N`
+  // перестаёт задавать состояние однозначно, и снимок уезжает не туда, где его ждут.
+  useEffect(() => {
+    drag.value = 0;
+  }, [zone, drag]);
 
   useEffect(() => {
     if (moving) {
       // Проход ТУДА-ОБРАТНО: невозвратный повтор в конце цикла прыгал в начало, и это
-      // читалось сбросом сцены. Заодно каждая зона проходит мимо стекла дважды.
-      t.value = withRepeat(
-        withTiming(1, { duration: TRAVEL * SPEED_MS_PER_DP, easing: Easing.linear }),
-        -1,
-        true,
-      );
-    } else {
+      // читалось сбросом сцены.
       t.value = 0;
+      t.value = withRepeat(withTiming(1, { duration: 14000, easing: Easing.linear }), -1, true);
+    } else {
+      t.value = withTiming(0, { duration: 160 });
     }
   }, [moving, t]);
 
+  const travel = CONTENT_H - SCREEN_H;
   const scrollStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -TRAVEL * t.value }],
+    transform: [{ translateY: -travel * t.value }],
+  }));
+
+  // ПАРКОВКА — обычный стиль, без Reanimated. Ворклет захватывает обычные переменные один
+  // раз и на смену зоны не пересобирается: сцена молча оставалась на прежнем фоне, а замер
+  // при этом выглядел валидным. Стенду нужна детерминированность, а не плавность —
+  // анимация осталась только у режима движения.
+  // Зона задаёт БАЗУ, палец добавляет смещение к ней. Стиль анимированный, потому что
+  // прокрутка идёт с UI-потока: гнать её через состояние значит рендерить сцену на каждый
+  // кадр тяги.
+  const parkedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: parkOffset(zone, focusY) + drag.value }],
   }));
 
   return (
-    <View style={styles.root}>
-      <Animated.View style={[styles.content, scrollStyle]}>
-        <View style={styles.flex1}>
-          <SaturatedZones />
-        </View>
-
-        <View style={styles.flex1_5}>
-          <LinearGradient
-            colors={['#ff3d81', '#ff8a3d', '#ffe23d', '#3dff8a', '#3d8aff', '#8a3dff']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </View>
-
-        <View style={[styles.flex1_2, styles.lightZone]}>
-          <Text style={[styles.text, styles.darkText, { fontSize: 11 }]}>
-            светлая зона · тонкие линии · 11px
-          </Text>
-          <LineGrid color="#9aa7ad" hCount={6} vCount={9} />
-        </View>
-
-        <View style={styles.flex2_5}>
-          <CoreSection />
-        </View>
-
-        <View style={styles.flex1_2}>
-          <HardEdgeBlocks />
-        </View>
-
-        <View style={[styles.flex1_5, styles.darkZone]}>
-          <Text style={[styles.text, { fontSize: 11 }]}>тёмная зона · тонкие линии · 11px</Text>
-          <LineGrid color="#3a4750" hCount={7} vCount={10} />
-        </View>
-
-        <View style={styles.flex1}>
-          <LinearGradient
-            colors={['#0d1114', '#1b3a3f', '#5ecfc6', '#1b3a3f', '#0d1114']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </View>
-
-        <View style={styles.flex1_5}>
-          <ListRows />
-        </View>
-
-        <View style={styles.flex1_2}>
-          <ExtremeZone color="#000000" label="чистый чёрный · отражать нечего" labelColor="#6a7a82" />
-        </View>
-
-        <View style={styles.flex1_2}>
-          <ExtremeZone color="#ffffff" label="чистый белый" labelColor="#5a6a72" />
-        </View>
-
-        <View style={styles.flex1}>
-          <SplitZone />
-        </View>
-
-        <View style={styles.flex1}>
-          <ExtremeZone color="#808080" label="средний серый 50%" labelColor="#1a1a1a" />
-        </View>
-      </Animated.View>
-    </View>
+    <GestureDetector gesture={scroll}>
+      <View style={styles.root}>
+        <Animated.View style={[styles.content, moving ? scrollStyle : parkedStyle]}>
+          {LAB_ZONES.map((z) => (
+            <View key={z.name} style={styles.slot}>
+              {z.render()}
+            </View>
+          ))}
+        </Animated.View>
+      </View>
+    </GestureDetector>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, overflow: 'hidden', backgroundColor: '#0d1114' },
-  content: { width: '100%', height: CONTENT_H, flexDirection: 'column' },
-  flex1: { flex: 1 },
-  flex1_2: { flex: 1.2 },
-  flex1_5: { flex: 1.5 },
-  flex2_5: { flex: 2.5 },
-  row: { flex: 1, flexDirection: 'row' },
+  content: { width: '100%', height: CONTENT_H },
+  slot: { height: ZONE_H },
+  zone: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  row: { flexDirection: 'row', alignItems: 'stretch', gap: 0 },
   flexCell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  zoneLabel: { color: '#00000099', fontSize: 12, fontWeight: '800', letterSpacing: 2 },
-  lightZone: { backgroundColor: '#f4f6f7', padding: 8 },
-  darkZone: { backgroundColor: '#05080a', padding: 8 },
+  zoneLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  centered: { textAlign: 'center' },
+  satLabel: { color: '#00000099', fontSize: 12, fontWeight: '800', letterSpacing: 2 },
+  lightZone: { backgroundColor: '#f4f6f7', padding: 8, alignItems: 'flex-start', justifyContent: 'flex-start' },
+  darkZone: { backgroundColor: '#05080a', padding: 8, alignItems: 'flex-start', justifyContent: 'flex-start' },
   text: { color: '#e6ecef' },
   darkText: { color: '#0d1114' },
   lineLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   lineSpacer: { flex: 1 },
-  core: { flex: 1, flexDirection: 'row', backgroundColor: '#0d1114' },
+  core: { flexDirection: 'row', backgroundColor: '#0d1114', alignItems: 'center' },
   checkerBoard: { alignSelf: 'center', marginLeft: 12 },
   checkerRow: { flexDirection: 'row' },
   coreText: { flex: 1, justifyContent: 'center', gap: 6, paddingHorizontal: 14 },
-  contrastChip: { backgroundColor: '#ffffff', alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 3 },
+  contrastChip: {
+    backgroundColor: '#ffffff',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
   contrastChipText: { color: '#0a0a0a', fontSize: 11, fontWeight: '600' },
-  blockGrid: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' },
+  blockGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   blockCell: { width: '33.33%', height: '50%' },
-  extreme: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  extremeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   hairline: { width: '55%', height: 1, opacity: 0.7 },
-  listZone: { flex: 1, backgroundColor: '#05080a', justifyContent: 'center', gap: 10, paddingHorizontal: 14 },
+  listZone: { backgroundColor: '#05080a', gap: 10, paddingHorizontal: 14, alignItems: 'stretch' },
   listRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   listCover: { width: 40, height: 40, borderRadius: 8 },
   listText: { flex: 1, gap: 2 },
 });
+
+/** Сцена не зависит ни от материала, ни от морфинга: тринадцать полноэкранных зон незачем
+ *  пересобирать на каждом кадре перетаскивания ползунка. */
+export const MaterialLabScene = memo(MaterialLabSceneImpl);
