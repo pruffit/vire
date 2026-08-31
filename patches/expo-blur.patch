@@ -1,0 +1,18 @@
+diff --git a/android/src/main/java/expo/modules/blur/ExpoBlurView.kt b/android/src/main/java/expo/modules/blur/ExpoBlurView.kt
+index 71344c8df533c25facea5fe7f5ed91528d15c1ed..f05a09e77f9b4e86ed20c991d7a3c59f35db17c4 100644
+--- a/android/src/main/java/expo/modules/blur/ExpoBlurView.kt
++++ b/android/src/main/java/expo/modules/blur/ExpoBlurView.kt
+@@ -159,7 +159,12 @@ class ExpoBlurView(context: Context, appContext: AppContext) : ExpoView(context,
+     val dimezisBlurTarget = blurTarget?.blurTargetView
+       ?: throw BlurViewConfigurationException("The BlurView targeting blur target with id: $blurTargetId couldn't find the target")
+ 
+-    blurView.setupWith(dimezisBlurTarget)
++    // VireMusic: полное разрешение и БЕЗ подмешанного шума.
++    // Дефолтный setupWith(target) разворачивается в setupWith(target, 4f, true): фон
++    // снимается в четыре раза меньше и поверх результата рисуется тайловая текстура шума
++    // (класс Noise, BitmapShader с TileMode.REPEAT). Повтор тайла и читался регулярной
++    // решёткой внутри стекла на тёмных участках. См. docs/vireglass/material-lab.md §E-25.
++    blurView.setupWith(dimezisBlurTarget, 1f, false)
+       .setFrameClearDrawable(decorView.background)
+       .setBlurRadius(blurRadius / blurReduction)
+ 

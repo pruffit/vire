@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurTargetView } from 'expo-blur';
+import { Backdrop } from './backdrop';
 import { colors } from '../lib/theme';
 import { BlurTargetScope, useRegisterBlurTarget } from '../lib/blur-target';
 
@@ -21,9 +21,9 @@ export function Screen({ children, style }: { children: React.ReactNode; style?:
   // paddingTop safe-area — последним в массиве: если чужой style задаёт padding
   // шорткатом (перекрывает paddingTop), инсет всё равно должен победить.
   return (
-    <BlurTargetView style={[styles.container, style, { paddingTop: insets.top }]} ref={blurTargetRef}>
+    <Backdrop style={[styles.container, style, { paddingTop: insets.top }]} targetRef={blurTargetRef}>
       <BlurTargetScope target={blurTargetRef}>{children}</BlurTargetScope>
-    </BlurTargetView>
+    </Backdrop>
   );
 }
 

@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "check:release-config": "node scripts/check-release-config.mjs",
     "prebuild:android": "expo prebuild --platform android",
-    "build:android": "node scripts/check-release-config.mjs && node scripts/build-release.mjs"
+    "build:android": "node scripts/check-release-config.mjs && node scripts/build-release.mjs",
+    "dev": "node scripts/dev.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",

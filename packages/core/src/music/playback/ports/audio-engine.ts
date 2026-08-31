@@ -5,6 +5,7 @@ export type AudioEngineEvent =
   | 'error'
   | 'remoteNext'
   | 'remotePrevious'
+  | 'remoteLike'
   | 'statechange';
 export type Unsubscribe = () => void;
 

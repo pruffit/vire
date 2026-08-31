@@ -14,7 +14,7 @@ vi.mock('../storage/file-store', () => ({
   },
 }));
 
-const { audioEngine, emit } = vi.hoisted(() => {
+const { audioEngine, emit, setNotificationLikeState } = vi.hoisted(() => {
   const listeners: Record<string, Array<(payload?: unknown) => void>> = {};
   return {
     audioEngine: {
@@ -32,14 +32,16 @@ const { audioEngine, emit } = vi.hoisted(() => {
     emit: (event: string, payload?: unknown) => {
       (listeners[event] ?? []).forEach((cb) => cb(payload));
     },
+    setNotificationLikeState: vi.fn(),
   };
 });
-vi.mock('../audio-engine', () => ({ audioEngine }));
+vi.mock('../audio-engine', () => ({ audioEngine, setNotificationLikeState }));
 
 const { getDownloadedTrack } = vi.hoisted(() => ({ getDownloadedTrack: vi.fn() }));
 vi.mock('../offline/download-manager', () => ({ getDownloadedTrack }));
 
 import { usePlayerStore, __resetSeekGuardForTests, type QueueTrack, subscribePlayerEffects } from '../player-store';
+import { useLikesStore } from '../likes-store';
 
 const CTX = { source: 'release' } as const;
 
@@ -69,6 +71,7 @@ function resetStore() {
   });
   persisted.clear();
   __resetSeekGuardForTests();
+  useLikesStore.setState({ state: {} });
 }
 
 // Подписки стора больше не висят на уровне модуля (фаст-рефреш плодил их и дублировал
@@ -78,8 +81,9 @@ let unsubscribe: (() => void) | null = null;
 beforeEach(() => {
   vi.clearAllMocks();
   request.mockImplementation((url: string) => {
-    const id = url.split('/').at(-2);
-    return Promise.resolve(manifestOk(id ?? ''));
+    const id = url.split('/').at(-2) ?? '';
+    if (url.endsWith('/like')) return Promise.resolve({ ok: true, data: { liked: false } });
+    return Promise.resolve(manifestOk(id));
   });
   getDownloadedTrack.mockResolvedValue(null);
   resetStore();
@@ -144,7 +148,7 @@ describe('usePlayerStore.playQueue', () => {
 });
 
 describe('usePlayerStore.playQueue — скачанный трек (офлайн)', () => {
-  it('трек скачан — играет локальный файл, apiRequest не вызывается', async () => {
+  it('трек скачан — играет локальный файл, манифест по сети не запрашивается', async () => {
     getDownloadedTrack.mockResolvedValue({
       id: 't1',
       title: 'Track t1',
@@ -158,7 +162,9 @@ describe('usePlayerStore.playQueue — скачанный трек (офлайн
 
     await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
 
-    expect(request).not.toHaveBeenCalled();
+    // Аудио — локально, сети не требует. Статус лайка для иконки в шторке — отдельный,
+    // не блокирующий воспроизведение запрос (терпит сбой офлайн — см. likes-store.load()).
+    expect(request.mock.calls.some(([url]) => String(url).includes('/manifest'))).toBe(false);
     expect(audioEngine.load).toHaveBeenCalledWith(
       expect.objectContaining({ manifestUrl: 'file:///offline/t1/playlist.m3u8' }),
     );
@@ -259,6 +265,43 @@ describe('usePlayerStore.togglePlayPause', () => {
     expect(audioEngine.play).toHaveBeenCalledTimes(1);
     expect(usePlayerStore.getState().status).toBe('playing');
   });
+
+  // Регрессия: прежняя цепочка if/else if не покрывала `idle`, и кнопка play молча не
+  // делала ничего. Поймано только на устройстве — гейты такое не видят.
+  it('idle с непустой очередью — грузит трек, а не игнорирует нажатие', async () => {
+    usePlayerStore.setState({ queue: [track('t1')], queueIndex: 0, status: 'idle', restored: false });
+    request.mockResolvedValueOnce({ ok: true, data: { hlsUrl: 'https://cdn/t1.m3u8', waveformPeaks: null } });
+
+    usePlayerStore.getState().togglePlayPause();
+    await flush();
+
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ manifestUrl: 'https://cdn/t1.m3u8' }));
+    expect(usePlayerStore.getState().status).toBe('playing');
+  });
+
+  it('восстановленная очередь — грузит с сохранённой позиции, а не резюмит пустой движок', async () => {
+    usePlayerStore.setState({
+      queue: [track('t1')],
+      queueIndex: 0,
+      status: 'paused',
+      restored: true,
+      positionSec: 42,
+    });
+    request.mockResolvedValueOnce({ ok: true, data: { hlsUrl: 'https://cdn/t1.m3u8', waveformPeaks: null } });
+
+    usePlayerStore.getState().togglePlayPause();
+    await flush();
+
+    expect(audioEngine.load).toHaveBeenCalledWith(expect.objectContaining({ startAt: 42 }));
+    expect(usePlayerStore.getState().restored).toBe(false);
+  });
+
+  it('loading — повторное нажатие не запускает вторую загрузку', async () => {
+    usePlayerStore.setState({ queue: [track('t1')], queueIndex: 0, status: 'loading', restored: false });
+    usePlayerStore.getState().togglePlayPause();
+    await flush();
+    expect(audioEngine.load).not.toHaveBeenCalled();
+  });
 });
 
 describe('usePlayerStore.seek', () => {
@@ -354,6 +397,63 @@ describe('события audioEngine', () => {
     usePlayerStore.setState({ status: 'error' });
     emit('statechange', { isPlaying: false });
     expect(usePlayerStore.getState().status).toBe('error');
+  });
+});
+
+describe('лайк в шторке уведомления (remoteLike)', () => {
+  it('переключает лайк текущего трека и шлёт запрос', async () => {
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
+    useLikesStore.setState({ state: { t1: false } });
+    vi.clearAllMocks();
+
+    emit('remoteLike');
+    await flush();
+
+    expect(request).toHaveBeenCalledWith('/api/v1/tracks/t1/like', expect.objectContaining({ method: 'POST' }));
+    expect(useLikesStore.getState().state.t1).toBe(true);
+  });
+
+  it('нет активного трека — no-op', async () => {
+    emit('remoteLike');
+    await flush();
+
+    expect(request).not.toHaveBeenCalled();
+  });
+});
+
+describe('лайк — иконка в шторке (setNotificationLikeState)', () => {
+  it('смена трека пушит уже известное состояние лайка', async () => {
+    useLikesStore.setState({ state: { t1: true } });
+
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
+
+    expect(setNotificationLikeState).toHaveBeenCalledWith(true);
+  });
+
+  it('состояние трека неизвестно — пушит false, не дожидаясь сети', async () => {
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
+
+    expect(setNotificationLikeState).toHaveBeenCalledWith(false);
+  });
+
+  it('лайк текущего трека меняется в сторе — перерисовывает иконку', async () => {
+    useLikesStore.setState({ state: { t1: false } });
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
+    vi.clearAllMocks();
+
+    useLikesStore.getState().update('t1', true);
+
+    expect(setNotificationLikeState).toHaveBeenCalledWith(true);
+  });
+
+  it('лайк другого трека, не текущего, — иконку в шторке не трогает', async () => {
+    useLikesStore.setState({ state: { t1: false, t2: false } });
+    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
+    vi.clearAllMocks();
+
+    useLikesStore.getState().update('t2', true);
+
+    expect(setNotificationLikeState).not.toHaveBeenCalled();
   });
 });
 

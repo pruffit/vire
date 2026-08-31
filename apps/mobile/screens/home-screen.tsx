@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { BlurTargetView } from 'expo-blur';
+import { Backdrop } from '../components/backdrop';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -183,9 +183,9 @@ export default function HomeScreen() {
   }
 
   return (
-    <BlurTargetView style={styles.blurTarget} ref={blurTargetRef}>
+    <Backdrop style={styles.blurTarget} targetRef={blurTargetRef}>
       <BlurTargetScope target={blurTargetRef}>{content}</BlurTargetScope>
-    </BlurTargetView>
+    </Backdrop>
   );
 }
 

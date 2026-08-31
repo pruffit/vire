@@ -14,7 +14,7 @@ import kotlin.math.min
 // трансформ аффинный (один коэффициент на всю линзу — это лупа, а не линза), а Skia-канвас
 // пикселей нативной подложки не видит. `RenderEffect.createRuntimeShaderEffect` — единственный
 // на Android способ отдать AGSL-шейдеру УЖЕ отрисованное содержимое вьюхи: сюда приходит
-// размытый бэкдроп от BlurView-ребёнка, и шейдер семплирует его по смещённой координате.
+// снимок фона от BlurView-ребёнка, и шейдер семплирует его по смещённой координате.
 //
 // Исходник шейдера приходит ПРОПОМ из JS (`lib/vireglass/lens-shader.ts`): AGSL и SKSL — один
 // язык, поэтому геометрия у линзы и у поверхности буквально одна строка. Держать вторую копию
@@ -22,6 +22,8 @@ import kotlin.math.min
 @SuppressLint("ViewConstructor")
 class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
   private val density = context.resources.displayMetrics.density
+
+  private val screenAt = IntArray(2)
 
   private var shader: RuntimeShader? = null
   private var compiledSource: String? = null
@@ -35,6 +37,12 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
   var edgePush = 0f
   var chroma = 0f
   var spherical = 0f
+  var frost = 0f
+  var adapt = 0f
+  var adaptTarget = 0.42f
+  var fresnel = 0f
+  var fresnelPower = 5f
+  var reflectReach = 0f
   var morphX = 0f
   var morphY = 0f
   var morphWidth = 0f
@@ -65,9 +73,9 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
   /** Единственный вызов после смены любого пропа — униформы применяются только через повторный
    *  `setRenderEffect`, мутации самого `RuntimeShader` вьюху не инвалидируют. */
   fun applyEffect() {
-    // Прятать вьюху можно ТОЛЬКО когда шейдера нет совсем: `dimezisBlurView` внутри прекращает
-    // захват фона, если его спрятать, и обратно сам не оживает — вместо преломления остаётся
-    // ровная плашка. Переходное состояние просто ждёт следующего вызова.
+    // Прятать вьюху можно ТОЛЬКО когда шейдера нет совсем: BlurView внутри прекращает
+    // захват фона, если его спрятать, и обратно сам не оживает. Переходное состояние
+    // просто ждёт следующего вызова.
     val effect = ensureShader()
     if (effect == null) {
       visibility = INVISIBLE
@@ -91,6 +99,26 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
       effect.setFloatUniform("u_edgePush", edgePush * density)
       effect.setFloatUniform("u_chroma", chroma * density)
       effect.setFloatUniform("u_spherical", spherical * density)
+      effect.setFloatUniform("u_frost", frost * density)
+      // Докуда вообще есть содержимое: вьюха линзы шире стекла на запас, дальше пусто.
+      effect.setFloatUniform("u_reach", min(width, height) / 2f)
+
+      // Захват кончается на краю экрана, а вьюха линзы у поверхности во всю ширину за него
+      // выходит. Отдаём шейдеру прямоугольник, где содержимое реально есть, в СВОИХ
+      // координатах — иначе вдоль таких кромок остаётся полоса без преломления.
+      getLocationOnScreen(screenAt)
+      val metrics = resources.displayMetrics
+      val minX = maxOf(-screenAt[0], 0).toFloat() + 1f
+      val minY = maxOf(-screenAt[1], 0).toFloat() + 1f
+      val maxX = minOf(metrics.widthPixels - screenAt[0], width).toFloat() - 1f
+      val maxY = minOf(metrics.heightPixels - screenAt[1], height).toFloat() - 1f
+      effect.setFloatUniform("u_contentMin", minX, minY)
+      effect.setFloatUniform("u_contentMax", maxX, maxY)
+      effect.setFloatUniform("u_adapt", adapt)
+      effect.setFloatUniform("u_adaptTarget", adaptTarget)
+      effect.setFloatUniform("u_fresnel", fresnel)
+      effect.setFloatUniform("u_fresnelPower", fresnelPower)
+      effect.setFloatUniform("u_reflectReach", reflectReach * density)
       effect.setFloatUniform("u_morphOffset", morphX * density, morphY * density)
       effect.setFloatUniform("u_morphHalf", morphWidth * density / 2f, morphHeight * density / 2f)
       effect.setFloatUniform("u_morphCorner", morphCorner * density)

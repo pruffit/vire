@@ -67,6 +67,13 @@ export const type = {
     lineHeight: 15,
     color: colors.mutedForeground,
   },
+  /** Имя артиста под крупным заголовком (фуллскрин-плеер) — между caption и body. */
+  subtitle: {
+    fontFamily: fonts.medium,
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.mutedForeground,
+  },
   body: {
     fontFamily: fonts.regular,
     fontSize: 14,

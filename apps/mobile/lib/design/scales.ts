@@ -20,8 +20,8 @@ export const layout = {
   /** Поля экрана. Списки уже — плотность важнее воздуха. */
   screenPadding: 20,
   listPadding: 12,
-  /** Минимальная тач-зона; добирается прозрачным паддингом у кнопок меньше её. */
-  touchTarget: 44,
+  /** Минимальная тач-зона Material (48×48, зазор ≥ 8); добирается прозрачным паддингом. */
+  touchTarget: 48,
 } as const;
 
 export const radii = {
@@ -45,6 +45,8 @@ export const duration = {
   panel: 220,
   sheet: 280,
   screen: 240,
+  /** Кросс-фейд ambient-фона плеера на смене трека. */
+  ambient: 600,
 } as const;
 
 export type DurationKey = keyof typeof duration;

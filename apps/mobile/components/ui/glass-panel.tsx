@@ -3,7 +3,13 @@ import { StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyl
 import { useSharedValue } from 'react-native-reanimated';
 import { VireGlassSurface } from '../vireglass/glass-surface';
 import { useEnvironmentLight } from '../../lib/vireglass/environment';
-import { resolveMaterial, VIREGLASS_MATERIAL_V1 } from '../../lib/vireglass/material';
+import {
+  resolveOptics,
+  type VireGlassDebugMode,
+  type VireGlassOptics,
+} from '../../lib/vireglass/material';
+
+const DEFAULT_OPTICS = resolveOptics();
 import { radii } from '../../lib/design/scales';
 
 /**
@@ -22,6 +28,9 @@ export function GlassPanel({
   children,
   radius = radii.glass,
   blurTarget,
+  dim = 0,
+  optics: opticsOverride,
+  debug,
   style,
   contentStyle,
 }: {
@@ -29,6 +38,12 @@ export function GlassPanel({
   radius?: number;
   /** Цель живого блюра — контент текущего экрана (`lib/blur-target.tsx`). */
   blurTarget?: RefObject<View | null> | null;
+  /** Затемнение линзы: материал v2 почти не мутит фон, и текст на панели теряет контраст
+   *  над светлой обложкой. Дешевле второго материала и не трогает оптику кромки. */
+  dim?: number;
+  /** Только для стенда материала: продукт всегда берёт дефолт. */
+  optics?: VireGlassOptics;
+  debug?: VireGlassDebugMode;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
 }) {
@@ -46,8 +61,8 @@ export function GlassPanel({
     () => (size ? { width: size.width, height: size.height, cornerRadius: radius } : null),
     [size, radius],
   );
-  const material = useMemo(() => resolveMaterial(VIREGLASS_MATERIAL_V1), []);
-  const light = useEnvironmentLight(material.environment);
+  const optics = opticsOverride ?? DEFAULT_OPTICS;
+  const light = useEnvironmentLight(optics.environment);
 
   // Панель неподвижна: деформации и нажатия у неё нет, но контракт поверхности требует
   // shared values — заводим постоянные нули.
@@ -62,9 +77,11 @@ export function GlassPanel({
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <VireGlassSurface
             geometry={geometry}
-            material={material}
+            optics={optics}
             dynamics={{ shiftX, shiftY, press, active, light }}
             blurTarget={blurTarget}
+            dim={dim}
+            debug={debug ?? 'normal'}
           />
         </View>
       )}

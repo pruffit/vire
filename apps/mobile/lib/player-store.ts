@@ -8,11 +8,12 @@ import { nextQueueIndex, shuffleOn, shuffleOff, sliceWindowAroundIndex, type Rep
 // падает целиком. Тот же класс ограничения, что у edge-middleware веба.
 import { clampRestoredQueueIndex } from '@vire/core/playback/engine-policy';
 import { apiRequest } from './api-client';
-import { audioEngine, type AudioTimeUpdate } from './audio-engine';
+import { audioEngine, setNotificationLikeState, type AudioTimeUpdate } from './audio-engine';
 import { getDownloadedTrack } from './offline/download-manager';
 import { fileStore } from './storage/file-store';
 import { ListenTracker } from './playback/listen-tracker';
 import { reportListen, flushPending } from './playback/play-reporter';
+import { useLikesStore } from './likes-store';
 
 export interface QueueTrack {
   id: string;
@@ -87,22 +88,24 @@ export const usePlayerStore = create<PlayerState>()(
         await loadAndPlay(index);
       },
 
+      // Ветки перечислены исчерпывающе намеренно: прежняя цепочка if/else if не покрывала
+      // `idle`, и в этом состоянии кнопка play молча не делала ничего (найдено на устройстве).
       togglePlayPause: () => {
         const { status, queueIndex, restored } = get();
-        if (restored) {
-          // Первый play после холодного старта: манифест ещё не загружен.
-          loadAndPlay(queueIndex, get().positionSec);
-          return;
-        }
+        if (queueIndex < 0 || status === 'loading') return;
         if (status === 'playing') {
           audioEngine.pause();
           set({ status: 'paused' });
-        } else if (status === 'paused') {
+          return;
+        }
+        // `restored` — очередь пришла из персиста, в движке ещё ничего нет: возобновлять
+        // нечего, нужен полный load с сохранённой позиции.
+        if (status === 'paused' && !restored) {
           audioEngine.play();
           set({ status: 'playing' });
-        } else if (status === 'error') {
-          loadAndPlay(queueIndex);
+          return;
         }
+        loadAndPlay(queueIndex, restored ? get().positionSec : 0);
       },
 
       next: () => {
@@ -248,6 +251,10 @@ async function loadAndPlay(index: number, startAt = 0): Promise<void> {
     tracker.start(track.id, state.context?.source ?? 'direct', Date.now());
     tracker.resume(Date.now());
     usePlayerStore.setState({ status: 'playing', waveformPeaks: peaks });
+    // Иконка лайка в шторке — сразу лучшее известное значение (кэш стора лайков), точное
+    // придёт следом через likes-подписку в subscribePlayerEffects(), когда load() дозагрузит.
+    useLikesStore.getState().load(track.id);
+    setNotificationLikeState(!!useLikesStore.getState().state[track.id]);
   } catch (err) {
     console.error('[player] load/play упал', track.id, err);
     if (usePlayerStore.getState().queueIndex === index) usePlayerStore.setState({ status: 'error' });
@@ -302,6 +309,13 @@ export function subscribePlayerEffects(): () => void {
     audioEngine.on('remoteNext', () => usePlayerStore.getState().next()),
     audioEngine.on('remotePrevious', () => usePlayerStore.getState().prev()),
 
+    // Лайк из шторки — трек мог ни разу не показаться в UI, toggleRemote сам догрузит state.
+    audioEngine.on('remoteLike', () => {
+      const { queue, queueIndex } = usePlayerStore.getState();
+      const track = queue[queueIndex];
+      if (track) useLikesStore.getState().toggleRemote(track.id);
+    }),
+
     audioEngine.on('statechange', (payload) => {
       const { status } = usePlayerStore.getState();
       if (status === 'loading' || status === 'error') return;
@@ -325,8 +339,20 @@ export function subscribePlayerEffects(): () => void {
     if (span) void reportListen(span);
   });
 
+  // Лайк текущего трека изменился (из UI или из toggleRemote выше) — перерисовать иконку
+  // в шторке. Только для трека, который сейчас играет: чужие лайки в другом месте приложения
+  // MediaSession не касаются.
+  const likesUnsub = useLikesStore.subscribe((state, prevState) => {
+    const { queue, queueIndex } = usePlayerStore.getState();
+    const track = queue[queueIndex];
+    if (!track) return;
+    const liked = state.state[track.id];
+    if (liked !== prevState.state[track.id]) setNotificationLikeState(!!liked);
+  });
+
   return () => {
     for (const off of offs) off();
     appState.remove();
+    likesUnsub();
   };
 }

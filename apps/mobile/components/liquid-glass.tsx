@@ -16,10 +16,11 @@ import { VireGlassSurface } from './vireglass/glass-surface';
 import { circleGeometry, surfacePadDp } from '../lib/vireglass/geometry';
 import { useEnvironmentLight } from '../lib/vireglass/environment';
 import {
-  resolveMaterial,
-  VIREGLASS_MATERIAL_V1,
-  type VireGlassMaterial,
+  resolveOptics,
+  type VireGlassOptics,
 } from '../lib/vireglass/material';
+
+const DEFAULT_OPTICS = resolveOptics();
 
 const DRAG_LIMIT = 7;
 const TAP_SLOP = 10;
@@ -27,8 +28,6 @@ const TAP_SLOP = 10;
 const DRAG_SPRING = { mass: 1, damping: 28, stiffness: 340 };
 const RELEASE_SPRING = { mass: 0.9, damping: 17, stiffness: 300 };
 const PRESS_SPRING = { mass: 0.6, damping: 16, stiffness: 260 };
-
-const DEFAULT_TINT = [0.4, 0.4, 0.44, 0.16] as const;
 
 /** Жёсткое сопротивление: за палец капля идёт крайне неохотно — стекло, а не резинка.
  *  tanh(t / (LIMIT*4)) означает, что даже на 100 dp протяжки капля уезжает лишь на ~7 dp. */
@@ -101,8 +100,7 @@ export function LiquidGlassButton({
   blurTarget,
   ink = colors.foreground,
   inkActive = colors.foreground,
-  tint = DEFAULT_TINT,
-  material = VIREGLASS_MATERIAL_V1,
+  optics = DEFAULT_OPTICS,
   dim = 0,
   style,
 }: {
@@ -114,24 +112,13 @@ export function LiquidGlassButton({
   blurTarget?: RefObject<View | null> | null;
   ink?: string;
   inkActive?: string;
-  /** rgb + сила тонировки стекла (не заливка). Перекрывает тинт материала. */
-  tint?: readonly [number, number, number, number];
-  material?: VireGlassMaterial;
+  optics?: VireGlassOptics;
   /** Затемнение линзы под скрим экрана. */
   dim?: number;
   style?: StyleProp<ViewStyle>;
 }) {
   const dpr = PixelRatio.get();
   const geometry = useMemo(() => circleGeometry(size), [size]);
-  const resolved = useMemo(
-    () =>
-      resolveMaterial({
-        ...material,
-        tint: { r: tint[0], g: tint[1], b: tint[2] },
-        tintStrength: tint[3],
-      }),
-    [material, tint],
-  );
   const box = size + surfacePadDp(geometry, DRAG_LIMIT) * 2;
   const mask = useIconMask(icon, box, Math.round(size * 0.42), dpr);
 
@@ -139,7 +126,7 @@ export function LiquidGlassButton({
   const shiftY = useSharedValue(0);
   const press = useSharedValue(0);
   const lit = useSharedValue(active ? 1 : 0);
-  const light = useEnvironmentLight(resolved.environment);
+  const light = useEnvironmentLight(optics.environment);
   useEffect(() => {
     lit.value = withTiming(active ? 1 : 0, { duration: 240 });
   }, [active, lit]);
@@ -189,7 +176,7 @@ export function LiquidGlassButton({
       <View collapsable={false} style={[styles.host, style]}>
         <VireGlassSurface
           geometry={geometry}
-          material={resolved}
+          optics={optics}
           dynamics={{ shiftX, shiftY, press, active: lit, light }}
           blurTarget={blurTarget}
           dragLimit={DRAG_LIMIT}

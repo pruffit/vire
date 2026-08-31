@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import {
   Canvas,
@@ -17,8 +17,13 @@ import Animated, {
 import { BlurView } from 'expo-blur';
 import { GlassLens as GlassLensNative, isGlassLensSupported } from '../../modules/glass-lens';
 import { toLensProps, toSurfaceUniforms, type VireGlassMorph } from '../../lib/vireglass/adapters';
-import { lensPadDp, surfacePadDp, type VireGlassGeometry } from '../../lib/vireglass/geometry';
-import type { VireGlassDebugMode, VireGlassMaterial } from '../../lib/vireglass/material';
+import {
+  lensPadDp,
+  MAX_STRETCH,
+  surfacePadDp,
+  type VireGlassGeometry,
+} from '../../lib/vireglass/geometry';
+import type { VireGlassDebugMode, VireGlassOptics } from '../../lib/vireglass/material';
 import { SURFACE_SHADER } from '../../lib/vireglass/surface-shader';
 import { useBackdropEnabled } from '../../lib/design/preferences';
 import { useGlassSurfaceRegistration } from '../../lib/design/surface-registry';
@@ -30,10 +35,6 @@ function compile(src: string) {
 }
 
 const SURFACE = compile(SURFACE_SHADER);
-
-/** Максимальное растяжение вдоль вектора тяги. Один и тот же закон применяют шейдер
- *  (обратной деформацией координаты) и трансформ живой подложки — иначе они разъезжаются. */
-export const MAX_STRETCH = 0.17;
 
 export type GlassDynamics = {
   shiftX: SharedValue<number>;
@@ -54,7 +55,7 @@ export type GlassIcon = {
 
 export function VireGlassSurface({
   geometry,
-  material,
+  optics,
   dynamics,
   debug = 'normal',
   morph,
@@ -67,7 +68,7 @@ export function VireGlassSurface({
   style,
 }: {
   geometry: VireGlassGeometry;
-  material: VireGlassMaterial;
+  optics: VireGlassOptics;
   dynamics: GlassDynamics;
   debug?: VireGlassDebugMode;
   morph?: VireGlassMorph;
@@ -85,15 +86,29 @@ export function VireGlassSurface({
 }) {
   const { width, height, cornerRadius } = geometry;
   const pad = surfacePadDp(geometry, dragLimit, morph);
-  const lensPad = lensPadDp(geometry, material, morph);
+
+  // Вьюха линзы не должна менять размер на ходу: каждая смена — перераскладка плюс новый
+  // `RenderEffect`, и на глаз это читается рывком. Морфинг же двигает вторую форму каждый
+  // кадр, то есть меняет нужный запас непрерывно. Поэтому запас только РАСТЁТ: за первый
+  // проход он доходит до максимума, дальше размер стоит намертво. Сбрасывается лишь на
+  // смене габарита самой детали.
+  const padRef = useRef(0);
+  const geometryKey = `${width}x${height}x${cornerRadius}`;
+  const geometryRef = useRef(geometryKey);
+  if (geometryRef.current !== geometryKey) {
+    geometryRef.current = geometryKey;
+    padRef.current = 0;
+  }
+  padRef.current = Math.max(padRef.current, lensPadDp(geometry, optics, morph, dragLimit));
+  const lensPad = padRef.current;
 
   const statics = useMemo(
-    () => toSurfaceUniforms(material, geometry, { debug, morph, dragLimit, shadow }),
-    [material, geometry, debug, morph, dragLimit, shadow],
+    () => toSurfaceUniforms(optics, geometry, { debug, morph, dragLimit, shadow }),
+    [optics, geometry, debug, morph, dragLimit, shadow],
   );
   const lensProps = useMemo(
-    () => toLensProps(material, geometry, { debug, morph }),
-    [material, geometry, debug, morph],
+    () => toLensProps(optics, geometry, { debug, morph }),
+    [optics, geometry, debug, morph],
   );
   const iconUniforms = useMemo(
     () => ({
@@ -107,6 +122,12 @@ export function VireGlassSurface({
 
   const { shiftX, shiftY, press, active, light } = dynamics;
 
+  // Ворклет исполняется на UI-потоке и втягивает в замыкание только то, что babel-плагин
+  // сумел захватить: импорт из ДРУГОГО модуля он не тянет, и на устройстве это падает
+  // `ReferenceError: Property 'MAX_STRETCH' doesn't exist`. Typecheck и тесты такое не
+  // видят — ворклеты они не исполняют. Локальная переменная компонента захватывается всегда.
+  const stretchLimit = MAX_STRETCH;
+
   // Цель блюра — ref, и на первом рендере она ещё пуста: сама по себе перерисовку она не
   // вызывает. Без этого эффекта стекло остаётся без бэкдропа до первого постороннего
   // ре-рендера — на статичном экране навсегда.
@@ -115,20 +136,28 @@ export function VireGlassSurface({
     setHasTarget(blurTarget?.current != null);
   }, [blurTarget]);
 
+  // ПЕРЕМЕЩЕНИЕ — общее для обеих половин стекла. Раньше линзу двигал трансформ вьюхи, а
+  // поверхность — сдвиг внутри шейдера, то есть две разные системы на одно движение: Skia
+  // рисует на своей поверхности и в кадровый бюджет приложения даже не попадает, поэтому на
+  // протяжке кромка и преломление расходились. Теперь их несёт ОДИН трансформ, и при
+  // перетаскивании перерисовывать нечего вовсе — только двигать.
+  const moveStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shiftX.value }, { translateY: shiftY.value }],
+  }));
+
   // Живая подложка обязана повторять деформацию стекла: она нативная вьюха, шейдер её не
-  // гнёт, поэтому тот же закон применяется трансформом.
+  // гнёт, поэтому тот же закон применяется трансформом. Здесь остаётся только деформация —
+  // перенос уехал уровнем выше.
   const lensStyle = useAnimatedStyle(() => {
     const dx = shiftX.value;
     const dy = shiftY.value;
     const len = Math.sqrt(dx * dx + dy * dy);
-    const stretch = dragLimit > 0 ? Math.min(len / dragLimit, 1) * MAX_STRETCH : 0;
+    const stretch = dragLimit > 0 ? Math.min(len / dragLimit, 1) * stretchLimit : 0;
     const along = 1 + stretch;
     const angle = len > 0.001 ? Math.atan2(dy, dx) : 0;
     const bulge = 1 + press.value * 0.05;
     return {
       transform: [
-        { translateX: dx },
-        { translateY: dy },
         { rotate: `${angle}rad` },
         { scaleX: along * bulge },
         { scaleY: (1 / Math.sqrt(along)) * bulge },
@@ -145,9 +174,11 @@ export function VireGlassSurface({
     return {
       ...statics,
       ...iconUniforms,
-      u_shift: [dx, dy],
+      // Перенос делает трансформ обёртки, шейдеру он больше не нужен — иначе сдвиг
+      // применился бы дважды. Направление тяги остаётся: по нему идёт деформация.
+      u_shift: [0, 0],
       u_dir: [dx * inv, dy * inv],
-      u_stretch: dragLimit > 0 ? Math.min(len / dragLimit, 1) * MAX_STRETCH : 0,
+      u_stretch: dragLimit > 0 ? Math.min(len / dragLimit, 1) * stretchLimit : 0,
       u_press: press.value,
       u_active: active.value,
       u_light: [light.value[0], light.value[1]],
@@ -179,7 +210,8 @@ export function VireGlassSurface({
       {/* Снимок экрана (makeImageFromView) для бэкдропа не годится в принципе: ~1000 мс на
           кадр, любое преломление по нему отстаёт. BlurView с blurTarget рисует контент
           экрана покадрово нативно и выровнен с ним по построению. */}
-      <Animated.View style={[styles.lens, { width, height }, lensStyle]}>
+      <Animated.View style={[styles.moving, { width, height }, moveStyle]} pointerEvents="none">
+        <Animated.View style={[styles.lens, { width, height }, lensStyle]}>
         {liveBackdrop && hasTarget && blurTarget?.current ? (
           refracting && GlassLensNative ? (
             // Вьюха линзы НАМЕРЕННО больше стекла — у кромки выборка уходит за его пределы,
@@ -192,8 +224,14 @@ export function VireGlassSurface({
                 height: height + lensPad * 2,
               }}
             >
+              {/* ЧИСТЫЙ ЗАХВАТ: интенсивность строго 0. Стадия размытия BlurView подмешивает
+                  зерно, хорошо заметное на тёмном — изолировано в стенде: при выключенном
+                  блюре внутренность стекла идеально ровная (зерно 0.000), при включённом —
+                  2.7 при том же фоне. Само размытие тут не нужно: линза берёт у BlurView
+                  только снимок фона. Полное разрешение и снятая текстура шума — патч
+                  expo-blur (setupWith(target, 1f, false)), docs §E-25. */}
               <BlurView
-                intensity={material.blur}
+                intensity={0}
                 tint="dark"
                 blurMethod="dimezisBlurView"
                 blurTarget={blurTarget}
@@ -214,8 +252,9 @@ export function VireGlassSurface({
                   transform: [{ scale: lensProps.magnify }],
                 }}
               >
+                {/* Фолбэк шейдера не имеет — размывать, кроме BlurView, тут нечем. */}
                 <BlurView
-                  intensity={material.blur}
+                  intensity={optics.blur}
                   tint="dark"
                   blurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
                   blurTarget={blurTarget}
@@ -230,14 +269,17 @@ export function VireGlassSurface({
             style={[styles.scrim, { width, height, borderRadius: cornerRadius, opacity: dim }]}
           />
         ) : null}
-      </Animated.View>
-      <Canvas
+        </Animated.View>
+        <Canvas
         style={[
           styles.canvas,
           { width: width + pad * 2, height: height + pad * 2, left: -pad, top: -pad },
         ]}
       >
-        <Fill>
+        {/* dither ВЫКЛЮЧЕН: Skia подмешивает его при растеризации в 8-битную поверхность,
+            и на тёмном это читается крупой. Замерено в стенде: с выключенным бэкдропом,
+            когда остаётся только этот слой, зерно внутри 3.5 против 0.04 снаружи. */}
+        <Fill dither={false}>
           <Shader source={SURFACE} uniforms={uniforms}>
             {icon?.image ? (
               <ImageShader image={icon.image} tx="decal" ty="decal" />
@@ -246,13 +288,15 @@ export function VireGlassSurface({
             )}
           </Shader>
         </Fill>
-      </Canvas>
+        </Canvas>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   host: { overflow: 'visible' },
+  moving: { position: 'absolute' },
   lens: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   clip: { position: 'absolute', overflow: 'hidden' },
   canvas: { position: 'absolute' },

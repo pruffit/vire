@@ -1,5 +1,6 @@
 import {
   bevelDp,
+  bevelFraction,
   chromaDp,
   edgePushDp,
   halfMinDp,
@@ -9,7 +10,7 @@ import {
   type VireGlassGeometry,
 } from './geometry';
 import { LENS_SHADER } from './lens-shader';
-import { debugIndex, type VireGlassDebugMode, type VireGlassMaterial } from './material';
+import { debugIndex, type VireGlassDebugMode, type VireGlassOptics } from './material';
 
 /** Гладкое объединение со второй формой — только морфинг-эксперимент стенда. */
 export type VireGlassMorph = {
@@ -27,7 +28,7 @@ const NO_MORPH = { offsetX: 0, offsetY: 0, width: 0, height: 0, cornerRadius: 0,
 /** Пропы нативной вьюхи. Имена обязаны совпадать с `Prop("…")` в `GlassLensModule.kt` —
  *  расхождение Expo проглатывает молча, и линза просто не включается (см. тест паритета). */
 export function toLensProps(
-  material: VireGlassMaterial,
+  optics: VireGlassOptics,
   geometry: VireGlassGeometry,
   options: { debug?: VireGlassDebugMode; morph?: VireGlassMorph } = {},
 ) {
@@ -37,11 +38,21 @@ export function toLensProps(
     glassWidth: geometry.width,
     glassHeight: geometry.height,
     cornerRadius: geometry.cornerRadius,
-    bevel: material.thickness,
-    magnify: 1 + (material.refractionScale - 1) * material.refraction,
-    edgePush: edgePushDp(geometry, material),
-    chroma: chromaDp(geometry, material),
-    spherical: sphericalDp(geometry, material),
+    bevel: bevelFraction(geometry, optics),
+    magnify: 1 + (optics.refractionScale - 1) * optics.refraction,
+    edgePush: edgePushDp(geometry, optics),
+    chroma: chromaDp(geometry, optics),
+    spherical: sphericalDp(geometry, optics),
+    // ВЫКЛЮЧЕНО. Своё размытие уводит выборку в площадной сбор: дисперсия там не считается
+    // вовсе, а по всему телу появляется смаз, которого в центре быть не должно, — оптика
+    // становится вялой. Зерно снято самим захватом, размытие тут больше не нужно.
+    frost: 0,
+    adapt: optics.adaptation,
+    adaptTarget: optics.adaptTarget,
+    fresnel: optics.fresnel,
+    fresnelPower: optics.fresnelPower,
+    // Кромка собирает свет в окрестности детали — это радиус вокруг формы, а не её фаска.
+    reflectReach: optics.gatherRadiusDp,
     morphX: morph.offsetX,
     morphY: morph.offsetY,
     morphWidth: morph.width,
@@ -55,7 +66,7 @@ export function toLensProps(
 /** Статическая часть униформ поверхности. Динамика (жест, нажатие, свет) домешивается
  *  в ворклете компонента — адаптер обязан оставаться обычной функцией. */
 export function toSurfaceUniforms(
-  material: VireGlassMaterial,
+  optics: VireGlassOptics,
   geometry: VireGlassGeometry,
   options: { debug?: VireGlassDebugMode; morph?: VireGlassMorph; dragLimit?: number; shadow?: number } = {},
 ) {
@@ -65,22 +76,18 @@ export function toSurfaceUniforms(
     u_center: [geometry.width / 2 + pad, geometry.height / 2 + pad],
     u_halfSize: [geometry.width / 2, geometry.height / 2],
     u_corner: Math.min(geometry.cornerRadius, halfMinDp(geometry)),
-    u_bevel: bevelDp(geometry, material),
-    u_thickness: material.thickness,
+    u_bevel: bevelDp(geometry, optics),
+    u_thickness: bevelFraction(geometry, optics),
     u_morphOffset: [morph.offsetX, morph.offsetY],
     u_morphHalf: [morph.width / 2, morph.height / 2],
     u_morphCorner: morph.cornerRadius,
     u_morphK: morph.smoothing,
-    u_fresnel: material.fresnel,
-    u_fresnelPower: material.fresnelPower,
-    u_specular: material.specular,
-    u_specularPower: material.specularPower,
-    u_edgeStrength: material.edgeStrength,
-    u_edgeWidth: material.edgeWidth,
-    u_dispersion: material.dispersion,
-    u_refraction: material.refraction,
-    u_tint: [material.tint.r, material.tint.g, material.tint.b, material.tintStrength],
-    u_opacity: material.opacity,
+    u_specular: optics.specular,
+    u_specularPower: optics.specularPower,
+    u_edgeDensity: optics.edgeDensity,
+    u_dispersion: optics.dispersion,
+    u_refraction: optics.refraction,
+    u_tint: [optics.tint.r, optics.tint.g, optics.tint.b, optics.tintStrength],
     u_shadow: options.shadow ?? 1,
     u_shadowReach: shadowReachDp(geometry),
     u_debug: debugIndex(options.debug ?? 'normal'),

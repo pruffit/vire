@@ -24,6 +24,12 @@ class GlassLensModule : Module() {
       Prop("edgePush") { view: GlassLensView, value: Float -> view.edgePush = value }
       Prop("chroma") { view: GlassLensView, value: Float -> view.chroma = value }
       Prop("spherical") { view: GlassLensView, value: Float -> view.spherical = value }
+      Prop("frost") { view: GlassLensView, value: Float -> view.frost = value }
+      Prop("adapt") { view: GlassLensView, value: Float -> view.adapt = value }
+      Prop("adaptTarget") { view: GlassLensView, value: Float -> view.adaptTarget = value }
+      Prop("fresnel") { view: GlassLensView, value: Float -> view.fresnel = value }
+      Prop("fresnelPower") { view: GlassLensView, value: Float -> view.fresnelPower = value }
+      Prop("reflectReach") { view: GlassLensView, value: Float -> view.reflectReach = value }
       Prop("morphX") { view: GlassLensView, value: Float -> view.morphX = value }
       Prop("morphY") { view: GlassLensView, value: Float -> view.morphY = value }
       Prop("morphWidth") { view: GlassLensView, value: Float -> view.morphWidth = value }

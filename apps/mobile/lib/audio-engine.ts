@@ -1,3 +1,4 @@
+import { NativeModules } from 'react-native';
 import TrackPlayer, {
   AppKilledPlaybackBehavior,
   Capability,
@@ -21,13 +22,16 @@ type Listener = (payload?: unknown) => void;
 
 const PROGRESS_POLL_MS = 500;
 
-const TRANSPORT_CAPABILITIES = [
+// Шторка уведомления показывает ровно play/pause/next/prev — заказчик прямым текстом
+// запретил «стоп» и перетаскиваемый скраббер (docs/superpowers/specs/2026-08-30-mobile-player-redesign-p3.md §4).
+// export — только ради прямой проверки в тестах (updateOptions() вызывается один раз за
+// процесс из-за memo в ensureReady(), поэтому в поздних тестах TrackPlayer.updateOptions
+// уже не перехватить).
+export const TRANSPORT_CAPABILITIES = [
   Capability.Play,
   Capability.Pause,
   Capability.SkipToNext,
   Capability.SkipToPrevious,
-  Capability.SeekTo,
-  Capability.Stop,
 ];
 
 function waitUntilReady(): Promise<void> {
@@ -65,6 +69,7 @@ export class TrackPlayerAudioEngine implements IAudioEngine {
     error: new Set(),
     remoteNext: new Set(),
     remotePrevious: new Set(),
+    remoteLike: new Set(),
     statechange: new Set(),
   };
   private setupPromise: Promise<void> | null = null;
@@ -102,6 +107,10 @@ export class TrackPlayerAudioEngine implements IAudioEngine {
     });
     TrackPlayer.addEventListener(Event.RemoteNext, () => this.emit('remoteNext'));
     TrackPlayer.addEventListener(Event.RemotePrevious, () => this.emit('remotePrevious'));
+    // Кнопка лайка в шторке — кастомное действие MediaSession, добавленное патчем RNTP
+    // (patches/react-native-track-player@4.1.2.patch); Event.RemoteLike в самой библиотеке
+    // уже типизирован, но нативно ничего не эмитит без патча.
+    TrackPlayer.addEventListener(Event.RemoteLike, () => this.emit('remoteLike'));
 
     // Event.PlaybackProgressUpdated не гарантированно шлётся с нужной частотой на всех
     // версиях/платформах (официальный хук useProgress() в самой RNTP тоже не полагается
@@ -202,3 +211,21 @@ export class TrackPlayerAudioEngine implements IAudioEngine {
 }
 
 export const audioEngine: IAudioEngine = new TrackPlayerAudioEngine();
+
+interface PatchedTrackPlayerModule {
+  setLikeState?: (liked: boolean) => Promise<null>;
+}
+
+/**
+ * Пушит состояние «лайкнуто» в нативную MediaSession для иконки в шторке — вне
+ * IAudioEngine, звонок напрямую в нативный модуль, есть только на пропатченной RNTP
+ * (см. патч выше). Метод существует не всегда (dev-клиент без пересборки нативной части) —
+ * проверка на существование перед вызовом обязательна.
+ */
+export function setNotificationLikeState(liked: boolean): void {
+  const trackPlayerModule = (NativeModules as Record<string, unknown>).TrackPlayerModule as
+    | PatchedTrackPlayerModule
+    | undefined;
+  if (typeof trackPlayerModule?.setLikeState !== 'function') return;
+  trackPlayerModule.setLikeState(liked).catch(() => {});
+}

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { trackLyricsResponseSchema, type TrackLyricsResponse } from '@vire/api-contracts';
 
 type LyricLine = NonNullable<TrackLyricsResponse['lyrics']>[number];
@@ -8,12 +8,27 @@ import { usePlayerStore, type QueueTrack } from '../../lib/player-store';
 import { formatDuration } from '../../lib/format';
 import { colors } from '../../lib/theme';
 import { type } from '../../lib/design/typography';
-import { space, radii } from '../../lib/design/scales';
+import { space } from '../../lib/design/scales';
 import { TrackRow } from '../ui/track-row';
-import { LoadingState, EmptyState } from '../ui/states';
+
+function SectionLoading() {
+  return (
+    <View style={styles.empty}>
+      <ActivityIndicator color={colors.mutedForeground} />
+    </View>
+  );
+}
+
+function SectionEmpty({ text }: { text: string }) {
+  return (
+    <View style={styles.empty}>
+      <Text style={type.caption}>{text}</Text>
+    </View>
+  );
+}
 
 /** Что дальше в очереди. Тап — переход к треку без выхода из плеера. */
-export function QueuePanel() {
+export function QueueSection() {
   const queue = usePlayerStore((s) => s.queue);
   const queueIndex = usePlayerStore((s) => s.queueIndex);
   const playQueue = usePlayerStore((s) => s.playQueue);
@@ -22,11 +37,11 @@ export function QueuePanel() {
   const upcoming = queue.slice(queueIndex + 1);
 
   if (upcoming.length === 0) {
-    return <EmptyState title="Дальше пусто" hint="Это последний трек в очереди." />;
+    return <SectionEmpty text="Это последний трек в очереди" />;
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+    <View style={styles.list}>
       {upcoming.map((t: QueueTrack, i) => (
         <TrackRow
           key={`${t.id}-${i}`}
@@ -36,19 +51,18 @@ export function QueuePanel() {
           onPress={() => playQueue(queue, queueIndex + 1 + i, context ?? { source: 'direct' })}
         />
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
 /**
- * Текст трека. Синхронизированный подсвечивает текущую строку и доскролливает к ней;
- * без таймкодов показывается статично — оба варианта приходят одним контрактом.
+ * Текст трека. Строки списком, активная (по таймкоду) подсвечена; тап — seek. Без
+ * автоскролла: он дерётся с прокруткой страницы, которой теперь принадлежит этот блок.
  */
-export function LyricsPanel({ trackId }: { trackId: string }) {
+export function LyricsSection({ trackId }: { trackId: string }) {
   const positionSec = usePlayerStore((s) => s.positionSec);
   const seek = usePlayerStore((s) => s.seek);
   const [lyrics, setLyrics] = useState<LyricLine[] | null | undefined>(undefined);
-  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,19 +82,13 @@ export function LyricsPanel({ trackId }: { trackId: string }) {
     ? lyrics!.reduce((acc, line, i) => (line.t !== null && line.t <= positionSec ? i : acc), -1)
     : -1;
 
-  useEffect(() => {
-    if (activeIndex < 0) return;
-    // Держим активную строку в верхней трети — так видно, что будет дальше.
-    scrollRef.current?.scrollTo({ y: Math.max(0, activeIndex * LINE_HEIGHT - LINE_HEIGHT * 2), animated: true });
-  }, [activeIndex]);
-
-  if (lyrics === undefined) return <LoadingState />;
+  if (lyrics === undefined) return <SectionLoading />;
   if (!lyrics || lyrics.length === 0) {
-    return <EmptyState title="Текста нет" hint="Артист ещё не добавил слова к этому треку." />;
+    return <SectionEmpty text="Артист ещё не добавил слова к этому треку" />;
   }
 
   return (
-    <ScrollView ref={scrollRef} contentContainerStyle={styles.lyrics} showsVerticalScrollIndicator={false}>
+    <View>
       {lyrics.map((line, i) => (
         <Text
           key={i}
@@ -90,26 +98,33 @@ export function LyricsPanel({ trackId }: { trackId: string }) {
           {line.text || ' '}
         </Text>
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
-const LINE_HEIGHT = 30;
-
-/** Мета трека: то, ради чего на вебе есть отдельная страница трека. */
-export function TrackPanel({ track }: { track: QueueTrack }) {
+/**
+ * Мета трека: то, ради чего на вебе есть отдельная страница трека. Название и артист
+ * сюда не дублируются — они стоят заголовком двумя экранами выше.
+ */
+export function TrackSection() {
   const durationSec = usePlayerStore((s) => s.durationSec);
   const context = usePlayerStore((s) => s.context);
+  const queueLength = usePlayerStore((s) => s.queue.length);
+  const queueIndex = usePlayerStore((s) => s.queueIndex);
+
+  const rows: { label: string; value: string }[] = [];
+  if (durationSec > 0) rows.push({ label: 'ДЛИТЕЛЬНОСТЬ', value: formatDuration(durationSec) });
+  if (context) rows.push({ label: 'ИСТОЧНИК', value: SOURCE_LABEL[context.source] ?? context.source });
+  if (queueLength > 1) rows.push({ label: 'В ОЧЕРЕДИ', value: `${queueIndex + 1} / ${queueLength}` });
+
+  if (rows.length === 0) return <SectionEmpty text="Данных о треке пока нет" />;
 
   return (
-    <ScrollView contentContainerStyle={styles.meta} showsVerticalScrollIndicator={false}>
-      <MetaRow label="ТРЕК" value={track.title} />
-      <MetaRow label="АРТИСТ" value={track.artistName} />
-      {durationSec > 0 && (
-        <MetaRow label="ДЛИТЕЛЬНОСТЬ" value={formatDuration(durationSec)} />
-      )}
-      {context && <MetaRow label="ИСТОЧНИК" value={SOURCE_LABEL[context.source] ?? context.source} />}
-    </ScrollView>
+    <View>
+      {rows.map((row, i) => (
+        <MetaRow key={row.label} label={row.label} value={row.value} last={i === rows.length - 1} />
+      ))}
+    </View>
   );
 }
 
@@ -125,9 +140,9 @@ const SOURCE_LABEL: Record<string, string> = {
   direct: 'Напрямую',
 };
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function MetaRow({ label, value, last }: { label: string; value: string; last: boolean }) {
   return (
-    <View style={styles.metaRow}>
+    <View style={[styles.metaRow, !last && styles.metaRowDivider]}>
       <Text style={type.mono}>{label}</Text>
       <Text style={[type.row, styles.metaValue]} numberOfLines={2}>
         {value}
@@ -137,22 +152,22 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  list: { paddingHorizontal: space.md, paddingBottom: space.xl, gap: 2 },
-  lyrics: { paddingHorizontal: space.lg, paddingBottom: space.xl },
+  empty: { paddingVertical: space.xl, alignItems: 'center' },
+  list: { gap: 2 },
   line: {
     ...type.body,
-    minHeight: LINE_HEIGHT,
-    lineHeight: LINE_HEIGHT,
+    minHeight: 30,
+    lineHeight: 30,
     color: colors.mutedForeground,
   },
   lineActive: { color: colors.foreground },
-  meta: { paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.md },
   metaRow: {
-    gap: 4,
-    paddingVertical: space.sm,
-    paddingHorizontal: space.md,
-    borderRadius: radii.card,
-    backgroundColor: colors.card,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.md,
   },
+  metaRowDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
   metaValue: { color: colors.foreground },
 });

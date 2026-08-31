@@ -8,12 +8,12 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurTargetView } from 'expo-blur';
+import { Backdrop } from '../components/backdrop';
 import { LiquidGlassButton } from '../components/liquid-glass';
 import { VireGlassSurface } from '../components/vireglass/glass-surface';
 import { useEnvironmentLight } from '../lib/vireglass/environment';
 import { capsuleGeometry, circleGeometry, roundedRectGeometry } from '../lib/vireglass/geometry';
-import { applyToggles, resolveMaterial, VIREGLASS_MATERIAL_V1 } from '../lib/vireglass/material';
+import { applyToggles, LEGACY_OPTICS } from '../lib/vireglass/material';
 import type { IconName } from '../lib/icon';
 
 // Сцены замера (docs/vireglass/benchmarks/). Эксперимент «счёт» гоняет ПРОДОВЫЙ
@@ -39,11 +39,11 @@ const SIDE_MARGIN = 12;
 // до Phase 3 — там линза не включалась вовсе, и воспроизвести то состояние отсюда нечем
 // (material-lab.md E-01).
 const MATERIALS = {
-  'без преломления': resolveMaterial({
-    ...applyToggles(VIREGLASS_MATERIAL_V1, { refraction: false, dispersion: false }),
+  'без преломления': {
+    ...applyToggles(LEGACY_OPTICS['v1'], { refraction: false, dispersion: false }),
     blur: 9,
-  }),
-  'Material v1': VIREGLASS_MATERIAL_V1,
+  },
+  'Material v1': LEGACY_OPTICS['v1'],
 };
 
 type MaterialName = keyof typeof MATERIALS;
@@ -83,7 +83,7 @@ function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () 
 }
 
 export function GlassBench() {
-  // Цель блюра обязана быть BlurTargetView из expo-blur, а не обычной View: на обычной
+  // Цель обязана быть `Backdrop`, а не обычной View: на обычной
   // нативный проп blurTargetId не ставится («Cannot set prop blurTargetId»), захват фона
   // молча не включается — и замер уходит мимо самой дорогой части конвейера.
   const targetRef = useRef<View>(null);
@@ -124,9 +124,9 @@ export function GlassBench() {
           мини-плеер живут вне экрана). Положить стекло ВНУТРЬ своей же цели нельзя:
           dimezis рисует цель в себя, дерево RenderNode замыкается и рантайм падает
           переполнением стека в prepareTreeImpl. Проверено — воспроизводится за секунды. */}
-      <BlurTargetView style={StyleSheet.absoluteFill} ref={targetRef}>
+      <Backdrop style={StyleSheet.absoluteFill} targetRef={targetRef}>
         <MovingBackdrop />
-      </BlurTargetView>
+      </Backdrop>
 
       <View style={[styles.glassRow, mode === 'площадь' && styles.glassColumn]}>
         {items.map((i) =>
@@ -137,13 +137,13 @@ export function GlassBench() {
               icon={ICONS[i % ICONS.length]}
               blurTarget={targetRef}
               active={i === 0}
-              material={MATERIALS[material]}
+              optics={MATERIALS[material]}
             />
           ) : (
             <VireGlassSurface
               key={i}
               geometry={geometry}
-              material={MATERIALS[material]}
+              optics={MATERIALS[material]}
               dynamics={{ shiftX, shiftY, press, active, light }}
               blurTarget={targetRef}
             />
