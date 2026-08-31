@@ -14,6 +14,8 @@ import { requireNativeModule, requireNativeView } from 'expo';
  * (`lib/vireglass/adapters.ts`).
  */
 export type GlassLensProps = {
+  /** Тег GlassBackdrop, чей снимок кадра линза кладёт под преломление. */
+  backdropId?: number | null;
   /** Исходник AGSL. Собирается в JS, чтобы геометрия у линзы и поверхности была одной строкой. */
   shaderSource: string;
   /** Размер ВИДИМОГО стекла в dp. Сама вьюха обязана быть больше него: у кромки выборка
@@ -55,6 +57,23 @@ const native = (() => {
     return null;
   }
 })();
+
+export type GlassBackdropProps = { style?: StyleProp<ViewStyle>; children?: ReactNode };
+
+/**
+ * Захват фона БЕЗ размытия. expo-blur отдаёт дизеренную копию: на Android 13+ он гонит
+ * захват через createBlurEffect, а Skia дизерит выход блюра (замеры — docs/vireglass).
+ */
+export const GlassBackdrop: ComponentType<GlassBackdropProps> | null =
+  Platform.OS === 'android'
+    ? (() => {
+        try {
+          return requireNativeView('GlassLens', 'GlassBackdropView') as ComponentType<GlassBackdropProps>;
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
 /** Диагностический зонд: что именно приходит в createRuntimeShaderEffect.
  *  Только для стенда (screens/glass-lab), в продовом UI не используется. */

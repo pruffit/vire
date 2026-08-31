@@ -27,6 +27,8 @@ import {
   refractionScale as refractionScaleFrom,
   refractionStrength,
   specularPower as specularPowerFrom,
+  bodyDensity as bodyDensityFrom,
+  edgeLight as edgeLightFrom,
   specularStrength,
 } from './optics';
 
@@ -43,8 +45,12 @@ export type VireGlassMaterial = {
   roughness: number;
   /** Отклик на ориентацию устройства, 0 — свет закреплён к экрану. */
   environment: number;
-  /** Не физика, а требование читаемости: выравнивание фона под стеклом. */
-  adaptation: number;
+  /** Не физика, а требование читаемости: насколько сильно стекло обязано развести свою
+   *  светлоту с надписью поверх себя. 0 — стекло просто прозрачное. */
+  legibility: number;
+  /** Светлота того, что приложение рисует ПОВЕРХ стекла: 1 — светлые иконки и текст,
+   *  0 — тёмные. Причина, а не ручка: её знает вызывающий экран. */
+  ink: number;
 };
 
 export const MATERIAL_RANGES = {
@@ -53,13 +59,15 @@ export const MATERIAL_RANGES = {
   bevel: [0, 40],
   roughness: [0, 1],
   environment: [0, 1],
-  adaptation: [0, 1],
+  legibility: [0, 1],
+  ink: [0, 1],
 } as const satisfies Record<string, readonly [number, number]>;
 
 export type VireGlassNumericKey = keyof typeof MATERIAL_RANGES;
 
-/** Целевая светимость фона под стеклом. Порог читаемости, а не вкус — потому константа. */
-export const ADAPT_TARGET = 0.42;
+/** Радиус, по которому берётся ЛОКАЛЬНАЯ светлота фона, dp. Не по пикселю: иначе стекло
+ *  гоняется за штрихами и вокруг букв под ним появляется ореол. */
+export const ADAPT_RADIUS = 22;
 
 /** Затемнение линзы у продуктовых поверхностей — плоская заливка поверх бэкдропа. */
 export const PRODUCT_DIM = 0.2;
@@ -89,8 +97,11 @@ export type VireGlassOptics = {
   tintStrength: number;
   edgeDensity: number;
   environment: number;
-  adaptation: number;
-  adaptTarget: number;
+  legibility: number;
+  ink: number;
+  adaptRadius: number;
+  bodyDensity: number;
+  edgeLight: number;
 };
 
 // Продовый дефолт — «вода»: ниже показатель преломления, тоньше среда и фаска, почти
@@ -101,7 +112,8 @@ export const VIREGLASS_MATERIAL_V4: VireGlassMaterial = {
   bevel: 5,
   roughness: 0.05,
   environment: 0.27,
-  adaptation: 0.26,
+  legibility: 0.26,
+  ink: 1,
 };
 
 /** Материал продукта. Потребители берут его, а не версию поимённо. */
@@ -136,8 +148,11 @@ export function resolveOptics(patch: Partial<VireGlassMaterial> = {}): VireGlass
     tintStrength: absorption(m.thickness),
     edgeDensity: edgeDensityFrom(m.thickness, m.bevel),
     environment: m.environment,
-    adaptation: m.adaptation,
-    adaptTarget: ADAPT_TARGET,
+    legibility: m.legibility,
+    ink: m.ink,
+    adaptRadius: ADAPT_RADIUS,
+    bodyDensity: bodyDensityFrom(m.thickness),
+    edgeLight: edgeLightFrom(m.ior),
   };
 }
 
@@ -163,8 +178,11 @@ export const LEGACY_OPTICS = {
     tintStrength: 0.35,
     edgeDensity: 1.5,
     environment: 0.27,
-    adaptation: 0.55,
-    adaptTarget: ADAPT_TARGET,
+    legibility: 0.55,
+    ink: 1,
+    adaptRadius: ADAPT_RADIUS,
+    bodyDensity: 0.14,
+    edgeLight: 0.35,
   },
   'v2': {
     blur: 5,
@@ -182,8 +200,11 @@ export const LEGACY_OPTICS = {
     tintStrength: 0.1,
     edgeDensity: 3.63,
     environment: 0,
-    adaptation: 0,
-    adaptTarget: ADAPT_TARGET,
+    legibility: 0,
+    ink: 1,
+    adaptRadius: ADAPT_RADIUS,
+    bodyDensity: 0.14,
+    edgeLight: 0.35,
   },
   'v1': {
     blur: 12,
@@ -201,8 +222,11 @@ export const LEGACY_OPTICS = {
     tintStrength: 0.16,
     edgeDensity: 3.63,
     environment: 0,
-    adaptation: 0,
-    adaptTarget: ADAPT_TARGET,
+    legibility: 0,
+    ink: 1,
+    adaptRadius: ADAPT_RADIUS,
+    bodyDensity: 0.14,
+    edgeLight: 0.35,
   },
 } as const satisfies Record<string, VireGlassOptics>;
 
@@ -232,7 +256,7 @@ export const EFFECTS = [
   'dispersion',
   'tint',
   'environment',
-  'adaptation',
+  'legibility',
 ] as const;
 
 export type VireGlassEffect = (typeof EFFECTS)[number];
@@ -267,7 +291,7 @@ export function applyToggles(
   if (!on.dispersion) o.dispersion = 0;
   if (!on.tint) o.tintStrength = 0;
   if (!on.environment) o.environment = 0;
-  if (!on.adaptation) o.adaptation = 0;
+  if (!on.legibility) o.legibility = 0;
   return o;
 }
 

@@ -6,6 +6,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
+import { GlassBackdrop } from '../modules/glass-lens';
 
 /**
  * Область, чей кадр стекло кладёт под преломление, — одна точка вместо `BlurTargetView`
@@ -25,8 +26,12 @@ export function Backdrop({
 }) {
   return (
     <BlurTargetView style={style} onLayout={onLayout} ref={targetRef}>
-      {children}
+      {GlassBackdrop ? <GlassBackdrop style={fill}>{children}</GlassBackdrop> : children}
     </BlurTargetView>
   );
 }
 
+
+// Свой захват заполняет цель целиком: линза берёт его снимок, а внешняя цель expo-blur
+// остаётся только ради фолбэка ниже Android 13.
+const fill = { flex: 1 } as const;

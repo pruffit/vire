@@ -51,12 +51,12 @@ const optics = resolveOptics();
 
 describe('resolveMaterial', () => {
   it('обрезает каждую причину по своему диапазону', () => {
-    const m = resolveMaterial({ ior: 99, thickness: -5, bevel: 999, roughness: 7, adaptation: -1 });
+    const m = resolveMaterial({ ior: 99, thickness: -5, bevel: 999, roughness: 7, legibility: -1 });
     expect(m.ior).toBe(MATERIAL_RANGES.ior[1]);
     expect(m.thickness).toBe(MATERIAL_RANGES.thickness[0]);
     expect(m.bevel).toBe(MATERIAL_RANGES.bevel[1]);
     expect(m.roughness).toBe(MATERIAL_RANGES.roughness[1]);
-    expect(m.adaptation).toBe(0);
+    expect(m.legibility).toBe(0);
   });
 
   // Цвет среды больше не задаётся: он выводится из показателя преломления вместе с
@@ -130,7 +130,7 @@ describe('applyToggles', () => {
       dispersion: false,
       tint: false,
       environment: false,
-      adaptation: false,
+      legibility: false,
     });
     expect(off.blur).toBe(0);
     expect(off.refraction).toBe(0);
@@ -141,7 +141,7 @@ describe('applyToggles', () => {
     expect(off.dispersion).toBe(0);
     expect(off.tintStrength).toBe(0);
     expect(off.environment).toBe(0);
-    expect(off.adaptation).toBe(0);
+    expect(off.legibility).toBe(0);
   });
 
   it('пустой набор тумблеров ничего не меняет', () => {

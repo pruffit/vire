@@ -5,7 +5,10 @@ import android.content.Context
 import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
 import android.os.Build
+import android.graphics.Canvas
 import android.util.Log
+import android.view.View
+import android.view.ViewGroup
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.views.ExpoView
 import kotlin.math.min
@@ -24,6 +27,37 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
   private val density = context.resources.displayMetrics.density
 
   private val screenAt = IntArray(2)
+  private val selfAt = IntArray(2)
+  private val backdropAt = IntArray(2)
+
+  // ViewGroup себя не рисует по умолчанию, а фон линзе рисовать теперь именно ей.
+  init { setWillNotDraw(false) }
+
+  private var backdrop: GlassBackdropView? = null
+
+  /** Тег ЦЕЛИ (components/backdrop.tsx), а не самого захвата: снаружи стоит BlurTargetView
+   *  ради фолбэка ниже Android 13, наш GlassBackdropView лежит внутри неё. */
+  var backdropId: Int? = null
+    set(value) {
+      if (field == value) return
+      field = value
+      backdrop?.unregister(this)
+      backdrop = value?.let { id -> appContext.findView<View>(id)?.let(::findBackdrop) }
+      if (value != null && backdrop == null) {
+        Log.e("GlassLens", "бэкдроп $value не найден, стекло остаётся без преломления")
+      }
+      backdrop?.register(this)
+      invalidate()
+    }
+
+  private fun findBackdrop(view: View, depth: Int = 0): GlassBackdropView? {
+    if (view is GlassBackdropView) return view
+    if (depth >= 3 || view !is ViewGroup) return null
+    for (i in 0 until view.childCount) {
+      findBackdrop(view.getChildAt(i), depth + 1)?.let { return it }
+    }
+    return null
+  }
 
   private var shader: RuntimeShader? = null
   private var compiledSource: String? = null
@@ -38,8 +72,14 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
   var chroma = 0f
   var spherical = 0f
   var frost = 0f
-  var adapt = 0f
-  var adaptTarget = 0.42f
+  var ink = 1f
+  var legibility = 0f
+  var adaptRadius = 22f
+  var bodyDensity = 0f
+  var edgeLight = 0f
+  var bodyTintR = 1f
+  var bodyTintG = 1f
+  var bodyTintB = 1f
   var fresnel = 0f
   var fresnelPower = 5f
   var reflectReach = 0f
@@ -114,8 +154,12 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
       val maxY = minOf(metrics.heightPixels - screenAt[1], height).toFloat() - 1f
       effect.setFloatUniform("u_contentMin", minX, minY)
       effect.setFloatUniform("u_contentMax", maxX, maxY)
-      effect.setFloatUniform("u_adapt", adapt)
-      effect.setFloatUniform("u_adaptTarget", adaptTarget)
+      effect.setFloatUniform("u_ink", ink)
+      effect.setFloatUniform("u_legibility", legibility)
+      effect.setFloatUniform("u_adaptRadius", adaptRadius * density)
+      effect.setFloatUniform("u_bodyDensity", bodyDensity)
+      effect.setFloatUniform("u_edgeLight", edgeLight)
+      effect.setFloatUniform("u_bodyTint", bodyTintR, bodyTintG, bodyTintB)
       effect.setFloatUniform("u_fresnel", fresnel)
       effect.setFloatUniform("u_fresnelPower", fresnelPower)
       effect.setFloatUniform("u_reflectReach", reflectReach * density)
@@ -131,6 +175,28 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
     }
 
     setRenderEffect(RenderEffect.createRuntimeShaderEffect(effect, "content"))
+  }
+
+  /** Содержимое линзы — снимок фона, и рисует его она сама: RenderEffect работает по тому,
+   *  что вьюха нарисовала. Смещение берём по позиции на экране — она учитывает трансформы,
+   *  и когда стекло едет, под ним оказывается другой участок фона. */
+  override fun onDraw(canvas: Canvas) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+    val source = backdrop ?: return
+    // Регистрация идемпотентна и восстанавливается сама: бэкдроп может пере-подключиться.
+    source.register(this)
+    val n = source.content ?: return
+    getLocationOnScreen(selfAt)
+    source.getLocationOnScreen(backdropAt)
+    canvas.save()
+    canvas.translate((backdropAt[0] - selfAt[0]).toFloat(), (backdropAt[1] - selfAt[1]).toFloat())
+    canvas.drawRenderNode(n)
+    canvas.restore()
+  }
+
+  override fun onDetachedFromWindow() {
+    backdrop?.unregister(this)
+    super.onDetachedFromWindow()
   }
 
   override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {

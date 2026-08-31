@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  findNodeHandle,
+  Platform,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import {
   Canvas,
   ColorShader,
@@ -102,9 +109,24 @@ export function VireGlassSurface({
   padRef.current = Math.max(padRef.current, lensPadDp(geometry, optics, morph, dragLimit));
   const lensPad = padRef.current;
 
+  // Цель блюра — ref, и на первом рендере она ещё пуста: сама по себе перерисовку она не
+  // вызывает. Без этого эффекта стекло остаётся без бэкдропа до первого постороннего
+  // ре-рендера — на статичном экране навсегда.
+  const [hasTarget, setHasTarget] = useState(false);
+  // Нативной линзе нужен ТЕГ цели: по нему она находит внутри неё свой захват.
+  const [backdropId, setBackdropId] = useState<number | null>(null);
+  useEffect(() => {
+    const node = blurTarget?.current ?? null;
+    setHasTarget(node != null);
+    setBackdropId(node ? findNodeHandle(node) : null);
+  }, [blurTarget]);
+
+  // Тело стекла рисует линза, когда она живая: только там виден фон, а без фона точечной
+  // адаптации не существует. Поверхности в этом случае остаётся блик, тень и иконка.
+  const bodyInLens = isGlassLensSupported && GlassLensNative !== null && hasTarget;
   const statics = useMemo(
-    () => toSurfaceUniforms(optics, geometry, { debug, morph, dragLimit, shadow }),
-    [optics, geometry, debug, morph, dragLimit, shadow],
+    () => toSurfaceUniforms(optics, geometry, { debug, morph, dragLimit, shadow, bodyInLens }),
+    [optics, geometry, debug, morph, dragLimit, shadow, bodyInLens],
   );
   const lensProps = useMemo(
     () => toLensProps(optics, geometry, { debug, morph }),
@@ -127,14 +149,6 @@ export function VireGlassSurface({
   // `ReferenceError: Property 'MAX_STRETCH' doesn't exist`. Typecheck и тесты такое не
   // видят — ворклеты они не исполняют. Локальная переменная компонента захватывается всегда.
   const stretchLimit = MAX_STRETCH;
-
-  // Цель блюра — ref, и на первом рендере она ещё пуста: сама по себе перерисовку она не
-  // вызывает. Без этого эффекта стекло остаётся без бэкдропа до первого постороннего
-  // ре-рендера — на статичном экране навсегда.
-  const [hasTarget, setHasTarget] = useState(false);
-  useEffect(() => {
-    setHasTarget(blurTarget?.current != null);
-  }, [blurTarget]);
 
   // ПЕРЕМЕЩЕНИЕ — общее для обеих половин стекла. Раньше линзу двигал трансформ вьюхи, а
   // поверхность — сдвиг внутри шейдера, то есть две разные системы на одно движение: Skia
@@ -218,26 +232,13 @@ export function VireGlassSurface({
             // форму вырезает сам шейдер.
             <GlassLensNative
               {...lensProps}
+              backdropId={backdropId}
               style={{
                 position: 'absolute',
                 width: width + lensPad * 2,
                 height: height + lensPad * 2,
               }}
-            >
-              {/* ЧИСТЫЙ ЗАХВАТ: интенсивность строго 0. Стадия размытия BlurView подмешивает
-                  зерно, хорошо заметное на тёмном — изолировано в стенде: при выключенном
-                  блюре внутренность стекла идеально ровная (зерно 0.000), при включённом —
-                  2.7 при том же фоне. Само размытие тут не нужно: линза берёт у BlurView
-                  только снимок фона. Полное разрешение и снятая текстура шума — патч
-                  expo-blur (setupWith(target, 1f, false)), docs §E-25. */}
-              <BlurView
-                intensity={0}
-                tint="dark"
-                blurMethod="dimezisBlurView"
-                blurTarget={blurTarget}
-                style={StyleSheet.absoluteFill}
-              />
-            </GlassLensNative>
+            />
           ) : (
             // Фолбэк ниже Android 13: равномерное увеличение. Это лупа, а не линза —
             // радиально переменного смещения аффинным трансформом не выразить.

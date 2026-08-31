@@ -47,8 +47,15 @@ export function toLensProps(
     // вовсе, а по всему телу появляется смаз, которого в центре быть не должно, — оптика
     // становится вялой. Зерно снято самим захватом, размытие тут больше не нужно.
     frost: 0,
-    adapt: optics.adaptation,
-    adaptTarget: optics.adaptTarget,
+    ink: optics.ink,
+    legibility: optics.legibility,
+    adaptRadius: optics.adaptRadius,
+    bodyDensity: optics.bodyDensity,
+    edgeLight: optics.edgeLight,
+    // Оттенок среды уезжает тремя числами: пропы нативной вьюхи плоские.
+    bodyTintR: optics.tint.r,
+    bodyTintG: optics.tint.g,
+    bodyTintB: optics.tint.b,
     fresnel: optics.fresnel,
     fresnelPower: optics.fresnelPower,
     // Кромка собирает свет в окрестности детали — это радиус вокруг формы, а не её фаска.
@@ -68,7 +75,14 @@ export function toLensProps(
 export function toSurfaceUniforms(
   optics: VireGlassOptics,
   geometry: VireGlassGeometry,
-  options: { debug?: VireGlassDebugMode; morph?: VireGlassMorph; dragLimit?: number; shadow?: number } = {},
+  options: {
+    debug?: VireGlassDebugMode;
+    morph?: VireGlassMorph;
+    dragLimit?: number;
+    shadow?: number;
+    /** Тело стекла рисует линза — поверхности остаётся блик, тень и иконка. */
+    bodyInLens?: boolean;
+  } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
   const pad = surfacePadDp(geometry, options.dragLimit ?? 0, morph);
@@ -87,7 +101,15 @@ export function toSurfaceUniforms(
     u_edgeDensity: optics.edgeDensity,
     u_dispersion: optics.dispersion,
     u_refraction: optics.refraction,
-    u_tint: [optics.tint.r, optics.tint.g, optics.tint.b, optics.tintStrength],
+    // Плотность тинта гасится, когда тело считает линза: рисовать его дважды значит
+    // получить двойную заливку, а адаптация у поверхности всё равно невозможна — фона она
+    // не видит. Сам цвет остаётся: по нему идёт поглощение у кромки.
+    u_tint: [
+      optics.tint.r,
+      optics.tint.g,
+      optics.tint.b,
+      options.bodyInLens ? 0 : optics.tintStrength,
+    ],
     u_shadow: options.shadow ?? 1,
     u_shadowReach: shadowReachDp(geometry),
     u_debug: debugIndex(options.debug ?? 'normal'),

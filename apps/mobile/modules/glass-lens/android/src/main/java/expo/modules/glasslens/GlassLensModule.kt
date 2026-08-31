@@ -15,6 +15,7 @@ class GlassLensModule : Module() {
     View(GlassLensView::class) {
       Name("GlassLensView")
 
+      Prop("backdropId") { view: GlassLensView, value: Int? -> view.backdropId = value }
       Prop("shaderSource") { view: GlassLensView, value: String -> view.shaderSource = value }
       Prop("glassWidth") { view: GlassLensView, value: Float -> view.glassWidth = value }
       Prop("glassHeight") { view: GlassLensView, value: Float -> view.glassHeight = value }
@@ -25,8 +26,14 @@ class GlassLensModule : Module() {
       Prop("chroma") { view: GlassLensView, value: Float -> view.chroma = value }
       Prop("spherical") { view: GlassLensView, value: Float -> view.spherical = value }
       Prop("frost") { view: GlassLensView, value: Float -> view.frost = value }
-      Prop("adapt") { view: GlassLensView, value: Float -> view.adapt = value }
-      Prop("adaptTarget") { view: GlassLensView, value: Float -> view.adaptTarget = value }
+      Prop("ink") { view: GlassLensView, value: Float -> view.ink = value }
+      Prop("legibility") { view: GlassLensView, value: Float -> view.legibility = value }
+      Prop("adaptRadius") { view: GlassLensView, value: Float -> view.adaptRadius = value }
+      Prop("bodyDensity") { view: GlassLensView, value: Float -> view.bodyDensity = value }
+      Prop("edgeLight") { view: GlassLensView, value: Float -> view.edgeLight = value }
+      Prop("bodyTintR") { view: GlassLensView, value: Float -> view.bodyTintR = value }
+      Prop("bodyTintG") { view: GlassLensView, value: Float -> view.bodyTintG = value }
+      Prop("bodyTintB") { view: GlassLensView, value: Float -> view.bodyTintB = value }
       Prop("fresnel") { view: GlassLensView, value: Float -> view.fresnel = value }
       Prop("fresnelPower") { view: GlassLensView, value: Float -> view.fresnelPower = value }
       Prop("reflectReach") { view: GlassLensView, value: Float -> view.reflectReach = value }
@@ -39,6 +46,11 @@ class GlassLensModule : Module() {
       Prop("debug") { view: GlassLensView, value: Float -> view.debug = value }
 
       OnViewDidUpdateProps { view: GlassLensView -> view.applyEffect() }
+    }
+
+    // Захват фона: пишет своих детей в RenderNode, линза берёт его как content.
+    View(GlassBackdropView::class) {
+      Name("GlassBackdropView")
     }
 
     // Диагностический зонд (docs/vireglass/ADR-001): показывает, какие пиксели реально

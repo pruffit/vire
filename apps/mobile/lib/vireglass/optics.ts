@@ -69,7 +69,10 @@ export const specularStrength = (ior: number, roughness: number) =>
  * детали: у настоящего стекла луч не знает, какого размера кусок отрезали. Отсюда мелкая
  * поверхность преломляет заметнее крупной без всякой «компенсации размера».
  */
-const EDGE_PUSH_PER_BEVEL = 2.6;
+// Смещение не может превысить ФАСКУ: луч гнёт именно она, и видеть дальше собственной
+// толщи ему нечем. При коэффициенте 2.6 смещение выходило в полтора раза шире фаски, и
+// кромка показывала не сжатую полоску, а читаемую КОПИЮ текста, лежащего снаружи стекла.
+const EDGE_PUSH_PER_BEVEL = 1;
 
 export const edgePush = (ior: number, bevelDp: number) =>
   refractionStrength(ior) * EDGE_PUSH_PER_BEVEL * Math.max(bevelDp, 0);
@@ -108,3 +111,17 @@ export function mediumTint(ior: number): { r: number; g: number; b: number } {
 const GATHER_PER_BEVEL = 4;
 
 export const gatherRadius = (bevelDp: number) => Math.max(bevelDp, 1) * GATHER_PER_BEVEL;
+
+/**
+ * Плотность тела в плоской середине. Раньше жила константой в поверхностном шейдере; теперь
+ * тело считает линза, и величина переезжает сюда вместе с остальными следствиями.
+ */
+const BODY_DENSITY = 0.19;
+
+export const bodyDensity = (thicknessDp: number) => BODY_DENSITY * absorption(thicknessDp);
+
+/**
+ * Насколько кромка подхватывает свет и цвет окрестности. Это то же отражение, что и Френель:
+ * отдельной ручки не заводим — плотная среда возвращает больше окружения по построению.
+ */
+export const edgeLight = (ior: number) => fresnelStrength(ior);
