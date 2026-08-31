@@ -175,10 +175,20 @@ half4 main(float2 xy) {
   // честно остаётся тёмным, потому что источника нет.
   float3 N = normalize(float3(n * vgBevelSlope(t), 1.0));
   float fres = u_fresnel * pow(1.0 - clamp(N.z, 0.0, 1.0), u_fresnelPower);
+  // Отражение берётся ПЛОЩАДКОЙ, а не точкой. Кривая поверхность собирает целый телесный
+  // угол, и один сдвинутый отсчёт — это чистый перенос без сжатия: у кромки появлялась
+  // неискажённая КОПИЯ того, что лежит рядом со стеклом (у плотных материалов радиус сбора
+  // доходит до 64 dp, и текст снаружи читался внутри стекла). Усреднение по окрестности
+  // оставляет цвет окружения, но не его форму.
   float2 around = u_center + p + n * (u_reflectReach * mix(0.25, 1.0, t));
-  half4 rc = content.eval(vgInContent(around));
-  float ra = float(rc.a);
-  float3 refl = ra > 0.004 ? float3(rc.rgb) / ra : float3(0.0);
+  float probe = u_reflectReach * 0.45;
+  float4 rsum = float4(content.eval(vgInContent(around)))
+    + float4(content.eval(vgInContent(around + float2(probe, 0.0))))
+    + float4(content.eval(vgInContent(around - float2(probe, 0.0))))
+    + float4(content.eval(vgInContent(around + float2(0.0, probe))))
+    + float4(content.eval(vgInContent(around - float2(0.0, probe))));
+  float ra = rsum.a * 0.2;
+  float3 refl = ra > 0.004 ? rsum.rgb * 0.2 / ra : float3(0.0);
   rgb = mix(rgb, refl, fres);
 
   // ЛОКАЛЬНАЯ ОЦЕНКА ФОНА. Адаптация обязана идти по НИЗКОЙ частоте. Если считать её по
@@ -209,7 +219,10 @@ half4 main(float2 xy) {
   // на выходе получаются четыре смещённые копии — текст под стеклом двоился, а шахматка
   // рассыпалась в кашу. Широкие отсчёты годятся только на ОЦЕНКУ; видимое размытие делает
   // честный дисковый сбор по спирали.
-  float adaptBlur = busy * u_legibility * u_adaptRadius * 0.6;
+  // Рассеяние живёт в ТОЛЩЕ, а не в кромке: у фаски работа другая — гнуть луч и расщеплять
+  // его. Размывая деталь целиком, адаптация съедала и дисперсию, и подхват цвета окружения,
+  // и у сильно преломляющих материалов кромка становилась пресной.
+  float adaptBlur = busy * u_legibility * u_adaptRadius * 0.6 * (1.0 - smoothstep(0.12, 0.7, t));
   if (adaptBlur > 0.5) {
     float reach = max(u_reach - length(p), 1.0);
     float4 g = vgGather(s, min(adaptBlur, reach));

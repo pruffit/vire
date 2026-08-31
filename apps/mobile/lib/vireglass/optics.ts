@@ -69,10 +69,7 @@ export const specularStrength = (ior: number, roughness: number) =>
  * детали: у настоящего стекла луч не знает, какого размера кусок отрезали. Отсюда мелкая
  * поверхность преломляет заметнее крупной без всякой «компенсации размера».
  */
-// Смещение не может превысить ФАСКУ: луч гнёт именно она, и видеть дальше собственной
-// толщи ему нечем. При коэффициенте 2.6 смещение выходило в полтора раза шире фаски, и
-// кромка показывала не сжатую полоску, а читаемую КОПИЮ текста, лежащего снаружи стекла.
-const EDGE_PUSH_PER_BEVEL = 1;
+const EDGE_PUSH_PER_BEVEL = 2.6;
 
 export const edgePush = (ior: number, bevelDp: number) =>
   refractionStrength(ior) * EDGE_PUSH_PER_BEVEL * Math.max(bevelDp, 0);
