@@ -32,6 +32,10 @@ export const CONFIRMATIONS = 3;
  *  блоку их набирается около двадцати в секунду — четверти хватает на отклик за ~200 мс. */
 export const SMOOTH = 0.25;
 
+/** Остаток, ниже которого сглаживание доводит величину до замера. Экспонента к цели не
+ *  приходит никогда, и оценка «менялась» денормалями ещё две минуты после того, как фон встал. */
+export const SETTLE = 1e-6;
+
 /**
  * Доля наклона, которая доходит до участников.
  *
@@ -119,7 +123,8 @@ export function aggregate(
  */
 export function smoothPlane(prev: GroupPlane | null, next: GroupPlane): GroupPlane {
   if (!prev) return next;
-  const e = (was: number, now: number) => was + (now - was) * SMOOTH;
+  const e = (was: number, now: number) =>
+    Math.abs(now - was) < SETTLE ? now : was + (now - was) * SMOOTH;
   return {
     mx: next.mx,
     ml: e(prev.ml, next.ml),

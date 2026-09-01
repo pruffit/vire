@@ -70,6 +70,9 @@ const GlassGroupContext = createContext<GroupApi | null>(null);
 /** Длительность перекраски — та же, что у одиночной поверхности (`adaptation.ts`). */
 const FADE_MS = 420;
 
+const sameValues = (a: readonly number[], b: readonly number[]) =>
+  a.length === b.length && a.every((v, i) => v === b[i]);
+
 export function GlassGroup({ children }: { children: ReactNode }) {
   const pull = useSharedValue([0, 0, 0, 0, -1]);
   const seats = useRef(0);
@@ -125,8 +128,18 @@ export function GlassGroup({ children }: { children: ReactNode }) {
   }
   const group = state.current;
 
+  // Идентичность массива меняется только вместе со значениями: он лежит в зависимостях
+  // маппера Reanimated, а смена зависимостей — это stop/start маппера на UI-потоке.
+  const probes = useRef(new Map<number, number[]>());
   const probeAt = useCallback(
-    (x: number) => (plane ? probeValuesAt(plane, x) : undefined),
+    (x: number) => {
+      if (!plane) return undefined;
+      const next = probeValuesAt(plane, x);
+      const prev = probes.current.get(x);
+      if (prev && sameValues(prev, next)) return prev;
+      probes.current.set(x, next);
+      return next;
+    },
     [plane],
   );
 

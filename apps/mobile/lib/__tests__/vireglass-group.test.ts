@@ -6,6 +6,7 @@ import {
   createGroupState,
   GRADIENT,
   probeValuesAt,
+  SETTLE,
   smoothPlane,
   type GroupMember,
   type GroupPlane,
@@ -13,21 +14,22 @@ import {
 
 const LEGIBILITY = 0.26;
 
-/** Ровный фон: lo и hi совпадают со светлотой, цвет серый — проверяется сама оценка блока. */
-const sample = (luma: number): BackdropSample => ({
+/** Фон под участником: по умолчанию ровный (lo и hi равны светлоте). Отдельный `hi` — блик
+ *  под краем стекла, которым проверяется уклон решения в светлую сторону. */
+const sample = (luma: number, hi = luma): BackdropSample => ({
   luma,
   busy: 0,
   lo: luma,
-  hi: luma,
+  hi,
   r: luma,
   g: luma,
   b: luma,
 });
 
-const member = (x: number, luma: number, legibility = LEGIBILITY): GroupMember => ({
+const member = (x: number, luma: number, legibility = LEGIBILITY, hi = luma): GroupMember => ({
   x,
   y: 0,
-  sample: sample(luma),
+  sample: sample(luma, hi),
   legibility,
 });
 
@@ -38,8 +40,8 @@ function makeState() {
     plane: (p) => planes.push(p),
     flip: (p) => flips.push(p),
   });
-  const report = (id: string, x: number, luma: number, legibility = LEGIBILITY) =>
-    state.report(id, x, 0, sample(luma), legibility);
+  const report = (id: string, x: number, luma: number, legibility = LEGIBILITY, hi = luma) =>
+    state.report(id, x, 0, sample(luma, hi), legibility);
   return { state, planes, flips, report };
 }
 
@@ -90,6 +92,23 @@ describe('оценка блока по участникам', () => {
     expect(smoothed.ml).toBeGreaterThan(first.ml);
     expect(smoothed.ml).toBeLessThan(second.ml);
   });
+
+  // Экспонента к цели не приходит никогда: без доводки оценка «менялась» на уровне денормалей
+  // ещё две минуты после того, как фон встал, и всё это время дёргала маппер линзы.
+  it('оценка доходит до замера за считанные шаги, а не подбирается к нему вечно', () => {
+    const target = aggregate([member(0, 0.05)])?.plane as GroupPlane;
+    let plane = aggregate([member(0, 0.9)])?.plane as GroupPlane;
+    let steps = 0;
+    let prev: GroupPlane;
+    do {
+      prev = plane;
+      plane = smoothPlane(plane, target);
+      steps += 1;
+    } while (plane.base !== prev.base && steps < 1000);
+    expect(steps).toBeLessThan(100);
+    expect(plane.base).toBe(target.base);
+    expect(SETTLE).toBeLessThan(1 / 255 / 100);
+  });
 });
 
 describe('полярность блока', () => {
@@ -126,9 +145,13 @@ describe('полярность блока', () => {
     expect(state.confirmations()).toBe(0);
   });
 
-  it('требование читаемости блок берёт строгейшее из участников', () => {
-    const decision = aggregate([member(0, 0.72, 0.05), member(100, 0.72, 0.6)])?.decision;
-    expect(decision?.legibility).toBe(0.6);
+  // Порядок участников проверяется обеими раскладками: по крайнему в списке требованию
+  // блок остался бы со светлой надписью там, где придирчивый сосед её уже не читает.
+  it('требование читаемости блок берёт строгейшее из участников, а не крайнее по порядку', () => {
+    const lax = member(0, 0.72, 0.05);
+    const strict = member(100, 0.72, 0.6);
+    expect(aggregate([lax, strict])?.decision.legibility).toBe(0.6);
+    expect(aggregate([strict, lax])?.decision.legibility).toBe(0.6);
   });
 
   // На этом фоне нетребовательному участнику стекла хватает, а придирчивому уже нет.
@@ -144,6 +167,26 @@ describe('полярность блока', () => {
     }
     expect(lax.flips).toEqual([]);
     expect(strict.flips).toEqual([0]);
+  });
+
+  // Блик под краем стекла: среднее по блоку ещё тёмное, а самое светлое место уже нет.
+  it('решение уклоняется к самому светлому месту блока, а не идёт по среднему', () => {
+    const flat = aggregate([member(0, 0.6), member(100, 0.6)])?.decision;
+    const lit = aggregate([member(0, 0.6), member(100, 0.6, LEGIBILITY, 1)])?.decision;
+    expect(flat?.decisive).toBeCloseTo(0.6, 5);
+    expect(lit?.decisive).toBeGreaterThan(0.6);
+    expect(lit?.decisive).toBeLessThan(1);
+  });
+
+  it('блик перекрашивает блок, ровный фон той же светлоты — нет', () => {
+    const flat = makeState();
+    const lit = makeState();
+    for (let i = 0; i < CONFIRMATIONS; i += 1) {
+      flat.report('a', 0, 0.6, 0.6);
+      lit.report('a', 0, 0.6, 0.6, 1);
+    }
+    expect(flat.flips).toEqual([]);
+    expect(lit.flips).toEqual([0]);
   });
 });
 
