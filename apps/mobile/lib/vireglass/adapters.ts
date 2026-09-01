@@ -43,11 +43,12 @@ export const lensMagnify = (o: VireGlassOptics) => 1 + (o.refractionScale - 1) *
 // экземпляром на весь процесс: иначе каждый кадр перетаскивания шлёт на нативную сторону
 // три десятка новых строк, React не может отличить «не изменилось» от нового массива, и
 // движение идёт ступенями. Значения — единственное, что действительно меняется.
-let shape: { names: string[]; sizes: number[] } | null = null;
+const shapes = new Map<number, { names: string[]; sizes: number[] }>();
 
 function channel(entries: [string, number | readonly number[]][]) {
   const uniformValues: number[] = [];
-  let same = shape !== null && shape.names.length === entries.length;
+  let shape = shapes.get(entries.length);
+  let same = shape !== undefined;
   for (let i = 0; i < entries.length; i += 1) {
     const [name, value] = entries[i];
     const v = typeof value === 'number' ? [value] : value;
@@ -59,6 +60,7 @@ function channel(entries: [string, number | readonly number[]][]) {
       names: entries.map((e) => e[0]),
       sizes: entries.map((e) => (typeof e[1] === 'number' ? 1 : e[1].length)),
     };
+    shapes.set(entries.length, shape);
   }
   return { uniformNames: shape!.names, uniformSizes: shape!.sizes, uniformValues };
 }
@@ -68,9 +70,23 @@ function channel(entries: [string, number | readonly number[]][]) {
 export function toLensProps(
   optics: VireGlassOptics,
   geometry: VireGlassGeometry,
-  options: { debug?: VireGlassDebugMode; morph?: VireGlassMorph } = {},
+  options: { debug?: VireGlassDebugMode; morph?: VireGlassMorph; groupProbe?: number[] } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
+  // Оценка фона на всю группу поверхностей. Едет тем же каналом, что и материал, и
+  // применяется ПОСЛЕ собственной оценки линзы — то есть просто перебивает её. Отдельным
+  // пропом это не поедет: вьюха линзы обёрнута анимированным компонентом.
+  const g = options.groupProbe;
+  const group: [string, number | readonly number[]][] =
+    g && g.length >= 9
+      ? [
+          ['u_probeLuma', g[0]],
+          ['u_probeBusy', g[1]],
+          ['u_probeRange', [g[2], g[3]]],
+          ['u_probeSlope', [g[4], g[5]]],
+          ['u_probe', [g[6], g[7], g[8]]],
+        ]
+      : [];
   const d = PixelRatio.get();
   const halfW = (geometry.width * d) / 2;
   const halfH = (geometry.height * d) / 2;
@@ -110,6 +126,7 @@ export function toLensProps(
       ['u_morphCorner', morph.cornerRadius * d],
       ['u_morphK', morph.smoothing * d],
       ['u_debug', debugIndex(options.debug ?? 'normal')],
+      ...group,
     ]),
   };
 }

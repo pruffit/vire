@@ -337,16 +337,20 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
     // на статичном экране события прекращались вовсе — а решение о перекраске контента
     // требует нескольких подтверждений подряд и потому не набиралось никогда. Частота и так
     // низкая (PROBE_INTERVAL_MS), фильтровать её должен потребитель.
+    emitSample(mean, busy, lo, hi, r / n, g / n, b / n)
+  }
+
+  private fun emitSample(
+    luma: Float,
+    busy: Float,
+    lo: Float,
+    hi: Float,
+    r: Float,
+    g: Float,
+    b: Float,
+  ) {
     onBackdropSample(
-      mapOf(
-        "luma" to mean,
-        "busy" to busy,
-        "lo" to lo,
-        "hi" to hi,
-        "r" to r / n,
-        "g" to g / n,
-        "b" to b / n,
-      ),
+      mapOf("luma" to luma, "busy" to busy, "lo" to lo, "hi" to hi, "r" to r, "g" to g, "b" to b),
     )
   }
 

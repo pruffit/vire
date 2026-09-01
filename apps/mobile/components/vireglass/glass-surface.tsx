@@ -51,9 +51,12 @@ function compile(src: string) {
 
 /** Насколько уменьшается капля, уходя за пальцем: у самого пальца она вдвое меньше тела.
  *  Ноль дал бы вторую такую же деталь вместо капли. */
-const LOBE_SHRINK = 0.48;
+const LOBE_SHRINK = 0.24;
 /** Ширина шейки: доля половины тела, уходящая в сглаживание сшивки. Больше — толще перемычка. */
-const LOBE_NECK = 0.38;
+const LOBE_NECK = 0.30;
+/** Насколько худеет донор на полном вылете капли. Ноль означал бы, что стекло берётся
+ *  из ниоткуда: деталь читалась бы кнопкой с приклеенным пузырём, а не материалом. */
+const DONOR_LOSS = 0.2;
 
 const SURFACE = compile(SURFACE_SHADER);
 
@@ -95,6 +98,8 @@ export function VireGlassSurface({
   icon,
   dim = 0,
   onBackdropSample,
+  groupProbe,
+  pullBus,
   style,
 }: {
   geometry: VireGlassGeometry;
@@ -112,6 +117,11 @@ export function VireGlassSurface({
   /** Светлота фона ПОД стеклом, раз в ~200 мс. Отсюда экран узнаёт, что стекло дошло до
    *  своего предела и надпись пора перекрасить (lib/vireglass/adaptation.ts). */
   onBackdropSample?: (e: { nativeEvent: BackdropSample }) => void;
+  /** Оценка фона на всю группу поверхностей. Пусто — линза считает по своему замеру. */
+  groupProbe?: number[];
+  /** Общая шина тяги группы и место этой детали в ней. Своя капля рисуется от нуля, чужая —
+   *  от места детали на экране, и на подходе две поверхности сливаются в одну. */
+  pullBus?: { bus: SharedValue<number[]>; seat: number; centerX: number; centerY: number };
   /** Затемнение линзы под скрим экрана: BlurView целится в контент напрямую и затемняющей
    *  подложки над ним не видит — без этого линза светится дыркой в скриме. */
   dim?: number;
@@ -158,8 +168,8 @@ export function VireGlassSurface({
   // константа модуля, но при горячей перезагрузке она меняется, а мемо с прежними
   // зависимостями продолжает отдавать СТАРЫЙ шейдер: правка оптики молча не доезжает.
   const lensProps = useMemo(
-    () => toLensProps(optics, geometry, { debug, morph }),
-    [optics, geometry, debug, morph, LENS_SHADER],
+    () => toLensProps(optics, geometry, { debug, morph, groupProbe }),
+    [optics, geometry, debug, morph, groupProbe, LENS_SHADER],
   );
   const iconUniforms = useMemo(
     () => ({
@@ -210,31 +220,84 @@ export function VireGlassSurface({
     const dx = shiftX.value;
     const dy = shiftY.value;
     const len = Math.sqrt(dx * dx + dy * dy);
-    if (dragLimit <= 0 || len < 0.01) return [0, 0, 0, 0, 0, 0];
-    const k = Math.min(len / dragLimit, 1);
-    const r = halfMin * (1 - LOBE_SHRINK * k);
-    return [dx, dy, r, r, r, halfMin * LOBE_NECK * k];
-  }, [dragLimit, halfMin]);
-
-  // Место морфинга в плоском канале униформ линзы. Имена и размеры фиксированы, шесть
-  // величин лежат подряд — смещение считается один раз, в ворклете остаётся подставить.
-  const lobeSlot = useMemo(() => {
-    let at = 0;
-    for (let i = 0; i < lensProps.uniformNames.length; i += 1) {
-      if (lensProps.uniformNames[i] === 'u_morphOffset') return at;
-      at += lensProps.uniformSizes[i];
+    const mine = dragLimit > 0 && len >= 0.01;
+    if (mine) {
+      const k = Math.min(len / dragLimit, 1);
+      const r = halfMin * (1 - LOBE_SHRINK * k);
+      const neck = halfMin * LOBE_NECK * k;
+      // Капля объявляется всей группе: соседи подхватят её и на подходе сольются.
+      if (pullBus) {
+        pullBus.bus.value = [pullBus.centerX + dx, pullBus.centerY + dy, r, neck, pullBus.seat];
+      }
+      // Донор теряет материал: он остаётся на месте, но худеет — иначе стекло берётся
+      // из ниоткуда, и деталь читается не материалом, а кнопкой с приклеенным пузырём.
+      return [dx, dy, r, r, r, neck, 1 - DONOR_LOSS * k, Math.min(1, r / halfMin)];
     }
-    return -1;
+    if (pullBus && pullBus.bus.value[4] === pullBus.seat) {
+      pullBus.bus.value = [0, 0, 0, 0, -1];
+    }
+    // Чужая капля: та же вторая форма, только её место считается от центра ЭТОЙ детали.
+    //
+    // Условие ЖЁСТКОЕ — капля должна лезть в само тело соседа, а не просто оказаться
+    // поблизости. Иначе сосед рисует её у себя ТАМ, ГДЕ У НЕГО НЕТ ЛИНЗЫ: преломлению
+    // взяться неоткуда, выходит непрозрачное пятно, и вдобавок холст соседа лежит выше
+    // холста донора — пятно перекрывает донору иконку. На кадре это выглядит абсурдом,
+    // и это он и есть.
+    //
+    // При нынешнем шаге таб-бара (90 dp) и ходе тяги (42 dp) условие не выполняется
+    // никогда: дотянуться до соседа кнопка просто не может. Слияние включится там, где
+    // поверхности стоят ближе.
+    if (pullBus && pullBus.bus.value[3] > 0 && pullBus.bus.value[4] !== pullBus.seat) {
+      const bx = pullBus.bus.value[0] - pullBus.centerX;
+      const by = pullBus.bus.value[1] - pullBus.centerY;
+      const r = pullBus.bus.value[2];
+      const reach = halfMin + r * 0.25;
+      if (bx * bx + by * by < reach * reach) {
+        return [bx, by, r, r, r, pullBus.bus.value[3], 1, Math.min(1, r / halfMin)];
+      }
+    }
+    return [0, 0, 0, 0, 0, 0, 1, 1];
+  }, [dragLimit, halfMin, pullBus]);
+
+  // Места величин в плоском канале униформ линзы. Имена и размеры фиксированы, поэтому
+  // смещения считаются один раз, а в ворклете остаётся подставить числа.
+  const slots = useMemo(() => {
+    const at: Record<string, number> = {};
+    let i = 0;
+    for (let k = 0; k < lensProps.uniformNames.length; k += 1) {
+      at[lensProps.uniformNames[k]] = i;
+      i += lensProps.uniformSizes[k];
+    }
+    return {
+      lobe: at.u_morphOffset ?? -1,
+      half: at.u_halfSize ?? -1,
+      corner: at.u_corner ?? -1,
+      bevel: at.u_bevel ?? -1,
+    };
   }, [lensProps]);
+
+  // Значения униформ уезжают ТОЛЬКО анимированным пропом. Пока они шли ещё и обычным, с
+  // активной группой (та перерисовывает блок два десятка раз в секунду) обычный проп
+  // затирал подставленную ворклетом каплю, и на кадре её просто не было.
+  const { uniformValues: _values, ...lensStatic } = lensProps;
 
   const lensAnimatedProps = useAnimatedProps<{ uniformValues: number[] }>(() => {
     const values = lensProps.uniformValues.slice();
-    if (lobeSlot >= 0 && lobe.value[5] > 0) {
+    if (slots.lobe >= 0 && lobe.value[5] > 0) {
       // Канал линзы в пикселях: капля считается в dp, как и вся геометрия.
-      for (let i = 0; i < 6; i += 1) values[lobeSlot + i] = lobe.value[i] * density;
+      for (let i = 0; i < 6; i += 1) values[slots.lobe + i] = lobe.value[i] * density;
+    }
+    const loss = lobe.value[6];
+    if (loss < 1 && slots.half >= 0) {
+      values[slots.half] = lensProps.uniformValues[slots.half] * loss;
+      values[slots.half + 1] = lensProps.uniformValues[slots.half + 1] * loss;
+      if (slots.corner >= 0) values[slots.corner] = lensProps.uniformValues[slots.corner] * loss;
+    }
+    if (lobe.value[7] < 1 && slots.bevel >= 0) {
+      values[slots.bevel] = lensProps.uniformValues[slots.bevel] * lobe.value[7];
     }
     return { uniformValues: values };
-  }, [lensProps, lobeSlot, density]);
+  }, [lensProps, slots, density]);
 
   const uniforms = useDerivedValue(() => {
     return {
@@ -242,6 +305,13 @@ export function VireGlassSurface({
       ...iconUniforms,
       // Капля перебивает статический морфинг: тянуть и одновременно сшивать две
       // поверхности стенд не просит, а тяга обязана быть живой.
+      // Донор худеет: тело уменьшается ровно на ту долю, что ушла в каплю.
+      u_halfSize: [statics.u_halfSize[0] * lobe.value[6], statics.u_halfSize[1] * lobe.value[6]],
+      u_corner: statics.u_corner * lobe.value[6],
+      // Фаска задана в абсолютных dp под размер тела. Капля вдвое меньше — с прежней
+      // фаской она становится фаской ЦЕЛИКОМ, поглощение насыщается, и вместо стекла
+      // получается чёрная дыра с резким ободком.
+      u_bevel: statics.u_bevel * lobe.value[7],
       u_morphOffset: lobe.value[5] > 0 ? [lobe.value[0], lobe.value[1]] : statics.u_morphOffset,
       u_morphHalf: lobe.value[5] > 0 ? [lobe.value[2], lobe.value[3]] : statics.u_morphHalf,
       u_morphCorner: lobe.value[5] > 0 ? lobe.value[4] : statics.u_morphCorner,
@@ -292,7 +362,7 @@ export function VireGlassSurface({
             // Вьюха линзы НАМЕРЕННО больше стекла — у кромки выборка уходит за его пределы,
             // форму вырезает сам шейдер.
             <AnimatedGlassLens
-              {...lensProps}
+              {...lensStatic}
               animatedProps={lensAnimatedProps}
               backdropId={backdropId}
               onBackdropSample={onBackdropSample}

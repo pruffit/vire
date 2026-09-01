@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassPanel } from '../components/ui/glass-panel';
 import { LiquidGlassButton } from '../components/liquid-glass';
+import { GlassGroup } from '../lib/vireglass/glass-group';
 import { Icon } from '../lib/icon';
 import { useFrameThrottle } from '../lib/frame-throttle';
 import { useInkColor } from '../lib/vireglass/glass-ink';
@@ -148,6 +149,7 @@ export function LabMiniPlayer({ optics, debug, blurTarget, dim }: LabSurfaceProp
 
 export function LabTabBar({ optics, blurTarget, dim }: LabSurfaceProps) {
   return (
+    <GlassGroup>
     <View style={styles.tabRow}>
       {TAB_ICONS.map((icon, i) => (
         <LiquidGlassButton
@@ -161,6 +163,7 @@ export function LabTabBar({ optics, blurTarget, dim }: LabSurfaceProps) {
         />
       ))}
     </View>
+    </GlassGroup>
   );
 }
 
@@ -264,6 +267,7 @@ const styles = StyleSheet.create({
   miniFill: { width: '38%', height: 1.5, backgroundColor: colors.foreground, opacity: 0.7 },
 
   tabRow: {
+    overflow: 'visible',
     height: TAB_BAR_CONTENT_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',

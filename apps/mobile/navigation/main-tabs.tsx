@@ -9,6 +9,7 @@ import { SearchStackNavigator } from './search-stack';
 import { LibraryStackNavigator } from './library-stack';
 import { ProfileStackNavigator } from './profile-stack';
 import { LiquidGlassButton } from '../components/liquid-glass';
+import { GlassGroup } from '../lib/vireglass/glass-group';
 import { type IconName } from '../lib/icon';
 import { useBlurTarget } from '../lib/blur-target';
 import { TAB_BAR_CONTENT_HEIGHT } from '../lib/layout';
@@ -61,6 +62,9 @@ function CircleTabBar({ state, navigation }: BottomTabBarProps) {
         locations={SCRIM_STOPS}
         style={[styles.scrim, { height: TAB_BAR_CONTENT_HEIGHT + insets.bottom + SCRIM_HEIGHT }]}
       />
+      {/* Таб-бар адаптируется БЛОКОМ: под каждой кнопкой свой кусок фона, и по своему
+          замеру одна уходит в тень, а соседняя остаётся прозрачной. */}
+      <GlassGroup>
       <View
         style={[
           styles.row,
@@ -92,6 +96,7 @@ function CircleTabBar({ state, navigation }: BottomTabBarProps) {
           );
         })}
       </View>
+      </GlassGroup>
     </>
   );
 }
@@ -122,7 +127,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  // Капля тяги уходит за пределы ряда — обрезать её нечем и незачем.
   row: {
+    overflow: 'visible',
     position: 'absolute',
     left: 22,
     right: 22,

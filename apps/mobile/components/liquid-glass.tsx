@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type RefObject } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
 import { PixelRatio, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import {
   PaintStyle,
@@ -14,7 +14,8 @@ import { ICON_PATHS, type IconName } from '../lib/icon';
 import { colors } from '../lib/theme';
 import { VireGlassSurface } from './vireglass/glass-surface';
 import { circleGeometry, surfacePadDp } from '../lib/vireglass/geometry';
-import { useGlassAdaptation } from '../lib/vireglass/adaptation';
+import { useGlassAdaptation, type BackdropSample } from '../lib/vireglass/adaptation';
+import { useGlassGroup } from '../lib/vireglass/glass-group';
 import { inkColor } from '../lib/vireglass/glass-ink';
 import { useEnvironmentLight } from '../lib/vireglass/environment';
 import {
@@ -142,12 +143,43 @@ export function LiquidGlassButton({
   // Полярность штриха ведёт сама кнопка: только она видит, что под ней лежит. Явно
   // заданный цвет её отключает — вызывающий знает свой контент лучше.
   const auto = ink === undefined && inkActive === undefined;
-  const adaptation = useGlassAdaptation(opticsProp, { enabled: auto });
-  const optics = useMemo(
-    () => (auto ? { ...opticsProp, ink: adaptation.ink } : opticsProp),
-    [opticsProp, auto, adaptation.ink],
+  // Внутри группы решение о полярности и оценка фона общие на весь блок: у каждой кнопки
+  // под собой свой кусок фона, и по своему замеру одна уходит в тень, а соседняя остаётся
+  // прозрачной — блок разваливается на отдельные детали.
+  const group = useGlassGroup();
+  const adaptation = useGlassAdaptation(opticsProp, { enabled: auto && group === null });
+  const id = useId();
+  const at = useRef({ x: 0, y: 0 });
+  // Место детали приходит из onLayout уже после первого рендера. Шина тяги обязана его
+  // знать, иначе чужая капля считается от нуля и приезжает не туда — поэтому раскладка
+  // отмечается состоянием, а не только ссылкой.
+  const [layoutTick, setLayoutTick] = useState(0);
+  const inkValue = group?.ink ?? adaptation.ink;
+  const groupProbe = group?.probeAt(at.current.x);
+  // Место в шине тяги выдаётся один раз: по нему деталь отличает СВОЮ каплю от чужой.
+  const seatRef = useRef(-1);
+  if (seatRef.current < 0 && group) seatRef.current = group.claim();
+  const seat = seatRef.current;
+  const pullBus = useMemo(
+    () =>
+      group && seat > 0
+        ? { bus: group.pull, seat, centerX: at.current.x, centerY: at.current.y }
+        : undefined,
+    [group, seat, layoutTick],
   );
-  const strokeIdle = ink ?? inkColor(adaptation.ink, colors.foreground, INK_ON_LIGHT);
+
+  const onSample = useCallback(
+    (e: { nativeEvent: BackdropSample }) => {
+      if (group) group.report(id, at.current.x, at.current.y, e.nativeEvent);
+      else adaptation.onBackdropSample(e);
+    },
+    [group, id, adaptation],
+  );
+  const optics = useMemo(
+    () => (auto ? { ...opticsProp, ink: inkValue } : opticsProp),
+    [opticsProp, auto, inkValue],
+  );
+  const strokeIdle = ink ?? inkColor(inkValue, colors.foreground, INK_ON_LIGHT);
   const strokeActive = inkActive ?? strokeIdle;
   const geometry = useMemo(() => circleGeometry(size), [size]);
   const dragLimit = size * DRAG_LIMIT_RATIO;
@@ -209,7 +241,17 @@ export function LiquidGlassButton({
 
   return (
     <GestureDetector gesture={gesture}>
-      <View collapsable={false} style={[styles.host, style]}>
+      <View
+        collapsable={false}
+        style={[styles.host, style]}
+        onLayout={(e) => {
+          // Место кнопки в блоке: по нему группа строит плоскость светлоты, чтобы блок
+          // темнел градиентно, а не ступенями по кнопкам.
+          const { x, y, width: w, height: h } = e.nativeEvent.layout;
+          at.current = { x: x + w / 2, y: y + h / 2 };
+          setLayoutTick((v) => v + 1);
+        }}
+      >
         <VireGlassSurface
           geometry={geometry}
           optics={optics}
@@ -218,7 +260,9 @@ export function LiquidGlassButton({
           dragLimit={dragLimit}
           icon={iconLayer}
           dim={dim}
-          onBackdropSample={auto ? adaptation.onBackdropSample : undefined}
+          onBackdropSample={auto ? onSample : undefined}
+          groupProbe={groupProbe}
+          pullBus={pullBus}
         />
       </View>
     </GestureDetector>
