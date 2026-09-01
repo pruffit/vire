@@ -15,24 +15,26 @@ class GlassLensModule : Module() {
     View(GlassLensView::class) {
       Name("GlassLensView")
 
+      // Светлота фона под стеклом. Событие, а не проп: приложение обязано узнать предел,
+      // за которым стекло уже не разведёт себя с надписью, и перекрасить надпись само.
+      Events("onBackdropSample")
+
+      Prop("backdropId") { view: GlassLensView, value: Int? -> view.backdropId = value }
       Prop("shaderSource") { view: GlassLensView, value: String -> view.shaderSource = value }
       Prop("glassWidth") { view: GlassLensView, value: Float -> view.glassWidth = value }
       Prop("glassHeight") { view: GlassLensView, value: Float -> view.glassHeight = value }
-      Prop("cornerRadius") { view: GlassLensView, value: Float -> view.cornerRadius = value }
-      Prop("bevel") { view: GlassLensView, value: Float -> view.bevel = value }
-      Prop("magnify") { view: GlassLensView, value: Float -> view.magnify = value }
-      Prop("edgePush") { view: GlassLensView, value: Float -> view.edgePush = value }
-      Prop("chroma") { view: GlassLensView, value: Float -> view.chroma = value }
-      Prop("spherical") { view: GlassLensView, value: Float -> view.spherical = value }
-      Prop("morphX") { view: GlassLensView, value: Float -> view.morphX = value }
-      Prop("morphY") { view: GlassLensView, value: Float -> view.morphY = value }
-      Prop("morphWidth") { view: GlassLensView, value: Float -> view.morphWidth = value }
-      Prop("morphHeight") { view: GlassLensView, value: Float -> view.morphHeight = value }
-      Prop("morphCorner") { view: GlassLensView, value: Float -> view.morphCorner = value }
-      Prop("morphSmoothing") { view: GlassLensView, value: Float -> view.morphSmoothing = value }
-      Prop("debug") { view: GlassLensView, value: Float -> view.debug = value }
+      // Весь материал — одним каналом: имя ↔ размер ↔ значение приезжают вместе, поэтому
+      // рассинхрон с шейдером больше невозможен молча (см. applyChannel).
+      Prop("uniformNames") { view: GlassLensView, value: List<String> -> view.uniformNames = value }
+      Prop("uniformValues") { view: GlassLensView, value: List<Double> -> view.uniformValues = value }
+      Prop("uniformSizes") { view: GlassLensView, value: List<Int> -> view.uniformSizes = value }
 
       OnViewDidUpdateProps { view: GlassLensView -> view.applyEffect() }
+    }
+
+    // Захват фона: пишет своих детей в RenderNode, линза берёт его как content.
+    View(GlassBackdropView::class) {
+      Name("GlassBackdropView")
     }
 
     // Диагностический зонд (docs/vireglass/ADR-001): показывает, какие пиксели реально

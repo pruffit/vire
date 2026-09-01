@@ -3,6 +3,7 @@ import {
   NavigationContainer,
   createNavigationContainerRef,
   type LinkingOptions,
+  type NavigatorScreenParams,
   type Theme,
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -11,6 +12,7 @@ import { ActivityIndicator, View } from 'react-native';
 import SignInScreen from '../screens/sign-in-screen';
 import PlayerScreen from '../screens/player-screen';
 import { MainScreen } from './main-screen';
+import type { MainTabsParamList } from './main-tabs';
 import { hasStoredSession, getDeviceId, clearAuthTokens } from '../lib/secure-store';
 import { registerForPushNotifications } from '../lib/push';
 import { onSessionExpired } from '../lib/session-events';
@@ -18,7 +20,7 @@ import { colors } from '../lib/theme';
 
 export type RootStackParamList = {
   SignIn: undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<MainTabsParamList>;
   Player: undefined;
 };
 

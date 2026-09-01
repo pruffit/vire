@@ -18,9 +18,36 @@ function rotate(v: readonly number[], angle: number): number[] {
   return [v[0] * c - v[1] * s, v[0] * s + v[1] * c];
 }
 
+// Наклон общий для всех поверхностей — сенсор один на устройство. Подписка тоже одна:
+// с `environment > 0` в дефолтном материале иначе получалось по слушателю на каждое
+// стекло (до шести одновременно), и каждое считало один и тот же фильтр заново.
+const listeners = new Set<(tilt: number) => void>();
+let subscription: { remove: () => void } | null = null;
+let tilt = 0;
+
+function subscribe(cb: (tilt: number) => void): () => void {
+  listeners.add(cb);
+  if (!subscription) {
+    Accelerometer.setUpdateInterval(INTERVAL_MS);
+    subscription = Accelerometer.addListener(({ x, y }) => {
+      const raw = Math.max(-1, Math.min(1, x * 0.7 + y * 0.3));
+      tilt += (raw - tilt) * SMOOTHING;
+      for (const listener of listeners) listener(tilt);
+    });
+  }
+  return () => {
+    listeners.delete(cb);
+    if (listeners.size === 0) {
+      subscription?.remove();
+      subscription = null;
+      tilt = 0;
+    }
+  };
+}
+
 /**
- * Направление ключевого света. `strength = 0` (дефолт Material v1) не подписывается на сенсор
- * вовсе и держит свет закреплённым к экрану — стабильность важнее эффекта.
+ * Направление ключевого света. `strength = 0` не подписывается на сенсор вовсе и держит
+ * свет закреплённым к экрану.
  */
 export function useEnvironmentLight(strength: number): SharedValue<readonly number[]> {
   const light = useSharedValue<readonly number[]>(REST_LIGHT);
@@ -30,17 +57,12 @@ export function useEnvironmentLight(strength: number): SharedValue<readonly numb
       light.value = REST_LIGHT;
       return;
     }
-    let tilt = 0;
     let emitted = 0;
-    Accelerometer.setUpdateInterval(INTERVAL_MS);
-    const sub = Accelerometer.addListener(({ x, y }) => {
-      const raw = Math.max(-1, Math.min(1, x * 0.7 + y * 0.3));
-      tilt += (raw - tilt) * SMOOTHING;
-      if (Math.abs(tilt - emitted) < DEADZONE) return;
-      emitted = tilt;
-      light.value = rotate(REST_LIGHT, -tilt * MAX_SWING * strength);
+    return subscribe((next) => {
+      if (Math.abs(next - emitted) < DEADZONE) return;
+      emitted = next;
+      light.value = rotate(REST_LIGHT, -next * MAX_SWING * strength);
     });
-    return () => sub.remove();
   }, [strength, light]);
 
   return light;

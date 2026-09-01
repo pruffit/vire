@@ -71,7 +71,7 @@ export default function PlaylistScreen({
       coverUrl: t.coverUrl,
       durationSec: t.durationSec,
     }));
-    playQueue(queue, index);
+    playQueue(queue, index, { source: 'playlist', sourceId: playlistId });
   };
 
   return (

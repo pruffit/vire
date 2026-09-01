@@ -3,6 +3,7 @@ import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'reac
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useBlurTarget } from '../lib/blur-target';
+import { useBackdropEnabled } from '../lib/design/preferences';
 
 // «Дым» — единственная стеклянная поверхность кита (design-канвасы этой сессии: «VireMusic
 // UI Kit» §02 + «VireMusic Glass» turn 4 «единые правила стекла»): нейтральное графитовое
@@ -49,16 +50,25 @@ export function Glass({
   shadow?: boolean;
 }) {
   const blurTarget = useBlurTarget();
+  // Панели ещё не переехали на общий материал (`components/ui/glass-panel.tsx` — мигрируют
+  // вместе с примитивом листа), но подчиняться настройкам обязаны уже сейчас: иначе тумблер
+  // «Стеклянный интерфейс» гасил бы одни поверхности и не трогал соседние.
+  const backdropEnabled = useBackdropEnabled();
 
   return (
     <View style={[styles.container, { borderRadius: radius }, edge === true && styles.fullEdge, shadow && styles.shadow, style]}>
-      <BlurView
-        intensity={intensity}
-        tint="dark"
-        blurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
-        blurTarget={blurTarget ?? undefined}
-        style={StyleSheet.absoluteFill}
-      />
+      {backdropEnabled ? (
+        <BlurView
+          intensity={intensity}
+          tint="dark"
+          blurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
+          blurTarget={blurTarget ?? undefined}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : (
+        // Состояние «reduced» из кита: непрозрачная панель вместо стекла.
+        <View style={[StyleSheet.absoluteFill, styles.opaque]} />
+      )}
       <View style={[StyleSheet.absoluteFill, styles.tint]} />
       <LinearGradient colors={[SHEEN_TOP, 'transparent']} style={StyleSheet.absoluteFill} />
       {edge && (
@@ -93,6 +103,7 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   tint: { backgroundColor: GLASS_TINT },
+  opaque: { backgroundColor: '#0b0908' },
   specular: { position: 'absolute', left: 16, right: 16, top: 0, height: 1 },
   rim: { position: 'absolute', left: 16, right: 16, bottom: 0, height: 1 },
 });

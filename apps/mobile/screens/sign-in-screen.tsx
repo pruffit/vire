@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
@@ -9,7 +9,9 @@ import { WEB_BASE_URL } from '../lib/env';
 import { setAuthTokens } from '../lib/secure-store';
 import { registerForPushNotifications } from '../lib/push';
 import { Screen } from '../components/screen';
-import { colors, radius } from '../lib/theme';
+import { colors } from '../lib/theme';
+import { type, fonts } from '../lib/design/typography';
+import { space, layout, radii } from '../lib/design/scales';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SignIn'>;
 
@@ -67,15 +69,26 @@ export default function SignInScreen({ navigation }: Props) {
 
   return (
     <Screen style={styles.container}>
-      <Text style={styles.logo}>VireMusic</Text>
-      <Text style={styles.subtitle}>Независимая музыкальная площадка</Text>
-      <Pressable style={styles.button} onPress={handleSignIn} disabled={pending}>
+      <View style={styles.identity}>
+        <Text style={styles.wordmark}>VireMusic</Text>
+        {/* Подпись переносится: до кита она стояла в одну строку и обрезалась на «музыкальная». */}
+        <Text style={styles.tagline}>Независимая музыкальная площадка</Text>
+      </View>
+
+      <Pressable
+        style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+        onPress={handleSignIn}
+        disabled={pending}
+        accessibilityRole="button"
+        accessibilityLabel="Войти"
+      >
         {pending ? (
-          <ActivityIndicator color={colors.primaryForeground} />
+          <ActivityIndicator color={colors.background} />
         ) : (
-          <Text style={styles.buttonText}>Войти</Text>
+          <Text style={styles.buttonLabel}>Войти</Text>
         )}
       </Pressable>
+
       {error !== null && <Text style={styles.error}>{error}</Text>}
     </Screen>
   );
@@ -86,22 +99,28 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
-    gap: 20,
+    gap: space.xl,
     padding: 32,
   },
-  logo: { color: colors.foreground, fontSize: 32, fontWeight: '800' },
-  subtitle: { color: colors.mutedForeground, fontSize: 15, textAlign: 'center' },
+  identity: { alignItems: 'center', gap: space.sm },
+  wordmark: {
+    fontFamily: fonts.extrabold,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -1,
+    color: colors.foreground,
+  },
+  tagline: { ...type.caption, fontSize: 13, lineHeight: 18, textAlign: 'center' },
   button: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: radius.lg,
-    minHeight: 44,
-    minWidth: 160,
+    minHeight: layout.touchTarget,
+    minWidth: 180,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 32,
+    borderRadius: radii.full,
+    backgroundColor: colors.foreground,
   },
-  buttonText: { color: colors.primaryForeground, fontSize: 16, fontWeight: '700' },
-  error: { color: colors.destructive, textAlign: 'center' },
+  buttonPressed: { opacity: 0.85, transform: [{ scale: 0.96 }] },
+  buttonLabel: { ...type.button, color: colors.background },
+  error: { ...type.caption, color: colors.destructive, textAlign: 'center' },
 });

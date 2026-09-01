@@ -14,35 +14,39 @@ import { requireNativeModule, requireNativeView } from 'expo';
  * (`lib/vireglass/adapters.ts`).
  */
 export type GlassLensProps = {
+  /** Тег GlassBackdrop, чей снимок кадра линза кладёт под преломление. */
+  backdropId?: number | null;
   /** Исходник AGSL. Собирается в JS, чтобы геометрия у линзы и поверхности была одной строкой. */
   shaderSource: string;
   /** Размер ВИДИМОГО стекла в dp. Сама вьюха обязана быть больше него: у кромки выборка
-   *  уходит наружу (`edgePush`), и без запаса шейдеру там нечего семплировать. */
+   *  уходит наружу (edgePush), и без запаса шейдеру там нечего семплировать. По этому же
+   *  габариту берётся прямоугольник зонда светлоты. */
   glassWidth: number;
   glassHeight: number;
-  cornerRadius: number;
-  /** Доля полуразмера под фаской (`material.thickness`). */
-  bevel?: number;
-  /** Увеличение в плоской середине. */
-  magnify?: number;
-  /** Смещение выборки у самой кромки, dp. */
-  edgePush?: number;
-  /** Хроматическая аберрация на кромке, dp. */
-  chroma?: number;
-  /** Сферическая аберрация на кромке, dp. */
-  spherical?: number;
-  /** Вторая форма для морфинг-эксперимента; `morphSmoothing` = 0 её выключает. */
-  morphX?: number;
-  morphY?: number;
-  morphWidth?: number;
-  morphHeight?: number;
-  morphCorner?: number;
-  morphSmoothing?: number;
-  /** Индекс режима из `DEBUG_MODES`. */
-  debug?: number;
+  /** Униформы материала одним каналом (`toLensProps`): имя ↔ размер ↔ значения. Раньше на
+   *  каждую величину был свой проп, и опечатка молча выключала линзу целиком. */
+  uniformNames: string[];
+  uniformSizes: number[];
+  /** Значения приезжают анимированным пропом: их подставляет ворклет тяги. Обычным пропом
+   *  их слать НЕЛЬЗЯ одновременно — при частых перерисовках он затирает подставленное. */
+  uniformValues?: number[];
+  /** Светлота, пестрота и средний цвет фона ПОД стеклом. Приложение слушает это, чтобы
+   *  перекрасить надпись, когда стекло уже отработало свой предел. */
+  onBackdropSample?: (e: {
+    nativeEvent: {
+      luma: number;
+      busy: number;
+      lo: number;
+      hi: number;
+      r: number;
+      g: number;
+      b: number;
+    };
+  }) => void;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 };
+
 
 const native = (() => {
   if (Platform.OS !== 'android') return null;
@@ -55,6 +59,23 @@ const native = (() => {
     return null;
   }
 })();
+
+export type GlassBackdropProps = { style?: StyleProp<ViewStyle>; children?: ReactNode };
+
+/**
+ * Захват фона БЕЗ размытия. expo-blur отдаёт дизеренную копию: на Android 13+ он гонит
+ * захват через createBlurEffect, а Skia дизерит выход блюра (замеры — docs/vireglass).
+ */
+export const GlassBackdrop: ComponentType<GlassBackdropProps> | null =
+  Platform.OS === 'android'
+    ? (() => {
+        try {
+          return requireNativeView('GlassLens', 'GlassBackdropView') as ComponentType<GlassBackdropProps>;
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
 /** Диагностический зонд: что именно приходит в createRuntimeShaderEffect.
  *  Только для стенда (screens/glass-lab), в продовом UI не используется. */

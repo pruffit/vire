@@ -14,23 +14,16 @@ uniform float2 u_morphHalf;
 uniform float  u_morphCorner;
 uniform float  u_morphK;
 
-uniform float2 u_shift;
-uniform float2 u_dir;
-uniform float  u_stretch;
 uniform float  u_press;
 uniform float  u_active;
 uniform float2 u_light;
 
-uniform float  u_fresnel;
-uniform float  u_fresnelPower;
 uniform float  u_specular;
 uniform float  u_specularPower;
-uniform float  u_edgeStrength;
-uniform float  u_edgeWidth;
+uniform float  u_edgeDensity;
 uniform float  u_dispersion;
 uniform float  u_refraction;
 uniform float4 u_tint;
-uniform float  u_opacity;
 uniform float  u_shadow;
 uniform float  u_shadowReach;
 uniform float  u_debug;
@@ -43,9 +36,10 @@ uniform float4 u_inkActive;
 ${VG_SDF}
 
 const float VG_FALLOFF = ${VG_FALLOFF};
-const float ICON_LAG = 0.5;
 /* Толщина, на которой откалибровано поглощение: при ней полоса совпадает с прежним стеклом. */
 const float VG_REF_THICKNESS = 0.18;
+// Плотность тинта в плоской середине; у фаски она множится на u_edgeDensity.
+const float VG_BODY_DENSITY = 0.19;
 
 half4 vgPack(half3 c, float a) { return half4(c * half(a), half(a)); }
 
@@ -57,17 +51,13 @@ half3 vgHeat(float v) {
 }
 
 half4 main(float2 xy) {
-  float2 p = xy - u_center - u_shift;
+  float2 p = xy - u_center;
 
   // Обратная деформация: вдоль вектора тяги растяжение A, поперёк сжатие 1/sqrt(A). Ровно
   // этот закон повторяет трансформ живой подложки под канвасом, иначе они разъезжаются.
-  if (u_stretch > 0.001) {
-    float along = dot(p, u_dir);
-    float2 perp = p - u_dir * along;
-    float A = 1.0 + u_stretch;
-    p = u_dir * (along / A) + perp * sqrt(A);
-  }
-  p *= 1.0 - u_press * 0.05;
+  // Геометрии движения здесь НЕТ — ни тяги, ни вздутия от нажатия. Всё это делает один
+  // трансформ обёртки, он же несёт нативную линзу: шейдер её не достаёт, а два конвейера
+  // на одно движение расходятся на кадр, и слои становится видно по отдельности.
 
   float halfMin = max(min(u_halfSize.x, u_halfSize.y), 1.0);
   float bevel = max(u_bevel, 1.0);
@@ -79,11 +69,6 @@ half4 main(float2 xy) {
   float3 V = float3(0.0, 0.0, 1.0);
 
   float bloom = 1.0 + u_press * 0.45;
-  float lift = 1.0 + u_active * 0.85;
-
-  // Френель считается от НАКЛОНА фаски, а не от расстояния до края: поэтому он гаснет вместе
-  // с толщиной и не превращается в контур постоянной ширины.
-  float fres = pow(1.0 - clamp(N.z, 0.0, 1.0), u_fresnelPower) * u_fresnel;
 
   float3 L1 = normalize(float3(u_light * 0.86, 0.42));
   float3 L2 = normalize(float3(-u_light * 0.78, 0.50));
@@ -92,18 +77,12 @@ half4 main(float2 xy) {
   float s2 = pow(max(dot(reflect(-L2, N), V), 0.0), u_specularPower * 1.45) * 0.14;
   float spec = (s1 + s2) * bevelMask * u_specular * bloom * (1.0 + u_active * 0.30);
 
-  // Кромка — не кольцо, а две дуги: яркая со стороны ключевого света и слабая с обратной.
-  // Именно перепад по обводу глаз опознаёт как стекло; ровное кольцо читается контуром.
+  // Светящейся кромки здесь больше НЕТ. Она была отражением, нарисованным белым поверх, и
+  // потому выглядела одинаково над чёрным списком и над светлой обложкой. Отражение
+  // считает линза (lens-shader.ts) — там виден бэкдроп, и кромка берёт цвет от того, что
+  // реально под ней. Здесь остаётся только то, что от окружения не зависит: блик от НАШЕГО
+  // ключевого света, поглощение среды и тень.
   float facing = dot(n, u_light);
-  float lo = 1.0 - clamp(u_edgeWidth, 0.05, 1.0);
-  float edgeBand = smoothstep(lo, mix(lo, 1.0, 0.85), t);
-  float arcTop = pow(max(facing, 0.0), 1.5);
-  float arcBot = pow(max(-facing, 0.0), 4.0) * 0.16;
-  float rimLum = edgeBand * (arcTop + arcBot) * u_edgeStrength * bloom * lift;
-  half3 cool = mix(half3(1.0), half3(0.88, 0.95, 1.0), half(clamp(u_dispersion, 0.0, 1.0)));
-  half3 warm = mix(half3(1.0), half3(1.0, 0.94, 0.84), half(clamp(u_dispersion, 0.0, 1.0)));
-  half3 rimCol = (half3(half(arcTop)) * cool + half3(half(arcBot)) * warm)
-    * half(edgeBand * u_edgeStrength * bloom * lift);
 
   // Толщина как поглощение: полоса там, где кромку не освещает ни один источник. Растёт
   // с фаской, поэтому тонкое стекло само по себе перестаёт «наливаться» у края.
@@ -119,30 +98,39 @@ half4 main(float2 xy) {
     }
     if (u_debug < 2.5) { return vgPack(half3(1.0), inMask); }
     if (u_debug < 3.5) { return vgPack(vgHeat(t), inMask); }
-    if (u_debug < 4.5) { return vgPack(vgHeat(fres), inMask); }
+    // Френель теперь у линзы; здесь показываем его ФОРМУ — насколько взгляд скользящий.
+    if (u_debug < 4.5) { return vgPack(vgHeat(1.0 - clamp(N.z, 0.0, 1.0)), inMask); }
     if (u_debug < 5.5) {
       float push = pow(t, VG_FALLOFF) * u_refraction;
       return vgPack(vgHeat(push), inMask);
     }
     if (u_debug < 6.5) { return half4(0.0); }
     if (u_debug < 7.5) { return vgPack(half3(1.0), spec * inMask); }
-    if (u_debug < 8.5) {
-      half3 split = (half3(half(arcTop)) * cool - half3(half(arcTop)) * warm) * half(6.0);
-      return vgPack(clamp(abs(split), half3(0.0), half3(1.0)), edgeBand * inMask);
-    }
-    return vgPack(half3(N * 0.5 + 0.5), inMask);
+    // Расщепление считает линза; здесь — поле, по которому оно нарастает.
+    if (u_debug < 8.5) { return vgPack(vgHeat(u_dispersion * t * t), inMask); }
+    if (u_debug < 9.5) { return vgPack(half3(N * 0.5 + 0.5), inMask); }
+    // spectral и adapt показывает ЛИНЗА — поверхность обязана уйти с дороги.
+    return half4(0.0);
   }
 
   // Тень и ореол живут СНАРУЖИ формы: внутри их место занимает само стекло. Отрыв от
   // контента держится именно на тени — без неё поверхность лежит НА картинке, а не над ней.
-  float outside = smoothstep(-1.0, 1.0, sd);
-  float sdDrop = vgScene(p - float2(0.0, u_shadowReach * 0.16), u_halfSize, u_corner,
-                         u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
-  float amb = 1.0 - smoothstep(0.0, u_shadowReach, max(sdDrop, 0.0));
-  float con = 1.0 - smoothstep(0.0, u_shadowReach * 0.22, max(sd, 0.0));
-  float shade = (amb * amb * 0.22 + con * con * 0.18) * outside * u_shadow;
-  float halo = 1.0 - smoothstep(0.0, u_shadowReach * 0.30, max(sd, 0.0));
-  halo = halo * halo * u_active * 0.10 * outside;
+  // Тень живёт только у кромки и снаружи: при sd < −1 множитель outside и так ноль.
+  // Считать её глубоко внутри формы — это лишняя ПОЛНАЯ оценка SDF на каждый такой пиксель,
+  // а тело занимает почти всю площадь. Ветвление здесь по координате, но расходятся только
+  // нити на самой кромке.
+  float shade = 0.0;
+  float halo = 0.0;
+  if (sd > -1.0) {
+    float outside = smoothstep(-1.0, 1.0, sd);
+    float sdDrop = vgScene(p - float2(0.0, u_shadowReach * 0.16), u_halfSize, u_corner,
+                           u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
+    float amb = 1.0 - smoothstep(0.0, u_shadowReach, max(sdDrop, 0.0));
+    float con = 1.0 - smoothstep(0.0, u_shadowReach * 0.22, max(sd, 0.0));
+    shade = (amb * amb * 0.22 + con * con * 0.18) * outside * u_shadow;
+    halo = 1.0 - smoothstep(0.0, u_shadowReach * 0.30, max(sd, 0.0));
+    halo = halo * halo * u_active * 0.10 * outside;
+  }
 
   if (sd > 1.0) {
     return half4(half3(half(halo)), half(halo + shade * (1.0 - halo)));
@@ -154,7 +142,9 @@ half4 main(float2 xy) {
 
   // Тинт СВЕТЛЫЙ и слабый, а не тёмный: тёмное стекло на тёмном контенте исчезает, и его
   // приходится держать жирной кромкой — от этого поверхность читается хромированной бусиной.
-  float body = mix(0.19, 0.69, smoothstep(0.10, 0.62, t)) * density;
+  // Плотность тинта у фаски — отдельная величина: физически фаска гнёт свет сильнее, но
+  // мутнее НЕ становится. Сцепленные, они давали молочное кольцо по всему обводу.
+  float body = mix(VG_BODY_DENSITY, VG_BODY_DENSITY * u_edgeDensity, smoothstep(0.10, 0.62, t)) * density;
   float vignette = smoothstep(0.15, 1.0, inner) * 0.19 * density;
   float a = max(body, vignette) + u_press * 0.05;
 
@@ -163,25 +153,18 @@ half4 main(float2 xy) {
   col *= 1.0 - half(absorb * 1.2);
 
   col += half3(spec) * half3(0.98, 0.99, 1.0);
-  col += rimCol;
-  col += half3(half(fres * 0.34)) * half3(0.96, 0.98, 1.0);
 
-  float2 ip = u_center + p + u_shift * (1.0 - ICON_LAG);
-  half4 ink = u_icon.eval(ip * u_iconScale) * half(u_iconOn);
-  // Маска двухслойная: штрих в зелёном канале, размытый красный ореол под ним. Разность
-  // каналов даёт тень под иконкой — без неё светлый штрих тонет в светлой обложке.
-  half halation = ink.a - ink.g;
-  col *= 1.0 - halation * 0.92;
-  a = max(a, float(halation) * 0.72);
+  // Значок едет вместе со стеклом: перенос и деформацию несёт трансформ обёртки, здесь
+  // остаётся только его место на детали.
+  half4 ink = u_icon.eval((u_center + p) * u_iconScale) * half(u_iconOn);
   half inkA = ink.g * half(mix(0.82, 1.0, u_active));
   half3 inkCol = mix(half3(u_inkIdle.rgb), half3(u_inkActive.rgb), half(u_active));
   col = col * (1.0 - inkA) + inkCol * inkA;
 
-  // Альфа кромки и блика идёт вровень с их яркостью: при заниженной альфе premultiplied
-  // результат гаснет и край становится невидимым на тёмном фоне.
-  a = clamp(a + spec + rimLum + fres * 0.30, 0.0, 1.0);
+  // Альфа блика идёт вровень с его яркостью: при заниженной альфе premultiplied результат
+  // гаснет и блик становится невидимым на тёмном фоне.
+  a = clamp(a + spec, 0.0, 1.0);
   a = max(a, float(inkA));
-  a *= u_opacity;
   a *= 1.0 - smoothstep(-1.0, 1.0, sd);
 
   col = clamp(col, half3(0.0), half3(1.0));

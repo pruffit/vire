@@ -1,10 +1,14 @@
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { RootNavigator } from './navigation/root-navigator';
 import { bootstrapE2eeIdentity } from './lib/e2ee/bootstrap';
+import { subscribePlayerEffects } from './lib/player-store';
 import { BlurTargetProvider } from './lib/blur-target';
+import { useKitFonts } from './lib/design/use-fonts';
+import { colors } from './lib/theme';
 import { GlassLab } from './screens/glass-lab';
 import { GlassBench } from './screens/glass-bench';
 import { MaterialLab } from './screens/material-lab';
@@ -24,15 +28,28 @@ function Lab() {
 }
 
 export default function App() {
+  // Шрифты кита ждём до первого кадра: иначе экран рисуется системным Roboto и вся
+  // вёрстка прыгает при подмене. Фон подложки — тот же, что у сплеша, поэтому пауза
+  // читается продолжением запуска, а не мельканием.
+  const fontsReady = useKitFonts();
+
   useEffect(() => {
     if (!GLASS_LAB) bootstrapE2eeIdentity();
   }, []);
+
+  // Отчёт о прослушивании при уходе в фон — подписка живёт в эффекте, чтобы фаст-рефреш
+  // не плодил слушателей (живой прогон дал из-за этого дубли в play_events).
+  useEffect(() => (GLASS_LAB ? undefined : subscribePlayerEffects()), []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <BlurTargetProvider>{GLASS_LAB ? <Lab /> : <RootNavigator />}</BlurTargetProvider>
+        {fontsReady ? (
+          <BlurTargetProvider>{GLASS_LAB ? <Lab /> : <RootNavigator />}</BlurTargetProvider>
+        ) : (
+          <View style={{ flex: 1, backgroundColor: colors.background }} />
+        )}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -45,3 +45,8 @@ apps/worker/models/
 
 # Ключи сервисных аккаунтов Firebase — секреты, никогда не в git
 *-firebase-adminsdk-*.json
+
+# Сборки Android: артефакты, а не исходники (по 90–180 МБ каждая)
+*.apk
+*.apk.idsig
+*.aab

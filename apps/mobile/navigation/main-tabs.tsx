@@ -1,19 +1,24 @@
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { HomeStackNavigator } from './home-stack';
+import { HomeStackNavigator, type HomeStackParamList } from './home-stack';
 import { SearchStackNavigator } from './search-stack';
 import { LibraryStackNavigator } from './library-stack';
 import { ProfileStackNavigator } from './profile-stack';
 import { LiquidGlassButton } from '../components/liquid-glass';
+import { GlassGroup } from '../lib/vireglass/glass-group';
 import { type IconName } from '../lib/icon';
 import { useBlurTarget } from '../lib/blur-target';
 import { TAB_BAR_CONTENT_HEIGHT } from '../lib/layout';
+import { SCRIM_COMPENSATION } from '../lib/vireglass/material';
 
+// Home принимает вложенные параметры — фуллскрин-плеер (корневой стек, вне табов)
+// открывает «К релизу» через navigation.navigate('Main', { screen: 'Home', params: {...} }).
 export type MainTabsParamList = {
-  Home: undefined;
+  Home: NavigatorScreenParams<HomeStackParamList>;
   Search: undefined;
   Library: undefined;
   Profile: undefined;
@@ -36,9 +41,9 @@ const CIRCLE_SIZE = 68;
 const SCRIM_HEIGHT = 96;
 const SCRIM = ['rgba(3,2,1,0)', 'rgba(3,2,1,0.12)', 'rgba(3,2,1,0.32)', 'rgba(3,2,1,0.46)'] as const;
 const SCRIM_STOPS = [0, 0.5, 0.8, 1] as const;
-/** `BlurView` линзы целится в контент экрана напрямую и скрима над ним не видит — линза
- *  обязана погасить себя на ту же величину, что скрим на высоте ряда кнопок. */
-const LENS_DIM = 0.10;
+// Линза целится в контент экрана напрямую и этого градиента над ним не видит — гасит себя
+// на ту же величину сама (`SCRIM_COMPENSATION`) — это компенсация, отдельная от общего
+// продуктового `PRODUCT_DIM` у панелей.
 
 // Кит («05 · КОМПОНЕНТЫ», навигация) требует раздельные круглые кнопки без подписи —
 // не одну сплошную капсулу с иконкой+текстом, которую строит `tabBarStyle`/`tabBarIcon`
@@ -57,6 +62,9 @@ function CircleTabBar({ state, navigation }: BottomTabBarProps) {
         locations={SCRIM_STOPS}
         style={[styles.scrim, { height: TAB_BAR_CONTENT_HEIGHT + insets.bottom + SCRIM_HEIGHT }]}
       />
+      {/* Таб-бар адаптируется БЛОКОМ: под каждой кнопкой свой кусок фона, и по своему
+          замеру одна уходит в тень, а соседняя остаётся прозрачной. */}
+      <GlassGroup>
       <View
         style={[
           styles.row,
@@ -82,12 +90,13 @@ function CircleTabBar({ state, navigation }: BottomTabBarProps) {
               icon={iconName}
               active={focused}
               blurTarget={blurTarget}
-              dim={LENS_DIM}
+              dim={SCRIM_COMPENSATION}
               onPress={onPress}
             />
           );
         })}
       </View>
+      </GlassGroup>
     </>
   );
 }
@@ -118,7 +127,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  // Капля тяги уходит за пределы ряда — обрезать её нечем и незачем.
   row: {
+    overflow: 'visible',
     position: 'absolute',
     left: 22,
     right: 22,

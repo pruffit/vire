@@ -126,6 +126,68 @@ describe('useLikesStore.toggle', () => {
   });
 });
 
+describe('useLikesStore.like', () => {
+  it('ставит лайк и шлёт POST', async () => {
+    useLikesStore.setState({ state: { t1: false } });
+    request.mockResolvedValue({ ok: true, data: { liked: true } });
+
+    useLikesStore.getState().like('t1');
+
+    expect(useLikesStore.getState().state.t1).toBe(true);
+    expect(request).toHaveBeenCalledWith('/api/v1/tracks/t1/like', expect.objectContaining({ method: 'POST' }));
+
+    await flush();
+  });
+
+  it('уже лайкнут — не бьёт в сеть повторно', () => {
+    useLikesStore.setState({ state: { t1: true } });
+
+    useLikesStore.getState().like('t1');
+
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('трек не загружен в state — no-op, как у toggle', () => {
+    useLikesStore.getState().like('t1');
+    expect(request).not.toHaveBeenCalled();
+  });
+});
+
+describe('useLikesStore.toggleRemote', () => {
+  it('трек уже в state — ведёт себя как обычный toggle', async () => {
+    useLikesStore.setState({ state: { t1: false } });
+    request.mockResolvedValue({ ok: true, data: { liked: true } });
+
+    useLikesStore.getState().toggleRemote('t1');
+
+    expect(useLikesStore.getState().state.t1).toBe(true);
+    expect(request).toHaveBeenCalledWith('/api/v1/tracks/t1/like', expect.objectContaining({ method: 'POST' }));
+
+    await flush();
+  });
+
+  it('трек не загружен (лайк из шторки без захода на экран трека) — сначала грузит state, потом переключает', async () => {
+    request.mockResolvedValueOnce({ ok: true, data: { liked: false } });
+    request.mockResolvedValueOnce({ ok: true, data: { liked: true } });
+
+    useLikesStore.getState().toggleRemote('t1');
+    await flush();
+
+    expect(useLikesStore.getState().state.t1).toBe(true);
+    expect(request).toHaveBeenNthCalledWith(1, '/api/v1/tracks/t1/like', expect.objectContaining({ schema: expect.anything() }));
+    expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tracks/t1/like', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('трек не загружен, сеть на догрузке падает — без исключений, state не меняется', async () => {
+    request.mockResolvedValue({ ok: false, error: { status: 0, message: 'Нет соединения' } });
+
+    useLikesStore.getState().toggleRemote('t1');
+    await flush();
+
+    expect(useLikesStore.getState().state.t1).toBeUndefined();
+  });
+});
+
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { TrackPlayer, emitNative, Event, State } = vi.hoisted(() => {
   const listeners: Record<string, Array<(payload?: unknown) => void>> = {};
@@ -13,6 +13,7 @@ const { TrackPlayer, emitNative, Event, State } = vi.hoisted(() => {
     RemoteSeek: 'remote-seek',
     RemoteNext: 'remote-next',
     RemotePrevious: 'remote-previous',
+    RemoteLike: 'remote-like',
   };
 
   const State = {
@@ -67,7 +68,8 @@ vi.mock('react-native-track-player', () => ({
 // Singleton создаётся один раз при импорте модуля (как в реальном приложении) —
 // все тесты работают через него, не плодят параллельные инстансы (иначе они делили бы
 // один и тот же глобальный TrackPlayer.addEventListener и дублировали побочные эффекты).
-import { audioEngine } from '../audio-engine';
+import { audioEngine, setNotificationLikeState, TRANSPORT_CAPABILITIES } from '../audio-engine';
+import { NativeModules } from 'react-native';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -230,6 +232,49 @@ describe('TrackPlayerAudioEngine — remote-команды (lock-screen/увед
   it('RemoteSeek вызывает seekTo с позицией из события', () => {
     emitNative(Event.RemoteSeek, { position: 77 });
     expect(TrackPlayer.seekTo).toHaveBeenCalledWith(77);
+  });
+
+  it('RemoteLike эмитится портом наружу — кнопка лайка в шторке (кастомное действие из патча RNTP)', () => {
+    const onLike = vi.fn();
+    const unsubscribe = audioEngine.on('remoteLike', onLike);
+
+    emitNative(Event.RemoteLike);
+
+    expect(onLike).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+});
+
+describe('TrackPlayerAudioEngine — capabilities шторки', () => {
+  it('объявляет только play/pause/next/prev — без Stop и SeekTo (требование заказчика)', () => {
+    expect(TRANSPORT_CAPABILITIES).toEqual(['play', 'pause', 'skip-next', 'skip-previous']);
+  });
+});
+
+describe('setNotificationLikeState', () => {
+  afterEach(() => {
+    delete (NativeModules as Record<string, unknown>).TrackPlayerModule;
+  });
+
+  it('несопатченная установка (метода нет) — не падает', () => {
+    expect(() => setNotificationLikeState(true)).not.toThrow();
+  });
+
+  it('патч применён — зовёт нативный setLikeState', () => {
+    const setLikeState = vi.fn().mockResolvedValue(null);
+    (NativeModules as Record<string, unknown>).TrackPlayerModule = { setLikeState };
+
+    setNotificationLikeState(true);
+
+    expect(setLikeState).toHaveBeenCalledWith(true);
+  });
+
+  it('нативный вызов отклоняется — без необработанного отказа промиса', async () => {
+    const setLikeState = vi.fn().mockRejectedValue(new Error('boom'));
+    (NativeModules as Record<string, unknown>).TrackPlayerModule = { setLikeState };
+
+    expect(() => setNotificationLikeState(false)).not.toThrow();
+    await flush();
   });
 });
 

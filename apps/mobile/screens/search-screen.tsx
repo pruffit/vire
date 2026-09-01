@@ -81,7 +81,7 @@ export default function SearchScreen() {
       coverUrl: t.coverUrl,
       durationSec: null,
     }));
-    playQueue(queue, index);
+    playQueue(queue, index, { source: 'search' });
   };
 
   return (

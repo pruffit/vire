@@ -53,9 +53,23 @@ function run(command, args, cwd) {
 // prebuild переносит app.json в нативный проект: пакет, версию, google-services и config-плагины
 // (подпись + набор ABI — plugins/with-android-release-signing.js). Без него правки app.json
 // в APK не попадают вообще.
-run('npx', ['expo', 'prebuild', '--platform', 'android'], root);
-
+//
+// `--fast` пропускает этот шаг. Смысл: prebuild сносит `android/` целиком, вместе с кэшем
+// CMake, поэтому нативный C++ пересобирается даже когда правка чисто JS-овая — а шейдеры
+// у нас живут строками в TypeScript, и таких итераций большинство. Пропускать МОЖНО ровно
+// пока не менялись app.json, конфиг-плагины, патчи нативных модулей и код в modules/.
+// Флаг читается И из аргументов, И из окружения: `pnpm build:android --fast` съедает флаг
+// сам, не доводя до скрипта (нужно `pnpm build:android -- --fast`), и молчаливо собирает
+// долгим путём. Переменная от этого не зависит.
 const androidDir = resolve(root, 'android');
+const fast = process.argv.includes('--fast') || process.env.VIRE_FAST_BUILD === '1';
+
+if (fast && existsSync(androidDir)) {
+  console.log('  ! --fast: prebuild пропущен, нативная часть берётся из android/ как есть');
+} else {
+  run('npx', ['expo', 'prebuild', '--platform', 'android'], root);
+}
+
 if (!existsSync(androidDir)) {
   console.error('prebuild не создал android/ — дальше идти некуда');
   process.exit(1);

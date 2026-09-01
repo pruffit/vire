@@ -31,17 +31,24 @@ float2 vgRoundRectNormal(float2 p, float2 halfSize, float corner) {
   return g * sign(p);
 }
 
-// На объединённой сцене аналитической нормали нет — там градиент берётся разностями.
-// Ветка по униформе, дивергенции внутри кадра не создаёт.
+// Нормаль объединения — АНАЛИТИЧЕСКАЯ, конечных разностей здесь больше нет.
+//
+// Вывод: у smin два слагаемых, mix(b,a,h) и −k·h·(1−h). Их производные по h содержат
+// множитель (1−2h) с противоположными знаками и сокращаются ровно, потому что h линейна
+// по (b−a)/k. Остаётся mix(∇b, ∇a, h) — то есть нормали двух форм, смешанные тем же весом,
+// каким смешаны сами расстояния.
+//
+// Прежний вариант брал четыре ДОПОЛНИТЕЛЬНЫХ вычисления сцены на пиксель (каждое — две
+// формы плюс smin) и при этом был приближением. Здесь две формы, точно.
 float2 vgSceneNormal(float2 p, float2 halfSize, float corner,
                      float2 offsetB, float2 halfB, float cornerB, float k) {
-  if (k <= 0.0) { return vgRoundRectNormal(p, halfSize, corner); }
-  float e = 0.75;
-  float dx = vgScene(p + float2(e, 0.0), halfSize, corner, offsetB, halfB, cornerB, k)
-           - vgScene(p - float2(e, 0.0), halfSize, corner, offsetB, halfB, cornerB, k);
-  float dy = vgScene(p + float2(0.0, e), halfSize, corner, offsetB, halfB, cornerB, k)
-           - vgScene(p - float2(0.0, e), halfSize, corner, offsetB, halfB, cornerB, k);
-  return normalize(float2(dx, dy) + float2(1e-5, 1e-5));
+  float2 na = vgRoundRectNormal(p, halfSize, corner);
+  if (k <= 0.0) { return na; }
+  float2 q = p - offsetB;
+  float a = vgRoundRect(p, halfSize, corner);
+  float b = vgRoundRect(q, halfB, cornerB);
+  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+  return normalize(mix(vgRoundRectNormal(q, halfB, cornerB), na, h) + float2(1e-5, 1e-5));
 }
 
 // Положение в фаске: 0 — плоская середина, 1 — самая кромка. Одна эта величина питает
@@ -50,10 +57,15 @@ float vgBevelT(float sd, float bevel) {
   return clamp((sd + bevel) / bevel, 0.0, 1.0);
 }
 
-// Наклон профиля фаски. Не полусфера: полусфера гнёт всё поле зрения и читается мыльным
-// пузырём — середина обязана остаться плоской.
+// Наклон профиля фаски — сферический: t / sqrt(1 - t²), как у шарового сегмента. Прежний
+// t² держал наклон около нуля почти всю фаску и взлетал у самой кромки, отчего вся оптика
+// собиралась в узкое кольцо и деталь читалась ШАЙБОЙ — плоский верх и стенка по борту.
+// Здесь кривизна распределена по фаске, и кромка перестаёт быть линией.
+//
+// Полем зрения это по-прежнему не правит: гнётся только фаска, середина плоская, иначе
+// поверхность читается мыльным пузырём.
 float vgBevelSlope(float t) {
-  return min(t * t * inversesqrt(max(1.0 - t * t * 0.94, 0.02)), 3.2);
+  return min(t * inversesqrt(max(1.0 - t * t * 0.94, 0.02)), 3.2);
 }
 `;
 
