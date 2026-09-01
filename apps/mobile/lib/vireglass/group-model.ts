@@ -1,4 +1,10 @@
-import { bodyDensityFor, type BackdropSample } from './adaptation';
+import {
+  bodyDensityFor,
+  CONFIRMATIONS,
+  FLIP_DENSITY,
+  RETURN_DENSITY,
+  type BackdropSample,
+} from './adaptation';
 
 /**
  * ОЦЕНКА БЛОКА СТЕКЛА — чистая часть группы поверхностей (`glass-group.tsx`).
@@ -22,11 +28,6 @@ export type GroupPlane = {
 
 /** Вход решения о полярности: светлота, по которой судит блок, и строжайшее из требований. */
 export type GroupDecision = { decisive: number; legibility: number };
-
-/** Предел стекла и возврат — те же, что у одиночной поверхности (`adaptation.ts`). */
-export const FLIP_DENSITY = 0.48;
-export const RETURN_DENSITY = 0.4;
-export const CONFIRMATIONS = 3;
 
 /** Доля нового замера в сглаженной оценке. Замеры идут от каждого участника, поэтому по
  *  блоку их набирается около двадцати в секунду — четверти хватает на отклик за ~200 мс. */
@@ -53,7 +54,7 @@ const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
  * по x: участники блока стоят в ряд, и одной оси достаточно — по вертикали их разброса нет.
  * Координаты центрируются, поэтому нормальные уравнения распадаются.
  */
-export function fitLuma(members: readonly GroupMember[]): {
+function fitLuma(members: readonly GroupMember[]): {
   mx: number;
   ml: number;
   slope: number;
@@ -125,13 +126,19 @@ export function smoothPlane(prev: GroupPlane | null, next: GroupPlane): GroupPla
   if (!prev) return next;
   const e = (was: number, now: number) =>
     Math.abs(now - was) < SETTLE ? now : was + (now - was) * SMOOTH;
-  return {
-    mx: next.mx,
-    ml: e(prev.ml, next.ml),
-    slope: e(prev.slope, next.slope),
-    base: e(prev.base, next.base),
-    rest: next.rest.map((v, i) => e(prev.rest[i], v)),
-  };
+  const ml = e(prev.ml, next.ml);
+  const slope = e(prev.slope, next.slope);
+  const base = e(prev.base, next.base);
+  const rest = next.rest.map((v, i) => e(prev.rest[i], v));
+  // Сошедшаяся оценка отдаётся прежним объектом: иначе `setPlane` перерисовывал бы блок
+  // на каждом замере — двадцать раз в секунду и на неподвижном экране тоже.
+  const same =
+    next.mx === prev.mx &&
+    ml === prev.ml &&
+    slope === prev.slope &&
+    base === prev.base &&
+    rest.every((v, i) => v === prev.rest[i]);
+  return same ? prev : { mx: next.mx, ml, slope, base, rest };
 }
 
 /** Замер, который участник в точке `x` отдаёт своей линзе — в порядке её пропа. */
@@ -147,7 +154,7 @@ export function probeValuesAt(plane: GroupPlane, x: number): number[] {
 }
 
 /** Требует ли блок сменить полярность надписи при текущей (1 светлая, 0 тёмная). */
-export function wantsPolarityChange(decision: GroupDecision, polarity: number): boolean {
+function wantsPolarityChange(decision: GroupDecision, polarity: number): boolean {
   const cost = bodyDensityFor(decision.decisive, decision.legibility, 0, 1);
   return polarity === 1 ? cost > FLIP_DENSITY : cost < RETURN_DENSITY;
 }

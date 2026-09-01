@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useSharedValue, type SharedValue } from 'react-native-reanimated';
-import type { BackdropSample } from './adaptation';
+import { FADE_MS, type BackdropSample } from './adaptation';
 import {
   createGroupState,
   probeValuesAt,
@@ -29,13 +29,6 @@ import {
  * светлоты, и каждый берёт из неё значение в своей точке — блок темнеет плавно поперёк
  * себя, а не ступенями по кнопкам.
  */
-
-export type GroupProbe = {
-  /** Светлота, пестрота, lo, hi, наклон по осям, средний цвет — в порядке пропа линзы. */
-  values: number[];
-  /** Полярность надписи на весь блок: 1 светлая, 0 тёмная. */
-  ink: number;
-};
 
 /**
  * Шина тяги: [x, y, радиус капли, ширина шейки, номер тянущего]. Живёт разделяемым значением,
@@ -66,9 +59,6 @@ type GroupApi = {
 };
 
 const GlassGroupContext = createContext<GroupApi | null>(null);
-
-/** Длительность перекраски — та же, что у одиночной поверхности (`adaptation.ts`). */
-const FADE_MS = 420;
 
 const sameValues = (a: readonly number[], b: readonly number[]) =>
   a.length === b.length && a.every((v, i) => v === b[i]);

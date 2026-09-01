@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { BackdropSample } from '../vireglass/adaptation';
+import { CONFIRMATIONS, type BackdropSample } from '../vireglass/adaptation';
 import {
   aggregate,
-  CONFIRMATIONS,
   createGroupState,
   GRADIENT,
   probeValuesAt,
@@ -109,6 +108,15 @@ describe('оценка блока по участникам', () => {
     expect(plane.base).toBe(target.base);
     expect(SETTLE).toBeLessThan(1 / 255 / 100);
   });
+
+  // Сошедшаяся оценка не должна давать новый объект: на нём React перерисовывал бы блок
+  // на каждом замере, в том числе на неподвижном экране.
+  it('сошедшаяся оценка отдаётся прежним объектом', () => {
+    const target = aggregate([member(0, 0.05)])?.plane as GroupPlane;
+    let plane = aggregate([member(0, 0.9)])?.plane as GroupPlane;
+    for (let i = 0; i < 200; i += 1) plane = smoothPlane(plane, target);
+    expect(smoothPlane(plane, target)).toBe(plane);
+  });
 });
 
 describe('полярность блока', () => {
@@ -200,6 +208,8 @@ describe('плоскость светлоты у участников', () => {
   it('плотность задаёт самое светлое место блока', () => {
     expect(plane.base).toBe(1);
     expect(at[3]).toBeCloseTo(plane.base, 5);
+    // Обе раскладки: по крайнему в списке замеру перевёрнутый ряд отдал бы блоку чёрный край.
+    expect(aggregate([...edge].reverse())?.plane.base).toBe(1);
   });
 
   it('над границей чёрного и белого участники не получают своих значений', () => {
@@ -232,14 +242,25 @@ describe('плоскость светлоты у участников', () => {
   });
 
   it('остальные величины замера в блоке общие', () => {
-    const mixed = aggregate([
-      { ...member(0, 0.2), sample: { luma: 0.2, busy: 0.1, lo: 0.1, hi: 0.3, r: 0.2, g: 0.2, b: 0.2 } },
-      { ...member(1, 0.6), sample: { luma: 0.6, busy: 0.8, lo: 0.4, hi: 0.9, r: 0.6, g: 0.6, b: 0.6 } },
-    ])?.plane as GroupPlane;
-    // Пестрота и края — самые тяжёлые в блоке, цвет — средний по участникам.
-    expect(mixed.rest[0]).toBe(0.8);
-    expect(mixed.rest[1]).toBe(0.1);
-    expect(mixed.rest[2]).toBe(0.9);
-    expect(mixed.rest[3]).toBeCloseTo(0.4, 5);
+    const calm: GroupMember = {
+      ...member(0, 0.2),
+      sample: { luma: 0.2, busy: 0.1, lo: 0.1, hi: 0.3, r: 0.2, g: 0.2, b: 0.2 },
+    };
+    const loud: GroupMember = {
+      ...member(1, 0.6),
+      sample: { luma: 0.6, busy: 0.8, lo: 0.4, hi: 0.9, r: 0.6, g: 0.6, b: 0.6 },
+    };
+    // Обе раскладки: по крайнему в списке замеру блок брал бы то пестроту, то её отсутствие.
+    for (const order of [
+      [calm, loud],
+      [loud, calm],
+    ]) {
+      const mixed = aggregate(order)?.plane as GroupPlane;
+      // Пестрота и края — самые тяжёлые в блоке, цвет — средний по участникам.
+      expect(mixed.rest[0]).toBe(0.8);
+      expect(mixed.rest[1]).toBe(0.1);
+      expect(mixed.rest[2]).toBe(0.9);
+      expect(mixed.rest[3]).toBeCloseTo(0.4, 5);
+    }
   });
 });
