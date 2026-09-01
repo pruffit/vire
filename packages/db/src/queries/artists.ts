@@ -87,6 +87,28 @@ export async function artistHasPublishedTrackById(artistProfileId: string): Prom
   return row?.has ?? false;
 }
 
+export interface ArtistContextInfo {
+  slug: string;
+  name: string;
+  avatarUrl: string | null;
+  bio: string | null;
+}
+
+/** Артист трека для плеера (эндпоинт /tracks/[id]/context) — минимум для «Об авторе». */
+export async function getArtistContext(artistProfileId: string): Promise<ArtistContextInfo | null> {
+  const [row] = await db
+    .select({
+      slug: artistProfiles.slug,
+      name: artistProfiles.name,
+      avatarUrl: artistProfiles.avatarUrl,
+      bio: artistProfiles.bio,
+    })
+    .from(artistProfiles)
+    .where(and(eq(artistProfiles.id, artistProfileId), eq(artistProfiles.isActive, true)))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function isArtistMember(artistProfileId: string, userId: string): Promise<boolean> {
   const [row] = await db
     .select({ id: artistMembers.id })

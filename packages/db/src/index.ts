@@ -27,8 +27,8 @@ export * from './repositories/external-resolution';
 export { getTrackAudio, getPlayableTrackAudio, getTrackArtistProfileId, getTrackSourceKey, getArtistTrackSources, getTrackAudioMeta, trackExists, getTrackTitle, listTracksNeedingAnalysis, updateTrackAnalysis, getGenreSuggestionsForTracks, saveGenreSuggestions, getGenreSuggestionsSnapshot, getAudioFeaturesSnapshot } from './queries/track-audio';
 export type { TrackAudioData, PlayableTrackAudioData, GenreSuggestionRow, GenreSuggestionsSnapshot, AudioFeaturesSnapshot } from './queries/track-audio';
 export { getPublicTrackLyrics } from './queries/lyrics';
-export { listActiveArtists, artistHasPublishedTrackById, isArtistMember } from './queries/artists';
-export type { ArtistListItem } from './queries/artists';
+export { listActiveArtists, artistHasPublishedTrackById, isArtistMember, getArtistContext } from './queries/artists';
+export type { ArtistListItem, ArtistContextInfo } from './queries/artists';
 export { getLikeState, getLikeCount, likeTrack, unlikeTrack } from './queries/likes';
 export {
   presaveForUser,

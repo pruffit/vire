@@ -105,9 +105,9 @@ export function MiniPlayer() {
             )}
           </Pressable>
         </GlassPanel>
-        {/* Прогресс — информация, не контроллер: он внутри панели, начинается по левому
-            краю текстовой колонки и не доходит до обложки. По кромке панели он читался
-            как обрезанный скраббер и провоцировал тянуть его пальцем. Живёт снаружи
+        {/* Прогресс — информация, не контроллер: он живёт в границах текстовой колонки и
+            не заходит ни под обложку, ни под кнопку. Дотянутый до кромки стекла, он
+            читался обрезанным скраббером и провоцировал тянуть его пальцем. Снаружи
             GlassPanel: у той на контенте свой паддинг, от которого absolute отсчитывался
             бы дважды. */}
         <View style={styles.progressTrack} pointerEvents="none">
@@ -125,6 +125,9 @@ const SWIPE_MIN = 24;
 const INSET = 8;
 const PANEL_RADIUS = radii.glass;
 const COVER = MINI_PLAYER_HEIGHT - INSET * 2;
+/** Полтора пикселя читались артефактом вёрстки, а не индикатором: на такой высоте
+ *  скругление не видно вовсе. */
+const PROGRESS_HEIGHT = 3;
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: space.md, right: space.md, height: MINI_PLAYER_HEIGHT },
@@ -146,12 +149,17 @@ const styles = StyleSheet.create({
   progressTrack: {
     position: 'absolute',
     left: INSET + COVER + space.md,
-    right: INSET,
+    right: INSET + layout.touchTarget + space.md,
     bottom: INSET,
-    height: 1.5,
+    height: PROGRESS_HEIGHT,
     borderRadius: radii.full,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     overflow: 'hidden',
   },
-  progressFill: { height: 1.5, borderRadius: radii.full, backgroundColor: colors.foreground, opacity: 0.7 },
+  progressFill: {
+    height: PROGRESS_HEIGHT,
+    borderRadius: radii.full,
+    backgroundColor: colors.foreground,
+    opacity: 0.8,
+  },
 });
