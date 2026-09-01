@@ -421,7 +421,7 @@ half4 main(float2 xy) {
   // Отклик ЛИНЕЙНЫЙ по пестроте, а не квадратичный: в квадрате умеренно пёстрый фон
   // (обложка в списке, строка текста) почти не поднимал плотность, и вся работа по
   // читаемости оставалась размытию — которому здесь не место.
-  float busyFloor = clamp(u_probeBusy, 0.0, 1.0) * mix(0.15, 0.85, u_legibility);
+  float busyFloor = clamp(busy, 0.0, 1.0) * mix(0.15, 0.85, u_legibility);
   float density = max(max(u_bodyDensity, mix(needForDark, needForLight, pol)), busyFloor);
   float tintLuma = mix(VG_TINT_LIGHT, VG_TINT_DARK, pol);
 

@@ -168,13 +168,24 @@ export function LiquidGlassButton({
     [group, seat, layoutTick],
   );
 
+  // Колбэк держится за сами методы, а не за объекты адаптации и группы: те пересоздаются на
+  // каждом замере, и проп нативной вьюхи менялся бы впустую по нескольку раз в секунду.
+  const { onBackdropSample } = adaptation;
+  const report = group?.report;
   const onSample = useCallback(
     (e: { nativeEvent: BackdropSample }) => {
-      if (group) group.report(id, at.current.x, at.current.y, e.nativeEvent);
-      else adaptation.onBackdropSample(e);
+      if (report) report(id, at.current.x, at.current.y, e.nativeEvent, opticsProp.legibility);
+      else onBackdropSample(e);
     },
-    [group, id, adaptation],
+    [report, id, onBackdropSample, opticsProp.legibility],
   );
+
+  const release = group?.release;
+  useEffect(() => {
+    if (!release) return;
+    return () => release(id);
+  }, [release, id]);
+
   const optics = useMemo(
     () => (auto ? { ...opticsProp, ink: inkValue } : opticsProp),
     [opticsProp, auto, inkValue],
@@ -237,7 +248,7 @@ export function LiquidGlassButton({
       });
 
     return Gesture.Simultaneous(drag, tap);
-  }, [onPress, press, shiftX, shiftY]);
+  }, [onPress, press, shiftX, shiftY, dragLimit]);
 
   return (
     <GestureDetector gesture={gesture}>

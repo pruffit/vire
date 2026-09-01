@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { bodyDensityFor, type BackdropSample } from './adaptation';
 
@@ -22,7 +31,7 @@ export type GroupProbe = {
   ink: number;
 };
 
-type Member = { x: number; y: number; sample: BackdropSample };
+type Member = { x: number; y: number; sample: BackdropSample; legibility: number };
 
 /**
  * Шина тяги: [x, y, радиус капли, ширина шейки, номер тянущего]. Живёт разделяемым значением,
@@ -36,7 +45,15 @@ type Member = { x: number; y: number; sample: BackdropSample };
 export type PullBus = SharedValue<number[]>;
 
 type GroupApi = {
-  report: (id: string, x: number, y: number, sample: BackdropSample) => void;
+  report: (
+    id: string,
+    x: number,
+    y: number,
+    sample: BackdropSample,
+    legibility: number,
+  ) => void;
+  /** Снять участника с учёта при размонтировании: иначе он навсегда остаётся в оценке блока. */
+  release: (id: string) => void;
   probeAt: (x: number) => number[] | undefined;
   ink: number | undefined;
   pull: PullBus;
@@ -129,68 +146,91 @@ export function GlassGroup({ children }: { children: ReactNode }) {
     raf.current = requestAnimationFrame(step);
   }, []);
 
-  const report = useCallback(
-    (id: string, x: number, y: number, sample: BackdropSample) => {
-      members.current.set(id, { x, y, sample });
-      const all = [...members.current.values()];
-      if (all.length === 0) return;
+  useEffect(() => () => {
+    if (raf.current !== null) cancelAnimationFrame(raf.current);
+  }, []);
 
-      const { mx, ml, slope } = fit(all);
-      let busy = 0;
-      let lo = 1;
-      let hi = 0;
-      // Самое светлое МЕСТО блока: по нему считается плотность на всех. Иначе над
-      // границей чёрного и белого блок держится за среднее, светлая надпись не темнеет
-      // ни на чём и тонет над светлой половиной.
-      let base = 0;
-      let r = 0;
-      let g = 0;
-      let b = 0;
-      for (const m of all) {
-        busy = Math.max(busy, m.sample.busy);
-        lo = Math.min(lo, m.sample.lo);
-        hi = Math.max(hi, m.sample.hi);
-        base = Math.max(base, m.sample.luma);
-        r += m.sample.r;
-        g += m.sample.g;
-        b += m.sample.b;
-      }
-      const k = all.length;
-      // Сглаживание по замерам, а не по кадрам: нативная линза сглаживает СВОЮ оценку, а
-      // групповая перебивает её уже готовой. Без этого блок менял тон ступенями — шаг зонда
-      // 180 мс слишком крупный, чтобы адаптация читалась незаметной.
-      setProbe((prev) => {
-        const next = { mx, ml, slope, base, rest: [busy, lo, hi, r / k, g / k, b / k] };
-        if (!prev) return next;
-        const e = (was: number, now: number) => was + (now - was) * SMOOTH;
-        return {
-          mx,
-          ml: e(prev.ml, ml),
-          slope: e(prev.slope, slope),
-          base: e(prev.base, base),
-          rest: next.rest.map((v, i) => e(prev.rest[i], v)),
-        };
-      });
-
-      // Решение о полярности — одно на блок и по его СРЕДНЕЙ светлоте. По собственной
-      // каждая кнопка решала сама, и на пёстром фоне блок получался разноцветным.
-      const decisive = ml * 0.75 + hi * 0.25;
-      const cost = bodyDensityFor(decisive, 0.26, 0, 1);
-      const wasLight = target.current === 1;
-      const wants = wasLight ? cost > FLIP_DENSITY : cost < RETURN_DENSITY;
-      if (!wants) {
-        pending.current = 0;
-        return;
-      }
-      pending.current += 1;
-      if (pending.current < CONFIRMATIONS) return;
+  const evaluate = useCallback(() => {
+    const all = [...members.current.values()];
+    if (all.length === 0) {
       pending.current = 0;
-      from.current = current.current;
-      target.current = wasLight ? 0 : 1;
-      startedAt.current = Date.now();
-      animate();
+      setProbe(null);
+      return;
+    }
+
+    const { mx, ml, slope } = fit(all);
+    let busy = 0;
+    let lo = 1;
+    let hi = 0;
+    // Самое светлое МЕСТО блока: по нему считается плотность на всех. Иначе над
+    // границей чёрного и белого блок держится за среднее, светлая надпись не темнеет
+    // ни на чём и тонет над светлой половиной.
+    let base = 0;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    // Требование читаемости — самое строгое в блоке: полярность одна на всех, и по
+    // слабейшему требованию сосед с более придирчивой оптикой остался бы нечитаемым.
+    let legibility = 0;
+    for (const m of all) {
+      busy = Math.max(busy, m.sample.busy);
+      lo = Math.min(lo, m.sample.lo);
+      hi = Math.max(hi, m.sample.hi);
+      base = Math.max(base, m.sample.luma);
+      r += m.sample.r;
+      g += m.sample.g;
+      b += m.sample.b;
+      legibility = Math.max(legibility, m.legibility);
+    }
+    const k = all.length;
+    // Сглаживание по замерам, а не по кадрам: нативная линза сглаживает СВОЮ оценку, а
+    // групповая перебивает её уже готовой. Без этого блок менял тон ступенями — шаг зонда
+    // 180 мс слишком крупный, чтобы адаптация читалась незаметной.
+    setProbe((prev) => {
+      const next = { mx, ml, slope, base, rest: [busy, lo, hi, r / k, g / k, b / k] };
+      if (!prev) return next;
+      const e = (was: number, now: number) => was + (now - was) * SMOOTH;
+      return {
+        mx,
+        ml: e(prev.ml, ml),
+        slope: e(prev.slope, slope),
+        base: e(prev.base, base),
+        rest: next.rest.map((v, i) => e(prev.rest[i], v)),
+      };
+    });
+
+    // Решение о полярности — одно на блок и по его СРЕДНЕЙ светлоте. По собственной
+    // каждая кнопка решала сама, и на пёстром фоне блок получался разноцветным.
+    const decisive = ml * 0.75 + hi * 0.25;
+    const cost = bodyDensityFor(decisive, legibility, 0, 1);
+    const wasLight = target.current === 1;
+    const wants = wasLight ? cost > FLIP_DENSITY : cost < RETURN_DENSITY;
+    if (!wants) {
+      pending.current = 0;
+      return;
+    }
+    pending.current += 1;
+    if (pending.current < CONFIRMATIONS) return;
+    pending.current = 0;
+    from.current = current.current;
+    target.current = wasLight ? 0 : 1;
+    startedAt.current = Date.now();
+    animate();
+  }, [animate]);
+
+  const report = useCallback(
+    (id: string, x: number, y: number, sample: BackdropSample, legibility: number) => {
+      members.current.set(id, { x, y, sample, legibility });
+      evaluate();
     },
-    [animate],
+    [evaluate],
+  );
+
+  const release = useCallback(
+    (id: string) => {
+      if (members.current.delete(id)) evaluate();
+    },
+    [evaluate],
   );
 
   const probeAt = useCallback(
@@ -209,8 +249,8 @@ export function GlassGroup({ children }: { children: ReactNode }) {
   );
 
   const api = useMemo<GroupApi>(
-    () => ({ report, probeAt, ink, pull, claim }),
-    [report, probeAt, ink, pull, claim],
+    () => ({ report, release, probeAt, ink, pull, claim }),
+    [report, release, probeAt, ink, pull, claim],
   );
 
   return <GlassGroupContext.Provider value={api}>{children}</GlassGroupContext.Provider>;

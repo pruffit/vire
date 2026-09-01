@@ -110,6 +110,9 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
     viewTreeObserver.addOnPreDrawListener(onPreDraw)
+    // Защёлка сбоя снимается только здесь, на новой жизни вьюхи: сброс в releaseProbe
+    // означал бы пересоздание потока и рендерера каждые 180 мс на стабильном сбое.
+    probeFailed = false
   }
 
   override fun onDetachedFromWindow() {
@@ -250,7 +253,12 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
     } catch (e: Throwable) {
       Log.w("GlassLens", "снимок зонда не прочитался", e)
     } finally {
-      image.close()
+      // Кадр закрывается на потоке зонда и может опоздать: releaseProbe с главного потока
+      // уже закрыл reader, и тогда close() кидает IllegalStateException.
+      try {
+        image.close()
+      } catch (e: Throwable) {
+      }
     }
     mainHandler.post { for (lens in lenses) lens.onBackdropProbed() }
   }
@@ -271,10 +279,6 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
     probeThread?.quitSafely()
     probeThread = null
     probeHandler = null
-    // Защёлка сбрасывается вместе с ресурсами: сбой мог быть транзиентным (драйвер, смена
-    // конфигурации), и держать зонд выключенным до конца жизни вьюхи из-за одного
-    // исключения значит потерять автоинверсию темы навсегда и молча.
-    probeFailed = false
     lumaGrid = null
     colorGrid = null
   }

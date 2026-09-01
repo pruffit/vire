@@ -268,9 +268,3 @@ export function useGlassAdaptation(
 
   return { ink, sample, onBackdropSample };
 }
-
-/** Цвет надписи для текущей полярности. Между концами идёт по светлоте — это ровно то, что
- *  видит стекло, поэтому текст и тело не расходятся на переходе. */
-export function inkColor(ink: number, light: string, dark: string): string {
-  return ink > 0.5 ? light : dark;
-}
