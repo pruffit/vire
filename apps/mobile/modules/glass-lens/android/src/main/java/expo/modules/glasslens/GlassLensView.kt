@@ -394,12 +394,14 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
     settling = true
     post(object : Runnable {
       override fun run() {
-        // В сумму входят ВСЕ величины, которые цикл двигает: по одной луме он вставал сразу,
-        // когда фон менял только оттенок, и тинт доезжал рывками по тикам зонда.
-        val d = abs(targetLuma - probeLuma) + abs(targetBusy - probeBusy) +
-          abs(targetLo - probeLo) + abs(targetHi - probeHi) +
-          abs(targetSlopeX - probeSlopeX) + abs(targetSlopeY - probeSlopeY) +
-          abs(targetR - probeR) + abs(targetG - probeG) + abs(targetB - probeB)
+        // Условие смотрит на ВСЕ величины, которые цикл двигает: по одной луме он вставал,
+        // когда фон менял только оттенок. Максимум, а не сумма: порог задан на ОДНУ величину
+        // и от суммы ужесточался бы с каждым слагаемым — это лишние кадры с applyEffect().
+        val d = maxOf(
+          maxOf(abs(targetLuma - probeLuma), abs(targetBusy - probeBusy), abs(targetLo - probeLo)),
+          maxOf(abs(targetHi - probeHi), abs(targetSlopeX - probeSlopeX), abs(targetSlopeY - probeSlopeY)),
+          maxOf(abs(targetR - probeR), abs(targetG - probeG), abs(targetB - probeB)),
+        )
         probeLuma += (targetLuma - probeLuma) * SETTLE
         probeBusy += (targetBusy - probeBusy) * SETTLE
         probeLo += (targetLo - probeLo) * SETTLE

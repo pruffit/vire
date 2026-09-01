@@ -226,6 +226,7 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
     val image = try {
       reader.acquireLatestImage()
     } catch (e: Throwable) {
+      Log.w("GlassLens", "кадр зонда не выдан", e)
       null
     } ?: return
     try {
@@ -258,6 +259,7 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
       try {
         image.close()
       } catch (e: Throwable) {
+        Log.w("GlassLens", "кадр зонда не закрылся", e)
       }
     }
     mainHandler.post { for (lens in lenses) lens.onBackdropProbed() }

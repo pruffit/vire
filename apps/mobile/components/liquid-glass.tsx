@@ -160,20 +160,27 @@ export function LiquidGlassButton({
   const seatRef = useRef(-1);
   if (seatRef.current < 0 && group) seatRef.current = group.claim();
   const seat = seatRef.current;
+  // Зависимость — сама шина, а не объект группы: группа пересоздаётся на каждом замере, и
+  // от новой ссылки Reanimated пересобирал бы маппер поверхности десятки раз в секунду.
+  const pullSignal = group?.pull;
   const pullBus = useMemo(
     () =>
-      group && seat > 0
-        ? { bus: group.pull, seat, centerX: at.current.x, centerY: at.current.y }
+      pullSignal && seat > 0
+        ? { bus: pullSignal, seat, centerX: at.current.x, centerY: at.current.y }
         : undefined,
-    [group, seat, layoutTick],
+    [pullSignal, seat, layoutTick],
   );
 
   // Колбэк держится за сами методы, а не за объекты адаптации и группы: те пересоздаются на
   // каждом замере, и проп нативной вьюхи менялся бы впустую по нескольку раз в секунду.
   const { onBackdropSample } = adaptation;
   const report = group?.report;
+  // Замер, пришедший после снятия участника, вернул бы размонтированную кнопку в оценку
+  // блока навсегда: снимать её второй раз уже некому.
+  const mounted = useRef(true);
   const onSample = useCallback(
     (e: { nativeEvent: BackdropSample }) => {
+      if (!mounted.current) return;
       if (report) report(id, at.current.x, at.current.y, e.nativeEvent, opticsProp.legibility);
       else onBackdropSample(e);
     },
@@ -182,8 +189,11 @@ export function LiquidGlassButton({
 
   const release = group?.release;
   useEffect(() => {
-    if (!release) return;
-    return () => release(id);
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (release) release(id);
+    };
   }, [release, id]);
 
   const optics = useMemo(
