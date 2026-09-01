@@ -281,11 +281,11 @@ iOS/Android получают свои реестры с нативными вь�
 
 | Путь | Содержимое |
 |---|---|
-| `packages/api-contracts/src/sdui/` | zod-схемы `Screen`, `Block`, `DataSource` |
+| `packages/api-contracts/src/sdui.ts` | zod-схемы `Screen`, `Block`, `DataSource` |
 | `packages/core/src/platform/sdui/` | сборка композиции: флаги, A/B, персонализация |
 | `apps/web/app/api/v1/screens/home/route.ts` | эндпоинт композиции |
 | `apps/web/components/sdui/` | реестр и рендерер |
-| `apps/web/lib/flags.ts` | флаг раскатки (из `platform/config`) |
+| `apps/web/lib/feature-flags.ts` | флаг раскатки (из `platform/config`) |
 
 Отдельный пакет `packages/sdui` — **только когда** появится второй потребитель рендерера
 (мобильный клиент или второй продукт). До тех пор границы держит директория,

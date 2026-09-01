@@ -34,8 +34,8 @@
 
 - **Heartbeat API:** `apps/web/app/api/v1/tracks/[id]/listening/route.ts`
 - **Утилиты присутствия:** `apps/web/lib/presence.ts`
-- **Компонент счётчика (трек):** в `apps/web/app/artists/[slug]/releases/[releaseId]/tracks/[trackId]/` — live-обновление через polling или SSE
-- **Дашборд (заголовок):** `apps/web/app/dashboard/_components/LiveCount.tsx` (или аналог)
+- **Компонент счётчика (трек):** в `apps/web/app/[locale]/(listener)/artists/[slug]/releases/[releaseId]/tracks/[trackId]/` — live-обновление через polling или SSE
+- **Дашборд (заголовок):** `apps/web/app/[locale]/dashboard/live-now.tsx`
 - **Redis-клиент:** `ioredis` — тот же `REDIS_URL`, что у BullMQ, но отдельный инстанс
 
 ## Env-переменные

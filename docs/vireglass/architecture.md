@@ -25,7 +25,7 @@
 | `modules/glass-lens/android/.../GlassLensView.kt` | нативный | компиляция присланного AGSL + `RenderEffect` |
 | `modules/glass-lens/android/.../GlassBackdropView.kt` | нативный | захват кадра в RenderNode + зонд светлоты фона |
 | `modules/glass-lens/android/.../GlassLensModule.kt` | нативный | регистрация вьюх, канал униформ, событие замера |
-| `scripts/glass-probe.mjs` | инструмент | измеритель кадра: снимок, шум, полосы, упор, кадры |
+| `apps/mobile/scripts/glass-probe.mjs` | инструмент | измеритель кадра: снимок, шум, полосы, упор, кадры |
 | `lib/blur-target.tsx` | JS | контекст цели блюра, защита от рекурсии |
 
 Потребители: `navigation/main-tabs.tsx`, `components/mini-player.tsx`,

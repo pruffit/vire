@@ -12,9 +12,9 @@
   попадает тому профилю, что выбран переключателем.
 
 ## Где код
-- **Страница (дашборд):** `apps/web/app/dashboard/posts/page.tsx` +
+- **Страница (дашборд):** `apps/web/app/[locale]/dashboard/posts/page.tsx` +
   `posts-manager.tsx` (композер, инлайн-правка, удаление)
-- **Показ на профиле:** `apps/web/app/artists/[slug]/page.tsx` (секция анонсов)
+- **Показ на профиле:** `apps/web/app/[locale]/(listener)/artists/[slug]/page.tsx` (секция анонсов)
 - **API:**
   - `apps/web/app/api/v1/dashboard/posts/route.ts` — `POST` (создать)
   - `apps/web/app/api/v1/dashboard/posts/[id]/route.ts` — `PATCH`/`DELETE`

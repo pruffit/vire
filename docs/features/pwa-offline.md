@@ -39,7 +39,7 @@ VireMusic ставится как приложение (иконка на дом
   плитка «Скачанное» в `app/(listener)/library/page.tsx`.
 - **Манифест и заголовки:** `app/manifest.ts` (`id`, `scope`, `shortcuts`, maskable-иконка),
   `next.config.ts` — `/sw.js` отдаётся с `Cache-Control: no-cache`.
-- **Иконка:** `scripts/make-maskable-icon.mjs` — разовая генерация `public/icon-maskable-512.png`
+- **Иконка:** `apps/web/scripts/make-maskable-icon.mjs` — разовая генерация `public/icon-maskable-512.png`
   (в билд-цепочке не участвует).
 
 ## Стратегии кэша

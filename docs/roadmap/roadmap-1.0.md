@@ -119,7 +119,7 @@ headers (`next.config.ts`), rate limiting (Redis fixed-window), лимиты з�
 - [x] Мониторинг: health-эндпоинт (`/api/health`), webhook/Telegram-алерты на ошибки
   роутов и упавшие джобы — см. `docs/features/monitoring.md`.
   Осталось опционально: внешний uptime-чек (UptimeRobot); внешний приёмник ошибок
-  (Sentry/GlitchTip) отложен — не влезает в 1 ГБ VPS, sentry.io блокирует РФ.
+  (Sentry/GlitchTip) отложен — не влезает в 2 ГБ VPS, sentry.io блокирует РФ.
 
 ## 8. Этап 2 — прямые продажи (бэкенд готов, UI отвязан)
 

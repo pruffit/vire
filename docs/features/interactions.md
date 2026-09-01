@@ -43,7 +43,7 @@
 - **API плейлистов:** `apps/web/app/api/v1/playlists/route.ts`, `[id]/route.ts`, `[id]/tracks/route.ts`
 - **API mood-тегов:** `apps/web/app/api/v1/tracks/[id]/moods/route.ts`
 - **API моментов:** `apps/web/app/api/v1/tracks/[id]/moments/route.ts`
-- **Компонент шеринга:** `apps/web/app/_components/TrackShare.tsx`
+- **Компонент шеринга:** `apps/web/components/track-share.tsx`
 - **DB таблицы:** `track_likes`, `follows`, `playlists`, `playlist_tracks`, `track_moods`, `favorite_moments`
 
 ## Env-переменные

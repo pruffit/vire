@@ -58,15 +58,17 @@
 
 ## Где код
 
-- **Страницы:** `apps/web/app/dashboard/`
+- **Страницы:** `apps/web/app/[locale]/dashboard/`
 - **UI-кит:** `apps/web/components/ui-kit.tsx` (общий с админкой)
-- **Менеджер треков:** `apps/web/app/dashboard/releases/[id]/track-manager.tsx`
+- **Менеджер треков:** `apps/web/app/[locale]/dashboard/releases/[id]/track-manager.tsx`
 - **API релизов:** `apps/web/app/api/v1/dashboard/releases/`
 - **Reorder треков:** `PUT apps/web/app/api/v1/dashboard/releases/[id]/tracks/route.ts`
 - **API профиля:** `apps/web/app/api/v1/dashboard/profile/route.ts`
 - **API постов:** `apps/web/app/api/v1/dashboard/posts/route.ts`, `[id]/route.ts`
-- **API загрузки:** `apps/web/app/api/v1/dashboard/releases/[id]/tracks/upload/route.ts`
-- **Аналитика:** `apps/web/app/api/v1/dashboard/stats/route.ts`
+- **API загрузки:** `apps/web/app/api/v1/dashboard/tracks/upload/route.ts`
+- **Аналитика:** `apps/web/app/[locale]/dashboard/stats-section.tsx` (Server Component,
+  данные читаются напрямую query-функциями `getArtistPlayStats`/`getArtistRelistenStats`
+  из `packages/db/src/queries/artist-analytics.ts`/`relisten.ts`, без API-роута)
 - **Сервисы:** `packages/core/src/music/catalog/services/` — `artist`, `release`, `track`
 - **DB таблицы:** `releases`, `tracks`, `track_audio`, `artist_posts`, `play_events`
 

@@ -94,7 +94,7 @@ Realtime-инкремент через тот же SSE, что и чат. Час
 - **Web-push** — таблица `push_subscriptions(user_id, endpoint unique, p256dh, auth)`, роуты
   `POST/DELETE /api/v1/push/subscribe`. Service worker `apps/web/public/sw.js` (`push` →
   `showNotification`, `notificationclick` → фокус/открытие URL из payload). Отправка —
-  `apps/worker/src/lib/webpush.js` (`web-push`, только в воркере).
+  `apps/worker/src/lib/webpush.ts` (`web-push`, только в воркере).
 - Настройки — секция «Уведомления» в `/profile`
   (`apps/web/components/listener/profile/notification-settings.tsx`): email вкл/выкл, push
   вкл/выкл (включение запрашивает `Notification.requestPermission` + `pushManager.subscribe`).

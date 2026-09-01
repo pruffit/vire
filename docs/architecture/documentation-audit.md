@@ -29,14 +29,20 @@
 | Тюнинг Postgres `shared_buffers=96MB` | `docker-compose.prod.yml` | считался от 1 ГБ — база недообеспечена |
 | Потолок «15–20 слушателей» | `load-testing.md` (замер 27.07.2026) | замер сделан на старом железе, устарел |
 
-**✅ Исправлено полностью (28.08.2026)** — все 16 файлов: `ops/deployment.md`,
-`foundation/architecture.md`, `architecture/current-state.md`, `architecture.md`,
-`platform-core.md`, `migration-plan.md`, `multiplatform.md`,
-`foundation/TECHNICAL_DEBT.md`, `features/monitoring.md`, `features/audio-analysis.md`,
-`features/seo.md`, `ops/load-testing.md`, `architecture-audit.md`, `CLAUDE.md`, `README.md`,
+**Исправлено 28.08.2026** — 16 файлов: `docs/ops/deployment.md`,
+`docs/foundation/architecture.md`, `docs/architecture/current-state.md`, `docs/architecture.md`,
+`docs/platform-core.md`, `docs/migration-plan.md`, `docs/multiplatform.md`,
+`docs/foundation/TECHNICAL_DEBT.md`, `docs/features/monitoring.md`, `docs/features/audio-analysis.md`,
+`docs/features/seo.md`, `docs/ops/load-testing.md`, `docs/architecture-audit.md`, `CLAUDE.md`, `README.md`,
 `docker-compose.prod.yml`.
 
-Отдельно: `ops/load-testing.md` получил пометку, что замер ёмкости (15–20 слушателей)
+**Дочищено 02.09.2026** — проход 28.08 пропустил пять мест, где «1 ГБ» стояло не в спеке
+железа, а внутри обоснований: `roadmap/TODO.md` (Observability), `features/auto-genre.md`
+(размер батча ONNX), `roadmap/roadmap-1.0.md` (Sentry), `roadmap/platform-core-brief.md`
+(RSC через HTTP и «Core как отдельный сервис»). Отсюда правило: искать не только цифру,
+но и выводы, которые на неё ссылаются.
+
+Отдельно: `docs/ops/load-testing.md` получил пометку, что замер ёмкости (15–20 слушателей)
 сделан **до апгрейда** и является нижней границей; `architecture-audit.md` помечен
 историческим срезом с перечнем закрытых блокеров.
 

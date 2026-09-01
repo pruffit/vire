@@ -56,8 +56,8 @@
 - **Сшивка:** `apps/web/lib/feed.ts` — `buildFeed(userId, limit)`
 - **UI:** `apps/web/components/home/feed-section.tsx` (серверный сбор + презейв-статусы),
   `apps/web/components/home/feed-list.tsx` (клиент: рендер трёх видов карточки +
-  «Показать ещё» 12→24), встроен в `apps/web/app/(listener)/home-sections.tsx` /
-  `app/(listener)/page.tsx` под заголовком «Ваша лента»
+  «Показать ещё» 12→24), встроен в `apps/web/app/[locale]/(listener)/(home)/home-sections.tsx` /
+  `app/[locale]/(listener)/(home)/page.tsx` под заголовком «Ваша лента»
 - **Переиспользовано:** `components/countdown-badge.tsx`, `components/upcoming-presave-button.tsx`,
   `components/explicit-badge.tsx`, `components/chat/chat-avatar.tsx`, `components/listener/section.tsx`
 

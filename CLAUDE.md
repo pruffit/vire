@@ -320,6 +320,7 @@ pnpm --filter @vire/web check:i18n     # кириллица вне словар�
 pnpm --filter @vire/web check:contracts  # роут /api/v1 без схемы @vire/api-contracts вне allowlist
 pnpm --filter @vire/web check:caller   # роут app/api берёт актора через getCaller(), не через auth()
 pnpm turbo run check:layers            # границы @vire/core: platform/** не знает о music/**
+pnpm check:doc-paths                   # из корня; пути к коду в docs/**.md ведут в существующие файлы
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов
 pnpm --filter @vire/web build          # прод-сборка (prebuild гоняет check:routes + check:i18n + check:contracts)
@@ -345,7 +346,7 @@ pnpm audit --audit-level=high          # из корня; гейт CI, лока�
 > рантайме на каждый запрос** (вкл. `/api/health`, favicon), а `next build`
 > компилирует молча. Барьеры в CI (`.github/workflows/deploy.yml`, job `gates`):
 > **(1)** `check:routes` — статический детектор конфликта имён сегментов
-> (`scripts/check-route-slugs.mjs`, висит и на `prebuild`); **(2)** smoke —
+> (`apps/web/scripts/check-route-slugs.mjs`, висит и на `prebuild`); **(2)** smoke —
 > поднимает прод-артефакт `apps/web/.next/standalone/apps/web/server.js` и дёргает
 > `/robots.txt` (роут без БД): любой 5xx красит CI. Новые динамические сегменты
 > называй так же, как соседние (`[releaseId]`, не `[id]`).

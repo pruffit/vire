@@ -36,10 +36,10 @@
 | API-роуты | `apps/web/app/api/v1/friends/request/route.ts` (POST, rate-limit 30/60с), `.../friends/[userId]/route.ts` (DELETE — decline/cancel/unfriend), `.../friends/[userId]/accept/route.ts` (POST), `.../friends/search/route.ts` (GET `?q=`, auth + rate-limit, отдаёт `{id,name,image,status}[]`, email не отдаётся), `.../friends/seen/route.ts` (POST — отметить заявки просмотренными), `.../user/profile/route.ts` (PATCH принимает `socialVisibility`) |
 | Композиция сервиса (веб) | `apps/web/lib/friends.ts` (`friendshipService()`, `userDirectoryService()`) |
 | Гейт видимости профиля | `apps/web/lib/friend-profile.ts` (`loadFriendProfile` — статус дружбы + `canSeeLikes` + подгрузка лайков/плейлистов) |
-| Страница профиля | `apps/web/app/(listener)/u/[userId]/page.tsx`, `.../friend-liked-track-row.tsx` |
+| Страница профиля | `apps/web/app/[locale]/(listener)/u/[userId]/page.tsx`, `.../friend-liked-track-row.tsx` |
 | Компоненты | `apps/web/components/friends/friend-button.tsx`, `.../share-profile-button.tsx`, `.../incoming-requests.tsx`, `.../user-search.tsx` (typeahead с `AbortController`), `.../mark-requests-seen.tsx` (mount-effect отметки просмотра), `apps/web/components/listener/profile/privacy-settings.tsx` |
-| Экран `/friends` | `apps/web/app/(listener)/friends/page.tsx` (монтирует `UserSearch` + `MarkRequestsSeen`) |
-| Навигация | `apps/web/components/listener/library-sidebar.tsx`, `.../listener-sidebar.tsx`, `apps/web/components/listener/mobile-tab-bar.tsx` (бейдж `incomingCount`), подключение в `apps/web/app/(listener)/layout.tsx` и `apps/web/app/layout.tsx` |
+| Экран `/friends` | `apps/web/app/[locale]/(listener)/friends/page.tsx` (монтирует `UserSearch` + `MarkRequestsSeen`) |
+| Навигация | `apps/web/components/listener/library-sidebar.tsx`, `.../listener-sidebar.tsx`, `apps/web/components/listener/mobile-tab-bar.tsx` (бейдж `incomingCount`), подключение в `apps/web/app/[locale]/(listener)/layout.tsx` и `apps/web/app/layout.tsx` |
 | Кэш запросов на рендер | `apps/web/lib/listener-data.ts` — `getUserPublicProfileCached`, `countUnseenIncomingCached` (React `cache()`, через `FriendshipService.countUnseen`) |
 | Миграция | `packages/db/src/migrations/0038_young_argent.sql` — `users.friend_requests_seen_at` + GIN-триграм `users_name_trgm_idx` на `users.name` |
 
