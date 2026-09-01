@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@vire/api-contracts": "workspace:*",
-    "zod": "^3.25.0"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/node": "^22",
