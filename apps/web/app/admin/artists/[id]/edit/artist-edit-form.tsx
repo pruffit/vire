@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { actionAdminUpdateArtist } from '../../../actions';
 import { fieldClass, SectionLabel } from '@/components/admin/ui';
-import { Textarea } from '@/components/ui-kit';
+import { Field, Textarea } from '@/components/ui-kit';
 import { ThemeEditor, type ThemeValue } from '@/components/theme-editor';
 
 interface Initial {
@@ -103,11 +103,3 @@ export function ArtistEditForm({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="label-mono text-foreground/45">{label}</span>
-      {children}
-    </label>
-  );
-}
