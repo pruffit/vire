@@ -36,7 +36,10 @@
 - **Утилиты присутствия:** `apps/web/lib/presence.ts`
 - **Компонент счётчика (трек):** в `apps/web/app/[locale]/(listener)/artists/[slug]/releases/[releaseId]/tracks/[trackId]/` — live-обновление через polling или SSE
 - **Дашборд (заголовок):** `apps/web/app/[locale]/dashboard/live-now.tsx`
-- **Redis-клиент:** `ioredis` — тот же `REDIS_URL`, что у BullMQ, но отдельный инстанс
+- **Redis-клиент:** общий на весь веб — `apps/web/lib/redis.ts` (`ioredis`, тот же
+  `REDIS_URL`, что у BullMQ, но отдельное соединение). Своё соединение держит только
+  `lib/realtime.ts`: `psubscribe` переводит клиента в режим подписчика, обычные команды
+  через него уже не проходят
 
 ## Env-переменные
 

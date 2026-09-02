@@ -1,17 +1,4 @@
-import Redis from 'ioredis';
-
-const globalForRedis = globalThis as unknown as { _rlRedis?: Redis };
-
-function getRedis(): Redis {
-  if (!globalForRedis._rlRedis) {
-    globalForRedis._rlRedis = new Redis(
-      process.env.REDIS_URL ?? 'redis://localhost:6379',
-      { maxRetriesPerRequest: null, lazyConnect: false },
-    );
-    globalForRedis._rlRedis.on('error', () => {});
-  }
-  return globalForRedis._rlRedis;
-}
+import { getRedis } from './redis';
 
 interface RateLimitResult {
   ok: boolean;

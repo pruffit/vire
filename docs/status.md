@@ -193,6 +193,7 @@
   Локальные blob-превью в формах остаются `<img>` (next/image не оптимизирует blob:).
 - Свой аватар слушателя грузится через `POST /api/v1/user/profile` (multipart) в S3
   (`avatars/users/{id}.{ext}`), ключ стабильный — к URL добавляется `?v=timestamp` для сброса кэша.
-- Live-присутствие использует Redis напрямую (`ioredis`, `apps/web/lib/presence.ts`) — отдельно
+- Live-присутствие использует Redis напрямую (`apps/web/lib/presence.ts`) — отдельно
   от BullMQ-очередей, но тот же `REDIS_URL`. Все presence-эндпоинты деградируют до `count:0`
-  при недоступности Redis.
+  при недоступности Redis. Соединение общее для всего веба (`apps/web/lib/redis.ts`);
+  своё держит только `lib/realtime.ts` под `psubscribe`.
