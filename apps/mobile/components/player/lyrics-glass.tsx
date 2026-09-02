@@ -12,13 +12,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassPanel } from '../ui/glass-panel';
 import { useGlassInk, inkColor } from '../../lib/vireglass/glass-ink';
 import { Icon } from '../../lib/icon';
+import { colors } from '../../lib/theme';
 import { fonts } from '../../lib/design/typography';
 import { radii, space } from '../../lib/design/scales';
 import type { LyricLine } from '../../lib/playback/use-lyrics';
 
-/** Затемнение линзы под текстом держим НИЖЕ продуктового (0.2): контраст под белой строкой
- *  и так набирает само стекло — над светлым местом обложки оно уплотняет тело. Плоский скрим
- *  поверх этого превращал панель в чёрную плашку без единого признака материала. */
+/** Затемнение линзы под текстом — заметно выше продуктового (0.2): строки лежат прямо на
+ *  обложке, и её светлые куски съедают белый текст раньше, чем это случилось бы на фоне
+ *  экрана. Преломление на этом уровне ещё отчётливо видно; выше — панель теряет материал. */
 const LYRICS_DIM = 0.52;
 /** Мягкая кромка окна: строка, обрезанная посередине глифа, читается сломанной вёрсткой. */
 const FADE = 26;
@@ -35,7 +36,6 @@ const MANUAL_HOLD_MS = 5000;
 const CHEVRON = 30;
 
 const DARK_INK = '#0b0908';
-const LIGHT_INK = '#eae7e2';
 
 /**
  * Текст трека на стекле поверх обложки.
@@ -91,7 +91,7 @@ function Body({
   onSeek: (sec: number) => void;
 }) {
   const ink = useGlassInk();
-  const text = inkColor(ink, LIGHT_INK, DARK_INK);
+  const text = inkColor(ink, colors.foreground, DARK_INK);
   const shadow = ink > 0.5 ? 'rgba(0,0,0,0.95)' : 'rgba(255,255,255,0.85)';
   const edge = ink > 0.5 ? '9,8,7' : '234,231,226';
   const fade = [`rgba(${edge},0.8)`, `rgba(${edge},0)`] as const;

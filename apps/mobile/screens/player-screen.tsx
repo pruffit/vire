@@ -160,9 +160,12 @@ export default function PlayerScreen() {
   // Обложка занимает всё, что осталось после хрома, — по меньшей из сторон площадки.
   // Доля экрана сюда не годится: на низком аппарате она вытесняет волну под обрез, на
   // высоком оставляет пустоту в half-экрана.
-  const artSize = coverArea
-    ? Math.floor(Math.min(coverArea.width, coverArea.height))
-    : Math.min(width - layout.screenPadding * 2, heroHeight * 0.45);
+  const artSize = Math.max(
+    1,
+    coverArea
+      ? Math.floor(Math.min(coverArea.width, coverArea.height))
+      : Math.min(width - layout.screenPadding * 2, heroHeight * 0.45),
+  );
   const coverBox = coverArea ? { top: coverArea.y + (coverArea.height - artSize) / 2, size: artSize } : null;
   const edgeScale = Math.max(width, windowHeight) / artSize;
   const immersiveShiftY = coverBox ? heroHeight / 2 - (coverBox.top + coverBox.size / 2) : 0;
