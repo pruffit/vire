@@ -70,10 +70,17 @@
 - [sdui.md](sdui.md) — протокол Server-Driven UI (главная мобилки уже на нём, [features/sdui-home.md](features/sdui-home.md)).
 - [roadmap/platform-core-brief.md](roadmap/platform-core-brief.md) — краткая версия трека.
 
+## vireSpace — вынос ядра в SDK
+
+[virespace.md](virespace.md) — что из 127 000 строк переиспользуемая технология, а что
+конкретно музыкальная площадка. Инвентаризация по фактическому графу зависимостей,
+готовность каждого кандидата, порядок работ. Первая волна — VireGlass и `design-tokens`.
+
 ## VireGlass
 
 Материал стекла для мобилки: нативный Expo-модуль (Kotlin + AGSL) и Skia-поверхность.
-Самая проработанная техническая ветка проекта и главный кандидат на вынос в SDK.
+Самая проработанная техническая ветка проекта и главный кандидат на вынос в SDK
+(оценка готовности — в [virespace.md](virespace.md)).
 
 - [vireglass/README.md](vireglass/README.md) — модель материала: причины (ior, толщина, фаска, шероховатость) → следствия.
 - [vireglass/architecture.md](vireglass/architecture.md) — карта реализации: слои, параметры, ограничения.
