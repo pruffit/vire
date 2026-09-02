@@ -14,12 +14,12 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1121.0",
     "@aws-sdk/s3-request-presigner": "^3.1121.0",
-    "@smithy/node-http-handler": "^4.11.3",
-    "@vire/core": "workspace:*"
+    "@smithy/node-http-handler": "^4.11.3"
   },
   "devDependencies": {
     "@types/node": "^22",
     "@vire/config": "workspace:*",
+    "@vire/core": "workspace:*",
     "typescript": "^5.8.3",
     "vitest": "^4.1.11"
   }

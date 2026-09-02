@@ -94,7 +94,7 @@
   `PlaylistService.checkInvite` — он же решает, показывать ли баннер приглашения, чтобы
   мусорный `?join=` на публичном плейлисте не рисовал ложное «вас зовут».
 - **Участники** — таблица `playlist_collaborators` (`user_id`, `invited_by`, `joined_at`,
-  unique по `playlist_id+user_id`). Гарды на присоединение (`PlaylistService.join`):
+  unique по `playlist_id+user_id`); SQL соавторства — `packages/db/src/queries/playlist-collaborators.ts`. Гарды на присоединение (`PlaylistService.join`):
   авторизован, `is_collaborative`, токен совпадает, не владелец, нет блокировки в любую
   сторону (`isBlockedEitherWay`). Вставка и проверка лимита `PLAYLIST_MAX_COLLABORATORS`
   (50) — одной транзакцией репозитория (`joinCollaborator`, лочит строку плейлиста), иначе

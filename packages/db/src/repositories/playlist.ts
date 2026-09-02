@@ -29,6 +29,10 @@ import {
   getPlaylistLikeState,
   likePlaylist,
   unlikePlaylist,
+  type PlaylistTrackRow,
+  type PlaylistAddTrack,
+} from '../queries/playlists';
+import {
   listPlaylistCollaborators,
   isPlaylistCollaborator,
   joinPlaylistCollaborator,
@@ -38,9 +42,7 @@ import {
   getPlaylistInvitePreview,
   getPlaylistTrackAddedBy,
   removeCollaboratorMembershipBetween,
-  type PlaylistTrackRow,
-  type PlaylistAddTrack,
-} from '../queries/playlists';
+} from '../queries/playlist-collaborators';
 import { trackExists as trackExistsQuery } from '../queries/track-audio';
 import { adminUpdatePlaylist, adminDeletePlaylist } from '../queries/admin';
 

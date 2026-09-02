@@ -1,6 +1,7 @@
 import type { IHomeBlocksRepository, ReleaseCard, HomeChartTrack, HomePlaylistCard, FriendsActivity } from '@vire/core';
 import { getLatestReleases, listReleases, getUpcomingReleases, getPopularTracks, getRecentlyPlayed, getPersonalTrackPicks } from '../queries/discovery';
-import { getEditorialPlaylists, getPersonalPlaylists, getPopularPlaylists, getPublicUserPlaylists, getLikedPlaylistIds } from '../queries/playlists';
+import { getLikedPlaylistIds } from '../queries/playlists';
+import { getEditorialPlaylists, getPersonalPlaylists, getPopularPlaylists, getPublicUserPlaylists } from '../queries/playlist-editorial';
 import { getFriendsActivity } from '../queries/friends-activity';
 
 /** Тонкая обёртка над queries/discovery.ts и queries/playlists.ts — SQL живёт там, не здесь. */
