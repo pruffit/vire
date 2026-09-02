@@ -1,4 +1,8 @@
-# Мобильные паттерны (мобайл-фёрст база)
+# Адаптив веба (мобайл-фёрст база)
+
+Это про **`apps/web` на узком экране**, а не про мобильное приложение — соседние
+`mobile-design-system.md` и `mobile-player.md` описывают React Native. Файл раньше
+назывался `mobile-patterns.md` и путался с ними.
 
 Единый свод паттернов минимального вьюпорта. Фундамент заложен в Срезе 0
 (`docs/superpowers/plans/2026-07-22-mobile-slice-0-foundation.md`); срезы 1–6 раскатки
@@ -134,7 +138,7 @@
   кнопка-иконка поиска на десктопе центрирована (`top-1/2 -translate-y-1/2`), на
   `pointer-coarse` растёт до 44×44 (`top-0 bottom-0 translate-y-0 w-11`), инпут резервирует
   `pointer-coarse:pr-11` под неё — иконка не сдвигается, десктоп-поведение не меняется.
-- Плей-оверлеи `pointer-coarse:opacity-100` (правило mobile-patterns) — на `home/cover-rail.tsx`,
+- Плей-оверлеи `pointer-coarse:opacity-100` (правило web-responsive) — на `home/cover-rail.tsx`,
   `release-quick-look.tsx`, `listening-now.tsx`. Затемнение-подложка и иконка-бейдж —
   РАЗНЫЕ элементы: подложка `group-hover` только (иначе на таче обложка затемнена всегда),
   `pointer-coarse:opacity-100` вешается на иконку, не на подложку.
