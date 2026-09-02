@@ -53,6 +53,10 @@
   - `resolveActiveArtist(userId, id?)` — общая логика (id → проверка владения,
     иначе дефолт `findByUserId`);
   - `listUserArtists(userId)` — все артисты пользователя.
+- **Гейт «свой трек»:** `apps/web/lib/require-owned-track.ts` — `requireOwnedTrack(req, id)`
+  собирает всю цепочку артист-периметра (авторизован → активный артист → трек существует →
+  релиз принадлежит этому артисту) и возвращает результат-значение, как `require-access.ts`.
+  Роуты `dashboard/tracks/[id]/*` идут через него, а не повторяют проверку каждый у себя.
 - **Переключение:** `app/api/v1/dashboard/active-artist/route.ts` (POST, ставит cookie),
   UI — `app/dashboard/artist-switcher.tsx`.
 - **Репозиторий:** `packages/db/src/repositories/artist.ts` — `findAllByUserId`,
