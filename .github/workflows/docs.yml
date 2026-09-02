@@ -1,0 +1,24 @@
+name: Docs
+
+# Изменение только в документации не запускает CI (там `paths-ignore: docs/**`),
+# поэтому гейт путей ловил бы правки доков лишь заодно с кодом. Скрипт на голом
+# node, без установки зависимостей — прогон занимает секунды.
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', '**/*.md']
+  pull_request:
+    branches: [main]
+    paths: ['docs/**', '**/*.md']
+  workflow_dispatch:
+
+jobs:
+  doc-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Doc paths
+        run: node scripts/check-doc-paths.mjs
