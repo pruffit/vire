@@ -31,6 +31,7 @@ export function GlassPanel({
   radius = radii.glass,
   blurTarget,
   dim = 0,
+  topLayer = false,
   optics: opticsOverride,
   adaptive = true,
   debug,
@@ -44,6 +45,8 @@ export function GlassPanel({
   /** Затемнение линзы: материал v2 почти не мутит фон, и текст на панели теряет контраст
    *  над светлой обложкой. Дешевле второго материала и не трогает оптику кромки. */
   dim?: number;
+  /** Панель верхнего слоя: экран-оверлей глушит то, что под ним, но не её. */
+  topLayer?: boolean;
   /** Только для стенда материала: продукт всегда берёт дефолт. */
   optics?: VireGlassOptics;
   /** Панель сама решает, светлыми или тёмными обязаны быть надписи на ней, и раздаёт это
@@ -93,6 +96,7 @@ export function GlassPanel({
             dynamics={{ shiftX, shiftY, press, active, light }}
             blurTarget={blurTarget}
             dim={dim}
+            topLayer={topLayer}
             debug={debug ?? 'normal'}
             onBackdropSample={adaptive ? adaptation.onBackdropSample : undefined}
           />

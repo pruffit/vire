@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { fileStore } from '../storage/file-store';
+import { backdropAllowed } from './glass-budget';
 
 /**
  * Настройки оформления из кита: тумблер стекла и приглушение движения.
@@ -41,9 +42,9 @@ export const usePreferences = create<PreferencesState>()(
   ),
 );
 
-/** Живой бэкдроп нужен, только когда стекло включено и поверх ничего не открыто. */
-export function useBackdropEnabled(): boolean {
-  return usePreferences((s) => s.glassEnabled && s.openSheets === 0);
+/** Правило живёт в glass-budget.ts — там же, где остальная логика подавления поверхностей. */
+export function useBackdropEnabled(topLayer = false): boolean {
+  return usePreferences((s) => backdropAllowed(s, topLayer));
 }
 
 export function useReduceMotion(): boolean {

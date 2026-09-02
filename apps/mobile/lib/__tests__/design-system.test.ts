@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   GLASS_GREEN_MAX,
   GLASS_SURFACES,
+  backdropAllowed,
   REACHABLE_SCENARIOS,
   countSurfaces,
 } from '../design/glass-budget';
@@ -32,6 +33,16 @@ describe('бюджет стеклянных поверхностей', () => {
 
   it('крупная плашка стоит столько же, сколько мелкая — цена в числе, не в площади', () => {
     expect(GLASS_SURFACES.contentPlate).toBe(GLASS_SURFACES.miniPlayer);
+  });
+
+  it('экран-оверлей глушит нижние поверхности, но не свою собственную', () => {
+    // Плеер сам поднимает счётчик листов. Без оговорки topLayer он выключал живой бэкдроп
+    // своему же стеклу, и панель текста падала в непрозрачный фолбэк.
+    const withPlayer = { glassEnabled: true, openSheets: 1 };
+    expect(backdropAllowed(withPlayer, false)).toBe(false);
+    expect(backdropAllowed(withPlayer, true)).toBe(true);
+    // Тумблер стекла — аварийный выход и старше всего остального.
+    expect(backdropAllowed({ glassEnabled: false, openSheets: 0 }, true)).toBe(false);
   });
 
   it('пятый таб вернуть можно — бюджет выдерживает', () => {

@@ -7,32 +7,25 @@ import {
   type Theme,
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import SignInScreen from '../screens/sign-in-screen';
+import { useEffect } from 'react';
 import PlayerScreen from '../screens/player-screen';
 import { MainScreen } from './main-screen';
 import type { MainTabsParamList } from './main-tabs';
-import { hasStoredSession, getDeviceId, clearAuthTokens } from '../lib/secure-store';
+import { getDeviceId, clearAuthTokens } from '../lib/secure-store';
 import { registerForPushNotifications } from '../lib/push';
 import { onSessionExpired } from '../lib/session-events';
 import { colors } from '../lib/theme';
 
 export type RootStackParamList = {
-  SignIn: undefined;
   Main: NavigatorScreenParams<MainTabsParamList>;
   Player: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// Ref, а не хук: выкинуть на экран входа надо из слоя API-клиента, который про навигацию
-// не знает и знать не должен (см. lib/session-events.ts).
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
-// Только vire://release/:releaseId (инкремент 8). Работает лишь при уже сохранённой
-// сессии — SignIn-стек не участвует в linking, поэтому анонимный холодный старт
-// диплинк теряет и просто показывает экран входа (см. docs/features/mobile-app.md).
+// Только vire://release/:releaseId (инкремент 8).
 const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['vire://'],
   config: {
@@ -62,52 +55,24 @@ const navTheme: Theme = {
   },
 };
 
+/**
+ * Экрана входа нет: приложение открывается сразу в Main. Запрос авторизации вернётся
+ * отдельно и в другой форме — гейт на старте её только откладывал.
+ */
 export function RootNavigator() {
-  const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList | null>(null);
-
   useEffect(() => {
-    // expo-secure-store не имеет веб-реализации (getValueWithKeyAsync бросает) — без catch
-    // web-превью зависает на спиннере навсегда. На web/без сессии считаем неавторизованным.
-    hasStoredSession()
-      .then(async (has) => {
-        setInitialRoute(has ? 'Main' : 'SignIn');
-        if (!has) return;
-        const deviceId = await getDeviceId();
-        if (deviceId) void registerForPushNotifications(deviceId);
-      })
-      .catch(() => setInitialRoute('SignIn'));
+    void getDeviceId().then((deviceId) => {
+      if (deviceId) void registerForPushNotifications(deviceId);
+    });
   }, []);
 
-  // Refresh отклонён сервером — сессию не восстановить. Токены к этому моменту уже
-  // вычищены в api-client; добиваем их ещё раз на случай, если событие пришло из ветки
-  // «refreshToken отсутствует», и уводим на вход, а не оставляем экран в ошибке.
-  useEffect(
-    () =>
-      onSessionExpired(() => {
-        void clearAuthTokens();
-        if (navigationRef.isReady()) {
-          navigationRef.reset({ index: 0, routes: [{ name: 'SignIn' }] });
-        } else {
-          setInitialRoute('SignIn');
-        }
-      }),
-    [],
-  );
-
-  if (initialRoute === null) {
-    return (
-      <View
-        style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}
-      >
-        <ActivityIndicator color={colors.foreground} size="large" />
-      </View>
-    );
-  }
+  // Сессию не восстановить — чистим токены. Уводить некуда: приложение работает и
+  // анонимно, а запрос входа придёт из того места, которому он реально нужен.
+  useEffect(() => onSessionExpired(() => void clearAuthTokens()), []);
 
   return (
     <NavigationContainer ref={navigationRef} theme={navTheme} linking={linking}>
-      <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="SignIn" component={SignInScreen} />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={MainScreen} />
         <Stack.Screen name="Player" component={PlayerScreen} options={{ presentation: 'modal' }} />
       </Stack.Navigator>

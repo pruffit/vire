@@ -17,9 +17,9 @@ export const GLASS_SURFACES = {
   miniPlayer: 1,
   sheet: 1,
   searchField: 1,
-  /** Фуллскрин-плеер: плавающая капсула транспорта — единственная стеклянная поверхность
-   *  экрана (кнопка «свернуть» больше не стеклянная). */
-  playerControls: 1,
+  /** Фуллскрин-плеер: единственное стекло экрана — полоса текста на обложке. Транспорт
+   *  плоский: под ним затемнённый ambient-фон, преломлять там нечего. */
+  playerLyrics: 1,
   /** Крупная контентная плашка (шапка артиста) — одна поверхность независимо от площади. */
   contentPlate: 1,
 } as const;
@@ -45,7 +45,7 @@ export const SUPPRESSED_BY_SHEET: readonly GlassElement[] = [
  * получалось бы 4 + 1 + 2 = 7 поверхностей — за пределами измеренной зелёной зоны.
  * Поэтому плеер поднимает тот же счётчик, что и лист.
  */
-export const FULLSCREEN_PLAYER: readonly GlassElement[] = ['sheet', 'playerControls'];
+export const FULLSCREEN_PLAYER: readonly GlassElement[] = ['playerLyrics'];
 
 export function countSurfaces(elements: readonly GlassElement[]): number {
   const sheetOpen = elements.includes('sheet');
@@ -62,8 +62,23 @@ export const REACHABLE_SCENARIOS: Record<string, readonly GlassElement[]> = {
   'поиск + шит «в плейлист»': ['tabBar', 'miniPlayer', 'searchField', 'sheet'],
   'экран артиста с играющим треком': ['tabBar', 'miniPlayer', 'contentPlate'],
   'артист + шит': ['tabBar', 'miniPlayer', 'contentPlate', 'sheet'],
-  'фуллскрин-плеер': ['playerControls'],
-  'фуллскрин-плеер + шит': ['playerControls', 'sheet'],
+  'фуллскрин-плеер': ['playerLyrics'],
+  'фуллскрин-плеер + шит': ['playerLyrics', 'sheet'],
   // Плеер открыт поверх табов и мини-плеера — те остаются смонтированными.
   'фуллскрин-плеер поверх табов': ['tabBar', 'miniPlayer', ...FULLSCREEN_PLAYER],
 };
+
+/**
+ * Живой бэкдроп нужен, только когда стекло включено и поверх ничего не открыто.
+ *
+ * `topLayer` — для поверхностей САМОГО верхнего слоя: экран, который поднял счётчик листов,
+ * глушит то, что осталось под ним, но не себя. Без этой оговорки фуллскрин-плеер выключал
+ * собственное стекло, и панель текста рисовалась непрозрачной плашкой — ровно тем, за что
+ * материал и ругают.
+ */
+export function backdropAllowed(
+  { glassEnabled, openSheets }: { glassEnabled: boolean; openSheets: number },
+  topLayer: boolean,
+): boolean {
+  return glassEnabled && (topLayer || openSheets === 0);
+}

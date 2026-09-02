@@ -97,6 +97,7 @@ export function VireGlassSurface({
   dragLimit = 0,
   icon,
   dim = 0,
+  topLayer = false,
   onBackdropSample,
   groupProbe,
   pullBus,
@@ -125,6 +126,8 @@ export function VireGlassSurface({
   /** Затемнение линзы под скрим экрана: BlurView целится в контент напрямую и затемняющей
    *  подложки над ним не видит — без этого линза светится дыркой в скриме. */
   dim?: number;
+  /** Поверхность верхнего слоя: не глушится собственным экраном-оверлеем. */
+  topLayer?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const { width, height, cornerRadius } = geometry;
@@ -330,7 +333,7 @@ export function VireGlassSurface({
   // а не размазаны по потребителям. Подавление под листом предписывает сам кит: нижние
   // слои за скримом преломлять нечего, и оно же удерживает бюджет поверхностей в зелёной
   // зоне (`lib/design/glass-budget.ts`).
-  const backdropAllowed = useBackdropEnabled();
+  const backdropAllowed = useBackdropEnabled(topLayer);
   const liveBackdrop = backdrop && backdropAllowed;
 
   // Сторожит ФАКТИЧЕСКОЕ число живых поверхностей; тест стережёт объявленную модель.

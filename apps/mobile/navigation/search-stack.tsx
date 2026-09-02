@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SearchScreen from '../screens/search-screen';
 import ReleaseScreen from '../screens/release-screen';
+import ArtistScreen from '../screens/artist-screen';
 import type { HomeStackParamList } from './home-stack';
 
 // 'ReleaseDetail' — тот же screen-компонент, что и в home-stack.tsx (переиспользуем ReleaseScreen,
@@ -8,6 +9,7 @@ import type { HomeStackParamList } from './home-stack';
 export type SearchStackParamList = {
   SearchHome: undefined;
   ReleaseDetail: HomeStackParamList['ReleaseDetail'];
+  ArtistDetail: HomeStackParamList['ArtistDetail'];
 };
 
 const Stack = createNativeStackNavigator<SearchStackParamList>();
@@ -17,6 +19,7 @@ export function SearchStackNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="SearchHome" component={SearchScreen} />
       <Stack.Screen name="ReleaseDetail" component={ReleaseScreen} />
+      <Stack.Screen name="ArtistDetail" component={ArtistScreen} />
     </Stack.Navigator>
   );
 }
