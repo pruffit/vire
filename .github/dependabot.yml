@@ -11,24 +11,19 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Europe/Moscow"
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 1
     commit-message:
       prefix: "chore(deps)"
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
-      major:
-        update-types: ["major"]
+    # Мажоры не автоматом. Сгруппированные они дают неревьюабельный PR (первая же
+    # партия склеила zod 3→4, bullmq 5→6, ioredis 5→6 и RN gesture-handler 2→3 —
+    # четыре несвязанные миграции в одном диффе), а по одному PR на пакет создают
+    # шум, который всё равно никто не мержит. Отслеживаются вручную:
+    # `pnpm outdated -r`, список ожидающих — docs/roadmap/TODO.md.
     ignore:
-      # Типы Node держим в паре с рантаймом (node-version: 22 в CI и в образах).
-      - dependency-name: "@types/node"
-        versions: [">=23"]
-      # Мажоры тулчейна ломают сборку целиком — поднимаем осознанно, не автоматом.
-      - dependency-name: "typescript"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "eslint"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@eslint/js"
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
     labels:
       - "dependencies"
