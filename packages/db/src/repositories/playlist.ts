@@ -44,7 +44,7 @@ import {
   removeCollaboratorMembershipBetween,
 } from '../queries/playlist-collaborators';
 import { trackExists as trackExistsQuery } from '../queries/track-audio';
-import { adminUpdatePlaylist, adminDeletePlaylist } from '../queries/admin';
+import { adminUpdatePlaylist, adminDeletePlaylist } from '../queries/admin-catalog';
 
 export class DrizzlePlaylistRepository implements IPlaylistRepository {
   constructor(private readonly db: DB) {}

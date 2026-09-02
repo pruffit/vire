@@ -26,7 +26,7 @@
 - **Доступ:** `packages/db/src/repositories/artist.ts` — `findByUserId`,
   `findAllByUserId`, `findByIdForUser` джойнят через `artist_members`.
 - **Создание:** `createArtistForUser` пишет OWNER-членство в транзакции.
-- **Админ-управление:** `packages/db/src/queries/admin.ts`
+- **Админ-управление:** `packages/db/src/queries/admin-artists.ts`
   (`listArtistMembers`/`addArtistMember`/`removeArtistMember`), server actions в
   `app/admin/actions.ts`, UI `app/admin/artists/members-manager.tsx`.
 
@@ -57,7 +57,7 @@
   UI — `app/dashboard/artist-switcher.tsx`.
 - **Репозиторий:** `packages/db/src/repositories/artist.ts` — `findAllByUserId`,
   `findByIdForUser`, `findByUserId` (теперь с детерминированным порядком по createdAt).
-- **Создание:** `packages/db/src/queries/admin.ts` `createArtistForUser` — снят блок
+- **Создание:** `packages/db/src/queries/admin-artists.ts` `createArtistForUser` — снят блок
   «уже есть профиль»; промоушен до ARTIST по-прежнему только для LISTENER.
 - Все dashboard-роуты/страницы резолвят артиста через `active-artist` вместо
   прямого `findByUserId`.
