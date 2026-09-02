@@ -1,45 +1,44 @@
-import { ActivityIndicator, Pressable, StyleSheet, type StyleProp, type ViewStyle, type View as RNView } from 'react-native';
-import type { RefObject } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { GlassPanel } from '../ui/glass-panel';
-import { LikeButton } from '../like-button';
 import { Icon } from '../../lib/icon';
 import { colors } from '../../lib/theme';
 import { layout, radii } from '../../lib/design/scales';
-import { PLAYER_TRANSPORT_HEIGHT } from '../../lib/layout';
-import { PRODUCT_DIM } from '../../lib/vireglass/material';
 
-const PLAY_SIZE = 56;
-const ICON_SIZE = 24;
+const PLAY_SIZE = 68;
+const STEP_SIZE = 30;
+const MODE_SIZE = 20;
 
 /**
- * Плавающая стеклянная капсула фуллскрин-плеера: лайк и «поделиться» — в главном ряду
- * (поддержка артиста важнее утилит режима), play крупнее остальных.
+ * Главный ряд управления. Плоский, без стекла: под ним затемнённый край ambient-фона —
+ * преломлять там нечего, и стеклянная капсула читалась бы как выключенная.
+ *
+ * Режимы (перемешать/повтор) стоят по краям того же ряда: это тоже управление
+ * воспроизведением, и разносить их по разным блокам незачем.
  */
 export function Transport({
-  trackId,
   playing,
   loading,
   hasNext,
   hasPrev,
-  blurTarget,
+  shuffle,
+  repeat,
   onPrev,
   onNext,
   onTogglePlay,
-  onShare,
-  style,
+  onToggleShuffle,
+  onCycleRepeat,
 }: {
-  trackId: string;
   playing: boolean;
   loading: boolean;
   hasNext: boolean;
   hasPrev: boolean;
-  blurTarget: RefObject<RNView | null>;
+  shuffle: boolean;
+  repeat: 'off' | 'all' | 'one';
   onPrev: () => void;
   onNext: () => void;
   onTogglePlay: () => void;
-  onShare: () => void;
-  style?: StyleProp<ViewStyle>;
+  onToggleShuffle: () => void;
+  onCycleRepeat: () => void;
 }) {
   const tap = (fn: () => void) => () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -47,69 +46,96 @@ export function Transport({
   };
 
   return (
-    <GlassPanel
-      radius={PLAYER_TRANSPORT_HEIGHT / 2}
-      blurTarget={blurTarget}
-      dim={PRODUCT_DIM}
-      style={[styles.panel, style]}
-      contentStyle={styles.row}
-    >
-      <LikeButton trackId={trackId} variant="primary" />
+    <View style={styles.row}>
+      <Pressable
+        onPress={tap(onToggleShuffle)}
+        style={styles.side}
+        accessibilityRole="button"
+        accessibilityState={{ selected: shuffle }}
+        accessibilityLabel="Перемешать"
+      >
+        <Icon name="shuffle" size={MODE_SIZE} color={shuffle ? colors.foreground : colors.mutedForeground} />
+      </Pressable>
+
       <Pressable
         onPress={tap(onPrev)}
         disabled={!hasPrev}
-        hitSlop={8}
-        style={styles.button}
+        style={styles.step}
         accessibilityRole="button"
         accessibilityLabel="Предыдущий трек"
       >
-        <Icon name="skip-back" size={ICON_SIZE} color={hasPrev ? colors.foreground : colors.mutedForeground} />
+        <Icon name="skip-back" size={STEP_SIZE} color={hasPrev ? colors.foreground : colors.mutedForeground} />
       </Pressable>
+
       <Pressable
         onPress={tap(onTogglePlay)}
-        style={styles.playButton}
+        style={styles.play}
         accessibilityRole="button"
         accessibilityLabel={playing ? 'Пауза' : 'Играть'}
       >
         {loading ? (
           <ActivityIndicator color={colors.background} />
         ) : (
-          <Icon name={playing ? 'pause' : 'play'} size={26} color={colors.background} />
+          <Icon name={playing ? 'pause' : 'play'} size={30} color={colors.background} />
         )}
       </Pressable>
+
       <Pressable
         onPress={tap(onNext)}
         disabled={!hasNext}
-        hitSlop={8}
-        style={styles.button}
+        style={styles.step}
         accessibilityRole="button"
         accessibilityLabel="Следующий трек"
       >
-        <Icon name="skip-forward" size={ICON_SIZE} color={hasNext ? colors.foreground : colors.mutedForeground} />
+        <Icon name="skip-forward" size={STEP_SIZE} color={hasNext ? colors.foreground : colors.mutedForeground} />
       </Pressable>
-      <Pressable onPress={tap(onShare)} hitSlop={8} style={styles.button} accessibilityRole="button" accessibilityLabel="Поделиться">
-        <Icon name="share" size={20} color={colors.foreground} />
+
+      <Pressable
+        onPress={tap(onCycleRepeat)}
+        style={styles.side}
+        accessibilityRole="button"
+        accessibilityState={{ selected: repeat !== 'off' }}
+        accessibilityLabel={repeat === 'one' ? 'Повтор одного трека' : 'Повтор'}
+      >
+        <View style={styles.modeIcon}>
+          <Icon name="repeat" size={MODE_SIZE} color={repeat !== 'off' ? colors.foreground : colors.mutedForeground} />
+          {repeat === 'one' && <View style={styles.repeatDot} />}
+        </View>
       </Pressable>
-    </GlassPanel>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  panel: { height: PLAYER_TRANSPORT_HEIGHT },
-  row: {
-    flex: 1,
-    flexDirection: 'row',
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  side: {
+    width: layout.touchTarget,
+    height: layout.touchTarget,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPadding,
+    justifyContent: 'center',
   },
-  button: { width: layout.touchTarget, height: layout.touchTarget, alignItems: 'center', justifyContent: 'center' },
-  playButton: {
+  step: {
+    width: layout.touchTarget,
+    height: layout.touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  play: {
     width: PLAY_SIZE,
     height: PLAY_SIZE,
     borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.foreground,
+  },
+  modeIcon: { width: MODE_SIZE, height: MODE_SIZE, alignItems: 'center', justifyContent: 'center' },
+  repeatDot: {
+    position: 'absolute',
+    right: -3,
+    top: -3,
+    width: 5,
+    height: 5,
+    borderRadius: radii.full,
     backgroundColor: colors.foreground,
   },
 });

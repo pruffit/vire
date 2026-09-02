@@ -11,8 +11,8 @@ import { Cover } from '../ui/cover';
 import { Icon } from '../../lib/icon';
 import type { RootStackParamList } from '../../navigation/root-navigator';
 
-const AVATAR = 56;
-const SIMILAR = 72;
+const AVATAR = 64;
+const SIMILAR = 76;
 
 /**
  * Артист трека и похожие. У трека в очереди есть только имя артиста, поэтому и то и другое
@@ -60,7 +60,7 @@ export function ContextSections({ trackId }: { trackId: string }) {
         >
           <Cover uri={artist.avatarUrl} size={AVATAR} radius={radii.full} />
           <View style={styles.artistText}>
-            <Text style={type.sectionTitle} numberOfLines={1}>
+            <Text style={type.releaseTitle} numberOfLines={1}>
               {artist.name}
             </Text>
             {artist.bio ? (
@@ -68,6 +68,9 @@ export function ContextSections({ trackId }: { trackId: string }) {
                 {artist.bio}
               </Text>
             ) : null}
+          </View>
+          <View style={styles.chevron}>
+            <Icon name="chevron-down" size={18} color={colors.mutedForeground} />
           </View>
         </Pressable>
       </View>
@@ -102,8 +105,8 @@ export function ContextSections({ trackId }: { trackId: string }) {
   );
 }
 
-/** Строка-действие в шторке. */
-export function SheetAction({
+/** Строка-действие под контекстом трека. */
+export function ContextAction({
   icon,
   label,
   onPress,
@@ -127,6 +130,8 @@ const styles = StyleSheet.create({
   similarRow: { gap: space.md, paddingRight: space.md },
   similarCard: { width: SIMILAR, gap: space.xs, alignItems: 'center' },
   similarName: { textAlign: 'center' },
+  /** Единственный шеврон набора смотрит вниз — поворачиваем его в «дальше». */
+  chevron: { transform: [{ rotate: '-90deg' }] },
   action: {
     flexDirection: 'row',
     alignItems: 'center',

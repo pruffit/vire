@@ -6,7 +6,7 @@ import { usePlayerStore } from './player-store';
 // mini-player -> main-tabs (require cycle, RN разрешает, но с риском undefined на старте).
 export const MINI_PLAYER_HEIGHT = 64;
 export const TAB_BAR_CONTENT_HEIGHT = 68;
-/** Плавающая капсула транспорта фуллскрин-плеера (`screens/player-screen.tsx`). */
+/** Габарит капсулы в стенде материала (`screens/material-lab-elements.tsx`). */
 export const PLAYER_TRANSPORT_HEIGHT = 72;
 // Мини-плеер сидит на 10px над таб-баром (components/mini-player.tsx), плюс запас на
 // читаемость под ним.
