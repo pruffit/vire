@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassPanel } from '../ui/glass-panel';
 import { useGlassInk, inkColor } from '../../lib/vireglass/glass-ink';
+import { useReduceMotion } from '../../lib/design/preferences';
 import { Icon } from '../../lib/icon';
 import { colors } from '../../lib/theme';
 import { fonts } from '../../lib/design/typography';
@@ -91,6 +92,7 @@ function Body({
   onSeek: (sec: number) => void;
 }) {
   const ink = useGlassInk();
+  const reduceMotion = useReduceMotion();
   const text = inkColor(ink, colors.foreground, DARK_INK);
   const shadow = ink > 0.5 ? 'rgba(0,0,0,0.95)' : 'rgba(255,255,255,0.85)';
   const edge = ink > 0.5 ? '9,8,7' : '234,231,226';
@@ -111,8 +113,8 @@ function Body({
     if (activeIndex < 0 || Date.now() < manualUntil.current) return;
     const top = lineTops.current[activeIndex];
     if (top === undefined || viewport === 0) return;
-    scroll.current?.scrollTo({ y: Math.max(0, top - viewport * ACTIVE_ANCHOR), animated: true });
-  }, [activeIndex, expanded, viewport]);
+    scroll.current?.scrollTo({ y: Math.max(0, top - viewport * ACTIVE_ANCHOR), animated: !reduceMotion });
+  }, [activeIndex, expanded, viewport, reduceMotion]);
 
   return (
     <>
