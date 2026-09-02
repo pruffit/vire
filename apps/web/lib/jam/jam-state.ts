@@ -1,25 +1,11 @@
-import Redis from 'ioredis';
 import type { IJamStateStore, JamPlaybackState } from '@vire/core';
+import { getRedis } from '../redis';
 
 // Presence-окно того же порядка, что apps/web/lib/presence.ts — гости шлют heartbeat чаще этого.
 const PRESENCE_WINDOW_MS = 45_000;
 const PRESENCE_KEY_TTL_SEC = 120;
 const PLAYBACK_TTL_SEC = 12 * 60 * 60;
 const ADD_COUNTER_WINDOW_SEC = 60;
-
-const globalForRedis = globalThis as unknown as { _jamStateRedis?: Redis };
-
-function getRedis(): Redis {
-  if (!globalForRedis._jamStateRedis) {
-    globalForRedis._jamStateRedis = new Redis(
-      process.env.REDIS_URL ?? 'redis://localhost:6379',
-      { maxRetriesPerRequest: null, lazyConnect: false },
-    );
-    // Без обработчика ioredis роняет процесс на сетевой ошибке Redis.
-    globalForRedis._jamStateRedis.on('error', () => {});
-  }
-  return globalForRedis._jamStateRedis;
-}
 
 const playbackKey = (jamId: string) => `jam:${jamId}:playback`;
 const presenceKey = (jamId: string) => `jam:${jamId}:presence`;

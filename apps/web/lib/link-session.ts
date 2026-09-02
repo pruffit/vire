@@ -1,19 +1,6 @@
-import Redis from 'ioredis';
+import { getRedis } from './redis';
 
 const TTL_SEC = 300;
-
-const globalForRedis = globalThis as unknown as { _linkRedis?: Redis };
-
-function getRedis(): Redis {
-  if (!globalForRedis._linkRedis) {
-    globalForRedis._linkRedis = new Redis(
-      process.env.REDIS_URL ?? 'redis://localhost:6379',
-      { maxRetriesPerRequest: null, lazyConnect: false },
-    );
-    globalForRedis._linkRedis.on('error', () => {});
-  }
-  return globalForRedis._linkRedis;
-}
 
 const key = (id: string) => `chat:link:${id}`;
 
