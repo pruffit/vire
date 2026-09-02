@@ -194,150 +194,150 @@ export default function PlayerScreen() {
           {/* Один контейнер на весь экран: ExpoView бэкдропа раскладывает только первого
               ребёнка, и вторым сиблингом прокрутка получала нулевую высоту. */}
           <View style={styles.screen}>
-          <AmbientBackground coverUrl={track.coverUrl} />
+            <AmbientBackground coverUrl={track.coverUrl} />
 
-          <Animated.ScrollView
-            ref={scrollRef}
-            style={styles.scroll}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-            showsVerticalScrollIndicator={false}
-          >
-            <View
-              style={[
-                styles.hero,
-                {
-                  height: heroHeight,
-                  paddingTop: insets.top + HEADER_HEIGHT,
-                  paddingBottom: insets.bottom + space.md,
-                },
-              ]}
+            <Animated.ScrollView
+              ref={scrollRef}
+              style={styles.scroll}
+              onScroll={onScroll}
+              scrollEventThrottle={16}
+              showsVerticalScrollIndicator={false}
             >
               <View
-                style={styles.coverArea}
-                onLayout={(e) => {
-                  const { y, width: w, height } = e.nativeEvent.layout;
-                  setCoverArea((prev) =>
-                    prev && prev.y === y && prev.width === w && prev.height === height
-                      ? prev
-                      : { y, width: w, height },
-                  );
-                }}
+                style={[
+                  styles.hero,
+                  {
+                    height: heroHeight,
+                    paddingTop: insets.top + HEADER_HEIGHT,
+                    paddingBottom: insets.bottom + space.md,
+                  },
+                ]}
               >
-                <CoverCarousel
-                  queue={queue}
-                  queueIndex={queueIndex}
-                  size={artSize}
-                  radius={radii.card}
-                  immersive={immersive}
-                  edgeScale={edgeScale}
-                  immersiveShiftY={immersiveShiftY}
-                  reduceMotion={reduceMotion}
-                  onTap={toggleImmersive}
-                  onDoubleTap={() => likeTrack(track.id)}
-                  onLongPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-                    setActionSheetOpen(true);
+                <View
+                  style={styles.coverArea}
+                  onLayout={(e) => {
+                    const { y, width: w, height } = e.nativeEvent.layout;
+                    setCoverArea((prev) =>
+                      prev && prev.y === y && prev.width === w && prev.height === height
+                        ? prev
+                        : { y, width: w, height },
+                    );
                   }}
-                  onSwipeNext={next}
-                  onSwipePrev={prev}
-                  onDismiss={() => navigation.goBack()}
-                />
-              </View>
-
-              <Animated.View style={[styles.controls, chromeStyle]} pointerEvents={chromePointerEvents}>
-                <View style={styles.titleRow}>
-                  <View style={styles.titles}>
-                    <Text style={type.screenTitle} numberOfLines={1}>
-                      {track.title}
-                    </Text>
-                    <Text style={type.subtitle} numberOfLines={1}>
-                      {track.artistName}
-                    </Text>
-                  </View>
-                  <LikeButton trackId={track.id} variant="primary" />
-                  <Pressable
-                    onPress={share}
-                    hitSlop={8}
-                    style={styles.titleAction}
-                    accessibilityRole="button"
-                    accessibilityLabel="Поделиться"
-                  >
-                    <Icon name="share" size={20} color={colors.foreground} />
-                  </Pressable>
-                </View>
-
-                <Transport
-                  playing={status === 'playing'}
-                  loading={status === 'loading'}
-                  hasNext={hasNext}
-                  hasPrev={hasPrev}
-                  shuffle={shuffle}
-                  repeat={repeat}
-                  onPrev={prev}
-                  onNext={next}
-                  onTogglePlay={togglePlayPause}
-                  onToggleShuffle={toggleShuffle}
-                  onCycleRepeat={cycleRepeat}
-                />
-
-                <View style={styles.scrubber}>
-                  <Waveform peaks={waveformPeaks} positionSec={positionSec} durationSec={durationSec} onSeek={seek} />
-                  <View style={styles.timesRow}>
-                    <Text style={type.mono}>{formatDuration(positionSec)}</Text>
-                    <Text style={type.mono}>{formatDuration(durationSec)}</Text>
-                  </View>
-                </View>
-
-                {status === 'error' && (
-                  <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>
-                )}
-
-                <Pressable
-                  onPress={() => scrollRef.current?.scrollTo({ y: heroHeight, animated: true })}
-                  style={styles.more}
-                  accessibilityRole="button"
-                  accessibilityLabel="Показать больше о треке"
                 >
-                  <Icon name="chevron-down" size={16} color={colors.mutedForeground} />
-                </Pressable>
-              </Animated.View>
-            </View>
+                  <CoverCarousel
+                    queue={queue}
+                    queueIndex={queueIndex}
+                    size={artSize}
+                    radius={radii.card}
+                    immersive={immersive}
+                    edgeScale={edgeScale}
+                    immersiveShiftY={immersiveShiftY}
+                    reduceMotion={reduceMotion}
+                    onTap={toggleImmersive}
+                    onDoubleTap={() => likeTrack(track.id)}
+                    onLongPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                      setActionSheetOpen(true);
+                    }}
+                    onSwipeNext={next}
+                    onSwipePrev={prev}
+                    onDismiss={() => navigation.goBack()}
+                  />
+                </View>
 
-            <View style={[styles.context, { paddingBottom: insets.bottom + space.xl }]}>
-              <ContextSections trackId={track.id} />
-              <View style={styles.section}>
-                <Text style={type.mono}>ДАЛЬШЕ</Text>
-                <QueueSection />
-              </View>
-              <View style={styles.section}>
-                <ContextAction icon="plus" label="В плейлист" onPress={() => setPlaylistOpen(true)} />
-                <ContextAction icon="share" label="Поделиться" onPress={share} />
-              </View>
-            </View>
-          </Animated.ScrollView>
+                <Animated.View style={[styles.controls, chromeStyle]} pointerEvents={chromePointerEvents}>
+                  <View style={styles.titleRow}>
+                    <View style={styles.titles}>
+                      <Text style={type.screenTitle} numberOfLines={1}>
+                        {track.title}
+                      </Text>
+                      <Text style={type.subtitle} numberOfLines={1}>
+                        {track.artistName}
+                      </Text>
+                    </View>
+                    <LikeButton trackId={track.id} variant="primary" />
+                    <Pressable
+                      onPress={share}
+                      hitSlop={8}
+                      style={styles.titleAction}
+                      accessibilityRole="button"
+                      accessibilityLabel="Поделиться"
+                    >
+                      <Icon name="share" size={20} color={colors.foreground} />
+                    </Pressable>
+                  </View>
 
-          {/* Шапка закреплена: свернуть плеер нужно и с прокрученного контекста, а заодно
-              скрим держит читаемым системный статус-бар над уехавшей вверх обложкой. */}
-          <Animated.View
-            style={[styles.header, { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT }, chromeStyle]}
-            pointerEvents={chromePointerEvents}
-          >
-            <LinearGradient colors={HEADER_SCRIM} style={StyleSheet.absoluteFill} pointerEvents="none" />
-            <Pressable
-              onPress={() => navigation.goBack()}
-              hitSlop={10}
-              style={styles.headerButton}
-              accessibilityRole="button"
-              accessibilityLabel="Свернуть плеер"
+                  <Transport
+                    playing={status === 'playing'}
+                    loading={status === 'loading'}
+                    hasNext={hasNext}
+                    hasPrev={hasPrev}
+                    shuffle={shuffle}
+                    repeat={repeat}
+                    onPrev={prev}
+                    onNext={next}
+                    onTogglePlay={togglePlayPause}
+                    onToggleShuffle={toggleShuffle}
+                    onCycleRepeat={cycleRepeat}
+                  />
+
+                  <View style={styles.scrubber}>
+                    <Waveform peaks={waveformPeaks} positionSec={positionSec} durationSec={durationSec} onSeek={seek} />
+                    <View style={styles.timesRow}>
+                      <Text style={type.mono}>{formatDuration(positionSec)}</Text>
+                      <Text style={type.mono}>{formatDuration(durationSec)}</Text>
+                    </View>
+                  </View>
+
+                  {status === 'error' && (
+                    <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>
+                  )}
+
+                  <Pressable
+                    onPress={() => scrollRef.current?.scrollTo({ y: heroHeight, animated: true })}
+                    style={styles.more}
+                    accessibilityRole="button"
+                    accessibilityLabel="Показать больше о треке"
+                  >
+                    <Icon name="chevron-down" size={16} color={colors.mutedForeground} />
+                  </Pressable>
+                </Animated.View>
+              </View>
+
+              <View style={[styles.context, { paddingBottom: insets.bottom + space.xl }]}>
+                <ContextSections trackId={track.id} />
+                <View style={styles.section}>
+                  <Text style={type.mono}>ДАЛЬШЕ</Text>
+                  <QueueSection />
+                </View>
+                <View style={styles.section}>
+                  <ContextAction icon="plus" label="В плейлист" onPress={() => setPlaylistOpen(true)} />
+                  <ContextAction icon="share" label="Поделиться" onPress={share} />
+                </View>
+              </View>
+            </Animated.ScrollView>
+
+            {/* Шапка закреплена: свернуть плеер нужно и с прокрученного контекста, а заодно
+                скрим держит читаемым системный статус-бар над уехавшей вверх обложкой. */}
+            <Animated.View
+              style={[styles.header, { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT }, chromeStyle]}
+              pointerEvents={chromePointerEvents}
             >
-              <Icon name="chevron-down" size={22} color={colors.foreground} />
-            </Pressable>
-            <Text style={type.mono} numberOfLines={1}>
-              {context ? SOURCE_LABEL[context.source] : SOURCE_LABEL.direct}
-            </Text>
-            <View style={styles.headerButton} />
-          </Animated.View>
+              <LinearGradient colors={HEADER_SCRIM} style={StyleSheet.absoluteFill} pointerEvents="none" />
+              <Pressable
+                onPress={() => navigation.goBack()}
+                hitSlop={10}
+                style={styles.headerButton}
+                accessibilityRole="button"
+                accessibilityLabel="Свернуть плеер"
+              >
+                <Icon name="chevron-down" size={22} color={colors.foreground} />
+              </Pressable>
+              <Text style={type.mono} numberOfLines={1}>
+                {context ? SOURCE_LABEL[context.source] : SOURCE_LABEL.direct}
+              </Text>
+              <View style={styles.headerButton} />
+            </Animated.View>
           </View>
         </BlurTargetScope>
       </Backdrop>
