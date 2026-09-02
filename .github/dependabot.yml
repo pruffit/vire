@@ -25,6 +25,29 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # Версии RN и React в мобилке диктует мажор Expo SDK, а не semver: у React Native
+      # minor — фактически мажор. 0.86 → 0.87 сменил тип `View` с инстанса на компонент
+      # (`ref` теперь ждёт `ReactNativeElement`), а expo-blur остался типизирован под 0.86 —
+      # typecheck падал на рассинхроне двух библиотек, а не на нашем коде. Поднимать
+      # только через `expo install --fix` вместе с SDK.
+      - dependency-name: "react-native"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "@types/react"
+      # У версий 0.x semver считает minor тем, чем он не является: 0.7 → 0.8 у libsodium
+      # сменил сигнатуру `crypto_generichash`. Это крипто под E2EE-чатом, и формат обязан
+      # сойтись с мобилкой (`sodium-compat`, тест `sodium-compat.test.ts`) — обновлять
+      # отдельной задачей с проверкой совместимости, а не в пачке из полусотни пакетов.
+      - dependency-name: "libsodium-wrappers"
+      - dependency-name: "@types/libsodium-wrappers"
+      # Графический стек VireGlass. Skia рисует поверхность, reanimated с worklets гоняет
+      # её анимации; одной партией сюда приезжало Skia 2.6 → 2.11 и worklets 0.10 → 0.12.
+      # Цена стекла измерена на устройстве (0.8 мс GPU на поверхность, потолок — три);
+      # после подъёма этих трёх замер недействителен, а устройства под рукой нет.
+      # Поднимать вместе с Expo SDK и перемерять — docs/vireglass/benchmarks/.
+      - dependency-name: "@shopify/react-native-skia"
+      - dependency-name: "react-native-reanimated"
+      - dependency-name: "react-native-worklets"
     labels:
       - "dependencies"
 
