@@ -1,28 +1,32 @@
 #!/usr/bin/env node
 /**
- * Проверка, что пути к коду в документации ведут в существующие файлы.
+ * Проверка, что ссылки в документации никуда не проваливаются: пути к коду
+ * в бэктиках и относительные markdown-ссылки между документами.
  *
- * Доки ссылаются на код бэктиками (`apps/web/lib/format.ts`). Код переезжает —
- * ссылка остаётся, и док начинает врать молча: ни typecheck, ни lint его не читают.
- * Так после i18n-рефакторинга 37 ссылок в 21 фичедоке остались на путях без
- * `[locale]`, а девять указывали на переименованные файлы.
+ * Код переезжает — ссылка остаётся, и док начинает врать молча: ни typecheck,
+ * ни lint его не читают. Так после i18n-рефакторинга 37 ссылок в 21 фичедоке
+ * остались на путях без `[locale]`, а девять указывали на переименованные файлы.
  *
- * `docs/superpowers/**` не проверяется: это журнал планов и спек, его пути
- * описывают состояние на момент написания и меняться задним числом не должны.
+ * Журнал `docs/superpowers/plans|specs` не проверяется: он фиксирует состояние
+ * на момент написания и задним числом не правится. Его индекс (README) — проверяется.
  *
  * Запуск: node scripts/check-doc-paths.mjs   (cwd = корень репо)
- * Exit 1 при битой ссылке, печатает файл:строку и путь.
+ * Exit 1 при битой ссылке, печатает файл:строку и цель.
  */
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import { join, dirname, relative } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SCAN = ['docs', 'README.md', 'CLAUDE.md'];
-const SKIP_DIRS = new Set(['superpowers', 'node_modules']);
+const SKIP_DIRS = new Set(['node_modules']);
+/** Журнал процесса: пути внутри записей историчны, индекс — нет. */
+const JOURNAL = /^docs[/\\]superpowers[/\\](plans|specs)[/\\]/;
 
 /** Пути к коду в бэктиках: apps/…, packages/…, scripts/…, ops/… */
 const PATH_RE = /`((?:apps|packages|scripts|ops)\/[^`\s]+)`/g;
+/** Относительная markdown-ссылка на другой документ: [текст](путь.md#якорь) */
+const LINK_RE = /\[[^\]]*\]\(([^)\s]+\.md)(?:#[^)]*)?\)/g;
 
 function markdownFiles(entry) {
   const abs = join(ROOT, entry);
@@ -62,16 +66,28 @@ function normalize(p) {
 }
 
 const broken = [];
+let codePaths = 0;
+let docLinks = 0;
 
 for (const entry of SCAN) {
   for (const file of markdownFiles(entry)) {
+    const journal = JOURNAL.test(file);
     const lines = readFileSync(join(ROOT, file), 'utf8').split(/\r?\n/);
     lines.forEach((line, i) => {
-      for (const [, raw] of line.matchAll(PATH_RE)) {
-        const p = normalize(raw);
-        if (!isCheckable(p)) continue;
-        if (!existsSync(join(ROOT, p))) {
-          broken.push({ file: file.replace(/\\/g, '/'), line: i + 1, path: p });
+      const at = { file: file.replace(/\\/g, '/'), line: i + 1 };
+      if (!journal) {
+        for (const [, raw] of line.matchAll(PATH_RE)) {
+          const p = normalize(raw);
+          if (!isCheckable(p)) continue;
+          codePaths++;
+          if (!existsSync(join(ROOT, p))) broken.push({ ...at, path: p });
+        }
+      }
+      for (const [, target] of line.matchAll(LINK_RE)) {
+        if (/^https?:/.test(target)) continue;
+        docLinks++;
+        if (!existsSync(resolve(dirname(join(ROOT, file)), target))) {
+          broken.push({ ...at, path: target });
         }
       }
     });
@@ -79,10 +95,10 @@ for (const entry of SCAN) {
 }
 
 if (broken.length > 0) {
-  console.error(`\nБитые пути к коду в документации: ${broken.length}\n`);
+  console.error(`\nБитые ссылки в документации: ${broken.length}\n`);
   for (const b of broken) console.error(`  ${b.file}:${b.line}  →  ${b.path}`);
-  console.error('\nКод переехал, а док остался. Поправь путь или убери ссылку.\n');
+  console.error('\nЦель переехала, а ссылка осталась. Поправь путь или убери ссылку.\n');
   process.exit(1);
 }
 
-console.log('check:doc-paths — все пути к коду в документации существуют');
+console.log(`check:doc-paths — ${codePaths} путей к коду и ${docLinks} ссылок между документами, все ведут в существующие файлы`);
