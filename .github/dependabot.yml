@@ -48,13 +48,6 @@ updates:
       - dependency-name: "@shopify/react-native-skia"
       - dependency-name: "react-native-reanimated"
       - dependency-name: "react-native-worklets"
-      # sharp грузит libvips через dlopen по RPATH, трейсер Next его не видит, и в
-      # standalone кладётся биндинг без библиотеки (клало прод в v1.34.0). Держится
-      # глобом в `next.config.ts`, который уже дважды переставал совпадать. Патч
-      # 0.35.3 → 0.35.4 уронил `next build`: трейсер полез читать директорию
-      # `@img/sharp-libvips-linux-x64` как файл. Локально на Windows не
-      # воспроизводится — проверять только сборкой Docker-образа.
-      - dependency-name: "sharp"
     labels:
       - "dependencies"
 
