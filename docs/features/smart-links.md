@@ -41,11 +41,11 @@
 - **Валидация:** `apps/web/lib/smart-link.ts` (`normalizeSlug`, `isValidSlug`, `parseSmartLinkLinks`).
 - **Видимость привязанного релиза:** `packages/core/src/music/marketing/smart-link-display.ts`
   (`resolveSmartLinkDisplay` — CTA и подстановка полей из одного гейта).
-- **Публичная страница:** `apps/web/app/smartlink/[artistSlug]/[linkSlug]/page.tsx`.
-- **Дашборд:** `apps/web/app/dashboard/links/*` (список, форма, new, [id]).
+- **Публичная страница:** `apps/web/app/[locale]/(listener)/smartlink/[artistSlug]/[linkSlug]/page.tsx`.
+- **Дашборд:** `apps/web/app/[locale]/dashboard/links/*` (список, форма, new, [id]).
 - **API:** `apps/web/app/api/v1/dashboard/smart-links/route.ts` (POST),
   `.../[id]/route.ts` (PATCH/DELETE).
-- **Хаб:** `apps/web/app/artists/[slug]/page.tsx` (иконки ссылок + секция смартлинков).
+- **Хаб:** `apps/web/app/[locale]/(listener)/artists/[slug]/page.tsx` (иконки ссылок + секция смартлинков).
 
 ## Env
 - S3 (обложки в публичный `stream`, ключ `covers/smartlinks/{uuid}.{ext}`) — те же

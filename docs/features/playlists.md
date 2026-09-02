@@ -147,7 +147,7 @@
 
 ## Где код
 
-- **Страница:** `apps/web/app/(listener)/playlists/[id]/page.tsx` — server-shell
+- **Страница:** `apps/web/app/[locale]/(listener)/playlists/[id]/page.tsx` — server-shell
   full-bleed (`max-w-[120rem]`, паттерн контентных страниц вроде релиза), шапка
   ограничена `max-w-2xl` под текст; `generateMetadata` + рендерит клиентский оркестратор.
   `/library/liked` (`app/(listener)/library/liked/page.tsx`) переиспользует тот же

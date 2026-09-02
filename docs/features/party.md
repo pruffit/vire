@@ -190,7 +190,7 @@ LRU-кэш, что у плеера); у внешних и локальных п�
 
 ## Где код
 
-- **Страницы:** `apps/web/app/(listener)/nrvz914/` — `page.tsx` (вход), `layout.tsx` (noindex),
+- **Страницы:** `apps/web/app/[locale]/(listener)/nrvz914/` — `page.tsx` (вход), `layout.tsx` (noindex),
   `[code]/{page,party-room,party-add-panel,party-screen}.tsx`.
 - **Вход из футера:** `apps/web/components/party-trigger.tsx`, путь — `apps/web/lib/party.ts`.
 - **API:** `POST /api/v1/jam/[code]/queue/external` (любой ввод), `POST …/queue/local`

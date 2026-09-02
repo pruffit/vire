@@ -24,7 +24,7 @@
 ## Где код
 
 - **Пакет:** `packages/design-tokens/` — `src/tokens.json` (источник), `src/generate.ts` (чистые
-  функции `generateCss`/`generateTs`, без файлового IO), `scripts/build.mjs` (IO-обвязка: читает
+  функции `generateCss`/`generateTs`, без файлового IO), `packages/design-tokens/scripts/build.mjs` (IO-обвязка: читает
   `tokens.json`, пишет `dist/`).
 - **Потребитель (веб):** `packages/ui/src/globals.css` — `@import "@vire/design-tokens/tokens.css"`.
   `packages/ui/package.json` зависит от `@vire/design-tokens` (workspace).

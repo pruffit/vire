@@ -96,7 +96,7 @@
   `personal-4h` cron `0 */4 * * *`, tz `Europe/Moscow`).
 - **Ручной прогон:** `/admin` → «Обновить подборки» → `POST /api/v1/admin/editorial`
   (`generateAllEditorialPlaylists` — общие + личные).
-- **UI:** `apps/web/app/(listener)/page.tsx` (секция «Подборки»), `components/editorial-playlist-card.tsx`.
+- **UI:** `apps/web/app/[locale]/(listener)/(home)/page.tsx` (секция «Подборки»), `components/editorial-playlist-card.tsx`.
 - **Схема:** `playlists.kind` enum (+`PERSONAL`), `playlists.target_user_id`
   (миграция `0017`).
 

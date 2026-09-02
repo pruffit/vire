@@ -23,7 +23,7 @@
 - **Плеер:** `apps/web/components/video-player.tsx` (`VideoPlayer` + `Facade`)
 - **VK-постер:** подтягивается на сервере (`lib/vk-api.ts` → `fetchVkPoster`) в
   `VideosSection` страницы артиста — у VK его нет в ссылке.
-- **Где используется:** профиль артиста `apps/web/app/(listener)/artists/[slug]/page.tsx`;
+- **Где используется:** профиль артиста `apps/web/app/[locale]/(listener)/artists/[slug]/page.tsx`;
   ссылка вводится в `dashboard/profile/edit-profile-form.tsx`
 - **Данные:** ссылка хранится в профиле артиста (`artist_profiles`)
 

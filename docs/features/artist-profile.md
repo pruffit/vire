@@ -52,10 +52,10 @@ co-listen-выборка не должна ронять страницу) — д
 
 ## Где код
 
-- **Страница:** `apps/web/app/(listener)/artists/[slug]/page.tsx` — SSR, `generateMetadata`,
+- **Страница:** `apps/web/app/[locale]/(listener)/artists/[slug]/page.tsx` — SSR, `generateMetadata`,
   инжекция CSS-переменных темы, двухколоночный макет (`ArtistBanner`, `ArtistIdentity`,
   `SectionHeader`, `*Section`)
-- **Блок «Популярное»:** `apps/web/app/(listener)/artists/[slug]/artist-popular-tracks.tsx`
+- **Блок «Популярное»:** `apps/web/app/[locale]/(listener)/artists/[slug]/artist-popular-tracks.tsx`
   (`'use client'`); сортировка — `apps/web/lib/artist-tracks.ts` (`topByPlays`, покрыт тестом)
 - **Запрос каталога:** `getArtistPlayableTracks(artistProfileId)` в
   `packages/db/src/queries/discovery.ts` — READY-треки слышимых релизов + агрегат `plays`
@@ -64,19 +64,19 @@ co-listen-выборка не должна ронять страницу) — д
   (`ReleaseHeroPlay`, темизирована, `controls.play` из `player/audio-engine`)
 - **Индикатор «играет»:** `apps/web/components/playing-bars.tsx` (`PlayingBars`, общий
   с трек-листом релиза)
-- **Блок «Похожие артисты»:** `apps/web/app/(listener)/artists/[slug]/similar-artists-section.tsx`
+- **Блок «Похожие артисты»:** `apps/web/app/[locale]/(listener)/artists/[slug]/similar-artists-section.tsx`
   (`SimilarArtistsSection`) — сигналы и данные в `docs/features/discovery.md`
 - **Форматтеры ридаута:** `apps/web/lib/format.ts` (`formatCount`, `plural*`, `totalDuration`)
 - **Виджет темизации:** `apps/web/components/theme-editor.tsx` (`ThemeEditor`, controlled) —
   пресеты, live color picker, шрифты, зерно, превью страницы; общий для дашборда
-  (`apps/web/app/dashboard/profile/edit-profile-form.tsx`) и **админ-редактора артиста**
+  (`apps/web/app/[locale]/dashboard/profile/edit-profile-form.tsx`) и **админ-редактора артиста**
   (`/admin/artists/[id]/edit`, минуя ownership-гард дашборда — правит любой профиль)
 - **API профиля:** `apps/web/app/api/v1/dashboard/profile/route.ts`
 - **Сервис:** `packages/core/src/music/catalog/services/artist.ts`
 - **Репозиторий:** `packages/core/src/music/catalog/repositories/artist.ts`
 - **Загрузка обложки/аватара:** `apps/web/app/api/v1/dashboard/profile/route.ts`
   (multipart; `header`/`removeHeader`, `avatar`/`removeAvatar`); политики — `apps/web/lib/image.ts`
-  (`HEADER_POLICY`, `AVATAR_POLICY`); форма — `apps/web/app/dashboard/profile/edit-profile-form.tsx`
+  (`HEADER_POLICY`, `AVATAR_POLICY`); форма — `apps/web/app/[locale]/dashboard/profile/edit-profile-form.tsx`
 - **DB таблицы:** `artist_profiles` (`packages/db/src/schema/artists.ts`)
   - `slug`, `name`, `bio`, `avatar_url`, `header_url` (широкая обложка, миграция 0028)
   - `theme_tokens` JSONB, `links`/`videos` JSONB

@@ -38,7 +38,7 @@ Now Playing/фонового воспроизведения — Windows `MAX_PAT
   (нумерованный список; тап на трек ставит его в очередь плеера как отдельный трек и
   сразу играет — переиспользует тот же `usePlayerStore.playQueue`, что и релизный
   трек-лист). Оба серверных списка уже ограничены (`FRESH_RELEASES_RESULT_LIMIT=18`,
-  `HOT_TRACKS_LIMIT=20` в `packages/core/.../home-blocks.ts`) — клиентского лимита не
+  `HOT_TRACKS_LIMIT=20` в `packages/core/src/music/discovery/services/home-blocks.ts`) — клиентского лимита не
   требуется. Pull-to-refresh (`RefreshControl`) перезагружает композицию + оба блока,
   с лёгким haptic-impact на срабатывание.
 - **Воспроизведение звука (инкремент 3).** Экран релиза (`GET /api/v1/releases/{id}`) —
@@ -171,7 +171,7 @@ Now Playing/фонового воспроизведения — Windows `MAX_PAT
     и hierarchical lookup обязателен.
 - **RN-таргет токенов:** `packages/design-tokens/src/generate.ts` — `oklchToHex()` (чистая
   конвертация OKLCH→OKLab→linear sRGB→gamma sRGB→hex, формулы Björn Ottosson, без внешних
-  зависимостей) и `generateNative()`; `scripts/build.mjs` пишет `dist/tokens.native.ts`;
+  зависимостей) и `generateNative()`; `packages/design-tokens/scripts/build.mjs` пишет `dist/tokens.native.ts`;
   `exports["./native"]` в `package.json`.
 - **`packages/core/package.json`:** новые подпути `./playback/queue` и `./playback/audio-engine`
   (рядом с уже существующими `./access`/`./signing`) — баррель `@vire/core` тянет
@@ -325,13 +325,13 @@ Keystore (`vire-upload-keystore.jks`, алиас `vire-upload`, до 2054) и п
 
 > ⚠️ Локальный `.env` задаёт `EXPO_PUBLIC_API_BASE_URL` для разработки, Expo грузит его
 > **при любой сборке**, а в резолвере явный override сильнее `app.json`. То есть
-> release унёс бы в бандл `localhost` с машины сборщика. `scripts/build-release.mjs`
+> release унёс бы в бандл `localhost` с машины сборщика. `apps/mobile/scripts/build-release.mjs`
 > гасит эти переменные и `.env` на время релизной сборки (`EXPO_NO_DOTENV=1`);
 > `expo start` не задет.
 
 ### Барьер `check:release-config`
 
-`scripts/check-release-config.mjs` падает до сборки, если: пакет остался плейсхолдером
+`apps/mobile/scripts/check-release-config.mjs` падает до сборки, если: пакет остался плейсхолдером
 `com.anonymous.*`; нет `versionCode`; базовый URL не `https://` или локальный;
 `google-services.json` не содержит клиента под текущий пакет; нет keystore или паролей.
 Пустой `extra.sentryDsn` — предупреждение, не блокер: репозиторий обязан собираться до
@@ -809,7 +809,7 @@ Kotlin-совместимости; версия `expo-audio`/RNTP событий
   - Попытка обхода: `next dev --webpack` (не Turbopack) действительно не задевает
     `@parcel/watcher` и стартует («Ready in 987ms»), но падает на независимом баге:
     `Attempted import error: 'createContext' is not exported from 'react'` при компиляции
-    `use-intl` → `packages/i18n/src/translator.ts` → `packages/core/.../email-templates.ts`
+    `use-intl` → `packages/i18n/src/translator.ts` → `packages/core/src/platform/notifications/email-templates.ts`
     (500 на `/robots.txt`). Это ESM/CJS-несовместимость webpack-режима с React 19 в этом
     репо — путь никогда не тестировался (проект всегда шёл через Turbopack), чинить его —
     отдельная, не сегодняшняя задача. Процесс остановлен, `.env`-правка `apps/mobile/.env`
@@ -1177,7 +1177,7 @@ JS через `linking` React Navigation.
 
 - **Бэкенд-добавка (`apps/web` + `packages/api-contracts`, без миграции).** `GET
   /api/v1/friends` раньше отдавал только `{friends}` — веб не нуждался в REST для входящих
-  (`apps/web/app/(listener)/friends/page.tsx` вызывает `FriendshipService.listIncoming`
+  (`apps/web/app/[locale]/(listener)/friends/page.tsx` вызывает `FriendshipService.listIncoming`
   напрямую как RSC). Мобилке нужен настоящий JSON — маршрут расширен на `incoming:
   IncomingRequestDTO[]` (та же `FriendshipService.listIncoming`, ничего нового в
   `packages/core`/`packages/db`). `packages/api-contracts/src/friends.ts` —
@@ -1805,7 +1805,7 @@ tcp:3000 tcp:3000`/`tcp:9000` уже стояли с прошлой сессии
   отдельной курсивной плашкой «Не удалось расшифровать», не роняет экран и не выкидывается
   из списка. Живые сообщения — `useChatRealtime`, фильтр по `conversationId`, дедуп по
   `message.id` (эхо своего же отправленного сообщения, `ChatService.send` публикует
-  событие обеим сторонам — подтверждено чтением `packages/core/.../chat.ts:63-65` на
+  событие обеим сторонам — подтверждено чтением `packages/core/src/platform/messaging/services/chat.ts:63-65` на
   этапе планирования). Отправка — оптимistic-append сразу с плейнтекстом и реальным
   id из ответа `sendMessage` (без tempId-реконсиляции — id уже настоящий к моменту
   прихода SSE-эха). `FlatList` ASC + `scrollToEnd` на новое сообщение/маунт (не inverted —
@@ -2008,7 +2008,7 @@ indicator.tsx`, `components/chat/chat-thread.tsx`).
     `conversationId`+`userId===otherUserId`, `setPeerTyping(true)` + таймер 4с на автосброс),
     `chat:read` (фильтр по `conversationId`, `chat:read`-payload несёт `readAt`, не `userId` —
     адресность уже обеспечена сервером через `publish(otherUserId, ...)`, см.
-    `packages/core/.../chat.ts:87-98`).
+    `packages/core/src/platform/messaging/services/chat.ts:87-98`).
   - `lastOwnMessage` (`useMemo`) + `ownStatusLabel` — «Прочитано» когда
     `isReadByPeer(lastOwnMessage.createdAt, peerReadAt)`, иначе «Отправлено»; рендерится
     подписью под бабблом только у сообщения с `id === lastOwnMessage.id` (не у каждого
@@ -3307,4 +3307,4 @@ blurView.setupWith(dimezisBlurTarget).setFrameClearDrawable(decorView.background
 > ⚠️ **Стенд управляется диплинком**, а не тапами: `vire://lab?zone=11&preset=2`. `adb shell
 > input tap` приходит с опозданием и теряется — состояние уезжает уже после того, как скрипт
 > его сверил, и замер идёт не над тем фоном. URL обязательно в кавычках: `&` иначе съедает
-> шелл устройства. Измеритель кадра — `scripts/glass-probe.mjs`.
+> шелл устройства. Измеритель кадра — `apps/mobile/scripts/glass-probe.mjs`.

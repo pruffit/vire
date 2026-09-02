@@ -16,7 +16,7 @@
 - **Аккаунт** — способы входа, выход.
 
 ## Где код
-- **Страница/роут:** `apps/web/app/(listener)/profile/page.tsx`
+- **Страница/роут:** `apps/web/app/[locale]/(listener)/profile/page.tsx`
 - **Компоненты:** `apps/web/components/listener/profile/*` (banner, hero, taste-section,
   activity-feed, library-previews, appearance-settings, sign-out-button, account-section);
   переиспользуют `components/listener/*` (playlist-card, liked-track-row, followed-artists).

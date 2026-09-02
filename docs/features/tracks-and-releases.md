@@ -29,10 +29,10 @@ track_audio.status: PROCESSING → READY (или BLOCKED при ошибке)
 
 ## Где код
 
-- **Загрузка файла (API):** `apps/web/app/api/v1/dashboard/releases/[id]/tracks/upload/route.ts`
+- **Загрузка файла (API):** `apps/web/app/api/v1/dashboard/tracks/upload/route.ts`
 - **Создание/редактирование релиза (API):** `apps/web/app/api/v1/dashboard/releases/route.ts` и `[id]/route.ts`
 - **Смена статуса релиза:** `apps/web/app/api/v1/dashboard/releases/[id]/status/route.ts`
-- **Кнопка публикации:** `apps/web/app/dashboard/releases/[id]/_components/PublishButton.tsx`
+- **Кнопка публикации:** `apps/web/app/[locale]/dashboard/publish-button.tsx`
 - **Воркер транскодинга:** `apps/worker/src/workers/transcode.worker.ts`
 - **Пайплайн HLS:** `apps/worker/src/lib/ffmpeg.ts`
 - **Waveform peaks:** `apps/worker/src/lib/waveform.ts` — `peaksFromPcm`

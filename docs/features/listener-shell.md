@@ -48,7 +48,7 @@
 
 ## Где код
 
-- **Route-группа:** `apps/web/app/(listener)/` — `layout.tsx` (сайдбар + футер) и все
+- **Route-группа:** `apps/web/app/[locale]/(listener)/` — `layout.tsx` (сайдбар + футер) и все
   слушательские страницы (главная, `library`, `profile`, `artists`, `releases`,
   `playlists`, `search`, `smartlink`, инфо-страницы). URL не меняются.
 - **Root layout:** `apps/web/app/layout.tsx` — каркас app-shell (`#main-content` —

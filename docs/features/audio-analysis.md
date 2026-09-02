@@ -99,7 +99,7 @@
   `apps/web/app/api/v1/admin/tracks/[id]/analyze|audio-features/route.ts`
 - **UI:** `apps/web/lib/use-track-analysis.ts` (общий движок поллинга),
   `apps/web/lib/use-genre-analysis.ts` (обёртка для жанра поверх того же движка),
-  `apps/web/app/dashboard/releases/[id]/track-manager.tsx`,
+  `apps/web/app/[locale]/dashboard/releases/[id]/track-manager.tsx`,
   `apps/web/app/admin/tracks/[id]/edit/track-edit-form.tsx`
 - **Данные:**
   - `packages/db/src/schema/releases.ts` — `track_audio.bpm`, `track_audio.musical_key`

@@ -139,7 +139,7 @@ Near-instant доставка через SSE поверх Redis pub/sub. **End-t
 | Realtime | `apps/web/lib/realtime.ts` (publish/subscribe, порт `RealtimePublisher` в `packages/core/src/platform/ports/realtime.ts`), клиент `apps/web/lib/use-realtime.ts` |
 | Композиция | `apps/web/lib/chat.ts` (`chatService()`) |
 | Роуты | `apps/web/app/api/v1/chat/{messages,open,conversations,unread-count,[conversationId]/messages,[conversationId]/read,[conversationId]/typing}/route.ts`, `apps/web/app/api/v1/realtime/stream/route.ts` |
-| Страницы | `apps/web/app/(listener)/messages/layout.tsx` (двухпанельный shell, auth-гейт, список диалогов), `.../messages/page.tsx` (заглушка «Выберите диалог»), `.../messages/[conversationId]/page.tsx` (тред) |
+| Страницы | `apps/web/app/[locale]/(listener)/messages/layout.tsx` (двухпанельный shell, auth-гейт, список диалогов), `.../messages/page.tsx` (заглушка «Выберите диалог»), `.../messages/[conversationId]/page.tsx` (тред) |
 | Компоненты | `apps/web/components/chat/{messages-shell,conversation-list,chat-thread,message-composer,message-bubble,chat-avatar,chat-format,device-link,link-approve,link-protocol,e2ee-bootstrap,typing-indicator,chat-events-bridge}.tsx`, `.../message-friend-button.tsx` |
 | Сообщения (клиент) | `apps/web/lib/chat-messages.ts` — чистые `normalizeMessage`/`mergeMessages` (дедуп по id, снятие pending по совпадению шифротекста, сортировка ASC) |
 | Живой список диалогов | `apps/web/lib/chat-conversations.ts` (`useConversations`/`refreshConversations`/`applyIncomingMessage`/`markConversationReadLocal`), роут `GET /api/v1/chat/conversations` |

@@ -15,7 +15,7 @@
 - **Поиск в навбаре** (`nav-search.tsx`) — раскрывающееся поле в шапке.
 
 ## Где код
-- **Страница:** `apps/web/app/search/page.tsx` (+ `search-tracks-section.tsx`,
+- **Страница:** `apps/web/app/[locale]/(listener)/search/page.tsx` (+ `search-tracks-section.tsx`,
   `search-releases-section.tsx`)
 - **Инлайн-поиск:** `apps/web/components/global-search.tsx`
 - **Палитра:** `apps/web/components/command-palette.tsx`

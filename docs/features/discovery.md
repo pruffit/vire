@@ -63,9 +63,9 @@
   `buildSimilarArtists(artistProfileId, limit)`
 - **Подпись-причина (UI):** `apps/web/lib/discovery-reason.ts` — `discoveryReasonLabel`
 - **Секция на главной:** `apps/web/components/home/discovery-section.tsx`
-  (`DiscoverySection`), подключена в `apps/web/app/(listener)/page.tsx` под `Suspense`
+  (`DiscoverySection`), подключена в `apps/web/app/[locale]/(listener)/(home)/page.tsx` под `Suspense`
   рядом с секцией «Артисты»
-- **Блок на странице артиста:** `apps/web/app/(listener)/artists/[slug]/similar-artists-section.tsx`
+- **Блок на странице артиста:** `apps/web/app/[locale]/(listener)/artists/[slug]/similar-artists-section.tsx`
   (`SimilarArtistsSection`), встроен после «Релизы», до «Площадки»
 - **Переиспользовано:** `components/artist-card.tsx` (карточка), `components/scroll-row.tsx`
   (горизонтальная лента с тач-свайпом), `components/listener/section.tsx` /

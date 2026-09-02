@@ -114,7 +114,7 @@ ior · thickness · bevel · roughness · film · environment · legibility · i
 | Плоское стекло панелей (блюр + тинт + рамка) | **Реализовано** | `components/glass.tsx` |
 | Фолбэк ниже Android 13 (аффинная лупа) | **Реализовано** | `glass-surface.tsx` |
 | Material Lab: зоны, диплинк, метка состояния | **Реализовано** | `screens/material-lab.tsx` |
-| Измеритель кадра | **Реализовано** | `scripts/glass-probe.mjs` |
+| Измеритель кадра | **Реализовано** | `apps/mobile/scripts/glass-probe.mjs` |
 | Отклик на ориентацию устройства | **Экспериментально** | `lib/vireglass/environment.ts` |
 | Общий бэкдроп на N поверхностей | **Отложено** — замер снял основание (ADR-001 §5) | — |
 | iOS-рендерер | **Не поддерживается** (нет публичного API доступа к фону) | — |

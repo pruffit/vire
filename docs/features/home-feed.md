@@ -38,19 +38,18 @@
 10. **Артисты** (всем) — витрина активных артистов, `ArtistHoverChip`.
 
 ### Лента `/feed`
-Страница удалена (redirect на `/`, `apps/web/app/feed/page.tsx`) — контент живёт как
-секция «Ваша лента» на главной, см. п. 5 выше и [feed](feed.md).
+Отдельной страницы нет: контент живёт секцией «Ваша лента» на главной,
+см. п. 5 выше и [feed](feed.md).
 
 ## Где код
-- **Главная:** `apps/web/app/(listener)/page.tsx` — RSC-стриминг: блокирующая
+- **Главная:** `apps/web/app/[locale]/(listener)/(home)/page.tsx` — RSC-стриминг: блокирующая
   часть только hero + «Поток», остальные секции — async-компоненты
-  `app/(listener)/home-sections.tsx` за `<Suspense>` (общие данные шарятся через
+  `apps/web/app/[locale]/(listener)/(home)/home-sections.tsx` за `<Suspense>` (общие данные шарятся через
   React `cache()`; каждый источник — с `.catch(() => [])`, чтобы одна упавшая
   секция не роняла страницу). Fallback-скелетоны (`components/home/skeletons.tsx`,
   статичные, без анимаций — анти-джиттер) только у стабильно непустых секций
   (Горячие/Свежие/Подборки/Артисты, размеры совпадают с контентом — без сдвига);
   условно-пустые стримятся с `fallback={null}`.
-- **Лента:** `apps/web/app/feed/page.tsx` (+ `loading.tsx`)
 - **Играбельные модули:** `components/home/recent-rail.tsx` +
   `components/home/cover-rail.tsx` («Продолжить слушать»),
   `components/home/hot-tracks.tsx` («Горячие треки»),

@@ -54,6 +54,8 @@ jobs:
         run: pnpm turbo run typecheck
       - name: Lint
         run: pnpm turbo run lint
+      - name: Doc paths
+        run: pnpm check:doc-paths
       # Барьер: параллелизм turbo не складывается с параллелизмом vitest.
       - name: Test concurrency check
         run: node scripts/check-test-concurrency.mjs
