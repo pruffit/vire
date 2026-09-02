@@ -1,6 +1,10 @@
-# VireMusic — инструкция для Claude Code
+# vireSpace — инструкция для Claude Code
 
-Независимая музыкальная площадка для артистов и слушателей СНГ.
+Платформа для продуктов, где автор владеет тем, что создал. **VireMusic** — первый
+продукт на ней: независимая музыкальная площадка для артистов и слушателей СНГ.
+Разделение уже в коде: `packages/core/src/platform/**` не знает о `music/**`
+(барьер `check:layers`); что выносится в публичные SDK — `docs/virespace.md`.
+
 Полная документация: `docs/vision/concept.md`, `docs/foundation/architecture.md`, `docs/foundation/data-schema.md` (карта всех доков — `docs/README.md`).
 
 ## Рабочий процесс (обязательно)
