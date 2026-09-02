@@ -121,6 +121,9 @@ function Body({
       <ScrollView
         ref={scroll}
         scrollEnabled={expanded}
+        // Свёрнутая полоса не должна съедать вертикальный свайп: под ней прокрутка страницы,
+        // а сама она в этом состоянии не листается.
+        pointerEvents={expanded ? 'auto' : 'none'}
         showsVerticalScrollIndicator={false}
         onLayout={(e) => {
           const h = e.nativeEvent.layout.height;
