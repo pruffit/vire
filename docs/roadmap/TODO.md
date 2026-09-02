@@ -165,6 +165,15 @@
   миграции сразу, по отдельности — шум. Проверять `pnpm outdated -r` раз в цикл; каждый
   пункт — своя задача со своим прогоном гейтов.
 
+  **Известно заранее: даже minor/patch по RN и Expo требуют трёх правок типов** (вскрылось
+  на прогоне отменённой группы из 48 обновлений). Типы стали строже к `undefined`:
+  `findNodeHandle()` теперь возвращает `number | null | undefined` — нужен `?? null`
+  (`apps/mobile/components/vireglass/glass-surface.tsx`); `Linking.getInitialURL()` резолвится
+  в `string | null | undefined` (`apps/mobile/screens/material-lab.tsx`); `useRef<View>(null)`
+  больше не годится для `ref={}` на `<View>` — ожидается `Ref<ReactNativeElement>`
+  (`apps/mobile/screens/glass-lab.tsx`, а `View` как тип инстанса используется ещё в
+  девяти местах, включая проп `blurTarget`).
+
   | Пакет | Сейчас → доступно | Чем рискуем |
   |---|---|---|
   | `zod` | 3.25 → 4.x | несущая зависимость: `@vire/api-contracts` — единственный источник типов; ломается вывод типов во всём дереве |
