@@ -20,7 +20,7 @@ import type {
   TrackStatus,
 } from '@vire/core';
 import { getTrackSourceKey, getArtistTrackSources } from '../queries/track-audio';
-import { setTrackStatus } from '../queries/admin';
+import { setTrackStatus } from '../queries/admin-catalog';
 
 type TrackRow = typeof tracks.$inferSelect;
 

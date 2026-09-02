@@ -85,21 +85,33 @@ export {
 } from './queries/purchases';
 export type { PendingPurchase, PurchasedTrack } from './queries/purchases';
 export {
-  pingDb,
   getAdminStats,
   getAdminAttention,
   getRecentPublishedReleases,
+} from './queries/admin';
+export {
+  pingDb,
   getAdminPlatformMetrics,
   getAdminDailyPlays,
   getAdminTopTracks,
   getAdminTopArtists,
+} from './queries/admin-analytics';
+export {
   listUsersAdmin,
   setUserRole,
+} from './queries/admin-users';
+export {
   verifyArtist,
   listArtistsAdmin,
   setArtistActive,
   getArtistCore,
   adminUpdateArtist,
+  createArtistForUser,
+  listArtistMembers,
+  addArtistMember,
+  removeArtistMember,
+} from './queries/admin-artists';
+export {
   listTracksAdmin,
   setTrackStatus,
   listReleasesAdmin,
@@ -108,29 +120,28 @@ export {
   listPlaylistsAdmin,
   adminUpdatePlaylist,
   adminDeletePlaylist,
-  createArtistForUser,
-  listArtistMembers,
-  addArtistMember,
-  removeArtistMember,
-} from './queries/admin';
+} from './queries/admin-catalog';
 export type {
-  ArtistMemberRow,
   AdminStats,
-  AdminUser,
-  AdminTrack,
-  AdminRelease,
-  AdminPost,
-  AdminPlaylist,
   AdminAttention,
   StuckTrack,
   UnverifiedArtist,
   AdminRecentRelease,
+} from './queries/admin';
+export type {
   AdminPlatformMetrics,
   AdminDailyPlays,
   AdminTopTrack,
   AdminTopArtist,
-  AdminArtist,
-} from './queries/admin';
+} from './queries/admin-analytics';
+export type { AdminUser } from './queries/admin-users';
+export type { AdminArtist, ArtistMemberRow } from './queries/admin-artists';
+export type {
+  AdminTrack,
+  AdminRelease,
+  AdminPost,
+  AdminPlaylist,
+} from './queries/admin-catalog';
 export type { UserRole } from './queries/admin-types';
 export { getFollowerEmails, getTrackOwnerContact } from './queries/notifications';
 export type { TrackOwnerContact } from './queries/notifications';
