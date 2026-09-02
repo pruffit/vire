@@ -20,11 +20,13 @@ import { PLAYER_TRANSPORT_HEIGHT } from '../lib/layout';
 import { Icon } from '../lib/icon';
 import { AmbientBackground } from '../components/player/ambient-background';
 import { CoverCarousel } from '../components/player/cover-carousel';
-import { SectionDivider } from '../components/player/section-divider';
 import { Transport } from '../components/player/transport';
 import { Waveform } from '../components/player/waveform';
-import { QueueSection, LyricsSection, TrackSection } from '../components/player/panels';
+import { QueueSection, LyricsSection } from '../components/player/panels';
 import { TrackActionSheet } from '../components/player/track-action-sheet';
+import { PlayerSheet, SHEET_COLLAPSED } from '../components/player/player-sheet';
+import { ContextSections, SheetAction } from '../components/player/context-sections';
+import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
 import type { RootStackParamList } from '../navigation/root-navigator';
 
 /**
@@ -61,6 +63,7 @@ export default function PlayerScreen() {
   const [coverCenterY, setCoverCenterY] = useState(0);
   const [immersiveOn, setImmersiveOn] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
+  const [playlistOpen, setPlaylistOpen] = useState(false);
   const immersive = useSharedValue(0);
   const chromeStyle = useAnimatedStyle(() => ({ opacity: 1 - immersive.value }));
 
@@ -113,14 +116,7 @@ export default function PlayerScreen() {
         onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
       >
         <BlurTargetScope target={artRef}>
-          <Animated.ScrollView
-            scrollEnabled={!immersiveOn}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingBottom: insets.bottom + space.md + PLAYER_TRANSPORT_HEIGHT + space.xl,
-            }}
-          >
-            <View style={[styles.screen1, { height: viewportHeight || windowHeight }]}>
+          <View style={styles.screen1}>
               <AmbientBackground coverUrl={track.coverUrl} />
 
               {/* Транспорт плавает над экраном 1 — место под него обязано быть вычтено
@@ -131,7 +127,7 @@ export default function PlayerScreen() {
                   styles.screen1Content,
                   {
                     paddingTop: insets.top + space.sm,
-                    paddingBottom: insets.bottom + PLAYER_TRANSPORT_HEIGHT + space.md * 2,
+                    paddingBottom: SHEET_COLLAPSED + PLAYER_TRANSPORT_HEIGHT + space.md * 3,
                   },
                 ]}
               >
@@ -222,24 +218,12 @@ export default function PlayerScreen() {
 
                 {status === 'error' && <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>}
               </View>
-            </View>
-
-            <View style={styles.body}>
-              <SectionDivider label="Текст" />
-              <LyricsSection trackId={track.id} />
-
-              <SectionDivider label="Трек" />
-              <TrackSection />
-
-              <SectionDivider label="Дальше" />
-              <QueueSection />
-            </View>
-          </Animated.ScrollView>
+          </View>
         </BlurTargetScope>
       </Backdrop>
 
       <Animated.View
-        style={[styles.transportWrap, { bottom: insets.bottom + space.lg }, chromeStyle]}
+        style={[styles.transportWrap, { bottom: SHEET_COLLAPSED + space.md }, chromeStyle]}
         pointerEvents={chromePointerEvents}
       >
         <Transport
@@ -255,6 +239,22 @@ export default function PlayerScreen() {
           onShare={share}
         />
       </Animated.View>
+
+      {/* Шторка — стекло, поэтому она сиблинг Backdrop, а не потомок: цель преломления
+          не может быть предком стекла, иначе рекурсия RenderNode роняет RenderThread. */}
+      <Animated.View style={chromeStyle} pointerEvents={chromePointerEvents}>
+        <PlayerSheet blurTarget={artRef}>
+          <LyricsSection trackId={track.id} />
+          <SheetAction icon="plus" label="В плейлист" onPress={() => setPlaylistOpen(true)} />
+          <ContextSections trackId={track.id} />
+          <View style={styles.queue}>
+            <Text style={type.mono}>ДАЛЬШЕ</Text>
+            <QueueSection />
+          </View>
+        </PlayerSheet>
+      </Animated.View>
+
+      <AddToPlaylistSheet trackId={track.id} open={playlistOpen} onOpenChange={setPlaylistOpen} hideTrigger />
 
       <TrackActionSheet
         open={actionSheetOpen}
@@ -274,7 +274,7 @@ const ART_MAX_VIEWPORT = 0.46;
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   blurTarget: { flex: 1 },
-  screen1: { overflow: 'hidden' },
+  screen1: { flex: 1, overflow: 'hidden' },
   screen1Content: { flex: 1, paddingHorizontal: layout.screenPadding },
   handleWrap: { alignItems: 'center', minHeight: layout.touchTarget, justifyContent: 'center' },
   handle: { width: 36, height: 4, borderRadius: radii.full, backgroundColor: colors.border },
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.foreground,
   },
   error: { ...type.caption, color: colors.destructive, paddingTop: space.sm },
-  body: { paddingHorizontal: layout.screenPadding },
+  queue: { gap: space.sm },
   transportWrap: {
     position: 'absolute',
     left: layout.screenPadding,

@@ -5,7 +5,6 @@ import { trackLyricsResponseSchema, type TrackLyricsResponse } from '@vire/api-c
 type LyricLine = NonNullable<TrackLyricsResponse['lyrics']>[number];
 import { apiRequest } from '../../lib/api-client';
 import { usePlayerStore, type QueueTrack } from '../../lib/player-store';
-import { formatDuration } from '../../lib/format';
 import { colors } from '../../lib/theme';
 import { type } from '../../lib/design/typography';
 import { space } from '../../lib/design/scales';
@@ -83,12 +82,13 @@ export function LyricsSection({ trackId }: { trackId: string }) {
     : -1;
 
   if (lyrics === undefined) return <SectionLoading />;
-  if (!lyrics || lyrics.length === 0) {
-    return <SectionEmpty text="Артист ещё не добавил слова к этому треку" />;
-  }
+  // Инструментальный трек — норма, а не недоделка артиста: отсутствие текста не событие,
+  // о котором стоит сообщать. Секции просто нет.
+  if (!lyrics || lyrics.length === 0) return null;
 
   return (
-    <View>
+    <View style={styles.section}>
+      <Text style={type.mono}>ТЕКСТ</Text>
       {lyrics.map((line, i) => (
         <Text
           key={i}
@@ -102,56 +102,8 @@ export function LyricsSection({ trackId }: { trackId: string }) {
   );
 }
 
-/**
- * Мета трека: то, ради чего на вебе есть отдельная страница трека. Название и артист
- * сюда не дублируются — они стоят заголовком двумя экранами выше.
- */
-export function TrackSection() {
-  const durationSec = usePlayerStore((s) => s.durationSec);
-  const context = usePlayerStore((s) => s.context);
-  const queueLength = usePlayerStore((s) => s.queue.length);
-  const queueIndex = usePlayerStore((s) => s.queueIndex);
-
-  const rows: { label: string; value: string }[] = [];
-  if (durationSec > 0) rows.push({ label: 'ДЛИТЕЛЬНОСТЬ', value: formatDuration(durationSec) });
-  if (context) rows.push({ label: 'ИСТОЧНИК', value: SOURCE_LABEL[context.source] ?? context.source });
-  if (queueLength > 1) rows.push({ label: 'В ОЧЕРЕДИ', value: `${queueIndex + 1} / ${queueLength}` });
-
-  if (rows.length === 0) return <SectionEmpty text="Данных о треке пока нет" />;
-
-  return (
-    <View>
-      {rows.map((row, i) => (
-        <MetaRow key={row.label} label={row.label} value={row.value} last={i === rows.length - 1} />
-      ))}
-    </View>
-  );
-}
-
-const SOURCE_LABEL: Record<string, string> = {
-  home: 'Главная',
-  release: 'Релиз',
-  playlist: 'Плейлист',
-  artist: 'Артист',
-  search: 'Поиск',
-  liked: 'Любимые',
-  wave: 'Волна',
-  feed: 'Лента',
-  direct: 'Напрямую',
-};
-
-function MetaRow({ label, value, last }: { label: string; value: string; last: boolean }) {
-  return (
-    <View style={[styles.metaRow, !last && styles.metaRowDivider]}>
-      <Text style={type.mono}>{label}</Text>
-      <Text style={[type.row, styles.metaValue]} numberOfLines={2}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  section: { gap: space.sm },
   empty: { paddingVertical: space.xl, alignItems: 'center' },
   list: { gap: 2 },
   line: {
@@ -161,13 +113,4 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
   },
   lineActive: { color: colors.foreground },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: space.md,
-    paddingVertical: space.md,
-  },
-  metaRowDivider: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  metaValue: { color: colors.foreground },
 });
