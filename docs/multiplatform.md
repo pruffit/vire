@@ -1,6 +1,12 @@
 # Мультиплатформенность — стратегия клиентов
 
-**Статус:** предложение (Phase 1) · **Основание:** `architecture-audit.md`, `architecture.md`
+**Статус на 02.09.2026: клиенты существуют, стратегия сбылась частично.** Написан
+10.08.2026 как предложение; с тех пор появились `apps/mobile` (React Native + Expo,
+Android) и `apps/desktop` (Tauri v2), Bearer-аутентификация устройств
+([features/device-auth.md](features/device-auth.md)) и типизированный `packages/api-client`.
+Что из описанного здесь ещё не сделано — сверять с [architecture/current-state.md](architecture/current-state.md).
+
+**Основание:** `architecture-audit.md`, `architecture.md`
 
 ---
 

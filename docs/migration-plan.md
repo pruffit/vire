@@ -1,7 +1,12 @@
 # План миграции — от VireMusic к Platform Core
 
-**Статус:** предложение (Phase 2) · **Основание:** `architecture-audit.md`, `architecture.md`,
-`platform-core.md`, `sdui.md`, `multiplatform.md`
+**Статус на 02.09.2026: волны 0–8 выполнены, открыты 9–11.** Написан 10.08.2026 как
+предложение; проверено по коду — `packages/core/src/platform/{access,identity,storage,sdui}`
+на месте, барьер `check:layers` в CI. Оставшиеся три волны (организации, полиморфные
+взаимодействия, CI под несколько продуктов) — это уже трек vireSpace, см. [virespace.md](virespace.md).
+
+**Основание:** `architecture-audit.md`, `architecture.md`, `platform-core.md`,
+`sdui.md`, `multiplatform.md`
 
 Каждый шаг: малый, проверяемый, **обратимый**, оставляющий приложение работающим.
 Ни один шаг не требует одновременной правки всей кодовой базы.

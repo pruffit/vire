@@ -1,6 +1,12 @@
 # Platform Core — состав и границы
 
-**Статус:** предложение (Phase 1) · **Основание:** `architecture-audit.md` · `architecture.md`
+**Статус на 02.09.2026: раскладка выполнена, вынос в публикуемые пакеты — нет.** Написан
+10.08.2026 как предложение; `packages/core/src` разделён на `platform/**` (access, billing,
+config, identity, messaging, notifications, ports, sdui, search, social, storage, util) и
+`music/**`, правило «platform не знает о music» держит барьер `check:layers` в CI. Само
+отделение Core наружу открыто — оценка готовности в [virespace.md](virespace.md).
+
+**Основание:** `architecture-audit.md` · `architecture.md`
 
 Документ отвечает на один вопрос: **что именно попадает в Core, что остаётся в домене,
 и по какому доказательству принято решение.** Каждое включение обосновано либо тем, что
