@@ -4,7 +4,7 @@ import { PgDialect } from 'drizzle-orm/pg-core';
 vi.mock('../client', () => ({ db: {} }));
 
 const { staleMoodPlaylistWhere } = await import('./editorial');
-const { editorialPlaylistIdentity } = await import('./playlists');
+const { editorialPlaylistIdentity } = await import('./playlist-editorial');
 
 const dialect = new PgDialect();
 

@@ -165,15 +165,6 @@ export {
   updatePlaylist,
   setPlaylistCover,
   isPermutation,
-  fetchPlaylistMeta,
-  pickCovers,
-  getEditorialPlaylists,
-  getPersonalPlaylists,
-  getPopularPlaylists,
-  getPublicUserPlaylists,
-  upsertEditorialPlaylist,
-  createPersonalPlaylist,
-  deletePersonalPlaylists,
   likePlaylist,
   unlikePlaylist,
   getPlaylistLikeState,
@@ -182,6 +173,24 @@ export {
   searchTracksForPlaylist,
   getPlaylistSuggestions,
   getPublicPlaylistsByOwner,
+} from './queries/playlists';
+export type {
+  PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, PlaylistTrackAddedByRow, PlaylistAddTrack,
+  PlaylistSuggestions, SitemapPlaylist,
+} from './queries/playlists';
+export { fetchPlaylistMeta, pickCovers } from './queries/playlist-meta';
+export type { EditorialPlaylist, PlaylistMeta } from './queries/playlist-meta';
+export {
+  getEditorialPlaylists,
+  getPersonalPlaylists,
+  getPopularPlaylists,
+  getPublicUserPlaylists,
+  upsertEditorialPlaylist,
+  createPersonalPlaylist,
+  deletePersonalPlaylists,
+  editorialPlaylistIdentity,
+} from './queries/playlist-editorial';
+export {
   listPlaylistCollaborators,
   isPlaylistCollaborator,
   joinPlaylistCollaborator,
@@ -191,12 +200,10 @@ export {
   getPlaylistCollabState,
   getPlaylistInvitePreview,
   getPlaylistTrackAddedBy,
-} from './queries/playlists';
+} from './queries/playlist-collaborators';
 export type {
-  PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, PlaylistTrackAddedByRow, EditorialPlaylist, PlaylistAddTrack,
-  PlaylistSuggestions, PlaylistMeta, SitemapPlaylist, PlaylistCollaboratorRow, PlaylistCollabState,
-  PlaylistInvitePreviewRow,
-} from './queries/playlists';
+  PlaylistCollaboratorRow, PlaylistCollabState, PlaylistInvitePreviewRow, JoinCollaboratorOutcome,
+} from './queries/playlist-collaborators';
 export {
   generateAllEditorialPlaylists,
   generateSharedPlaylists,
