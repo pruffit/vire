@@ -188,6 +188,15 @@
   | `eslint` + `@eslint/js` | 9 → 10 | поднимать парой |
   | `@types/node` | 22 → 26 | только вместе с рантаймом; сейчас Node 22 в CI и образах |
 
+  **Отдельно: пакеты, выведенные из автообновления целиком** — им semver врёт, и dependabot
+  подаёт их как безобидный minor/patch (`.github/dependabot.yml`, там же причины):
+
+  | Пакеты | Почему вручную |
+  |---|---|
+  | `react-native`, `react`, `react-dom`, `@types/react` | версии диктует мажор Expo SDK. У RN minor — фактически мажор: 0.86 → 0.87 сменил тип `View` с инстанса на компонент, `ref` стал ждать `ReactNativeElement`, а `expo-blur` остался под 0.86 — typecheck падал на рассинхроне двух библиотек. Поднимать через `expo install --fix` |
+  | `libsodium-wrappers` (+ типы) | у 0.x minor и есть мажор: 0.7 → 0.8 сменил сигнатуру `crypto_generichash`. Крипто под E2EE-чатом, формат обязан сойтись с мобилкой (`sodium-compat`) |
+  | `@shopify/react-native-skia`, `react-native-reanimated`, `react-native-worklets` | графический стек VireGlass. Одной партией приезжало Skia 2.6 → 2.11 и worklets 0.10 → 0.12; цена стекла измерена на устройстве (0.8 мс GPU на поверхность), после подъёма замер недействителен. Поднимать с Expo SDK и перемерять |
+
 - [x] **Аудит `overflow-y-auto` без явной оси X** (найдено и закрыто 16.08.2026 при починке
   полос прокрутки в сайдбаре слушателя). По спеке CSS `overflow-x: visible` рядом с
   `overflow-y: auto` вычисляется в `auto`, поэтому любой вылезающий за край элемент
