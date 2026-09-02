@@ -579,9 +579,6 @@ importers:
       '@smithy/node-http-handler':
         specifier: ^4.11.3
         version: 4.11.3
-      '@vire/core':
-        specifier: workspace:*
-        version: link:../core
     devDependencies:
       '@types/node':
         specifier: ^22
@@ -589,6 +586,9 @@ importers:
       '@vire/config':
         specifier: workspace:*
         version: link:../config
+      '@vire/core':
+        specifier: workspace:*
+        version: link:../core
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
