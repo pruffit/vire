@@ -66,9 +66,7 @@ export default function ProfileScreen() {
       await apiRequest(`/api/v1/auth/devices/${deviceId}`, { method: 'DELETE', schema: okResponseSchema });
     }
     await clearAuthTokens();
-    // Инкремент 9 вложил ProfileScreen в ProfileStackNavigator — до RootStack теперь два
-    // уровня navigator'ов (ProfileStack -> MainTabs -> RootStack), не один.
-    navigation.getParent()?.getParent()?.reset({ index: 0, routes: [{ name: 'SignIn' }] });
+    // Уводить некуда: экрана входа больше нет, приложение работает и анонимно.
   };
 
   return (

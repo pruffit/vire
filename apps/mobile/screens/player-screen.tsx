@@ -61,6 +61,7 @@ export default function PlayerScreen() {
   const artRef = useRef<View>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
   const [coverCenterY, setCoverCenterY] = useState(0);
+  const [scrubberHeight, setScrubberHeight] = useState(0);
   const [immersiveOn, setImmersiveOn] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
@@ -127,7 +128,7 @@ export default function PlayerScreen() {
                   styles.screen1Content,
                   {
                     paddingTop: insets.top + space.sm,
-                    paddingBottom: SHEET_COLLAPSED + PLAYER_TRANSPORT_HEIGHT + space.md * 3,
+                    paddingBottom: insets.bottom + SHEET_COLLAPSED + space.md,
                   },
                 ]}
               >
@@ -179,7 +180,15 @@ export default function PlayerScreen() {
                   </Text>
                 </Animated.View>
 
-                <Animated.View style={[styles.scrubber, chromeStyle]} pointerEvents={chromePointerEvents}>
+                {/* Место под транспорт: он стекло и живёт снаружи Backdrop, поэтому в
+                    потоке под него резервируется высота, а сам он позиционируется от низа. */}
+                <View style={styles.transportGap} />
+
+                <Animated.View
+                  style={[styles.scrubber, chromeStyle]}
+                  pointerEvents={chromePointerEvents}
+                  onLayout={(e) => setScrubberHeight(e.nativeEvent.layout.height)}
+                >
                   <Waveform peaks={waveformPeaks} positionSec={positionSec} durationSec={durationSec} onSeek={seek} />
                   {/* Таймкоды прижаты к концам волны, которую они описывают; режимы
                       воспроизведения — нейтральной парой посередине. */}
@@ -223,7 +232,11 @@ export default function PlayerScreen() {
       </Backdrop>
 
       <Animated.View
-        style={[styles.transportWrap, { bottom: SHEET_COLLAPSED + space.md }, chromeStyle]}
+        style={[
+          styles.transportWrap,
+          { bottom: insets.bottom + SHEET_COLLAPSED + space.md + scrubberHeight + space.lg },
+          chromeStyle,
+        ]}
         pointerEvents={chromePointerEvents}
       >
         <Transport
@@ -281,6 +294,7 @@ const styles = StyleSheet.create({
   coverArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   titles: { gap: 4, paddingBottom: space.lg },
   scrubber: { gap: space.sm },
+  transportGap: { height: PLAYER_TRANSPORT_HEIGHT + space.lg },
   timesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   modes: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   modeButton: {

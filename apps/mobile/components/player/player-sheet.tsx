@@ -8,10 +8,9 @@ import { colors } from '../../lib/theme';
 import { space, layout, radii } from '../../lib/design/scales';
 import { PRODUCT_DIM } from '../../lib/vireglass/material';
 
-/** В покое видна только ручка с зазором — намёк, что поверхность тянется. Экспортируется:
- *  по этой величине плеер поднимает транспорт, чтобы тот не сел на шторку. */
+/** Видимая часть шторки в покое — ручка с зазором. Системная навигация идёт СВЕРХ неё:
+ *  под жестовой панелью ручка пряталась, и наружу торчало содержимое. */
 export const SHEET_COLLAPSED = 56;
-const COLLAPSED = SHEET_COLLAPSED;
 
 /**
  * Стеклянная шторка плеера: тянется от ручки вверх и накрывает обложку.
@@ -32,14 +31,17 @@ export function PlayerSheet({
 }) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  // Нижние radii.sheet уходят под кромку экрана (см. ниже), поэтому в высоту они входят,
+  // а из видимой части — нет: без этого наружу торчала первая строка, а не одна ручка.
+  const collapsed = SHEET_COLLAPSED + insets.bottom + radii.sheet;
   const max = windowHeight - insets.top - space.xl;
-  const [height, setHeight] = useState(COLLAPSED);
+  const [height, setHeight] = useState(collapsed);
   // Высота меняет геометрию стекла, а с ней путь Skia и весь набор униформ линзы. Одно
   // такое пересобирание на кадр шторка держит; по событию на каждое движение пальца — нет.
   const emitHeight = useFrameThrottle(setHeight);
   // Высота ещё и в ref: держать её в зависимостях жеста нельзя — объект жеста
   // пересоздавался бы на каждом кадре тяги, и GestureDetector срывал бы перетаскивание.
-  const heightRef = useRef(COLLAPSED);
+  const heightRef = useRef(collapsed);
   const startRef = useRef(0);
 
   const gesture = useMemo(
@@ -50,20 +52,20 @@ export function PlayerSheet({
           startRef.current = heightRef.current;
         })
         .onChange((e) => {
-          const next = Math.min(max, Math.max(COLLAPSED, startRef.current - e.translationY));
+          const next = Math.min(max, Math.max(collapsed, startRef.current - e.translationY));
           heightRef.current = next;
           emitHeight(next);
         })
         // Доводка до ближайшего края: шторка, брошенная посередине, читается забытой.
         .onEnd(() => {
-          const settled = heightRef.current > (COLLAPSED + max) / 2 ? max : COLLAPSED;
+          const settled = heightRef.current > (collapsed + max) / 2 ? max : collapsed;
           heightRef.current = settled;
           setHeight(settled);
         }),
-    [max, emitHeight],
+    [collapsed, max, emitHeight],
   );
 
-  const open = height > COLLAPSED + 1;
+  const open = height > collapsed + 1;
 
   return (
     <View style={[styles.wrap, { height: height + radii.sheet, bottom: -radii.sheet }]}>
