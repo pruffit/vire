@@ -90,7 +90,7 @@ export function ArtistCard({ artist, accent, onPress }: { artist: Artist; accent
               {formatCount(artist.followerCount).toUpperCase()} {pluralFollowers(artist.followerCount).toUpperCase()}
             </Text>
           ) : artist.bio ? (
-            <Text style={type.caption} numberOfLines={2}>
+            <Text style={[type.caption, styles.onArt]} numberOfLines={2}>
               {artist.bio}
             </Text>
           ) : null}
@@ -285,6 +285,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
   artistGoLabel: { color: colors.foreground },
+  /** Надпись лежит на фотографии, а не на фоне: приглушённый цвет кита на светлом кадре
+   *  не читается, скрим один этого не решает. */
+  onArt: {
+    color: colors.foreground,
+    opacity: 0.92,
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
+  },
   waveGo: { opacity: 0.8 },
 
   similarRow: { gap: space.md, paddingRight: space.md },
