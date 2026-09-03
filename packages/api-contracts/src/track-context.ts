@@ -5,6 +5,9 @@ const contextArtistSchema = z.object({
   name: z.string(),
   avatarUrl: z.string().nullable(),
   bio: z.string().nullable(),
+  /** Акцент темы артиста: плеер красит им фон и главную кнопку. */
+  accentColor: z.string().nullable(),
+  followerCount: z.number().int().nonnegative(),
 });
 
 const contextSimilarArtistSchema = z.object({

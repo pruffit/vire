@@ -67,7 +67,6 @@ function resetStore() {
     originalQueue: null,
     context: null,
     restored: false,
-    waveformPeaks: null,
   });
   persisted.clear();
   __resetSeekGuardForTests();
@@ -621,25 +620,3 @@ describe('восстановление после перезапуска', () =>
   });
 });
 
-describe('данные трека из манифеста', () => {
-  it('пики волны берутся из манифеста — отдельного запроса нет', async () => {
-    request.mockResolvedValue({ ok: true, data: { hlsUrl: 'https://cdn/x.m3u8', waveformPeaks: [0.1, 0.9, 0.4] } });
-
-    await usePlayerStore.getState().playQueue([track('t1')], 0, CTX);
-
-    expect(usePlayerStore.getState().waveformPeaks).toEqual([0.1, 0.9, 0.4]);
-    expect(request.mock.calls.filter(([u]) => String(u).includes('/manifest'))).toHaveLength(1);
-  });
-
-  it('смена трека сбрасывает пики предыдущего', async () => {
-    request.mockResolvedValueOnce({ ok: true, data: { hlsUrl: 'a', waveformPeaks: [1, 2] } });
-    await usePlayerStore.getState().playQueue([track('t1'), track('t2')], 0, CTX);
-    expect(usePlayerStore.getState().waveformPeaks).toEqual([1, 2]);
-
-    request.mockImplementation(() => new Promise(() => {})); // манифест второго висит
-    usePlayerStore.getState().next();
-    await flush();
-
-    expect(usePlayerStore.getState().waveformPeaks).toBeNull();
-  });
-});

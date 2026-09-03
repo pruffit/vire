@@ -10,28 +10,25 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassPanel } from '../ui/glass-panel';
-import { useGlassInk, inkColor } from '../../lib/vireglass/glass-ink';
+import { useGlassInk } from '../../lib/vireglass/glass-ink';
 import { useReduceMotion } from '../../lib/design/preferences';
 import { Icon } from '../../lib/icon';
 import { colors } from '../../lib/theme';
 import { fonts } from '../../lib/design/typography';
 import { radii, space } from '../../lib/design/scales';
+import { VIREGLASS_LYRICS_MATERIAL } from '../../lib/vireglass/material';
 import type { LyricLine } from '../../lib/playback/use-lyrics';
 
-/** Затемнение линзы под текстом — заметно выше продуктового (0.2): строки лежат прямо на
- *  обложке, и её светлые куски съедают белый текст раньше, чем это случилось бы на фоне
- *  экрана. Преломление на этом уровне ещё отчётливо видно; выше — панель теряет материал. */
-const LYRICS_DIM = 0.52;
 /** Мягкая кромка окна: строка, обрезанная посередине глифа, читается сломанной вёрсткой. */
-const FADE = 26;
-const LINE_SIZE = 20;
-const LINE_HEIGHT = 29;
+const FADE = 44;
+const LINE_SIZE = 22;
+const LINE_HEIGHT = 32;
 /** Пустая строка в LRC — цезура между куплетами, а не строка: полная высота рвала бы окно. */
 const BREAK_HEIGHT = 12;
 /** Доля высоты окна, на которой держится звучащая строка: выше середины, чтобы следующие
  *  строки были видны заранее. */
-const ACTIVE_ANCHOR = 0.3;
-const IDLE_ALPHA = 0.7;
+const ACTIVE_ANCHOR = 0.36;
+const IDLE_ALPHA = 0.5;
 /** Пауза автопрокрутки после того, как список листнули рукой. */
 const MANUAL_HOLD_MS = 5000;
 const CHEVRON = 30;
@@ -67,7 +64,7 @@ export function LyricsGlass({
     <GlassPanel
       radius={radii.glass}
       blurTarget={blurTarget}
-      dim={LYRICS_DIM}
+      material={VIREGLASS_LYRICS_MATERIAL}
       topLayer
       style={styles.panel}
       contentStyle={styles.content}
@@ -93,10 +90,10 @@ function Body({
 }) {
   const ink = useGlassInk();
   const reduceMotion = useReduceMotion();
-  const text = inkColor(ink, colors.foreground, DARK_INK);
+  const text = ink > 0.5 ? colors.foreground : DARK_INK;
   const shadow = ink > 0.5 ? 'rgba(0,0,0,0.95)' : 'rgba(255,255,255,0.85)';
   const edge = ink > 0.5 ? '9,8,7' : '234,231,226';
-  const fade = [`rgba(${edge},0.8)`, `rgba(${edge},0)`] as const;
+  const fade = [`rgba(${edge},0.7)`, `rgba(${edge},0)`] as const;
 
   const scroll = useRef<ScrollView>(null);
   const lineTops = useRef<number[]>([]);
@@ -175,7 +172,7 @@ function Body({
 const styles = StyleSheet.create({
   panel: { flex: 1 },
   content: { flex: 1, overflow: 'hidden', borderRadius: radii.glass },
-  lines: { paddingHorizontal: space.lg, paddingVertical: space.md, paddingRight: CHEVRON + space.lg },
+  lines: { paddingHorizontal: space.lg, paddingVertical: FADE, paddingRight: CHEVRON + space.lg },
   line: {
     fontFamily: fonts.bold,
     fontSize: LINE_SIZE,

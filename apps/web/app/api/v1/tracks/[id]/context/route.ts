@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getTrackArtistProfileId, getArtistContext, artistHasPublishedTrackById, isArtistMember } from '@vire/db';
+import {
+  getTrackArtistProfileId,
+  getArtistContext,
+  artistHasPublishedTrackById,
+  isArtistMember,
+  getFollowerCount,
+} from '@vire/db';
 import { isUuid } from '@vire/core';
 import { getCaller } from '@/lib/caller';
 import { canViewEmptyArtist } from '@/lib/artist-visibility';
@@ -28,10 +34,20 @@ export async function GET(_req: Request, { params }: Params) {
     }
   }
 
-  const similar = await buildSimilarArtists(artistProfileId);
+  const [similar, followerCount] = await Promise.all([
+    buildSimilarArtists(artistProfileId),
+    getFollowerCount(artistProfileId),
+  ]);
 
   return NextResponse.json({
-    artist: { slug: artist.slug, name: artist.name, avatarUrl: artist.avatarUrl, bio: artist.bio },
+    artist: {
+      slug: artist.slug,
+      name: artist.name,
+      avatarUrl: artist.avatarUrl,
+      bio: artist.bio,
+      accentColor: artist.accentColor,
+      followerCount,
+    },
     similar: similar.map((a) => ({ slug: a.artistSlug, name: a.artistName, avatarUrl: a.artistAvatarUrl })),
   } satisfies TrackContextResponse);
 }

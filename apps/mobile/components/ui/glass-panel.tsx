@@ -7,6 +7,7 @@ import { GlassInkProvider } from '../../lib/vireglass/glass-ink';
 import { useEnvironmentLight } from '../../lib/vireglass/environment';
 import {
   resolveOptics,
+  type VireGlassMaterial,
   type VireGlassDebugMode,
   type VireGlassOptics,
 } from '../../lib/vireglass/material';
@@ -32,6 +33,7 @@ export function GlassPanel({
   blurTarget,
   dim = 0,
   topLayer = false,
+  material,
   optics: opticsOverride,
   adaptive = true,
   debug,
@@ -47,6 +49,9 @@ export function GlassPanel({
   dim?: number;
   /** Панель верхнего слоя: экран-оверлей глушит то, что под ним, но не её. */
   topLayer?: boolean;
+  /** Свой материал панели — ПРИЧИНЫ, не следствия. Передавать константу модуля: новый
+   *  объект на каждый рендер пересобирал бы всю оптику. */
+  material?: Partial<VireGlassMaterial>;
   /** Только для стенда материала: продукт всегда берёт дефолт. */
   optics?: VireGlassOptics;
   /** Панель сама решает, светлыми или тёмными обязаны быть надписи на ней, и раздаёт это
@@ -70,7 +75,10 @@ export function GlassPanel({
     () => (size ? { width: size.width, height: size.height, cornerRadius: radius } : null),
     [size, radius],
   );
-  const base = opticsOverride ?? DEFAULT_OPTICS;
+  const base = useMemo(
+    () => opticsOverride ?? (material ? resolveOptics(material) : DEFAULT_OPTICS),
+    [opticsOverride, material],
+  );
   // Полярность надписей ведёт сама панель: только она видит, что под ней лежит.
   const adaptation = useGlassAdaptation(base, { enabled: adaptive });
   const optics = useMemo(

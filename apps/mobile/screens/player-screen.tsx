@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   runOnJS,
   useAnimatedReaction,
-  useAnimatedRef,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -22,37 +21,52 @@ import { useLikesStore } from '../lib/likes-store';
 import { usePreferences, useReduceMotion } from '../lib/design/preferences';
 import { BlurTargetScope } from '../lib/blur-target';
 import { WEB_BASE_URL } from '../lib/env';
-import { formatDuration } from '../lib/format';
 import { activeLineIndex, useLyrics } from '../lib/playback/use-lyrics';
+import { useTrackContext } from '../lib/playback/use-track-context';
+import { fetchWaveTracks } from '../lib/playback/wave';
+import { resolveAccent } from '../lib/design/accent';
 import { colors } from '../lib/theme';
 import { type } from '../lib/design/typography';
 import { space, layout, radii, motionDuration } from '../lib/design/scales';
 import { Icon } from '../lib/icon';
-import { AmbientBackground } from '../components/player/ambient-background';
+import { PlayerGround } from '../components/player/player-ground';
 import { CoverCarousel } from '../components/player/cover-carousel';
 import { LyricsGlass } from '../components/player/lyrics-glass';
 import { Transport } from '../components/player/transport';
-import { Waveform } from '../components/player/waveform';
+import { ProgressLine } from '../components/player/progress-line';
 import { QueueSection } from '../components/player/panels';
 import { TrackActionSheet } from '../components/player/track-action-sheet';
-import { ContextSections, ContextAction } from '../components/player/context-sections';
+import {
+  ArtistCard,
+  ContextAction,
+  SimilarArtists,
+  WaveBanner,
+} from '../components/player/player-context';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
 import { LikeButton } from '../components/like-button';
 import type { RootStackParamList } from '../navigation/root-navigator';
 
-/** Обложка дышит уже полей экрана: она главный носитель смысла, поля важнее для текста. */
+/** Обложка дышит уже полей экрана: она главный носитель смысла. */
 const COVER_INSET = 12;
-/** Высота ряда шапки под системным инсетом. */
+/** Доля высоты вьюпорта — ПОТОЛОК обложки, а не её цель: на низком аппарате квадрат во всю
+ *  ширину вытеснил бы управление за сгиб. */
+const COVER_MAX_VIEWPORT = 0.46;
 const HEADER_HEIGHT = 44;
-const HEADER_SCRIM = ["rgba(3,2,1,0.62)", "rgba(3,2,1,0)"] as const;
+const HEADER_SCRIM = ['rgba(3,2,1,0.62)', 'rgba(3,2,1,0)'] as const;
+/** За сколько прокрутки шапка доходит до плотной: заголовок трека уезжает ровно под неё.
+ *  Градиента для этого мало — фон экрана берёт цвет обложки и бывает светлым. */
+const HEADER_SOLID_AT = 90;
 
-/** Доля обложки, которую занимает свёрнутая полоса текста. */
-const LYRICS_BAND = 0.42;
+/** Доля обложки под свёрнутой полосой текста. */
+const LYRICS_BAND = 0.52;
 const LYRICS_INSET = 10;
 /** За сколько прокрутки полоса текста успевает раствориться. */
 const LYRICS_FADE = 150;
 /** Дальше этого полоса не ловит касания — иначе она перехватывала бы прокрутку страницы. */
 const LYRICS_IDLE_AT = 20;
+
+/** Ближе этого к концу очереди волна подливает следующую пачку. */
+const WAVE_REFILL_AT = 2;
 
 const SOURCE_LABEL: Record<PlaySource, string> = {
   wave: 'ВОЛНА',
@@ -68,15 +82,20 @@ const SOURCE_LABEL: Record<PlaySource, string> = {
 };
 
 /**
- * Фуллскрин-плеер: обложка во весь первый экран, контекст трека — прокруткой под ним.
+ * Фуллскрин-плеер.
  *
- * Стекло на экране ровно одно — полоса текста, лежащая НА обложке. Это единственное место,
- * где под материалом есть что преломлять; на затемнённом ambient-фоне он выглядел бы
- * выключенным, поэтому управление плоское.
+ * Раскладка выведена из того, что на экране делают, а не из симметрии: содержимое (обложка
+ * и текст на ней) наверху — туда смотрят; частое управление внизу — там живёт большой палец;
+ * контекст (волна, автор, похожие, очередь) под сгибом — это отдельное намерение.
+ * Разбор — `docs/superpowers/specs/2026-09-03-mobile-player-v3.md`.
  *
- * Полоса — сиблинг `Backdrop`, а не потомок: цель преломления не может быть предком стекла
- * (`lib/blur-target.tsx`), иначе рекурсия RenderNode роняет RenderThread. Поэтому она
- * стоит по замеренной рамке обложки и едет за прокруткой трансформом, а не лежит в потоке.
+ * Первый экран НЕ растянут на вьюпорт: блоки идут подряд, остаток высоты занимает начало
+ * контекста. Растянутый центрировал обложку в остатке и оставлял пустоту вокруг неё.
+ *
+ * Стекло на экране одно — полоса текста на обложке, единственное место, где под материалом
+ * есть что преломлять. Она сиблинг `Backdrop`, а не потомок: цель преломления не может быть
+ * предком стекла (`lib/blur-target.tsx`), поэтому полоса стоит по замеренной рамке обложки
+ * и едет за прокруткой трансформом.
  */
 export default function PlayerScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -89,7 +108,6 @@ export default function PlayerScreen() {
   const status = usePlayerStore((s) => s.status);
   const positionSec = usePlayerStore((s) => s.positionSec);
   const durationSec = usePlayerStore((s) => s.durationSec);
-  const waveformPeaks = usePlayerStore((s) => s.waveformPeaks);
   const shuffle = usePlayerStore((s) => s.shuffle);
   const repeat = usePlayerStore((s) => s.repeat);
   const context = usePlayerStore((s) => s.context);
@@ -99,15 +117,17 @@ export default function PlayerScreen() {
   const seek = usePlayerStore((s) => s.seek);
   const toggleShuffle = usePlayerStore((s) => s.toggleShuffle);
   const cycleRepeat = usePlayerStore((s) => s.cycleRepeat);
+  const playQueue = usePlayerStore((s) => s.playQueue);
+  const appendToQueue = usePlayerStore((s) => s.appendToQueue);
   const likeTrack = useLikesStore((s) => s.like);
 
   const track = queue[queueIndex];
   const { lines } = useLyrics(track?.id);
+  const trackContext = useTrackContext(track?.id);
 
   const artRef = useRef<View>(null);
-  const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const [viewportHeight, setViewportHeight] = useState(0);
-  const [coverArea, setCoverArea] = useState<{ y: number; width: number; height: number } | null>(null);
+  const [coverTop, setCoverTop] = useState(0);
   const [immersiveOn, setImmersiveOn] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [lyricsIdle, setLyricsIdle] = useState(false);
@@ -117,8 +137,9 @@ export default function PlayerScreen() {
   const immersive = useSharedValue(0);
   const scrollY = useSharedValue(0);
   const chromeStyle = useAnimatedStyle(() => ({ opacity: 1 - immersive.value }));
-  // Полоса текста живёт вне прокрутки и обязана ехать за обложкой сама; растворяется
-  // задолго до конца первого экрана — ниже она уже не про обложку, а про чужой контент.
+  const headerSolidStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, scrollY.value / HEADER_SOLID_AT),
+  }));
   const lyricsStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -scrollY.value }],
     opacity: (1 - immersive.value) * Math.max(0, 1 - scrollY.value / LYRICS_FADE),
@@ -137,8 +158,7 @@ export default function PlayerScreen() {
     },
   );
 
-  // Плеер перекрывает таб-бар и мини-плеер целиком: их стеклу под ним преломлять нечего,
-  // а бюджет поверхностей иначе выходит за измеренную зелёную зону.
+  // Плеер перекрывает таб-бар и мини-плеер целиком: их стеклу под ним преломлять нечего.
   const pushSheet = usePreferences((s) => s.pushSheet);
   const popSheet = usePreferences((s) => s.popSheet);
   useEffect(() => {
@@ -146,29 +166,43 @@ export default function PlayerScreen() {
     return popSheet;
   }, [pushSheet, popSheet]);
 
-  // Развёрнутый текст закрывает обложку целиком — держать его открытым, уехав к контексту,
-  // незачем: он там всё равно растворён.
   useEffect(() => {
     if (lyricsIdle) setLyricsOpen(false);
   }, [lyricsIdle]);
+
+  // Волна бесконечна по замыслу: доливаем хвост, не дожидаясь тишины.
+  const waveSeed = queue[queue.length - 1]?.id;
+  const tail = queue.length - 1 - queueIndex;
+  const queueIds = queue.map((t) => t.id).join(',');
+  useEffect(() => {
+    if (context?.source !== 'wave' || !waveSeed || tail > WAVE_REFILL_AT) return;
+    let cancelled = false;
+    fetchWaveTracks(waveSeed, queueIds.split(',')).then((tracks) => {
+      if (!cancelled) appendToQueue(tracks);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [context?.source, waveSeed, tail, queueIds, appendToQueue]);
+
+  const openArtist = useCallback(
+    (slug: string) => {
+      navigation.navigate('Main', { screen: 'Home', params: { screen: 'ArtistDetail', params: { slug } } });
+    },
+    [navigation],
+  );
+
+  const accent = useMemo(() => resolveAccent(trackContext?.artist.accentColor), [trackContext]);
 
   if (!track) return null;
 
   const hasNext = nextQueueIndex(queueIndex, queue.length, repeat) !== null;
   const hasPrev = queueIndex > 0;
-  const heroHeight = viewportHeight || windowHeight;
-  // Обложка занимает всё, что осталось после хрома, — по меньшей из сторон площадки.
-  // Доля экрана сюда не годится: на низком аппарате она вытесняет волну под обрез, на
-  // высоком оставляет пустоту в half-экрана.
-  const artSize = Math.max(
-    1,
-    coverArea
-      ? Math.floor(Math.min(coverArea.width, coverArea.height))
-      : Math.min(width - layout.screenPadding * 2, heroHeight * 0.45),
-  );
-  const coverBox = coverArea ? { top: coverArea.y + (coverArea.height - artSize) / 2, size: artSize } : null;
+  const viewport = viewportHeight || windowHeight;
+  const artSize = Math.max(1, Math.min(width - COVER_INSET * 2, viewport * COVER_MAX_VIEWPORT));
   const edgeScale = Math.max(width, windowHeight) / artSize;
-  const immersiveShiftY = coverBox ? heroHeight / 2 - (coverBox.top + coverBox.size / 2) : 0;
+  const coverScreenTop = coverTop + insets.top + HEADER_HEIGHT;
+  const immersiveShiftY = viewport / 2 - (coverScreenTop + artSize / 2);
   const releaseId = context?.source === 'release' ? (context.sourceId ?? null) : null;
   const activeLine = activeLineIndex(lines, positionSec);
   const chromePointerEvents = immersiveOn ? 'none' : 'auto';
@@ -183,6 +217,12 @@ export default function PlayerScreen() {
     Share.share({ message: `${track.title} — ${track.artistName}`, url: `${WEB_BASE_URL}/` }).catch(() => {});
   };
 
+  const startWave = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const tracks = await fetchWaveTracks(track.id, [track.id]);
+    if (tracks.length > 0) await playQueue([track, ...tracks], 0, { source: 'wave' });
+  };
+
   return (
     <View style={styles.root}>
       <Backdrop
@@ -194,35 +234,23 @@ export default function PlayerScreen() {
           {/* Один контейнер на весь экран: ExpoView бэкдропа раскладывает только первого
               ребёнка, и вторым сиблингом прокрутка получала нулевую высоту. */}
           <View style={styles.screen}>
-            <AmbientBackground coverUrl={track.coverUrl} />
+            <PlayerGround coverUrl={track.coverUrl} ground={accent.ground} />
 
             <Animated.ScrollView
-              ref={scrollRef}
               style={styles.scroll}
               onScroll={onScroll}
               scrollEventThrottle={16}
               showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingTop: insets.top + HEADER_HEIGHT,
+                paddingBottom: insets.bottom + space.xl,
+              }}
             >
-              <View
-                style={[
-                  styles.hero,
-                  {
-                    height: heroHeight,
-                    paddingTop: insets.top + HEADER_HEIGHT,
-                    paddingBottom: insets.bottom + space.md,
-                  },
-                ]}
-              >
+              <Animated.View style={[styles.hero, chromeStyle]} pointerEvents={chromePointerEvents}>
                 <View
                   style={styles.coverArea}
-                  onLayout={(e) => {
-                    const { y, width: w, height } = e.nativeEvent.layout;
-                    setCoverArea((prev) =>
-                      prev && prev.y === y && prev.width === w && prev.height === height
-                        ? prev
-                        : { y, width: w, height },
-                    );
-                  }}
+                  onLayout={(e) => setCoverTop(e.nativeEvent.layout.y)}
+                  pointerEvents="box-none"
                 >
                   <CoverCarousel
                     queue={queue}
@@ -245,84 +273,80 @@ export default function PlayerScreen() {
                   />
                 </View>
 
-                <Animated.View style={[styles.controls, chromeStyle]} pointerEvents={chromePointerEvents}>
-                  <View style={styles.titleRow}>
-                    <View style={styles.titles}>
-                      <Text style={type.screenTitle} numberOfLines={1}>
-                        {track.title}
-                      </Text>
-                      <Text style={type.subtitle} numberOfLines={1}>
-                        {track.artistName}
-                      </Text>
-                    </View>
-                    <LikeButton trackId={track.id} variant="primary" />
-                    <Pressable
-                      onPress={share}
-                      hitSlop={8}
-                      style={styles.titleAction}
-                      accessibilityRole="button"
-                      accessibilityLabel="Поделиться"
-                    >
-                      <Icon name="share" size={20} color={colors.foreground} />
-                    </Pressable>
+                <View style={styles.titleRow}>
+                  <View style={styles.titles}>
+                    <Text style={type.screenTitle} numberOfLines={1}>
+                      {track.title}
+                    </Text>
+                    <Text style={type.subtitle} numberOfLines={1}>
+                      {track.artistName}
+                    </Text>
                   </View>
-
-                  <Transport
-                    playing={status === 'playing'}
-                    loading={status === 'loading'}
-                    hasNext={hasNext}
-                    hasPrev={hasPrev}
-                    shuffle={shuffle}
-                    repeat={repeat}
-                    onPrev={prev}
-                    onNext={next}
-                    onTogglePlay={togglePlayPause}
-                    onToggleShuffle={toggleShuffle}
-                    onCycleRepeat={cycleRepeat}
-                  />
-
-                  <View style={styles.scrubber}>
-                    <Waveform peaks={waveformPeaks} positionSec={positionSec} durationSec={durationSec} onSeek={seek} />
-                    <View style={styles.timesRow}>
-                      <Text style={type.mono}>{formatDuration(positionSec)}</Text>
-                      <Text style={type.mono}>{formatDuration(durationSec)}</Text>
-                    </View>
-                  </View>
-
-                  {status === 'error' && (
-                    <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>
-                  )}
-
+                  <LikeButton trackId={track.id} variant="primary" />
                   <Pressable
-                    onPress={() => scrollRef.current?.scrollTo({ y: heroHeight, animated: true })}
-                    style={styles.more}
+                    onPress={share}
+                    hitSlop={8}
+                    style={styles.titleAction}
                     accessibilityRole="button"
-                    accessibilityLabel="Показать больше о треке"
+                    accessibilityLabel="Поделиться"
                   >
-                    <Icon name="chevron-down" size={16} color={colors.mutedForeground} />
+                    <Icon name="share" size={20} color={colors.foreground} />
                   </Pressable>
-                </Animated.View>
-              </View>
-
-              <View style={[styles.context, { paddingBottom: insets.bottom + space.xl }]}>
-                <ContextSections trackId={track.id} />
-                <View style={styles.section}>
-                  <Text style={type.mono}>ДАЛЬШЕ</Text>
-                  <QueueSection />
                 </View>
-                <View style={styles.section}>
+
+                <Transport
+                  playing={status === 'playing'}
+                  loading={status === 'loading'}
+                  accent={accent}
+                  hasNext={hasNext}
+                  hasPrev={hasPrev}
+                  shuffle={shuffle}
+                  repeat={repeat}
+                  onPrev={prev}
+                  onNext={next}
+                  onTogglePlay={togglePlayPause}
+                  onToggleShuffle={toggleShuffle}
+                  onCycleRepeat={cycleRepeat}
+                />
+
+                <ProgressLine
+                  positionSec={positionSec}
+                  durationSec={durationSec}
+                  accent={accent.fill}
+                  onSeek={seek}
+                />
+
+                {status === 'error' && (
+                  <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>
+                )}
+              </Animated.View>
+
+              <View style={styles.context}>
+                <WaveBanner trackTitle={track.title} accent={accent} onPress={startWave} />
+
+                {trackContext && (
+                  <>
+                    <ArtistCard artist={trackContext.artist} onPress={() => openArtist(trackContext.artist.slug)} />
+                    <SimilarArtists items={trackContext.similar} onPress={openArtist} />
+                  </>
+                )}
+
+                <QueueSection />
+
+                <View style={styles.block}>
                   <ContextAction icon="plus" label="В плейлист" onPress={() => setPlaylistOpen(true)} />
                   <ContextAction icon="share" label="Поделиться" onPress={share} />
                 </View>
               </View>
             </Animated.ScrollView>
 
-            {/* Шапка закреплена: свернуть плеер нужно и с прокрученного контекста, а заодно
-                скрим держит читаемым системный статус-бар над уехавшей вверх обложкой. */}
+            {/* Шапка закреплена: свернуть плеер нужно и с прокрученного контекста, а скрим
+                держит читаемым системный статус-бар над уехавшей вверх обложкой. */}
             <Animated.View
               style={[styles.header, { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT }, chromeStyle]}
               pointerEvents={chromePointerEvents}
             >
+              <Animated.View style={[StyleSheet.absoluteFill, styles.headerSolid, headerSolidStyle]} pointerEvents="none" />
               <LinearGradient colors={HEADER_SCRIM} style={StyleSheet.absoluteFill} pointerEvents="none" />
               <Pressable
                 onPress={() => navigation.goBack()}
@@ -342,16 +366,11 @@ export default function PlayerScreen() {
         </BlurTargetScope>
       </Backdrop>
 
-      {lines && coverBox && (
+      {lines && (
         <Animated.View
           style={[
             styles.lyricsWrap,
-            {
-              top: coverBox.top,
-              left: (width - coverBox.size) / 2,
-              width: coverBox.size,
-              height: coverBox.size,
-            },
+            { top: coverScreenTop, left: (width - artSize) / 2, width: artSize, height: artSize },
             lyricsStyle,
           ]}
           pointerEvents={lyricsIdle || immersiveOn ? 'none' : 'box-none'}
@@ -359,7 +378,7 @@ export default function PlayerScreen() {
           <View
             style={[
               styles.lyricsBand,
-              lyricsOpen ? { top: LYRICS_INSET } : { height: Math.round(coverBox.size * LYRICS_BAND) },
+              lyricsOpen ? { top: LYRICS_INSET } : { height: Math.round(artSize * LYRICS_BAND) },
             ]}
             pointerEvents={lyricsOpen ? 'auto' : 'box-none'}
           >
@@ -395,7 +414,24 @@ const styles = StyleSheet.create({
   blurTarget: { flex: 1 },
   screen: { flex: 1, overflow: 'hidden' },
   scroll: { flex: 1 },
-  hero: { paddingHorizontal: layout.screenPadding },
+
+  /** Внутри блока — шаг шкалы; расстояние между блоками задаёт `context`. */
+  hero: { paddingHorizontal: layout.screenPadding, gap: space.lg },
+  coverArea: { alignItems: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  titles: { flex: 1, gap: 2, minWidth: 0 },
+  titleAction: {
+    width: layout.touchTarget,
+    height: layout.touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  error: { ...type.caption, color: colors.destructive },
+
+  context: { paddingHorizontal: layout.screenPadding, paddingTop: space.xl, gap: space.xl },
+  block: { gap: space.sm },
+
+  headerSolid: { backgroundColor: colors.background },
   header: {
     position: 'absolute',
     top: 0,
@@ -407,22 +443,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenPadding,
   },
   headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  coverArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: -(layout.screenPadding - COVER_INSET),
-  },
-  controls: { gap: space.lg },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  titles: { flex: 1, gap: 2, minWidth: 0 },
-  titleAction: { width: layout.touchTarget, height: layout.touchTarget, alignItems: 'center', justifyContent: 'center' },
-  scrubber: { gap: space.xs },
-  timesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  error: { ...type.caption, color: colors.destructive },
-  more: { alignItems: 'center', opacity: 0.85 },
-  context: { paddingHorizontal: layout.screenPadding, paddingTop: space.lg, gap: space.xl },
-  section: { gap: space.sm },
+
   lyricsWrap: { position: 'absolute' },
   lyricsBand: { position: 'absolute', left: LYRICS_INSET, right: LYRICS_INSET, bottom: LYRICS_INSET },
 });

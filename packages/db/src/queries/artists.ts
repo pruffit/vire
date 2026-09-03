@@ -92,6 +92,8 @@ export interface ArtistContextInfo {
   name: string;
   avatarUrl: string | null;
   bio: string | null;
+  /** Акцент темы артиста — плеер красит им фон и главную кнопку. */
+  accentColor: string | null;
 }
 
 /** Артист трека для плеера (эндпоинт /tracks/[id]/context) — минимум для «Об авторе». */
@@ -102,6 +104,7 @@ export async function getArtistContext(artistProfileId: string): Promise<ArtistC
       name: artistProfiles.name,
       avatarUrl: artistProfiles.avatarUrl,
       bio: artistProfiles.bio,
+      accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
     })
     .from(artistProfiles)
     .where(and(eq(artistProfiles.id, artistProfileId), eq(artistProfiles.isActive, true)))

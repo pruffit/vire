@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { trackContextResponseSchema } from '@vire/api-contracts';
 
-const { getTrackArtistProfileId, getArtistContext, artistHasPublishedTrackById, isArtistMember, buildSimilarArtists } = vi.hoisted(() => ({
+const { getTrackArtistProfileId, getArtistContext, artistHasPublishedTrackById, isArtistMember, getFollowerCount, buildSimilarArtists } = vi.hoisted(() => ({
   getTrackArtistProfileId: vi.fn(),
   getArtistContext: vi.fn(),
   artistHasPublishedTrackById: vi.fn(),
   isArtistMember: vi.fn(),
+  getFollowerCount: vi.fn(),
   buildSimilarArtists: vi.fn(),
 }));
 
@@ -16,6 +17,7 @@ vi.mock('@vire/db', () => ({
   getArtistContext,
   artistHasPublishedTrackById,
   isArtistMember,
+  getFollowerCount,
 }));
 
 import { auth } from '@/auth';
@@ -27,13 +29,20 @@ const TRACK_ID = '11111111-1111-4111-8111-111111111111';
 const ctx = (id: string = TRACK_ID) => ({ params: Promise.resolve({ id }) });
 const req = () => new Request(`http://localhost/api/v1/tracks/${TRACK_ID}/context`);
 
-const ARTIST = { slug: 'danya', name: 'Danya', avatarUrl: 'https://cdn.example/a.jpg', bio: 'Bio text' };
+const ARTIST = {
+  slug: 'danya',
+  name: 'Danya',
+  avatarUrl: 'https://cdn.example/a.jpg',
+  bio: 'Bio text',
+  accentColor: '#ff5c39',
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockedAuth.mockResolvedValue(null as never);
   artistHasPublishedTrackById.mockResolvedValue(true);
   buildSimilarArtists.mockResolvedValue([]);
+  getFollowerCount.mockResolvedValue(0);
 });
 
 describe('GET /api/v1/tracks/[id]/context', () => {
@@ -68,7 +77,7 @@ describe('GET /api/v1/tracks/[id]/context', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({
-      artist: ARTIST,
+      artist: { ...ARTIST, followerCount: 0 },
       similar: [{ slug: 'other', name: 'Other', avatarUrl: null }],
     });
     expect(trackContextResponseSchema.safeParse(body).success).toBe(true);
@@ -81,7 +90,7 @@ describe('GET /api/v1/tracks/[id]/context', () => {
 
     const res = await GET(req(), ctx());
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ artist: ARTIST, similar: [] });
+    await expect(res.json()).resolves.toEqual({ artist: { ...ARTIST, followerCount: 0 }, similar: [] });
   });
 
   describe('пустой артист (нет опубликованных треков)', () => {
