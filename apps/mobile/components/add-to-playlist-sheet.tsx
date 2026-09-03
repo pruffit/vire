@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Modal,
   Pressable,
@@ -20,6 +20,7 @@ import {
 import { Icon } from '../lib/icon';
 import { Glass } from './glass';
 import { Cover } from './ui/cover';
+import { BottomSheet } from './ui/bottom-sheet';
 import { usePreferences } from '../lib/design/preferences';
 import { colors } from '../lib/theme';
 import { type } from '../lib/design/typography';
@@ -30,12 +31,15 @@ export function AddToPlaylistSheet({
   open: controlledOpen,
   onOpenChange,
   hideTrigger = false,
+  inline = false,
 }: {
   trackId: string;
   /** Внешнее управление (лист действий фуллскрин-плеера) — по умолчанию свой стейт + свой триггер. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
+  /** Плеер рисует лист оверлеем внутри экрана: системный `Modal` там читается чужим окном. */
+  inline?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -130,6 +134,51 @@ export function AddToPlaylistSheet({
     setCreating(false);
   }
 
+  const content: ReactNode = (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      {/* Создание — первой строкой, а не полем на дне: чаще всего трек кладут в новый
+          плейлист именно в этот момент, а до дна списка ещё надо долистать. */}
+      <View style={styles.createRow}>
+        <View style={styles.createGlyph}>
+          <Icon name="plus" size={20} color={colors.foreground} />
+        </View>
+        <TextInput
+          value={newTitle}
+          onChangeText={setNewTitle}
+          placeholder="Новый плейлист"
+          placeholderTextColor={colors.mutedForeground}
+          style={styles.input}
+          returnKeyType="done"
+          onSubmitEditing={handleCreate}
+        />
+        {newTitle.trim().length > 0 && (
+          <Pressable
+            style={[styles.createButton, creating && styles.createButtonDisabled]}
+            onPress={handleCreate}
+            disabled={creating}
+            accessibilityRole="button"
+            accessibilityLabel="Создать плейлист"
+          >
+            <Text style={[type.button, styles.createButtonText]}>Создать</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {playlists.length === 0 ? (
+        <Text style={[type.caption, styles.empty]}>Плейлистов пока нет — назовите первый</Text>
+      ) : (
+        playlists.map((pl) => (
+          <PlaylistRow
+            key={pl.id}
+            playlist={pl}
+            inIt={inPlaylists.has(pl.id)}
+            onPress={() => togglePlaylist(pl.id)}
+          />
+        ))
+      )}
+    </ScrollView>
+  );
+
   return (
     <>
       {!hideTrigger && (
@@ -145,68 +194,25 @@ export function AddToPlaylistSheet({
         </Pressable>
       )}
 
-      <Modal visible={open} animationType="slide" transparent onRequestClose={close}>
-        <Pressable style={styles.overlay} onPress={close} />
-        <Glass style={[styles.panel, { paddingBottom: insets.bottom + space.md }]} radius={radii.sheet} intensity={55}>
-          <View style={styles.grabber} />
-
-          <View style={styles.head}>
-            <Text style={type.releaseTitle}>В плейлист</Text>
-            <Pressable
-              onPress={close}
-              hitSlop={12}
-              style={styles.close}
-              accessibilityRole="button"
-              accessibilityLabel="Закрыть"
-            >
-              <Icon name="x" size={20} color={colors.mutedForeground} />
-            </Pressable>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-            {/* Создание — первой строкой, а не полем на дне: чаще всего трек кладут в
-                новый плейлист именно в этот момент, а до дна списка ещё надо долистать. */}
-            <View style={styles.createRow}>
-              <View style={styles.createGlyph}>
-                <Icon name="plus" size={20} color={colors.foreground} />
-              </View>
-              <TextInput
-                value={newTitle}
-                onChangeText={setNewTitle}
-                placeholder="Новый плейлист"
-                placeholderTextColor={colors.mutedForeground}
-                style={styles.input}
-                returnKeyType="done"
-                onSubmitEditing={handleCreate}
-              />
-              {newTitle.trim().length > 0 && (
-                <Pressable
-                  style={[styles.createButton, creating && styles.createButtonDisabled]}
-                  onPress={handleCreate}
-                  disabled={creating}
-                  accessibilityRole="button"
-                  accessibilityLabel="Создать плейлист"
-                >
-                  <Text style={[type.button, styles.createButtonText]}>Создать</Text>
-                </Pressable>
-              )}
+      {inline ? (
+        <BottomSheet open={open} title="В плейлист" onClose={close}>
+          {content}
+        </BottomSheet>
+      ) : (
+        <Modal visible={open} animationType="slide" transparent onRequestClose={close}>
+          <Pressable style={styles.overlay} onPress={close} />
+          <Glass style={[styles.panel, { paddingBottom: insets.bottom + space.md }]} radius={radii.sheet} intensity={55}>
+            <View style={styles.grabber} />
+            <View style={styles.head}>
+              <Text style={type.releaseTitle}>В плейлист</Text>
+              <Pressable onPress={close} hitSlop={12} style={styles.close} accessibilityRole="button" accessibilityLabel="Закрыть">
+                <Icon name="x" size={20} color={colors.mutedForeground} />
+              </Pressable>
             </View>
-
-            {playlists.length === 0 ? (
-              <Text style={[type.caption, styles.empty]}>Плейлистов пока нет — назовите первый</Text>
-            ) : (
-              playlists.map((p) => (
-                <PlaylistRow
-                  key={p.id}
-                  playlist={p}
-                  inIt={inPlaylists.has(p.id)}
-                  onPress={() => togglePlaylist(p.id)}
-                />
-              ))
-            )}
-          </ScrollView>
-        </Glass>
-      </Modal>
+            {content}
+          </Glass>
+        </Modal>
+      )}
     </>
   );
 }

@@ -134,6 +134,38 @@ export const VIREGLASS_MATERIAL_V4: VireGlassMaterial = {
 
 
 /**
+ * Стекло, а не вода. У v4 показатель преломления 1.33 — это вода: почти нет отражения на
+ * кромке, почти нет дисперсии, увеличение 2 %. На экране такая поверхность честно выглядит
+ * «никак», и её принимали за выключенное стекло.
+ *
+ * 1.5 — обычное стекло. Следствия считаются из него сами: отражение на кромке вдвое сильнее,
+ * дисперсия в полтора раза, подхват цвета окружения на потолке. Толщина поднята чуть-чуть:
+ * она задаёт увеличение, но вместе с ним и поглощение, а поглощение — это чернота.
+ */
+export const VIREGLASS_MATERIAL_V5: VireGlassMaterial = {
+  ior: 1.5,
+  thickness: 16,
+  bevel: 8,
+  roughness: 0.06,
+  environment: 0.27,
+  legibility: 0.26,
+  ink: 1,
+  film: 340,
+};
+
+/**
+ * Матовое стекло листа. Лист лежит поверх ЖИВОГО экрана, и прозрачным ему быть нельзя:
+ * сквозь него читались кнопки транспорта и прогресс — вёрстка выглядела сломанной.
+ * Затемнением это не лечится (плоский скрим поверх резкой картинки её не прячет), поэтому
+ * поднята шероховатость: она даёт `u_frost` — нижний порог размытия бэкдропа, на который
+ * потолок адаптивного размытия не распространяется.
+ */
+export const VIREGLASS_SHEET_MATERIAL: VireGlassMaterial = {
+  ...VIREGLASS_MATERIAL_V5,
+  roughness: 0.85,
+};
+/** Материал продукта. Потребители берут его, а не версию поимённо. */
+/**
  * Стекло под крупным текстом (панель текста в плеере).
  *
  * Продуктовый материал БЕЗ изменений оптики — поднята только `legibility`. Это и есть её
@@ -146,12 +178,11 @@ export const VIREGLASS_MATERIAL_V4: VireGlassMaterial = {
  * `legibility`.
  */
 export const VIREGLASS_LYRICS_MATERIAL: VireGlassMaterial = {
-  ...VIREGLASS_MATERIAL_V4,
+  ...VIREGLASS_MATERIAL_V5,
   legibility: 0.95,
 };
 
-/** Материал продукта. Потребители берут его, а не версию поимённо. */
-export const VIREGLASS_MATERIAL = VIREGLASS_MATERIAL_V4;
+export const VIREGLASS_MATERIAL = VIREGLASS_MATERIAL_V5;
 
 export function resolveMaterial(patch: Partial<VireGlassMaterial> = {}): VireGlassMaterial {
   const m = { ...VIREGLASS_MATERIAL, ...patch };

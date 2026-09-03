@@ -20,8 +20,10 @@ import type { LyricLine } from '../../lib/playback/use-lyrics';
 const FADE = 44;
 /** Пустая строка в LRC — цезура между куплетами, а не строка: полная высота рвала бы окно. */
 const BREAK_HEIGHT = 14;
-/** Насколько отступает следующая строка. Не прячем её: по ней ведут глазами вперёд. */
-const NEXT_ALPHA = 0.52;
+/** Насколько отступают соседние строки. Не прячем: по следующей ведут взгляд вперёд,
+ *  прошедшая держит контекст. Разницу «где сейчас» несёт РАЗМЕР, а не только светлота. */
+const NEXT_ALPHA = 0.55;
+const PAST_ALPHA = 0.32;
 
 const DARK_INK = '#0b0908';
 
@@ -75,12 +77,23 @@ function nextText(lines: LyricLine[], from: number): string | null {
   return null;
 }
 
+/** Ближайшая непустая строка ВЫШЕ `from`. */
+function prevText(lines: LyricLine[], from: number): string | null {
+  for (let i = Math.min(from, lines.length - 1); i >= 0; i -= 1) {
+    if (lines[i].text) return lines[i].text;
+  }
+  return null;
+}
+
 /**
- * Синхронный текст: звучащая строка и следующая, больше ничего.
+ * Синхронный текст: прошедшая строка, звучащая и следующая.
  *
- * Список целиком здесь не нужен и мешал: за воспроизведением следят по одной строке, а
- * десять приглушённых вокруг превращали панель в стену. Прокрутки тоже нет — строки
- * сменяются на месте, и глазу не нужно догонять уезжающий текст.
+ * Размер сам говорит, где сейчас песня, — приглушённости для этого мало: на пёстрой обложке
+ * она читается как «плохо видно», а не как «уже спето». Прошедшая строка нужна, чтобы
+ * звучащая не висела в пустоте и было видно, откуда пришли.
+ *
+ * Списка целиком здесь нет намеренно: за воспроизведением следят по одной строке, десять
+ * приглушённых вокруг превращали панель в стену.
  */
 function Synced({ lines, activeIndex }: { lines: LyricLine[]; activeIndex: number }) {
   const ink = useGlassInk();
@@ -88,24 +101,28 @@ function Synced({ lines, activeIndex }: { lines: LyricLine[]; activeIndex: numbe
   // обложкой, где адаптация садится посередине, строка выходила буквально серой.
   const text = ink > 0.5 ? colors.foreground : DARK_INK;
   const shadow = ink > 0.5 ? 'rgba(0,0,0,0.95)' : 'rgba(255,255,255,0.85)';
+  const tone = { color: text, textShadowColor: shadow };
 
   // До первой строки ведущей ещё нет — показываем начало текста, а не пустую панель.
-  const start = activeIndex >= 0 ? activeIndex : 0;
-  const current = nextText(lines, start);
-  const upcoming = nextText(lines, start + 1);
+  const at = activeIndex >= 0 ? activeIndex : 0;
+  const past = activeIndex > 0 ? prevText(lines, at - 1) : null;
+  const current = nextText(lines, at);
+  const upcoming = nextText(lines, at + 1);
 
   return (
-    <View style={styles.pair}>
+    <View style={styles.stack}>
+      {past && (
+        <Text style={[styles.past, tone]} numberOfLines={2}>
+          {past}
+        </Text>
+      )}
       {current && (
-        <Text style={[styles.line, { color: text, textShadowColor: shadow }]} numberOfLines={3}>
+        <Text style={[styles.current, tone]} numberOfLines={3}>
           {current}
         </Text>
       )}
       {upcoming && (
-        <Text
-          style={[styles.line, styles.next, { color: text, textShadowColor: shadow }]}
-          numberOfLines={3}
-        >
+        <Text style={[styles.next, tone]} numberOfLines={2}>
           {upcoming}
         </Text>
       )}
@@ -149,18 +166,35 @@ const styles = StyleSheet.create({
   panel: { flex: 1 },
   content: { flex: 1, overflow: 'hidden', borderRadius: radii.card },
 
-  pair: { flex: 1, justifyContent: 'center', paddingHorizontal: space.lg, gap: space.lg },
+  stack: { flex: 1, justifyContent: 'center', paddingHorizontal: space.lg, gap: space.md },
   /** Витринный гротеск: строка песни — не интерфейс, ей можно и нужно иметь лицо. */
-  line: {
+  past: {
     fontFamily: fonts.displayBold,
-    fontSize: 20,
-    lineHeight: 30,
-    letterSpacing: -0.4,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+    opacity: PAST_ALPHA,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 10,
+  },
+  current: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    lineHeight: 34,
+    letterSpacing: -0.3,
     textAlign: 'center',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 12,
+    textShadowRadius: 14,
   },
-  next: { opacity: NEXT_ALPHA },
+  next: {
+    fontFamily: fonts.displayBold,
+    fontSize: 18,
+    lineHeight: 26,
+    textAlign: 'center',
+    opacity: NEXT_ALPHA,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 10,
+  },
 
   // Отступ по вертикали в высоту вуали: иначе она гасит крайние строки.
   plainBody: { paddingHorizontal: space.lg, paddingVertical: FADE },

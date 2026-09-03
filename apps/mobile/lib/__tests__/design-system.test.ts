@@ -105,11 +105,11 @@ describe('типографика', () => {
   });
 
   it('три роли и каждая при своём шрифте', () => {
-    // Мета — моноширинный, витрина — гротеск Unbounded, интерфейс — Manrope. Витриной
-    // нельзя набирать строку списка: Unbounded широкий и съедает ширину экрана.
+    // Мета — моноширинный, витрина — плакатный Oswald, интерфейс — Manrope. Витриной
+    // нельзя набирать строку списка: Oswald узкий и в мелком кегле нечитаем.
     expect((typeScale.mono.fontFamily as string).startsWith('JetBrainsMono')).toBe(true);
     for (const key of ['screenTitle', 'releaseTitle'] as const) {
-      expect((typeScale[key].fontFamily as string).startsWith('Unbounded'), key).toBe(true);
+      expect((typeScale[key].fontFamily as string).startsWith('Oswald'), key).toBe(true);
     }
     for (const key of ['row', 'body', 'caption', 'subtitle', 'button'] as const) {
       expect((typeScale[key].fontFamily as string).startsWith('Manrope'), key).toBe(true);

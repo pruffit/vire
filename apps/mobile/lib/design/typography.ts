@@ -16,9 +16,10 @@ export const fonts = {
   extrabold: 'Manrope_800ExtraBold',
   mono: 'JetBrainsMono_400Regular',
   monoMedium: 'JetBrainsMono_500Medium',
-  /** Витрина: заголовок трека, названия блоков. Широкий гротеск, интерфейс им не набирают. */
-  displayBold: 'Unbounded_700Bold',
-  display: 'Unbounded_800ExtraBold',
+  /** Витрина: заголовок трека, строка песни, «ПОТОК». Узкий плакатный гротеск — интерфейс
+   *  им не набирают, в мелком кегле он превращается в гребёнку. */
+  displayBold: 'Oswald_600SemiBold',
+  display: 'Oswald_700Bold',
 } as const;
 
 /** Прозрачности текста из кита — как множители к foreground, а не отдельные цвета. */

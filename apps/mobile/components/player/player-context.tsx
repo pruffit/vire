@@ -1,5 +1,4 @@
-import type { RefObject } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, type View as RNView } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { TrackContextResponse } from '@vire/api-contracts';
@@ -8,13 +7,11 @@ import { type, fonts } from '../../lib/design/typography';
 import { space, layout, radii } from '../../lib/design/scales';
 import { formatCount, pluralFollowers } from '../../lib/format';
 import { Cover } from '../ui/cover';
-import { GlassPanel } from '../ui/glass-panel';
 import { Icon, type IconName } from '../../lib/icon';
 import type { Accent } from '../../lib/design/accent';
 
 const ARTIST_CARD = 208;
 const SIMILAR = 76;
-const WAVE_GLYPH = 40;
 
 type Artist = TrackContextResponse['artist'];
 type Similar = TrackContextResponse['similar'][number];
@@ -38,40 +35,24 @@ function BlockTitle({ children }: { children: string }) {
 export function WaveBanner({
   trackTitle,
   accent,
-  blurTarget,
   onPress,
 }: {
   trackTitle: string;
   accent: Accent;
-  blurTarget: RefObject<RNView | null>;
   onPress: () => void;
 }) {
   return (
-    <GlassPanel
-      radius={radii.card}
-      blurTarget={blurTarget}
-      topLayer
-      adaptive={false}
-      style={styles.waveGlass}
-      contentStyle={styles.waveInner}
-    >
+    // Не стекло: под плашкой ровный градиент фона, преломлять там нечего, и прозрачная
+    // поверхность на пустом месте читается недоразумением, а не материалом.
     <Pressable
-      style={({ pressed }) => [styles.wave, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.wave, { backgroundColor: accent.wash }, pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Слушать волну в духе трека ${trackTitle}`}
+      accessibilityLabel={`Слушать поток в духе трека ${trackTitle}`}
     >
-      <View style={[styles.waveGlyph, { backgroundColor: accent.fill }]}>
-        <Icon name="music" size={20} color={accent.ink} />
-      </View>
-      {/* Одно слово вместо заголовка с подписью: подпись объясняла кнопку, которая в
-          объяснении не нуждается, и та же мысль повторялась дважды. */}
       <Text style={styles.waveWord}>ПОТОК</Text>
-      <View style={styles.waveGo}>
-        <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
-      </View>
+      <Icon name="chevron-right" size={22} color={accent.fill} />
     </Pressable>
-    </GlassPanel>
   );
 }
 
@@ -166,7 +147,6 @@ export function PlayerActions({
   hasLyrics,
   lyricsShown,
   accent,
-  blurTarget,
   onToggleLyrics,
   onPlaylist,
   onShare,
@@ -174,24 +154,13 @@ export function PlayerActions({
   hasLyrics: boolean;
   lyricsShown: boolean;
   accent: Accent;
-  blurTarget: RefObject<RNView | null>;
   onToggleLyrics: () => void;
   onPlaylist: () => void;
   onShare: () => void;
 }) {
   return (
-    // Одна поверхность на три кнопки, а не три: цена стекла — в ЧИСЛЕ поверхностей
-    // (lib/design/glass-budget.ts), и три отдельные плашки стоили бы втрое дороже одной
-    // полосы, выглядя при этом дробнее.
-    <GlassPanel
-      radius={radii.full}
-      blurTarget={blurTarget}
-      topLayer
-      adaptive={false}
-      style={styles.actionsGlass}
-      contentStyle={styles.actions}
-    >
-      <ActionPill
+    <View style={styles.actions}>
+      <ActionButton
         icon="text"
         label="Текст"
         // Инструментал — не поломка: кнопка остаётся на месте и гаснет, иначе ряд
@@ -201,13 +170,14 @@ export function PlayerActions({
         accent={accent}
         onPress={onToggleLyrics}
       />
-      <ActionPill icon="list-plus" label="В плейлист" accent={accent} onPress={onPlaylist} />
-      <ActionPill icon="share" label="Поделиться" accent={accent} onPress={onShare} />
-    </GlassPanel>
+      <ActionButton icon="list-plus" label="В плейлист" accent={accent} onPress={onPlaylist} />
+      <ActionButton icon="share" label="Поделиться" accent={accent} onPress={onShare} />
+    </View>
   );
 }
 
-function ActionPill({
+/** Подписи нет: три знака на экране плеера читаются без слов, а слова забирали ширину. */
+function ActionButton({
   icon,
   label,
   disabled = false,
@@ -222,13 +192,12 @@ function ActionPill({
   accent: Accent;
   onPress: () => void;
 }) {
-  const tint = active ? accent.ink : colors.foreground;
   return (
     <Pressable
       style={({ pressed }) => [
-        styles.pill,
+        styles.actionButton,
         active && { backgroundColor: accent.fill },
-        disabled && styles.pillDisabled,
+        disabled && styles.actionDisabled,
         pressed && !disabled && styles.pressed,
       ]}
       onPress={onPress}
@@ -237,10 +206,7 @@ function ActionPill({
       accessibilityState={{ disabled, selected: active }}
       accessibilityLabel={label}
     >
-      <Icon name={icon} size={18} color={tint} />
-      <Text style={[styles.pillLabel, { color: tint }]} numberOfLines={1}>
-        {label}
-      </Text>
+      <Icon name={icon} size={22} color={active ? accent.ink : colors.foreground} />
     </Pressable>
   );
 }
@@ -270,28 +236,19 @@ const styles = StyleSheet.create({
   block: { gap: space.sm },
   pressed: { opacity: 0.85 },
 
-  waveGlass: { minHeight: 76 },
-  waveInner: { flex: 1 },
   wave: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.md,
-    paddingHorizontal: space.md,
-  },
-  waveGlyph: {
-    width: WAVE_GLYPH,
-    height: WAVE_GLYPH,
-    borderRadius: radii.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    minHeight: 72,
+    paddingHorizontal: space.lg,
+    borderRadius: radii.card,
   },
   waveWord: {
-    flex: 1,
     fontFamily: fonts.display,
-    fontSize: 22,
-    lineHeight: 28,
-    letterSpacing: 0.5,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: 1,
     color: colors.foreground,
   },
 
@@ -327,27 +284,21 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 8,
   },
-  waveGo: { opacity: 0.8 },
 
   similarRow: { gap: space.md, paddingRight: space.md },
   similarCard: { width: SIMILAR, gap: space.xs, alignItems: 'center' },
   similarName: { textAlign: 'center' },
 
-  actionsGlass: { minHeight: 56 },
-  actions: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 4, gap: 4 },
-  pill: {
-    flex: 1,
-    flexDirection: 'row',
+  actions: { flexDirection: 'row', justifyContent: 'center', gap: space.lg },
+  actionButton: {
+    width: 52,
+    height: 52,
+    borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    minHeight: layout.touchTarget,
-    paddingHorizontal: space.sm,
-    borderRadius: radii.full,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  pillDisabled: { opacity: 0.35 },
-  pillLabel: { ...type.caption, color: colors.foreground },
-
+  actionDisabled: { opacity: 0.32 },
   action: {
     flexDirection: 'row',
     alignItems: 'center',

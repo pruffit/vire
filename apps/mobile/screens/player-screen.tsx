@@ -29,6 +29,7 @@ import { colors } from '../lib/theme';
 import { type } from '../lib/design/typography';
 import { space, layout, radii, motionDuration } from '../lib/design/scales';
 import { Icon } from '../lib/icon';
+import { GlassPanel } from '../components/ui/glass-panel';
 import { PlayerGround } from '../components/player/player-ground';
 import { CoverCarousel } from '../components/player/cover-carousel';
 import { LyricsGlass } from '../components/player/lyrics-glass';
@@ -43,6 +44,7 @@ import {
   WaveBanner,
 } from '../components/player/player-context';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
+import { ShareSheet } from '../components/player/share-sheet';
 import { LikeButton } from '../components/like-button';
 import type { RootStackParamList } from '../navigation/root-navigator';
 
@@ -134,6 +136,7 @@ export default function PlayerScreen() {
   const [lyricsIdle, setLyricsIdle] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const immersive = useSharedValue(0);
   const scrollY = useSharedValue(0);
@@ -210,9 +213,7 @@ export default function PlayerScreen() {
     immersive.value = withTiming(on ? 1 : 0, { duration: motionDuration('screen', reduceMotion) });
   };
 
-  const share = () => {
-    Share.share({ message: `${track.title} — ${track.artistName}`, url: `${WEB_BASE_URL}/` }).catch(() => {});
-  };
+  const share = () => setShareOpen(true);
 
   const startWave = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -277,9 +278,20 @@ export default function PlayerScreen() {
                     <Text style={type.screenTitle} numberOfLines={1}>
                       {track.title}
                     </Text>
-                    <Text style={type.subtitle} numberOfLines={1}>
-                      {track.artistName}
-                    </Text>
+                    {/* Имя автора — переход, а не подпись: из плеера к артисту ведёт только
+                        оно, и выглядеть оно обязано нажимаемым. */}
+                    <Pressable
+                      style={styles.artistLink}
+                      disabled={!trackContext}
+                      onPress={() => trackContext && openArtist(trackContext.artist.slug)}
+                      accessibilityRole="link"
+                      accessibilityLabel={`Открыть артиста ${track.artistName}`}
+                    >
+                      <Text style={styles.artistName} numberOfLines={1}>
+                        {track.artistName}
+                      </Text>
+                      {trackContext && <Icon name="chevron-right" size={16} color={colors.foreground} />}
+                    </Pressable>
                   </View>
                   <LikeButton trackId={track.id} variant="primary" />
                 </View>
@@ -310,7 +322,6 @@ export default function PlayerScreen() {
                   hasLyrics={lines !== null}
                   lyricsShown={lyricsShown}
                   accent={accent}
-                  blurTarget={groundRef}
                   onToggleLyrics={() => setLyricsShown((v) => !v)}
                   onPlaylist={() => setPlaylistOpen(true)}
                   onShare={share}
@@ -322,7 +333,7 @@ export default function PlayerScreen() {
               </Animated.View>
 
               <View style={styles.context}>
-                <WaveBanner trackTitle={track.title} accent={accent} blurTarget={groundRef} onPress={startWave} />
+                <WaveBanner trackTitle={track.title} accent={accent} onPress={startWave} />
 
                 {trackContext && (
                   <>
@@ -339,31 +350,42 @@ export default function PlayerScreen() {
               </View>
             </Animated.ScrollView>
 
-            {/* Шапка закреплена: свернуть плеер нужно и с прокрученного контекста, а скрим
-                держит читаемым системный статус-бар над уехавшей вверх обложкой. */}
-            <Animated.View
-              style={[styles.header, { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT }, chromeStyle]}
-              pointerEvents={chromePointerEvents}
-            >
-              <Animated.View style={[StyleSheet.absoluteFill, styles.headerSolid, headerSolidStyle]} pointerEvents="none" />
-              <LinearGradient colors={HEADER_SCRIM} style={StyleSheet.absoluteFill} pointerEvents="none" />
-              <Pressable
-                onPress={() => navigation.goBack()}
-                hitSlop={10}
-                style={styles.headerButton}
-                accessibilityRole="button"
-                accessibilityLabel="Свернуть плеер"
-              >
-                <Icon name="chevron-down" size={22} color={colors.foreground} />
-              </Pressable>
-              <Text style={type.caption} numberOfLines={1}>
-                {context ? SOURCE_LABEL[context.source] : SOURCE_LABEL.direct}
-              </Text>
-              <View style={styles.headerButton} />
-            </Animated.View>
           </View>
         </BlurTargetScope>
       </Backdrop>
+
+      {/* Шапка — сиблинг Backdrop, а не потомок: под ней едет обложка, и стеклу здесь есть
+          что преломлять. Внутри захвата она преломляла бы саму себя (рекурсия RenderNode). */}
+      <Animated.View
+        style={[styles.header, { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT }, chromeStyle]}
+        pointerEvents={chromePointerEvents}
+      >
+        <GlassPanel
+          radius={0}
+          blurTarget={artRef}
+          topLayer
+          adaptive={false}
+          style={StyleSheet.absoluteFill}
+          contentStyle={styles.headerGlass}
+        >
+          <View style={{ height: insets.top }} pointerEvents="none" />
+          <View style={styles.headerRow}>
+            <Pressable
+              onPress={() => navigation.goBack()}
+              hitSlop={10}
+              style={styles.headerButton}
+              accessibilityRole="button"
+              accessibilityLabel="Свернуть плеер"
+            >
+              <Icon name="chevron-down" size={24} color={colors.foreground} />
+            </Pressable>
+            <Text style={styles.source} numberOfLines={1}>
+              {context ? SOURCE_LABEL[context.source] : SOURCE_LABEL.direct}
+            </Text>
+            <View style={styles.headerButton} />
+          </View>
+        </GlassPanel>
+      </Animated.View>
 
       {lines && lyricsShown && (
         <Animated.View
@@ -385,7 +407,24 @@ export default function PlayerScreen() {
         </Animated.View>
       )}
 
-      <AddToPlaylistSheet trackId={track.id} open={playlistOpen} onOpenChange={setPlaylistOpen} hideTrigger />
+      <AddToPlaylistSheet
+        trackId={track.id}
+        open={playlistOpen}
+        onOpenChange={setPlaylistOpen}
+        inline
+        hideTrigger
+      />
+
+      <ShareSheet
+        open={shareOpen}
+        trackId={track.id}
+        title={track.title}
+        artistName={track.artistName}
+        coverUrl={track.coverUrl}
+        artistSlug={trackContext?.artist.slug ?? null}
+        onClose={() => setShareOpen(false)}
+        onOpenArtist={openArtist}
+      />
 
       <TrackActionSheet
         open={actionSheetOpen}
@@ -409,6 +448,8 @@ const styles = StyleSheet.create({
   hero: { paddingHorizontal: layout.screenPadding, gap: space.lg },
   coverArea: { alignItems: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  artistLink: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 28 },
+  artistName: { ...type.subtitle, color: colors.foreground },
   titles: { flex: 1, gap: 2, minWidth: 0 },
   titleAction: {
     width: layout.touchTarget,
@@ -422,16 +463,17 @@ const styles = StyleSheet.create({
   block: { gap: space.sm },
 
   headerSolid: { backgroundColor: colors.background },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+  header: { position: 'absolute', top: 0, left: 0, right: 0 },
+  headerGlass: { flex: 1 },
+  headerRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: layout.screenPadding,
+    paddingHorizontal: space.sm,
   },
+  /** Откуда играет — не метка, а строка: моно с разрядкой здесь читалось слабо. */
+  source: { ...type.row, color: colors.mutedForeground },
   headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 
   lyricsWrap: { position: 'absolute' },

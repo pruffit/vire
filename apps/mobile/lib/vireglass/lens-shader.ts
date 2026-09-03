@@ -187,6 +187,8 @@ float4 vgGather(float2 q, float radius, float2 seed) {
   return acc / float(VG_FROST_TAPS + 1);
 }
 
+const float VG_ADAPT_BLUR_MAX = 3.5;
+
 half4 main(float2 xy) {
   float2 p = xy - u_center;
   float sd = vgScene(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
@@ -375,7 +377,11 @@ half4 main(float2 xy) {
   // Величина намеренно СЛАБАЯ. Размытие здесь вспомогательное: оно смягчает фактуру под
   // надписью, но разводит светлоту не оно, а плотность тела. Дай ему волю — и буквы под
   // стеклом превращаются в кашу из пикселей, чего никакая читаемость не стоит.
-  float adaptBlur = max(busy * u_legibility * u_adaptRadius * 0.5, u_frost);
+  // Потолок жёсткий и низкий. Формула растёт как legibility × adaptRadius, и на панели с
+  // legibility 0.95 давала 10.5 dp — ровно та каша, о которой предупреждает абзац выше:
+  // обложка под текстом превращалась в мутное пятно, и это принимали за плохое преломление.
+  // Читаемость обязана набираться ПЛОТНОСТЬЮ тела (busyFloor ниже), а не размытием.
+  float adaptBlur = max(min(busy * u_legibility * u_adaptRadius * 0.5, VG_ADAPT_BLUR_MAX), u_frost);
   if (adaptBlur > 0.5) {
     float reach = max(u_reach - length(p), 1.0);
     float4 g = vgGather(s, min(adaptBlur, reach), xy);
