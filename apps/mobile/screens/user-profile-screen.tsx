@@ -23,6 +23,7 @@ import { FriendButton } from '../components/friend-button';
 import { useContentBottomPadding } from '../lib/layout';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
+import { fonts } from '../lib/design/typography';
 
 type LoadState = 'loading' | 'error' | 'ready';
 type LikedTrack = UserProfileResponse['likes'][number];
@@ -245,13 +246,13 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
   },
-  retryText: { color: colors.foreground, fontWeight: '700' },
+  retryText: { color: colors.foreground, fontFamily: fonts.bold },
   listContent: { paddingHorizontal: 16, gap: 20 },
   header: { alignItems: 'center', gap: 8, paddingVertical: 16 },
   avatar: { width: 72, height: 72, borderRadius: 36 },
   avatarPlaceholder: { backgroundColor: colors.secondary, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { color: colors.mutedForeground, fontSize: 24, fontWeight: '700' },
-  name: { color: colors.foreground, fontSize: 20, fontWeight: '800' },
+  avatarInitial: { color: colors.mutedForeground, fontSize: 24, fontFamily: fonts.bold },
+  name: { color: colors.foreground, fontSize: 20, fontFamily: fonts.extrabold },
   blockedText: { color: colors.mutedForeground, fontSize: 13, marginTop: 4 },
   unblockButton: {
     flexDirection: 'row',
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.secondary,
   },
-  unblockText: { color: colors.foreground, fontSize: 13, fontWeight: '700' },
+  unblockText: { color: colors.foreground, fontSize: 13, fontFamily: fonts.bold },
   messageButton: {
     minHeight: 40,
     paddingHorizontal: 14,
@@ -270,11 +271,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.secondary,
   },
-  messageButtonText: { color: colors.foreground, fontSize: 13, fontWeight: '700' },
+  messageButtonText: { color: colors.foreground, fontSize: 13, fontFamily: fonts.bold },
   blockLink: { marginTop: 4, paddingVertical: 4, paddingHorizontal: 8 },
   blockLinkText: { color: colors.mutedForeground, fontSize: 12 },
   section: { gap: 8 },
-  sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+  sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontFamily: fonts.bold, textTransform: 'uppercase' },
   sectionBody: { gap: 2 },
   emptyText: { color: colors.mutedForeground, fontSize: 14, paddingVertical: 8 },
   trackRow: {
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
   trackRowActive: { backgroundColor: colors.secondary },
   trackInfo: { flex: 1, gap: 2 },
   trackTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  trackTitle: { color: colors.foreground, fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  trackTitle: { color: colors.foreground, fontSize: 15, fontFamily: fonts.semibold, flexShrink: 1 },
   trackArtist: { color: colors.mutedForeground, fontSize: 13 },
   explicitBadge: {
     backgroundColor: 'rgba(255,255,255,0.12)',
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  explicitText: { color: colors.mutedForeground, fontSize: 9, fontWeight: '800' },
+  explicitText: { color: colors.mutedForeground, fontSize: 9, fontFamily: fonts.extrabold },
   trackDuration: { color: colors.mutedForeground, fontSize: 13, fontVariant: ['tabular-nums'] },
   row: {
     flexDirection: 'row',
@@ -311,6 +312,6 @@ const styles = StyleSheet.create({
   },
   playlistCover: { width: 40, height: 40, borderRadius: radius.sm },
   playlistCoverPlaceholder: { backgroundColor: colors.secondary },
-  rowTitle: { flex: 1, color: colors.cardForeground, fontSize: 15, fontWeight: '600' },
+  rowTitle: { flex: 1, color: colors.cardForeground, fontSize: 15, fontFamily: fonts.semibold },
   rowCount: { color: colors.mutedForeground, fontSize: 12 },
 });

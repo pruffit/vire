@@ -31,6 +31,7 @@ import { BlurTargetScope, useRegisterBlurTarget } from '../lib/blur-target';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { LikeButton } from '../components/like-button';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
+import { fonts } from '../lib/design/typography';
 
 type LoadState = 'loading' | 'error' | 'ready';
 
@@ -293,17 +294,17 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
   },
-  retryText: { color: colors.foreground, fontWeight: '700' },
+  retryText: { color: colors.foreground, fontFamily: fonts.bold },
   section: { gap: 12 },
-  sectionTitle: { color: colors.foreground, fontSize: 20, fontWeight: '800', paddingHorizontal: 16 },
+  sectionTitle: { color: colors.foreground, fontSize: 20, fontFamily: fonts.extrabold, paddingHorizontal: 16 },
   row: { paddingHorizontal: 16, gap: 12 },
   card: { width: 148, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.card },
   cardPressed: { opacity: 0.75, transform: [{ scale: 0.99 }] },
   cover: { width: '100%', aspectRatio: 1 },
   coverPlaceholder: { backgroundColor: colors.secondary },
   cardInfo: { padding: 10, gap: 4 },
-  cardTitle: { color: colors.cardForeground, fontSize: 14, fontWeight: '700' },
-  cardArtist: { color: colors.mutedForeground, fontSize: 12, fontWeight: '500' },
+  cardTitle: { color: colors.cardForeground, fontSize: 14, fontFamily: fonts.bold },
+  cardArtist: { color: colors.mutedForeground, fontSize: 12, fontFamily: fonts.medium },
   explicitBadge: {
     position: 'absolute',
     top: 8,
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  explicitText: { color: colors.foreground, fontSize: 10, fontWeight: '800' },
+  explicitText: { color: colors.foreground, fontSize: 10, fontFamily: fonts.extrabold },
   trackList: { paddingHorizontal: 16, gap: 4 },
   trackRow: {
     flexDirection: 'row',
@@ -326,11 +327,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   trackRowActive: { backgroundColor: colors.secondary },
-  trackRank: { color: colors.mutedForeground, fontSize: 14, fontWeight: '700', minWidth: 20, textAlign: 'center' },
+  trackRank: { color: colors.mutedForeground, fontSize: 14, fontFamily: fonts.bold, minWidth: 20, textAlign: 'center' },
   trackCover: { width: 44, height: 44, borderRadius: radius.sm },
   trackInfo: { flex: 1, gap: 2 },
   trackTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  trackTitle: { color: colors.foreground, fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  trackTitle: { color: colors.foreground, fontSize: 15, fontFamily: fonts.semibold, flexShrink: 1 },
   trackExplicitBadge: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 3,
@@ -339,6 +340,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  trackExplicitText: { color: colors.mutedForeground, fontSize: 9, fontWeight: '800' },
-  trackArtist: { color: colors.mutedForeground, fontSize: 13, fontWeight: '500' },
+  trackExplicitText: { color: colors.mutedForeground, fontSize: 9, fontFamily: fonts.extrabold },
+  trackArtist: { color: colors.mutedForeground, fontSize: 13, fontFamily: fonts.medium },
 });

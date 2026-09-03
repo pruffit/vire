@@ -38,7 +38,7 @@ import { QueueSection } from '../components/player/panels';
 import { TrackActionSheet } from '../components/player/track-action-sheet';
 import {
   ArtistCard,
-  ContextAction,
+  PlayerActions,
   SimilarArtists,
   WaveBanner,
 } from '../components/player/player-context';
@@ -57,9 +57,6 @@ const HEADER_SCRIM = ['rgba(3,2,1,0.62)', 'rgba(3,2,1,0)'] as const;
  *  Градиента для этого мало — фон экрана берёт цвет обложки и бывает светлым. */
 const HEADER_SOLID_AT = 90;
 
-/** Доля обложки под свёрнутой полосой текста. */
-const LYRICS_BAND = 0.52;
-const LYRICS_INSET = 10;
 /** За сколько прокрутки полоса текста успевает раствориться. */
 const LYRICS_FADE = 150;
 /** Дальше этого полоса не ловит касания — иначе она перехватывала бы прокрутку страницы. */
@@ -122,14 +119,14 @@ export default function PlayerScreen() {
   const likeTrack = useLikesStore((s) => s.like);
 
   const track = queue[queueIndex];
-  const { lines } = useLyrics(track?.id);
+  const { lines, synced } = useLyrics(track?.id);
   const trackContext = useTrackContext(track?.id);
 
   const artRef = useRef<View>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
   const [coverTop, setCoverTop] = useState(0);
   const [immersiveOn, setImmersiveOn] = useState(false);
-  const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [lyricsShown, setLyricsShown] = useState(false);
   const [lyricsIdle, setLyricsIdle] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
@@ -165,10 +162,6 @@ export default function PlayerScreen() {
     pushSheet();
     return popSheet;
   }, [pushSheet, popSheet]);
-
-  useEffect(() => {
-    if (lyricsIdle) setLyricsOpen(false);
-  }, [lyricsIdle]);
 
   // Волна бесконечна по замыслу: доливаем хвост, не дожидаясь тишины.
   const waveSeed = queue[queue.length - 1]?.id;
@@ -234,7 +227,7 @@ export default function PlayerScreen() {
           {/* Один контейнер на весь экран: ExpoView бэкдропа раскладывает только первого
               ребёнка, и вторым сиблингом прокрутка получала нулевую высоту. */}
           <View style={styles.screen}>
-            <PlayerGround coverUrl={track.coverUrl} ground={accent.ground} />
+            <PlayerGround coverUrl={track.coverUrl} accent={accent} />
 
             <Animated.ScrollView
               style={styles.scroll}
@@ -283,15 +276,6 @@ export default function PlayerScreen() {
                     </Text>
                   </View>
                   <LikeButton trackId={track.id} variant="primary" />
-                  <Pressable
-                    onPress={share}
-                    hitSlop={8}
-                    style={styles.titleAction}
-                    accessibilityRole="button"
-                    accessibilityLabel="Поделиться"
-                  >
-                    <Icon name="share" size={20} color={colors.foreground} />
-                  </Pressable>
                 </View>
 
                 <Transport
@@ -316,6 +300,15 @@ export default function PlayerScreen() {
                   onSeek={seek}
                 />
 
+                <PlayerActions
+                  hasLyrics={lines !== null}
+                  lyricsShown={lyricsShown}
+                  accent={accent}
+                  onToggleLyrics={() => setLyricsShown((v) => !v)}
+                  onPlaylist={() => setPlaylistOpen(true)}
+                  onShare={share}
+                />
+
                 {status === 'error' && (
                   <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>
                 )}
@@ -326,17 +319,16 @@ export default function PlayerScreen() {
 
                 {trackContext && (
                   <>
-                    <ArtistCard artist={trackContext.artist} onPress={() => openArtist(trackContext.artist.slug)} />
+                    <ArtistCard
+                      artist={trackContext.artist}
+                      accent={accent}
+                      onPress={() => openArtist(trackContext.artist.slug)}
+                    />
                     <SimilarArtists items={trackContext.similar} onPress={openArtist} />
                   </>
                 )}
 
                 <QueueSection />
-
-                <View style={styles.block}>
-                  <ContextAction icon="plus" label="В плейлист" onPress={() => setPlaylistOpen(true)} />
-                  <ContextAction icon="share" label="Поделиться" onPress={share} />
-                </View>
               </View>
             </Animated.ScrollView>
 
@@ -366,7 +358,7 @@ export default function PlayerScreen() {
         </BlurTargetScope>
       </Backdrop>
 
-      {lines && (
+      {lines && lyricsShown && (
         <Animated.View
           style={[
             styles.lyricsWrap,
@@ -375,23 +367,14 @@ export default function PlayerScreen() {
           ]}
           pointerEvents={lyricsIdle || immersiveOn ? 'none' : 'box-none'}
         >
-          <View
-            style={[
-              styles.lyricsBand,
-              lyricsOpen ? { top: LYRICS_INSET } : { height: Math.round(artSize * LYRICS_BAND) },
-            ]}
-            pointerEvents={lyricsOpen ? 'auto' : 'box-none'}
-          >
-            <LyricsGlass
-              key={track.id}
-              lines={lines}
-              activeIndex={activeLine}
-              expanded={lyricsOpen}
-              onToggle={() => setLyricsOpen((v) => !v)}
-              onSeek={seek}
-              blurTarget={artRef}
-            />
-          </View>
+          <LyricsGlass
+            key={track.id}
+            lines={lines}
+            activeIndex={activeLine}
+            synced={synced}
+            onSeek={seek}
+            blurTarget={artRef}
+          />
         </Animated.View>
       )}
 
@@ -445,5 +428,4 @@ const styles = StyleSheet.create({
   headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 
   lyricsWrap: { position: 'absolute' },
-  lyricsBand: { position: 'absolute', left: LYRICS_INSET, right: LYRICS_INSET, bottom: LYRICS_INSET },
 });

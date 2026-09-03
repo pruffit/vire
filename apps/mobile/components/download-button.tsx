@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { downloadTrack, removeDownload, getDownloadedTrack, type DownloadTrackInput } from '../lib/offline/download-manager';
 import { Icon } from '../lib/icon';
 import { colors } from '../lib/theme';
+import { fonts } from '../lib/design/typography';
 
 type DownloadState = 'idle' | 'downloading' | 'done';
 
@@ -59,5 +60,5 @@ export function DownloadButton({ meta }: { meta: DownloadTrackInput }) {
 
 const styles = StyleSheet.create({
   button: { minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
-  progressText: { color: colors.mutedForeground, fontSize: 10, fontWeight: '700' },
+  progressText: { color: colors.mutedForeground, fontSize: 10, fontFamily: fonts.bold },
 });

@@ -10,7 +10,7 @@ import { Cover } from '../ui/cover';
 import { Icon, type IconName } from '../../lib/icon';
 import type { Accent } from '../../lib/design/accent';
 
-const ARTIST_CARD = 168;
+const ARTIST_CARD = 208;
 const SIMILAR = 76;
 const WAVE_GLYPH = 40;
 
@@ -39,26 +39,31 @@ export function WaveBanner({
 }) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.wave, { borderColor: accent.fill }, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.wave, { backgroundColor: accent.wash }, pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Волна по треку ${trackTitle}`}
+      accessibilityLabel={`Слушать волну в духе трека ${trackTitle}`}
     >
       <View style={[styles.waveGlyph, { backgroundColor: accent.fill }]}>
-        <Icon name="play" size={20} color={accent.ink} />
+        <Icon name="music" size={20} color={accent.ink} />
       </View>
       <View style={styles.waveText}>
-        <Text style={type.sectionTitle}>Волна по треку</Text>
+        <Text style={type.sectionTitle}>Волна</Text>
+        {/* Раньше здесь стояло «Похожее на «<название>»» — подпись под кнопкой на экране
+            этого же трека читалась как «похоже на самого себя». */}
         <Text style={type.caption} numberOfLines={1}>
-          Похожее на «{trackTitle}»
+          Бесконечный поток в этом настроении
         </Text>
+      </View>
+      <View style={styles.waveGo}>
+        <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
       </View>
     </Pressable>
   );
 }
 
-/** Карточка автора: фотография во всю ширину, имя и подписчики поверх неё. */
-export function ArtistCard({ artist, onPress }: { artist: Artist; onPress: () => void }) {
+/** Карточка автора: фотография во всю ширину, поверх неё имя и явная кнопка перехода. */
+export function ArtistCard({ artist, accent, onPress }: { artist: Artist; accent: Accent; onPress: () => void }) {
   return (
     <View style={styles.block}>
       <BlockTitle>ОБ АВТОРЕ</BlockTitle>
@@ -73,26 +78,26 @@ export function ArtistCard({ artist, onPress }: { artist: Artist; onPress: () =>
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.artistPlaceholder]} />
         )}
-        <LinearGradient colors={ARTIST_SCRIM} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={ARTIST_SCRIM} locations={ARTIST_SCRIM_STOPS} style={StyleSheet.absoluteFill} />
         <View style={styles.artistFoot}>
-          <View style={styles.artistText}>
-            <Text style={type.releaseTitle} numberOfLines={1}>
-              {artist.name}
+          <Text style={type.releaseTitle} numberOfLines={1}>
+            {artist.name}
+          </Text>
+          {/* Ноль подписчиков — не факт о музыканте, а пустая строка. Тогда полезнее
+              первая строка описания. */}
+          {artist.followerCount > 0 ? (
+            <Text style={type.mono}>
+              {formatCount(artist.followerCount).toUpperCase()} {pluralFollowers(artist.followerCount).toUpperCase()}
             </Text>
-            {/* Ноль подписчиков — не факт о музыканте, а пустая строка. Тогда полезнее
-                первая строка описания. */}
-            {artist.followerCount > 0 ? (
-              <Text style={type.caption}>
-                {formatCount(artist.followerCount)} {pluralFollowers(artist.followerCount)}
-              </Text>
-            ) : artist.bio ? (
-              <Text style={type.caption} numberOfLines={1}>
-                {artist.bio}
-              </Text>
-            ) : null}
-          </View>
-          <View style={styles.chevron}>
-            <Icon name="chevron-down" size={18} color={colors.foreground} />
+          ) : artist.bio ? (
+            <Text style={type.caption} numberOfLines={2}>
+              {artist.bio}
+            </Text>
+          ) : null}
+          {/* Шеврон в углу — не кнопка: на телефоне нужна явная цель, а не догадка. */}
+          <View style={[styles.artistGo, { borderColor: accent.fill }]}>
+            <Text style={[type.button, styles.artistGoLabel]}>Смотреть артиста</Text>
+            <Icon name="chevron-right" size={16} color={colors.foreground} />
           </View>
         </View>
       </Pressable>
@@ -136,6 +141,85 @@ export function SimilarArtists({
   );
 }
 
+/**
+ * Ряд действий под управлением: текст, плейлист, «поделиться».
+ *
+ * Стоят здесь, а не в строке названия, намеренно. Строка названия — верх экрана, куда
+ * большой палец не достаёт; эти три нажимают часто, поэтому они внизу, крупные и с
+ * подписями. Раньше «в плейлист» лежал последней строкой под очередью — до него надо
+ * было прокрутить весь контекст.
+ */
+export function PlayerActions({
+  hasLyrics,
+  lyricsShown,
+  accent,
+  onToggleLyrics,
+  onPlaylist,
+  onShare,
+}: {
+  hasLyrics: boolean;
+  lyricsShown: boolean;
+  accent: Accent;
+  onToggleLyrics: () => void;
+  onPlaylist: () => void;
+  onShare: () => void;
+}) {
+  return (
+    <View style={styles.actions}>
+      <ActionPill
+        icon="text"
+        label="Текст"
+        // Инструментал — не поломка: кнопка остаётся на месте и гаснет, иначе ряд
+        // перескакивал бы при каждой смене трека.
+        disabled={!hasLyrics}
+        active={lyricsShown}
+        accent={accent}
+        onPress={onToggleLyrics}
+      />
+      <ActionPill icon="list-plus" label="В плейлист" accent={accent} onPress={onPlaylist} />
+      <ActionPill icon="share" label="Поделиться" accent={accent} onPress={onShare} />
+    </View>
+  );
+}
+
+function ActionPill({
+  icon,
+  label,
+  disabled = false,
+  active = false,
+  accent,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  disabled?: boolean;
+  active?: boolean;
+  accent: Accent;
+  onPress: () => void;
+}) {
+  const tint = active ? accent.ink : colors.foreground;
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.pill,
+        active && { backgroundColor: accent.fill },
+        disabled && styles.pillDisabled,
+        pressed && !disabled && styles.pressed,
+      ]}
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled, selected: active }}
+      accessibilityLabel={label}
+    >
+      <Icon name={icon} size={18} color={tint} />
+      <Text style={[styles.pillLabel, { color: tint }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 /** Строка-утилита: редкие действия, поэтому последними и без выделения. */
 export function ContextAction({
   icon,
@@ -154,7 +238,8 @@ export function ContextAction({
   );
 }
 
-const ARTIST_SCRIM = ['rgba(3,2,1,0)', 'rgba(3,2,1,0.35)', 'rgba(3,2,1,0.88)'] as const;
+const ARTIST_SCRIM = ['rgba(3,2,1,0)', 'rgba(3,2,1,0.5)', 'rgba(3,2,1,0.94)'] as const;
+const ARTIST_SCRIM_STOPS = [0, 0.42, 1] as const;
 
 const styles = StyleSheet.create({
   block: { gap: space.sm },
@@ -164,11 +249,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    height: 68,
+    minHeight: 76,
     paddingHorizontal: space.md,
     borderRadius: radii.card,
-    borderWidth: 1,
-    backgroundColor: colors.secondary,
   },
   waveGlyph: {
     width: WAVE_GLYPH,
@@ -180,21 +263,48 @@ const styles = StyleSheet.create({
   waveText: { flex: 1, gap: 2, minWidth: 0 },
 
   artistCard: {
-    height: ARTIST_CARD,
+    minHeight: ARTIST_CARD,
     borderRadius: radii.card,
     overflow: 'hidden',
     justifyContent: 'flex-end',
     backgroundColor: colors.secondary,
   },
   artistPlaceholder: { backgroundColor: colors.secondary },
-  artistFoot: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, padding: space.md },
-  artistText: { flex: 1, gap: 2, minWidth: 0 },
-  /** Единственный шеврон набора смотрит вниз — поворачиваем его в «дальше». */
-  chevron: { transform: [{ rotate: '-90deg' }] },
+  artistFoot: { gap: space.xs, padding: space.md },
+  artistGo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    minHeight: 40,
+    marginTop: space.sm,
+    paddingHorizontal: space.md,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  artistGoLabel: { color: colors.foreground },
+  waveGo: { opacity: 0.8 },
 
   similarRow: { gap: space.md, paddingRight: space.md },
   similarCard: { width: SIMILAR, gap: space.xs, alignItems: 'center' },
   similarName: { textAlign: 'center' },
+
+  actions: { flexDirection: 'row', gap: space.sm },
+  pill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: layout.touchTarget,
+    paddingHorizontal: space.sm,
+    borderRadius: radii.full,
+    backgroundColor: colors.secondary,
+  },
+  pillDisabled: { opacity: 0.35 },
+  pillLabel: { ...type.caption, color: colors.foreground },
 
   action: {
     flexDirection: 'row',

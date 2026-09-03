@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -18,8 +19,11 @@ import {
 } from '../lib/playlists';
 import { Icon } from '../lib/icon';
 import { Glass } from './glass';
+import { Cover } from './ui/cover';
 import { usePreferences } from '../lib/design/preferences';
-import { colors, radius } from '../lib/theme';
+import { colors } from '../lib/theme';
+import { type } from '../lib/design/typography';
+import { space, layout, radii } from '../lib/design/scales';
 
 export function AddToPlaylistSheet({
   trackId,
@@ -143,41 +147,64 @@ export function AddToPlaylistSheet({
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={close}>
         <Pressable style={styles.overlay} onPress={close} />
-        <Glass style={[styles.panel, { paddingBottom: insets.bottom + 12 }]} radius={24} intensity={55}>
-          <Text style={styles.heading}>Добавить в плейлист</Text>
+        <Glass style={[styles.panel, { paddingBottom: insets.bottom + space.md }]} radius={radii.sheet} intensity={55}>
+          <View style={styles.grabber} />
 
-          {playlists.length === 0 ? (
-            <Text style={styles.empty}>Плейлистов пока нет</Text>
-          ) : (
-            <View style={styles.list}>
-              {playlists.map((p) => (
+          <View style={styles.head}>
+            <Text style={type.releaseTitle}>В плейлист</Text>
+            <Pressable
+              onPress={close}
+              hitSlop={12}
+              style={styles.close}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть"
+            >
+              <Icon name="x" size={20} color={colors.mutedForeground} />
+            </Pressable>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+            {/* Создание — первой строкой, а не полем на дне: чаще всего трек кладут в
+                новый плейлист именно в этот момент, а до дна списка ещё надо долистать. */}
+            <View style={styles.createRow}>
+              <View style={styles.createGlyph}>
+                <Icon name="plus" size={20} color={colors.foreground} />
+              </View>
+              <TextInput
+                value={newTitle}
+                onChangeText={setNewTitle}
+                placeholder="Новый плейлист"
+                placeholderTextColor={colors.mutedForeground}
+                style={styles.input}
+                returnKeyType="done"
+                onSubmitEditing={handleCreate}
+              />
+              {newTitle.trim().length > 0 && (
+                <Pressable
+                  style={[styles.createButton, creating && styles.createButtonDisabled]}
+                  onPress={handleCreate}
+                  disabled={creating}
+                  accessibilityRole="button"
+                  accessibilityLabel="Создать плейлист"
+                >
+                  <Text style={[type.button, styles.createButtonText]}>Создать</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {playlists.length === 0 ? (
+              <Text style={[type.caption, styles.empty]}>Плейлистов пока нет — назовите первый</Text>
+            ) : (
+              playlists.map((p) => (
                 <PlaylistRow
                   key={p.id}
                   playlist={p}
                   inIt={inPlaylists.has(p.id)}
                   onPress={() => togglePlaylist(p.id)}
                 />
-              ))}
-            </View>
-          )}
-
-          <View style={styles.createRow}>
-            <TextInput
-              value={newTitle}
-              onChangeText={setNewTitle}
-              placeholder="Новый плейлист"
-              placeholderTextColor={colors.mutedForeground}
-              style={styles.input}
-              onSubmitEditing={handleCreate}
-            />
-            <Pressable
-              style={[styles.createButton, (!newTitle.trim() || creating) && styles.createButtonDisabled]}
-              onPress={handleCreate}
-              disabled={!newTitle.trim() || creating}
-            >
-              <Text style={styles.createButtonText}>Создать</Text>
-            </Pressable>
-          </View>
+              ))
+            )}
+          </ScrollView>
         </Glass>
       </Modal>
     </>
@@ -194,52 +221,89 @@ function PlaylistRow({
   onPress: () => void;
 }) {
   return (
-    <Pressable style={styles.row} onPress={onPress}>
-      <View style={[styles.checkbox, inIt && styles.checkboxChecked]}>
-        {inIt && <Icon name="check" size={12} color={colors.background} />}
+    <Pressable
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: inIt }}
+      accessibilityLabel={playlist.title}
+    >
+      <Cover uri={playlist.coverUrl} size={COVER} radius={radii.coverSm} />
+      <View style={styles.rowText}>
+        <Text style={type.row} numberOfLines={1}>
+          {playlist.title}
+        </Text>
+        <Text style={type.caption}>{playlist.trackCount} трек{plural(playlist.trackCount)}</Text>
       </View>
-      <Text style={styles.rowTitle} numberOfLines={1}>
-        {playlist.title}
-      </Text>
-      <Text style={styles.rowCount}>{playlist.trackCount}</Text>
+      <View style={[styles.check, inIt && styles.checkOn]}>
+        {inIt && <Icon name="check" size={14} color={colors.background} />}
+      </View>
     </Pressable>
   );
 }
 
+/** 1 трек · 2 трека · 5 треков. */
+function plural(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return '';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'а';
+  return 'ов';
+}
+
+const COVER = 48;
+const CHECK = 26;
+
 const styles = StyleSheet.create({
   trigger: { minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
-  panel: {
-    paddingTop: 16,
-    paddingHorizontal: 16,
-    maxHeight: '70%',
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
+  panel: { paddingTop: space.sm, paddingHorizontal: layout.screenPadding, maxHeight: '78%' },
+  grabber: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    borderRadius: radii.full,
+    backgroundColor: colors.border,
+    marginBottom: space.md,
   },
-  heading: { color: colors.mutedForeground, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 8 },
-  empty: { color: colors.mutedForeground, fontSize: 14, paddingVertical: 12 },
-  list: { gap: 2, marginBottom: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, paddingVertical: 6 },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: radius.sm,
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  close: { width: layout.touchTarget, height: layout.touchTarget, alignItems: 'center', justifyContent: 'center' },
+  scroll: { paddingTop: space.sm, gap: space.xs },
+
+  createRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 64 },
+  createGlyph: {
+    width: COVER,
+    height: COVER,
+    borderRadius: radii.coverSm,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  input: { ...type.row, flex: 1, paddingVertical: space.sm },
+  createButton: {
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: space.md,
+    borderRadius: radii.full,
+    backgroundColor: colors.foreground,
+  },
+  createButtonDisabled: { opacity: 0.4 },
+  createButtonText: { color: colors.background },
+
+  empty: { paddingVertical: space.lg, textAlign: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 64 },
+  rowPressed: { opacity: 0.7 },
+  rowText: { flex: 1, gap: 2, minWidth: 0 },
+  check: {
+    width: CHECK,
+    height: CHECK,
+    borderRadius: radii.full,
+    borderWidth: 1.5,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: { backgroundColor: colors.foreground, borderColor: colors.foreground },
-  rowTitle: { flex: 1, color: colors.cardForeground, fontSize: 15, fontWeight: '600' },
-  rowCount: { color: colors.mutedForeground, fontSize: 12 },
-  createRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: 12,
-  },
-  input: { flex: 1, color: colors.cardForeground, fontSize: 15, paddingVertical: 8 },
-  createButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.md, backgroundColor: colors.secondary },
-  createButtonDisabled: { opacity: 0.4 },
-  createButtonText: { color: colors.secondaryForeground, fontSize: 14, fontWeight: '700' },
+  checkOn: { backgroundColor: colors.foreground, borderColor: colors.foreground },
 });

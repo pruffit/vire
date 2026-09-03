@@ -16,6 +16,9 @@ export const fonts = {
   extrabold: 'Manrope_800ExtraBold',
   mono: 'JetBrainsMono_400Regular',
   monoMedium: 'JetBrainsMono_500Medium',
+  /** Витрина: заголовок трека, названия блоков. Широкий гротеск, интерфейс им не набирают. */
+  displayBold: 'Unbounded_700Bold',
+  display: 'Unbounded_800ExtraBold',
 } as const;
 
 /** Прозрачности текста из кита — как множители к foreground, а не отдельные цвета. */
@@ -34,14 +37,14 @@ const MONO_TRACKING = 0.12;
 
 export const type = {
   screenTitle: {
-    fontFamily: fonts.extrabold,
-    fontSize: 28,
-    lineHeight: 32,
-    letterSpacing: -0.56,
+    fontFamily: fonts.display,
+    fontSize: 30,
+    lineHeight: 34,
+    letterSpacing: -0.6,
     color: colors.foreground,
   },
   releaseTitle: {
-    fontFamily: fonts.extrabold,
+    fontFamily: fonts.displayBold,
     fontSize: 22,
     lineHeight: 26,
     letterSpacing: -0.22,
@@ -49,50 +52,51 @@ export const type = {
   },
   sectionTitle: {
     fontFamily: fonts.bold,
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 16,
+    lineHeight: 20,
+    letterSpacing: -0.1,
     color: colors.foreground,
   },
   /** Строка списка: название трека, имя в диалоге. */
   row: {
     fontFamily: fonts.semibold,
-    fontSize: 12.5,
-    lineHeight: 16,
+    fontSize: 15,
+    lineHeight: 19,
     color: colors.foreground,
   },
   /** Подпись: артист, мета, описание. Кит держит её на 60 % непрозрачности. */
   caption: {
-    fontFamily: fonts.regular,
-    fontSize: 11.5,
-    lineHeight: 15,
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    lineHeight: 17,
     color: colors.mutedForeground,
   },
   /** Имя артиста под крупным заголовком (фуллскрин-плеер) — между caption и body. */
   subtitle: {
     fontFamily: fonts.medium,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 21,
     color: colors.mutedForeground,
   },
   body: {
     fontFamily: fonts.regular,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.foreground,
   },
   /** МЕТКА · ТАЙМКОД · СТАТУС — всегда в верхнем регистре на стороне вызова. */
   mono: {
     fontFamily: fonts.monoMedium,
-    fontSize: 10,
-    lineHeight: 13,
-    letterSpacing: 10 * MONO_TRACKING,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 11 * MONO_TRACKING,
     color: colors.mutedForeground,
   },
   /** Текст на кнопке-пилюле. */
   button: {
     fontFamily: fonts.bold,
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 19,
     color: colors.foreground,
   },
 } satisfies Record<string, TextStyle>;
@@ -100,7 +104,9 @@ export const type = {
 export type TypeToken = keyof typeof type;
 
 /**
- * Минимальные кегли кита: 10 для моно, 11 для Manrope; на стекле — не ниже 11 и не легче
- * 500. Проверяется тестом, чтобы шкала не поехала вниз при правках.
+ * Минимальные кегли: 11 для моно, 13 для Manrope. Прежние 10/11.5 пришли из вебовой
+ * плотности и на телефоне читались мелко и жидко — подпись 11.5 regular была самым
+ * частым «мелким тонким шрифтом» в продукте. Проверяется тестом, чтобы шкала не поехала
+ * вниз при правках.
  */
-export const MIN_SIZE = { mono: 10, sans: 11 } as const;
+export const MIN_SIZE = { mono: 11, sans: 13 } as const;

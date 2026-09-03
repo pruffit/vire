@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
   GLASS_GREEN_MAX,
@@ -102,9 +104,14 @@ describe('типографика', () => {
     }
   });
 
-  it('мета набирается моноширинным, контент — нет', () => {
+  it('три роли и каждая при своём шрифте', () => {
+    // Мета — моноширинный, витрина — гротеск Unbounded, интерфейс — Manrope. Витриной
+    // нельзя набирать строку списка: Unbounded широкий и съедает ширину экрана.
     expect((typeScale.mono.fontFamily as string).startsWith('JetBrainsMono')).toBe(true);
-    for (const key of ['screenTitle', 'releaseTitle', 'row', 'body', 'caption'] as const) {
+    for (const key of ['screenTitle', 'releaseTitle'] as const) {
+      expect((typeScale[key].fontFamily as string).startsWith('Unbounded'), key).toBe(true);
+    }
+    for (const key of ['row', 'body', 'caption', 'subtitle', 'button'] as const) {
       expect((typeScale[key].fontFamily as string).startsWith('Manrope'), key).toBe(true);
     }
   });
@@ -112,5 +119,30 @@ describe('типографика', () => {
   it('межбуквенное у крупных заголовков отрицательное — кит требует −1…−2 %', () => {
     expect(typeScale.screenTitle.letterSpacing).toBeLessThan(0);
     expect(typeScale.releaseTitle.letterSpacing).toBeLessThan(0);
+  });
+});
+
+describe('шрифт задаётся семейством, а не весом', () => {
+  // Android не синтезирует начертания у кастомных шрифтов: fontWeight на Manrope молча
+  // рисует обычный вес. Продукт от этого выглядел «мелким и тонким» — правило было в
+  // typography.ts, но проверялось только на самой шкале, а экраны его нарушали в 60+ местах.
+  const ROOT = join(__dirname, '..', '..');
+  const LABS = /glass-bench|glass-lab|material-lab/;
+
+  const walk = (dir: string, out: string[] = []): string[] => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p, out);
+      else if (name.endsWith('.tsx')) out.push(p);
+    }
+    return out;
+  };
+
+  it('ни один экран и компонент продукта не задаёт fontWeight', () => {
+    const files = [...walk(join(ROOT, 'components')), ...walk(join(ROOT, 'screens'))].filter(
+      (f) => !LABS.test(f),
+    );
+    const guilty = files.filter((f) => readFileSync(f, 'utf8').includes('fontWeight'));
+    expect(guilty.map((f) => f.slice(ROOT.length + 1))).toEqual([]);
   });
 });
