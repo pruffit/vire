@@ -38,7 +38,7 @@
     "hls.js": "^1.6.16",
     "ioredis": "^5.4.1",
     "libsodium-wrappers": "0.7.15",
-    "motion": "^12.40.0",
+    "motion": "^13.2.0",
     "next": "16.3.3",
     "next-auth": "5.0.0-beta.32",
     "next-intl": "4.14.1",
