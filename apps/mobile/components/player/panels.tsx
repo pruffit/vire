@@ -21,7 +21,7 @@ export function QueueSection() {
 
   return (
     <View style={styles.block}>
-      <Text style={type.mono}>ДАЛЬШЕ</Text>
+      <Text style={type.sectionTitle}>Дальше</Text>
       <View style={styles.list}>
         {upcoming.map((t: QueueTrack, i) => (
           <TrackRow

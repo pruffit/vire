@@ -1,12 +1,14 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { RefObject } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View, type View as RNView } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { TrackContextResponse } from '@vire/api-contracts';
 import { colors } from '../../lib/theme';
-import { type } from '../../lib/design/typography';
+import { type, fonts } from '../../lib/design/typography';
 import { space, layout, radii } from '../../lib/design/scales';
 import { formatCount, pluralFollowers } from '../../lib/format';
 import { Cover } from '../ui/cover';
+import { GlassPanel } from '../ui/glass-panel';
 import { Icon, type IconName } from '../../lib/icon';
 import type { Accent } from '../../lib/design/accent';
 
@@ -17,9 +19,14 @@ const WAVE_GLYPH = 40;
 type Artist = TrackContextResponse['artist'];
 type Similar = TrackContextResponse['similar'][number];
 
-/** Заголовок блока контекста. Одна форма на все блоки, иначе ритм разъезжается. */
+/**
+ * Заголовок блока контекста. Одна форма на все блоки, иначе ритм разъезжается.
+ *
+ * Не моноширинный: у JetBrains Mono кириллица в верхнем регистре с разрядкой выглядит
+ * слабо, а разряды здесь держать нечего — моно оставлен таймкодам.
+ */
 function BlockTitle({ children }: { children: string }) {
-  return <Text style={type.mono}>{children}</Text>;
+  return <Text style={type.sectionTitle}>{children}</Text>;
 }
 
 /**
@@ -31,15 +38,25 @@ function BlockTitle({ children }: { children: string }) {
 export function WaveBanner({
   trackTitle,
   accent,
+  blurTarget,
   onPress,
 }: {
   trackTitle: string;
   accent: Accent;
+  blurTarget: RefObject<RNView | null>;
   onPress: () => void;
 }) {
   return (
+    <GlassPanel
+      radius={radii.card}
+      blurTarget={blurTarget}
+      topLayer
+      adaptive={false}
+      style={styles.waveGlass}
+      contentStyle={styles.waveInner}
+    >
     <Pressable
-      style={({ pressed }) => [styles.wave, { backgroundColor: accent.wash }, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.wave, pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Слушать волну в духе трека ${trackTitle}`}
@@ -47,18 +64,14 @@ export function WaveBanner({
       <View style={[styles.waveGlyph, { backgroundColor: accent.fill }]}>
         <Icon name="music" size={20} color={accent.ink} />
       </View>
-      <View style={styles.waveText}>
-        <Text style={type.sectionTitle}>Волна</Text>
-        {/* Раньше здесь стояло «Похожее на «<название>»» — подпись под кнопкой на экране
-            этого же трека читалась как «похоже на самого себя». */}
-        <Text style={type.caption} numberOfLines={1}>
-          Бесконечный поток в этом настроении
-        </Text>
-      </View>
+      {/* Одно слово вместо заголовка с подписью: подпись объясняла кнопку, которая в
+          объяснении не нуждается, и та же мысль повторялась дважды. */}
+      <Text style={styles.waveWord}>ПОТОК</Text>
       <View style={styles.waveGo}>
         <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
       </View>
     </Pressable>
+    </GlassPanel>
   );
 }
 
@@ -66,7 +79,7 @@ export function WaveBanner({
 export function ArtistCard({ artist, accent, onPress }: { artist: Artist; accent: Accent; onPress: () => void }) {
   return (
     <View style={styles.block}>
-      <BlockTitle>ОБ АВТОРЕ</BlockTitle>
+      <BlockTitle>Об авторе</BlockTitle>
       <Pressable
         style={({ pressed }) => [styles.artistCard, pressed && styles.pressed]}
         onPress={onPress}
@@ -86,8 +99,8 @@ export function ArtistCard({ artist, accent, onPress }: { artist: Artist; accent
           {/* Ноль подписчиков — не факт о музыканте, а пустая строка. Тогда полезнее
               первая строка описания. */}
           {artist.followerCount > 0 ? (
-            <Text style={type.mono}>
-              {formatCount(artist.followerCount).toUpperCase()} {pluralFollowers(artist.followerCount).toUpperCase()}
+            <Text style={[type.caption, styles.onArt]}>
+              {formatCount(artist.followerCount)} {pluralFollowers(artist.followerCount)}
             </Text>
           ) : artist.bio ? (
             <Text style={[type.caption, styles.onArt]} numberOfLines={2}>
@@ -115,7 +128,7 @@ export function SimilarArtists({
   if (items.length === 0) return null;
   return (
     <View style={styles.block}>
-      <BlockTitle>ПОХОЖИЕ АРТИСТЫ</BlockTitle>
+      <BlockTitle>Похожие артисты</BlockTitle>
       <ScrollView
         horizontal
         nestedScrollEnabled
@@ -153,6 +166,7 @@ export function PlayerActions({
   hasLyrics,
   lyricsShown,
   accent,
+  blurTarget,
   onToggleLyrics,
   onPlaylist,
   onShare,
@@ -160,12 +174,23 @@ export function PlayerActions({
   hasLyrics: boolean;
   lyricsShown: boolean;
   accent: Accent;
+  blurTarget: RefObject<RNView | null>;
   onToggleLyrics: () => void;
   onPlaylist: () => void;
   onShare: () => void;
 }) {
   return (
-    <View style={styles.actions}>
+    // Одна поверхность на три кнопки, а не три: цена стекла — в ЧИСЛЕ поверхностей
+    // (lib/design/glass-budget.ts), и три отдельные плашки стоили бы втрое дороже одной
+    // полосы, выглядя при этом дробнее.
+    <GlassPanel
+      radius={radii.full}
+      blurTarget={blurTarget}
+      topLayer
+      adaptive={false}
+      style={styles.actionsGlass}
+      contentStyle={styles.actions}
+    >
       <ActionPill
         icon="text"
         label="Текст"
@@ -178,7 +203,7 @@ export function PlayerActions({
       />
       <ActionPill icon="list-plus" label="В плейлист" accent={accent} onPress={onPlaylist} />
       <ActionPill icon="share" label="Поделиться" accent={accent} onPress={onShare} />
-    </View>
+    </GlassPanel>
   );
 }
 
@@ -245,13 +270,14 @@ const styles = StyleSheet.create({
   block: { gap: space.sm },
   pressed: { opacity: 0.85 },
 
+  waveGlass: { minHeight: 76 },
+  waveInner: { flex: 1 },
   wave: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    minHeight: 76,
     paddingHorizontal: space.md,
-    borderRadius: radii.card,
   },
   waveGlyph: {
     width: WAVE_GLYPH,
@@ -260,7 +286,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  waveText: { flex: 1, gap: 2, minWidth: 0 },
+  waveWord: {
+    flex: 1,
+    fontFamily: fonts.display,
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: 0.5,
+    color: colors.foreground,
+  },
 
   artistCard: {
     minHeight: ARTIST_CARD,
@@ -300,7 +333,8 @@ const styles = StyleSheet.create({
   similarCard: { width: SIMILAR, gap: space.xs, alignItems: 'center' },
   similarName: { textAlign: 'center' },
 
-  actions: { flexDirection: 'row', gap: space.sm },
+  actionsGlass: { minHeight: 56 },
+  actions: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 4, gap: 4 },
   pill: {
     flex: 1,
     flexDirection: 'row',
@@ -310,7 +344,6 @@ const styles = StyleSheet.create({
     minHeight: layout.touchTarget,
     paddingHorizontal: space.sm,
     borderRadius: radii.full,
-    backgroundColor: colors.secondary,
   },
   pillDisabled: { opacity: 0.35 },
   pillLabel: { ...type.caption, color: colors.foreground },

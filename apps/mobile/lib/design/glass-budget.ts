@@ -20,6 +20,9 @@ export const GLASS_SURFACES = {
   /** Фуллскрин-плеер: единственное стекло экрана — полоса текста на обложке. Транспорт
    *  плоский: под ним затемнённый ambient-фон, преломлять там нечего. */
   playerLyrics: 1,
+  /** Ряд действий плеера — ОДНА полоса на три кнопки: цена стекла в числе поверхностей. */
+  playerActions: 1,
+  playerWave: 1,
   /** Крупная контентная плашка (шапка артиста) — одна поверхность независимо от площади. */
   contentPlate: 1,
 } as const;
@@ -45,12 +48,18 @@ export const SUPPRESSED_BY_SHEET: readonly GlassElement[] = [
  * получалось бы 4 + 1 + 2 = 7 поверхностей — за пределами измеренной зелёной зоны.
  * Поэтому плеер поднимает тот же счётчик, что и лист.
  */
-export const FULLSCREEN_PLAYER: readonly GlassElement[] = ['playerLyrics'];
+export const FULLSCREEN_PLAYER: readonly GlassElement[] = ['playerLyrics', 'playerActions', 'playerWave'];
+
+/** Поверхности самого плеера: он перекрывает приложение и глушит нижние так же, как лист. */
+const PLAYER_SURFACES: readonly GlassElement[] = ['playerLyrics', 'playerActions', 'playerWave'];
 
 export function countSurfaces(elements: readonly GlassElement[]): number {
-  const sheetOpen = elements.includes('sheet');
+  // Подавление даёт не слово «sheet», а факт «сверху что-то открыто»: плеер поднимает тот
+  // же счётчик листов (screens/player-screen.tsx), поэтому его поверхности глушат нижние
+  // ровно так же. Считать иначе значит держать в бюджете таб-бар, которого на экране нет.
+  const overlayOpen = elements.includes('sheet') || elements.some((e) => PLAYER_SURFACES.includes(e));
   return elements
-    .filter((e) => !(sheetOpen && SUPPRESSED_BY_SHEET.includes(e)))
+    .filter((e) => !(overlayOpen && SUPPRESSED_BY_SHEET.includes(e)))
     .reduce((sum, e) => sum + GLASS_SURFACES[e], 0);
 }
 
@@ -62,8 +71,8 @@ export const REACHABLE_SCENARIOS: Record<string, readonly GlassElement[]> = {
   'поиск + шит «в плейлист»': ['tabBar', 'miniPlayer', 'searchField', 'sheet'],
   'экран артиста с играющим треком': ['tabBar', 'miniPlayer', 'contentPlate'],
   'артист + шит': ['tabBar', 'miniPlayer', 'contentPlate', 'sheet'],
-  'фуллскрин-плеер': ['playerLyrics'],
-  'фуллскрин-плеер + шит': ['playerLyrics', 'sheet'],
+  'фуллскрин-плеер': [...FULLSCREEN_PLAYER],
+  'фуллскрин-плеер + шит': [...FULLSCREEN_PLAYER, 'sheet'],
   // Плеер открыт поверх табов и мини-плеера — те остаются смонтированными.
   'фуллскрин-плеер поверх табов': ['tabBar', 'miniPlayer', ...FULLSCREEN_PLAYER],
 };

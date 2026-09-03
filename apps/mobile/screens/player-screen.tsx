@@ -66,16 +66,16 @@ const LYRICS_IDLE_AT = 20;
 const WAVE_REFILL_AT = 2;
 
 const SOURCE_LABEL: Record<PlaySource, string> = {
-  wave: 'ВОЛНА',
-  release: 'РЕЛИЗ',
-  playlist: 'ПЛЕЙЛИСТ',
-  artist: 'АРТИСТ',
-  home: 'ГЛАВНАЯ',
-  feed: 'ЛЕНТА',
-  search: 'ПОИСК',
-  liked: 'ЛЮБИМОЕ',
-  purchased: 'ПОКУПКИ',
-  direct: 'ОЧЕРЕДЬ',
+  wave: 'Волна',
+  release: 'Релиз',
+  playlist: 'Плейлист',
+  artist: 'Артист',
+  home: 'Главная',
+  feed: 'Лента',
+  search: 'Поиск',
+  liked: 'Любимое',
+  purchased: 'Покупки',
+  direct: 'Очередь',
 };
 
 /**
@@ -123,6 +123,10 @@ export default function PlayerScreen() {
   const trackContext = useTrackContext(track?.id);
 
   const artRef = useRef<View>(null);
+  // Второй захват — только фон. Плашки лежат В прокрутке, то есть внутри artRef, и её
+  // преломлять не могут (цель не может быть предком стекла). Фон им предком не приходится,
+  // поэтому у них живой бэкдроп есть, а рекурсии RenderNode нет.
+  const groundRef = useRef<View>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
   const [coverTop, setCoverTop] = useState(0);
   const [immersiveOn, setImmersiveOn] = useState(false);
@@ -218,6 +222,10 @@ export default function PlayerScreen() {
 
   return (
     <View style={styles.root}>
+      <Backdrop targetRef={groundRef} style={StyleSheet.absoluteFill}>
+        <PlayerGround coverUrl={track.coverUrl} accent={accent} />
+      </Backdrop>
+
       <Backdrop
         targetRef={artRef}
         style={styles.blurTarget}
@@ -227,8 +235,6 @@ export default function PlayerScreen() {
           {/* Один контейнер на весь экран: ExpoView бэкдропа раскладывает только первого
               ребёнка, и вторым сиблингом прокрутка получала нулевую высоту. */}
           <View style={styles.screen}>
-            <PlayerGround coverUrl={track.coverUrl} accent={accent} />
-
             <Animated.ScrollView
               style={styles.scroll}
               onScroll={onScroll}
@@ -304,6 +310,7 @@ export default function PlayerScreen() {
                   hasLyrics={lines !== null}
                   lyricsShown={lyricsShown}
                   accent={accent}
+                  blurTarget={groundRef}
                   onToggleLyrics={() => setLyricsShown((v) => !v)}
                   onPlaylist={() => setPlaylistOpen(true)}
                   onShare={share}
@@ -315,7 +322,7 @@ export default function PlayerScreen() {
               </Animated.View>
 
               <View style={styles.context}>
-                <WaveBanner trackTitle={track.title} accent={accent} onPress={startWave} />
+                <WaveBanner trackTitle={track.title} accent={accent} blurTarget={groundRef} onPress={startWave} />
 
                 {trackContext && (
                   <>
@@ -349,7 +356,7 @@ export default function PlayerScreen() {
               >
                 <Icon name="chevron-down" size={22} color={colors.foreground} />
               </Pressable>
-              <Text style={type.mono} numberOfLines={1}>
+              <Text style={type.caption} numberOfLines={1}>
                 {context ? SOURCE_LABEL[context.source] : SOURCE_LABEL.direct}
               </Text>
               <View style={styles.headerButton} />
