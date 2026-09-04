@@ -82,6 +82,16 @@ describe('гейт видимости в поиске', () => {
     expect(found).not.toContain(empty.slug);
   });
 
+  it('артист с одним заблокированным треком не находится', async () => {
+    const { artist: ok } = await makeVisibleArtist({ name: 'Ищемый Первый' });
+    const blockedOnly = await makeArtist({ name: 'Ищемый Второй' });
+    const release = await makeRelease(blockedOnly.id, { status: 'PUBLISHED' });
+    await makeTrack(release.id, { status: 'BLOCKED' });
+
+    const found = (await searchAll('Ищемый', 20)).artists.map((a) => a.slug);
+    expect(found).toContain(ok.slug);
+    expect(found).not.toContain(blockedOnly.slug);
+  });
   it('трек из черновика не находится, опубликованный — находится', async () => {
     const artist = await makeArtist();
     const published = await makeRelease(artist.id, { status: 'PUBLISHED' });

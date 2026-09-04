@@ -26,19 +26,29 @@ describe('гейт видимости артиста', () => {
     expect(slugs).not.toContain(artist.slug);
   });
 
-  it('artistHasPublishedTrackById смотрит на статус релиза, а не трека', async () => {
+  it('заблокированный и сбойный трек не делают артиста видимым', async () => {
+    const artist = await makeArtist();
+    const published = await makeRelease(artist.id, { status: 'PUBLISHED' });
+
+    await makeTrack(published.id, { status: 'BLOCKED' });
+    expect(await artistHasPublishedTrackById(artist.id)).toBe(false);
+
+    await makeTrack(published.id, { trackNumber: 2, status: 'FAILED' });
+    expect(await artistHasPublishedTrackById(artist.id)).toBe(false);
+
+    const slugs = (await listActiveArtists({ limit: 50, offset: 0 })).map((a) => a.slug);
+    expect(slugs).not.toContain(artist.slug);
+  });
+
+  it('трек в обработке артиста не прячет — транскодинг это минуты', async () => {
     const artist = await makeArtist();
     const draft = await makeRelease(artist.id, { status: 'DRAFT' });
     await makeTrack(draft.id);
     expect(await artistHasPublishedTrackById(artist.id)).toBe(false);
 
-    // Зафиксировано фактическое поведение: гейт каталога проверяет только статус релиза.
-    // Трек в PROCESSING/FAILED/BLOCKED делает артиста видимым, хотя играть у него нечего —
-    // getArtistPlayableTracks фильтрует по READY, и профиль оказывается пустым.
     const published = await makeRelease(artist.id, { status: 'PUBLISHED' });
     await makeTrack(published.id, { status: 'PROCESSING' });
     expect(await artistHasPublishedTrackById(artist.id)).toBe(true);
-    expect(await getArtistPlayableTracks(artist.id)).toHaveLength(0);
   });
 });
 
