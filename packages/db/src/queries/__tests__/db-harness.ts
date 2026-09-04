@@ -2,8 +2,11 @@ import { sql } from 'drizzle-orm';
 import { db } from '../../client';
 import { users } from '../../schema/users';
 import { artistProfiles } from '../../schema/artists';
-import { releases, tracks } from '../../schema/releases';
-import { playlists, playlistTracks } from '../../schema/interactions';
+import { releases, tracks, trackAudio, trackGenres, trackMoods } from '../../schema/releases';
+import type { TrackGenre } from '../track-genres';
+import type { Mood } from '../track-moods';
+import { playlists, playlistTracks, friendships, likes } from '../../schema/interactions';
+import { playEvents } from '../../schema/analytics';
 
 /**
  * Чистит данные между тестами. Корневые таблицы перечислены явно, остальное снимает CASCADE:
@@ -11,7 +14,7 @@ import { playlists, playlistTracks } from '../../schema/interactions';
  */
 export async function resetDb(): Promise<void> {
   await db.execute(
-    sql.raw('truncate table "users", "artist_profiles", "releases", "tracks", "playlists" restart identity cascade'),
+    sql.raw('truncate table "users", "artist_profiles", "releases", "tracks", "playlists", "play_events" restart identity cascade'),
   );
 }
 
@@ -77,4 +80,39 @@ export async function makePlaylist(
 
 export async function addPlaylistTrack(playlistId: string, trackId: string, position = 1): Promise<void> {
   await db.insert(playlistTracks).values({ playlistId, trackId, position });
+}
+
+export async function addTrackAudio(
+  trackId: string,
+  overrides: Partial<typeof trackAudio.$inferInsert> = {},
+): Promise<void> {
+  await db
+    .insert(trackAudio)
+    .values({ trackId, hlsManifestKey: `stream/${trackId}/index.m3u8`, ...overrides });
+}
+
+export async function addTrackGenres(trackId: string, genres: TrackGenre[]): Promise<void> {
+  await db.insert(trackGenres).values(genres.map((genre) => ({ trackId, genre })));
+}
+
+export async function addTrackMoods(trackId: string, moods: Mood[]): Promise<void> {
+  await db.insert(trackMoods).values(moods.map((mood) => ({ trackId, mood })));
+}
+
+export async function makeFriendship(requesterId: string, addresseeId: string): Promise<void> {
+  await db.insert(friendships).values({ requesterId, addresseeId, status: 'ACCEPTED' });
+}
+
+export async function likeTrack(userId: string, trackId: string): Promise<void> {
+  await db.insert(likes).values({ userId, trackId });
+}
+
+export async function addPlayEvent(
+  trackId: string,
+  userId: string | null,
+  overrides: Partial<typeof playEvents.$inferInsert> = {},
+): Promise<void> {
+  await db
+    .insert(playEvents)
+    .values({ trackId, userId, sessionId: `sess-${trackId}-${userId ?? 'anon'}`, durationPlayedSec: 120, ...overrides });
 }
