@@ -33,11 +33,13 @@ export async function searchAll(query: string, limit = 5): Promise<SearchResults
       .where(
         and(
           eq(artistProfiles.isActive, true),
+          // Зеркало artistHasPublishedTrack из artists.ts — правится синхронно с ним.
           sql`exists (
             select 1 from tracks t
             join releases r on r.id = t.release_id
             where r.artist_profile_id = artist_profiles.id
               and r.status = 'PUBLISHED'
+              and t.status not in ('BLOCKED', 'FAILED')
           )`,
           ilike(artistProfiles.name, q),
         ),
