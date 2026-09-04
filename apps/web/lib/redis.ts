@@ -15,6 +15,8 @@ export function getRedis(): Redis {
     globalForRedis._redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
       maxRetriesPerRequest: null,
       lazyConnect: false,
+      // ioredis 6 включил RESP3 по умолчанию; держим формат ответов v5.
+      protocol: 2,
     });
     // Без обработчика ioredis роняет процесс на сетевой ошибке Redis.
     globalForRedis._redis.on('error', () => {});

@@ -4,7 +4,7 @@ import { connection } from '../queues/connection.js';
 let client: Redis | null = null;
 function redis(): Redis {
   if (!client) {
-    client = new Redis(connection.url, { maxRetriesPerRequest: null, lazyConnect: false });
+    client = new Redis(connection.url, { maxRetriesPerRequest: null, lazyConnect: false, protocol: 2 });
     client.on('error', () => {});
   }
   return client;

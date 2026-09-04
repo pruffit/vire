@@ -338,6 +338,15 @@ pnpm audit --audit-level=high          # из корня; гейт CI, лока�
 > свежий мажор (`nanoid` уехал на 6.x ESM-only, которого `postcss` не ждёт). `pnpm update`
 > для этого не годится — поднимает вторую копию нативных пакетов рядом со старой.
 
+> ⚠️ **Ставь зависимости правкой `package.json` + `pnpm install` из корня, не `pnpm add --filter`.**
+> В локе включён `autoInstallPeers`, и на пакете, где react только в `peerDependencies`
+> (`packages/ui`), фильтрованный `add` доставляет этот peer **в обход `pnpm.overrides`** —
+> `packages/ui/node_modules/react` уезжает на другую копию, в приложении оказываются две
+> версии React, диспетчер хуков становится null. Симптом: `Cannot read properties of null
+> (reading 'useContext' / 'useSyncExternalStore')` в двух десятках несвязанных тестов, будто
+> «мажор сломал полпродукта». **Лок при этом остаётся корректным** — в CI на чистой установке
+> не воспроизводится, только локально. Лечится `pnpm install` без `--filter` (03.09.2026).
+
 > CI (`gates`) гоняет typecheck единым `pnpm turbo run typecheck` — таск в `turbo.json`
 > без scope-фильтра, подхватывает любой пакет со своим script `typecheck` (сейчас
 > `@vire/web`, `@vire/core`, `@vire/db` и остальные). Добавлять отдельный CI-шаг под
