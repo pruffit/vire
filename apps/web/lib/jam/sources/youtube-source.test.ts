@@ -2,7 +2,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 class FakePlayer {
-  static instances: FakePlayer[] = [];
   destroy = vi.fn();
   playVideo = vi.fn();
   pauseVideo = vi.fn();
@@ -15,14 +14,24 @@ class FakePlayer {
 
   constructor(public el: HTMLElement, public opts: { videoId: string; events?: typeof FakePlayer.prototype.events }) {
     this.events = opts.events ?? {};
-    FakePlayer.instances.push(this);
   }
 }
 
 const PlayerState = { ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3 };
 
+// Массив пересоздаётся на каждый тест, а подкласс захватывает текущий: плеер от
+// оборванного таймаутом теста попадёт в старый массив и не отравит следующий.
+let players: FakePlayer[] = [];
+
 function installFakeYT(): void {
-  (window as unknown as { YT: unknown }).YT = { Player: FakePlayer, PlayerState };
+  const bucket = players;
+  class BoundPlayer extends FakePlayer {
+    constructor(el: HTMLElement, opts: ConstructorParameters<typeof FakePlayer>[1]) {
+      super(el, opts);
+      bucket.push(this);
+    }
+  }
+  (window as unknown as { YT: unknown }).YT = { Player: BoundPlayer, PlayerState };
 }
 
 function fireApiReady(): void {
@@ -32,7 +41,7 @@ function fireApiReady(): void {
 
 beforeEach(() => {
   vi.resetModules();
-  FakePlayer.instances = [];
+  players = [];
   delete (window as unknown as { YT?: unknown }).YT;
   delete (window as unknown as { onYouTubeIframeAPIReady?: unknown }).onYouTubeIframeAPIReady;
   document.head.innerHTML = '';
@@ -48,7 +57,7 @@ describe('createYoutubeSource', () => {
     const engine = createYoutubeSource();
 
     await expect(engine.load('vid-1')).resolves.toBeUndefined();
-    expect(FakePlayer.instances).toHaveLength(0);
+    expect(players).toHaveLength(0);
     expect(document.querySelector('script[src="https://www.youtube.com/iframe_api"]')).toBeNull();
   });
 
@@ -63,14 +72,14 @@ describe('createYoutubeSource', () => {
     expect(document.querySelector('script[src="https://www.youtube.com/iframe_api"]')).not.toBeNull();
 
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    FakePlayer.instances[0]!.events.onReady?.({ target: FakePlayer.instances[0] });
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    players[0]!.events.onReady?.({ target: players[0] });
 
     await expect(loadPromise).resolves.toBeUndefined();
     // Плееру отдаётся собственный дочерний узел, а не React-контейнер: YT.Player подменяет элемент на iframe.
-    expect(FakePlayer.instances[0]!.el).not.toBe(el);
-    expect(el.contains(FakePlayer.instances[0]!.el)).toBe(true);
-    expect(FakePlayer.instances[0]!.opts.videoId).toBe('vid-1');
+    expect(players[0]!.el).not.toBe(el);
+    expect(el.contains(players[0]!.el)).toBe(true);
+    expect(players[0]!.opts.videoId).toBe('vid-1');
   });
 
   it('destroy убирает свой узел из контейнера — React-контейнер остаётся цел', async () => {
@@ -83,8 +92,8 @@ describe('createYoutubeSource', () => {
 
     const loadPromise = engine.load('vid-1');
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    FakePlayer.instances[0]!.events.onReady?.({ target: FakePlayer.instances[0] });
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    players[0]!.events.onReady?.({ target: players[0] });
     await loadPromise;
     expect(el.childElementCount).toBe(1);
 
@@ -103,14 +112,14 @@ describe('createYoutubeSource', () => {
 
     const first = engine.load('vid-1');
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    FakePlayer.instances[0]!.events.onReady?.({ target: FakePlayer.instances[0] });
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    players[0]!.events.onReady?.({ target: players[0] });
     await first;
 
     await engine.load('vid-2');
 
-    expect(FakePlayer.instances).toHaveLength(1);
-    expect(FakePlayer.instances[0]!.loadVideoById).toHaveBeenCalledWith('vid-2');
+    expect(players).toHaveLength(1);
+    expect(players[0]!.loadVideoById).toHaveBeenCalledWith('vid-2');
   });
 
   it('play/pause/seek/currentTimeMs делегируют плееру', async () => {
@@ -121,8 +130,8 @@ describe('createYoutubeSource', () => {
 
     const loadPromise = engine.load('vid-1');
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    const player = FakePlayer.instances[0]!;
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    const player = players[0]!;
     player.events.onReady?.({ target: player });
     await loadPromise;
 
@@ -149,8 +158,8 @@ describe('createYoutubeSource', () => {
 
     const loadPromise = engine.load('vid-1');
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    const player = FakePlayer.instances[0]!;
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    const player = players[0]!;
     player.events.onReady?.({ target: player });
     await loadPromise;
 
@@ -175,8 +184,8 @@ describe('createYoutubeSource', () => {
 
     const loadPromise = engine.load('vid-1');
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    const player = FakePlayer.instances[0]!;
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    const player = players[0]!;
     player.events.onReady?.({ target: player });
     await loadPromise;
 
@@ -197,8 +206,8 @@ describe('createYoutubeSource', () => {
 
     const loadPromise = engine.load('vid-1');
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    const player = FakePlayer.instances[0]!;
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    const player = players[0]!;
     player.events.onError?.({ target: player });
 
     await expect(loadPromise).resolves.toBeUndefined();
@@ -215,8 +224,8 @@ describe('createYoutubeSource', () => {
 
     const loadPromise = engine.load('vid-1');
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    const player = FakePlayer.instances[0]!;
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    const player = players[0]!;
     player.events.onReady?.({ target: player });
     await loadPromise;
 
@@ -246,8 +255,8 @@ describe('createYoutubeSource', () => {
 
     const loadPromise = engine.load('vid-1');
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    const player = FakePlayer.instances[0]!;
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    const player = players[0]!;
     player.events.onReady?.({ target: player });
     await loadPromise;
 
@@ -265,12 +274,12 @@ describe('createYoutubeSource', () => {
     await engine.load('vid-1');
     engine.seek(42_000);
     engine.play();
-    expect(FakePlayer.instances).toHaveLength(0);
+    expect(players).toHaveLength(0);
 
     setPartyVideoContainer(document.createElement('div'));
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    const player = FakePlayer.instances[0]!;
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    const player = players[0]!;
     player.events.onReady?.({ target: player });
 
     expect(player.seekTo).toHaveBeenCalledWith(42, true);
@@ -289,8 +298,8 @@ describe('createYoutubeSource', () => {
 
     setPartyVideoContainer(document.createElement('div'));
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    const player = FakePlayer.instances[0]!;
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    const player = players[0]!;
     player.events.onReady?.({ target: player });
 
     expect(player.seekTo).toHaveBeenCalledWith(10, true);
@@ -306,8 +315,8 @@ describe('createYoutubeSource', () => {
 
     const loadPromise = engine.load('vid-1');
     fireApiReady();
-    await vi.waitFor(() => expect(FakePlayer.instances).toHaveLength(1));
-    const player = FakePlayer.instances[0]!;
+    await vi.waitFor(() => expect(players).toHaveLength(1));
+    const player = players[0]!;
     player.events.onReady?.({ target: player });
     await loadPromise;
 
@@ -317,6 +326,6 @@ describe('createYoutubeSource', () => {
     // после destroy() смена контейнера не должна пытаться пересоздать плеер этого движка
     setPartyVideoContainer(null);
     setPartyVideoContainer(el);
-    expect(FakePlayer.instances).toHaveLength(1);
+    expect(players).toHaveLength(1);
   });
 });
