@@ -27,7 +27,7 @@ function redisUrl(): string {
 
 function getPublisherRedis(): Redis {
   if (!globalForRealtime._realtimePublisherRedis) {
-    const redis = new Redis(redisUrl(), { maxRetriesPerRequest: null, lazyConnect: false });
+    const redis = new Redis(redisUrl(), { maxRetriesPerRequest: null, lazyConnect: false, protocol: 2 });
     redis.on('error', () => {});
     globalForRealtime._realtimePublisherRedis = redis;
   }
@@ -46,7 +46,7 @@ function getEmitter(): EventEmitter {
 
 function ensureSubscriber(): void {
   if (globalForRealtime._realtimeSubscriberRedis) return;
-  const sub = new Redis(redisUrl(), { maxRetriesPerRequest: null, lazyConnect: false });
+  const sub = new Redis(redisUrl(), { maxRetriesPerRequest: null, lazyConnect: false, protocol: 2 });
   sub.on('error', () => {});
   sub.psubscribe(PSUBSCRIBE_PATTERN).catch(() => {});
   sub.on('pmessage', (_pattern: string, channel: string, message: string) => {

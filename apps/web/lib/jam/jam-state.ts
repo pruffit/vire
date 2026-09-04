@@ -54,7 +54,7 @@ export class RedisJamStateStore implements IJamStateStore {
       const res = await redis
         .multi()
         .zremrangebyscore(key, 0, now - PRESENCE_WINDOW_MS)
-        .zrange(key, 0, -1)
+        .zrange(key, '0', '-1')
         .exec();
       const members = res?.[1]?.[1];
       return Array.isArray(members) ? (members as string[]) : [];

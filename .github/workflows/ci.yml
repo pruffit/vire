@@ -66,7 +66,25 @@ jobs:
       - name: Test
         run: pnpm test
       - name: Security audit
-        run: pnpm audit --audit-level=high
+        # Сервис аудита npm периодически недоступен и роняет релиз, не имея отношения к коду
+        # (04.09.2026 — два прогона подряд по ERR_SOCKET_TIMEOUT). Найденные уязвимости валят
+        # гейт сразу, как и раньше; недоступный реестр после трёх попыток даёт предупреждение,
+        # а не падение — чужой простой не должен быть стоп-фактором релиза. Прогнать вручную.
+        run: |
+          for attempt in 1 2 3; do
+            if out=$(pnpm audit --audit-level=high 2>&1); then
+              echo "$out"
+              exit 0
+            fi
+            echo "$out"
+            if ! echo "$out" | grep -qE 'ERR_SOCKET_TIMEOUT|FetchError|ECONNRESET|ETIMEDOUT|EAI_AGAIN'; then
+              echo '::error::pnpm audit нашёл уязвимости уровня high и выше'
+              exit 1
+            fi
+            echo "::warning::реестр npm недоступен (попытка $attempt из 3)"
+          done
+          echo '::warning::pnpm audit пропущен — сервис аудита npm недоступен. Прогнать вручную перед тегом.'
+          exit 0
       - name: Design audit (Impeccable)
         run: pnpm --filter @vire/web audit:design
       - name: Build

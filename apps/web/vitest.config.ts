@@ -11,6 +11,9 @@ export default defineConfig({
       'components/**/*.test.ts', 'components/**/*.test.tsx',
       'store/**/*.test.ts', 'store/**/*.test.tsx',
     ],
+    // Кейсы с vi.resetModules() переисполняют тяжёлый граф модулей на каждый тест;
+    // на Windows под параллельной нагрузкой это не укладывается в дефолтные 5с.
+    testTimeout: 20000,
     server: {
       // next-intl's ESM build imports bare `next/navigation` (no extension); `next`
       // has no package.json "exports" map, so Node's native ESM loader can't resolve

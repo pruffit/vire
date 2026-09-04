@@ -24,8 +24,8 @@ export async function getWaveSession(sessionId: string): Promise<WaveSession> {
     const redis = getRedis();
     const key = servedKey(sessionId);
     const [servedIds, recentServedIds, seed] = await Promise.all([
-      redis.zrange(key, -MAX_SERVED_IDS, -1),
-      redis.zrange(key, -5, -1),
+      redis.zrange(key, String(-MAX_SERVED_IDS), '-1'),
+      redis.zrange(key, '-5', '-1'),
       redis.hgetall(seedKey(sessionId)),
     ]);
     return { servedIds, recentServedIds, mood: seed.mood ?? null, genre: seed.genre ?? null };

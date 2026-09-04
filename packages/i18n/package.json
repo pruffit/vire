@@ -11,7 +11,7 @@
     "./messages/*": "./messages/*"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ../../node_modules/typescript-7/bin/tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
