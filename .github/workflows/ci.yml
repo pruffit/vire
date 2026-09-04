@@ -29,6 +29,22 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    # Тесты гейтов видимости в packages/db идут по живой схеме: три утечки этого класса
+    # (черновики, скрытый артист, смартлинк) были ошибками в SQL, чистые предикаты их не ловят.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vire
+          POSTGRES_PASSWORD: vire
+          POSTGRES_DB: vire_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v7
 
@@ -63,6 +79,10 @@ jobs:
       # Vitest сам параллелит файлы внутри пакета; второй, нескоординированный
       # слой параллелизма от turbo перепрописывает ядра и роняет тесты по таймауту
       # (docs/foundation/TECHNICAL_DEBT.md → «turbo run test флейкал»).
+      - name: Migrate test database
+        run: pnpm --filter @vire/db db:migrate:fresh
+        env:
+          DATABASE_URL: postgresql://vire:vire@localhost:5432/vire_test
       - name: Test
         run: pnpm test
       - name: Security audit
