@@ -5,7 +5,7 @@ import { artistProfiles } from '../../schema/artists';
 import { releases, tracks, trackAudio, trackGenres, trackMoods } from '../../schema/releases';
 import type { TrackGenre } from '../track-genres';
 import type { Mood } from '../track-moods';
-import { playlists, playlistTracks, friendships, likes } from '../../schema/interactions';
+import { playlists, playlistTracks, friendships, likes, follows } from '../../schema/interactions';
 import { playEvents } from '../../schema/analytics';
 
 /**
@@ -115,4 +115,8 @@ export async function addPlayEvent(
   await db
     .insert(playEvents)
     .values({ trackId, userId, sessionId: `sess-${trackId}-${userId ?? 'anon'}`, durationPlayedSec: 120, ...overrides });
+}
+
+export async function followArtist(userId: string, artistProfileId: string): Promise<void> {
+  await db.insert(follows).values({ userId, artistProfileId });
 }
