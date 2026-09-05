@@ -1,5 +1,5 @@
-import { type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, type ReactNode } from 'react';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassPanel } from './glass-panel';
 import { VIREGLASS_SHEET_MATERIAL } from '../../lib/vireglass/material';
@@ -30,6 +30,18 @@ export function BottomSheet({
   children: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
+
+  // «Назад» на Android закрывала лист, пока он был Modal (`onRequestClose`); свой лист об
+  // этой кнопке не знает, и она уводила с экрана из-под открытого листа.
+  useEffect(() => {
+    if (!open) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (

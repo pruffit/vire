@@ -70,6 +70,14 @@ jobs:
         run: pnpm turbo run typecheck
       - name: Lint
         run: pnpm turbo run lint
+      # Барьер: транспайлер AGSL → GLSL. Оба шейдера компилируются и линкуются в настоящем
+      # WebGL2 — рассинхрон имён униформ Expo однажды проглотил молча, и преломление
+      # простояло выключенным в проде целую фазу. Браузер ставится явно: pnpm не пускает
+      # postinstall playwright (onlyBuiltDependencies), поэтому сам он не приедет.
+      - name: GLSL check
+        run: |
+          pnpm --filter @vire/vireglass exec playwright install --with-deps chromium-headless-shell
+          pnpm turbo run check:glsl
       - name: Doc paths
         run: pnpm check:doc-paths
       # Барьер: параллелизм turbo не складывается с параллелизмом vitest.

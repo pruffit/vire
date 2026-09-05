@@ -12,6 +12,7 @@
     "lint": {},
     "typecheck": {},
     "check:layers": {},
+    "check:glsl": {},
     "check:contracts": {},
     "test": {}
   }
