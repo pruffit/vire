@@ -8,14 +8,16 @@
     "check:i18n": "node scripts/check-i18n.mjs",
     "check:contracts": "node scripts/check-contracts.mjs",
     "check:caller": "node scripts/check-caller.mjs",
-    "prebuild": "node scripts/check-route-slugs.mjs && node scripts/check-i18n.mjs && node scripts/check-contracts.mjs && node scripts/check-caller.mjs",
+    "prebuild": "node scripts/build-rnd.mjs && node scripts/check-route-slugs.mjs && node scripts/check-i18n.mjs && node scripts/check-contracts.mjs && node scripts/check-caller.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "audit:design": "impeccable detect app components"
+    "audit:design": "impeccable detect app components",
+    "rnd": "node scripts/build-rnd.mjs",
+    "rnd:watch": "node scripts/build-rnd.mjs --watch"
   },
   "dependencies": {
     "@auth/core": "0.41.3",
@@ -60,11 +62,14 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vire/config": "workspace:*",
+    "@vire/vireglass": "workspace:*",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "fake-indexeddb": "^6.0.0",
     "impeccable": "3.6.0",
     "jsdom": "^29.1.1",
+    "playwright": "^1.62.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.8"

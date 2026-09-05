@@ -139,6 +139,11 @@ const nextConfig: NextConfig = {
     // Next 16 блокирует оптимизацию с loopback IP (SSRF-защита); локальному MinIO нужен обход только в dev.
     dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
   },
+  // Стенд материала VireGlass — статическая страница в public/rnd, не React: она не зависит
+  // от гидрации приложения и его оболочки, а пересборка идёт esbuild'ом за миллисекунды.
+  async rewrites() {
+    return [{ source: '/rnd', destination: '/rnd/index.html' }];
+  },
   async headers() {
     return [
       { source: '/(.*)', headers: SECURITY_HEADERS },

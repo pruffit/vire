@@ -7,5 +7,7 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   ...baseConfig,
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  // public/rnd/stand.js* — бандл esbuild из packages/vireglass (scripts/build-rnd.mjs),
+  // не авторский код: как .next/out/build, генерируется и не должен линтиться.
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "public/rnd/stand.*"]),
 ]);

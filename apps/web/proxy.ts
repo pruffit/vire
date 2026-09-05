@@ -69,6 +69,14 @@ export default auth((req) => {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
+  // Стенд материала VireGlass — dev-инструмент вне локализации. Хром снят намеренно:
+  // стенду нужен чистый кадр, иначе скриншот и замер ловят Nav и плеер.
+  if (pathname.startsWith('/rnd')) {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-desktop-chrome', 'none');
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   const isProtected = PROTECTED_PREFIXES.some((p) => unprefixed.startsWith(p));
   if (isProtected && !req.auth) {
     const signIn = new URL(getPathname({ href: '/sign-in', locale: urlLocale }), req.nextUrl.origin);
