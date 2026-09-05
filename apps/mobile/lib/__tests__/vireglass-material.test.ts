@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DYNAMIC_UNIFORMS,
   ICON_UNIFORMS,
+  OVERLAY_UNIFORMS,
   toLensProps,
   toSurfaceUniforms,
 } from '../vireglass/adapters';
@@ -227,7 +228,7 @@ function lensUniform(props: ReturnType<typeof toLensProps>, name: string): numbe
 
 describe('адаптеры', () => {
   it('выключенное преломление не смещает выборку и не увеличивает середину', () => {
-    const props = toLensProps(applyToggles(optics, { refraction: false }), circle);
+    const props = toLensProps(applyToggles(optics, { refraction: false }), circle, PixelRatio.get());
     expect(lensUniform(props, 'u_magnify')).toEqual([1]);
     expect(lensUniform(props, 'u_edgePush')).toEqual([0]);
     expect(lensUniform(props, 'u_spherical')).toEqual([0]);
@@ -235,7 +236,7 @@ describe('адаптеры', () => {
 
   it('выключенная дисперсия убирает хроматическое расхождение', () => {
     expect(
-      lensUniform(toLensProps(applyToggles(optics, { dispersion: false }), circle), 'u_chroma'),
+      lensUniform(toLensProps(applyToggles(optics, { dispersion: false }), circle, PixelRatio.get()), 'u_chroma'),
     ).toEqual([0]);
   });
 
@@ -244,7 +245,7 @@ describe('адаптеры', () => {
   it('обе программы видят одну и ту же фаску', () => {
     // Линза получает фаску в пикселях, поверхность — в dp: одна и та же величина среды,
     // разные единицы. Разъехаться им нельзя — иначе две программы рисуют разную форму.
-    const px = lensUniform(toLensProps(optics, circle), 'u_bevel')[0];
+    const px = lensUniform(toLensProps(optics, circle, PixelRatio.get()), 'u_bevel')[0];
     expect(px / PixelRatio.get()).toBeCloseTo(toSurfaceUniforms(optics, circle).u_bevel, 5);
   });
 
@@ -257,26 +258,26 @@ describe('адаптеры', () => {
     expect(SURFACE_SHADER).not.toContain('u_fresnel');
     expect(SURFACE_SHADER).not.toContain('u_edgeStrength');
 
-    const props = toLensProps(optics, circle);
+    const props = toLensProps(optics, circle, PixelRatio.get());
     expect(lensUniform(props, 'u_fresnel')).toEqual([optics.fresnel]);
     expect(lensUniform(props, 'u_reflectReach')[0]).toBeGreaterThan(0);
   });
 
   it('выключенный френель убирает отражение целиком', () => {
     expect(
-      lensUniform(toLensProps(applyToggles(optics, { fresnel: false }), circle), 'u_fresnel'),
+      lensUniform(toLensProps(applyToggles(optics, { fresnel: false }), circle, PixelRatio.get()), 'u_fresnel'),
     ).toEqual([0]);
   });
 
   it('вторая форма выключена, пока морфинг не задан', () => {
-    expect(lensUniform(toLensProps(optics, circle), 'u_morphK')).toEqual([0]);
+    expect(lensUniform(toLensProps(optics, circle, PixelRatio.get()), 'u_morphK')).toEqual([0]);
     expect(toSurfaceUniforms(optics, circle).u_morphK).toBe(0);
   });
 
   it('debug-режим уезжает в шейдеры одним и тем же индексом', () => {
     expect(debugIndex('normal')).toBe(0);
     expect(debugIndex('backdrop')).toBe(6);
-    expect(lensUniform(toLensProps(optics, circle, { debug: 'backdrop' }), 'u_debug')).toEqual([6]);
+    expect(lensUniform(toLensProps(optics, circle, PixelRatio.get(), { debug: 'backdrop' }), 'u_debug')).toEqual([6]);
     expect(toSurfaceUniforms(optics, circle, { debug: 'backdrop' }).u_debug).toBe(6);
   });
 
@@ -298,7 +299,7 @@ describe('контракт с нативным слоем', () => {
     const declared = new Set(
       [...lensBlock.matchAll(/Prop\("(\w+)"\)/g)].map((m) => m[1]),
     );
-    for (const key of Object.keys(toLensProps(optics, circle))) {
+    for (const key of Object.keys(toLensProps(optics, circle, PixelRatio.get()))) {
       expect(declared, `проп ${key} не объявлен нативно`).toContain(key);
     }
   });
@@ -316,20 +317,20 @@ describe('контракт с нативным слоем', () => {
   it('каждая униформа AGSL-исходника кем-то заполняется', () => {
     const declared = [...LENS_SHADER.matchAll(/uniform\s+\w+\s+(u_\w+);/g)].map((m) => m[1]);
     const native = [...view.matchAll(/setFloatUniform\("(\w+)"/g)].map((m) => m[1]);
-    const provided = new Set([...native, ...toLensProps(optics, circle).uniformNames]);
+    const provided = new Set([...native, ...toLensProps(optics, circle, PixelRatio.get()).uniformNames]);
     for (const name of declared) {
       expect(provided, `униформа ${name} нигде не выставляется`).toContain(name);
     }
   });
 
   it('канал не шлёт униформ, которых в шейдере нет', () => {
-    for (const name of toLensProps(optics, circle).uniformNames) {
+    for (const name of toLensProps(optics, circle, PixelRatio.get()).uniformNames) {
       expect(new RegExp(`uniform\\s+\\w+\\s+${name};`).test(LENS_SHADER)).toBe(true);
     }
   });
 
   it('размеры канала совпадают с числом значений', () => {
-    const props = toLensProps(optics, circle);
+    const props = toLensProps(optics, circle, PixelRatio.get());
     expect(props.uniformNames.length).toBe(props.uniformSizes.length);
     expect(props.uniformSizes.reduce((x, y) => x + y, 0)).toBe(props.uniformValues.length);
   });
@@ -345,6 +346,7 @@ describe('контракт шейдера поверхности', () => {
       ...Object.keys(toSurfaceUniforms(optics, circle)),
       ...DYNAMIC_UNIFORMS,
       ...ICON_UNIFORMS,
+      ...OVERLAY_UNIFORMS,
     ]);
     expect(declared.length).toBeGreaterThan(20);
     for (const name of declared) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONFIRMATIONS, type BackdropSample } from '../vireglass/adaptation';
+import { CONFIRMATIONS, type BackdropSample } from '../adaptation';
 import {
   aggregate,
   createGroupState,
@@ -9,7 +9,7 @@ import {
   smoothPlane,
   type GroupMember,
   type GroupPlane,
-} from '../vireglass/group-model';
+} from '../group-model';
 
 const LEGIBILITY = 0.26;
 

@@ -1,4 +1,3 @@
-import { PixelRatio } from 'react-native';
 import {
   bevelDp,
   bevelFraction,
@@ -24,7 +23,30 @@ export type VireGlassMorph = {
   smoothing: number;
 };
 
+
+/** Отклик поверхности на палец: деформируется поле вокруг точки касания, а не габарит формы
+ *  (`vgTouchWarp` в `sdf.ts`). Длины в dp; `radius` = 0 выключает отклик целиком. */
+export type VireGlassTouch = {
+  x: number;
+  y: number;
+  pullX: number;
+  pullY: number;
+  press: number;
+  radius: number;
+  waveAmp: number;
+  wavePhase: number;
+};
+
+const NO_TOUCH: VireGlassTouch = {
+  x: 0, y: 0, pullX: 0, pullY: 0, press: 0, radius: 0, waveAmp: 0, wavePhase: 0,
+};
+
 const NO_MORPH = { offsetX: 0, offsetY: 0, width: 0, height: 0, cornerRadius: 0, smoothing: 0 };
+
+/** Прогресса нет. Отрицательным, а не нулём: ноль — это начало трека, законное значение. */
+const NO_PROGRESS = -1;
+
+
 
 /** Увеличение в плоской середине. Отдельно от канала униформ: его же берёт фолбэк ниже
  *  Android 13, где оптики нет и остаётся аффинная лупа. */
@@ -70,9 +92,18 @@ function channel(entries: [string, number | readonly number[]][]) {
 export function toLensProps(
   optics: VireGlassOptics,
   geometry: VireGlassGeometry,
-  options: { debug?: VireGlassDebugMode; morph?: VireGlassMorph; groupProbe?: number[] } = {},
+  density: number,
+  options: {
+    debug?: VireGlassDebugMode;
+    morph?: VireGlassMorph;
+    groupProbe?: number[];
+    touch?: VireGlassTouch;
+    /** Сыгранная доля, 0…1: слева от границы деталь активна. `undefined` — прогресса нет. */
+    progress?: number;
+  } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
+  const touch = options.touch ?? NO_TOUCH;
   // Оценка фона на всю группу поверхностей. Едет тем же каналом, что и материал, и
   // применяется ПОСЛЕ собственной оценки линзы — то есть просто перебивает её. Отдельным
   // пропом это не поедет: вьюха линзы обёрнута анимированным компонентом.
@@ -87,7 +118,7 @@ export function toLensProps(
           ['u_probe', [g[6], g[7], g[8]]],
         ]
       : [];
-  const d = PixelRatio.get();
+  const d = density;
   const halfW = (geometry.width * d) / 2;
   const halfH = (geometry.height * d) / 2;
   const halfMin = Math.min(halfW, halfH);
@@ -109,6 +140,7 @@ export function toLensProps(
       ['u_frost', optics.blur * d],
       ['u_ink', optics.ink],
       ['u_legibility', optics.legibility],
+      ['u_presence', optics.presence],
       ['u_adaptRadius', optics.adaptRadius * d],
       ['u_bodyTint', [optics.tint.r, optics.tint.g, optics.tint.b]],
       ['u_bodyDensity', optics.bodyDensity],
@@ -125,6 +157,12 @@ export function toLensProps(
       ['u_morphHalf', [(morph.width * d) / 2, (morph.height * d) / 2]],
       ['u_morphCorner', morph.cornerRadius * d],
       ['u_morphK', morph.smoothing * d],
+      ['u_touch', [touch.x * d, touch.y * d]],
+      ['u_pull', [touch.pullX * d, touch.pullY * d]],
+      ['u_touchPress', touch.press],
+      ['u_touchRadius', touch.radius * d],
+      ['u_wave', [touch.waveAmp * d, touch.wavePhase]],
+      ['u_progress', options.progress ?? NO_PROGRESS],
       ['u_debug', debugIndex(options.debug ?? 'normal')],
       ...group,
     ]),
@@ -143,9 +181,13 @@ export function toSurfaceUniforms(
     shadow?: number;
     /** Тело стекла рисует линза — поверхности остаётся блик, тень и иконка. */
     bodyInLens?: boolean;
+    touch?: VireGlassTouch;
+    /** Сыгранная доля, 0…1: слева от границы деталь активна. `undefined` — прогресса нет. */
+    progress?: number;
   } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
+  const touch = options.touch ?? NO_TOUCH;
   const pad = surfacePadDp(geometry, options.dragLimit ?? 0, morph);
   return {
     u_center: [geometry.width / 2 + pad, geometry.height / 2 + pad],
@@ -173,6 +215,14 @@ export function toSurfaceUniforms(
     ],
     u_shadow: options.shadow ?? 1,
     u_shadowReach: shadowReachDp(geometry),
+    u_touch: [touch.x, touch.y],
+    u_pull: [touch.pullX, touch.pullY],
+    u_touchPress: touch.press,
+    u_touchRadius: touch.radius,
+    u_wave: [touch.waveAmp, touch.wavePhase],
+    u_presence: optics.presence,
+    u_progress: options.progress ?? NO_PROGRESS,
+
     u_debug: debugIndex(options.debug ?? 'normal'),
   };
 }
@@ -186,6 +236,10 @@ export const REST_LIGHT: readonly [number, number] = [-0.577, -0.817];
 export const DYNAMIC_UNIFORMS = ['u_press', 'u_active', 'u_light'] as const;
 
 export const ICON_UNIFORMS = ['u_iconOn', 'u_iconScale', 'u_inkIdle', 'u_inkActive'] as const;
+
+/** Цветной слой приложения на стекле. Сэмплер `u_overlay` живёт в том же контракте, что и
+ *  маска краски, и берётся ТОЙ ЖЕ координатой — иначе деформация ведёт их порознь. */
+export const OVERLAY_UNIFORMS = ['u_overlayOn'] as const;
 
 /**
  * Слияние двух поверхностей в одну непрерывную среду.

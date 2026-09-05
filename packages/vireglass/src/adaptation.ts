@@ -73,7 +73,10 @@ export function bodyDensityFor(
   // ни при какой полярности. Формула та же, что в шейдере.
   const s = clamp(spread, 0, 1);
   const busyFloor = s * (0.15 + (0.85 - 0.15) * clamp(legibility, 0, 1));
-  return Math.max(bodyDensity, need, busyFloor);
+  // Требование гаснет вместе с legibility — тот же множитель, что в `lens-shader.ts`: на нуле
+  // модель обещает прозрачное стекло, а не мягкий потолок.
+  const demand = clamp(legibility * 4, 0, 1);
+  return Math.max(bodyDensity, need * demand, busyFloor);
 }
 
 /**
@@ -161,6 +164,32 @@ export function preferredPolarity(
 // 0.48 выбрано по насыщенному жёлтому: его светлота 0.78 — самая высокая среди цветов,
 // которые обязаны остаться под БЕЛОЙ надписью. Перекраска начинается примерно с 0.90, то
 // есть только на действительно очень светлом фоне.
+/**
+ * Полярность надписи по замеру фона — ОДНО место на все платформы. Возвращает, должна ли
+ * надпись остаться (или стать) светлой; гистерезис уже внутри, поэтому вызывающему остаётся
+ * решить только, сколько подтверждений он хочет.
+ *
+ * Три вещи, которые легко сделать неправильно и которые уже стоили ошибок:
+ *  - решение по СВЕТЛОТЕ с уклоном в светлую сторону, а не по среднему (иначе белый экран с
+ *    тёмной полосой не переключится) и не по максимуму (иначе одна светлая обложка под краем
+ *    перекрасит всю панель);
+ *  - цена удержания считается с НУЛЕВОЙ собственной плотностью и без разброса: это цена, а не
+ *    итоговая плотность. Подмешать сюда `bodyDensity` или пестроту — значит сравнивать с
+ *    порогом величину, которая никогда не падает до нуля, и решение поедет от любой фактуры;
+ *  - назад раньше, чем вперёд: без зазора надпись мигает на каждой границе.
+ */
+export function shouldInkBeLight(
+  sample: { luma: number; hi?: number },
+  legibility: number,
+  wasLight: boolean,
+): boolean {
+  const hi = sample.hi ?? sample.luma;
+  const decisive = sample.luma * 0.75 + hi * 0.25;
+  const cost = bodyDensityFor(decisive, legibility, 0, 1);
+  const wantsFlip = wasLight ? cost > FLIP_DENSITY : cost < RETURN_DENSITY;
+  return wantsFlip ? !wasLight : wasLight;
+}
+
 export const FLIP_DENSITY = 0.48;
 /** Обратно — заметно раньше, чем вперёд: без этого зазора надпись мигала бы на каждой
  *  светлой обложке, проехавшей под краем стекла. */
@@ -242,15 +271,10 @@ export function useGlassAdaptation(
       }
       if (!enabled) return;
 
-      // Решение принимается по светлоте с уклоном в СВЕТЛУЮ сторону, а не по среднему и не
-      // по самому светлому месту. По среднему — преимущественно белый экран с тёмной
-      // полосой не переключался бы; по максимуму — одна светлая обложка под краем стекла
-      // перекрашивала бы всю панель.
-      const hi = next.hi ?? next.luma;
-      const decisive = next.luma * 0.75 + hi * 0.25;
-      const cost = bodyDensityFor(decisive, optics.legibility, 0, 1);
       const wasLight = target.current === 1;
-      const wants = wasLight ? cost > FLIP_DENSITY : cost < RETURN_DENSITY;
+      // Само решение — в `shouldInkBeLight`: одно место на все платформы. Здесь остаётся
+      // только политика подтверждений, она у приложения своя.
+      const wants = shouldInkBeLight(next, optics.legibility, wasLight) !== wasLight;
       if (!wants) {
         pending.current = 0;
         return;

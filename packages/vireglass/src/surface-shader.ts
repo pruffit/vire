@@ -3,6 +3,9 @@ import { VG_FALLOFF, VG_SDF } from './sdf';
 /** Порядок совпадает с `DEBUG_MODES` в `material.ts`: индекс уезжает в `u_debug`. */
 export const SURFACE_SHADER = `
 uniform shader u_icon;
+/** Цветной контент приложения НА стекле — обложка, миниатюра. Отдельный слой от маски краски:
+ *  та одноканальная и красится полярностью, а этот несёт свой цвет как есть. */
+uniform shader u_overlay;
 
 uniform float2 u_center;
 uniform float2 u_halfSize;
@@ -26,16 +29,25 @@ uniform float  u_refraction;
 uniform float4 u_tint;
 uniform float  u_shadow;
 uniform float  u_shadowReach;
+uniform float  u_presence;
+uniform float  u_progress;
 uniform float  u_debug;
 
 uniform float  u_iconOn;
+uniform float  u_overlayOn;
 uniform float  u_iconScale;
 uniform float4 u_inkIdle;
 uniform float4 u_inkActive;
+uniform float2 u_touch;
+uniform float2 u_pull;
+uniform float  u_touchPress;
+uniform float  u_touchRadius;
+uniform float2 u_wave;
 
 ${VG_SDF}
 
 const float VG_FALLOFF = ${VG_FALLOFF};
+
 /* Толщина, на которой откалибровано поглощение: при ней полоса совпадает с прежним стеклом. */
 const float VG_REF_THICKNESS = 0.18;
 // Плотность тинта в плоской середине; у фаски она множится на u_edgeDensity.
@@ -51,7 +63,7 @@ half3 vgHeat(float v) {
 }
 
 half4 main(float2 xy) {
-  float2 p = xy - u_center;
+  float2 p = vgTouchWarp(xy - u_center, u_touch, u_pull, u_touchPress, u_touchRadius, u_wave.x, u_wave.y);
 
   // Обратная деформация: вдоль вектора тяги растяжение A, поперёк сжатие 1/sqrt(A). Ровно
   // этот закон повторяет трансформ живой подложки под канвасом, иначе они разъезжаются.
@@ -70,12 +82,17 @@ half4 main(float2 xy) {
 
   float bloom = 1.0 + u_press * 0.45;
 
+  // Прогресс — активное состояние, ставшее полем: сыгранная часть блестит и светится ровно
+  // настолько, насколько блестит активная деталь целиком. Краску это НЕ трогает: перекрашивать
+  // надпись по ходу трека значит менять её посреди слова.
+  float lit = max(u_active, vgProgress(p, u_halfSize, u_progress));
+
   float3 L1 = normalize(float3(u_light * 0.86, 0.42));
   float3 L2 = normalize(float3(-u_light * 0.78, 0.50));
   float bevelMask = smoothstep(0.10, 0.55, t);
   float s1 = pow(max(dot(reflect(-L1, N), V), 0.0), u_specularPower) * 0.85;
   float s2 = pow(max(dot(reflect(-L2, N), V), 0.0), u_specularPower * 1.45) * 0.14;
-  float spec = (s1 + s2) * bevelMask * u_specular * bloom * (1.0 + u_active * 0.30);
+  float spec = (s1 + s2) * bevelMask * u_specular * bloom * (1.0 + lit * 0.30);
 
   // Светящейся кромки здесь больше НЕТ. Она была отражением, нарисованным белым поверх, и
   // потому выглядела одинаково над чёрным списком и над светлой обложкой. Отражение
@@ -129,7 +146,7 @@ half4 main(float2 xy) {
     float con = 1.0 - smoothstep(0.0, u_shadowReach * 0.22, max(sd, 0.0));
     shade = (amb * amb * 0.22 + con * con * 0.18) * outside * u_shadow;
     halo = 1.0 - smoothstep(0.0, u_shadowReach * 0.30, max(sd, 0.0));
-    halo = halo * halo * u_active * 0.10 * outside;
+    halo = halo * halo * lit * 0.10 * outside;
   }
 
   if (sd > 1.0) {
@@ -146,25 +163,56 @@ half4 main(float2 xy) {
   // мутнее НЕ становится. Сцепленные, они давали молочное кольцо по всему обводу.
   float body = mix(VG_BODY_DENSITY, VG_BODY_DENSITY * u_edgeDensity, smoothstep(0.10, 0.62, t)) * density;
   float vignette = smoothstep(0.15, 1.0, inner) * 0.19 * density;
-  float a = max(body, vignette) + u_press * 0.05;
+  // Прибавки плотности на нажатие здесь НЕТ. Она задумывалась как «деталь заметнее под
+  // пальцем», но тянет тело к тинту, а тинт зависит от полярности: над светлым фоном
+  // (полярность тёмная) нажатие ТЕМНИЛО деталь. Присутствие показывают деформация поля
+  // vgTouchWarp и расцветающий блик ниже — им знак полярности безразличен.
+  float a = max(body, vignette);
 
-  col = mix(col, half3(0.58, 0.58, 0.61), half(u_active * 0.40));
-  a = max(a, u_active * 0.26) + absorb;
+  // Цвет тела активность НЕ трогает. Подмешивание фиксированного серого сюда меняло знак
+  // эффекта от фона: над тёмным деталь светлела, над светлым — темнела, хотя состояние одно
+  // и то же. Активность показывают блик и подсветка кромки выше: им фон безразличен.
+  a = a + absorb;
   col *= 1.0 - half(absorb * 1.2);
 
-  col += half3(spec) * half3(0.98, 0.99, 1.0);
+  // ЗНАЧОК ЛЕЖИТ ПОД ПОВЕРХНОСТЬЮ, а не наклеен на неё: раньше он подмешивался последним,
+  // поверх блика, и читался плоским стикером на объёмном стекле. У кромки его уводит нормаль,
+  // как всё, что видно сквозь стекло, а блик ложится СВЕРХУ — он живёт на самой поверхности.
+  //
+  // Никакой тени под значком здесь НЕТ. Она делалась разницей двух смещённых выборок маски и
+  // давала по краю второй контур — границы значка выглядели рваными.
+  float2 inkShift = n * (u_bevel * 0.5 * t);
+  float2 inkUv = u_center + p - inkShift;
 
-  // Значок едет вместе со стеклом: перенос и деформацию несёт трансформ обёртки, здесь
-  // остаётся только его место на детали.
-  half4 ink = u_icon.eval((u_center + p) * u_iconScale) * half(u_iconOn);
+  half4 ink = u_icon.eval(inkUv * u_iconScale) * half(u_iconOn);
+
+  // ПОДЛОЖКА ПОД КРАСКОЙ. Читаемость — требование МЕСТНОЕ, а не общее по детали. Гасить фон по
+  // всей площади значит платить прозрачностью там, где гасить нечего: под пустым местом стекло
+  // обязано оставаться стеклом. Плотность поднимается только под самой краской и в кайме
+  // вокруг неё — так на стекле матируют зону под гравировкой, а не весь лист.
+  //
+  // Поле каймы приходит ГОТОВЫМ, красным каналом маски (контракт описан у iconMask в рендерере):
+  // приложение размывает краску один раз на кадр настоящим гауссианом. Считать это поле здесь
+  // нечем: кольцо отсчётов вокруг пикселя — то же недосэмплирование, что и в дисковом сборе,
+  // и подложка выходила рваной, с видимой границей вокруг каждой группы букв.
+
   half inkA = ink.g * half(mix(0.82, 1.0, u_active));
   half3 inkCol = mix(half3(u_inkIdle.rgb), half3(u_inkActive.rgb), half(u_active));
   col = col * (1.0 - inkA) + inkCol * inkA;
 
+  // ЦВЕТНОЙ КОНТЕНТ ЛЕЖИТ ТАМ ЖЕ, ГДЕ КРАСКА — внутри материала и на той же координате. Иначе
+  // деформация ведёт их порознь: при нажатии название и артист трясутся вместе с поверхностью,
+  // а обложка стоит на месте, потому что она была отдельным слоем поверх стекла. Полярность его
+  // не трогает — у него свой цвет, и подменять его нечем.
+  half4 over = u_overlay.eval(inkUv * u_iconScale) * half(u_overlayOn);
+  col = col * (1.0 - over.a) + over.rgb * over.a;
+
+  col += half3(spec) * half3(0.98, 0.99, 1.0);
+
   // Альфа блика идёт вровень с его яркостью: при заниженной альфе premultiplied результат
   // гаснет и блик становится невидимым на тёмном фоне.
   a = clamp(a + spec, 0.0, 1.0);
-  a = max(a, float(inkA));
+  a = max(a, max(float(inkA), float(over.a)));
   a *= 1.0 - smoothstep(-1.0, 1.0, sd);
 
   col = clamp(col, half3(0.0), half3(1.0));

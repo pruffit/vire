@@ -31,6 +31,7 @@
     "@vire/core": "workspace:*",
     "@vire/design-tokens": "workspace:*",
     "@vire/media": "workspace:*",
+    "@vire/vireglass": "workspace:*",
     "blakejs": "^1.2.1",
     "expo": "~57.0.18",
     "expo-blur": "~57.0.2",

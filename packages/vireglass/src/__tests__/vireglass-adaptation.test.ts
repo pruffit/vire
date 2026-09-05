@@ -8,10 +8,10 @@ import {
   INK_LIGHT,
   preferredPolarity,
   relativeLuminance,
-} from '../vireglass/adaptation';
-import { LENS_SHADER } from '../vireglass/lens-shader';
-import { colorPickup, diffraction, dispersion, iridescence } from '../vireglass/optics';
-import { resolveOptics } from '../vireglass/material';
+} from '../adaptation';
+import { LENS_SHADER } from '../lens-shader';
+import { colorPickup, diffraction, dispersion, iridescence } from '../optics';
+import { resolveOptics } from '../material';
 
 const LEGIBILITY = 0.26;
 const BODY = 0.04;

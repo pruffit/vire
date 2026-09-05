@@ -54,6 +54,14 @@ export type VireGlassMaterial = {
   /** Светлота того, что приложение рисует ПОВЕРХ стекла: 1 — светлые иконки и текст,
    *  0 — тёмные. Причина, а не ручка: её знает вызывающий экран. */
   ink: number;
+  /** Минимальная РАЗЛИЧИМОСТЬ самой детали: на сколько её тело обязано отойти по светлоте
+   *  от фона под ней. Не то же, что `legibility` — та про надпись ПОВЕРХ стекла, эта про сам
+   *  элемент. Над однородным фоном стеклу нечего преломлять, и деталь пропадает; для
+   *  управляющего элемента это недопустимо. 0 — различимость не требуется.
+   *
+   *  Знак берётся ОТ ФОНА, а не от полярности надписи: над тёмным тело светлеет, над
+   *  светлым темнеет. Поэтому требование работает одинаково на любом фоне. */
+  presence: number;
   /** Толщина поверхностной плёнки, нм. Отсюда интерференция: разность хода в плёнке
    *  сравнима с длиной волны, и отражение окрашивается переливами. 0 — плёнки нет. */
   film: number;
@@ -67,6 +75,7 @@ export const MATERIAL_RANGES = {
   environment: [0, 1],
   legibility: [0, 1],
   ink: [0, 1],
+  presence: [0, 0.6],
   film: [0, 900],
 } as const satisfies Record<string, readonly [number, number]>;
 
@@ -106,6 +115,8 @@ export type VireGlassOptics = {
   environment: number;
   legibility: number;
   ink: number;
+  /** Минимальная различимость детали на фоне — в единицах светлоты. */
+  presence: number;
   adaptRadius: number;
   bodyDensity: number;
   edgeLight: number;
@@ -129,6 +140,7 @@ export const VIREGLASS_MATERIAL_V4: VireGlassMaterial = {
   environment: 0.27,
   legibility: 0.26,
   ink: 1,
+  presence: 0.05,
   film: 340,
 };
 
@@ -150,6 +162,7 @@ export const VIREGLASS_MATERIAL_V5: VireGlassMaterial = {
   environment: 0.27,
   legibility: 0.26,
   ink: 1,
+  presence: 0.05,
   film: 340,
 };
 
@@ -182,7 +195,55 @@ export const VIREGLASS_LYRICS_MATERIAL: VireGlassMaterial = {
   legibility: 0.95,
 };
 
+/**
+ * Стекло органов управления — кнопок, плашек, всего, что нажимают.
+ *
+ * От базового отличается одним: поднято `presence`. Кусок фона имеет право исчезнуть над
+ * однородным полотном, элемент управления — нет: его надо видеть до того, как в него ткнули.
+ */
+export const VIREGLASS_CONTROL_MATERIAL: VireGlassMaterial = {
+  ...VIREGLASS_MATERIAL_V5,
+  presence: 0.11,
+};
+
 export const VIREGLASS_MATERIAL = VIREGLASS_MATERIAL_V5;
+
+/**
+ * Деталь, НЕСУЩАЯ КРАСКУ приложения (значок, строку, обложку), обязана держать её читаемой —
+ * это и есть причина `legibility`. Деталь без краски разводить светлоту не с чем, и требование
+ * у неё выключено: модель обещает ей просто прозрачное стекло.
+ *
+ * Правило живёт здесь, а не у потребителя: иначе одна и та же кнопка со значком получает на
+ * вебе и на Android разную читаемость.
+ */
+export function materialForInk(material: VireGlassMaterial, carriesInk: boolean): VireGlassMaterial {
+  return { ...material, legibility: carriesInk ? VIREGLASS_LYRICS_MATERIAL.legibility : 0 };
+}
+
+/**
+ * АКТИВНОЕ СОСТОЯНИЕ как состояние СРЕДЫ, а не как подсветка поверх неё.
+ *
+ * Активная деталь — это более плотное и более чистое стекло: выше показатель преломления,
+ * толще тело, шире фаска, меньше шероховатости. Из этих причин сами собой следуют и яркая
+ * кромка, и сильный блик, и большее присутствие — собирать их по отдельности значит получить
+ * состояние, которого у стекла не бывает.
+ *
+ * `environment` здесь НЕ трогается намеренно. Оно задаёт, насколько тело красится тем, что под
+ * ним, и на максимуме активная кнопка над обложкой превращалась в цветное пятно: состояние
+ * читалось как «испачкана», а не как «выбрана». Признак состояния обязан не зависеть от фона —
+ * иначе любая проехавшая под деталью картинка его подделает.
+ */
+export function activeMaterial(material: VireGlassMaterial, on: number): VireGlassMaterial {
+  const k = Math.min(Math.max(on, 0), 1);
+  return {
+    ...material,
+    ior: material.ior + 0.35 * k,
+    thickness: material.thickness * (1 + 0.9 * k),
+    bevel: material.bevel * (1 + 1.8 * k),
+    roughness: material.roughness * (1 - 0.75 * k),
+    presence: material.presence + 0.12 * k,
+  };
+}
 
 export function resolveMaterial(patch: Partial<VireGlassMaterial> = {}): VireGlassMaterial {
   const m = { ...VIREGLASS_MATERIAL, ...patch };
@@ -215,6 +276,7 @@ export function resolveOptics(patch: Partial<VireGlassMaterial> = {}): VireGlass
     environment: m.environment,
     legibility: m.legibility,
     ink: m.ink,
+    presence: m.presence,
     adaptRadius: ADAPT_RADIUS,
     bodyDensity: bodyDensityFrom(m.thickness),
     edgeLight: edgeLightFrom(m.ior),
@@ -249,6 +311,7 @@ export const LEGACY_OPTICS = {
     environment: 0.27,
     legibility: 0.55,
     ink: 1,
+    presence: 0,
     adaptRadius: ADAPT_RADIUS,
     bodyDensity: 0.14,
     edgeLight: 0.35,
@@ -275,6 +338,7 @@ export const LEGACY_OPTICS = {
     environment: 0,
     legibility: 0,
     ink: 1,
+    presence: 0,
     adaptRadius: ADAPT_RADIUS,
     bodyDensity: 0.14,
     edgeLight: 0.35,
@@ -301,6 +365,7 @@ export const LEGACY_OPTICS = {
     environment: 0,
     legibility: 0,
     ink: 1,
+    presence: 0,
     adaptRadius: ADAPT_RADIUS,
     bodyDensity: 0.14,
     edgeLight: 0.35,
