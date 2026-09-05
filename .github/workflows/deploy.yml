@@ -16,6 +16,22 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    # Тесты гейтов видимости в packages/db идут по живой схеме: три утечки этого класса
+    # (черновики, скрытый артист, смартлинк) были ошибками в SQL, чистые предикаты их не ловят.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vire
+          POSTGRES_PASSWORD: vire
+          POSTGRES_DB: vire_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v7
 
@@ -62,13 +78,35 @@ jobs:
         run: pnpm --filter @vire/web check:caller
       # `pnpm test`, не `turbo run test`: корневой скрипт держит --concurrency=1.
       # Причина — в docs/foundation/TECHNICAL_DEBT.md («turbo run test флейкал»).
+      - name: Migrate test database
+        run: pnpm --filter @vire/db db:migrate:fresh
+        env:
+          DATABASE_URL: postgresql://vire:vire@localhost:5432/vire_test
       - name: Test
         run: pnpm test
       # --ignore-unfixable: не валить gate на advisory без патча в апстриме (напр. image-size
       # через apps/mobile>expo>@expo/metro — DoS-only в dev-время бандлере, чинить нечем, пока
       # апстрим не выпустит фикс). Advisory с доступным патчем по-прежнему валят сборку.
       - name: Security audit
-        run: pnpm audit --audit-level=high --ignore-unfixable
+        # Сервис аудита npm периодически недоступен и роняет релиз, не имея отношения к коду
+        # (04.09.2026 — два прогона подряд по ERR_SOCKET_TIMEOUT). Найденные уязвимости валят
+        # гейт сразу, как и раньше; недоступный реестр после трёх попыток даёт предупреждение,
+        # а не падение — чужой простой не должен быть стоп-фактором релиза. Прогнать вручную.
+        run: |
+          for attempt in 1 2 3; do
+            if out=$(pnpm audit --audit-level=high --ignore-unfixable 2>&1); then
+              echo "$out"
+              exit 0
+            fi
+            echo "$out"
+            if ! echo "$out" | grep -qE 'ERR_SOCKET_TIMEOUT|FetchError|ECONNRESET|ETIMEDOUT|EAI_AGAIN'; then
+              echo '::error::pnpm audit нашёл уязвимости уровня high и выше'
+              exit 1
+            fi
+            echo "::warning::реестр npm недоступен (попытка $attempt из 3)"
+          done
+          echo '::warning::pnpm audit пропущен — сервис аудита npm недоступен. Прогнать вручную перед тегом.'
+          exit 0
       - name: Design audit (Impeccable)
         run: pnpm --filter @vire/web audit:design
       - name: Build

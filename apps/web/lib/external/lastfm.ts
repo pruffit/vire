@@ -1,6 +1,6 @@
-import Redis from 'ioredis';
 import type { MetadataHint } from '@vire/core';
 import { sanitizeCoverUrl } from './cover-hosts';
+import { getRedis } from '../redis';
 
 const API_BASE = 'https://ws.audioscrobbler.com/2.0/';
 const TIMEOUT_MS = 4000;
@@ -11,19 +11,6 @@ interface LastfmTrack {
   name?: string;
   artist?: { name?: string } | string;
   image?: Array<{ '#text'?: string }>;
-}
-
-const globalForRedis = globalThis as unknown as { _lastfmRedis?: Redis };
-
-function getRedis(): Redis {
-  if (!globalForRedis._lastfmRedis) {
-    globalForRedis._lastfmRedis = new Redis(
-      process.env.REDIS_URL ?? 'redis://localhost:6379',
-      { maxRetriesPerRequest: null, lazyConnect: false },
-    );
-    globalForRedis._lastfmRedis.on('error', () => {});
-  }
-  return globalForRedis._lastfmRedis;
 }
 
 const cacheKey = (username: string) => `lastfm:top:${username.toLowerCase()}`;

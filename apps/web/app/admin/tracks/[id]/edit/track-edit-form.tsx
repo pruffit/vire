@@ -6,7 +6,7 @@ import { actionAdminUpdateTrack } from '../../../actions';
 import { ALL_GENRES, GENRE_GROUPS, GENRE_LABELS, MAX_TRACK_GENRES, type Genre } from '@/lib/genres';
 import { ALL_MOODS, MOOD_LABELS } from '@/lib/moods';
 import { fieldClass } from '@/components/admin/ui';
-import { Textarea } from '@/components/ui-kit';
+import { Field, Textarea } from '@/components/ui-kit';
 import { NumberField } from '@/components/number-field';
 import { CreditsEditor } from '@/components/credits-editor';
 import type { TrackCredit } from '@/lib/upload';
@@ -378,14 +378,6 @@ export function TrackEditForm({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="label-mono text-foreground/45">{label}</span>
-      {children}
-    </label>
-  );
-}
 
 function Check({
   label,

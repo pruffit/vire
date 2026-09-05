@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../client', () => ({ db: {} }));
 
-import { pickCovers } from './playlists';
+import { pickCovers } from './playlist-meta';
 
 describe('pickCovers', () => {
   it('puts the playlist own cover first', () => {

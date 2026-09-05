@@ -3,7 +3,7 @@ import { artistProfiles, artistMembers } from '../schema';
 import type { DB } from '../client';
 import type { IArtistRepository, ArtistProfile, ThemeTokens, ArtistLink, ArtistVideo, UpdateArtistProfileData } from '@vire/core';
 import { defaultThemeTokens } from '@vire/core';
-import { adminUpdateArtist } from '../queries/admin';
+import { adminUpdateArtist } from '../queries/admin-artists';
 
 export class DrizzleArtistRepository implements IArtistRepository {
   constructor(private readonly db: DB) {}

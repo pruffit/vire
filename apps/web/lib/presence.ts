@@ -1,5 +1,5 @@
-import Redis from 'ioredis';
 import { PRESENCE_TRACK_PREFIX, PRESENCE_SITE_KEY, presenceTrackKey, presenceUserKey } from '@vire/core';
+import { getRedis } from './redis';
 
 /**
  * Live-присутствие на Redis: ZSET по треку (member=sessionId, score=время heartbeat, мс);
@@ -10,20 +10,6 @@ import { PRESENCE_TRACK_PREFIX, PRESENCE_SITE_KEY, presenceTrackKey, presenceUse
 // Клиент должен слать heartbeat чаще, чем WINDOW (см. HEARTBEAT_MS в плеере).
 export const WINDOW_MS = 45_000;
 const KEY_TTL_SEC = 120;
-
-const globalForRedis = globalThis as unknown as { _presenceRedis?: Redis };
-
-function getRedis(): Redis {
-  if (!globalForRedis._presenceRedis) {
-    globalForRedis._presenceRedis = new Redis(
-      process.env.REDIS_URL ?? 'redis://localhost:6379',
-      { maxRetriesPerRequest: null, lazyConnect: false },
-    );
-    // Без обработчика ioredis роняет процесс на сетевой ошибке Redis.
-    globalForRedis._presenceRedis.on('error', () => {});
-  }
-  return globalForRedis._presenceRedis;
-}
 
 const trackKey = presenceTrackKey;
 // Присутствие на сайте в целом (не на конкретном треке) — один ZSET на всех.

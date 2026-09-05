@@ -7,11 +7,15 @@ export type ArtistListItem = ArtistCard;
 
 // Артист виден слушателям только если у него есть хотя бы один трек в
 // опубликованном релизе. Пустые профили скрываем из каталога, поиска и sitemap.
+// BLOCKED и FAILED не считаются: они не транзиентны, и артист с одним таким треком
+// висел бы в витрине с пустой страницей. PROCESSING оставлен — это минуты транскодинга,
+// а artist-guard отдаёт 404 артисту без треков, и свежеопубликованный не должен его ловить.
 export const artistHasPublishedTrack = sql`exists (
   select 1 from tracks t
   join releases r on r.id = t.release_id
   where r.artist_profile_id = artist_profiles.id
     and r.status = 'PUBLISHED'
+    and t.status not in ('BLOCKED', 'FAILED')
 )`;
 
 export async function listActiveArtists({

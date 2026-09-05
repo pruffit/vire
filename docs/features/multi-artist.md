@@ -26,7 +26,7 @@
 - **Доступ:** `packages/db/src/repositories/artist.ts` — `findByUserId`,
   `findAllByUserId`, `findByIdForUser` джойнят через `artist_members`.
 - **Создание:** `createArtistForUser` пишет OWNER-членство в транзакции.
-- **Админ-управление:** `packages/db/src/queries/admin.ts`
+- **Админ-управление:** `packages/db/src/queries/admin-artists.ts`
   (`listArtistMembers`/`addArtistMember`/`removeArtistMember`), server actions в
   `app/admin/actions.ts`, UI `app/admin/artists/members-manager.tsx`.
 
@@ -53,11 +53,15 @@
   - `resolveActiveArtist(userId, id?)` — общая логика (id → проверка владения,
     иначе дефолт `findByUserId`);
   - `listUserArtists(userId)` — все артисты пользователя.
+- **Гейт «свой трек»:** `apps/web/lib/require-owned-track.ts` — `requireOwnedTrack(req, id)`
+  собирает всю цепочку артист-периметра (авторизован → активный артист → трек существует →
+  релиз принадлежит этому артисту) и возвращает результат-значение, как `require-access.ts`.
+  Роуты `dashboard/tracks/[id]/*` идут через него, а не повторяют проверку каждый у себя.
 - **Переключение:** `app/api/v1/dashboard/active-artist/route.ts` (POST, ставит cookie),
   UI — `app/dashboard/artist-switcher.tsx`.
 - **Репозиторий:** `packages/db/src/repositories/artist.ts` — `findAllByUserId`,
   `findByIdForUser`, `findByUserId` (теперь с детерминированным порядком по createdAt).
-- **Создание:** `packages/db/src/queries/admin.ts` `createArtistForUser` — снят блок
+- **Создание:** `packages/db/src/queries/admin-artists.ts` `createArtistForUser` — снят блок
   «уже есть профиль»; промоушен до ARTIST по-прежнему только для LISTENER.
 - Все dashboard-роуты/страницы резолвят артиста через `active-artist` вместо
   прямого `findByUserId`.

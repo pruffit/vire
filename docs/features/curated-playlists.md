@@ -89,8 +89,10 @@
   без БД, `pnpm --filter @vire/db test`. `composePlaylist` работает с
   `PlaylistCandidate = { trackId, artistId }` (artistId нужен для artist-cap); все
   SQL-источники editorial возвращают этот тип.
-- **Запросы для главной:** `packages/db/src/queries/playlists.ts`
+- **Запросы для главной:** `packages/db/src/queries/playlist-editorial.ts`
   (`getEditorialPlaylists` — общие, `getPersonalPlaylists`, `getPopularPlaylists` — фолбэк).
+  Коллаж обложек и досчёт трек-каунта — общие с пользовательскими плейлистами,
+  живут в `packages/db/src/queries/playlist-meta.ts`.
 - **Расписание:** воркер `apps/worker/src/workers/editorial.worker.ts` + планировщики
   в `apps/worker/src/index.ts` (`upsertJobScheduler`: `shared-daily` cron `0 0 * * *`,
   `personal-4h` cron `0 */4 * * *`, tz `Europe/Moscow`).

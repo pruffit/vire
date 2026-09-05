@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { actionAdminUpdateRelease } from '../../../actions';
 import { GENRE_GROUPS, GENRE_LABELS } from '@/lib/genres';
 import { fieldClass } from '@/components/admin/ui';
-import { Textarea } from '@/components/ui-kit';
+import { Field, Textarea } from '@/components/ui-kit';
 import { Select, type SelectGroup } from '@/components/select';
 import { DateField } from '@/components/date-field';
 
@@ -114,11 +114,3 @@ export function ReleaseEditForm({ releaseId, initial, canMutate }: { releaseId: 
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="label-mono text-foreground/45">{label}</span>
-      {children}
-    </label>
-  );
-}

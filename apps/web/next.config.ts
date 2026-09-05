@@ -106,10 +106,12 @@ const nextConfig: NextConfig = {
   // `virtual-store-dir-max-length=20` (мобильный фикс Windows MAX_PATH, коммит 7d1ae6a7):
   // длинные имена pnpm заменяет хешем `_<...>`, и libvips молча переставал попадать в
   // standalone. Поймал барьер в apps/web/Dockerfile, а не прод.
-  // Хвост `/*` обязателен: `@img/**` матчит и сами папки, а Turbopack с Next 16.3 читает
-  // каждое совпадение как файл и падает на первой же директории (`@img/colour`).
+  // Целимся в САМ libvips, а не во весь `@img`: с Next 16.3 Turbopack читает каждое
+  // совпадение как файл и падает на первой же директории внутри области (`@img/colour`,
+  // который к libvips отношения не имеет). Хвост `/**` тут безопасен — под `lib/`
+  // лежат только файлы библиотеки.
   outputFileTracingIncludes: {
-    '/**': ['../../node_modules/.pnpm/*/node_modules/@img/**/*'],
+    '/**': ['../../node_modules/.pnpm/*/node_modules/@img/sharp-libvips-*/lib/**'],
   },
   transpilePackages: ['@vire/core', '@vire/db', '@vire/ui', '@vire/i18n', '@vire/storage'],
   images: {

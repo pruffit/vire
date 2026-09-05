@@ -1,6 +1,6 @@
 {
   "name": "vire",
-  "version": "1.52.1",
+  "version": "1.53.1",
   "private": true,
   "packageManager": "pnpm@10.17.1",
   "engines": {
@@ -17,6 +17,7 @@
     "test": "turbo run test --concurrency=1"
   },
   "devDependencies": {
+    "typescript-7": "npm:typescript@7.0.2",
     "turbo": "^2.3.3"
   },
   "pnpm": {
@@ -57,5 +58,9 @@
       "react-native-track-player@4.1.2": "patches/react-native-track-player@4.1.2.patch",
       "expo-blur": "patches/expo-blur.patch"
     }
+  },
+  "optionalDependencies": {
+    "@typescript/typescript-linux-x64": "7.0.2",
+    "@typescript/typescript-win32-x64": "7.0.2"
   }
 }

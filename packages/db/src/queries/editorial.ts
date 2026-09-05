@@ -1,7 +1,7 @@
 import { desc, eq, gte, sql, and, count, inArray, isNotNull, type SQL } from 'drizzle-orm';
 import { db } from '../client';
 import { tracks, releases, artistProfiles, trackMoods, playEvents, likes, playlists, playlistTracks } from '../schema';
-import { upsertEditorialPlaylist, createPersonalPlaylist, deletePersonalPlaylists } from './playlists';
+import { upsertEditorialPlaylist, createPersonalPlaylist, deletePersonalPlaylists } from './playlist-editorial';
 import { MOOD_LABELS, type Mood } from './track-moods';
 import type { TrackGenre } from './track-genres';
 import { getTasteProfile, materializeTasteProfiles, clearTasteProfileCache } from './taste';

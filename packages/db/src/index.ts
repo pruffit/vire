@@ -85,21 +85,33 @@ export {
 } from './queries/purchases';
 export type { PendingPurchase, PurchasedTrack } from './queries/purchases';
 export {
-  pingDb,
   getAdminStats,
   getAdminAttention,
   getRecentPublishedReleases,
+} from './queries/admin';
+export {
+  pingDb,
   getAdminPlatformMetrics,
   getAdminDailyPlays,
   getAdminTopTracks,
   getAdminTopArtists,
+} from './queries/admin-analytics';
+export {
   listUsersAdmin,
   setUserRole,
+} from './queries/admin-users';
+export {
   verifyArtist,
   listArtistsAdmin,
   setArtistActive,
   getArtistCore,
   adminUpdateArtist,
+  createArtistForUser,
+  listArtistMembers,
+  addArtistMember,
+  removeArtistMember,
+} from './queries/admin-artists';
+export {
   listTracksAdmin,
   setTrackStatus,
   listReleasesAdmin,
@@ -108,29 +120,28 @@ export {
   listPlaylistsAdmin,
   adminUpdatePlaylist,
   adminDeletePlaylist,
-  createArtistForUser,
-  listArtistMembers,
-  addArtistMember,
-  removeArtistMember,
-} from './queries/admin';
+} from './queries/admin-catalog';
 export type {
-  ArtistMemberRow,
   AdminStats,
-  AdminUser,
-  AdminTrack,
-  AdminRelease,
-  AdminPost,
-  AdminPlaylist,
   AdminAttention,
   StuckTrack,
   UnverifiedArtist,
   AdminRecentRelease,
+} from './queries/admin';
+export type {
   AdminPlatformMetrics,
   AdminDailyPlays,
   AdminTopTrack,
   AdminTopArtist,
-  AdminArtist,
-} from './queries/admin';
+} from './queries/admin-analytics';
+export type { AdminUser } from './queries/admin-users';
+export type { AdminArtist, ArtistMemberRow } from './queries/admin-artists';
+export type {
+  AdminTrack,
+  AdminRelease,
+  AdminPost,
+  AdminPlaylist,
+} from './queries/admin-catalog';
 export type { UserRole } from './queries/admin-types';
 export { getFollowerEmails, getTrackOwnerContact } from './queries/notifications';
 export type { TrackOwnerContact } from './queries/notifications';
@@ -165,15 +176,6 @@ export {
   updatePlaylist,
   setPlaylistCover,
   isPermutation,
-  fetchPlaylistMeta,
-  pickCovers,
-  getEditorialPlaylists,
-  getPersonalPlaylists,
-  getPopularPlaylists,
-  getPublicUserPlaylists,
-  upsertEditorialPlaylist,
-  createPersonalPlaylist,
-  deletePersonalPlaylists,
   likePlaylist,
   unlikePlaylist,
   getPlaylistLikeState,
@@ -182,6 +184,24 @@ export {
   searchTracksForPlaylist,
   getPlaylistSuggestions,
   getPublicPlaylistsByOwner,
+} from './queries/playlists';
+export type {
+  PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, PlaylistTrackAddedByRow, PlaylistAddTrack,
+  PlaylistSuggestions, SitemapPlaylist,
+} from './queries/playlists';
+export { fetchPlaylistMeta, pickCovers } from './queries/playlist-meta';
+export type { EditorialPlaylist, PlaylistMeta } from './queries/playlist-meta';
+export {
+  getEditorialPlaylists,
+  getPersonalPlaylists,
+  getPopularPlaylists,
+  getPublicUserPlaylists,
+  upsertEditorialPlaylist,
+  createPersonalPlaylist,
+  deletePersonalPlaylists,
+  editorialPlaylistIdentity,
+} from './queries/playlist-editorial';
+export {
   listPlaylistCollaborators,
   isPlaylistCollaborator,
   joinPlaylistCollaborator,
@@ -191,12 +211,10 @@ export {
   getPlaylistCollabState,
   getPlaylistInvitePreview,
   getPlaylistTrackAddedBy,
-} from './queries/playlists';
+} from './queries/playlist-collaborators';
 export type {
-  PlaylistSummary, PlaylistWithTracks, PlaylistTrackRow, PlaylistTrackAddedByRow, EditorialPlaylist, PlaylistAddTrack,
-  PlaylistSuggestions, PlaylistMeta, SitemapPlaylist, PlaylistCollaboratorRow, PlaylistCollabState,
-  PlaylistInvitePreviewRow,
-} from './queries/playlists';
+  PlaylistCollaboratorRow, PlaylistCollabState, PlaylistInvitePreviewRow, JoinCollaboratorOutcome,
+} from './queries/playlist-collaborators';
 export {
   generateAllEditorialPlaylists,
   generateSharedPlaylists,

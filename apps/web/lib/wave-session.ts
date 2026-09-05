@@ -1,24 +1,11 @@
-import Redis from 'ioredis';
 import { WAVE_SESSION_TTL_SEC, WAVE_SESSION_MAX_SERVED, waveServedKey, waveSeedKey } from '@vire/core';
+import { getRedis } from './redis';
 
 // Состояние волны на Redis: анти-повтор выданных треков + seed mood/genre сессии.
 // TTL 6ч; любая ошибка Redis деградирует до пустого состояния, выдачу не роняет.
 
 const TTL_SEC = WAVE_SESSION_TTL_SEC;
 const MAX_SERVED_IDS = WAVE_SESSION_MAX_SERVED;
-
-const globalForRedis = globalThis as unknown as { _waveRedis?: Redis };
-
-function getRedis(): Redis {
-  if (!globalForRedis._waveRedis) {
-    globalForRedis._waveRedis = new Redis(
-      process.env.REDIS_URL ?? 'redis://localhost:6379',
-      { maxRetriesPerRequest: null, lazyConnect: false },
-    );
-    globalForRedis._waveRedis.on('error', () => {});
-  }
-  return globalForRedis._waveRedis;
-}
 
 const servedKey = waveServedKey;
 const seedKey = waveSeedKey;
@@ -37,8 +24,8 @@ export async function getWaveSession(sessionId: string): Promise<WaveSession> {
     const redis = getRedis();
     const key = servedKey(sessionId);
     const [servedIds, recentServedIds, seed] = await Promise.all([
-      redis.zrange(key, -MAX_SERVED_IDS, -1),
-      redis.zrange(key, -5, -1),
+      redis.zrange(key, String(-MAX_SERVED_IDS), '-1'),
+      redis.zrange(key, '-5', '-1'),
       redis.hgetall(seedKey(sessionId)),
     ]);
     return { servedIds, recentServedIds, mood: seed.mood ?? null, genre: seed.genre ?? null };

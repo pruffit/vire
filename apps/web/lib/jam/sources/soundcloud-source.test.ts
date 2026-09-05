@@ -5,7 +5,6 @@ const API_SRC = 'https://w.soundcloud.com/player/api.js';
 const Events = { READY: 'ready', PLAY: 'play', PAUSE: 'pause', FINISH: 'finish', PLAY_PROGRESS: 'progress', ERROR: 'error' };
 
 class FakeWidget {
-  static instances: FakeWidget[] = [];
   handlers = new Map<string, (e?: unknown) => void>();
   play = vi.fn();
   pause = vi.fn();
@@ -14,9 +13,7 @@ class FakeWidget {
   load = vi.fn((_url: string, opts: { callback?: () => void }) => opts.callback?.());
   unbind = vi.fn();
 
-  constructor(public iframe: HTMLIFrameElement) {
-    FakeWidget.instances.push(this);
-  }
+  constructor(public iframe: HTMLIFrameElement) {}
 
   bind(event: string, listener: (e?: unknown) => void): void {
     this.handlers.set(event, listener);
@@ -27,8 +24,17 @@ class FakeWidget {
   }
 }
 
+// Массив пересоздаётся на каждый тест, а фабрика захватывает текущий: виджет от
+// оборванного таймаутом теста попадёт в старый массив и не отравит следующий.
+let widgets: FakeWidget[] = [];
+
 function installFakeSC(): void {
-  const widgetFactory = (iframe: HTMLIFrameElement) => new FakeWidget(iframe);
+  const bucket = widgets;
+  const widgetFactory = (iframe: HTMLIFrameElement) => {
+    const widget = new FakeWidget(iframe);
+    bucket.push(widget);
+    return widget;
+  };
   (window as unknown as { SC: unknown }).SC = { Widget: Object.assign(widgetFactory, { Events }) };
 }
 
@@ -40,7 +46,7 @@ function fireScriptLoad(): void {
 
 beforeEach(() => {
   vi.resetModules();
-  FakeWidget.instances = [];
+  widgets = [];
   delete (window as unknown as { SC?: unknown }).SC;
   document.head.innerHTML = '';
   document.body.innerHTML = '';
@@ -61,7 +67,7 @@ describe('createSoundcloudSource', () => {
     const engine = createSoundcloudSource();
 
     await expect(engine.load('https://soundcloud.com/a/b')).resolves.toBeUndefined();
-    expect(FakeWidget.instances).toHaveLength(0);
+    expect(widgets).toHaveLength(0);
     expect(document.querySelector(`script[src="${API_SRC}"]`)).toBeNull();
   });
 
@@ -72,8 +78,8 @@ describe('createSoundcloudSource', () => {
     expect(document.querySelector(`script[src="${API_SRC}"]`)).not.toBeNull();
 
     fireScriptLoad();
-    await vi.waitFor(() => expect(FakeWidget.instances).toHaveLength(1));
-    FakeWidget.instances[0]!.emit(Events.READY);
+    await vi.waitFor(() => expect(widgets).toHaveLength(1));
+    widgets[0]!.emit(Events.READY);
 
     await expect(loadPromise).resolves.toBeUndefined();
     const iframe = container.querySelector('iframe');
@@ -87,7 +93,7 @@ describe('createSoundcloudSource', () => {
     document.querySelector<HTMLScriptElement>(`script[src="${API_SRC}"]`)?.dispatchEvent(new Event('error'));
 
     await expect(loadPromise).resolves.toBeUndefined();
-    expect(FakeWidget.instances).toHaveLength(0);
+    expect(widgets).toHaveLength(0);
   });
 
   it('повторный load переиспользует виджет через widget.load', async () => {
@@ -95,14 +101,14 @@ describe('createSoundcloudSource', () => {
 
     const first = engine.load('https://soundcloud.com/a/b');
     fireScriptLoad();
-    await vi.waitFor(() => expect(FakeWidget.instances).toHaveLength(1));
-    FakeWidget.instances[0]!.emit(Events.READY);
+    await vi.waitFor(() => expect(widgets).toHaveLength(1));
+    widgets[0]!.emit(Events.READY);
     await first;
 
     await engine.load('https://soundcloud.com/c/d');
 
-    expect(FakeWidget.instances).toHaveLength(1);
-    expect(FakeWidget.instances[0]!.load).toHaveBeenCalledWith('https://soundcloud.com/c/d', expect.objectContaining({ auto_play: false }));
+    expect(widgets).toHaveLength(1);
+    expect(widgets[0]!.load).toHaveBeenCalledWith('https://soundcloud.com/c/d', expect.objectContaining({ auto_play: false }));
   });
 
   it('позиция берётся из PLAY_PROGRESS, первый прогресс после PLAY уведомляет onPlaying и снимает буферизацию', async () => {
@@ -114,8 +120,8 @@ describe('createSoundcloudSource', () => {
 
     const loadPromise = engine.load('https://soundcloud.com/a/b');
     fireScriptLoad();
-    await vi.waitFor(() => expect(FakeWidget.instances).toHaveLength(1));
-    const widget = FakeWidget.instances[0]!;
+    await vi.waitFor(() => expect(widgets).toHaveLength(1));
+    const widget = widgets[0]!;
     widget.emit(Events.READY);
     await loadPromise;
 
@@ -139,13 +145,13 @@ describe('createSoundcloudSource', () => {
 
     const loadPromise = engine.load('https://soundcloud.com/a/b');
     fireScriptLoad();
-    await vi.waitFor(() => expect(FakeWidget.instances).toHaveLength(1));
-    FakeWidget.instances[0]!.emit(Events.READY);
+    await vi.waitFor(() => expect(widgets).toHaveLength(1));
+    widgets[0]!.emit(Events.READY);
     await loadPromise;
 
     engine.seek(9000);
 
-    expect(FakeWidget.instances[0]!.seekTo).toHaveBeenCalledWith(9000);
+    expect(widgets[0]!.seekTo).toHaveBeenCalledWith(9000);
     expect(engine.currentTimeMs()).toBe(9000);
   });
 
@@ -157,14 +163,14 @@ describe('createSoundcloudSource', () => {
     await engine.load('https://soundcloud.com/a/b');
     engine.seek(30_000);
     engine.play();
-    expect(FakeWidget.instances).toHaveLength(0);
+    expect(widgets).toHaveLength(0);
 
     const container = document.createElement('div');
     document.body.appendChild(container);
     setPartyVideoContainer(container);
     fireScriptLoad();
-    await vi.waitFor(() => expect(FakeWidget.instances).toHaveLength(1));
-    const widget = FakeWidget.instances[0]!;
+    await vi.waitFor(() => expect(widgets).toHaveLength(1));
+    const widget = widgets[0]!;
     widget.emit(Events.READY);
 
     expect(widget.seekTo).toHaveBeenCalledWith(30_000);
@@ -176,8 +182,8 @@ describe('createSoundcloudSource', () => {
 
     const loadPromise = engine.load('https://soundcloud.com/a/b');
     fireScriptLoad();
-    await vi.waitFor(() => expect(FakeWidget.instances).toHaveLength(1));
-    FakeWidget.instances[0]!.emit(Events.READY);
+    await vi.waitFor(() => expect(widgets).toHaveLength(1));
+    widgets[0]!.emit(Events.READY);
     await loadPromise;
     expect(container.childElementCount).toBe(1);
 
