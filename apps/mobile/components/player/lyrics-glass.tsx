@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import {
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,196 +9,204 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassPanel } from '../ui/glass-panel';
-import { useGlassInk, inkColor } from '../../lib/vireglass/glass-ink';
-import { useReduceMotion } from '../../lib/design/preferences';
-import { Icon } from '../../lib/icon';
+import { useGlassInk } from '../../lib/vireglass/glass-ink';
 import { colors } from '../../lib/theme';
 import { fonts } from '../../lib/design/typography';
 import { radii, space } from '../../lib/design/scales';
+import { VIREGLASS_LYRICS_MATERIAL } from '../../lib/vireglass/material';
 import type { LyricLine } from '../../lib/playback/use-lyrics';
 
-/** Затемнение линзы под текстом — заметно выше продуктового (0.2): строки лежат прямо на
- *  обложке, и её светлые куски съедают белый текст раньше, чем это случилось бы на фоне
- *  экрана. Преломление на этом уровне ещё отчётливо видно; выше — панель теряет материал. */
-const LYRICS_DIM = 0.52;
 /** Мягкая кромка окна: строка, обрезанная посередине глифа, читается сломанной вёрсткой. */
-const FADE = 26;
-const LINE_SIZE = 20;
-const LINE_HEIGHT = 29;
+const FADE = 44;
 /** Пустая строка в LRC — цезура между куплетами, а не строка: полная высота рвала бы окно. */
-const BREAK_HEIGHT = 12;
-/** Доля высоты окна, на которой держится звучащая строка: выше середины, чтобы следующие
- *  строки были видны заранее. */
-const ACTIVE_ANCHOR = 0.3;
-const IDLE_ALPHA = 0.7;
-/** Пауза автопрокрутки после того, как список листнули рукой. */
-const MANUAL_HOLD_MS = 5000;
-const CHEVRON = 30;
+const BREAK_HEIGHT = 14;
+/** Насколько отступают соседние строки. Не прячем: по следующей ведут взгляд вперёд,
+ *  прошедшая держит контекст. Разницу «где сейчас» несёт РАЗМЕР, а не только светлота. */
+const NEXT_ALPHA = 0.55;
+const PAST_ALPHA = 0.32;
 
 const DARK_INK = '#0b0908';
 
 /**
- * Текст трека на стекле поверх обложки.
+ * Текст трека на стекле поверх обложки — во всю её ширину и высоту.
  *
- * Это единственное место в плеере, где стекло стоит на насыщенном фоне, — и единственное,
+ * Это единственное место в плеере, где стекло стоит на насыщенном фоне, и единственное,
  * где материал вообще имеет смысл: на плоской подложке преломлять нечего.
  *
- * Свёрнутая полоса не перехватывает касания (`box-none`), кроме своей кнопки: она лежит
- * НЕ внутри прокрутки экрана (цель преломления не может быть предком стекла), и всё, что
- * она поймает, до страницы уже не дойдёт.
+ * Панель лежит НЕ внутри прокрутки экрана — цель преломления не может быть предком стекла
+ * (`lib/blur-target.tsx`), поэтому она стоит по замеренной рамке обложки и едет за
+ * прокруткой трансформом.
  */
 export function LyricsGlass({
   lines,
   activeIndex,
-  expanded,
-  onToggle,
+  synced,
   onSeek,
   blurTarget,
 }: {
   lines: LyricLine[];
   activeIndex: number;
-  expanded: boolean;
-  onToggle: () => void;
+  /** Есть таймкоды: строку ведёт воспроизведение. */
+  synced: boolean;
   onSeek: (sec: number) => void;
   blurTarget: RefObject<RNView | null>;
 }) {
   return (
     <GlassPanel
-      radius={radii.glass}
+      radius={radii.card}
       blurTarget={blurTarget}
-      dim={LYRICS_DIM}
+      material={VIREGLASS_LYRICS_MATERIAL}
       topLayer
       style={styles.panel}
       contentStyle={styles.content}
     >
-      <Body lines={lines} activeIndex={activeIndex} expanded={expanded} onToggle={onToggle} onSeek={onSeek} />
+      {synced ? (
+        <Synced lines={lines} activeIndex={activeIndex} />
+      ) : (
+        <Plain lines={lines} onSeek={onSeek} />
+      )}
     </GlassPanel>
   );
 }
 
-/** Полярность надписей раздаёт сама панель — читать её можно только из её детей. */
-function Body({
-  lines,
-  activeIndex,
-  expanded,
-  onToggle,
-  onSeek,
-}: {
-  lines: LyricLine[];
-  activeIndex: number;
-  expanded: boolean;
-  onToggle: () => void;
-  onSeek: (sec: number) => void;
-}) {
+/** Ближайшая непустая строка начиная с `from`; пустые в LRC — цезуры, а не строки. */
+function nextText(lines: LyricLine[], from: number): string | null {
+  for (let i = Math.max(0, from); i < lines.length; i += 1) {
+    if (lines[i].text) return lines[i].text;
+  }
+  return null;
+}
+
+/** Ближайшая непустая строка ВЫШЕ `from`. */
+function prevText(lines: LyricLine[], from: number): string | null {
+  for (let i = Math.min(from, lines.length - 1); i >= 0; i -= 1) {
+    if (lines[i].text) return lines[i].text;
+  }
+  return null;
+}
+
+/**
+ * Синхронный текст: прошедшая строка, звучащая и следующая.
+ *
+ * Размер сам говорит, где сейчас песня, — приглушённости для этого мало: на пёстрой обложке
+ * она читается как «плохо видно», а не как «уже спето». Прошедшая строка нужна, чтобы
+ * звучащая не висела в пустоте и было видно, откуда пришли.
+ *
+ * Списка целиком здесь нет намеренно: за воспроизведением следят по одной строке, десять
+ * приглушённых вокруг превращали панель в стену.
+ */
+function Synced({ lines, activeIndex }: { lines: LyricLine[]; activeIndex: number }) {
   const ink = useGlassInk();
-  const reduceMotion = useReduceMotion();
-  const text = inkColor(ink, colors.foreground, DARK_INK);
+  // В полюс, а не смешением: inkColor между полюсами отдаёт средне-серый, и над пёстрой
+  // обложкой, где адаптация садится посередине, строка выходила буквально серой.
+  const text = ink > 0.5 ? colors.foreground : DARK_INK;
+  const shadow = ink > 0.5 ? 'rgba(0,0,0,0.95)' : 'rgba(255,255,255,0.85)';
+  const tone = { color: text, textShadowColor: shadow };
+
+  // До первой строки ведущей ещё нет — показываем начало текста, а не пустую панель.
+  const at = activeIndex >= 0 ? activeIndex : 0;
+  const past = activeIndex > 0 ? prevText(lines, at - 1) : null;
+  const current = nextText(lines, at);
+  const upcoming = nextText(lines, at + 1);
+
+  return (
+    <View style={styles.stack}>
+      {past && (
+        <Text style={[styles.past, tone]} numberOfLines={2}>
+          {past}
+        </Text>
+      )}
+      {current && (
+        <Text style={[styles.current, tone]} numberOfLines={3}>
+          {current}
+        </Text>
+      )}
+      {upcoming && (
+        <Text style={[styles.next, tone]} numberOfLines={2}>
+          {upcoming}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/** Без таймкодов вести нечего: это просто текст песни — мельче, влево, с прокруткой. */
+function Plain({ lines, onSeek }: { lines: LyricLine[]; onSeek: (sec: number) => void }) {
+  const ink = useGlassInk();
+  const text = ink > 0.5 ? colors.foreground : DARK_INK;
   const shadow = ink > 0.5 ? 'rgba(0,0,0,0.95)' : 'rgba(255,255,255,0.85)';
   const edge = ink > 0.5 ? '9,8,7' : '234,231,226';
-  const fade = [`rgba(${edge},0.8)`, `rgba(${edge},0)`] as const;
-
-  const scroll = useRef<ScrollView>(null);
-  const lineTops = useRef<number[]>([]);
-  const manualUntil = useRef(0);
-  // Высота окна — состояние, а не ref: на паузе активная строка не меняется, и эффект,
-  // завязанный только на неё, после первого layout'а больше не запускался бы вовсе.
-  const [viewport, setViewport] = useState(0);
-
-  const onLineLayout = useCallback((index: number, e: LayoutChangeEvent) => {
-    lineTops.current[index] = e.nativeEvent.layout.y;
-  }, []);
-
-  useEffect(() => {
-    if (activeIndex < 0 || Date.now() < manualUntil.current) return;
-    const top = lineTops.current[activeIndex];
-    if (top === undefined || viewport === 0) return;
-    scroll.current?.scrollTo({ y: Math.max(0, top - viewport * ACTIVE_ANCHOR), animated: !reduceMotion });
-  }, [activeIndex, expanded, viewport, reduceMotion]);
+  const fade = [`rgba(${edge},0.7)`, `rgba(${edge},0)`] as const;
 
   return (
     <>
-      <ScrollView
-        ref={scroll}
-        scrollEnabled={expanded}
-        // Свёрнутая полоса не должна съедать вертикальный свайп: под ней прокрутка страницы,
-        // а сама она в этом состоянии не листается.
-        pointerEvents={expanded ? 'auto' : 'none'}
-        showsVerticalScrollIndicator={false}
-        onLayout={(e) => {
-          const h = e.nativeEvent.layout.height;
-          setViewport((prev) => (prev === h ? prev : h));
-        }}
-        onScrollBeginDrag={() => {
-          manualUntil.current = Date.now() + MANUAL_HOLD_MS;
-        }}
-        contentContainerStyle={styles.lines}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.plainBody}>
         {lines.map((line, i) =>
           line.text ? (
             <Text
               key={i}
-              onLayout={(e) => onLineLayout(i, e)}
-              onPress={expanded && line.t !== null ? () => onSeek(line.t!) : undefined}
-              style={[
-                styles.line,
-                { color: text, textShadowColor: shadow },
-                i === activeIndex ? styles.lineActive : activeIndex >= 0 && styles.lineIdle,
-              ]}
+              onPress={line.t !== null ? () => onSeek(line.t!) : undefined}
+              style={[styles.plain, { color: text, textShadowColor: shadow }]}
             >
               {line.text}
             </Text>
           ) : (
-            <View key={i} onLayout={(e) => onLineLayout(i, e)} style={styles.break} />
+            <View key={i} style={styles.break} />
           ),
         )}
       </ScrollView>
 
       <LinearGradient colors={fade} style={[styles.fade, styles.fadeTop]} pointerEvents="none" />
       <LinearGradient colors={[fade[1], fade[0]]} style={[styles.fade, styles.fadeBottom]} pointerEvents="none" />
-
-      <Pressable
-        onPress={onToggle}
-        hitSlop={12}
-        style={styles.chevron}
-        accessibilityRole="button"
-        accessibilityLabel={expanded ? 'Свернуть текст' : 'Развернуть текст'}
-      >
-        <View style={expanded ? undefined : styles.chevronUp}>
-          <Icon name="chevron-down" size={18} color={text} />
-        </View>
-      </Pressable>
     </>
   );
 }
 
 const styles = StyleSheet.create({
   panel: { flex: 1 },
-  content: { flex: 1, overflow: 'hidden', borderRadius: radii.glass },
-  lines: { paddingHorizontal: space.lg, paddingVertical: space.md, paddingRight: CHEVRON + space.lg },
-  line: {
-    fontFamily: fonts.bold,
-    fontSize: LINE_SIZE,
-    lineHeight: LINE_HEIGHT,
-    letterSpacing: -0.2,
+  content: { flex: 1, overflow: 'hidden', borderRadius: radii.card },
+
+  stack: { flex: 1, justifyContent: 'center', paddingHorizontal: space.lg, gap: space.md },
+  /** Витринный гротеск: строка песни — не интерфейс, ей можно и нужно иметь лицо. */
+  past: {
+    fontFamily: fonts.displayBold,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+    opacity: PAST_ALPHA,
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 11,
+    textShadowRadius: 10,
   },
-  /** Звучащая строка — единственная в полную силу; тень отделяет её от обложки. */
-  lineActive: { textShadowRadius: 13 },
-  /** Соседние строки не исчезают, а отступают: контекст песни остаётся читаемым. */
-  lineIdle: { opacity: IDLE_ALPHA },
+  current: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    lineHeight: 34,
+    letterSpacing: -0.3,
+    textAlign: 'center',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 14,
+  },
+  next: {
+    fontFamily: fonts.displayBold,
+    fontSize: 18,
+    lineHeight: 26,
+    textAlign: 'center',
+    opacity: NEXT_ALPHA,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 10,
+  },
+
+  // Отступ по вертикали в высоту вуали: иначе она гасит крайние строки.
+  plainBody: { paddingHorizontal: space.lg, paddingVertical: FADE },
+  plain: {
+    fontFamily: fonts.medium,
+    fontSize: 16,
+    lineHeight: 26,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 10,
+  },
   break: { height: BREAK_HEIGHT },
   fade: { position: 'absolute', left: 0, right: 0, height: FADE },
   fadeTop: { top: 0 },
   fadeBottom: { bottom: 0 },
-  chevron: {
-    position: 'absolute',
-    top: space.xs,
-    right: space.xs,
-    width: CHEVRON,
-    height: CHEVRON,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chevronUp: { transform: [{ rotate: '180deg' }] },
 });

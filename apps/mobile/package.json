@@ -18,6 +18,8 @@
   "dependencies": {
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@expo-google-fonts/manrope": "^0.4.2",
+    "@expo-google-fonts/oswald": "^0.4.2",
+    "@expo-google-fonts/unbounded": "^0.4.1",
     "@expo/metro-runtime": "~57.0.14",
     "@react-navigation/bottom-tabs": "^7.18.18",
     "@react-navigation/native": "^7.3.18",
@@ -29,6 +31,7 @@
     "@vire/core": "workspace:*",
     "@vire/design-tokens": "workspace:*",
     "@vire/media": "workspace:*",
+    "@vire/vireglass": "workspace:*",
     "blakejs": "^1.2.1",
     "expo": "~57.0.18",
     "expo-blur": "~57.0.2",
@@ -62,6 +65,8 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/generator": "^7.29.7",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "^57.0.9",
     "typescript": "^5.8.3",

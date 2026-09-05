@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Icon } from '../../lib/icon';
 import { colors } from '../../lib/theme';
 import { layout, radii } from '../../lib/design/scales';
+import type { Accent } from '../../lib/design/accent';
 
 const PLAY_SIZE = 68;
 const STEP_SIZE = 30;
@@ -18,6 +19,7 @@ const MODE_SIZE = 20;
 export function Transport({
   playing,
   loading,
+  accent,
   hasNext,
   hasPrev,
   shuffle,
@@ -30,6 +32,8 @@ export function Transport({
 }: {
   playing: boolean;
   loading: boolean;
+  /** Цвет темы артиста: главная кнопка — единственное место, где он берётся в полную силу. */
+  accent: Accent;
   hasNext: boolean;
   hasPrev: boolean;
   shuffle: boolean;
@@ -69,14 +73,14 @@ export function Transport({
 
       <Pressable
         onPress={tap(onTogglePlay)}
-        style={styles.play}
+        style={[styles.play, { backgroundColor: accent.fill }]}
         accessibilityRole="button"
         accessibilityLabel={playing ? 'Пауза' : 'Играть'}
       >
         {loading ? (
-          <ActivityIndicator color={colors.background} />
+          <ActivityIndicator color={accent.ink} />
         ) : (
-          <Icon name={playing ? 'pause' : 'play'} size={30} color={colors.background} />
+          <Icon name={playing ? 'pause' : 'play'} size={30} color={accent.ink} />
         )}
       </Pressable>
 
@@ -126,7 +130,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.foreground,
   },
   modeIcon: { width: MODE_SIZE, height: MODE_SIZE, alignItems: 'center', justifyContent: 'center' },
   repeatDot: {

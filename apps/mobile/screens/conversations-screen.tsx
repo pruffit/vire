@@ -16,6 +16,7 @@ import { ChatLockedNotice, useChatLocked } from '../components/chat-locked-notic
 import { useContentBottomPadding } from '../lib/layout';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
+import { fonts } from '../lib/design/typography';
 
 type LoadState = 'loading' | 'error' | 'ready';
 
@@ -179,10 +180,10 @@ function ConversationRow({
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16 },
-  heading: { color: colors.foreground, fontSize: 20, fontWeight: '800', marginTop: 8, marginBottom: 12 },
+  heading: { color: colors.foreground, fontSize: 20, fontFamily: fonts.extrabold, marginTop: 8, marginBottom: 12 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 32 },
   messageText: { color: colors.mutedForeground, fontSize: 15, textAlign: 'center' },
-  emptyTitle: { color: colors.foreground, fontSize: 18, fontWeight: '700', marginTop: 4 },
+  emptyTitle: { color: colors.foreground, fontSize: 18, fontFamily: fonts.bold, marginTop: 4 },
   emptySubtitle: { color: colors.mutedForeground, fontSize: 14, textAlign: 'center' },
   retryButton: {
     backgroundColor: colors.secondary,
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
   },
-  retryText: { color: colors.foreground, fontWeight: '700' },
+  retryText: { color: colors.foreground, fontFamily: fonts.bold },
   listContent: { gap: 2 },
   row: {
     flexDirection: 'row',
@@ -204,12 +205,12 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 40, height: 40, borderRadius: 20 },
   avatarPlaceholder: { backgroundColor: colors.secondary, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { color: colors.mutedForeground, fontSize: 15, fontWeight: '700' },
+  avatarInitial: { color: colors.mutedForeground, fontSize: 15, fontFamily: fonts.bold },
   info: { flex: 1, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
-  name: { flexShrink: 1, color: colors.mutedForeground, fontSize: 15, fontWeight: '600' },
+  name: { flexShrink: 1, color: colors.mutedForeground, fontSize: 15, fontFamily: fonts.semibold },
   timestamp: { flexShrink: 0, color: colors.mutedForeground, fontSize: 12 },
   preview: { color: colors.mutedForeground, fontSize: 13 },
-  textUnread: { color: colors.foreground, fontWeight: '700' },
+  textUnread: { color: colors.foreground, fontFamily: fonts.bold },
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
 });

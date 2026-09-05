@@ -4,6 +4,7 @@ import type { FriendshipStatusDTO } from '@vire/api-contracts';
 import { useFriendAction } from '../lib/use-friend-action';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
+import { fonts } from '../lib/design/typography';
 
 function tap() {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.primary,
   },
-  primaryText: { color: colors.primaryForeground, fontSize: 13, fontWeight: '700' },
+  primaryText: { color: colors.primaryForeground, fontSize: 13, fontFamily: fonts.bold },
   muted: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -110,5 +111,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.secondary,
   },
-  mutedText: { color: colors.foreground, fontSize: 13, fontWeight: '700' },
+  mutedText: { color: colors.foreground, fontSize: 13, fontFamily: fonts.bold },
 });

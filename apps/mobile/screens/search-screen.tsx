@@ -14,6 +14,7 @@ import { Screen } from '../components/screen';
 import { Glass } from '../components/glass';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
+import { fonts } from '../lib/design/typography';
 
 // @vire/api-contracts экспортирует только собранный SearchResponse, не типы отдельных
 // хитов — выводим их так же, как ReleaseDetailResponse['tracks'][number] в release-screen.tsx.
@@ -234,7 +235,7 @@ function TrackRow({
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16 },
-  heading: { color: colors.foreground, fontSize: 20, fontWeight: '800', marginTop: 8, marginBottom: 12 },
+  heading: { color: colors.foreground, fontSize: 20, fontFamily: fonts.extrabold, marginTop: 8, marginBottom: 12 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
   hintText: { color: colors.mutedForeground, fontSize: 14, textAlign: 'center' },
   listContent: { gap: 20 },
   section: { gap: 8 },
-  sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+  sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontFamily: fonts.bold, textTransform: 'uppercase' },
   sectionBody: { gap: 2 },
   row: {
     flexDirection: 'row',
@@ -260,8 +261,8 @@ const styles = StyleSheet.create({
   },
   rowActive: { backgroundColor: colors.secondary },
   rowInfo: { flex: 1, gap: 2, minWidth: 0 },
-  rowTitle: { flex: 1, color: colors.cardForeground, fontSize: 15, fontWeight: '600' },
-  rowSubtitle: { color: colors.mutedForeground, fontSize: 13, fontWeight: '500' },
+  rowTitle: { flex: 1, color: colors.cardForeground, fontSize: 15, fontFamily: fonts.semibold },
+  rowSubtitle: { color: colors.mutedForeground, fontSize: 13, fontFamily: fonts.medium },
   avatar: { width: 44, height: 44, borderRadius: 22 },
   cover: { width: 44, height: 44, borderRadius: radius.sm },
   coverPlaceholder: { backgroundColor: colors.secondary },

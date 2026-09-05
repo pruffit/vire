@@ -23,6 +23,7 @@ import { useContentBottomPadding } from '../lib/layout';
 import { LikeButton } from '../components/like-button';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
 import { DownloadButton } from '../components/download-button';
+import { fonts } from '../lib/design/typography';
 
 type LoadState = 'loading' | 'error' | 'ready';
 type TrackItem = ReleaseDetailResponse['tracks'][number];
@@ -195,8 +196,8 @@ const styles = StyleSheet.create({
   header: { padding: 16, alignItems: 'center', gap: 6, overflow: 'hidden' },
   cover: { width: 180, height: 180, borderRadius: radius.lg, marginBottom: 8 },
   coverPlaceholder: { backgroundColor: colors.secondary },
-  title: { color: colors.foreground, fontSize: 20, fontWeight: '800', textAlign: 'center' },
-  artist: { color: colors.mutedForeground, fontSize: 15, fontWeight: '500', textAlign: 'center' },
+  title: { color: colors.foreground, fontSize: 20, fontFamily: fonts.extrabold, textAlign: 'center' },
+  artist: { color: colors.mutedForeground, fontSize: 15, fontFamily: fonts.medium, textAlign: 'center' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
   messageText: { color: colors.mutedForeground, fontSize: 15, textAlign: 'center' },
   retryButton: {
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
   },
-  retryText: { color: colors.foreground, fontWeight: '700' },
+  retryText: { color: colors.foreground, fontFamily: fonts.bold },
   listContent: { paddingHorizontal: 16 },
   trackRow: {
     flexDirection: 'row',
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   trackNumber: { color: colors.mutedForeground, fontSize: 14, minWidth: 20, textAlign: 'center' },
   trackInfo: { flex: 1, gap: 2 },
   trackTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  trackTitle: { color: colors.foreground, fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  trackTitle: { color: colors.foreground, fontSize: 15, fontFamily: fonts.semibold, flexShrink: 1 },
   explicitBadge: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 3,
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  explicitText: { color: colors.mutedForeground, fontSize: 9, fontWeight: '800' },
+  explicitText: { color: colors.mutedForeground, fontSize: 9, fontFamily: fonts.extrabold },
   trackStatus: { color: colors.mutedForeground, fontSize: 12 },
   trackDuration: { color: colors.mutedForeground, fontSize: 13, fontVariant: ['tabular-nums'] },
   trackDisabled: { color: colors.mutedForeground, opacity: 0.5 },

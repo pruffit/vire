@@ -50,3 +50,9 @@ apps/worker/models/
 *.apk
 *.apk.idsig
 *.aab
+
+# Стенд VireGlass: бандл собирается из rnd-src при сборке веба (prebuild), в репозитории ему
+# делать нечего — он бы устаревал молча. Снимки замеров — расходный материал измерителя.
+apps/web/public/rnd/stand.js
+apps/web/public/rnd/stand.js.map
+apps/web/scripts/.glass-shots/

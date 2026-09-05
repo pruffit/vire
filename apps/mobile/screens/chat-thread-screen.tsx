@@ -24,6 +24,7 @@ import { ChatLockedNotice, useChatLocked } from '../components/chat-locked-notic
 import { Glass } from '../components/glass';
 import { useContentBottomPadding } from '../lib/layout';
 import { colors, radius } from '../lib/theme';
+import { fonts } from '../lib/design/typography';
 
 type LoadState = 'loading' | 'error' | 'blocked' | 'ready';
 
@@ -360,7 +361,7 @@ function Bubble({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   header: { paddingHorizontal: 16, paddingVertical: 12 },
-  headerName: { color: colors.foreground, fontSize: 18, fontWeight: '800' },
+  headerName: { color: colors.foreground, fontSize: 18, fontFamily: fonts.extrabold },
   typingCaption: { color: colors.mutedForeground, fontSize: 12, marginTop: 2 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
   messageText: { color: colors.mutedForeground, fontSize: 15, textAlign: 'center' },
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
   },
-  retryText: { color: colors.foreground, fontWeight: '700' },
+  retryText: { color: colors.foreground, fontFamily: fonts.bold },
   listContent: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
   keyMismatchBanner: {
     marginHorizontal: 16,
@@ -421,5 +422,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   sendButtonDisabled: { opacity: 0.4 },
-  sendButtonText: { color: colors.primaryForeground, fontSize: 20, fontWeight: '800' },
+  sendButtonText: { color: colors.primaryForeground, fontSize: 20, fontFamily: fonts.extrabold },
 });

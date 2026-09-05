@@ -10,6 +10,7 @@ import { Screen } from '../components/screen';
 import { useContentBottomPadding } from '../lib/layout';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
+import { fonts } from '../lib/design/typography';
 
 type LoadState = 'loading' | 'error' | 'ready';
 
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
   // (та же причина, что чинили в home-screen.tsx). paddingBottom задаётся динамически —
   // useContentBottomPadding().
   container: { padding: 16, gap: 12 },
-  title: { color: colors.foreground, fontSize: 20, fontWeight: '800', marginTop: 8, marginBottom: 4 },
+  title: { color: colors.foreground, fontSize: 20, fontFamily: fonts.extrabold, marginTop: 8, marginBottom: 4 },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -166,8 +167,8 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: 14,
   },
-  navRowText: { color: colors.foreground, fontSize: 15, fontWeight: '700' },
-  sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginTop: 8 },
+  navRowText: { color: colors.foreground, fontSize: 15, fontFamily: fonts.bold },
+  sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontFamily: fonts.bold, textTransform: 'uppercase', marginTop: 8 },
   centered: { alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 32 },
   messageText: { color: colors.mutedForeground, fontSize: 15, textAlign: 'center' },
   retryButton: {
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
   },
-  retryText: { color: colors.foreground, fontWeight: '700' },
+  retryText: { color: colors.foreground, fontFamily: fonts.bold },
   deviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -189,12 +190,12 @@ const styles = StyleSheet.create({
   },
   deviceInfo: { flex: 1, gap: 4 },
   deviceNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  deviceName: { color: colors.cardForeground, fontSize: 16, fontWeight: '700', flexShrink: 1 },
+  deviceName: { color: colors.cardForeground, fontSize: 16, fontFamily: fonts.bold, flexShrink: 1 },
   deviceMeta: { color: colors.mutedForeground, fontSize: 13 },
   currentBadge: { backgroundColor: colors.primary, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 3 },
-  currentBadgeText: { color: colors.primaryForeground, fontSize: 11, fontWeight: '700' },
+  currentBadgeText: { color: colors.primaryForeground, fontSize: 11, fontFamily: fonts.bold },
   revokeButton: { minHeight: 44, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
-  revokeText: { color: colors.destructive, fontWeight: '700' },
+  revokeText: { color: colors.destructive, fontFamily: fonts.bold },
   signOutButton: {
     marginTop: 8,
     backgroundColor: colors.card,
@@ -204,5 +205,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
   },
-  signOutText: { color: colors.destructive, fontSize: 16, fontWeight: '700' },
+  signOutText: { color: colors.destructive, fontSize: 16, fontFamily: fonts.bold },
 });

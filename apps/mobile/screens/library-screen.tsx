@@ -19,6 +19,7 @@ import { formatDuration, formatBytes } from '../lib/format';
 import { Screen } from '../components/screen';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
+import { fonts } from '../lib/design/typography';
 
 export default function LibraryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<LibraryStackParamList, 'LibraryHome'>>();
@@ -193,11 +194,11 @@ function DownloadRow({
 }
 
 const styles = StyleSheet.create({
-  title: { color: colors.foreground, fontSize: 20, fontWeight: '800', paddingHorizontal: 16, marginTop: 8, marginBottom: 4 },
+  title: { color: colors.foreground, fontSize: 20, fontFamily: fonts.extrabold, paddingHorizontal: 16, marginTop: 8, marginBottom: 4 },
   sectionTitle: {
     color: colors.mutedForeground,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     textTransform: 'uppercase',
     paddingHorizontal: 16,
     marginTop: 16,
@@ -208,11 +209,11 @@ const styles = StyleSheet.create({
   playlistsRow: { paddingHorizontal: 16, gap: 12 },
   playlistCard: { width: 120 },
   playlistCover: { width: 120, height: 120, borderRadius: radius.lg },
-  playlistTitle: { color: colors.foreground, fontSize: 13, fontWeight: '700', marginTop: 8 },
+  playlistTitle: { color: colors.foreground, fontSize: 13, fontFamily: fonts.bold, marginTop: 8 },
   playlistMeta: { color: colors.mutedForeground, fontSize: 11, marginTop: 2 },
   empty: { alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 32, paddingTop: 96 },
   emptyDownloadsOnly: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
-  emptyTitle: { color: colors.foreground, fontSize: 18, fontWeight: '700' },
+  emptyTitle: { color: colors.foreground, fontSize: 18, fontFamily: fonts.bold },
   emptySubtitle: { color: colors.mutedForeground, fontSize: 14, textAlign: 'center' },
   listContent: {},
   row: {
@@ -228,7 +229,7 @@ const styles = StyleSheet.create({
   cover: { width: 44, height: 44, borderRadius: radius.sm },
   coverPlaceholder: { backgroundColor: colors.secondary },
   info: { flex: 1, gap: 2, minWidth: 0 },
-  trackTitle: { color: colors.foreground, fontSize: 15, fontWeight: '600' },
+  trackTitle: { color: colors.foreground, fontSize: 15, fontFamily: fonts.semibold },
   trackMeta: { color: colors.mutedForeground, fontSize: 12 },
   removeButton: { minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
 });

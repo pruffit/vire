@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useChatAvailability } from '../lib/e2ee/chat-availability';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
+import { fonts } from '../lib/design/typography';
 
 /**
  * Экран-заглушка вместо чата, когда на сервере лежит ключ другого устройства.
@@ -46,6 +47,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.secondary,
   },
-  title: { color: colors.foreground, fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  title: { color: colors.foreground, fontSize: 18, fontFamily: fonts.bold, textAlign: 'center' },
   body: { color: colors.mutedForeground, fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

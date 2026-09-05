@@ -324,6 +324,8 @@ pnpm --filter @vire/web check:i18n     # кириллица вне словар�
 pnpm --filter @vire/web check:contracts  # роут /api/v1 без схемы @vire/api-contracts вне allowlist
 pnpm --filter @vire/web check:caller   # роут app/api берёт актора через getCaller(), не через auth()
 pnpm turbo run check:layers            # границы @vire/core: platform/** не знает о music/**
+pnpm turbo run check:glsl              # шейдеры VireGlass компилируются в GLSL ES 3.0 (нужен
+                                       # playwright install chromium-headless-shell)
 pnpm check:doc-paths                   # из корня; пути к коду в docs/**.md ведут в существующие файлы
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов

@@ -171,13 +171,17 @@ export function VireGlassSurface({
   // константа модуля, но при горячей перезагрузке она меняется, а мемо с прежними
   // зависимостями продолжает отдавать СТАРЫЙ шейдер: правка оптики молча не доезжает.
   const lensProps = useMemo(
-    () => toLensProps(optics, geometry, { debug, morph, groupProbe }),
+    () => toLensProps(optics, geometry, PixelRatio.get(), { debug, morph, groupProbe }),
     [optics, geometry, debug, morph, groupProbe, LENS_SHADER],
   );
   const iconUniforms = useMemo(
     () => ({
       u_iconOn: icon?.image ? 1 : 0,
       u_iconScale: icon?.scale ?? 1,
+      // Цветного слоя на стекле у мобильного плеера пока нет: обложка и миниатюры рисуются
+      // детьми вьюхи. Слот в шейдере при этом обязан быть занят — Skia раздаёт дочерние
+      // шейдеры по порядку объявления, и пустой слот сдвинул бы маску краски.
+      u_overlayOn: 0,
       u_inkIdle: icon?.inkIdle ?? [1, 1, 1, 1],
       u_inkActive: icon?.inkActive ?? [1, 1, 1, 1],
     }),
@@ -423,6 +427,8 @@ export function VireGlassSurface({
             ) : (
               <ColorShader color="#00000000" />
             )}
+            {/* Второй слот — цветной слой (u_overlay). Пустой, пока его сюда не подключат. */}
+            <ColorShader color="#00000000" />
           </Shader>
         </Fill>
         </Canvas>

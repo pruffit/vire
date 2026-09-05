@@ -21,6 +21,9 @@ export interface QueueTrack {
   artistName: string;
   coverUrl: string | null;
   durationSec: number | null;
+  /** Акцент релиза — сцена красится сразу, не дожидаясь ответа сети. Не у всех источников
+   *  очереди он под рукой, поэтому опционален; фолбэк — useTrackContext, затем нейтраль. */
+  accentColor?: string | null;
 }
 
 export type PlaybackStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error';
@@ -37,8 +40,6 @@ interface PlayerState {
   status: PlaybackStatus;
   positionSec: number;
   durationSec: number;
-  /** Пики волны из манифеста — приходят бесплатно вместе с hlsUrl, отдельного запроса нет. */
-  waveformPeaks: number[] | null;
   shuffle: boolean;
   repeat: Repeat;
   originalQueue: QueueTrack[] | null;
@@ -50,6 +51,8 @@ interface PlayerState {
    */
   restored: boolean;
   playQueue: (tracks: QueueTrack[], startIndex: number, context: PlayContext) => Promise<void>;
+  /** Дописать хвост очереди, не трогая текущий трек и позицию: волна подливает треки по ходу. */
+  appendToQueue: (tracks: QueueTrack[]) => void;
   togglePlayPause: () => void;
   next: () => void;
   prev: () => void;
@@ -72,7 +75,6 @@ export const usePlayerStore = create<PlayerState>()(
       status: 'idle',
       positionSec: 0,
       durationSec: 0,
-      waveformPeaks: null,
       shuffle: false,
       repeat: 'off',
       originalQueue: null,
@@ -86,6 +88,20 @@ export const usePlayerStore = create<PlayerState>()(
         // настройка слушателя, не свойство очереди).
         set({ queue: tracks, queueIndex: index, shuffle: false, originalQueue: null, context, restored: false });
         await loadAndPlay(index);
+      },
+
+      appendToQueue: (tracks) => {
+        if (tracks.length === 0) return;
+        const { queue, originalQueue } = get();
+        const known = new Set(queue.map((t) => t.id));
+        const fresh = tracks.filter((t) => !known.has(t.id));
+        if (fresh.length === 0) return;
+        // originalQueue живёт параллельно очереди под шаффлом — иначе выключение шаффла
+        // откатило бы к очереди без долитого хвоста.
+        set({
+          queue: [...queue, ...fresh],
+          originalQueue: originalQueue ? [...originalQueue, ...fresh] : null,
+        });
       },
 
       // Ветки перечислены исчерпывающе намеренно: прежняя цепочка if/else if не покрывала
@@ -211,7 +227,6 @@ async function loadAndPlay(index: number, startAt = 0): Promise<void> {
     status: 'loading',
     positionSec: startAt,
     durationSec: track.durationSec ?? 0,
-    waveformPeaks: null,
     restored: false,
   });
 
@@ -219,7 +234,6 @@ async function loadAndPlay(index: number, startAt = 0): Promise<void> {
   if (usePlayerStore.getState().queueIndex !== index) return;
 
   let manifestUrl: string;
-  let peaks: number[] | null = null;
   if (downloaded) {
     manifestUrl = downloaded.localPlaylistPath;
   } else {
@@ -235,7 +249,6 @@ async function loadAndPlay(index: number, startAt = 0): Promise<void> {
       return;
     }
     manifestUrl = result.data.hlsUrl;
-    peaks = result.data.waveformPeaks;
   }
 
   try {
@@ -250,7 +263,7 @@ async function loadAndPlay(index: number, startAt = 0): Promise<void> {
     await audioEngine.play();
     tracker.start(track.id, state.context?.source ?? 'direct', Date.now());
     tracker.resume(Date.now());
-    usePlayerStore.setState({ status: 'playing', waveformPeaks: peaks });
+    usePlayerStore.setState({ status: 'playing' });
     // Иконка лайка в шторке — сразу лучшее известное значение (кэш стора лайков), точное
     // придёт следом через likes-подписку в subscribePlayerEffects(), когда load() дозагрузит.
     useLikesStore.getState().load(track.id);

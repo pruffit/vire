@@ -22,6 +22,7 @@ import { Glass } from '../components/glass';
 import { useContentBottomPadding } from '../lib/layout';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
+import { fonts } from '../lib/design/typography';
 
 const SEARCH_MIN_LENGTH = 2;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -207,7 +208,7 @@ function PersonRow({
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16 },
-  heading: { color: colors.foreground, fontSize: 20, fontWeight: '800', marginTop: 8, marginBottom: 12 },
+  heading: { color: colors.foreground, fontSize: 20, fontFamily: fonts.extrabold, marginTop: 8, marginBottom: 12 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -227,10 +228,10 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
   },
-  retryText: { color: colors.foreground, fontWeight: '700' },
+  retryText: { color: colors.foreground, fontFamily: fonts.bold },
   listContent: { gap: 20 },
   section: { gap: 8 },
-  sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+  sectionTitle: { color: colors.mutedForeground, fontSize: 12, fontFamily: fonts.bold, textTransform: 'uppercase' },
   sectionBody: { gap: 2 },
   emptyText: { color: colors.mutedForeground, fontSize: 14, paddingVertical: 8 },
   row: {
@@ -243,6 +244,6 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 40, height: 40, borderRadius: 20 },
   avatarPlaceholder: { backgroundColor: colors.secondary, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { color: colors.mutedForeground, fontSize: 15, fontWeight: '700' },
-  rowName: { flex: 1, color: colors.cardForeground, fontSize: 15, fontWeight: '600' },
+  avatarInitial: { color: colors.mutedForeground, fontSize: 15, fontFamily: fonts.bold },
+  rowName: { flex: 1, color: colors.cardForeground, fontSize: 15, fontFamily: fonts.semibold },
 });
