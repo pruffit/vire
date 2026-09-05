@@ -77,8 +77,36 @@ const GROUND_L = [0.17, 0.1] as const;
 /** Ниже этого фон не читается цветным вовсе — поднимаем блёклый акцент до внятного. */
 const GROUND_MIN_S = 0.42;
 /** Подложка карточки: тот же тон, но темнее ступеней фона, иначе карточка не отделяется. */
-const WASH_L = 0.14;
-const WASH_S = 0.3;
+const WASH_L = 0.19;
+const WASH_S = 0.34;
+
+/** Светлоты ролей сцены (player-ground.tsx). Разбор — brief §10. */
+const SCENE_BASE_L = 0.11;
+const SCENE_HALO_L = 0.32;
+const SCENE_DIAGONAL_L = 0.22;
+const SCENE_DIAGONAL_S_MULT = 0.8;
+const SCENE_DIAGONAL_HUE_SHIFT = 150 / 360;
+const SCENE_DEEP_L = 0.07;
+
+/** Хью тёплой нейтрали продукта (`docs/PRODUCT.md`, «hue ~75»), а не чистый серый —
+ *  на ней стоит сцена трека без акцента. */
+const NEUTRAL_HUE = 75 / 360;
+
+function sceneRoles(h: number, groundS: number): Pick<Accent, 'base' | 'halo' | 'diagonal' | 'deep'> {
+  const at = (l: number, s: number, hue = h) => toHex(hslToRgb({ h: hue, s, l }));
+  return {
+    base: at(SCENE_BASE_L, groundS),
+    halo: at(SCENE_HALO_L, groundS),
+    diagonal: at(SCENE_DIAGONAL_L, groundS * SCENE_DIAGONAL_S_MULT, (h + SCENE_DIAGONAL_HUE_SHIFT) % 1),
+    deep: at(SCENE_DEEP_L, groundS),
+  };
+}
+
+/** `hex` → `rgba(...)`: сцене нужно гасить `halo`/`diagonal` до прозрачности по радиусу. */
+export function withAlpha(hex: string, alpha: number): string {
+  const rgb = parseHex(hex);
+  return rgb ? toRgba(rgb, alpha) : `rgba(0, 0, 0, ${alpha})`;
+}
 
 export type Accent = {
   /** Заливка главной кнопки и прогресса. */
@@ -87,21 +115,25 @@ export type Accent = {
   ink: string;
   /** Верхний тон фона экрана. */
   ground: string;
-  /** Ступени градиента фона, сверху вниз; последняя — палитра приложения. */
-  gradient: readonly [string, string, string];
-  /** Те же ступени с альфа-рампой: ими размытая обложка гасится книзу, не темнея. */
-  veil: readonly [string, string, string];
   /** Подложка карточки в тон трека. */
   wash: string;
+  /** Поле сцены плеера (player-ground.tsx) — заливка канваса целиком. */
+  base: string;
+  /** Свет от обложки: центр радиального градиента сцены, средняя светлота. */
+  halo: string;
+  /** Второе пятно в противоположном углу — сдвиг тона на 150°, чтобы поле не читалось
+   *  плоским прожектором. */
+  diagonal: string;
+  /** Низ сцены — там, где фон под управлением и контекстом обязан замолкнуть. */
+  deep: string;
 };
 
 const NEUTRAL: Accent = {
   fill: colors.foreground,
   ink: colors.background,
   ground: colors.background,
-  gradient: ['#14110e', '#0a0806', colors.background],
-  veil: ['rgba(20, 17, 14, 0)', 'rgba(10, 8, 6, 0.9)', 'rgba(3, 2, 1, 1)'],
   wash: colors.secondary,
+  ...sceneRoles(NEUTRAL_HUE, GROUND_MIN_S),
 };
 
 /**
@@ -119,14 +151,12 @@ export function resolveAccent(hex: string | null | undefined): Accent {
   const { h, s } = rgbToHsl(rgb);
   const groundS = Math.max(s, GROUND_MIN_S);
   const step = (l: number, sat: number) => toHex(hslToRgb({ h, s: sat, l }));
-  const veilStep = (l: number, a: number) => toRgba(hslToRgb({ h, s: groundS, l }), a);
 
   return {
     fill: fillable ? toHex(rgb) : colors.foreground,
     ink: !fillable || luma > INK_FLIP_LUMA ? colors.background : colors.foreground,
     ground: step(GROUND_L[0], groundS),
-    gradient: [step(GROUND_L[0], groundS), step(GROUND_L[1], groundS), colors.background],
-    veil: [veilStep(GROUND_L[0], 0), veilStep(GROUND_L[1], 0.9), 'rgba(3, 2, 1, 1)'],
     wash: step(WASH_L, WASH_S),
+    ...sceneRoles(h, groundS),
   };
 }

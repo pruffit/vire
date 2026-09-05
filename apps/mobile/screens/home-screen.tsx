@@ -111,6 +111,7 @@ export default function HomeScreen() {
       artistName: t.artistName,
       coverUrl: t.coverUrl,
       durationSec: null,
+      accentColor: t.accentColor,
     }));
     playQueue(queue, index, { source: 'home' });
   };

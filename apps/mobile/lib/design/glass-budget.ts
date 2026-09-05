@@ -17,11 +17,11 @@ export const GLASS_SURFACES = {
   miniPlayer: 1,
   sheet: 1,
   searchField: 1,
-  /** Фуллскрин-плеер: единственное стекло экрана — полоса текста на обложке. Транспорт
-   *  плоский: под ним затемнённый ambient-фон, преломлять там нечего. */
+  /** Панель текста на обложке — самое насыщенное место экрана. */
   playerLyrics: 1,
-  /** Ряд действий плеера — ОДНА полоса на три кнопки: цена стекла в числе поверхностей. */
-  playerActions: 1,
+  /** «Поток по треку»: под строкой сцена со светом, а не ровная заливка. Сцена рисуется SVG
+   *  ровно поэтому: канвас Skia не попадает в снимок RenderNode, из которого материал
+   *  берёт преломление, и панель над ним выходила чёрной. */
   playerWave: 1,
   /** Крупная контентная плашка (шапка артиста) — одна поверхность независимо от площади. */
   contentPlate: 1,
@@ -48,10 +48,10 @@ export const SUPPRESSED_BY_SHEET: readonly GlassElement[] = [
  * получалось бы 4 + 1 + 2 = 7 поверхностей — за пределами измеренной зелёной зоны.
  * Поэтому плеер поднимает тот же счётчик, что и лист.
  */
-export const FULLSCREEN_PLAYER: readonly GlassElement[] = ['playerLyrics', 'playerActions', 'playerWave'];
+export const FULLSCREEN_PLAYER: readonly GlassElement[] = ['playerLyrics', 'playerWave'];
 
 /** Поверхности самого плеера: он перекрывает приложение и глушит нижние так же, как лист. */
-const PLAYER_SURFACES: readonly GlassElement[] = ['playerLyrics', 'playerActions', 'playerWave'];
+const PLAYER_SURFACES: readonly GlassElement[] = ['playerLyrics', 'playerWave'];
 
 export function countSurfaces(elements: readonly GlassElement[]): number {
   // Подавление даёт не слово «sheet», а факт «сверху что-то открыто»: плеер поднимает тот

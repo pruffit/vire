@@ -71,6 +71,7 @@ export default function PlaylistScreen({
       artistName: t.artistName,
       coverUrl: t.coverUrl,
       durationSec: t.durationSec,
+      accentColor: t.accentColor,
     }));
     playQueue(queue, index, { source: 'playlist', sourceId: playlistId });
   };

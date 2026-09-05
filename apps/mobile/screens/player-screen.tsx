@@ -11,7 +11,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+
 import * as Haptics from 'expo-haptics';
 import { nextQueueIndex } from '@vire/core/playback/queue';
 import type { PlaySource } from '@vire/api-contracts';
@@ -37,13 +37,7 @@ import { Transport } from '../components/player/transport';
 import { ProgressLine } from '../components/player/progress-line';
 import { QueueSection } from '../components/player/panels';
 import { TrackActionSheet } from '../components/player/track-action-sheet';
-import {
-  ArtistCard,
-  PlayerActions,
-  SimilarArtists,
-  WaveBanner,
-} from '../components/player/player-context';
-import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
+import { ArtistCard, SimilarArtists, WaveBanner } from '../components/player/player-context';
 import { ShareSheet } from '../components/player/share-sheet';
 import { LikeButton } from '../components/like-button';
 import type { RootStackParamList } from '../navigation/root-navigator';
@@ -54,7 +48,7 @@ const COVER_INSET = 12;
  *  ширину вытеснил бы управление за сгиб. */
 const COVER_MAX_VIEWPORT = 0.46;
 const HEADER_HEIGHT = 44;
-const HEADER_SCRIM = ['rgba(3,2,1,0.62)', 'rgba(3,2,1,0)'] as const;
+
 /** За сколько прокрутки шапка доходит до плотной: заголовок трека уезжает ровно под неё.
  *  Градиента для этого мало — фон экрана берёт цвет обложки и бывает светлым. */
 const HEADER_SOLID_AT = 90;
@@ -85,16 +79,20 @@ const SOURCE_LABEL: Record<PlaySource, string> = {
  *
  * Раскладка выведена из того, что на экране делают, а не из симметрии: содержимое (обложка
  * и текст на ней) наверху — туда смотрят; частое управление внизу — там живёт большой палец;
- * контекст (волна, автор, похожие, очередь) под сгибом — это отдельное намерение.
- * Разбор — `docs/superpowers/specs/2026-09-03-mobile-player-v3.md`.
+ * контекст (волна, автор, похожие, очередь) под сгибом — это отдельное намерение. Прогресс
+ * стоит НАД транспортом (обе мировые модели держат его выше), ряд действий снят — редкое
+ * («В плейлист», «Поделиться», «К релизу», «Открыть артиста») ушло в лист `⋯` шапки, частое
+ * (лайк, текст, очередь) осталось на первом экране. Разбор —
+ * `docs/superpowers/specs/2026-09-03-mobile-player-v4-brief.md`.
  *
  * Первый экран НЕ растянут на вьюпорт: блоки идут подряд, остаток высоты занимает начало
  * контекста. Растянутый центрировал обложку в остатке и оставлял пустоту вокруг неё.
  *
- * Стекло на экране одно — полоса текста на обложке, единственное место, где под материалом
- * есть что преломлять. Она сиблинг `Backdrop`, а не потомок: цель преломления не может быть
- * предком стекла (`lib/blur-target.tsx`), поэтому полоса стоит по замеренной рамке обложки
- * и едет за прокруткой трансформом.
+ * Поле обложки — два режима, обложка и текст, переключатель на самом поле (правый верхний
+ * угол рамки). Обложка остаётся под панелью текста: стекло имеет смысл только там, где под
+ * ним есть что преломлять. Панель — сиблинг `Backdrop`, а не потомок: цель преломления не
+ * может быть предком стекла (`lib/blur-target.tsx`), поэтому она стоит по замеренной рамке
+ * обложки и едет за прокруткой трансформом.
  */
 export default function PlayerScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -125,9 +123,6 @@ export default function PlayerScreen() {
   const trackContext = useTrackContext(track?.id);
 
   const artRef = useRef<View>(null);
-  // Второй захват — только фон. Плашки лежат В прокрутке, то есть внутри artRef, и её
-  // преломлять не могут (цель не может быть предком стекла). Фон им предком не приходится,
-  // поэтому у них живой бэкдроп есть, а рекурсии RenderNode нет.
   const groundRef = useRef<View>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
   const [coverTop, setCoverTop] = useState(0);
@@ -135,7 +130,6 @@ export default function PlayerScreen() {
   const [lyricsShown, setLyricsShown] = useState(false);
   const [lyricsIdle, setLyricsIdle] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
-  const [playlistOpen, setPlaylistOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
   const immersive = useSharedValue(0);
@@ -192,7 +186,10 @@ export default function PlayerScreen() {
     [navigation],
   );
 
-  const accent = useMemo(() => resolveAccent(trackContext?.artist.accentColor), [trackContext]);
+  // Цвет берётся по значению, а не по объекту контекста: иначе сцена перекрашивалась бы
+  // кросс-фейдом на каждое обновление контекста.
+  const accentColor = track?.accentColor ?? trackContext?.artist.accentColor;
+  const accent = useMemo(() => resolveAccent(accentColor), [accentColor]);
 
   if (!track) return null;
 
@@ -206,6 +203,7 @@ export default function PlayerScreen() {
   const releaseId = context?.source === 'release' ? (context.sourceId ?? null) : null;
   const activeLine = activeLineIndex(lines, positionSec);
   const chromePointerEvents = immersiveOn ? 'none' : 'auto';
+  const hasLyrics = lines !== null;
 
   const toggleImmersive = () => {
     const on = !immersiveOn;
@@ -223,8 +221,17 @@ export default function PlayerScreen() {
 
   return (
     <View style={styles.root}>
+      {/* Захват сцены: плашки контекста лежат В прокрутке, то есть внутри artRef, и её
+          преломлять не могут — цель не может быть предком стекла. */}
       <Backdrop targetRef={groundRef} style={StyleSheet.absoluteFill}>
-        <PlayerGround coverUrl={track.coverUrl} accent={accent} />
+        <PlayerGround
+          accent={accent}
+          width={width}
+          height={windowHeight}
+          haloCenterX={width / 2}
+          haloCenterY={coverScreenTop + artSize / 2}
+          artSize={artSize}
+        />
       </Backdrop>
 
       <Backdrop
@@ -246,33 +253,59 @@ export default function PlayerScreen() {
                 paddingBottom: insets.bottom + space.xl,
               }}
             >
-              <Animated.View style={[styles.hero, chromeStyle]} pointerEvents={chromePointerEvents}>
+              {/* Обложка НЕ под `chromeStyle`: иммерсив гасит интерфейс вокруг неё, а не её
+                  саму — под общей прозрачностью она исчезала вместе с ним. */}
+              <View style={styles.hero}>
                 <View
                   style={styles.coverArea}
                   onLayout={(e) => setCoverTop(e.nativeEvent.layout.y)}
                   pointerEvents="box-none"
                 >
-                  <CoverCarousel
-                    queue={queue}
-                    queueIndex={queueIndex}
-                    size={artSize}
-                    radius={radii.card}
-                    immersive={immersive}
-                    edgeScale={edgeScale}
-                    immersiveShiftY={immersiveShiftY}
-                    reduceMotion={reduceMotion}
-                    onTap={toggleImmersive}
-                    onDoubleTap={() => likeTrack(track.id)}
-                    onLongPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-                      setActionSheetOpen(true);
-                    }}
-                    onSwipeNext={next}
-                    onSwipePrev={prev}
-                    onDismiss={() => navigation.goBack()}
-                  />
+                  <View style={{ width: artSize, height: artSize }}>
+                    <CoverCarousel
+                      queue={queue}
+                      queueIndex={queueIndex}
+                      size={artSize}
+                      radius={radii.card}
+                      immersive={immersive}
+                      edgeScale={edgeScale}
+                      immersiveShiftY={immersiveShiftY}
+                      reduceMotion={reduceMotion}
+                      onTap={toggleImmersive}
+                      onDoubleTap={() => likeTrack(track.id)}
+                      onLongPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                        setActionSheetOpen(true);
+                      }}
+                      onSwipeNext={next}
+                      onSwipePrev={prev}
+                      onDismiss={() => navigation.goBack()}
+                    />
+                    {/* На инструментале гаснет, а не пропадает — иначе угол поля прыгает
+                        на каждой смене трека. */}
+                    <Animated.View
+                      style={[styles.lyricsToggleSlot, chromeStyle]}
+                      pointerEvents={chromePointerEvents}
+                    >
+                      <Pressable
+                        style={[
+                          styles.lyricsToggle,
+                          lyricsShown && { backgroundColor: accent.fill },
+                          !hasLyrics && styles.lyricsToggleDisabled,
+                        ]}
+                        disabled={!hasLyrics}
+                        onPress={() => setLyricsShown((v) => !v)}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: !hasLyrics, selected: lyricsShown }}
+                        accessibilityLabel="Текст песни"
+                      >
+                        <Icon name="text" size={20} color={lyricsShown ? accent.ink : colors.foreground} />
+                      </Pressable>
+                    </Animated.View>
+                  </View>
                 </View>
 
+                <Animated.View style={[styles.heroChrome, chromeStyle]} pointerEvents={chromePointerEvents}>
                 <View style={styles.titleRow}>
                   <View style={styles.titles}>
                     <Text style={type.screenTitle} numberOfLines={1}>
@@ -296,6 +329,13 @@ export default function PlayerScreen() {
                   <LikeButton trackId={track.id} variant="primary" />
                 </View>
 
+                <ProgressLine
+                  positionSec={positionSec}
+                  durationSec={durationSec}
+                  accent={accent.fill}
+                  onSeek={seek}
+                />
+
                 <Transport
                   playing={status === 'playing'}
                   loading={status === 'loading'}
@@ -311,29 +351,14 @@ export default function PlayerScreen() {
                   onCycleRepeat={cycleRepeat}
                 />
 
-                <ProgressLine
-                  positionSec={positionSec}
-                  durationSec={durationSec}
-                  accent={accent.fill}
-                  onSeek={seek}
-                />
-
-                <PlayerActions
-                  hasLyrics={lines !== null}
-                  lyricsShown={lyricsShown}
-                  accent={accent}
-                  onToggleLyrics={() => setLyricsShown((v) => !v)}
-                  onPlaylist={() => setPlaylistOpen(true)}
-                  onShare={share}
-                />
-
                 {status === 'error' && (
                   <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>
                 )}
-              </Animated.View>
+                </Animated.View>
+              </View>
 
-              <View style={styles.context}>
-                <WaveBanner trackTitle={track.title} accent={accent} onPress={startWave} />
+              <Animated.View style={[styles.context, chromeStyle]} pointerEvents={chromePointerEvents}>
+                <WaveBanner trackTitle={track.title} blurTarget={groundRef} onPress={startWave} />
 
                 {trackContext && (
                   <>
@@ -347,7 +372,7 @@ export default function PlayerScreen() {
                 )}
 
                 <QueueSection />
-              </View>
+              </Animated.View>
             </Animated.ScrollView>
 
           </View>
@@ -368,6 +393,17 @@ export default function PlayerScreen() {
           style={StyleSheet.absoluteFill}
           contentStyle={styles.headerGlass}
         >
+          <View style={StyleSheet.absoluteFill} pointerEvents="none" />
+        </GlassPanel>
+
+        {/* Уплотнение — ПОВЕРХ линзы, а не внутри неё: линза рисуется над своими детьми, и
+            подложка под ней ничего не давала — метка источника тонула в светлой обложке. */}
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { backgroundColor: accent.base }, headerSolidStyle]}
+          pointerEvents="none"
+        />
+
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           <View style={{ height: insets.top }} pointerEvents="none" />
           <View style={styles.headerRow}>
             <Pressable
@@ -382,9 +418,17 @@ export default function PlayerScreen() {
             <Text style={styles.source} numberOfLines={1}>
               {context ? SOURCE_LABEL[context.source] : SOURCE_LABEL.direct}
             </Text>
-            <View style={styles.headerButton} />
+            <Pressable
+              onPress={() => setActionSheetOpen(true)}
+              hitSlop={10}
+              style={styles.headerButton}
+              accessibilityRole="button"
+              accessibilityLabel="Действия с треком"
+            >
+              <Icon name="more-horizontal" size={24} color={colors.foreground} />
+            </Pressable>
           </View>
-        </GlassPanel>
+        </View>
       </Animated.View>
 
       {lines && lyricsShown && (
@@ -407,14 +451,6 @@ export default function PlayerScreen() {
         </Animated.View>
       )}
 
-      <AddToPlaylistSheet
-        trackId={track.id}
-        open={playlistOpen}
-        onOpenChange={setPlaylistOpen}
-        inline
-        hideTrigger
-      />
-
       <ShareSheet
         open={shareOpen}
         trackId={track.id}
@@ -431,8 +467,12 @@ export default function PlayerScreen() {
         onClose={() => setActionSheetOpen(false)}
         trackId={track.id}
         title={track.title}
-        artistName={track.artistName}
         releaseId={releaseId}
+        artistSlug={trackContext?.artist.slug ?? null}
+        hasLyrics={hasLyrics}
+        onShowLyrics={() => setLyricsShown(true)}
+        onShare={share}
+        onOpenArtist={openArtist}
       />
     </View>
   );
@@ -446,7 +486,18 @@ const styles = StyleSheet.create({
 
   /** Внутри блока — шаг шкалы; расстояние между блоками задаёт `context`. */
   hero: { paddingHorizontal: layout.screenPadding, gap: space.lg },
+  heroChrome: { gap: space.lg },
   coverArea: { alignItems: 'center' },
+  lyricsToggleSlot: { position: 'absolute', top: space.sm, right: space.sm },
+  lyricsToggle: {
+    width: layout.touchTarget,
+    height: layout.touchTarget,
+    borderRadius: radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(3,2,1,0.45)',
+  },
+  lyricsToggleDisabled: { opacity: 0.32 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   artistLink: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 28 },
   artistName: { ...type.subtitle, color: colors.foreground },
@@ -462,7 +513,7 @@ const styles = StyleSheet.create({
   context: { paddingHorizontal: layout.screenPadding, paddingTop: space.xl, gap: space.xl },
   block: { gap: space.sm },
 
-  headerSolid: { backgroundColor: colors.background },
+
   header: { position: 'absolute', top: 0, left: 0, right: 0 },
   headerGlass: { flex: 1 },
   headerRow: {

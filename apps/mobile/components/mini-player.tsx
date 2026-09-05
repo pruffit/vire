@@ -14,6 +14,7 @@ import { Icon } from '../lib/icon';
 import { colors } from '../lib/theme';
 import { type } from '../lib/design/typography';
 import { space, layout, radii } from '../lib/design/scales';
+import { resolveAccent } from '../lib/design/accent';
 import { PRODUCT_DIM } from '../lib/vireglass/material';
 
 /**
@@ -61,6 +62,12 @@ export function MiniPlayer() {
     return Gesture.Exclusive(swipe, tap);
   }, [navigation, next, prev]);
 
+  // Без акцента — нынешний нейтральный вид: слой не рисуется вовсе, а не красится в нейтраль.
+  const accent = useMemo(
+    () => (track?.accentColor ? resolveAccent(track.accentColor) : null),
+    [track?.accentColor],
+  );
+
   if (!track) return null;
 
   const progress = durationSec > 0 ? Math.min(1, Math.max(0, positionSec / durationSec)) : 0;
@@ -80,6 +87,11 @@ export function MiniPlayer() {
           style={styles.panel}
           contentStyle={styles.content}
         >
+          {accent && (
+            // Подкрас поверх того же материала — иначе мини читается панелью системы,
+            // а не продолжением музыки.
+            <View style={[styles.tint, { backgroundColor: accent.wash }]} pointerEvents="none" />
+          )}
           <Cover uri={track.coverUrl} size={COVER} radius={PANEL_RADIUS - INSET} />
           <View style={styles.info}>
             <Text style={type.sectionTitle} numberOfLines={1}>
@@ -128,6 +140,8 @@ const COVER = MINI_PLAYER_HEIGHT - INSET * 2;
 /** Полтора пикселя читались артефактом вёрстки, а не индикатором: на такой высоте
  *  скругление не видно вовсе. */
 const PROGRESS_HEIGHT = 3;
+/** Подкрас, а не заливка: материал обязан просвечивать под тоном трека. */
+const TINT_OPACITY = 0.24;
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: space.md, right: space.md, height: MINI_PLAYER_HEIGHT },
@@ -138,6 +152,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.md,
     padding: INSET,
+  },
+  tint: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: PANEL_RADIUS,
+    opacity: TINT_OPACITY,
   },
   info: { flex: 1, gap: 2, minWidth: 0 },
   playButton: {

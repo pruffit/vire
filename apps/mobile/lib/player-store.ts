@@ -21,6 +21,9 @@ export interface QueueTrack {
   artistName: string;
   coverUrl: string | null;
   durationSec: number | null;
+  /** Акцент релиза — сцена красится сразу, не дожидаясь ответа сети. Не у всех источников
+   *  очереди он под рукой, поэтому опционален; фолбэк — useTrackContext, затем нейтраль. */
+  accentColor?: string | null;
 }
 
 export type PlaybackStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error';

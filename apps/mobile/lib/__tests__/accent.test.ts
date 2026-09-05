@@ -35,4 +35,24 @@ describe('акцент темы артиста', () => {
     const a = resolveAccent('#57c2a3');
     expect(luminance(parseHex(a.ground)!)).toBeLessThan(luminance(parseHex('#57c2a3')!));
   });
+
+  it('роли сцены: halo светлее base, base светлее deep, все темнее акцента', () => {
+    const a = resolveAccent('#57c2a3');
+    const accentLuma = luminance(parseHex('#57c2a3')!);
+    const haloLuma = luminance(parseHex(a.halo)!);
+    const baseLuma = luminance(parseHex(a.base)!);
+    const deepLuma = luminance(parseHex(a.deep)!);
+
+    expect(haloLuma).toBeGreaterThan(baseLuma);
+    expect(baseLuma).toBeGreaterThan(deepLuma);
+    expect(haloLuma).toBeLessThan(accentLuma);
+    expect(baseLuma).toBeLessThan(accentLuma);
+    expect(deepLuma).toBeLessThan(accentLuma);
+  });
+
+  it('нейтраль тоже красится ролями сцены — на тёплом хью, не на чистом сером', () => {
+    const a = resolveAccent(null);
+    expect(a.halo).not.toBe(a.base);
+    expect(parseHex(a.base)).not.toEqual({ r: 0, g: 0, b: 0 });
+  });
 });

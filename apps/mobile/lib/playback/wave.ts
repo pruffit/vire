@@ -27,5 +27,6 @@ export async function fetchWaveTracks(seedTrackId: string, playedIds: string[]):
     artistName: t.artistName,
     coverUrl: t.coverUrl,
     durationSec: null,
+    accentColor: t.accentColor,
   }));
 }
