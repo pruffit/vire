@@ -13,6 +13,7 @@
     "typecheck": {},
     "check:layers": {},
     "check:glsl": {},
+    "check:optics": {},
     "check:contracts": {},
     "test": {}
   }
