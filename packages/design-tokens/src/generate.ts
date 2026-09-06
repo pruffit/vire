@@ -27,6 +27,18 @@ export interface Tokens {
   };
   /** Базовый радиус в px (RN-совместимо — без rem, который зависит от root font-size). */
   radius: number;
+  /**
+   * ВИТРИННОЕ НАЧЕРТАНИЕ — одно на все клиенты. Им набираются заголовок трека, строка песни
+   * и кнопка «ПОТОК»; интерфейс им не набирают, в мелком кегле плакатный гротеск превращается
+   * в гребёнку. Живёт в токенах, а не в ките одного клиента: выбор делается один раз и обязан
+   * быть одинаковым в вебе и на Android, иначе одна и та же кнопка выглядит по-разному.
+   *
+   * `tracking` — разрядка в пикселях при наборе прописными: широкому гротеску её нужно мало,
+   * узкому много, и это свойство самого начертания, а не кнопки.
+   */
+  font: {
+    display: { family: string; weight: number; tracking: number };
+  };
 }
 
 const CSS_VAR_NAMES: Record<keyof Tokens['color'], string> = {
@@ -120,6 +132,13 @@ ${colorLines.join('\n')}
     lg: ${tokens.radius + 4},
     xl: ${tokens.radius + 8},
   },
+  font: {
+    display: {
+      family: '${tokens.font.display.family}',
+      weight: ${tokens.font.display.weight},
+      tracking: ${tokens.font.display.tracking},
+    },
+  },
 } as const;
 
 export type DesignTokens = typeof tokens;
@@ -141,6 +160,13 @@ ${colorLines.join('\n')}
     md: ${tokens.radius},
     lg: ${tokens.radius + 4},
     xl: ${tokens.radius + 8},
+  },
+  font: {
+    display: {
+      family: '${tokens.font.display.family}',
+      weight: ${tokens.font.display.weight},
+      tracking: ${tokens.font.display.tracking},
+    },
   },
 } as const;
 

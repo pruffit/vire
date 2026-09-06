@@ -1,3 +1,4 @@
+import { FLOW_MARK } from '@/lib/marks';
 // Иконки, специфичные для плеера — общие для мини-бара/фуллскрина/очереди.
 import { Icon } from '@/components/icon';
 
@@ -67,7 +68,7 @@ export function RepeatIcon({ size = 18 }: { size?: number }) {
 export function WaveIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 12 C4.5 6, 7.5 6, 10 12 C12.5 18, 15.5 18, 18 12 C20.5 6, 22 6, 22 12" />
+      <path d={FLOW_MARK} />
     </svg>
   );
 }

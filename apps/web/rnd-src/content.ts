@@ -2,6 +2,7 @@
 // есть ПОД линзами — стекло его преломляет, и ровно ради этого соседства лаборатория и нужна.
 // Всё, что рисуется поверх стекла (краска на плашке, её обложка), лежит в `mini-player.ts`.
 
+import { FLOW_MARK, MARK_STROKE, MARK_VIEWBOX } from '../lib/marks';
 import { drawIcon, type IconName } from './icons';
 import { DISPLAY_FACE, fontOf } from './typefaces';
 import { PHONE, phoneOrigin, phonePath, SCREEN_MARGIN } from './scenes';
@@ -19,19 +20,16 @@ export const TRANSPORT_ICONS: readonly IconName[] = [
   'vire-more-horizontal',
 ];
 
-/** Значок Потока — тот же путь, что у кнопки в продукте (`components/wave-start-button.tsx`).
- *  В спрайте волны нет, а рисовать вторую значит развести стенд с продуктом по форме. */
-const FLOW_PATH = 'M2 12 C4.5 6, 7.5 6, 10 12 C12.5 18, 15.5 18, 18 12 C20.5 6, 22 6, 22 12';
 
 function paintFlowIcon(ctx: CanvasRenderingContext2D, size: number, color: string): void {
   ctx.save();
-  ctx.scale(size / 24, size / 24);
-  ctx.translate(-12, -12);
+  ctx.scale(size / MARK_VIEWBOX, size / MARK_VIEWBOX);
+  ctx.translate(-MARK_VIEWBOX / 2, -MARK_VIEWBOX / 2);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = MARK_STROKE;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.stroke(new Path2D(FLOW_PATH));
+  ctx.stroke(new Path2D(FLOW_MARK));
   ctx.restore();
 }
 

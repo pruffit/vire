@@ -7,6 +7,7 @@ import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
 import { PlayIcon } from '@/components/icons';
+import { FLOW_MARK } from '@/lib/marks';
 import { toast } from '@/lib/toast';
 
 export function WaveStartButton() {
@@ -114,7 +115,7 @@ function WaveIcon({ active }: { active: boolean }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <motion.path
-        d="M2 12 C4.5 6, 7.5 6, 10 12 C12.5 18, 15.5 18, 18 12 C20.5 6, 22 6, 22 12"
+        d={FLOW_MARK}
         animate={active ? { pathLength: [1, 0.6, 1], opacity: [1, 0.7, 1] } : { pathLength: 1, opacity: 0.5 }}
         transition={active ? { repeat: Infinity, duration: 2.4, ease: 'easeInOut' } : { duration: 0.3 }}
       />
