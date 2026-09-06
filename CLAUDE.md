@@ -326,6 +326,8 @@ pnpm --filter @vire/web check:caller   # роут app/api берёт актор�
 pnpm turbo run check:layers            # границы @vire/core: platform/** не знает о music/**
 pnpm turbo run check:glsl              # шейдеры VireGlass компилируются в GLSL ES 3.0 (нужен
                                        # playwright install chromium-headless-shell)
+pnpm turbo run check:optics            # деталь VireGlass осталась и окном, и предметом:
+                                       # рендер над полотном, а не только компиляция шейдера
 pnpm check:doc-paths                   # из корня; пути к коду в docs/**.md ведут в существующие файлы
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов

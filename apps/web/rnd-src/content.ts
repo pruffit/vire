@@ -2,7 +2,38 @@
 // есть ПОД линзами — стекло его преломляет, и ровно ради этого соседства лаборатория и нужна.
 // Всё, что рисуется поверх стекла (краска на плашке, её обложка), лежит в `mini-player.ts`.
 
+import { drawIcon, type IconName } from './icons';
+import { DISPLAY_FACE, fontOf } from './typefaces';
 import { PHONE, phoneOrigin, phonePath, SCREEN_MARGIN } from './scenes';
+
+/** Транспорт экрана трека. Значки из системного спрайта, как и в навигации. */
+export const TRANSPORT_ICONS: readonly IconName[] = [
+  'vire-shuffle',
+  'vire-skip-back',
+  'vire-skip-forward',
+  'vire-repeat',
+  'vire-heart',
+  'vire-share-2',
+  'vire-chevron-down',
+  'vire-align-center',
+  'vire-more-horizontal',
+];
+
+/** Значок Потока — тот же путь, что у кнопки в продукте (`components/wave-start-button.tsx`).
+ *  В спрайте волны нет, а рисовать вторую значит развести стенд с продуктом по форме. */
+const FLOW_PATH = 'M2 12 C4.5 6, 7.5 6, 10 12 C12.5 18, 15.5 18, 18 12 C20.5 6, 22 6, 22 12';
+
+function paintFlowIcon(ctx: CanvasRenderingContext2D, size: number, color: string): void {
+  ctx.save();
+  ctx.scale(size / 24, size / 24);
+  ctx.translate(-12, -12);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke(new Path2D(FLOW_PATH));
+  ctx.restore();
+}
 
 export type Track = { title: string; artist: string; length: string; hue: number };
 
@@ -20,9 +51,9 @@ export const RECENT: readonly Track[] = [
   { title: 'Последний трамвай', artist: 'Ким Долгов', length: '4:12', hue: 120 },
 ];
 
-const ROW = 68;
-const LIST_TOP = 66;
-const COVER = 48;
+const ROW = 56;
+const LIST_TOP = 58;
+const COVER = 38;
 const TEXT_GAP = 12;
 /** Запас под списком, чтобы последний трек можно было вывести из-под плашки и навигации. */
 const LIST_BOTTOM = 124;
@@ -67,6 +98,220 @@ export function paintCover(
   ctx.beginPath();
   ctx.arc(size * 0.66, size * 0.74, size * 0.3, 0, Math.PI * 2);
   ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Отступ обложки от верха экрана. Большой намеренно: вся композиция экрана сдвинута ВНИЗ, к
+ * руке. Группа управления и без того прибита к нижнему краю, и если обложку оставить у самого
+ * верха, между ней и подписью открывается провал — воздух оказывается посреди экрана, где он
+ * читается разрывом, а не воздухом. Пусто должно быть СВЕРХУ, над обложкой.
+ */
+const BIG_COVER_TOP = 100;
+/** Отбивка подписи от обложки и расстояние между строками. */
+/**
+ * Блок под обложкой прибит К НИЗУ, а не к обложке.
+ *
+ * Он принадлежит кнопке «ПОТОК» и транспорту, а не картинке: подпись, полоса и органы
+ * управления читаются как одна группа, и висеть она должна у нижнего края, где рука. Пока
+ * отбивки считались от низа обложки, между транспортом и кнопкой оставалась дыра в шесть
+ * десятков пикселей, а сама группа сидела посреди экрана без опоры.
+ *
+ * Свободное место при этом никуда не делось — оно ушло ПОД ОБЛОЖКУ, где ему и место: там оно
+ * читается воздухом, а не разрывом.
+ */
+const BIG_ARTIST_GAP = 24;
+/** Полоса прогресса и транспорт: отбивки от низа обложки. */
+/** Отбивки внутри группы, снизу вверх: от кнопки к транспорту и дальше к подписи. */
+const FLOW_TO_TRANSPORT = 38;
+const TRANSPORT_TO_TIME = 42;
+const TIME_TO_BAR = 20;
+const BAR_TO_ARTIST = 24;
+const BAR_HEIGHT = 4;
+/** Размеры значков транспорта: главный крупнее, вспомогательные мельче и приглушены. */
+const PLAY_SIZE = 34;
+const SKIP_SIZE = 26;
+const SIDE_SIZE = 19;
+/** Действия над треком справа от подписи: лайк и «поделиться». */
+const ACTION_SIZE = 21;
+const ACTION_STEP = 34;
+/** Верхняя панель: свернуть плеер слева, текст и «ещё» справа. Живёт В ОТСТУПЕ над обложкой —
+ *  ради него он и был оставлен, иначе это просто пустое место. */
+const TOP_BAR_Y = 52;
+const TOP_ICON = 22;
+const TOP_STEP = 36;
+const FLOW_HEIGHT = 52;
+/** Отбивка Потока от низа экрана: над индикатором домой. */
+const FLOW_BOTTOM = 44;
+/** Радиус тот же, что у обложки: кнопка — опора экрана, а не наклейка. */
+const FLOW_RADIUS = 18;
+
+/** Секунды в «м:сс»: время слева считается от доли, справа стоит длина трека из данных. */
+function clock(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function trackSeconds(length: string): number {
+  const [m, s] = length.split(':').map(Number);
+  return m * 60 + s;
+}
+
+/**
+ * Экран трека: большая обложка и подпись под ней. Для материала это самый тяжёлый фон из всех,
+ * что есть в стенде. Обложка цветная, яркая и занимает половину экрана: над ней стекло обязано
+ * и остаться прозрачным, и удержать собственную надпись, а тело — не набрать её цвет целиком.
+ *
+ * Живёт в ПОЛОТНЕ, под линзами, как и список: это контент страницы, а не то, что лежит на
+ * стекле. Оттенок берётся у играющего трека — экран и мини-плеер обязаны говорить об одном.
+ *
+ * Подпись выключена ВЛЕВО, по тому же полю экрана, что и обложка: край подписи и край обложки
+ * стоят в одну вертикаль, иначе разнобой видно сразу.
+ */
+export function drawCoverScreen(
+  ctx: CanvasRenderingContext2D,
+  density: number,
+  index: number,
+  offsetX: number,
+  offsetY: number,
+  progress: number,
+  playing: boolean,
+): void {
+  const px = density;
+  const o = phoneOrigin(index);
+  const size = PHONE.width - SCREEN_MARGIN * 2;
+  const track = RECENT[0];
+
+  ctx.save();
+  phonePath(ctx, o.x * px + offsetX, o.y * px + offsetY, PHONE.width * px, PHONE.height * px, PHONE.radius * px);
+  ctx.clip();
+  ctx.translate(o.x * px + offsetX, o.y * px + offsetY);
+  ctx.scale(px, px);
+  ctx.translate(SCREEN_MARGIN, BIG_COVER_TOP);
+
+  // ВЕРХНЯЯ ПАНЕЛЬ. Отсчёт отрицательный: панель стоит выше обложки, в отступе над ней.
+  // Свернуть плеер — слева, потому что это выход, а выход там же, где «назад». Текст и «ещё»
+  // справа: это действия над треком, а не навигация, и мешать их с выходом нельзя.
+  const topY = TOP_BAR_Y - BIG_COVER_TOP;
+  ctx.save();
+  ctx.globalAlpha = 0.72;
+  ctx.translate(TOP_ICON / 2, topY);
+  drawIcon(ctx, 'vire-chevron-down', TOP_ICON);
+  ctx.translate(size - TOP_ICON, 0);
+  drawIcon(ctx, 'vire-more-horizontal', TOP_ICON);
+  ctx.translate(-TOP_STEP, 0);
+  drawIcon(ctx, 'vire-align-center', TOP_ICON);
+  ctx.restore();
+
+  paintCover(ctx, size, 18, track.hue);
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#f2f4f8';
+  ctx.font = '600 22px system-ui, sans-serif';
+  // Стопка считается СНИЗУ ВВЕРХ, от кнопки «ПОТОК»: она — опора группы.
+  const flowTop = PHONE.height - BIG_COVER_TOP - FLOW_BOTTOM - FLOW_HEIGHT;
+  const rowY = flowTop - FLOW_TO_TRANSPORT;
+  const timeY = rowY - TRANSPORT_TO_TIME;
+  const barY = timeY - TIME_TO_BAR;
+  const artistY = barY - BAR_TO_ARTIST;
+  const titleY = artistY - BIG_ARTIST_GAP;
+
+  ctx.fillText(track.title, 0, titleY);
+  ctx.fillStyle = '#98a1b2';
+  ctx.font = '15px system-ui, sans-serif';
+  ctx.fillText(track.artist, 0, artistY);
+
+  // ДЕЙСТВИЯ НАД ТРЕКОМ — справа от подписи, по её середине, прижаты к тому же полю экрана,
+  // что и обложка. Приглушены: подпись здесь главная, а лайк и «поделиться» рядом с ней —
+  // спутники, и спорить с названием по силе они не должны.
+  const actionY = titleY + BIG_ARTIST_GAP / 2 - 4;
+  ctx.save();
+  ctx.globalAlpha = 0.62;
+  ctx.translate(size - ACTION_SIZE / 2, actionY);
+  drawIcon(ctx, 'vire-share-2', ACTION_SIZE);
+  ctx.translate(-ACTION_STEP, 0);
+  drawIcon(ctx, 'vire-heart', ACTION_SIZE);
+  ctx.restore();
+
+  // ПОЛОСА ПРОГРЕССА. Доля та же, что двигает подсветку на плашке мини-плеера: два места на
+  // стенде показывают один трек, и разъезжаться им нельзя.
+  const done = Math.min(Math.max(progress, 0), 1);
+
+  const bar = (from: number, to: number, color: string) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(from, barY, Math.max(to - from, BAR_HEIGHT), BAR_HEIGHT, BAR_HEIGHT / 2);
+    ctx.fill();
+  };
+  bar(0, size, '#39404f');
+  bar(0, size * done, '#e6eaf2');
+
+  const total = trackSeconds(track.length);
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.fillStyle = '#8892a4';
+  ctx.fillText(clock(total * done), 0, timeY);
+  ctx.textAlign = 'right';
+  ctx.fillText(track.length, size, timeY);
+  ctx.textAlign = 'left';
+
+  // ТРАНСПОРТ. Ряд симметричен относительно середины экрана, шаг между значками одинаков:
+  // главный крупнее и в полную силу, вспомогательные мельче и приглушены — иерархия задаётся
+  // размером и плотностью краски, а не рамками вокруг кнопок.
+  const row = rowY;
+  const step = size / 4.6;
+  // Значки в спрайте белые, и красить их нечем — да и незачем: приглушение прозрачностью
+  // и есть «меньше краски», ровно та же величина, которой отличаются строки на плашке.
+  const controls: [IconName | 'play', number, number, number][] = [
+    ['vire-shuffle', -step * 2, SIDE_SIZE, 0.5],
+    ['vire-skip-back', -step, SKIP_SIZE, 0.85],
+    ['play', 0, PLAY_SIZE, 1],
+    ['vire-skip-forward', step, SKIP_SIZE, 0.85],
+    ['vire-repeat', step * 2, SIDE_SIZE, 0.5],
+  ];
+  for (const [name, dx, iconSize, alpha] of controls) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(size / 2 + dx, row);
+    drawIcon(ctx, name === 'play' ? (playing ? 'vire-pause' : 'vire-play') : name, iconSize);
+    ctx.restore();
+  }
+
+  // ДВА ДЕЙСТВИЯ ПОД ТРАНСПОРТОМ. Ширина у них одинаковая, а вес — разный: текст это
+  // второстепенное действие и берётся обводкой, Волна — главное и берётся заливкой. Различать
+  // их размером было бы неверно: оба помещаются в строку и равны по площади, разной должна
+  // быть только плотность.
+  ctx.restore();
+}
+
+/** Габарит кнопки «ПОТОК»: её же берёт стеклянная деталь в раскладке стенда. */
+export const FLOW_BUTTON = {
+  width: PHONE.width - SCREEN_MARGIN * 2,
+  height: FLOW_HEIGHT,
+  radius: FLOW_RADIUS,
+  /** На сколько центр кнопки поднят над нижним краем экрана. */
+  lift: FLOW_BOTTOM + FLOW_HEIGHT / 2,
+};
+
+/**
+ * Краска кнопки «ПОТОК». Уходит в маску и живёт ВНУТРИ материала — как краска мини-плеера и
+ * значки навигации: её ведёт нормаль фаски, поверх ложится блик, а цвет даёт полярность детали.
+ * Рисуется от ЦЕНТРА кнопки: маска собирается по раскладке, а не по координатам экрана.
+ */
+export function drawFlowInk(ctx: CanvasRenderingContext2D, scale: number): void {
+  ctx.save();
+  ctx.scale(scale, scale);
+  ctx.textBaseline = 'middle';
+  ctx.font = fontOf(DISPLAY_FACE, 19);
+  ctx.letterSpacing = `${DISPLAY_FACE.tracking}px`;
+  const word = ctx.measureText('ПОТОК').width;
+  ctx.translate(-(word + 32) / 2 + 11, 0);
+  paintFlowIcon(ctx, 21, '#ffffff');
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'left';
+  ctx.fillText('ПОТОК', 23, 1);
+  ctx.letterSpacing = '0px';
   ctx.restore();
 }
 

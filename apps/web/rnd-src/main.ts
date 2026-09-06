@@ -26,9 +26,18 @@ import { createVireGlassRenderer } from '@vire/vireglass/web';
 import { drawIcon, loadIcons, NAV_ICONS, type IconName } from './icons';
 import { drawCover, drawPlayerInk, hitPlay, PLAYER_ICONS } from './mini-player';
 import { createPanel } from './panel';
-import { drawRecentList, recentScrollMax } from './content';
+import {
+  drawCoverScreen,
+  drawFlowInk,
+  drawRecentList,
+  FLOW_BUTTON,
+  recentScrollMax,
+  TRANSPORT_ICONS,
+} from './content';
+import { drawTypeSpecimen, loadTypefaces, typeScrollMax } from './typefaces';
 import {
   drawAppBackground,
+  drawFoot,
   drawPhoneFrames,
   PHONE,
   phoneOrigin,
@@ -263,9 +272,16 @@ function controlPiece() {
   };
 }
 
-const PHONE_COUNT = 4;
+const PHONE_COUNT = 5;
 // Оттенок дымки на экране-предложении: в продукте придёт от обложки, здесь крутится адресом.
 const APP_SCREEN = 1;
+/** Экраны с фоном приложения. Нулевой остаётся на голой зоне намеренно: на клетке видно, что
+ *  именно делает преломление, а на дымке — нет. */
+const APP_BACKGROUNDS = [1, 2, 3, 4];
+/** Экран-витрина начертаний: по нему выбирается гротеск для витринных надписей. */
+const TYPE_SCREEN = 4;
+/** Экран трека: обложка с подписью. Самый тяжёлый фон для материала из всех, что есть. */
+const COVER_SCREEN = 2;
 /** Экран навигации: те же кнопки, но со значками — контент ПОВЕРХ стекла. */
 const NAV_SCREEN = 3;
 const accentHue = Number(params.get('hue') ?? 265);
@@ -289,6 +305,8 @@ type ButtonRow = {
   icons?: readonly IconName[];
   /** Плашка несёт мини-плеер: обложку, две строки и кнопку плей/паузы. */
   player?: boolean;
+  /** Деталь несёт краску «ПОТОК» — главное действие экрана трека. */
+  flow?: boolean;
   /** Приложение рисует ПОВЕРХ стекла: значки навигации, обложка и строки плеера. Без этого
    *  требование читаемости выключается — разводить светлоту не с чем. */
   content?: boolean;
@@ -325,6 +343,17 @@ const ROWS: readonly ButtonRow[] = [
     icons: NAV_ICONS,
     content: true,
     select: 'single',
+  },
+  {
+    screen: COVER_SCREEN,
+    size: FLOW_BUTTON.height,
+    width: FLOW_BUTTON.width,
+    radius: FLOW_BUTTON.radius,
+    lift: FLOW_BUTTON.lift - 58,
+    count: 1,
+    flow: true,
+    content: true,
+    select: 'none',
   },
 ];
 
@@ -462,10 +491,11 @@ function updateIconMask(): HTMLCanvasElement | null {
   iconCtx.fillRect(0, 0, iconCanvas.width, iconCanvas.height);
   for (const spot of buttonLayout()) {
     const icon = spot.row.icons?.[spot.place];
-    if (!icon && !spot.row.player) continue;
+    if (!icon && !spot.row.player && !spot.row.flow) continue;
     iconCtx.save();
     iconCtx.translate(spot.x * dpr, spot.y * dpr);
     if (icon) drawIcon(iconCtx, icon, 24 * dpr);
+    else if (spot.row.flow) drawFlowInk(iconCtx, dpr);
     else drawPlayerInk(iconCtx, rowWidth(spot.row), dpr, playing);
     iconCtx.restore();
   }
@@ -495,9 +525,13 @@ function buttonPieces() {
   return buttonLayout().map((spot, i) => {
     const light = buttonInk[i] === INK_LIGHT;
     const d = buttonDeforms[i].sample();
+    // РОЛЬ ДЕТАЛИ МАТЕРИАЛ НЕ МЕНЯЕТ. Главное действие экрана я сначала сделал более плотным
+    // стеклом — и на кадре рядом плашка, кнопки навигации и «ПОТОК» перестали читаться одним
+    // материалом: три разных стекла вместо одного. Роль показывают КРАСКА, размер и место,
+    // а материал у всех деталей продукта обязан быть один; меняет его только состояние.
     const on = buttonActive[i];
     // Краска детали — это и значок навигации, и строки плеера: обе едут одной маской.
-    const hasInk = Boolean(spot.row.icons) || Boolean(spot.row.player);
+    const hasInk = Boolean(spot.row.icons) || Boolean(spot.row.player) || Boolean(spot.row.flow);
     return {
       // Толщина — ПРИЧИНА: из неё следуют и плотность тела, и ширина фаски. Поднимать
       // следствия по отдельности значит собирать состояние, которого у стекла не бывает.
@@ -557,11 +591,15 @@ function renderFrame() {
     scene: screens
       ? (ctx, w, h, ox, oy) => {
           zone(ctx, w, h, ox, oy);
-          drawAppBackground(ctx, dpr, APP_SCREEN, ox, oy, accentHue);
-          drawAppBackground(ctx, dpr, NAV_SCREEN, ox, oy, accentHue);
+          for (const i of APP_BACKGROUNDS) drawAppBackground(ctx, dpr, i, ox, oy, accentHue);
+          drawCoverScreen(ctx, dpr, COVER_SCREEN, ox, oy, progress, playing);
+          drawTypeSpecimen(ctx, dpr, TYPE_SCREEN, ox, oy, scrollOf(TYPE_SCREEN));
           // Список — обычный контент, и живёт он В ПОЛОТНЕ, под линзами: стекло обязано его
           // преломлять, иначе плашка висит не над экраном, а рядом с ним.
-          drawRecentList(ctx, dpr, NAV_SCREEN, ox, oy, listScroll);
+          drawRecentList(ctx, dpr, NAV_SCREEN, ox, oy, scrollOf(NAV_SCREEN));
+          // Притенение низа идёт ПОСЛЕ контента: под панелью управления экран обязан быть
+          // спокойным, а в фоне этот же градиент оказывался под списком и не работал.
+          for (const i of APP_BACKGROUNDS) drawFoot(ctx, dpr, i, ox, oy);
           drawPhoneFrames(ctx, dpr, PHONE_COUNT, ox, oy);
         }
       : zone,
@@ -649,13 +687,26 @@ function moveStage(dx: number, dy: number): void {
 /** Прокрутка содержимого главного экрана. Это НЕ протяжка полотна: полотно возит по кадру
  *  весь телефон вместе с линзами, а здесь под неподвижным стеклом едет контент — только так и
  *  видно, что материал делает с проезжающей под ним строкой. */
-let listScroll = 0;
+/** Прокрутка содержимого — У КАЖДОГО ЭКРАНА СВОЯ. Она двигает контент под неподвижным стеклом,
+ *  тогда как протяжка полотна возит по кадру весь телефон вместе с его линзами. Экран без
+ *  записи в этой таблице не прокручивается вовсе, и колесо над ним двигает полотно. */
+const SCROLL_MAX: ReadonlyMap<number, () => number> = new Map([
+  [NAV_SCREEN, recentScrollMax],
+  [TYPE_SCREEN, typeScrollMax],
+]);
+const screenScroll = new Map<number, number>();
+const scrollOf = (screen: number) => screenScroll.get(screen) ?? 0;
 
-function scrollList(dy: number): void {
-  const next = Math.min(Math.max(listScroll + dy, 0), recentScrollMax());
-  if (next === listScroll) return;
-  listScroll = next;
-  pending = SETTLE_FRAMES;
+/** Прокручен ли экран. `false` — экран не прокручиваемый, колесо достаётся полотну. */
+function scrollScreen(screen: number, dy: number): boolean {
+  const max = SCROLL_MAX.get(screen);
+  if (!max) return false;
+  const next = Math.min(Math.max(scrollOf(screen) + dy, 0), max());
+  if (next !== scrollOf(screen)) {
+    screenScroll.set(screen, next);
+    pending = SETTLE_FRAMES;
+  }
+  return true;
 }
 
 /** Экран телефона под курсором. По нему колесо решает, что крутить: содержимое или полотно. */
@@ -681,9 +732,9 @@ window.addEventListener(
     }
     // Над главным экраном колесо крутит ЕГО содержимое: полотно там таскают мышью, а вот
     // прогнать список под плашкой иначе нечем.
-    if (state.view === 'screens' && screenUnder(event.clientX, event.clientY) === NAV_SCREEN) {
-      scrollList(event.deltaY / dpr);
-      return;
+    if (state.view === 'screens') {
+      const screen = screenUnder(event.clientX, event.clientY);
+      if (screen !== null && scrollScreen(screen, event.deltaY / dpr)) return;
     }
     moveStage(-event.deltaX / dpr, -event.deltaY / dpr);
   },
@@ -787,6 +838,10 @@ canvas.addEventListener('pointercancel', endGesture);
 placeCaptions();
 
 // Значки приходят из спрайта асинхронно — как пришли, кадр перерисовывается с ними.
-void loadIcons([...NAV_ICONS, ...PLAYER_ICONS]).then(() => wake());
+void loadIcons([...NAV_ICONS, ...PLAYER_ICONS, ...TRANSPORT_ICONS]).then(() => wake());
+
+// Гротески приходят файлами, как и значки: пока они не загружены, canvas молча рисует
+// системным, и кадр надо пересобрать — иначе стенд показывает не те начертания.
+void loadTypefaces().then(() => wake());
 
 requestAnimationFrame(tick);

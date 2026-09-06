@@ -73,6 +73,11 @@ jobs:
         run: |
           pnpm --filter @vire/vireglass exec playwright install --with-deps chromium-headless-shell
           pnpm turbo run check:glsl
+      # Компиляции мало: шейдер собирается и при сломанной оптике. Этот гейт рендерит деталь
+      # над полотном и проверяет два обещания материала — что она осталась окном и осталась
+      # предметом. Оба уже нарушались молча.
+      - name: Optics check
+        run: pnpm turbo run check:optics
       - name: Doc paths
         run: pnpm check:doc-paths
       # Барьер: параллелизм turbo не складывается с параллелизмом vitest (иначе флейк по таймауту).
