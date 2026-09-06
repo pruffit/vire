@@ -99,11 +99,19 @@ describe('отклик на палец', () => {
 });
 
 describe('материал органов управления', () => {
-  it('от базового отличается только присутствием', () => {
-    const { presence, ...rest } = VIREGLASS_CONTROL_MATERIAL;
-    const { presence: base, ...baseRest } = VIREGLASS_MATERIAL;
-    expect(rest).toEqual(baseRest);
-    expect(presence).toBeGreaterThan(base);
+  it('толще и чище базового: орган управления — предмет, а не линза над фоном', () => {
+    const c = VIREGLASS_CONTROL_MATERIAL;
+    const b = VIREGLASS_MATERIAL;
+    expect(c.bevel).toBeGreaterThan(b.bevel);
+    expect(c.thickness).toBeGreaterThan(b.thickness);
+    expect(c.ior).toBeGreaterThan(b.ior);
+    expect(c.roughness).toBeLessThan(b.roughness);
+    expect(c.presence).toBeGreaterThan(b.presence);
+  });
+
+  it('окружение и плёнка остаются базовыми: их роль от органа управления не зависит', () => {
+    expect(VIREGLASS_CONTROL_MATERIAL.environment).toBe(VIREGLASS_MATERIAL.environment);
+    expect(VIREGLASS_CONTROL_MATERIAL.film).toBe(VIREGLASS_MATERIAL.film);
   });
 
   it('деталь без краски не обязана разводить светлоту, с краской — обязана', () => {

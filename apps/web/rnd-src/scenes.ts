@@ -134,14 +134,43 @@ export function drawAppBackground(
   haze(x + width * 0.22, y + height * 0.18, width * 0.85, hue, 0.3);
   haze(x + width * 0.85, y + height * 0.62, width * 0.75, (hue + 55) % 360, 0.22);
 
-  // Низ притемнён: под панелью управления фон обязан оставаться спокойным, иначе стекло там
-  // соберёт слишком много цвета и деталь начнёт спорить с контентом.
-  const foot = ctx.createLinearGradient(x, y + height * 0.62, x, y + height);
-  foot.addColorStop(0, '#00000000');
-  foot.addColorStop(1, '#000000b3');
-  ctx.fillStyle = foot;
-  ctx.fillRect(x, y + height * 0.62, width, height * 0.38);
+  ctx.restore();
+}
 
+/**
+ * ПРИТЕНЕНИЕ НИЗА — отдельным проходом ПОВЕРХ КОНТЕНТА, а не в фоне.
+ *
+ * Оно и раньше рисовалось, но в составе фона — то есть ПОД списком. Толку от этого не было
+ * никакого: контент ложился сверху и приходил под панель управления в полную силу. На экране
+ * это выглядело так, будто стекло перестало работать: заголовок трека шёл прямо сквозь ряд
+ * навигации и между кнопками, где стекла нет вовсе и подавлять чужое нечем.
+ *
+ * Скрим — это НЕ работа материала. Материал отвечает за то, что видно СКВОЗЬ него; за то, что
+ * лежит в зазорах между деталями, отвечает экран. Поэтому здесь и решается.
+ */
+export function drawFoot(
+  ctx: CanvasRenderingContext2D,
+  density: number,
+  index: number,
+  offsetX: number,
+  offsetY: number,
+): void {
+  const px = density;
+  const o = phoneOrigin(index);
+  const x = o.x * px + offsetX;
+  const y = o.y * px + offsetY;
+  const width = PHONE.width * px;
+  const height = PHONE.height * px;
+
+  ctx.save();
+  phonePath(ctx, x, y, width, height, PHONE.radius * px);
+  ctx.clip();
+  const foot = ctx.createLinearGradient(x, y + height * 0.7, x, y + height);
+  foot.addColorStop(0, '#00000000');
+  foot.addColorStop(0.55, '#000000a6');
+  foot.addColorStop(1, '#000000e6');
+  ctx.fillStyle = foot;
+  ctx.fillRect(x, y + height * 0.7, width, height * 0.3);
   ctx.restore();
 }
 

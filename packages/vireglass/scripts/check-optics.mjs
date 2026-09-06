@@ -42,11 +42,14 @@ const STEPS = 41;
 const ENTRY = `
 import { createVireGlassRenderer } from '${WEB}';
 import {
+  circleGeometry,
   INK_DARK,
   INK_LIGHT,
+  materialForInk,
   resolveOptics,
   roundedRectGeometry,
   shouldInkBeLight,
+  VIREGLASS_CONTROL_MATERIAL,
   VIREGLASS_MATERIAL,
 } from '${CORE}';
 
@@ -57,7 +60,7 @@ const hex = (v) => {
 
 let stage = null;
 
-globalThis.vgProbe = ({ level, striped }) => {
+globalThis.vgProbe = ({ level, striped, control }) => {
   if (!stage) {
     const canvas = document.createElement('canvas');
     canvas.width = 520;
@@ -80,13 +83,14 @@ globalThis.vgProbe = ({ level, striped }) => {
     for (let x = 0; x < w; x += 24) ctx.fillRect(x, 0, 10, h);
   };
 
-  const light = shouldInkBeLight(
-    { luma: level, hi: level },
-    VIREGLASS_MATERIAL.legibility,
-    level < 0.5,
-  );
-  const optics = resolveOptics({ ...VIREGLASS_MATERIAL, ink: light ? INK_LIGHT : INK_DARK });
-  const geometry = roundedRectGeometry(220, 120, 32);
+  // Два случая, и оба обязательны. КУСОК ФОНА — базовый материал крупной деталью. ОРГАН
+  // УПРАВЛЕНИЯ — стекло кнопок мелкой деталью и с краской поверх: оно толще, фаска у него шире
+  // и на маленьком габарите упирается в потолок, то есть ведёт себя совсем иначе. Пока гейт
+  // знал только первый случай, смена материала кнопок прошла мимо него целиком.
+  const base = control ? materialForInk(VIREGLASS_CONTROL_MATERIAL, true) : VIREGLASS_MATERIAL;
+  const light = shouldInkBeLight({ luma: level, hi: level }, base.legibility, level < 0.5);
+  const optics = resolveOptics({ ...base, ink: light ? INK_LIGHT : INK_DARK });
+  const geometry = control ? circleGeometry(56) : roundedRectGeometry(220, 120, 32);
   const piece = { optics, geometry, centerX: canvas.width / 2, centerY: canvas.height / 2 };
 
   // Зонд отчитывается с отставанием, а оценка досчитывается несколько кадров.
@@ -108,12 +112,13 @@ globalThis.vgProbe = ({ level, striped }) => {
     return [at(0.05), at(0.95), at(0.5)];
   };
 
+  const halfW = control ? 12 : 60;
   // Внутри — плоская середина, мимо фаски. Снаружи — то же полотно выше детали. Кромка —
   // полоса по верхнему краю: над ровным фоном различимость может жить именно там.
   return {
-    inside: row(canvas.height / 2, 60),
-    outside: row(canvas.height / 2 - 110, 60),
-    rim: row(canvas.height / 2 - 58, 60),
+    inside: row(canvas.height / 2, halfW),
+    outside: row(canvas.height / 2 - 110, halfW),
+    rim: row(canvas.height / 2 - (control ? 26 : 58), halfW),
   };
 };
 `;
@@ -137,10 +142,12 @@ async function main() {
   let worstWindow = { value: Infinity, level: 0 };
   let worstPresence = { value: Infinity, level: 0 };
 
+  for (const { control, name } of [{ control: false, name: "кусок фона" }, { control: true, name: "орган управления" }]) {
+  console.log(`--- ${name} ---`);
   for (let i = 0; i < STEPS; i += 1) {
     const level = 0.04 + (0.9 * i) / (STEPS - 1);
-    const striped = await page.evaluate((a) => globalThis.vgProbe(a), { level, striped: true });
-    const flat = await page.evaluate((a) => globalThis.vgProbe(a), { level, striped: false });
+    const striped = await page.evaluate((a) => globalThis.vgProbe(a), { level, striped: true, control });
+    const flat = await page.evaluate((a) => globalThis.vgProbe(a), { level, striped: false, control });
 
     const transmission = spread(striped.inside) / Math.max(spread(striped.outside), 1e-6);
     // Отход считается В ОБЕ СТОРОНЫ: над светлым полотном деталь отходит ВНИЗ, и метрика,
@@ -159,11 +166,12 @@ async function main() {
         `предмет ${presence.toFixed(1)}`,
     );
     if (!(transmission >= MIN_TRANSMISSION)) {
-      failed.push(`на полотне ${level.toFixed(2)} деталь перестала быть окном`);
+      failed.push(`${name}, полотно ${level.toFixed(2)}: перестала быть окном`);
     }
     if (!(presence >= MIN_PRESENCE)) {
-      failed.push(`на полотне ${level.toFixed(2)} деталь пропала над ровным фоном`);
+      failed.push(`${name}, полотно ${level.toFixed(2)}: пропала над ровным фоном`);
     }
+  }
   }
   await browser.close();
 

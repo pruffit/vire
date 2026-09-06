@@ -6,6 +6,53 @@
 <meta name="robots" content="noindex, nofollow">
 <title>VireGlass — стенд материала</title>
 <style>
+  /* Гротески витрины начертаний. Файлы лежат РЯДОМ СО СТЕНДОМ, а не тянутся из сети: он
+     обязан открываться офлайн. Кириллический срез, а не полный файл — стенду нужно одно
+     слово, а полный тянет за собой латиницу и вьетнамский. Начертания кита (Oswald, Manrope,
+     JetBrains Mono) взяты из тех же пакетов, что стоят в мобилке. */
+  @font-face { font-family: 'Tektur'; font-weight: 700; font-display: block;
+    src: url('/rnd/fonts/tektur-cyrillic-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Russo One'; font-weight: 400; font-display: block;
+    src: url('/rnd/fonts/russo-one-cyrillic-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Rubik Mono One'; font-weight: 400; font-display: block;
+    src: url('/rnd/fonts/rubik-mono-one-cyrillic-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Stalinist One'; font-weight: 400; font-display: block;
+    src: url('/rnd/fonts/stalinist-one-cyrillic-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Jost'; font-weight: 700; font-display: block;
+    src: url('/rnd/fonts/jost-cyrillic-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Golos Text'; font-weight: 700; font-display: block;
+    src: url('/rnd/fonts/golos-text-cyrillic-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Onest'; font-weight: 800; font-display: block;
+    src: url('/rnd/fonts/onest-cyrillic-800-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Alumni Sans'; font-weight: 800; font-display: block;
+    src: url('/rnd/fonts/alumni-sans-cyrillic-800-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Play'; font-weight: 700; font-display: block;
+    src: url('/rnd/fonts/play-cyrillic-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Exo 2'; font-weight: 800; font-display: block;
+    src: url('/rnd/fonts/exo-2-cyrillic-800-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Geologica'; font-weight: 700; font-display: block;
+    src: url('/rnd/fonts/geologica-cyrillic-700-normal.woff2') format('woff2'); }
+    src: url('/rnd/fonts/bebas-neue-cyrillic-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Cuprum'; font-weight: 700; font-display: block;
+    src: url('/rnd/fonts/cuprum-cyrillic-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Ruda'; font-weight: 700; font-display: block;
+    src: url('/rnd/fonts/ruda-cyrillic-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Rubik'; font-weight: 800; font-display: block;
+    src: url('/rnd/fonts/rubik-cyrillic-800-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Commissioner'; font-weight: 800; font-display: block;
+    src: url('/rnd/fonts/commissioner-cyrillic-800-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Unbounded'; font-weight: 800; font-display: block;
+    src: url('/rnd/fonts/unbounded-cyrillic-800-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Oswald'; font-weight: 400; font-display: block;
+    src: url('/rnd/fonts/Oswald_400Regular.ttf') format('truetype'); }
+  @font-face { font-family: 'Oswald'; font-weight: 600; font-display: block;
+    src: url('/rnd/fonts/Oswald_600SemiBold.ttf') format('truetype'); }
+  @font-face { font-family: 'Manrope'; font-weight: 600; font-display: block;
+    src: url('/rnd/fonts/Manrope_600SemiBold.ttf') format('truetype'); }
+  @font-face { font-family: 'Manrope'; font-weight: 800; font-display: block;
+    src: url('/rnd/fonts/Manrope_800ExtraBold.ttf') format('truetype'); }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 700; font-display: block;
+    src: url('/rnd/fonts/JetBrainsMono_700Bold.ttf') format('truetype'); }
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; overflow: clip; background: #000; }
