@@ -25,8 +25,23 @@ export function isKnownNoise(message: string): boolean {
   return KNOWN_NOISE.some((re) => re.test(message));
 }
 
+// Пустой message (брошен `new Error()`, пустая строка, объект) давал алерт вида
+// «🔴 [web] POST /ru:» — без типа ошибки он нечитаем.
+export function describeError(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message) return error.message;
+    const digest = (error as { digest?: unknown }).digest;
+    const suffix = typeof digest === 'string' && digest ? ` (digest=${digest})` : '';
+    return `${error.name || 'Error'} без message${suffix}`;
+  }
+
+  const text = String(error);
+  if (text.trim() && text !== '[object Object]') return text;
+  return `без message: ${Object.prototype.toString.call(error)}`;
+}
+
 export async function captureError(error: unknown, ctx: ErrorContext = {}): Promise<void> {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = describeError(error);
   const stack = error instanceof Error ? error.stack : undefined;
   const service = ctx.service ?? 'web';
   const knownNoise = isKnownNoise(message);

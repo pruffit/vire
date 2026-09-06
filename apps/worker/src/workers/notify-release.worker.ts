@@ -2,7 +2,7 @@ import { Worker, type Job } from 'bullmq';
 import { getFollowerEmails } from '@vire/db';
 import { QUEUE_NOTIFY_RELEASE, emailShell, type NotifyReleaseJobData } from '@vire/core';
 import { getTranslator, isLocale, localizedPath, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
-import { connection } from '../queues/connection.js';
+import { baseWorkerOptions } from '../queues/worker-options.js';
 import { brevoSender } from '../lib/brevo.js';
 
 // Brevo HTTP API — SMTP на проде заблокирован хостингом. messageVersions — батч:
@@ -109,7 +109,7 @@ async function handle(job: Job<NotifyReleaseJobData>): Promise<void> {
 
 export function createNotifyReleaseWorker() {
   return new Worker<NotifyReleaseJobData>(QUEUE_NOTIFY_RELEASE, handle, {
-    connection,
+    ...baseWorkerOptions,
     concurrency: 2,
   });
 }

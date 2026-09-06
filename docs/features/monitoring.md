@@ -22,11 +22,20 @@ Telegram/webhook) + **health-эндпоинт** + структурированн
     нет, на пользователей не влияет;
   - `Failed to find Server Action …` — вкладка со старым деплоем шлёт
     action-id, которого нет в новом билде; штатно после каждого релиза.
-- **Алерты воркера** — три уровня:
+  Пустой `error.message` (брошен `new Error()`, объект, пустая строка) не даёт
+  алерта вида «`🔴 [web] POST /ru:`»: `describeError` падает на имя ошибки и
+  `digest`.
+- **Алерты воркера** — четыре уровня:
   - `failed` всех очередей (transcode, analyze, play-events, notify-release) →
     `alertJobFailure` (🔴 упавший джоб);
   - `error` воркера (обрыв Redis, сбой подключения — очередь могла встать) →
     `alertWorkerError` (🟠);
+  - **обрыв соединения с Redis** — `close` на общем инстансе → 🟠 один раз на
+    инцидент, `ready` → `alertRecovered` (🟢) с длительностью простоя. Без этой
+    пары обрыв не виден в момент обрыва: `maxRetriesPerRequest: null` (обязателен
+    для блокирующих команд bullmq) заставляет команды ждать вечно, и авария
+    всплывает часами позже — потерянными локами уже отработавших джоб
+    (инцидент 06.09.2026);
   - **падение процесса** (`uncaughtException` / `unhandledRejection`) →
     `alertCrash` (🛑), затем `process.exit(1)`. Алерт дожидается доставки до
     выхода, иначе воркер умирал бы молча, а загрузки застревали в PROCESSING.
@@ -48,7 +57,9 @@ Telegram/webhook) + **health-эндпоинт** + структурированн
 - **Web-трекинг:** `apps/web/instrumentation.ts`, `apps/web/lib/observability.ts`
   (`captureError`), `apps/web/lib/rate-limit.ts` (`pingRedis`)
 - **Воркер:** `apps/worker/src/lib/alert.ts` (`alertJobFailure`,
-  `alertWorkerError`, `alertCrash`), подключение — `apps/worker/src/index.ts`
+  `alertWorkerError`, `alertRecovered`, `alertCrash`), подключение —
+  `apps/worker/src/index.ts`; слушатели соединения Redis —
+  `apps/worker/src/queues/connection.ts`
 - **Админ-обзор системы** (дополняет): `apps/web/lib/admin-health.ts` (`/admin` —
   пинг PG/Redis, очереди BullMQ с ошибками, live-слушатели)
 

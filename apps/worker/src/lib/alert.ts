@@ -77,6 +77,17 @@ export async function alertWorkerError(queue: string, err: Error): Promise<void>
   });
 }
 
+/** Восстановление после обрыва — без него в канале остаётся только хвост аварии. */
+export async function alertRecovered(scope: string, downMs: number): Promise<void> {
+  console.warn(JSON.stringify({
+    level: 'warn', service: 'worker', scope, kind: 'recovered', downMs,
+    ts: new Date().toISOString(),
+  }));
+
+  const text = `🟢 [worker:${scope}] соединение восстановлено после ${Math.round(downMs / 1000)}с простоя`;
+  await dispatch(text, { level: 'warn', service: 'worker', scope, kind: 'recovered', downMs });
+}
+
 /** Вызывать перед `process.exit(1)` и дождаться — иначе процесс умрёт раньше доставки алерта. */
 export async function alertCrash(scope: string, err: Error): Promise<void> {
   console.error(JSON.stringify({

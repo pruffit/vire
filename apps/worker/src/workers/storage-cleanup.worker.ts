@@ -1,7 +1,7 @@
 import { Worker, type Job } from 'bullmq';
 import { DrizzleOrphanedStorageRepository } from '@vire/db';
 import { QUEUE_STORAGE_CLEANUP, StorageCleanupService } from '@vire/core';
-import { connection } from '../queues/connection.js';
+import { baseWorkerOptions } from '../queues/worker-options.js';
 import { vaultStorage, streamStorage } from '../lib/s3.js';
 
 export async function handle(job: Job): Promise<void> {
@@ -20,5 +20,5 @@ export async function handle(job: Job): Promise<void> {
 }
 
 export function createStorageCleanupWorker() {
-  return new Worker(QUEUE_STORAGE_CLEANUP, handle, { connection, concurrency: 1 });
+  return new Worker(QUEUE_STORAGE_CLEANUP, handle, { ...baseWorkerOptions, concurrency: 1 });
 }

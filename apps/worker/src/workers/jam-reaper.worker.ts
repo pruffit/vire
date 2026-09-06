@@ -1,7 +1,7 @@
 import { Worker, type Job } from 'bullmq';
 import { db, DrizzleJamRepository } from '@vire/db';
 import { QUEUE_JAM_REAPER } from '@vire/core';
-import { connection } from '../queues/connection.js';
+import { baseWorkerOptions } from '../queues/worker-options.js';
 import { reapJamRedisState } from '../lib/jam-cleanup.js';
 
 const STALE_HOURS = 12;
@@ -16,5 +16,5 @@ export async function handle(_job: Job): Promise<void> {
 }
 
 export function createJamReaperWorker() {
-  return new Worker(QUEUE_JAM_REAPER, handle, { connection, concurrency: 1 });
+  return new Worker(QUEUE_JAM_REAPER, handle, { ...baseWorkerOptions, concurrency: 1 });
 }

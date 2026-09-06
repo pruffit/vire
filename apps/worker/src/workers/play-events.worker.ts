@@ -1,7 +1,7 @@
 import { Worker, type Job } from 'bullmq';
 import { insertPlayEvent } from '@vire/db';
 import { QUEUE_PLAY_EVENTS, type PlayEventJobData } from '@vire/core';
-import { connection } from '../queues/connection.js';
+import { baseWorkerOptions } from '../queues/worker-options.js';
 
 async function process(job: Job<PlayEventJobData>): Promise<void> {
   const { trackId, sessionId, userId, source, durationPlayedSec, startedAt } = job.data;
@@ -18,7 +18,7 @@ async function process(job: Job<PlayEventJobData>): Promise<void> {
 
 export function createPlayEventsWorker() {
   return new Worker<PlayEventJobData>(QUEUE_PLAY_EVENTS, process, {
-    connection,
+    ...baseWorkerOptions,
     concurrency: 10,
   });
 }
