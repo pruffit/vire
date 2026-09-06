@@ -56,7 +56,11 @@ export function drawPlayerInk(
   ctx.fillStyle = '#ffffff';
   ctx.font = '600 13px system-ui, sans-serif';
   ctx.fillText(TRACK.title, textLeft, -2);
-  ctx.fillStyle = '#9c9c9c';
+  // Вторая строка приглушена, но НЕ ВДВОЕ. Серый 0.61 давал ей вдвое меньше краски, чем у
+  // названия, и над проезжающим списком запаса не оставалось: чужая строка приходит сквозь
+  // стекло на четверти своего контраста, и этого хватало, чтобы встать с ней вровень.
+  // Второстепенность здесь держат кегль и цвет, а не полупрозрачность на грани фола.
+  ctx.fillStyle = '#d2d2d2';
   ctx.font = '11px system-ui, sans-serif';
   ctx.fillText(TRACK.artist, textLeft, 13);
   ctx.translate(playCenterX(width), 0);
