@@ -3,7 +3,7 @@ import { QUEUE_NOTIFY_EXTERNAL, type ExternalNotifyJobData, decideExternalDelive
 import { signNotifyUnsub } from '@vire/core/notifications/unsubscribe'; // субпуть: node:crypto не в edge-safe корневом barrel (Task 15)
 import { getUserNotifyContext, getUserDisplayName, listPushSubscriptions, deletePushSubscriptionsByEndpoints, listExpoPushTokens, deleteExpoPushTokensByTokens } from '@vire/db';
 import { isLocale, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
-import { connection } from '../queues/connection.js';
+import { baseWorkerOptions } from '../queues/worker-options.js';
 import { sendBrevoEmail } from '../lib/brevo.js';
 import { sendPush } from '../lib/webpush.js';
 import { sendExpoPush } from '../lib/expo-push.js';
@@ -77,5 +77,5 @@ export async function handle(job: Job<ExternalNotifyJobData>): Promise<void> {
 }
 
 export function createNotifyExternalWorker() {
-  return new Worker<ExternalNotifyJobData>(QUEUE_NOTIFY_EXTERNAL, handle, { connection, concurrency: 4 });
+  return new Worker<ExternalNotifyJobData>(QUEUE_NOTIFY_EXTERNAL, handle, { ...baseWorkerOptions, concurrency: 4 });
 }

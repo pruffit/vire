@@ -13,7 +13,7 @@ import { createMetricsWorker } from './workers/metrics.worker.js';
 import { createNotifyExternalWorker } from './workers/notify-external.worker.js';
 import { createJamReaperWorker } from './workers/jam-reaper.worker.js';
 import { createStorageCleanupWorker } from './workers/storage-cleanup.worker.js';
-import { connection } from './queues/connection.js';
+import { connection, closeConnection } from './queues/connection.js';
 import { alertJobFailure, alertWorkerError, alertCrash } from './lib/alert.js';
 import { jobDurationMs } from './lib/timing.js';
 
@@ -234,6 +234,7 @@ async function shutdown() {
     storageCleanupWorker.close(),
     storageCleanupQueue.close(),
   ]);
+  await closeConnection();
   process.exit(0);
 }
 

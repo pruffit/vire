@@ -16,7 +16,7 @@ import { analyzeAudioFeatures } from '../lib/audio-analysis.js';
 import { classifyTrackGenre } from '../lib/genre-classifier.js';
 import { decideAutoApplyGenres } from '../lib/genre-policy.js';
 import type { GenreSuggestion } from '../lib/discogs-genre-map.js';
-import { connection } from '../queues/connection.js';
+import { baseWorkerOptions } from '../queues/worker-options.js';
 import { sendMail } from '../lib/mailer.js';
 import { createStageTimer } from '../lib/timing.js';
 
@@ -202,7 +202,7 @@ const LOCK_DURATION_MS = 10 * 60 * 1000;
 export function createTranscodeWorker() {
   // defaultJobOptions: опция Queue, не Worker; retry задаётся при постановке задачи в очередь
   const worker = new Worker<TranscodeJobData | ProcessMediaJobData>(QUEUE_TRANSCODE, processTranscodeJob, {
-    connection,
+    ...baseWorkerOptions,
     concurrency: 2,
     lockDuration: LOCK_DURATION_MS,
   });

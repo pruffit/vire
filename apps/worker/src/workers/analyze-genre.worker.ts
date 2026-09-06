@@ -7,7 +7,7 @@ import { QUEUE_ANALYZE_GENRE, type AnalyzeGenreJobData } from '@vire/core';
 import { VAULT, downloadToFile } from '../lib/s3.js';
 import { classifyTrackGenreOnDemand } from '../lib/genre-classifier.js';
 import { decideAutoApplyGenres } from '../lib/genre-policy.js';
-import { connection } from '../queues/connection.js';
+import { baseWorkerOptions } from '../queues/worker-options.js';
 
 export async function processAnalyzeGenreJob(job: Job<AnalyzeGenreJobData>): Promise<void> {
   const { trackId } = job.data;
@@ -39,7 +39,7 @@ const LOCK_DURATION_MS = 10 * 60 * 1000;
 
 export function createAnalyzeGenreWorker() {
   return new Worker<AnalyzeGenreJobData>(QUEUE_ANALYZE_GENRE, processAnalyzeGenreJob, {
-    connection,
+    ...baseWorkerOptions,
     concurrency: 1,
     lockDuration: LOCK_DURATION_MS,
   });

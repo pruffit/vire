@@ -8,6 +8,7 @@ import {
   type FulfillPresaveJobData,
 } from '@vire/core';
 import { connection } from '../queues/connection.js';
+import { baseWorkerOptions } from '../queues/worker-options.js';
 
 // Cron (см. index.ts): находит SCHEDULED-релизы с наступившей датой, атомарно
 // публикует и ставит уведомление подписчикам + исполнение пресейвов.
@@ -54,5 +55,5 @@ async function handle(job: Job): Promise<void> {
 }
 
 export function createScheduledPublishWorker() {
-  return new Worker(QUEUE_SCHEDULED_PUBLISH, handle, { connection, concurrency: 1 });
+  return new Worker(QUEUE_SCHEDULED_PUBLISH, handle, { ...baseWorkerOptions, concurrency: 1 });
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { alertJobFailure, alertWorkerError, alertCrash } from './alert.js';
+import { alertJobFailure, alertWorkerError, alertCrash, alertRecovered } from './alert.js';
 
 const fetchMock = vi.fn();
 
@@ -100,5 +100,14 @@ describe('Telegram-канал', () => {
     const urls = fetchMock.mock.calls.map((c) => c[0] as string);
     expect(urls).toContain('https://api.telegram.org/botbot-123/sendMessage');
     expect(urls).toContain('https://hook.test/x');
+  });
+});
+
+describe('alertRecovered', () => {
+  it('закрывает инцидент: kind=recovered и длительность простоя', async () => {
+    await alertRecovered('redis', 7_200_000);
+    const body = lastBody();
+    expect(body).toMatchObject({ kind: 'recovered', level: 'warn', scope: 'redis', downMs: 7_200_000 });
+    expect(body.text).toContain('7200с');
   });
 });

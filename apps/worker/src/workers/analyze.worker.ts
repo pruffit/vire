@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { QUEUE_ANALYZE, type AnalyzeJobData } from '@vire/core';
 import { VAULT, downloadToFile } from '../lib/s3.js';
 import { analyzeAudioFeatures } from '../lib/audio-analysis.js';
-import { connection } from '../queues/connection.js';
+import { baseWorkerOptions } from '../queues/worker-options.js';
 
 export async function processAnalyzeJob(job: Job<AnalyzeJobData>): Promise<void> {
   const { trackId, flacKey } = job.data;
@@ -37,7 +37,7 @@ const LOCK_DURATION_MS = 10 * 60 * 1000;
 
 export function createAnalyzeWorker() {
   return new Worker<AnalyzeJobData>(QUEUE_ANALYZE, processAnalyzeJob, {
-    connection,
+    ...baseWorkerOptions,
     concurrency: 1, // анализ тяжёлый, не параллелим
     lockDuration: LOCK_DURATION_MS,
   });

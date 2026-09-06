@@ -1,17 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 
 const redisInstance = {
-  on: vi.fn(),
   del: vi.fn().mockResolvedValue(1),
   publish: vi.fn().mockResolvedValue(0),
 };
 
-vi.mock('ioredis', () => ({
-  default: vi.fn(function MockRedis() {
-    return redisInstance;
-  }),
-}));
-vi.mock('../queues/connection.js', () => ({ connection: { url: 'redis://localhost:6379' } }));
+vi.mock('../queues/connection.js', () => ({ connection: redisInstance }));
 
 const { reapJamRedisState } = await import('./jam-cleanup.js');
 

@@ -8,7 +8,7 @@ import {
 } from '@vire/db';
 import { QUEUE_FULFILL_PRESAVE, emailShell, type FulfillPresaveJobData } from '@vire/core';
 import { getTranslator, isLocale, localizedPath, DEFAULT_LOCALE, type Locale } from '@vire/i18n';
-import { connection } from '../queues/connection.js';
+import { baseWorkerOptions } from '../queues/worker-options.js';
 import { sendMail } from '../lib/mailer.js';
 import { buildUnsubscribeUrl } from '../lib/presave-unsubscribe.js';
 
@@ -84,7 +84,7 @@ async function handle(job: Job<FulfillPresaveJobData>): Promise<void> {
 
 export function createFulfillPresaveWorker() {
   return new Worker<FulfillPresaveJobData>(QUEUE_FULFILL_PRESAVE, handle, {
-    connection,
+    ...baseWorkerOptions,
     concurrency: 2,
   });
 }
