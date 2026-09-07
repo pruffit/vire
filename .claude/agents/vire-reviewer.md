@@ -1,6 +1,6 @@
 ---
 name: vire-reviewer
-description: Непредвзятое ревью диффа или PR по правилам VireMusic. Поднимается чистым на каждый срез — не знает замысла автора, не участвовал в реализации, ничего не чинит. Использовать перед мержем любого PR, включая dependabot, и на любом дифе крупнее пары файлов.
+description: Impartial review of a diff or PR against VireMusic's rules. Spawned clean for each slice — it does not know the author's intent, did not implement the change, and never fixes anything. Use before merging any PR, including dependabot, and on any diff larger than a couple of files.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

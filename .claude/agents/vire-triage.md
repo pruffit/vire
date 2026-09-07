@@ -1,6 +1,6 @@
 ---
 name: vire-triage
-description: Заводит и разбирает GitHub issues в VireMusic — дедуп по существующим, метки area:*, формулировка проблемы и объёма. Поднимается чистым, чтобы описать проблему по фактам из кода, а не по памяти сессии.
+description: Creates and triages GitHub issues in VireMusic — dedup against existing ones, area:* labels, statement of the problem and its scope. Spawned clean so the problem is described from facts in the code, not from session memory.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

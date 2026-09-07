@@ -1,6 +1,6 @@
 ---
 name: vire-scribe
-description: Собирает из рабочего дерева серию коммитов и тексты PR в стиле репозитория VireMusic. Читает только дифф, а не рассказ автора, поэтому сообщение описывает то, что реально изменилось. Не пушит и не мержит.
+description: Turns a working tree into a series of commits and writes PR bodies in the VireMusic repository's own style. Reads only the diff, never the author's account of it, so the message describes what actually changed. Never pushes and never merges.
 tools: Read, Grep, Glob, Bash, Write
 model: sonnet
 ---

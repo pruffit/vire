@@ -1,6 +1,6 @@
 ---
 name: vire-git
-description: Git и GitHub VireMusic как зона ответственности агента — ветки, коммиты, PR, ревью, issues, красный CI, мерж. Поднимай в начале любой работы с историей и в конце любой задачи, а также когда открыт чужой PR (dependabot), упал прогон CI или в дереве накопились изменения. Каждый шаг с суждением идёт чистым сабагентом, чтобы код оценивался без знания замысла автора.
+description: Use for anything touching git or GitHub in VireMusic — branching, committing, opening and reviewing PRs, issues, red CI, merging to main. Invoke at the start of work that will produce commits, at the end of any task, and whenever a PR is open (including dependabot), a CI run failed, or the working tree has accumulated changes. Every judgment step runs in a clean subagent so the code is judged without knowing the author's intent.
 version: 1.0.0
 user-invocable: true
 ---
