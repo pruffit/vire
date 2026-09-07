@@ -1,5 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import {
   GLASS_GREEN_MAX,
@@ -11,6 +13,10 @@ import {
 import { space, layout, radii, duration, motionDuration } from '../design/scales';
 import { tokens } from '@vire/design-tokens/native';
 import { type as typeScale, fonts, MIN_SIZE } from '../design/typography';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const FLOW_BUTTON = readFileSync(resolve(HERE, '../../components/player/flow-button.tsx'), 'utf8');
+const BUTTON = readFileSync(resolve(HERE, '../../components/liquid-glass.tsx'), 'utf8');
 
 describe('бюджет стеклянных поверхностей', () => {
   // Главный инвариант фазы. До P1 он нарушался: поиск + мини-плеер + таб-бар + шит
@@ -36,6 +42,20 @@ describe('бюджет стеклянных поверхностей', () => {
 
   it('крупная плашка стоит столько же, сколько мелкая — цена в числе, не в площади', () => {
     expect(GLASS_SURFACES.contentPlate).toBe(GLASS_SURFACES.miniPlayer);
+  });
+
+  // Правило выше действует, только если деталь ЗАЯВИЛА себя верхним слоем. Кнопка «ПОТОК»
+  // этого не делала и гасла вместе с таб-баром под плеером: линза не монтировалась, и от
+  // стекла оставалась непрозрачная плашка. Проверяем сам проброс — примитива тут мало.
+  it('детали на экране плеера объявлены верхним слоем', () => {
+    expect(FLOW_BUTTON).toContain('topLayer');
+    expect(BUTTON).toContain('topLayer={topLayer}');
+  });
+
+  // Фаска задана в dp и от габарита не зависит, а габарит зависит от экрана: у выросшей
+  // детали макетная фаска отдаёт кромке меньшую долю полуразмера.
+  it('материал детали идёт через тот же масштаб, что и её геометрия', () => {
+    expect(FLOW_BUTTON).toContain('useMockMaterial(FLOW_MATERIAL)');
   });
 
   it('экран-оверлей глушит нижние поверхности, но не свою собственную', () => {
