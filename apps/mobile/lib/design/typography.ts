@@ -1,4 +1,5 @@
 import type { TextStyle } from 'react-native';
+import { tokens } from '@vire/design-tokens/native';
 import { colors } from '../theme';
 
 /**
@@ -16,10 +17,15 @@ export const fonts = {
   extrabold: 'Manrope_800ExtraBold',
   mono: 'JetBrainsMono_400Regular',
   monoMedium: 'JetBrainsMono_500Medium',
-  /** Витрина: заголовок трека, строка песни, «ПОТОК». Узкий плакатный гротеск — интерфейс
-   *  им не набирают, в мелком кегле он превращается в гребёнку. */
-  displayBold: 'Oswald_600SemiBold',
-  display: 'Oswald_700Bold',
+  /** Витрина: заголовок трека, строка песни, «ПОТОК». Плакатный гротеск — интерфейс им не
+   *  набирают, в мелком кегле он превращается в гребёнку.
+   *
+   *  Семейство берётся из токена `font.display`, а не пишется здесь: выбор витринного
+   *  начертания один на веб и Android. Имя вида `Семейство_ВесНазвание` — так их регистрирует
+   *  expo-font, и каждый вес отдельным семейством, потому что Android не синтезирует
+   *  начертания у кастомных шрифтов надёжно. */
+  displayBold: `${tokens.font.display.family}_600SemiBold`,
+  display: `${tokens.font.display.family}_800ExtraBold`,
 } as const;
 
 /** Прозрачности текста из кита — как множители к foreground, а не отдельные цвета. */

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,40 +14,36 @@ import Animated, {
 
 import * as Haptics from 'expo-haptics';
 import { nextQueueIndex } from '@vire/core/playback/queue';
-import type { PlaySource } from '@vire/api-contracts';
 import { Backdrop } from '../components/backdrop';
 import { usePlayerStore } from '../lib/player-store';
 import { useLikesStore } from '../lib/likes-store';
 import { usePreferences, useReduceMotion } from '../lib/design/preferences';
 import { BlurTargetScope } from '../lib/blur-target';
-import { WEB_BASE_URL } from '../lib/env';
 import { activeLineIndex, useLyrics } from '../lib/playback/use-lyrics';
 import { useTrackContext } from '../lib/playback/use-track-context';
 import { fetchWaveTracks } from '../lib/playback/wave';
 import { resolveAccent } from '../lib/design/accent';
 import { colors } from '../lib/theme';
-import { type } from '../lib/design/typography';
-import { space, layout, radii, motionDuration } from '../lib/design/scales';
+import { fonts, type } from '../lib/design/typography';
+import { space, layout, motionDuration } from '../lib/design/scales';
 import { Icon } from '../lib/icon';
-import { GlassPanel } from '../components/ui/glass-panel';
-import { PlayerGround } from '../components/player/player-ground';
+import { HazeGround, HAZE_TOP } from '../components/haze-ground';
+import { useMock } from '../lib/design/mock';
 import { CoverCarousel } from '../components/player/cover-carousel';
 import { LyricsGlass } from '../components/player/lyrics-glass';
 import { Transport } from '../components/player/transport';
 import { ProgressLine } from '../components/player/progress-line';
+import { FlowButton } from '../components/player/flow-button';
 import { QueueSection } from '../components/player/panels';
 import { TrackActionSheet } from '../components/player/track-action-sheet';
-import { ArtistCard, SimilarArtists, WaveBanner } from '../components/player/player-context';
+import { ArtistCard, SimilarArtists } from '../components/player/player-context';
 import { ShareSheet } from '../components/player/share-sheet';
 import { LikeButton } from '../components/like-button';
 import type { RootStackParamList } from '../navigation/root-navigator';
 
-/** Обложка дышит уже полей экрана: она главный носитель смысла. */
-const COVER_INSET = 12;
-/** Доля высоты вьюпорта — ПОТОЛОК обложки, а не её цель: на низком аппарате квадрат во всю
- *  ширину вытеснил бы управление за сгиб. */
-const COVER_MAX_VIEWPORT = 0.46;
-const HEADER_HEIGHT = 44;
+const MOCK_TOP_BAR_Y = 52;
+const MOCK_TOP_ICON = 22;
+const MOCK_TOP_STEP = 36;
 
 /** За сколько прокрутки шапка доходит до плотной: заголовок трека уезжает ровно под неё.
  *  Градиента для этого мало — фон экрана берёт цвет обложки и бывает светлым. */
@@ -61,44 +57,51 @@ const LYRICS_IDLE_AT = 20;
 /** Ближе этого к концу очереди волна подливает следующую пачку. */
 const WAVE_REFILL_AT = 2;
 
-const SOURCE_LABEL: Record<PlaySource, string> = {
-  wave: 'Волна',
-  release: 'Релиз',
-  playlist: 'Плейлист',
-  artist: 'Артист',
-  home: 'Главная',
-  feed: 'Лента',
-  search: 'Поиск',
-  liked: 'Любимое',
-  purchased: 'Покупки',
-  direct: 'Очередь',
-};
+/** Отбивки первого экрана, считанные снизу вверх от кнопки «ПОТОК» — см. спеку
+ *  `docs/superpowers/specs/2026-09-06-mobile-stand-design.md`. */
+/** Обложка стоит на этой высоте от верха экрана — как в макете. */
+const MOCK_COVER_TOP = 100;
+const MOCK_COVER_RADIUS = 18;
+/** Пол обложки: ниже него она перестаёт быть содержимым и становится миниатюрой. */
+const MOCK_COVER_MIN = 132;
+const MOCK_COVER_TO_TITLE = 36;
+const MOCK_TITLE_TO_ARTIST = 24;
+const MOCK_ARTIST_TO_PROGRESS = 24;
+const MOCK_PROGRESS_TO_TRANSPORT = 42;
+const MOCK_TRANSPORT_TO_FLOW = 38;
+const MOCK_FLOW_BOTTOM = 44;
+/** Полотно макета: высота и сторона обложки (300 − 2×20). Вертикаль считается по остатку
+ *  `высота − обложка`, потому что обложку зажимает ширина поля, а не высота экрана. */
+const MOCK_PHONE_HEIGHT = 640;
+const MOCK_COVER_SIDE = 260;
+const MOCK_ACTION = 25;
+const MOCK_ACTION_STEP = 38;
+const MOCK_TITLE_SIZE = 22;
+/** Главный значок транспорта: по нему считается высота ряда, а от неё — отбивки. */
+const MOCK_PLAY = 34;
+const MOCK_ARTIST_SIZE = 15;
+const MOCK_SCREEN_MARGIN = 20;
 
 /**
  * Фуллскрин-плеер.
  *
- * Раскладка выведена из того, что на экране делают, а не из симметрии: содержимое (обложка
- * и текст на ней) наверху — туда смотрят; частое управление внизу — там живёт большой палец;
- * контекст (волна, автор, похожие, очередь) под сгибом — это отдельное намерение. Прогресс
- * стоит НАД транспортом (обе мировые модели держат его выше), ряд действий снят — редкое
- * («В плейлист», «Поделиться», «К релизу», «Открыть артиста») ушло в лист `⋯` шапки, частое
- * (лайк, текст, очередь) осталось на первом экране. Разбор —
- * `docs/superpowers/specs/2026-09-03-mobile-player-v4-brief.md`.
+ * Первый экран — колонка на всю высоту вьюпорта, раскладка считается СНИЗУ ВВЕРХ от кнопки
+ * «ПОТОК»: она опора группы управления, прибитой к нижнему краю. Остаток высоты копится
+ * ВОЗДУХОМ над обложкой — единственным местом, где экрану есть куда расти на высоком
+ * аппарате. Контекст (автор, похожие, очередь) идёт ниже сгиба, в той же прокрутке.
  *
- * Первый экран НЕ растянут на вьюпорт: блоки идут подряд, остаток высоты занимает начало
- * контекста. Растянутый центрировал обложку в остатке и оставлял пустоту вокруг неё.
- *
- * Поле обложки — два режима, обложка и текст, переключатель на самом поле (правый верхний
- * угол рамки). Обложка остаётся под панелью текста: стекло имеет смысл только там, где под
- * ним есть что преломлять. Панель — сиблинг `Backdrop`, а не потомок: цель преломления не
- * может быть предком стекла (`lib/blur-target.tsx`), поэтому она стоит по замеренной рамке
- * обложки и едет за прокруткой трансформом.
+ * Поле обложки — два режима, обложка и текст, переключатель в шапке (см. заголовок). Обложка
+ * остаётся под панелью текста: стекло имеет смысл только там, где под ним есть что
+ * преломлять. Панель — сиблинг `Backdrop`, а не потомок: цель преломления не может быть
+ * предком стекла (`lib/blur-target.tsx`), поэтому она стоит по замеренной рамке обложки и
+ * едет за прокруткой трансформом.
  */
 export default function PlayerScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const { width, height: windowHeight } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
+  const ms = useMock();
 
   const queue = usePlayerStore((s) => s.queue);
   const queueIndex = usePlayerStore((s) => s.queueIndex);
@@ -126,6 +129,7 @@ export default function PlayerScreen() {
   const groundRef = useRef<View>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
   const [coverTop, setCoverTop] = useState(0);
+  const [coverRegionHeight, setCoverRegionHeight] = useState(0);
   const [immersiveOn, setImmersiveOn] = useState(false);
   const [lyricsShown, setLyricsShown] = useState(false);
   const [lyricsIdle, setLyricsIdle] = useState(false);
@@ -196,9 +200,24 @@ export default function PlayerScreen() {
   const hasNext = nextQueueIndex(queueIndex, queue.length, repeat) !== null;
   const hasPrev = queueIndex > 0;
   const viewport = viewportHeight || windowHeight;
-  const artSize = Math.max(1, Math.min(width - COVER_INSET * 2, viewport * COVER_MAX_VIEWPORT));
+  const contentWidth = width - ms(MOCK_SCREEN_MARGIN) * 2;
+  // Сторону обложки задаёт ЗАМЕРЕННАЯ высота её поля, а не арифметика по вставкам: поле
+  // растянуто `flex`, и остаток высоты за группой управления считает сам движок раскладки.
+  // Считанная вручную стопка расходилась с настоящей на любой строке, появившейся в группе
+  // (например на ошибке воспроизведения), и обложка прыгала прямо во время проигрывания.
+  const topIcon = ms(MOCK_TOP_ICON);
+  const topBarCenter = Math.max(insets.top + topIcon / 2 + 6, ms(MOCK_TOP_BAR_Y));
+  const headerHeight = topBarCenter + topIcon / 2 + ms(8);
+  // Вертикальные отбивки тянутся по ОСТАТКУ высоты за обложкой, а не по ширине. Обложка
+  // упирается в ширину поля и высоту макета не добирает; если считать отбивки от ширины,
+  // разница копится одной дырой. Здесь она раскладывается по всем отбивкам разом — стопка
+  // садится в экран точно, и пустоты не остаётся ни сверху, ни под кнопкой.
+  const vs = (v: number) =>
+    (v * (viewport - contentWidth)) / (MOCK_PHONE_HEIGHT - MOCK_COVER_SIDE);
+  const coverAir = Math.max(0, vs(MOCK_COVER_TOP) - headerHeight);
+  const artSize = Math.min(contentWidth, Math.max(ms(MOCK_COVER_MIN), coverRegionHeight - coverAir));
   const edgeScale = Math.max(width, windowHeight) / artSize;
-  const coverScreenTop = coverTop + insets.top + HEADER_HEIGHT;
+  const coverScreenTop = coverTop + headerHeight;
   const immersiveShiftY = viewport / 2 - (coverScreenTop + artSize / 2);
   const releaseId = context?.source === 'release' ? (context.sourceId ?? null) : null;
   const activeLine = activeLineIndex(lines, positionSec);
@@ -210,6 +229,26 @@ export default function PlayerScreen() {
     setImmersiveOn(on);
     immersive.value = withTiming(on ? 1 : 0, { duration: motionDuration('screen', reduceMotion) });
   };
+
+  // Отбивки макета заданы ОТ БАЗОВОЙ ЛИНИИ (и от центра ряда транспорта), а не как поля
+  // между блоками. Переносить их полями нельзя: стопка выходит выше нарисованной ровно на
+  // сумму строчных боксов и съедает обложку. Ниже они переведены в поля по метрикам строк.
+  const titleSize = ms(MOCK_TITLE_SIZE);
+  const artistSize = ms(MOCK_ARTIST_SIZE);
+  const artistLine = Math.round(artistSize * 1.33);
+  // Шаг между базовыми линиями подписи задаёт САМ строчный бокс названия.
+  const titleStyle = { fontSize: titleSize, lineHeight: ms(MOCK_TITLE_TO_ARTIST) };
+  const artistStyle = { fontSize: artistSize, lineHeight: artistLine };
+  const ascent = (line: number, size: number) => Math.round((line + size * 0.72) / 2);
+  const descent = (line: number, size: number) => line - ascent(line, size);
+  const transportBox = ms(MOCK_PLAY);
+  // Отбивка не уходит в минус: на низком экране (или при увеличенном системном кегле)
+  // `vs()` мал, а вычитаемая метрика строки нет — блоки наезжали бы друг на друга.
+  const gap = (v: number, metric: number) => Math.max(0, vs(v) - metric);
+  const coverToTitle = gap(MOCK_COVER_TO_TITLE, ascent(ms(MOCK_TITLE_TO_ARTIST), titleSize));
+  const artistToProgress = gap(MOCK_ARTIST_TO_PROGRESS, descent(artistLine, artistSize));
+  const progressToTransport = gap(MOCK_PROGRESS_TO_TRANSPORT, transportBox / 2);
+  const transportToFlow = gap(MOCK_TRANSPORT_TO_FLOW, transportBox / 2);
 
   const share = () => setShareOpen(true);
 
@@ -224,14 +263,7 @@ export default function PlayerScreen() {
       {/* Захват сцены: плашки контекста лежат В прокрутке, то есть внутри artRef, и её
           преломлять не могут — цель не может быть предком стекла. */}
       <Backdrop targetRef={groundRef} style={StyleSheet.absoluteFill}>
-        <PlayerGround
-          accent={accent}
-          width={width}
-          height={windowHeight}
-          haloCenterX={width / 2}
-          haloCenterY={coverScreenTop + artSize / 2}
-          artSize={artSize}
-        />
+        <HazeGround accent={accent} width={width} height={windowHeight} />
       </Backdrop>
 
       <Backdrop
@@ -248,25 +280,42 @@ export default function PlayerScreen() {
               onScroll={onScroll}
               scrollEventThrottle={16}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{
-                paddingTop: insets.top + HEADER_HEIGHT,
-                paddingBottom: insets.bottom + space.xl,
-              }}
+              contentContainerStyle={styles.scrollContent}
             >
-              {/* Обложка НЕ под `chromeStyle`: иммерсив гасит интерфейс вокруг неё, а не её
-                  саму — под общей прозрачностью она исчезала вместе с ним. */}
-              <View style={styles.hero}>
+              {/* Первый экран занимает вьюпорт целиком, но МИНИМУМОМ, а не жёсткой высотой:
+                  на низком аппарате группа управления обязана вытолкнуть экран в прокрутку,
+                  а не сплющить обложку. */}
+              <View
+                style={[
+                  { paddingHorizontal: ms(MOCK_SCREEN_MARGIN) },
+                  {
+                    minHeight: viewport,
+                    paddingTop: headerHeight,
+                    paddingBottom: vs(MOCK_FLOW_BOTTOM),
+                  },
+                ]}
+              >
+                {/* Обложка НЕ под `chromeStyle`: иммерсив гасит интерфейс вокруг неё, а не её
+                    саму — под общей прозрачностью она исчезала вместе с ним. */}
+                {/* Базис — макетная высота области (воздух над обложкой плюс сама обложка),
+                    дальше рост. Лишнюю высоту аппарата делит пополам с распоркой под кнопкой:
+                    целиком сверху она читается провалом под панелью, целиком снизу — отрывает
+                    «ПОТОК» от края. Потолок здесь стоять не может: упёршись в него, рост
+                    прекращался и остаток ложился мёртвой полосой под кнопкой. */}
                 <View
-                  style={styles.coverArea}
-                  onLayout={(e) => setCoverTop(e.nativeEvent.layout.y)}
-                  pointerEvents="box-none"
+                  style={[styles.coverRegion, { flexBasis: coverAir + contentWidth }]}
+                  onLayout={(e) => setCoverRegionHeight(e.nativeEvent.layout.height)}
                 >
-                  <View style={{ width: artSize, height: artSize }}>
+                  <View
+                    style={{ width: artSize, height: artSize }}
+                    onLayout={(e) => setCoverTop(e.nativeEvent.layout.y)}
+                    pointerEvents="box-none"
+                  >
                     <CoverCarousel
                       queue={queue}
                       queueIndex={queueIndex}
                       size={artSize}
-                      radius={radii.card}
+                      radius={ms(MOCK_COVER_RADIUS)}
                       immersive={immersive}
                       edgeScale={edgeScale}
                       immersiveShiftY={immersiveShiftY}
@@ -281,85 +330,81 @@ export default function PlayerScreen() {
                       onSwipePrev={prev}
                       onDismiss={() => navigation.goBack()}
                     />
-                    {/* На инструментале гаснет, а не пропадает — иначе угол поля прыгает
-                        на каждой смене трека. */}
-                    <Animated.View
-                      style={[styles.lyricsToggleSlot, chromeStyle]}
-                      pointerEvents={chromePointerEvents}
-                    >
-                      <Pressable
-                        style={[
-                          styles.lyricsToggle,
-                          lyricsShown && { backgroundColor: accent.fill },
-                          !hasLyrics && styles.lyricsToggleDisabled,
-                        ]}
-                        disabled={!hasLyrics}
-                        onPress={() => setLyricsShown((v) => !v)}
-                        accessibilityRole="button"
-                        accessibilityState={{ disabled: !hasLyrics, selected: lyricsShown }}
-                        accessibilityLabel="Текст песни"
-                      >
-                        <Icon name="text" size={20} color={lyricsShown ? accent.ink : colors.foreground} />
-                      </Pressable>
-                    </Animated.View>
                   </View>
                 </View>
 
-                <Animated.View style={[styles.heroChrome, chromeStyle]} pointerEvents={chromePointerEvents}>
-                <View style={styles.titleRow}>
-                  <View style={styles.titles}>
-                    <Text style={type.screenTitle} numberOfLines={1}>
-                      {track.title}
-                    </Text>
-                    {/* Имя автора — переход, а не подпись: из плеера к артисту ведёт только
-                        оно, и выглядеть оно обязано нажимаемым. */}
-                    <Pressable
-                      style={styles.artistLink}
-                      disabled={!trackContext}
-                      onPress={() => trackContext && openArtist(trackContext.artist.slug)}
-                      accessibilityRole="link"
-                      accessibilityLabel={`Открыть артиста ${track.artistName}`}
-                    >
-                      <Text style={styles.artistName} numberOfLines={1}>
-                        {track.artistName}
+                <Animated.View
+                  style={[{ marginTop: coverToTitle }, chromeStyle]}
+                  pointerEvents={chromePointerEvents}
+                >
+                  <View style={styles.titleRow}>
+                    <View style={styles.titles}>
+                      <Text style={[styles.title, titleStyle]} numberOfLines={1}>
+                        {track.title}
                       </Text>
-                      {trackContext && <Icon name="chevron-right" size={16} color={colors.foreground} />}
-                    </Pressable>
+                      {/* Имя автора — переход, а не подпись: из плеера к артисту ведёт только
+                          оно. */}
+                      <Pressable
+                        style={styles.artistLink}
+                        hitSlop={12}
+                        disabled={!trackContext}
+                        onPress={() => trackContext && openArtist(trackContext.artist.slug)}
+                        accessibilityRole="link"
+                        accessibilityLabel={`Открыть артиста ${track.artistName}`}
+                      >
+                        <Text style={[styles.artist, artistStyle]} numberOfLines={1}>
+                          {track.artistName}
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    <View style={[styles.actions, { gap: ms(MOCK_ACTION_STEP) - ms(MOCK_ACTION) }]}>
+                      <LikeButton trackId={track.id} variant="title" size={ms(MOCK_ACTION)} />
+                      <Pressable
+                        onPress={share}
+                        hitSlop={14}
+                        style={{ width: ms(MOCK_ACTION), height: ms(MOCK_ACTION), alignItems: 'center', justifyContent: 'center' }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Поделиться треком"
+                      >
+                        <Icon name="share" size={ms(MOCK_ACTION)} color={colors.foreground} />
+                      </Pressable>
+                    </View>
                   </View>
-                  <LikeButton trackId={track.id} variant="primary" />
-                </View>
 
-                <ProgressLine
-                  positionSec={positionSec}
-                  durationSec={durationSec}
-                  accent={accent.fill}
-                  onSeek={seek}
-                />
+                  <View style={{ marginTop: artistToProgress }}>
+                    <ProgressLine positionSec={positionSec} durationSec={durationSec} onSeek={seek} />
+                  </View>
 
-                <Transport
-                  playing={status === 'playing'}
-                  loading={status === 'loading'}
-                  accent={accent}
-                  hasNext={hasNext}
-                  hasPrev={hasPrev}
-                  shuffle={shuffle}
-                  repeat={repeat}
-                  onPrev={prev}
-                  onNext={next}
-                  onTogglePlay={togglePlayPause}
-                  onToggleShuffle={toggleShuffle}
-                  onCycleRepeat={cycleRepeat}
-                />
+                  <View style={{ marginTop: progressToTransport }}>
+                    <Transport
+                      playing={status === 'playing'}
+                      loading={status === 'loading'}
+                      hasNext={hasNext}
+                      hasPrev={hasPrev}
+                      shuffle={shuffle}
+                      repeat={repeat}
+                      onPrev={prev}
+                      onNext={next}
+                      onTogglePlay={togglePlayPause}
+                      onToggleShuffle={toggleShuffle}
+                      onCycleRepeat={cycleRepeat}
+                      width={contentWidth}
+                    />
+                  </View>
 
-                {status === 'error' && (
-                  <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>
-                )}
+                  {status === 'error' && (
+                    <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>
+                  )}
+
+                  <View style={{ marginTop: transportToFlow }}>
+                    <FlowButton onPress={startWave} blurTarget={groundRef} width={contentWidth} />
+                  </View>
                 </Animated.View>
+
               </View>
 
               <Animated.View style={[styles.context, chromeStyle]} pointerEvents={chromePointerEvents}>
-                <WaveBanner trackTitle={track.title} blurTarget={groundRef} onPress={startWave} />
-
                 {trackContext && (
                   <>
                     <ArtistCard
@@ -379,54 +424,55 @@ export default function PlayerScreen() {
         </BlurTargetScope>
       </Backdrop>
 
-      {/* Шапка — сиблинг Backdrop, а не потомок: под ней едет обложка, и стеклу здесь есть
-          что преломлять. Внутри захвата она преломляла бы саму себя (рекурсия RenderNode). */}
+      {/* Верхняя панель — ПРОСТО ЗНАЧКИ на фоне, без стекла. Стеклянная панель, стоявшая
+          здесь, давала жёсткую горизонтальную кромку поперёк экрана; в макете панели нет. */}
       <Animated.View
-        style={[styles.header, { paddingTop: insets.top, height: insets.top + HEADER_HEIGHT }, chromeStyle]}
+        style={[styles.header, { height: headerHeight }, chromeStyle]}
         pointerEvents={chromePointerEvents}
       >
-        <GlassPanel
-          radius={0}
-          blurTarget={artRef}
-          topLayer
-          adaptive={false}
-          style={StyleSheet.absoluteFill}
-          contentStyle={styles.headerGlass}
-        >
-          <View style={StyleSheet.absoluteFill} pointerEvents="none" />
-        </GlassPanel>
-
-        {/* Уплотнение — ПОВЕРХ линзы, а не внутри неё: линза рисуется над своими детьми, и
-            подложка под ней ничего не давала — метка источника тонула в светлой обложке. */}
         <Animated.View
-          style={[StyleSheet.absoluteFill, { backgroundColor: accent.base }, headerSolidStyle]}
+          style={[StyleSheet.absoluteFill, styles.headerSolid, headerSolidStyle]}
           pointerEvents="none"
         />
-
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          <View style={{ height: insets.top }} pointerEvents="none" />
-          <View style={styles.headerRow}>
-            <Pressable
-              onPress={() => navigation.goBack()}
-              hitSlop={10}
-              style={styles.headerButton}
-              accessibilityRole="button"
-              accessibilityLabel="Свернуть плеер"
-            >
-              <Icon name="chevron-down" size={24} color={colors.foreground} />
-            </Pressable>
-            <Text style={styles.source} numberOfLines={1}>
-              {context ? SOURCE_LABEL[context.source] : SOURCE_LABEL.direct}
-            </Text>
-            <Pressable
-              onPress={() => setActionSheetOpen(true)}
-              hitSlop={10}
-              style={styles.headerButton}
-              accessibilityRole="button"
-              accessibilityLabel="Действия с треком"
-            >
-              <Icon name="more-horizontal" size={24} color={colors.foreground} />
-            </Pressable>
+          <View style={{ height: topBarCenter - topIcon / 2 }} pointerEvents="none" />
+          <View style={[styles.headerRow, { paddingHorizontal: ms(MOCK_SCREEN_MARGIN) }]}>
+            <View style={[styles.headerSide, styles.headerSideStart]}>
+              <Pressable
+                onPress={() => navigation.goBack()}
+                hitSlop={13}
+                style={[{ width: topIcon, height: topIcon, alignItems: 'center', justifyContent: 'center' }, styles.headerIconAlpha]}
+                accessibilityRole="button"
+                accessibilityLabel="Свернуть плеер"
+              >
+                <Icon name="chevron-down" size={topIcon} color={colors.foreground} />
+              </Pressable>
+            </View>
+
+            <View style={styles.headerGap} />
+
+            <View style={[styles.headerSide, styles.headerSideEnd, { gap: ms(MOCK_TOP_STEP) - topIcon }]}>
+              <Pressable
+                onPress={() => setLyricsShown((v) => !v)}
+                disabled={!hasLyrics}
+                hitSlop={13}
+                style={{ width: topIcon, height: topIcon, alignItems: 'center', justifyContent: 'center', opacity: hasLyrics ? 0.72 : 0.3 }}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !hasLyrics, selected: lyricsShown }}
+                accessibilityLabel="Текст песни"
+              >
+                <Icon name="align-center" size={topIcon} color={lyricsShown ? accent.ink : colors.foreground} />
+              </Pressable>
+              <Pressable
+                onPress={() => setActionSheetOpen(true)}
+                hitSlop={13}
+                style={[{ width: topIcon, height: topIcon, alignItems: 'center', justifyContent: 'center' }, styles.headerIconAlpha]}
+                accessibilityRole="button"
+                accessibilityLabel="Действия с треком"
+              >
+                <Icon name="more-vertical" size={topIcon} color={colors.foreground} />
+              </Pressable>
+            </View>
           </View>
         </View>
       </Animated.View>
@@ -483,49 +529,38 @@ const styles = StyleSheet.create({
   blurTarget: { flex: 1 },
   screen: { flex: 1, overflow: 'hidden' },
   scroll: { flex: 1 },
+  scrollContent: { paddingBottom: space.xl },
 
-  /** Внутри блока — шаг шкалы; расстояние между блоками задаёт `context`. */
-  hero: { paddingHorizontal: layout.screenPadding, gap: space.lg },
-  heroChrome: { gap: space.lg },
-  coverArea: { alignItems: 'center' },
-  lyricsToggleSlot: { position: 'absolute', top: space.sm, right: space.sm },
-  lyricsToggle: {
-    width: layout.touchTarget,
-    height: layout.touchTarget,
-    borderRadius: radii.full,
+  coverRegion: {
+    flexGrow: 1,
+    flexShrink: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(3,2,1,0.45)',
+    justifyContent: 'flex-end',
   },
-  lyricsToggleDisabled: { opacity: 0.32 },
+
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  artistLink: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 28 },
-  artistName: { ...type.subtitle, color: colors.foreground },
-  titles: { flex: 1, gap: 2, minWidth: 0 },
-  titleAction: {
-    width: layout.touchTarget,
-    height: layout.touchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  error: { ...type.caption, color: colors.destructive },
+  titles: { flex: 1, minWidth: 0 },
+  /** Подпись трека набрана ИНТЕРФЕЙСНЫМ гротеском: витринное начертание на этом экране
+   *  занято кнопкой «ПОТОК», и второй раз оно спорило бы с ней за роль. */
+  title: { fontFamily: fonts.semibold, color: '#f2f4f8' },
+  artist: { fontFamily: fonts.regular, color: '#98a1b2' },
+  /** Имя автора — переход: тач-зону ему добирает `hitSlop`, а `minHeight` держит её
+   *  предсказуемой при любой длине имени. */
+  artistLink: { alignSelf: 'flex-start', minHeight: 28, justifyContent: 'center' },
+  actions: { flexDirection: 'row', alignItems: 'center', opacity: 0.62 },
+  error: { ...type.caption, color: colors.destructive, marginTop: space.sm },
+
 
   context: { paddingHorizontal: layout.screenPadding, paddingTop: space.xl, gap: space.xl },
-  block: { gap: space.sm },
-
 
   header: { position: 'absolute', top: 0, left: 0, right: 0 },
-  headerGlass: { flex: 1 },
-  headerRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.sm,
-  },
-  /** Откуда играет — не метка, а строка: моно с разрядкой здесь читалось слабо. */
-  source: { ...type.row, color: colors.mutedForeground },
-  headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerSolid: { backgroundColor: HAZE_TOP },
+  headerRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  headerGap: { flex: 1 },
+  headerSide: { flexDirection: 'row', alignItems: 'center' },
+  headerSideStart: { justifyContent: 'flex-start' },
+  headerSideEnd: { justifyContent: 'flex-end' },
+  headerIconAlpha: { opacity: 0.72 },
 
   lyricsWrap: { position: 'absolute' },
 });

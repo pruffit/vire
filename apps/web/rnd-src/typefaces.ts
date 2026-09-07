@@ -9,6 +9,7 @@
 // Manrope, JetBrains Mono) взяты из тех же пакетов, что стоят в мобилке; остальные — срез
 // кириллицы с зеркала fontsource. Новых зависимостей ни там, ни там не заведено.
 
+import { tokens } from '@vire/design-tokens';
 import { PHONE, phoneOrigin, phonePath, SCREEN_MARGIN } from './scenes';
 
 export type Typeface = {
@@ -20,13 +21,16 @@ export type Typeface = {
   tracking: number;
 };
 
-/** Начертание витринных надписей — выбрано на экране гротесков. Одно место на весь стенд:
- *  захочешь другое, меняешь здесь, и кнопка «ПОТОК» перенабирается. */
+/**
+ * Витринное начертание берётся ИЗ ТОКЕНА, а не выбирается здесь: им набираются заголовок
+ * трека, строка песни и кнопка «ПОТОК» и в вебе, и на Android, и решение обязано быть одно.
+ * Витрина ниже — инструмент выбора, а сам выбор живёт в `@vire/design-tokens`.
+ */
 export const DISPLAY_FACE: Typeface = {
-  family: 'Unbounded',
-  weight: 800,
-  note: 'широкий геометрический — ВЫБРАН для кнопки',
-  tracking: 0.4,
+  family: tokens.font.display.family,
+  weight: tokens.font.display.weight,
+  note: 'ВЫБРАНО для витринных надписей',
+  tracking: tokens.font.display.tracking,
 };
 
 export const TYPEFACES: readonly Typeface[] = [

@@ -1,8 +1,6 @@
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { NavigatorScreenParams } from '@react-navigation/native';
-import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { HomeStackNavigator, type HomeStackParamList } from './home-stack';
 import { SearchStackNavigator } from './search-stack';
@@ -12,8 +10,9 @@ import { LiquidGlassButton } from '../components/liquid-glass';
 import { GlassGroup } from '../lib/vireglass/glass-group';
 import { type IconName } from '../lib/icon';
 import { useBlurTarget } from '../lib/blur-target';
-import { TAB_BAR_CONTENT_HEIGHT } from '../lib/layout';
-import { SCRIM_COMPENSATION } from '../lib/vireglass/material';
+import { useFurniture } from '../lib/layout';
+import { mockScale, useMockMaterial } from '../lib/design/mock';
+import { materialForInk, VIREGLASS_CONTROL_MATERIAL } from '../lib/vireglass/material';
 
 // Home принимает вложенные параметры — фуллскрин-плеер (корневой стек, вне табов)
 // открывает «К релизу» через navigation.navigate('Main', { screen: 'Home', params: {...} }).
@@ -33,44 +32,33 @@ const TAB_ICONS: Record<keyof MainTabsParamList, IconName> = {
   Profile: 'user',
 };
 
-const CIRCLE_SIZE = 68;
+/** Поле ряда в макете: кнопки стоят по краям поля экрана. */
+const MOCK_ROW_INSET = 20;
 
-// Кнопки плавают над контентом, который под них уезжает: без затемняющей подложки строчки
-// трека проходят прямо сквозь ряд и стекло читается наклейкой. Скрим — длинный мягкий
-// градиент от прозрачного, никакой видимой границы у него нет.
-const SCRIM_HEIGHT = 96;
-const SCRIM = ['rgba(3,2,1,0)', 'rgba(3,2,1,0.12)', 'rgba(3,2,1,0.32)', 'rgba(3,2,1,0.46)'] as const;
-const SCRIM_STOPS = [0, 0.5, 0.8, 1] as const;
-// Линза целится в контент экрана напрямую и этого градиента над ним не видит — гасит себя
-// на ту же величину сама (`SCRIM_COMPENSATION`) — это компенсация, отдельная от общего
-// продуктового `PRODUCT_DIM` у панелей.
+/** Навигация — органы управления, и значки на них — краска приложения. Активное состояние
+ *  собирает из этого материала само ядро (`activeMaterial` в components/liquid-glass.tsx). */
+const CONTROL_MATERIAL = materialForInk(VIREGLASS_CONTROL_MATERIAL, true);
 
 // Кит («05 · КОМПОНЕНТЫ», навигация) требует раздельные круглые кнопки без подписи —
 // не одну сплошную капсулу с иконкой+текстом, которую строит `tabBarStyle`/`tabBarIcon`
 // у стандартного bottom-tabs. Поэтому весь бар — кастомный `tabBar`, стандартные
 // `tabBarStyle`/`tabBarLabelStyle`/`tabBarIcon` из screenOptions больше не участвуют.
+//
+// Притенение низа рисует сам экран (`components/furniture-scrim.tsx`): оно обязано попасть
+// в захват линзы, а этот ряд лежит НАД захватом.
 function CircleTabBar({ state, navigation }: BottomTabBarProps) {
-  const insets = useSafeAreaInsets();
+  const { nav, navBottom } = useFurniture();
+  const { width } = useWindowDimensions();
+  const inset = Math.round(MOCK_ROW_INSET * mockScale(width));
+  const material = useMockMaterial(CONTROL_MATERIAL);
   // Живой фон линзы — контент сфокусированного экрана; преломление считается покадрово.
   const blurTarget = useBlurTarget();
 
   return (
-    <>
-      <LinearGradient
-        pointerEvents="none"
-        colors={SCRIM}
-        locations={SCRIM_STOPS}
-        style={[styles.scrim, { height: TAB_BAR_CONTENT_HEIGHT + insets.bottom + SCRIM_HEIGHT }]}
-      />
-      {/* Таб-бар адаптируется БЛОКОМ: под каждой кнопкой свой кусок фона, и по своему
-          замеру одна уходит в тень, а соседняя остаётся прозрачной. */}
-      <GlassGroup>
-      <View
-        style={[
-          styles.row,
-          { height: TAB_BAR_CONTENT_HEIGHT + insets.bottom, paddingBottom: insets.bottom, bottom: 6 },
-        ]}
-      >
+    // Таб-бар адаптируется БЛОКОМ: под каждой кнопкой свой кусок фона, и по своему
+    // замеру одна уходит в тень, а соседняя остаётся прозрачной.
+    <GlassGroup>
+      <View style={[styles.row, { bottom: navBottom, left: inset, right: inset, height: nav }]}>
         {state.routes.map((route, index) => {
           const focused = state.index === index;
           const iconName = TAB_ICONS[route.name as keyof MainTabsParamList];
@@ -86,18 +74,17 @@ function CircleTabBar({ state, navigation }: BottomTabBarProps) {
           return (
             <LiquidGlassButton
               key={route.key}
-              size={CIRCLE_SIZE}
+              size={nav}
               icon={iconName}
               active={focused}
               blurTarget={blurTarget}
-              dim={SCRIM_COMPENSATION}
+              material={material}
               onPress={onPress}
             />
           );
         })}
       </View>
-      </GlassGroup>
-    </>
+    </GlassGroup>
   );
 }
 
@@ -121,18 +108,10 @@ export function MainTabs() {
 }
 
 const styles = StyleSheet.create({
-  scrim: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
   // Капля тяги уходит за пределы ряда — обрезать её нечем и незачем.
   row: {
     overflow: 'visible',
     position: 'absolute',
-    left: 22,
-    right: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

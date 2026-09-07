@@ -32,6 +32,7 @@
     "@vire/api-contracts": "workspace:*",
     "@vire/core": "workspace:*",
     "@vire/db": "workspace:*",
+    "@vire/design-tokens": "workspace:*",
     "@vire/i18n": "workspace:*",
     "@vire/storage": "workspace:*",
     "@vire/ui": "workspace:*",

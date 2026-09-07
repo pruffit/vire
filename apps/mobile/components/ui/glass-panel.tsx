@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode, type RefObject } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
+import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { VireGlassSurface } from '../vireglass/glass-surface';
 import { useGlassAdaptation } from '../../lib/vireglass/adaptation';
 import { GlassInkProvider } from '../../lib/vireglass/glass-ink';
@@ -32,6 +32,9 @@ export function GlassPanel({
   radius = radii.glass,
   blurTarget,
   dim = 0,
+  progress,
+  press: pressProp,
+  active: activeProp,
   topLayer = false,
   material,
   optics: opticsOverride,
@@ -47,6 +50,13 @@ export function GlassPanel({
   /** Затемнение линзы: материал v2 почти не мутит фон, и текст на панели теряет контраст
    *  над светлой обложкой. Дешевле второго материала и не трогает оптику кромки. */
   dim?: number;
+  /** Сыгранная доля, 0…1: материал светится слева от границы. Так прогресс показывает
+   *  мини-плеер — это состояние самого стекла, а не полоска, положенная на него. */
+  progress?: SharedValue<number>;
+  /** Нажатие и включённость панели, 0…1. Без них панель неподвижна — так и стоят
+   *  неинтерактивные поверхности; нажимаемой панели отклик обязателен. */
+  press?: SharedValue<number>;
+  active?: SharedValue<number>;
   /** Панель верхнего слоя: экран-оверлей глушит то, что под ним, но не её. */
   topLayer?: boolean;
   /** Свой материал панели — ПРИЧИНЫ, не следствия. Передавать константу модуля: новый
@@ -87,12 +97,14 @@ export function GlassPanel({
   );
   const light = useEnvironmentLight(optics.environment);
 
-  // Панель неподвижна: деформации и нажатия у неё нет, но контракт поверхности требует
-  // shared values — заводим постоянные нули.
+  // Тяги у панели нет: тянут круглые кнопки, панель стоит. Нажатие и включённость
+  // приходят снаружи, когда панель нажимаемая, — иначе те же постоянные нули.
   const shiftX = useSharedValue(0);
   const shiftY = useSharedValue(0);
-  const press = useSharedValue(0);
-  const active = useSharedValue(0);
+  const idlePress = useSharedValue(0);
+  const idleActive = useSharedValue(0);
+  const press = pressProp ?? idlePress;
+  const active = activeProp ?? idleActive;
 
   return (
     <View style={[styles.host, { borderRadius: radius }, style]} onLayout={onLayout}>
@@ -104,6 +116,7 @@ export function GlassPanel({
             dynamics={{ shiftX, shiftY, press, active, light }}
             blurTarget={blurTarget}
             dim={dim}
+            progress={progress}
             topLayer={topLayer}
             debug={debug ?? 'normal'}
             onBackdropSample={adaptive ? adaptation.onBackdropSample : undefined}

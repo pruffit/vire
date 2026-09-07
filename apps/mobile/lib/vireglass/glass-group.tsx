@@ -8,14 +8,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { FADE_MS, type BackdropSample } from './adaptation';
-import {
-  createGroupState,
-  probeValuesAt,
-  type GroupPlane,
-  type GroupState,
-} from './group-model';
+import { createGroupState, type GroupState } from './group-model';
 
 /**
  * ГРУППА ПОВЕРХНОСТЕЙ — блок стекла, который адаптируется целиком.
@@ -24,23 +18,13 @@ import {
  * в тень, а соседняя остаётся прозрачной; на пёстром фоне у них ещё и полярность надписи
  * расходится. Блок при этом перестаёт читаться блоком и разваливается на отдельные детали.
  *
- * Группа собирает замеры участников, считает ОДНУ оценку на всех и возвращает её каждому.
- * Тонирование при этом остаётся градиентным: по замерам участников строится плоскость
- * светлоты, и каждый берёт из неё значение в своей точке — блок темнеет плавно поперёк
- * себя, а не ступенями по кнопкам.
- */
-
-/**
- * Шина тяги: [x, y, радиус капли, ширина шейки, номер тянущего]. Живёт разделяемым значением,
- * а не состоянием, потому что читают её ворклеты соседей на КАЖДОМ кадре тяги — через React
- * это был бы рендер блока на кадр.
+ * Группа собирает замеры участников и возвращает всем ОДНУ полярность краски.
  *
- * Благодаря ей капля видна не только тому, из кого её тянут: сосед добавляет её себе второй
- * формой, и на подходе две детали сливаются в одну — материал ведёт себя как материал, а не
- * как набор независимых кнопок.
+ * Оценку СРЕДЫ она больше не раздаёт: та живёт в самой линзе, как в вебе, — общая перебивала
+ * собственный зонд детали, и при одном материале «Поток» и навигация адаптировались к фону
+ * по-разному. Вместе с ней ушла и шина тяги: тянут не деталь, а поле вокруг пятна касания
+ * (`createDeform` в ядре), и сливать соседние поверхности каплей нечем.
  */
-export type PullBus = SharedValue<number[]>;
-
 type GroupApi = {
   report: (
     id: string,
@@ -51,26 +35,12 @@ type GroupApi = {
   ) => void;
   /** Снять участника с учёта при размонтировании: иначе он навсегда остаётся в оценке блока. */
   release: (id: string) => void;
-  probeAt: (x: number) => number[] | undefined;
   ink: number | undefined;
-  pull: PullBus;
-  /** Номер участника в группе. Свою каплю тянущий рисует сам, чужую — как приходящую. */
-  claim: () => number;
 };
 
 const GlassGroupContext = createContext<GroupApi | null>(null);
 
-const sameValues = (a: readonly number[], b: readonly number[]) =>
-  a.length === b.length && a.every((v, i) => v === b[i]);
-
 export function GlassGroup({ children }: { children: ReactNode }) {
-  const pull = useSharedValue([0, 0, 0, 0, -1]);
-  const seats = useRef(0);
-  const claim = useCallback(() => {
-    seats.current += 1;
-    return seats.current;
-  }, []);
-  const [plane, setPlane] = useState<GroupPlane | null>(null);
   const [ink, setInk] = useState(1);
 
   const target = useRef(1);
@@ -111,31 +81,18 @@ export function GlassGroup({ children }: { children: ReactNode }) {
 
   const state = useRef<GroupState | null>(null);
   if (state.current === null) {
+    // Плоскость светлоты блока ядро всё ещё считает, но читать её некому: среду каждая
+    // линза оценивает сама. Здесь остаётся полярность краски.
     state.current = createGroupState({
-      plane: setPlane,
+      plane: () => {},
       flip: (polarity) => flipRef.current(polarity),
     });
   }
   const group = state.current;
 
-  // Идентичность массива меняется только вместе со значениями: он лежит в зависимостях
-  // маппера Reanimated, а смена зависимостей — это stop/start маппера на UI-потоке.
-  const probes = useRef(new Map<number, number[]>());
-  const probeAt = useCallback(
-    (x: number) => {
-      if (!plane) return undefined;
-      const next = probeValuesAt(plane, x);
-      const prev = probes.current.get(x);
-      if (prev && sameValues(prev, next)) return prev;
-      probes.current.set(x, next);
-      return next;
-    },
-    [plane],
-  );
-
   const api = useMemo<GroupApi>(
-    () => ({ report: group.report, release: group.release, probeAt, ink, pull, claim }),
-    [group, probeAt, ink, pull, claim],
+    () => ({ report: group.report, release: group.release, ink }),
+    [group, ink],
   );
 
   return <GlassGroupContext.Provider value={api}>{children}</GlassGroupContext.Provider>;

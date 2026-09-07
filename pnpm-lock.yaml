@@ -252,6 +252,9 @@ importers:
       '@vire/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@vire/design-tokens':
+        specifier: workspace:*
+        version: link:../../packages/design-tokens
       '@vire/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n

@@ -9,6 +9,7 @@ import {
   countSurfaces,
 } from '../design/glass-budget';
 import { space, layout, radii, duration, motionDuration } from '../design/scales';
+import { tokens } from '@vire/design-tokens/native';
 import { type as typeScale, fonts, MIN_SIZE } from '../design/typography';
 
 describe('бюджет стеклянных поверхностей', () => {
@@ -105,11 +106,17 @@ describe('типографика', () => {
   });
 
   it('три роли и каждая при своём шрифте', () => {
-    // Мета — моноширинный, витрина — плакатный Oswald, интерфейс — Manrope. Витриной
-    // нельзя набирать строку списка: Oswald узкий и в мелком кегле нечитаем.
+    // Мета — моноширинный, витрина — плакатный гротеск, интерфейс — Manrope. Витриной нельзя
+    // набирать строку списка: плакатное начертание в мелком кегле нечитаемо.
+    //
+    // Семейство витрины сверяется С ТОКЕНОМ, а не с именем: какое оно — решение общее для
+    // веба и Android, и меняться оно должно в одном месте, не ломая тест.
     expect((typeScale.mono.fontFamily as string).startsWith('JetBrainsMono')).toBe(true);
     for (const key of ['screenTitle', 'releaseTitle'] as const) {
-      expect((typeScale[key].fontFamily as string).startsWith('Oswald'), key).toBe(true);
+      expect(
+        (typeScale[key].fontFamily as string).startsWith(tokens.font.display.family),
+        key,
+      ).toBe(true);
     }
     for (const key of ['row', 'body', 'caption', 'subtitle', 'button'] as const) {
       expect((typeScale[key].fontFamily as string).startsWith('Manrope'), key).toBe(true);

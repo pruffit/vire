@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -17,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import {
   freshReleasesResponseSchema,
   hotTracksResponseSchema,
+  personalBlockResponseSchema,
   screenSchema,
   type HomeChartTrackDTO,
   type ReleaseCardDTO,
@@ -32,13 +34,17 @@ import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { LikeButton } from '../components/like-button';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
 import { fonts } from '../lib/design/typography';
+import { resolveAccent } from '../lib/design/accent';
+import { HazeGround } from '../components/haze-ground';
+import { FurnitureScrim } from '../components/furniture-scrim';
+import { RecentList } from '../components/recent-list';
 
 type LoadState = 'loading' | 'error' | 'ready';
 
 // Экран умеет рендерить только эти два типа блоков — сервер отфильтрует композицию
 // под них (docs/sdui.md §5), остальные блоки главной (персонализация, лента, друзья)
 // мобилке пока не нужны.
-const SUPPORTED_BLOCKS = 'fresh-releases,hot-tracks';
+const SUPPORTED_BLOCKS = 'personal,fresh-releases,hot-tracks';
 
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'HomeList'>>();
@@ -48,10 +54,15 @@ export default function HomeScreen() {
   const bottomPadding = useContentBottomPadding();
   const [freshReleases, setFreshReleases] = useState<ReleaseCardDTO[]>([]);
   const [hotTracks, setHotTracks] = useState<HomeChartTrackDTO[]>([]);
+  const [recent, setRecent] = useState<HomeChartTrackDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const playQueue = usePlayerStore((s) => s.playQueue);
   const currentTrackId = usePlayerStore((s) => s.queue[s.queueIndex]?.id ?? null);
+  // Тон дымки берёт играющий трек: экран и мини-плеер обязаны говорить об одном.
+  const currentAccent = usePlayerStore((s) => s.queue[s.queueIndex]?.accentColor ?? null);
+  const accent = useMemo(() => resolveAccent(currentAccent), [currentAccent]);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const load = useCallback(async () => {
     const screenResult = await apiRequest('/api/v1/screens/home', {
@@ -62,10 +73,15 @@ export default function HomeScreen() {
 
     const freshEndpoint = endpointOf(screenResult.data.blocks, 'fresh-releases');
     const hotEndpoint = endpointOf(screenResult.data.blocks, 'hot-tracks');
+    // Блок персональный и приходит только авторизованному: его отсутствие — не ошибка.
+    const personalEndpoint = endpointOf(screenResult.data.blocks, 'personal');
 
-    const [freshResult, hotResult] = await Promise.all([
+    const [freshResult, hotResult, personalResult] = await Promise.all([
       freshEndpoint ? apiRequest(freshEndpoint, { schema: freshReleasesResponseSchema }) : Promise.resolve(null),
       hotEndpoint ? apiRequest(hotEndpoint, { schema: hotTracksResponseSchema }) : Promise.resolve(null),
+      personalEndpoint
+        ? apiRequest(personalEndpoint, { schema: personalBlockResponseSchema })
+        : Promise.resolve(null),
     ]);
 
     // Оба источника блока отвалились — честная ошибка. Один из двух — показываем то, что есть.
@@ -73,6 +89,7 @@ export default function HomeScreen() {
 
     setFreshReleases(freshResult?.ok ? freshResult.data.items : []);
     setHotTracks(hotResult?.ok ? hotResult.data.items : []);
+    setRecent(personalResult?.ok ? personalResult.data.recentlyPlayed : []);
     return true;
   }, []);
 
@@ -104,17 +121,18 @@ export default function HomeScreen() {
   // disabled (nextQueueIndex на очереди из одного элемента отдаёт null) — трек играет,
   // а кнопки переключения выглядят сломанными. Сравни с release-screen.tsx/library-screen.tsx,
   // где очередь строится из всего видимого списка так же, изначально.
-  const playHotTrack = (index: number) => {
-    const queue: QueueTrack[] = hotTracks.map((t) => ({
+  const toQueue = (items: readonly HomeChartTrackDTO[]): QueueTrack[] =>
+    items.map((t) => ({
       id: t.id,
       title: t.title,
       artistName: t.artistName,
       coverUrl: t.coverUrl,
-      durationSec: null,
+      durationSec: t.durationSec,
       accentColor: t.accentColor,
     }));
-    playQueue(queue, index, { source: 'home' });
-  };
+
+  const playHotTrack = (index: number) => playQueue(toQueue(hotTracks), index, { source: 'home' });
+  const playRecent = (index: number) => playQueue(toQueue(recent), index, { source: 'home' });
 
   // Один BlurTargetView на все состояния экрана (не только «ready») — таб-бар/мини-плеер
   // всегда должны находить актуальную цель блюра, пока HomeScreen в фокусе, иначе на
@@ -150,6 +168,8 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />
         }
       >
+        <RecentList tracks={recent} onPlay={playRecent} />
+
         {freshReleases.length > 0 && (
           <Section title="Новые релизы">
             <ScrollView
@@ -186,7 +206,17 @@ export default function HomeScreen() {
 
   return (
     <Backdrop style={styles.blurTarget} targetRef={blurTargetRef}>
-      <BlurTargetScope target={blurTargetRef}>{content}</BlurTargetScope>
+      <BlurTargetScope target={blurTargetRef}>
+        {/* Дымка — часть ЗАХВАТА, а не подложка под ним: стекло преломляет цель блюра, и
+            фон, оставленный снаружи, до линзы бы не доехал. */}
+        <View style={styles.blurTarget}>
+          <HazeGround accent={accent} width={screenWidth} height={screenHeight} />
+          {content}
+          {/* Последним в захвате: линза обязана видеть притенение, иначе деталь приходится
+              гасить саму — вместо стекла выходит чёрный пластик. */}
+          <FurnitureScrim />
+        </View>
+      </BlurTargetScope>
     </Backdrop>
   );
 }
@@ -274,7 +304,7 @@ function HotTrackRow({
 
 const styles = StyleSheet.create({
   blurTarget: { flex: 1, backgroundColor: colors.background },
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1 },
   // paddingBottom задаётся динамически — useContentBottomPadding() (lib/layout.ts):
   // резервирует место под мини-плеер И под плавающий (position:absolute) таб-бар.
   content: { paddingTop: 16, gap: 28 },

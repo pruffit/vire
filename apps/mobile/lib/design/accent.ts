@@ -69,77 +69,55 @@ const MIN_FILL_LUMA = 0.05;
 const INK_FLIP_LUMA = 0.4;
 
 /**
- * Светлота ступеней фона. Затемнение СМЕШИВАНИЕМ С ЧЁРНЫМ обесцвечивает: у канала падает
- * и светлота, и насыщенность, и от бирюзы остаётся серо-зелёная грязь. Поэтому тон и
- * насыщенность сохраняются, меняется только светлота.
+ * Подложка карточки: тот же тон, но темнее, иначе карточка не отделяется. Затемнение
+ * СМЕШИВАНИЕМ С ЧЁРНЫМ обесцвечивает — у канала падает и светлота, и насыщенность, и от
+ * бирюзы остаётся серо-зелёная грязь. Поэтому тон сохраняется, меняется только светлота.
  */
-const GROUND_L = [0.17, 0.1] as const;
-/** Ниже этого фон не читается цветным вовсе — поднимаем блёклый акцент до внятного. */
-const GROUND_MIN_S = 0.42;
-/** Подложка карточки: тот же тон, но темнее ступеней фона, иначе карточка не отделяется. */
 const WASH_L = 0.19;
 const WASH_S = 0.34;
-
-/** Светлоты ролей сцены (player-ground.tsx). Разбор — brief §10. */
-const SCENE_BASE_L = 0.11;
-const SCENE_HALO_L = 0.32;
-const SCENE_DIAGONAL_L = 0.22;
-const SCENE_DIAGONAL_S_MULT = 0.8;
-const SCENE_DIAGONAL_HUE_SHIFT = 150 / 360;
-const SCENE_DEEP_L = 0.07;
 
 /** Хью тёплой нейтрали продукта (`docs/PRODUCT.md`, «hue ~75»), а не чистый серый —
  *  на ней стоит сцена трека без акцента. */
 const NEUTRAL_HUE = 75 / 360;
 
-function sceneRoles(h: number, groundS: number): Pick<Accent, 'base' | 'halo' | 'diagonal' | 'deep'> {
-  const at = (l: number, s: number, hue = h) => toHex(hslToRgb({ h: hue, s, l }));
-  return {
-    base: at(SCENE_BASE_L, groundS),
-    halo: at(SCENE_HALO_L, groundS),
-    diagonal: at(SCENE_DIAGONAL_L, groundS * SCENE_DIAGONAL_S_MULT, (h + SCENE_DIAGONAL_HUE_SHIFT) % 1),
-    deep: at(SCENE_DEEP_L, groundS),
-  };
+/** Цвет по тону в градусах: дымка фона задана в HSL и строится прямо из него. */
+export function hueHex(degrees: number, s: number, l: number): string {
+  const h = (((degrees % 360) + 360) % 360) / 360;
+  return toHex(hslToRgb({ h, s, l }));
 }
 
-/** `hex` → `rgba(...)`: сцене нужно гасить `halo`/`diagonal` до прозрачности по радиусу. */
 export function withAlpha(hex: string, alpha: number): string {
   const rgb = parseHex(hex);
   return rgb ? toRgba(rgb, alpha) : `rgba(0, 0, 0, ${alpha})`;
 }
 
+/**
+ * Из обложки берётся ТОН, а светлоты сцены задаёт сама сцена (`components/haze-ground.tsx`,
+ * порт `drawAppBackground`). Готовых ролей поля здесь больше нет: они были вдвое темнее
+ * вебовых, и экран под органами управления уходил в бесцветное почти-чёрное.
+ */
 export type Accent = {
+  /** Тон трека в градусах: по нему строятся пятна дымки фона. */
+  hue: number;
   /** Заливка главной кнопки и прогресса. */
   fill: string;
   /** Что читается НА заливке. */
   ink: string;
-  /** Верхний тон фона экрана. */
-  ground: string;
   /** Подложка карточки в тон трека. */
   wash: string;
-  /** Поле сцены плеера (player-ground.tsx) — заливка канваса целиком. */
-  base: string;
-  /** Свет от обложки: центр радиального градиента сцены, средняя светлота. */
-  halo: string;
-  /** Второе пятно в противоположном углу — сдвиг тона на 150°, чтобы поле не читалось
-   *  плоским прожектором. */
-  diagonal: string;
-  /** Низ сцены — там, где фон под управлением и контекстом обязан замолкнуть. */
-  deep: string;
 };
 
 const NEUTRAL: Accent = {
+  hue: NEUTRAL_HUE * 360,
   fill: colors.foreground,
   ink: colors.background,
-  ground: colors.background,
   wash: colors.secondary,
-  ...sceneRoles(NEUTRAL_HUE, GROUND_MIN_S),
 };
 
 /**
  * Акцент темы артиста, приведённый к ролям.
  *
- * Фон берётся сильно затемнённым: в полную силу цвет забивает обложку, ради которой экран
+ * Цвет берётся сильно приглушённым: в полную силу он забивает обложку, ради которой экран
  * и открывают. Референсы делают то же — приглушённый тон от артворка, а не сам артворк.
  */
 export function resolveAccent(hex: string | null | undefined): Accent {
@@ -148,15 +126,12 @@ export function resolveAccent(hex: string | null | undefined): Accent {
 
   const luma = luminance(rgb);
   const fillable = luma >= MIN_FILL_LUMA;
-  const { h, s } = rgbToHsl(rgb);
-  const groundS = Math.max(s, GROUND_MIN_S);
-  const step = (l: number, sat: number) => toHex(hslToRgb({ h, s: sat, l }));
+  const { h } = rgbToHsl(rgb);
 
   return {
+    hue: h * 360,
     fill: fillable ? toHex(rgb) : colors.foreground,
     ink: !fillable || luma > INK_FLIP_LUMA ? colors.background : colors.foreground,
-    ground: step(GROUND_L[0], groundS),
-    wash: step(WASH_L, WASH_S),
-    ...sceneRoles(h, groundS),
+    wash: toHex(hslToRgb({ h, s: WASH_S, l: WASH_L })),
   };
 }
