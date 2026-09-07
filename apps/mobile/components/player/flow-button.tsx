@@ -11,8 +11,9 @@ import { Unbounded_800ExtraBold } from '@expo-google-fonts/unbounded';
  *  плотность стекла. Меняет материал только состояние — это делает ядро (`activeMaterial`). */
 const FLOW_MATERIAL = materialForInk(VIREGLASS_CONTROL_MATERIAL, true);
 
-/** Величины макета (`apps/web/rnd-src/content.ts`, `drawFlowInk`). */
-const MOCK_HEIGHT = 52;
+/** Величины макета (`apps/web/rnd-src/content.ts`, `drawFlowInk`). Высота наружу: экран
+ *  держит место кнопки распоркой, а саму кнопку рисует оверлеем над захватом. */
+export const MOCK_FLOW_HEIGHT = 52;
 const MOCK_RADIUS = 18;
 const MOCK_MARK = 21;
 const MOCK_LABEL = 19;
@@ -41,7 +42,7 @@ export function FlowButton({
   width: number;
 }) {
   const ms = useMock();
-  const height = ms(MOCK_HEIGHT);
+  const height = ms(MOCK_FLOW_HEIGHT);
   const label = ms(MOCK_LABEL);
   const mark = ms(MOCK_MARK);
   const gap = ms(MOCK_GAP);
@@ -63,6 +64,10 @@ export function FlowButton({
       paintMask={font ? paintMask : undefined}
       material={FLOW_MATERIAL}
       blurTarget={blurTarget}
+      // Кнопка живёт НА экране плеера, а тот поднимает счётчик листов, чтобы погасить
+      // таб-бар и мини-плеер под собой. Без этой отметки она гасла вместе с ними: линза
+      // не рисовалась, и от стекла оставалась тёмная плашка без кромки.
+      topLayer
       onPress={onPress}
     />
   );

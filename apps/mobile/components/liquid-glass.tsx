@@ -25,6 +25,7 @@ import {
   activeMaterial,
   resolveMaterial,
   resolveOptics,
+  type VireGlassDebugMode,
   type VireGlassMaterial,
   type VireGlassOptics,
 } from '../lib/vireglass/material';
@@ -153,6 +154,8 @@ export function LiquidGlassButton({
   material,
   optics: opticsProp = DEFAULT_OPTICS,
   dim = 0,
+  topLayer = false,
+  debug,
   style,
 }: {
   /** Высота детали. Без `width` она же и ширина — деталь круглая. */
@@ -193,6 +196,12 @@ export function LiquidGlassButton({
   optics?: VireGlassOptics;
   /** Затемнение линзы под скрим экрана. */
   dim?: number;
+  /** Деталь ВЕРХНЕГО слоя. Экран-оверлей глушит живой бэкдроп у всего, что под ним, — и у
+   *  своих собственных деталей тоже, если они об этом не заявили. Без бэкдропа линза не
+   *  рисуется вовсе: остаётся тёмная плашка без кромки. */
+  topLayer?: boolean;
+  /** Только для разбора материала: продукт всегда рисует 'normal'. */
+  debug?: VireGlassDebugMode;
   style?: StyleProp<ViewStyle>;
 }) {
   const dpr = PixelRatio.get();
@@ -374,6 +383,8 @@ export function LiquidGlassButton({
           dragLimit={dragLimit}
           icon={iconLayer}
           dim={dim}
+          topLayer={topLayer}
+          debug={debug ?? 'normal'}
           onBackdropSample={auto ? onSample : undefined}
         />
       </View>
