@@ -25,10 +25,9 @@ import { fetchWaveTracks } from '../lib/playback/wave';
 import { resolveAccent } from '../lib/design/accent';
 import { colors } from '../lib/theme';
 import { fonts, type } from '../lib/design/typography';
-import { space, layout, radii, motionDuration } from '../lib/design/scales';
+import { space, layout, motionDuration } from '../lib/design/scales';
 import { Icon } from '../lib/icon';
-import { GlassPanel } from '../components/ui/glass-panel';
-import { HazeGround } from '../components/haze-ground';
+import { HazeGround, HAZE_TOP } from '../components/haze-ground';
 import { useMock } from '../lib/design/mock';
 import { CoverCarousel } from '../components/player/cover-carousel';
 import { LyricsGlass } from '../components/player/lyrics-glass';
@@ -428,6 +427,10 @@ export default function PlayerScreen() {
         style={[styles.header, { height: headerHeight }, chromeStyle]}
         pointerEvents={chromePointerEvents}
       >
+        <Animated.View
+          style={[StyleSheet.absoluteFill, styles.headerSolid, headerSolidStyle]}
+          pointerEvents="none"
+        />
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           <View style={{ height: topBarCenter - topIcon / 2 }} pointerEvents="none" />
           <View style={[styles.headerRow, { paddingHorizontal: ms(MOCK_SCREEN_MARGIN) }]}>
@@ -548,10 +551,9 @@ const styles = StyleSheet.create({
   context: { paddingHorizontal: layout.screenPadding, paddingTop: space.xl, gap: space.xl },
 
   header: { position: 'absolute', top: 0, left: 0, right: 0 },
+  headerSolid: { backgroundColor: HAZE_TOP },
   headerRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   headerGap: { flex: 1 },
-  /** Обе стороны одной минимальной ширины — иначе несимметричные группы значков сбивают
-   *  метку источника с центра. */
   headerSide: { flexDirection: 'row', alignItems: 'center' },
   headerSideStart: { justifyContent: 'flex-start' },
   headerSideEnd: { justifyContent: 'flex-end' },
