@@ -52,18 +52,13 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
       backdrop?.unregister(this)
       backdrop = null
       attach(value, RESOLVE_TRIES)
+      invalidate()
     }
 
-  /**
-   * Поиск вьюхи захвата по тегу с ПОВТОРАМИ.
-   *
-   * Проп приезжает из эффекта, который в JS выполняется сразу после коммита, а нативная
-   * вьюха цели к этому моменту может быть ещё не зарегистрирована — тогда поиск возвращает
-   * null НАВСЕГДА: повторной установки того же тега не будет, сеттер отсекает её сравнением.
-   * Стекло тогда молча остаётся без преломления, и от материала остаётся плоская плашка.
-   */
+  /** Поиск вьюхи захвата с повторами по кадрам: тег приезжает раньше, чем цель успевает
+   *  зарегистрироваться, а второй установки того же тега сеттер уже не пропустит. */
   private fun attach(id: Int?, tries: Int) {
-    if (id == null || id != backdropId) return
+    if (id == null || id != backdropId || backdrop != null) return
     backdrop = appContext.findView<View>(id)?.let(::findBackdrop)
     if (backdrop != null) {
       backdrop?.register(this)
@@ -71,7 +66,7 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
       return
     }
     if (tries > 0) {
-      post { attach(id, tries - 1) }
+      postOnAnimation { attach(id, tries - 1) }
       return
     }
     Log.e("GlassLens", "бэкдроп $id не найден, стекло остаётся без преломления")
@@ -375,8 +370,7 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
 
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
-    // Вьюха могла подключиться позже, чем приехал тег: пробуем ещё раз.
-    if (backdrop == null) attach(backdropId, RESOLVE_TRIES)
+    attach(backdropId, RESOLVE_TRIES)
   }
 
   override fun onDetachedFromWindow() {
