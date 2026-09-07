@@ -3382,6 +3382,11 @@ blurView.setupWith(dimezisBlurTarget).setFrameClearDrawable(decorView.background
 протяжке. Прогресс мини-плеера показывает сам материал (`u_progress`), позиция доезжает
 подпиской мимо React.
 
+> «НЕДАВНЕЕ» берётся из блока `personal` (`/api/v1/home/personal`, `recentlyPlayed`) —
+> он требует авторизации. Длительность строки добавлена в `homeChartTrackSchema` полем
+> `durationSec` **с умолчанием**: нативный клиент обновляется отдельно от сервера и обязан
+> разбирать ответ версии, которая этого поля ещё не знает.
+
 ## Стекло на Android = стекло в вебе
 
 Проверка велась не на глаз: веб-стенд снимался Playwright'ом, Android — `adb screencap`,
