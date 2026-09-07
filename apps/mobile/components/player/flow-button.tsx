@@ -11,9 +11,8 @@ import { Unbounded_800ExtraBold } from '@expo-google-fonts/unbounded';
  *  плотность стекла. Меняет материал только состояние — это делает ядро (`activeMaterial`). */
 const FLOW_MATERIAL = materialForInk(VIREGLASS_CONTROL_MATERIAL, true);
 
-/** Величины макета (`apps/web/rnd-src/content.ts`, `drawFlowInk`). Высота наружу: экран
- *  держит место кнопки распоркой, а саму кнопку рисует оверлеем над захватом. */
-export const MOCK_FLOW_HEIGHT = 52;
+/** Величины макета (`apps/web/rnd-src/content.ts`, `drawFlowInk`). */
+const MOCK_FLOW_HEIGHT = 52;
 const MOCK_RADIUS = 18;
 const MOCK_MARK = 21;
 const MOCK_LABEL = 19;
@@ -42,9 +41,8 @@ export function FlowButton({
   width: number;
 }) {
   const ms = useMock();
-  // Материал идёт ЧЕРЕЗ ТОТ ЖЕ МАСШТАБ, что и геометрия. Кнопка выросла в 1.37 раза, а
-  // фаска оставалась макетной: она отдавала кромке меньшую долю полуразмера, и та читалась
-  // тоньше и тусклее нарисованной — при том, что навигация и плашка масштаб уже держали.
+  // Материал идёт через тот же масштаб, что и геометрия: у выросшей детали макетная фаска
+  // отдаёт кромке меньшую долю полуразмера и читается тоньше нарисованной.
   const material = useMockMaterial(FLOW_MATERIAL);
   const height = ms(MOCK_FLOW_HEIGHT);
   const label = ms(MOCK_LABEL);
@@ -68,9 +66,7 @@ export function FlowButton({
       paintMask={font ? paintMask : undefined}
       material={material}
       blurTarget={blurTarget}
-      // Кнопка живёт НА экране плеера, а тот поднимает счётчик листов, чтобы погасить
-      // таб-бар и мини-плеер под собой. Без этой отметки она гасла вместе с ними: линза
-      // не рисовалась, и от стекла оставалась тёмная плашка без кромки.
+      // Экран плеера глушит бэкдроп у всего, что под ним; кнопка стоит НА нём.
       topLayer
       onPress={onPress}
     />
