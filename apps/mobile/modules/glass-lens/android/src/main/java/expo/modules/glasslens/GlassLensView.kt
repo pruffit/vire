@@ -50,13 +50,32 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
       if (field == value) return
       field = value
       backdrop?.unregister(this)
-      backdrop = value?.let { id -> appContext.findView<View>(id)?.let(::findBackdrop) }
-      if (value != null && backdrop == null) {
-        Log.e("GlassLens", "бэкдроп $value не найден, стекло остаётся без преломления")
-      }
+      backdrop = null
+      attach(value, RESOLVE_TRIES)
+    }
+
+  /**
+   * Поиск вьюхи захвата по тегу с ПОВТОРАМИ.
+   *
+   * Проп приезжает из эффекта, который в JS выполняется сразу после коммита, а нативная
+   * вьюха цели к этому моменту может быть ещё не зарегистрирована — тогда поиск возвращает
+   * null НАВСЕГДА: повторной установки того же тега не будет, сеттер отсекает её сравнением.
+   * Стекло тогда молча остаётся без преломления, и от материала остаётся плоская плашка.
+   */
+  private fun attach(id: Int?, tries: Int) {
+    if (id == null || id != backdropId) return
+    backdrop = appContext.findView<View>(id)?.let(::findBackdrop)
+    if (backdrop != null) {
       backdrop?.register(this)
       invalidate()
+      return
     }
+    if (tries > 0) {
+      post { attach(id, tries - 1) }
+      return
+    }
+    Log.e("GlassLens", "бэкдроп $id не найден, стекло остаётся без преломления")
+  }
 
   private fun findBackdrop(view: View, depth: Int = 0): GlassBackdropView? {
     if (view is GlassBackdropView) return view
@@ -354,6 +373,12 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
     )
   }
 
+  override fun onAttachedToWindow() {
+    super.onAttachedToWindow()
+    // Вьюха могла подключиться позже, чем приехал тег: пробуем ещё раз.
+    if (backdrop == null) attach(backdropId, RESOLVE_TRIES)
+  }
+
   override fun onDetachedFromWindow() {
     backdrop?.unregister(this)
     super.onDetachedFromWindow()
@@ -418,6 +443,9 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
   }
 
   private companion object {
+    /** Сколько кадров ждём появления вьюхи захвата, прежде чем признать её отсутствие. */
+    const val RESOLVE_TRIES = 10
+
     /** Число корзин гистограммы. Хватает и на перцентили, и на среднее отклонение: точнее
      *  этого статистика всё равно не нужна — она управляет плавными величинами. */
     const val BINS = 32
