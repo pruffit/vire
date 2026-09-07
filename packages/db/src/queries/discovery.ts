@@ -250,6 +250,7 @@ export interface PlayableChartTrack {
   artistSlug: string;
   releaseId: string;
   coverUrl: string | null;
+  durationSec: number | null;
   accentColor: string | null;
   isExplicit: boolean;
   plays: number;
@@ -264,6 +265,7 @@ const playableTrackColumns = {
   artistSlug: artistProfiles.slug,
   releaseId: releases.id,
   coverUrl: releases.coverUrl,
+  durationSec: tracks.durationSec,
   accentColor: sql<string | null>`${artistProfiles.themeTokens}->>'accent'`,
   isExplicit: tracks.isExplicit,
   version: tracks.version,
@@ -284,7 +286,7 @@ export async function getPopularTracks(days = 30, limit = 20): Promise<PlayableC
       eq(artistProfiles.isActive, true),
       releaseIsAired,
     ))
-    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, tracks.version, tracks.credits)
+    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, tracks.durationSec, artistProfiles.themeTokens, tracks.isExplicit, tracks.version, tracks.credits)
     .orderBy(desc(count(playEvents.id)))
     .limit(limit);
   return rows.map(({ credits, ...r }) => ({ ...r, plays: Number(r.plays), feat: featFromCredits(credits) }));
@@ -304,12 +306,12 @@ export async function getRecentlyPlayed(userId: string, limit = 12): Promise<Pla
       eq(artistProfiles.isActive, true),
       releaseIsAired,
     ))
-    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, tracks.version, tracks.credits)
+    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, tracks.durationSec, artistProfiles.themeTokens, tracks.isExplicit, tracks.version, tracks.credits)
     .orderBy(desc(sql`max(${playEvents.startedAt})`))
     .limit(limit);
   return rows.map((r) => ({
     id: r.id, title: r.title, artistName: r.artistName, artistSlug: r.artistSlug,
-    releaseId: r.releaseId, coverUrl: r.coverUrl, accentColor: r.accentColor,
+    releaseId: r.releaseId, coverUrl: r.coverUrl, durationSec: r.durationSec, accentColor: r.accentColor,
     isExplicit: r.isExplicit, plays: 0, version: r.version, feat: featFromCredits(r.credits),
   }));
 }
@@ -361,7 +363,7 @@ export async function getPersonalTrackPicks(userId: string, limit = 12): Promise
       notInArray(tracks.id, likedTrackIds),
       notInArray(tracks.id, recentlyPlayedTrackIds),
     ))
-    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, artistProfiles.themeTokens, tracks.isExplicit, tracks.version, tracks.credits, releaseFreshness)
+    .groupBy(tracks.id, tracks.title, artistProfiles.name, artistProfiles.slug, releases.id, releases.coverUrl, tracks.durationSec, artistProfiles.themeTokens, tracks.isExplicit, tracks.version, tracks.credits, releaseFreshness)
     .orderBy(desc(releaseFreshness), desc(count(playEvents.id)))
     .limit(limit);
   return rows.map(({ credits, ...r }) => ({ ...r, plays: Number(r.plays), feat: featFromCredits(credits) }));

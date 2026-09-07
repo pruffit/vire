@@ -74,6 +74,7 @@ function makeTrack(overrides?: Partial<HomeChartTrack>): HomeChartTrack {
     artistSlug: 'test-artist',
     releaseId: 'release-1',
     coverUrl: null,
+    durationSec: null,
     accentColor: null,
     isExplicit: false,
     plays: 0,

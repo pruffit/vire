@@ -18,6 +18,10 @@ export const homeChartTrackSchema = z.object({
   artistSlug: z.string(),
   releaseId: z.string(),
   coverUrl: z.string().nullable(),
+  // С умолчанием, а не просто nullable: нативный клиент обновляется отдельно от сервера и
+  // обязан разбирать ответ версии, которая этого поля ещё не знает. Требуемое поле роняло
+  // весь блок в ошибку разбора — на экране это выглядело пустой главной.
+  durationSec: z.number().nullable().default(null),
   accentColor: z.string().nullable(),
   isExplicit: z.boolean(),
   plays: z.number(),

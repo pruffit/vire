@@ -7,6 +7,7 @@ export interface HomeChartTrack {
   artistSlug: string;
   releaseId: string;
   coverUrl: string | null;
+  durationSec: number | null;
   accentColor: string | null;
   isExplicit: boolean;
   plays: number;

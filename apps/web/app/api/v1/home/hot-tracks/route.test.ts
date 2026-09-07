@@ -20,6 +20,7 @@ function makeTrack(overrides?: Record<string, unknown>) {
     artistSlug: 'artist',
     releaseId: 'release-1',
     coverUrl: null,
+    durationSec: null,
     accentColor: null,
     isExplicit: false,
     plays: 10,
