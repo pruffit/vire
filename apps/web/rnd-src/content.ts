@@ -20,7 +20,6 @@ export const TRANSPORT_ICONS: readonly IconName[] = [
   'vire-more-horizontal',
 ];
 
-
 function paintFlowIcon(ctx: CanvasRenderingContext2D, size: number, color: string): void {
   ctx.save();
   ctx.scale(size / MARK_VIEWBOX, size / MARK_VIEWBOX);
