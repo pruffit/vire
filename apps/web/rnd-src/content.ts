@@ -2,7 +2,7 @@
 // есть ПОД линзами — стекло его преломляет, и ровно ради этого соседства лаборатория и нужна.
 // Всё, что рисуется поверх стекла (краска на плашке, её обложка), лежит в `mini-player.ts`.
 
-import { FLOW_MARK, MARK_STROKE, MARK_VIEWBOX } from '../lib/marks';
+import { FLOW_MARK, MARK_STROKE, MARK_VIEWBOX } from '@vire/design-tokens/marks';
 import { drawIcon, type IconName } from './icons';
 import { DISPLAY_FACE, fontOf } from './typefaces';
 import { PHONE, phoneOrigin, phonePath, SCREEN_MARGIN } from './scenes';

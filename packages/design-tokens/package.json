@@ -6,7 +6,8 @@
   "exports": {
     ".": "./dist/tokens.ts",
     "./tokens.css": "./dist/tokens.css",
-    "./native": "./dist/tokens.native.ts"
+    "./native": "./dist/tokens.native.ts",
+    "./marks": "./src/marks.ts"
   },
   "scripts": {
     "build": "tsx scripts/build.mjs",

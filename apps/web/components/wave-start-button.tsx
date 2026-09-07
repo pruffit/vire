@@ -7,7 +7,7 @@ import { spring } from '@vire/ui/motion';
 import { usePlayerStore } from '@/store/player';
 import { controls } from '@/lib/player/audio-engine';
 import { PlayIcon } from '@/components/icons';
-import { FLOW_MARK } from '@/lib/marks';
+import { FLOW_MARK } from '@vire/design-tokens/marks';
 import { toast } from '@/lib/toast';
 
 export function WaveStartButton() {

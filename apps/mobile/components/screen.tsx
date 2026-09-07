@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Backdrop } from './backdrop';
 import { colors } from '../lib/theme';
 import { BlurTargetScope, useRegisterBlurTarget } from '../lib/blur-target';
+import { FurnitureScrim } from './furniture-scrim';
 
 // Единая точка safe-area для всех экранов — верхний инсет (статус-бар) закрывал контент
 // на каждом экране по отдельности, потому что headerShown:false везде (свой UI, не
@@ -22,7 +23,12 @@ export function Screen({ children, style }: { children: React.ReactNode; style?:
   // шорткатом (перекрывает paddingTop), инсет всё равно должен победить.
   return (
     <Backdrop style={[styles.container, style, { paddingTop: insets.top }]} targetRef={blurTargetRef}>
-      <BlurTargetScope target={blurTargetRef}>{children}</BlurTargetScope>
+      <BlurTargetScope target={blurTargetRef}>
+        {children}
+        {/* Последним ребёнком захвата: линза обязана видеть притенение, иначе деталь
+            приходится гасить саму — вместо стекла выходит чёрный пластик. */}
+        <FurnitureScrim />
+      </BlurTargetScope>
     </Backdrop>
   );
 }

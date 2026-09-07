@@ -2,15 +2,20 @@ import { useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
-import { colors } from '../../lib/theme';
 import { type } from '../../lib/design/typography';
-import { radii, space } from '../../lib/design/scales';
+import { radii } from '../../lib/design/scales';
+import { useMock } from '../../lib/design/mock';
 import { formatDuration } from '../../lib/format';
 
-const TRACK = 3;
-const KNOB = 12;
-/** Тач-зона: сама линия в 3 dp пальцем не берётся. */
-const TOUCH = 28;
+/** Величины макета; на экране пересчитываются пропорцией (`lib/design/mock.ts`). */
+const MOCK_TRACK = 4;
+const MOCK_KNOB = 12;
+const MOCK_TIME_GAP = 8;
+const TRACK_COLOR = '#39404f';
+const FILL_COLOR = '#e6eaf2';
+const TIME_COLOR = '#8892a4';
+/** Тач-зона добирается hitSlop: сама линия пальцем не берётся, но и высоту занимать не должна. */
+const TOUCH = 14;
 /** Хаптик-тик при перетаскивании — раз в столько проскроленных секунд. */
 const HAPTIC_TICK_SEC = 5;
 
@@ -23,17 +28,16 @@ const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 export function ProgressLine({
   positionSec,
   durationSec,
-  accent,
   onSeek,
 }: {
   positionSec: number;
   durationSec: number;
-  accent: string;
   onSeek: (sec: number) => void;
 }) {
   const [width, setWidth] = useState(0);
   const [dragSec, setDragSec] = useState<number | null>(null);
   const lastTick = useRef(-1);
+  const ms = useMock();
 
   const shownSec = dragSec ?? positionSec;
   const progress = durationSec > 0 ? clamp01(shownSec / durationSec) : 0;
@@ -62,49 +66,46 @@ export function ProgressLine({
       .onEnd((e) => seekAt(e.x, true));
   }, [durationSec, width, onSeek]);
 
+  const track = ms(MOCK_TRACK);
+  const knob = ms(MOCK_KNOB);
+
   return (
-    <View style={styles.host}>
+    <View style={{ gap: ms(MOCK_TIME_GAP) }}>
       <GestureDetector gesture={gesture}>
         <View
+          hitSlop={TOUCH}
           style={styles.touch}
           onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
           accessibilityRole="adjustable"
           accessibilityLabel="Позиция в треке"
         >
-          <View style={styles.track}>
-            <View style={[styles.fill, { width: `${progress * 100}%`, backgroundColor: accent }]} />
+          <View style={[styles.track, { height: track }]}>
+            <View style={[styles.fill, { height: track, width: `${progress * 100}%` }]} />
           </View>
           {width > 0 && (
             <View
-              style={[styles.knob, { left: progress * width - KNOB / 2, backgroundColor: accent }]}
+              style={[styles.knob, { width: knob, height: knob, left: progress * width - knob / 2 }]}
               pointerEvents="none"
             />
           )}
         </View>
       </GestureDetector>
       <View style={styles.times}>
-        <Text style={type.mono}>{formatDuration(shownSec)}</Text>
-        <Text style={type.mono}>{formatDuration(durationSec)}</Text>
+        <Text style={styles.time}>{formatDuration(shownSec)}</Text>
+        <Text style={styles.time}>{formatDuration(durationSec)}</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  host: { gap: space.xs },
-  touch: { height: TOUCH, justifyContent: 'center' },
-  track: {
-    height: TRACK,
-    borderRadius: radii.full,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    overflow: 'hidden',
-  },
-  fill: { height: TRACK, borderRadius: radii.full },
-  knob: {
-    position: 'absolute',
-    width: KNOB,
-    height: KNOB,
-    borderRadius: radii.full,
-  },
+  /** Высоту ряда даёт сама полоса: бокс в 28 dp поднимал всю стопку экрана. */
+  touch: { justifyContent: 'center' },
+  track: { borderRadius: radii.full, backgroundColor: TRACK_COLOR, overflow: 'hidden' },
+  fill: { borderRadius: radii.full, backgroundColor: FILL_COLOR },
+  knob: { position: 'absolute', borderRadius: radii.full, backgroundColor: FILL_COLOR },
   times: { flexDirection: 'row', justifyContent: 'space-between' },
+  /** Разрядка моно-стиля кита задана под ПРОПИСНЫЕ метки; на цифрах таймкода она
+   *  рассыпает их в строчку из отдельных знаков. */
+  time: { ...type.mono, letterSpacing: 0, color: TIME_COLOR },
 });

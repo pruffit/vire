@@ -37,6 +37,7 @@ import {
   type VireGlassGeometry,
 } from '../../lib/vireglass/geometry';
 import type { BackdropSample } from '../../lib/vireglass/adaptation';
+import type { DeformSample } from '../../lib/vireglass/touch-response';
 import type { VireGlassDebugMode, VireGlassOptics } from '../../lib/vireglass/material';
 import { LENS_SHADER } from '../../lib/vireglass/lens-shader';
 import { SURFACE_SHADER } from '../../lib/vireglass/surface-shader';
@@ -49,14 +50,8 @@ function compile(src: string) {
   return effect;
 }
 
-/** Насколько уменьшается капля, уходя за пальцем: у самого пальца она вдвое меньше тела.
- *  Ноль дал бы вторую такую же деталь вместо капли. */
-const LOBE_SHRINK = 0.24;
-/** Ширина шейки: доля половины тела, уходящая в сглаживание сшивки. Больше — толще перемычка. */
-const LOBE_NECK = 0.30;
-/** Насколько худеет донор на полном вылете капли. Ноль означал бы, что стекло берётся
- *  из ниоткуда: деталь читалась бы кнопкой с приклеенным пузырём, а не материалом. */
-const DONOR_LOSS = 0.2;
+/** Доля активности, которую поднимает само касание (веб — `main.ts`, buttonPieces). */
+const ACTIVE_ON_TOUCH = 0.3;
 
 const SURFACE = compile(SURFACE_SHADER);
 
@@ -83,6 +78,10 @@ export type GlassIcon = {
   scale: number;
   inkIdle: number[];
   inkActive: number[];
+  /** Цветной слой НА стекле: обложка играющего трека. Маска одноканальная и красится
+   *  полярностью, а этот слой несёт свой цвет как есть (веб — `rnd-src/mini-player.ts`).
+   *  Коробка у него та же, что у маски: шейдер семплирует оба по одному `inkUv`. */
+  overlay?: SkImage | null;
 };
 
 export function VireGlassSurface({
@@ -96,11 +95,11 @@ export function VireGlassSurface({
   shadow = 1,
   dragLimit = 0,
   icon,
+  progress,
+  touch,
   dim = 0,
   topLayer = false,
   onBackdropSample,
-  groupProbe,
-  pullBus,
   style,
 }: {
   geometry: VireGlassGeometry;
@@ -115,14 +114,18 @@ export function VireGlassSurface({
   shadow?: number;
   dragLimit?: number;
   icon?: GlassIcon;
+  /** Сыгранная доля, 0…1: слева от границы деталь активна, справа нет. Едет shared value —
+   *  обычным пропом она пересобирала бы весь канал униформ и затирала подставленную
+   *  ворклетом каплю тяги, ровно как это уже было со статическим uniformValues. */
+  progress?: SharedValue<number>;
+  /** Отклик на палец ПО МОДЕЛИ ЯДРА (`createDeform`): точка касания, тяга вокруг пятна,
+   *  вдавливание и волна. Здесь этого не было вовсе — в шейдер уходил `NO_TOUCH`, то есть
+   *  нули, и деформации не существовало ни при каком жесте. Веб гоняет ровно эти же поля
+   *  (`web/renderer.ts`), контракт адаптеров общий и задан в dp. */
+  touch?: SharedValue<DeformSample>;
   /** Светлота фона ПОД стеклом, раз в ~200 мс. Отсюда экран узнаёт, что стекло дошло до
    *  своего предела и надпись пора перекрасить (lib/vireglass/adaptation.ts). */
   onBackdropSample?: (e: { nativeEvent: BackdropSample }) => void;
-  /** Оценка фона на всю группу поверхностей. Пусто — линза считает по своему замеру. */
-  groupProbe?: number[];
-  /** Общая шина тяги группы и место этой детали в ней. Своя капля рисуется от нуля, чужая —
-   *  от места детали на экране, и на подходе две поверхности сливаются в одну. */
-  pullBus?: { bus: SharedValue<number[]>; seat: number; centerX: number; centerY: number };
   /** Затемнение линзы под скрим экрана: BlurView целится в контент напрямую и затемняющей
    *  подложки над ним не видит — без этого линза светится дыркой в скриме. */
   dim?: number;
@@ -171,100 +174,35 @@ export function VireGlassSurface({
   // константа модуля, но при горячей перезагрузке она меняется, а мемо с прежними
   // зависимостями продолжает отдавать СТАРЫЙ шейдер: правка оптики молча не доезжает.
   const lensProps = useMemo(
-    () => toLensProps(optics, geometry, PixelRatio.get(), { debug, morph, groupProbe }),
-    [optics, geometry, debug, morph, groupProbe, LENS_SHADER],
+    // Оценка фона — СОБСТВЕННЫЙ зонд линзы, как в вебе. Групповая оценка перебивала его
+    // и была изобретением андроидного пути: в вебе `groupProbe` нет вовсе, там каждая
+    // деталь адаптируется по своему зонду. Из-за перебивки навигация и «Поток»
+    // адаптировались к окружению по-разному при одном материале.
+    () => toLensProps(optics, geometry, PixelRatio.get(), { debug, morph }),
+    [optics, geometry, debug, morph, LENS_SHADER],
   );
   const iconUniforms = useMemo(
     () => ({
       u_iconOn: icon?.image ? 1 : 0,
       u_iconScale: icon?.scale ?? 1,
-      // Цветного слоя на стекле у мобильного плеера пока нет: обложка и миниатюры рисуются
-      // детьми вьюхи. Слот в шейдере при этом обязан быть занят — Skia раздаёт дочерние
-      // шейдеры по порядку объявления, и пустой слот сдвинул бы маску краски.
-      u_overlayOn: 0,
+      // Слот в шейдере обязан быть занят всегда: Skia раздаёт дочерние шейдеры по порядку
+      // объявления, и пустой слот сдвинул бы маску краски.
+      u_overlayOn: icon?.overlay ? 1 : 0,
       u_inkIdle: icon?.inkIdle ?? [1, 1, 1, 1],
       u_inkActive: icon?.inkActive ?? [1, 1, 1, 1],
     }),
     [icon],
   );
 
-  const { shiftX, shiftY, press, active, light } = dynamics;
-
-  // ПЕРЕМЕЩЕНИЕ — общее для обеих половин стекла. Раньше линзу двигал трансформ вьюхи, а
-  // поверхность — сдвиг внутри шейдера, то есть две разные системы на одно движение: Skia
-  // рисует на своей поверхности и в кадровый бюджет приложения даже не попадает, поэтому на
-  // протяжке кромка и преломление расходились. Теперь их несёт ОДИН трансформ, и при
-  // перетаскивании перерисовывать нечего вовсе — только двигать.
-  // ОДИН трансформ на оба слоя: и перенос, и упругая деформация, и вздутие от нажатия.
-  //
-  // Деформация раньше жила в двух механизмах сразу — линзу гнул трансформ (нативная вьюха,
-  // шейдер её не достаёт), поверхность гнула сама себя в SKSL. Закон был один и тот же, а
-  // конвейера два: Reanimated коммитит трансформ в своём кадре, Skia рисует на своей
-  // поверхности. Достаточно одного кадра расхождения, чтобы на протяжке кромка отъехала от
-  // преломления и слои стало видно по отдельности. Геометрия деформации теперь только здесь,
-  // в шейдере от неё остались u_press на блик и на подъём альфы.
-  // Тело НЕ ездит за пальцем: тянут не деталь, а её кусок. В трансформе осталось только
-  // вздутие от нажатия — оно изотропно и деталь ни повернуть, ни сплющить не может.
-  const moveStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + press.value * 0.05 }],
-  }));
+  const { press, active, light } = dynamics;
 
   const halfMin = Math.min(geometry.width, geometry.height) / 2;
+  /** Палец — площадь, а не остриё. Радиус берётся от МЕНЬШЕГО полуразмера: иначе на широкой
+   *  плашке касание расползлось бы на всю её длину. Доля та же, что в вебе (`main.ts`). */
+  const touchRadius = 0.72 * halfMin;
   // Канал линзы в пикселях, а вся геометрия модели — в dp. Читается один раз: PixelRatio
   // в ворклете недоступен.
   const density = PixelRatio.get();
-
-  /**
-   * Тяга — ВТОРАЯ форма, сшитая с телом, а не деформация тела. Тело стоит на месте, за
-   * пальцем уходит капля поменьше, между ними smin даёт шейку. Симметричное растяжение,
-   * которое стояло здесь раньше, вытягивало деталь и в противоположную сторону — с
-   * прилипшей каплей такого не бывает, и деталь читалась пилюлей, а не материалом.
-   *
-   * Отдаётся плоским набором в том же порядке, в каком морфинг лежит в канале униформ:
-   * offsetX, offsetY, halfW, halfH, corner, neck.
-   */
-  const lobe = useDerivedValue(() => {
-    const dx = shiftX.value;
-    const dy = shiftY.value;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const mine = dragLimit > 0 && len >= 0.01;
-    if (mine) {
-      const k = Math.min(len / dragLimit, 1);
-      const r = halfMin * (1 - LOBE_SHRINK * k);
-      const neck = halfMin * LOBE_NECK * k;
-      // Капля объявляется всей группе: соседи подхватят её и на подходе сольются.
-      if (pullBus) {
-        pullBus.bus.value = [pullBus.centerX + dx, pullBus.centerY + dy, r, neck, pullBus.seat];
-      }
-      // Донор теряет материал: он остаётся на месте, но худеет — иначе стекло берётся
-      // из ниоткуда, и деталь читается не материалом, а кнопкой с приклеенным пузырём.
-      return [dx, dy, r, r, r, neck, 1 - DONOR_LOSS * k, Math.min(1, r / halfMin)];
-    }
-    if (pullBus && pullBus.bus.value[4] === pullBus.seat) {
-      pullBus.bus.value = [0, 0, 0, 0, -1];
-    }
-    // Чужая капля: та же вторая форма, только её место считается от центра ЭТОЙ детали.
-    //
-    // Условие ЖЁСТКОЕ — капля должна лезть в само тело соседа, а не просто оказаться
-    // поблизости. Иначе сосед рисует её у себя ТАМ, ГДЕ У НЕГО НЕТ ЛИНЗЫ: преломлению
-    // взяться неоткуда, выходит непрозрачное пятно, и вдобавок холст соседа лежит выше
-    // холста донора — пятно перекрывает донору иконку. На кадре это выглядит абсурдом,
-    // и это он и есть.
-    //
-    // При нынешнем шаге таб-бара (90 dp) и ходе тяги (42 dp) условие не выполняется
-    // никогда: дотянуться до соседа кнопка просто не может. Слияние включится там, где
-    // поверхности стоят ближе.
-    if (pullBus && pullBus.bus.value[3] > 0 && pullBus.bus.value[4] !== pullBus.seat) {
-      const bx = pullBus.bus.value[0] - pullBus.centerX;
-      const by = pullBus.bus.value[1] - pullBus.centerY;
-      const r = pullBus.bus.value[2];
-      const reach = halfMin + r * 0.25;
-      if (bx * bx + by * by < reach * reach) {
-        return [bx, by, r, r, r, pullBus.bus.value[3], 1, Math.min(1, r / halfMin)];
-      }
-    }
-    return [0, 0, 0, 0, 0, 0, 1, 1];
-  }, [dragLimit, halfMin, pullBus]);
 
   // Места величин в плоском канале униформ линзы. Имена и размеры фиксированы, поэтому
   // смещения считаются один раз, а в ворклете остаётся подставить числа.
@@ -276,10 +214,12 @@ export function VireGlassSurface({
       i += lensProps.uniformSizes[k];
     }
     return {
-      lobe: at.u_morphOffset ?? -1,
-      half: at.u_halfSize ?? -1,
-      corner: at.u_corner ?? -1,
-      bevel: at.u_bevel ?? -1,
+      progress: at.u_progress ?? -1,
+      touch: at.u_touch ?? -1,
+      pull: at.u_pull ?? -1,
+      touchPress: at.u_touchPress ?? -1,
+      touchRadius: at.u_touchRadius ?? -1,
+      wave: at.u_wave ?? -1,
     };
   }, [lensProps]);
 
@@ -290,44 +230,50 @@ export function VireGlassSurface({
 
   const lensAnimatedProps = useAnimatedProps<{ uniformValues: number[] }>(() => {
     const values = lensProps.uniformValues.slice();
-    if (slots.lobe >= 0 && lobe.value[5] > 0) {
-      // Канал линзы в пикселях: капля считается в dp, как и вся геометрия.
-      for (let i = 0; i < 6; i += 1) values[slots.lobe + i] = lobe.value[i] * density;
-    }
-    const loss = lobe.value[6];
-    if (loss < 1 && slots.half >= 0) {
-      values[slots.half] = lensProps.uniformValues[slots.half] * loss;
-      values[slots.half + 1] = lensProps.uniformValues[slots.half + 1] * loss;
-      if (slots.corner >= 0) values[slots.corner] = lensProps.uniformValues[slots.corner] * loss;
-    }
-    if (lobe.value[7] < 1 && slots.bevel >= 0) {
-      values[slots.bevel] = lensProps.uniformValues[slots.bevel] * lobe.value[7];
+    if (slots.progress >= 0 && progress) values[slots.progress] = progress.value;
+    // Отклик на палец. Канал линзы в ПИКСЕЛЯХ, а модель — в dp: геометрические поля
+    // домножаются на плотность, фаза волны и вдавливание безразмерны. Тот же пересчёт
+    // делает веб (`web/renderer.ts`), контракт адаптера трогать нельзя — он общий.
+    if (touch) {
+      const t = touch.value;
+      if (slots.touch >= 0) {
+        values[slots.touch] = t.touchX * density;
+        values[slots.touch + 1] = t.touchY * density;
+      }
+      if (slots.pull >= 0) {
+        values[slots.pull] = t.pullX * density;
+        values[slots.pull + 1] = t.pullY * density;
+      }
+      if (slots.touchPress >= 0) values[slots.touchPress] = t.press;
+      if (slots.touchRadius >= 0) values[slots.touchRadius] = touchRadius * density;
+      if (slots.wave >= 0) {
+        values[slots.wave] = t.waveAmp * density;
+        values[slots.wave + 1] = t.wavePhase;
+      }
     }
     return { uniformValues: values };
-  }, [lensProps, slots, density]);
+  }, [lensProps, slots, density, progress, touch, touchRadius]);
 
   const uniforms = useDerivedValue(() => {
     return {
       ...statics,
       ...iconUniforms,
-      // Капля перебивает статический морфинг: тянуть и одновременно сшивать две
-      // поверхности стенд не просит, а тяга обязана быть живой.
-      // Донор худеет: тело уменьшается ровно на ту долю, что ушла в каплю.
-      u_halfSize: [statics.u_halfSize[0] * lobe.value[6], statics.u_halfSize[1] * lobe.value[6]],
-      u_corner: statics.u_corner * lobe.value[6],
-      // Фаска задана в абсолютных dp под размер тела. Капля вдвое меньше — с прежней
-      // фаской она становится фаской ЦЕЛИКОМ, поглощение насыщается, и вместо стекла
-      // получается чёрная дыра с резким ободком.
-      u_bevel: statics.u_bevel * lobe.value[7],
-      u_morphOffset: lobe.value[5] > 0 ? [lobe.value[0], lobe.value[1]] : statics.u_morphOffset,
-      u_morphHalf: lobe.value[5] > 0 ? [lobe.value[2], lobe.value[3]] : statics.u_morphHalf,
-      u_morphCorner: lobe.value[5] > 0 ? lobe.value[4] : statics.u_morphCorner,
-      u_morphK: lobe.value[5] > 0 ? lobe.value[5] : statics.u_morphK,
-      u_press: press.value,
-      u_active: active.value,
+      // Отклик на палец по модели ядра. Раньше сюда не приезжало ничего, и шейдер работал
+      // на `NO_TOUCH` — нулях: ни точки касания, ни тяги, ни волны не существовало.
+      u_touch: touch ? [touch.value.touchX, touch.value.touchY] : statics.u_touch,
+      u_pull: touch ? [touch.value.pullX, touch.value.pullY] : statics.u_pull,
+      u_touchPress: touch ? touch.value.press : statics.u_touchPress,
+      u_touchRadius: touch ? touchRadius : statics.u_touchRadius,
+      u_wave: touch ? [touch.value.waveAmp, touch.value.wavePhase] : statics.u_wave,
+      u_press: touch ? touch.value.press : press.value,
+      // Касание и активность идут в одну униформу: берётся сильнейшее, иначе нажатие на уже
+      // активную деталь читалось бы как её выключение. Доля та же, что в вебе (`main.ts`,
+      // buttonPieces): касание поднимает активность на треть, а не до полной.
+      u_active: touch ? Math.max(touch.value.active * ACTIVE_ON_TOUCH, active.value) : active.value,
       u_light: [light.value[0], light.value[1]],
+      u_progress: progress ? progress.value : statics.u_progress,
     };
-  }, [statics, iconUniforms, lobe]);
+  }, [statics, iconUniforms, progress, touch, touchRadius]);
 
   const refracting = isGlassLensSupported && GlassLensNative !== null;
   const magnify = lensMagnify(optics);
@@ -358,8 +304,8 @@ export function VireGlassSurface({
       {/* collapsable={false} обязателен обоим: в статичном стиле трансформа нет, он приезжает
           только из ворклета, и Android-RN считает такой узел лишним и схлопывает его в
           родителя — деформация тогда просто некуда применяться. */}
-      <Animated.View
-        style={[styles.moving, { width, height }, moveStyle]}
+      <View
+        style={[styles.moving, { width, height }]}
         pointerEvents="none"
         collapsable={false}
       >
@@ -427,12 +373,16 @@ export function VireGlassSurface({
             ) : (
               <ColorShader color="#00000000" />
             )}
-            {/* Второй слот — цветной слой (u_overlay). Пустой, пока его сюда не подключат. */}
-            <ColorShader color="#00000000" />
+            {/* Второй слот — цветной слой (u_overlay): обложка мини-плеера. */}
+            {icon?.overlay ? (
+              <ImageShader image={icon.overlay} tx="decal" ty="decal" />
+            ) : (
+              <ColorShader color="#00000000" />
+            )}
           </Shader>
         </Fill>
         </Canvas>
-      </Animated.View>
+      </View>
     </View>
   );
 }

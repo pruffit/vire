@@ -1,4 +1,4 @@
-import { FLOW_MARK } from '@/lib/marks';
+import { FLOW_MARK } from '@vire/design-tokens/marks';
 // Иконки, специфичные для плеера — общие для мини-бара/фуллскрина/очереди.
 import { Icon } from '@/components/icon';
 

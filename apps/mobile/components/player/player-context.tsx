@@ -1,4 +1,3 @@
-import { type RefObject } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,7 +7,6 @@ import { type } from '../../lib/design/typography';
 import { space, radii } from '../../lib/design/scales';
 import { formatCount, pluralFollowers } from '../../lib/format';
 import { Cover } from '../ui/cover';
-import { GlassPanel } from '../ui/glass-panel';
 import { Icon } from '../../lib/icon';
 import type { Accent } from '../../lib/design/accent';
 
@@ -26,41 +24,6 @@ type Similar = TrackContextResponse['similar'][number];
  */
 function BlockTitle({ children }: { children: string }) {
   return <Text style={type.sectionTitle}>{children}</Text>;
-}
-
-/**
- * «Поток по треку» — продолжить похожим, не выходя из плеера.
- *
- * Строка-действие в общем языке блоков контекста, не баннер: витринный Oswald здесь был
- * прямым нарушением продуктового регистра (`fonts.display` — заголовку трека и строке
- * песни, никогда органу управления).
- */
-export function WaveBanner({
-  trackTitle,
-  blurTarget,
-  onPress,
-}: {
-  trackTitle: string;
-  /** Захват сцены: цель преломления не может быть предком стекла, а строка лежит В прокрутке. */
-  blurTarget: RefObject<View | null>;
-  onPress: () => void;
-}) {
-  return (
-    // Стекло: под строкой сцена со светом от обложки, а не ровная заливка — преломлять есть
-    // что. Заливки поверх материала нет: она погасила бы то, ради чего он здесь.
-    <GlassPanel radius={radii.card} blurTarget={blurTarget} topLayer style={styles.waveGlass}>
-      <Pressable
-        style={({ pressed }) => [styles.wave, pressed && styles.pressed]}
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={`Слушать поток в духе трека ${trackTitle}`}
-      >
-        <Icon name="music" size={20} color={colors.foreground} />
-        <Text style={[type.row, styles.waveLabel]}>Поток по треку</Text>
-        <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
-      </Pressable>
-    </GlassPanel>
-  );
 }
 
 /** Карточка автора: фотография во всю ширину, поверх неё имя и явная кнопка перехода. */
@@ -148,17 +111,6 @@ const ARTIST_SCRIM_STOPS = [0, 0.42, 1] as const;
 const styles = StyleSheet.create({
   block: { gap: space.sm },
   pressed: { opacity: 0.85 },
-
-  waveGlass: { borderRadius: radii.card },
-  wave: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    minHeight: 56,
-    paddingHorizontal: space.lg,
-    borderRadius: radii.card,
-  },
-  waveLabel: { flex: 1 },
 
   artistCard: {
     minHeight: ARTIST_CARD,

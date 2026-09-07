@@ -16,6 +16,10 @@ import { Cover } from '../ui/cover';
 import { Icon } from '../../lib/icon';
 import { colors } from '../../lib/theme';
 
+/** Доля ширины обложки, на которой сосед доходит до полной своей плотности. */
+const NEIGHBOUR_REVEAL = 0.5;
+/** Сосед не спорит с текущей обложкой за внимание. */
+const NEIGHBOUR_ALPHA = 0.38;
 const GAP = space.lg;
 const AXIS_LOCK = 10;
 const SWIPE_COMMIT = 64;
@@ -200,6 +204,13 @@ export function CoverCarousel({
     transform: [{ scale: 0.6 + burst.value * 0.6 }],
   }));
 
+  // Соседи проявляются ТОЛЬКО на протяжке. В покое они торчали за полем экрана — обложка
+  // переставала быть одним предметом. Обрезать их нельзя: на том же боксе построен
+  // иммерсив, и клип срезал бы обложку, разъезжающуюся на весь экран.
+  const neighbourStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, Math.abs(dragX.value) / (size * NEIGHBOUR_REVEAL)) * NEIGHBOUR_ALPHA,
+  }));
+
   if (!track) return null;
 
   return (
@@ -211,21 +222,21 @@ export function CoverCarousel({
       >
         <Animated.View style={[styles.strip, { width: size, height: size }, stripStyle]}>
           {prevTrack && (
-            <Cover
-              uri={prevTrack.coverUrl}
-              radius={radius}
-              style={[styles.slot, styles.neighbour, { width: size, height: size, left: -size - GAP }]}
-            />
+            <Animated.View
+              style={[styles.slot, { width: size, height: size, left: -size - GAP }, neighbourStyle]}
+            >
+              <Cover uri={prevTrack.coverUrl} size={size} radius={radius} />
+            </Animated.View>
           )}
           <Animated.View style={[styles.slot, { width: size, height: size, overflow: 'hidden' }, coverStyle]}>
             <Cover uri={track.coverUrl} size={size} radius={0} />
           </Animated.View>
           {nextTrack && (
-            <Cover
-              uri={nextTrack.coverUrl}
-              radius={radius}
-              style={[styles.slot, styles.neighbour, { width: size, height: size, left: size + GAP }]}
-            />
+            <Animated.View
+              style={[styles.slot, { width: size, height: size, left: size + GAP }, neighbourStyle]}
+            >
+              <Cover uri={nextTrack.coverUrl} size={size} radius={radius} />
+            </Animated.View>
           )}
         </Animated.View>
         <Animated.View style={[styles.burst, burstStyle]} pointerEvents="none">
@@ -239,7 +250,5 @@ export function CoverCarousel({
 const styles = StyleSheet.create({
   strip: { position: 'relative' },
   slot: { position: 'absolute', top: 0, left: 0 },
-  /** Соседи подглядывают, но не спорят с текущей обложкой за внимание. */
-  neighbour: { opacity: 0.38 },
   burst: { position: 'absolute', top: '50%', left: '50%', marginLeft: -36, marginTop: -36 },
 });

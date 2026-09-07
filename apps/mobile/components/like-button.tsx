@@ -10,12 +10,25 @@ import { layout } from '../lib/design/scales';
  * `primary` — место в главном ряду действий (транспорт плеера): полноразмерная тач-зона и
  * белая иконка в неактивном состоянии. Приглушённое сердце рядом с белыми кнопками
  * перемотки читалось бы как отключённое.
+ *
+ * `title` — рядом с заголовком трека на экране плеера: размер задаёт экран через `size`,
+ * потому что там он идёт по масштабу макета, а не в чистых dp; тач-зона добирается
+ * hitSlop (кит запрещает раздувать под неё сам значок).
  */
-type Variant = 'inline' | 'primary';
+type Variant = 'inline' | 'primary' | 'title';
 
-const ICON_SIZE: Record<Variant, number> = { inline: 18, primary: 24 };
+const ICON_SIZE: Record<Variant, number> = { inline: 18, primary: 24, title: 21 };
+const HIT_SLOP: Record<Variant, number> = { inline: 12, primary: 12, title: 14 };
 
-export function LikeButton({ trackId, variant = 'inline' }: { trackId: string; variant?: Variant }) {
+export function LikeButton({
+  trackId,
+  variant = 'inline',
+  size,
+}: {
+  trackId: string;
+  variant?: Variant;
+  size?: number;
+}) {
   const liked = useLikesStore((s) => s.state[trackId]);
   const load = useLikesStore((s) => s.load);
   const toggle = useLikesStore((s) => s.toggle);
@@ -24,12 +37,17 @@ export function LikeButton({ trackId, variant = 'inline' }: { trackId: string; v
     load(trackId);
   }, [load, trackId]);
 
-  const idle = variant === 'primary' ? colors.foreground : colors.mutedForeground;
+  const idle = variant === 'inline' ? colors.mutedForeground : colors.foreground;
+  const iconSize = size ?? ICON_SIZE[variant];
 
   return (
     <Pressable
-      style={[styles.button, variant === 'primary' && styles.primary]}
-      hitSlop={12}
+      style={[
+        styles.button,
+        variant === 'primary' && styles.primary,
+        variant === 'title' && { minWidth: iconSize, minHeight: iconSize },
+      ]}
+      hitSlop={HIT_SLOP[variant]}
       accessibilityRole="button"
       accessibilityState={{ selected: !!liked }}
       accessibilityLabel={liked ? 'Убрать лайк' : 'Лайк'}
@@ -38,7 +56,7 @@ export function LikeButton({ trackId, variant = 'inline' }: { trackId: string; v
         toggle(trackId);
       }}
     >
-      <Icon name="heart" size={ICON_SIZE[variant]} color={liked ? colors.primary : idle} filled={!!liked} />
+      <Icon name="heart" size={iconSize} color={liked ? colors.primary : idle} filled={!!liked} />
     </Pressable>
   );
 }

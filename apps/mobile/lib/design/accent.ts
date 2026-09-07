@@ -103,12 +103,20 @@ function sceneRoles(h: number, groundS: number): Pick<Accent, 'base' | 'halo' | 
 }
 
 /** `hex` → `rgba(...)`: сцене нужно гасить `halo`/`diagonal` до прозрачности по радиусу. */
+/** Цвет по тону в градусах: дымка фона задана в HSL и строится прямо из него. */
+export function hueHex(degrees: number, s: number, l: number): string {
+  const h = (((degrees % 360) + 360) % 360) / 360;
+  return toHex(hslToRgb({ h, s, l }));
+}
+
 export function withAlpha(hex: string, alpha: number): string {
   const rgb = parseHex(hex);
   return rgb ? toRgba(rgb, alpha) : `rgba(0, 0, 0, ${alpha})`;
 }
 
 export type Accent = {
+  /** Тон трека в градусах: по нему строятся пятна дымки фона (`components/haze-ground.tsx`). */
+  hue: number;
   /** Заливка главной кнопки и прогресса. */
   fill: string;
   /** Что читается НА заливке. */
@@ -129,6 +137,7 @@ export type Accent = {
 };
 
 const NEUTRAL: Accent = {
+  hue: NEUTRAL_HUE * 360,
   fill: colors.foreground,
   ink: colors.background,
   ground: colors.background,
@@ -153,6 +162,7 @@ export function resolveAccent(hex: string | null | undefined): Accent {
   const step = (l: number, sat: number) => toHex(hslToRgb({ h, s: sat, l }));
 
   return {
+    hue: h * 360,
     fill: fillable ? toHex(rgb) : colors.foreground,
     ink: !fillable || luma > INK_FLIP_LUMA ? colors.background : colors.foreground,
     ground: step(GROUND_L[0], groundS),
