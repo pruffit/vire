@@ -4,7 +4,7 @@ import { Skia, useFont, type SkCanvas, type SkFont } from '@shopify/react-native
 import { FLOW_MARK, MARK_STROKE, MARK_VIEWBOX } from '@vire/design-tokens/marks';
 import { LiquidGlassButton, inkStroke } from '../liquid-glass';
 import { materialForInk, VIREGLASS_CONTROL_MATERIAL } from '../../lib/vireglass/material';
-import { useMock } from '../../lib/design/mock';
+import { useMock, useMockMaterial } from '../../lib/design/mock';
 import { Unbounded_800ExtraBold } from '@expo-google-fonts/unbounded';
 
 /** Материал у всех деталей продукта ОДИН: роль показывают краска, размер и место, а не
@@ -42,6 +42,10 @@ export function FlowButton({
   width: number;
 }) {
   const ms = useMock();
+  // Материал идёт ЧЕРЕЗ ТОТ ЖЕ МАСШТАБ, что и геометрия. Кнопка выросла в 1.37 раза, а
+  // фаска оставалась макетной: она отдавала кромке меньшую долю полуразмера, и та читалась
+  // тоньше и тусклее нарисованной — при том, что навигация и плашка масштаб уже держали.
+  const material = useMockMaterial(FLOW_MATERIAL);
   const height = ms(MOCK_FLOW_HEIGHT);
   const label = ms(MOCK_LABEL);
   const mark = ms(MOCK_MARK);
@@ -62,7 +66,7 @@ export function FlowButton({
       width={width}
       radius={ms(MOCK_RADIUS)}
       paintMask={font ? paintMask : undefined}
-      material={FLOW_MATERIAL}
+      material={material}
       blurTarget={blurTarget}
       // Кнопка живёт НА экране плеера, а тот поднимает счётчик листов, чтобы погасить
       // таб-бар и мини-плеер под собой. Без этой отметки она гасла вместе с ними: линза
