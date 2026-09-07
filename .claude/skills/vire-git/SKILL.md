@@ -242,6 +242,9 @@ RN/React, libsodium, Skia/reanimated), зелёный CI, мерж. Мажоры
 }
 ```
 
+Путь к `bash.exe` взят от стандартной установки Git for Windows; стоит Git иначе —
+правится там же, в этом фрагменте.
+
 Пишущие команды (`git push`, `gh pr create`, `gh pr merge`, `gh issue create`,
 `gh api ... -X POST`) в allow-лист намеренно не идут: промпт на них — последняя видимая
 точка перед действием наружу.
