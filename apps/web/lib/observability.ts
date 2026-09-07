@@ -40,6 +40,15 @@ export function describeError(error: unknown): string {
   return `без message: ${Object.prototype.toString.call(error)}`;
 }
 
+// Место ошибки в тексте алерта: без него digest без message стоит похода в логи контейнера,
+// а деплой их стирает. routeType отделяет server action от рендера, route handler и proxy.
+export function formatAlertText(service: string, ctx: ErrorContext, message: string): string {
+  const parts = [ctx.routeType, ctx.routePath]
+    .filter((v): v is string => typeof v === 'string' && v.length > 0);
+  const suffix = parts.length > 0 ? ` [${parts.join(' ')}]` : '';
+  return `🔴 [${service}] ${ctx.where ?? 'error'}: ${message}${suffix}`;
+}
+
 export async function captureError(error: unknown, ctx: ErrorContext = {}): Promise<void> {
   const message = describeError(error);
   const stack = error instanceof Error ? error.stack : undefined;
@@ -53,7 +62,7 @@ export async function captureError(error: unknown, ctx: ErrorContext = {}): Prom
 
   if (knownNoise) return;
 
-  const text = `🔴 [${service}] ${ctx.where ?? 'error'}: ${message}`;
+  const text = formatAlertText(service, ctx, message);
   const now = Date.now();
   if (!alertGate.shouldPass(text, now)) return;
 
