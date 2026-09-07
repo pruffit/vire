@@ -4,7 +4,7 @@ import { Skia, useFont, type SkCanvas, type SkFont } from '@shopify/react-native
 import { FLOW_MARK, MARK_STROKE, MARK_VIEWBOX } from '@vire/design-tokens/marks';
 import { LiquidGlassButton, inkStroke } from '../liquid-glass';
 import { materialForInk, VIREGLASS_CONTROL_MATERIAL } from '../../lib/vireglass/material';
-import { useMock } from '../../lib/design/mock';
+import { useMock, useMockMaterial } from '../../lib/design/mock';
 import { Unbounded_800ExtraBold } from '@expo-google-fonts/unbounded';
 
 /** Материал у всех деталей продукта ОДИН: роль показывают краска, размер и место, а не
@@ -12,7 +12,7 @@ import { Unbounded_800ExtraBold } from '@expo-google-fonts/unbounded';
 const FLOW_MATERIAL = materialForInk(VIREGLASS_CONTROL_MATERIAL, true);
 
 /** Величины макета (`apps/web/rnd-src/content.ts`, `drawFlowInk`). */
-const MOCK_HEIGHT = 52;
+const MOCK_FLOW_HEIGHT = 52;
 const MOCK_RADIUS = 18;
 const MOCK_MARK = 21;
 const MOCK_LABEL = 19;
@@ -41,7 +41,10 @@ export function FlowButton({
   width: number;
 }) {
   const ms = useMock();
-  const height = ms(MOCK_HEIGHT);
+  // Материал идёт через тот же масштаб, что и геометрия: у выросшей детали макетная фаска
+  // отдаёт кромке меньшую долю полуразмера и читается тоньше нарисованной.
+  const material = useMockMaterial(FLOW_MATERIAL);
+  const height = ms(MOCK_FLOW_HEIGHT);
   const label = ms(MOCK_LABEL);
   const mark = ms(MOCK_MARK);
   const gap = ms(MOCK_GAP);
@@ -61,8 +64,10 @@ export function FlowButton({
       width={width}
       radius={ms(MOCK_RADIUS)}
       paintMask={font ? paintMask : undefined}
-      material={FLOW_MATERIAL}
+      material={material}
       blurTarget={blurTarget}
+      // Экран плеера глушит бэкдроп у всего, что под ним; кнопка стоит НА нём.
+      topLayer
       onPress={onPress}
     />
   );

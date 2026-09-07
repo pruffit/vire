@@ -50,13 +50,27 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
       if (field == value) return
       field = value
       backdrop?.unregister(this)
-      backdrop = value?.let { id -> appContext.findView<View>(id)?.let(::findBackdrop) }
-      if (value != null && backdrop == null) {
-        Log.e("GlassLens", "бэкдроп $value не найден, стекло остаётся без преломления")
-      }
-      backdrop?.register(this)
+      backdrop = null
+      attach(value, RESOLVE_TRIES)
       invalidate()
     }
+
+  /** Поиск вьюхи захвата с повторами по кадрам: тег приезжает раньше, чем цель успевает
+   *  зарегистрироваться, а второй установки того же тега сеттер уже не пропустит. */
+  private fun attach(id: Int?, tries: Int) {
+    if (id == null || id != backdropId || backdrop != null) return
+    backdrop = appContext.findView<View>(id)?.let(::findBackdrop)
+    if (backdrop != null) {
+      backdrop?.register(this)
+      invalidate()
+      return
+    }
+    if (tries > 0) {
+      postOnAnimation { attach(id, tries - 1) }
+      return
+    }
+    Log.e("GlassLens", "бэкдроп $id не найден, стекло остаётся без преломления")
+  }
 
   private fun findBackdrop(view: View, depth: Int = 0): GlassBackdropView? {
     if (view is GlassBackdropView) return view
@@ -354,6 +368,11 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
     )
   }
 
+  override fun onAttachedToWindow() {
+    super.onAttachedToWindow()
+    attach(backdropId, RESOLVE_TRIES)
+  }
+
   override fun onDetachedFromWindow() {
     backdrop?.unregister(this)
     super.onDetachedFromWindow()
@@ -418,6 +437,9 @@ class GlassLensView(context: Context, appContext: AppContext) : ExpoView(context
   }
 
   private companion object {
+    /** Сколько кадров ждём появления вьюхи захвата, прежде чем признать её отсутствие. */
+    const val RESOLVE_TRIES = 10
+
     /** Число корзин гистограммы. Хватает и на перцентили, и на среднее отклонение: точнее
      *  этого статистика всё равно не нужна — она управляет плавными величинами. */
     const val BINS = 32
