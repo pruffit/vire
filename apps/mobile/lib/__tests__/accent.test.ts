@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseHex, luminance, resolveAccent } from '../design/accent';
+import { parseHex, luminance, resolveAccent, hueHex } from '../design/accent';
 import { colors } from '../theme';
 
 describe('акцент темы артиста', () => {
@@ -18,7 +18,7 @@ describe('акцент темы артиста', () => {
   it('без акцента экран остаётся на своей палитре', () => {
     const a = resolveAccent(null);
     expect(a.fill).toBe(colors.foreground);
-    expect(a.ground).toBe(colors.background);
+    expect(a.wash).toBe(colors.secondary);
   });
 
   it('слишком тёмный акцент не идёт в заливку кнопки', () => {
@@ -31,28 +31,23 @@ describe('акцент темы артиста', () => {
     expect(resolveAccent('#3b4cc0').ink).toBe(colors.foreground);
   });
 
-  it('фон всегда темнее самого акцента', () => {
+  it('подложка карточки всегда темнее самого акцента', () => {
     const a = resolveAccent('#57c2a3');
-    expect(luminance(parseHex(a.ground)!)).toBeLessThan(luminance(parseHex('#57c2a3')!));
+    expect(luminance(parseHex(a.wash)!)).toBeLessThan(luminance(parseHex('#57c2a3')!));
   });
 
-  it('роли сцены: halo светлее base, base светлее deep, все темнее акцента', () => {
-    const a = resolveAccent('#57c2a3');
-    const accentLuma = luminance(parseHex('#57c2a3')!);
-    const haloLuma = luminance(parseHex(a.halo)!);
-    const baseLuma = luminance(parseHex(a.base)!);
-    const deepLuma = luminance(parseHex(a.deep)!);
-
-    expect(haloLuma).toBeGreaterThan(baseLuma);
-    expect(baseLuma).toBeGreaterThan(deepLuma);
-    expect(haloLuma).toBeLessThan(accentLuma);
-    expect(baseLuma).toBeLessThan(accentLuma);
-    expect(deepLuma).toBeLessThan(accentLuma);
+  // Светлоты сцены задаёт сама сцена (`components/haze-ground.tsx`), отсюда уезжает ТОЛЬКО
+  // тон. Готовые роли поля были вдвое темнее вебовых, и экран уходил в почти-чёрное.
+  it('в сцену уезжает тон, а не готовый цвет', () => {
+    expect(resolveAccent('#57c2a3').hue).toBeCloseTo(163, 0);
+    expect(resolveAccent(null).hue).toBeCloseTo(75, 0);
   });
 
-  it('нейтраль тоже красится ролями сцены — на тёплом хью, не на чистом сером', () => {
-    const a = resolveAccent(null);
-    expect(a.halo).not.toBe(a.base);
-    expect(parseHex(a.base)).not.toEqual({ r: 0, g: 0, b: 0 });
+  it('цвет по тону строится в HSL, а не смешиванием с чёрным', () => {
+    // Смешивание обесцвечивает: у канала падает и светлота, и насыщенность.
+    expect(hueHex(0, 0.7, 0.55)).toBe(hueHex(360, 0.7, 0.55));
+    expect(luminance(parseHex(hueHex(163, 0.7, 0.55))!)).toBeGreaterThan(
+      luminance(parseHex(hueHex(163, 0.7, 0.4))!),
+    );
   });
 });
