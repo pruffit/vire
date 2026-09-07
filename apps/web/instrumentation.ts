@@ -19,12 +19,16 @@ export async function register(): Promise<void> {
 export async function onRequestError(
   error: unknown,
   request: { path: string; method: string },
-  context: { routePath?: string; routerKind?: string },
+  context: { routePath?: string; routerKind?: string; routeType?: string; renderSource?: string },
 ): Promise<void> {
   const { captureError } = await import('@/lib/observability');
+  // routeType различает server action, рендер страницы, route handler и proxy. Без него
+  // ошибка с пустым message (use-intl вырезает текст в проде) не локализуется по алерту.
   await captureError(error, {
     where: `${request.method} ${request.path}`,
     routePath: context.routePath,
     routerKind: context.routerKind,
+    routeType: context.routeType,
+    renderSource: context.renderSource,
   });
 }

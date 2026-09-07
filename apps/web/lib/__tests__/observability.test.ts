@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isKnownNoise, describeError } from '../observability';
+import { isKnownNoise, describeError, formatAlertText } from '../observability';
 
 describe('isKnownNoise', () => {
   it('глушит kState transformAlgorithm (баг Node webstreams при обрыве стрима)', () => {
@@ -43,5 +43,21 @@ describe('describeError', () => {
     expect(describeError({})).toBe('без message: [object Object]');
     expect(describeError('   ')).toBe('без message: [object String]');
     expect(describeError(null)).toBe('null');
+  });
+});
+
+describe('formatAlertText', () => {
+  it('дописывает routeType и routePath — без них digest не локализуется', () => {
+    const text = formatAlertText('web', {
+      where: 'POST /ru', routeType: 'action', routePath: '/[locale]',
+    }, 'Error без message (digest=3916268529)');
+
+    expect(text).toBe('🔴 [web] POST /ru: Error без message (digest=3916268529) [action /[locale]]');
+  });
+
+  it('обходится тем, что есть', () => {
+    expect(formatAlertText('web', { where: 'GET /x', routePath: '/x' }, 'boom'))
+      .toBe('🔴 [web] GET /x: boom [/x]');
+    expect(formatAlertText('worker', {}, 'boom')).toBe('🔴 [worker] error: boom');
   });
 });

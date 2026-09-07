@@ -24,7 +24,12 @@ Telegram/webhook) + **health-эндпоинт** + структурированн
     action-id, которого нет в новом билде; штатно после каждого релиза.
   Пустой `error.message` (брошен `new Error()`, объект, пустая строка) не даёт
   алерта вида «`🔴 [web] POST /ru:`»: `describeError` падает на имя ошибки и
-  `digest`.
+  `digest`. Хвостом идёт `[routeType routePath]` (`formatAlertText`) — `routeType`
+  различает server action, рендер страницы, route handler и proxy. Без него пустой
+  message не локализуется по одному алерту, а логи контейнера деплой стирает.
+  Отдельный случай, ради которого это сделано: `use-intl` в production-сборке
+  бросает `new Error(void 0)` — текст вырезан самой библиотекой, и место остаётся
+  единственной зацепкой (инцидент 07.09, digest `3916268529`).
 - **Алерты воркера** — четыре уровня:
   - `failed` всех очередей (transcode, analyze, play-events, notify-release) →
     `alertJobFailure` (🔴 упавший джоб);
