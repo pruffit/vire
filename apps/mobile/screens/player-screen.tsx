@@ -242,10 +242,13 @@ export default function PlayerScreen() {
   const ascent = (line: number, size: number) => Math.round((line + size * 0.72) / 2);
   const descent = (line: number, size: number) => line - ascent(line, size);
   const transportBox = ms(MOCK_PLAY);
-  const coverToTitle = vs(MOCK_COVER_TO_TITLE) - ascent(ms(MOCK_TITLE_TO_ARTIST), titleSize);
-  const artistToProgress = vs(MOCK_ARTIST_TO_PROGRESS) - descent(artistLine, artistSize);
-  const progressToTransport = vs(MOCK_PROGRESS_TO_TRANSPORT) - transportBox / 2;
-  const transportToFlow = vs(MOCK_TRANSPORT_TO_FLOW) - transportBox / 2;
+  // Отбивка не уходит в минус: на низком экране (или при увеличенном системном кегле)
+  // `vs()` мал, а вычитаемая метрика строки нет — блоки наезжали бы друг на друга.
+  const gap = (v: number, metric: number) => Math.max(0, vs(v) - metric);
+  const coverToTitle = gap(MOCK_COVER_TO_TITLE, ascent(ms(MOCK_TITLE_TO_ARTIST), titleSize));
+  const artistToProgress = gap(MOCK_ARTIST_TO_PROGRESS, descent(artistLine, artistSize));
+  const progressToTransport = gap(MOCK_PROGRESS_TO_TRANSPORT, transportBox / 2);
+  const transportToFlow = gap(MOCK_TRANSPORT_TO_FLOW, transportBox / 2);
 
   const share = () => setShareOpen(true);
 
