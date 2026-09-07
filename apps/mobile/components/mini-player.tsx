@@ -23,6 +23,13 @@ import { LiquidGlassButton, paintIcon } from './liquid-glass';
 import { resolveAccent } from '../lib/design/accent';
 import { colors } from '../lib/theme';
 import { materialForInk, PRODUCT_DIM, VIREGLASS_CONTROL_MATERIAL } from '../lib/vireglass/material';
+import {
+  hitPlay,
+  MOCK_PLATE,
+  plateLeft,
+  playCenterX,
+  type PlateLayout,
+} from '../lib/design/plate';
 
 /**
  * Мини-плеер — самая заметная стеклянная поверхность продукта и единственное, что связывает
@@ -70,10 +77,10 @@ export function MiniPlayer() {
     return usePlayerStore.subscribe(apply);
   }, [progress]);
 
-  const inset = ms(MOCK_INSET);
+  const inset = ms(MOCK_PLATE.inset);
   const cover = plate - inset * 2;
-  const titleFont = useFont(Manrope_600SemiBold, ms(MOCK_TITLE));
-  const artistFont = useFont(Manrope_400Regular, ms(MOCK_ARTIST));
+  const titleFont = useFont(Manrope_600SemiBold, ms(MOCK_PLATE.title));
+  const artistFont = useFont(Manrope_400Regular, ms(MOCK_PLATE.artist));
   const art = useImage(track?.coverUrl ?? null);
   const playing = status === 'playing';
   const wash = track?.accentColor ? resolveAccent(track.accentColor).wash : colors.secondary;
@@ -81,11 +88,11 @@ export function MiniPlayer() {
   // Числа считаются ДО мемо, а не внутри него: `useMock` отдаёт новую функцию на каждый
   // рендер, и с ней в зависимостях раскладка (а за ней и обе маски) пересобиралась бы
   // каждый кадр — то есть офскрин-поверхность Skia на каждый тик позиции.
-  const coverRadius = ms(MOCK_COVER_RADIUS);
-  const textGap = ms(MOCK_TEXT_GAP);
-  const play = ms(MOCK_PLAY);
-  const titleBaseline = ms(MOCK_TITLE_BASELINE);
-  const artistBaseline = ms(MOCK_ARTIST_BASELINE);
+  const coverRadius = ms(MOCK_PLATE.coverRadius);
+  const textGap = ms(MOCK_PLATE.textGap);
+  const play = ms(MOCK_PLATE.play);
+  const titleBaseline = ms(MOCK_PLATE.titleBaseline);
+  const artistBaseline = ms(MOCK_PLATE.artistBaseline);
   const layout = useMemo<PlateLayout>(
     () => ({
       plateW: width,
@@ -155,8 +162,8 @@ export function MiniPlayer() {
         styles.wrap,
         {
           bottom: plateBottom,
-          left: ms(MOCK_SCREEN_MARGIN),
-          right: ms(MOCK_SCREEN_MARGIN),
+          left: ms(MOCK_PLATE.screenMargin),
+          right: ms(MOCK_PLATE.screenMargin),
           height: plate,
         },
       ]}
@@ -172,7 +179,7 @@ export function MiniPlayer() {
         <LiquidGlassButton
           size={plate}
           width={width}
-          radius={ms(MOCK_RADIUS)}
+          radius={ms(MOCK_PLATE.radius)}
           paintMask={paintMask}
           paintOverlay={paintOverlay}
           material={material}
@@ -185,28 +192,6 @@ export function MiniPlayer() {
       )}
     </View>
   );
-}
-
-type PlateLayout = {
-  plateW: number;
-  pad: number;
-  cover: number;
-  coverRadius: number;
-  textGap: number;
-  play: number;
-  titleBaseline: number;
-  artistBaseline: number;
-};
-
-/** Левый край плашки внутри коробки маски: коробка шире детали на запас деформации. */
-const plateLeft = (boxW: number, plateW: number) => (boxW - plateW) / 2;
-/** Центр значка плей/паузы отмеряется от ПРАВОГО края (веб — `playCenterX`). */
-const playCenterX = (l: PlateLayout) => l.plateW - l.pad - PLAY_OFFSET - l.play / 2;
-
-function hitPlay(l: PlateLayout, local: { x: number; y: number }): boolean {
-  const hit = (l.play * MOCK_PLAY_HIT) / MOCK_PLAY;
-  const middle = l.cover / 2 + l.pad;
-  return Math.abs(local.x - playCenterX(l)) <= hit && Math.abs(local.y - middle) <= hit;
 }
 
 /**
@@ -305,22 +290,6 @@ const PLATE_MATERIAL = materialForInk(VIREGLASS_CONTROL_MATERIAL, true);
 
 /** Вторую строку глушит ЦВЕТ, а не прозрачность: маска одноканальная (веб — то же). */
 const MUTED_INK = '#d2d2d2';
-
-/** Величины макета (`apps/web/rnd-src/mini-player.ts`). */
-const MOCK_SCREEN_MARGIN = 20;
-const MOCK_INSET = 9;
-const MOCK_RADIUS = 16;
-const MOCK_COVER_RADIUS = 8;
-const MOCK_TEXT_GAP = 12;
-const MOCK_PLAY = 22;
-const MOCK_PLAY_HIT = 18;
-const MOCK_TITLE = 13;
-const MOCK_ARTIST = 11;
-/** Базовые линии строк относительно середины плашки. */
-const MOCK_TITLE_BASELINE = -2;
-const MOCK_ARTIST_BASELINE = 13;
-/** Зазор между значком плей и правым отступом. */
-const PLAY_OFFSET = 4;
 
 const styles = StyleSheet.create({
   wrap: { position: 'absolute' },
