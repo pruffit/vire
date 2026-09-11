@@ -27,11 +27,8 @@ export type ScrollEdge = {
 
 const band = document.createElement('canvas');
 
-/**
- * Расфокус наводится В САМОМ СЛОЕ, а не поверх фона: слой прозрачен вне строк, и полосу в нём
- * можно стереть и положить заново. Рисовать размытую копию поверх резкой нельзя — сквозь неё
- * просвечивает резкая, и строка двоится.
- */
+/** Расфокус наводится В САМОМ СЛОЕ: рисовать размытую копию поверх резкой нельзя — сквозь неё
+ *  просвечивает резкая, и строка двоится. */
 function defocus(layer: HTMLCanvasElement, edge: ScrollEdge, density: number): void {
   const ctx = layer.getContext('2d');
   const margin = MAX_BLUR_DP * density * 2;
@@ -39,13 +36,15 @@ function defocus(layer: HTMLCanvasElement, edge: ScrollEdge, density: number): v
   const height = Math.min(edge.height + margin * 2, layer.height - top);
   if (!ctx || height <= 0) return;
 
-  if (band.width !== edge.width || band.height !== height) {
-    band.width = edge.width;
-    band.height = height;
+  // Буфер только РАСТЁТ: у верхней и нижней полосы высоты разные, и подгонка под каждую
+  // пересоздавала бы его дважды за кадр — это дорого и незачем.
+  if (band.width < edge.width || band.height < height) {
+    band.width = Math.max(band.width, edge.width);
+    band.height = Math.max(band.height, height);
   }
   const into = band.getContext('2d');
   if (!into) return;
-  into.clearRect(0, 0, band.width, band.height);
+  into.clearRect(0, 0, edge.width, height);
 
   const slice = edge.height / SLICES;
   for (let i = 0; i < SLICES; i += 1) {
@@ -54,12 +53,18 @@ function defocus(layer: HTMLCanvasElement, edge: ScrollEdge, density: number): v
     const blur = MAX_BLUR_DP * density * edge.strength * (1 - f) ** 1.5;
     const sliceTop =
       edge.side === 'top' ? edge.y + i * slice : edge.y + edge.height - (i + 1) * slice;
+    // Источник — сам ломоть и запас на радиус: иначе браузер считает блюр по всей полосе,
+    // а видна после обрезки десятая её часть.
+    const pad = blur * 2 + 1;
+    const from = Math.max(sliceTop - pad, top);
+    const span = Math.min(slice + pad * 2, top + height - from);
+    if (span <= 0) continue;
     into.save();
     into.beginPath();
     into.rect(0, sliceTop - top, edge.width, slice + 0.5);
     into.clip();
     into.filter = blur > 0.3 ? `blur(${blur}px)` : 'none';
-    into.drawImage(layer, edge.x, top, edge.width, height, 0, 0, edge.width, height);
+    into.drawImage(layer, edge.x, from, edge.width, span, 0, from - top, edge.width, span);
     into.restore();
   }
 

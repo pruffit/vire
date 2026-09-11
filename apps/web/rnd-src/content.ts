@@ -307,7 +307,7 @@ export function drawFlowInk(ctx: CanvasRenderingContext2D, scale: number): void 
  * протяжка полотна возит по кадру весь телефон вместе с его линзами. Без обрезки по экрану
  * список вылезал бы на зону за рамкой телефона.
  */
-export function drawRecentList(
+function drawRecentList(
   ctx: CanvasRenderingContext2D,
   density: number,
   index: number,
@@ -375,6 +375,15 @@ function drawRecentHeader(
 ): void {
   const o = phoneOrigin(index);
   ctx.save();
+  phonePath(
+    ctx,
+    o.x * density + offsetX,
+    o.y * density + offsetY,
+    PHONE.width * density,
+    PHONE.height * density,
+    PHONE.radius * density,
+  );
+  ctx.clip();
   ctx.translate(o.x * density + offsetX, o.y * density + offsetY);
   ctx.scale(density, density);
   ctx.textBaseline = 'alphabetic';
