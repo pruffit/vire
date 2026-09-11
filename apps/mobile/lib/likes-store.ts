@@ -7,7 +7,8 @@ interface LikesState {
   load: (trackId: string) => void;
   update: (trackId: string, liked: boolean) => void;
   toggle: (trackId: string) => void;
-  /** Ставит лайк, никогда не снимает — двойной тап по обложке (защита от случайного анлайка). */
+  /** Ставит лайк, никогда не снимает — двойной тап по обложке (защита от случайного анлайка).
+   *  Незагруженное состояние сначала догружает, как toggleRemote. */
   like: (trackId: string) => void;
   /**
    * Лайк с шторки уведомления: трек может ни разу не показывался в UI, поэтому state ещё
@@ -41,6 +42,22 @@ export const useLikesStore = create<LikesState>((set, get) => {
       .finally(() => { _toggling.delete(trackId); });
   }
 
+  /** Действует сразу при известном состоянии; иначе сначала догружает его — общий приём
+   *  для like() и toggleRemote(), трек мог ни разу не показываться в UI. */
+  function withLoadedState(trackId: string, action: () => void) {
+    if (get().state[trackId] !== undefined) {
+      action();
+      return;
+    }
+    apiRequest(`/api/v1/tracks/${trackId}/like`, { schema: likeResponseSchema })
+      .then((result) => {
+        if (!result.ok) return;
+        get().update(trackId, result.data.liked);
+        action();
+      })
+      .catch(() => {});
+  }
+
   return {
     state: {},
 
@@ -68,23 +85,15 @@ export const useLikesStore = create<LikesState>((set, get) => {
     },
 
     like(trackId) {
-      const current = get().state[trackId];
-      if (current === undefined || current === true) return;
-      write(trackId, true, current);
+      withLoadedState(trackId, () => {
+        const current = get().state[trackId] ?? false;
+        if (current) return;
+        write(trackId, true, current);
+      });
     },
 
     toggleRemote(trackId) {
-      if (get().state[trackId] !== undefined) {
-        get().toggle(trackId);
-        return;
-      }
-      apiRequest(`/api/v1/tracks/${trackId}/like`, { schema: likeResponseSchema })
-        .then((result) => {
-          if (!result.ok) return;
-          get().update(trackId, result.data.liked);
-          get().toggle(trackId);
-        })
-        .catch(() => {});
+      withLoadedState(trackId, () => get().toggle(trackId));
     },
   };
 });

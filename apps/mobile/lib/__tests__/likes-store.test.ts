@@ -147,9 +147,36 @@ describe('useLikesStore.like', () => {
     expect(request).not.toHaveBeenCalled();
   });
 
-  it('трек не загружен в state — no-op, как у toggle', () => {
+  it('трек не загружен (двойной тап без захода на трек) — сначала грузит state, потом ставит лайк', async () => {
+    request.mockResolvedValueOnce({ ok: true, data: { liked: false } });
+    request.mockResolvedValueOnce({ ok: true, data: { liked: true } });
+
     useLikesStore.getState().like('t1');
-    expect(request).not.toHaveBeenCalled();
+    await flush();
+
+    expect(useLikesStore.getState().state.t1).toBe(true);
+    expect(request).toHaveBeenNthCalledWith(1, '/api/v1/tracks/t1/like', expect.objectContaining({ schema: expect.anything() }));
+    expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tracks/t1/like', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('трек не загружен, а на сервере уже лайкнут — догружает и лишний POST не шлёт', async () => {
+    request.mockResolvedValueOnce({ ok: true, data: { liked: true } });
+
+    useLikesStore.getState().like('t1');
+    await flush();
+
+    expect(useLikesStore.getState().state.t1).toBe(true);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('трек не загружен, сеть на догрузке падает — без исключений, лайк не ставится', async () => {
+    request.mockResolvedValue({ ok: false, error: { status: 0, message: 'Нет соединения' } });
+
+    useLikesStore.getState().like('t1');
+    await flush();
+
+    expect(useLikesStore.getState().state.t1).toBeUndefined();
+    expect(request).toHaveBeenCalledTimes(1);
   });
 });
 
