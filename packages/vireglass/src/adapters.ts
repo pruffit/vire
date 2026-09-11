@@ -227,8 +227,6 @@ export function toSurfaceUniforms(
     u_morph2Offset: [morph2.offsetX, morph2.offsetY],
     u_morph2Half: [morph2.width / 2, morph2.height / 2],
     u_morph2Corner: morph2.cornerRadius,
-    u_specular: optics.specular,
-    u_specularPower: optics.specularPower,
     u_edgeDensity: optics.edgeDensity,
     u_dispersion: optics.dispersion,
     u_refraction: optics.refraction,
@@ -262,7 +260,7 @@ export const REST_LIGHT: readonly [number, number] = [-0.577, -0.817];
 /** Униформы, которые компонент домешивает в ворклете (нажатие, активность, направление
  *  света) и слоем иконки. Перечислены здесь, чтобы тест мог проверить полноту контракта
  *  шейдера без импорта самого компонента (он тянет Skia и в node-окружении не поднимается). */
-export const DYNAMIC_UNIFORMS = ['u_press', 'u_active', 'u_light'] as const;
+export const DYNAMIC_UNIFORMS = ['u_press', 'u_active'] as const;
 
 export const ICON_UNIFORMS = ['u_iconOn', 'u_iconScale', 'u_inkIdle', 'u_inkActive'] as const;
 

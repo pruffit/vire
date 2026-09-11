@@ -22,10 +22,7 @@ uniform float  u_morph2Corner;
 
 uniform float  u_press;
 uniform float  u_active;
-uniform float2 u_light;
 
-uniform float  u_specular;
-uniform float  u_specularPower;
 uniform float  u_edgeDensity;
 uniform float  u_dispersion;
 uniform float  u_refraction;

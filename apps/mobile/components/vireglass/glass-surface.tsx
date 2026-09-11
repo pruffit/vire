@@ -276,7 +276,6 @@ export function VireGlassSurface({
       // активную деталь читалось бы как её выключение. Доля та же, что в вебе (`main.ts`,
       // buttonPieces): касание поднимает активность на треть, а не до полной.
       u_active: touch ? Math.max(touch.value.active * ACTIVE_ON_TOUCH, active.value) : active.value,
-      u_light: [light.value[0], light.value[1]],
       u_progress: progress ? progress.value : statics.u_progress,
     };
   }, [statics, iconUniforms, progress, touch, touchRadius]);

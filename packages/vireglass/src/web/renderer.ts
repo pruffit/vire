@@ -26,7 +26,6 @@ import {
   DYNAMIC_UNIFORMS,
   ICON_UNIFORMS,
   OVERLAY_UNIFORMS,
-  REST_LIGHT,
   toLensProps,
   toSurfaceUniforms,
   type VireGlassAccent,
@@ -484,7 +483,6 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
       // Динамика ворклета на Android (нажатие, активность, наклон) здесь приходит полями детали.
       setUniform(gl, surfaceLoc(DYNAMIC_UNIFORMS[0]), piece.press ?? 0);
       setUniform(gl, surfaceLoc(DYNAMIC_UNIFORMS[1]), piece.active ?? 0);
-      setUniform(gl, surfaceLoc(DYNAMIC_UNIFORMS[2]), piece.light ?? REST_LIGHT);
       const hasIcon = Boolean(piece.icon && options.iconMask);
       setUniform(gl, surfaceLoc(ICON_UNIFORMS[0]), hasIcon ? 1 : 0);
       // Масштаб 1: координата уже экранная, нормировку на размер делает сам сэмплер.
