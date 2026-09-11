@@ -88,7 +88,7 @@ globalThis.vgProbe = ({ level, striped, control }) => {
   // и на маленьком габарите упирается в потолок, то есть ведёт себя совсем иначе. Пока гейт
   // знал только первый случай, смена материала кнопок прошла мимо него целиком.
   const base = control ? materialForInk(VIREGLASS_CONTROL_MATERIAL, true) : VIREGLASS_MATERIAL;
-  const light = shouldInkBeLight({ luma: level, hi: level }, base.legibility, level < 0.5);
+  const light = shouldInkBeLight({ luma: level, hi: level }, level < 0.5);
   const optics = resolveOptics({ ...base, ink: light ? INK_LIGHT : INK_DARK });
   const geometry = control ? circleGeometry(56) : roundedRectGeometry(220, 120, 32);
   const piece = { optics, geometry, centerX: canvas.width / 2, centerY: canvas.height / 2 };

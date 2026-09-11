@@ -1,10 +1,4 @@
-import {
-  bodyDensityFor,
-  CONFIRMATIONS,
-  FLIP_DENSITY,
-  RETURN_DENSITY,
-  type BackdropSample,
-} from './adaptation';
+import { CONFIRMATIONS, FLIP_LUMA, RETURN_LUMA, type BackdropSample } from './adaptation';
 
 /**
  * ОЦЕНКА БЛОКА СТЕКЛА — чистая часть группы поверхностей (`glass-group.tsx`).
@@ -155,8 +149,7 @@ export function probeValuesAt(plane: GroupPlane, x: number): number[] {
 
 /** Требует ли блок сменить полярность надписи при текущей (1 светлая, 0 тёмная). */
 function wantsPolarityChange(decision: GroupDecision, polarity: number): boolean {
-  const cost = bodyDensityFor(decision.decisive, decision.legibility, 0, 1);
-  return polarity === 1 ? cost > FLIP_DENSITY : cost < RETURN_DENSITY;
+  return polarity === 1 ? decision.decisive >= FLIP_LUMA : decision.decisive < RETURN_LUMA;
 }
 
 export type GroupSink = {

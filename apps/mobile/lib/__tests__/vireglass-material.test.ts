@@ -13,20 +13,18 @@ import {
 import {
   bevelDp,
   bevelFraction,
-  chromaDp,
   circleGeometry,
-  edgePushDp,
   halfMinDp,
   lensPadDp,
   MAX_BEVEL_FRACTION,
   roundedRectGeometry,
   surfacePadDp,
+  thicknessDp,
 } from '../vireglass/geometry';
 import { LENS_SHADER } from '../vireglass/lens-shader';
 import {
   absorption,
   edgeDensity,
-  edgePush,
   fresnelF0,
   refractionStrength,
   specularPower,
@@ -116,10 +114,6 @@ describe('вывод оптики из среды', () => {
     expect(specularPower(0.8)).toBeLessThan(specularPower(0));
   });
 
-  it('смещение у кромки задано средой и фаской, а не габаритом детали', () => {
-    expect(edgePush(1.45, 12.6)).toBeGreaterThan(0);
-    expect(edgePush(1.45, 25)).toBeCloseTo(edgePush(1.45, 12.5) * 2, 1);
-  });
 });
 
 describe('applyToggles', () => {
@@ -137,7 +131,6 @@ describe('applyToggles', () => {
     expect(off.blur).toBe(0);
     expect(off.refraction).toBe(0);
     expect(off.refractionScale).toBe(1);
-    expect(off.edgePushDp).toBe(0);
     expect(off.fresnel).toBe(0);
     expect(off.specular).toBe(0);
     expect(off.dispersion).toBe(0);
@@ -162,28 +155,18 @@ describe('геометрия', () => {
     expect(circle).toEqual({ width: 58, height: 58, cornerRadius: 29 });
   });
 
-  // Главное следствие перехода к абсолютным величинам: множителей и потолков больше нет,
-  // мелкая деталь преломляет заметнее крупной сама собой.
-  it('одна среда даёт мелкой детали большую ДОЛЮ оптики, чем крупной', () => {
+  // Крупнее деталь — толще стекло (reference.md §1), но медленнее габарита: доля фаски у
+  // мелкой детали всё равно больше.
+  it('крупная деталь толще, а мелкой достаётся большая ДОЛЯ оптики', () => {
     const button = circleGeometry(68);
     const sheet = roundedRectGeometry(393, 460, 30);
     expect(bevelFraction(button, optics)).toBeGreaterThan(bevelFraction(sheet, optics));
-    expect(bevelDp(button, optics)).toBeCloseTo(bevelDp(sheet, optics), 5);
+    expect(bevelDp(sheet, optics)).toBeGreaterThan(bevelDp(button, optics));
+    expect(thicknessDp(sheet, optics)).toBeGreaterThan(thicknessDp(button, optics));
   });
 
   it('фаска не выходит за предел модели даже на крошечной форме', () => {
     expect(bevelFraction(circleGeometry(16), optics)).toBeLessThanOrEqual(MAX_BEVEL_FRACTION);
-  });
-
-  it('смещение не уводит выборку за пределы формы', () => {
-    const tiny = circleGeometry(24);
-    expect(edgePushDp(tiny, optics)).toBeLessThan(halfMinDp(tiny));
-  });
-
-  it('запас вьюхи линзы покрывает всю выборку за кромкой', () => {
-    expect(lensPadDp(circle, optics)).toBeGreaterThan(
-      edgePushDp(circle, optics) + chromaDp(circle, optics),
-    );
   });
 
   // Кромка собирает свет СНАРУЖИ формы. Если вьюха не шире на радиус сбора, выборка уходит
@@ -227,16 +210,15 @@ function lensUniform(props: ReturnType<typeof toLensProps>, name: string): numbe
 }
 
 describe('адаптеры', () => {
-  it('выключенное преломление не смещает выборку и не увеличивает середину', () => {
+  // Показатель 1 — луч не гнётся вовсе: выборка остаётся под пикселем.
+  it('выключенное преломление не смещает выборку', () => {
     const props = toLensProps(applyToggles(optics, { refraction: false }), circle, PixelRatio.get());
-    expect(lensUniform(props, 'u_magnify')).toEqual([1]);
-    expect(lensUniform(props, 'u_edgePush')).toEqual([0]);
-    expect(lensUniform(props, 'u_spherical')).toEqual([0]);
+    expect(lensUniform(props, 'u_ior')).toEqual([1]);
   });
 
   it('выключенная дисперсия убирает хроматическое расхождение', () => {
     expect(
-      lensUniform(toLensProps(applyToggles(optics, { dispersion: false }), circle, PixelRatio.get()), 'u_chroma'),
+      lensUniform(toLensProps(applyToggles(optics, { dispersion: false }), circle, PixelRatio.get()), 'u_iorSpread'),
     ).toEqual([0]);
   });
 
@@ -256,6 +238,7 @@ describe('адаптеры', () => {
     expect(LENS_SHADER).toContain('u_fresnel');
     expect(LENS_SHADER).toContain('u_reflectReach');
     expect(SURFACE_SHADER).not.toContain('u_fresnel');
+    expect(SURFACE_SHADER).not.toContain('u_reflectReach');
     expect(SURFACE_SHADER).not.toContain('u_edgeStrength');
 
     const props = toLensProps(optics, circle, PixelRatio.get());

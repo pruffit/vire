@@ -26,9 +26,9 @@ import {
   DYNAMIC_UNIFORMS,
   ICON_UNIFORMS,
   OVERLAY_UNIFORMS,
-  REST_LIGHT,
   toLensProps,
   toSurfaceUniforms,
+  type VireGlassAccent,
   type VireGlassMorph,
   type VireGlassTouch,
 } from '../adapters';
@@ -64,6 +64,8 @@ export type VireGlassPiece = {
   centerX: number;
   centerY: number;
   morph?: VireGlassMorph;
+  /** Третья форма того же тела: разрыв детали на части идёт двумя перемычками. */
+  morph2?: VireGlassMorph;
   /** Локальный отклик на палец: точка касания, тяга, нажатие, волна. */
   touch?: VireGlassTouch;
   /** Отклик на нажатие, 0…1 — блик расцветает, тело чуть плотнеет. */
@@ -79,6 +81,12 @@ export type VireGlassPiece = {
   /** Цвет значка в покое и в активном состоянии, RGBA 0…1. */
   inkIdle?: readonly number[];
   inkActive?: readonly number[];
+  /** Направление ключевого света в плоскости экрана; по умолчанию — свет в покое. */
+  light?: readonly [number, number];
+  /** 0…1: появление детали нарастанием линзы (M 2:55). */
+  appear?: number;
+  /** Тонирование главного действия — цветное стекло, а не заливка. */
+  accent?: VireGlassAccent;
 };
 
 export type VireGlassRenderOptions = {
@@ -378,15 +386,15 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
       // тень, фаска и сбор света выходят за габарит детали.
       // Капля морфа уезжает за габарит детали — её ход входит в запас, иначе ножницы срежут
       // хвост ровно там, где он и интересен.
-      const morphReach = piece.morph
-        ? Math.hypot(piece.morph.offsetX, piece.morph.offsetY) +
-          Math.max(piece.morph.width, piece.morph.height) / 2 +
-          piece.morph.smoothing
-        : 0;
-      // Деформация поля уводит край детали за её габарит — тяга целиком плюс размах волны.
-      // Без этого слагаемого ножницы срезают ровно ту часть, ради которой тянут.
+      const reachOf = (m?: VireGlassMorph) =>
+        m ? Math.hypot(m.offsetX, m.offsetY) + Math.max(m.width, m.height) / 2 + m.smoothing : 0;
+      const morphReach = Math.max(reachOf(piece.morph), reachOf(piece.morph2));
+      // Деформация поля уводит край детали за её габарит — тяга, размах волны и рост при
+      // нажатии. Без этого слагаемого ножницы срезают ровно ту часть, ради которой тянут.
       const touchReach = piece.touch
-        ? Math.hypot(piece.touch.pullX, piece.touch.pullY) + piece.touch.waveAmp * 2
+        ? Math.hypot(piece.touch.pullX, piece.touch.pullY) +
+          piece.touch.waveAmp * 2 +
+          Math.max(piece.geometry.width, piece.geometry.height) * 0.05 * piece.touch.press
         : 0;
       const padPx =
         (lensPadDp(piece.geometry, piece.optics) + surfacePadDp(piece.geometry, 0) + morphReach + touchReach) *
@@ -425,8 +433,12 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
       const lens = toLensProps(piece.optics, piece.geometry, options.density, {
         debug: options.debug,
         morph: piece.morph,
+        morph2: piece.morph2,
         touch: piece.touch,
         progress: piece.progress,
+        light: piece.light,
+        appear: piece.appear,
+        accent: piece.accent,
       });
       applyChannel(gl, lensLoc, lens.uniformNames, lens.uniformSizes, lens.uniformValues);
       drawFullscreenTriangle(gl);
@@ -438,9 +450,14 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
       const rawSurface = toSurfaceUniforms(piece.optics, piece.geometry, {
         debug: options.debug,
         morph: piece.morph,
+        morph2: piece.morph2,
         bodyInLens: true,
         touch: piece.touch,
         progress: piece.progress,
+        // Над текстом тень плотнее, над ровным фоном слабее (M 11:47): отрыв детали от
+        // пёстрого контента держит именно она.
+        shadow: stats ? 0.8 + Math.min(stats.busy * 6, 1.2) : 1,
+        appear: piece.appear,
       });
       const d = options.density;
       applyObject(gl, surfaceLoc, {
@@ -453,6 +470,9 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
         u_morphHalf: [rawSurface.u_morphHalf[0] * d, rawSurface.u_morphHalf[1] * d],
         u_morphCorner: rawSurface.u_morphCorner * d,
         u_morphK: rawSurface.u_morphK * d,
+        u_morph2Offset: [rawSurface.u_morph2Offset[0] * d, rawSurface.u_morph2Offset[1] * d],
+        u_morph2Half: [rawSurface.u_morph2Half[0] * d, rawSurface.u_morph2Half[1] * d],
+        u_morph2Corner: rawSurface.u_morph2Corner * d,
         u_shadowReach: rawSurface.u_shadowReach * d,
 
         u_touch: [rawSurface.u_touch[0] * d, rawSurface.u_touch[1] * d],
@@ -460,12 +480,9 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
         u_touchRadius: rawSurface.u_touchRadius * d,
         u_wave: [rawSurface.u_wave[0] * d, rawSurface.u_wave[1]],
       });
-      // Динамика ворклета на Android (жест/нажатие/наклон) — здесь константы: стенд неподвижен,
-      // а акселерометра в браузере нет (спека §5 «Чего в вебе не будет»), поэтому свет — REST_LIGHT.
+      // Динамика ворклета на Android (нажатие, активность, наклон) здесь приходит полями детали.
       setUniform(gl, surfaceLoc(DYNAMIC_UNIFORMS[0]), piece.press ?? 0);
       setUniform(gl, surfaceLoc(DYNAMIC_UNIFORMS[1]), piece.active ?? 0);
-      // Акселерометра в браузере нет (спека §5), свет остаётся в покое.
-      setUniform(gl, surfaceLoc(DYNAMIC_UNIFORMS[2]), REST_LIGHT);
       const hasIcon = Boolean(piece.icon && options.iconMask);
       setUniform(gl, surfaceLoc(ICON_UNIFORMS[0]), hasIcon ? 1 : 0);
       // Масштаб 1: координата уже экранная, нормировку на размер делает сам сэмплер.
