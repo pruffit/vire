@@ -5,7 +5,9 @@
 import { FLOW_MARK, MARK_STROKE, MARK_VIEWBOX } from '@vire/design-tokens/marks';
 import { drawIcon, type IconName } from './icons';
 import { DISPLAY_FACE, fontOf } from './typefaces';
+import { scrollEdgeStrength, scrollEdgeStyle } from '@vire/vireglass';
 import { PHONE, phoneOrigin, phonePath, SCREEN_MARGIN } from './scenes';
+import { drawWithScrollEdges, type ScrollEdge } from './scroll-edge';
 
 /** Транспорт экрана трека. Значки из системного спрайта, как и в навигации. */
 export const TRANSPORT_ICONS: readonly IconName[] = [
@@ -305,7 +307,7 @@ export function drawFlowInk(ctx: CanvasRenderingContext2D, scale: number): void 
  * протяжка полотна возит по кадру весь телефон вместе с его линзами. Без обрезки по экрану
  * список вылезал бы на зону за рамкой телефона.
  */
-export function drawRecentList(
+function drawRecentList(
   ctx: CanvasRenderingContext2D,
   density: number,
   index: number,
@@ -325,10 +327,6 @@ export function drawRecentList(
   ctx.scale(px, px);
   ctx.translate(0, -scroll);
   ctx.textBaseline = 'alphabetic';
-
-  ctx.fillStyle = '#7c8598';
-  ctx.font = '600 11px system-ui, sans-serif';
-  ctx.fillText('НЕДАВНЕЕ', SCREEN_MARGIN, 44);
 
   RECENT.forEach((track, i) => {
     const mid = LIST_TOP + i * ROW + ROW / 2;
@@ -356,4 +354,103 @@ export function drawRecentList(
   });
 
   ctx.restore();
+}
+
+/** Полоса края сверху: статус-бар и заголовок, который над ней плавает. */
+const TOP_EDGE = LIST_TOP + 12;
+/** Полоса края снизу: зона плашки мини-плеера и навигации. */
+const BOTTOM_EDGE = 170;
+/** Верх фона приложения — в него растворяется контент у светлого стекла. */
+const BACKDROP_FILL = '18,21,27';
+
+const recentLayer = document.createElement('canvas');
+
+/** Заголовок не едет со списком: он плавает над краем и обязан оставаться чистым (219 @9:22). */
+function drawRecentHeader(
+  ctx: CanvasRenderingContext2D,
+  density: number,
+  index: number,
+  offsetX: number,
+  offsetY: number,
+): void {
+  const o = phoneOrigin(index);
+  ctx.save();
+  phonePath(
+    ctx,
+    o.x * density + offsetX,
+    o.y * density + offsetY,
+    PHONE.width * density,
+    PHONE.height * density,
+    PHONE.radius * density,
+  );
+  ctx.clip();
+  ctx.translate(o.x * density + offsetX, o.y * density + offsetY);
+  ctx.scale(density, density);
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#7c8598';
+  ctx.font = '600 11px system-ui, sans-serif';
+  ctx.fillText('НЕДАВНЕЕ', SCREEN_MARGIN, 44);
+  ctx.restore();
+}
+
+/**
+ * Экран навигации целиком: список отдельным слоем и краевой эффект у обоих краёв. Стиль нижнего
+ * края берётся у плашки мини-плеера — ближайшего стекла; сверху стекла нет, только светлый
+ * заголовок, и край берёт тёмный стиль.
+ */
+export function drawRecentScreen(
+  ctx: CanvasRenderingContext2D,
+  density: number,
+  index: number,
+  offsetX: number,
+  offsetY: number,
+  scroll: number,
+  maxScroll: number,
+  glassInkLight: boolean,
+): void {
+  if (recentLayer.width !== ctx.canvas.width || recentLayer.height !== ctx.canvas.height) {
+    recentLayer.width = ctx.canvas.width;
+    recentLayer.height = ctx.canvas.height;
+  }
+  const layer = recentLayer.getContext('2d');
+  if (!layer) return;
+  layer.clearRect(0, 0, recentLayer.width, recentLayer.height);
+  drawRecentList(layer, density, index, offsetX, offsetY, scroll);
+
+  const o = phoneOrigin(index);
+  const x = o.x * density + offsetX;
+  const y = o.y * density + offsetY;
+  const width = PHONE.width * density;
+  const height = PHONE.height * density;
+  const edges: ScrollEdge[] = [
+    {
+      x,
+      y,
+      width,
+      height: TOP_EDGE * density,
+      side: 'top',
+      style: scrollEdgeStyle(true),
+      fill: BACKDROP_FILL,
+      strength: scrollEdgeStrength('top', scroll, maxScroll),
+    },
+    {
+      x,
+      y: y + height - BOTTOM_EDGE * density,
+      width,
+      height: BOTTOM_EDGE * density,
+      side: 'bottom',
+      style: scrollEdgeStyle(glassInkLight),
+      fill: BACKDROP_FILL,
+      strength: scrollEdgeStrength('bottom', scroll, maxScroll),
+      // Затемнение у низа уже держит скрим экрана — у продукта это `FurnitureScrim`.
+      veil: false,
+    },
+  ];
+  ctx.save();
+  phonePath(ctx, x, y, width, height, PHONE.radius * density);
+  ctx.clip();
+  drawWithScrollEdges(ctx, recentLayer, edges, density);
+  ctx.restore();
+  drawRecentHeader(ctx, density, index, offsetX, offsetY);
 }
