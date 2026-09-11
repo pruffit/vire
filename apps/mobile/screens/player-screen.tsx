@@ -30,6 +30,7 @@ import { space, layout, motionDuration } from '../lib/design/scales';
 import { Icon } from '../lib/icon';
 import { HazeGround, HAZE_TOP } from '../components/haze-ground';
 import { useMock } from '../lib/design/mock';
+import { distributeSurplus } from '../lib/design/stack';
 import { CoverCarousel } from '../components/player/cover-carousel';
 import { LyricsGlass } from '../components/player/lyrics-glass';
 import { Transport } from '../components/player/transport';
@@ -92,11 +93,22 @@ const MOCK_PHONE_HEIGHT = 640;
 const MOCK_COVER_SIDE = 260;
 const MOCK_ACTION = 25;
 const MOCK_ACTION_STEP = 38;
-const MOCK_TITLE_SIZE = 22;
+const MOCK_TITLE_SIZE = 20;
 /** Главный значок транспорта: по нему считается высота ряда, а от неё — отбивки. */
 const MOCK_PLAY = 34;
 const MOCK_ARTIST_SIZE = 15;
 const MOCK_SCREEN_MARGIN = 20;
+
+/** Веса зазоров для `distributeSurplus` — макетные величины в том же порядке, в каком они
+ *  идут на экране сверху вниз. */
+const STACK_GAP_WEIGHTS = [
+  MOCK_COVER_TOP,
+  MOCK_COVER_TO_TITLE,
+  MOCK_ARTIST_TO_PROGRESS,
+  MOCK_PROGRESS_TO_TRANSPORT,
+  MOCK_TRANSPORT_TO_FLOW,
+  MOCK_FLOW_BOTTOM,
+] as const;
 
 /**
  * Фуллскрин-плеер.
@@ -230,8 +242,8 @@ export default function PlayerScreen() {
   // садится в экран точно, и пустоты не остаётся ни сверху, ни под кнопкой.
   const vs = (v: number) =>
     (v * (viewport - contentWidth)) / (MOCK_PHONE_HEIGHT - MOCK_COVER_SIDE);
-  const coverAir = Math.max(0, vs(MOCK_COVER_TOP) - headerHeight);
-  const artSize = Math.min(contentWidth, Math.max(ms(MOCK_COVER_MIN), coverRegionHeight - coverAir));
+  const coverAirBase = Math.max(0, vs(MOCK_COVER_TOP) - headerHeight);
+  const artSize = Math.min(contentWidth, Math.max(ms(MOCK_COVER_MIN), coverRegionHeight - coverAirBase));
   const edgeScale = Math.max(width, windowHeight) / artSize;
   const coverScreenTop = coverTop + headerHeight;
   const immersiveShiftY = viewport / 2 - (coverScreenTop + artSize / 2);
@@ -263,10 +275,31 @@ export default function PlayerScreen() {
   // Отбивка не уходит в минус: на низком экране (или при увеличенном системном кегле)
   // `vs()` мал, а вычитаемая метрика строки нет — блоки наезжали бы друг на друга.
   const gap = (v: number, metric: number) => Math.max(0, vs(v) - metric);
-  const coverToTitle = gap(MOCK_COVER_TO_TITLE, ascent(ms(MOCK_TITLE_TO_ARTIST), titleSize));
-  const artistToProgress = gap(MOCK_ARTIST_TO_PROGRESS, descent(artistLine, artistSize));
-  const progressToTransport = gap(MOCK_PROGRESS_TO_TRANSPORT, transportBox / 2);
-  const transportToFlow = gap(MOCK_TRANSPORT_TO_FLOW, transportBox / 2);
+  const coverToTitleBase = gap(MOCK_COVER_TO_TITLE, ascent(ms(MOCK_TITLE_TO_ARTIST), titleSize));
+  const artistToProgressBase = gap(MOCK_ARTIST_TO_PROGRESS, descent(artistLine, artistSize));
+  const progressToTransportBase = gap(MOCK_PROGRESS_TO_TRANSPORT, transportBox / 2);
+  const transportToFlowBase = gap(MOCK_TRANSPORT_TO_FLOW, transportBox / 2);
+  const flowBottomBase = vs(MOCK_FLOW_BOTTOM);
+
+  // Излишек — то, что flexGrow добавил региону обложки сверх его макетной величины. На
+  // низком аппарате (регион сжался) он отрицательный, и distributeSurplus не раздаёт его —
+  // тогда все базовые величины выше остаются как есть, это прежнее сжатие.
+  const regionSurplus = coverRegionHeight - (coverAirBase + contentWidth);
+  const [
+    coverAirSurplus,
+    coverToTitleSurplus,
+    artistToProgressSurplus,
+    progressToTransportSurplus,
+    transportToFlowSurplus,
+    flowBottomSurplus,
+  ] = distributeSurplus(STACK_GAP_WEIGHTS, regionSurplus);
+
+  const coverAir = coverAirBase + coverAirSurplus;
+  const coverToTitle = coverToTitleBase + coverToTitleSurplus;
+  const artistToProgress = artistToProgressBase + artistToProgressSurplus;
+  const progressToTransport = progressToTransportBase + progressToTransportSurplus;
+  const transportToFlow = transportToFlowBase + transportToFlowSurplus;
+  const flowBottom = flowBottomBase + flowBottomSurplus;
 
   const share = () => setShareOpen(true);
 
@@ -309,17 +342,14 @@ export default function PlayerScreen() {
                   {
                     minHeight: viewport,
                     paddingTop: headerHeight,
-                    paddingBottom: vs(MOCK_FLOW_BOTTOM),
+                    paddingBottom: flowBottom,
                   },
                 ]}
               >
                 {/* Обложка НЕ под `chromeStyle`: иммерсив гасит интерфейс вокруг неё, а не её
                     саму — под общей прозрачностью она исчезала вместе с ним. */}
-                {/* Базис — макетная высота области (воздух над обложкой плюс сама обложка),
-                    дальше рост. Лишнюю высоту аппарата делит пополам с распоркой под кнопкой:
-                    целиком сверху она читается провалом под панелью, целиком снизу — отрывает
-                    «ПОТОК» от края. Потолок здесь стоять не может: упёршись в него, рост
-                    прекращался и остаток ложился мёртвой полосой под кнопкой. */}
+                {/* Базис региона — воздух над обложкой (со своей долей излишка) плюс сама
+                    обложка; остальной излишек ушёл в отбивки ниже через `distributeSurplus`. */}
                 <View
                   style={[styles.coverRegion, { flexBasis: coverAir + contentWidth }]}
                   onLayout={(e) => setCoverRegionHeight(e.nativeEvent.layout.height)}
