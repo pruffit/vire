@@ -244,6 +244,7 @@ export default function PlayerScreen() {
     (v * (viewport - contentWidth)) / (MOCK_PHONE_HEIGHT - MOCK_COVER_SIDE);
   const coverAirBase = Math.max(0, vs(MOCK_COVER_TOP) - headerHeight);
   const artSize = Math.min(contentWidth, Math.max(ms(MOCK_COVER_MIN), coverRegionHeight - coverAirBase));
+  const coverRadius = ms(MOCK_COVER_RADIUS);
   const edgeScale = Math.max(width, windowHeight) / artSize;
   const coverScreenTop = coverTop + headerHeight;
   const immersiveShiftY = viewport / 2 - (coverScreenTop + artSize / 2);
@@ -363,7 +364,7 @@ export default function PlayerScreen() {
                       queue={queue}
                       queueIndex={queueIndex}
                       size={artSize}
-                      radius={ms(MOCK_COVER_RADIUS)}
+                      radius={coverRadius}
                       immersive={immersive}
                       edgeScale={edgeScale}
                       immersiveShiftY={immersiveShiftY}
@@ -549,6 +550,7 @@ export default function PlayerScreen() {
             synced={synced}
             onSeek={seek}
             blurTarget={artRef}
+            radius={coverRadius}
           />
         </Animated.View>
       )}
