@@ -7,7 +7,7 @@ import {
   type LayoutChangeEvent,
   type View as RNView,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassPanel } from '../ui/glass-panel';
 import { useGlassInk } from '../../lib/vireglass/glass-ink';
@@ -157,6 +157,12 @@ function Synced({ lines, activeIndex }: { lines: LyricLine[]; activeIndex: numbe
   const [layers, setLayers] = useState({ from: stack, to: stack });
   const fade = useSharedValue(1);
 
+  // Схлопывает слои обратно в один, когда переход доигран — иначе уходящий слой
+  // остаётся смонтированным (незримым) навсегда.
+  const collapseLayers = useCallback(() => {
+    setLayers((prev) => ({ from: prev.to, to: prev.to }));
+  }, []);
+
   useEffect(() => {
     if (previousIndex.current === activeIndex) {
       previousStack.current = stack;
@@ -167,8 +173,10 @@ function Synced({ lines, activeIndex }: { lines: LyricLine[]; activeIndex: numbe
     previousStack.current = stack;
     setLayers({ from, to: stack });
     fade.value = 0;
-    fade.value = withTiming(1, { duration: motionDuration('panel', reduceMotion) });
-  }, [activeIndex, reduceMotion]);
+    fade.value = withTiming(1, { duration: motionDuration('panel', reduceMotion) }, (finished) => {
+      if (finished) runOnJS(collapseLayers)();
+    });
+  }, [activeIndex, reduceMotion, collapseLayers]);
 
   const crossfading = layers.from !== layers.to;
 
