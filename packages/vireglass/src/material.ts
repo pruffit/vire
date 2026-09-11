@@ -33,6 +33,7 @@ import {
   diffraction as diffractionFrom,
   colorPickup as colorPickupFrom,
   specularStrength,
+  iorSpread as iorSpreadFrom,
 } from './optics';
 
 export type VireGlassTint = { r: number; g: number; b: number };
@@ -125,6 +126,12 @@ export type VireGlassOptics = {
   diffraction: number;
   /** Насколько тело красится цветом окружения. */
   colorPickup: number;
+  /** Показатель преломления: сдвиг луча шейдер считает по закону Снелла. */
+  ior: number;
+  /** Толщина пластины, dp — до поправки на размер детали. */
+  thicknessDp: number;
+  /** Разнос показателя между красным и синим каналом — дисперсия. */
+  iorSpread: number;
 };
 
 // Продовый дефолт — «вода»: ниже показатель преломления, тоньше среда и фаска, почти
@@ -153,8 +160,8 @@ export const VIREGLASS_MATERIAL_V4: VireGlassMaterial = {
  */
 export const VIREGLASS_MATERIAL_V5: VireGlassMaterial = {
   ior: 1.5,
-  thickness: 16,
-  bevel: 8,
+  thickness: 28,
+  bevel: 6,
   roughness: 0.06,
   environment: 0.27,
   legibility: 0.26,
@@ -211,8 +218,8 @@ export const VIREGLASS_LYRICS_MATERIAL: VireGlassMaterial = {
 export const VIREGLASS_CONTROL_MATERIAL: VireGlassMaterial = {
   ...VIREGLASS_MATERIAL_V5,
   ior: 1.69,
-  thickness: 24,
-  bevel: 16,
+  thickness: 30,
+  bevel: 8,
   roughness: 0.035,
   presence: 0.176,
 };
@@ -295,6 +302,9 @@ export function resolveOptics(patch: Partial<VireGlassMaterial> = {}): VireGlass
     iridescence: iridescenceFrom(m.ior, m.film),
     diffraction: diffractionFrom(m.ior),
     colorPickup: colorPickupFrom(m.ior),
+    ior: m.ior,
+    thicknessDp: m.thickness,
+    iorSpread: iorSpreadFrom(m.ior),
   };
 }
 
@@ -330,6 +340,9 @@ export const LEGACY_OPTICS = {
     iridescence: 0,
     diffraction: 0,
     colorPickup: 0,
+    ior: 1.5,
+    thicknessDp: 16,
+    iorSpread: 0,
   },
   'v2': {
     blur: 5,
@@ -357,6 +370,9 @@ export const LEGACY_OPTICS = {
     iridescence: 0,
     diffraction: 0,
     colorPickup: 0,
+    ior: 1.5,
+    thicknessDp: 16,
+    iorSpread: 0,
   },
   'v1': {
     blur: 12,
@@ -384,6 +400,9 @@ export const LEGACY_OPTICS = {
     iridescence: 0,
     diffraction: 0,
     colorPickup: 0,
+    ior: 1.5,
+    thicknessDp: 16,
+    iorSpread: 0,
   },
 } as const satisfies Record<string, VireGlassOptics>;
 
@@ -444,11 +463,15 @@ export function applyToggles(
     o.refraction = 0;
     o.refractionScale = 1;
     o.edgePushDp = 0;
+    o.ior = 1;
   }
   if (!on.fresnel) o.fresnel = 0;
   if (!on.bevel) o.bevelDp = 1;
   if (!on.specular) o.specular = 0;
-  if (!on.dispersion) o.dispersion = 0;
+  if (!on.dispersion) {
+    o.dispersion = 0;
+    o.iorSpread = 0;
+  }
   if (!on.tint) o.tintStrength = 0;
   if (!on.environment) o.environment = 0;
   if (!on.legibility) o.legibility = 0;

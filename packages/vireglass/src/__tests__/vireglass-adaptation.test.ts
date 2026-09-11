@@ -4,10 +4,13 @@ import {
   bodyDensityFor,
   bodyLuma,
   contrastRatio,
+  FLIP_LUMA,
   INK_DARK,
   INK_LIGHT,
   preferredPolarity,
   relativeLuminance,
+  RETURN_LUMA,
+  shouldInkBeLight,
 } from '../adaptation';
 import { LENS_SHADER } from '../lens-shader';
 import { colorPickup, diffraction, dispersion, iridescence } from '../optics';
@@ -59,7 +62,7 @@ describe('тело стекла: модель в JS и в шейдере', () =>
   // mix(0.35, 1.0, t), середина светилась втрое слабее кромки — и это читалось пятном
   // другого тона по центру стекла.
   it('подсветка тела не зависит от места на детали', () => {
-    expect(LENS_SHADER).toContain('rgb += ambient * u_edgeLight * (0.12 + 0.55 * (1.0 - local));');
+    expect(LENS_SHADER).toContain('rgb += ambient * u_edgeLight * (0.05 + 0.2 * (1.0 - local));');
   });
 
   it('порог читаемости — потолок светлоты, и он строже при высоком требовании', () => {
@@ -104,34 +107,28 @@ describe('предел стекла и полярность', () => {
     expect(relativeLuminance(0)).toBe(0);
   });
 
-  const cost = (l: number) => bodyDensityFor(l, LEGIBILITY, 0, 1);
-
-  // Правило продукта: надпись светлая везде, кроме очень светлого фона. На цветном её
-  // вытягивает плотность тела, а не смена цвета — иначе иконки на цветных блоках прыгают
-  // из белых в чёрные и обратно.
-  it('на цветном фоне стекло справляется само — перекрашивать нечего', () => {
-    // 0.78 — светлота насыщенного жёлтого, самого светлого из цветов, на которых надпись
-    // обязана остаться белой.
-    for (const l of [0.35, 0.5, 0.62, 0.7, 0.78]) {
-      expect(cost(l)).toBeLessThan(0.48);
-    }
+  // Правило эталона (reference.md §3): над жёлтым цветком глифы уже чёрные, а стекло светлое.
+  it('над светлым цветом надпись уходит в тёмную', () => {
+    expect(shouldInkBeLight({ luma: 0.78 }, true)).toBe(false);
+    expect(shouldInkBeLight({ luma: 0.95 }, true)).toBe(false);
   });
 
-  it('на очень светлом фоне цена удержания светлой надписи выходит за предел', () => {
-    expect(cost(0.92)).toBeGreaterThan(0.48);
-    expect(cost(1)).toBeGreaterThan(0.48);
+  it('на насыщенном и тёмном фоне надпись остаётся светлой', () => {
+    for (const l of [0.05, 0.35, 0.5, 0.58]) expect(shouldInkBeLight({ luma: l }, true)).toBe(true);
   });
 
   // Зазор между «переключиться» и «вернуться» — иначе надпись мигает на каждой светлой
   // обложке, проехавшей под краем стекла.
   it('возврат к светлой требует заметно более тёмного фона, чем уход от неё', () => {
-    const flipAt = [...Array(101).keys()].map((i) => i / 100).find((l) => cost(l) > 0.48) ?? 1;
-    const backAt = [...Array(101).keys()].map((i) => i / 100).find((l) => cost(l) > 0.34) ?? 1;
-    expect(backAt).toBeLessThan(flipAt);
+    const between = (FLIP_LUMA + RETURN_LUMA) / 2;
+    expect(shouldInkBeLight({ luma: between }, true)).toBe(true);
+    expect(shouldInkBeLight({ luma: between }, false)).toBe(false);
+    expect(FLIP_LUMA - RETURN_LUMA).toBeGreaterThanOrEqual(0.1);
   });
 
-  it('над границей чёрного и белого решение остаётся за плотностью, а не за цветом', () => {
-    expect(cost(0.5 * 0.75 + 1 * 0.25)).toBeLessThan(0.48);
+  it('решение уклоняется к самому светлому месту под стеклом', () => {
+    expect(shouldInkBeLight({ luma: 0.55 }, true)).toBe(true);
+    expect(shouldInkBeLight({ luma: 0.55, hi: 0.95 }, true)).toBe(false);
   });
 
   it('требование читаемости разводит тело с надписью тем сильнее, чем оно выше', () => {

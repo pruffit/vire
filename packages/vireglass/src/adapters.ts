@@ -1,12 +1,11 @@
 import {
   bevelDp,
   bevelFraction,
-  chromaDp,
-  edgePushDp,
   halfMinDp,
+  rimDp,
   shadowReachDp,
-  sphericalDp,
   surfacePadDp,
+  thicknessDp,
   type VireGlassGeometry,
 } from './geometry';
 import { LENS_SHADER } from './lens-shader';
@@ -100,6 +99,10 @@ export function toLensProps(
     touch?: VireGlassTouch;
     /** Сыгранная доля, 0…1: слева от границы деталь активна. `undefined` — прогресса нет. */
     progress?: number;
+    /** Направление ключевого света в плоскости экрана; по умолчанию — свет в покое. */
+    light?: readonly [number, number];
+    /** 0…1: линза нарастает при появлении детали — вместо прозрачности. */
+    appear?: number;
   } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
@@ -131,10 +134,12 @@ export function toLensProps(
       ['u_halfSize', [halfW, halfH]],
       ['u_corner', Math.min(geometry.cornerRadius * d, halfMin)],
       ['u_bevel', Math.max(bevelDp(geometry, optics) * d, 1)],
-      ['u_magnify', lensMagnify(optics)],
-      ['u_edgePush', edgePushDp(geometry, optics) * d],
-      ['u_chroma', chromaDp(geometry, optics) * d],
-      ['u_spherical', sphericalDp(geometry, optics) * d],
+      ['u_thick', thicknessDp(geometry, optics) * d],
+      ['u_rim', rimDp(geometry, optics) * d],
+      ['u_ior', optics.ior],
+      ['u_iorSpread', optics.iorSpread],
+      ['u_light', options.light ?? REST_LIGHT],
+      ['u_appear', options.appear ?? 1],
       // Мутность от шероховатости поверхности. Живёт в том же дисковом сборе, что и
       // адаптивное рассеяние, и гасится к фаске: там работа другая — гнуть луч и расщеплять.
       ['u_frost', optics.blur * d],
@@ -142,11 +147,10 @@ export function toLensProps(
       ['u_legibility', optics.legibility],
       ['u_presence', optics.presence],
       ['u_adaptRadius', optics.adaptRadius * d],
-      ['u_bodyTint', [optics.tint.r, optics.tint.g, optics.tint.b]],
       ['u_bodyDensity', optics.bodyDensity],
       ['u_edgeLight', optics.edgeLight],
       ['u_fresnel', optics.fresnel],
-      ['u_fresnelPower', optics.fresnelPower],
+      ['u_specular', optics.specular],
       // Кромка собирает свет в окрестности детали — это радиус вокруг формы, а не её фаска.
       ['u_reflectReach', optics.gatherRadiusDp * d],
       ['u_film', optics.film],

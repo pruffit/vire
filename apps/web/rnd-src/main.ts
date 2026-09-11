@@ -11,6 +11,7 @@ import {
   resolveOptics,
   roundedRectGeometry,
   circleGeometry,
+  capsuleGeometry,
   VIREGLASS_CONTROL_MATERIAL,
   VIREGLASS_MATERIAL,
   activeMaterial,
@@ -101,7 +102,14 @@ let material = currentMaterial();
 let optics = resolveOptics(material);
 let polarity = manualInk ? 'ручная' : 'светлая';
 
-const geometry = roundedRectGeometry(280, 120, 32);
+// Форма контрольного образца — в адресе: капсула и круг повторяют эталонные кадры.
+const SHAPES = {
+  rect: roundedRectGeometry(280, 120, 32),
+  capsule: capsuleGeometry(300, 110),
+  circle: circleGeometry(150),
+} as const;
+const shapeName = (params.get('shape') ?? 'rect') as keyof typeof SHAPES;
+const geometry = SHAPES[shapeName] ?? SHAPES.rect;
 const dpr = window.devicePixelRatio || 1;
 const renderer = createVireGlassRenderer(canvas);
 
@@ -182,6 +190,7 @@ function syncUrl(): void {
   for (const [key, value] of state.overrides) next.set(key, String(Math.round(value * 1000) / 1000));
   if (params.get('ui') === '0') next.set('ui', '0');
   if (params.has('hue')) next.set('hue', String(accentHue));
+  if (params.has('shape')) next.set('shape', shapeName);
   history.replaceState(null, '', `${location.pathname}?${next}`);
 }
 
@@ -366,11 +375,8 @@ const ROW_OFFSETS = ROWS.reduce<number[]>((acc) => {
 }, []);
 const BUTTON_TOTAL = ROWS.reduce((n, row) => n + row.count, 0);
 
-/** Полярность кнопок считается по ИХ материалу и их фону, а не по панельному: ползунки правят
- *  контрольный образец, а ручной `ink` вообще выключает автоматику — кнопки тогда оставались
- *  светлополярными над светлым фоном и давились до серого. */
+/** Материал кнопок свой, а не панельный: ползунки правят только контрольный образец. */
 const BUTTON_MATERIAL = VIREGLASS_CONTROL_MATERIAL;
-const buttonOptics = resolveOptics(BUTTON_MATERIAL);
 /** Полярность — У КАЖДОЙ КНОПКИ СВОЯ, по её собственному зонду. Общей на весь кадр она
  *  бралась с первой детали: над светлой клеткой выходила тёмная надпись, и требование
  *  читаемости выбеливало тело кнопок навигации на ЧЁРНОМ фоне до матового диска. */
@@ -381,7 +387,7 @@ function updateButtonInk(probes: readonly ({ luma: number; hi: number } | null)[
     const sample = probes[i];
     if (!sample) continue;
     const was = buttonInk[i] === INK_LIGHT;
-    const next = shouldInkBeLight(sample, buttonOptics.legibility, was) ? INK_LIGHT : INK_DARK;
+    const next = shouldInkBeLight(sample, was) ? INK_LIGHT : INK_DARK;
     if (next !== buttonInk[i]) wake();
     buttonInk[i] = next;
   }
@@ -613,7 +619,7 @@ function renderFrame() {
 
 function applyPolarity(sample: { luma: number; hi: number }): void {
   if (manualInk) return;
-  const light = shouldInkBeLight(sample, optics.legibility, polarity === 'светлая');
+  const light = shouldInkBeLight(sample, polarity === 'светлая');
   const next = light ? 'светлая' : 'тёмная';
   // Замер зонда приходит с отставанием, и полярность может смениться на ПОСЛЕДНЕМ кадре
   // досчёта. Без побудки состояние уже новое, а на экране остаётся кадр со старой полярностью.

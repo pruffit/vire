@@ -48,8 +48,6 @@ ${VG_SDF}
 
 const float VG_FALLOFF = ${VG_FALLOFF};
 
-/* Толщина, на которой откалибровано поглощение: при ней полоса совпадает с прежним стеклом. */
-const float VG_REF_THICKNESS = 0.18;
 // Плотность тинта в плоской середине; у фаски она множится на u_edgeDensity.
 const float VG_BODY_DENSITY = 0.19;
 /* Глубина краски под поверхностью, dp. На столько её уводит нормаль у самой кромки. */
@@ -80,33 +78,13 @@ half4 main(float2 xy) {
   float t = vgBevelT(sd, bevel);
   float2 n = vgSceneNormal(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
   float3 N = normalize(float3(n * vgBevelSlope(t), 1.0));
-  float3 V = float3(0.0, 0.0, 1.0);
-
-  float bloom = 1.0 + u_press * 0.45;
 
   // Прогресс — активное состояние, ставшее полем: сыгранная часть блестит и светится ровно
   // настолько, насколько блестит активная деталь целиком. Краску это НЕ трогает: перекрашивать
   // надпись по ходу трека значит менять её посреди слова.
   float lit = max(u_active, vgProgress(p, u_halfSize, u_progress));
 
-  float3 L1 = normalize(float3(u_light * 0.86, 0.42));
-  float3 L2 = normalize(float3(-u_light * 0.78, 0.50));
-  float bevelMask = smoothstep(0.10, 0.55, t);
-  float s1 = pow(max(dot(reflect(-L1, N), V), 0.0), u_specularPower) * 0.85;
-  float s2 = pow(max(dot(reflect(-L2, N), V), 0.0), u_specularPower * 1.45) * 0.14;
-  float spec = (s1 + s2) * bevelMask * u_specular * bloom * (1.0 + lit * 0.30);
-
-  // Светящейся кромки здесь больше НЕТ. Она была отражением, нарисованным белым поверх, и
-  // потому выглядела одинаково над чёрным списком и над светлой обложкой. Отражение
-  // считает линза (lens-shader.ts) — там виден бэкдроп, и кромка берёт цвет от того, что
-  // реально под ней. Здесь остаётся только то, что от окружения не зависит: блик от НАШЕГО
-  // ключевого света, поглощение среды и тень.
-  float facing = dot(n, u_light);
-
-  // Толщина как поглощение: полоса там, где кромку не освещает ни один источник. Растёт
-  // с фаской, поэтому тонкое стекло само по себе перестаёт «наливаться» у края.
-  float absorb = smoothstep(0.0, 0.70, t) * (1.0 - smoothstep(0.80, 1.0, t))
-    * (1.0 - abs(facing)) * 0.10 * (u_thickness / VG_REF_THICKNESS);
+  // Блик и кромку считает линза: отражение — функция окружения, а его видно только оттуда.
 
   if (u_debug > 0.5) {
     float inMask = 1.0 - smoothstep(-1.0, 1.0, sd);
@@ -124,7 +102,7 @@ half4 main(float2 xy) {
       return vgPack(vgHeat(push), inMask);
     }
     if (u_debug < 6.5) { return half4(0.0); }
-    if (u_debug < 7.5) { return vgPack(half3(1.0), spec * inMask); }
+    if (u_debug < 7.5) { return half4(0.0); }
     // Расщепление считает линза; здесь — поле, по которому оно нарастает.
     if (u_debug < 8.5) { return vgPack(vgHeat(u_dispersion * t * t), inMask); }
     if (u_debug < 9.5) { return vgPack(half3(N * 0.5 + 0.5), inMask); }
@@ -174,8 +152,6 @@ half4 main(float2 xy) {
   // Цвет тела активность НЕ трогает. Подмешивание фиксированного серого сюда меняло знак
   // эффекта от фона: над тёмным деталь светлела, над светлым — темнела, хотя состояние одно
   // и то же. Активность показывают блик и подсветка кромки выше: им фон безразличен.
-  a = a + absorb;
-  col *= 1.0 - half(absorb * 1.2);
 
   // ЗНАЧОК ЛЕЖИТ ПОД ПОВЕРХНОСТЬЮ, а не наклеен на неё: раньше он подмешивался последним,
   // поверх блика, и читался плоским стикером на объёмном стекле. У кромки его уводит нормаль,
@@ -214,11 +190,7 @@ half4 main(float2 xy) {
   half4 over = u_overlay.eval(inkUv * u_iconScale) * half(u_overlayOn);
   col = col * (1.0 - over.a) + over.rgb * over.a;
 
-  col += half3(spec) * half3(0.98, 0.99, 1.0);
-
-  // Альфа блика идёт вровень с его яркостью: при заниженной альфе premultiplied результат
-  // гаснет и блик становится невидимым на тёмном фоне.
-  a = clamp(a + spec, 0.0, 1.0);
+  a = clamp(a, 0.0, 1.0);
   a = max(a, max(float(inkA), float(over.a)));
   a *= 1.0 - smoothstep(-1.0, 1.0, sd);
 

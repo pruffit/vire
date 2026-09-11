@@ -13,15 +13,14 @@ import {
   toGLSL,
 } from '../targets/glsl';
 
-/** Контракт униформ лямбды (спека §4): 35 имён из трёх источников — вьюха, зонд, материал. */
+/** Контракт униформ линзы (спека §4): имена из трёх источников — вьюха, зонд, материал. */
 const NATIVE_UNIFORMS = ['u_center', 'u_reach', 'u_contentMin', 'u_contentMax'];
 const PROBE_UNIFORMS = ['u_probeLuma', 'u_probeBusy', 'u_probeRange', 'u_probeSlope', 'u_probe'];
 const MATERIAL_UNIFORMS = [
-  'u_halfSize', 'u_corner', 'u_bevel', 'u_magnify', 'u_edgePush', 'u_chroma', 'u_spherical',
-  'u_frost', 'u_ink', 'u_legibility', 'u_presence', 'u_adaptRadius', 'u_bodyTint', 'u_bodyDensity',
-  'u_edgeLight', 'u_fresnel', 'u_fresnelPower', 'u_reflectReach', 'u_film', 'u_iridescence',
-  'u_diffraction', 'u_colorPickup', 'u_morphOffset', 'u_morphHalf', 'u_morphCorner', 'u_morphK',
-  'u_debug',
+  'u_halfSize', 'u_corner', 'u_bevel', 'u_thick', 'u_rim', 'u_ior', 'u_iorSpread', 'u_light',
+  'u_appear', 'u_frost', 'u_ink', 'u_legibility', 'u_presence', 'u_adaptRadius', 'u_bodyDensity', 'u_edgeLight', 'u_fresnel', 'u_specular', 'u_reflectReach', 'u_film',
+  'u_iridescence', 'u_diffraction', 'u_colorPickup', 'u_morphOffset', 'u_morphHalf',
+  'u_morphCorner', 'u_morphK', 'u_debug',
 ];
 /** Отклик на палец: деформация поля вокруг точки касания (`vgTouchWarp` в sdf.ts). Едет тем
  *  же каналом, что и материал; на Android остаётся в нулях, пока его туда не подключат. */

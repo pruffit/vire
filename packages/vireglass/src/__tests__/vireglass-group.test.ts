@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONFIRMATIONS, type BackdropSample } from '../adaptation';
+import { CONFIRMATIONS, FLIP_LUMA, RETURN_LUMA, type BackdropSample } from '../adaptation';
 import {
   aggregate,
   createGroupState,
@@ -162,19 +162,15 @@ describe('полярность блока', () => {
     expect(aggregate([strict, lax])?.decision.legibility).toBe(0.6);
   });
 
-  // На этом фоне нетребовательному участнику стекла хватает, а придирчивому уже нет.
-  // По первому попавшемуся требованию блок остался бы со светлой надписью на обоих.
-  it('придирчивый участник перекрашивает весь блок, нетребовательный — нет', () => {
-    const lax = makeState();
-    const strict = makeState();
-    for (let i = 0; i < CONFIRMATIONS; i += 1) {
-      lax.report('a', 0, 0.72, 0.05);
-      lax.report('b', 100, 0.72, 0.05);
-      strict.report('a', 0, 0.72, 0.05);
-      strict.report('b', 100, 0.72, 0.6);
-    }
-    expect(lax.flips).toEqual([]);
-    expect(strict.flips).toEqual([0]);
+  // Блок переключается целиком по светлоте под ним, с зазором: назад — заметно раньше.
+  it('блок уходит в тёмную надпись выше порога и возвращается только ниже обратного', () => {
+    const block = makeState();
+    for (let i = 0; i < CONFIRMATIONS; i += 1) block.report('a', 0, FLIP_LUMA + 0.02);
+    expect(block.flips).toEqual([0]);
+    for (let i = 0; i < CONFIRMATIONS; i += 1) block.report('a', 0, (FLIP_LUMA + RETURN_LUMA) / 2);
+    expect(block.flips).toEqual([0]);
+    for (let i = 0; i < CONFIRMATIONS; i += 1) block.report('a', 0, RETURN_LUMA - 0.02);
+    expect(block.flips).toEqual([0, 1]);
   });
 
   // Блик под краем стекла: среднее по блоку ещё тёмное, а самое светлое место уже нет.

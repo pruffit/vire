@@ -35,6 +35,12 @@ const DISPERSION_PER_IOR = 1.1;
 
 export const dispersion = (ior: number) => clamp01((ior - 1) * DISPERSION_PER_IOR);
 
+/** Разнос показателя между красным и синим каналом. Физический (~0.01 при числе Аббе 55)
+ *  на пороге заметности — стилизация той же монотонности, что у Френеля. */
+const IOR_SPREAD_PER_DISPERSION = 0.045;
+
+export const iorSpread = (ior: number) => dispersion(ior) * IOR_SPREAD_PER_DISPERSION;
+
 /** Бугер–Ламберт: сколько поглотит среда на пути длиной `pathDp`. */
 const ABSORB_PER_DP = 0.017;
 
