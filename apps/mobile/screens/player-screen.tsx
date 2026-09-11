@@ -14,6 +14,7 @@ import Animated, {
 
 import * as Haptics from 'expo-haptics';
 import { nextQueueIndex } from '@vire/core/playback/queue';
+import type { PlaySource } from '@vire/api-contracts';
 import { Backdrop } from '../components/backdrop';
 import { usePlayerStore } from '../lib/player-store';
 import { useLikesStore } from '../lib/likes-store';
@@ -56,6 +57,21 @@ const LYRICS_IDLE_AT = 20;
 
 /** Ближе этого к концу очереди волна подливает следующую пачку. */
 const WAVE_REFILL_AT = 2;
+
+/** Откуда играет очередь. У стенда источника нет вовсе — он рисует материал, а не продукт;
+ *  на мобилке это работающая информация (спека инкремента, «Отличия от стенда»). */
+const SOURCE_LABEL: Record<PlaySource, string> = {
+  wave: 'Волна',
+  release: 'Релиз',
+  playlist: 'Плейлист',
+  artist: 'Артист',
+  home: 'Главная',
+  feed: 'Лента',
+  search: 'Поиск',
+  liked: 'Любимое',
+  purchased: 'Покупки',
+  direct: 'Очередь',
+};
 
 /** Отбивки первого экрана, считанные снизу вверх от кнопки «ПОТОК» — см. спеку
  *  `docs/superpowers/specs/2026-09-06-mobile-stand-design.md`. */
@@ -242,6 +258,8 @@ export default function PlayerScreen() {
   const ascent = (line: number, size: number) => Math.round((line + size * 0.72) / 2);
   const descent = (line: number, size: number) => line - ascent(line, size);
   const transportBox = ms(MOCK_PLAY);
+  // Ширина стороны — по БОЛЬШЕЙ группе значков (справа их два), иначе метка уедет с центра.
+  const sideWidth = topIcon + ms(MOCK_TOP_STEP);
   // Отбивка не уходит в минус: на низком экране (или при увеличенном системном кегле)
   // `vs()` мал, а вычитаемая метрика строки нет — блоки наезжали бы друг на друга.
   const gap = (v: number, metric: number) => Math.max(0, vs(v) - metric);
@@ -437,7 +455,7 @@ export default function PlayerScreen() {
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           <View style={{ height: topBarCenter - topIcon / 2 }} pointerEvents="none" />
           <View style={[styles.headerRow, { paddingHorizontal: ms(MOCK_SCREEN_MARGIN) }]}>
-            <View style={[styles.headerSide, styles.headerSideStart]}>
+            <View style={[styles.headerSide, styles.headerSideStart, { minWidth: sideWidth }]}>
               <Pressable
                 onPress={() => navigation.goBack()}
                 hitSlop={13}
@@ -449,9 +467,17 @@ export default function PlayerScreen() {
               </Pressable>
             </View>
 
-            <View style={styles.headerGap} />
+            <Text style={styles.source} numberOfLines={1}>
+              {SOURCE_LABEL[context?.source ?? 'direct']}
+            </Text>
 
-            <View style={[styles.headerSide, styles.headerSideEnd, { gap: ms(MOCK_TOP_STEP) - topIcon }]}>
+            <View
+              style={[
+                styles.headerSide,
+                styles.headerSideEnd,
+                { gap: ms(MOCK_TOP_STEP) - topIcon, minWidth: sideWidth },
+              ]}
+            >
               <Pressable
                 onPress={() => setLyricsShown((v) => !v)}
                 disabled={!hasLyrics}
@@ -556,7 +582,9 @@ const styles = StyleSheet.create({
   header: { position: 'absolute', top: 0, left: 0, right: 0 },
   headerSolid: { backgroundColor: HAZE_TOP },
   headerRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  headerGap: { flex: 1 },
+  source: { ...type.row, flex: 1, textAlign: 'center', color: colors.mutedForeground },
+  // Обе стороны одной минимальной ширины — иначе несимметричные группы значков сбивают
+  // метку источника с центра.
   headerSide: { flexDirection: 'row', alignItems: 'center' },
   headerSideStart: { justifyContent: 'flex-start' },
   headerSideEnd: { justifyContent: 'flex-end' },
