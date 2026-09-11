@@ -383,10 +383,12 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
           Math.max(piece.morph.width, piece.morph.height) / 2 +
           piece.morph.smoothing
         : 0;
-      // Деформация поля уводит край детали за её габарит — тяга целиком плюс размах волны.
-      // Без этого слагаемого ножницы срезают ровно ту часть, ради которой тянут.
+      // Деформация поля уводит край детали за её габарит — тяга, размах волны и рост при
+      // нажатии. Без этого слагаемого ножницы срезают ровно ту часть, ради которой тянут.
       const touchReach = piece.touch
-        ? Math.hypot(piece.touch.pullX, piece.touch.pullY) + piece.touch.waveAmp * 2
+        ? Math.hypot(piece.touch.pullX, piece.touch.pullY) +
+          piece.touch.waveAmp * 2 +
+          Math.max(piece.geometry.width, piece.geometry.height) * 0.05 * piece.touch.press
         : 0;
       const padPx =
         (lensPadDp(piece.geometry, piece.optics) + surfacePadDp(piece.geometry, 0) + morphReach + touchReach) *

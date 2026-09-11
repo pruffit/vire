@@ -31,6 +31,8 @@ float vgScene(float2 p, float2 halfSize, float corner,
 float2 vgTouchWarp(float2 p, float2 touch, float2 pull, float press, float radius,
                    float waveAmp, float wavePhase) {
   if (radius <= 0.0) { return p; }
+  // Под пальцем деталь растёт целиком (M 3:51; HIG: interactive «expands»).
+  p /= 1.0 + 0.06 * press;
   float2 d = p - touch;
   float r = length(d);
 

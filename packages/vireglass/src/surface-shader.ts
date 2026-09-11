@@ -116,6 +116,12 @@ half4 main(float2 xy) {
   // Считать её глубоко внутри формы — это лишняя ПОЛНАЯ оценка SDF на каждый такой пиксель,
   // а тело занимает почти всю площадь. Ветвление здесь по координате, но расходятся только
   // нити на самой кромке.
+  // Касание зажигает материал изнутри от точки пальца (M 3:38, 12:05): свет расходится по
+  // детали и стекает наружу, на подложку.
+  float2 fromTouch = p - u_touch;
+  float glowR = halfMin * 1.6;
+  float touchGlow = u_press * exp(-dot(fromTouch, fromTouch) / (glowR * glowR));
+
   float shade = 0.0;
   float halo = 0.0;
   if (sd > -1.0) {
@@ -127,7 +133,7 @@ half4 main(float2 xy) {
     float con = 1.0 - smoothstep(0.0, max(u_shadowReach * 0.12, 1.0), max(sd, 0.0));
     shade = (amb * amb * 0.14 + con * con * 0.10) * outside * u_shadow;
     halo = 1.0 - smoothstep(0.0, u_shadowReach * 0.30, max(sd, 0.0));
-    halo = halo * halo * lit * 0.10 * outside;
+    halo = halo * halo * (lit * 0.10 + touchGlow * 0.35) * outside;
   }
 
   if (sd > 1.0) {
@@ -191,7 +197,9 @@ half4 main(float2 xy) {
   half4 over = u_overlay.eval(inkUv * u_iconScale) * half(u_overlayOn);
   col = col * (1.0 - over.a) + over.rgb * over.a;
 
-  a = clamp(a, 0.0, 1.0);
+  float glow = touchGlow * 0.45 + u_press * 0.06;
+  col = col * half(1.0 - glow) + half3(half(glow));
+  a = clamp(a + glow * (1.0 - a), 0.0, 1.0);
   a = max(a, max(float(inkA), float(over.a)));
   a *= 1.0 - smoothstep(-1.0, 1.0, sd);
 
