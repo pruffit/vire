@@ -97,7 +97,6 @@ export type VireGlassOptics = {
   refractionScale: number;
   /** Ширина фаски в dp — абсолютная величина среды. */
   bevelDp: number;
-  /** Смещение выборки у кромки в dp — тоже от среды, не от габарита детали. */
   /** Радиус, в котором кромка собирает свет вокруг детали. */
   gatherRadiusDp: number;
   fresnel: number;
