@@ -441,6 +441,9 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
         bodyInLens: true,
         touch: piece.touch,
         progress: piece.progress,
+        // Над текстом тень плотнее, над ровным фоном слабее (M 11:47): отрыв детали от
+        // пёстрого контента держит именно она.
+        shadow: stats ? 0.8 + Math.min(stats.busy * 6, 1.2) : 1,
       });
       const d = options.density;
       applyObject(gl, surfaceLoc, {

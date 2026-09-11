@@ -61,8 +61,9 @@ export const rimDp = (g: VireGlassGeometry, o: VireGlassOptics) => thicknessDp(g
 export const edgePushDp = (g: VireGlassGeometry, o: VireGlassOptics) =>
   Math.min(o.edgePushDp, MAX_PUSH_FRACTION * halfMinDp(g));
 
+/** Крупнее деталь — глубже и шире тень (M 7:14). */
 export const shadowReachDp = (g: VireGlassGeometry) =>
-  Math.min(halfMinDp(g) * 0.16, 7);
+  Math.min(Math.max(halfMinDp(g) * 0.5, 6), 36);
 
 /** Насколько вторая форма морфинга вылезает за габарит первой. Без этого запаса слитая
  *  форма обрезается краем канваса и эксперимент показывает не то, что проверяет. */

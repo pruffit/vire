@@ -120,11 +120,12 @@ half4 main(float2 xy) {
   float halo = 0.0;
   if (sd > -1.0) {
     float outside = smoothstep(-1.0, 1.0, sd);
-    float sdDrop = vgScene(p - float2(0.0, u_shadowReach * 0.16), u_halfSize, u_corner,
+    // Тень мягкая и широкая, со сдвигом вниз (M 11:58): отрыв детали от контента держит она.
+    float sdDrop = vgScene(p - float2(0.0, u_shadowReach * 0.35), u_halfSize, u_corner,
                            u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
-    float amb = 1.0 - smoothstep(0.0, u_shadowReach, max(sdDrop, 0.0));
-    float con = 1.0 - smoothstep(0.0, u_shadowReach * 0.22, max(sd, 0.0));
-    shade = (amb * amb * 0.22 + con * con * 0.18) * outside * u_shadow;
+    float amb = 1.0 - smoothstep(-u_shadowReach * 0.3, u_shadowReach, sdDrop);
+    float con = 1.0 - smoothstep(0.0, max(u_shadowReach * 0.12, 1.0), max(sd, 0.0));
+    shade = (amb * amb * 0.14 + con * con * 0.10) * outside * u_shadow;
     halo = 1.0 - smoothstep(0.0, u_shadowReach * 0.30, max(sd, 0.0));
     halo = halo * halo * lit * 0.10 * outside;
   }
