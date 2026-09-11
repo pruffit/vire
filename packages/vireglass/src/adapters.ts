@@ -188,6 +188,8 @@ export function toSurfaceUniforms(
     touch?: VireGlassTouch;
     /** Сыгранная доля, 0…1: слева от границы деталь активна. `undefined` — прогресса нет. */
     progress?: number;
+    /** 0…1: деталь появляется — тень и краска нарастают вместе с линзой. */
+    appear?: number;
   } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
@@ -226,6 +228,7 @@ export function toSurfaceUniforms(
     u_wave: [touch.waveAmp, touch.wavePhase],
     u_presence: optics.presence,
     u_progress: options.progress ?? NO_PROGRESS,
+    u_appear: options.appear ?? 1,
 
     u_debug: debugIndex(options.debug ?? 'normal'),
   };

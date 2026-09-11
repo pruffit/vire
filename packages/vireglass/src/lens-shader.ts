@@ -367,7 +367,7 @@ half4 main(float2 xy) {
   float adaptBlur = max(
     (structure * VG_SCATTER_MAX + VG_SCATTER_BASE) * u_legibility * u_adaptRadius
       * min(max(footprint, 1.0), VG_FOOTPRINT_MAX),
-    u_frost);
+    u_frost) * u_appear;
   if (adaptBlur > 0.5) {
     float reach = max(u_reach - length(p), 1.0);
     float4 g = vgGather(s, min(adaptBlur, reach), xy);
@@ -406,10 +406,12 @@ half4 main(float2 xy) {
 
   // Своего цвета у стекла нет — только цвет того, что под ним (HIG «Color»).
   float3 tintHue = mix(float3(1.0), vgHue(wide * 0.5 + ambient * 0.5), u_colorPickup);
-  rgb = mix(rgb, tintHue * tintLuma, density);
+  // Появляется деталь нарастанием линзы и тела, а не прозрачностью (M 2:55): при u_appear = 0
+  // она неотличима от фона под ней.
+  rgb = mix(rgb, tintHue * tintLuma, density * u_appear);
 
   // Свет окружения доходит до тела одинаково по всей детали; на светлом фоне сходит на нет.
-  rgb += ambient * u_edgeLight * (0.05 + 0.2 * (1.0 - local));
+  rgb += ambient * u_edgeLight * (0.05 + 0.2 * (1.0 - local)) * u_appear;
   // Стекло концентрирует свет; сыгранная часть — участок, где его больше.
   float glow = VG_CONCENTRATE + 0.08 * vgProgress(p, u_halfSize, u_progress);
   rgb += (1.0 - rgb) * glow * lens;

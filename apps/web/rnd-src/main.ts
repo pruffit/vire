@@ -8,6 +8,7 @@ import {
   MATERIAL_PRESETS,
   MATERIAL_RANGES,
   PRESET_NAMES,
+  REST_LIGHT,
   resolveOptics,
   roundedRectGeometry,
   circleGeometry,
@@ -191,6 +192,7 @@ function syncUrl(): void {
   if (params.get('ui') === '0') next.set('ui', '0');
   if (params.has('hue')) next.set('hue', String(accentHue));
   if (params.has('shape')) next.set('shape', shapeName);
+  if (params.has('appear')) next.set('appear', String(appearTarget));
   history.replaceState(null, '', `${location.pathname}?${next}`);
 }
 
@@ -222,6 +224,7 @@ function samplePieces(ink: number) {
     geometry: roundedRectGeometry(size, size, size * 0.28),
     centerX: (left + i * (size + gap)) * dpr,
     centerY: y,
+    light: lightFor((left + i * (size + gap)) * dpr, y),
   }));
 }
 
@@ -251,6 +254,36 @@ const pullLimit = () => 0.14 * halfMinDp(geometry);
 /** Радиус влияния пальца: за его пределами поле стоит на месте. */
 const touchRadius = () => 0.72 * halfMinDp(geometry);
 
+/** Свет за указателем — веб-замена наклона устройства (M 11:29): блик тянется к нему. */
+let pointer: { x: number; y: number } | null = null;
+const POINTER_PULL = 0.7;
+
+function lightFor(cx: number, cy: number): readonly [number, number] {
+  if (!pointer) return REST_LIGHT;
+  const dx = pointer.x * dpr - cx;
+  const dy = pointer.y * dpr - cy;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) return REST_LIGHT;
+  const x = REST_LIGHT[0] * (1 - POINTER_PULL) + (dx / len) * POINTER_PULL;
+  const y = REST_LIGHT[1] * (1 - POINTER_PULL) + (dy / len) * POINTER_PULL;
+  const l = Math.hypot(x, y) || 1;
+  return [x / l, y / l];
+}
+
+/** Появление — нарастанием линзы, а не прозрачностью (M 2:55): двойной клик по образцу. */
+const appearParam = Number(params.get('appear') ?? 1);
+let appearTarget = Number.isFinite(appearParam) ? Math.min(Math.max(appearParam, 0), 1) : 1;
+let appear = appearTarget;
+
+function stepAppear(dt: number): boolean {
+  if (Math.abs(appearTarget - appear) < 0.002) {
+    appear = appearTarget;
+    return false;
+  }
+  appear += (appearTarget - appear) * (1 - Math.exp(-dt / 0.14));
+  return true;
+}
+
 /**
  * Габарит детали НЕ трогается: тяга, нажатие и волна уходят в поле формы (`vgTouchWarp`).
  * Масштабирование ширины давало абсурд — тянешь правый край, а левый уходит наружу.
@@ -278,6 +311,8 @@ function controlPiece() {
     // подсвеченной, а не тронутой. Отклик должен читаться формой и бликом, поэтому сюда
     // уходит только доля: блик и подсветка кромки остаются, заливка — нет.
     active: d.active * 0.3,
+    light: lightFor(center.x, center.y),
+    appear,
   };
 }
 
@@ -553,6 +588,7 @@ function buttonPieces() {
       // Кнопки принадлежат ЭКРАНУ, а не кадру: полотно тянут — они едут вместе с ним.
       centerX: spot.x * dpr,
       centerY: spot.y * dpr,
+      light: lightFor(spot.x * dpr, spot.y * dpr),
       touch: {
         x: d.touchX,
         y: d.touchY,
@@ -656,7 +692,8 @@ function tick(now: number): void {
   deform.step(dt);
   for (const d of buttonDeforms) d.step(dt);
   const activeMoving = stepButtonActive(dt);
-  if (activeMoving || stepProgress(dt) || !deform.idle() || buttonDeforms.some((d) => !d.idle())) {
+  const appearing = stepAppear(dt);
+  if (appearing || activeMoving || stepProgress(dt) || !deform.idle() || buttonDeforms.some((d) => !d.idle())) {
     wake();
   }
   if (pending <= 0) return;
@@ -807,6 +844,8 @@ canvas.addEventListener('pointerdown', (event) => {
   }
 });
 canvas.addEventListener('pointermove', (event) => {
+  pointer = { x: event.clientX, y: event.clientY };
+  wake();
   if (!gesture) {
     canvas.style.cursor = pickTarget(event.clientX, event.clientY) ? 'pointer' : 'grab';
     return;
@@ -840,6 +879,17 @@ const endGesture = (event: PointerEvent) => {
 };
 canvas.addEventListener('pointerup', endGesture);
 canvas.addEventListener('pointercancel', endGesture);
+canvas.addEventListener('pointerleave', () => {
+  pointer = null;
+  wake();
+});
+canvas.addEventListener('dblclick', (event) => {
+  if (state.view !== 'material' || overPanel(event.target)) return;
+  const target = pickTarget(event.clientX, event.clientY);
+  if (!target || target.index !== undefined) return;
+  appearTarget = appearTarget > 0.5 ? 0 : 1;
+  wake();
+});
 
 placeCaptions();
 

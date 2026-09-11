@@ -220,6 +220,7 @@ export function VireGlassSurface({
       touchPress: at.u_touchPress ?? -1,
       touchRadius: at.u_touchRadius ?? -1,
       wave: at.u_wave ?? -1,
+      light: at.u_light ?? -1,
     };
   }, [lensProps]);
 
@@ -231,6 +232,11 @@ export function VireGlassSurface({
   const lensAnimatedProps = useAnimatedProps<{ uniformValues: number[] }>(() => {
     const values = lensProps.uniformValues.slice();
     if (slots.progress >= 0 && progress) values[slots.progress] = progress.value;
+    // Кромочный свет считает линза, а наклон устройства приходит ворклетом — сюда же.
+    if (slots.light >= 0) {
+      values[slots.light] = light.value[0];
+      values[slots.light + 1] = light.value[1];
+    }
     // Отклик на палец. Канал линзы в ПИКСЕЛЯХ, а модель — в dp: геометрические поля
     // домножаются на плотность, фаза волны и вдавливание безразмерны. Тот же пересчёт
     // делает веб (`web/renderer.ts`), контракт адаптера трогать нельзя — он общий.
@@ -252,7 +258,7 @@ export function VireGlassSurface({
       }
     }
     return { uniformValues: values };
-  }, [lensProps, slots, density, progress, touch, touchRadius]);
+  }, [lensProps, slots, density, progress, touch, touchRadius, light]);
 
   const uniforms = useDerivedValue(() => {
     return {

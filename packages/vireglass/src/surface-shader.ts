@@ -31,6 +31,7 @@ uniform float  u_shadow;
 uniform float  u_shadowReach;
 uniform float  u_presence;
 uniform float  u_progress;
+uniform float  u_appear;
 uniform float  u_debug;
 
 uniform float  u_iconOn;
@@ -131,9 +132,9 @@ half4 main(float2 xy) {
                            u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
     float amb = 1.0 - smoothstep(-u_shadowReach * 0.3, u_shadowReach, sdDrop);
     float con = 1.0 - smoothstep(0.0, max(u_shadowReach * 0.12, 1.0), max(sd, 0.0));
-    shade = (amb * amb * 0.14 + con * con * 0.10) * outside * u_shadow;
+    shade = (amb * amb * 0.14 + con * con * 0.10) * outside * u_shadow * u_appear;
     halo = 1.0 - smoothstep(0.0, u_shadowReach * 0.30, max(sd, 0.0));
-    halo = halo * halo * (lit * 0.10 + touchGlow * 0.35) * outside;
+    halo = halo * halo * (lit * 0.10 + touchGlow * 0.35) * outside * u_appear;
   }
 
   if (sd > 1.0) {
@@ -186,7 +187,7 @@ half4 main(float2 xy) {
   // нечем: кольцо отсчётов вокруг пикселя — то же недосэмплирование, что и в дисковом сборе,
   // и подложка выходила рваной, с видимой границей вокруг каждой группы букв.
 
-  half inkA = ink.g * half(mix(0.82, 1.0, u_active));
+  half inkA = ink.g * half(mix(0.82, 1.0, u_active) * u_appear);
   half3 inkCol = mix(half3(u_inkIdle.rgb), half3(u_inkActive.rgb), half(u_active));
   col = col * (1.0 - inkA) + inkCol * inkA;
 
@@ -194,10 +195,10 @@ half4 main(float2 xy) {
   // деформация ведёт их порознь: при нажатии название и артист трясутся вместе с поверхностью,
   // а обложка стоит на месте, потому что она была отдельным слоем поверх стекла. Полярность его
   // не трогает — у него свой цвет, и подменять его нечем.
-  half4 over = u_overlay.eval(inkUv * u_iconScale) * half(u_overlayOn);
+  half4 over = u_overlay.eval(inkUv * u_iconScale) * half(u_overlayOn * u_appear);
   col = col * (1.0 - over.a) + over.rgb * over.a;
 
-  float glow = touchGlow * 0.45 + u_press * 0.06;
+  float glow = (touchGlow * 0.45 + u_press * 0.06) * u_appear;
   col = col * half(1.0 - glow) + half3(half(glow));
   a = clamp(a + glow * (1.0 - a), 0.0, 1.0);
   a = max(a, max(float(inkA), float(over.a)));
