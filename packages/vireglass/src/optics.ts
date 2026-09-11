@@ -132,10 +132,10 @@ export const gatherRadius = (bevelDp: number) =>
   clamp(Math.max(bevelDp, 1) * GATHER_PER_BEVEL, 4, GATHER_MAX);
 
 /**
- * Плотность тела в плоской середине. Раньше жила константой в поверхностном шейдере; теперь
- * тело считает линза, и величина переезжает сюда вместе с остальными следствиями.
+ * Собственная плотность тела от поглощения толщи. Малая: своего цвета у стекла нет, тело
+ * уходит к тинту только под требование читаемости (HIG «Color»), иначе приглушает контент.
  */
-const BODY_DENSITY = 0.19;
+const BODY_DENSITY = 0.05;
 
 export const bodyDensity = (thicknessDp: number) => BODY_DENSITY * absorption(thicknessDp);
 

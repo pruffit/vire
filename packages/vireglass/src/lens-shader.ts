@@ -40,6 +40,7 @@ uniform float  u_ior;
 uniform float  u_iorSpread;
 uniform float2 u_light;
 uniform float  u_appear;
+uniform float4 u_accent;
 uniform float  u_frost;
 uniform float  u_ink;
 uniform float  u_legibility;
@@ -409,6 +410,14 @@ half4 main(float2 xy) {
   // Появляется деталь нарастанием линзы и тела, а не прозрачностью (M 2:55): при u_appear = 0
   // она неотличима от фона под ней.
   rgb = mix(rgb, tintHue * tintLuma, density * u_appear);
+
+  // ТОНИРОВАНИЕ — цветное стекло, а не заливка (M 16:31, 17:03): тон ведёт светлота фона,
+  // над тёмным он глубже, над светлым светлее, и фактура контента видна сквозь цвет.
+  if (u_accent.a > 0.0) {
+    float3 tone = u_accent.rgb * mix(0.88, 1.08, local);
+    float3 through = tone * (0.85 + 0.3 * vgLuma(rgb));
+    rgb = mix(rgb, clamp(through, float3(0.0), float3(1.0)), u_accent.a * u_appear);
+  }
 
   // Свет окружения доходит до тела одинаково по всей детали; на светлом фоне сходит на нет.
   rgb += ambient * u_edgeLight * (0.05 + 0.2 * (1.0 - local)) * u_appear;

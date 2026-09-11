@@ -29,6 +29,7 @@ import {
   REST_LIGHT,
   toLensProps,
   toSurfaceUniforms,
+  type VireGlassAccent,
   type VireGlassMorph,
   type VireGlassTouch,
 } from '../adapters';
@@ -83,6 +84,8 @@ export type VireGlassPiece = {
   light?: readonly [number, number];
   /** 0…1: появление детали нарастанием линзы (M 2:55). */
   appear?: number;
+  /** Тонирование главного действия — цветное стекло, а не заливка. */
+  accent?: VireGlassAccent;
 };
 
 export type VireGlassRenderOptions = {
@@ -435,6 +438,7 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
         progress: piece.progress,
         light: piece.light,
         appear: piece.appear,
+        accent: piece.accent,
       });
       applyChannel(gl, lensLoc, lens.uniformNames, lens.uniformSizes, lens.uniformValues);
       drawFullscreenTriangle(gl);

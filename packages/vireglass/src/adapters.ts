@@ -45,6 +45,13 @@ const NO_MORPH = { offsetX: 0, offsetY: 0, width: 0, height: 0, cornerRadius: 0,
 /** Прогресса нет. Отрицательным, а не нулём: ноль — это начало трека, законное значение. */
 const NO_PROGRESS = -1;
 
+/** Цветное стекло главного действия (M 16:08). Цвет — RGB 0…1. */
+export type VireGlassAccent = { color: readonly [number, number, number]; amount?: number };
+
+/** Доля тонирования по умолчанию: цвет читается, но контент под ним ещё виден. */
+export const ACCENT_AMOUNT = 0.8;
+const NO_ACCENT = [0, 0, 0, 0] as const;
+
 
 
 /** Увеличение в плоской середине. Отдельно от канала униформ: его же берёт фолбэк ниже
@@ -103,6 +110,8 @@ export function toLensProps(
     light?: readonly [number, number];
     /** 0…1: линза нарастает при появлении детали — вместо прозрачности. */
     appear?: number;
+    /** Тонирование главного действия: цвет стекла и доля, в которой он ложится на контент. */
+    accent?: VireGlassAccent;
   } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
@@ -140,6 +149,7 @@ export function toLensProps(
       ['u_iorSpread', optics.iorSpread],
       ['u_light', options.light ?? REST_LIGHT],
       ['u_appear', options.appear ?? 1],
+      ['u_accent', options.accent ? [...options.accent.color, options.accent.amount ?? ACCENT_AMOUNT] : NO_ACCENT],
       // Мутность от шероховатости поверхности. Живёт в том же дисковом сборе, что и
       // адаптивное рассеяние, и гасится к фаске: там работа другая — гнуть луч и расщеплять.
       ['u_frost', optics.blur * d],

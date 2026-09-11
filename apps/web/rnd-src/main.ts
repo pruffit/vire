@@ -193,6 +193,7 @@ function syncUrl(): void {
   if (params.has('hue')) next.set('hue', String(accentHue));
   if (params.has('shape')) next.set('shape', shapeName);
   if (params.has('appear')) next.set('appear', String(appearTarget));
+  if (params.has('accent')) next.set('accent', '1');
   history.replaceState(null, '', `${location.pathname}?${next}`);
 }
 
@@ -313,6 +314,7 @@ function controlPiece() {
     active: d.active * 0.3,
     light: lightFor(center.x, center.y),
     appear,
+    accent: params.has('accent') ? { color: ACCENT_RGB } : undefined,
   };
 }
 
@@ -329,6 +331,17 @@ const COVER_SCREEN = 2;
 /** Экран навигации: те же кнопки, но со значками — контент ПОВЕРХ стекла. */
 const NAV_SCREEN = 3;
 const accentHue = Number(params.get('hue') ?? 265);
+/** Акцент экрана в RGB — им тонируется главное действие (M 16:08). */
+const ACCENT_RGB = hslToRgb(accentHue, 0.62, 0.5);
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return [f(0), f(8), f(4)];
+}
 /**
  * Ряды деталей на экранах телефонов. Ряд — ОДИН описатель на все экраны: пустые кнопки,
  * навигация со значками и плашка под мини-плеер отличаются полями, а не отдельным набором
@@ -564,7 +577,9 @@ function updateColorLayer(): HTMLCanvasElement | null {
 
 function buttonPieces() {
   return buttonLayout().map((spot, i) => {
-    const light = buttonInk[i] === INK_LIGHT;
+    // Главное действие тонировано акцентом, и краска на цветном стекле всегда светлая.
+    const tinted = Boolean(spot.row.flow);
+    const light = tinted || buttonInk[i] === INK_LIGHT;
     const d = buttonDeforms[i].sample();
     // РОЛЬ ДЕТАЛИ МАТЕРИАЛ НЕ МЕНЯЕТ. Главное действие экрана я сначала сделал более плотным
     // стеклом — и на кадре рядом плашка, кнопки навигации и «ПОТОК» перестали читаться одним
@@ -580,8 +595,9 @@ function buttonPieces() {
       // она — вопросы к материалу, и ответ на них обязан быть один на вебе и на Android.
       optics: resolveOptics({
         ...activeMaterial(materialForInk(BUTTON_MATERIAL, Boolean(spot.row.content)), on),
-        ink: buttonInk[i],
+        ink: light ? INK_LIGHT : INK_DARK,
       }),
+      accent: tinted ? { color: ACCENT_RGB } : undefined,
       geometry: spot.row.width
         ? roundedRectGeometry(spot.row.width, spot.row.size, spot.row.radius ?? spot.row.size / 2)
         : circleGeometry(spot.row.size),
@@ -617,7 +633,7 @@ function buttonPieces() {
       overlay: Boolean(spot.row.player),
       // Невыбранный значок приглушён цветом, а не прозрачностью: альфу задаёт маска, и гасить
       // её пришлось бы отдельным набором значков. Полярность — та же, что у тела.
-      inkIdle: light ? [0.72, 0.76, 0.82, 1] : [0.24, 0.26, 0.3, 1],
+      inkIdle: tinted ? [1, 1, 1, 1] : light ? [0.72, 0.76, 0.82, 1] : [0.24, 0.26, 0.3, 1],
       inkActive: light ? [1, 1, 1, 1] : [0.05, 0.06, 0.08, 1],
     };
   });
