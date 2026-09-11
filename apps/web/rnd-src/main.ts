@@ -2,6 +2,7 @@
 // HTML + этот бандл, esbuild собирает его за миллисекунды из `packages/vireglass`.
 // Состояние целиком в адресе: ссылка воспроизводит кадр, как диплинк на Android-стенде.
 import {
+  applyAccessibility,
   DEBUG_MODES,
   INK_DARK,
   INK_LIGHT,
@@ -10,9 +11,11 @@ import {
   PRESET_NAMES,
   REST_LIGHT,
   resolveOptics,
+  type VireGlassAccessibility,
   roundedRectGeometry,
   circleGeometry,
   capsuleGeometry,
+  VIREGLASS_CLEAR_MATERIAL,
   VIREGLASS_CONTROL_MATERIAL,
   VIREGLASS_MATERIAL,
   activeMaterial,
@@ -92,7 +95,30 @@ for (const key of MATERIAL_KEYS) {
   if (Number.isFinite(v)) state.overrides.set(key, v);
 }
 
+/** Прозрачный вариант (Clear) — отдельное состояние стенда: смешивать его с обычным нельзя,
+ *  поэтому он не пресет среды, а режим кадра целиком. */
+const clearMode = params.get('clear') === '1';
+
+/**
+ * Настройки доступности меняют слои материала, а не отменяют его (эталон 219 §18:15). Стенд
+ * берёт их из системы, а буквы в адресе (?a11y=tcm) включают принудительно: перещёлкивать
+ * настройки всей ОС ради одного кадра невозможно.
+ */
+const a11yForced = params.get('a11y') ?? '';
+const asks = (query: string) => window.matchMedia?.(query).matches ?? false;
+const a11y: VireGlassAccessibility = {
+  reduceTransparency: a11yForced.includes('t') || asks('(prefers-reduced-transparency: reduce)'),
+  increaseContrast: a11yForced.includes('c') || asks('(prefers-contrast: more)'),
+  reduceMotion: a11yForced.includes('m') || asks('(prefers-reduced-motion: reduce)'),
+};
+
+/** Материал кадра всегда идёт через модификаторы: иначе часть деталей их не увидит. */
+function optic(material: Partial<VireGlassMaterial> = {}) {
+  return applyAccessibility(resolveOptics(material), a11y);
+}
+
 function baseMaterial(): VireGlassMaterial {
+  if (clearMode) return VIREGLASS_CLEAR_MATERIAL;
   return state.preset >= 0 ? MATERIAL_PRESETS[PRESET_NAMES[state.preset]] : VIREGLASS_MATERIAL;
 }
 
@@ -107,7 +133,7 @@ function currentMaterial(): VireGlassMaterial {
 // Явный `ink` в адресе — ручной режим, автоматика тогда молчит.
 let manualInk = state.overrides.has('ink');
 let material = currentMaterial();
-let optics = resolveOptics(material);
+let optics = optic(material);
 let polarity = manualInk ? 'ручная' : 'светлая';
 
 // Форма контрольного образца — в адресе: капсула и круг повторяют эталонные кадры.
@@ -180,7 +206,7 @@ let ready = false;
 function change(mutate: () => void): void {
   mutate();
   material = currentMaterial();
-  optics = resolveOptics(material);
+  optics = optic(material);
   pending = SETTLE_FRAMES;
   ready = false;
   // Раскладка подписей зависит от режима, поэтому пересчитывается на ЛЮБОЕ изменение —
@@ -201,6 +227,8 @@ function syncUrl(): void {
   if (params.has('shape')) next.set('shape', shapeName);
   if (params.has('appear')) next.set('appear', String(appearTarget));
   if (params.has('accent')) next.set('accent', '1');
+  if (a11yForced) next.set('a11y', a11yForced);
+  if (clearMode) next.set('clear', '1');
   history.replaceState(null, '', `${location.pathname}?${next}`);
 }
 
@@ -228,7 +256,7 @@ function sampleLayout() {
 function samplePieces(ink: number) {
   const { size, gap, left, y } = sampleLayout();
   return SAMPLE_MATERIALS.map((sample, i) => ({
-    optics: resolveOptics({ ...sample.material, ink }),
+    optics: optic({ ...sample.material, ink }),
     geometry: roundedRectGeometry(size, size, size * 0.28),
     centerX: (left + i * (size + gap)) * dpr,
     centerY: y,
@@ -250,8 +278,8 @@ function placeCaptions(): void {
 
 // Волна от касания заметнее, чем от отрыва: палец ударяет по поверхности, отпускание её
 // только отпускает. Амплитуды в CSS-пикселях смещения поля.
-const WAVE_ON_TOUCH = 4;
-const WAVE_ON_RELEASE = 2.5;
+const WAVE_ON_TOUCH = a11y.reduceMotion ? 0 : 4;
+const WAVE_ON_RELEASE = a11y.reduceMotion ? 0 : 2.5;
 
 const deform = createDeform();
 
@@ -284,6 +312,11 @@ let appearTarget = Number.isFinite(appearParam) ? Math.min(Math.max(appearParam,
 let appear = appearTarget;
 
 function stepAppear(dt: number): boolean {
+  if (a11y.reduceMotion) {
+    const moved = appear !== appearTarget;
+    appear = appearTarget;
+    return moved;
+  }
   if (Math.abs(appearTarget - appear) < 0.002) {
     appear = appearTarget;
     return false;
@@ -442,7 +475,7 @@ const ROW_OFFSETS = ROWS.reduce<number[]>((acc) => {
 const BUTTON_TOTAL = ROWS.reduce((n, row) => n + row.count, 0);
 
 /** Материал кнопок свой, а не панельный: ползунки правят только контрольный образец. */
-const BUTTON_MATERIAL = VIREGLASS_CONTROL_MATERIAL;
+const BUTTON_MATERIAL = clearMode ? VIREGLASS_CLEAR_MATERIAL : VIREGLASS_CONTROL_MATERIAL;
 /** Полярность — У КАЖДОЙ КНОПКИ СВОЯ, по её собственному зонду. Общей на весь кадр она
  *  бралась с первой детали: над светлой клеткой выходила тёмная надпись, и требование
  *  читаемости выбеливало тело кнопок навигации на ЧЁРНОМ фоне до матового диска. */
@@ -617,7 +650,7 @@ function buttonPieces() {
       // следствия по отдельности значит собирать состояние, которого у стекла не бывает.
       // Материал детали собирается ИЗ ЯДРА, а не по месту: несёт ли она краску и активна ли
       // она — вопросы к материалу, и ответ на них обязан быть один на вебе и на Android.
-      optics: resolveOptics({
+      optics: optic({
         ...activeMaterial(materialForInk(BUTTON_MATERIAL, Boolean(spot.row.content)), on),
         ink: light ? INK_LIGHT : INK_DARK,
       }),
@@ -670,7 +703,7 @@ const popover = createPopover(() => {
     right: origin.x + PHONE.width - SCREEN_MARGIN + offset.x,
     top: origin.y + TOP_BAR_Y - CAPSULE.height / 2 + offset.y,
   };
-});
+}, a11y.reduceMotion);
 if (params.get('menu') === '1') popover.setOpen(true);
 let popoverInk = INK_LIGHT;
 
@@ -682,7 +715,7 @@ function updatePopoverInk(sample: { luma: number; hi: number } | null): void {
 }
 
 /** Разрыв и слияние (M 5:02) — своя сцена: в эталоне он тоже показан отдельно, крупно. */
-const group = createGroup(() => ({ x: viewWidthCss() / 2, y: canvas.height / dpr / 2 }));
+const group = createGroup(() => ({ x: viewWidthCss() / 2, y: canvas.height / dpr / 2 }), a11y.reduceMotion);
 let groupInk = INK_LIGHT;
 
 function updateGroupInk(sample: { luma: number; hi: number } | null): void {
@@ -697,7 +730,7 @@ function groupPiece() {
   const ink = groupInk === INK_LIGHT ? [1, 1, 1, 1] : [0.06, 0.07, 0.09, 1];
   return {
     ...frame,
-    optics: resolveOptics({ ...materialForInk(BUTTON_MATERIAL, true), ink: groupInk }),
+    optics: optic({ ...materialForInk(BUTTON_MATERIAL, true), ink: groupInk }),
     light: lightFor(frame.centerX, frame.centerY),
     icon: true,
     inkIdle: ink,
@@ -718,7 +751,7 @@ function popoverPiece() {
   const ink = popoverInk === INK_LIGHT ? [1, 1, 1, 1] : [0.06, 0.07, 0.09, 1];
   return {
     ...frame,
-    optics: resolveOptics({ ...materialForInk(BUTTON_MATERIAL, true), ink: popoverInk }),
+    optics: optic({ ...materialForInk(BUTTON_MATERIAL, true), ink: popoverInk }),
     light: lightFor(frame.centerX, frame.centerY),
     icon: true,
     inkIdle: ink,
@@ -769,7 +802,7 @@ function applyPolarity(sample: { luma: number; hi: number }): void {
   // досчёта. Без побудки состояние уже новое, а на экране остаётся кадр со старой полярностью.
   if (next !== polarity) wake();
   polarity = next;
-  optics = resolveOptics({ ...material, ink: light ? INK_LIGHT : INK_DARK });
+  optics = optic({ ...material, ink: light ? INK_LIGHT : INK_DARK });
 }
 
 function describe(probe: { luma: number; busy: number; lo: number; hi: number } | null): string {

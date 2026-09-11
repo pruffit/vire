@@ -135,6 +135,8 @@ describe('applyToggles', () => {
     expect(off.specular).toBe(0);
     expect(off.dispersion).toBe(0);
     expect(off.tintStrength).toBe(0);
+    // Затемняющий слой — тот же ответ на требование читаемости, только у прозрачного варианта.
+    expect(off.dimming).toBe(0);
     expect(off.environment).toBe(0);
     expect(off.legibility).toBe(0);
   });

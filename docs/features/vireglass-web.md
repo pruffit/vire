@@ -128,12 +128,24 @@ Android (AGSL) и веб (WebGL2). Стенд `/rnd` — лаборатория,
   поэтому до самого разрыва это один кусок стекла с перемычками, а не три съехавшиеся детали.
   Свет живёт у перехода, а не у состояния: вспыхивает на разрыве и гаснет сам (`rnd-src/group.ts`).
 
+- **Прозрачный вариант** (эталон 219 @14:16) — `?clear=1`: кадр целиком переходит на
+  `VIREGLASS_CLEAR_MATERIAL` (адаптации нет, читаемость держит затемняющий слой). Режим кадра, а
+  не пресет среды: варианты не смешивают, поэтому переключается всё сразу. Ползунок `dimming`
+  в панели правит силу затемнения.
+
+- **Настройки доступности** (эталон 219 §18:15) стенд берёт из системы
+  (`prefers-reduced-transparency`, `prefers-contrast`, `prefers-reduced-motion`), а `?a11y=tcm`
+  включает их принудительно по буквам: перещёлкивать настройки всей ОС ради одного кадра
+  невозможно. Уменьшенное движение выключает упругость целиком — пружины меню и разрыва встают
+  сразу, волна от касания не бросается, появление происходит без хода.
+
 - **Измеритель** снимает кадр и считает светлоту, шум, долю пикселей в упоре и полосы.
 
 ## Где код
 
 - **Пакет:** `packages/vireglass/src/` — `material.ts` (причины), `optics.ts` (следствия),
-  `geometry.ts`, `sdf.ts`, `lens-shader.ts`, `surface-shader.ts`, `adaptation.ts`, `adapters.ts`.
+  `geometry.ts`, `sdf.ts`, `lens-shader.ts`, `surface-shader.ts`, `adaptation.ts`,
+  `accessibility.ts`, `adapters.ts`.
 - **Цели рендера:** `packages/vireglass/src/targets/{agsl,glsl}.ts`; гейт компиляции —
   `packages/vireglass/scripts/check-glsl.mjs` (`pnpm turbo run check:glsl`, в CI и в релизе).
 - **Веб-рендерер:** `packages/vireglass/src/web/{renderer,probe,gl}.ts` — подпуть `@vire/vireglass/web`.

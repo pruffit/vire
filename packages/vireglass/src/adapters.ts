@@ -158,6 +158,7 @@ export function toLensProps(
       ['u_frost', optics.blur * d],
       ['u_ink', optics.ink],
       ['u_legibility', optics.legibility],
+      ['u_dim', optics.dimming],
       ['u_presence', optics.presence],
       ['u_adaptRadius', optics.adaptRadius * d],
       ['u_bodyDensity', optics.bodyDensity],

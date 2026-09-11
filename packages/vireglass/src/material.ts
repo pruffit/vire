@@ -51,6 +51,12 @@ export type VireGlassMaterial = {
   /** Не физика, а требование читаемости: насколько сильно стекло обязано развести свою
    *  светлоту с надписью поверх себя. 0 — стекло просто прозрачное. */
   legibility: number;
+  /** Затемняющий слой ПОД стеклом, 0..1. Прозрачному варианту (Clear) читаемость даёт именно
+   *  он: адаптации у такого стекла нет, и без затемнения краска тонет на ярком контенте.
+   *
+   *  Не путать с пропом `dim` мобильной поверхности: тот компенсирует платформенный захват
+   *  (BlurView не видит скрим экрана над контентом), а это — свойство самого материала. */
+  dimming: number;
   /** Светлота того, что приложение рисует ПОВЕРХ стекла: 1 — светлые иконки и текст,
    *  0 — тёмные. Причина, а не ручка: её знает вызывающий экран. */
   ink: number;
@@ -74,6 +80,7 @@ export const MATERIAL_RANGES = {
   roughness: [0, 1],
   environment: [0, 1],
   legibility: [0, 1],
+  dimming: [0, 0.5],
   ink: [0, 1],
   presence: [0, 0.6],
   film: [0, 900],
@@ -109,6 +116,8 @@ export type VireGlassOptics = {
   edgeDensity: number;
   environment: number;
   legibility: number;
+  /** Затемнение контента под стеклом — тот самый слой варианта Clear. */
+  dimming: number;
   ink: number;
   /** Минимальная различимость детали на фоне — в единицах светлоты. */
   presence: number;
@@ -140,6 +149,7 @@ export const VIREGLASS_MATERIAL_V4: VireGlassMaterial = {
   roughness: 0.05,
   environment: 0.27,
   legibility: 0.26,
+  dimming: 0,
   ink: 1,
   presence: 0.05,
   film: 340,
@@ -162,6 +172,7 @@ export const VIREGLASS_MATERIAL_V5: VireGlassMaterial = {
   roughness: 0.06,
   environment: 0.27,
   legibility: 0.26,
+  dimming: 0,
   ink: 1,
   presence: 0.05,
   film: 340,
@@ -232,8 +243,24 @@ export const VIREGLASS_MATERIAL = VIREGLASS_MATERIAL_V5;
  * вебе и на Android разную читаемость.
  */
 export function materialForInk(material: VireGlassMaterial, carriesInk: boolean): VireGlassMaterial {
+  // У прозрачного варианта читаемость держит затемняющий слой, а не тело. Поднять ему
+  // требование значит сделать из него обычное стекло, а варианты не смешивают (219 §Clear).
+  if (material.dimming > 0) return material;
   return { ...material, legibility: carriesInk ? VIREGLASS_LYRICS_MATERIAL.legibility : 0 };
 }
+
+/**
+ * Прозрачный вариант материала (Clear). Адаптации у него нет — стекло постоянно прозрачнее,
+ * контент под ним виден почти как есть, а читаемость краски держит затемняющий слой. Годится
+ * только там, где выполнены три условия эталона: деталь лежит на медиа, контент терпит
+ * затемнение, а краска поверх крупная и яркая.
+ */
+export const VIREGLASS_CLEAR_MATERIAL: VireGlassMaterial = {
+  ...VIREGLASS_MATERIAL,
+  legibility: 0,
+  presence: 0,
+  dimming: 0.22,
+};
 
 /**
  * АКТИВНОЕ СОСТОЯНИЕ как состояние СРЕДЫ, а не как подсветка поверх неё.
@@ -289,6 +316,7 @@ export function resolveOptics(patch: Partial<VireGlassMaterial> = {}): VireGlass
     edgeDensity: edgeDensityFrom(m.thickness, m.bevel),
     environment: m.environment,
     legibility: m.legibility,
+    dimming: m.dimming,
     ink: m.ink,
     presence: m.presence,
     adaptRadius: ADAPT_RADIUS,
@@ -326,6 +354,7 @@ export const LEGACY_OPTICS = {
     edgeDensity: 1.5,
     environment: 0.27,
     legibility: 0.55,
+    dimming: 0,
     ink: 1,
     presence: 0,
     adaptRadius: ADAPT_RADIUS,
@@ -355,6 +384,7 @@ export const LEGACY_OPTICS = {
     edgeDensity: 3.63,
     environment: 0,
     legibility: 0,
+    dimming: 0,
     ink: 1,
     presence: 0,
     adaptRadius: ADAPT_RADIUS,
@@ -384,6 +414,7 @@ export const LEGACY_OPTICS = {
     edgeDensity: 3.63,
     environment: 0,
     legibility: 0,
+    dimming: 0,
     ink: 1,
     presence: 0,
     adaptRadius: ADAPT_RADIUS,
@@ -466,7 +497,11 @@ export function applyToggles(
   }
   if (!on.tint) o.tintStrength = 0;
   if (!on.environment) o.environment = 0;
-  if (!on.legibility) o.legibility = 0;
+  if (!on.legibility) {
+    o.legibility = 0;
+    // Затемняющий слой — тот же ответ на требование читаемости, только у прозрачного варианта.
+    o.dimming = 0;
+  }
   if (!on.interference) o.iridescence = 0;
   if (!on.diffraction) o.diffraction = 0;
   return o;

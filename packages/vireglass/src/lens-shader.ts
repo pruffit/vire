@@ -44,6 +44,7 @@ uniform float4 u_accent;
 uniform float  u_frost;
 uniform float  u_ink;
 uniform float  u_legibility;
+uniform float  u_dim;
 uniform float  u_presence;
 uniform float  u_progress;
 uniform float  u_adaptRadius;
@@ -285,6 +286,10 @@ half4 main(float2 xy) {
       aB > 0.004 ? float(c4.b + c5.b) * 0.5 / aB : 0.0);
     srcA = (aR + aG + aB) / 3.0;
   }
+
+  // Затемняющий слой прозрачного варианта держит читаемость вместо тела. Умножение, а не тинт:
+  // контент обязан остаться видимым, только тише.
+  rgb *= 1.0 - u_dim * u_appear;
 
   // ОТРАЖЕНИЕ. Френель по настоящему наклону грани: у силуэта взгляд скользящий и отражение
   // почти полное, поэтому кромка — тонкая линия сама. Отражается окружение детали и ключевой свет.
