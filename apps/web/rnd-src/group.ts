@@ -23,7 +23,13 @@ const smooth = (e0: number, e1: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-function stepSpring(s: Spring, dt: number, response: number, damping: number): boolean {
+function stepSpring(s: Spring, dt: number, response: number, damping: number, instant = false): boolean {
+  if (instant) {
+    const moved = s.x !== s.target || s.v !== 0;
+    s.x = s.target;
+    s.v = 0;
+    return moved;
+  }
   const stiffness = ((2 * Math.PI) / response) ** 2;
   const friction = (4 * Math.PI * damping) / response;
   const h = 1 / 240;
@@ -41,7 +47,7 @@ function stepSpring(s: Spring, dt: number, response: number, damping: number): b
 }
 
 /** `center` — середина группы в CSS-пикселях кадра. */
-export function createGroup(center: () => { x: number; y: number }) {
+export function createGroup(center: () => { x: number; y: number }, instant = false) {
   const split: Spring = { x: 0, v: 0, target: 0 };
   const deform = createDeform();
   // Свет живёт у ПЕРЕХОДА, а не у состояния: он вспыхивает на разрыве и гаснет сам.
@@ -123,8 +129,9 @@ export function createGroup(center: () => { x: number; y: number }) {
 
   function step(dt: number): boolean {
     split.target = apart ? 1 : 0;
-    const moving = stepSpring(split, dt, apart ? 0.8 : 0.7, 0.85);
+    const moving = stepSpring(split, dt, apart ? 0.8 : 0.7, 0.85, instant);
     deform.step(dt);
+    if (instant) heat = 0;
     if (heat > 0.002) {
       heat *= Math.exp(-dt / 0.45);
       if (heat <= 0.002) heat = 0;

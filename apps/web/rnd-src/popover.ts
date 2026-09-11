@@ -37,7 +37,13 @@ const smooth = (e0: number, e1: number, x: number) => {
 const half = (b: Box) => Math.min(b.w, b.h) / 2;
 
 /** Пружина с откликом `response` секунд; `damping` < 1 даёт перелёт. */
-function stepSpring(s: Spring, dt: number, response: number, damping: number): boolean {
+function stepSpring(s: Spring, dt: number, response: number, damping: number, instant = false): boolean {
+  if (instant) {
+    const moved = s.x !== s.target || s.v !== 0;
+    s.x = s.target;
+    s.v = 0;
+    return moved;
+  }
   const stiffness = ((2 * Math.PI) / response) ** 2;
   const friction = (4 * Math.PI * damping) / response;
   const h = 1 / 240;
@@ -55,7 +61,7 @@ function stepSpring(s: Spring, dt: number, response: number, damping: number): b
 }
 
 /** `anchor` — правый верхний угол капсулы в CSS-пикселях кадра: из него меню и растёт. */
-export function createPopover(anchor: () => { right: number; top: number }) {
+export function createPopover(anchor: () => { right: number; top: number }, instant = false) {
   const shrink: Spring = { x: 0, v: 0, target: 0 };
   const grow: Spring = { x: 0, v: 0, target: 0 };
   const deform = createDeform();
@@ -158,8 +164,8 @@ export function createPopover(anchor: () => { right: number; top: number }) {
       grow.target = 0;
       if (grow.x < 0.12) shrink.target = 0;
     }
-    const a = stepSpring(shrink, dt, open ? 0.38 : 0.3, 1);
-    const b = stepSpring(grow, dt, open ? 0.46 : 0.4, open ? 0.72 : 1);
+    const a = stepSpring(shrink, dt, open ? 0.38 : 0.3, 1, instant);
+    const b = stepSpring(grow, dt, open ? 0.46 : 0.4, open ? 0.72 : 1, instant);
     deform.step(dt);
     return a || b || !deform.idle();
   }
