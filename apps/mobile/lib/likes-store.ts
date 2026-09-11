@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { likeResponseSchema } from '@vire/api-contracts';
+import { likeResponseSchema, type LikeResponse } from '@vire/api-contracts';
+import type { ApiResult } from '@vire/api-client';
 import { apiRequest } from './api-client';
 
 interface LikesState {
@@ -17,7 +18,9 @@ interface LikesState {
   toggleRemote: (trackId: string) => void;
 }
 
-const _pending = new Set<string>();
+// In-flight GET по треку: вне стора, чтобы читаться синхронно и делиться между load() и
+// withLoadedState() — двойной тап по незагруженному треку не должен слать второй такой же GET.
+const _pending = new Map<string, Promise<ApiResult<LikeResponse>>>();
 // In-flight guard для записи: вне стора, чтобы читаться синхронно (повторный тап по
 // тому же треку до ответа сети должен быть no-op, а не гонкой POST/DELETE) — тот же
 // паттерн, что apps/web/store/likes.ts.
@@ -42,6 +45,23 @@ export const useLikesStore = create<LikesState>((set, get) => {
       .finally(() => { _toggling.delete(trackId); });
   }
 
+  /** GET состояния лайка, разделяемый всеми вызовами на один и тот же трек — присоединяется
+   *  к уже летящему запросу вместо повторного. */
+  function fetchState(trackId: string): Promise<ApiResult<LikeResponse>> {
+    const inFlight = _pending.get(trackId);
+    if (inFlight) return inFlight;
+
+    const request = apiRequest(`/api/v1/tracks/${trackId}/like`, { schema: likeResponseSchema })
+      .then((result) => {
+        if (result.ok) get().update(trackId, result.data.liked);
+        return result;
+      })
+      .finally(() => { _pending.delete(trackId); });
+
+    _pending.set(trackId, request);
+    return request;
+  }
+
   /** Действует сразу при известном состоянии; иначе сначала догружает его — общий приём
    *  для like() и toggleRemote(), трек мог ни разу не показываться в UI. */
   function withLoadedState(trackId: string, action: () => void) {
@@ -49,11 +69,9 @@ export const useLikesStore = create<LikesState>((set, get) => {
       action();
       return;
     }
-    apiRequest(`/api/v1/tracks/${trackId}/like`, { schema: likeResponseSchema })
+    fetchState(trackId)
       .then((result) => {
-        if (!result.ok) return;
-        get().update(trackId, result.data.liked);
-        action();
+        if (result.ok) action();
       })
       .catch(() => {});
   }
@@ -63,15 +81,7 @@ export const useLikesStore = create<LikesState>((set, get) => {
 
     load(trackId) {
       if (trackId in get().state) return;
-      if (_pending.has(trackId)) return;
-      _pending.add(trackId);
-
-      apiRequest(`/api/v1/tracks/${trackId}/like`, { schema: likeResponseSchema })
-        .then((result) => {
-          _pending.delete(trackId);
-          if (result.ok) set((s) => ({ state: { ...s.state, [trackId]: result.data.liked } }));
-        })
-        .catch(() => { _pending.delete(trackId); });
+      fetchState(trackId).catch(() => {});
     },
 
     update(trackId, liked) {

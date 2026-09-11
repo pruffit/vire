@@ -180,6 +180,45 @@ describe('useLikesStore.like', () => {
   });
 });
 
+describe('useLikesStore — дедуп GET между load и like/toggleRemote', () => {
+  it('load уже летит — like на тот же трек подключается к тому же запросу, не шлёт второй', async () => {
+    let resolveLoad: (v: unknown) => void = () => {};
+    request.mockReturnValueOnce(new Promise((r) => { resolveLoad = r; }));
+    request.mockResolvedValueOnce({ ok: true, data: { liked: true } });
+
+    useLikesStore.getState().load('t1');
+    useLikesStore.getState().like('t1');
+
+    expect(request).toHaveBeenCalledTimes(1);
+
+    resolveLoad({ ok: true, data: { liked: false } });
+    await flush();
+
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request).toHaveBeenNthCalledWith(1, '/api/v1/tracks/t1/like', expect.objectContaining({ schema: expect.anything() }));
+    expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tracks/t1/like', expect.objectContaining({ method: 'POST' }));
+    expect(useLikesStore.getState().state.t1).toBe(true);
+  });
+
+  it('load уже летит — toggleRemote на тот же трек тоже подключается, а не дублирует GET', async () => {
+    let resolveLoad: (v: unknown) => void = () => {};
+    request.mockReturnValueOnce(new Promise((r) => { resolveLoad = r; }));
+    request.mockResolvedValueOnce({ ok: true, data: { liked: true } });
+
+    useLikesStore.getState().load('t1');
+    useLikesStore.getState().toggleRemote('t1');
+
+    expect(request).toHaveBeenCalledTimes(1);
+
+    resolveLoad({ ok: true, data: { liked: false } });
+    await flush();
+
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tracks/t1/like', expect.objectContaining({ method: 'POST' }));
+    expect(useLikesStore.getState().state.t1).toBe(true);
+  });
+});
+
 describe('useLikesStore.toggleRemote', () => {
   it('трек уже в state — ведёт себя как обычный toggle', async () => {
     useLikesStore.setState({ state: { t1: false } });
