@@ -91,6 +91,7 @@ const float VG_FILM_IOR = 1.35;
 const float VG_SLOPE_MAX = 40.0;
 // Доля радиуса сбора, до которой доходит рассеяние над пёстрым фоном под краской (M 11:47).
 const float VG_SCATTER_MAX = 0.35;
+const float VG_SCATTER_BASE = 0.1;
 // Отклик на структуру под стеклом насыщается рано: спорит с надписью не площадь чужого
 // текста, а сам факт его наличия (строка под плашкой даёт busy около 0.12).
 const float VG_STRUCTURE_GAIN = 20.0;
@@ -362,8 +363,10 @@ half4 main(float2 xy) {
   // (M 11:47): текст под капсулой становится пятнами. Одинаково по всей линзе, радиус меряется
   // в фоне — у силуэта линза его сжимает.
   float structure = 1.0 - exp(-busy * VG_STRUCTURE_GAIN);
+  // Под краской Regular рассеивает фон всегда, над пёстрым — сильнее.
   float adaptBlur = max(
-    structure * u_legibility * u_adaptRadius * VG_SCATTER_MAX * min(max(footprint, 1.0), VG_FOOTPRINT_MAX),
+    (structure * VG_SCATTER_MAX + VG_SCATTER_BASE) * u_legibility * u_adaptRadius
+      * min(max(footprint, 1.0), VG_FOOTPRINT_MAX),
     u_frost);
   if (adaptBlur > 0.5) {
     float reach = max(u_reach - length(p), 1.0);
