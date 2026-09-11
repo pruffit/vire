@@ -144,7 +144,8 @@ Android (AGSL) и веб (WebGL2). Стенд `/rnd` — лаборатория,
 ## Где код
 
 - **Пакет:** `packages/vireglass/src/` — `material.ts` (причины), `optics.ts` (следствия),
-  `geometry.ts`, `sdf.ts`, `lens-shader.ts`, `surface-shader.ts`, `adaptation.ts`, `adapters.ts`.
+  `geometry.ts`, `sdf.ts`, `lens-shader.ts`, `surface-shader.ts`, `adaptation.ts`,
+  `accessibility.ts`, `adapters.ts`.
 - **Цели рендера:** `packages/vireglass/src/targets/{agsl,glsl}.ts`; гейт компиляции —
   `packages/vireglass/scripts/check-glsl.mjs` (`pnpm turbo run check:glsl`, в CI и в релизе).
 - **Веб-рендерер:** `packages/vireglass/src/web/{renderer,probe,gl}.ts` — подпуть `@vire/vireglass/web`.

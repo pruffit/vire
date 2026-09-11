@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAccessibility, NO_ACCESSIBILITY } from '../accessibility';
-import { resolveOptics } from '../material';
+import { resolveOptics, VIREGLASS_CLEAR_MATERIAL } from '../material';
 
 const optics = resolveOptics();
 
@@ -26,6 +26,15 @@ describe('модификаторы доступности', () => {
     expect(out.presence).toBeGreaterThan(optics.presence);
     expect(out.bodyDensity).toBeGreaterThan(optics.bodyDensity);
     expect(out.legibility).toBe(1);
+  });
+
+  // Эталон распространяет настройки на всё стекло: вариант материала их не отменяет.
+  it('контраст главнее прозрачного варианта', () => {
+    const clear = resolveOptics(VIREGLASS_CLEAR_MATERIAL);
+    const out = applyAccessibility(clear, { ...NO_ACCESSIBILITY, increaseContrast: true });
+    expect(out.legibility).toBe(1);
+    expect(out.presence).toBeGreaterThanOrEqual(0.5);
+    expect(out.bodyDensity).toBeGreaterThanOrEqual(0.9);
   });
 
   // Настройки складываются: включены обе — материал обязан выполнить оба требования.

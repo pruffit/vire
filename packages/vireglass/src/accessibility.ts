@@ -25,6 +25,8 @@ const OBSCURE_MIN = 0.45;
 const CONTRAST_DENSITY = 0.9;
 const CONTRAST_PRESENCE = 0.5;
 
+/** Настройка системы действует на всё стекло и главнее варианта материала (219 @18:45): прозрачный
+ *  вариант под контрастом тоже уходит к краю шкалы — контраст пользователю нужнее эстетики. */
 export function applyAccessibility(
   optics: VireGlassOptics,
   mods: VireGlassAccessibility = NO_ACCESSIBILITY,

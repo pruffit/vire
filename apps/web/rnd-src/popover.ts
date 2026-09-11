@@ -157,7 +157,11 @@ export function createPopover(anchor: () => { right: number; top: number }, inst
 
   function step(dt: number): boolean {
     // Меню начинает расти, когда капля уже собралась; капсула возвращается, когда меню стекло в каплю.
-    if (open) {
+    // Без движения фазам ждать друг друга незачем: обе встают за один кадр.
+    if (instant) {
+      shrink.target = open ? 1 : 0;
+      grow.target = open ? 1 : 0;
+    } else if (open) {
       shrink.target = 1;
       if (shrink.x > 0.8) grow.target = 1;
     } else {
