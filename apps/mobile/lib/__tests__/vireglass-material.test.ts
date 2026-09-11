@@ -14,7 +14,6 @@ import {
   bevelDp,
   bevelFraction,
   circleGeometry,
-  edgePushDp,
   halfMinDp,
   lensPadDp,
   MAX_BEVEL_FRACTION,
@@ -26,7 +25,6 @@ import { LENS_SHADER } from '../vireglass/lens-shader';
 import {
   absorption,
   edgeDensity,
-  edgePush,
   fresnelF0,
   refractionStrength,
   specularPower,
@@ -116,10 +114,6 @@ describe('вывод оптики из среды', () => {
     expect(specularPower(0.8)).toBeLessThan(specularPower(0));
   });
 
-  it('смещение у кромки задано средой и фаской, а не габаритом детали', () => {
-    expect(edgePush(1.45, 12.6)).toBeGreaterThan(0);
-    expect(edgePush(1.45, 25)).toBeCloseTo(edgePush(1.45, 12.5) * 2, 1);
-  });
 });
 
 describe('applyToggles', () => {
@@ -137,7 +131,6 @@ describe('applyToggles', () => {
     expect(off.blur).toBe(0);
     expect(off.refraction).toBe(0);
     expect(off.refractionScale).toBe(1);
-    expect(off.edgePushDp).toBe(0);
     expect(off.fresnel).toBe(0);
     expect(off.specular).toBe(0);
     expect(off.dispersion).toBe(0);
@@ -174,11 +167,6 @@ describe('геометрия', () => {
 
   it('фаска не выходит за предел модели даже на крошечной форме', () => {
     expect(bevelFraction(circleGeometry(16), optics)).toBeLessThanOrEqual(MAX_BEVEL_FRACTION);
-  });
-
-  it('смещение не уводит выборку за пределы формы', () => {
-    const tiny = circleGeometry(24);
-    expect(edgePushDp(tiny, optics)).toBeLessThan(halfMinDp(tiny));
   });
 
   // Кромка собирает свет СНАРУЖИ формы. Если вьюха не шире на радиус сбора, выборка уходит

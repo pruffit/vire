@@ -122,7 +122,6 @@ const DERIVED: (keyof VireGlassOptics)[] = [
   'refraction',
   'refractionScale',
   'bevelDp',
-  'edgePushDp',
   'fresnel',
   'specular',
   'dispersion',

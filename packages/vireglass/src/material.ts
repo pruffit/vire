@@ -19,7 +19,6 @@ import {
   blur as blurFrom,
   dispersion as dispersionFrom,
   edgeDensity as edgeDensityFrom,
-  edgePush as edgePushFrom,
   gatherRadius as gatherRadiusFrom,
   fresnelStrength,
   FRESNEL_EXPONENT,
@@ -99,7 +98,6 @@ export type VireGlassOptics = {
   /** Ширина фаски в dp — абсолютная величина среды. */
   bevelDp: number;
   /** Смещение выборки у кромки в dp — тоже от среды, не от габарита детали. */
-  edgePushDp: number;
   /** Радиус, в котором кромка собирает свет вокруг детали. */
   gatherRadiusDp: number;
   fresnel: number;
@@ -281,7 +279,6 @@ export function resolveOptics(patch: Partial<VireGlassMaterial> = {}): VireGlass
     refraction: refractionStrength(m.ior),
     refractionScale: refractionScaleFrom(m.ior, m.thickness),
     bevelDp: m.bevel,
-    edgePushDp: edgePushFrom(m.ior, m.bevel),
     gatherRadiusDp: gatherRadiusFrom(m.bevel),
     fresnel: fresnelStrength(m.ior),
     fresnelPower: FRESNEL_EXPONENT,
@@ -319,7 +316,6 @@ export const LEGACY_OPTICS = {
     refraction: 0.49,
     refractionScale: 1.05,
     bevelDp: 12.6,
-    edgePushDp: 32.7,
     gatherRadiusDp: 40,
     fresnel: 0.77,
     fresnelPower: 2.86,
@@ -349,7 +345,6 @@ export const LEGACY_OPTICS = {
     refraction: 0.95,
     refractionScale: 1.34,
     bevelDp: 14,
-    edgePushDp: 30,
     gatherRadiusDp: 40,
     fresnel: 0.72,
     fresnelPower: 2.4,
@@ -379,7 +374,6 @@ export const LEGACY_OPTICS = {
     refraction: 0.55,
     refractionScale: 1.14,
     bevelDp: 10,
-    edgePushDp: 22,
     gatherRadiusDp: 40,
     fresnel: 0.5,
     fresnelPower: 3.2,
@@ -462,7 +456,6 @@ export function applyToggles(
   if (!on.refraction) {
     o.refraction = 0;
     o.refractionScale = 1;
-    o.edgePushDp = 0;
     o.ior = 1;
   }
   if (!on.fresnel) o.fresnel = 0;

@@ -84,9 +84,6 @@ export const specularStrength = (ior: number, roughness: number) =>
  */
 const EDGE_PUSH_PER_BEVEL = 2.6;
 
-export const edgePush = (ior: number, bevelDp: number) =>
-  refractionStrength(ior) * EDGE_PUSH_PER_BEVEL * Math.max(bevelDp, 0);
-
 /**
  * Цвет среды. Руками не задаётся: у прозрачных сред оттенок связан с плотностью. Вода
  * поглощает красный и уходит в холодный, обычное стекло почти нейтрально с лёгкой зеленью,

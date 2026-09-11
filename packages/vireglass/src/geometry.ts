@@ -42,7 +42,6 @@ export const sizeGain = (g: VireGlassGeometry) =>
 
 /** Фаска шире этой доли полуразмера ломает SDF: закругления сходятся посередине. */
 export const MAX_BEVEL_FRACTION = 0.65;
-const MAX_PUSH_FRACTION = 0.85;
 
 export const bevelFraction = (g: VireGlassGeometry, o: VireGlassOptics) =>
   Math.min(MAX_BEVEL_FRACTION, (o.bevelDp * sizeGain(g)) / halfMinDp(g));
@@ -57,9 +56,6 @@ export const thicknessDp = (g: VireGlassGeometry, o: VireGlassOptics) =>
 export const RIM_FRACTION = 0.85;
 
 export const rimDp = (g: VireGlassGeometry, o: VireGlassOptics) => thicknessDp(g, o) * RIM_FRACTION;
-
-export const edgePushDp = (g: VireGlassGeometry, o: VireGlassOptics) =>
-  Math.min(o.edgePushDp, MAX_PUSH_FRACTION * halfMinDp(g));
 
 /** Крупнее деталь — глубже и шире тень (M 7:14). */
 export const shadowReachDp = (g: VireGlassGeometry) =>
