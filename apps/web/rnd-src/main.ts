@@ -28,6 +28,7 @@ import { createVireGlassRenderer } from '@vire/vireglass/web';
 import { drawIcon, loadIcons, NAV_ICONS, type IconName } from './icons';
 import { drawCover, drawPlayerInk, hitPlay, PLAYER_ICONS } from './mini-player';
 import { createPanel } from './panel';
+import { createGroup } from './group';
 import { CAPSULE, createPopover, POPOVER_ICONS, type PopoverHit } from './popover';
 import {
   drawCoverScreen,
@@ -76,7 +77,11 @@ const state = {
   zone: intParam('zone', 0, 0, ZONES.length - 1),
   preset: intParam('preset', -1, -1, PRESET_NAMES.length - 1),
   debug: intParam('debug', 0, 0, DEBUG_MODES.length - 1),
-  view: params.get('view') === 'screens' ? ('screens' as const) : ('material' as const),
+  view: params.get('view') === 'screens'
+    ? ('screens' as const)
+    : params.get('view') === 'morph'
+      ? ('morph' as const)
+      : ('material' as const),
   overrides: new Map<VireGlassNumericKey, number>(),
 };
 
@@ -189,7 +194,7 @@ function syncUrl(): void {
   next.set('zone', String(state.zone));
   if (state.preset >= 0) next.set('preset', String(state.preset));
   if (state.debug > 0) next.set('debug', String(state.debug));
-  if (state.view === 'screens') next.set('view', 'screens');
+  if (state.view !== 'material') next.set('view', state.view);
   for (const [key, value] of state.overrides) next.set(key, String(Math.round(value * 1000) / 1000));
   if (params.get('ui') === '0') next.set('ui', '0');
   if (params.has('hue')) next.set('hue', String(accentHue));
@@ -234,7 +239,7 @@ function samplePieces(ink: number) {
 /** Подписи живут в DOM, а не в сцене: нарисованные в сцену, они попали бы ПОД стекло. */
 function placeCaptions(): void {
   const { size, gap, left, y } = sampleLayout();
-  const hidden = state.view === 'screens';
+  const hidden = state.view !== 'material';
   captions.forEach((node, i) => {
     node.style.display = hidden ? 'none' : 'block';
     node.style.left = `${left + i * (size + gap)}px`;
@@ -539,12 +544,21 @@ function toggleButton(index: number, localX: number, localY: number): void {
 // поэтому значок каждой кнопки просто рисуется в неё на своём месте.
 const iconCanvas = document.createElement('canvas');
 const iconCtx = iconCanvas.getContext('2d');
-function updateIconMask(): HTMLCanvasElement | null {
+function clearMask(): CanvasRenderingContext2D | null {
   if (!iconCtx) return null;
   if (iconCanvas.width !== canvas.width || iconCanvas.height !== canvas.height) {
     iconCanvas.width = canvas.width;
     iconCanvas.height = canvas.height;
   }
+  iconCtx.globalCompositeOperation = 'source-over';
+  iconCtx.filter = 'none';
+  iconCtx.fillStyle = '#000000';
+  iconCtx.fillRect(0, 0, iconCanvas.width, iconCanvas.height);
+  return iconCtx;
+}
+
+function updateIconMask(): HTMLCanvasElement | null {
+  if (!clearMask() || !iconCtx) return null;
   // Форму краски шейдер читает ЗЕЛЁНЫМ каналом маски, а не альфой. Поэтому маска — белым по
   // ЧЁРНОМУ: при рисовании по прозрачному сглаживание уходит в альфу, зелёный внутри штриха
   // остаётся единицей до самого края, и границы выходят рваными.
@@ -552,10 +566,6 @@ function updateIconMask(): HTMLCanvasElement | null {
   // Спокойного основания под краской здесь НЕТ и быть не должно: это свойство материала
   // (legibility), одинаковое по всей детали. Пока его подкладывала лаборатория, у значка оно
   // было одно, у плашки другое, и разница ничем не объяснялась.
-  iconCtx.globalCompositeOperation = 'source-over';
-  iconCtx.filter = 'none';
-  iconCtx.fillStyle = '#000000';
-  iconCtx.fillRect(0, 0, iconCanvas.width, iconCanvas.height);
   for (const spot of buttonLayout()) {
     const icon = spot.row.icons?.[spot.place];
     if (!icon && !spot.row.player && !spot.row.flow) continue;
@@ -671,6 +681,37 @@ function updatePopoverInk(sample: { luma: number; hi: number } | null): void {
   popoverInk = next;
 }
 
+/** Разрыв и слияние (M 5:02) — своя сцена: в эталоне он тоже показан отдельно, крупно. */
+const group = createGroup(() => ({ x: viewWidthCss() / 2, y: canvas.height / dpr / 2 }));
+let groupInk = INK_LIGHT;
+
+function updateGroupInk(sample: { luma: number; hi: number } | null): void {
+  if (!sample) return;
+  const next = shouldInkBeLight(sample, groupInk === INK_LIGHT) ? INK_LIGHT : INK_DARK;
+  if (next !== groupInk) wake();
+  groupInk = next;
+}
+
+function groupPiece() {
+  const frame = group.frame(dpr);
+  const ink = groupInk === INK_LIGHT ? [1, 1, 1, 1] : [0.06, 0.07, 0.09, 1];
+  return {
+    ...frame,
+    optics: resolveOptics({ ...materialForInk(BUTTON_MATERIAL, true), ink: groupInk }),
+    light: lightFor(frame.centerX, frame.centerY),
+    icon: true,
+    inkIdle: ink,
+    inkActive: ink,
+  };
+}
+
+function updateGroupMask(): HTMLCanvasElement | null {
+  const ctx = clearMask();
+  if (!ctx) return null;
+  group.drawInk(ctx, dpr);
+  return iconCanvas;
+}
+
 function popoverPiece() {
   const frame = popover.frame(dpr);
   // Меню читают, а не выбирают в нём: краска полной силы, без приглушённого покоя.
@@ -689,6 +730,7 @@ function renderFrame() {
   const ink = manualInk ? material.ink : polarity === 'тёмная' ? INK_DARK : INK_LIGHT;
   const zone = ZONES[state.zone].draw;
   const screens = state.view === 'screens';
+  const morph = state.view === 'morph';
   return renderer.render({
     density: dpr,
     debug: DEBUG_MODES[state.debug] as VireGlassDebugMode,
@@ -709,9 +751,13 @@ function renderFrame() {
       : zone,
     offsetX: offset.x * dpr,
     offsetY: offset.y * dpr,
-    iconMask: screens ? updateIconMask() : null,
+    iconMask: screens ? updateIconMask() : morph ? updateGroupMask() : null,
     colorLayer: screens ? updateColorLayer() : null,
-    pieces: screens ? [...buttonPieces(), popoverPiece()] : [controlPiece(), ...samplePieces(ink)],
+    pieces: screens
+      ? [...buttonPieces(), popoverPiece()]
+      : morph
+        ? [groupPiece()]
+        : [controlPiece(), ...samplePieces(ink)],
   });
 }
 
@@ -756,11 +802,13 @@ function tick(now: number): void {
   const activeMoving = stepButtonActive(dt);
   const appearing = stepAppear(dt);
   const popoverMoving = popover.step(dt);
+  const groupMoving = group.step(dt);
   const progressing = stepProgress(dt);
   if (
     appearing ||
     activeMoving ||
     popoverMoving ||
+    groupMoving ||
     progressing ||
     !deform.idle() ||
     buttonDeforms.some((d) => !d.idle())
@@ -773,7 +821,8 @@ function tick(now: number): void {
   if (state.view === 'screens') {
     updateButtonInk(probes);
     updatePopoverInk(probes[BUTTON_TOTAL] ?? null);
-  } else if (probe) applyPolarity(probe);
+  } else if (state.view === 'morph') updateGroupInk(probe);
+  else if (probe) applyPolarity(probe);
   pending -= 1;
   // Метка и панель обновляются КАЖДЫЙ кадр, а не по окончании досчёта: иначе правка,
   // сделанная во время досчёта, остаётся без отражения, и панель выглядит мёртвой.
@@ -867,10 +916,17 @@ type Target = {
   index?: number;
   /** Попали в меню «ещё» или в капсулу, из которой оно растёт. */
   popover?: PopoverHit;
+  /** Попали в группу на сцене морфинга. */
+  group?: boolean;
 };
 
 /** Какая деталь под пальцем — в обоих режимах, с запасом, чтобы не мазать по кромке. */
 function pickTarget(clientX: number, clientY: number): Target | null {
+  if (state.view === 'morph') {
+    const hit = group.pick(clientX, clientY);
+    if (!hit) return null;
+    return { deform: group.deform, localX: hit.localX, localY: hit.localY, limit: 4, group: true };
+  }
   if (state.view === 'screens') {
     // Меню лежит поверх экрана, поэтому палец достаётся ему первым.
     const pop = popover.pick(clientX, clientY);
@@ -958,7 +1014,8 @@ const endGesture = (event: PointerEvent) => {
   // Клик — это жест без протяжки: тянули дальше порога, значит переключать нечего.
   if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) < 6) {
     // Открытое меню закрывается первым: касание мимо него ничего под ним не нажимает.
-    if (target?.popover) popover.click(target.popover);
+    if (target?.group) group.click();
+    else if (target?.popover) popover.click(target.popover);
     else if (popover.isOpen()) popover.setOpen(false);
     else if (target?.index !== undefined) toggleButton(target.index, target.localX, target.localY);
     wake();
