@@ -7,6 +7,7 @@ export * from './lens-shader';
 export * from './surface-shader';
 export * from './adaptation';
 export * from './accessibility';
+export * from './scroll-edge';
 export * from './group-model';
 export * from './adapters';
 export * from './targets/agsl';

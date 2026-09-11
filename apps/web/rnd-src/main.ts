@@ -36,7 +36,7 @@ import { CAPSULE, createPopover, POPOVER_ICONS, type PopoverHit } from './popove
 import {
   drawCoverScreen,
   drawFlowInk,
-  drawRecentList,
+  drawRecentScreen,
   FLOW_BUTTON,
   recentScrollMax,
   TOP_BAR_Y,
@@ -480,6 +480,9 @@ const BUTTON_MATERIAL = clearMode ? VIREGLASS_CLEAR_MATERIAL : VIREGLASS_CONTROL
  *  бралась с первой детали: над светлой клеткой выходила тёмная надпись, и требование
  *  читаемости выбеливало тело кнопок навигации на ЧЁРНОМ фоне до матового диска. */
 const buttonInk = new Array<number>(BUTTON_TOTAL).fill(INK_LIGHT);
+/** Плашка мини-плеера — стекло над списком: по её стилю выбирается стиль края прокрутки. */
+const PLATE_INDEX = ROW_OFFSETS[ROWS.findIndex((row) => row.player)];
+const plateInkLight = () => buttonInk[PLATE_INDEX] === INK_LIGHT;
 
 function updateButtonInk(probes: readonly ({ luma: number; hi: number } | null)[]): void {
   for (let i = 0; i < BUTTON_TOTAL; i += 1) {
@@ -775,7 +778,7 @@ function renderFrame() {
           drawTypeSpecimen(ctx, dpr, TYPE_SCREEN, ox, oy, scrollOf(TYPE_SCREEN));
           // Список — обычный контент, и живёт он В ПОЛОТНЕ, под линзами: стекло обязано его
           // преломлять, иначе плашка висит не над экраном, а рядом с ним.
-          drawRecentList(ctx, dpr, NAV_SCREEN, ox, oy, scrollOf(NAV_SCREEN));
+          drawRecentScreen(ctx, dpr, NAV_SCREEN, ox, oy, scrollOf(NAV_SCREEN), recentScrollMax(), plateInkLight());
           // Притенение низа идёт ПОСЛЕ контента: под панелью управления экран обязан быть
           // спокойным, а в фоне этот же градиент оказывался под списком и не работал.
           for (const i of APP_BACKGROUNDS) drawFoot(ctx, dpr, i, ox, oy);
