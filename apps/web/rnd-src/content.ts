@@ -132,11 +132,9 @@ const SIDE_SIZE = 19;
 /** Действия над треком справа от подписи: лайк и «поделиться». */
 const ACTION_SIZE = 21;
 const ACTION_STEP = 34;
-/** Верхняя панель: свернуть плеер слева, текст и «ещё» справа. Живёт В ОТСТУПЕ над обложкой —
- *  ради него он и был оставлен, иначе это просто пустое место. */
-const TOP_BAR_Y = 52;
-const TOP_ICON = 22;
-const TOP_STEP = 36;
+/** Верхняя панель: свернуть плеер слева, текст и «ещё» справа, в отступе над обложкой.
+ *  Кнопки стеклянные — их рисует стенд поверх полотна, а не само полотно. */
+export const TOP_BAR_Y = 52;
 const FLOW_HEIGHT = 52;
 /** Отбивка Потока от низа экрана: над индикатором домой. */
 const FLOW_BOTTOM = 44;
@@ -186,20 +184,6 @@ export function drawCoverScreen(
   ctx.translate(o.x * px + offsetX, o.y * px + offsetY);
   ctx.scale(px, px);
   ctx.translate(SCREEN_MARGIN, BIG_COVER_TOP);
-
-  // ВЕРХНЯЯ ПАНЕЛЬ. Отсчёт отрицательный: панель стоит выше обложки, в отступе над ней.
-  // Свернуть плеер — слева, потому что это выход, а выход там же, где «назад». Текст и «ещё»
-  // справа: это действия над треком, а не навигация, и мешать их с выходом нельзя.
-  const topY = TOP_BAR_Y - BIG_COVER_TOP;
-  ctx.save();
-  ctx.globalAlpha = 0.72;
-  ctx.translate(TOP_ICON / 2, topY);
-  drawIcon(ctx, 'vire-chevron-down', TOP_ICON);
-  ctx.translate(size - TOP_ICON, 0);
-  drawIcon(ctx, 'vire-more-horizontal', TOP_ICON);
-  ctx.translate(-TOP_STEP, 0);
-  drawIcon(ctx, 'vire-align-center', TOP_ICON);
-  ctx.restore();
 
   paintCover(ctx, size, 18, track.hue);
 

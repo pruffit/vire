@@ -28,12 +28,14 @@ import { createVireGlassRenderer } from '@vire/vireglass/web';
 import { drawIcon, loadIcons, NAV_ICONS, type IconName } from './icons';
 import { drawCover, drawPlayerInk, hitPlay, PLAYER_ICONS } from './mini-player';
 import { createPanel } from './panel';
+import { CAPSULE, createPopover, POPOVER_ICONS, type PopoverHit } from './popover';
 import {
   drawCoverScreen,
   drawFlowInk,
   drawRecentList,
   FLOW_BUTTON,
   recentScrollMax,
+  TOP_BAR_Y,
   TRANSPORT_ICONS,
 } from './content';
 import { drawTypeSpecimen, loadTypefaces, typeScrollMax } from './typefaces';
@@ -358,6 +360,8 @@ type ButtonRow = {
   radius?: number;
   /** На сколько ряд поднят над нижним краем экрана. */
   lift?: number;
+  /** Центр ряда от ВЕРХА экрана — у верхней панели; тогда `lift` не нужен. */
+  top?: number;
   count: number;
   icons?: readonly IconName[];
   /** Плашка несёт мини-плеер: обложку, две строки и кнопку плей/паузы. */
@@ -412,6 +416,15 @@ const ROWS: readonly ButtonRow[] = [
     content: true,
     select: 'none',
   },
+  {
+    screen: COVER_SCREEN,
+    size: 40,
+    top: TOP_BAR_Y,
+    count: 1,
+    icons: ['vire-chevron-down'],
+    content: true,
+    select: 'none',
+  },
 ];
 
 const rowWidth = (row: ButtonRow) => row.width ?? row.size;
@@ -450,7 +463,7 @@ function buttonLayout(): ButtonSpot[] {
     const w = rowWidth(row);
     const span = PHONE.width - SCREEN_MARGIN * 2;
     const gap = row.count > 1 ? (span - row.count * w) / (row.count - 1) : 0;
-    const y = origin.y + PHONE.height - 58 - (row.lift ?? 0) + offset.y;
+    const y = origin.y + (row.top ?? PHONE.height - 58 - (row.lift ?? 0)) + offset.y;
     return Array.from({ length: row.count }, (_, place) => ({
       x: origin.x + SCREEN_MARGIN + (w + gap) * place + w / 2 + offset.x,
       y,
@@ -548,11 +561,12 @@ function updateIconMask(): HTMLCanvasElement | null {
     if (!icon && !spot.row.player && !spot.row.flow) continue;
     iconCtx.save();
     iconCtx.translate(spot.x * dpr, spot.y * dpr);
-    if (icon) drawIcon(iconCtx, icon, 24 * dpr);
+    if (icon) drawIcon(iconCtx, icon, Math.round(spot.row.size * 0.46) * dpr);
     else if (spot.row.flow) drawFlowInk(iconCtx, dpr);
     else drawPlayerInk(iconCtx, rowWidth(spot.row), dpr, playing);
     iconCtx.restore();
   }
+  popover.drawInk(iconCtx, dpr);
   return iconCanvas;
 }
 
@@ -639,6 +653,38 @@ function buttonPieces() {
   });
 }
 
+/** Меню «ещё» на экране трека растёт из капсулы верхней панели (M 5:11). */
+const popover = createPopover(() => {
+  const origin = phoneOrigin(COVER_SCREEN);
+  return {
+    right: origin.x + PHONE.width - SCREEN_MARGIN + offset.x,
+    top: origin.y + TOP_BAR_Y - CAPSULE.height / 2 + offset.y,
+  };
+});
+if (params.get('menu') === '1') popover.setOpen(true);
+let popoverInk = INK_LIGHT;
+
+function updatePopoverInk(sample: { luma: number; hi: number } | null): void {
+  if (!sample) return;
+  const next = shouldInkBeLight(sample, popoverInk === INK_LIGHT) ? INK_LIGHT : INK_DARK;
+  if (next !== popoverInk) wake();
+  popoverInk = next;
+}
+
+function popoverPiece() {
+  const frame = popover.frame(dpr);
+  // Меню читают, а не выбирают в нём: краска полной силы, без приглушённого покоя.
+  const ink = popoverInk === INK_LIGHT ? [1, 1, 1, 1] : [0.06, 0.07, 0.09, 1];
+  return {
+    ...frame,
+    optics: resolveOptics({ ...materialForInk(BUTTON_MATERIAL, true), ink: popoverInk }),
+    light: lightFor(frame.centerX, frame.centerY),
+    icon: true,
+    inkIdle: ink,
+    inkActive: ink,
+  };
+}
+
 function renderFrame() {
   const ink = manualInk ? material.ink : polarity === 'тёмная' ? INK_DARK : INK_LIGHT;
   const zone = ZONES[state.zone].draw;
@@ -665,7 +711,7 @@ function renderFrame() {
     offsetY: offset.y * dpr,
     iconMask: screens ? updateIconMask() : null,
     colorLayer: screens ? updateColorLayer() : null,
-    pieces: screens ? buttonPieces() : [controlPiece(), ...samplePieces(ink)],
+    pieces: screens ? [...buttonPieces(), popoverPiece()] : [controlPiece(), ...samplePieces(ink)],
   });
 }
 
@@ -709,14 +755,25 @@ function tick(now: number): void {
   for (const d of buttonDeforms) d.step(dt);
   const activeMoving = stepButtonActive(dt);
   const appearing = stepAppear(dt);
-  if (appearing || activeMoving || stepProgress(dt) || !deform.idle() || buttonDeforms.some((d) => !d.idle())) {
+  const popoverMoving = popover.step(dt);
+  const progressing = stepProgress(dt);
+  if (
+    appearing ||
+    activeMoving ||
+    popoverMoving ||
+    progressing ||
+    !deform.idle() ||
+    buttonDeforms.some((d) => !d.idle())
+  ) {
     wake();
   }
   if (pending <= 0) return;
   const probes = renderFrame().probes;
   const probe = probes[0];
-  if (state.view === 'screens') updateButtonInk(probes);
-  else if (probe) applyPolarity(probe);
+  if (state.view === 'screens') {
+    updateButtonInk(probes);
+    updatePopoverInk(probes[BUTTON_TOTAL] ?? null);
+  } else if (probe) applyPolarity(probe);
   pending -= 1;
   // Метка и панель обновляются КАЖДЫЙ кадр, а не по окончании досчёта: иначе правка,
   // сделанная во время досчёта, остаётся без отражения, и панель выглядит мёртвой.
@@ -808,11 +865,24 @@ type Target = {
   limit: number;
   /** Индекс кнопки, если попали в неё: только их состояние переключается кликом. */
   index?: number;
+  /** Попали в меню «ещё» или в капсулу, из которой оно растёт. */
+  popover?: PopoverHit;
 };
 
 /** Какая деталь под пальцем — в обоих режимах, с запасом, чтобы не мазать по кромке. */
 function pickTarget(clientX: number, clientY: number): Target | null {
   if (state.view === 'screens') {
+    // Меню лежит поверх экрана, поэтому палец достаётся ему первым.
+    const pop = popover.pick(clientX, clientY);
+    if (pop) {
+      return {
+        deform: popover.deform,
+        localX: pop.localX,
+        localY: pop.localY,
+        limit: 0.14 * pop.halfMin,
+        popover: pop.hit,
+      };
+    }
     const layout = buttonLayout();
     for (let i = 0; i < layout.length; i += 1) {
       const row = layout[i].row;
@@ -880,14 +950,17 @@ canvas.addEventListener('pointermove', (event) => {
 const endGesture = (event: PointerEvent) => {
   if (!gesture) return;
   if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-  if (gesture.target) {
-    gesture.target.deform.release(WAVE_ON_RELEASE);
-    // Клик — это жест без протяжки: тянули дальше порога, значит переключать нечего.
-    const moved = Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY);
-    const index = gesture.target.index;
-    if (index !== undefined && moved < 6) {
-      toggleButton(index, gesture.target.localX, gesture.target.localY);
-    }
+  const target = gesture.target;
+  if (target) {
+    target.deform.release(WAVE_ON_RELEASE);
+    wake();
+  }
+  // Клик — это жест без протяжки: тянули дальше порога, значит переключать нечего.
+  if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) < 6) {
+    // Открытое меню закрывается первым: касание мимо него ничего под ним не нажимает.
+    if (target?.popover) popover.click(target.popover);
+    else if (popover.isOpen()) popover.setOpen(false);
+    else if (target?.index !== undefined) toggleButton(target.index, target.localX, target.localY);
     wake();
   }
   gesture = null;
@@ -910,7 +983,9 @@ canvas.addEventListener('dblclick', (event) => {
 placeCaptions();
 
 // Значки приходят из спрайта асинхронно — как пришли, кадр перерисовывается с ними.
-void loadIcons([...NAV_ICONS, ...PLAYER_ICONS, ...TRANSPORT_ICONS]).then(() => wake());
+void loadIcons([...NAV_ICONS, ...PLAYER_ICONS, ...TRANSPORT_ICONS, ...POPOVER_ICONS, 'vire-chevron-down']).then(() =>
+  wake(),
+);
 
 // Гротески приходят файлами, как и значки: пока они не загружены, canvas молча рисует
 // системным, и кадр надо пересобрать — иначе стенд показывает не те начертания.
