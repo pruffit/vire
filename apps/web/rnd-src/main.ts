@@ -13,6 +13,7 @@ import {
   roundedRectGeometry,
   circleGeometry,
   capsuleGeometry,
+  VIREGLASS_CLEAR_MATERIAL,
   VIREGLASS_CONTROL_MATERIAL,
   VIREGLASS_MATERIAL,
   activeMaterial,
@@ -92,7 +93,12 @@ for (const key of MATERIAL_KEYS) {
   if (Number.isFinite(v)) state.overrides.set(key, v);
 }
 
+/** Прозрачный вариант (Clear) — отдельное состояние стенда: смешивать его с обычным нельзя,
+ *  поэтому он не пресет среды, а режим кадра целиком. */
+const clearMode = params.get('clear') === '1';
+
 function baseMaterial(): VireGlassMaterial {
+  if (clearMode) return VIREGLASS_CLEAR_MATERIAL;
   return state.preset >= 0 ? MATERIAL_PRESETS[PRESET_NAMES[state.preset]] : VIREGLASS_MATERIAL;
 }
 
@@ -201,6 +207,7 @@ function syncUrl(): void {
   if (params.has('shape')) next.set('shape', shapeName);
   if (params.has('appear')) next.set('appear', String(appearTarget));
   if (params.has('accent')) next.set('accent', '1');
+  if (clearMode) next.set('clear', '1');
   history.replaceState(null, '', `${location.pathname}?${next}`);
 }
 
@@ -442,7 +449,7 @@ const ROW_OFFSETS = ROWS.reduce<number[]>((acc) => {
 const BUTTON_TOTAL = ROWS.reduce((n, row) => n + row.count, 0);
 
 /** Материал кнопок свой, а не панельный: ползунки правят только контрольный образец. */
-const BUTTON_MATERIAL = VIREGLASS_CONTROL_MATERIAL;
+const BUTTON_MATERIAL = clearMode ? VIREGLASS_CLEAR_MATERIAL : VIREGLASS_CONTROL_MATERIAL;
 /** Полярность — У КАЖДОЙ КНОПКИ СВОЯ, по её собственному зонду. Общей на весь кадр она
  *  бралась с первой детали: над светлой клеткой выходила тёмная надпись, и требование
  *  читаемости выбеливало тело кнопок навигации на ЧЁРНОМ фоне до матового диска. */
