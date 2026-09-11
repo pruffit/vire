@@ -13,9 +13,10 @@ import type { VireGlassOptics } from './material';
  * Светлоту фона ПОД стеклом приложению неоткуда взять: она видна только нативному захвату.
  * Оттуда она и приходит — событием `onBackdropSample` (зонд в `GlassBackdropView`).
  *
- * Решение принимается по ТОЙ ЖЕ формуле, по которой стекло красит своё тело
- * (`lens-shader.ts`). Иначе приложение судило бы по одной физике, а видел бы пользователь
- * другую — и перекраска включалась бы не там, где надпись действительно тонет.
+ * Решение принимается ПО СВЕТЛОТЕ с гистерезисом: считать здесь плотность тела по формуле
+ * шейдера значит держать вторую реализацию модели, которая разъезжается с первой молча.
+ * Что тело и надпись действительно расходятся по контрасту, проверяет `check:optics` —
+ * на настоящем рендере, а не на копии формулы.
  */
 
 export type BackdropSample = {
@@ -32,123 +33,10 @@ export type BackdropSample = {
   b: number;
 };
 
-// Константы модели тела — те же, что в шейдере линзы. Дублирование здесь осознанное и
-// закрыто тестом: держать их в одном месте нельзя, шейдер это строка на другом языке.
-const TINT_DARK = 0.07;
-const TINT_LIGHT = 0.94;
-const BODY_CAP_LOOSE = 0.62;
-const BODY_CAP_TIGHT = 0.38;
-const MAX_DENSITY = 0.92;
-
-const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
-
-/** Потолок светлоты тела для СВЕТЛОЙ надписи. Порог задан контрастом, а не разностью
- *  светлот: «на 0.14 темнее белого» — это светлота 0.86, на которой белый текст не виден
- *  вовсе. Для тёмной надписи порог зеркальный. */
-export function bodyCap(legibility: number): number {
-  return BODY_CAP_LOOSE + (BODY_CAP_TIGHT - BODY_CAP_LOOSE) * clamp(legibility * 2, 0, 1);
-}
-
-/**
- * Плотность, которую тело обязано набрать над фоном светлоты `local`, чтобы надпись данной
- * полярности осталась читаемой. Повторяет `lens-shader.ts`.
- */
-export function bodyDensityFor(
-  local: number,
-  legibility: number,
-  bodyDensity: number,
-  polarity: number,
-  spread = 0,
-): number {
-  const cap = bodyCap(legibility);
-  const need =
-    polarity > 0.5
-      ? local > cap
-        ? clamp((local - cap) / Math.max(local - TINT_DARK, 1e-4), 0, MAX_DENSITY)
-        : 0
-      : local < 1 - cap
-        ? clamp((1 - cap - local) / Math.max(TINT_LIGHT - local, 1e-4), 0, MAX_DENSITY)
-        : 0;
-  // Разнородный фон поднимает плотность сам по себе: разделения по светлоте там не хватает
-  // ни при какой полярности. Формула та же, что в шейдере.
-  const s = clamp(spread, 0, 1);
-  const busyFloor = s * (0.15 + (0.85 - 0.15) * clamp(legibility, 0, 1));
-  // Требование гаснет вместе с legibility — тот же множитель, что в `lens-shader.ts`: на нуле
-  // модель обещает прозрачное стекло, а не мягкий потолок.
-  const demand = clamp(legibility * 4, 0, 1);
-  return Math.max(bodyDensity, need * demand, busyFloor);
-}
-
-/**
- * Светлота тела стекла, которой оно ДОБЬЁТСЯ при данной полярности над фоном светлоты
- * `local`.
- */
-export function bodyLuma(
-  local: number,
-  legibility: number,
-  bodyDensity: number,
-  polarity: number,
-  spread = 0,
-  edgeLight = 0,
-): number {
-  const tint = polarity > 0.5 ? TINT_DARK : TINT_LIGHT;
-  const density = bodyDensityFor(local, legibility, bodyDensity, polarity, spread);
-  // Подсветка окружения поднимает светлоту тела ПОСЛЕ тинта — та же формула, что в шейдере.
-  // Без этого слагаемого решение принималось бы по светлоте, которой на экране нет.
-  const lift = local * edgeLight * (0.05 + 0.2 * (1 - local));
-  return clamp(local + (tint - local) * density + lift, 0, 1);
-}
-
-/** Относительная яркость по WCAG: экран отдаёт sRGB, а контраст считается в линейном. */
-export function relativeLuminance(srgb: number): number {
-  const v = clamp(srgb, 0, 1);
-  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-}
-
-export function contrastRatio(a: number, b: number): number {
-  const la = relativeLuminance(a);
-  const lb = relativeLuminance(b);
-  return la > lb ? (la + 0.05) / (lb + 0.05) : (lb + 0.05) / (la + 0.05);
-}
-
 /** Светлота надписи на концах шкалы. Кит держит светлый текст почти белым, тёмный — почти
  *  чёрным; промежуточных состояний у полярности не бывает по построению. */
 export const INK_LIGHT = 0.95;
 export const INK_DARK = 0.08;
-
-export type PolarityDecision = {
-  /** Контраст надписи с телом стекла при светлой и при тёмной полярности. Решение по ним
-   *  принимает вызывающий: ему нужно знать, какая полярность СЕЙЧАС. */
-  light: number;
-  dark: number;
-};
-
-/**
- * Какая полярность даёт надписи больше контраста над этим фоном. Возвращает обе величины —
- * решение о переключении принимает вызывающий, потому что ему нужен ещё и гистерезис.
- */
-export function preferredPolarity(
-  local: number,
-  legibility: number,
-  bodyDensity: number,
-  range: { lo: number; hi: number } = { lo: local, hi: local },
-  edgeLight = 0,
-): PolarityDecision {
-  // Контраст считается в ХУДШЕМ месте под стеклом: светлой надписи мешает самый светлый
-  // участок, тёмной — самый тёмный. По среднему решать нельзя — над границей чёрного и
-  // белого оно даёт серый, при котором формально всё в порядке, а надпись тонет над
-  // светлой половиной.
-  const spread = Math.max(range.hi - range.lo, 0);
-  const light = contrastRatio(
-    INK_LIGHT,
-    bodyLuma(range.hi, legibility, bodyDensity, 1, spread, edgeLight),
-  );
-  const dark = contrastRatio(
-    INK_DARK,
-    bodyLuma(range.lo, legibility, bodyDensity, 0, spread, edgeLight),
-  );
-  return { light, dark };
-}
 
 /**
  * Полярность надписи по замеру фона — ОДНО место на все платформы. Мелкая деталь и её глифы
