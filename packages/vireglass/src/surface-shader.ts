@@ -29,6 +29,7 @@ uniform float  u_refraction;
 uniform float4 u_tint;
 uniform float  u_shadow;
 uniform float  u_shadowReach;
+uniform float3 u_ambient;
 uniform float  u_presence;
 uniform float  u_progress;
 uniform float  u_appear;
@@ -51,10 +52,20 @@ const float VG_FALLOFF = ${VG_FALLOFF};
 
 // Плотность тинта в плоской середине; у фаски она множится на u_edgeDensity.
 const float VG_BODY_DENSITY = 0.19;
+/* Доля оттенка окружения в тени. Тень обязана остаться тенью, а не цветным пятном. */
+const float VG_SHADOW_TINT = 0.5;
 /* Глубина краски под поверхностью, dp. На столько её уводит нормаль у самой кромки. */
 const float VG_INK_DEPTH = 4.0;
 
 half4 vgPack(half3 c, float a) { return half4(c * half(a), half(a)); }
+
+// В тень затекает ЦВЕТ окружения, а не его яркость: из оттенка вычитается его собственная
+// светлота, иначе тень просто бледнеет и теряет глубину вместо того, чтобы потеплеть.
+float3 vgShadowTint(float3 ambient) {
+  float peak = max(max(ambient.r, ambient.g), max(ambient.b, 0.001));
+  float3 hue = ambient / peak;
+  return hue - dot(hue, float3(0.2126, 0.7152, 0.0722));
+}
 
 half3 vgHeat(float v) {
   float x = clamp(v, 0.0, 1.0);
@@ -137,7 +148,10 @@ half4 main(float2 xy) {
   }
 
   if (sd > 1.0) {
-    return half4(half3(half(halo)), half(halo + shade * (1.0 - halo)));
+    // Свет окружения затекает в тень (219 @8:22): она не чёрная дыра, а подкрашена тем, что
+    // лежит рядом. Иначе деталь над цветным контентом висит на сером пятне.
+    half3 spill = max(half3(half(halo)) + half3(vgShadowTint(u_ambient)) * half(VG_SHADOW_TINT * shade * (1.0 - halo)), half3(0.0));
+    return half4(spill, half(halo + shade * (1.0 - halo)));
   }
 
   float density = u_tint.w;
@@ -201,6 +215,7 @@ half4 main(float2 xy) {
   float mask = 1.0 - smoothstep(-1.0, 1.0, sd);
   pm = clamp(pm, half3(0.0), half3(1.0)) * half(mask);
   a *= mask;
+  pm = max(pm + half3(vgShadowTint(u_ambient)) * half(VG_SHADOW_TINT * shade * (1.0 - a)), half3(0.0));
   return half4(pm, half(a + shade * (1.0 - a)));
 }
 `;

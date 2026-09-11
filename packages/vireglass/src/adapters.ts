@@ -202,6 +202,8 @@ export function toSurfaceUniforms(
     morph2?: VireGlassMorph;
     dragLimit?: number;
     shadow?: number;
+    /** Средний цвет окружения детали: свет из него затекает в тень (эталон 219 @8:22). */
+    ambient?: readonly [number, number, number];
     /** Тело стекла рисует линза — поверхности остаётся блик, тень и иконка. */
     bodyInLens?: boolean;
     touch?: VireGlassTouch;
@@ -241,6 +243,8 @@ export function toSurfaceUniforms(
       options.bodyInLens ? 0 : optics.tintStrength,
     ],
     u_shadow: options.shadow ?? 1,
+    // Нейтраль по умолчанию: без замера окружения тень остаётся такой же, как была.
+    u_ambient: options.ambient ?? [0, 0, 0],
     u_shadowReach: shadowReachDp(geometry),
     u_touch: [touch.x, touch.y],
     u_pull: [touch.pullX, touch.pullY],
