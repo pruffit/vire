@@ -117,24 +117,20 @@ half4 main(float2 xy) {
   // Считать её глубоко внутри формы — это лишняя ПОЛНАЯ оценка SDF на каждый такой пиксель,
   // а тело занимает почти всю площадь. Ветвление здесь по координате, но расходятся только
   // нити на самой кромке.
-  // Касание зажигает материал изнутри от точки пальца (M 3:38, 12:05): свет расходится по
-  // детали и стекает наружу, на подложку.
-  float2 fromTouch = p - u_touch;
-  float glowR = halfMin * 1.6;
-  float touchGlow = u_press * exp(-dot(fromTouch, fromTouch) / (glowR * glowR));
-
   float shade = 0.0;
   float halo = 0.0;
   if (sd > -1.0) {
     float outside = smoothstep(-1.0, 1.0, sd);
+    // Под пальцем деталь идёт к подложке, и тень поджимается: она и есть зазор между ними.
+    float reach = u_shadowReach * (1.0 - 0.25 * u_press);
     // Тень мягкая и широкая, со сдвигом вниз (M 11:58): отрыв детали от контента держит она.
-    float sdDrop = vgScene(p - float2(0.0, u_shadowReach * 0.35), u_halfSize, u_corner,
+    float sdDrop = vgScene(p - float2(0.0, reach * 0.35), u_halfSize, u_corner,
                            u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
-    float amb = 1.0 - smoothstep(-u_shadowReach * 0.3, u_shadowReach, sdDrop);
-    float con = 1.0 - smoothstep(0.0, max(u_shadowReach * 0.12, 1.0), max(sd, 0.0));
+    float amb = 1.0 - smoothstep(-reach * 0.3, reach, sdDrop);
+    float con = 1.0 - smoothstep(0.0, max(reach * 0.12, 1.0), max(sd, 0.0));
     shade = (amb * amb * 0.14 + con * con * 0.10) * outside * u_shadow * u_appear;
-    halo = 1.0 - smoothstep(0.0, u_shadowReach * 0.30, max(sd, 0.0));
-    halo = halo * halo * (lit * 0.10 + touchGlow * 0.35) * outside * u_appear;
+    halo = 1.0 - smoothstep(0.0, reach * 0.30, max(sd, 0.0));
+    halo = halo * halo * lit * 0.10 * outside * u_appear;
   }
 
   if (sd > 1.0) {
@@ -187,24 +183,28 @@ half4 main(float2 xy) {
   // нечем: кольцо отсчётов вокруг пикселя — то же недосэмплирование, что и в дисковом сборе,
   // и подложка выходила рваной, с видимой границей вокруг каждой группы букв.
 
+  // Слои ложатся premultiplied-over: в прямой альфе почти прозрачное тёмное тело затягивало
+  // цвет полупрозрачной краски и света пальца к себе — кромки букв серели, нажатие темнило.
+  half3 pm = col * half(a);
   half inkA = ink.g * half(mix(0.82, 1.0, u_active) * u_appear);
   half3 inkCol = mix(half3(u_inkIdle.rgb), half3(u_inkActive.rgb), half(u_active));
-  col = col * (1.0 - inkA) + inkCol * inkA;
+  pm = pm * (1.0 - inkA) + inkCol * inkA;
+  a = a + float(inkA) * (1.0 - a);
 
   // ЦВЕТНОЙ КОНТЕНТ ЛЕЖИТ ТАМ ЖЕ, ГДЕ КРАСКА — внутри материала и на той же координате. Иначе
   // деформация ведёт их порознь: при нажатии название и артист трясутся вместе с поверхностью,
   // а обложка стоит на месте, потому что она была отдельным слоем поверх стекла. Полярность его
   // не трогает — у него свой цвет, и подменять его нечем.
   half4 over = u_overlay.eval(inkUv * u_iconScale) * half(u_overlayOn * u_appear);
-  col = col * (1.0 - over.a) + over.rgb * over.a;
+  pm = pm * (1.0 - over.a) + over.rgb * over.a;
+  a = a + float(over.a) * (1.0 - a);
 
-  float glow = (touchGlow * 0.45 + u_press * 0.06) * u_appear;
-  col = col * half(1.0 - glow) + half3(half(glow));
-  a = clamp(a + glow * (1.0 - a), 0.0, 1.0);
-  a = max(a, max(float(inkA), float(over.a)));
-  a *= 1.0 - smoothstep(-1.0, 1.0, sd);
+  // Свет от пальца собирает ЛИНЗА: это концентрат окружения, а не своя белизна. Поверхности
+  // остаётся лишь то, что стекло выплёскивает наружу, — ореол выше.
 
-  col = clamp(col, half3(0.0), half3(1.0));
-  return half4(col * half(a), half(a + shade * (1.0 - a)));
+  float mask = 1.0 - smoothstep(-1.0, 1.0, sd);
+  pm = clamp(pm, half3(0.0), half3(1.0)) * half(mask);
+  a *= mask;
+  return half4(pm, half(a + shade * (1.0 - a)));
 }
 `;

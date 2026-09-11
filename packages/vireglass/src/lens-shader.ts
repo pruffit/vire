@@ -213,7 +213,15 @@ float4 vgGather(float2 q, float radius, float2 seed) {
 half4 main(float2 xy) {
   float2 p = vgTouchWarp(xy - u_center, u_touch, u_pull, u_touchPress, u_touchRadius, u_wave.x, u_wave.y);
   float sd = vgScene(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
-  if (sd > 1.0) { return half4(0.0); }
+  // Снаружи стекла нет — кроме света, который оно выплёскивает под пальцем на подложку
+  // (M 3:38): это тот же концентрат окружения, что и внутри, поэтому над тёмным фоном
+  // белого ореола не возникает.
+  if (sd > 1.0) {
+    float spill = u_touchPress * exp(-sd / max(min(u_halfSize.x, u_halfSize.y) * 0.5, 4.0)) * 0.5 * u_appear;
+    if (spill < 0.004) { return half4(0.0); }
+    float3 lit = clamp((u_probeLuma >= 0.0 ? u_probe : float3(0.35)) * 1.6 + float3(0.1), float3(0.0), float3(1.0));
+    return half4(half3(lit * spill), half(spill));
+  }
 
   float bevel = max(u_bevel, 1.0);
   float e = max(-sd, 0.0);
@@ -424,6 +432,16 @@ half4 main(float2 xy) {
   // Стекло концентрирует свет; сыгранная часть — участок, где его больше.
   float glow = VG_CONCENTRATE + 0.08 * vgProgress(p, u_halfSize, u_progress);
   rgb += (1.0 - rgb) * glow * lens;
+
+  // Под пальцем и в морфинге стекло сгущает свет в пятно (M 4:56, 5:11). Это КОНЦЕНТРАТ
+  // окружения, а не собственная белизна: над тёмным фоном деталь светлеет, но белой не
+  // становится, и краска поверх неё остаётся читаемой.
+  if (u_touchPress > 0.001) {
+    float2 fromTouch = p - u_touch;
+    float spotR = max(min(u_halfSize.x, u_halfSize.y) * 1.2, 1.0);
+    float spot = u_touchPress * (0.3 + 0.55 * exp(-dot(fromTouch, fromTouch) / (spotR * spotR)));
+    rgb = mix(rgb, clamp(ambient * 1.6 + float3(0.1), float3(0.0), float3(1.0)), spot * lens);
+  }
 
   // КРОМОЧНЫЙ СВЕТ — отдельный слой, линия в ~1 pt по силуэту (M 2:36, 11:04): ярче там, где
   // грань смотрит на ключевой свет, слабее напротив; где свет не падает — тёмная обводка.
