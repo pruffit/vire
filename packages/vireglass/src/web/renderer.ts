@@ -65,6 +65,8 @@ export type VireGlassPiece = {
   centerX: number;
   centerY: number;
   morph?: VireGlassMorph;
+  /** Третья форма того же тела: разрыв детали на части идёт двумя перемычками. */
+  morph2?: VireGlassMorph;
   /** Локальный отклик на палец: точка касания, тяга, нажатие, волна. */
   touch?: VireGlassTouch;
   /** Отклик на нажатие, 0…1 — блик расцветает, тело чуть плотнеет. */
@@ -385,11 +387,9 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
       // тень, фаска и сбор света выходят за габарит детали.
       // Капля морфа уезжает за габарит детали — её ход входит в запас, иначе ножницы срежут
       // хвост ровно там, где он и интересен.
-      const morphReach = piece.morph
-        ? Math.hypot(piece.morph.offsetX, piece.morph.offsetY) +
-          Math.max(piece.morph.width, piece.morph.height) / 2 +
-          piece.morph.smoothing
-        : 0;
+      const reachOf = (m?: VireGlassMorph) =>
+        m ? Math.hypot(m.offsetX, m.offsetY) + Math.max(m.width, m.height) / 2 + m.smoothing : 0;
+      const morphReach = Math.max(reachOf(piece.morph), reachOf(piece.morph2));
       // Деформация поля уводит край детали за её габарит — тяга, размах волны и рост при
       // нажатии. Без этого слагаемого ножницы срезают ровно ту часть, ради которой тянут.
       const touchReach = piece.touch
@@ -434,6 +434,7 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
       const lens = toLensProps(piece.optics, piece.geometry, options.density, {
         debug: options.debug,
         morph: piece.morph,
+        morph2: piece.morph2,
         touch: piece.touch,
         progress: piece.progress,
         light: piece.light,
@@ -450,6 +451,7 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
       const rawSurface = toSurfaceUniforms(piece.optics, piece.geometry, {
         debug: options.debug,
         morph: piece.morph,
+        morph2: piece.morph2,
         bodyInLens: true,
         touch: piece.touch,
         progress: piece.progress,
@@ -469,6 +471,9 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
         u_morphHalf: [rawSurface.u_morphHalf[0] * d, rawSurface.u_morphHalf[1] * d],
         u_morphCorner: rawSurface.u_morphCorner * d,
         u_morphK: rawSurface.u_morphK * d,
+        u_morph2Offset: [rawSurface.u_morph2Offset[0] * d, rawSurface.u_morph2Offset[1] * d],
+        u_morph2Half: [rawSurface.u_morph2Half[0] * d, rawSurface.u_morph2Half[1] * d],
+        u_morph2Corner: rawSurface.u_morph2Corner * d,
         u_shadowReach: rawSurface.u_shadowReach * d,
 
         u_touch: [rawSurface.u_touch[0] * d, rawSurface.u_touch[1] * d],

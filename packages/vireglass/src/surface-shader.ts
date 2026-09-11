@@ -16,6 +16,9 @@ uniform float2 u_morphOffset;
 uniform float2 u_morphHalf;
 uniform float  u_morphCorner;
 uniform float  u_morphK;
+uniform float2 u_morph2Offset;
+uniform float2 u_morph2Half;
+uniform float  u_morph2Corner;
 
 uniform float  u_press;
 uniform float  u_active;
@@ -75,9 +78,11 @@ half4 main(float2 xy) {
   float halfMin = max(min(u_halfSize.x, u_halfSize.y), 1.0);
   float bevel = max(u_bevel, 1.0);
 
-  float sd = vgScene(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
+  float sd = vgScene(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK,
+                u_morph2Offset, u_morph2Half, u_morph2Corner);
   float t = vgBevelT(sd, bevel);
-  float2 n = vgSceneNormal(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
+  float2 n = vgSceneNormal(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK,
+                u_morph2Offset, u_morph2Half, u_morph2Corner);
   float3 N = normalize(float3(n * vgBevelSlope(t), 1.0));
 
   // Прогресс — активное состояние, ставшее полем: сыгранная часть блестит и светится ровно
@@ -125,7 +130,8 @@ half4 main(float2 xy) {
     float reach = u_shadowReach * (1.0 - 0.25 * u_press);
     // Тень мягкая и широкая, со сдвигом вниз (M 11:58): отрыв детали от контента держит она.
     float sdDrop = vgScene(p - float2(0.0, reach * 0.35), u_halfSize, u_corner,
-                           u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
+                           u_morphOffset, u_morphHalf, u_morphCorner, u_morphK,
+                u_morph2Offset, u_morph2Half, u_morph2Corner);
     float amb = 1.0 - smoothstep(-reach * 0.3, reach, sdDrop);
     float con = 1.0 - smoothstep(0.0, max(reach * 0.12, 1.0), max(sd, 0.0));
     shade = (amb * amb * 0.14 + con * con * 0.10) * outside * u_shadow * u_appear;

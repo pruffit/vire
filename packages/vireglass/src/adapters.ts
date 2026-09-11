@@ -102,6 +102,8 @@ export function toLensProps(
   options: {
     debug?: VireGlassDebugMode;
     morph?: VireGlassMorph;
+    /** Третья форма слитого тела; ноль размера её выключает. */
+    morph2?: VireGlassMorph;
     groupProbe?: number[];
     touch?: VireGlassTouch;
     /** Сыгранная доля, 0…1: слева от границы деталь активна. `undefined` — прогресса нет. */
@@ -115,6 +117,7 @@ export function toLensProps(
   } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
+  const morph2 = options.morph2 ?? NO_MORPH;
   const touch = options.touch ?? NO_TOUCH;
   // Оценка фона на всю группу поверхностей. Едет тем же каналом, что и материал, и
   // применяется ПОСЛЕ собственной оценки линзы — то есть просто перебивает её. Отдельным
@@ -171,6 +174,9 @@ export function toLensProps(
       ['u_morphHalf', [(morph.width * d) / 2, (morph.height * d) / 2]],
       ['u_morphCorner', morph.cornerRadius * d],
       ['u_morphK', morph.smoothing * d],
+      ['u_morph2Offset', [morph2.offsetX * d, morph2.offsetY * d]],
+      ['u_morph2Half', [(morph2.width * d) / 2, (morph2.height * d) / 2]],
+      ['u_morph2Corner', morph2.cornerRadius * d],
       ['u_touch', [touch.x * d, touch.y * d]],
       ['u_pull', [touch.pullX * d, touch.pullY * d]],
       ['u_touchPress', touch.press],
@@ -191,6 +197,8 @@ export function toSurfaceUniforms(
   options: {
     debug?: VireGlassDebugMode;
     morph?: VireGlassMorph;
+    /** Третья форма слитого тела; ноль размера её выключает. */
+    morph2?: VireGlassMorph;
     dragLimit?: number;
     shadow?: number;
     /** Тело стекла рисует линза — поверхности остаётся блик, тень и иконка. */
@@ -203,6 +211,7 @@ export function toSurfaceUniforms(
   } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
+  const morph2 = options.morph2 ?? NO_MORPH;
   const touch = options.touch ?? NO_TOUCH;
   const pad = surfacePadDp(geometry, options.dragLimit ?? 0, morph);
   return {
@@ -215,6 +224,9 @@ export function toSurfaceUniforms(
     u_morphHalf: [morph.width / 2, morph.height / 2],
     u_morphCorner: morph.cornerRadius,
     u_morphK: morph.smoothing,
+    u_morph2Offset: [morph2.offsetX, morph2.offsetY],
+    u_morph2Half: [morph2.width / 2, morph2.height / 2],
+    u_morph2Corner: morph2.cornerRadius,
     u_specular: optics.specular,
     u_specularPower: optics.specularPower,
     u_edgeDensity: optics.edgeDensity,

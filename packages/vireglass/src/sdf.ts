@@ -14,12 +14,17 @@ float vgSmin(float a, float b, float k) {
   return mix(b, a, h) - k * h * (1.0 - h);
 }
 
-// Сцена = одна форма, а при k > 0 — гладкое объединение двух (морфинг-эксперимент).
+// Сцена = одна форма, а при k > 0 — гладкое объединение с одной или двумя соседними. Третья
+// форма нужна для разрыва органа управления на части (reference.md §5): перемычек там две.
+// Выключается она нулевым размером, а не своим k: перемычка у слитого тела общая.
 float vgScene(float2 p, float2 halfSize, float corner,
-              float2 offsetB, float2 halfB, float cornerB, float k) {
+              float2 offsetB, float2 halfB, float cornerB, float k,
+              float2 offsetC, float2 halfC, float cornerC) {
   float a = vgRoundRect(p, halfSize, corner);
   if (k <= 0.0) { return a; }
-  return vgSmin(a, vgRoundRect(p - offsetB, halfB, cornerB), k);
+  float ab = vgSmin(a, vgRoundRect(p - offsetB, halfB, cornerB), k);
+  if (halfC.x <= 0.0) { return ab; }
+  return vgSmin(ab, vgRoundRect(p - offsetC, halfC, cornerC), k);
 }
 
 // Отклик на палец. Деформируется ПОЛЕ вокруг точки касания, а не габарит формы: масштабируя
@@ -83,14 +88,22 @@ float2 vgRoundRectNormal(float2 p, float2 halfSize, float corner) {
 // Прежний вариант брал четыре ДОПОЛНИТЕЛЬНЫХ вычисления сцены на пиксель (каждое — две
 // формы плюс smin) и при этом был приближением. Здесь две формы, точно.
 float2 vgSceneNormal(float2 p, float2 halfSize, float corner,
-                     float2 offsetB, float2 halfB, float cornerB, float k) {
+                     float2 offsetB, float2 halfB, float cornerB, float k,
+                     float2 offsetC, float2 halfC, float cornerC) {
   float2 na = vgRoundRectNormal(p, halfSize, corner);
   if (k <= 0.0) { return na; }
   float2 q = p - offsetB;
   float a = vgRoundRect(p, halfSize, corner);
   float b = vgRoundRect(q, halfB, cornerB);
   float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
-  return normalize(mix(vgRoundRectNormal(q, halfB, cornerB), na, h) + float2(1e-5, 1e-5));
+  float2 nab = normalize(mix(vgRoundRectNormal(q, halfB, cornerB), na, h) + float2(1e-5, 1e-5));
+  if (halfC.x <= 0.0) { return nab; }
+  // Тот же вывод, что и для пары: нормали смешиваются тем же весом, что и расстояния.
+  float2 qc = p - offsetC;
+  float ab = vgSmin(a, b, k);
+  float c = vgRoundRect(qc, halfC, cornerC);
+  float hc = clamp(0.5 + 0.5 * (c - ab) / k, 0.0, 1.0);
+  return normalize(mix(vgRoundRectNormal(qc, halfC, cornerC), nab, hc) + float2(1e-5, 1e-5));
 }
 
 // Положение в фаске: 0 — плоская середина, 1 — самая кромка. Одна эта величина питает

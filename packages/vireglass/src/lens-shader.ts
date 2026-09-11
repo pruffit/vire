@@ -60,6 +60,9 @@ uniform float2 u_morphOffset;
 uniform float2 u_morphHalf;
 uniform float  u_morphCorner;
 uniform float  u_morphK;
+uniform float2 u_morph2Offset;
+uniform float2 u_morph2Half;
+uniform float  u_morph2Corner;
 uniform float  u_debug;
 uniform float2 u_touch;
 uniform float2 u_pull;
@@ -212,7 +215,8 @@ float4 vgGather(float2 q, float radius, float2 seed) {
 
 half4 main(float2 xy) {
   float2 p = vgTouchWarp(xy - u_center, u_touch, u_pull, u_touchPress, u_touchRadius, u_wave.x, u_wave.y);
-  float sd = vgScene(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
+  float sd = vgScene(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK,
+                u_morph2Offset, u_morph2Half, u_morph2Corner);
   // Снаружи стекла нет — кроме света, который оно выплёскивает под пальцем на подложку
   // (M 3:38): это тот же концентрат окружения, что и внутри, поэтому над тёмным фоном
   // белого ореола не возникает.
@@ -227,7 +231,8 @@ half4 main(float2 xy) {
   float e = max(-sd, 0.0);
   // 0 в плоской середине, 1 у силуэта.
   float t = 1.0 - clamp(e / bevel, 0.0, 1.0);
-  float2 n = vgSceneNormal(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
+  float2 n = vgSceneNormal(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK,
+                u_morph2Offset, u_morph2Half, u_morph2Corner);
 
   // Режим «бэкдроп» отдаёт содержимое как есть — это опорная точка для сравнения оптики.
   float on = u_debug > 5.5 && u_debug < 6.5 ? 0.0 : 1.0;
