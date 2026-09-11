@@ -30,7 +30,6 @@ import { space, layout, motionDuration } from '../lib/design/scales';
 import { Icon } from '../lib/icon';
 import { HazeGround, HAZE_TOP } from '../components/haze-ground';
 import { useMock } from '../lib/design/mock';
-import { distributeSurplus } from '../lib/design/stack';
 import { CoverCarousel } from '../components/player/cover-carousel';
 import { LyricsGlass } from '../components/player/lyrics-glass';
 import { Transport } from '../components/player/transport';
@@ -99,8 +98,9 @@ const MOCK_PLAY = 34;
 const MOCK_ARTIST_SIZE = 15;
 const MOCK_SCREEN_MARGIN = 20;
 
-/** Веса зазоров для `distributeSurplus` — макетные величины в том же порядке, в каком они
- *  идут на экране сверху вниз. */
+/** Веса зазоров стопки — макетные величины в том же порядке, в каком они идут на экране
+ *  сверху вниз. Каждый зазор — свой `flexGrow` того же веса: свободную высоту делит между
+ *  ними сам flexbox, пропорционально и за один проход раскладки. */
 const STACK_GAP_WEIGHTS = [
   MOCK_COVER_TOP,
   MOCK_COVER_TO_TITLE,
@@ -109,6 +109,17 @@ const STACK_GAP_WEIGHTS = [
   MOCK_TRANSPORT_TO_FLOW,
   MOCK_FLOW_BOTTOM,
 ] as const;
+const [
+  COVER_AIR_WEIGHT,
+  COVER_TO_TITLE_WEIGHT,
+  ARTIST_TO_PROGRESS_WEIGHT,
+  PROGRESS_TO_TRANSPORT_WEIGHT,
+  TRANSPORT_TO_FLOW_WEIGHT,
+  FLOW_BOTTOM_WEIGHT,
+] = STACK_GAP_WEIGHTS;
+// Три внутренних зазора стопки растут вложенно в общем весе своего блока — доля от него
+// делится между ними в тех же пропорциях, поэтому итог совпадает с плоским распределением.
+const CHROME_GROW = ARTIST_TO_PROGRESS_WEIGHT + PROGRESS_TO_TRANSPORT_WEIGHT + TRANSPORT_TO_FLOW_WEIGHT;
 
 /**
  * Фуллскрин-плеер.
@@ -282,26 +293,6 @@ export default function PlayerScreen() {
   const transportToFlowBase = gap(MOCK_TRANSPORT_TO_FLOW, transportBox / 2);
   const flowBottomBase = vs(MOCK_FLOW_BOTTOM);
 
-  // Излишек — то, что flexGrow добавил региону обложки сверх его макетной величины. На
-  // низком аппарате (регион сжался) он отрицательный, и distributeSurplus не раздаёт его —
-  // тогда все базовые величины выше остаются как есть, это прежнее сжатие.
-  const regionSurplus = coverRegionHeight - (coverAirBase + contentWidth);
-  const [
-    coverAirSurplus,
-    coverToTitleSurplus,
-    artistToProgressSurplus,
-    progressToTransportSurplus,
-    transportToFlowSurplus,
-    flowBottomSurplus,
-  ] = distributeSurplus(STACK_GAP_WEIGHTS, regionSurplus);
-
-  const coverAir = coverAirBase + coverAirSurplus;
-  const coverToTitle = coverToTitleBase + coverToTitleSurplus;
-  const artistToProgress = artistToProgressBase + artistToProgressSurplus;
-  const progressToTransport = progressToTransportBase + progressToTransportSurplus;
-  const transportToFlow = transportToFlowBase + transportToFlowSurplus;
-  const flowBottom = flowBottomBase + flowBottomSurplus;
-
   const share = () => setShareOpen(true);
 
   const startWave = async () => {
@@ -340,19 +331,15 @@ export default function PlayerScreen() {
               <View
                 style={[
                   { paddingHorizontal: ms(MOCK_SCREEN_MARGIN) },
-                  {
-                    minHeight: viewport,
-                    paddingTop: headerHeight,
-                    paddingBottom: flowBottom,
-                  },
+                  { minHeight: viewport, paddingTop: headerHeight },
                 ]}
               >
                 {/* Обложка НЕ под `chromeStyle`: иммерсив гасит интерфейс вокруг неё, а не её
                     саму — под общей прозрачностью она исчезала вместе с ним. */}
-                {/* Базис региона — воздух над обложкой (со своей долей излишка) плюс сама
-                    обложка; остальной излишек ушёл в отбивки ниже через `distributeSurplus`. */}
+                {/* Базис региона — воздух над обложкой плюс сама обложка; излишек добирает
+                    сам flexbox через `flexGrow`, тем же весом, что и зазоры ниже. */}
                 <View
-                  style={[styles.coverRegion, { flexBasis: coverAir + contentWidth }]}
+                  style={[styles.coverRegion, { flexBasis: coverAirBase + contentWidth }]}
                   onLayout={(e) => setCoverRegionHeight(e.nativeEvent.layout.height)}
                 >
                   <View
@@ -382,8 +369,10 @@ export default function PlayerScreen() {
                   </View>
                 </View>
 
+                <View style={{ flexBasis: coverToTitleBase, flexGrow: COVER_TO_TITLE_WEIGHT }} />
+
                 <Animated.View
-                  style={[{ marginTop: coverToTitle }, chromeStyle]}
+                  style={[styles.chrome, { flexGrow: CHROME_GROW }, chromeStyle]}
                   pointerEvents={chromePointerEvents}
                 >
                   <View style={styles.titleRow}>
@@ -421,36 +410,34 @@ export default function PlayerScreen() {
                     </View>
                   </View>
 
-                  <View style={{ marginTop: artistToProgress }}>
-                    <ProgressLine positionSec={positionSec} durationSec={durationSec} onSeek={seek} />
-                  </View>
+                  <View style={{ flexBasis: artistToProgressBase, flexGrow: ARTIST_TO_PROGRESS_WEIGHT }} />
+                  <ProgressLine positionSec={positionSec} durationSec={durationSec} onSeek={seek} />
 
-                  <View style={{ marginTop: progressToTransport }}>
-                    <Transport
-                      playing={status === 'playing'}
-                      loading={status === 'loading'}
-                      hasNext={hasNext}
-                      hasPrev={hasPrev}
-                      shuffle={shuffle}
-                      repeat={repeat}
-                      onPrev={prev}
-                      onNext={next}
-                      onTogglePlay={togglePlayPause}
-                      onToggleShuffle={toggleShuffle}
-                      onCycleRepeat={cycleRepeat}
-                      width={contentWidth}
-                    />
-                  </View>
+                  <View style={{ flexBasis: progressToTransportBase, flexGrow: PROGRESS_TO_TRANSPORT_WEIGHT }} />
+                  <Transport
+                    playing={status === 'playing'}
+                    loading={status === 'loading'}
+                    hasNext={hasNext}
+                    hasPrev={hasPrev}
+                    shuffle={shuffle}
+                    repeat={repeat}
+                    onPrev={prev}
+                    onNext={next}
+                    onTogglePlay={togglePlayPause}
+                    onToggleShuffle={toggleShuffle}
+                    onCycleRepeat={cycleRepeat}
+                    width={contentWidth}
+                  />
 
                   {status === 'error' && (
                     <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>
                   )}
 
-                  <View style={{ marginTop: transportToFlow }}>
-                    <FlowButton onPress={startWave} blurTarget={groundRef} width={contentWidth} />
-                  </View>
+                  <View style={{ flexBasis: transportToFlowBase, flexGrow: TRANSPORT_TO_FLOW_WEIGHT }} />
+                  <FlowButton onPress={startWave} blurTarget={groundRef} width={contentWidth} />
                 </Animated.View>
 
+                <View style={{ flexBasis: flowBottomBase, flexGrow: FLOW_BOTTOM_WEIGHT }} />
               </View>
 
               <Animated.View style={[styles.context, chromeStyle]} pointerEvents={chromePointerEvents}>
@@ -590,11 +577,12 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: space.xl },
 
   coverRegion: {
-    flexGrow: 1,
+    flexGrow: COVER_AIR_WEIGHT,
     flexShrink: 1,
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
+  chrome: { flexShrink: 0 },
 
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   titles: { flex: 1, minWidth: 0 },
