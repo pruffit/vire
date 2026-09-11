@@ -14,6 +14,7 @@ import Animated, {
 
 import * as Haptics from 'expo-haptics';
 import { nextQueueIndex } from '@vire/core/playback/queue';
+import type { PlaySource } from '@vire/api-contracts';
 import { Backdrop } from '../components/backdrop';
 import { usePlayerStore } from '../lib/player-store';
 import { useLikesStore } from '../lib/likes-store';
@@ -57,6 +58,21 @@ const LYRICS_IDLE_AT = 20;
 /** Ближе этого к концу очереди волна подливает следующую пачку. */
 const WAVE_REFILL_AT = 2;
 
+/** Откуда играет очередь. У стенда источника нет вовсе — он рисует материал, а не продукт;
+ *  на мобилке это работающая информация (спека инкремента, «Отличия от стенда»). */
+const SOURCE_LABEL: Record<PlaySource, string> = {
+  wave: 'Волна',
+  release: 'Релиз',
+  playlist: 'Плейлист',
+  artist: 'Артист',
+  home: 'Главная',
+  feed: 'Лента',
+  search: 'Поиск',
+  liked: 'Любимое',
+  purchased: 'Покупки',
+  direct: 'Очередь',
+};
+
 /** Отбивки первого экрана, считанные снизу вверх от кнопки «ПОТОК» — см. спеку
  *  `docs/superpowers/specs/2026-09-06-mobile-stand-design.md`. */
 /** Обложка стоит на этой высоте от верха экрана — как в макете. */
@@ -76,11 +92,34 @@ const MOCK_PHONE_HEIGHT = 640;
 const MOCK_COVER_SIDE = 260;
 const MOCK_ACTION = 25;
 const MOCK_ACTION_STEP = 38;
-const MOCK_TITLE_SIZE = 22;
+const MOCK_TITLE_SIZE = 20;
 /** Главный значок транспорта: по нему считается высота ряда, а от неё — отбивки. */
 const MOCK_PLAY = 34;
 const MOCK_ARTIST_SIZE = 15;
 const MOCK_SCREEN_MARGIN = 20;
+
+/** Веса зазоров стопки — макетные величины в том же порядке, в каком они идут на экране
+ *  сверху вниз. Каждый зазор — свой `flexGrow` того же веса: свободную высоту делит между
+ *  ними сам flexbox, пропорционально и за один проход раскладки. */
+const STACK_GAP_WEIGHTS = [
+  MOCK_COVER_TOP,
+  MOCK_COVER_TO_TITLE,
+  MOCK_ARTIST_TO_PROGRESS,
+  MOCK_PROGRESS_TO_TRANSPORT,
+  MOCK_TRANSPORT_TO_FLOW,
+  MOCK_FLOW_BOTTOM,
+] as const;
+const [
+  COVER_AIR_WEIGHT,
+  COVER_TO_TITLE_WEIGHT,
+  ARTIST_TO_PROGRESS_WEIGHT,
+  PROGRESS_TO_TRANSPORT_WEIGHT,
+  TRANSPORT_TO_FLOW_WEIGHT,
+  FLOW_BOTTOM_WEIGHT,
+] = STACK_GAP_WEIGHTS;
+// Три внутренних зазора стопки растут вложенно в общем весе своего блока — доля от него
+// делится между ними в тех же пропорциях, поэтому итог совпадает с плоским распределением.
+const CHROME_GROW = ARTIST_TO_PROGRESS_WEIGHT + PROGRESS_TO_TRANSPORT_WEIGHT + TRANSPORT_TO_FLOW_WEIGHT;
 
 /**
  * Фуллскрин-плеер.
@@ -214,8 +253,9 @@ export default function PlayerScreen() {
   // садится в экран точно, и пустоты не остаётся ни сверху, ни под кнопкой.
   const vs = (v: number) =>
     (v * (viewport - contentWidth)) / (MOCK_PHONE_HEIGHT - MOCK_COVER_SIDE);
-  const coverAir = Math.max(0, vs(MOCK_COVER_TOP) - headerHeight);
-  const artSize = Math.min(contentWidth, Math.max(ms(MOCK_COVER_MIN), coverRegionHeight - coverAir));
+  const coverAirBase = Math.max(0, vs(MOCK_COVER_TOP) - headerHeight);
+  const artSize = Math.min(contentWidth, Math.max(ms(MOCK_COVER_MIN), coverRegionHeight - coverAirBase));
+  const coverRadius = ms(MOCK_COVER_RADIUS);
   const edgeScale = Math.max(width, windowHeight) / artSize;
   const coverScreenTop = coverTop + headerHeight;
   const immersiveShiftY = viewport / 2 - (coverScreenTop + artSize / 2);
@@ -242,13 +282,16 @@ export default function PlayerScreen() {
   const ascent = (line: number, size: number) => Math.round((line + size * 0.72) / 2);
   const descent = (line: number, size: number) => line - ascent(line, size);
   const transportBox = ms(MOCK_PLAY);
+  // Ширина стороны — по БОЛЬШЕЙ группе значков (справа их два), иначе метка уедет с центра.
+  const sideWidth = topIcon + ms(MOCK_TOP_STEP);
   // Отбивка не уходит в минус: на низком экране (или при увеличенном системном кегле)
   // `vs()` мал, а вычитаемая метрика строки нет — блоки наезжали бы друг на друга.
   const gap = (v: number, metric: number) => Math.max(0, vs(v) - metric);
-  const coverToTitle = gap(MOCK_COVER_TO_TITLE, ascent(ms(MOCK_TITLE_TO_ARTIST), titleSize));
-  const artistToProgress = gap(MOCK_ARTIST_TO_PROGRESS, descent(artistLine, artistSize));
-  const progressToTransport = gap(MOCK_PROGRESS_TO_TRANSPORT, transportBox / 2);
-  const transportToFlow = gap(MOCK_TRANSPORT_TO_FLOW, transportBox / 2);
+  const coverToTitleBase = gap(MOCK_COVER_TO_TITLE, ascent(ms(MOCK_TITLE_TO_ARTIST), titleSize));
+  const artistToProgressBase = gap(MOCK_ARTIST_TO_PROGRESS, descent(artistLine, artistSize));
+  const progressToTransportBase = gap(MOCK_PROGRESS_TO_TRANSPORT, transportBox / 2);
+  const transportToFlowBase = gap(MOCK_TRANSPORT_TO_FLOW, transportBox / 2);
+  const flowBottomBase = vs(MOCK_FLOW_BOTTOM);
 
   const share = () => setShareOpen(true);
 
@@ -288,22 +331,15 @@ export default function PlayerScreen() {
               <View
                 style={[
                   { paddingHorizontal: ms(MOCK_SCREEN_MARGIN) },
-                  {
-                    minHeight: viewport,
-                    paddingTop: headerHeight,
-                    paddingBottom: vs(MOCK_FLOW_BOTTOM),
-                  },
+                  { minHeight: viewport, paddingTop: headerHeight },
                 ]}
               >
                 {/* Обложка НЕ под `chromeStyle`: иммерсив гасит интерфейс вокруг неё, а не её
                     саму — под общей прозрачностью она исчезала вместе с ним. */}
-                {/* Базис — макетная высота области (воздух над обложкой плюс сама обложка),
-                    дальше рост. Лишнюю высоту аппарата делит пополам с распоркой под кнопкой:
-                    целиком сверху она читается провалом под панелью, целиком снизу — отрывает
-                    «ПОТОК» от края. Потолок здесь стоять не может: упёршись в него, рост
-                    прекращался и остаток ложился мёртвой полосой под кнопкой. */}
+                {/* Базис региона — воздух над обложкой плюс сама обложка; излишек добирает
+                    сам flexbox через `flexGrow`, тем же весом, что и зазоры ниже. */}
                 <View
-                  style={[styles.coverRegion, { flexBasis: coverAir + contentWidth }]}
+                  style={[styles.coverRegion, { flexBasis: coverAirBase + contentWidth }]}
                   onLayout={(e) => setCoverRegionHeight(e.nativeEvent.layout.height)}
                 >
                   <View
@@ -315,7 +351,7 @@ export default function PlayerScreen() {
                       queue={queue}
                       queueIndex={queueIndex}
                       size={artSize}
-                      radius={ms(MOCK_COVER_RADIUS)}
+                      radius={coverRadius}
                       immersive={immersive}
                       edgeScale={edgeScale}
                       immersiveShiftY={immersiveShiftY}
@@ -333,8 +369,10 @@ export default function PlayerScreen() {
                   </View>
                 </View>
 
+                <View style={{ flexBasis: coverToTitleBase, flexGrow: COVER_TO_TITLE_WEIGHT }} />
+
                 <Animated.View
-                  style={[{ marginTop: coverToTitle }, chromeStyle]}
+                  style={[styles.chrome, { flexGrow: CHROME_GROW }, chromeStyle]}
                   pointerEvents={chromePointerEvents}
                 >
                   <View style={styles.titleRow}>
@@ -372,36 +410,34 @@ export default function PlayerScreen() {
                     </View>
                   </View>
 
-                  <View style={{ marginTop: artistToProgress }}>
-                    <ProgressLine positionSec={positionSec} durationSec={durationSec} onSeek={seek} />
-                  </View>
+                  <View style={{ flexBasis: artistToProgressBase, flexGrow: ARTIST_TO_PROGRESS_WEIGHT }} />
+                  <ProgressLine positionSec={positionSec} durationSec={durationSec} onSeek={seek} />
 
-                  <View style={{ marginTop: progressToTransport }}>
-                    <Transport
-                      playing={status === 'playing'}
-                      loading={status === 'loading'}
-                      hasNext={hasNext}
-                      hasPrev={hasPrev}
-                      shuffle={shuffle}
-                      repeat={repeat}
-                      onPrev={prev}
-                      onNext={next}
-                      onTogglePlay={togglePlayPause}
-                      onToggleShuffle={toggleShuffle}
-                      onCycleRepeat={cycleRepeat}
-                      width={contentWidth}
-                    />
-                  </View>
+                  <View style={{ flexBasis: progressToTransportBase, flexGrow: PROGRESS_TO_TRANSPORT_WEIGHT }} />
+                  <Transport
+                    playing={status === 'playing'}
+                    loading={status === 'loading'}
+                    hasNext={hasNext}
+                    hasPrev={hasPrev}
+                    shuffle={shuffle}
+                    repeat={repeat}
+                    onPrev={prev}
+                    onNext={next}
+                    onTogglePlay={togglePlayPause}
+                    onToggleShuffle={toggleShuffle}
+                    onCycleRepeat={cycleRepeat}
+                    width={contentWidth}
+                  />
 
                   {status === 'error' && (
                     <Text style={styles.error}>Не удалось воспроизвести — нажмите play ещё раз</Text>
                   )}
 
-                  <View style={{ marginTop: transportToFlow }}>
-                    <FlowButton onPress={startWave} blurTarget={groundRef} width={contentWidth} />
-                  </View>
+                  <View style={{ flexBasis: transportToFlowBase, flexGrow: TRANSPORT_TO_FLOW_WEIGHT }} />
+                  <FlowButton onPress={startWave} blurTarget={groundRef} width={contentWidth} />
                 </Animated.View>
 
+                <View style={{ flexBasis: flowBottomBase, flexGrow: FLOW_BOTTOM_WEIGHT }} />
               </View>
 
               <Animated.View style={[styles.context, chromeStyle]} pointerEvents={chromePointerEvents}>
@@ -437,7 +473,7 @@ export default function PlayerScreen() {
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           <View style={{ height: topBarCenter - topIcon / 2 }} pointerEvents="none" />
           <View style={[styles.headerRow, { paddingHorizontal: ms(MOCK_SCREEN_MARGIN) }]}>
-            <View style={[styles.headerSide, styles.headerSideStart]}>
+            <View style={[styles.headerSide, styles.headerSideStart, { minWidth: sideWidth }]}>
               <Pressable
                 onPress={() => navigation.goBack()}
                 hitSlop={13}
@@ -449,9 +485,17 @@ export default function PlayerScreen() {
               </Pressable>
             </View>
 
-            <View style={styles.headerGap} />
+            <Text style={styles.source} numberOfLines={1}>
+              {SOURCE_LABEL[context?.source ?? 'direct']}
+            </Text>
 
-            <View style={[styles.headerSide, styles.headerSideEnd, { gap: ms(MOCK_TOP_STEP) - topIcon }]}>
+            <View
+              style={[
+                styles.headerSide,
+                styles.headerSideEnd,
+                { gap: ms(MOCK_TOP_STEP) - topIcon, minWidth: sideWidth },
+              ]}
+            >
               <Pressable
                 onPress={() => setLyricsShown((v) => !v)}
                 disabled={!hasLyrics}
@@ -493,6 +537,7 @@ export default function PlayerScreen() {
             synced={synced}
             onSeek={seek}
             blurTarget={artRef}
+            radius={coverRadius}
           />
         </Animated.View>
       )}
@@ -532,11 +577,12 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: space.xl },
 
   coverRegion: {
-    flexGrow: 1,
+    flexGrow: COVER_AIR_WEIGHT,
     flexShrink: 1,
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
+  chrome: { flexShrink: 0 },
 
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   titles: { flex: 1, minWidth: 0 },
@@ -556,7 +602,9 @@ const styles = StyleSheet.create({
   header: { position: 'absolute', top: 0, left: 0, right: 0 },
   headerSolid: { backgroundColor: HAZE_TOP },
   headerRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  headerGap: { flex: 1 },
+  source: { ...type.row, flex: 1, textAlign: 'center', color: colors.mutedForeground },
+  // Обе стороны одной минимальной ширины — иначе несимметричные группы значков сбивают
+  // метку источника с центра.
   headerSide: { flexDirection: 'row', alignItems: 'center' },
   headerSideStart: { justifyContent: 'flex-start' },
   headerSideEnd: { justifyContent: 'flex-end' },

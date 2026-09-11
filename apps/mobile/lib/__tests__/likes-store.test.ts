@@ -147,9 +147,75 @@ describe('useLikesStore.like', () => {
     expect(request).not.toHaveBeenCalled();
   });
 
-  it('трек не загружен в state — no-op, как у toggle', () => {
+  it('трек не загружен (двойной тап без захода на трек) — сначала грузит state, потом ставит лайк', async () => {
+    request.mockResolvedValueOnce({ ok: true, data: { liked: false } });
+    request.mockResolvedValueOnce({ ok: true, data: { liked: true } });
+
     useLikesStore.getState().like('t1');
-    expect(request).not.toHaveBeenCalled();
+    await flush();
+
+    expect(useLikesStore.getState().state.t1).toBe(true);
+    expect(request).toHaveBeenNthCalledWith(1, '/api/v1/tracks/t1/like', expect.objectContaining({ schema: expect.anything() }));
+    expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tracks/t1/like', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('трек не загружен, а на сервере уже лайкнут — догружает и лишний POST не шлёт', async () => {
+    request.mockResolvedValueOnce({ ok: true, data: { liked: true } });
+
+    useLikesStore.getState().like('t1');
+    await flush();
+
+    expect(useLikesStore.getState().state.t1).toBe(true);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('трек не загружен, сеть на догрузке падает — без исключений, лайк не ставится', async () => {
+    request.mockResolvedValue({ ok: false, error: { status: 0, message: 'Нет соединения' } });
+
+    useLikesStore.getState().like('t1');
+    await flush();
+
+    expect(useLikesStore.getState().state.t1).toBeUndefined();
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useLikesStore — дедуп GET между load и like/toggleRemote', () => {
+  it('load уже летит — like на тот же трек подключается к тому же запросу, не шлёт второй', async () => {
+    let resolveLoad: (v: unknown) => void = () => {};
+    request.mockReturnValueOnce(new Promise((r) => { resolveLoad = r; }));
+    request.mockResolvedValueOnce({ ok: true, data: { liked: true } });
+
+    useLikesStore.getState().load('t1');
+    useLikesStore.getState().like('t1');
+
+    expect(request).toHaveBeenCalledTimes(1);
+
+    resolveLoad({ ok: true, data: { liked: false } });
+    await flush();
+
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request).toHaveBeenNthCalledWith(1, '/api/v1/tracks/t1/like', expect.objectContaining({ schema: expect.anything() }));
+    expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tracks/t1/like', expect.objectContaining({ method: 'POST' }));
+    expect(useLikesStore.getState().state.t1).toBe(true);
+  });
+
+  it('load уже летит — toggleRemote на тот же трек тоже подключается, а не дублирует GET', async () => {
+    let resolveLoad: (v: unknown) => void = () => {};
+    request.mockReturnValueOnce(new Promise((r) => { resolveLoad = r; }));
+    request.mockResolvedValueOnce({ ok: true, data: { liked: true } });
+
+    useLikesStore.getState().load('t1');
+    useLikesStore.getState().toggleRemote('t1');
+
+    expect(request).toHaveBeenCalledTimes(1);
+
+    resolveLoad({ ok: true, data: { liked: false } });
+    await flush();
+
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request).toHaveBeenNthCalledWith(2, '/api/v1/tracks/t1/like', expect.objectContaining({ method: 'POST' }));
+    expect(useLikesStore.getState().state.t1).toBe(true);
   });
 });
 
