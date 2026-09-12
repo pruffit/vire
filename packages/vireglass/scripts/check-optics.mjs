@@ -14,6 +14,10 @@
  *   5. ПЁСТРОЕ ПОЛОТНО — С ДВУХ СТОРОН. Над обложкой деталь обязана и держать краску
  *      читаемой, и не стирать то, что под ней. Требования тянут в разные стороны и ломаются
  *      порознь: заливка спасает краску и убивает контент, отказ от заливки — наоборот.
+ *   6. КРОМКА КОПИТ СОДЕРЖИМОЕ. У силуэта линза обязана собирать то, что лежит за кромкой,
+ *      и раздувать его изображение — этим стекло и отличается от плёнки. Остальные пять
+ *      обещаний смотрят в середину детали, где наклон нулевой и преломления нет вовсе,
+ *      поэтому полосу у кромки не проверяет больше ничто.
  *
  * Проверка идёт ПО ВСЕМУ ДИАПАЗОНУ светлоты полотна, а не в паре точек. Дефект, ради которого
  * гейт и написан, был не порогом, а ОСОБЕННОСТЬЮ: требуемый отход делился на расстояние от
@@ -77,10 +81,21 @@ const MIN_INK_ON_BUSY = 70;
  * 0.35) остаётся 18, то есть обложку под стеклом замазывает. Порог между ними.
  */
 const MIN_CONTENT_ON_BUSY = 28;
+/**
+ * Во сколько раз у кромки обязано раздуться изображение полосы, лежащей под деталью, против
+ * её же ширины снаружи. Замер даёт 2.02; при прежней толщине среды, с которой деталь читалась
+ * плёнкой, — 1.73. Порог между этими числами.
+ *
+ * Число привязано к этой сцене: раздув — отношение, и на полосе другой толщины или на детали
+ * другой формы оно другое. Сравнивать его с замерами по кадрам эталона нельзя, это страховка
+ * от возврата к тонкому стеклу, а не сверка с Apple.
+ */
+const MIN_EDGE_GAIN = 1.88;
 
 const ENTRY = `
 import { createVireGlassRenderer } from '${WEB}';
 import {
+  capsuleGeometry,
   circleGeometry,
   INK_DARK,
   INK_LIGHT,
@@ -236,6 +251,86 @@ globalThis.vgInkProbe = ({ press }) => {
   let width = 0;
   for (let i = 0; i < n; i += 1) if (line[i] > half) width += 1;
   return { sharp, lo, hi, width };
+};
+
+let rimStage = null;
+
+// Шестое обещание: КРОМКА КОПИТ СОДЕРЖИМОЕ. Под деталью лежит полоса; её изображение меряется
+// по столбцам шириной «масса, делённая на пик» — без порога, потому что у самой кромки полоса
+// распадается на куски и любая граница по порогу перепрыгивает разрывы.
+globalThis.vgRimProbe = () => {
+  // Плотность устройства, а не единица: толщина среды задана в dp, и на плотности 1 деталь
+  // выходит вдвое мельче настоящей — полоса накопления у кромки тогда вдвое у́же.
+  const D = 2;
+  if (!rimStage) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 400;
+    document.body.append(canvas);
+    const renderer = createVireGlassRenderer(canvas);
+    renderer.resize(canvas.width, canvas.height);
+    rimStage = { canvas, renderer };
+  }
+  const { canvas, renderer } = rimStage;
+
+  // Полоса в 17% высоты детали — та же пропорция, что под эталонной ручкой. Пропорция входит
+  // в определение замера: раздув это отношение, и на полосе другой толщины число другое.
+  const scene = (ctx, w, h) => {
+    ctx.fillStyle = '#eceef2';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#1f2430';
+    ctx.fillRect(0, h / 2 - 10 * D, w, 20 * D);
+  };
+
+  const optics = resolveOptics(materialForInk(VIREGLASS_CONTROL_MATERIAL, false));
+  const piece = {
+    optics,
+    // Капсула, а не прямоугольник: у эталонной ручки полоса пересекает скруглённый торец,
+    // и на прямой грани накопление у кромки выходит другим.
+    geometry: capsuleGeometry(300, 110),
+    centerX: canvas.width / 2,
+    centerY: canvas.height / 2,
+    appear: 1,
+  };
+  for (let i = 0; i < 30; i += 1) {
+    renderer.render({ density: D, debug: 'normal', scene, pieces: [piece] });
+  }
+
+  const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+  // Капсула 300x110 dp при плотности 2 занимает 100..700 по горизонтали: окно начинается
+  // снаружи неё и доходит до середины полосы накопления.
+  const x0 = 40;
+  const w = 160;
+  const y0 = 100;
+  const h = 200;
+  const buf = new Uint8Array(w * h * 4);
+  gl.readPixels(x0, canvas.height - y0 - h, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+  const lum = (i) => 0.2126 * buf[i * 4] + 0.7152 * buf[i * 4 + 1] + 0.0722 * buf[i * 4 + 2];
+
+  // Ширина изображения полосы в столбце: масса темноты, делённая на её пик. У нетронутой
+  // полосы она равна её толщине, у собранной кромкой — больше.
+  const widthAt = (c) => {
+    const col = [];
+    for (let r = 0; r < h; r += 1) col.push(lum(r * w + c));
+    const sorted = [...col].sort((a, b) => a - b);
+    const base = sorted[sorted.length - 1];
+    let mass = 0;
+    let peak = 0;
+    for (const v of col) {
+      const t = base - v;
+      if (t > 0) {
+        mass += t;
+        if (t > peak) peak = t;
+      }
+    }
+    return peak > 4 ? mass / peak : 0;
+  };
+
+  let outside = 0;
+  let best = 0;
+  for (let c = 0; c < 40; c += 1) outside = Math.max(outside, widthAt(c));
+  for (let c = 60; c < w; c += 1) best = Math.max(best, widthAt(c));
+  return { outside, best, gain: outside > 1 ? best / outside : 0 };
 };
 
 let busyStage = null;
@@ -447,6 +542,16 @@ async function main() {
     failed.push(`краска под пальцем не ушла в расфокус (мягче всего на ${(softening * 100).toFixed(0)}%)`);
   }
 
+  console.log('--- кромка копит содержимое ---');
+  const rim = await page.evaluate(() => globalThis.vgRimProbe());
+  console.log(
+    `${rim.gain >= MIN_EDGE_GAIN ? ' ' : '!'} полоса под деталью: снаружи ${rim.outside.toFixed(1)}, ` +
+      `у кромки ${rim.best.toFixed(1)} — раздув ${rim.gain.toFixed(2)}x`,
+  );
+  if (!(rim.gain >= MIN_EDGE_GAIN)) {
+    failed.push(`кромка не копит содержимое (раздув ${rim.gain.toFixed(2)}x)`);
+  }
+
   console.log('--- пёстрое полотно ---');
   let worstInk = { value: Infinity, level: 0 };
   let worstContent = { value: Infinity, level: 0 };
@@ -502,7 +607,7 @@ async function main() {
   console.log(
     'check-optics: стекло остаётся и окном, и предметом на всём диапазоне полотна, ' +
       'краска под пальцем уходит в расфокус, поднятая деталь отрывается от подложки, ' +
-      'над пёстрым полотном живут и краска, и контент',
+      'над пёстрым полотном живут и краска, и контент, кромка копит содержимое',
   );
 }
 
