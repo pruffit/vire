@@ -20,6 +20,7 @@ import { FriendButton } from '../components/friend-button';
 import { Screen } from '../components/screen';
 import { Glass } from '../components/glass';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 import { fonts } from '../lib/design/typography';
@@ -32,6 +33,7 @@ type LoadState = 'loading' | 'error' | 'ready';
 export default function FriendsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'Friends'>>();
   const bottomPadding = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const [friends, setFriends] = useState<FriendDTO[]>([]);
   const [incoming, setIncoming] = useState<IncomingRequestDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
@@ -123,6 +125,7 @@ export default function FriendsScreen() {
 
       {state === 'ready' && (
         <ScrollView
+          {...scrollEdge}
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />}
         >

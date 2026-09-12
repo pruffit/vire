@@ -14,6 +14,7 @@ import {
 } from '../lib/offline/download-manager';
 import { fetchPlaylists } from '../lib/playlists';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { formatDuration, formatBytes } from '../lib/format';
 import { Screen } from '../components/screen';
@@ -24,6 +25,7 @@ import { fonts } from '../lib/design/typography';
 export default function LibraryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<LibraryStackParamList, 'LibraryHome'>>();
   const bottomPadding = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const [downloads, setDownloads] = useState<DownloadedTrackMeta[]>([]);
   const [usage, setUsage] = useState(0);
   const [playlists, setPlaylists] = useState<PlaylistSummaryDTO[]>([]);
@@ -80,6 +82,7 @@ export default function LibraryScreen() {
   return (
     <Screen>
       <FlatList
+        {...scrollEdge}
         contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
         data={downloads}
         keyExtractor={(item) => item.id}

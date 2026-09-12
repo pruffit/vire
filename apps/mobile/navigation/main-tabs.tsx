@@ -7,10 +7,11 @@ import { SearchStackNavigator } from './search-stack';
 import { LibraryStackNavigator } from './library-stack';
 import { ProfileStackNavigator } from './profile-stack';
 import { LiquidGlassButton } from '../components/liquid-glass';
-import { GlassGroup } from '../lib/vireglass/glass-group';
+import { GlassGroup, useGlassGroup } from '../lib/vireglass/glass-group';
 import { type IconName } from '../lib/icon';
 import { useBlurTarget } from '../lib/blur-target';
 import { useFurniture } from '../lib/layout';
+import { useFurnitureInk } from '../lib/scroll-edge';
 import { mockScale, useMockMaterial } from '../lib/design/mock';
 import { materialForInk, VIREGLASS_CONTROL_MATERIAL } from '../lib/vireglass/material';
 
@@ -46,6 +47,13 @@ const CONTROL_MATERIAL = materialForInk(VIREGLASS_CONTROL_MATERIAL, true);
 //
 // Притенение низа рисует сам экран (`components/furniture-scrim.tsx`): оно обязано попасть
 // в захват линзы, а этот ряд лежит НАД захватом.
+// Стиль краевого эффекта идёт за полярностью ближайшего стекла (эталон §10), а полярность
+// блока живёт в группе и наружу не выходит. Забрать её можно только изнутри.
+function FurnitureInk() {
+  useFurnitureInk(useGlassGroup()?.ink);
+  return null;
+}
+
 function CircleTabBar({ state, navigation }: BottomTabBarProps) {
   const { nav, navBottom } = useFurniture();
   const { width } = useWindowDimensions();
@@ -58,6 +66,7 @@ function CircleTabBar({ state, navigation }: BottomTabBarProps) {
     // Таб-бар адаптируется БЛОКОМ: под каждой кнопкой свой кусок фона, и по своему
     // замеру одна уходит в тень, а соседняя остаётся прозрачной.
     <GlassGroup>
+      <FurnitureInk />
       <View style={[styles.row, { bottom: navBottom, left: inset, right: inset, height: nav }]}>
         {state.routes.map((route, index) => {
           const focused = state.index === index;
