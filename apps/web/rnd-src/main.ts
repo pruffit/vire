@@ -21,6 +21,7 @@ import {
   activeMaterial,
   createDeform,
   materialForInk,
+  raiseIntoGlass,
   type VireGlassDebugMode,
   type VireGlassMaterial,
   type VireGlassNumericKey,
@@ -61,6 +62,13 @@ if (!stage) throw new Error('нет #stage');
 const canvas = document.createElement('canvas');
 stage.append(canvas);
 
+// Слой матовой крышки ползунка: обычный 2D-канвас ПОВЕРХ кадра. В полотне её увидел бы зонд и
+// принял за окружение; указатель сквозь слой проходит, жест ловит нижний канвас.
+const solidLayer = document.createElement('canvas');
+solidLayer.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;';
+stage.append(solidLayer);
+const solidCtx = solidLayer.getContext('2d');
+
 // Цветной контент (обложка) уезжает в рендерер отдельным СЛОЕМ КАДРА, а не рисуется поверх
 // канваса: он обязан жить внутри материала на той же координате, что и краска, иначе
 // деформация ведёт их порознь.
@@ -85,7 +93,9 @@ const state = {
     ? ('screens' as const)
     : params.get('view') === 'morph'
       ? ('morph' as const)
-      : ('material' as const),
+      : params.get('view') === 'slider'
+        ? ('slider' as const)
+        : ('material' as const),
   overrides: new Map<VireGlassNumericKey, number>(),
 };
 
@@ -151,6 +161,8 @@ const renderer = createVireGlassRenderer(canvas);
 function resize(): void {
   canvas.width = Math.round(canvas.clientWidth * dpr);
   canvas.height = Math.round(canvas.clientHeight * dpr);
+  solidLayer.width = canvas.width;
+  solidLayer.height = canvas.height;
   renderer.resize(canvas.width, canvas.height);
 }
 resize();
@@ -356,6 +368,104 @@ function controlPiece() {
     light: lightFor(center.x, center.y),
     appear,
     accent: params.has('accent') ? { color: ACCENT_RGB } : undefined,
+  };
+}
+
+// ПОЛЗУНОК — орган, который в покое стеклом НЕ является (эталон §5): ручка матовая, и только
+// под пальцем она поднимается в стекло, пропуская сквозь себя дорожку.
+const SLIDER_TRACK_W = 360;
+const SLIDER_TRACK_H = 6;
+const SLIDER_KNOB_W = 72;
+const SLIDER_KNOB_H = 44;
+/** Насколько орган вырастает под пальцем. Рост — работа стенда: вся геометрия движения живёт
+ *  в одном месте, материал о нём не знает. */
+const SLIDER_GROW = 0.15;
+const SLIDER_FILL = '#2f6df6';
+const SLIDER_TRACK = 'rgba(255,255,255,0.22)';
+const SLIDER_KNOB_SOLID = '#ffffff';
+
+const sliderDeform = createDeform();
+let sliderValue = 0.42;
+
+const sliderCenterY = () => canvas.height * 0.5;
+const sliderLeft = () => (viewWidthCss() - SLIDER_TRACK_W) / 2;
+const sliderKnobX = () => sliderLeft() + SLIDER_TRACK_W * sliderValue;
+
+/** Дорожка живёт В ПОЛОТНЕ, а не в маске краски: только тогда её преломляет линза, и видно,
+ *  что ручка действительно стала стеклом, а не просто посветлела. */
+function drawSliderTrack(ctx: CanvasRenderingContext2D, d: number): void {
+  const y = sliderCenterY();
+  const h = SLIDER_TRACK_H * d;
+  const capsule = (x: number, w: number, color: string) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x * d, y - h / 2, w * d, h, h / 2);
+    ctx.fill();
+  };
+  capsule(sliderLeft(), SLIDER_TRACK_W, SLIDER_TRACK);
+  capsule(sliderLeft(), SLIDER_TRACK_W * sliderValue, SLIDER_FILL);
+}
+
+/**
+ * Матовая ручка в покое. Рисуется ПОВЕРХ кадра, а не в полотно: в полотне её увидел бы зонд,
+ * принял белое пятно за окружение и раздул свечение под пальцем до фонаря — замерено, стекло
+ * от этого переставало читаться. Поверх — она и есть то, что уступает место линзе: гаснет
+ * ровно настолько, насколько та поднялась (`raiseIntoGlass`), доли перекрываются.
+ */
+function drawSliderKnobSolid(): void {
+  const ctx = solidCtx;
+  if (!ctx) return;
+  ctx.clearRect(0, 0, solidLayer.width, solidLayer.height);
+  if (state.view !== 'slider') return;
+  const press = sliderDeform.sample().press;
+  const { solid } = raiseIntoGlass(press);
+  if (solid <= 0.001) return;
+  const grow = 1 + SLIDER_GROW * press;
+  const w = SLIDER_KNOB_W * grow * dpr;
+  const h = SLIDER_KNOB_H * grow * dpr;
+  ctx.save();
+  ctx.globalAlpha = solid;
+  ctx.fillStyle = SLIDER_KNOB_SOLID;
+  ctx.beginPath();
+  ctx.roundRect(sliderKnobX() * dpr - w / 2, sliderCenterY() - h / 2, w, h, h / 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function sliderPiece() {
+  const s = sliderDeform.sample();
+  const { glass, lift } = raiseIntoGlass(s.press);
+  const grow = 1 + SLIDER_GROW * s.press;
+  const knob = {
+    width: SLIDER_KNOB_W * grow,
+    height: SLIDER_KNOB_H * grow,
+    cornerRadius: (SLIDER_KNOB_H * grow) / 2,
+  };
+  const centerX = sliderKnobX() * dpr;
+  const centerY = sliderCenterY();
+  return {
+    optics: optic(materialForInk(currentMaterial(), false)),
+    geometry: knob,
+    centerX,
+    centerY,
+    touch: {
+      x: s.touchX,
+      y: s.touchY,
+      pullX: s.pullX,
+      pullY: s.pullY,
+      press: s.press,
+      radius: 0.72 * Math.min(knob.width, knob.height) * 0.5,
+      waveAmp: s.waveAmp,
+      wavePhase: s.wavePhase,
+    },
+    press: s.press,
+    active: s.active * 0.3,
+    light: lightFor(centerX, centerY),
+    // Стекла в покое нет вовсе: орган матовый, и линза НАРАСТАЕТ под пальцем — тем же
+    // механизмом, которым деталь появляется на экране (эталон §12: не прозрачностью).
+    appear: glass,
+    // Ручка под пальцем отрывается от подложки, а не вдавливается в неё.
+    lift,
   };
 }
 
@@ -768,6 +878,7 @@ function renderFrame() {
   const zone = ZONES[state.zone].draw;
   const screens = state.view === 'screens';
   const morph = state.view === 'morph';
+  const slider = state.view === 'slider';
   return renderer.render({
     density: dpr,
     debug: DEBUG_MODES[state.debug] as VireGlassDebugMode,
@@ -785,7 +896,12 @@ function renderFrame() {
           for (const i of APP_BACKGROUNDS) drawFoot(ctx, dpr, i, ox, oy);
           drawPhoneFrames(ctx, dpr, PHONE_COUNT, ox, oy);
         }
-      : zone,
+      : slider
+        ? (ctx, w, h, ox, oy) => {
+            zone(ctx, w, h, ox, oy);
+            drawSliderTrack(ctx, dpr);
+          }
+        : zone,
     offsetX: offset.x * dpr,
     offsetY: offset.y * dpr,
     iconMask: screens ? updateIconMask() : morph ? updateGroupMask() : null,
@@ -794,7 +910,9 @@ function renderFrame() {
       ? [...buttonPieces(), popoverPiece()]
       : morph
         ? [groupPiece()]
-        : [controlPiece(), ...samplePieces(ink)],
+        : slider
+          ? [sliderPiece()]
+          : [controlPiece(), ...samplePieces(ink)],
   });
 }
 
@@ -835,6 +953,7 @@ function tick(now: number): void {
   lastFrame = now;
   // Шагают ВСЕ деформации: кнопок четыре, и каждая живёт своей пружиной.
   deform.step(dt);
+  sliderDeform.step(dt);
   for (const d of buttonDeforms) d.step(dt);
   const activeMoving = stepButtonActive(dt);
   const appearing = stepAppear(dt);
@@ -848,12 +967,14 @@ function tick(now: number): void {
     groupMoving ||
     progressing ||
     !deform.idle() ||
+    !sliderDeform.idle() ||
     buttonDeforms.some((d) => !d.idle())
   ) {
     wake();
   }
   if (pending <= 0) return;
   const probes = renderFrame().probes;
+  drawSliderKnobSolid();
   const probe = probes[0];
   if (state.view === 'screens') {
     updateButtonInk(probes);
@@ -955,10 +1076,19 @@ type Target = {
   popover?: PopoverHit;
   /** Попали в группу на сцене морфинга. */
   group?: boolean;
+  /** Попали в ручку ползунка: жест ведёт её вдоль дорожки, а не таскает полотно. */
+  slider?: boolean;
 };
 
 /** Какая деталь под пальцем — в обоих режимах, с запасом, чтобы не мазать по кромке. */
 function pickTarget(clientX: number, clientY: number): Target | null {
+  if (state.view === 'slider') {
+    const dx = clientX - sliderKnobX();
+    const dy = clientY - sliderCenterY() / dpr;
+    // Запас по вертикали щедрее ручки: по дорожке целятся пальцем, а не курсором.
+    if (Math.abs(dx) > SLIDER_KNOB_W / 2 + 10 || Math.abs(dy) > SLIDER_KNOB_H / 2 + 12) return null;
+    return { deform: sliderDeform, localX: dx, localY: dy, limit: 0, slider: true };
+  }
   if (state.view === 'morph') {
     const hit = group.pick(clientX, clientY);
     if (!hit) return null;
@@ -1029,7 +1159,11 @@ canvas.addEventListener('pointermove', (event) => {
     canvas.style.cursor = pickTarget(event.clientX, event.clientY) ? 'pointer' : 'grab';
     return;
   }
-  if (gesture.target) {
+  if (gesture.target?.slider) {
+    // Ручка идёт за пальцем по дорожке; тяги у неё нет — орган ездит, а не тянется.
+    sliderValue = Math.min(Math.max((event.clientX - sliderLeft()) / SLIDER_TRACK_W, 0), 1);
+    wake();
+  } else if (gesture.target) {
     gesture.target.deform.drag(
       event.clientX - gesture.startX,
       event.clientY - gesture.startY,

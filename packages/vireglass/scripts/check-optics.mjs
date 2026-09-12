@@ -9,6 +9,8 @@
  *      исчезает: тело или кромка отходят от фона.
  *   3. КРАСКА ПОД ПАЛЬЦЕМ. Глиф обязан терять резкость на нажатии (эталон §6): без этого
  *      деталь под пальцем только светлеет, а краска остаётся приклеенной поверх стекла.
+ *   4. ПОДЪЁМ В СТЕКЛО. У детали, которая под пальцем поднимается, а не вдавливается
+ *      (эталон §5), тень обязана ОТОЙТИ: подъём без зазора под деталью — не подъём.
  *
  * Проверка идёт ПО ВСЕМУ ДИАПАЗОНУ светлоты полотна, а не в паре точек. Дефект, ради которого
  * гейт и написан, был не порогом, а ОСОБЕННОСТЬЮ: требуемый отход делился на расстояние от
@@ -23,7 +25,7 @@
  * когда оно действительно нарушено.
  *
  * Запуск: pnpm --filter @vire/vireglass check:optics
- * Только третье обещание (секунды вместо минут): ... check:optics -- --ink
+ * Только обещания про палец, третье и четвёртое (секунды вместо минут): ... check:optics -- --ink
  */
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
@@ -50,6 +52,13 @@ const STEPS = 41;
  * расфокус — и гейт падает, ради чего он и написан. Оба числа сняты этим же пробником.
  */
 const MIN_INK_SOFTENING = 0.45;
+/**
+ * Насколько дальше обязана лечь тень у детали, поднимающейся в стекло, против вдавленной
+ * кнопки при том же нажатии. Три точки, снятые этим же пробником: 109% с правилом, 55% при
+ * вдвое ослабленном подъёме, ровно 0% с выключенным. Порог стоит ВЫШЕ половинного случая —
+ * иначе ослабление вдвое проходило бы молча, а гейт ловил бы только полное отключение.
+ */
+const MIN_LIFT_SPREAD = 0.75;
 
 const ENTRY = `
 import { createVireGlassRenderer } from '${WEB}';
@@ -210,6 +219,54 @@ globalThis.vgInkProbe = ({ press }) => {
   for (let i = 0; i < n; i += 1) if (line[i] > half) width += 1;
   return { sharp, lo, hi, width };
 };
+
+// Четвёртое обещание: ОРГАН, ПОДНИМАЮЩИЙСЯ В СТЕКЛО, ОТРЫВАЕТСЯ ОТ ПОДЛОЖКИ. Тень под ним
+// обязана отойти дальше, чем под вдавленной кнопкой при том же нажатии. Меряется площадью
+// потемнения в столбце под нижней кромкой детали на ровном светлом полотне.
+globalThis.vgLiftProbe = ({ lift }) => {
+  if (!stage) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 520;
+    canvas.height = 300;
+    document.body.append(canvas);
+    const renderer = createVireGlassRenderer(canvas);
+    renderer.resize(canvas.width, canvas.height);
+    stage = { canvas, renderer };
+  }
+  const { canvas, renderer } = stage;
+
+  const level = 0.78;
+  const scene = (ctx, w, h) => {
+    ctx.fillStyle = hex(level);
+    ctx.fillRect(0, 0, w, h);
+  };
+  const optics = resolveOptics({ ...materialForInk(VIREGLASS_CONTROL_MATERIAL, true), ink: INK_DARK });
+  const piece = {
+    optics,
+    geometry: circleGeometry(56),
+    centerX: canvas.width / 2,
+    centerY: canvas.height / 2,
+    press: 1,
+    lift,
+  };
+
+  for (let i = 0; i < 30; i += 1) {
+    renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece] });
+  }
+
+  const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+  const rows = 46;
+  const buf = new Uint8Array(rows * 4);
+  // Столбец вниз от нижней кромки: в координатах GL отсчёт снизу, поэтому читаем ниже центра.
+  gl.readPixels(canvas.width / 2, canvas.height / 2 - 28 - rows, 1, rows, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+  const ground = 255 * level;
+  let area = 0;
+  for (let i = 0; i < rows; i += 1) {
+    const v = 0.2126 * buf[i * 4] + 0.7152 * buf[i * 4 + 1] + 0.0722 * buf[i * 4 + 2];
+    area += Math.max(ground - v, 0);
+  }
+  return area;
+};
 `;
 
 async function main() {
@@ -233,7 +290,7 @@ async function main() {
 
   // `--ink` гоняет только обещание про краску: проход по диапазону светлоты занимает минуты,
   // а правка краски его не задевает.
-  const inkOnly = process.argv.includes('--ink');
+  const inkOnly = process.argv.includes("--ink");
   for (const { control, name } of inkOnly ? [] : [{ control: false, name: "кусок фона" }, { control: true, name: "орган управления" }]) {
   console.log(`--- ${name} ---`);
   for (let i = 0; i < STEPS; i += 1) {
@@ -284,6 +341,18 @@ async function main() {
     failed.push(`краска под пальцем не ушла в расфокус (мягче всего на ${(softening * 100).toFixed(0)}%)`);
   }
 
+  console.log('--- подъём в стекло ---');
+  const pressedDown = await page.evaluate((a) => globalThis.vgLiftProbe(a), { lift: 0 });
+  const liftedUp = await page.evaluate((a) => globalThis.vgLiftProbe(a), { lift: 1 });
+  const spread2 = pressedDown > 0 ? liftedUp / pressedDown - 1 : 0;
+  console.log(
+    `${spread2 >= MIN_LIFT_SPREAD ? ' ' : '!'} тень под деталью: вдавлена ${pressedDown.toFixed(0)}, ` +
+      `поднята ${liftedUp.toFixed(0)} — дальше на ${(spread2 * 100).toFixed(0)}%`,
+  );
+  if (!(spread2 >= MIN_LIFT_SPREAD)) {
+    failed.push(`поднятая деталь не оторвалась от подложки (тень дальше всего на ${(spread2 * 100).toFixed(0)}%)`);
+  }
+
   await browser.close();
 
   console.log(
@@ -299,7 +368,7 @@ async function main() {
   }
   console.log(
     'check-optics: стекло остаётся и окном, и предметом на всём диапазоне полотна, ' +
-      'а краска под пальцем уходит в расфокус',
+      'краска под пальцем уходит в расфокус, поднятая деталь отрывается от подложки',
   );
 }
 

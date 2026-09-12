@@ -22,6 +22,8 @@ uniform float  u_morph2Corner;
 
 uniform float  u_press;
 uniform float  u_active;
+/* 0 — деталь под пальцем вдавливается, 1 — поднимается в стекло (эталон §5). */
+uniform float  u_lift;
 
 uniform float  u_edgeDensity;
 uniform float  u_dispersion;
@@ -141,8 +143,11 @@ half4 main(float2 xy) {
   float halo = 0.0;
   if (sd > -1.0) {
     float outside = smoothstep(-1.0, 1.0, sd);
-    // Под пальцем деталь идёт к подложке, и тень поджимается: она и есть зазор между ними.
-    float reach = u_shadowReach * (1.0 - 0.25 * u_press);
+    // Под пальцем кнопка идёт К подложке, и тень поджимается: она и есть зазор между ними.
+    // Орган, поднимающийся в стекло (ручка свитча, ползунка — эталон §5), идёт ОТ неё, и тогда
+    // тень, наоборот, отходит. Куда именно — знает только приложение, поэтому направление
+    // приходит долей: 0 — вдавливание, как было у всех деталей до появления этого правила.
+    float reach = u_shadowReach * (1.0 + mix(-0.25, 0.55, u_lift) * u_press);
     // Тень мягкая и широкая, со сдвигом вниз (M 11:58): отрыв детали от контента держит она.
     float sdDrop = vgScene(p - float2(0.0, reach * 0.35), u_halfSize, u_corner,
                            u_morphOffset, u_morphHalf, u_morphCorner, u_morphK,

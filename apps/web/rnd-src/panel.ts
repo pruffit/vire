@@ -7,13 +7,13 @@ import {
   type VireGlassOptics,
 } from '@vire/vireglass';
 
-/** Три стенда: доводка материала, экраны с деталями по месту и сцена морфинга. */
-const VIEWS = ['material', 'screens', 'morph'] as const;
-const VIEW_NAMES = ['материал', 'экраны', 'морфинг'] as const;
+/** Четыре стенда: доводка материала, экраны с деталями по месту, сцена морфинга и ползунок. */
+const VIEWS = ['material', 'screens', 'morph', 'slider'] as const;
+const VIEW_NAMES = ['материал', 'экраны', 'морфинг', 'ползунок'] as const;
 
 export type PanelState = {
   /** Что на стенде: доводка материала или телефонные экраны с деталями по месту. */
-  view: 'material' | 'screens' | 'morph';
+  view: (typeof VIEWS)[number];
   zone: number;
   /** -1 — базовый материал продукта, иначе индекс в PRESET_NAMES. */
   preset: number;

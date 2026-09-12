@@ -86,6 +86,8 @@ export type VireGlassPiece = {
   light?: readonly [number, number];
   /** 0…1: появление детали нарастанием линзы (M 2:55). */
   appear?: number;
+  /** 0 — под пальцем деталь вдавливается, 1 — поднимается в стекло (эталон §5). */
+  lift?: number;
   /** Тонирование главного действия — цветное стекло, а не заливка. */
   accent?: VireGlassAccent;
 };
@@ -462,6 +464,7 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
         // сглаживание и писалось.
         ambient: stats ? ([stats.r, stats.g, stats.b] as const) : undefined,
         appear: piece.appear,
+        lift: piece.lift,
       });
       // Перевод dp → пиксели устройства живёт в ядре (`toDeviceSurfaceUniforms`): список длин
       // один на все поля, и новое поле не забудется здесь по недосмотру.
