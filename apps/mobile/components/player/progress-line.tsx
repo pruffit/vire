@@ -73,7 +73,20 @@ export function ProgressLine({
   const glass = useSharedValue(0);
   const solid = useSharedValue(1);
   const zero = useSharedValue(0);
-  const light = useEnvironmentLight(0);
+
+  const knobSize = ms(MOCK_GLASS_KNOB);
+  // `ms` — новая функция на каждый рендер (`lib/design/mock.ts`), а ProgressLine
+  // перерисовывается на каждый семпл перетаскивания. Держим в зависимостях ЧИСЛО: иначе
+  // геометрия пересобиралась бы каждый кадр жеста и тянула за собой униформы поверхности.
+  const knobGeometry = useMemo(() => circleGeometry(knobSize), [knobSize]);
+  // Краски на ручке нет, поэтому и требования читаемости у неё нет — стекло остаётся стеклом.
+  const knobOptics = useMemo(
+    () => resolveOptics(materialForInk(VIREGLASS_CONTROL_MATERIAL, false)),
+    [],
+  );
+  // Отклик на наклон — тот же, что у остальных деталей этого материала; хардкод нуля выключал
+  // бы кромочный свет ручке, хотя материал его предполагает.
+  const light = useEnvironmentLight(knobOptics.environment);
 
   // Стекло существует только на время жеста. В покое его нет вовсе — иначе канвас Skia
   // рисовался бы всё время, пока открыт плеер, ради детали с нулевым `appear`.
@@ -107,17 +120,6 @@ export function ProgressLine({
     transform: [{ scale: 1 + KNOB_GROW * touch.value.press }],
   }));
   const solidStyle = useAnimatedStyle(() => ({ opacity: solid.value }));
-
-  const knobSize = ms(MOCK_GLASS_KNOB);
-  // `ms` — новая функция на каждый рендер (`lib/design/mock.ts`), а ProgressLine
-  // перерисовывается на каждый семпл перетаскивания. Держим в зависимостях ЧИСЛО: иначе
-  // геометрия пересобиралась бы каждый кадр жеста и тянула за собой униформы поверхности.
-  const knobGeometry = useMemo(() => circleGeometry(knobSize), [knobSize]);
-  // Краски на ручке нет, поэтому и требования читаемости у неё нет — стекло остаётся стеклом.
-  const knobOptics = useMemo(
-    () => resolveOptics(materialForInk(VIREGLASS_CONTROL_MATERIAL, false)),
-    [],
-  );
 
   const gesture = useMemo(() => {
     // runOnJS: ворклет-колбэки Pan в связке RNGH 2.32 + reanimated 4 молча не выполняются.
