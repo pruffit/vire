@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * Гейт на ДВА ГЛАВНЫХ ОБЕЩАНИЯ МАТЕРИАЛА. Оба нарушались молча и жили сутками: шейдер
+ * Гейт на ГЛАВНЫЕ ОБЕЩАНИЯ МАТЕРИАЛА. Первые два нарушались молча и жили сутками: шейдер
  * компилируется, тесты зелёные, а на экране плашка вместо стекла.
  *
  *   1. ОКНО. Деталь обязана пропускать то, что под ней. Над полосатым полотном размах яркости
  *      ВНУТРИ детали — заметная доля размаха снаружи.
  *   2. ПРЕДМЕТ. Деталь обязана быть видна над РОВНЫМ полотном, иначе элемент управления
  *      исчезает: тело или кромка отходят от фона.
+ *   3. КРАСКА ПОД ПАЛЬЦЕМ. Глиф обязан терять резкость на нажатии (эталон §6): без этого
+ *      деталь под пальцем только светлеет, а краска остаётся приклеенной поверх стекла.
  *
  * Проверка идёт ПО ВСЕМУ ДИАПАЗОНУ светлоты полотна, а не в паре точек. Дефект, ради которого
  * гейт и написан, был не порогом, а ОСОБЕННОСТЬЮ: требуемый отход делился на расстояние от
@@ -21,6 +23,7 @@
  * когда оно действительно нарушено.
  *
  * Запуск: pnpm --filter @vire/vireglass check:optics
+ * Только третье обещание (секунды вместо минут): ... check:optics -- --ink
  */
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
@@ -38,6 +41,9 @@ const MIN_PRESENCE = 5;
 /** Шагов по светлоте полотна. Гуще, чем кажется нужным: особенность сидит там, где светлота
  *  полотна проходит рядом со светлотой тинта, и редкий шаг её перешагивает. */
 const STEPS = 41;
+/** Насколько мягче обязана стать кромка краски под пальцем. Порог отделяет расфокус от
+ *  случайной разницы в пару единиц, которую дают сдвиг краски и свет пятна. */
+const MIN_INK_SOFTENING = 0.25;
 
 const ENTRY = `
 import { createVireGlassRenderer } from '${WEB}';
@@ -121,6 +127,73 @@ globalThis.vgProbe = ({ level, striped, control }) => {
     rim: row(canvas.height / 2 - (control ? 26 : 58), halfW),
   };
 };
+
+let inkStage = null;
+
+// Третье обещание: КРАСКА ПОД ПАЛЬЦЕМ ТЕРЯЕТ РЕЗКОСТЬ. Меряется на штрихе поперёк: берётся
+// строка через центр детали, резкость — самый крутой перепад между соседними пикселями.
+globalThis.vgInkProbe = ({ press }) => {
+  if (!stage) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 520;
+    canvas.height = 300;
+    document.body.append(canvas);
+    const renderer = createVireGlassRenderer(canvas);
+    renderer.resize(canvas.width, canvas.height);
+    stage = { canvas, renderer };
+  }
+  const { canvas, renderer } = stage;
+  if (!inkStage) {
+    // Маска краски: белый штрих по ЧЁРНОМУ, как того требует контракт кадра.
+    const mask = document.createElement('canvas');
+    mask.width = canvas.width;
+    mask.height = canvas.height;
+    const mctx = mask.getContext('2d');
+    mctx.fillStyle = '#000000';
+    mctx.fillRect(0, 0, mask.width, mask.height);
+    mctx.fillStyle = '#ffffff';
+    mctx.fillRect(canvas.width / 2 - 5, canvas.height / 2 - 18, 10, 36);
+    inkStage = { mask };
+  }
+  const { mask } = inkStage;
+
+  const level = 0.2;
+  const scene = (ctx, w, h) => {
+    ctx.fillStyle = hex(level);
+    ctx.fillRect(0, 0, w, h);
+  };
+  const optics = resolveOptics({ ...materialForInk(VIREGLASS_CONTROL_MATERIAL, true), ink: INK_LIGHT });
+  const piece = {
+    optics,
+    geometry: circleGeometry(56),
+    centerX: canvas.width / 2,
+    centerY: canvas.height / 2,
+    icon: true,
+    appear: 1,
+    inkIdle: [1, 1, 1, 1],
+    inkActive: [1, 1, 1, 1],
+    // Палец стоит в центре: краска под ним, и расфокус обязан её достать. Радиус пятна — тот же,
+    // что кладёт продукт: доля половины меньшей стороны.
+    touch: { x: 0, y: 0, pullX: 0, pullY: 0, press, radius: 0.72 * 28, waveAmp: 0, wavePhase: 0 },
+  };
+
+  for (let i = 0; i < 30; i += 1) {
+    renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece], iconMask: mask });
+  }
+
+  const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+  const n = 48;
+  const buf = new Uint8Array(n * 4);
+  gl.readPixels(canvas.width / 2 - n / 2, canvas.height / 2, n, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+  let sharp = 0;
+  let prev = null;
+  for (let i = 0; i < n; i += 1) {
+    const v = 0.2126 * buf[i * 4] + 0.7152 * buf[i * 4 + 1] + 0.0722 * buf[i * 4 + 2];
+    if (prev !== null) sharp = Math.max(sharp, Math.abs(v - prev));
+    prev = v;
+  }
+  return sharp;
+};
 `;
 
 async function main() {
@@ -142,7 +215,10 @@ async function main() {
   let worstWindow = { value: Infinity, level: 0 };
   let worstPresence = { value: Infinity, level: 0 };
 
-  for (const { control, name } of [{ control: false, name: "кусок фона" }, { control: true, name: "орган управления" }]) {
+  // `--ink` гоняет только обещание про краску: проход по диапазону светлоты занимает минуты,
+  // а правка краски его не задевает.
+  const inkOnly = process.argv.includes('--ink');
+  for (const { control, name } of inkOnly ? [] : [{ control: false, name: "кусок фона" }, { control: true, name: "орган управления" }]) {
   console.log(`--- ${name} ---`);
   for (let i = 0; i < STEPS; i += 1) {
     const level = 0.04 + (0.9 * i) / (STEPS - 1);
@@ -173,6 +249,19 @@ async function main() {
     }
   }
   }
+
+  console.log('--- краска под пальцем ---');
+  const sharpIdle = await page.evaluate((a) => globalThis.vgInkProbe(a), { press: 0 });
+  const sharpPressed = await page.evaluate((a) => globalThis.vgInkProbe(a), { press: 1 });
+  const softening = sharpIdle > 0 ? 1 - sharpPressed / sharpIdle : 0;
+  console.log(
+    `${softening >= MIN_INK_SOFTENING ? ' ' : '!'} кромка штриха: покой ${sharpIdle.toFixed(1)}, ` +
+      `под пальцем ${sharpPressed.toFixed(1)} — мягче на ${(softening * 100).toFixed(0)}%`,
+  );
+  if (!(softening >= MIN_INK_SOFTENING)) {
+    failed.push(`краска под пальцем не ушла в расфокус (мягче всего на ${(softening * 100).toFixed(0)}%)`);
+  }
+
   await browser.close();
 
   console.log(
@@ -186,7 +275,10 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  console.log('check-optics: стекло остаётся и окном, и предметом на всём диапазоне полотна');
+  console.log(
+    'check-optics: стекло остаётся и окном, и предметом на всём диапазоне полотна, ' +
+      'а краска под пальцем уходит в расфокус',
+  );
 }
 
 await main();
