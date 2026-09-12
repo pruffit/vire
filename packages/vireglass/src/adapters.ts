@@ -265,6 +265,8 @@ export function toSurfaceUniforms(
  * десятками ручных умножений подряд: пропущенное поле там ловил только глаз, а промах виден не
  * везде — на плотности 1 домножение неотличимо от его отсутствия.
  */
+export type SurfaceUniforms = ReturnType<typeof toSurfaceUniforms>;
+
 export const SURFACE_LENGTH_UNIFORMS = [
   'u_halfSize',
   'u_corner',
@@ -280,9 +282,9 @@ export const SURFACE_LENGTH_UNIFORMS = [
   'u_touch',
   'u_pull',
   'u_touchRadius',
-] as const;
-
-type SurfaceUniforms = ReturnType<typeof toSurfaceUniforms>;
+  // `satisfies`, а не просто `as const`: опечатка в имени иначе компилируется молча и уходит в
+  // рантайм — поле с мусорным именем получает NaN, а настоящее остаётся недомноженным.
+] as const satisfies readonly (keyof SurfaceUniforms)[];
 
 /**
  * Униформы поверхности в пикселях устройства. Android рисует в dp и зовёт адаптер как есть;
