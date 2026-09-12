@@ -36,7 +36,7 @@ import {
   surfacePadDp,
   type VireGlassGeometry,
 } from '../../lib/vireglass/geometry';
-import type { BackdropSample } from '../../lib/vireglass/adaptation';
+import { ambientFrom, type BackdropSample } from '../../lib/vireglass/adaptation';
 import type { DeformSample } from '../../lib/vireglass/touch-response';
 import type { VireGlassDebugMode, VireGlassOptics } from '../../lib/vireglass/material';
 import { LENS_SHADER } from '../../lib/vireglass/lens-shader';
@@ -149,6 +149,20 @@ export function VireGlassSurface({
     geometryRef.current = geometryKey;
     padRef.current = 0;
   }
+  // Цвет окружения затекает в тень (эталон §7), и зонд его уже считает — остаётся не потерять
+  // по пути. Подписываемся только там, где замер и так идёт: включать зонд ради тени незачем.
+  const [ambient, setAmbient] = useState<[number, number, number] | undefined>(undefined);
+  const handleSample = useMemo(() => {
+    if (!onBackdropSample) return undefined;
+    return (event: { nativeEvent: BackdropSample }) => {
+      const next = ambientFrom(event.nativeEvent);
+      setAmbient((prev) =>
+        prev && prev[0] === next[0] && prev[1] === next[1] && prev[2] === next[2] ? prev : next,
+      );
+      onBackdropSample(event);
+    };
+  }, [onBackdropSample]);
+
   // Системные настройки меняют СЛОИ материала, а не отменяют его (эталон §9). Применяются
   // здесь: через эту поверхность проходит всё стекло приложения, и одного места достаточно.
   const a11y = useAccessibilityModifiers();
@@ -173,8 +187,8 @@ export function VireGlassSurface({
   // адаптации не существует. Поверхности в этом случае остаётся блик, тень и иконка.
   const bodyInLens = isGlassLensSupported && GlassLensNative !== null && hasTarget;
   const statics = useMemo(
-    () => toSurfaceUniforms(tuned, geometry, { debug, morph, dragLimit, shadow, bodyInLens }),
-    [tuned, geometry, debug, morph, dragLimit, shadow, bodyInLens],
+    () => toSurfaceUniforms(tuned, geometry, { debug, morph, dragLimit, shadow, bodyInLens, ambient }),
+    [tuned, geometry, debug, morph, dragLimit, shadow, bodyInLens, ambient],
   );
   // Исходник шейдера — часть результата, поэтому он в зависимостях. Формально это
   // константа модуля, но при горячей перезагрузке она меняется, а мемо с прежними
@@ -329,7 +343,7 @@ export function VireGlassSurface({
               {...lensStatic}
               animatedProps={lensAnimatedProps}
               backdropId={backdropId}
-              onBackdropSample={onBackdropSample}
+              onBackdropSample={handleSample}
               style={{
                 position: 'absolute',
                 width: width + lensPad * 2,

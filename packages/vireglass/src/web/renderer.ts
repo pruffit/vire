@@ -44,6 +44,7 @@ import {
   drawFullscreenTriangle,
   FULLSCREEN_TRIANGLE_VERTEX_SOURCE,
 } from './gl';
+import { ambientFrom } from '../adaptation';
 import { createProbe, type ProbeStats } from './probe';
 
 /** Сцена рисует себя со сдвигом: линзы на кадре стоят, а полотно под ними ползёт — только так
@@ -458,7 +459,7 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
         // пёстрого контента держит именно она.
         shadow: stats ? 0.8 + Math.min(stats.busy * 6, 1.2) : 1,
         // Цвет окружения зонд уже посчитал — тени он достаётся даром.
-        ambient: stats ? ([stats.r, stats.g, stats.b] as const) : undefined,
+        ambient: stats ? ambientFrom(stats) : undefined,
         appear: piece.appear,
       });
       const d = options.density;

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { FLIP_LUMA, INK_DARK, INK_LIGHT, RETURN_LUMA, shouldInkBeLight } from '../adaptation';
+import {
+  ambientFrom,
+  FLIP_LUMA,
+  INK_DARK,
+  INK_LIGHT,
+  RETURN_LUMA,
+  shouldInkBeLight,
+} from '../adaptation';
 import { LENS_SHADER } from '../lens-shader';
 import { colorPickup, diffraction, dispersion, iridescence } from '../optics';
 import { resolveOptics } from '../material';
@@ -68,5 +75,16 @@ describe('предел стекла и полярность', () => {
   it('надпись описывается двумя концами шкалы, а не произвольной светлотой', () => {
     expect(INK_LIGHT).toBeGreaterThan(0.9);
     expect(INK_DARK).toBeLessThan(0.1);
+  });
+});
+
+describe('цвет окружения для тени', () => {
+  // Замер приходит раз в 180 мс, и на мобилке каждая выборка иначе дёргала бы перерисовку.
+  it('огрубляется шагом, а не тянется точным значением', () => {
+    expect(ambientFrom({ r: 0.501, g: 0.5, b: 0.499 })).toEqual([0.5, 0.5, 0.5]);
+  });
+
+  it('зажимается в допустимый диапазон', () => {
+    expect(ambientFrom({ r: -1, g: 2, b: 0.25 })).toEqual([0, 1, 0.25]);
   });
 });
