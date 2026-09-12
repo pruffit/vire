@@ -149,13 +149,19 @@ Android (AGSL) и веб (WebGL2). Стенд `/rnd` — лаборатория,
   но только цветом — светлота тени не меняется, иначе она бледнеет и деталь теряет опору.
   Проверяется замером полосы под деталью, а не на глаз: разница там в единицы из 255.
 
+- **Радиусы вложенных форм считаются** (эталон 219 §7:53): у экрана 34, поэтому всё, что
+  прилегает к его углам через поле 20, получает 14 — обложка, кнопка «Поток», плашка
+  мини-плеера. Обложка внутри плашки — уже 5: её радиус считается от плашки, а не экрана.
+  Круглые кнопки и обложки посреди списка правило не трогает: их углы ни во что не вложены.
+
 - **Измеритель** снимает кадр и считает светлоту, шум, долю пикселей в упоре и полосы.
 
 ## Где код
 
 - **Пакет:** `packages/vireglass/src/` — `material.ts` (причины), `optics.ts` (следствия),
   `geometry.ts`, `sdf.ts`, `lens-shader.ts`, `surface-shader.ts`, `adaptation.ts`,
-  `accessibility.ts`, `scroll-edge.ts`, `adapters.ts`.
+  `accessibility.ts`, `scroll-edge.ts`,
+  `concentric.ts`, `adapters.ts`.
 - **Цели рендера:** `packages/vireglass/src/targets/{agsl,glsl}.ts`; гейт компиляции —
   `packages/vireglass/scripts/check-glsl.mjs` (`pnpm turbo run check:glsl`, в CI и в релизе).
 - **Веб-рендерер:** `packages/vireglass/src/web/{renderer,probe,gl}.ts` — подпуть `@vire/vireglass/web`.

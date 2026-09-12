@@ -6,7 +6,8 @@
 // зелёный канал), поэтому она ложится отдельным слоем ПОВЕРХ стекла — ровно так же, как на
 // Android поверх стеклянной вьюхи рисуются её дети.
 
-import { paintCover, RECENT } from './content';
+import { concentricRadius } from '@vire/vireglass';
+import { paintCover, RECENT, SCREEN_INNER_RADIUS } from './content';
 import { drawIcon, type IconName } from './icons';
 
 export const PLAYER_ICONS: readonly IconName[] = ['vire-play', 'vire-pause'];
@@ -23,7 +24,8 @@ export const PLAYER_ICONS: readonly IconName[] = ['vire-play', 'vire-pause'];
  *  сверху, снизу и слева. На 36 поля оставалось шесть, и обложка распирала плашку. */
 const PAD = 9;
 const COVER = 30;
-const COVER_RADIUS = 8;
+/** Обложка вложена уже в ПЛАШКУ, поэтому её радиус считается от радиуса плашки, а не экрана. */
+const COVER_RADIUS = concentricRadius(SCREEN_INNER_RADIUS, PAD);
 const TEXT_GAP = 12;
 const PLAY_SIZE = 22;
 const PLAY_HIT = 18;
