@@ -372,8 +372,10 @@ half4 main(float2 xy) {
     float3 w3 = vgUnpack(content.eval(vgInContent(s - wy)));
     wide = (w0 + w1 + w2 + w3) * 0.25;
     float lw = vgLuma(wide);
-    busy = max(max(abs(vgLuma(w0) - lw), abs(vgLuma(w1) - lw)),
-               max(abs(vgLuma(w2) - lw), abs(vgLuma(w3) - lw)));
+    // Та же статистика, что у зонда (удвоенное среднее отклонение): от неё зависит не только
+    // размытие, но и запас контраста краски, и масштабы двух путей расходиться не должны.
+    busy = clamp(0.5 * (abs(vgLuma(w0) - lw) + abs(vgLuma(w1) - lw)
+      + abs(vgLuma(w2) - lw) + abs(vgLuma(w3) - lw)), 0.0, 1.0);
   }
   // Светлота в ЭТОМ месте поверхности: плоскость зонда, зажатая в измеренный диапазон.
   float2 nrm = p / max(u_halfSize, float2(1.0));
