@@ -211,6 +211,8 @@ export function toSurfaceUniforms(
     progress?: number;
     /** 0…1: деталь появляется — тень и краска нарастают вместе с линзой. */
     appear?: number;
+    /** 0 — под пальцем деталь вдавливается, 1 — поднимается в стекло (эталон §5). */
+    lift?: number;
   } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
@@ -254,6 +256,8 @@ export function toSurfaceUniforms(
     u_presence: optics.presence,
     u_progress: options.progress ?? NO_PROGRESS,
     u_appear: options.appear ?? 1,
+    // Ноль по умолчанию: кнопки вдавливаются, как и вели себя все детали до появления правила.
+    u_lift: options.lift ?? 0,
 
     u_debug: debugIndex(options.debug ?? 'normal'),
   };
