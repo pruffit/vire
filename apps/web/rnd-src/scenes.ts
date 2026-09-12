@@ -348,20 +348,24 @@ const paragraph: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
 };
 
 /**
- * Дорожка под деталью (M 4:30, L 6:10). Толщина — треть детали: столько же в обоих эталонах,
- * и именно на полосе видно то, чего не показывает сетка, — как у самой кромки содержимое
- * утягивает вдоль силуэта и раздувает.
+ * Дорожка под деталью (M 4:30, L 6:10) — мерная сцена: на полосе видно то, чего не показывает
+ * сетка, как у самой кромки содержимое утягивает вдоль силуэта и раздувает.
+ *
+ * Толщина в dp, а не долей окна, как у прочих зон: деталь тоже фиксирована в dp, и замер не
+ * должен зависеть от размера окна. 19 dp — те же 17% высоты капсулы, что у дорожки под
+ * эталонной ручкой: «во сколько раз толще» зависит и от толщины самой дорожки тоже, и на
+ * другой пропорции число с эталоном не сравнить.
  */
 const track: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
-  const px = w / 360;
+  const dpr = window.devicePixelRatio || 1;
   const y = Math.round(h * 0.34 + oy);
-  const thick = Math.round(10 * px);
+  const thick = Math.round(19 * dpr);
   ctx.fillStyle = '#eceef2';
   ctx.fillRect(0, 0, w, h);
   ctx.fillStyle = '#d2d6de';
   ctx.fillRect(0, y - thick / 2, w, thick);
   ctx.fillStyle = '#0a6fd8';
-  ctx.fillRect(0, y - thick / 2, w * 0.42 + ox, thick);
+  ctx.fillRect(0, y - thick / 2, Math.max(0, Math.min(w, w * 0.42 + ox)), thick);
 };
 
 export const ZONES: readonly Zone[] = [
