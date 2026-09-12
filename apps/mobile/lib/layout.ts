@@ -55,8 +55,6 @@ export function useFurniture(): Furniture {
  * и деталь показывает неприглушённый текст там, где вокруг всё затемнено.
  */
 export const SCRIM_RATIO = 0.3;
-export const SCRIM_COLORS = ['rgba(3,2,1,0)', 'rgba(3,2,1,0.65)', 'rgba(3,2,1,0.9)'] as const;
-export const SCRIM_STOPS = [0, 0.55, 1] as const;
 
 export function useScrimHeight(): number {
   const { height } = useWindowDimensions();

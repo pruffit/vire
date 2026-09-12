@@ -21,6 +21,7 @@ import { formatDuration } from '../lib/format';
 import { Screen } from '../components/screen';
 import { FriendButton } from '../components/friend-button';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 import { fonts } from '../lib/design/typography';
@@ -33,6 +34,7 @@ export default function UserProfileScreen({ route }: NativeStackScreenProps<Prof
   const { userId } = route.params;
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'UserProfile'>>();
   const bottomPadding = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
@@ -118,6 +120,7 @@ export default function UserProfileScreen({ route }: NativeStackScreenProps<Prof
 
       {state === 'ready' && profile && (
         <ScrollView
+          {...scrollEdge}
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.foreground} />}
         >

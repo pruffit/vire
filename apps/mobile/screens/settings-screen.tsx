@@ -2,6 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-nat
 import * as Haptics from 'expo-haptics';
 import { Screen } from '../components/screen';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 import { usePreferences } from '../lib/design/preferences';
 import { colors } from '../lib/theme';
 import { type } from '../lib/design/typography';
@@ -17,6 +18,7 @@ import { isCrashReportingEnabled } from '../lib/crash-reporting';
  */
 export default function SettingsScreen() {
   const bottomPadding = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const glassEnabled = usePreferences((s) => s.glassEnabled);
   const reduceMotion = usePreferences((s) => s.reduceMotion);
   const setGlassEnabled = usePreferences((s) => s.setGlassEnabled);
@@ -24,7 +26,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
+      <ScrollView {...scrollEdge} contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
         <Text style={type.screenTitle}>Настройки</Text>
 
         <View style={styles.group}>

@@ -22,6 +22,7 @@ import { space, layout, radii } from '../lib/design/scales';
 import { Screen } from '../components/screen';
 import { Cover } from '../components/ui/cover';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 
 type LoadState = 'loading' | 'error' | 'ready';
 type Artist = ArtistPageResponse['artist'];
@@ -40,6 +41,7 @@ export default function ArtistScreen({ route }: { route: { params: HomeStackPara
   const { slug } = route.params;
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const bottomPadding = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const [artist, setArtist] = useState<Artist | null>(null);
   const [releases, setReleases] = useState<Release[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
@@ -113,6 +115,7 @@ export default function ArtistScreen({ route }: { route: { params: HomeStackPara
 
       {state === 'ready' && (
         <FlatList
+          {...scrollEdge}
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
           data={releases}
           keyExtractor={(item) => item.id}

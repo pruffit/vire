@@ -5,6 +5,7 @@ import { Backdrop } from './backdrop';
 import { colors } from '../lib/theme';
 import { BlurTargetScope, useRegisterBlurTarget } from '../lib/blur-target';
 import { FurnitureScrim } from './furniture-scrim';
+import { useScrollEdgeReset } from '../lib/scroll-edge';
 
 // Единая точка safe-area для всех экранов — верхний инсет (статус-бар) закрывал контент
 // на каждом экране по отдельности, потому что headerShown:false везде (свой UI, не
@@ -18,6 +19,7 @@ export function Screen({ children, style }: { children: React.ReactNode; style?:
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View>(null);
   useRegisterBlurTarget(blurTargetRef);
+  useScrollEdgeReset();
 
   // paddingTop safe-area — последним в массиве: если чужой style задаёт padding
   // шорткатом (перекрывает paddingTop), инсет всё равно должен победить.

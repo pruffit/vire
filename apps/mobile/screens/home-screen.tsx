@@ -37,6 +37,7 @@ import { fonts } from '../lib/design/typography';
 import { resolveAccent } from '../lib/design/accent';
 import { HazeGround } from '../components/haze-ground';
 import { FurnitureScrim } from '../components/furniture-scrim';
+import { useScrollEdge, useScrollEdgeReset } from '../lib/scroll-edge';
 import { RecentList } from '../components/recent-list';
 
 type LoadState = 'loading' | 'error' | 'ready';
@@ -50,6 +51,8 @@ export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList, 'HomeList'>>();
   const blurTargetRef = useRef<View>(null);
   useRegisterBlurTarget(blurTargetRef);
+  useScrollEdgeReset();
+  const scrollEdge = useScrollEdge();
   const insets = useSafeAreaInsets();
   const bottomPadding = useContentBottomPadding();
   const [freshReleases, setFreshReleases] = useState<ReleaseCardDTO[]>([]);
@@ -162,6 +165,7 @@ export default function HomeScreen() {
   } else {
     content = (
       <ScrollView
+        {...scrollEdge}
         style={[styles.screen, { paddingTop: insets.top }]}
         contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
         refreshControl={

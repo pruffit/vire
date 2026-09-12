@@ -7,6 +7,7 @@ import { RootNavigator } from './navigation/root-navigator';
 import { bootstrapE2eeIdentity } from './lib/e2ee/bootstrap';
 import { subscribePlayerEffects } from './lib/player-store';
 import { BlurTargetProvider } from './lib/blur-target';
+import { ScrollEdgeProvider } from './lib/scroll-edge';
 import { useKitFonts } from './lib/design/use-fonts';
 import { colors } from './lib/theme';
 import { GlassLab } from './screens/glass-lab';
@@ -46,7 +47,9 @@ export default function App() {
       <SafeAreaProvider>
         <StatusBar style="light" />
         {fontsReady ? (
-          <BlurTargetProvider>{GLASS_LAB ? <Lab /> : <RootNavigator />}</BlurTargetProvider>
+          <BlurTargetProvider>
+            <ScrollEdgeProvider>{GLASS_LAB ? <Lab /> : <RootNavigator />}</ScrollEdgeProvider>
+          </BlurTargetProvider>
         ) : (
           <View style={{ flex: 1, backgroundColor: colors.background }} />
         )}

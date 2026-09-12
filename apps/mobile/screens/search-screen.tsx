@@ -9,6 +9,7 @@ import type { SearchStackParamList } from '../navigation/search-stack';
 import { search } from '../lib/search';
 import { WEB_BASE_URL } from '../lib/env';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { Screen } from '../components/screen';
 import { Glass } from '../components/glass';
@@ -28,6 +29,7 @@ const EMPTY_RESULT: SearchResponse = { artists: [], releases: [], tracks: [] };
 export default function SearchScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<SearchStackParamList, 'SearchHome'>>();
   const bottomPadding = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const playQueue = usePlayerStore((s) => s.playQueue);
   const currentTrackId = usePlayerStore((s) => s.queue[s.queueIndex]?.id ?? null);
 
@@ -128,7 +130,7 @@ export default function SearchScreen() {
       )}
 
       {hasQuery && hasResults && (
-        <ScrollView contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}>
+        <ScrollView {...scrollEdge} contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}>
           {result.artists.length > 0 && (
             <Section title="Артисты">
               {result.artists.map((artist) => (
