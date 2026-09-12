@@ -347,6 +347,25 @@ const paragraph: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
   }
 };
 
+/**
+ * Дорожка под деталью (M 4:30, L 6:10) — мерная сцена: на полосе видно то, чего не показывает
+ * сетка, как у самой кромки содержимое утягивает вдоль силуэта и раздувает.
+ *
+ * Толщина в dp, а не долей окна, как у прочих зон: деталь тоже фиксирована в dp, и замер не
+ * должен зависеть от размера окна. 19 dp — те же 17% высоты капсулы, что у эталонной дорожки.
+ */
+const track: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
+  const dpr = window.devicePixelRatio || 1;
+  const y = Math.round(h * 0.34 + oy);
+  const thick = Math.round(19 * dpr);
+  ctx.fillStyle = '#eceef2';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#d2d6de';
+  ctx.fillRect(0, y - thick / 2, w, thick);
+  ctx.fillStyle = '#0a6fd8';
+  ctx.fillRect(0, y - thick / 2, Math.max(0, Math.min(w, w * 0.42 + ox)), thick);
+};
+
 export const ZONES: readonly Zone[] = [
   {
     name: 'светлая клетка',
@@ -363,6 +382,7 @@ export const ZONES: readonly Zone[] = [
   { name: 'мак на небе', draw: poppy },
   { name: 'дюны', draw: dunes },
   { name: 'абзац', draw: paragraph },
+  { name: 'дорожка', draw: track },
 ] as const;
 
 export const ZONE_NAMES: readonly string[] = ZONES.map((z) => z.name);
