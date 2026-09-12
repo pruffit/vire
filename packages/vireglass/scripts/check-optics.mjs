@@ -41,9 +41,15 @@ const MIN_PRESENCE = 5;
 /** Шагов по светлоте полотна. Гуще, чем кажется нужным: особенность сидит там, где светлота
  *  полотна проходит рядом со светлотой тинта, и редкий шаг её перешагивает. */
 const STEPS = 41;
-/** Насколько мягче обязана стать кромка краски под пальцем. Порог отделяет расфокус от
- *  случайной разницы в пару единиц, которую дают сдвиг краски и свет пятна. */
-const MIN_INK_SOFTENING = 0.25;
+/**
+ * Насколько мягче обязана стать кромка краски под пальцем.
+ *
+ * Порог стоит ВЫШЕ того, что даёт одно только нажатие. Само вдавливание уже смягчает кромку:
+ * деталь под пальцем светлеет и сдвигается на доли пикселя, и замер без расфокуса вовсе
+ * (`VG_INK_DEFOCUS = 0`) показывает 32%. С расфокусом — 55%. Порог между ними: выключи
+ * расфокус — и гейт падает, ради чего он и написан. Оба числа сняты этим же пробником.
+ */
+const MIN_INK_SOFTENING = 0.45;
 
 const ENTRY = `
 import { createVireGlassRenderer } from '${WEB}';
@@ -165,16 +171,17 @@ globalThis.vgInkProbe = ({ press }) => {
   const optics = resolveOptics({ ...materialForInk(VIREGLASS_CONTROL_MATERIAL, true), ink: INK_LIGHT });
   const piece = {
     optics,
-    geometry: circleGeometry(56),
+    geometry: roundedRectGeometry(220, 120, 32),
     centerX: canvas.width / 2,
     centerY: canvas.height / 2,
     icon: true,
     appear: 1,
     inkIdle: [1, 1, 1, 1],
     inkActive: [1, 1, 1, 1],
-    // Палец стоит в центре: краска под ним, и расфокус обязан её достать. Радиус пятна — тот же,
-    // что кладёт продукт: доля половины меньшей стороны.
-    touch: { x: 0, y: 0, pullX: 0, pullY: 0, press, radius: 0.72 * 28, waveAmp: 0, wavePhase: 0 },
+    // Палец уведён в угол детали: расфокус от расстояния не зависит (он идёт от силы нажатия и
+    // размера пятна), а вот вдавливание — зависит, и мерить его заодно ни к чему. Радиус пятна
+    // тот же, что кладёт продукт: доля половины меньшей стороны.
+    touch: { x: 104, y: 52, pullX: 0, pullY: 0, press, radius: 0.72 * 60, waveAmp: 0, wavePhase: 0 },
   };
 
   for (let i = 0; i < 30; i += 1) {
@@ -185,14 +192,24 @@ globalThis.vgInkProbe = ({ press }) => {
   const n = 48;
   const buf = new Uint8Array(n * 4);
   gl.readPixels(canvas.width / 2 - n / 2, canvas.height / 2, n, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-  let sharp = 0;
-  let prev = null;
+  const line = [];
   for (let i = 0; i < n; i += 1) {
-    const v = 0.2126 * buf[i * 4] + 0.7152 * buf[i * 4 + 1] + 0.0722 * buf[i * 4 + 2];
-    if (prev !== null) sharp = Math.max(sharp, Math.abs(v - prev));
-    prev = v;
+    line.push(0.2126 * buf[i * 4] + 0.7152 * buf[i * 4 + 1] + 0.0722 * buf[i * 4 + 2]);
   }
-  return sharp;
+
+  let sharp = 0;
+  for (let i = 1; i < n; i += 1) sharp = Math.max(sharp, Math.abs(line[i] - line[i - 1]));
+
+  // Крутизна сама по себе меряет не только резкость: вдавливание растягивает поле, штрих
+  // становится шире, и тот же переход раскладывается на большее число пикселей. Поэтому
+  // крутизна умножается на ШИРИНУ штриха на полувысоте — растяжение сокращается, остаётся
+  // именно размытие.
+  const lo = Math.min(...line);
+  const hi = Math.max(...line);
+  const half = (lo + hi) / 2;
+  let width = 0;
+  for (let i = 0; i < n; i += 1) if (line[i] > half) width += 1;
+  return { sharp, lo, hi, width };
 };
 `;
 
@@ -251,14 +268,20 @@ async function main() {
   }
 
   console.log('--- краска под пальцем ---');
-  const sharpIdle = await page.evaluate((a) => globalThis.vgInkProbe(a), { press: 0 });
-  const sharpPressed = await page.evaluate((a) => globalThis.vgInkProbe(a), { press: 1 });
+  const idle = await page.evaluate((a) => globalThis.vgInkProbe(a), { press: 0 });
+  const pressed = await page.evaluate((a) => globalThis.vgInkProbe(a), { press: 1 });
+  // Крутизна кромки в долях полного перепада строки: под пальцем деталь светлеет, и абсолютная
+  // крутизна падает даже без всякого размытия — делить обязательно, иначе меряется подсветка.
+  const rel = (m) => m.sharp / Math.max(m.hi - m.lo, 1e-6);
+  const sharpIdle = rel(idle);
+  const sharpPressed = rel(pressed);
   const softening = sharpIdle > 0 ? 1 - sharpPressed / sharpIdle : 0;
   console.log(
     `${softening >= MIN_INK_SOFTENING ? ' ' : '!'} кромка штриха: покой ${sharpIdle.toFixed(1)}, ` +
       `под пальцем ${sharpPressed.toFixed(1)} — мягче на ${(softening * 100).toFixed(0)}%`,
   );
   if (!(softening >= MIN_INK_SOFTENING)) {
+    console.log(`  покой ${JSON.stringify(idle)}, нажатие ${JSON.stringify(pressed)}`);
     failed.push(`краска под пальцем не ушла в расфокус (мягче всего на ${(softening * 100).toFixed(0)}%)`);
   }
 
