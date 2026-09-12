@@ -98,6 +98,8 @@ export function VireGlassSurface({
   icon,
   progress,
   touch,
+  appear,
+  lift = 0,
   dim = 0,
   topLayer = false,
   onBackdropSample,
@@ -124,6 +126,12 @@ export function VireGlassSurface({
    *  нули, и деформации не существовало ни при каком жесте. Веб гоняет ровно эти же поля
    *  (`web/renderer.ts`), контракт адаптеров общий и задан в dp. */
   touch?: SharedValue<DeformSample>;
+  /** Доля, в которой деталь СУЩЕСТВУЕТ, 0…1: стекло нарастает, а не проявляется прозрачностью
+   *  (эталон §12). Едет shared value по той же причине, что и `progress`. */
+  appear?: SharedValue<number>;
+  /** 0 — под пальцем деталь вдавливается, 1 — поднимается в стекло и тень отходит (эталон §5).
+   *  Свойство самой детали, а не её движения, поэтому обычный проп. */
+  lift?: number;
   /** Светлота фона ПОД стеклом, раз в ~200 мс. Отсюда экран узнаёт, что стекло дошло до
    *  своего предела и надпись пора перекрасить (lib/vireglass/adaptation.ts). */
   onBackdropSample?: (e: { nativeEvent: BackdropSample }) => void;
@@ -202,8 +210,8 @@ export function VireGlassSurface({
   // адаптации не существует. Поверхности в этом случае остаётся блик, тень и иконка.
   const bodyInLens = isGlassLensSupported && GlassLensNative !== null && hasTarget;
   const statics = useMemo(
-    () => toSurfaceUniforms(tuned, geometry, { debug, morph, dragLimit, shadow, bodyInLens, ambient }),
-    [tuned, geometry, debug, morph, dragLimit, shadow, bodyInLens, ambient],
+    () => toSurfaceUniforms(tuned, geometry, { debug, morph, dragLimit, shadow, bodyInLens, ambient, lift }),
+    [tuned, geometry, debug, morph, dragLimit, shadow, bodyInLens, ambient, lift],
   );
   // Исходник шейдера — часть результата, поэтому он в зависимостях. Формально это
   // константа модуля, но при горячей перезагрузке она меняется, а мемо с прежними
@@ -312,8 +320,10 @@ export function VireGlassSurface({
       // buttonPieces): касание поднимает активность на треть, а не до полной.
       u_active: touch ? Math.max(touch.value.active * ACTIVE_ON_TOUCH, active.value) : active.value,
       u_progress: progress ? progress.value : statics.u_progress,
+      // Деталь нарастает стеклом, а не прозрачностью: ноль — её нет вовсе.
+      u_appear: appear ? appear.value : statics.u_appear,
     };
-  }, [statics, iconUniforms, progress, touch, touchRadius]);
+  }, [statics, iconUniforms, progress, touch, touchRadius, appear]);
 
   const magnify = lensMagnify(tuned);
 

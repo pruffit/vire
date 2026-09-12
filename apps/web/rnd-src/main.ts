@@ -434,7 +434,7 @@ function drawSliderKnobSolid(): void {
 
 function sliderPiece() {
   const s = sliderDeform.sample();
-  const { glass, lift } = raiseIntoGlass(s.press);
+  const { glass } = raiseIntoGlass(s.press);
   const grow = 1 + SLIDER_GROW * s.press;
   const knob = {
     width: SLIDER_KNOB_W * grow,
@@ -464,8 +464,9 @@ function sliderPiece() {
     // Стекла в покое нет вовсе: орган матовый, и линза НАРАСТАЕТ под пальцем — тем же
     // механизмом, которым деталь появляется на экране (эталон §12: не прозрачностью).
     appear: glass,
-    // Ручка под пальцем отрывается от подложки, а не вдавливается в неё.
-    lift,
+    // Ручка этого рода под пальцем отрывается от подложки, а не вдавливается в неё. Это
+    // НАПРАВЛЕНИЕ, а не величина: насколько она уже поднялась, знает нажатие.
+    lift: 1,
   };
 }
 
