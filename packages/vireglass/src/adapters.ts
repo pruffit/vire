@@ -259,6 +259,50 @@ export function toSurfaceUniforms(
   };
 }
 
+/**
+ * Поля поверхности, которые суть ДЛИНЫ: контракт адаптера задан в dp, и на вебе каждое из них
+ * обязано домножиться на плотность экрана. Список здесь, а не в рендерере, где он был полутора
+ * десятками ручных умножений подряд: пропущенное поле там ловил только глаз, а промах виден не
+ * везде — на плотности 1 домножение неотличимо от его отсутствия.
+ */
+export type SurfaceUniforms = ReturnType<typeof toSurfaceUniforms>;
+
+export const SURFACE_LENGTH_UNIFORMS = [
+  'u_halfSize',
+  'u_corner',
+  'u_bevel',
+  'u_morphOffset',
+  'u_morphHalf',
+  'u_morphCorner',
+  'u_morphK',
+  'u_morph2Offset',
+  'u_morph2Half',
+  'u_morph2Corner',
+  'u_shadowReach',
+  'u_touch',
+  'u_pull',
+  'u_touchRadius',
+  // `satisfies`, а не просто `as const`: опечатка в имени иначе компилируется молча и уходит в
+  // рантайм — поле с мусорным именем получает NaN, а настоящее остаётся недомноженным.
+] as const satisfies readonly (keyof SurfaceUniforms)[];
+
+/**
+ * Униформы поверхности в пикселях устройства. Android рисует в dp и зовёт адаптер как есть;
+ * вебу нужен этот перевод. `u_center` сюда не входит: центр детали рендерер знает сам.
+ */
+export function toDeviceSurfaceUniforms(raw: SurfaceUniforms, density: number): SurfaceUniforms {
+  const scaled: Record<string, unknown> = { ...raw };
+  for (const key of SURFACE_LENGTH_UNIFORMS) {
+    const value: unknown = scaled[key];
+    scaled[key] = Array.isArray(value)
+      ? (value as number[]).map((v) => v * density)
+      : (value as number) * density;
+  }
+  // У волны длина только амплитуда; фаза считается в оборотах и плотности не знает.
+  scaled.u_wave = [raw.u_wave[0] * density, raw.u_wave[1]];
+  return scaled as SurfaceUniforms;
+}
+
 /** Направление ключевого света в экранных координатах, когда отклик на ориентацию выключен. */
 export const REST_LIGHT: readonly [number, number] = [-0.577, -0.817];
 

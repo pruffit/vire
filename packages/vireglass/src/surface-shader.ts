@@ -56,6 +56,11 @@ const float VG_BODY_DENSITY = 0.19;
 const float VG_SHADOW_TINT = 1.0;
 /* Глубина краски под поверхностью, dp. На столько её уводит нормаль у самой кромки. */
 const float VG_INK_DEPTH = 4.0;
+/* Расфокус краски под пальцем (эталон §6): глиф теряет кромку и тонет в молоке. Задан ДОЛЕЙ
+ * пятна касания, а не числом: пятно уже приходит в единицах устройства, поэтому радиус сам
+ * следует и за плотностью экрана, и за габаритом детали. В покое он нулевой, и выборка
+ * остаётся одиночной. */
+const float VG_INK_DEFOCUS = 0.08;
 
 half4 vgPack(half3 c, float a) { return half4(c * half(a), half(a)); }
 
@@ -190,7 +195,34 @@ half4 main(float2 xy) {
   float2 inkShift = n * (min(u_bevel * 0.5, VG_INK_DEPTH) * t);
   float2 inkUv = u_center + p - inkShift;
 
-  half4 ink = u_icon.eval(inkUv * u_iconScale) * half(u_iconOn);
+  // ПОД ПАЛЬЦЕМ КРАСКА ТЕРЯЕТ РЕЗКОСТЬ (эталон §6): у эталона глиф под нажатием тонет в
+  // молоке, а не просто светлеет. Ветка однородна по всей детали: нажатие приходит униформой,
+  // поэтому расфокус ничего не стоит, пока деталь не трогают.
+  float defocus = VG_INK_DEFOCUS * u_touchRadius * u_touchPress;
+  float2 inkDx = float2(defocus, 0.0);
+  float2 inkDy = float2(0.0, defocus);
+
+  half4 ink;
+  half4 over;
+  if (defocus > 0.01) {
+    // Крест вокруг центра с двойным весом середины: маска краски контрастная, и четырёх
+    // отсчётов хватает, чтобы штрих перестал держать кромку.
+    ink = (u_icon.eval((inkUv - inkDx) * u_iconScale)
+         + u_icon.eval((inkUv + inkDx) * u_iconScale)
+         + u_icon.eval((inkUv - inkDy) * u_iconScale)
+         + u_icon.eval((inkUv + inkDy) * u_iconScale)
+         + u_icon.eval(inkUv * u_iconScale) * 2.0) * half(u_iconOn / 6.0);
+    // Цветной контент лежит в той же плоскости, что краска, и расплывается вместе с ней:
+    // разная резкость двух слоёв одной плоскости читалась бы дефектом, а не нажатием.
+    over = (u_overlay.eval((inkUv - inkDx) * u_iconScale)
+          + u_overlay.eval((inkUv + inkDx) * u_iconScale)
+          + u_overlay.eval((inkUv - inkDy) * u_iconScale)
+          + u_overlay.eval((inkUv + inkDy) * u_iconScale)
+          + u_overlay.eval(inkUv * u_iconScale) * 2.0) * half(u_overlayOn * u_appear / 6.0);
+  } else {
+    ink = u_icon.eval(inkUv * u_iconScale) * half(u_iconOn);
+    over = u_overlay.eval(inkUv * u_iconScale) * half(u_overlayOn * u_appear);
+  }
 
   // Подложку под краской держит ЛИНЗА (плотность тела по зонду), а не поверхность: читаемость
   // — свойство материала, и считать её здесь второй раз значит развести два ответа на один вопрос.
@@ -207,7 +239,6 @@ half4 main(float2 xy) {
   // деформация ведёт их порознь: при нажатии название и артист трясутся вместе с поверхностью,
   // а обложка стоит на месте, потому что она была отдельным слоем поверх стекла. Полярность его
   // не трогает — у него свой цвет, и подменять его нечем.
-  half4 over = u_overlay.eval(inkUv * u_iconScale) * half(u_overlayOn * u_appear);
   pm = pm * (1.0 - over.a) + over.rgb * over.a;
   a = a + float(over.a) * (1.0 - a);
 
