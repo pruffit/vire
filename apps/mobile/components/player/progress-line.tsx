@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
@@ -92,11 +92,19 @@ export function ProgressLine({
   // рисовался бы всё время, пока открыт плеер, ради детали с нулевым `appear`.
   const [raised, setRaised] = useState(false);
   const running = useRef(false);
+  // Пружина успокаивается, только когда палец отпущен. Уйди экран из-под пальца (навигация,
+  // смена трека) — отпускания не будет, и цикл крутился бы вечно поверх мёртвых значений.
+  const alive = useRef(true);
+  useEffect(() => () => { alive.current = false; }, []);
   const wake = useCallback(() => {
     if (running.current) return;
     running.current = true;
     let last = Date.now();
     const frame = () => {
+      if (!alive.current) {
+        running.current = false;
+        return;
+      }
       const now = Date.now();
       const dt = (now - last) / 1000;
       last = now;
