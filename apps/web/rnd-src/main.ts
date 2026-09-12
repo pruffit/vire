@@ -39,6 +39,7 @@ import {
   drawRecentScreen,
   FLOW_BUTTON,
   recentScrollMax,
+  SCREEN_INNER_RADIUS,
   TOP_BAR_Y,
   TRANSPORT_ICONS,
 } from './content';
@@ -426,9 +427,9 @@ const ROWS: readonly ButtonRow[] = [
     screen: NAV_SCREEN,
     size: PLATE_HEIGHT,
     width: PHONE.width - SCREEN_MARGIN * 2,
-    // Ниже 12 нельзя: фаска материала здесь 8 dp, и на таком радиусе она съедает угол
-    // целиком — свет собирается в точку, стекло читается пластиной со снятой кромкой.
-    radius: 16,
+    // Радиус вложен в угол экрана (`SCREEN_INNER_RADIUS`), а не подобран. Ниже 12 нельзя:
+    // фаска здесь 8 dp, и на таком радиусе она съедает угол целиком — свет собирается в точку.
+    radius: SCREEN_INNER_RADIUS,
     lift: NAV_SIZE / 2 + PLATE_GAP + PLATE_HEIGHT / 2,
     count: 1,
     player: true,

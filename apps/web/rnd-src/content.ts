@@ -5,7 +5,7 @@
 import { FLOW_MARK, MARK_STROKE, MARK_VIEWBOX } from '@vire/design-tokens/marks';
 import { drawIcon, type IconName } from './icons';
 import { DISPLAY_FACE, fontOf } from './typefaces';
-import { scrollEdgeStrength, scrollEdgeStyle } from '@vire/vireglass';
+import { concentricRadius, scrollEdgeStrength, scrollEdgeStyle } from '@vire/vireglass';
 import { PHONE, phoneOrigin, phonePath, SCREEN_MARGIN } from './scenes';
 import { drawWithScrollEdges, type ScrollEdge } from './scroll-edge';
 
@@ -49,6 +49,13 @@ export const RECENT: readonly Track[] = [
   { title: 'Сквозь помехи', artist: 'Нева Ретро', length: '3:54', hue: 288 },
   { title: 'Последний трамвай', artist: 'Ким Долгов', length: '4:12', hue: 120 },
 ];
+
+/**
+ * Радиус всего, что прилегает к углам экрана: обложка, кнопка «Поток», плашка мини-плеера.
+ * Считается, а не подбирается: вложенные формы делят ЦЕНТР кривизны, иначе их углы идут не
+ * параллельно углам экрана и поле между ними то съедается, то расходится (эталон §11).
+ */
+export const SCREEN_INNER_RADIUS = concentricRadius(PHONE.radius, SCREEN_MARGIN);
 
 const ROW = 56;
 const LIST_TOP = 58;
@@ -141,7 +148,7 @@ const FLOW_HEIGHT = 52;
 /** Отбивка Потока от низа экрана: над индикатором домой. */
 const FLOW_BOTTOM = 44;
 /** Радиус тот же, что у обложки: кнопка — опора экрана, а не наклейка. */
-const FLOW_RADIUS = 18;
+const FLOW_RADIUS = SCREEN_INNER_RADIUS;
 
 /** Секунды в «м:сс»: время слева считается от доли, справа стоит длина трека из данных. */
 function clock(seconds: number): string {
@@ -187,7 +194,7 @@ export function drawCoverScreen(
   ctx.scale(px, px);
   ctx.translate(SCREEN_MARGIN, BIG_COVER_TOP);
 
-  paintCover(ctx, size, 18, track.hue);
+  paintCover(ctx, size, SCREEN_INNER_RADIUS, track.hue);
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
