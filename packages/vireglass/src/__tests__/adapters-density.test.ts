@@ -13,23 +13,50 @@ const touch = { x: 12, y: -8, pullX: 4, pullY: 2, press: 1, radius: 40, waveAmp:
 
 const raw = () => toSurfaceUniforms(optics, geometry, { touch, shadow: 1 });
 
+/**
+ * Что именно является длиной — записано здесь ВТОРОЙ РАЗ намеренно. Возьми тест этот список из
+ * самого модуля — и он станет проверять сам себя: удалённое из `SURFACE_LENGTH_UNIFORMS` поле
+ * просто переедет в «безразмерные» и пройдёт проверку на равенство. Здесь список — ожидание,
+ * и расходиться с ним нельзя молча: правка требует осознанной правки обеих сторон.
+ */
+const LENGTHS = [
+  'u_halfSize',
+  'u_corner',
+  'u_bevel',
+  'u_morphOffset',
+  'u_morphHalf',
+  'u_morphCorner',
+  'u_morphK',
+  'u_morph2Offset',
+  'u_morph2Half',
+  'u_morph2Corner',
+  'u_shadowReach',
+  'u_touch',
+  'u_pull',
+  'u_touchRadius',
+] as const;
+
 describe('перевод униформ поверхности в пиксели устройства', () => {
   // Контракт адаптера — dp: так его читает Android, где Skia рисует в тех же единицах.
   it('на плотности 1 не меняет ничего', () => {
     expect(toDeviceSurfaceUniforms(raw(), 1)).toEqual(raw());
   });
 
+  it('длинами числятся ровно те поля, что перечислены здесь', () => {
+    expect([...SURFACE_LENGTH_UNIFORMS].sort()).toEqual([...LENGTHS].sort());
+  });
+
   it('длины домножаются, всё остальное остаётся как было', () => {
     const before = raw();
     const after = toDeviceSurfaceUniforms(before, 2);
-    const lengths = new Set<string>([...SURFACE_LENGTH_UNIFORMS, 'u_wave']);
+    const lengths = new Set<string>([...LENGTHS, 'u_wave']);
 
     for (const [key, value] of Object.entries(before)) {
       if (lengths.has(key)) continue;
       expect(after[key as keyof typeof after], key).toEqual(value);
     }
 
-    for (const key of SURFACE_LENGTH_UNIFORMS) {
+    for (const key of LENGTHS) {
       const was = before[key];
       const now = after[key];
       if (Array.isArray(was)) {
