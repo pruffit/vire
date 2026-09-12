@@ -95,15 +95,19 @@ const float VG_FILM_IOR = 1.35;
 // Потолок наклона профиля у самого силуэта: там он уходит в бесконечность.
 const float VG_SLOPE_MAX = 40.0;
 // Доля радиуса сбора, до которой доходит рассеяние над пёстрым фоном под краской (M 11:47).
-const float VG_SCATTER_MAX = 0.35;
+// Выставлена по эталону: там структура под капсулой гаснет в 9–10 раз, а не в тридцать.
+const float VG_SCATTER_MAX = 0.20;
 const float VG_SCATTER_BASE = 0.1;
 // Отклик на структуру под стеклом насыщается рано: спорит с надписью не площадь чужого
 // текста, а сам факт его наличия (строка под плашкой даёт busy около 0.12).
 const float VG_STRUCTURE_GAIN = 20.0;
-// Плотность тела с краской над спокойным и над пёстрым фоном. Читаемость набирают размытие
-// и потолок светлоты, а не заливка: выше пола деталь становится крашеной плашкой.
-const float VG_GROUND_MIN = 0.15;
-const float VG_GROUND_MAX = 0.70;
+// Плотность тела с краской над спокойным и над пёстрым фоном. Пол и потолок низкие: читаемость
+// набирает адресное требование ниже, а не заливка — выше пола деталь становится крашеной плашкой.
+const float VG_GROUND_MIN = 0.06;
+const float VG_GROUND_MAX = 0.12;
+// Доля разброса фона, которая доживает до тела сквозь рассеяние: требование читаемости
+// считается от этого края, а не от средней светлоты места.
+const float VG_BUSY_EDGE = 0.75;
 // Концентрация света: тело чуть светлее того, что под ним (M 2:29).
 const float VG_CONCENTRATE = 0.04;
 
@@ -368,8 +372,10 @@ half4 main(float2 xy) {
     float3 w3 = vgUnpack(content.eval(vgInContent(s - wy)));
     wide = (w0 + w1 + w2 + w3) * 0.25;
     float lw = vgLuma(wide);
-    busy = max(max(abs(vgLuma(w0) - lw), abs(vgLuma(w1) - lw)),
-               max(abs(vgLuma(w2) - lw), abs(vgLuma(w3) - lw)));
+    // Та же статистика, что у зонда (удвоенное среднее отклонение): от неё зависит не только
+    // размытие, но и запас контраста краски, и масштабы двух путей расходиться не должны.
+    busy = clamp(0.5 * (abs(vgLuma(w0) - lw) + abs(vgLuma(w1) - lw)
+      + abs(vgLuma(w2) - lw) + abs(vgLuma(w3) - lw)), 0.0, 1.0);
   }
   // Светлота в ЭТОМ месте поверхности: плоскость зонда, зажатая в измеренный диапазон.
   float2 nrm = p / max(u_halfSize, float2(1.0));
@@ -411,12 +417,17 @@ half4 main(float2 xy) {
   float away = mix(VG_TINT_LIGHT, VG_TINT_DARK, darkSide);
   float tintLuma = mix(away, mix(VG_TINT_LIGHT, VG_TINT_DARK, pol), demand);
 
-  // Сколько среды нужно, чтобы увести светлоту под надписью за порог — по месту.
-  float needForLight = local > capLight
-    ? clamp((local - capLight) / max(local - VG_TINT_DARK, 1e-4), 0.0, 0.92)
+  // Сколько среды нужно, чтобы увести светлоту под надписью за порог — по месту. Считается от
+  // того края разброса фона, который ближе к краске: светлую надпись топит светлое пятно под
+  // ней, а средняя светлота места про это пятно не знает.
+  float edge = busy * VG_BUSY_EDGE;
+  float inkHi = min(local + edge, 1.0);
+  float inkLo = max(local - edge, 0.0);
+  float needForLight = inkHi > capLight
+    ? clamp((inkHi - capLight) / max(inkHi - VG_TINT_DARK, 1e-4), 0.0, 0.92)
     : 0.0;
-  float needForDark = local < floorDark
-    ? clamp((floorDark - local) / max(VG_TINT_LIGHT - local, 1e-4), 0.0, 0.92)
+  float needForDark = inkLo < floorDark
+    ? clamp((floorDark - inkLo) / max(VG_TINT_LIGHT - inkLo, 1e-4), 0.0, 0.92)
     : 0.0;
   float needForInk = mix(needForDark, needForLight, pol) * demand;
 
