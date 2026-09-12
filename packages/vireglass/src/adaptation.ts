@@ -33,6 +33,17 @@ export type BackdropSample = {
   b: number;
 };
 
+/** Шаг огрубления цвета окружения — для платформ, где замер идёт через состояние: каждая
+ *  выборка зонда иначе дёргала бы перерисовку поверхности. Тень красится грубо, ей точность
+ *  и не нужна. Веб рисует униформы императивно каждый кадр и берёт цвет как есть. */
+const AMBIENT_STEP = 32;
+
+/** Цвет окружения детали из замера зонда — тот, что затекает в её тень (reference.md §7). */
+export function ambientFrom(sample: { r: number; g: number; b: number }): [number, number, number] {
+  const step = (v: number) => Math.round(Math.min(Math.max(v, 0), 1) * AMBIENT_STEP) / AMBIENT_STEP;
+  return [step(sample.r), step(sample.g), step(sample.b)];
+}
+
 /** Светлота надписи на концах шкалы. Кит держит светлый текст почти белым, тёмный — почти
  *  чёрным; промежуточных состояний у полярности не бывает по построению. */
 export const INK_LIGHT = 0.95;

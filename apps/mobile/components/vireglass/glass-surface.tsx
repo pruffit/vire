@@ -36,7 +36,7 @@ import {
   surfacePadDp,
   type VireGlassGeometry,
 } from '../../lib/vireglass/geometry';
-import type { BackdropSample } from '../../lib/vireglass/adaptation';
+import { ambientFrom, type BackdropSample } from '../../lib/vireglass/adaptation';
 import type { DeformSample } from '../../lib/vireglass/touch-response';
 import type { VireGlassDebugMode, VireGlassOptics } from '../../lib/vireglass/material';
 import { LENS_SHADER } from '../../lib/vireglass/lens-shader';
@@ -149,6 +149,20 @@ export function VireGlassSurface({
     geometryRef.current = geometryKey;
     padRef.current = 0;
   }
+  // Цвет окружения затекает в тень (эталон §7), и зонд его уже считает — остаётся не потерять
+  // по пути. Подписываемся только там, где замер и так идёт: включать зонд ради тени незачем.
+  const [sampled, setSampled] = useState<[number, number, number] | undefined>(undefined);
+  const handleSample = useMemo(() => {
+    if (!onBackdropSample) return undefined;
+    return (event: { nativeEvent: BackdropSample }) => {
+      const next = ambientFrom(event.nativeEvent);
+      setSampled((prev) =>
+        prev && prev[0] === next[0] && prev[1] === next[1] && prev[2] === next[2] ? prev : next,
+      );
+      onBackdropSample(event);
+    };
+  }, [onBackdropSample]);
+
   // Системные настройки меняют СЛОИ материала, а не отменяют его (эталон §9). Применяются
   // здесь: через эту поверхность проходит всё стекло приложения, и одного места достаточно.
   const a11y = useAccessibilityModifiers();
@@ -169,12 +183,27 @@ export function VireGlassSurface({
     setBackdropId(node ? findNodeHandle(node) : null);
   }, [blurTarget]);
 
+  // Единственная точка, где решается, живёт ли бэкдроп. Через неё проходит ВСЁ стекло
+  // приложения, поэтому и тумблер настроек, и подавление под открытым листом стоят здесь,
+  // а не размазаны по потребителям. Подавление под листом предписывает сам кит: нижние
+  // слои за скримом преломлять нечего, и оно же удерживает бюджет поверхностей в зелёной
+  // зоне (`lib/design/glass-budget.ts`).
+  const backdropAllowed = useBackdropEnabled(topLayer);
+  const liveBackdrop = backdrop && backdropAllowed;
+  const refracting = isGlassLensSupported && GlassLensNative !== null;
+  const backdropReady = liveBackdrop && hasTarget && blurTarget?.current != null;
+  // Этим же выражением ниже монтируется вьюха с зондом — двум условиям разойтись нечем.
+  // А разойтись им есть на чём: линза уходит и под открытым листом, и при уменьшенной
+  // прозрачности, тогда как тень рисуется всегда, и цвет ушедшего фона в ней бы застыл.
+  const measuring = backdropReady && refracting && AnimatedGlassLens !== null;
+  const ambient = measuring ? sampled : undefined;
+
   // Тело стекла рисует линза, когда она живая: только там виден фон, а без фона точечной
   // адаптации не существует. Поверхности в этом случае остаётся блик, тень и иконка.
   const bodyInLens = isGlassLensSupported && GlassLensNative !== null && hasTarget;
   const statics = useMemo(
-    () => toSurfaceUniforms(tuned, geometry, { debug, morph, dragLimit, shadow, bodyInLens }),
-    [tuned, geometry, debug, morph, dragLimit, shadow, bodyInLens],
+    () => toSurfaceUniforms(tuned, geometry, { debug, morph, dragLimit, shadow, bodyInLens, ambient }),
+    [tuned, geometry, debug, morph, dragLimit, shadow, bodyInLens, ambient],
   );
   // Исходник шейдера — часть результата, поэтому он в зависимостях. Формально это
   // константа модуля, но при горячей перезагрузке она меняется, а мемо с прежними
@@ -286,16 +315,7 @@ export function VireGlassSurface({
     };
   }, [statics, iconUniforms, progress, touch, touchRadius]);
 
-  const refracting = isGlassLensSupported && GlassLensNative !== null;
   const magnify = lensMagnify(tuned);
-
-  // Единственная точка, где решается, живёт ли бэкдроп. Через неё проходит ВСЁ стекло
-  // приложения, поэтому и тумблер настроек, и подавление под открытым листом стоят здесь,
-  // а не размазаны по потребителям. Подавление под листом предписывает сам кит: нижние
-  // слои за скримом преломлять нечего, и оно же удерживает бюджет поверхностей в зелёной
-  // зоне (`lib/design/glass-budget.ts`).
-  const backdropAllowed = useBackdropEnabled(topLayer);
-  const liveBackdrop = backdrop && backdropAllowed;
 
   // Сторожит ФАКТИЧЕСКОЕ число живых поверхностей; тест стережёт объявленную модель.
   useGlassSurfaceRegistration(liveBackdrop && hasTarget);
@@ -321,15 +341,15 @@ export function VireGlassSurface({
         collapsable={false}
       >
         <View style={[styles.lens, { width, height }]}>
-        {liveBackdrop && hasTarget && blurTarget?.current ? (
-          refracting && AnimatedGlassLens ? (
+        {backdropReady ? (
+          measuring && AnimatedGlassLens ? (
             // Вьюха линзы НАМЕРЕННО больше стекла — у кромки выборка уходит за его пределы,
             // форму вырезает сам шейдер.
             <AnimatedGlassLens
               {...lensStatic}
               animatedProps={lensAnimatedProps}
               backdropId={backdropId}
-              onBackdropSample={onBackdropSample}
+              onBackdropSample={handleSample}
               style={{
                 position: 'absolute',
                 width: width + lensPad * 2,
