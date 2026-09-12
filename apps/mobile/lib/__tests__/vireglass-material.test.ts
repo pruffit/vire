@@ -339,6 +339,11 @@ describe('контракт шейдера поверхности', () => {
     }
   });
 
+  // Без замера окружения тень обязана остаться прежней — нейтрально-чёрной.
+  it('окружение по умолчанию нейтрально', () => {
+    expect(toSurfaceUniforms(optics, circle).u_ambient).toEqual([0, 0, 0]);
+  });
+
   it('адаптер не шлёт униформ, которых в шейдере нет', () => {
     for (const key of Object.keys(toSurfaceUniforms(optics, circle))) {
       expect(new RegExp(`uniform\\s+\\w+\\s+${key};`).test(SURFACE_SHADER)).toBe(true);
