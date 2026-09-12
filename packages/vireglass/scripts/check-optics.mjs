@@ -11,6 +11,9 @@
  *      деталь под пальцем только светлеет, а краска остаётся приклеенной поверх стекла.
  *   4. ПОДЪЁМ В СТЕКЛО. У детали, которая под пальцем поднимается, а не вдавливается
  *      (эталон §5), тень обязана ОТОЙТИ: подъём без зазора под деталью — не подъём.
+ *   5. ПЁСТРОЕ ПОЛОТНО — С ДВУХ СТОРОН. Над обложкой деталь обязана и держать краску
+ *      читаемой, и не стирать то, что под ней. Требования тянут в разные стороны и ломаются
+ *      порознь: заливка спасает краску и убивает контент, отказ от заливки — наоборот.
  *
  * Проверка идёт ПО ВСЕМУ ДИАПАЗОНУ светлоты полотна, а не в паре точек. Дефект, ради которого
  * гейт и написан, был не порогом, а ОСОБЕННОСТЬЮ: требуемый отход делился на расстояние от
@@ -43,6 +46,8 @@ const MIN_PRESENCE = 5;
 /** Шагов по светлоте полотна. Гуще, чем кажется нужным: особенность сидит там, где светлота
  *  полотна проходит рядом со светлотой тинта, и редкий шаг её перешагивает. */
 const STEPS = 41;
+/** Шагов по светлоте пёстрого полотна. Реже, чем по ровному: особенности между шагами тут нет. */
+const BUSY_STEPS = 9;
 /**
  * Насколько мягче обязана стать кромка краски под пальцем.
  *
@@ -59,6 +64,19 @@ const MIN_INK_SOFTENING = 0.45;
  * иначе ослабление вдвое проходило бы молча, а гейт ловил бы только полное отключение.
  */
 const MIN_LIFT_SPREAD = 0.75;
+/**
+ * Контраст краски с телом рядом над пёстрым полотном, в единицах светлоты 0..255. Худшее
+ * измеренное — 89; если считать требование читаемости от средней светлоты места, а не от
+ * ближнего к краске края разброса (`VG_BUSY_EDGE` = 0), тот же замер даёт 50, и светлая
+ * надпись тонет в светлом пятне обложки. Порог стоит между этими двумя числами.
+ */
+const MIN_INK_ON_BUSY = 70;
+/**
+ * Сколько светлоты обязано ОСТАТЬСЯ от структуры полотна внутри детали, там же. Худшее
+ * измеренное — 40; при плотности подложки 0.15/0.70 остаётся 18, то есть обложку под стеклом
+ * замазывает заливка. Порог между ними.
+ */
+const MIN_CONTENT_ON_BUSY = 28;
 
 const ENTRY = `
 import { createVireGlassRenderer } from '${WEB}';
@@ -220,6 +238,94 @@ globalThis.vgInkProbe = ({ press }) => {
   return { sharp, lo, hi, width };
 };
 
+let busyStage = null;
+
+// Пятое обещание: НАД ПЁСТРЫМ ПОЛОТНОМ ЖИВУТ ОБА. Полотно — мозаика из плиток КРУПНЕЕ радиуса
+// сбора: структуру мельче него стекло гасит по физике, и требовать её сохранения нельзя.
+// Плитки раскладывает генератор, а не шахматный порядок: на периодическом полотне оценка
+// разброса ловит собственный период и числа скачут от уровня к уровню.
+// Контраст краски считается худшими краями — краска своим слабым, тело своим ближним к ней:
+// надпись тонет там, где под ней оказалось светлое пятно, а не в среднем по детали.
+globalThis.vgBusyProbe = ({ level, cell, amp }) => {
+  // СВОЙ рендерер, не общий: оценка окружения переносится между кадрами, и полотно в клетку,
+  // пройдя через общий канвас, сбивало бы и свои числа, и замер тени у следующего обещания.
+  if (!busyStage) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 520;
+    canvas.height = 300;
+    document.body.append(canvas);
+    const renderer = createVireGlassRenderer(canvas);
+    renderer.resize(canvas.width, canvas.height);
+    const mask = document.createElement('canvas');
+    mask.width = canvas.width;
+    mask.height = canvas.height;
+    const m = mask.getContext('2d');
+    m.fillStyle = '#000000';
+    m.fillRect(0, 0, mask.width, mask.height);
+    m.fillStyle = '#ffffff';
+    m.fillRect(canvas.width / 2 - 3, canvas.height / 2 - 18, 6, 36);
+    busyStage = { canvas, renderer, mask };
+  }
+  const { canvas, renderer } = busyStage;
+
+  const lo = hex(level - amp);
+  const hi = hex(level + amp);
+  const scene = (ctx, w, h) => {
+    let seed = 1;
+    for (let y = 0; y < h; y += cell) {
+      for (let x = 0; x < w; x += cell) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        ctx.fillStyle = (seed >> 16) % 2 ? hi : lo;
+        ctx.fillRect(x, y, cell, cell);
+      }
+    }
+  };
+
+  const light = shouldInkBeLight({ luma: level, hi: level + amp }, level < 0.5);
+  const optics = resolveOptics({
+    ...materialForInk(VIREGLASS_CONTROL_MATERIAL, true),
+    ink: light ? INK_LIGHT : INK_DARK,
+  });
+  const v = light ? 1 : 0;
+  const piece = {
+    optics,
+    geometry: roundedRectGeometry(220, 120, 32),
+    centerX: canvas.width / 2,
+    centerY: canvas.height / 2,
+    icon: true,
+    appear: 1,
+    inkIdle: [v, v, v, 1],
+    inkActive: [v, v, v, 1],
+  };
+  for (let i = 0; i < 30; i += 1) {
+    renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece], iconMask: busyStage.mask });
+  }
+
+  const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+  const W = 64;
+  const H = 24;
+  const buf = new Uint8Array(W * H * 4);
+  gl.readPixels(canvas.width / 2 - W / 2, canvas.height / 2 - H / 2, W, H, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+  const lum = (i) => 0.2126 * buf[i * 4] + 0.7152 * buf[i * 4 + 1] + 0.0722 * buf[i * 4 + 2];
+  const glyph = [];
+  const body = [];
+  for (let r = 0; r < H; r += 1) {
+    for (let c = 0; c < W; c += 1) {
+      const dx = c - W / 2;
+      if (Math.abs(dx) <= 2) glyph.push(lum(r * W + c));
+      else if (Math.abs(dx) >= 6 && Math.abs(dx) <= 28) body.push(lum(r * W + c));
+    }
+  }
+  const q = (a, p) => {
+    const sorted = [...a].sort((x, y) => x - y);
+    return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
+  };
+  return {
+    contrast: light ? q(glyph, 0.1) - q(body, 0.9) : q(body, 0.1) - q(glyph, 0.9),
+    content: q(body, 0.9) - q(body, 0.1),
+  };
+};
+
 // Четвёртое обещание: ОРГАН, ПОДНИМАЮЩИЙСЯ В СТЕКЛО, ОТРЫВАЕТСЯ ОТ ПОДЛОЖКИ. Тень под ним
 // обязана отойти дальше, чем под вдавленной кнопкой при том же нажатии. Меряется площадью
 // потемнения в столбце под нижней кромкой детали на ровном светлом полотне.
@@ -341,6 +447,28 @@ async function main() {
     failed.push(`краска под пальцем не ушла в расфокус (мягче всего на ${(softening * 100).toFixed(0)}%)`);
   }
 
+  console.log('--- пёстрое полотно ---');
+  let worstInk = { value: Infinity, level: 0 };
+  let worstContent = { value: Infinity, level: 0 };
+  for (let i = 0; i < BUSY_STEPS; i += 1) {
+    const level = 0.18 + (0.64 * i) / (BUSY_STEPS - 1);
+    // Плитка 16 px крупнее радиуса сбора; амплитуда одна на всех шагах — иначе шаги не сравнить.
+    const busy = await page.evaluate((a) => globalThis.vgBusyProbe(a), { level, cell: 16, amp: 0.28 });
+    if (busy.contrast < worstInk.value) worstInk = { value: busy.contrast, level };
+    if (busy.content < worstContent.value) worstContent = { value: busy.content, level };
+    const ok = busy.contrast >= MIN_INK_ON_BUSY && busy.content >= MIN_CONTENT_ON_BUSY;
+    console.log(
+      `${ok ? ' ' : '!'} полотно ${level.toFixed(2)}: краска ${busy.contrast.toFixed(0)}, ` +
+        `контент ${busy.content.toFixed(0)}`,
+    );
+    if (!(busy.contrast >= MIN_INK_ON_BUSY)) {
+      failed.push(`полотно ${level.toFixed(2)}: краска утонула в обложке (${busy.contrast.toFixed(0)})`);
+    }
+    if (!(busy.content >= MIN_CONTENT_ON_BUSY)) {
+      failed.push(`полотно ${level.toFixed(2)}: обложку под деталью стёрло (${busy.content.toFixed(0)})`);
+    }
+  }
+
   console.log('--- подъём в стекло ---');
   const pressedDown = await page.evaluate((a) => globalThis.vgLiftProbe(a), { lift: 0 });
   const liftedUp = await page.evaluate((a) => globalThis.vgLiftProbe(a), { lift: 1 });
@@ -356,6 +484,11 @@ async function main() {
   await browser.close();
 
   console.log(
+    `худшее на пёстром: краска ${worstInk.value.toFixed(0)} на ${worstInk.level.toFixed(2)} ` +
+      `(нужно ≥ ${MIN_INK_ON_BUSY}), контент ${worstContent.value.toFixed(0)} на ` +
+      `${worstContent.level.toFixed(2)} (нужно ≥ ${MIN_CONTENT_ON_BUSY})`,
+  );
+  console.log(
     `худшее: окно ${(worstWindow.value * 100).toFixed(0)}% на ${worstWindow.level.toFixed(2)} ` +
       `(нужно ≥ ${MIN_TRANSMISSION * 100}%), предмет ${worstPresence.value.toFixed(1)} ` +
       `на ${worstPresence.level.toFixed(2)} (нужно ≥ ${MIN_PRESENCE})`,
@@ -368,7 +501,8 @@ async function main() {
   }
   console.log(
     'check-optics: стекло остаётся и окном, и предметом на всём диапазоне полотна, ' +
-      'краска под пальцем уходит в расфокус, поднятая деталь отрывается от подложки',
+      'краска под пальцем уходит в расфокус, поднятая деталь отрывается от подложки, ' +
+      'над пёстрым полотном живут и краска, и контент',
   );
 }
 
