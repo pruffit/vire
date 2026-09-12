@@ -1,7 +1,10 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { fileStore } from '../storage/file-store';
 import { backdropAllowed } from './glass-budget';
+import { mergeAccessibility, useSystemAccessibility } from './accessibility';
+import type { VireGlassAccessibility } from '../vireglass/accessibility';
 
 /**
  * Настройки оформления из кита: тумблер стекла и приглушение движения.
@@ -47,6 +50,16 @@ export function useBackdropEnabled(topLayer = false): boolean {
   return usePreferences((s) => backdropAllowed(s, topLayer));
 }
 
+/**
+ * Модификаторы материала: системные настройки плюс тумблер кита. Одно место на всё
+ * приложение — иначе часть поверхностей слушает систему, а часть нет.
+ */
+export function useAccessibilityModifiers(): VireGlassAccessibility {
+  const appReduceMotion = usePreferences((s) => s.reduceMotion);
+  const system = useSystemAccessibility();
+  return useMemo(() => mergeAccessibility(system, appReduceMotion), [system, appReduceMotion]);
+}
+
 export function useReduceMotion(): boolean {
-  return usePreferences((s) => s.reduceMotion);
+  return useAccessibilityModifiers().reduceMotion;
 }
