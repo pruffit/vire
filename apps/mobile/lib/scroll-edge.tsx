@@ -25,6 +25,9 @@ import { scrollEdgeStyle, type ScrollEdgeStyle } from './vireglass/scroll-edge';
  */
 type EdgeApi = {
   strength: SharedValue<number>;
+  /** Силу берёт себе список сфокусированного экрана; без владельца края нет. */
+  claim: (push: () => void) => void;
+  release: (push: () => void) => void;
   inkLight: boolean;
   setInkLight: (light: boolean) => void;
 };
@@ -36,7 +39,33 @@ export function ScrollEdgeProvider({ children }: { children: ReactNode }) {
   // не знает вовсе — иначе каждый кадр прокрутки перерисовывал бы экран целиком.
   const strength = useSharedValue(1);
   const [inkLight, setInkLight] = useState(true);
-  const api = useMemo<EdgeApi>(() => ({ strength, inkLight, setInkLight }), [strength, inkLight]);
+
+  // Сила одна на приложение, а экран при потере фокуса НЕ размонтируется: вкладка остаётся
+  // живой, экран под верхним — тоже. Поэтому её держит ВЛАДЕЛЕЦ — список сфокусированного
+  // экрана, — и на возврате фокуса он же пересчитывает её из своего последнего замера.
+  // Сбрасывать силу на входе экрана нельзя: нативные `onLayout`/`onContentSizeChange` при
+  // возврате не повторяются, пока размеры те же, а `onScroll` без жеста не приходит вовсе —
+  // докрученный список так и остался бы притенён после возврата с плеера.
+  const owner = useRef<(() => void) | null>(null);
+  const claim = useCallback((push: () => void) => {
+    owner.current = push;
+    push();
+  }, []);
+  // Снятие УСЛОВНОЕ, как у цели блюра: порядок focus-эффектов навигацией не гарантирован, и
+  // безусловное стёрло бы заявку экрана, который уже вошёл.
+  const release = useCallback(
+    (push: () => void) => {
+      if (owner.current !== push) return;
+      owner.current = null;
+      strength.value = 1;
+    },
+    [strength],
+  );
+
+  const api = useMemo<EdgeApi>(
+    () => ({ strength, claim, release, inkLight, setInkLight }),
+    [strength, claim, release, inkLight],
+  );
   return <ScrollEdgeContext.Provider value={api}>{children}</ScrollEdgeContext.Provider>;
 }
 
@@ -45,7 +74,8 @@ export function ScrollEdgeProvider({ children }: { children: ReactNode }) {
  * списки не трогать: под мебель заезжает не их содержимое.
  */
 export function useScrollEdge() {
-  const strength = useContext(ScrollEdgeContext)?.strength;
+  const api = useContext(ScrollEdgeContext);
+  const strength = api?.strength;
   const seen = useRef({ scroll: 0, content: 0, layout: 0 });
 
   const push = useCallback(() => {
@@ -53,6 +83,13 @@ export function useScrollEdge() {
     const { scroll, content, layout } = seen.current;
     strength.value = edgeStrength(scroll, content, layout);
   }, [strength]);
+
+  useFocusEffect(
+    useCallback(() => {
+      api?.claim(push);
+      return () => api?.release(push);
+    }, [api, push]),
+  );
 
   const onScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -88,20 +125,6 @@ export function useScrollEdge() {
   // 32 мс, а не 16: событие идёт в JS-поток, а градиенту частота кадра не нужна — на глаз
   // ступеньки такой плотности неразличимы.
   return { onScroll, onContentSizeChange, onLayout, scrollEventThrottle: 32 };
-}
-
-/**
- * Экран без списка сам о себе не сообщит, и сила осталась бы от предыдущего — ровно то
- * залипание, от которого эффект и лечат. Полная сила — прежнее поведение; список экрана
- * тут же уточнит её замером.
- */
-export function useScrollEdgeReset(): void {
-  const strength = useContext(ScrollEdgeContext)?.strength;
-  useFocusEffect(
-    useCallback(() => {
-      if (strength) strength.value = 1;
-    }, [strength]),
-  );
 }
 
 /** Полярность нижней мебели: доля живёт в `GlassGroup` и анимируется покадрово, наружу уходит

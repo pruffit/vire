@@ -11,7 +11,9 @@ export const SCRIM_STOPS = [0, 0.55, 1] as const;
  *  и есть `3,2,1`). Так край живёт под светлым стеклом. */
 export const SCRIM_DISSOLVE = ['rgba(3,2,1,0)', 'rgba(3,2,1,0.65)', 'rgba(3,2,1,0.9)'] as const;
 /** Лёгкое затемнение: стекло ушло в тёмный стиль и гасит контент само, экрану остаётся
- *  меньше. Плотности те же, что у веба (`apps/web/rnd-src/scroll-edge.ts`). */
+ *  меньше. Пик тот же, что у веба (`apps/web/rnd-src/scroll-edge.ts`); у растворения он
+ *  достался от прежнего скрима (0.9 против 0.85 у веба), как и трёхстопная кривая вместо
+ *  линейной — на устройстве их не пересматривали. */
 export const SCRIM_DIM = ['rgba(0,0,0,0)', 'rgba(0,0,0,0.23)', 'rgba(0,0,0,0.35)'] as const;
 /** Жёсткий стиль — ровная полоса без градиента; закреплённых видов под мебелью в приложении
  *  нет, и эта ветка пока не выбирается ни разу. */
@@ -28,8 +30,10 @@ export function scrimColors(style: ScrollEdgeStyle): readonly [string, string, s
  * эффект сходит на нет, потому что под мебелью уже пусто.
  *
  * Пока габаритов нет — полная: мигнуть чистым фоном на первом кадре хуже, чем приглушить лишний раз.
+ * Измеренный пустой список — случай обратный: под мебелью пусто, и приглушать там нечего.
  */
 export function edgeStrength(scroll: number, content: number, layout: number): number {
-  if (content <= 0 || layout <= 0) return 1;
+  if (layout <= 0) return 1;
+  if (content <= 0) return 0;
   return scrollEdgeStrength('bottom', scroll, Math.max(content - layout, 0));
 }

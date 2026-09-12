@@ -11,6 +11,11 @@ describe('сила краевого эффекта', () => {
     expect(edgeStrength(0, 1200, 0)).toBe(1);
   });
 
+  // Экран измерен, а контента нет — это не то же самое, что «ещё не измерено».
+  it('измеренная пустота эффекта не даёт', () => {
+    expect(edgeStrength(0, 0, SCREEN)).toBe(0);
+  });
+
   it('короткому списку эффект не нужен: под мебелью пусто', () => {
     expect(edgeStrength(0, SCREEN, SCREEN)).toBe(0);
     expect(edgeStrength(0, SCREEN - 200, SCREEN)).toBe(0);
