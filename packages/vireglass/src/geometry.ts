@@ -104,11 +104,18 @@ export function lensPadDp(
   return quantise(sampling + dragLimit + stretch + morphReachDp(g, morph) + 2);
 }
 
-/** Запас канваса поверхности: тень уходит наружу формы, а перетаскивание сдвигает её ещё. */
+/**
+ * Запас канваса поверхности: тень уходит наружу формы, а перетаскивание сдвигает её ещё.
+ *
+ * Полтора радиуса, а не один: под пальцем у поднимающегося органа шейдер домножает радиус на
+ * 1.55 (`u_lift`, `u_press`), и на прежнем множителе 1.2 хвост тени обрезался краем канваса.
+ * Хвост слабее двух процентов альфы запасом не покрывается намеренно — на него ушло бы вдвое
+ * больше площади вьюхи.
+ */
 export function surfacePadDp(
   g: VireGlassGeometry,
   dragLimit = 0,
   morph?: Parameters<typeof morphReachDp>[1],
 ): number {
-  return quantise(shadowReachDp(g) * 1.2 + dragLimit + morphReachDp(g, morph) + 2);
+  return quantise(shadowReachDp(g) * 1.7 + dragLimit + morphReachDp(g, morph) + 2);
 }
