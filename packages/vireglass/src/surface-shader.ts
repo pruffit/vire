@@ -154,7 +154,7 @@ half4 main(float2 xy) {
                 u_morph2Offset, u_morph2Half, u_morph2Corner);
     float amb = 1.0 - smoothstep(-reach * 0.3, reach, sdDrop);
     float con = 1.0 - smoothstep(0.0, max(reach * 0.12, 1.0), max(sd, 0.0));
-    shade = (amb * amb * 0.14 + con * con * 0.10) * outside * u_shadow * u_appear;
+    shade = (amb * amb * 0.07 + con * con * 0.02) * outside * u_shadow * u_appear;
     halo = 1.0 - smoothstep(0.0, reach * 0.30, max(sd, 0.0));
     halo = halo * halo * lit * 0.10 * outside * u_appear;
   }
