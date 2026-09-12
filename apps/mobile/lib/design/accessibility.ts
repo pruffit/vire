@@ -1,52 +1,80 @@
 // Системные настройки доступности (эталон `docs/vireglass/reference.md` §9): материал обязан
 // слушать их сам, без участия экранов. Здесь только ЧТЕНИЕ системы; тумблер приложения
 // подмешивается в `preferences.ts`, чтобы этот модуль ничего о приложении не знал.
-import { useEffect, useState } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { useSyncExternalStore } from 'react';
+import { AccessibilityInfo, Platform } from 'react-native';
 import type { VireGlassAccessibility } from '../vireglass/accessibility';
 
 export type SystemAccessibility = {
   reduceMotion: boolean;
-  /** Настройка прозрачности есть только у iOS: на Android она остаётся выключенной. */
   reduceTransparency: boolean;
+  increaseContrast: boolean;
 };
 
-const OFF: SystemAccessibility = { reduceMotion: false, reduceTransparency: false };
+const OFF: SystemAccessibility = {
+  reduceMotion: false,
+  reduceTransparency: false,
+  increaseContrast: false,
+};
+
+let state: SystemAccessibility = OFF;
+const listeners = new Set<() => void>();
+let subscriptions: { remove: () => void }[] = [];
+
+function put(key: keyof SystemAccessibility, value: boolean): void {
+  if (state[key] === value) return;
+  state = { ...state, [key]: value };
+  for (const notify of listeners) notify();
+}
+
+/** Контраст в системе называется по-разному: у Android это высококонтрастный текст, у iOS —
+ *  затемнение системных цветов. Сигнал один, и материал отвечает на него одинаково. */
+const CONTRAST =
+  Platform.OS === 'ios'
+    ? { read: () => AccessibilityInfo.isDarkerSystemColorsEnabled(), event: 'darkerSystemColorsChanged' as const }
+    : { read: () => AccessibilityInfo.isHighTextContrastEnabled(), event: 'highTextContrastChanged' as const };
+
+function start(): void {
+  // Первый ответ приходит промисом, дальнейшие — событием: без первого настройка подхватится
+  // только после того, как человек её переключит, то есть на уже открытом экране никогда.
+  AccessibilityInfo.isReduceMotionEnabled().then((on) => put('reduceMotion', on)).catch(() => {});
+  AccessibilityInfo.isReduceTransparencyEnabled().then((on) => put('reduceTransparency', on)).catch(() => {});
+  CONTRAST.read().then((on) => put('increaseContrast', on)).catch(() => {});
+  subscriptions = [
+    AccessibilityInfo.addEventListener('reduceMotionChanged', (on) => put('reduceMotion', on)),
+    AccessibilityInfo.addEventListener('reduceTransparencyChanged', (on) => put('reduceTransparency', on)),
+    AccessibilityInfo.addEventListener(CONTRAST.event, (on) => put('increaseContrast', on)),
+  ];
+}
+
+function stop(): void {
+  for (const subscription of subscriptions) subscription.remove();
+  subscriptions = [];
+}
+
+/**
+ * Подписка ОДНА на приложение, а не на поверхность: стеклянных деталей на экране до десятка
+ * (`screens/glass-bench.tsx`), и своя пара запросов к мосту у каждой — заметная цена на ровном
+ * месте. Нативные слушатели живут, пока есть хоть один читатель.
+ */
+export function subscribeToSystemAccessibility(listener: () => void): () => void {
+  if (listeners.size === 0) start();
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) stop();
+  };
+}
+
+const read = (): SystemAccessibility => state;
 
 export function useSystemAccessibility(): SystemAccessibility {
-  const [state, setState] = useState<SystemAccessibility>(OFF);
-
-  useEffect(() => {
-    let alive = true;
-    const put = (key: keyof SystemAccessibility) => (value: boolean) => {
-      if (!alive) return;
-      setState((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
-    };
-    // Первый ответ приходит промисом, дальнейшие — событием: без первого настройка подхватится
-    // только после того, как человек её переключит, то есть на уже открытом экране никогда.
-    AccessibilityInfo.isReduceMotionEnabled().then(put('reduceMotion')).catch(() => {});
-    AccessibilityInfo.isReduceTransparencyEnabled().then(put('reduceTransparency')).catch(() => {});
-    const motion = AccessibilityInfo.addEventListener('reduceMotionChanged', put('reduceMotion'));
-    const transparency = AccessibilityInfo.addEventListener(
-      'reduceTransparencyChanged',
-      put('reduceTransparency'),
-    );
-    return () => {
-      alive = false;
-      motion.remove();
-      transparency.remove();
-    };
-  }, []);
-
-  return state;
+  return useSyncExternalStore(subscribeToSystemAccessibility, read, read);
 }
 
 /**
  * Настройка приложения складывается с системной и может только УЖЕСТОЧИТЬ её: человек, который
  * попросил систему убрать движение, не должен получать его обратно из-за тумблера в ките.
- *
- * Увеличенный контраст модель знает, но у Android публичной настройки для него нет, поэтому
- * источника здесь пока нет — на вебе он приходит из системы.
  */
 export function mergeAccessibility(
   system: SystemAccessibility,
@@ -54,7 +82,7 @@ export function mergeAccessibility(
 ): VireGlassAccessibility {
   return {
     reduceTransparency: system.reduceTransparency,
-    increaseContrast: false,
+    increaseContrast: system.increaseContrast,
     reduceMotion: system.reduceMotion || appReduceMotion,
   };
 }
