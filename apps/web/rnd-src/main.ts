@@ -394,16 +394,16 @@ const sliderKnobX = () => sliderLeft() + SLIDER_TRACK_W * sliderValue;
 /** Дорожка живёт В ПОЛОТНЕ, а не в маске краски: только тогда её преломляет линза, и видно,
  *  что ручка действительно стала стеклом, а не просто посветлела. */
 function drawSliderTrack(ctx: CanvasRenderingContext2D, d: number): void {
-  const y = sliderCenterY() / d;
-  const left = sliderLeft();
+  const y = sliderCenterY();
+  const h = SLIDER_TRACK_H * d;
   const capsule = (x: number, w: number, color: string) => {
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.roundRect(x * d, (y - SLIDER_TRACK_H / 2) * d, w * d, SLIDER_TRACK_H * d, (SLIDER_TRACK_H / 2) * d);
+    ctx.roundRect(x * d, y - h / 2, w * d, h, h / 2);
     ctx.fill();
   };
-  capsule(left, SLIDER_TRACK_W, SLIDER_TRACK);
-  capsule(left, SLIDER_TRACK_W * sliderValue, SLIDER_FILL);
+  capsule(sliderLeft(), SLIDER_TRACK_W, SLIDER_TRACK);
+  capsule(sliderLeft(), SLIDER_TRACK_W * sliderValue, SLIDER_FILL);
 }
 
 /**
