@@ -11,7 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { useSharedValue, type SharedValue } from 'react-native-reanimated';
-import { edgeStrength } from './design/scroll-edge';
+import { createEdgeOwner, edgeStrength } from './design/scroll-edge';
 import { scrollEdgeStyle, type ScrollEdgeStyle } from './vireglass/scroll-edge';
 
 /**
@@ -26,8 +26,9 @@ import { scrollEdgeStyle, type ScrollEdgeStyle } from './vireglass/scroll-edge';
 type EdgeApi = {
   strength: SharedValue<number>;
   /** Силу берёт себе список сфокусированного экрана; без владельца края нет. */
-  claim: (push: () => void) => void;
-  release: (push: () => void) => void;
+  claim: (token: object) => void;
+  release: (token: object) => void;
+  apply: (token: object, value: number) => void;
   inkLight: boolean;
   setInkLight: (light: boolean) => void;
 };
@@ -40,31 +41,19 @@ export function ScrollEdgeProvider({ children }: { children: ReactNode }) {
   const strength = useSharedValue(1);
   const [inkLight, setInkLight] = useState(true);
 
-  // Сила одна на приложение, а экран при потере фокуса НЕ размонтируется: вкладка остаётся
-  // живой, экран под верхним — тоже. Поэтому её держит ВЛАДЕЛЕЦ — список сфокусированного
-  // экрана, — и на возврате фокуса он же пересчитывает её из своего последнего замера.
-  // Сбрасывать силу на входе экрана нельзя: нативные `onLayout`/`onContentSizeChange` при
-  // возврате не повторяются, пока размеры те же, а `onScroll` без жеста не приходит вовсе —
-  // докрученный список так и остался бы притенён после возврата с плеера.
-  const owner = useRef<(() => void) | null>(null);
-  const claim = useCallback((push: () => void) => {
-    owner.current = push;
-    push();
-  }, []);
-  // Снятие УСЛОВНОЕ, как у цели блюра: порядок focus-эффектов навигацией не гарантирован, и
-  // безусловное стёрло бы заявку экрана, который уже вошёл.
-  const release = useCallback(
-    (push: () => void) => {
-      if (owner.current !== push) return;
-      owner.current = null;
-      strength.value = 1;
-    },
-    [strength],
-  );
+  // Владение — в `design/scroll-edge.ts`: правило «пишет только текущий владелец» одинаково
+  // отвечает и за вход-выход экрана, и за события фонового (разбор — docs/features/mobile-app.md).
+  const ownerRef = useRef<ReturnType<typeof createEdgeOwner> | null>(null);
+  if (ownerRef.current === null) {
+    ownerRef.current = createEdgeOwner((value) => {
+      strength.value = value;
+    });
+  }
+  const { claim, release, apply } = ownerRef.current;
 
   const api = useMemo<EdgeApi>(
-    () => ({ strength, claim, release, inkLight, setInkLight }),
-    [strength, claim, release, inkLight],
+    () => ({ strength, claim, release, apply, inkLight, setInkLight }),
+    [strength, claim, release, apply, inkLight],
   );
   return <ScrollEdgeContext.Provider value={api}>{children}</ScrollEdgeContext.Provider>;
 }
@@ -75,20 +64,32 @@ export function ScrollEdgeProvider({ children }: { children: ReactNode }) {
  */
 export function useScrollEdge() {
   const api = useContext(ScrollEdgeContext);
-  const strength = api?.strength;
-  const seen = useRef({ scroll: 0, content: 0, layout: 0 });
+  // Функции берутся по отдельности: сам объект пересоздаётся на смене полярности мебели, и
+  // подписка на фокус перезаводилась бы у каждого экрана при любом её переключении.
+  const claim = api?.claim;
+  const release = api?.release;
+  const apply = api?.apply;
+  // Чем экран предъявляет себя владельцем: живёт ровно столько же, сколько сам экран.
+  const token = useRef({}).current;
+  const seen = useRef<{ scroll: number; content: number | null; layout: number }>({
+    scroll: 0,
+    content: null,
+    layout: 0,
+  });
 
   const push = useCallback(() => {
-    if (!strength) return;
     const { scroll, content, layout } = seen.current;
-    strength.value = edgeStrength(scroll, content, layout);
-  }, [strength]);
+    apply?.(token, edgeStrength(scroll, content, layout));
+  }, [apply, token]);
 
+  // На фокусе сила пересчитывается из ПОСЛЕДНЕГО замера этого списка: список никуда не делся,
+  // а нативные события повторятся только при настоящей перекладке.
   useFocusEffect(
     useCallback(() => {
-      api?.claim(push);
-      return () => api?.release(push);
-    }, [api, push]),
+      claim?.(token);
+      push();
+      return () => release?.(token);
+    }, [claim, release, push, token]),
   );
 
   const onScroll = useCallback(

@@ -29,11 +29,36 @@ export function scrimColors(style: ScrollEdgeStyle): readonly [string, string, s
  * есть куда ехать, контент лежит под мебелью и его приглушают; на последних `SCROLL_EDGE_ENGAGE_DP`
  * эффект сходит на нет, потому что под мебелью уже пусто.
  *
- * Пока габаритов нет — полная: мигнуть чистым фоном на первом кадре хуже, чем приглушить лишний раз.
- * Измеренный пустой список — случай обратный: под мебелью пусто, и приглушать там нечего.
+ * Пока габаритов нет — полная: мигнуть чистым фоном на первом кадре хуже, чем приглушить лишний
+ * раз. Поэтому «ещё не мерили» приходит как `null`, а не нулём: порядок нативных `onLayout` и
+ * `onContentSizeChange` не задан, и по нулю эти два случая не различить.
  */
-export function edgeStrength(scroll: number, content: number, layout: number): number {
-  if (layout <= 0) return 1;
+export function edgeStrength(scroll: number, content: number | null, layout: number): number {
+  if (layout <= 0 || content === null) return 1;
   if (content <= 0) return 0;
   return scrollEdgeStrength('bottom', scroll, Math.max(content - layout, 0));
+}
+
+/**
+ * Силу края держит ОДИН владелец — список сфокусированного экрана. Проверка нужна на каждой
+ * записи, а не только на входе и выходе: экран при потере фокуса не размонтируется и свои
+ * нативные события получать не перестаёт (догрузка данных монтирует список уже ушедшего
+ * экрана), а сила на всё приложение одна.
+ */
+export function createEdgeOwner(write: (value: number) => void) {
+  let owner: object | null = null;
+  return {
+    claim(token: object): void {
+      owner = token;
+    },
+    release(token: object): void {
+      if (owner !== token) return;
+      owner = null;
+      write(1);
+    },
+    apply(token: object, value: number): void {
+      if (owner !== token) return;
+      write(value);
+    },
+  };
 }
