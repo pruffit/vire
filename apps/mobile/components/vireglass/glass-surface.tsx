@@ -41,7 +41,8 @@ import type { DeformSample } from '../../lib/vireglass/touch-response';
 import type { VireGlassDebugMode, VireGlassOptics } from '../../lib/vireglass/material';
 import { LENS_SHADER } from '../../lib/vireglass/lens-shader';
 import { SURFACE_SHADER } from '../../lib/vireglass/surface-shader';
-import { useBackdropEnabled } from '../../lib/design/preferences';
+import { applyAccessibility } from '../../lib/vireglass/accessibility';
+import { useAccessibilityModifiers, useBackdropEnabled } from '../../lib/design/preferences';
 import { useGlassSurfaceRegistration } from '../../lib/design/surface-registry';
 
 function compile(src: string) {
@@ -148,7 +149,12 @@ export function VireGlassSurface({
     geometryRef.current = geometryKey;
     padRef.current = 0;
   }
-  padRef.current = Math.max(padRef.current, lensPadDp(geometry, optics, morph, dragLimit));
+  // Системные настройки меняют СЛОИ материала, а не отменяют его (эталон §9). Применяются
+  // здесь: через эту поверхность проходит всё стекло приложения, и одного места достаточно.
+  const a11y = useAccessibilityModifiers();
+  const tuned = useMemo(() => applyAccessibility(optics, a11y), [optics, a11y]);
+
+  padRef.current = Math.max(padRef.current, lensPadDp(geometry, tuned, morph, dragLimit));
   const lensPad = padRef.current;
 
   // Цель блюра — ref, и на первом рендере она ещё пуста: сама по себе перерисовку она не
@@ -167,8 +173,8 @@ export function VireGlassSurface({
   // адаптации не существует. Поверхности в этом случае остаётся блик, тень и иконка.
   const bodyInLens = isGlassLensSupported && GlassLensNative !== null && hasTarget;
   const statics = useMemo(
-    () => toSurfaceUniforms(optics, geometry, { debug, morph, dragLimit, shadow, bodyInLens }),
-    [optics, geometry, debug, morph, dragLimit, shadow, bodyInLens],
+    () => toSurfaceUniforms(tuned, geometry, { debug, morph, dragLimit, shadow, bodyInLens }),
+    [tuned, geometry, debug, morph, dragLimit, shadow, bodyInLens],
   );
   // Исходник шейдера — часть результата, поэтому он в зависимостях. Формально это
   // константа модуля, но при горячей перезагрузке она меняется, а мемо с прежними
@@ -178,8 +184,8 @@ export function VireGlassSurface({
     // и была изобретением андроидного пути: в вебе `groupProbe` нет вовсе, там каждая
     // деталь адаптируется по своему зонду. Из-за перебивки навигация и «Поток»
     // адаптировались к окружению по-разному при одном материале.
-    () => toLensProps(optics, geometry, PixelRatio.get(), { debug, morph }),
-    [optics, geometry, debug, morph, LENS_SHADER],
+    () => toLensProps(tuned, geometry, PixelRatio.get(), { debug, morph }),
+    [tuned, geometry, debug, morph, LENS_SHADER],
   );
   const iconUniforms = useMemo(
     () => ({
@@ -281,7 +287,7 @@ export function VireGlassSurface({
   }, [statics, iconUniforms, progress, touch, touchRadius]);
 
   const refracting = isGlassLensSupported && GlassLensNative !== null;
-  const magnify = lensMagnify(optics);
+  const magnify = lensMagnify(tuned);
 
   // Единственная точка, где решается, живёт ли бэкдроп. Через неё проходит ВСЁ стекло
   // приложения, поэтому и тумблер настроек, и подавление под открытым листом стоят здесь,
@@ -346,7 +352,7 @@ export function VireGlassSurface({
               >
                 {/* Фолбэк шейдера не имеет — размывать, кроме BlurView, тут нечем. */}
                 <BlurView
-                  intensity={optics.blur}
+                  intensity={tuned.blur}
                   tint="dark"
                   blurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
                   blurTarget={blurTarget}
