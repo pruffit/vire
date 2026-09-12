@@ -8,7 +8,7 @@ import { radii } from '../../lib/design/scales';
 import { useMock } from '../../lib/design/mock';
 import { formatDuration } from '../../lib/format';
 import { VireGlassSurface } from '../vireglass/glass-surface';
-import { capsuleGeometry } from '../../lib/vireglass/geometry';
+import { circleGeometry } from '../../lib/vireglass/geometry';
 import { materialForInk, resolveOptics, VIREGLASS_CONTROL_MATERIAL } from '../../lib/vireglass/material';
 import { createDeform, raiseIntoGlass, type DeformSample } from '../../lib/vireglass/touch-response';
 import { useEnvironmentLight } from '../../lib/vireglass/environment';
@@ -108,7 +108,7 @@ export function ProgressLine({
   }));
   const solidStyle = useAnimatedStyle(() => ({ opacity: solid.value }));
 
-  const knobGeometry = useMemo(() => capsuleGeometry(ms(MOCK_GLASS_KNOB), ms(MOCK_GLASS_KNOB)), [ms]);
+  const knobGeometry = useMemo(() => circleGeometry(ms(MOCK_GLASS_KNOB)), [ms]);
   // Краски на ручке нет, поэтому и требования читаемости у неё нет — стекло остаётся стеклом.
   const knobOptics = useMemo(
     () => resolveOptics(materialForInk(VIREGLASS_CONTROL_MATERIAL, false)),
