@@ -108,7 +108,11 @@ export function ProgressLine({
   }));
   const solidStyle = useAnimatedStyle(() => ({ opacity: solid.value }));
 
-  const knobGeometry = useMemo(() => circleGeometry(ms(MOCK_GLASS_KNOB)), [ms]);
+  const knobSize = ms(MOCK_GLASS_KNOB);
+  // `ms` — новая функция на каждый рендер (`lib/design/mock.ts`), а ProgressLine
+  // перерисовывается на каждый семпл перетаскивания. Держим в зависимостях ЧИСЛО: иначе
+  // геометрия пересобиралась бы каждый кадр жеста и тянула за собой униформы поверхности.
+  const knobGeometry = useMemo(() => circleGeometry(knobSize), [knobSize]);
   // Краски на ручке нет, поэтому и требования читаемости у неё нет — стекло остаётся стеклом.
   const knobOptics = useMemo(
     () => resolveOptics(materialForInk(VIREGLASS_CONTROL_MATERIAL, false)),
