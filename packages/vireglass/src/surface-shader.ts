@@ -53,18 +53,20 @@ const float VG_FALLOFF = ${VG_FALLOFF};
 // Плотность тинта в плоской середине; у фаски она множится на u_edgeDensity.
 const float VG_BODY_DENSITY = 0.19;
 /* Доля оттенка окружения в тени. Тень обязана остаться тенью, а не цветным пятном. */
-const float VG_SHADOW_TINT = 0.5;
+const float VG_SHADOW_TINT = 1.0;
 /* Глубина краски под поверхностью, dp. На столько её уводит нормаль у самой кромки. */
 const float VG_INK_DEPTH = 4.0;
 
 half4 vgPack(half3 c, float a) { return half4(c * half(a), half(a)); }
 
 // В тень затекает ЦВЕТ окружения, а не его яркость: из оттенка вычитается его собственная
-// светлота, иначе тень просто бледнеет и теряет глубину вместо того, чтобы потеплеть.
+// светлота, иначе тень бледнеет и теряет глубину вместо того, чтобы потеплеть. Силу задаёт то,
+// сколько света вокруг: на почти чёрном фоне затекать в тень нечему.
 float3 vgShadowTint(float3 ambient) {
   float peak = max(max(ambient.r, ambient.g), max(ambient.b, 0.001));
   float3 hue = ambient / peak;
-  return hue - dot(hue, float3(0.2126, 0.7152, 0.0722));
+  float lumaWeights = dot(ambient, float3(0.2126, 0.7152, 0.0722));
+  return (hue - dot(hue, float3(0.2126, 0.7152, 0.0722))) * lumaWeights;
 }
 
 half3 vgHeat(float v) {
