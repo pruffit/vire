@@ -198,8 +198,10 @@ describe('геометрия', () => {
     expect(optics.gatherRadiusDp).toBeGreaterThan(optics.bevelDp);
   });
 
+  // Ход берётся крупнее шага квантования запаса (8 dp): ход мельче шага законно попадает
+  // в ту же корзину, и строгий рост на нём проверять нечестно.
   it('запас канваса растёт вместе с ходом перетаскивания', () => {
-    expect(surfacePadDp(circle, 7)).toBeGreaterThan(surfacePadDp(circle, 0));
+    expect(surfacePadDp(circle, 16)).toBeGreaterThan(surfacePadDp(circle, 0));
   });
 });
 
