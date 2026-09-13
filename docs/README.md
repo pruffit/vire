@@ -88,6 +88,7 @@
 - [vireglass/ADR-001-rendering-architecture.md](vireglass/ADR-001-rendering-architecture.md) — решение по рендерингу и доказательства.
 - [vireglass/material-lab.md](vireglass/material-lab.md) — журнал экспериментов над оптикой: гипотеза → наблюдение → решение.
 - [vireglass/acceptance.md](vireglass/acceptance.md) — критерии приёмки.
+- [vireglass/reference-check-2026-09.md](vireglass/reference-check-2026-09.md) — сверка ядра с первоисточниками за год (iOS 26.1…27, iPhone Duo): что Apple изменила и где ядро отстало.
 - [vireglass/platform-parity.md](vireglass/platform-parity.md) — гейт сверки платформ: восемь полотен, алгоритм замера, допуск, порядок разбора расхождения.
 - [vireglass/benchmarks/README.md](vireglass/benchmarks/README.md) — протокол и результаты замеров. Действительны последние ([31.08, после починки захвата](vireglass/benchmarks/2026-08-31-device-after-capture-fix.md)) — до неё линза семплировала пустоту, и прежние цифры недействительны.
 - [vireglass/spec-2026-08-28.md](vireglass/spec-2026-08-28.md) — *срез*: исходная спецификация до замеров.

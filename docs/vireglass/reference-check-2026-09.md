@@ -1,0 +1,78 @@
+# Сверка ядра с первоисточниками, сентябрь 2026
+
+Пересмотр всех доступных источников по Liquid Glass — официальных Apple за последний год
+(iOS 26.1 → 26.2 → 26.4 → 27, iPhone Duo) и сторонних разборов — и сверка каждого утверждения
+с тем, что стоит в ядре.
+
+Вывод коротко: **оптика ядра эталону не противоречит**, но за год Apple переработала материал, и
+пять пунктов ядра отстали от источников. Ни один из них не ломает то, что уже сведено; каждый
+заведён отдельной задачей.
+
+## Источники, добавленные к `reference.md`
+
+| Код | Что | Где |
+|---|---|---|
+| P | WWDC26 Platforms State of the Union — переработка материала в iOS 27 | developer.apple.com/videos/play/wwdc2026/102 |
+| O | apple.com/os/ios — «more uniform refraction», слайдер | apple.com/os/ios |
+| R | Release notes iOS 26.1 / 26.2 / 26.4 | support.apple.com/en-us/123075 |
+| U | Apple Newsroom + HIG «Designing for iPhone Duo» | apple.com/newsroom/2026/09, HIG |
+| I | WWDC26 8012, Icon Composer Group Lab | developer.apple.com/videos/play/wwdc2026/8012 |
+
+## Что Apple изменила за год
+
+**iOS 26.1** (R, дословно): «Liquid Glass setting gives you the option to choose between the
+default clear look or a **new tinted look which increases opacity of the material**». То есть
+появился пользовательский выбор — бинарный.
+
+**iOS 27** (P, дословно): «updates to the **foundations of how Liquid Glass is built** […] we
+tuned Liquid Glass so it **more effectively diffuses complex content behind it**. And to
+establish more depth and separation, we also introduced **a darkened edge along with brighter
+specular highlights**. We also made it more personalizable with **a new slider in settings to
+adjust Liquid Glass anywhere from ultra clear to fully tinted** […] Apps already using Liquid
+Glass get these improvements **automatically** […] without even needing to recompile».
+И (O): «**more uniform refraction** and **improved contrast**».
+
+**iPhone Duo** (U): изменена РАСКЛАДКА — панели уходят вбок, статус-бар садится в угол,
+Dynamic Island встаёт вертикально, появились «зарезервированные области» (камеры и полоса
+сгиба). **Самого материала правки не касаются** — ни в ньюсруме, ни в HIG, ни в Tech Talk
+изменений оптики под Duo не заявлено.
+
+Чего у Apple НЕТ, вопреки пересказам в прессе: формулировок «rebuilt Liquid Glass», «настоящее
+размытие вместо мягкого оттенка», «frosted glass animation». Первые две — пересказ фразы про
+diffuses, третья — описание журналистами анимации раскрытия.
+
+## Расхождения ядра с источниками
+
+| # | Что | Источник | Что в ядре | Вердикт |
+|---|---|---|---|---|
+| 1 | Тень плотнее над текстом, слабее над ровным светлым; в неё стекает цвет соседнего контента | M 11:47, 219 | `shade = amb² · 0.13 · зазор · u_shadow` — от содержимого под деталью НЕ зависит вовсе | **расхождение**, и не с iOS 27, а с нашим же `reference.md` §4 |
+| 2 | Тёмная кромка — самостоятельный слой по всему силуэту, плюс ярче блики | P | Тёмная обводка есть, но живёт только там, где НЕТ блика: `rgb *= 1 − 0.22·outline·(1−lit)` | **расхождение**, новое в iOS 27 |
+| 3 | Затемняющий слой под Clear — 35% (HIG) или 0.3 (пример кода SwiftUI) | HIG Materials | `VIREGLASS_CLEAR_MATERIAL.dimming = 0.22` | **ниже обоих чисел Apple**; либо поднять, либо обосновать кадрами |
+| 4 | Пользовательская шкала прозрачности: бинарная в 26.1, непрерывная в 27 | R, P, O | В `accessibility.ts` только три системных тумблера. Пользовательской шкалы нет | **пропущенная ось.** «Проектируется не вид, а ДИАПАЗОН» |
+| 5 | Вложенная форма далеко от края: честный ноль даёт прямой угол, поэтому есть `concentric(minimum:)` | SwiftUI | `concentricRadius = max(outer − inset, 0)` — минимума нет | **расхождение**, мелкое |
+
+## Что сверено и сошлось
+
+- **Линза как главный механизм**, появление модуляцией линзы, а не прозрачностью (219 «Lensing»,
+  «materialize in and out by gradually modulating the light bending») — в ядре так.
+- **Толщина растёт с размером детали** (219: «simulate a thicker, more substantial material»;
+  глубже тень, сильнее линза) — `sizeGain` по корню из полуразмера, и от него идут фаска,
+  толщина и вынос тени.
+- **Тинт как цветное стекло, а не заливка**: тон ведёт светлота фона (219, HIG Color) — в ядре
+  `tintLuma` по светлоте места, `VG_MEDIUM_PULL` стягивает содержимое к середине.
+- **Два варианта, не смешиваются; Clear не адаптируется** — `materialForInk` выходит рано при
+  `dimming > 0`.
+- **Настройки доступности — модификаторы слоёв, а не отмена материала** (219 @18:15) —
+  `applyAccessibility`.
+- **Мелкие детали переворачивают краску светлая/тёмная** — модель полярности с гистерезисом.
+- **Кромочный свет — две дуги, цвет от окружения, движется** — `rimKey`, `refl`, `u_light`.
+- **Дисперсия у кромки, а не по площади** — `chroma` растёт с наклоном грани.
+
+## Замечание про дисперсию
+
+Apple нигде не называет дисперсию и интерференцию среди свойств материала: официальный список —
+«specular highlights, refraction, translucency, blur, shadows» (HIG App icons, сессия 8012).
+У нас есть `u_iorSpread`, `u_iridescence`, `u_diffraction`, `VG_LAMBDA`, `VG_FILM_IOR`.
+Основание — радужная кайма на кадрах эталона (`reference.md` §2), то есть НАШ вывод из видео, а
+не документированное свойство. Оставляем, но помним: это единственное место, где ядро богаче
+документированного Apple, и при расхождении спорить будет нечем.
