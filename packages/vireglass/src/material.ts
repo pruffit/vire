@@ -529,6 +529,7 @@ export const DEBUG_MODES = [
   'normals',
   'spectral',
   'adapt',
+  'зонд',
 ] as const;
 
 export type VireGlassDebugMode = (typeof DEBUG_MODES)[number];

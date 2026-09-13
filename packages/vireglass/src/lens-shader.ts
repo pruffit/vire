@@ -499,7 +499,11 @@ half4 main(float2 xy) {
   rgb *= 1.0 - 0.22 * outline * (1.0 - lit);
 
   if (u_debug > 9.5 && u_debug < 10.5) { rgb = spectral * 0.5; }
-  if (u_debug > 10.5) { rgb = float3(density, needForInk, structure); }
+  if (u_debug > 10.5 && u_debug < 11.5) { rgb = float3(density, needForInk, structure); }
+  // ЧТО ЗОНД СКАЗАЛ ПРО ФОН — три величины, от которых зависит всё тонирование: средняя
+  // светлота под деталью, наклон светлоты по вертикали и светлота В ЭТОМ месте. Наклон ложится
+  // со сдвигом и вдвое ужатым: он знакопеременный и по модулю редко больше половины.
+  if (u_debug > 11.5) { rgb = float3(max(u_probeLuma, 0.0), 0.5 + u_probeSlope.y * 0.5, local); }
 
   rgb = vgSoftClip(rgb);
 
