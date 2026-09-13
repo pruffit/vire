@@ -88,6 +88,13 @@ export type VireGlassRefScene = {
   readonly bands: (level: number) => readonly VireGlassRefBand[];
   /** Светлота по умолчанию. Полотна, которым она не нужна, просто её игнорируют. */
   readonly level: number;
+  /**
+   * Годится ли полотно для ЧИСЛЕННОЙ сверки платформ. Профиль светлоты требует фона, одинаково
+   * устроенного вдоль строки; на периодической решётке из линий в пиксель среднее определяется
+   * тем, как платформа эту линию растрирует, а не материалом. Такое полотно остаётся в наборе —
+   * искажение прямой линии видно глазом сразу, — но в таблицу сверки не идёт.
+   */
+  readonly measurable?: false;
 };
 
 const whole = (layer: VireGlassRefLayer): readonly VireGlassRefBand[] => [
@@ -150,8 +157,9 @@ export const REFERENCE_SCENES: readonly VireGlassRefScene[] = [
   },
   {
     name: 'сетка',
-    what: 'искажения линзы: увод, разрыв и дрожание прямой линии видно сразу',
+    what: 'искажения линзы: увод, разрыв и дрожание прямой линии видно сразу (глазом, не числом)',
     level: 0.91,
+    measurable: false,
     bands: (level) => whole({ kind: 'сетка', level, lineLevel: level > 0.5 ? level - 0.14 : level + 0.14, stepDp: 12 }),
   },
 ];

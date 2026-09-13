@@ -81,9 +81,10 @@ function drawLayer(
     case 'сетка': {
       ctx.fillStyle = refGray(layer.level);
       ctx.fillRect(x, y, w, h);
-      // Линия ровно в пиксель устройства: иначе на ретине она размазывается в две серые и
-      // перестаёт быть тонкой, а по размазанной линии об искажениях не судить.
-      const thin = Math.max(1, Math.round(d * 0.5));
+      // Линия ровно в ОДИН пиксель устройства — столько же, сколько кладёт вьюха
+      // (`StyleSheet.hairlineWidth`). Половина плотности давала на этом экране два пикселя
+      // против одного, и полотна двух стендов расходились на самой тонкой детали сцены.
+      const thin = 1;
       const step = layer.stepDp * d;
       ctx.fillStyle = refGray(layer.lineLevel);
       for (let at = 0; at <= w; at += step) ctx.fillRect(x + Math.round(at), y, thin, h);
