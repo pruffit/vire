@@ -6,6 +6,8 @@
  *   --web         рендер веб-стендом (headless, тот же рендерер, что и в гейтах);
  *   --shot=<png>  снимок мобильной лаборатории (adb exec-out screencap -p > lab.png).
  *
+ * Внешних инструментов не требует: PNG снимка разбирается здесь же.
+ *
  * Полотно сверочной сцены — горизонтальные полосы во всю ширину, поэтому фон ПОД телом
  * ИЗВЕСТЕН, а не экстраполирован: это та же строка левее детали. Правило замеров, на котором
  * сгорели три разбора подряд, здесь выполняется по построению.
@@ -20,7 +22,7 @@
  */
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
-import { execFileSync } from 'node:child_process';
+import { inflateSync } from 'node:zlib';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
@@ -30,9 +32,6 @@ import { REFERENCE_SCENE_HEIGHT, REFERENCE_SHAPES, REFERENCE_SURROUND } from '..
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CORE = resolve(HERE, '../src/index.ts').replace(/\\/g, '/');
 const WEB = resolve(HERE, '../src/web/index.ts').replace(/\\/g, '/');
-const FFMPEG = process.env.VG_FFMPEG
-  ?? 'C:/Users/KOTLAEV/vire/node_modules/.pnpm/ffmpeg-static@5.3.0/node_modules/ffmpeg-static/ffmpeg.exe';
-
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
   const hit = args.find((a) => a.startsWith('--' + name + '='));
@@ -217,22 +216,73 @@ async function fromWeb() {
   );
 }
 
-/** Размер PNG — из IHDR: тащить сюда декодер ради двух чисел не нужно. */
-function pngSize(file) {
-  const head = Buffer.alloc(24);
-  const fd = fs.openSync(file, 'r');
-  fs.readSync(fd, head, 0, 24, 0);
-  fs.closeSync(fd);
-  if (head.toString('ascii', 1, 4) !== 'PNG') throw new Error('снимок обязан быть PNG');
-  return { width: head.readUInt32BE(16), height: head.readUInt32BE(20) };
+/**
+ * Снимок → RGBA. Декодер здесь свой: `adb exec-out screencap -p` отдаёт ровно один вид PNG
+ * (8 бит на канал, без чересстрочности), и ради него тянуть в пакет ffmpeg или библиотеку не
+ * стоит — тем более что путь к внешнему ffmpeg у каждого свой и скрипт перестаёт запускаться.
+ */
+function readPng(file) {
+  const buf = fs.readFileSync(file);
+  if (buf.toString('ascii', 1, 4) !== 'PNG') throw new Error('снимок обязан быть PNG');
+  const width = buf.readUInt32BE(16);
+  const height = buf.readUInt32BE(20);
+  const depth = buf[24];
+  const colorType = buf[25];
+  const interlace = buf[28];
+  if (depth !== 8 || interlace !== 0 || (colorType !== 6 && colorType !== 2)) {
+    throw new Error('поддерживается только PNG 8 бит RGB/RGBA без чересстрочности');
+  }
+  const channels = colorType === 6 ? 4 : 3;
+
+  const parts = [];
+  for (let at = 8; at + 8 <= buf.length; ) {
+    const length = buf.readUInt32BE(at);
+    const type = buf.toString('ascii', at + 4, at + 8);
+    if (type === 'IDAT') parts.push(buf.subarray(at + 8, at + 8 + length));
+    at += length + 12;
+    if (type === 'IEND') break;
+  }
+  const raw = inflateSync(Buffer.concat(parts));
+
+  // Развёртка фильтров PNG: каждая строка начинается байтом своего фильтра и ссылается на
+  // левый пиксель и строку выше — распаковывать приходится подряд, строка за строкой.
+  const stride = width * channels;
+  const out = new Uint8Array(width * height * 4);
+  const line = Buffer.alloc(stride);
+  const prev = Buffer.alloc(stride);
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[y * (stride + 1)];
+    raw.copy(line, 0, y * (stride + 1) + 1, y * (stride + 1) + 1 + stride);
+    for (let i = 0; i < stride; i += 1) {
+      const a = i >= channels ? line[i - channels] : 0;
+      const b = prev[i];
+      const c = i >= channels ? prev[i - channels] : 0;
+      let add = 0;
+      if (filter === 1) add = a;
+      else if (filter === 2) add = b;
+      else if (filter === 3) add = (a + b) >> 1;
+      else if (filter === 4) {
+        const pa = Math.abs(b - c);
+        const pb = Math.abs(a - c);
+        const pc = Math.abs(a + b - 2 * c);
+        add = pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+      }
+      line[i] = (line[i] + add) & 0xff;
+    }
+    for (let x = 0; x < width; x += 1) {
+      const o = (y * width + x) * 4;
+      out[o] = line[x * channels];
+      out[o + 1] = line[x * channels + 1];
+      out[o + 2] = line[x * channels + 2];
+      out[o + 3] = channels === 4 ? line[x * channels + 3] : 255;
+    }
+    line.copy(prev);
+  }
+  return { width, height, px: out };
 }
 
 async function fromShot(src) {
-  const { width, height } = pngSize(src);
-  const tmp = src + '.rgba';
-  execFileSync(FFMPEG, ['-y', '-loglevel', 'error', '-i', src, '-pix_fmt', 'rgba', '-f', 'rawvideo', tmp]);
-  const px = new Uint8Array(fs.readFileSync(tmp));
-  fs.unlinkSync(tmp);
+  const { width, height, px } = readPng(src);
 
   const hex = REFERENCE_SURROUND.slice(1);
   const surround = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
