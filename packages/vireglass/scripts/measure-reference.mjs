@@ -191,7 +191,7 @@ function locateStrip(px, width, height, surround) {
  * материал как есть, и на «ступенях» выходило +11 против −70. Сравнивать надо то, на что
  * смотрит глаз, поэтому обе платформы идут через ОДИН путь — снимок и разбор снимка.
  */
-async function shootStand({ density, debug, shape, preset, name, stageW, stageH, base }) {
+async function shootStand({ density, debug, shape, preset, name, stageW, stageH, base, ink }) {
   const url = new URL(base || 'http://127.0.0.1:0/rnd/');
   const server = base ? null : await listen(serveStand());
   if (server) url.port = String(server.port);
@@ -200,6 +200,10 @@ async function shootStand({ density, debug, shape, preset, name, stageW, stageH,
   url.searchParams.set('ui', '0');
   if (debug !== 'normal') url.searchParams.set('debug', String(DEBUG_INDEX[debug] ?? 0));
   if (preset) url.searchParams.set('preset', String(PRESET_INDEX(preset)));
+  // Полярность надписи закрепляется ЯВНО. У решения гистерезис (переворот 0.62, возврат 0.5),
+  // и полотно «градиент» ложится ровно в этот зазор: исход тогда зависит от того, из какого
+  // состояния стенд вошёл в зону, а не от материала. Автоматику проверяет не эта таблица.
+  if (ink !== '') url.searchParams.set('ink', ink);
 
   const browser = await chromium.launch();
   const page = await browser.newPage({
@@ -252,6 +256,7 @@ async function compareFrames(shotFile) {
     stageW: stage[0] || 411,
     stageH: stage[1] || 914,
     base: arg('stand', ''),
+    ink: arg('ink', ''),
   });
   const webAt = locatePiece(web, shape);
 
@@ -392,12 +397,13 @@ async function fromWeb() {
   const stageW = Number.isFinite(stage[0]) && stage[0] > 0 ? stage[0] : 411;
   const stageH = Number.isFinite(stage[1]) && stage[1] > 0 ? stage[1] : 914;
   const base = arg('stand', '');
-  const frame = await shootStand({ density, debug, shape, preset, name, stageW, stageH, base });
+  const ink = arg('ink', '');
+  const frame = await shootStand({ density, debug, shape, preset, name, stageW, stageH, base, ink });
   const strip = locateStrip(frame.px, frame.width, frame.height, surroundRgb());
   const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;
   report(
     'стенд · ' + name + ' · ' + stageW + 'x' + stageH + ' · density ' + density + ' · ' + debug
-      + ' · ' + shape + ' · ' + (preset || 'база'),
+      + ' · ' + shape + ' · ' + (preset || 'база') + (ink === '' ? ' · полярность авто' : ' · ink=' + ink),
     profile({
       px: frame.px,
       width: frame.width,
