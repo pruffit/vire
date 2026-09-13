@@ -96,8 +96,18 @@ function intParam(name: string, fallback: number, min: number, max: number): num
   return Number.isFinite(v) ? Math.min(Math.max(v, min), max) : fallback;
 }
 
+/** Зона в адресе — номером ИЛИ именем: у двух стендов номера разные, а имя полотна одно, и
+ *  ссылка на сверку не должна знать, сколько своих зон у каждого. */
+function zoneParam(): number {
+  const raw = params.get('zone');
+  if (raw === null) return 0;
+  const byName = ZONE_NAMES.indexOf(raw);
+  if (byName >= 0) return byName;
+  return intParam('zone', 0, 0, ZONES.length - 1);
+}
+
 const state = {
-  zone: intParam('zone', 0, 0, ZONES.length - 1),
+  zone: zoneParam(),
   preset: intParam('preset', -1, -1, PRESET_NAMES.length - 1),
   debug: intParam('debug', 0, 0, DEBUG_MODES.length - 1),
   view: params.get('view') === 'screens'
