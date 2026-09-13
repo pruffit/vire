@@ -26,7 +26,7 @@
  */
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
-import { inflateSync } from 'node:zlib';
+import { deflateSync, inflateSync } from 'node:zlib';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
@@ -77,6 +77,12 @@ function profile({ px, width, height, pxPerDp, cx, cy, radiusDp }) {
   // Одним пикселем нельзя: на полотнах с вертикальной структурой (полосы, сетка) он попадает то
   // на линию, то между ними, и отход скачет на десятки единиц от одного положения окна.
   const mean = (xs) => xs.reduce((s, v) => s + v, 0) / xs.length;
+  /** Размах по краям распределения, а не min/max: одна точка не должна решать за всё окно. */
+  const spread = (xs) => {
+    const v = [...xs].sort((a, b) => a - b);
+    const at = (q) => v[Math.min(v.length - 1, Math.floor(v.length * q))];
+    return at(0.95) - at(0.05);
+  };
   // Окно в НЕСКОЛЬКО строк, а не в одну: на полотнах с горизонтальной структурой (сетка) одна
   // строка то попадает на линию, то проходит мимо, и отход скачет на десятки единиц от сдвига
   // на пиксель. Пять строк — меньше трети шага самого частого узора, полосы оно не смешивает.
@@ -101,7 +107,17 @@ function profile({ px, width, height, pxPerDp, cx, cy, radiusDp }) {
     if (!chord.length || !outside.length) continue;
     const body = mean(chord);
     const back = mean(outside);
-    rows.push({ dp: Math.round(dy * radiusDp), body, back, dev: body - back });
+    rows.push({
+      dp: Math.round(dy * radiusDp),
+      body,
+      back,
+      dev: body - back,
+      // РАЗМАХ, а не только уровень. Средняя светлота одинакова и когда под стеклом видна
+      // фактура, и когда она стёрта в ровное молоко: на полотне «сетка» два стенда дали −4.8 и
+      // −4.9, при том что в одном линии проходят насквозь, а в другом их нет вовсе.
+      spread: spread(chord),
+      backSpread: spread(outside),
+    });
   }
   if (!rows.length) throw new Error('деталь не попала в кадр: проверь, что снята сверочная зона');
   return rows;
@@ -109,20 +125,29 @@ function profile({ px, width, height, pxPerDp, cx, cy, radiusDp }) {
 
 function report(title, rows) {
   console.log('--- ' + title + ' ---');
-  console.log('   dp    фон   тело   отход');
+  console.log('   dp    фон   тело   отход   размах сн./вн.');
   for (const r of rows) {
     const sign = r.dev >= 0 ? '+' : '';
     console.log(
       String(r.dp).padStart(5) + ' ' + r.back.toFixed(0).padStart(6) + ' ' + r.body.toFixed(0).padStart(6)
-        + '   ' + sign + r.dev.toFixed(1),
+        + '   ' + (sign + r.dev.toFixed(1)).padStart(7)
+        + '   ' + r.backSpread.toFixed(0).padStart(5) + ' ' + r.spread.toFixed(0).padStart(5),
     );
   }
   const worst = rows.reduce((a, b) => (Math.abs(b.dev) > Math.abs(a.dev) ? b : a), rows[0]);
   const mean = rows.reduce((s, r) => s + r.dev, 0) / rows.length;
+  const outer = rows.reduce((s, r) => s + r.backSpread, 0);
+  const inner = rows.reduce((s, r) => s + r.spread, 0);
   console.log(
     'средний отход ' + (mean >= 0 ? '+' : '') + mean.toFixed(1) + ', наибольший '
       + (worst.dev >= 0 ? '+' : '') + worst.dev.toFixed(1) + ' на ' + worst.dp + ' dp (фон '
       + worst.back.toFixed(0) + ')',
+  );
+  // Доля фактуры, дожившей под стекло. Ноль — деталь стала молочной плашкой, и никакой отход
+  // об этом не скажет: он про уровень, а не про то, видно ли сквозь.
+  console.log(
+    'пропускание фактуры ' + (outer > 1 ? Math.round((inner / outer) * 100) : 0) + '%'
+      + ' (размах снаружи ' + (outer / rows.length).toFixed(0) + ', внутри ' + (inner / rows.length).toFixed(0) + ')',
   );
 }
 
@@ -166,20 +191,8 @@ function locateStrip(px, width, height, surround) {
  * материал как есть, и на «ступенях» выходило +11 против −70. Сравнивать надо то, на что
  * смотрит глаз, поэтому обе платформы идут через ОДИН путь — снимок и разбор снимка.
  */
-async function fromWeb() {
-  const density = Number(arg('density', '2.75'));
-  const debug = arg('debug', 'normal');
-  const shape = arg('shape', 'круг');
-  const preset = arg('preset', '');
-  const name = arg('scene', 'ступени');
-  // --stage=411x914 ставит площадку размером с экран устройства: сетка зонда постоянная на всю
-  // площадку, и на тесной она накрывает деталь гуще, чем там.
-  const stage = arg('stage', '411x914').split('x').map(Number);
-  const stageW = Number.isFinite(stage[0]) && stage[0] > 0 ? stage[0] : 411;
-  const stageH = Number.isFinite(stage[1]) && stage[1] > 0 ? stage[1] : 914;
-  const base = arg('stand', '');
+async function shootStand({ density, debug, shape, preset, name, stageW, stageH, base }) {
   const url = new URL(base || 'http://127.0.0.1:0/rnd/');
-
   const server = base ? null : await listen(serveStand());
   if (server) url.port = String(server.port);
   url.searchParams.set('zone', name);
@@ -196,11 +209,190 @@ async function fromWeb() {
   await page.goto(url.toString());
   // Зонд отчитывается с отставанием, а оценка среды и полярность досчитываются несколько кадров.
   await page.waitForTimeout(3500);
-  const shot = await page.screenshot();
+  const png = await page.screenshot();
   await browser.close();
   server?.close();
+  return decodePng(png);
+}
 
-  const frame = decodePng(shot);
+/** Где на кадре стоит деталь: полотно ищется по полю окружения, отсчёт — от его угла. */
+function locatePiece(frame, shape) {
+  const strip = locateStrip(frame.px, frame.width, frame.height, surroundRgb());
+  const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;
+  return {
+    pxPerDp,
+    cx: Math.round(frame.width / 2 + (REFERENCE_PIECE_AT.xDp - REFERENCE_SCENE_WIDTH / 2) * pxPerDp),
+    cy: Math.round(strip.top + REFERENCE_PIECE_AT.yDp * pxPerDp),
+    radiusDp: Math.min(REFERENCE_SHAPES[shape].width, REFERENCE_SHAPES[shape].height) / 2,
+  };
+}
+
+/**
+ * СЛИЧЕНИЕ КАДРОВ. Два стенда живут в окнах разного размера, и глаз сравнивает не материал, а
+ * масштаб показа: на уменьшенном окне тонкая линия под стеклом пропадает вовсе, хотя в пикселях
+ * она на месте. Команда вырезает деталь с обоих кадров ОДНИМ окном в dp и кладёт рядом в одном
+ * размере — только по такому кадру спор «вижу разницу» имеет смысл.
+ */
+async function compareFrames(shotFile) {
+  const shape = arg('shape', 'круг');
+  const name = arg('scene', 'сетка');
+  const boxDp = Number(arg('box', '170'));
+  const out = arg('out', shotFile.replace(/[.]png$/i, '') + '-сличение.png');
+
+  const phone = readPng(shotFile);
+  const phoneAt = locatePiece(phone, shape);
+  const density = Number(arg('density', String(Math.round(phoneAt.pxPerDp * 1000) / 1000)));
+  const stage = arg('stage', '411x914').split('x').map(Number);
+  const web = await shootStand({
+    density,
+    debug: arg('debug', 'normal'),
+    shape,
+    preset: arg('preset', ''),
+    name,
+    stageW: stage[0] || 411,
+    stageH: stage[1] || 914,
+    base: arg('stand', ''),
+  });
+  const webAt = locatePiece(web, shape);
+
+  const size = Math.round(boxDp * phoneAt.pxPerDp);
+  const left = crop(phone, phoneAt.cx, phoneAt.cy, size);
+  const right = scaleTo(crop(web, webAt.cx, webAt.cy, Math.round(boxDp * webAt.pxPerDp)), size);
+  fs.writeFileSync(out, encodePng(sideBySide(left, right)));
+  console.log('сличение: ' + out);
+  console.log('слева устройство (' + phoneAt.pxPerDp.toFixed(2) + ' px/dp), справа стенд ('
+    + webAt.pxPerDp.toFixed(2) + ' px/dp), окно ' + boxDp + ' dp, оба приведены к ' + size + ' px');
+}
+
+function crop(frame, cx, cy, size) {
+  const half = size >> 1;
+  const px = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const sx = Math.min(Math.max(cx - half + x, 0), frame.width - 1);
+      const sy = Math.min(Math.max(cy - half + y, 0), frame.height - 1);
+      const s = (sy * frame.width + sx) * 4;
+      const d = (y * size + x) * 4;
+      px[d] = frame.px[s];
+      px[d + 1] = frame.px[s + 1];
+      px[d + 2] = frame.px[s + 2];
+      px[d + 3] = 255;
+    }
+  }
+  return { width: size, height: size, px };
+}
+
+/** Приведение к другому масштабу — УСРЕДНЕНИЕМ, а не выбором точки: точка теряет тонкую линию
+ *  ровно так же, как теряет её уменьшенное окно, и сравнение снова врёт. */
+function scaleTo(frame, size) {
+  const px = new Uint8Array(size * size * 4);
+  const k = frame.width / size;
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const x0 = Math.floor(x * k);
+      const y0 = Math.floor(y * k);
+      const x1 = Math.max(x0 + 1, Math.floor((x + 1) * k));
+      const y1 = Math.max(y0 + 1, Math.floor((y + 1) * k));
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let n = 0;
+      for (let sy = y0; sy < Math.min(y1, frame.height); sy += 1) {
+        for (let sx = x0; sx < Math.min(x1, frame.width); sx += 1) {
+          const s = (sy * frame.width + sx) * 4;
+          r += frame.px[s];
+          g += frame.px[s + 1];
+          b += frame.px[s + 2];
+          n += 1;
+        }
+      }
+      const d = (y * size + x) * 4;
+      px[d] = Math.round(r / n);
+      px[d + 1] = Math.round(g / n);
+      px[d + 2] = Math.round(b / n);
+      px[d + 3] = 255;
+    }
+  }
+  return { width: size, height: size, px };
+}
+
+function sideBySide(a, b) {
+  const gap = 8;
+  const width = a.width + gap + b.width;
+  const height = Math.max(a.height, b.height);
+  const px = new Uint8Array(width * height * 4).fill(0);
+  const put = (src, ox) => {
+    for (let y = 0; y < src.height; y += 1) {
+      for (let x = 0; x < src.width; x += 1) {
+        const s = (y * src.width + x) * 4;
+        const d = (y * width + ox + x) * 4;
+        px[d] = src.px[s];
+        px[d + 1] = src.px[s + 1];
+        px[d + 2] = src.px[s + 2];
+        px[d + 3] = 255;
+      }
+    }
+  };
+  put(a, 0);
+  put(b, a.width + gap);
+  return { width, height, px };
+}
+
+/** PNG из RGBA. Кодировщик свой по той же причине, что и декодер: одна зависимость ради
+ *  тридцати строк не окупается, а вид PNG здесь ровно один. */
+function encodePng(frame) {
+  const raw = Buffer.alloc(frame.height * (frame.width * 4 + 1));
+  for (let y = 0; y < frame.height; y += 1) {
+    raw[y * (frame.width * 4 + 1)] = 0;
+    Buffer.from(frame.px.buffer, y * frame.width * 4, frame.width * 4)
+      .copy(raw, y * (frame.width * 4 + 1) + 1);
+  }
+  const chunk = (type, body) => {
+    const out = Buffer.alloc(body.length + 12);
+    out.writeUInt32BE(body.length, 0);
+    out.write(type, 4, 4, "ascii");
+    body.copy(out, 8);
+    out.writeUInt32BE(crc32(out.subarray(4, 8 + body.length)) >>> 0, 8 + body.length);
+    return out;
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(frame.width, 0);
+  ihdr.writeUInt32BE(frame.height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i += 1) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return c ^ 0xffffffff;
+}
+
+async function fromWeb() {
+  const density = Number(arg('density', '2.75'));
+  const debug = arg('debug', 'normal');
+  const shape = arg('shape', 'круг');
+  const preset = arg('preset', '');
+  const name = arg('scene', 'ступени');
+  // --stage=411x914 ставит площадку размером с экран устройства: сетка зонда постоянная на всю
+  // площадку, и на тесной она накрывает деталь гуще, чем там.
+  const stage = arg('stage', '411x914').split('x').map(Number);
+  const stageW = Number.isFinite(stage[0]) && stage[0] > 0 ? stage[0] : 411;
+  const stageH = Number.isFinite(stage[1]) && stage[1] > 0 ? stage[1] : 914;
+  const base = arg('stand', '');
+  const frame = await shootStand({ density, debug, shape, preset, name, stageW, stageH, base });
   const strip = locateStrip(frame.px, frame.width, frame.height, surroundRgb());
   const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;
   report(
@@ -338,9 +530,11 @@ async function fromShot(src) {
 }
 
 const shot = arg('shot');
-if (shot) await fromShot(shot);
+const compare = arg('compare');
+if (compare) await compareFrames(compare);
+else if (shot) await fromShot(shot);
 else if (args.includes('--web')) await fromWeb();
 else {
-  console.error('нужен --web или --shot=<png>');
+  console.error('нужен --web, --shot=<png> или --compare=<png>');
   process.exit(2);
 }
