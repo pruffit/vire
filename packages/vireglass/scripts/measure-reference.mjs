@@ -17,8 +17,12 @@
  * обоих стендах.
  *
  * Запуск (через tsx — скрипт читает исходники пакета):
- *   pnpm --filter @vire/vireglass measure:reference -- --web [--density=2.75] [--debug=backdrop]
+ *   pnpm --filter @vire/vireglass measure:reference -- --web [--scene=ступени] [--density=3] [--debug=backdrop]
  *   pnpm --filter @vire/vireglass measure:reference -- --shot=lab.png
+ *
+ * Снимок с устройства снимается так (полотно выбирается диплинком, панель убрана):
+ *   adb shell am start -a android.intent.action.VIEW -d "vire://lab?zone=NN&panel=0&auto=0" PKG
+ *   adb exec-out screencap -p > lab.png
  */
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
@@ -27,7 +31,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 
-import { REFERENCE_SCENE_HEIGHT, REFERENCE_SHAPES, REFERENCE_SURROUND } from '../src/reference-scene';
+import {
+  REFERENCE_PIECE_AT,
+  REFERENCE_SCENE_HEIGHT,
+  REFERENCE_SCENE_WIDTH,
+  REFERENCE_SHAPES,
+  REFERENCE_SURROUND,
+} from '../src/reference-scene';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CORE = resolve(HERE, '../src/index.ts').replace(/\\/g, '/');
@@ -99,53 +109,39 @@ function report(title, rows) {
 }
 
 const ENTRY = [
-  "import { createVireGlassRenderer } from '" + WEB + "';",
+  "import { createVireGlassRenderer, drawReferenceScene } from '" + WEB + "';",
   "import {",
-  "  REFERENCE_BANDS,",
+  "  REFERENCE_PIECE_AT,",
   "  REFERENCE_SCENE_HEIGHT,",
+  "  REFERENCE_SCENE_WIDTH,",
   "  REFERENCE_SHAPES,",
-  "  REFERENCE_SURROUND,",
-  "  refGray,",
+  "  referenceScene,",
   "  resolveOptics,",
   "  MATERIAL_PRESETS,",
   "  VIREGLASS_MATERIAL,",
   "} from '" + CORE + "';",
   "",
-  "globalThis.vgReference = async ({ density, debug, shape, preset }) => {",
+  "globalThis.vgReference = async ({ density, debug, shape, preset, name }) => {",
   "  const canvas = document.createElement('canvas');",
-  "  canvas.width = Math.round(360 * density);",
+  "  canvas.width = Math.round((REFERENCE_SCENE_WIDTH + 48) * density);",
   "  canvas.height = Math.round((REFERENCE_SCENE_HEIGHT + 80) * density);",
   "  document.body.append(canvas);",
   "  const renderer = createVireGlassRenderer(canvas);",
   "  renderer.resize(canvas.width, canvas.height);",
   "",
-  "  const scene = (ctx, w, h, ox, oy, d) => {",
-  "    ctx.fillStyle = REFERENCE_SURROUND;",
-  "    ctx.fillRect(0, 0, w, h);",
-  "    let y = Math.round((h - REFERENCE_SCENE_HEIGHT * d) / 2);",
-  "    for (const band of REFERENCE_BANDS) {",
-  "      const bh = Math.round(band.heightDp * d);",
-  "      ctx.fillStyle = refGray(band.level);",
-  "      ctx.fillRect(0, y, band.splitLevel === undefined ? w : w / 2, bh);",
-  "      if (band.splitLevel !== undefined) {",
-  "        ctx.fillStyle = refGray(band.splitLevel);",
-  "        ctx.fillRect(w / 2, y, w - w / 2, bh);",
-  "      }",
-  "      if (band.bar) {",
-  "        const t = Math.round(bh * band.bar.thickness);",
-  "        ctx.fillStyle = refGray(band.bar.level);",
-  "        ctx.fillRect(0, y + Math.round((bh - t) / 2), w, t);",
-  "      }",
-  "      y += bh;",
-  "    }",
-  "  };",
+  "  const picked = referenceScene(name);",
+  "  const scene = (ctx, w, h, ox, oy, d) =>",
+  "    drawReferenceScene(ctx, picked, w, h, { density: d, fit: 'полотно' });",
   "",
   "  const geometry = REFERENCE_SHAPES[shape];",
+  "  // Деталь стоит в точке, заданной полотном, — как на обоих стендах.",
+  "  const left = (canvas.width - REFERENCE_SCENE_WIDTH * density) / 2;",
+  "  const top = (canvas.height - REFERENCE_SCENE_HEIGHT * density) / 2;",
   "  const piece = {",
   "    optics: resolveOptics(preset ? MATERIAL_PRESETS[preset] : VIREGLASS_MATERIAL),",
   "    geometry,",
-  "    centerX: canvas.width / 2,",
-  "    centerY: canvas.height / 2,",
+  "    centerX: left + REFERENCE_PIECE_AT.xDp * density,",
+  "    centerY: top + REFERENCE_PIECE_AT.yDp * density,",
   "  };",
   "  // Между кадрами ОБЯЗАТЕЛЕН выход в цикл событий: чтение зонда идёт через PBO и забор,",
   "  // а забор в непрерывной синхронной петле не срабатывает никогда. Без этого весь замер",
@@ -173,15 +169,22 @@ const ENTRY = [
   "};",
 ].join('\n');
 
-/** Полотно на снимке: полоса между двумя полями окружения по левому краю. Отсюда же масштаб. */
+/**
+ * Полотно на снимке: полоса между двумя полями окружения. Отсюда же масштаб снимка.
+ *
+ * Смотрим СРЕДНИЙ столбец, а не левый край: полотно у́же площадки, и по краю поле окружения
+ * идёт сверху донизу. В середине столбца выше и ниже полотна — окружение, а само полотно —
+ * что угодно, кроме него (в том числе деталь, если она видима).
+ */
 function locateStrip(px, width, height, surround) {
+  const col = width >> 1;
   const isSurround = (y) => {
-    const o = (y * width + 2) * 4;
+    const o = (y * width + col) * 4;
     return Math.abs(px[o] - surround[0]) < 10
       && Math.abs(px[o + 1] - surround[1]) < 10
       && Math.abs(px[o + 2] - surround[2]) < 10;
   };
-  let best = null;
+  const runs = [];
   let y = 0;
   while (y < height) {
     if (!isSurround(y)) { y += 1; continue; }
@@ -189,10 +192,15 @@ function locateStrip(px, width, height, surround) {
     const top = y;
     while (y < height && !isSurround(y)) y += 1;
     if (y >= height) break;
-    if (!best || y - top > best.bottom - best.top) best = { top, bottom: y };
+    runs.push({ top, bottom: y });
   }
-  if (!best) throw new Error('полотно не найдено: на снимке нет поля окружения сверочной сцены');
-  return best;
+  if (!runs.length) throw new Error('полотно не найдено: на снимке нет поля окружения сверочной сцены');
+  // Полотен на экране видно несколько (сцена — столбик зон), и нужно ПЕРВОЕ ПОЛНОЕ: именно его
+  // лаборатория паркует под деталь. Сравнение «строго длиннее» тут не годится — округление
+  // высоты полосы даёт разницу в пиксель, и замер перепрыгивал на соседнее полотно, где детали
+  // нет вовсе: отход выходил ровно нулевым и выглядел как исправный байпас.
+  const longest = Math.max(...runs.map((r) => r.bottom - r.top));
+  return runs.find((r) => r.bottom - r.top >= longest - 2);
 }
 
 async function fromWeb() {
@@ -200,6 +208,7 @@ async function fromWeb() {
   const debug = arg('debug', 'normal');
   const shape = arg('shape', 'круг');
   const preset = arg('preset', '');
+  const name = arg('scene', 'ступени');
   const bundle = await build({
     stdin: { contents: ENTRY, resolveDir: HERE, loader: 'ts' },
     bundle: true,
@@ -211,11 +220,11 @@ async function fromWeb() {
   const page = await browser.newPage();
   await page.goto('about:blank');
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
-  const frame = await page.evaluate((a) => globalThis.vgReference(a), { density, debug, shape, preset });
+  const frame = await page.evaluate((a) => globalThis.vgReference(a), { density, debug, shape, preset, name });
   await browser.close();
 
   report(
-    'веб · density ' + density + ' · ' + debug + ' · ' + shape + ' · ' + (preset || 'база'),
+    'веб · ' + name + ' · density ' + density + ' · ' + debug + ' · ' + shape + ' · ' + (preset || 'база'),
     profile({
       px: Uint8Array.from(frame.px),
       width: frame.width,
@@ -301,6 +310,8 @@ async function fromShot(src) {
   const strip = locateStrip(px, width, height, surround);
   const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;
   const geometry = REFERENCE_SHAPES[arg('shape', 'круг')];
+  // Деталь ищется не «где-то посередине», а в точке, заданной полотном: полотно по центру
+  // площадки, отсчёт от его левого верхнего угла.
   report(
     'снимок ' + src + ' · ' + width + '×' + height + ' · ' + pxPerDp.toFixed(2) + ' px/dp',
     profile({
@@ -308,8 +319,8 @@ async function fromShot(src) {
       width,
       height,
       pxPerDp,
-      cx: Math.round(width / 2),
-      cy: Math.round((strip.top + strip.bottom) / 2),
+      cx: Math.round(width / 2 + (REFERENCE_PIECE_AT.xDp - REFERENCE_SCENE_WIDTH / 2) * pxPerDp),
+      cy: Math.round(strip.top + REFERENCE_PIECE_AT.yDp * pxPerDp),
       radiusDp: Math.min(geometry.width, geometry.height) / 2,
     }),
   );
