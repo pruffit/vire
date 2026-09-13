@@ -305,7 +305,8 @@ function ReferenceZone({ scene }: { scene: VireGlassRefScene }) {
   );
 }
 
-/** Зоны стенда. Порядок = порядок в сцене; имя = то, что выбирается чипом. */
+/** Зоны стенда. Порядок = порядок в сцене; имя = то, что выбирается чипом.
+ *  Рисуются не все сразу — см. `MaterialLabSceneImpl`. */
 export const LAB_ZONES = [
   { name: 'чёрный', render: () => <Flat color="#000000" label="чистый чёрный · отражать нечего" labelColor="#6a7a82" /> },
   { name: 'чёрн.градиент', render: () => <NearBlackRamp /> },
@@ -425,9 +426,13 @@ function MaterialLabSceneImpl({
     <GestureDetector gesture={scroll}>
       <View style={styles.root}>
         <Animated.View style={[styles.content, moving ? scrollStyle : parkedStyle]}>
-          {LAB_ZONES.map((z) => (
+          {LAB_ZONES.map((z, i) => (
             <View key={z.name} style={styles.slot}>
-              {z.render()}
+              {/* Сцена — столбик из всех зон сразу, без виртуализации: прокрутка это сдвиг, и
+                  парковка обязана быть арифметикой. Тяжёлые полотна (шахматка — 336 вьюх,
+                  сетка — полсотни) держать смонтированными все разом незачем: дальше соседней
+                  зоны их всё равно не видно, а вьюхи считаются на каждом проходе лейаута. */}
+              {Math.abs(i - zone) <= 1 ? z.render() : null}
             </View>
           ))}
         </Animated.View>
