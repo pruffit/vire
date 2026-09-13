@@ -165,13 +165,21 @@ let polarity = manualInk ? 'ручная' : 'светлая';
 // местах выбирает разные фигуры, и сверка снова разъезжалась.
 const SHAPES = REFERENCE_SHAPES;
 const SHAPE_NAMES = Object.keys(SHAPES) as (keyof typeof SHAPES)[];
+// Прежние английские имена остаются рабочими: на них ссылаются снятые сверки в
+// docs/vireglass/benchmarks/**, и молчаливый откат к первой фигуре сделал бы их кадры
+// невоспроизводимыми — с виду успешно.
+const LEGACY_SHAPES: Record<string, keyof typeof SHAPES> = {
+  rect: 'плашка',
+  capsule: 'капсула',
+  circle: 'круг',
+};
 const shapeParam = params.get('shape') ?? '';
 const shapeIndex = Number(shapeParam);
-const shapeName = Number.isInteger(shapeIndex) && SHAPE_NAMES[shapeIndex]
+const shapeName = shapeParam !== '' && Number.isInteger(shapeIndex) && SHAPE_NAMES[shapeIndex]
   ? SHAPE_NAMES[shapeIndex]
   : SHAPE_NAMES.includes(shapeParam as keyof typeof SHAPES)
     ? (shapeParam as keyof typeof SHAPES)
-    : SHAPE_NAMES[0];
+    : (LEGACY_SHAPES[shapeParam] ?? SHAPE_NAMES[0]);
 const geometry = SHAPES[shapeName];
 const dpr = window.devicePixelRatio || 1;
 const renderer = createVireGlassRenderer(canvas);
