@@ -58,9 +58,8 @@ const lum = (r, g, b) => (CHANNEL < 0 ? 0.2126 * r + 0.7152 * g + 0.0722 * b : [
  * с отступом от кромки — там работают преломление и кромочный свет, к телу они отношения не
  * имеют, а по ширине берётся только середина хорды по той же причине.
  *
- * По хорде берётся МЕДИАНА, а не среднее: мобильная лаборатория держит поверх детали надпись
- * (ровно то, ради чего адаптация и существует), и среднее уезжало бы за её штрихами. Медиана
- * их отбрасывает, а на ровном теле совпадает со средним.
+ * Фон меряется ТЕМ ЖЕ окном, что и тело, — по столько же пикселей и столько же строк. Иначе
+ * на полотнах со структурой сравниваются разные величины: тело усреднено, а фон взят точкой.
  */
 function profile({ px, width, height, pxPerDp, cx, cy, radiusDp }) {
   const at = (x, y) => {
@@ -68,21 +67,34 @@ function profile({ px, width, height, pxPerDp, cx, cy, radiusDp }) {
     return lum(px[o], px[o + 1], px[o + 2]);
   };
   const r = radiusDp * pxPerDp;
-  // Столбец фона — левее детали и левее любого её оптического следа.
-  const backX = Math.max(2, Math.round(cx - r - 40 * pxPerDp));
+  // Фон берётся ТЕМ ЖЕ ОКНОМ, что и тело, и левее детали — левее любого её оптического следа.
+  // Одним пикселем нельзя: на полотнах с вертикальной структурой (полосы, сетка) он попадает то
+  // на линию, то между ними, и отход скачет на десятки единиц от одного положения окна.
+  const mean = (xs) => xs.reduce((s, v) => s + v, 0) / xs.length;
+  // Окно в НЕСКОЛЬКО строк, а не в одну: на полотнах с горизонтальной структурой (сетка) одна
+  // строка то попадает на линию, то проходит мимо, и отход скачет на десятки единиц от сдвига
+  // на пиксель. Пять строк — меньше трети шага самого частого узора, полосы оно не смешивает.
+  const ROWS = 2;
+  const span = (from, to, y) => {
+    const xs = [];
+    for (let dy = -ROWS; dy <= ROWS; dy += 1) {
+      const row = y + dy;
+      if (row < 0 || row >= height) continue;
+      for (let x = from; x <= to; x += 1) if (x >= 0 && x < width) xs.push(at(x, row));
+    }
+    return xs;
+  };
   const rows = [];
   for (let dy = -0.72; dy <= 0.721; dy += 0.12) {
     const y = Math.round(cy + dy * r);
     if (y < 0 || y >= height) continue;
     const half = Math.round(Math.sqrt(Math.max(1 - dy * dy, 0)) * r * 0.55);
-    const chord = [];
-    for (let x = cx - half; x <= cx + half; x += 1) {
-      if (x >= 0 && x < width) chord.push(at(x, y));
-    }
-    if (!chord.length) continue;
-    chord.sort((a, b) => a - b);
-    const body = chord[chord.length >> 1];
-    const back = at(backX, y);
+    const chord = span(cx - half, cx + half, y);
+    const backFrom = Math.max(2, Math.round(cx - r - 40 * pxPerDp) - half);
+    const outside = span(backFrom, backFrom + 2 * half, y);
+    if (!chord.length || !outside.length) continue;
+    const body = mean(chord);
+    const back = mean(outside);
     rows.push({ dp: Math.round(dy * radiusDp), body, back, dev: body - back });
   }
   if (!rows.length) throw new Error('деталь не попала в кадр: проверь, что снята сверочная зона');
