@@ -1,7 +1,7 @@
 // Стенд VireGlass — не React-страница (план, «Среда»/«Следствие для стенда»): статический
 // HTML + этот бандл, esbuild собирает его за миллисекунды из `packages/vireglass`.
 // Состояние целиком в адресе: ссылка воспроизводит кадр, как диплинк на Android-стенде.
-import {
+import { REFERENCE_SHAPES,
   applyAccessibility,
   DEBUG_MODES,
   INK_DARK,
@@ -14,7 +14,6 @@ import {
   type VireGlassAccessibility,
   roundedRectGeometry,
   circleGeometry,
-  capsuleGeometry,
   VIREGLASS_CLEAR_MATERIAL,
   VIREGLASS_CONTROL_MATERIAL,
   VIREGLASS_MATERIAL,
@@ -148,10 +147,12 @@ let optics = optic(material);
 let polarity = manualInk ? 'ручная' : 'светлая';
 
 // Форма контрольного образца — в адресе: капсула и круг повторяют эталонные кадры.
+// Фигуры общие с мобильной лабораторией: размер входит в оптику, и на разных фигурах
+// снимки двух стендов несравнимы (packages/vireglass/src/reference-scene.ts).
 const SHAPES = {
-  rect: roundedRectGeometry(280, 120, 32),
-  capsule: capsuleGeometry(300, 110),
-  circle: circleGeometry(150),
+  rect: REFERENCE_SHAPES['плашка'],
+  capsule: REFERENCE_SHAPES['капсула'],
+  circle: REFERENCE_SHAPES['круг'],
 } as const;
 const shapeName = (params.get('shape') ?? 'rect') as keyof typeof SHAPES;
 const geometry = SHAPES[shapeName] ?? SHAPES.rect;

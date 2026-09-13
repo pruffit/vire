@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
+import { REFERENCE_BANDS, refGray } from '../lib/vireglass/material';
 
 // Фон намеренно недружелюбный к рендереру: мелкий кегль, 1px-линии, резкие границы и
 // градиенты в одном кадре. Красивый градиент для стенда не годится — он прячет артефакты.
@@ -192,6 +193,26 @@ function NearWhiteRamp() {
   );
 }
 
+/** СВЕРОЧНАЯ ЗОНА. Полосы описаны данными в пакете и рисуются здесь ровно так же, как их
+ *  рисует веб-стенд, — только на одинаковом полотне снимки двух платформ сравнимы. */
+function ReferenceZone() {
+  return (
+    <View style={styles.zone}>
+      {REFERENCE_BANDS.map((band) => (
+        <View key={band.name} style={{ flex: band.height, flexDirection: 'row' }}>
+          <View style={{ flex: 1, backgroundColor: refGray(band.level), justifyContent: 'center' }}>
+            {band.bar ? (
+              <View style={{ height: `${band.bar.thickness * 100}%`, backgroundColor: refGray(band.bar.level) }} />
+            ) : null}
+          </View>
+          {band.splitLevel === undefined ? null : (
+            <View style={{ flex: 1, backgroundColor: refGray(band.splitLevel) }} />
+          )}
+        </View>
+      ))}
+    </View>
+  );
+}
 /** Зоны стенда. Порядок = порядок в сцене; имя = то, что выбирается чипом. */
 export const LAB_ZONES = [
   { name: 'чёрный', render: () => <Flat color="#000000" label="чистый чёрный · отражать нечего" labelColor="#6a7a82" /> },
@@ -228,6 +249,7 @@ export const LAB_ZONES = [
   { name: 'бел.градиент', render: () => <NearWhiteRamp /> },
   { name: 'белый', render: () => <Flat color="#ffffff" label="чистый белый" labelColor="#5a6a72" /> },
   { name: 'серый 50%', render: () => <Flat color="#808080" label="средний серый 50%" labelColor="#1a1a1a" /> },
+  { name: 'сверочная', render: () => <ReferenceZone /> },
 ] as const;
 
 export type LabZoneName = (typeof LAB_ZONES)[number]['name'];

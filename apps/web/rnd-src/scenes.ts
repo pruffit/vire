@@ -3,6 +3,7 @@
 // разрыв видно сразу. Ни один фон не доведён до чистого чёрного или белого: на крайних
 // значениях материал выглядит хорошо слишком легко, и решения по ним принимать нельзя.
 import type { VireGlassSceneDrawer } from '@vire/vireglass/web';
+import { REFERENCE_BANDS, refGray } from '@vire/vireglass';
 
 export type Zone = { name: string; draw: VireGlassSceneDrawer };
 
@@ -366,6 +367,26 @@ const track: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
   ctx.fillRect(0, y - thick / 2, Math.max(0, Math.min(w, w * 0.42 + ox)), thick);
 };
 
+// Сверочная сцена живёт в пакете и рисуется обоими стендами одинаково — только так снимок
+// с Android сравним со снимком из веба.
+const reference: VireGlassSceneDrawer = (ctx, w, h) => {
+  let y = 0;
+  for (const band of REFERENCE_BANDS) {
+    const bh = Math.round(h * band.height);
+    ctx.fillStyle = refGray(band.level);
+    ctx.fillRect(0, y, band.splitLevel === undefined ? w : w / 2, bh);
+    if (band.splitLevel !== undefined) {
+      ctx.fillStyle = refGray(band.splitLevel);
+      ctx.fillRect(w / 2, y, w - w / 2, bh);
+    }
+    if (band.bar) {
+      const t = Math.round(bh * band.bar.thickness);
+      ctx.fillStyle = refGray(band.bar.level);
+      ctx.fillRect(0, y + Math.round((bh - t) / 2), w, t);
+    }
+    y += bh;
+  }
+};
 export const ZONES: readonly Zone[] = [
   {
     name: 'светлая клетка',
@@ -383,6 +404,7 @@ export const ZONES: readonly Zone[] = [
   { name: 'дюны', draw: dunes },
   { name: 'абзац', draw: paragraph },
   { name: 'дорожка', draw: track },
+  { name: 'сверочная', draw: reference },
 ] as const;
 
 export const ZONE_NAMES: readonly string[] = ZONES.map((z) => z.name);

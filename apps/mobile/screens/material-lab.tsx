@@ -27,7 +27,7 @@ import { morphBetween, type VireGlassMorph } from '../lib/vireglass/adapters';
 import { useFrameThrottle } from '../lib/frame-throttle';
 import { INK_DARK, INK_LIGHT, useGlassAdaptation } from '../lib/vireglass/adaptation';
 import { useEnvironmentLight } from '../lib/vireglass/environment';
-import {
+import { REFERENCE_SHAPES,
   bevelDp,
   capsuleGeometry,
   circleGeometry,
@@ -60,11 +60,9 @@ import {
 // Стенд материала VireGlass. В продовый UI не входит: EXPO_PUBLIC_GLASS_LAB=material (App.tsx).
 // Журнал экспериментов — docs/vireglass/material-lab.md.
 
-const SHAPES = {
-  круг: circleGeometry(120),
-  капсула: capsuleGeometry(240, 72),
-  плашка: roundedRectGeometry(260, 140, 36),
-} satisfies Record<string, VireGlassGeometry>;
+// Фигуры общие с веб-стендом: размер входит в оптику через sizeGain, и на разных фигурах
+// снимки двух стендов несравнимы (packages/vireglass/src/reference-scene.ts).
+const SHAPES = REFERENCE_SHAPES;
 
 type ShapeName = keyof typeof SHAPES;
 const SHAPE_NAMES = Object.keys(SHAPES) as ShapeName[];

@@ -9,6 +9,7 @@ export * from './adaptation';
 export * from './accessibility';
 export * from './scroll-edge';
 export * from './concentric';
+export * from './reference-scene';
 export * from './group-model';
 export * from './adapters';
 export * from './targets/agsl';
