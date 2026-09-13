@@ -38,12 +38,19 @@ const arg = (name, fallback) => {
   return hit === undefined ? fallback : hit.slice(name.length + 3);
 };
 
-const lum = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+// Отладочные каналы кладут в r/g/b три РАЗНЫЕ величины, и светлота смешивает их в одно число.
+// --channel=r|g|b читает канал как есть; по умолчанию меряется светлота.
+const CHANNEL = { luma: -1, r: 0, g: 1, b: 2 }[arg('channel', 'luma')] ?? -1;
+const lum = (r, g, b) => (CHANNEL < 0 ? 0.2126 * r + 0.7152 * g + 0.0722 * b : [r, g, b][CHANNEL]);
 
 /**
  * Общая часть обоих путей: кадр RGBA, известный масштаб, известный центр детали. Строки берутся
  * с отступом от кромки — там работают преломление и кромочный свет, к телу они отношения не
  * имеют, а по ширине берётся только середина хорды по той же причине.
+ *
+ * По хорде берётся МЕДИАНА, а не среднее: мобильная лаборатория держит поверх детали надпись
+ * (ровно то, ради чего адаптация и существует), и среднее уезжало бы за её штрихами. Медиана
+ * их отбрасывает, а на ровном теле совпадает со средним.
  */
 function profile({ px, width, height, pxPerDp, cx, cy, radiusDp }) {
   const at = (x, y) => {
@@ -58,16 +65,15 @@ function profile({ px, width, height, pxPerDp, cx, cy, radiusDp }) {
     const y = Math.round(cy + dy * r);
     if (y < 0 || y >= height) continue;
     const half = Math.round(Math.sqrt(Math.max(1 - dy * dy, 0)) * r * 0.55);
-    let sum = 0;
-    let n = 0;
+    const chord = [];
     for (let x = cx - half; x <= cx + half; x += 1) {
-      if (x < 0 || x >= width) continue;
-      sum += at(x, y);
-      n += 1;
+      if (x >= 0 && x < width) chord.push(at(x, y));
     }
-    if (!n) continue;
+    if (!chord.length) continue;
+    chord.sort((a, b) => a - b);
+    const body = chord[chord.length >> 1];
     const back = at(backX, y);
-    rows.push({ dp: Math.round(dy * radiusDp), body: sum / n, back, dev: sum / n - back });
+    rows.push({ dp: Math.round(dy * radiusDp), body, back, dev: body - back });
   }
   if (!rows.length) throw new Error('деталь не попала в кадр: проверь, что снята сверочная зона');
   return rows;
