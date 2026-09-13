@@ -133,10 +133,12 @@ const ENTRY = [
   "  VIREGLASS_MATERIAL,",
   "} from '" + CORE + "';",
   "",
-  "globalThis.vgReference = async ({ density, debug, shape, preset, name }) => {",
+  "globalThis.vgReference = async ({ density, debug, shape, preset, name, stageW, stageH }) => {",
   "  const canvas = document.createElement('canvas');",
-  "  canvas.width = Math.round((REFERENCE_SCENE_WIDTH + 48) * density);",
-  "  canvas.height = Math.round((REFERENCE_SCENE_HEIGHT + 80) * density);",
+  "  // Размер площадки влияет на замер не только полем вокруг полотна: сетка зонда постоянная",
+  "  // (48x96 на всю площадку), поэтому на площадке телефона она накрывает деталь втрое реже.",
+  "  canvas.width = Math.round((stageW || REFERENCE_SCENE_WIDTH + 48) * density);",
+  "  canvas.height = Math.round((stageH || REFERENCE_SCENE_HEIGHT + 80) * density);",
   "  document.body.append(canvas);",
   "  const renderer = createVireGlassRenderer(canvas);",
   "  renderer.resize(canvas.width, canvas.height);",
@@ -221,6 +223,11 @@ async function fromWeb() {
   const shape = arg('shape', 'круг');
   const preset = arg('preset', '');
   const name = arg('scene', 'ступени');
+  // --stage=406x904 ставит площадку размером с экран устройства: тогда и сетка зонда ложится
+  // на деталь так же густо, как там.
+  const stage = arg('stage', '').split('x').map(Number);
+  const stageW = Number.isFinite(stage[0]) ? stage[0] : 0;
+  const stageH = Number.isFinite(stage[1]) ? stage[1] : 0;
   const bundle = await build({
     stdin: { contents: ENTRY, resolveDir: HERE, loader: 'ts' },
     bundle: true,
@@ -232,7 +239,7 @@ async function fromWeb() {
   const page = await browser.newPage();
   await page.goto('about:blank');
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
-  const frame = await page.evaluate((a) => globalThis.vgReference(a), { density, debug, shape, preset, name });
+  const frame = await page.evaluate((a) => globalThis.vgReference(a), { density, debug, shape, preset, name, stageW, stageH });
   await browser.close();
 
   report(
