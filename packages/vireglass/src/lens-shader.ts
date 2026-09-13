@@ -109,7 +109,13 @@ const float VG_GROUND_MAX = 0.12;
 // считается от этого края, а не от средней светлоты места.
 const float VG_BUSY_EDGE = 0.75;
 // Концентрация света: тело чуть светлее того, что под ним (M 2:29).
-const float VG_CONCENTRATE = 0.04;
+const float VG_CONCENTRATE = 0.01;
+// Светлота, к которой среда стягивает содержимое под стеклом, и сила этой стяжки. Среда и
+// забирает свет, и подмешивает рассеянный: над светлым фоном тело темнеет, над тёмным светлеет.
+const float VG_MEDIUM_LUMA = 0.40;
+const float VG_MEDIUM_PULL = 0.07;
+// Сколько света окружения доходит до тела поверх стяжки.
+const float VG_AMBIENT_SPILL = 0.01;
 
 float vgLuma(float3 c) { return dot(c, float3(0.2126, 0.7152, 0.0722)); }
 
@@ -448,8 +454,12 @@ half4 main(float2 xy) {
     rgb = mix(rgb, clamp(through, float3(0.0), float3(1.0)), u_accent.a * u_appear);
   }
 
-  // Свет окружения доходит до тела одинаково по всей детали; на светлом фоне сходит на нет.
-  rgb += ambient * u_edgeLight * (0.05 + 0.2 * (1.0 - local)) * u_appear;
+  // СЖАТИЕ КОНТРАСТА. Среда забирает часть света и подмешивает рассеянный, поэтому содержимое
+  // под стеклом идёт к середине, а не просто светлеет (M 2:35). Прежний слой только добавлял
+  // свет и над светлым фоном уводил тело в сторону, противоположную эталону.
+  rgb = mix(rgb, vgHue(ambient) * VG_MEDIUM_LUMA, VG_MEDIUM_PULL * u_appear);
+  // Свет окружения доходит до тела одинаково по всей детали.
+  rgb += ambient * u_edgeLight * VG_AMBIENT_SPILL * u_appear;
   // Стекло концентрирует свет; сыгранная часть — участок, где его больше.
   float glow = VG_CONCENTRATE + 0.08 * vgProgress(p, u_halfSize, u_progress);
   rgb += (1.0 - rgb) * glow * lens;
