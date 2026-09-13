@@ -36,7 +36,11 @@ import {
   surfacePadDp,
   type VireGlassGeometry,
 } from '../../lib/vireglass/geometry';
-import { ambientFrom, type BackdropSample } from '../../lib/vireglass/adaptation';
+import {
+  ambientFrom,
+  type BackdropSample,
+  shadowOpacityFrom,
+} from '../../lib/vireglass/adaptation';
 import type { DeformSample } from '../../lib/vireglass/touch-response';
 import type { VireGlassDebugMode, VireGlassOptics } from '../../lib/vireglass/material';
 import { LENS_SHADER } from '../../lib/vireglass/lens-shader';
@@ -85,6 +89,8 @@ export type GlassIcon = {
   overlay?: SkImage | null;
 };
 
+type GlassBackdropRead = { ambient: [number, number, number]; shadow: number };
+
 export function VireGlassSurface({
   geometry,
   optics,
@@ -93,7 +99,7 @@ export function VireGlassSurface({
   morph,
   blurTarget,
   backdrop = true,
-  shadow = 1,
+  shadow,
   dragLimit = 0,
   icon,
   progress,
@@ -114,6 +120,7 @@ export function VireGlassSurface({
   blurTarget?: RefObject<View | null> | null;
   /** Выключение монтирует поверхность без бэкдропа: опорная точка для сравнения на стенде. */
   backdrop?: boolean;
+  /** Ручная плотность тени. Без неё её ведёт зонд по тому, что под деталью. */
   shadow?: number;
   dragLimit?: number;
   icon?: GlassIcon;
@@ -157,15 +164,23 @@ export function VireGlassSurface({
     geometryRef.current = geometryKey;
     padRef.current = 0;
   }
-  // Цвет окружения затекает в тень (эталон §7), и зонд его уже считает — остаётся не потерять
-  // по пути. Подписываемся только там, где замер и так идёт: включать зонд ради тени незачем.
-  const [sampled, setSampled] = useState<[number, number, number] | undefined>(undefined);
+  // Зонд уже считает и цвет окружения (он затекает в тень, эталон §7), и пестроту (по ней идёт
+  // плотность тени, 219 @11:47) — остаётся не потерять их по пути. Подписка там же, где замер и
+  // так идёт: у стекла с прибитой вручную полярностью зонда нет, и тень у него не адаптируется.
+  const [sampled, setSampled] = useState<GlassBackdropRead | undefined>(undefined);
   const handleSample = useMemo(() => {
     if (!onBackdropSample) return undefined;
     return (event: { nativeEvent: BackdropSample }) => {
-      const next = ambientFrom(event.nativeEvent);
+      const ambient = ambientFrom(event.nativeEvent);
+      const shade = shadowOpacityFrom(event.nativeEvent);
       setSampled((prev) =>
-        prev && prev[0] === next[0] && prev[1] === next[1] && prev[2] === next[2] ? prev : next,
+        prev &&
+        prev.shadow === shade &&
+        prev.ambient[0] === ambient[0] &&
+        prev.ambient[1] === ambient[1] &&
+        prev.ambient[2] === ambient[2]
+          ? prev
+          : { ambient, shadow: shade },
       );
       onBackdropSample(event);
     };
@@ -204,14 +219,17 @@ export function VireGlassSurface({
   // А разойтись им есть на чём: линза уходит и под открытым листом, и при уменьшенной
   // прозрачности, тогда как тень рисуется всегда, и цвет ушедшего фона в ней бы застыл.
   const measuring = backdropReady && refracting && AnimatedGlassLens !== null;
-  const ambient = measuring ? sampled : undefined;
+  const read = measuring ? sampled : undefined;
+  const ambient = read?.ambient;
+  // Плотность тени ведёт то, что ПОД ДЕТАЛЬЮ (219 @11:47), и считает её тот же зонд, что цвет.
+  const shade = shadow ?? read?.shadow ?? 1;
 
   // Тело стекла рисует линза, когда она живая: только там виден фон, а без фона точечной
   // адаптации не существует. Поверхности в этом случае остаётся блик, тень и иконка.
   const bodyInLens = isGlassLensSupported && GlassLensNative !== null && hasTarget;
   const statics = useMemo(
-    () => toSurfaceUniforms(tuned, geometry, { debug, morph, dragLimit, shadow, bodyInLens, ambient, lift }),
-    [tuned, geometry, debug, morph, dragLimit, shadow, bodyInLens, ambient, lift],
+    () => toSurfaceUniforms(tuned, geometry, { debug, morph, dragLimit, shadow: shade, bodyInLens, ambient, lift }),
+    [tuned, geometry, debug, morph, dragLimit, shade, bodyInLens, ambient, lift],
   );
   // Исходник шейдера — часть результата, поэтому он в зависимостях. Формально это
   // константа модуля, но при горячей перезагрузке она меняется, а мемо с прежними

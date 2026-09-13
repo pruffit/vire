@@ -165,6 +165,14 @@ Android (AGSL) и веб (WebGL2). Стенд `/rnd` — лаборатория,
 
 - **Измеритель** снимает кадр и считает светлоту, шум, долю пикселей в упоре и полосы.
 
+### Плотность тени по контенту под деталью
+
+Тень детали не постоянная: над пёстрым (текст, обложка) она плотнее, над ровным светлым слабее
+(219 @11:47). Ведёт её тот же зонд фона, что и полярность краски, — величина одна на деталь, а не
+поле по площади тени. Закон живёт в ядре (`shadowOpacity`) и одинаков на вебе и на Android; на
+Android он работает там, где зонд и так подписан, то есть у стекла с автоматической полярностью.
+Замер обоих концов против эталона — `docs/vireglass/benchmarks/2026-09-14-shadow-adaptation-vs-reference.md`.
+
 ### Шкала прозрачности (ось есть, ползунка ещё нет)
 
 `applyGlassScale(optics, scale)` — пользовательская ось «ultra clear → fully tinted» из iOS 26.1/27.
@@ -186,7 +194,8 @@ Android (AGSL) и веб (WebGL2). Стенд `/rnd` — лаборатория,
   (список недавнего), `mini-player.ts` (краска и обложка плашки), `icons.ts` (маска значков);
   сборка `pnpm --filter @vire/web rnd` (esbuild, `--watch` для доводки).
 - **Роут:** rewrite `/rnd` → `/rnd/index.html` в `apps/web/next.config.ts`.
-- **Измеритель:** `apps/web/scripts/glass-probe.mjs` (Playwright).
+- **Измеритель:** `apps/web/scripts/glass-probe.mjs` (Playwright); профиль детали и тени на
+  сверочных полотнах — `packages/vireglass/scripts/measure-reference.mjs` (ключ `--shadow`).
 - **Android:** `apps/mobile/lib/vireglass/*` — тонкие ре-экспорты из пакета; натив и
   компоненты остались в мобилке.
 

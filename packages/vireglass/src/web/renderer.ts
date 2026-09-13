@@ -33,7 +33,7 @@ import {
   type VireGlassMorph,
   type VireGlassTouch,
 } from '../adapters';
-import { lensPadDp, surfacePadDp, type VireGlassGeometry } from '../geometry';
+import { lensPadDp, shadowOpacity, surfacePadDp, type VireGlassGeometry } from '../geometry';
 import { LENS_SHADER } from '../lens-shader';
 import type { VireGlassDebugMode, VireGlassOptics } from '../material';
 import { SURFACE_SHADER } from '../surface-shader';
@@ -460,9 +460,9 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
         bodyInLens: true,
         touch: piece.touch,
         progress: piece.progress,
-        // Над текстом тень плотнее, над ровным фоном слабее (M 11:47): отрыв детали от
-        // пёстрого контента держит именно она.
-        shadow: stats ? 0.8 + Math.min(stats.busy * 6, 1.2) : 1,
+        // Над текстом тень плотнее, над ровным фоном слабее (M 11:47). Закон — в ядре: пока он
+        // жил здесь, у Android его не было вовсе.
+        shadow: stats ? shadowOpacity(stats.busy) : 1,
         // Цвет окружения зонд уже посчитал — тени он достаётся даром. Берётся как есть:
         // `settleStats` его уже сгладил, а округление вернуло бы ступеньки, ради которых
         // сглаживание и писалось.

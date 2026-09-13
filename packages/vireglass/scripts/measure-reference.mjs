@@ -19,6 +19,12 @@
  * Запуск (через tsx — скрипт читает исходники пакета):
  *   pnpm --filter @vire/vireglass measure:reference -- --web [--scene=ступени] [--density=3] [--debug=backdrop]
  *   pnpm --filter @vire/vireglass measure:reference -- --shot=lab.png
+ *   pnpm --filter @vire/vireglass measure:reference -- --web --scene=ровное --shadow
+ *
+ * --shadow (только с --web) меряет не тело, а ТЕНЬ ПОД ДЕТАЛЬЮ: глубину провала светлоты ниже
+ * нижней кромки относительно фона той же строки слева и справа от детали. Кромка берётся из
+ * геометрии фигуры (центр детали и её высота известны скрипту), не поиском провала — иначе
+ * кромка гуляет вместе с порогом.
  *
  * Снимок с устройства снимается так (полотно выбирается диплинком, панель убрана):
  *   adb shell am start -a android.intent.action.VIEW -d "vire://lab?zone=NN&panel=0&auto=0" PKG
@@ -149,6 +155,97 @@ function report(title, rows) {
     'пропускание фактуры ' + (outer > 1 ? Math.round((inner / outer) * 100) : 0) + '%'
       + ' (размах снаружи ' + (outer / rows.length).toFixed(0) + ', внутри ' + (inner / rows.length).toFixed(0) + ')',
   );
+}
+
+/**
+ * Профиль ТЕНИ под деталью. Нижняя кромка приходит СНАРУЖИ (из геометрии), а не ищется по
+ * провалу светлоты — порог для поиска кромки на этом материале уже пять раз сжигал разбор.
+ * Фон строки — то же окно, что и центр, отставленное от кромки детали за пределы её разлёта
+ * (реальный максимум — shadowReachDp, ≤36dp; запас 40dp взят с той же меркой, что и в profile()
+ * выше). Окно ставится СРАЗУ по обе стороны — это два независимых замера фона, не один
+ * усреднённый, и таблица показывает оба.
+ */
+function shadowProfile({ px, width, height, pxPerDp, cx, edgeY, halfWidthDp, maxDp, stepDp }) {
+  const at = (x, y) => {
+    const o = (y * width + x) * 4;
+    return lum(px[o], px[o + 1], px[o + 2]);
+  };
+  const mean = (xs) => xs.reduce((s, v) => s + v, 0) / xs.length;
+  // Окно под центром — доля полуширины детали: остаётся в самом тёмном месте тени, не наползая
+  // на кромку, где ещё работает кромочный свет линзы.
+  const halfWinDp = Math.min(halfWidthDp * 0.4, 30);
+  const winPx = Math.max(1, Math.round(halfWinDp * pxPerDp));
+  const marginDp = 40;
+  const sideOffsetPx = Math.round((halfWidthDp + marginDp + halfWinDp) * pxPerDp);
+  if (cx - sideOffsetPx - winPx < 0 || cx + sideOffsetPx + winPx >= width) {
+    throw new Error('боковое опорное окно тени вышло за кадр: деталь или полотно слишком узкие для этого замера');
+  }
+  // Окно возвращает СПИСОК пикселей, а не сразу среднее: у фона его нужно и целиком (общий
+  // знаменатель формулы — «строка по бокам», оба борта вместе), и порознь (проверка §4).
+  const window = (x0, y) => {
+    const xs = [];
+    for (let x = x0 - winPx; x <= x0 + winPx; x += 1) if (x >= 0 && x < width) xs.push(at(x, y));
+    return xs;
+  };
+  const rows = [];
+  for (let dp = 0; dp <= maxDp; dp += stepDp) {
+    const y = Math.round(edgeY + dp * pxPerDp);
+    if (y < 0 || y >= height) break;
+    const leftXs = window(cx - sideOffsetPx, y);
+    const rightXs = window(cx + sideOffsetPx, y);
+    const center = mean(window(cx, y));
+    const left = mean(leftXs);
+    const right = mean(rightXs);
+    const back = mean([...leftXs, ...rightXs]);
+    rows.push({
+      dp, center, left, right, back,
+      depth: (1 - center / back) * 100,
+      depthLeft: (1 - center / left) * 100,
+      depthRight: (1 - center / right) * 100,
+    });
+  }
+  if (!rows.length) throw new Error('тень не попала в кадр: увеличь --stage или уменьши --reach');
+  return rows;
+}
+
+function reportShadow(title, rows, pieceHeightDp) {
+  console.log('--- ' + title + ' ---');
+  console.log('  dp   центр   слева  справа    фон  глубина  глубина(л)  глубина(п)');
+  for (const r of rows) {
+    console.log(
+      String(r.dp).padStart(4) + ' ' + r.center.toFixed(1).padStart(7) + ' '
+        + r.left.toFixed(1).padStart(7) + ' ' + r.right.toFixed(1).padStart(7) + ' '
+        + r.back.toFixed(1).padStart(6) + '  '
+        + (r.depth >= 0 ? '+' : '') + r.depth.toFixed(1).padStart(6) + '%   '
+        + (r.depthLeft >= 0 ? '+' : '') + r.depthLeft.toFixed(1).padStart(6) + '%   '
+        + (r.depthRight >= 0 ? '+' : '') + r.depthRight.toFixed(1).padStart(6) + '%',
+    );
+  }
+  let maxRow = rows[0];
+  for (const r of rows) if (r.depth > maxRow.depth) maxRow = r;
+  // Длина тени — dp до первого возврата к фону (глубина ⩽ 0), не порог: ноль здесь и есть сама
+  // метрика («тело уже не темнее фона»), а не подгонка под материал.
+  let lengthDp = rows[rows.length - 1].dp;
+  for (const r of rows) {
+    if (r.depth <= 0) { lengthDp = r.dp; break; }
+  }
+  console.log(
+    'максимум глубины ' + maxRow.depth.toFixed(1) + '% на ' + maxRow.dp + ' dp, длина тени '
+      + lengthDp + ' dp = ' + (lengthDp / pieceHeightDp).toFixed(2) + ' высоты детали',
+  );
+  const maxL = rows.reduce((a, b) => (b.depthLeft > a.depthLeft ? b : a), rows[0]);
+  const maxR = rows.reduce((a, b) => (b.depthRight > a.depthRight ? b : a), rows[0]);
+  const gap = Math.abs(maxL.depthLeft - maxR.depthRight);
+  // Два НЕЗАВИСИМЫХ набора столбцов — левый и правый опорный фон замерены порознь, не усреднены
+  // заранее (объединённый «фон» в таблице выше — уже производная от обоих). Симметрия материала
+  // явно не обещана — если разошлись, сказать прямо, а не спрятать за общим средним.
+  console.log(
+    (gap > 1
+      ? 'левый и правый замер РАСХОДЯТСЯ: максимум слева ' + maxL.depthLeft.toFixed(1) + '% на '
+        + maxL.dp + ' dp, максимум справа ' + maxR.depthRight.toFixed(1) + '% на ' + maxR.dp + ' dp'
+      : 'левый и правый замер сходятся (расхождение максимумов ' + gap.toFixed(1) + ' п.п.)'),
+  );
+  return { maxDepth: maxRow.depth, maxDp: maxRow.dp, lengthDp };
 }
 
 /**
@@ -416,6 +513,44 @@ async function fromWeb() {
   );
 }
 
+/** Тот же снимок стенда, что и fromWeb(), но профиль — под деталью, а не по её силуэту. */
+async function fromWebShadow() {
+  const density = Number(arg('density', '2.75'));
+  const shape = arg('shape', 'круг');
+  const preset = arg('preset', '');
+  const name = arg('scene', 'ступени');
+  const stage = arg('stage', '411x914').split('x').map(Number);
+  const stageW = Number.isFinite(stage[0]) && stage[0] > 0 ? stage[0] : 411;
+  const stageH = Number.isFinite(stage[1]) && stage[1] > 0 ? stage[1] : 914;
+  const base = arg('stand', '');
+  const ink = arg('ink', '');
+  const frame = await shootStand({ density, debug: 'normal', shape, preset, name, stageW, stageH, base, ink });
+  const strip = locateStrip(frame.px, frame.width, frame.height, surroundRgb());
+  const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;
+  const geometry = REFERENCE_SHAPES[shape];
+  const cx = Math.round(frame.width / 2 + (REFERENCE_PIECE_AT.xDp - REFERENCE_SCENE_WIDTH / 2) * pxPerDp);
+  const cy = Math.round(strip.top + REFERENCE_PIECE_AT.yDp * pxPerDp);
+  const edgeY = cy + (geometry.height / 2) * pxPerDp;
+  const maxDp = Number(arg('reach', String(Math.round(geometry.height / 2))));
+  const rows = shadowProfile({
+    px: frame.px,
+    width: frame.width,
+    height: frame.height,
+    pxPerDp,
+    cx,
+    edgeY,
+    halfWidthDp: geometry.width / 2,
+    maxDp,
+    stepDp: Number(arg('step', '2')),
+  });
+  reportShadow(
+    'тень · ' + name + ' · ' + stageW + 'x' + stageH + ' · density ' + density + ' · ' + shape
+      + ' · ' + (preset || 'база'),
+    rows,
+    geometry.height,
+  );
+}
+
 /** Стенд — статические файлы. Поднимаем их сами, чтобы замер не зависел от чужого сервера. */
 function serveStand() {
   const root = resolve(HERE, '../../../apps/web/public');
@@ -539,6 +674,7 @@ const shot = arg('shot');
 const compare = arg('compare');
 if (compare) await compareFrames(compare);
 else if (shot) await fromShot(shot);
+else if (args.includes('--web') && args.includes('--shadow')) await fromWebShadow();
 else if (args.includes('--web')) await fromWeb();
 else {
   console.error('нужен --web, --shot=<png> или --compare=<png>');
