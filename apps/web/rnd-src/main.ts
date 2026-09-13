@@ -1,7 +1,11 @@
 // Стенд VireGlass — не React-страница (план, «Среда»/«Следствие для стенда»): статический
 // HTML + этот бандл, esbuild собирает его за миллисекунды из `packages/vireglass`.
 // Состояние целиком в адресе: ссылка воспроизводит кадр, как диплинк на Android-стенде.
-import { REFERENCE_SHAPES,
+import { REFERENCE_PIECE_AT,
+  REFERENCE_SCENES,
+  REFERENCE_SCENE_HEIGHT,
+  REFERENCE_SCENE_WIDTH,
+  REFERENCE_SHAPES,
   applyAccessibility,
   DEBUG_MODES,
   INK_DARK,
@@ -54,6 +58,9 @@ import {
   ZONES,
   ZONE_NAMES,
 } from './scenes';
+
+/** Сверочные полотна: на них деталь паркуется в середину, как в мобильной лаборатории. */
+const REFERENCE_ZONE_NAMES = new Set(REFERENCE_SCENES.map((s) => s.name));
 
 const stage = document.getElementById('stage');
 if (!stage) throw new Error('нет #stage');
@@ -147,15 +154,20 @@ let optics = optic(material);
 let polarity = manualInk ? 'ручная' : 'светлая';
 
 // Форма контрольного образца — в адресе: капсула и круг повторяют эталонные кадры.
-// Фигуры общие с мобильной лабораторией: размер входит в оптику, и на разных фигурах
-// снимки двух стендов несравнимы (packages/vireglass/src/reference-scene.ts).
-const SHAPES = {
-  rect: REFERENCE_SHAPES['плашка'],
-  capsule: REFERENCE_SHAPES['капсула'],
-  circle: REFERENCE_SHAPES['круг'],
-} as const;
-const shapeName = (params.get('shape') ?? 'rect') as keyof typeof SHAPES;
-const geometry = SHAPES[shapeName] ?? SHAPES.rect;
+// Фигуры общие с мобильной лабораторией: размер входит в оптику, и на разных фигурах снимки
+// двух стендов несравнимы (packages/vireglass/src/reference-scene.ts). Общий у них и ПОРЯДОК:
+// свои имена и своё «по умолчанию» на каждом стенде значили, что одно и то же `shape` в двух
+// местах выбирает разные фигуры, и сверка снова разъезжалась.
+const SHAPES = REFERENCE_SHAPES;
+const SHAPE_NAMES = Object.keys(SHAPES) as (keyof typeof SHAPES)[];
+const shapeParam = params.get('shape') ?? '';
+const shapeIndex = Number(shapeParam);
+const shapeName = Number.isInteger(shapeIndex) && SHAPE_NAMES[shapeIndex]
+  ? SHAPE_NAMES[shapeIndex]
+  : SHAPE_NAMES.includes(shapeParam as keyof typeof SHAPES)
+    ? (shapeParam as keyof typeof SHAPES)
+    : SHAPE_NAMES[0];
+const geometry = SHAPES[shapeName];
 const dpr = window.devicePixelRatio || 1;
 const renderer = createVireGlassRenderer(canvas);
 
@@ -297,12 +309,17 @@ const WAVE_ON_RELEASE = a11y.reduceMotion ? 0 : 2.5;
 
 const deform = createDeform();
 
-// На сверочной зоне деталь встаёт в середину полотна — там же, где её держит мобильная
-// лаборатория. Иначе под деталью на двух стендах оказываются разные полосы.
-const controlCenter = () => ({
-  x: (viewWidthCss() / 2) * dpr,
-  y: canvas.height * (ZONE_NAMES[state.zone] === 'сверочная' ? 0.5 : 0.34),
-});
+// На сверочном полотне деталь стоит В ТОЧКЕ, ЗАДАННОЙ ПОЛОТНОМ, и отсчитывается от панели, а
+// не от видимой области: с открытой панелью управления центр видимой области и центр полотна —
+// разные точки, и деталь оказывалась над другими полосами, чем в мобильной лаборатории.
+const controlCenter = () => {
+  if (!REFERENCE_ZONE_NAMES.has(ZONE_NAMES[state.zone])) {
+    return { x: (viewWidthCss() / 2) * dpr, y: canvas.height * 0.34 };
+  }
+  const left = (canvas.width - REFERENCE_SCENE_WIDTH * dpr) / 2;
+  const top = (canvas.height - REFERENCE_SCENE_HEIGHT * dpr) / 2;
+  return { x: left + REFERENCE_PIECE_AT.xDp * dpr, y: top + REFERENCE_PIECE_AT.yDp * dpr };
+};
 // Ход тяги умеренный: тянут пальцем, а не растягивают резину. Деформация локальная, поэтому
 // заметна и при небольшой амплитуде — прежние 0.7 полуразмера читались как «слишком много».
 const pullLimit = () => 0.14 * halfMinDp(geometry);

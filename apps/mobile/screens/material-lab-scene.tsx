@@ -9,7 +9,17 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
-import { REFERENCE_BANDS, REFERENCE_SCENE_HEIGHT, REFERENCE_SURROUND, refGray } from '../lib/vireglass/material';
+import {
+  REFERENCE_SCENES,
+  REFERENCE_SCENE_HEIGHT,
+  REFERENCE_SCENE_WIDTH,
+  REFERENCE_SURROUND,
+  refCheckerCells,
+  refGradientSteps,
+  refGray,
+  type VireGlassRefLayer,
+  type VireGlassRefScene,
+} from '../lib/vireglass/material';
 
 // Фон намеренно недружелюбный к рендереру: мелкий кегль, 1px-линии, резкие границы и
 // градиенты в одном кадре. Красивый градиент для стенда не годится — он прячет артефакты.
@@ -193,30 +203,108 @@ function NearWhiteRamp() {
   );
 }
 
-/** СВЕРОЧНАЯ ЗОНА. Полосы описаны данными в пакете и рисуются здесь ровно так же, как их
- *  рисует веб-стенд, — только на одинаковом полотне снимки двух платформ сравнимы. */
-function ReferenceZone() {
-  // Полосы в dp, а не долями зоны: у веб-стенда полотно во весь вьюпорт, у зоны — 0.42 экрана,
-  // и одна и та же деталь ложилась на разное число полос. Сравнивать было нечего.
+/**
+ * СВЕРОЧНЫЕ ПОЛОТНА. Слои описаны данными в пакете и кладутся здесь вьюхами ровно так же, как
+ * их рисует канвасом веб-стенд: только на ОДНОМ полотне снимки двух платформ сравнимы.
+ *
+ * Панель фиксированного размера в dp, а не во всю зону: узор отсчитывается от края полотна, и
+ * на полотне во всю ширину фаза под деталью зависела бы от ширины экрана.
+ */
+function RefLayer({ layer }: { layer: VireGlassRefLayer }) {
+  switch (layer.kind) {
+    case 'заливка':
+      return <View style={[StyleSheet.absoluteFill, { backgroundColor: refGray(layer.level) }]} />;
+    case 'полосы':
+      return (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: refGray(layer.level) }]}>
+          {Array.from({ length: Math.ceil(REFERENCE_SCENE_WIDTH / layer.periodDp) }, (_, i) => (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                left: i * layer.periodDp,
+                top: 0,
+                bottom: 0,
+                width: layer.widthDp,
+                backgroundColor: refGray(layer.other),
+              }}
+            />
+          ))}
+        </View>
+      );
+    case 'ступень':
+      return (
+        <View style={[StyleSheet.absoluteFill, { flexDirection: 'row' }]}>
+          <View style={{ flex: 1, backgroundColor: refGray(layer.left) }} />
+          <View style={{ flex: 1, backgroundColor: refGray(layer.right) }} />
+        </View>
+      );
+    case 'черта':
+      return (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: refGray(layer.level), justifyContent: 'center' }]}>
+          <View style={{ height: layer.thicknessDp, backgroundColor: refGray(layer.barLevel) }} />
+        </View>
+      );
+    case 'сетка':
+      return (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: refGray(layer.level) }]}>
+          {Array.from({ length: Math.ceil(REFERENCE_SCENE_WIDTH / layer.stepDp) + 1 }, (_, i) => (
+            <View
+              key={'v' + i}
+              style={{ position: 'absolute', left: i * layer.stepDp, top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: refGray(layer.lineLevel) }}
+            />
+          ))}
+          {Array.from({ length: Math.ceil(REFERENCE_SCENE_HEIGHT / layer.stepDp) + 1 }, (_, i) => (
+            <View
+              key={'h' + i}
+              style={{ position: 'absolute', top: i * layer.stepDp, left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: refGray(layer.lineLevel) }}
+            />
+          ))}
+        </View>
+      );
+    case 'градиент':
+      return (
+        <View style={StyleSheet.absoluteFill}>
+          {refGradientSteps(layer).map((level, i) => (
+            <View key={i} style={{ flex: 1, backgroundColor: refGray(level) }} />
+          ))}
+        </View>
+      );
+    case 'шахматка':
+      return (
+        <View style={StyleSheet.absoluteFill}>
+          {refCheckerCells(layer, REFERENCE_SCENE_WIDTH, REFERENCE_SCENE_HEIGHT).map((cell, i) => (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                left: cell.xDp,
+                top: cell.yDp,
+                width: layer.cellDp,
+                height: layer.cellDp,
+                backgroundColor: refGray(cell.level),
+              }}
+            />
+          ))}
+        </View>
+      );
+  }
+}
+
+function ReferenceZone({ scene }: { scene: VireGlassRefScene }) {
   return (
     <View style={[styles.zone, styles.referenceZone]}>
-      <View style={{ height: REFERENCE_SCENE_HEIGHT, alignSelf: 'stretch' }}>
-        {REFERENCE_BANDS.map((band) => (
-          <View key={band.name} style={{ height: band.heightDp, flexDirection: 'row' }}>
-            <View style={{ flex: 1, backgroundColor: refGray(band.level), justifyContent: 'center' }}>
-              {band.bar ? (
-                <View style={{ height: `${band.bar.thickness * 100}%`, backgroundColor: refGray(band.bar.level) }} />
-              ) : null}
-            </View>
-            {band.splitLevel === undefined ? null : (
-              <View style={{ flex: 1, backgroundColor: refGray(band.splitLevel) }} />
-            )}
+      <View style={{ width: REFERENCE_SCENE_WIDTH, height: REFERENCE_SCENE_HEIGHT, overflow: 'hidden' }}>
+        {scene.bands(scene.level).map((band, i) => (
+          <View key={i} style={{ height: band.heightDp, overflow: 'hidden' }}>
+            <RefLayer layer={band.layer} />
           </View>
         ))}
       </View>
     </View>
   );
 }
+
 /** Зоны стенда. Порядок = порядок в сцене; имя = то, что выбирается чипом. */
 export const LAB_ZONES = [
   { name: 'чёрный', render: () => <Flat color="#000000" label="чистый чёрный · отражать нечего" labelColor="#6a7a82" /> },
@@ -253,11 +341,12 @@ export const LAB_ZONES = [
   { name: 'бел.градиент', render: () => <NearWhiteRamp /> },
   { name: 'белый', render: () => <Flat color="#ffffff" label="чистый белый" labelColor="#5a6a72" /> },
   { name: 'серый 50%', render: () => <Flat color="#808080" label="средний серый 50%" labelColor="#1a1a1a" /> },
-  { name: 'сверочная', render: () => <ReferenceZone /> },
-] as const;
+  // Сверочные полотна — общие с веб-стендом и с гейтом; порядок и имена берутся из пакета.
+  ...REFERENCE_SCENES.map((scene) => ({ name: scene.name, render: () => <ReferenceZone scene={scene} /> })),
+];
 
-export type LabZoneName = (typeof LAB_ZONES)[number]['name'];
-export const ZONE_NAMES = LAB_ZONES.map((z) => z.name) as LabZoneName[];
+export type LabZoneName = string;
+export const ZONE_NAMES = LAB_ZONES.map((z) => z.name);
 
 const CONTENT_H = ZONE_H * LAB_ZONES.length;
 

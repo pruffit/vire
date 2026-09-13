@@ -2,8 +2,8 @@
 // тонкая прямая линия показывает работу линзы честнее всего: любое искажение, увод или
 // разрыв видно сразу. Ни один фон не доведён до чистого чёрного или белого: на крайних
 // значениях материал выглядит хорошо слишком легко, и решения по ним принимать нельзя.
-import type { VireGlassSceneDrawer } from '@vire/vireglass/web';
-import { REFERENCE_BANDS, REFERENCE_SCENE_HEIGHT, REFERENCE_SURROUND, refGray } from '@vire/vireglass';
+import { drawReferenceScene, type VireGlassSceneDrawer } from '@vire/vireglass/web';
+import { REFERENCE_SCENES } from '@vire/vireglass';
 
 export type Zone = { name: string; draw: VireGlassSceneDrawer };
 
@@ -370,30 +370,14 @@ const track: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
   ctx.fillRect(0, y - thick / 2, Math.max(0, Math.min(w, w * 0.42 + ox)), thick);
 };
 
-// Сверочная сцена живёт в пакете и рисуется обоими стендами одинаково — только так снимок
-// с Android сравним со снимком из веба.
-const reference: VireGlassSceneDrawer = (ctx, w, h, _ox, _oy, density) => {
-  // Полотно фиксированной высоты в dp и по центру площадки: у двух стендов площадки разного
-  // размера, и полосы в долях от них выходили разной толщины.
-  ctx.fillStyle = REFERENCE_SURROUND;
-  ctx.fillRect(0, 0, w, h);
-  let y = Math.round((h - REFERENCE_SCENE_HEIGHT * density) / 2);
-  for (const band of REFERENCE_BANDS) {
-    const bh = Math.round(band.heightDp * density);
-    ctx.fillStyle = refGray(band.level);
-    ctx.fillRect(0, y, band.splitLevel === undefined ? w : w / 2, bh);
-    if (band.splitLevel !== undefined) {
-      ctx.fillStyle = refGray(band.splitLevel);
-      ctx.fillRect(w / 2, y, w - w / 2, bh);
-    }
-    if (band.bar) {
-      const t = Math.round(bh * band.bar.thickness);
-      ctx.fillStyle = refGray(band.bar.level);
-      ctx.fillRect(0, y + Math.round((bh - t) / 2), w, t);
-    }
-    y += bh;
-  }
-};
+// Сверочные полотна живут в пакете и рисуются обоими стендами одинаково — только так снимок
+// с Android сравним со снимком из веба, и только так гейт меряет то же, на что смотрит глаз.
+const referenceZones: readonly Zone[] = REFERENCE_SCENES.map((scene) => ({
+  name: scene.name,
+  draw: (ctx, w, h, _ox, _oy, density) =>
+    drawReferenceScene(ctx, scene, w, h, { density, fit: 'полотно' }),
+}));
+
 export const ZONES: readonly Zone[] = [
   {
     name: 'светлая клетка',
@@ -411,7 +395,7 @@ export const ZONES: readonly Zone[] = [
   { name: 'дюны', draw: dunes },
   { name: 'абзац', draw: paragraph },
   { name: 'дорожка', draw: track },
-  { name: 'сверочная', draw: reference },
-] as const;
+  ...referenceZones,
+];
 
 export const ZONE_NAMES: readonly string[] = ZONES.map((z) => z.name);

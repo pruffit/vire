@@ -94,19 +94,27 @@ const MIN_CONTENT_ON_BUSY = 28;
 const MIN_EDGE_GAIN = 1.88;
 
 const ENTRY = `
-import { createVireGlassRenderer } from '${WEB}';
+import { createVireGlassRenderer, drawReferenceScene } from '${WEB}';
 import {
   capsuleGeometry,
   circleGeometry,
   INK_DARK,
   INK_LIGHT,
   materialForInk,
+  referenceScene,
   resolveOptics,
   roundedRectGeometry,
   shouldInkBeLight,
   VIREGLASS_CONTROL_MATERIAL,
   VIREGLASS_MATERIAL,
 } from '${CORE}';
+
+// ПОЛОТНА ОБЩИЕ СО СТЕНДАМИ. Раньше каждое из них жило прямо здесь, и получалось, что гейт
+// меряет одно, а глаз на стенде смотрит на другое; расхождение находилось только случайно.
+// Гейту полотно нужно во весь кадр (он снимает пиксели, поле окружения только мешает), стендам
+// — панелью фиксированного размера; слои и их содержимое в dp одни и те же.
+const canvasScene = (name, level, density = 1) => (ctx, w, h) =>
+  drawReferenceScene(ctx, referenceScene(name), w, h, { density, level, fit: 'во весь кадр' });
 
 // ВЫХОД В ЦИКЛ СОБЫТИЙ МЕЖДУ КАДРАМИ ОБЯЗАТЕЛЕН. Зонд читает сетку светлоты через PBO с
 // забором, а забор в непрерывной синхронной петле не срабатывает никогда: сколько кадров ни
@@ -117,11 +125,6 @@ const settle = async (draw) => {
     draw();
     await new Promise((r) => setTimeout(r, 0));
   }
-};
-
-const hex = (v) => {
-  const b = Math.round(Math.min(Math.max(v, 0), 1) * 255).toString(16).padStart(2, '0');
-  return '#' + b + b + b;
 };
 
 let stage = null;
@@ -138,16 +141,7 @@ globalThis.vgProbe = async ({ level, striped, control }) => {
   }
   const { canvas, renderer } = stage;
 
-  // Полосы шире фаски: их обязано гасить тело, а не кромка. Контраст полос одинаков на всех
-  // уровнях, чтобы пропускание сравнивалось между шагами честно.
-  const stripe = level < 0.5 ? level + 0.22 : level - 0.22;
-  const scene = (ctx, w, h) => {
-    ctx.fillStyle = hex(level);
-    ctx.fillRect(0, 0, w, h);
-    if (!striped) return;
-    ctx.fillStyle = hex(stripe);
-    for (let x = 0; x < w; x += 24) ctx.fillRect(x, 0, 10, h);
-  };
+  const scene = canvasScene(striped ? 'полосы' : 'ровное', level);
 
   // Два случая, и оба обязательны. КУСОК ФОНА — базовый материал крупной деталью. ОРГАН
   // УПРАВЛЕНИЯ — стекло кнопок мелкой деталью и с краской поверх: оно толще, фаска у него шире
@@ -216,10 +210,7 @@ globalThis.vgInkProbe = async ({ press }) => {
   const { mask } = inkStage;
 
   const level = 0.2;
-  const scene = (ctx, w, h) => {
-    ctx.fillStyle = hex(level);
-    ctx.fillRect(0, 0, w, h);
-  };
+  const scene = canvasScene('ровное', level);
   const optics = resolveOptics({ ...materialForInk(VIREGLASS_CONTROL_MATERIAL, true), ink: INK_LIGHT });
   const piece = {
     optics,
@@ -281,14 +272,9 @@ globalThis.vgRimProbe = async () => {
   }
   const { canvas, renderer } = rimStage;
 
-  // Полоса в 17% высоты детали — та же пропорция, что под эталонной ручкой. Пропорция входит
-  // в определение замера: раздув это отношение, и на полосе другой толщины число другое.
-  const scene = (ctx, w, h) => {
-    ctx.fillStyle = '#eceef2';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#1f2430';
-    ctx.fillRect(0, h / 2 - 10 * D, w, 20 * D);
-  };
+  // Черта в 20 dp — та же пропорция к детали, что под эталонной ручкой. Пропорция входит в
+  // определение замера: раздув это отношение, и на черте другой толщины число другое.
+  const scene = canvasScene('черта', undefined, D);
 
   const optics = resolveOptics(materialForInk(VIREGLASS_CONTROL_MATERIAL, false));
   const piece = {
@@ -347,7 +333,7 @@ let busyStage = null;
 // разброса ловит собственный период и числа скачут от уровня к уровню.
 // Контраст краски считается худшими краями — краска своим слабым, тело своим ближним к ней:
 // надпись тонет там, где под ней оказалось светлое пятно, а не в среднем по детали.
-globalThis.vgBusyProbe = async ({ level, cell, amp }) => {
+globalThis.vgBusyProbe = async ({ level }) => {
   // СВОЙ рендерер, не общий: оценка окружения переносится между кадрами, и полотно в клетку,
   // пройдя через общий канвас, сбивало бы и свои числа, и замер тени у следующего обещания.
   if (!busyStage) {
@@ -369,19 +355,11 @@ globalThis.vgBusyProbe = async ({ level, cell, amp }) => {
   }
   const { canvas, renderer } = busyStage;
 
-  const lo = hex(level - amp);
-  const hi = hex(level + amp);
-  const scene = (ctx, w, h) => {
-    let seed = 1;
-    for (let y = 0; y < h; y += cell) {
-      for (let x = 0; x < w; x += cell) {
-        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-        ctx.fillStyle = (seed >> 16) % 2 ? hi : lo;
-        ctx.fillRect(x, y, cell, cell);
-      }
-    }
-  };
+  const scene = canvasScene('пёстрое', level);
 
+  // Верхний край разброса берётся из самого полотна: амплитуду шахматки задаёт пакет, и
+  // держать её второй копией здесь значит однажды разойтись с тем, что нарисовано.
+  const amp = referenceScene('пёстрое').bands(level)[0].layer.amp;
   const light = shouldInkBeLight({ luma: level, hi: level + amp }, level < 0.5);
   const optics = resolveOptics({
     ...materialForInk(VIREGLASS_CONTROL_MATERIAL, true),
@@ -441,10 +419,7 @@ globalThis.vgLiftProbe = async ({ lift }) => {
   const { canvas, renderer } = stage;
 
   const level = 0.78;
-  const scene = (ctx, w, h) => {
-    ctx.fillStyle = hex(level);
-    ctx.fillRect(0, 0, w, h);
-  };
+  const scene = canvasScene('ровное', level);
   const optics = resolveOptics({ ...materialForInk(VIREGLASS_CONTROL_MATERIAL, true), ink: INK_DARK });
   const piece = {
     optics,
@@ -561,8 +536,9 @@ async function main() {
   let worstContent = { value: Infinity, level: 0 };
   for (let i = 0; i < BUSY_STEPS; i += 1) {
     const level = 0.18 + (0.64 * i) / (BUSY_STEPS - 1);
-    // Плитка 16 px крупнее радиуса сбора; амплитуда одна на всех шагах — иначе шаги не сравнить.
-    const busy = await page.evaluate((a) => globalThis.vgBusyProbe(a), { level, cell: 16, amp: 0.28 });
+    // Плитка и амплитуда заданы полотном «пёстрое» в пакете: плитка крупнее радиуса сбора, а
+    // амплитуда одна на всех шагах — иначе шаги не сравнить.
+    const busy = await page.evaluate((a) => globalThis.vgBusyProbe(a), { level });
     if (busy.contrast < worstInk.value) worstInk = { value: busy.contrast, level };
     if (busy.content < worstContent.value) worstContent = { value: busy.content, level };
     const ok = busy.contrast >= MIN_INK_ON_BUSY && busy.content >= MIN_CONTENT_ON_BUSY;
