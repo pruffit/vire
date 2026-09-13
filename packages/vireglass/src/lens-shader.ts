@@ -101,10 +101,12 @@ const float VG_SCATTER_BASE = 0.1;
 // Отклик на структуру под стеклом насыщается рано: спорит с надписью не площадь чужого
 // текста, а сам факт его наличия (строка под плашкой даёт busy около 0.12).
 const float VG_STRUCTURE_GAIN = 20.0;
-// Плотность тела с краской над спокойным и над пёстрым фоном. Пол и потолок низкие: читаемость
-// набирает адресное требование ниже, а не заливка — выше пола деталь становится крашеной плашкой.
-const float VG_GROUND_MIN = 0.06;
-const float VG_GROUND_MAX = 0.12;
+// Насколько плотнее тело с краской над ПЁСТРЫМ фоном, чем над спокойным. Ровного пола здесь
+// нет: читаемость набирает адресное требование ниже, а базовую матовость — VG_MATTE_LIFT.
+const float VG_GROUND_SPAN = 0.06;
+// Рассеянный свет матовой детали — ДОБАВКА поверх фона, а не доля пути к тинту: доля обнуляется,
+// когда полотно доходит до светлоты тинта, и выше неё темнит (bench 2026-09-13-matte).
+const float VG_MATTE_LIFT = 0.10;
 // Доля разброса фона, которая доживает до тела сквозь рассеяние: требование читаемости
 // считается от этого края, а не от средней светлоты места.
 const float VG_BUSY_EDGE = 0.75;
@@ -437,7 +439,7 @@ half4 main(float2 xy) {
     : 0.0;
   float needForInk = mix(needForDark, needForLight, pol) * demand;
 
-  float ground = u_legibility * VG_GROUND_MIN + structure * u_legibility * (VG_GROUND_MAX - VG_GROUND_MIN);
+  float ground = structure * u_legibility * VG_GROUND_SPAN;
   float density = max(max(u_bodyDensity, ground), needForInk);
 
   // Своего цвета у стекла нет — только цвет того, что под ним (HIG «Color»).
@@ -445,6 +447,7 @@ half4 main(float2 xy) {
   // Появляется деталь нарастанием линзы и тела, а не прозрачностью (M 2:55): при u_appear = 0
   // она неотличима от фона под ней.
   rgb = mix(rgb, tintHue * tintLuma, density * u_appear);
+  rgb += tintHue * (u_legibility * VG_MATTE_LIFT * u_appear);
 
   // ТОНИРОВАНИЕ — цветное стекло, а не заливка (M 16:31, 17:03): тон ведёт светлота фона,
   // над тёмным он глубже, над светлым светлее, и фактура контента видна сквозь цвет.

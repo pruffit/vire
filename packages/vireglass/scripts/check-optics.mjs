@@ -32,7 +32,8 @@
  * когда оно действительно нарушено.
  *
  * Запуск: pnpm --filter @vire/vireglass check:optics
- * Только обещания про палец, третье и четвёртое (секунды вместо минут): ... check:optics -- --ink
+ * Без прохода по диапазону светлоты (секунды вместо минут): ... check:optics -- --ink. Остаётся всё,
+ * кроме первых двух обещаний: палец, подъём, пёстрое полотно и кромка.
  */
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
@@ -486,8 +487,8 @@ async function main() {
 
   const spread = ([lo, hi]) => hi - lo;
   const failed = [];
-  let worstWindow = { value: Infinity, level: 0 };
-  let worstPresence = { value: Infinity, level: 0 };
+  let worstWindow = { value: Infinity, level: 0, name: '' };
+  let worstPresence = { value: Infinity, level: 0, name: '' };
 
   // `--ink` гоняет только обещание про краску: проход по диапазону светлоты занимает минуты,
   // а правка краски его не задевает.
@@ -501,19 +502,21 @@ async function main() {
 
     const transmission = spread(striped.inside) / Math.max(spread(striped.outside), 1e-6);
     // Отход считается В ОБЕ СТОРОНЫ: над светлым полотном деталь отходит ВНИЗ, и метрика,
-    // смотрящая только на самое яркое, такую кромку не видит вовсе.
+    // смотрящая только на самое яркое, такую кромку не видит вовсе. Тело печатается рядом со
+    // знаком: по наибольшему из трёх не видно ни чем деталь держится, ни куда уходит тело.
+    const body = flat.inside[2] - flat.outside[2];
     const presence = Math.max(
-      Math.abs(flat.inside[2] - flat.outside[2]),
+      Math.abs(body),
       Math.abs(flat.rim[1] - flat.outside[2]),
       Math.abs(flat.rim[0] - flat.outside[2]),
     );
-    if (transmission < worstWindow.value) worstWindow = { value: transmission, level };
-    if (presence < worstPresence.value) worstPresence = { value: presence, level };
+    if (transmission < worstWindow.value) worstWindow = { value: transmission, level, name };
+    if (presence < worstPresence.value) worstPresence = { value: presence, level, name };
 
     const ok = transmission >= MIN_TRANSMISSION && presence >= MIN_PRESENCE;
     console.log(
       `${ok ? ' ' : '!'} полотно ${level.toFixed(2)}: окно ${(transmission * 100).toFixed(0)}%, ` +
-        `предмет ${presence.toFixed(1)}`,
+        `предмет ${presence.toFixed(1)} (тело ${body >= 0 ? '+' : ''}${body.toFixed(0)})`,
     );
     if (!(transmission >= MIN_TRANSMISSION)) {
       failed.push(`${name}, полотно ${level.toFixed(2)}: перестала быть окном`);
@@ -593,10 +596,10 @@ async function main() {
       `(нужно ≥ ${MIN_INK_ON_BUSY}), контент ${worstContent.value.toFixed(0)} на ` +
       `${worstContent.level.toFixed(2)} (нужно ≥ ${MIN_CONTENT_ON_BUSY})`,
   );
-  console.log(
+  if (!inkOnly) console.log(
     `худшее: окно ${(worstWindow.value * 100).toFixed(0)}% на ${worstWindow.level.toFixed(2)} ` +
-      `(нужно ≥ ${MIN_TRANSMISSION * 100}%), предмет ${worstPresence.value.toFixed(1)} ` +
-      `на ${worstPresence.level.toFixed(2)} (нужно ≥ ${MIN_PRESENCE})`,
+      `(${worstWindow.name}, нужно ≥ ${MIN_TRANSMISSION * 100}%), предмет ${worstPresence.value.toFixed(1)} ` +
+      `на ${worstPresence.level.toFixed(2)} (${worstPresence.name}, нужно ≥ ${MIN_PRESENCE})`,
   );
 
   if (failed.length) {
