@@ -69,6 +69,13 @@ type ShapeName = keyof typeof SHAPES;
 const SHAPE_NAMES = Object.keys(SHAPES) as ShapeName[];
 
 // Сцена: абстрактные фигуры или настоящие поверхности продукта на своих местах.
+/**
+ * Делитель метки состояния: индексы уезжают в снимок СЕРЫМ, и делитель обязан покрывать самый
+ * длинный из списков. Стояло 16 при четырнадцати зонах; когда сверочных полотен стало восемь,
+ * зоны с 16-й кодировались одним и тем же серым, и скрипт замера читал их все как шестнадцатую.
+ */
+const STATE_SCALE = 32;
+
 const STAGES = ['фигуры', 'транспорт', 'мини-плеер', 'таб-бар', 'лист', 'всё вместе'] as const;
 type StageName = (typeof STAGES)[number];
 
@@ -593,9 +600,9 @@ export function MaterialLab() {
       <View style={styles.stateTag} pointerEvents="none">
         <View style={styles.stateMark} />
         {[
-          zone / 16,
-          PRESET_NAMES.indexOf(preset) / 16,
-          DEBUG_MODES.indexOf(debug) / 16,
+          zone / STATE_SCALE,
+          PRESET_NAMES.indexOf(preset) / STATE_SCALE,
+          DEBUG_MODES.indexOf(debug) / STATE_SCALE,
           optics.ink,
           adaptation.sample?.luma ?? 0,
           Math.min(adaptation.sample?.busy ?? 0, 1),
