@@ -24,6 +24,7 @@
 | [status.md](status.md) | что уже построено, по областям |
 | [architecture/current-state.md](architecture/current-state.md) | **фактический** срез системы по коду: масштаб, слои, тесты (28.08.2026) |
 | [foundation/architecture.md](foundation/architecture.md) | стек, монорепо, слои, потоки данных, деплой |
+| [foundation/layers-and-order.md](foundation/layers-and-order.md) | границы слоёв визуальной части и порядок работ: материал → кит → экраны |
 | [features/README.md](features/README.md) | индекс фичедоков — по файлу на фичу |
 | `../CLAUDE.md` | рабочие правила и грабли, на которые уже наступали |
 
