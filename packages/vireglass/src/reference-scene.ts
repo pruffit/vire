@@ -13,6 +13,10 @@
  *   — РОВНЫЕ поля: отход тела детали от фона на пяти уровнях светлоты;
  *   — СТУПЕНЬ: сколько разброса фона доходит до пикселя у кромки;
  *   — ПОЛОСА: во сколько раз кромка раздувает изображение того, что за ней.
+ *
+ * Толщина полос — В DP. Доли высоты полотна выглядели общими, а были разными: у веб-стенда
+ * полотно во весь вьюпорт, у мобильной лаборатории — зона в 0.42 экрана, и одна и та же
+ * деталь ложилась на разное число полос. Профиль с такой пары снимков не сравнить.
  */
 
 import { capsuleGeometry, circleGeometry, roundedRectGeometry, type VireGlassGeometry } from './geometry';
@@ -30,11 +34,11 @@ export const REFERENCE_SHAPES = {
 
 export type VireGlassRefShapeName = keyof typeof REFERENCE_SHAPES;
 
-/** Доля высоты полотна и заливка. `split` — вторая заливка на правой половине полосы. */
+/** Толщина полосы и заливка. `split` — вторая заливка на правой половине полосы. */
 export type VireGlassRefBand = {
   readonly name: string;
-  /** Доля высоты всей сцены. Сумма по всем полосам равна единице. */
-  readonly height: number;
+  /** Толщина полосы в dp. Сумма по всем полосам — `REFERENCE_SCENE_HEIGHT`. */
+  readonly heightDp: number;
   /** Светлота заливки, 0…1. Серый, а не цвет: цвет мерить нечем без общей колориметрии. */
   readonly level: number;
   /** Светлота правой половины, если полоса со ступенью. */
@@ -44,14 +48,25 @@ export type VireGlassRefBand = {
 };
 
 export const REFERENCE_BANDS: readonly VireGlassRefBand[] = [
-  { name: 'ровное 0.10', height: 0.14, level: 0.1 },
-  { name: 'ровное 0.30', height: 0.14, level: 0.3 },
-  { name: 'ровное 0.50', height: 0.14, level: 0.5 },
-  { name: 'ровное 0.69', height: 0.14, level: 0.69 },
-  { name: 'ровное 0.90', height: 0.14, level: 0.9 },
-  { name: 'ступень 0.05 → 0.28', height: 0.15, level: 0.05, splitLevel: 0.28 },
-  { name: 'полоса на светлом', height: 0.15, level: 0.92, bar: { thickness: 0.17, level: 0.12 } },
+  { name: 'ровное 0.10', heightDp: 36, level: 0.1 },
+  { name: 'ровное 0.30', heightDp: 36, level: 0.3 },
+  { name: 'ровное 0.50', heightDp: 36, level: 0.5 },
+  { name: 'ровное 0.69', heightDp: 36, level: 0.69 },
+  { name: 'ровное 0.90', heightDp: 36, level: 0.9 },
+  { name: 'ступень 0.05 → 0.28', heightDp: 36, level: 0.05, splitLevel: 0.28 },
+  { name: 'полоса на светлом', heightDp: 36, level: 0.92, bar: { thickness: 0.17, level: 0.12 } },
 ];
+
+/**
+ * Высота всего полотна, dp. Держится в габарите самой тесной площадки — зоны мобильной
+ * лаборатории (0.42 высоты экрана): полотно обязано влезать целиком, иначе нижние полосы
+ * видит только один стенд.
+ */
+export const REFERENCE_SCENE_HEIGHT = REFERENCE_BANDS.reduce((sum, b) => sum + b.heightDp, 0);
+
+/** Поле вокруг полотна. Заведомо мимо уровней полос и не серое: по нему видно, где кончается
+ *  сверочная область, и на снимке её границу не спутать с полосой. */
+export const REFERENCE_SURROUND = '#3c1f4a';
 
 /** Светлота в шестнадцатеричный серый. Один перевод на обе платформы — иначе разойдутся. */
 export const refGray = (level: number): string => {

@@ -297,7 +297,12 @@ const WAVE_ON_RELEASE = a11y.reduceMotion ? 0 : 2.5;
 
 const deform = createDeform();
 
-const controlCenter = () => ({ x: (viewWidthCss() / 2) * dpr, y: canvas.height * 0.34 });
+// На сверочной зоне деталь встаёт в середину полотна — там же, где её держит мобильная
+// лаборатория. Иначе под деталью на двух стендах оказываются разные полосы.
+const controlCenter = () => ({
+  x: (viewWidthCss() / 2) * dpr,
+  y: canvas.height * (ZONE_NAMES[state.zone] === 'сверочная' ? 0.5 : 0.34),
+});
 // Ход тяги умеренный: тянут пальцем, а не растягивают резину. Деформация локальная, поэтому
 // заметна и при небольшой амплитуде — прежние 0.7 полуразмера читались как «слишком много».
 const pullLimit = () => 0.14 * halfMinDp(geometry);
@@ -888,8 +893,8 @@ function renderFrame() {
     density: dpr,
     debug: DEBUG_MODES[state.debug] as VireGlassDebugMode,
     scene: screens
-      ? (ctx, w, h, ox, oy) => {
-          zone(ctx, w, h, ox, oy);
+      ? (ctx, w, h, ox, oy, d) => {
+          zone(ctx, w, h, ox, oy, d);
           for (const i of APP_BACKGROUNDS) drawAppBackground(ctx, dpr, i, ox, oy, accentHue);
           drawCoverScreen(ctx, dpr, COVER_SCREEN, ox, oy, progress, playing);
           drawTypeSpecimen(ctx, dpr, TYPE_SCREEN, ox, oy, scrollOf(TYPE_SCREEN));
@@ -902,8 +907,8 @@ function renderFrame() {
           drawPhoneFrames(ctx, dpr, PHONE_COUNT, ox, oy);
         }
       : slider
-        ? (ctx, w, h, ox, oy) => {
-            zone(ctx, w, h, ox, oy);
+        ? (ctx, w, h, ox, oy, d) => {
+            zone(ctx, w, h, ox, oy, d);
             drawSliderTrack(ctx, dpr);
           }
         : zone,

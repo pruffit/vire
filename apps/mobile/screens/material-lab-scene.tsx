@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
-import { REFERENCE_BANDS, refGray } from '../lib/vireglass/material';
+import { REFERENCE_BANDS, REFERENCE_SCENE_HEIGHT, REFERENCE_SURROUND, refGray } from '../lib/vireglass/material';
 
 // Фон намеренно недружелюбный к рендереру: мелкий кегль, 1px-линии, резкие границы и
 // градиенты в одном кадре. Красивый градиент для стенда не годится — он прячет артефакты.
@@ -196,20 +196,24 @@ function NearWhiteRamp() {
 /** СВЕРОЧНАЯ ЗОНА. Полосы описаны данными в пакете и рисуются здесь ровно так же, как их
  *  рисует веб-стенд, — только на одинаковом полотне снимки двух платформ сравнимы. */
 function ReferenceZone() {
+  // Полосы в dp, а не долями зоны: у веб-стенда полотно во весь вьюпорт, у зоны — 0.42 экрана,
+  // и одна и та же деталь ложилась на разное число полос. Сравнивать было нечего.
   return (
-    <View style={styles.zone}>
-      {REFERENCE_BANDS.map((band) => (
-        <View key={band.name} style={{ flex: band.height, flexDirection: 'row' }}>
-          <View style={{ flex: 1, backgroundColor: refGray(band.level), justifyContent: 'center' }}>
-            {band.bar ? (
-              <View style={{ height: `${band.bar.thickness * 100}%`, backgroundColor: refGray(band.bar.level) }} />
-            ) : null}
+    <View style={[styles.zone, styles.referenceZone]}>
+      <View style={{ height: REFERENCE_SCENE_HEIGHT, alignSelf: 'stretch' }}>
+        {REFERENCE_BANDS.map((band) => (
+          <View key={band.name} style={{ height: band.heightDp, flexDirection: 'row' }}>
+            <View style={{ flex: 1, backgroundColor: refGray(band.level), justifyContent: 'center' }}>
+              {band.bar ? (
+                <View style={{ height: `${band.bar.thickness * 100}%`, backgroundColor: refGray(band.bar.level) }} />
+              ) : null}
+            </View>
+            {band.splitLevel === undefined ? null : (
+              <View style={{ flex: 1, backgroundColor: refGray(band.splitLevel) }} />
+            )}
           </View>
-          {band.splitLevel === undefined ? null : (
-            <View style={{ flex: 1, backgroundColor: refGray(band.splitLevel) }} />
-          )}
-        </View>
-      ))}
+        ))}
+      </View>
     </View>
   );
 }
@@ -353,6 +357,7 @@ const styles = StyleSheet.create({
   zoneLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   centered: { textAlign: 'center' },
   satLabel: { color: '#00000099', fontSize: 12, fontWeight: '800', letterSpacing: 2 },
+  referenceZone: { backgroundColor: REFERENCE_SURROUND, gap: 0 },
   lightZone: { backgroundColor: '#f4f6f7', padding: 8, alignItems: 'flex-start', justifyContent: 'flex-start' },
   darkZone: { backgroundColor: '#05080a', padding: 8, alignItems: 'flex-start', justifyContent: 'flex-start' },
   text: { color: '#e6ecef' },

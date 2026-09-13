@@ -3,7 +3,7 @@
 // разрыв видно сразу. Ни один фон не доведён до чистого чёрного или белого: на крайних
 // значениях материал выглядит хорошо слишком легко, и решения по ним принимать нельзя.
 import type { VireGlassSceneDrawer } from '@vire/vireglass/web';
-import { REFERENCE_BANDS, refGray } from '@vire/vireglass';
+import { REFERENCE_BANDS, REFERENCE_SCENE_HEIGHT, REFERENCE_SURROUND, refGray } from '@vire/vireglass';
 
 export type Zone = { name: string; draw: VireGlassSceneDrawer };
 
@@ -18,8 +18,11 @@ type Grid = {
 };
 
 function grid({ base, line, accent, step, every }: Grid): VireGlassSceneDrawer {
-  return (ctx, w, h, offsetX, offsetY) => {
-    const px = w / 360;
+  return (ctx, w, h, offsetX, offsetY, density) => {
+    // Масштаб полотна — тот же, что у деталей. Доля ширины канваса давала на десктопе клетку
+    // впятеро крупнее телефонной, и деталь того же размера читалась совсем иначе, чем на
+    // устройстве: сравнивать стенд с лабораторией было нечем.
+    const px = density;
     const cell = step * px;
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, w, h);
@@ -369,10 +372,14 @@ const track: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
 
 // Сверочная сцена живёт в пакете и рисуется обоими стендами одинаково — только так снимок
 // с Android сравним со снимком из веба.
-const reference: VireGlassSceneDrawer = (ctx, w, h) => {
-  let y = 0;
+const reference: VireGlassSceneDrawer = (ctx, w, h, _ox, _oy, density) => {
+  // Полотно фиксированной высоты в dp и по центру площадки: у двух стендов площадки разного
+  // размера, и полосы в долях от них выходили разной толщины.
+  ctx.fillStyle = REFERENCE_SURROUND;
+  ctx.fillRect(0, 0, w, h);
+  let y = Math.round((h - REFERENCE_SCENE_HEIGHT * density) / 2);
   for (const band of REFERENCE_BANDS) {
-    const bh = Math.round(h * band.height);
+    const bh = Math.round(band.heightDp * density);
     ctx.fillStyle = refGray(band.level);
     ctx.fillRect(0, y, band.splitLevel === undefined ? w : w / 2, bh);
     if (band.splitLevel !== undefined) {

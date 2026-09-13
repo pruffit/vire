@@ -55,6 +55,10 @@ export type VireGlassSceneDrawer = (
   height: number,
   offsetX: number,
   offsetY: number,
+  /** Пикселей на dp — та же величина, что у деталей. Полотно и стекло обязаны жить в одном
+   *  масштабе: от доли ширины канваса клетка на десктопе выходила впятеро крупнее телефонной,
+   *  и деталь того же размера смотрелась на стенде совсем не так, как на устройстве. */
+  density: number,
 ) => void;
 
 /** Одна стеклянная деталь на кадре. Материал у каждой свой — так их и сравнивают рядом. */
@@ -322,7 +326,7 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
     // 1. Сцена-фон: 2D-канвас проще для текста и «обложек» (задача, п. 3), а роль FBO(scene)
     // из плана играет сама текстура — дальше её только читают.
     sceneCtx.clearRect(0, 0, width, height);
-    options.scene(sceneCtx, width, height, options.offsetX ?? 0, options.offsetY ?? 0);
+    options.scene(sceneCtx, width, height, options.offsetX ?? 0, options.offsetY ?? 0, options.density);
     gl.bindTexture(gl.TEXTURE_2D, contentTexture);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, sceneCanvas);
     gl.bindTexture(gl.TEXTURE_2D, null);
