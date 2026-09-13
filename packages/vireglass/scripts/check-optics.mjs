@@ -108,6 +108,17 @@ import {
   VIREGLASS_MATERIAL,
 } from '${CORE}';
 
+// ВЫХОД В ЦИКЛ СОБЫТИЙ МЕЖДУ КАДРАМИ ОБЯЗАТЕЛЕН. Зонд читает сетку светлоты через PBO с
+// забором, а забор в непрерывной синхронной петле не срабатывает никогда: сколько кадров ни
+// рисуй, готового чтения не будет. Гейт тогда меряет ЗАПАСНОЙ путь шейдера (u_probeLuma = -1),
+// а не тот, что работает в продукте, — и пороги настраиваются не на тот материал.
+const settle = async (draw) => {
+  for (let i = 0; i < 40; i += 1) {
+    draw();
+    await new Promise((r) => setTimeout(r, 0));
+  }
+};
+
 const hex = (v) => {
   const b = Math.round(Math.min(Math.max(v, 0), 1) * 255).toString(16).padStart(2, '0');
   return '#' + b + b + b;
@@ -115,7 +126,7 @@ const hex = (v) => {
 
 let stage = null;
 
-globalThis.vgProbe = ({ level, striped, control }) => {
+globalThis.vgProbe = async ({ level, striped, control }) => {
   if (!stage) {
     const canvas = document.createElement('canvas');
     canvas.width = 520;
@@ -149,9 +160,7 @@ globalThis.vgProbe = ({ level, striped, control }) => {
   const piece = { optics, geometry, centerX: canvas.width / 2, centerY: canvas.height / 2 };
 
   // Зонд отчитывается с отставанием, а оценка досчитывается несколько кадров.
-  for (let i = 0; i < 30; i += 1) {
-    renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece] });
-  }
+  await settle(() => renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece] }));
 
   const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
   const row = (cy, halfW) => {
@@ -181,7 +190,7 @@ let inkStage = null;
 
 // Третье обещание: КРАСКА ПОД ПАЛЬЦЕМ ТЕРЯЕТ РЕЗКОСТЬ. Меряется на штрихе поперёк: берётся
 // строка через центр детали, резкость — самый крутой перепад между соседними пикселями.
-globalThis.vgInkProbe = ({ press }) => {
+globalThis.vgInkProbe = async ({ press }) => {
   if (!stage) {
     const canvas = document.createElement('canvas');
     canvas.width = 520;
@@ -227,9 +236,7 @@ globalThis.vgInkProbe = ({ press }) => {
     touch: { x: 104, y: 52, pullX: 0, pullY: 0, press, radius: 0.72 * 60, waveAmp: 0, wavePhase: 0 },
   };
 
-  for (let i = 0; i < 30; i += 1) {
-    renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece], iconMask: mask });
-  }
+  await settle(() => renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece], iconMask: mask }));
 
   const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
   const n = 48;
@@ -259,7 +266,7 @@ let rimStage = null;
 // Шестое обещание: КРОМКА КОПИТ СОДЕРЖИМОЕ. Под деталью лежит полоса; её изображение меряется
 // по столбцам шириной «масса, делённая на пик» — без порога, потому что у самой кромки полоса
 // распадается на куски и любая граница по порогу перепрыгивает разрывы.
-globalThis.vgRimProbe = () => {
+globalThis.vgRimProbe = async () => {
   // Плотность устройства, а не единица: толщина среды задана в dp, и на плотности 1 деталь
   // выходит вдвое мельче настоящей — полоса накопления у кромки тогда вдвое у́же.
   const D = 2;
@@ -293,9 +300,7 @@ globalThis.vgRimProbe = () => {
     centerY: canvas.height / 2,
     appear: 1,
   };
-  for (let i = 0; i < 30; i += 1) {
-    renderer.render({ density: D, debug: 'normal', scene, pieces: [piece] });
-  }
+  await settle(() => renderer.render({ density: D, debug: 'normal', scene, pieces: [piece] }));
 
   const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
   // Капсула 300x110 dp при плотности 2 занимает 100..700 по горизонтали: окно начинается
@@ -342,7 +347,7 @@ let busyStage = null;
 // разброса ловит собственный период и числа скачут от уровня к уровню.
 // Контраст краски считается худшими краями — краска своим слабым, тело своим ближним к ней:
 // надпись тонет там, где под ней оказалось светлое пятно, а не в среднем по детали.
-globalThis.vgBusyProbe = ({ level, cell, amp }) => {
+globalThis.vgBusyProbe = async ({ level, cell, amp }) => {
   // СВОЙ рендерер, не общий: оценка окружения переносится между кадрами, и полотно в клетку,
   // пройдя через общий канвас, сбивало бы и свои числа, и замер тени у следующего обещания.
   if (!busyStage) {
@@ -393,9 +398,7 @@ globalThis.vgBusyProbe = ({ level, cell, amp }) => {
     inkIdle: [v, v, v, 1],
     inkActive: [v, v, v, 1],
   };
-  for (let i = 0; i < 30; i += 1) {
-    renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece], iconMask: busyStage.mask });
-  }
+  await settle(() => renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece], iconMask: busyStage.mask }));
 
   const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
   const W = 64;
@@ -425,7 +428,7 @@ globalThis.vgBusyProbe = ({ level, cell, amp }) => {
 // Четвёртое обещание: ОРГАН, ПОДНИМАЮЩИЙСЯ В СТЕКЛО, ОТРЫВАЕТСЯ ОТ ПОДЛОЖКИ. Тень под ним
 // обязана отойти дальше, чем под вдавленной кнопкой при том же нажатии. Меряется площадью
 // потемнения в столбце под нижней кромкой детали на ровном светлом полотне.
-globalThis.vgLiftProbe = ({ lift }) => {
+globalThis.vgLiftProbe = async ({ lift }) => {
   if (!stage) {
     const canvas = document.createElement('canvas');
     canvas.width = 520;
@@ -452,9 +455,7 @@ globalThis.vgLiftProbe = ({ lift }) => {
     lift,
   };
 
-  for (let i = 0; i < 30; i += 1) {
-    renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece] });
-  }
+  await settle(() => renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece] }));
 
   const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
   const rows = 46;
