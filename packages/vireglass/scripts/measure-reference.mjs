@@ -24,12 +24,14 @@
  *   adb shell am start -a android.intent.action.VIEW -d "vire://lab?zone=NN&panel=0&auto=0" PKG
  *   adb exec-out screencap -p > lab.png
  */
-import { build } from 'esbuild';
 import { chromium } from 'playwright';
+import { createServer } from 'node:http';
 import { inflateSync } from 'node:zlib';
-import { dirname, resolve } from 'node:path';
+import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
+
+import { DEBUG_MODES, PRESET_NAMES } from '../src/material';
 
 import {
   REFERENCE_PIECE_AT,
@@ -40,8 +42,12 @@ import {
 } from '../src/reference-scene';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CORE = resolve(HERE, '../src/index.ts').replace(/\\/g, '/');
-const WEB = resolve(HERE, '../src/web/index.ts').replace(/\\/g, '/');
+const DEBUG_INDEX = Object.fromEntries(DEBUG_MODES.map((m, i) => [m, i]));
+const PRESET_INDEX = (name) => PRESET_NAMES.indexOf(name);
+const surroundRgb = () => {
+  const hex = REFERENCE_SURROUND.slice(1);
+  return [0, 2, 4].map((k) => parseInt(hex.slice(k, k + 2), 16));
+};
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
   const hit = args.find((a) => a.startsWith('--' + name + '='));
@@ -120,69 +126,6 @@ function report(title, rows) {
   );
 }
 
-const ENTRY = [
-  "import { createVireGlassRenderer, drawReferenceScene } from '" + WEB + "';",
-  "import {",
-  "  REFERENCE_PIECE_AT,",
-  "  REFERENCE_SCENE_HEIGHT,",
-  "  REFERENCE_SCENE_WIDTH,",
-  "  REFERENCE_SHAPES,",
-  "  referenceScene,",
-  "  resolveOptics,",
-  "  MATERIAL_PRESETS,",
-  "  VIREGLASS_MATERIAL,",
-  "} from '" + CORE + "';",
-  "",
-  "globalThis.vgReference = async ({ density, debug, shape, preset, name, stageW, stageH }) => {",
-  "  const canvas = document.createElement('canvas');",
-  "  // Размер площадки влияет на замер не только полем вокруг полотна: сетка зонда постоянная",
-  "  // (48x96 на всю площадку), поэтому на площадке телефона она накрывает деталь втрое реже.",
-  "  canvas.width = Math.round((stageW || REFERENCE_SCENE_WIDTH + 48) * density);",
-  "  canvas.height = Math.round((stageH || REFERENCE_SCENE_HEIGHT + 80) * density);",
-  "  document.body.append(canvas);",
-  "  const renderer = createVireGlassRenderer(canvas);",
-  "  renderer.resize(canvas.width, canvas.height);",
-  "",
-  "  const picked = referenceScene(name);",
-  "  const scene = (ctx, w, h, ox, oy, d) =>",
-  "    drawReferenceScene(ctx, picked, w, h, { density: d, fit: 'полотно' });",
-  "",
-  "  const geometry = REFERENCE_SHAPES[shape];",
-  "  // Деталь стоит в точке, заданной полотном, — как на обоих стендах.",
-  "  const left = (canvas.width - REFERENCE_SCENE_WIDTH * density) / 2;",
-  "  const top = (canvas.height - REFERENCE_SCENE_HEIGHT * density) / 2;",
-  "  const piece = {",
-  "    optics: resolveOptics(preset ? MATERIAL_PRESETS[preset] : VIREGLASS_MATERIAL),",
-  "    geometry,",
-  "    centerX: left + REFERENCE_PIECE_AT.xDp * density,",
-  "    centerY: top + REFERENCE_PIECE_AT.yDp * density,",
-  "  };",
-  "  // Между кадрами ОБЯЗАТЕЛЕН выход в цикл событий: чтение зонда идёт через PBO и забор,",
-  "  // а забор в непрерывной синхронной петле не срабатывает никогда. Без этого весь замер",
-  "  // шёл по запасному пути шейдера (u_probeLuma = -1) — не по тому, что работает в продукте.",
-  "  for (let i = 0; i < 40; i += 1) {",
-  "    renderer.render({ density, debug, scene, pieces: [piece] });",
-  "    await new Promise((r) => setTimeout(r, 0));",
-  "  }",
-  "",
-  "  const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });",
-  "  const buf = new Uint8Array(canvas.width * canvas.height * 4);",
-  "  gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, buf);",
-  "  // GL отсчитывает снизу: переворачиваем, чтобы кадр читался так же, как снимок с устройства.",
-  "  const out = new Uint8Array(buf.length);",
-  "  const stride = canvas.width * 4;",
-  "  for (let y = 0; y < canvas.height; y += 1) {",
-  "    out.set(buf.subarray((canvas.height - 1 - y) * stride, (canvas.height - y) * stride), y * stride);",
-  "  }",
-  "  return {",
-  "    width: canvas.width,",
-  "    height: canvas.height,",
-  "    radiusDp: Math.min(geometry.width, geometry.height) / 2,",
-  "    px: Array.from(out),",
-  "  };",
-  "};",
-].join('\n');
-
 /**
  * Полотно на снимке: полоса между двумя полями окружения. Отсюда же масштаб снимка.
  *
@@ -217,43 +160,89 @@ function locateStrip(px, width, height, surround) {
   return runs.find((r) => r.bottom - r.top >= longest - 2);
 }
 
+/**
+ * Веб-половина замера — СНИМОК НАСТОЯЩЕГО СТЕНДА, а не своя отрисовка сцены. Своя отрисовка
+ * уже разошлась со стендом вчетверо: стенд ведёт полярность надписи автоматикой, а замер брал
+ * материал как есть, и на «ступенях» выходило +11 против −70. Сравнивать надо то, на что
+ * смотрит глаз, поэтому обе платформы идут через ОДИН путь — снимок и разбор снимка.
+ */
 async function fromWeb() {
   const density = Number(arg('density', '2.75'));
   const debug = arg('debug', 'normal');
   const shape = arg('shape', 'круг');
   const preset = arg('preset', '');
   const name = arg('scene', 'ступени');
-  // --stage=406x904 ставит площадку размером с экран устройства: тогда и сетка зонда ложится
-  // на деталь так же густо, как там.
-  const stage = arg('stage', '').split('x').map(Number);
-  const stageW = Number.isFinite(stage[0]) ? stage[0] : 0;
-  const stageH = Number.isFinite(stage[1]) ? stage[1] : 0;
-  const bundle = await build({
-    stdin: { contents: ENTRY, resolveDir: HERE, loader: 'ts' },
-    bundle: true,
-    format: 'iife',
-    write: false,
-    logLevel: 'silent',
-  });
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  await page.goto('about:blank');
-  await page.addScriptTag({ content: bundle.outputFiles[0].text });
-  const frame = await page.evaluate((a) => globalThis.vgReference(a), { density, debug, shape, preset, name, stageW, stageH });
-  await browser.close();
+  // --stage=411x914 ставит площадку размером с экран устройства: сетка зонда постоянная на всю
+  // площадку, и на тесной она накрывает деталь гуще, чем там.
+  const stage = arg('stage', '411x914').split('x').map(Number);
+  const stageW = Number.isFinite(stage[0]) && stage[0] > 0 ? stage[0] : 411;
+  const stageH = Number.isFinite(stage[1]) && stage[1] > 0 ? stage[1] : 914;
+  const base = arg('stand', '');
+  const url = new URL(base || 'http://127.0.0.1:0/rnd/');
 
+  const server = base ? null : await listen(serveStand());
+  if (server) url.port = String(server.port);
+  url.searchParams.set('zone', name);
+  url.searchParams.set('shape', shape);
+  url.searchParams.set('ui', '0');
+  if (debug !== 'normal') url.searchParams.set('debug', String(DEBUG_INDEX[debug] ?? 0));
+  if (preset) url.searchParams.set('preset', String(PRESET_INDEX(preset)));
+
+  const browser = await chromium.launch();
+  const page = await browser.newPage({
+    viewport: { width: stageW, height: stageH },
+    deviceScaleFactor: density,
+  });
+  await page.goto(url.toString());
+  // Зонд отчитывается с отставанием, а оценка среды и полярность досчитываются несколько кадров.
+  await page.waitForTimeout(3500);
+  const shot = await page.screenshot();
+  await browser.close();
+  server?.close();
+
+  const frame = decodePng(shot);
+  const strip = locateStrip(frame.px, frame.width, frame.height, surroundRgb());
+  const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;
   report(
-    'веб · ' + name + ' · density ' + density + ' · ' + debug + ' · ' + shape + ' · ' + (preset || 'база'),
+    'стенд · ' + name + ' · ' + stageW + 'x' + stageH + ' · density ' + density + ' · ' + debug
+      + ' · ' + shape + ' · ' + (preset || 'база'),
     profile({
-      px: Uint8Array.from(frame.px),
+      px: frame.px,
       width: frame.width,
       height: frame.height,
-      pxPerDp: density,
-      cx: Math.round(frame.width / 2),
-      cy: Math.round(frame.height / 2),
-      radiusDp: frame.radiusDp,
+      pxPerDp,
+      cx: Math.round(frame.width / 2 + (REFERENCE_PIECE_AT.xDp - REFERENCE_SCENE_WIDTH / 2) * pxPerDp),
+      cy: Math.round(strip.top + REFERENCE_PIECE_AT.yDp * pxPerDp),
+      radiusDp: Math.min(REFERENCE_SHAPES[shape].width, REFERENCE_SHAPES[shape].height) / 2,
     }),
   );
+}
+
+/** Стенд — статические файлы. Поднимаем их сами, чтобы замер не зависел от чужого сервера. */
+function serveStand() {
+  const root = resolve(HERE, '../../../apps/web/public');
+  const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.map': 'application/json' };
+  const srv = createServer(async (req, res) => {
+    let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    if (path.endsWith('/')) path += 'index.html';
+    const file = normalize(join(root, path));
+    if (!file.startsWith(normalize(root))) { res.writeHead(403).end(); return; }
+    try {
+      const body = fs.readFileSync(file);
+      res.writeHead(200, { 'content-type': types[extname(file)] ?? 'application/octet-stream' });
+      res.end(body);
+    } catch {
+      res.writeHead(404).end();
+    }
+  });
+  return srv;
+}
+
+/** Слушать порт — операция асинхронная: адрес появляется только после события. */
+function listen(srv) {
+  return new Promise((done) => {
+    srv.listen(0, '127.0.0.1', () => done({ port: srv.address().port, close: () => srv.close() }));
+  });
 }
 
 /**
@@ -262,7 +251,10 @@ async function fromWeb() {
  * стоит — тем более что путь к внешнему ffmpeg у каждого свой и скрипт перестаёт запускаться.
  */
 function readPng(file) {
-  const buf = fs.readFileSync(file);
+  return decodePng(fs.readFileSync(file));
+}
+
+function decodePng(buf) {
   if (buf.toString('ascii', 1, 4) !== 'PNG') throw new Error('снимок обязан быть PNG');
   const width = buf.readUInt32BE(16);
   const height = buf.readUInt32BE(20);
