@@ -495,8 +495,10 @@ half4 main(float2 xy) {
   float line = (1.0 - smoothstep(0.0, lineW, e)) * lens;
   float outline = (1.0 - smoothstep(0.0, lineW * 0.6, e)) * lens;
   float lit = clamp(max(rimKey * 1.4, u_presence * 2.0), 0.0, 1.0);
+  // Тёмная кромка — самостоятельный слой по всему силуэту, блик ложится ПОВЕРХ неё (iOS 27).
+  // Пока обводка гасла множителем (1 − lit), силуэт читался одной дугой: блик ИЛИ тень.
+  rgb *= 1.0 - 0.22 * outline;
   rgb = mix(rgb, mix(refl, float3(1.0), 0.75), line * lit);
-  rgb *= 1.0 - 0.22 * outline * (1.0 - lit);
 
   if (u_debug > 9.5 && u_debug < 10.5) { rgb = spectral * 0.5; }
   if (u_debug > 10.5 && u_debug < 11.5) { rgb = float3(density, needForInk, structure); }

@@ -16,9 +16,15 @@
 | H | HIG «Materials», «Color»; SwiftUI `Glass`, `GlassEffectContainer` | developer.apple.com |
 | S | Meet with Apple, сессия 208 «Showcase: как приложения внедряют новый дизайн и Liquid Glass» (1,5 ч, с беседой команды дизайна Apple) | `.reference/liquid-glass/mwa-208-showcase_hd.mp4` + `-transcript.txt` |
 | B | Tech Talks 111462 «Raise the bar with iPhone Duo» — панели на широком экране | `.reference/liquid-glass/tt-111462-duo-bars_hd.mp4` + `-transcript.txt` |
+| P | WWDC26 Platforms State of the Union — переработка материала в iOS 27 | **записи нет**, только текст: developer.apple.com/videos/play/wwdc2026/102 |
+| R | Release notes iOS 26.1 / 26.2 / 26.4 — выбор Clear/Tinted | **записи нет**, только текст: support.apple.com/en-us/123075 |
 
 Папка `.reference/` в git не входит (исключена локально). Раскадровка — `ffmpeg` из
 `ffmpeg-static`, кадры 4K режутся кропами, линии сетки внутри стекла снимаются по яркости.
+
+**P и R — источники без записи**, и это разный класс доказательства: утверждение из них можно
+процитировать, но нельзя перепроверить кадром. Числа из таких источников в код не идут — только
+структурные правила.
 
 S и B на YouTube анонимно не открываются (бот-проверка требует входа, куки автора не трогаем),
 зато те же записи лежат у Apple открыто: страница сессии отдаёт и mp4 с `devstreaming-cdn`,
@@ -49,6 +55,10 @@ S и B на YouTube анонимно не открываются (бот-про�
   радужной каймой дисперсии (M 2:38; A 1:50). Остальной силуэт обведён тонкой **тёмной** линией.
 - **Цвет кромки — от окружения**: у жёлтого цветка кромка жёлтая, над небом — голубая (M 2:46).
 - Свет **двигается** по силуэту при взаимодействии и от наклона устройства (M 11:04).
+- **iOS 27 добавила тёмную кромку отдельным слоем**, и она НЕ исключает блик: «to establish more
+  depth and separation, we also introduced a darkened edge along with brighter specular
+  highlights» (P). До этого тёмная линия читалась как «там, где нет блика», теперь как «по всему
+  силуэту, а блик поверх неё».
 
 ## 3. Тело и адаптация (вариант Regular)
 
