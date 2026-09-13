@@ -46,6 +46,17 @@ describe('тело стекла в шейдере', () => {
     expect(LENS_SHADER).toContain('rgb = mix(rgb, vgHue(ambient) * VG_MEDIUM_LUMA, VG_MEDIUM_PULL * u_appear);');
     expect(LENS_SHADER).toContain('rgb += ambient * u_edgeLight * VG_AMBIENT_SPILL * u_appear;');
   });
+
+  // Рассеяние ЗАМЕНЯЕТ rgb целиком (вес доходит до единицы), поэтому всё, что легло раньше,
+  // теряется. Обратный порядок стирал отражение окружения на всей детали и гейтом не ловился:
+  // пороги перекрывали разницу с запасом (issue #106).
+  it('отражение ложится ПОСЛЕ рассеяния', () => {
+    const scatter = LENS_SHADER.indexOf('rgb = mix(rgb, blurred, smoothstep(0.5, 2.0, adaptBlur));');
+    const reflection = LENS_SHADER.indexOf('rgb = mix(rgb, env * spectral, fres);');
+    expect(scatter).toBeGreaterThan(-1);
+    expect(reflection).toBeGreaterThan(-1);
+    expect(reflection).toBeGreaterThan(scatter);
+  });
 });
 
 describe('предел стекла и полярность', () => {
