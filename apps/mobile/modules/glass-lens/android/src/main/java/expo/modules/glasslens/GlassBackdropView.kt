@@ -180,10 +180,10 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
     try {
       ensureProbe() ?: return
       val pn = probeNode ?: return
-      pn.setPosition(0, 0, PROBE_W, PROBE_H)
-      val c = pn.beginRecording(PROBE_W, PROBE_H)
+      pn.setPosition(0, 0, SHOT_W, SHOT_H)
+      val c = pn.beginRecording(SHOT_W, SHOT_H)
       try {
-        c.scale(PROBE_W.toFloat() / width, PROBE_H.toFloat() / height)
+        c.scale(SHOT_W.toFloat() / width, SHOT_H.toFloat() / height)
         c.drawRenderNode(n)
       } finally {
         pn.endRecording()
@@ -204,8 +204,8 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
     val handler = Handler(thread.looper)
     probeHandler = handler
     val reader = ImageReader.newInstance(
-      PROBE_W,
-      PROBE_H,
+      SHOT_W,
+      SHOT_H,
       PixelFormat.RGBA_8888,
       2,
       HardwareBuffer.USAGE_GPU_COLOR_OUTPUT or HardwareBuffer.USAGE_CPU_READ_OFTEN,
@@ -236,12 +236,23 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
       val pixelStride = plane.pixelStride
       val luma = FloatArray(PROBE_W * PROBE_H)
       val color = FloatArray(PROBE_W * PROBE_H * 3)
+      val cells = (SHOT_BLOCK * SHOT_BLOCK).toFloat()
       for (y in 0 until PROBE_H) {
         for (x in 0 until PROBE_W) {
-          val o = y * rowStride + x * pixelStride
-          val r = (buf.get(o).toInt() and 0xFF) / 255f
-          val g = (buf.get(o + 1).toInt() and 0xFF) / 255f
-          val b = (buf.get(o + 2).toInt() and 0xFF) / 255f
+          var r = 0f
+          var g = 0f
+          var b = 0f
+          for (dy in 0 until SHOT_BLOCK) {
+            for (dx in 0 until SHOT_BLOCK) {
+              val o = (y * SHOT_BLOCK + dy) * rowStride + (x * SHOT_BLOCK + dx) * pixelStride
+              r += (buf.get(o).toInt() and 0xFF) / 255f
+              g += (buf.get(o + 1).toInt() and 0xFF) / 255f
+              b += (buf.get(o + 2).toInt() and 0xFF) / 255f
+            }
+          }
+          r /= cells
+          g /= cells
+          b /= cells
           val i = y * PROBE_W + x
           luma[i] = 0.2126f * r + 0.7152f * g + 0.0722f * b
           color[i * 3] = r
@@ -295,6 +306,19 @@ class GlassBackdropView(context: Context, appContext: AppContext) : ExpoView(con
      */
     const val PROBE_W = 48
     const val PROBE_H = 96
+
+    /**
+     * Снимок берётся КРУПНЕЕ сетки, и клетка потом усредняется блоком SHOT_BLOCK×SHOT_BLOCK.
+     *
+     * Уменьшать экран сразу в сетку нельзя: растеризатор при уменьшении в двадцать пять раз
+     * не усредняет, а фильтрует — на ступени 0.50 → 0.69 клетка выходила 0.486, то есть ниже
+     * ОБОИХ уровней. На ровных полях это незаметно, а на градиенте зонд занижал наклон
+     * светлоты почти на треть, и тело детали на Android сильнее повторяло фон, чем в вебе
+     * (issue #113). Веб такой ошибки не делает: там клетку считает шейдер, усредняя 5×5.
+     */
+    const val SHOT_BLOCK = 5
+    const val SHOT_W = PROBE_W * SHOT_BLOCK
+    const val SHOT_H = PROBE_H * SHOT_BLOCK
 
     /** Частота снимка. Адаптация всё равно едет по времени порядка полусекунды, поэтому
      *  чаще смысла нет, а кадровый бюджет это трогать не должно. */
