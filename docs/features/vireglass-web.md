@@ -165,11 +165,18 @@ Android (AGSL) и веб (WebGL2). Стенд `/rnd` — лаборатория,
 
 - **Измеритель** снимает кадр и считает светлоту, шум, долю пикселей в упоре и полосы.
 
+### Шкала прозрачности (ось есть, ползунка ещё нет)
+
+`applyGlassScale(optics, scale)` — пользовательская ось «ultra clear → fully tinted» из iOS 26.1/27.
+В точке `GLASS_SCALE_DEFAULT` материал в точности сегодняшний, поэтому появление оси ничего не
+сдвинуло. К продукту она пока не подключена: экрана настроек с ползунком нет, вызовов из веба и
+мобилки нет. Гейт `check:optics` меряет её ХОДОМ по диапазону, а не в одной точке.
+
 ## Где код
 
 - **Пакет:** `packages/vireglass/src/` — `material.ts` (причины), `optics.ts` (следствия),
   `geometry.ts`, `sdf.ts`, `lens-shader.ts`, `surface-shader.ts`, `adaptation.ts`,
-  `accessibility.ts`, `scroll-edge.ts`,
+  `accessibility.ts`, `glass-scale.ts` (пользовательская шкала прозрачности), `scroll-edge.ts`,
   `concentric.ts`, `adapters.ts`.
 - **Цели рендера:** `packages/vireglass/src/targets/{agsl,glsl}.ts`; гейт компиляции —
   `packages/vireglass/scripts/check-glsl.mjs` (`pnpm turbo run check:glsl`, в CI и в релизе).

@@ -7,6 +7,7 @@ export * from './lens-shader';
 export * from './surface-shader';
 export * from './adaptation';
 export * from './accessibility';
+export * from './glass-scale';
 export * from './scroll-edge';
 export * from './concentric';
 export * from './reference-scene';

@@ -18,6 +18,9 @@
  *      и раздувать его изображение — этим стекло и отличается от плёнки. Остальные пять
  *      обещаний смотрят в середину детали, где наклон нулевой и преломления нет вовсе,
  *      поэтому полосу у кромки не проверяет больше ничто.
+ *   7. ШКАЛА ПРОЗРАЧНОСТИ ДВИЖЕТ МАТЕРИАЛ. Пользовательская шкала ultra clear → fully tinted
+ *      обязана реально менять стекло: к тонированному концу окно закрывается, деталь
+ *      становится заметнее. Меряется ХОД по шкале — пороги в одной точке этого не видят.
  *
  * Проверка идёт ПО ВСЕМУ ДИАПАЗОНУ светлоты полотна, а не в паре точек. Дефект, ради которого
  * гейт и написан, был не порогом, а ОСОБЕННОСТЬЮ: требуемый отход делился на расстояние от
@@ -51,6 +54,19 @@ const MIN_PRESENCE = 5;
 /** Шагов по светлоте полотна. Гуще, чем кажется нужным: особенность сидит там, где светлота
  *  полотна проходит рядом со светлотой тинта, и редкий шаг её перешагивает. */
 const STEPS = 41;
+/** Шагов по пользовательской шкале прозрачности и полотно, на котором она меряется. */
+const SCALE_STEPS = 7;
+const SCALE_LEVEL = 0.5;
+/**
+ * Насколько шкала обязана РЕАЛЬНО двигать материал от края до края. Пороги — половина от
+ * измеренного размаха (окно 89 % → 10 %, различимость 24.9 → 84.0): первая версия шкалы правила
+ * толщину среды и давала 1 п.п. и 0.7 — ровно тот случай, ради которого обещание и написано.
+ */
+const MIN_SCALE_TRANSMISSION_DROP = 0.4;
+const MIN_SCALE_PRESENCE_GAIN = 20;
+/** Обратный ход на шаге в пределах шума зонда — не провал; больше — шкала немонотонна. */
+const SCALE_REVERSAL = 0.02;
+const SCALE_PRESENCE_REVERSAL = 1;
 /** Шагов по светлоте пёстрого полотна. Реже, чем по ровному: особенности между шагами тут нет. */
 const BUSY_STEPS = 9;
 /**
@@ -97,7 +113,9 @@ const ENTRY = `
 import { createVireGlassRenderer, drawReferenceScene } from '${WEB}';
 import {
   capsuleGeometry,
+  applyGlassScale,
   circleGeometry,
+  GLASS_SCALE_DEFAULT,
   INK_DARK,
   INK_LIGHT,
   materialForInk,
@@ -129,7 +147,7 @@ const settle = async (draw) => {
 
 let stage = null;
 
-globalThis.vgProbe = async ({ level, striped, control }) => {
+globalThis.vgProbe = async ({ level, striped, control, scale }) => {
   if (!stage) {
     const canvas = document.createElement('canvas');
     canvas.width = 520;
@@ -149,7 +167,11 @@ globalThis.vgProbe = async ({ level, striped, control }) => {
   // знал только первый случай, смена материала кнопок прошла мимо него целиком.
   const base = control ? materialForInk(VIREGLASS_CONTROL_MATERIAL, true) : VIREGLASS_MATERIAL;
   const light = shouldInkBeLight({ luma: level, hi: level }, level < 0.5);
-  const optics = resolveOptics({ ...base, ink: light ? INK_LIGHT : INK_DARK });
+  // В точке по умолчанию шкала — тождество, поэтому остальные обещания меряются как прежде.
+  const optics = applyGlassScale(
+    resolveOptics({ ...base, ink: light ? INK_LIGHT : INK_DARK }),
+    scale ?? GLASS_SCALE_DEFAULT,
+  );
   const geometry = control ? circleGeometry(56) : roundedRectGeometry(220, 120, 32);
   const piece = { optics, geometry, centerX: canvas.width / 2, centerY: canvas.height / 2 };
 
@@ -501,6 +523,49 @@ async function main() {
       failed.push(`${name}, полотно ${level.toFixed(2)}: пропала над ровным фоном`);
     }
   }
+  }
+
+  // ШКАЛА ПРОЗРАЧНОСТИ МЕРЯЕТСЯ ХОДОМ, А НЕ ТОЧКОЙ. Одни и те же пороги на обоих концах
+  // требовать нельзя: ultra clear обязан быть незаметнее, fully tinted — обязан скрывать
+  // содержимое. Поэтому проверяется направление, а сегодняшние пороги держит точка по умолчанию.
+  console.log('--- шкала прозрачности ---');
+  const scalePoints = [];
+  for (let i = 0; i < SCALE_STEPS; i += 1) {
+    const scale = i / (SCALE_STEPS - 1);
+    const a = { level: SCALE_LEVEL, control: false, scale };
+    const striped = await page.evaluate((x) => globalThis.vgProbe(x), { ...a, striped: true });
+    const flat = await page.evaluate((x) => globalThis.vgProbe(x), { ...a, striped: false });
+    const transmission = spread(striped.inside) / Math.max(spread(striped.outside), 1e-6);
+    const presence = Math.max(
+      Math.abs(flat.inside[2] - flat.outside[2]),
+      Math.abs(flat.rim[1] - flat.outside[2]),
+      Math.abs(flat.rim[0] - flat.outside[2]),
+    );
+    scalePoints.push({ scale, transmission, presence });
+    console.log(`  шкала ${scale.toFixed(2)}: окно ${(transmission * 100).toFixed(0)}%, предмет ${presence.toFixed(1)}`);
+  }
+  const clearEnd = scalePoints[0];
+  const tintedEnd = scalePoints[scalePoints.length - 1];
+  const drop = clearEnd.transmission - tintedEnd.transmission;
+  const gain = tintedEnd.presence - clearEnd.presence;
+  console.log(`  размах: окно −${(drop * 100).toFixed(0)} п.п., предмет +${gain.toFixed(1)}`);
+  if (!(drop >= MIN_SCALE_TRANSMISSION_DROP)) {
+    failed.push(`шкала: тонирование не закрывает содержимое (окно упало на ${(drop * 100).toFixed(0)} п.п.)`);
+  }
+  if (!(gain >= MIN_SCALE_PRESENCE_GAIN)) {
+    failed.push(`шкала: тонирование не делает деталь заметнее (предмет вырос на ${gain.toFixed(1)})`);
+  }
+  for (let i = 1; i < scalePoints.length; i += 1) {
+    const at = scalePoints[i].scale.toFixed(2);
+    const back = scalePoints[i].transmission - scalePoints[i - 1].transmission;
+    if (back > SCALE_REVERSAL) {
+      failed.push(`шкала: на шаге ${at} окно ПОДРОСЛО на ${(back * 100).toFixed(0)} п.п.`);
+    }
+    // Оба конца могут сойтись при провале в середине — там регрессию и не видно иначе.
+    const dip = scalePoints[i - 1].presence - scalePoints[i].presence;
+    if (dip > SCALE_PRESENCE_REVERSAL) {
+      failed.push(`шкала: на шаге ${at} предмет ПРОСЕЛ на ${dip.toFixed(1)}`);
+    }
   }
 
   console.log('--- краска под пальцем ---');
