@@ -59,8 +59,13 @@ import {
   ZONE_NAMES,
 } from './scenes';
 
-/** Сверочные полотна: на них деталь паркуется в середину, как в мобильной лаборатории. */
+/**
+ * Сверочные полотна. На них кадр обязан совпадать с кадром мобильной лаборатории целиком, а не
+ * только полотном: деталь стоит в точке, заданной полотном, и в кадре она ОДНА — ряд образцов
+ * материалов и подписи под ними ложились прямо на полотно, а на телефоне их нет.
+ */
 const REFERENCE_ZONE_NAMES = new Set(REFERENCE_SCENES.map((s) => s.name));
+const onReferenceScene = () => REFERENCE_ZONE_NAMES.has(ZONE_NAMES[state.zone]);
 
 const stage = document.getElementById('stage');
 if (!stage) throw new Error('нет #stage');
@@ -293,7 +298,7 @@ function samplePieces(ink: number) {
 /** Подписи живут в DOM, а не в сцене: нарисованные в сцену, они попали бы ПОД стекло. */
 function placeCaptions(): void {
   const { size, gap, left, y } = sampleLayout();
-  const hidden = state.view !== 'material';
+  const hidden = state.view !== 'material' || onReferenceScene();
   captions.forEach((node, i) => {
     node.style.display = hidden ? 'none' : 'block';
     node.style.left = `${left + i * (size + gap)}px`;
@@ -313,7 +318,7 @@ const deform = createDeform();
 // не от видимой области: с открытой панелью управления центр видимой области и центр полотна —
 // разные точки, и деталь оказывалась над другими полосами, чем в мобильной лаборатории.
 const controlCenter = () => {
-  if (!REFERENCE_ZONE_NAMES.has(ZONE_NAMES[state.zone])) {
+  if (!onReferenceScene()) {
     return { x: (viewWidthCss() / 2) * dpr, y: canvas.height * 0.34 };
   }
   const left = (canvas.width - REFERENCE_SCENE_WIDTH * dpr) / 2;
@@ -939,7 +944,9 @@ function renderFrame() {
         ? [groupPiece()]
         : slider
           ? [sliderPiece()]
-          : [controlPiece(), ...samplePieces(ink)],
+          : onReferenceScene()
+            ? [controlPiece()]
+            : [controlPiece(), ...samplePieces(ink)],
   });
 }
 

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Backdrop } from '../components/backdrop';
 import { VireGlassSurface } from '../components/vireglass/glass-surface';
 import { MaterialLabScene, ZONE_NAMES } from './material-lab-scene';
+import { REFERENCE_SCENES } from '../lib/vireglass/material';
 import {
   LabMiniPlayer,
   LabSheet,
@@ -248,6 +249,9 @@ export function MaterialLab() {
     [manual, autoInk, adaptation.ink],
   );
   const geometry = SHAPES[shape];
+  // На сверочных полотнах кадр обязан совпадать с кадром веб-стенда целиком: деталь в кадре
+  // одна, без принадлежностей лаборатории.
+  const onReferenceScene = REFERENCE_SCENES.some((s) => s.name === ZONE_NAMES[zone]);
   const focusY =
     stage === 'фигуры' ? FIGURES_TOP + geometry.height / 2 : SCREEN_H - insets.bottom - 110;
 
@@ -380,8 +384,10 @@ export function MaterialLab() {
             />
           ))}
           {/* Надпись ПОВЕРХ стекла: ровно то, ради чего вся адаптация и существует. Её цвет
-              ведёт автоматика — если стекло дошло до предела, полярность переворачивается. */}
-          <Text
+              ведёт автоматика — если стекло дошло до предела, полярность переворачивается.
+              На сверочных полотнах её нет: там кадр обязан совпасть с кадром веб-стенда, а
+              надпись — принадлежность лаборатории, а не материала. */}
+          {onReferenceScene ? null : <Text
             style={[
               styles.overInk,
               {
@@ -391,7 +397,7 @@ export function MaterialLab() {
             ]}
           >
             Читаемость
-          </Text>
+          </Text>}
         </View>
       ) : null}
 
