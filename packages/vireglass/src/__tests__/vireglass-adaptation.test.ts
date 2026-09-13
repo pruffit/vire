@@ -51,6 +51,18 @@ describe('тело стекла в шейдере', () => {
   // Рассеяние ЗАМЕНЯЕТ rgb целиком (вес доходит до единицы), поэтому всё, что легло раньше,
   // теряется. Обратный порядок стирал отражение окружения на всей детали и гейтом не ловился:
   // пороги перекрывали разницу с запасом (issue #106).
+  // Режим «подложка» — единственная точка, где видно, ЧТО ДОШЛО до шейдера, отдельно от того,
+  // как он это обработал. Слои, не завязанные на линзу (тело, среда, рассеяние), доживали до
+  // него и смешивали два вопроса в один: деталь была видна и при идеальном захвате (issue #112).
+  it('«подложка» отдаёт содержимое без единого слоя поверх', () => {
+    const bypass = LENS_SHADER.indexOf('if (u_debug > 5.5 && u_debug < 6.5) {');
+    const medium = LENS_SHADER.indexOf('rgb = mix(rgb, vgHue(ambient) * VG_MEDIUM_LUMA');
+    const scatter = LENS_SHADER.indexOf('rgb = mix(rgb, blurred, smoothstep(0.5, 2.0, adaptBlur));');
+    expect(bypass).toBeGreaterThan(-1);
+    expect(bypass).toBeLessThan(scatter);
+    expect(bypass).toBeLessThan(medium);
+  });
+
   it('отражение ложится ПОСЛЕ рассеяния', () => {
     const scatter = LENS_SHADER.indexOf('rgb = mix(rgb, blurred, smoothstep(0.5, 2.0, adaptBlur));');
     const reflection = LENS_SHADER.indexOf('rgb = mix(rgb, env * spectral, fres);');
