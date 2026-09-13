@@ -8,6 +8,7 @@ import {
   shouldInkBeLight,
 } from '../adaptation';
 import { LENS_SHADER } from '../lens-shader';
+import { SURFACE_SHADER } from '../surface-shader';
 import { colorPickup, diffraction, dispersion, iridescence } from '../optics';
 import { resolveOptics } from '../material';
 
@@ -56,6 +57,15 @@ describe('тело стекла в шейдере', () => {
     expect(scatter).toBeGreaterThan(-1);
     expect(reflection).toBeGreaterThan(-1);
     expect(reflection).toBeGreaterThan(scatter);
+  });
+
+  // Тень обязана быть СЛАБЕЕ у самого контура, чем ниже него: у эталона минимум стоит на
+  // 17…25 px ниже кромки. Слагаемые, монотонные по расстоянию от силуэта, такого профиля не
+  // дают, а гейт откат не ловит — при возврате контактного затемнения обе его метрики даже
+  // растут (предмет 7.1 → 9.7, раздув 1.90 → 1.92).
+  it('тень у контура ослаблена зазором', () => {
+    expect(SURFACE_SHADER).toContain('mix(VG_GAP_LIGHT, 1.0, gap)');
+    expect(SURFACE_SHADER).not.toContain('con * con');
   });
 });
 
