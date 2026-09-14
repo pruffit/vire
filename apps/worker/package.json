@@ -12,8 +12,8 @@
     "models:download": "node scripts/download-models.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1121.0",
-    "@smithy/node-http-handler": "^4.11.3",
+    "@aws-sdk/client-s3": "^3.1130.0",
+    "@smithy/node-http-handler": "^4.12.1",
     "@vire/core": "workspace:*",
     "@vire/db": "workspace:*",
     "@vire/i18n": "workspace:*",

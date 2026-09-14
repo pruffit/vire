@@ -16,7 +16,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "use-intl": "4.14.1"
+    "use-intl": "4.14.3"
   },
   "devDependencies": {
     "@types/node": "^22",
