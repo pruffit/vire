@@ -13,6 +13,8 @@ interface ErrorContext {
 // Потолок записей обязателен — текст содержит уникальные сообщения ошибок.
 const alertGate = createThrottleGate({ ttlMs: 60_000, maxSize: 500 });
 
+const STACK_LIMIT = 2000;
+
 // Известный шум — логируем, но не алертим: transformAlgorithm — баг Node webstreams
 // при обрыве SSR-стрима, юзеров не задевает; Failed to find Server Action — старый
 // деплой шлёт action-id из прошлого билда, штатно после каждого релиза.
@@ -41,12 +43,25 @@ export function describeError(error: unknown): string {
 }
 
 // Место ошибки в тексте алерта: без него digest без message стоит похода в логи контейнера,
-// а деплой их стирает. routeType отделяет server action от рендера, route handler и proxy.
+// а деплой их стирает. routeType делит action/рендер/роут/proxy, renderSource — RSC и SSR.
 export function formatAlertText(service: string, ctx: ErrorContext, message: string): string {
-  const parts = [ctx.routeType, ctx.routePath]
+  const parts = [ctx.routeType, ctx.routePath, ctx.renderSource]
     .filter((v): v is string => typeof v === 'string' && v.length > 0);
   const suffix = parts.length > 0 ? ` [${parts.join(' ')}]` : '';
   return `🔴 [${service}] ${ctx.where ?? 'error'}: ${message}${suffix}`;
+}
+
+// Единственная зацепка, когда текста ошибки нет: production-сборка next-intl оборачивает
+// useTranslations/useFormatter в catch и перебрасывает `new Error(void 0)`, теряя оригинал.
+export function stackHead(stack: string | undefined, frames = 6): string {
+  if (!stack) return '';
+  return stack
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('at '))
+    .slice(0, frames)
+    .map((line) => `↳ ${line}`)
+    .join('\n');
 }
 
 export async function captureError(error: unknown, ctx: ErrorContext = {}): Promise<void> {
@@ -54,21 +69,29 @@ export async function captureError(error: unknown, ctx: ErrorContext = {}): Prom
   const stack = error instanceof Error ? error.stack : undefined;
   const service = ctx.service ?? 'web';
   const knownNoise = isKnownNoise(message);
+  const silent = error instanceof Error && !error.message;
+
+  const trimmedStack = stack?.slice(0, STACK_LIMIT);
 
   console.error(JSON.stringify({
     level: knownNoise ? 'warn' : 'error', service, message, knownNoise: knownNoise || undefined,
-    ...stripService(ctx), ts: new Date().toISOString(),
+    ...stripService(ctx), stack: trimmedStack, ts: new Date().toISOString(),
   }));
 
   if (knownNoise) return;
 
+  // Ключ анти-шторма — текст БЕЗ кадров: стек одной и той же ошибки может отличаться
+  // верхними кадрами, и тогда gate перестал бы схлопывать дубликаты.
   const text = formatAlertText(service, ctx, message);
   const now = Date.now();
   if (!alertGate.shouldPass(text, now)) return;
 
+  const head = silent ? stackHead(stack) : '';
+  const body = head ? `${text}\n${head}` : text;
+
   await Promise.all([
-    sendTelegram(text),
-    sendWebhook({ text, content: text, level: 'error', service, where: ctx.where, message, stack: stack?.slice(0, 2000), ts: now }),
+    sendTelegram(body),
+    sendWebhook({ text: body, content: body, level: 'error', service, where: ctx.where, message, stack: trimmedStack, ts: now }),
   ]);
 }
 

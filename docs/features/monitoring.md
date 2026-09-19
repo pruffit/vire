@@ -24,12 +24,22 @@ Telegram/webhook) + **health-эндпоинт** + структурированн
     action-id, которого нет в новом билде; штатно после каждого релиза.
   Пустой `error.message` (брошен `new Error()`, объект, пустая строка) не даёт
   алерта вида «`🔴 [web] POST /ru:`»: `describeError` падает на имя ошибки и
-  `digest`. Хвостом идёт `[routeType routePath]` (`formatAlertText`) — `routeType`
-  различает server action, рендер страницы, route handler и proxy. Без него пустой
-  message не локализуется по одному алерту, а логи контейнера деплой стирает.
-  Отдельный случай, ради которого это сделано: `use-intl` в production-сборке
-  бросает `new Error(void 0)` — текст вырезан самой библиотекой, и место остаётся
-  единственной зацепкой (инцидент 07.09, digest `3916268529`).
+  `digest`. Хвостом идёт `[routeType routePath renderSource]` (`formatAlertText`):
+  `routeType` различает server action, рендер страницы, route handler и proxy,
+  `renderSource` — RSC-рендер от SSR клиентских компонентов. **При пустом message**
+  под основной строкой идут ещё и шесть верхних кадров стека (`stackHead`) — без них
+  место стоит похода по SSH в логи контейнера, а деплой их стирает. Ключ анти-шторма
+  при этом остаётся текстом **без** кадров — иначе разошедшийся верхний кадр развалил
+  бы схлопывание дубликатов. Полный стек (обрезка 2000) идёт в structured-лог и полем
+  `stack` в payload вебхука; прод-релей это поле отбрасывает (читает только `text`),
+  оно пригодится, если `ALERT_WEBHOOK_URL` будет указывать прямо на Slack/Discord.
+
+  Ради чего это сделано: production-сборка **next-intl** оборачивает
+  `useTranslations`/`useFormatter` в `try{...}catch{throw new Error(void 0)}`
+  (`dist/esm/production/react-client/index.js`) — оригинал теряется целиком, и любой
+  сбой внутри этих хуков приходит безмолвным. Разбор повторяющегося алерта
+  `POST /ru … digest=3916268529` — `../superpowers/specs/2026-09-19-silent-error-alert-location.md`
+  (там же: почему `routeType: action` на главной не означает наш server action).
 - **Алерты воркера** — четыре уровня:
   - `failed` всех очередей (transcode, analyze, play-events, notify-release) →
     `alertJobFailure` (🔴 упавший джоб);
