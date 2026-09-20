@@ -19,6 +19,21 @@ describe('концентричность вложенных форм', () => {
     expect(concentricInset(outer, concentricRadius(outer, inset))).toBe(inset);
   });
 
+  // Пол радиуса — выход из того же случая, под который у SwiftUI есть concentric(minimum:).
+  it('пол радиуса не даёт вложенной форме получить прямой угол', () => {
+    expect(concentricRadius(10, 24, 6)).toBe(6);
+    expect(concentricRadius(14, 14, 4)).toBe(4);
+  });
+
+  it('пол не трогает радиус, который и так больше него', () => {
+    expect(concentricRadius(34, 12, 6)).toBe(22);
+  });
+
+  it('без пола поведение прежнее', () => {
+    expect(concentricRadius(10, 24)).toBe(concentricRadius(10, 24, 0));
+    expect(concentricRadius(10, 24, -5)).toBe(0);
+  });
+
   // Вложенность держится на любой глубине: кнопка в плашке, плашка в экране.
   it('вложение складывается по цепочке', () => {
     const screen = 44;

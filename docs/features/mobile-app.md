@@ -3393,6 +3393,15 @@ blurView.setupWith(dimezisBlurTarget).setFrameClearDrawable(decorView.background
 
 ## Стекло на Android = стекло в вебе
 
+> ⚠️ **Правка в `packages/vireglass` сама в APK не попадает.** Gradle следит за исходниками
+> `apps/mobile`, а не за пакетом, и считает задачу бандла актуальной — шейдер (он живёт строкой
+> в TypeScript пакета) уезжает старый. Симптом: на устройстве «не работает» то, что в вебе
+> работает, причём без единой ошибки. Перед сборкой сносить
+> `android/app/build/generated/assets/react` и `android/app/build/intermediates/assets/release`.
+
+> Сверка платформ ведётся по восьми общим полотнам с допуском в 10 единиц светлоты —
+> алгоритм, база и порядок разбора расхождения в [`docs/vireglass/platform-parity.md`](../vireglass/platform-parity.md).
+
 Проверка велась не на глаз: веб-стенд снимался Playwright'ом, Android — `adb screencap`,
 детали кадрировались в один масштаб и сравнивались попиксельно. Расхождения оказались
 в трёх местах, и все три — андроидные изобретения поверх ядра.

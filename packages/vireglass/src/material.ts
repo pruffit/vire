@@ -270,7 +270,9 @@ export const VIREGLASS_CLEAR_MATERIAL: VireGlassMaterial = {
   ...VIREGLASS_MATERIAL,
   legibility: 0,
   presence: 0,
-  dimming: 0.22,
+  // Числа Apple: 0.35 в HIG Materials, 0.3 в её же примере кода. Берём нижнее — оно из
+  // работающего кода, а не из прозы, и Clear обязан остаться окном.
+  dimming: 0.3,
 };
 
 /**
@@ -532,6 +534,7 @@ export const DEBUG_MODES = [
   'normals',
   'spectral',
   'adapt',
+  'зонд',
 ] as const;
 
 export type VireGlassDebugMode = (typeof DEBUG_MODES)[number];
