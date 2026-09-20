@@ -8,6 +8,7 @@ import { apiRequest } from '../lib/api-client';
 import { clearAuthTokens, getDeviceId } from '../lib/secure-store';
 import { Screen } from '../components/screen';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 import { fonts } from '../lib/design/typography';
@@ -28,6 +29,7 @@ function formatLastUsed(iso: string): string {
 export default function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>>();
   const bottomPadding = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const [devices, setDevices] = useState<DeviceDTO[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [revokingId, setRevokingId] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: bottomPadding }]}>
+      <ScrollView {...scrollEdge} contentContainerStyle={[styles.container, { paddingBottom: bottomPadding }]}>
       <Text style={styles.title}>Профиль</Text>
 
       <Pressable style={styles.navRow} onPress={() => navigation.navigate('Settings')}>

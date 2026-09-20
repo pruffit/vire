@@ -16,21 +16,25 @@ uniform float2 u_morphOffset;
 uniform float2 u_morphHalf;
 uniform float  u_morphCorner;
 uniform float  u_morphK;
+uniform float2 u_morph2Offset;
+uniform float2 u_morph2Half;
+uniform float  u_morph2Corner;
 
 uniform float  u_press;
 uniform float  u_active;
-uniform float2 u_light;
+/* 0 — деталь под пальцем вдавливается, 1 — поднимается в стекло (эталон §5). */
+uniform float  u_lift;
 
-uniform float  u_specular;
-uniform float  u_specularPower;
 uniform float  u_edgeDensity;
 uniform float  u_dispersion;
 uniform float  u_refraction;
 uniform float4 u_tint;
 uniform float  u_shadow;
 uniform float  u_shadowReach;
+uniform float3 u_ambient;
 uniform float  u_presence;
 uniform float  u_progress;
+uniform float  u_appear;
 uniform float  u_debug;
 
 uniform float  u_iconOn;
@@ -48,14 +52,33 @@ ${VG_SDF}
 
 const float VG_FALLOFF = ${VG_FALLOFF};
 
-/* Толщина, на которой откалибровано поглощение: при ней полоса совпадает с прежним стеклом. */
-const float VG_REF_THICKNESS = 0.18;
 // Плотность тинта в плоской середине; у фаски она множится на u_edgeDensity.
 const float VG_BODY_DENSITY = 0.19;
+/* Доля оттенка окружения в тени. Тень обязана остаться тенью, а не цветным пятном. */
+const float VG_SHADOW_TINT = 1.0;
+// Насколько тень слабее у самого контура, чем под серединой зазора, и на какой доле выноса
+// она добирает полную глубину. У эталона минимум тени стоит не у кромки, а ниже неё.
+const float VG_GAP_LIGHT = 0.76;
+const float VG_GAP_REACH = 0.20;
 /* Глубина краски под поверхностью, dp. На столько её уводит нормаль у самой кромки. */
 const float VG_INK_DEPTH = 4.0;
+/* Расфокус краски под пальцем (эталон §6): глиф теряет кромку и тонет в молоке. Задан ДОЛЕЙ
+ * пятна касания, а не числом: пятно уже приходит в единицах устройства, поэтому радиус сам
+ * следует и за плотностью экрана, и за габаритом детали. В покое он нулевой, и выборка
+ * остаётся одиночной. */
+const float VG_INK_DEFOCUS = 0.08;
 
 half4 vgPack(half3 c, float a) { return half4(c * half(a), half(a)); }
+
+// В тень затекает ЦВЕТ окружения, а не его яркость: из оттенка вычитается его собственная
+// светлота, иначе тень бледнеет и теряет глубину вместо того, чтобы потеплеть. Силу задаёт то,
+// сколько света вокруг: на почти чёрном фоне затекать в тень нечему.
+float3 vgShadowTint(float3 ambient) {
+  float peak = max(max(ambient.r, ambient.g), max(ambient.b, 0.001));
+  float3 hue = ambient / peak;
+  float lumaWeights = dot(ambient, float3(0.2126, 0.7152, 0.0722));
+  return (hue - dot(hue, float3(0.2126, 0.7152, 0.0722))) * lumaWeights;
+}
 
 half3 vgHeat(float v) {
   float x = clamp(v, 0.0, 1.0);
@@ -76,37 +99,19 @@ half4 main(float2 xy) {
   float halfMin = max(min(u_halfSize.x, u_halfSize.y), 1.0);
   float bevel = max(u_bevel, 1.0);
 
-  float sd = vgScene(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
+  float sd = vgScene(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK,
+                u_morph2Offset, u_morph2Half, u_morph2Corner);
   float t = vgBevelT(sd, bevel);
-  float2 n = vgSceneNormal(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
+  float2 n = vgSceneNormal(p, u_halfSize, u_corner, u_morphOffset, u_morphHalf, u_morphCorner, u_morphK,
+                u_morph2Offset, u_morph2Half, u_morph2Corner);
   float3 N = normalize(float3(n * vgBevelSlope(t), 1.0));
-  float3 V = float3(0.0, 0.0, 1.0);
-
-  float bloom = 1.0 + u_press * 0.45;
 
   // Прогресс — активное состояние, ставшее полем: сыгранная часть блестит и светится ровно
   // настолько, насколько блестит активная деталь целиком. Краску это НЕ трогает: перекрашивать
   // надпись по ходу трека значит менять её посреди слова.
   float lit = max(u_active, vgProgress(p, u_halfSize, u_progress));
 
-  float3 L1 = normalize(float3(u_light * 0.86, 0.42));
-  float3 L2 = normalize(float3(-u_light * 0.78, 0.50));
-  float bevelMask = smoothstep(0.10, 0.55, t);
-  float s1 = pow(max(dot(reflect(-L1, N), V), 0.0), u_specularPower) * 0.85;
-  float s2 = pow(max(dot(reflect(-L2, N), V), 0.0), u_specularPower * 1.45) * 0.14;
-  float spec = (s1 + s2) * bevelMask * u_specular * bloom * (1.0 + lit * 0.30);
-
-  // Светящейся кромки здесь больше НЕТ. Она была отражением, нарисованным белым поверх, и
-  // потому выглядела одинаково над чёрным списком и над светлой обложкой. Отражение
-  // считает линза (lens-shader.ts) — там виден бэкдроп, и кромка берёт цвет от того, что
-  // реально под ней. Здесь остаётся только то, что от окружения не зависит: блик от НАШЕГО
-  // ключевого света, поглощение среды и тень.
-  float facing = dot(n, u_light);
-
-  // Толщина как поглощение: полоса там, где кромку не освещает ни один источник. Растёт
-  // с фаской, поэтому тонкое стекло само по себе перестаёт «наливаться» у края.
-  float absorb = smoothstep(0.0, 0.70, t) * (1.0 - smoothstep(0.80, 1.0, t))
-    * (1.0 - abs(facing)) * 0.10 * (u_thickness / VG_REF_THICKNESS);
+  // Блик и кромку считает линза: отражение — функция окружения, а его видно только оттуда.
 
   if (u_debug > 0.5) {
     float inMask = 1.0 - smoothstep(-1.0, 1.0, sd);
@@ -124,7 +129,7 @@ half4 main(float2 xy) {
       return vgPack(vgHeat(push), inMask);
     }
     if (u_debug < 6.5) { return half4(0.0); }
-    if (u_debug < 7.5) { return vgPack(half3(1.0), spec * inMask); }
+    if (u_debug < 7.5) { return half4(0.0); }
     // Расщепление считает линза; здесь — поле, по которому оно нарастает.
     if (u_debug < 8.5) { return vgPack(vgHeat(u_dispersion * t * t), inMask); }
     if (u_debug < 9.5) { return vgPack(half3(N * 0.5 + 0.5), inMask); }
@@ -142,17 +147,29 @@ half4 main(float2 xy) {
   float halo = 0.0;
   if (sd > -1.0) {
     float outside = smoothstep(-1.0, 1.0, sd);
-    float sdDrop = vgScene(p - float2(0.0, u_shadowReach * 0.16), u_halfSize, u_corner,
-                           u_morphOffset, u_morphHalf, u_morphCorner, u_morphK);
-    float amb = 1.0 - smoothstep(0.0, u_shadowReach, max(sdDrop, 0.0));
-    float con = 1.0 - smoothstep(0.0, u_shadowReach * 0.22, max(sd, 0.0));
-    shade = (amb * amb * 0.22 + con * con * 0.18) * outside * u_shadow;
-    halo = 1.0 - smoothstep(0.0, u_shadowReach * 0.30, max(sd, 0.0));
-    halo = halo * halo * lit * 0.10 * outside;
+    // Под пальцем кнопка идёт К подложке, и тень поджимается: она и есть зазор между ними.
+    // Орган, поднимающийся в стекло (ручка свитча, ползунка — эталон §5), идёт ОТ неё, и тогда
+    // тень, наоборот, отходит. Куда именно — знает только приложение, поэтому направление
+    // приходит долей: 0 — вдавливание, как было у всех деталей до появления этого правила.
+    float reach = u_shadowReach * (1.0 + mix(-0.25, 0.55, u_lift) * u_press);
+    // Тень мягкая и широкая, со сдвигом вниз (M 11:58): отрыв детали от контента держит она.
+    float sdDrop = vgScene(p - float2(0.0, reach * 0.35), u_halfSize, u_corner,
+                           u_morphOffset, u_morphHalf, u_morphCorner, u_morphK,
+                u_morph2Offset, u_morph2Half, u_morph2Corner);
+    float amb = 1.0 - smoothstep(-reach * 0.3, reach, sdDrop);
+    // ЗАЗОР ПОД ПОДНЯТОЙ ДЕТАЛЬЮ ПОДСВЕЧЕН: у самого контура тень СЛАБЕЕ, чем ниже. Иначе
+    // минимум встаёт вплотную к силуэту — обе части тени монотонны по расстоянию.
+    float gap = smoothstep(0.0, max(reach * VG_GAP_REACH, 1.0), max(sd, 0.0));
+    shade = amb * amb * 0.13 * mix(VG_GAP_LIGHT, 1.0, gap) * outside * u_shadow * u_appear;
+    halo = 1.0 - smoothstep(0.0, reach * 0.30, max(sd, 0.0));
+    halo = halo * halo * lit * 0.10 * outside * u_appear;
   }
 
   if (sd > 1.0) {
-    return half4(half3(half(halo)), half(halo + shade * (1.0 - halo)));
+    // Свет окружения затекает в тень (219 @8:22): она не чёрная дыра, а подкрашена тем, что
+    // лежит рядом. Иначе деталь над цветным контентом висит на сером пятне.
+    half3 spill = max(half3(half(halo)) + half3(vgShadowTint(u_ambient)) * half(VG_SHADOW_TINT * shade * (1.0 - halo)), half3(0.0));
+    return half4(spill, half(halo + shade * (1.0 - halo)));
   }
 
   float density = u_tint.w;
@@ -174,8 +191,6 @@ half4 main(float2 xy) {
   // Цвет тела активность НЕ трогает. Подмешивание фиксированного серого сюда меняло знак
   // эффекта от фона: над тёмным деталь светлела, над светлым — темнела, хотя состояние одно
   // и то же. Активность показывают блик и подсветка кромки выше: им фон безразличен.
-  a = a + absorb;
-  col *= 1.0 - half(absorb * 1.2);
 
   // ЗНАЧОК ЛЕЖИТ ПОД ПОВЕРХНОСТЬЮ, а не наклеен на неё: раньше он подмешивался последним,
   // поверх блика, и читался плоским стикером на объёмном стекле. У кромки его уводит нормаль,
@@ -191,38 +206,60 @@ half4 main(float2 xy) {
   float2 inkShift = n * (min(u_bevel * 0.5, VG_INK_DEPTH) * t);
   float2 inkUv = u_center + p - inkShift;
 
-  half4 ink = u_icon.eval(inkUv * u_iconScale) * half(u_iconOn);
+  // ПОД ПАЛЬЦЕМ КРАСКА ТЕРЯЕТ РЕЗКОСТЬ (эталон §6): у эталона глиф под нажатием тонет в
+  // молоке, а не просто светлеет. Ветка однородна по всей детали: нажатие приходит униформой,
+  // поэтому расфокус ничего не стоит, пока деталь не трогают.
+  float defocus = VG_INK_DEFOCUS * u_touchRadius * u_touchPress;
+  float2 inkDx = float2(defocus, 0.0);
+  float2 inkDy = float2(0.0, defocus);
 
-  // ПОДЛОЖКА ПОД КРАСКОЙ. Читаемость — требование МЕСТНОЕ, а не общее по детали. Гасить фон по
-  // всей площади значит платить прозрачностью там, где гасить нечего: под пустым местом стекло
-  // обязано оставаться стеклом. Плотность поднимается только под самой краской и в кайме
-  // вокруг неё — так на стекле матируют зону под гравировкой, а не весь лист.
-  //
-  // Поле каймы приходит ГОТОВЫМ, красным каналом маски (контракт описан у iconMask в рендерере):
-  // приложение размывает краску один раз на кадр настоящим гауссианом. Считать это поле здесь
-  // нечем: кольцо отсчётов вокруг пикселя — то же недосэмплирование, что и в дисковом сборе,
-  // и подложка выходила рваной, с видимой границей вокруг каждой группы букв.
+  half4 ink;
+  half4 over;
+  if (defocus > 0.01) {
+    // Крест вокруг центра с двойным весом середины: маска краски контрастная, и четырёх
+    // отсчётов хватает, чтобы штрих перестал держать кромку.
+    ink = (u_icon.eval((inkUv - inkDx) * u_iconScale)
+         + u_icon.eval((inkUv + inkDx) * u_iconScale)
+         + u_icon.eval((inkUv - inkDy) * u_iconScale)
+         + u_icon.eval((inkUv + inkDy) * u_iconScale)
+         + u_icon.eval(inkUv * u_iconScale) * 2.0) * half(u_iconOn / 6.0);
+    // Цветной контент лежит в той же плоскости, что краска, и расплывается вместе с ней:
+    // разная резкость двух слоёв одной плоскости читалась бы дефектом, а не нажатием.
+    over = (u_overlay.eval((inkUv - inkDx) * u_iconScale)
+          + u_overlay.eval((inkUv + inkDx) * u_iconScale)
+          + u_overlay.eval((inkUv - inkDy) * u_iconScale)
+          + u_overlay.eval((inkUv + inkDy) * u_iconScale)
+          + u_overlay.eval(inkUv * u_iconScale) * 2.0) * half(u_overlayOn * u_appear / 6.0);
+  } else {
+    ink = u_icon.eval(inkUv * u_iconScale) * half(u_iconOn);
+    over = u_overlay.eval(inkUv * u_iconScale) * half(u_overlayOn * u_appear);
+  }
 
-  half inkA = ink.g * half(mix(0.82, 1.0, u_active));
+  // Подложку под краской держит ЛИНЗА (плотность тела по зонду), а не поверхность: читаемость
+  // — свойство материала, и считать её здесь второй раз значит развести два ответа на один вопрос.
+
+  // Слои ложатся premultiplied-over: в прямой альфе почти прозрачное тёмное тело затягивало
+  // цвет полупрозрачной краски и света пальца к себе — кромки букв серели, нажатие темнило.
+  half3 pm = col * half(a);
+  half inkA = ink.g * half(mix(0.82, 1.0, u_active) * u_appear);
   half3 inkCol = mix(half3(u_inkIdle.rgb), half3(u_inkActive.rgb), half(u_active));
-  col = col * (1.0 - inkA) + inkCol * inkA;
+  pm = pm * (1.0 - inkA) + inkCol * inkA;
+  a = a + float(inkA) * (1.0 - a);
 
   // ЦВЕТНОЙ КОНТЕНТ ЛЕЖИТ ТАМ ЖЕ, ГДЕ КРАСКА — внутри материала и на той же координате. Иначе
   // деформация ведёт их порознь: при нажатии название и артист трясутся вместе с поверхностью,
   // а обложка стоит на месте, потому что она была отдельным слоем поверх стекла. Полярность его
   // не трогает — у него свой цвет, и подменять его нечем.
-  half4 over = u_overlay.eval(inkUv * u_iconScale) * half(u_overlayOn);
-  col = col * (1.0 - over.a) + over.rgb * over.a;
+  pm = pm * (1.0 - over.a) + over.rgb * over.a;
+  a = a + float(over.a) * (1.0 - a);
 
-  col += half3(spec) * half3(0.98, 0.99, 1.0);
+  // Свет от пальца собирает ЛИНЗА: это концентрат окружения, а не своя белизна. Поверхности
+  // остаётся лишь то, что стекло выплёскивает наружу, — ореол выше.
 
-  // Альфа блика идёт вровень с его яркостью: при заниженной альфе premultiplied результат
-  // гаснет и блик становится невидимым на тёмном фоне.
-  a = clamp(a + spec, 0.0, 1.0);
-  a = max(a, max(float(inkA), float(over.a)));
-  a *= 1.0 - smoothstep(-1.0, 1.0, sd);
-
-  col = clamp(col, half3(0.0), half3(1.0));
-  return half4(col * half(a), half(a + shade * (1.0 - a)));
+  float mask = 1.0 - smoothstep(-1.0, 1.0, sd);
+  pm = clamp(pm, half3(0.0), half3(1.0)) * half(mask);
+  a *= mask;
+  pm = max(pm + half3(vgShadowTint(u_ambient)) * half(VG_SHADOW_TINT * shade * (1.0 - a)), half3(0.0));
+  return half4(pm, half(a + shade * (1.0 - a)));
 }
 `;

@@ -11,6 +11,7 @@ import { usePlayerStore, type QueueTrack } from '../lib/player-store';
 import { formatDuration } from '../lib/format';
 import { Screen } from '../components/screen';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 import { LikeButton } from '../components/like-button';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
 import { DownloadButton } from '../components/download-button';
@@ -31,6 +32,7 @@ export default function PlaylistScreen({
 }) {
   const { playlistId } = route.params;
   const bottomPadding = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const [playlist, setPlaylist] = useState<PlaylistDetailResponse['playlist'] | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [refreshing, setRefreshing] = useState(false);
@@ -121,6 +123,7 @@ export default function PlaylistScreen({
 
       {state === 'ready' && tracks.length > 0 && (
         <FlatList
+          {...scrollEdge}
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
           data={tracks}
           keyExtractor={(item) => item.id}

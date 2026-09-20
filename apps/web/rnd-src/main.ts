@@ -1,21 +1,30 @@
 // Стенд VireGlass — не React-страница (план, «Среда»/«Следствие для стенда»): статический
 // HTML + этот бандл, esbuild собирает его за миллисекунды из `packages/vireglass`.
 // Состояние целиком в адресе: ссылка воспроизводит кадр, как диплинк на Android-стенде.
-import {
+import { REFERENCE_PIECE_AT,
+  REFERENCE_SCENES,
+  REFERENCE_SCENE_HEIGHT,
+  REFERENCE_SCENE_WIDTH,
+  REFERENCE_SHAPES,
+  applyAccessibility,
   DEBUG_MODES,
   INK_DARK,
   INK_LIGHT,
   MATERIAL_PRESETS,
   MATERIAL_RANGES,
   PRESET_NAMES,
+  REST_LIGHT,
   resolveOptics,
+  type VireGlassAccessibility,
   roundedRectGeometry,
   circleGeometry,
+  VIREGLASS_CLEAR_MATERIAL,
   VIREGLASS_CONTROL_MATERIAL,
   VIREGLASS_MATERIAL,
   activeMaterial,
   createDeform,
   materialForInk,
+  raiseIntoGlass,
   type VireGlassDebugMode,
   type VireGlassMaterial,
   type VireGlassNumericKey,
@@ -26,12 +35,16 @@ import { createVireGlassRenderer } from '@vire/vireglass/web';
 import { drawIcon, loadIcons, NAV_ICONS, type IconName } from './icons';
 import { drawCover, drawPlayerInk, hitPlay, PLAYER_ICONS } from './mini-player';
 import { createPanel } from './panel';
+import { createGroup } from './group';
+import { CAPSULE, createPopover, POPOVER_ICONS, type PopoverHit } from './popover';
 import {
   drawCoverScreen,
   drawFlowInk,
-  drawRecentList,
+  drawRecentScreen,
   FLOW_BUTTON,
   recentScrollMax,
+  SCREEN_INNER_RADIUS,
+  TOP_BAR_Y,
   TRANSPORT_ICONS,
 } from './content';
 import { drawTypeSpecimen, loadTypefaces, typeScrollMax } from './typefaces';
@@ -46,11 +59,26 @@ import {
   ZONE_NAMES,
 } from './scenes';
 
+/**
+ * Сверочные полотна. На них кадр обязан совпадать с кадром мобильной лаборатории целиком, а не
+ * только полотном: деталь стоит в точке, заданной полотном, и в кадре она ОДНА — ряд образцов
+ * материалов и подписи под ними ложились прямо на полотно, а на телефоне их нет.
+ */
+const REFERENCE_ZONE_NAMES = new Set(REFERENCE_SCENES.map((s) => s.name));
+const onReferenceScene = () => REFERENCE_ZONE_NAMES.has(ZONE_NAMES[state.zone]);
+
 const stage = document.getElementById('stage');
 if (!stage) throw new Error('нет #stage');
 
 const canvas = document.createElement('canvas');
 stage.append(canvas);
+
+// Слой матовой крышки ползунка: обычный 2D-канвас ПОВЕРХ кадра. В полотне её увидел бы зонд и
+// принял за окружение; указатель сквозь слой проходит, жест ловит нижний канвас.
+const solidLayer = document.createElement('canvas');
+solidLayer.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;';
+stage.append(solidLayer);
+const solidCtx = solidLayer.getContext('2d');
 
 // Цветной контент (обложка) уезжает в рендерер отдельным СЛОЕМ КАДРА, а не рисуется поверх
 // канваса: он обязан жить внутри материала на той же координате, что и краска, иначе
@@ -68,11 +96,27 @@ function intParam(name: string, fallback: number, min: number, max: number): num
   return Number.isFinite(v) ? Math.min(Math.max(v, min), max) : fallback;
 }
 
+/** Зона в адресе — номером ИЛИ именем: у двух стендов номера разные, а имя полотна одно, и
+ *  ссылка на сверку не должна знать, сколько своих зон у каждого. */
+function zoneParam(): number {
+  const raw = params.get('zone');
+  if (raw === null) return 0;
+  const byName = ZONE_NAMES.indexOf(raw);
+  if (byName >= 0) return byName;
+  return intParam('zone', 0, 0, ZONES.length - 1);
+}
+
 const state = {
-  zone: intParam('zone', 0, 0, ZONES.length - 1),
+  zone: zoneParam(),
   preset: intParam('preset', -1, -1, PRESET_NAMES.length - 1),
   debug: intParam('debug', 0, 0, DEBUG_MODES.length - 1),
-  view: params.get('view') === 'screens' ? ('screens' as const) : ('material' as const),
+  view: params.get('view') === 'screens'
+    ? ('screens' as const)
+    : params.get('view') === 'morph'
+      ? ('morph' as const)
+      : params.get('view') === 'slider'
+        ? ('slider' as const)
+        : ('material' as const),
   overrides: new Map<VireGlassNumericKey, number>(),
 };
 
@@ -83,7 +127,30 @@ for (const key of MATERIAL_KEYS) {
   if (Number.isFinite(v)) state.overrides.set(key, v);
 }
 
+/** Прозрачный вариант (Clear) — отдельное состояние стенда: смешивать его с обычным нельзя,
+ *  поэтому он не пресет среды, а режим кадра целиком. */
+const clearMode = params.get('clear') === '1';
+
+/**
+ * Настройки доступности меняют слои материала, а не отменяют его (эталон 219 §18:15). Стенд
+ * берёт их из системы, а буквы в адресе (?a11y=tcm) включают принудительно: перещёлкивать
+ * настройки всей ОС ради одного кадра невозможно.
+ */
+const a11yForced = params.get('a11y') ?? '';
+const asks = (query: string) => window.matchMedia?.(query).matches ?? false;
+const a11y: VireGlassAccessibility = {
+  reduceTransparency: a11yForced.includes('t') || asks('(prefers-reduced-transparency: reduce)'),
+  increaseContrast: a11yForced.includes('c') || asks('(prefers-contrast: more)'),
+  reduceMotion: a11yForced.includes('m') || asks('(prefers-reduced-motion: reduce)'),
+};
+
+/** Материал кадра всегда идёт через модификаторы: иначе часть деталей их не увидит. */
+function optic(material: Partial<VireGlassMaterial> = {}) {
+  return applyAccessibility(resolveOptics(material), a11y);
+}
+
 function baseMaterial(): VireGlassMaterial {
+  if (clearMode) return VIREGLASS_CLEAR_MATERIAL;
   return state.preset >= 0 ? MATERIAL_PRESETS[PRESET_NAMES[state.preset]] : VIREGLASS_MATERIAL;
 }
 
@@ -98,16 +165,40 @@ function currentMaterial(): VireGlassMaterial {
 // Явный `ink` в адресе — ручной режим, автоматика тогда молчит.
 let manualInk = state.overrides.has('ink');
 let material = currentMaterial();
-let optics = resolveOptics(material);
+let optics = optic(material);
 let polarity = manualInk ? 'ручная' : 'светлая';
 
-const geometry = roundedRectGeometry(280, 120, 32);
+// Форма контрольного образца — в адресе: капсула и круг повторяют эталонные кадры.
+// Фигуры общие с мобильной лабораторией: размер входит в оптику, и на разных фигурах снимки
+// двух стендов несравнимы (packages/vireglass/src/reference-scene.ts). Общий у них и ПОРЯДОК:
+// свои имена и своё «по умолчанию» на каждом стенде значили, что одно и то же `shape` в двух
+// местах выбирает разные фигуры, и сверка снова разъезжалась.
+const SHAPES = REFERENCE_SHAPES;
+const SHAPE_NAMES = Object.keys(SHAPES) as (keyof typeof SHAPES)[];
+// Прежние английские имена остаются рабочими: на них ссылаются снятые сверки в
+// docs/vireglass/benchmarks/**, и молчаливый откат к первой фигуре сделал бы их кадры
+// невоспроизводимыми — с виду успешно.
+const LEGACY_SHAPES: Record<string, keyof typeof SHAPES> = {
+  rect: 'плашка',
+  capsule: 'капсула',
+  circle: 'круг',
+};
+const shapeParam = params.get('shape') ?? '';
+const shapeIndex = Number(shapeParam);
+const shapeName = shapeParam !== '' && Number.isInteger(shapeIndex) && SHAPE_NAMES[shapeIndex]
+  ? SHAPE_NAMES[shapeIndex]
+  : SHAPE_NAMES.includes(shapeParam as keyof typeof SHAPES)
+    ? (shapeParam as keyof typeof SHAPES)
+    : (LEGACY_SHAPES[shapeParam] ?? SHAPE_NAMES[0]);
+const geometry = SHAPES[shapeName];
 const dpr = window.devicePixelRatio || 1;
 const renderer = createVireGlassRenderer(canvas);
 
 function resize(): void {
   canvas.width = Math.round(canvas.clientWidth * dpr);
   canvas.height = Math.round(canvas.clientHeight * dpr);
+  solidLayer.width = canvas.width;
+  solidLayer.height = canvas.height;
   renderer.resize(canvas.width, canvas.height);
 }
 resize();
@@ -164,7 +255,7 @@ let ready = false;
 function change(mutate: () => void): void {
   mutate();
   material = currentMaterial();
-  optics = resolveOptics(material);
+  optics = optic(material);
   pending = SETTLE_FRAMES;
   ready = false;
   // Раскладка подписей зависит от режима, поэтому пересчитывается на ЛЮБОЕ изменение —
@@ -178,10 +269,15 @@ function syncUrl(): void {
   next.set('zone', String(state.zone));
   if (state.preset >= 0) next.set('preset', String(state.preset));
   if (state.debug > 0) next.set('debug', String(state.debug));
-  if (state.view === 'screens') next.set('view', 'screens');
+  if (state.view !== 'material') next.set('view', state.view);
   for (const [key, value] of state.overrides) next.set(key, String(Math.round(value * 1000) / 1000));
   if (params.get('ui') === '0') next.set('ui', '0');
   if (params.has('hue')) next.set('hue', String(accentHue));
+  if (params.has('shape')) next.set('shape', shapeName);
+  if (params.has('appear')) next.set('appear', String(appearTarget));
+  if (params.has('accent')) next.set('accent', '1');
+  if (a11yForced) next.set('a11y', a11yForced);
+  if (clearMode) next.set('clear', '1');
   history.replaceState(null, '', `${location.pathname}?${next}`);
 }
 
@@ -209,17 +305,18 @@ function sampleLayout() {
 function samplePieces(ink: number) {
   const { size, gap, left, y } = sampleLayout();
   return SAMPLE_MATERIALS.map((sample, i) => ({
-    optics: resolveOptics({ ...sample.material, ink }),
+    optics: optic({ ...sample.material, ink }),
     geometry: roundedRectGeometry(size, size, size * 0.28),
     centerX: (left + i * (size + gap)) * dpr,
     centerY: y,
+    light: lightFor((left + i * (size + gap)) * dpr, y),
   }));
 }
 
 /** Подписи живут в DOM, а не в сцене: нарисованные в сцену, они попали бы ПОД стекло. */
 function placeCaptions(): void {
   const { size, gap, left, y } = sampleLayout();
-  const hidden = state.view === 'screens';
+  const hidden = state.view !== 'material' || onReferenceScene();
   captions.forEach((node, i) => {
     node.style.display = hidden ? 'none' : 'block';
     node.style.left = `${left + i * (size + gap)}px`;
@@ -230,21 +327,69 @@ function placeCaptions(): void {
 
 // Волна от касания заметнее, чем от отрыва: палец ударяет по поверхности, отпускание её
 // только отпускает. Амплитуды в CSS-пикселях смещения поля.
-const WAVE_ON_TOUCH = 4;
-const WAVE_ON_RELEASE = 2.5;
+const WAVE_ON_TOUCH = a11y.reduceMotion ? 0 : 4;
+const WAVE_ON_RELEASE = a11y.reduceMotion ? 0 : 2.5;
 
 const deform = createDeform();
 
-const controlCenter = () => ({ x: (viewWidthCss() / 2) * dpr, y: canvas.height * 0.34 });
+// На сверочном полотне деталь стоит В ТОЧКЕ, ЗАДАННОЙ ПОЛОТНОМ, и отсчитывается от панели, а
+// не от видимой области: с открытой панелью управления центр видимой области и центр полотна —
+// разные точки, и деталь оказывалась над другими полосами, чем в мобильной лаборатории.
+const controlCenter = () => {
+  if (!onReferenceScene()) {
+    return { x: (viewWidthCss() / 2) * dpr, y: canvas.height * 0.34 };
+  }
+  const left = (canvas.width - REFERENCE_SCENE_WIDTH * dpr) / 2;
+  const top = (canvas.height - REFERENCE_SCENE_HEIGHT * dpr) / 2;
+  return { x: left + REFERENCE_PIECE_AT.xDp * dpr, y: top + REFERENCE_PIECE_AT.yDp * dpr };
+};
 // Ход тяги умеренный: тянут пальцем, а не растягивают резину. Деформация локальная, поэтому
 // заметна и при небольшой амплитуде — прежние 0.7 полуразмера читались как «слишком много».
 const pullLimit = () => 0.14 * halfMinDp(geometry);
 /** Радиус влияния пальца: за его пределами поле стоит на месте. */
 const touchRadius = () => 0.72 * halfMinDp(geometry);
 
+/** Свет за указателем — веб-замена наклона устройства (M 11:29): блик тянется к нему. */
+let pointer: { x: number; y: number } | null = null;
+const POINTER_PULL = 0.7;
+
+function lightFor(cx: number, cy: number): readonly [number, number] {
+  if (!pointer) return REST_LIGHT;
+  const dx = pointer.x * dpr - cx;
+  const dy = pointer.y * dpr - cy;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) return REST_LIGHT;
+  const x = REST_LIGHT[0] * (1 - POINTER_PULL) + (dx / len) * POINTER_PULL;
+  const y = REST_LIGHT[1] * (1 - POINTER_PULL) + (dy / len) * POINTER_PULL;
+  const l = Math.hypot(x, y) || 1;
+  return [x / l, y / l];
+}
+
+/** Появление — нарастанием линзы, а не прозрачностью (M 2:55): двойной клик по образцу. */
+const appearParam = Number(params.get('appear') ?? 1);
+let appearTarget = Number.isFinite(appearParam) ? Math.min(Math.max(appearParam, 0), 1) : 1;
+let appear = appearTarget;
+
+function stepAppear(dt: number): boolean {
+  if (a11y.reduceMotion) {
+    const moved = appear !== appearTarget;
+    appear = appearTarget;
+    return moved;
+  }
+  if (Math.abs(appearTarget - appear) < 0.002) {
+    appear = appearTarget;
+    return false;
+  }
+  appear += (appearTarget - appear) * (1 - Math.exp(-dt / 0.14));
+  return true;
+}
+
 /**
  * Габарит детали НЕ трогается: тяга, нажатие и волна уходят в поле формы (`vgTouchWarp`).
  * Масштабирование ширины давало абсурд — тянешь правый край, а левый уходит наружу.
+ *
+ * Материал берётся КАК ЕСТЬ, мимо `materialForInk`: это лаборатория среды. Замеряя по этой
+ * детали, задавай читаемость в адресе явно — умолчание тут своё, не продуктовое.
  */
 function controlPiece() {
   const d = deform.sample();
@@ -269,6 +414,108 @@ function controlPiece() {
     // подсвеченной, а не тронутой. Отклик должен читаться формой и бликом, поэтому сюда
     // уходит только доля: блик и подсветка кромки остаются, заливка — нет.
     active: d.active * 0.3,
+    light: lightFor(center.x, center.y),
+    appear,
+    accent: params.has('accent') ? { color: ACCENT_RGB } : undefined,
+  };
+}
+
+// ПОЛЗУНОК — орган, который в покое стеклом НЕ является (эталон §5): ручка матовая, и только
+// под пальцем она поднимается в стекло, пропуская сквозь себя дорожку.
+const SLIDER_TRACK_W = 360;
+const SLIDER_TRACK_H = 6;
+const SLIDER_KNOB_W = 72;
+const SLIDER_KNOB_H = 44;
+/** Насколько орган вырастает под пальцем. Рост — работа стенда: вся геометрия движения живёт
+ *  в одном месте, материал о нём не знает. */
+const SLIDER_GROW = 0.15;
+const SLIDER_FILL = '#2f6df6';
+const SLIDER_TRACK = 'rgba(255,255,255,0.22)';
+const SLIDER_KNOB_SOLID = '#ffffff';
+
+const sliderDeform = createDeform();
+let sliderValue = 0.42;
+
+const sliderCenterY = () => canvas.height * 0.5;
+const sliderLeft = () => (viewWidthCss() - SLIDER_TRACK_W) / 2;
+const sliderKnobX = () => sliderLeft() + SLIDER_TRACK_W * sliderValue;
+
+/** Дорожка живёт В ПОЛОТНЕ, а не в маске краски: только тогда её преломляет линза, и видно,
+ *  что ручка действительно стала стеклом, а не просто посветлела. */
+function drawSliderTrack(ctx: CanvasRenderingContext2D, d: number): void {
+  const y = sliderCenterY();
+  const h = SLIDER_TRACK_H * d;
+  const capsule = (x: number, w: number, color: string) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x * d, y - h / 2, w * d, h, h / 2);
+    ctx.fill();
+  };
+  capsule(sliderLeft(), SLIDER_TRACK_W, SLIDER_TRACK);
+  capsule(sliderLeft(), SLIDER_TRACK_W * sliderValue, SLIDER_FILL);
+}
+
+/**
+ * Матовая ручка в покое. Рисуется ПОВЕРХ кадра, а не в полотно: в полотне её увидел бы зонд,
+ * принял белое пятно за окружение и раздул свечение под пальцем до фонаря — замерено, стекло
+ * от этого переставало читаться. Поверх — она и есть то, что уступает место линзе: гаснет
+ * ровно настолько, насколько та поднялась (`raiseIntoGlass`), доли перекрываются.
+ */
+function drawSliderKnobSolid(): void {
+  const ctx = solidCtx;
+  if (!ctx) return;
+  ctx.clearRect(0, 0, solidLayer.width, solidLayer.height);
+  if (state.view !== 'slider') return;
+  const press = sliderDeform.sample().press;
+  const { solid } = raiseIntoGlass(press);
+  if (solid <= 0.001) return;
+  const grow = 1 + SLIDER_GROW * press;
+  const w = SLIDER_KNOB_W * grow * dpr;
+  const h = SLIDER_KNOB_H * grow * dpr;
+  ctx.save();
+  ctx.globalAlpha = solid;
+  ctx.fillStyle = SLIDER_KNOB_SOLID;
+  ctx.beginPath();
+  ctx.roundRect(sliderKnobX() * dpr - w / 2, sliderCenterY() - h / 2, w, h, h / 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function sliderPiece() {
+  const s = sliderDeform.sample();
+  const { glass } = raiseIntoGlass(s.press);
+  const grow = 1 + SLIDER_GROW * s.press;
+  const knob = {
+    width: SLIDER_KNOB_W * grow,
+    height: SLIDER_KNOB_H * grow,
+    cornerRadius: (SLIDER_KNOB_H * grow) / 2,
+  };
+  const centerX = sliderKnobX() * dpr;
+  const centerY = sliderCenterY();
+  return {
+    optics: optic(materialForInk(currentMaterial(), false)),
+    geometry: knob,
+    centerX,
+    centerY,
+    touch: {
+      x: s.touchX,
+      y: s.touchY,
+      pullX: s.pullX,
+      pullY: s.pullY,
+      press: s.press,
+      radius: 0.72 * Math.min(knob.width, knob.height) * 0.5,
+      waveAmp: s.waveAmp,
+      wavePhase: s.wavePhase,
+    },
+    press: s.press,
+    active: s.active * 0.3,
+    light: lightFor(centerX, centerY),
+    // Стекла в покое нет вовсе: орган матовый, и линза НАРАСТАЕТ под пальцем — тем же
+    // механизмом, которым деталь появляется на экране (эталон §12: не прозрачностью).
+    appear: glass,
+    // Ручка этого рода под пальцем отрывается от подложки, а не вдавливается в неё. Это
+    // НАПРАВЛЕНИЕ, а не величина: насколько она уже поднялась, знает нажатие.
+    lift: 1,
   };
 }
 
@@ -285,6 +532,17 @@ const COVER_SCREEN = 2;
 /** Экран навигации: те же кнопки, но со значками — контент ПОВЕРХ стекла. */
 const NAV_SCREEN = 3;
 const accentHue = Number(params.get('hue') ?? 265);
+/** Акцент экрана в RGB — им тонируется главное действие (M 16:08). */
+const ACCENT_RGB = hslToRgb(accentHue, 0.62, 0.5);
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return [f(0), f(8), f(4)];
+}
 /**
  * Ряды деталей на экранах телефонов. Ряд — ОДИН описатель на все экраны: пустые кнопки,
  * навигация со значками и плашка под мини-плеер отличаются полями, а не отдельным набором
@@ -301,6 +559,8 @@ type ButtonRow = {
   radius?: number;
   /** На сколько ряд поднят над нижним краем экрана. */
   lift?: number;
+  /** Центр ряда от ВЕРХА экрана — у верхней панели; тогда `lift` не нужен. */
+  top?: number;
   count: number;
   icons?: readonly IconName[];
   /** Плашка несёт мини-плеер: обложку, две строки и кнопку плей/паузы. */
@@ -327,9 +587,9 @@ const ROWS: readonly ButtonRow[] = [
     screen: NAV_SCREEN,
     size: PLATE_HEIGHT,
     width: PHONE.width - SCREEN_MARGIN * 2,
-    // Ниже 12 нельзя: фаска материала здесь 8 dp, и на таком радиусе она съедает угол
-    // целиком — свет собирается в точку, стекло читается пластиной со снятой кромкой.
-    radius: 16,
+    // Радиус вложен в угол экрана (`SCREEN_INNER_RADIUS`), а не подобран. Ниже 12 нельзя:
+    // фаска здесь 8 dp, и на таком радиусе она съедает угол целиком — свет собирается в точку.
+    radius: SCREEN_INNER_RADIUS,
     lift: NAV_SIZE / 2 + PLATE_GAP + PLATE_HEIGHT / 2,
     count: 1,
     player: true,
@@ -355,6 +615,15 @@ const ROWS: readonly ButtonRow[] = [
     content: true,
     select: 'none',
   },
+  {
+    screen: COVER_SCREEN,
+    size: 40,
+    top: TOP_BAR_Y,
+    count: 1,
+    icons: ['vire-chevron-down'],
+    content: true,
+    select: 'none',
+  },
 ];
 
 const rowWidth = (row: ButtonRow) => row.width ?? row.size;
@@ -366,22 +635,22 @@ const ROW_OFFSETS = ROWS.reduce<number[]>((acc) => {
 }, []);
 const BUTTON_TOTAL = ROWS.reduce((n, row) => n + row.count, 0);
 
-/** Полярность кнопок считается по ИХ материалу и их фону, а не по панельному: ползунки правят
- *  контрольный образец, а ручной `ink` вообще выключает автоматику — кнопки тогда оставались
- *  светлополярными над светлым фоном и давились до серого. */
-const BUTTON_MATERIAL = VIREGLASS_CONTROL_MATERIAL;
-const buttonOptics = resolveOptics(BUTTON_MATERIAL);
+/** Материал кнопок свой, а не панельный: ползунки правят только контрольный образец. */
+const BUTTON_MATERIAL = clearMode ? VIREGLASS_CLEAR_MATERIAL : VIREGLASS_CONTROL_MATERIAL;
 /** Полярность — У КАЖДОЙ КНОПКИ СВОЯ, по её собственному зонду. Общей на весь кадр она
  *  бралась с первой детали: над светлой клеткой выходила тёмная надпись, и требование
  *  читаемости выбеливало тело кнопок навигации на ЧЁРНОМ фоне до матового диска. */
 const buttonInk = new Array<number>(BUTTON_TOTAL).fill(INK_LIGHT);
+/** Плашка мини-плеера — стекло над списком: по её стилю выбирается стиль края прокрутки. */
+const PLATE_INDEX = ROW_OFFSETS[ROWS.findIndex((row) => row.player)];
+const plateInkLight = () => buttonInk[PLATE_INDEX] === INK_LIGHT;
 
 function updateButtonInk(probes: readonly ({ luma: number; hi: number } | null)[]): void {
   for (let i = 0; i < BUTTON_TOTAL; i += 1) {
     const sample = probes[i];
     if (!sample) continue;
     const was = buttonInk[i] === INK_LIGHT;
-    const next = shouldInkBeLight(sample, buttonOptics.legibility, was) ? INK_LIGHT : INK_DARK;
+    const next = shouldInkBeLight(sample, was) ? INK_LIGHT : INK_DARK;
     if (next !== buttonInk[i]) wake();
     buttonInk[i] = next;
   }
@@ -396,7 +665,7 @@ function buttonLayout(): ButtonSpot[] {
     const w = rowWidth(row);
     const span = PHONE.width - SCREEN_MARGIN * 2;
     const gap = row.count > 1 ? (span - row.count * w) / (row.count - 1) : 0;
-    const y = origin.y + PHONE.height - 58 - (row.lift ?? 0) + offset.y;
+    const y = origin.y + (row.top ?? PHONE.height - 58 - (row.lift ?? 0)) + offset.y;
     return Array.from({ length: row.count }, (_, place) => ({
       x: origin.x + SCREEN_MARGIN + (w + gap) * place + w / 2 + offset.x,
       y,
@@ -472,12 +741,21 @@ function toggleButton(index: number, localX: number, localY: number): void {
 // поэтому значок каждой кнопки просто рисуется в неё на своём месте.
 const iconCanvas = document.createElement('canvas');
 const iconCtx = iconCanvas.getContext('2d');
-function updateIconMask(): HTMLCanvasElement | null {
+function clearMask(): CanvasRenderingContext2D | null {
   if (!iconCtx) return null;
   if (iconCanvas.width !== canvas.width || iconCanvas.height !== canvas.height) {
     iconCanvas.width = canvas.width;
     iconCanvas.height = canvas.height;
   }
+  iconCtx.globalCompositeOperation = 'source-over';
+  iconCtx.filter = 'none';
+  iconCtx.fillStyle = '#000000';
+  iconCtx.fillRect(0, 0, iconCanvas.width, iconCanvas.height);
+  return iconCtx;
+}
+
+function updateIconMask(): HTMLCanvasElement | null {
+  if (!clearMask() || !iconCtx) return null;
   // Форму краски шейдер читает ЗЕЛЁНЫМ каналом маски, а не альфой. Поэтому маска — белым по
   // ЧЁРНОМУ: при рисовании по прозрачному сглаживание уходит в альфу, зелёный внутри штриха
   // остаётся единицей до самого края, и границы выходят рваными.
@@ -485,20 +763,17 @@ function updateIconMask(): HTMLCanvasElement | null {
   // Спокойного основания под краской здесь НЕТ и быть не должно: это свойство материала
   // (legibility), одинаковое по всей детали. Пока его подкладывала лаборатория, у значка оно
   // было одно, у плашки другое, и разница ничем не объяснялась.
-  iconCtx.globalCompositeOperation = 'source-over';
-  iconCtx.filter = 'none';
-  iconCtx.fillStyle = '#000000';
-  iconCtx.fillRect(0, 0, iconCanvas.width, iconCanvas.height);
   for (const spot of buttonLayout()) {
     const icon = spot.row.icons?.[spot.place];
     if (!icon && !spot.row.player && !spot.row.flow) continue;
     iconCtx.save();
     iconCtx.translate(spot.x * dpr, spot.y * dpr);
-    if (icon) drawIcon(iconCtx, icon, 24 * dpr);
+    if (icon) drawIcon(iconCtx, icon, Math.round(spot.row.size * 0.46) * dpr);
     else if (spot.row.flow) drawFlowInk(iconCtx, dpr);
     else drawPlayerInk(iconCtx, rowWidth(spot.row), dpr, playing);
     iconCtx.restore();
   }
+  popover.drawInk(iconCtx, dpr);
   return iconCanvas;
 }
 
@@ -523,7 +798,9 @@ function updateColorLayer(): HTMLCanvasElement | null {
 
 function buttonPieces() {
   return buttonLayout().map((spot, i) => {
-    const light = buttonInk[i] === INK_LIGHT;
+    // Главное действие тонировано акцентом, и краска на цветном стекле всегда светлая.
+    const tinted = Boolean(spot.row.flow);
+    const light = tinted || buttonInk[i] === INK_LIGHT;
     const d = buttonDeforms[i].sample();
     // РОЛЬ ДЕТАЛИ МАТЕРИАЛ НЕ МЕНЯЕТ. Главное действие экрана я сначала сделал более плотным
     // стеклом — и на кадре рядом плашка, кнопки навигации и «ПОТОК» перестали читаться одним
@@ -537,16 +814,18 @@ function buttonPieces() {
       // следствия по отдельности значит собирать состояние, которого у стекла не бывает.
       // Материал детали собирается ИЗ ЯДРА, а не по месту: несёт ли она краску и активна ли
       // она — вопросы к материалу, и ответ на них обязан быть один на вебе и на Android.
-      optics: resolveOptics({
+      optics: optic({
         ...activeMaterial(materialForInk(BUTTON_MATERIAL, Boolean(spot.row.content)), on),
-        ink: buttonInk[i],
+        ink: light ? INK_LIGHT : INK_DARK,
       }),
+      accent: tinted ? { color: ACCENT_RGB } : undefined,
       geometry: spot.row.width
         ? roundedRectGeometry(spot.row.width, spot.row.size, spot.row.radius ?? spot.row.size / 2)
         : circleGeometry(spot.row.size),
       // Кнопки принадлежат ЭКРАНУ, а не кадру: полотно тянут — они едут вместе с ним.
       centerX: spot.x * dpr,
       centerY: spot.y * dpr,
+      light: lightFor(spot.x * dpr, spot.y * dpr),
       touch: {
         x: d.touchX,
         y: d.touchY,
@@ -575,51 +854,129 @@ function buttonPieces() {
       overlay: Boolean(spot.row.player),
       // Невыбранный значок приглушён цветом, а не прозрачностью: альфу задаёт маска, и гасить
       // её пришлось бы отдельным набором значков. Полярность — та же, что у тела.
-      inkIdle: light ? [0.72, 0.76, 0.82, 1] : [0.24, 0.26, 0.3, 1],
+      inkIdle: tinted ? [1, 1, 1, 1] : light ? [0.72, 0.76, 0.82, 1] : [0.24, 0.26, 0.3, 1],
       inkActive: light ? [1, 1, 1, 1] : [0.05, 0.06, 0.08, 1],
     };
   });
+}
+
+/** Меню «ещё» на экране трека растёт из капсулы верхней панели (M 5:11). */
+const popover = createPopover(() => {
+  const origin = phoneOrigin(COVER_SCREEN);
+  return {
+    right: origin.x + PHONE.width - SCREEN_MARGIN + offset.x,
+    top: origin.y + TOP_BAR_Y - CAPSULE.height / 2 + offset.y,
+  };
+}, a11y.reduceMotion);
+if (params.get('menu') === '1') popover.setOpen(true);
+let popoverInk = INK_LIGHT;
+
+function updatePopoverInk(sample: { luma: number; hi: number } | null): void {
+  if (!sample) return;
+  const next = shouldInkBeLight(sample, popoverInk === INK_LIGHT) ? INK_LIGHT : INK_DARK;
+  if (next !== popoverInk) wake();
+  popoverInk = next;
+}
+
+/** Разрыв и слияние (M 5:02) — своя сцена: в эталоне он тоже показан отдельно, крупно. */
+const group = createGroup(() => ({ x: viewWidthCss() / 2, y: canvas.height / dpr / 2 }), a11y.reduceMotion);
+let groupInk = INK_LIGHT;
+
+function updateGroupInk(sample: { luma: number; hi: number } | null): void {
+  if (!sample) return;
+  const next = shouldInkBeLight(sample, groupInk === INK_LIGHT) ? INK_LIGHT : INK_DARK;
+  if (next !== groupInk) wake();
+  groupInk = next;
+}
+
+function groupPiece() {
+  const frame = group.frame(dpr);
+  const ink = groupInk === INK_LIGHT ? [1, 1, 1, 1] : [0.06, 0.07, 0.09, 1];
+  return {
+    ...frame,
+    optics: optic({ ...materialForInk(BUTTON_MATERIAL, true), ink: groupInk }),
+    light: lightFor(frame.centerX, frame.centerY),
+    icon: true,
+    inkIdle: ink,
+    inkActive: ink,
+  };
+}
+
+function updateGroupMask(): HTMLCanvasElement | null {
+  const ctx = clearMask();
+  if (!ctx) return null;
+  group.drawInk(ctx, dpr);
+  return iconCanvas;
+}
+
+function popoverPiece() {
+  const frame = popover.frame(dpr);
+  // Меню читают, а не выбирают в нём: краска полной силы, без приглушённого покоя.
+  const ink = popoverInk === INK_LIGHT ? [1, 1, 1, 1] : [0.06, 0.07, 0.09, 1];
+  return {
+    ...frame,
+    optics: optic({ ...materialForInk(BUTTON_MATERIAL, true), ink: popoverInk }),
+    light: lightFor(frame.centerX, frame.centerY),
+    icon: true,
+    inkIdle: ink,
+    inkActive: ink,
+  };
 }
 
 function renderFrame() {
   const ink = manualInk ? material.ink : polarity === 'тёмная' ? INK_DARK : INK_LIGHT;
   const zone = ZONES[state.zone].draw;
   const screens = state.view === 'screens';
+  const morph = state.view === 'morph';
+  const slider = state.view === 'slider';
   return renderer.render({
     density: dpr,
     debug: DEBUG_MODES[state.debug] as VireGlassDebugMode,
     scene: screens
-      ? (ctx, w, h, ox, oy) => {
-          zone(ctx, w, h, ox, oy);
+      ? (ctx, w, h, ox, oy, d) => {
+          zone(ctx, w, h, ox, oy, d);
           for (const i of APP_BACKGROUNDS) drawAppBackground(ctx, dpr, i, ox, oy, accentHue);
           drawCoverScreen(ctx, dpr, COVER_SCREEN, ox, oy, progress, playing);
           drawTypeSpecimen(ctx, dpr, TYPE_SCREEN, ox, oy, scrollOf(TYPE_SCREEN));
           // Список — обычный контент, и живёт он В ПОЛОТНЕ, под линзами: стекло обязано его
           // преломлять, иначе плашка висит не над экраном, а рядом с ним.
-          drawRecentList(ctx, dpr, NAV_SCREEN, ox, oy, scrollOf(NAV_SCREEN));
+          drawRecentScreen(ctx, dpr, NAV_SCREEN, ox, oy, scrollOf(NAV_SCREEN), recentScrollMax(), plateInkLight());
           // Притенение низа идёт ПОСЛЕ контента: под панелью управления экран обязан быть
           // спокойным, а в фоне этот же градиент оказывался под списком и не работал.
           for (const i of APP_BACKGROUNDS) drawFoot(ctx, dpr, i, ox, oy);
           drawPhoneFrames(ctx, dpr, PHONE_COUNT, ox, oy);
         }
-      : zone,
+      : slider
+        ? (ctx, w, h, ox, oy, d) => {
+            zone(ctx, w, h, ox, oy, d);
+            drawSliderTrack(ctx, dpr);
+          }
+        : zone,
     offsetX: offset.x * dpr,
     offsetY: offset.y * dpr,
-    iconMask: screens ? updateIconMask() : null,
+    iconMask: screens ? updateIconMask() : morph ? updateGroupMask() : null,
     colorLayer: screens ? updateColorLayer() : null,
-    pieces: screens ? buttonPieces() : [controlPiece(), ...samplePieces(ink)],
+    pieces: screens
+      ? [...buttonPieces(), popoverPiece()]
+      : morph
+        ? [groupPiece()]
+        : slider
+          ? [sliderPiece()]
+          : onReferenceScene()
+            ? [controlPiece()]
+            : [controlPiece(), ...samplePieces(ink)],
   });
 }
 
 function applyPolarity(sample: { luma: number; hi: number }): void {
   if (manualInk) return;
-  const light = shouldInkBeLight(sample, optics.legibility, polarity === 'светлая');
+  const light = shouldInkBeLight(sample, polarity === 'светлая');
   const next = light ? 'светлая' : 'тёмная';
   // Замер зонда приходит с отставанием, и полярность может смениться на ПОСЛЕДНЕМ кадре
   // досчёта. Без побудки состояние уже новое, а на экране остаётся кадр со старой полярностью.
   if (next !== polarity) wake();
   polarity = next;
-  optics = resolveOptics({ ...material, ink: light ? INK_LIGHT : INK_DARK });
+  optics = optic({ ...material, ink: light ? INK_LIGHT : INK_DARK });
 }
 
 function describe(probe: { luma: number; busy: number; lo: number; hi: number } | null): string {
@@ -648,15 +1005,33 @@ function tick(now: number): void {
   lastFrame = now;
   // Шагают ВСЕ деформации: кнопок четыре, и каждая живёт своей пружиной.
   deform.step(dt);
+  sliderDeform.step(dt);
   for (const d of buttonDeforms) d.step(dt);
   const activeMoving = stepButtonActive(dt);
-  if (activeMoving || stepProgress(dt) || !deform.idle() || buttonDeforms.some((d) => !d.idle())) {
+  const appearing = stepAppear(dt);
+  const popoverMoving = popover.step(dt);
+  const groupMoving = group.step(dt);
+  const progressing = stepProgress(dt);
+  if (
+    appearing ||
+    activeMoving ||
+    popoverMoving ||
+    groupMoving ||
+    progressing ||
+    !deform.idle() ||
+    !sliderDeform.idle() ||
+    buttonDeforms.some((d) => !d.idle())
+  ) {
     wake();
   }
   if (pending <= 0) return;
   const probes = renderFrame().probes;
+  drawSliderKnobSolid();
   const probe = probes[0];
-  if (state.view === 'screens') updateButtonInk(probes);
+  if (state.view === 'screens') {
+    updateButtonInk(probes);
+    updatePopoverInk(probes[BUTTON_TOTAL] ?? null);
+  } else if (state.view === 'morph') updateGroupInk(probe);
   else if (probe) applyPolarity(probe);
   pending -= 1;
   // Метка и панель обновляются КАЖДЫЙ кадр, а не по окончании досчёта: иначе правка,
@@ -749,11 +1124,40 @@ type Target = {
   limit: number;
   /** Индекс кнопки, если попали в неё: только их состояние переключается кликом. */
   index?: number;
+  /** Попали в меню «ещё» или в капсулу, из которой оно растёт. */
+  popover?: PopoverHit;
+  /** Попали в группу на сцене морфинга. */
+  group?: boolean;
+  /** Попали в ручку ползунка: жест ведёт её вдоль дорожки, а не таскает полотно. */
+  slider?: boolean;
 };
 
 /** Какая деталь под пальцем — в обоих режимах, с запасом, чтобы не мазать по кромке. */
 function pickTarget(clientX: number, clientY: number): Target | null {
+  if (state.view === 'slider') {
+    const dx = clientX - sliderKnobX();
+    const dy = clientY - sliderCenterY() / dpr;
+    // Запас по вертикали щедрее ручки: по дорожке целятся пальцем, а не курсором.
+    if (Math.abs(dx) > SLIDER_KNOB_W / 2 + 10 || Math.abs(dy) > SLIDER_KNOB_H / 2 + 12) return null;
+    return { deform: sliderDeform, localX: dx, localY: dy, limit: 0, slider: true };
+  }
+  if (state.view === 'morph') {
+    const hit = group.pick(clientX, clientY);
+    if (!hit) return null;
+    return { deform: group.deform, localX: hit.localX, localY: hit.localY, limit: 4, group: true };
+  }
   if (state.view === 'screens') {
+    // Меню лежит поверх экрана, поэтому палец достаётся ему первым.
+    const pop = popover.pick(clientX, clientY);
+    if (pop) {
+      return {
+        deform: popover.deform,
+        localX: pop.localX,
+        localY: pop.localY,
+        limit: 0.14 * pop.halfMin,
+        popover: pop.hit,
+      };
+    }
     const layout = buttonLayout();
     for (let i = 0; i < layout.length; i += 1) {
       const row = layout[i].row;
@@ -801,11 +1205,17 @@ canvas.addEventListener('pointerdown', (event) => {
   }
 });
 canvas.addEventListener('pointermove', (event) => {
+  pointer = { x: event.clientX, y: event.clientY };
+  wake();
   if (!gesture) {
     canvas.style.cursor = pickTarget(event.clientX, event.clientY) ? 'pointer' : 'grab';
     return;
   }
-  if (gesture.target) {
+  if (gesture.target?.slider) {
+    // Ручка идёт за пальцем по дорожке; тяги у неё нет — орган ездит, а не тянется.
+    sliderValue = Math.min(Math.max((event.clientX - sliderLeft()) / SLIDER_TRACK_W, 0), 1);
+    wake();
+  } else if (gesture.target) {
     gesture.target.deform.drag(
       event.clientX - gesture.startX,
       event.clientY - gesture.startY,
@@ -819,14 +1229,18 @@ canvas.addEventListener('pointermove', (event) => {
 const endGesture = (event: PointerEvent) => {
   if (!gesture) return;
   if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-  if (gesture.target) {
-    gesture.target.deform.release(WAVE_ON_RELEASE);
-    // Клик — это жест без протяжки: тянули дальше порога, значит переключать нечего.
-    const moved = Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY);
-    const index = gesture.target.index;
-    if (index !== undefined && moved < 6) {
-      toggleButton(index, gesture.target.localX, gesture.target.localY);
-    }
+  const target = gesture.target;
+  if (target) {
+    target.deform.release(WAVE_ON_RELEASE);
+    wake();
+  }
+  // Клик — это жест без протяжки: тянули дальше порога, значит переключать нечего.
+  if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) < 6) {
+    // Открытое меню закрывается первым: касание мимо него ничего под ним не нажимает.
+    if (target?.group) group.click();
+    else if (target?.popover) popover.click(target.popover);
+    else if (popover.isOpen()) popover.setOpen(false);
+    else if (target?.index !== undefined) toggleButton(target.index, target.localX, target.localY);
     wake();
   }
   gesture = null;
@@ -834,11 +1248,24 @@ const endGesture = (event: PointerEvent) => {
 };
 canvas.addEventListener('pointerup', endGesture);
 canvas.addEventListener('pointercancel', endGesture);
+canvas.addEventListener('pointerleave', () => {
+  pointer = null;
+  wake();
+});
+canvas.addEventListener('dblclick', (event) => {
+  if (state.view !== 'material' || overPanel(event.target)) return;
+  const target = pickTarget(event.clientX, event.clientY);
+  if (!target || target.index !== undefined) return;
+  appearTarget = appearTarget > 0.5 ? 0 : 1;
+  wake();
+});
 
 placeCaptions();
 
 // Значки приходят из спрайта асинхронно — как пришли, кадр перерисовывается с ними.
-void loadIcons([...NAV_ICONS, ...PLAYER_ICONS, ...TRANSPORT_ICONS]).then(() => wake());
+void loadIcons([...NAV_ICONS, ...PLAYER_ICONS, ...TRANSPORT_ICONS, ...POPOVER_ICONS, 'vire-chevron-down']).then(() =>
+  wake(),
+);
 
 // Гротески приходят файлами, как и значки: пока они не загружены, canvas молча рисует
 // системным, и кадр надо пересобрать — иначе стенд показывает не те начертания.

@@ -20,6 +20,7 @@ import { formatDuration } from '../lib/format';
 import { resolveReleaseHeader } from '../lib/release-header';
 import { Screen } from '../components/screen';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 import { LikeButton } from '../components/like-button';
 import { AddToPlaylistSheet } from '../components/add-to-playlist-sheet';
 import { DownloadButton } from '../components/download-button';
@@ -40,6 +41,7 @@ const HEADER_SCRIM = ['rgba(3,2,1,0.35)', 'rgba(3,2,1,0.55)', '#030201'] as cons
 export default function ReleaseScreen({ route }: { route: { params: HomeStackParamList['ReleaseDetail'] } }) {
   const { releaseId } = route.params;
   const bottomPadding = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const [tracks, setTracks] = useState<TrackItem[]>([]);
   const [release, setRelease] = useState<ReleaseDetailResponse['release'] | null>(null);
   const [state, setState] = useState<LoadState>('loading');
@@ -125,6 +127,7 @@ export default function ReleaseScreen({ route }: { route: { params: HomeStackPar
 
       {state === 'ready' && (
         <FlatList
+          {...scrollEdge}
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}
           data={tracks}
           keyExtractor={(item) => item.id}

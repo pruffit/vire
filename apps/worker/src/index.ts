@@ -14,7 +14,9 @@ import { createNotifyExternalWorker } from './workers/notify-external.worker.js'
 import { createJamReaperWorker } from './workers/jam-reaper.worker.js';
 import { createStorageCleanupWorker } from './workers/storage-cleanup.worker.js';
 import { connection, closeConnection } from './queues/connection.js';
-import { alertJobFailure, alertWorkerError, alertCrash } from './lib/alert.js';
+import { startHeartbeat, stopHeartbeat } from './queues/heartbeat.js';
+import { alertJobFailure, alertCrash } from './lib/alert.js';
+import { reportWorkerError, beginRedisShutdown } from './lib/redis-incident.js';
 import { jobDurationMs } from './lib/timing.js';
 
 /** Один формат строки успеха на все очереди: без длительности нельзя ответить,
@@ -48,39 +50,41 @@ const notifyExternalWorker = createNotifyExternalWorker();
 const jamReaperWorker = createJamReaperWorker();
 const storageCleanupWorker = createStorageCleanupWorker();
 
+startHeartbeat();
+
 // upsertJobScheduler идемпотентен: повторный запуск воркера не плодит дубли, обновляет расписание.
 const editorialQueue = new Queue(QUEUE_EDITORIAL, { connection });
 editorialQueue
   .upsertJobScheduler('shared-daily', { pattern: '0 0 * * *', tz: 'Europe/Moscow' }, { name: 'shared', data: { scope: 'shared' } })
-  .catch((err) => void alertWorkerError('editorial', err as Error));
+  .catch((err) => reportWorkerError('editorial', err as Error));
 editorialQueue
   .upsertJobScheduler('personal-4h', { pattern: '0 */4 * * *', tz: 'Europe/Moscow' }, { name: 'personal', data: { scope: 'personal' } })
-  .catch((err) => void alertWorkerError('editorial', err as Error));
+  .catch((err) => reportWorkerError('editorial', err as Error));
 
 // Планировщик авто-выхода SCHEDULED-релизов: раз в минуту проверяем наступившую
 // дату выхода, публикуем, шлём уведомления подписчикам и исполняем пресейвы.
 const scheduledPublishQueue = new Queue(QUEUE_SCHEDULED_PUBLISH, { connection });
 scheduledPublishQueue
   .upsertJobScheduler('due-every-min', { pattern: '* * * * *' }, { name: 'due', data: {} })
-  .catch((err) => void alertWorkerError('scheduled-publish', err as Error));
+  .catch((err) => reportWorkerError('scheduled-publish', err as Error));
 
 // Снапшот метрик за вчера, чуть после полуночи МСК — даёт время editorial-крону (00:00) отойти.
 const metricsQueue = new Queue(QUEUE_METRICS, { connection });
 metricsQueue
   .upsertJobScheduler('metrics-daily', { pattern: '10 0 * * *', tz: 'Europe/Moscow' }, { name: 'snapshot', data: {} })
-  .catch((err) => void alertWorkerError('metrics-daily', err as Error));
+  .catch((err) => reportWorkerError('metrics-daily', err as Error));
 
 // Авто-закрытие джемов без активности 12ч+, раз в 15 минут.
 const jamReaperQueue = new Queue(QUEUE_JAM_REAPER, { connection });
 jamReaperQueue
   .upsertJobScheduler('jam-reaper-15m', { pattern: '*/15 * * * *', tz: 'Europe/Moscow' }, { name: 'reap', data: {} })
-  .catch((err) => void alertWorkerError('jam-reaper', err as Error));
+  .catch((err) => reportWorkerError('jam-reaper', err as Error));
 
 // Уборка файлов удалённых треков/релизов — раз в час; сами записи ждут grace-периода (сутки).
 const storageCleanupQueue = new Queue(QUEUE_STORAGE_CLEANUP, { connection });
 storageCleanupQueue
   .upsertJobScheduler('storage-cleanup-hourly', { pattern: '30 * * * *', tz: 'Europe/Moscow' }, { name: 'sweep', data: {} })
-  .catch((err) => void alertWorkerError('storage-cleanup', err as Error));
+  .catch((err) => reportWorkerError('storage-cleanup', err as Error));
 
 editorialWorker.on('completed', (job) => {
   logDone('editorial', job, ` scope=${job.data.scope}`);
@@ -89,7 +93,7 @@ editorialWorker.on('failed', (job, err) => {
   void alertJobFailure('editorial', job?.id, err, { scope: job?.data.scope });
 });
 editorialWorker.on('error', (err) => {
-  void alertWorkerError('editorial', err);
+  reportWorkerError('editorial', err);
 });
 
 transcodeWorker.on('completed', (job) => {
@@ -105,7 +109,7 @@ transcodeWorker.on('failed', (job, err) => {
 });
 
 transcodeWorker.on('error', (err) => {
-  void alertWorkerError('transcode', err);
+  reportWorkerError('transcode', err);
 });
 
 playEventsWorker.on('failed', (job, err) => {
@@ -113,7 +117,7 @@ playEventsWorker.on('failed', (job, err) => {
 });
 
 playEventsWorker.on('error', (err) => {
-  void alertWorkerError('play-events', err);
+  reportWorkerError('play-events', err);
 });
 
 notifyReleaseWorker.on('completed', (job) => {
@@ -125,14 +129,14 @@ notifyReleaseWorker.on('failed', (job, err) => {
 });
 
 notifyReleaseWorker.on('error', (err) => {
-  void alertWorkerError('notify-release', err);
+  reportWorkerError('notify-release', err);
 });
 
 scheduledPublishWorker.on('failed', (job, err) => {
   void alertJobFailure('scheduled-publish', job?.id, err);
 });
 scheduledPublishWorker.on('error', (err) => {
-  void alertWorkerError('scheduled-publish', err);
+  reportWorkerError('scheduled-publish', err);
 });
 
 fulfillPresaveWorker.on('completed', (job) => {
@@ -142,7 +146,7 @@ fulfillPresaveWorker.on('failed', (job, err) => {
   void alertJobFailure('fulfill-presave', job?.id, err, { releaseId: job?.data.releaseId });
 });
 fulfillPresaveWorker.on('error', (err) => {
-  void alertWorkerError('fulfill-presave', err);
+  reportWorkerError('fulfill-presave', err);
 });
 
 metricsWorker.on('completed', (job) => {
@@ -152,7 +156,7 @@ metricsWorker.on('failed', (job, err) => {
   void alertJobFailure('metrics-daily', job?.id, err);
 });
 metricsWorker.on('error', (err) => {
-  void alertWorkerError('metrics-daily', err);
+  reportWorkerError('metrics-daily', err);
 });
 
 console.log('[worker] transcode + analyze + analyze-genre + play-events + notify-release + editorial + scheduled-publish + fulfill-presave + metrics-daily + notify-external + jam-reaper workers started');
@@ -164,7 +168,7 @@ analyzeWorker.on('failed', (job, err) => {
   void alertJobFailure('analyze', job?.id, err, { trackId: job?.data.trackId });
 });
 analyzeWorker.on('error', (err) => {
-  void alertWorkerError('analyze', err);
+  reportWorkerError('analyze', err);
 });
 
 analyzeGenreWorker.on('completed', (job) => {
@@ -174,7 +178,7 @@ analyzeGenreWorker.on('failed', (job, err) => {
   void alertJobFailure('analyze-genre', job?.id, err, { trackId: job?.data.trackId });
 });
 analyzeGenreWorker.on('error', (err) => {
-  void alertWorkerError('analyze-genre', err);
+  reportWorkerError('analyze-genre', err);
 });
 
 notifyExternalWorker.on('completed', (job) => {
@@ -184,7 +188,7 @@ notifyExternalWorker.on('failed', (job, err) => {
   void alertJobFailure('notify-external', job?.id, err, { kind: job?.data.kind });
 });
 notifyExternalWorker.on('error', (err) => {
-  void alertWorkerError('notify-external', err);
+  reportWorkerError('notify-external', err);
 });
 
 jamReaperWorker.on('completed', (job) => {
@@ -194,14 +198,14 @@ jamReaperWorker.on('failed', (job, err) => {
   void alertJobFailure('jam-reaper', job?.id, err);
 });
 jamReaperWorker.on('error', (err) => {
-  void alertWorkerError('jam-reaper', err);
+  reportWorkerError('jam-reaper', err);
 });
 
 storageCleanupWorker.on('failed', (job, err) => {
   void alertJobFailure('storage-cleanup', job?.id, err);
 });
 storageCleanupWorker.on('error', (err) => {
-  void alertWorkerError('storage-cleanup', err);
+  reportWorkerError('storage-cleanup', err);
 });
 
 // Алертим (дождавшись доставки) и выходим с кодом 1 — иначе воркер умирал бы молча,
@@ -215,6 +219,7 @@ process.on('unhandledRejection', (reason) => {
 });
 
 async function shutdown() {
+  beginRedisShutdown();
   await Promise.all([
     transcodeWorker.close(),
     playEventsWorker.close(),
@@ -234,6 +239,7 @@ async function shutdown() {
     storageCleanupWorker.close(),
     storageCleanupQueue.close(),
   ]);
+  await stopHeartbeat();
   await closeConnection();
   process.exit(0);
 }

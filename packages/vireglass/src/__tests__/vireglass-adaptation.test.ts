@@ -1,20 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
-  bodyCap,
-  bodyDensityFor,
-  bodyLuma,
-  contrastRatio,
+  ambientFrom,
+  FLIP_LUMA,
   INK_DARK,
   INK_LIGHT,
-  preferredPolarity,
-  relativeLuminance,
+  RETURN_LUMA,
+  shouldInkBeLight,
 } from '../adaptation';
 import { LENS_SHADER } from '../lens-shader';
+import { SURFACE_SHADER } from '../surface-shader';
 import { colorPickup, diffraction, dispersion, iridescence } from '../optics';
 import { resolveOptics } from '../material';
-
-const LEGIBILITY = 0.26;
-const BODY = 0.04;
 
 describe('спектральная оптика', () => {
   it('без плёнки интерференции нет вовсе', () => {
@@ -43,115 +39,86 @@ describe('спектральная оптика', () => {
   });
 });
 
-describe('тело стекла: модель в JS и в шейдере', () => {
-  // Решение о перекраске считается в JS, а рисует стекло шейдер. Если константы разъедутся,
-  // приложение будет судить по одной физике, а пользователь видеть другую — и перекраска
-  // включится не там, где надпись действительно тонет.
-  it('константы совпадают с шейдером', () => {
-    expect(LENS_SHADER).toContain('const float VG_BODY_CAP_LOOSE = 0.62;');
-    expect(LENS_SHADER).toContain('const float VG_BODY_CAP_TIGHT = 0.38;');
-    expect(LENS_SHADER).toContain('const float VG_TINT_DARK = 0.07;');
-    expect(LENS_SHADER).toContain('const float VG_TINT_LIGHT = 0.94;');
-    expect(LENS_SHADER).toContain('0.0, 0.92)');
-  });
-
-  // Подсветка окружения обязана быть одинаковой по всей детали. Пока она шла множителем
-  // mix(0.35, 1.0, t), середина светилась втрое слабее кромки — и это читалось пятном
-  // другого тона по центру стекла.
+describe('тело стекла в шейдере', () => {
+  // Обе строки, которые трогают светлоту тела, обязаны быть одинаковыми по всей детали. Пока
+  // подсветка шла множителем mix(0.35, 1.0, t), середина светилась втрое слабее кромки — и это
+  // читалось пятном другого тона по центру стекла.
   it('подсветка тела не зависит от места на детали', () => {
-    expect(LENS_SHADER).toContain('rgb += ambient * u_edgeLight * (0.12 + 0.55 * (1.0 - local));');
+    expect(LENS_SHADER).toContain('rgb = mix(rgb, vgHue(ambient) * VG_MEDIUM_LUMA, VG_MEDIUM_PULL * u_appear);');
+    expect(LENS_SHADER).toContain('rgb += ambient * u_edgeLight * VG_AMBIENT_SPILL * u_appear;');
   });
 
-  it('порог читаемости — потолок светлоты, и он строже при высоком требовании', () => {
-    expect(bodyCap(0.6)).toBeLessThan(bodyCap(0.1));
-    expect(bodyCap(1)).toBeCloseTo(0.38, 5);
+  // Рассеяние ЗАМЕНЯЕТ rgb целиком (вес доходит до единицы), поэтому всё, что легло раньше,
+  // теряется. Обратный порядок стирал отражение окружения на всей детали и гейтом не ловился:
+  // пороги перекрывали разницу с запасом (issue #106).
+  // Режим «подложка» — единственная точка, где видно, ЧТО ДОШЛО до шейдера, отдельно от того,
+  // как он это обработал. Слои, не завязанные на линзу (тело, среда, рассеяние), доживали до
+  // него и смешивали два вопроса в один: деталь была видна и при идеальном захвате (issue #112).
+  it('«подложка» отдаёт содержимое без единого слоя поверх', () => {
+    const bypass = LENS_SHADER.indexOf('if (u_debug > 5.5 && u_debug < 6.5) {');
+    const medium = LENS_SHADER.indexOf('rgb = mix(rgb, vgHue(ambient) * VG_MEDIUM_LUMA');
+    const scatter = LENS_SHADER.indexOf('rgb = mix(rgb, blurred, smoothstep(0.5, 2.0, adaptBlur));');
+    expect(bypass).toBeGreaterThan(-1);
+    expect(bypass).toBeLessThan(scatter);
+    expect(bypass).toBeLessThan(medium);
   });
 
-  it('над светлым фоном светлая полярность делает тело темнее фона', () => {
-    expect(bodyLuma(1, LEGIBILITY, BODY, 1)).toBeLessThan(1);
+  it('отражение ложится ПОСЛЕ рассеяния', () => {
+    const scatter = LENS_SHADER.indexOf('rgb = mix(rgb, blurred, smoothstep(0.5, 2.0, adaptBlur));');
+    const reflection = LENS_SHADER.indexOf('rgb = mix(rgb, env * spectral, fres);');
+    expect(scatter).toBeGreaterThan(-1);
+    expect(reflection).toBeGreaterThan(-1);
+    expect(reflection).toBeGreaterThan(scatter);
   });
 
-  it('над тёмным фоном тёмная полярность делает тело светлее фона', () => {
-    expect(bodyLuma(0, LEGIBILITY, BODY, 0)).toBeGreaterThan(0);
-  });
-
-  it('светлота тела монотонна по светлоте фона', () => {
-    let prev = -1;
-    for (let l = 0; l <= 1.0001; l += 0.05) {
-      const v = bodyLuma(l, LEGIBILITY, BODY, 1);
-      expect(v).toBeGreaterThanOrEqual(prev);
-      prev = v;
-    }
-  });
-
-  // Главный дефект прежней модели: она требовала от тела быть «на sep темнее» надписи, то
-  // есть светлее 0.86 — и считала белый текст на насыщенном жёлтом читаемым. Он там не виден.
-  it('на насыщенном цвете тело затемняется настолько, что светлая надпись читается', () => {
-    const yellow = 0.62;
-    expect(contrastRatio(INK_LIGHT, bodyLuma(yellow, LEGIBILITY, BODY, 1))).toBeGreaterThan(3);
-  });
-
-  it('светлая надпись читается на любой светлоте фона — ценой плотности', () => {
-    for (let l = 0; l <= 1.0001; l += 0.05) {
-      expect(contrastRatio(INK_LIGHT, bodyLuma(l, LEGIBILITY, BODY, 1))).toBeGreaterThan(3);
-    }
+  // Тень обязана быть СЛАБЕЕ у самого контура, чем ниже него: у эталона минимум стоит на
+  // 17…25 px ниже кромки. Слагаемые, монотонные по расстоянию от силуэта, такого профиля не
+  // дают, а гейт откат не ловит — при возврате контактного затемнения обе его метрики даже
+  // растут (предмет 7.1 → 9.7, раздув 1.90 → 1.92).
+  it('тень у контура ослаблена зазором', () => {
+    expect(SURFACE_SHADER).toContain('mix(VG_GAP_LIGHT, 1.0, gap)');
+    expect(SURFACE_SHADER).not.toContain('con * con');
   });
 });
 
 describe('предел стекла и полярность', () => {
-  it('WCAG: белое на чёрном — 21:1', () => {
-    expect(contrastRatio(1, 0)).toBeCloseTo(21, 1);
-    expect(relativeLuminance(0)).toBe(0);
+  // Правило эталона (reference.md §3): над жёлтым цветком глифы уже чёрные, а стекло светлое.
+  it('над светлым цветом надпись уходит в тёмную', () => {
+    expect(shouldInkBeLight({ luma: 0.78 }, true)).toBe(false);
+    expect(shouldInkBeLight({ luma: 0.95 }, true)).toBe(false);
   });
 
-  const cost = (l: number) => bodyDensityFor(l, LEGIBILITY, 0, 1);
-
-  // Правило продукта: надпись светлая везде, кроме очень светлого фона. На цветном её
-  // вытягивает плотность тела, а не смена цвета — иначе иконки на цветных блоках прыгают
-  // из белых в чёрные и обратно.
-  it('на цветном фоне стекло справляется само — перекрашивать нечего', () => {
-    // 0.78 — светлота насыщенного жёлтого, самого светлого из цветов, на которых надпись
-    // обязана остаться белой.
-    for (const l of [0.35, 0.5, 0.62, 0.7, 0.78]) {
-      expect(cost(l)).toBeLessThan(0.48);
-    }
-  });
-
-  it('на очень светлом фоне цена удержания светлой надписи выходит за предел', () => {
-    expect(cost(0.92)).toBeGreaterThan(0.48);
-    expect(cost(1)).toBeGreaterThan(0.48);
+  it('на насыщенном и тёмном фоне надпись остаётся светлой', () => {
+    for (const l of [0.05, 0.35, 0.5, 0.58]) expect(shouldInkBeLight({ luma: l }, true)).toBe(true);
   });
 
   // Зазор между «переключиться» и «вернуться» — иначе надпись мигает на каждой светлой
   // обложке, проехавшей под краем стекла.
   it('возврат к светлой требует заметно более тёмного фона, чем уход от неё', () => {
-    const flipAt = [...Array(101).keys()].map((i) => i / 100).find((l) => cost(l) > 0.48) ?? 1;
-    const backAt = [...Array(101).keys()].map((i) => i / 100).find((l) => cost(l) > 0.34) ?? 1;
-    expect(backAt).toBeLessThan(flipAt);
+    const between = (FLIP_LUMA + RETURN_LUMA) / 2;
+    expect(shouldInkBeLight({ luma: between }, true)).toBe(true);
+    expect(shouldInkBeLight({ luma: between }, false)).toBe(false);
+    expect(FLIP_LUMA - RETURN_LUMA).toBeGreaterThanOrEqual(0.1);
   });
 
-  it('над границей чёрного и белого решение остаётся за плотностью, а не за цветом', () => {
-    expect(cost(0.5 * 0.75 + 1 * 0.25)).toBeLessThan(0.48);
-  });
-
-  it('требование читаемости разводит тело с надписью тем сильнее, чем оно выше', () => {
-    expect(bodyLuma(0.7, 0.6, BODY, 1)).toBeLessThan(bodyLuma(0.7, 0.1, BODY, 1));
-    expect(bodyLuma(0.3, 0.6, BODY, 0)).toBeGreaterThan(bodyLuma(0.3, 0.1, BODY, 0));
-  });
-
-  it('под потолком стекло не вмешивается вовсе', () => {
-    const under = bodyCap(0.1) - 0.05;
-    expect(bodyDensityFor(under, 0.1, 0, 1)).toBe(0);
-  });
-
-  it('обе полярности остаются измеримыми — по ним читают отчёт', () => {
-    const d = preferredPolarity(0.5, LEGIBILITY, BODY);
-    expect(d.light).toBeGreaterThan(0);
-    expect(d.dark).toBeGreaterThan(0);
+  it('решение уклоняется к самому светлому месту под стеклом', () => {
+    expect(shouldInkBeLight({ luma: 0.55 }, true)).toBe(true);
+    expect(shouldInkBeLight({ luma: 0.55, hi: 0.95 }, true)).toBe(false);
   });
 
   it('надпись описывается двумя концами шкалы, а не произвольной светлотой', () => {
     expect(INK_LIGHT).toBeGreaterThan(0.9);
     expect(INK_DARK).toBeLessThan(0.1);
+  });
+});
+
+describe('цвет окружения для тени', () => {
+  // Замер приходит раз в 180 мс, и на мобилке каждая выборка иначе дёргала бы перерисовку.
+  it('огрубляется шагом, а не тянется точным значением', () => {
+    expect(ambientFrom({ r: 0.501, g: 0.5, b: 0.499 })).toEqual([0.5, 0.5, 0.5]);
+  });
+
+  it('зажимается в допустимый диапазон', () => {
+    expect(ambientFrom({ r: -1, g: 2, b: 0.25 })).toEqual([0, 1, 0.25]);
   });
 });

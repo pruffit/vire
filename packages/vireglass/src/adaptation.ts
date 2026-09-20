@@ -13,15 +13,17 @@ import type { VireGlassOptics } from './material';
  * Светлоту фона ПОД стеклом приложению неоткуда взять: она видна только нативному захвату.
  * Оттуда она и приходит — событием `onBackdropSample` (зонд в `GlassBackdropView`).
  *
- * Решение принимается по ТОЙ ЖЕ формуле, по которой стекло красит своё тело
- * (`lens-shader.ts`). Иначе приложение судило бы по одной физике, а видел бы пользователь
- * другую — и перекраска включалась бы не там, где надпись действительно тонет.
+ * Решение принимается ПО СВЕТЛОТЕ с гистерезисом: считать здесь плотность тела по формуле
+ * шейдера значит держать вторую реализацию модели, которая разъезжается с первой молча.
+ * Что тело и надпись действительно расходятся по контрасту, проверяет `check:optics` —
+ * на настоящем рендере, а не на копии формулы.
  */
 
 export type BackdropSample = {
   /** Средняя светлота фона под стеклом, 0..1, в той же (sRGB-кодированной) шкале, что и экран. */
   luma: number;
-  /** Размах светлоты (hi − lo): 0 на ровной заливке, ~1 на границе чёрного и белого. */
+  /** Пестрота: удвоенное среднее отклонение светлоты, 0 на ровной заливке, 1 на пределе.
+   *  Ровно та же величина, что считает зонд в вебе, — иначе платформы разъедутся молча. */
   busy: number;
   /** Самое тёмное и самое светлое место под стеклом. Решение о читаемости принимается по
    *  ним, а не по среднему: над границей чёрного и белого среднее — «всё в порядке». */
@@ -32,83 +34,15 @@ export type BackdropSample = {
   b: number;
 };
 
-// Константы модели тела — те же, что в шейдере линзы. Дублирование здесь осознанное и
-// закрыто тестом: держать их в одном месте нельзя, шейдер это строка на другом языке.
-const TINT_DARK = 0.07;
-const TINT_LIGHT = 0.94;
-const BODY_CAP_LOOSE = 0.62;
-const BODY_CAP_TIGHT = 0.38;
-const MAX_DENSITY = 0.92;
+/** Шаг огрубления цвета окружения — для платформ, где замер идёт через состояние: каждая
+ *  выборка зонда иначе дёргала бы перерисовку поверхности. Тень красится грубо, ей точность
+ *  и не нужна. Веб рисует униформы императивно каждый кадр и берёт цвет как есть. */
+const AMBIENT_STEP = 32;
 
-const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
-
-/** Потолок светлоты тела для СВЕТЛОЙ надписи. Порог задан контрастом, а не разностью
- *  светлот: «на 0.14 темнее белого» — это светлота 0.86, на которой белый текст не виден
- *  вовсе. Для тёмной надписи порог зеркальный. */
-export function bodyCap(legibility: number): number {
-  return BODY_CAP_LOOSE + (BODY_CAP_TIGHT - BODY_CAP_LOOSE) * clamp(legibility * 2, 0, 1);
-}
-
-/**
- * Плотность, которую тело обязано набрать над фоном светлоты `local`, чтобы надпись данной
- * полярности осталась читаемой. Повторяет `lens-shader.ts`.
- */
-export function bodyDensityFor(
-  local: number,
-  legibility: number,
-  bodyDensity: number,
-  polarity: number,
-  spread = 0,
-): number {
-  const cap = bodyCap(legibility);
-  const need =
-    polarity > 0.5
-      ? local > cap
-        ? clamp((local - cap) / Math.max(local - TINT_DARK, 1e-4), 0, MAX_DENSITY)
-        : 0
-      : local < 1 - cap
-        ? clamp((1 - cap - local) / Math.max(TINT_LIGHT - local, 1e-4), 0, MAX_DENSITY)
-        : 0;
-  // Разнородный фон поднимает плотность сам по себе: разделения по светлоте там не хватает
-  // ни при какой полярности. Формула та же, что в шейдере.
-  const s = clamp(spread, 0, 1);
-  const busyFloor = s * (0.15 + (0.85 - 0.15) * clamp(legibility, 0, 1));
-  // Требование гаснет вместе с legibility — тот же множитель, что в `lens-shader.ts`: на нуле
-  // модель обещает прозрачное стекло, а не мягкий потолок.
-  const demand = clamp(legibility * 4, 0, 1);
-  return Math.max(bodyDensity, need * demand, busyFloor);
-}
-
-/**
- * Светлота тела стекла, которой оно ДОБЬЁТСЯ при данной полярности над фоном светлоты
- * `local`.
- */
-export function bodyLuma(
-  local: number,
-  legibility: number,
-  bodyDensity: number,
-  polarity: number,
-  spread = 0,
-  edgeLight = 0,
-): number {
-  const tint = polarity > 0.5 ? TINT_DARK : TINT_LIGHT;
-  const density = bodyDensityFor(local, legibility, bodyDensity, polarity, spread);
-  // Подсветка окружения поднимает светлоту тела ПОСЛЕ тинта — та же формула, что в шейдере.
-  // Без этого слагаемого решение принималось бы по светлоте, которой на экране нет.
-  const lift = local * edgeLight * (0.12 + 0.55 * (1 - local));
-  return clamp(local + (tint - local) * density + lift, 0, 1);
-}
-
-/** Относительная яркость по WCAG: экран отдаёт sRGB, а контраст считается в линейном. */
-export function relativeLuminance(srgb: number): number {
-  const v = clamp(srgb, 0, 1);
-  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-}
-
-export function contrastRatio(a: number, b: number): number {
-  const la = relativeLuminance(a);
-  const lb = relativeLuminance(b);
-  return la > lb ? (la + 0.05) / (lb + 0.05) : (lb + 0.05) / (la + 0.05);
+/** Цвет окружения детали из замера зонда — тот, что затекает в её тень (reference.md §7). */
+export function ambientFrom(sample: { r: number; g: number; b: number }): [number, number, number] {
+  const step = (v: number) => Math.round(Math.min(Math.max(v, 0), 1) * AMBIENT_STEP) / AMBIENT_STEP;
+  return [step(sample.r), step(sample.g), step(sample.b)];
 }
 
 /** Светлота надписи на концах шкалы. Кит держит светлый текст почти белым, тёмный — почти
@@ -116,84 +50,28 @@ export function contrastRatio(a: number, b: number): number {
 export const INK_LIGHT = 0.95;
 export const INK_DARK = 0.08;
 
-export type PolarityDecision = {
-  /** Контраст надписи с телом стекла при светлой и при тёмной полярности. Решение по ним
-   *  принимает вызывающий: ему нужно знать, какая полярность СЕЙЧАС. */
-  light: number;
-  dark: number;
-};
-
 /**
- * Какая полярность даёт надписи больше контраста над этим фоном. Возвращает обе величины —
- * решение о переключении принимает вызывающий, потому что ему нужен ещё и гистерезис.
+ * Полярность надписи по замеру фона — ОДНО место на все платформы. Мелкая деталь и её глифы
+ * переключаются между светлым и тёмным так, чтобы контраст был наибольшим (reference.md §3):
+ * над жёлтым цветком у эталона глифы уже чёрные, а стекло светлое. Удерживать светлую надпись
+ * плотностью тела на светлом фоне значит превратить деталь в крашеную плашку.
+ *
+ * Решение по светлоте с уклоном в светлую сторону — не по среднему (белый экран с тёмной
+ * полосой иначе не переключится) и не по максимуму (одна светлая обложка под краем
+ * перекрасила бы всю панель). Гистерезис внутри; число подтверждений решает вызывающий.
  */
-export function preferredPolarity(
-  local: number,
-  legibility: number,
-  bodyDensity: number,
-  range: { lo: number; hi: number } = { lo: local, hi: local },
-  edgeLight = 0,
-): PolarityDecision {
-  // Контраст считается в ХУДШЕМ месте под стеклом: светлой надписи мешает самый светлый
-  // участок, тёмной — самый тёмный. По среднему решать нельзя — над границей чёрного и
-  // белого оно даёт серый, при котором формально всё в порядке, а надпись тонет над
-  // светлой половиной.
-  const spread = Math.max(range.hi - range.lo, 0);
-  const light = contrastRatio(
-    INK_LIGHT,
-    bodyLuma(range.hi, legibility, bodyDensity, 1, spread, edgeLight),
-  );
-  const dark = contrastRatio(
-    INK_DARK,
-    bodyLuma(range.lo, legibility, bodyDensity, 0, spread, edgeLight),
-  );
-  return { light, dark };
+export function shouldInkBeLight(sample: { luma: number; hi?: number }, wasLight: boolean): boolean {
+  return decisiveLuma(sample) < (wasLight ? FLIP_LUMA : RETURN_LUMA);
 }
 
-/**
- * ПРЕДЕЛ СТЕКЛА. Перекраска включается не тогда, когда падает контраст, а тогда, когда цена
- * его удержания перестаёт быть приемлемой: чтобы держать светлую надпись над очень светлым
- * фоном, тело должно затемниться так, что деталь перестаёт быть стеклом и становится
- * крашеной плашкой. Это и есть «все функции автоматического контроля отработали в адекватном
- * пределе» — дальше слово за приложением.
- *
- * По контрасту решать нельзя: он падает и на насыщенном жёлтом, и тогда светлые иконки
- * перекрашивались в тёмные на цветных блоках. Правило продукта — надпись светлая везде,
- * кроме ОЧЕНЬ светлого фона; на цветном её вытягивает плотность тела, а не смена цвета.
- */
-// 0.48 выбрано по насыщенному жёлтому: его светлота 0.78 — самая высокая среди цветов,
-// которые обязаны остаться под БЕЛОЙ надписью. Перекраска начинается примерно с 0.90, то
-// есть только на действительно очень светлом фоне.
-/**
- * Полярность надписи по замеру фона — ОДНО место на все платформы. Возвращает, должна ли
- * надпись остаться (или стать) светлой; гистерезис уже внутри, поэтому вызывающему остаётся
- * решить только, сколько подтверждений он хочет.
- *
- * Три вещи, которые легко сделать неправильно и которые уже стоили ошибок:
- *  - решение по СВЕТЛОТЕ с уклоном в светлую сторону, а не по среднему (иначе белый экран с
- *    тёмной полосой не переключится) и не по максимуму (иначе одна светлая обложка под краем
- *    перекрасит всю панель);
- *  - цена удержания считается с НУЛЕВОЙ собственной плотностью и без разброса: это цена, а не
- *    итоговая плотность. Подмешать сюда `bodyDensity` или пестроту — значит сравнивать с
- *    порогом величину, которая никогда не падает до нуля, и решение поедет от любой фактуры;
- *  - назад раньше, чем вперёд: без зазора надпись мигает на каждой границе.
- */
-export function shouldInkBeLight(
-  sample: { luma: number; hi?: number },
-  legibility: number,
-  wasLight: boolean,
-): boolean {
-  const hi = sample.hi ?? sample.luma;
-  const decisive = sample.luma * 0.75 + hi * 0.25;
-  const cost = bodyDensityFor(decisive, legibility, 0, 1);
-  const wantsFlip = wasLight ? cost > FLIP_DENSITY : cost < RETURN_DENSITY;
-  return wantsFlip ? !wasLight : wasLight;
-}
+export const decisiveLuma = (sample: { luma: number; hi?: number }) =>
+  sample.luma * 0.75 + (sample.hi ?? sample.luma) * 0.25;
 
-export const FLIP_DENSITY = 0.48;
-/** Обратно — заметно раньше, чем вперёд: без этого зазора надпись мигала бы на каждой
- *  светлой обложке, проехавшей под краем стекла. */
-export const RETURN_DENSITY = 0.4;
+/** Светлее этого светлая надпись уходит в тёмную. */
+export const FLIP_LUMA = 0.62;
+/** Обратно — заметно раньше, чем вперёд: без зазора надпись мигала бы на каждой светлой
+ *  обложке, проехавшей под краем стекла. */
+export const RETURN_LUMA = 0.5;
 /** Сколько подряд замеров должны требовать смены. Зонд снимает ~5 раз в секунду, поэтому
  *  три замера — это примерно полсекунды устойчивого фона, а не случайная обложка под краем. */
 export const CONFIRMATIONS = 3;
@@ -274,7 +152,7 @@ export function useGlassAdaptation(
       const wasLight = target.current === 1;
       // Само решение — в `shouldInkBeLight`: одно место на все платформы. Здесь остаётся
       // только политика подтверждений, она у приложения своя.
-      const wants = shouldInkBeLight(next, optics.legibility, wasLight) !== wasLight;
+      const wants = shouldInkBeLight(next, wasLight) !== wasLight;
       if (!wants) {
         pending.current = 0;
         return;
@@ -287,7 +165,7 @@ export function useGlassAdaptation(
       startedAt.current = Date.now();
       animate();
     },
-    [enabled, optics.legibility, animate],
+    [enabled, animate],
   );
 
   return { ink, sample, onBackdropSample };
