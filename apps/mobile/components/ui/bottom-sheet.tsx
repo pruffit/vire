@@ -2,11 +2,15 @@ import { useEffect, type ReactNode } from 'react';
 import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassPanel } from './glass-panel';
-import { VIREGLASS_SHEET_MATERIAL } from '../../lib/vireglass/material';
+import { materialForInk, VIREGLASS_SHEET_MATERIAL } from '../../lib/vireglass/material';
 import { Icon } from '../../lib/icon';
 import { colors } from '../../lib/theme';
 import { type } from '../../lib/design/typography';
 import { space, layout, radii } from '../../lib/design/scales';
+
+// Лист несёт текст поверх стекла, и требование читаемости обязано идти через модель: она знает
+// два исхода, 0.95 и 0, а прямой материал давал промежуточные 0.26 в наследство от V5.
+const SHEET_MATERIAL = materialForInk(VIREGLASS_SHEET_MATERIAL, true);
 
 
 /**
@@ -50,7 +54,7 @@ export function BottomSheet({
       <View style={styles.dock}>
         <GlassPanel
           radius={radii.sheet}
-          material={VIREGLASS_SHEET_MATERIAL}
+          material={SHEET_MATERIAL}
           adaptive={false}
           style={styles.panel}
           contentStyle={[styles.body, { paddingBottom: insets.bottom + space.lg }]}
