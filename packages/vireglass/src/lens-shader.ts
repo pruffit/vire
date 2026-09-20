@@ -467,6 +467,27 @@ half4 main(float2 xy) {
   float ground = structure * u_legibility * VG_GROUND_SPAN;
   float density = max(max(u_bodyDensity, ground), needForInk);
 
+  // РАЗЛИЧИМОСТЬ (§3). Над однородным полотном преломлять нечего, и деталь, которую держит
+  // одна лишь кромка, честно исчезает — верно для куска фона, неверно для органа управления.
+  //
+  // Жило это на одной кромочной линии, как lit = max(rimKey, u_presence x 2), тогда как
+  // DOM-путь всегда считал то же поле полом по ТЕЛУ. Одно поле, два рендерера, два смысла.
+  // Замер по собственному контролу Apple над плоской страницей (frames/verify/m-707) решает
+  // спор: там тело даёт 16 уровней разделения, а кромка 11.6.
+  //
+  // Запрошенное разделение ограничено тем, сколько осталось: над полотном 0.96 некуда уходить
+  // на 0.05 светлее. А ДЕЛИТСЯ оно на расстояние до конца шкалы тинта, а не до тинта, на
+  // котором тело сейчас стоит: второе взрывается всюду, где они близки, и загоняет плотность
+  // в потолок на обоих краях.
+  bool lighter = local < 0.5;
+  float target = lighter ? min(local + u_presence, 1.0) : max(local - u_presence, 0.0);
+  float separation = abs(target - local);
+  float reached = abs(tintLuma - local) * density;
+  if (u_presence > 0.0 && reached < separation) {
+    float toEnd = abs((lighter ? VG_TINT_LIGHT : VG_TINT_DARK) - local);
+    density = max(density, min(separation / max(toEnd, 1e-4), 0.92));
+  }
+
   // Своего цвета у стекла нет — только цвет того, что под ним (HIG «Color»).
   float3 tintHue = mix(float3(1.0), vgHue(wide * 0.5 + ambient * 0.5), u_colorPickup);
   // Появляется деталь нарастанием линзы и тела, а не прозрачностью (M 2:55): при u_appear = 0
@@ -509,7 +530,7 @@ half4 main(float2 xy) {
   float line = (1.0 - smoothstep(0.0, lineW, e)) * lens;
   // Тёмный кант шире блика: над светлым полотном белая линия не видна вовсе, и всю
   // различимость детали держит он один.
-  float outline = (1.0 - smoothstep(0.0, lineW * 1.4, e)) * lens;
+  float outline = (1.0 - smoothstep(0.0, lineW * 0.6, e)) * lens;
   float lit = clamp(max(rimKey * 1.4, u_presence * 2.0), 0.0, 1.0);
   // Тёмная кромка — самостоятельный слой по всему силуэту, блик ложится ПОВЕРХ неё (iOS 27).
   // Пока обводка гасла множителем (1 − lit), силуэт читался одной дугой: блик ИЛИ тень.
