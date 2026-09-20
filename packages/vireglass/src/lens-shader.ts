@@ -363,7 +363,10 @@ half4 main(float2 xy) {
   // оттенка к отражению, без лишних выборок.
   float3 spectral = float3(1.0);
   if (u_iridescence > 0.001) {
-    spectral *= mix(float3(1.0), vgInterference(cosT), u_iridescence);
+    // Окно у кромки, как у дифракции ниже: без него угол перестаёт меняться на трети
+    // фаски и плёнка красит остаток одним плоским цветом.
+    float wIri = u_iridescence * smoothstep(0.25, 1.0, t);
+    spectral *= mix(float3(1.0), vgInterference(cosT), wIri);
   }
   if (u_diffraction > 0.001) {
     float w = u_diffraction * smoothstep(0.45, 1.0, t);
@@ -493,7 +496,9 @@ half4 main(float2 xy) {
   // Различимость детали держит эта линия, а не заливка тела: над ровным фоном у элемента
   // управления она видна по всему силуэту.
   float line = (1.0 - smoothstep(0.0, lineW, e)) * lens;
-  float outline = (1.0 - smoothstep(0.0, lineW * 0.6, e)) * lens;
+  // Тёмный кант шире блика: над светлым полотном белая линия не видна вовсе, и всю
+  // различимость детали держит он один.
+  float outline = (1.0 - smoothstep(0.0, lineW * 1.4, e)) * lens;
   float lit = clamp(max(rimKey * 1.4, u_presence * 2.0), 0.0, 1.0);
   // Тёмная кромка — самостоятельный слой по всему силуэту, блик ложится ПОВЕРХ неё (iOS 27).
   // Пока обводка гасла множителем (1 − lit), силуэт читался одной дугой: блик ИЛИ тень.
