@@ -77,6 +77,17 @@ export async function alertWorkerError(queue: string, err: Error): Promise<void>
   });
 }
 
+/** Тик сторожа живости пришёл с опозданием на stalledMs — процесс или хост стояли. */
+export async function alertStall(stalledMs: number): Promise<void> {
+  console.error(JSON.stringify({
+    level: 'error', service: 'worker', kind: 'stall', stalledMs,
+    ts: new Date().toISOString(),
+  }));
+
+  const text = `🟠 [worker:heartbeat] процесс или хост стояли ${Math.round(stalledMs / 1000)}с`;
+  await dispatch(text, { level: 'error', service: 'worker', kind: 'stall', stalledMs });
+}
+
 /** Восстановление после обрыва — без него в канале остаётся только хвост аварии. */
 export async function alertRecovered(scope: string, downMs: number): Promise<void> {
   console.warn(JSON.stringify({

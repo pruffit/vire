@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { alertWorkerError, alertRecovered } from '../lib/alert.js';
+import { armRedisIncidents, beginRedisShutdown, noteRedisDown, noteRedisUp } from '../lib/redis-incident.js';
 
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
 
@@ -13,25 +13,17 @@ export const connection = new Redis(REDIS_URL, {
   protocol: 2,
 });
 
-// Обрыв Redis иначе не виден в момент обрыва: команды с maxRetriesPerRequest: null ждут
-// вечно, и авария всплывает часами позже — хвостом из потерянных локов уже отработавших джоб.
+// Обрыв не виден сразу: команды с maxRetriesPerRequest: null ждут вечно, авария всплывает
+// часами позже хвостом потерянных локов. Состояние инцидента — в redis-incident.ts.
 let lastError: Error | null = null;
-let downSince: number | null = null;
-let everReady = false;
-let shuttingDown = false;
 
 connection.on('error', (err: Error) => {
   lastError = err;
   console.error(`[redis] ошибка соединения: ${err.message}`);
 });
 
-// Алерт один на инцидент, а не на ошибку: ioredis повторяет error/close на каждой попытке
-// переподключения, и часовой обрыв иначе даёт десятки сообщений в канал. До первого ready
-// молчим — иначе каждый деплой, где redis встаёт медленнее воркера, даёт ложную пару.
 connection.on('close', () => {
-  if (shuttingDown || !everReady || downSince !== null) return;
-  downSince = Date.now();
-  void alertWorkerError('redis', lastError ?? new Error('соединение закрыто'));
+  noteRedisDown(lastError ?? new Error('соединение закрыто'));
 });
 
 connection.on('reconnecting', (delay: number) => {
@@ -39,16 +31,13 @@ connection.on('reconnecting', (delay: number) => {
 });
 
 connection.on('ready', () => {
-  everReady = true;
-  if (downSince === null) return;
-  const downMs = Date.now() - downSince;
-  downSince = null;
-  void alertRecovered('redis', downMs);
+  armRedisIncidents();
+  noteRedisUp();
 });
 
 /** bullmq не закрывает переданный инстанс сам (shared) — гасим на SIGTERM руками. */
 export async function closeConnection(): Promise<void> {
-  shuttingDown = true;
+  beginRedisShutdown();
   try {
     await connection.quit();
   } catch {
