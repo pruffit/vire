@@ -2,7 +2,8 @@
 // тонкая прямая линия показывает работу линзы честнее всего: любое искажение, увод или
 // разрыв видно сразу. Ни один фон не доведён до чистого чёрного или белого: на крайних
 // значениях материал выглядит хорошо слишком легко, и решения по ним принимать нельзя.
-import type { VireGlassSceneDrawer } from '@vire/vireglass/web';
+import { drawReferenceScene, type VireGlassSceneDrawer } from '@vire/vireglass/web';
+import { REFERENCE_SCENES } from '@vire/vireglass';
 
 export type Zone = { name: string; draw: VireGlassSceneDrawer };
 
@@ -17,8 +18,11 @@ type Grid = {
 };
 
 function grid({ base, line, accent, step, every }: Grid): VireGlassSceneDrawer {
-  return (ctx, w, h, offsetX, offsetY) => {
-    const px = w / 360;
+  return (ctx, w, h, offsetX, offsetY, density) => {
+    // Масштаб полотна — тот же, что у деталей. Доля ширины канваса давала на десктопе клетку
+    // впятеро крупнее телефонной, и деталь того же размера читалась совсем иначе, чем на
+    // устройстве: сравнивать стенд с лабораторией было нечем.
+    const px = density;
     const cell = step * px;
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, w, h);
@@ -366,6 +370,14 @@ const track: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
   ctx.fillRect(0, y - thick / 2, Math.max(0, Math.min(w, w * 0.42 + ox)), thick);
 };
 
+// Сверочные полотна живут в пакете и рисуются обоими стендами одинаково — только так снимок
+// с Android сравним со снимком из веба, и только так гейт меряет то же, на что смотрит глаз.
+const referenceZones: readonly Zone[] = REFERENCE_SCENES.map((scene) => ({
+  name: scene.name,
+  draw: (ctx, w, h, _ox, _oy, density) =>
+    drawReferenceScene(ctx, scene, w, h, { density, fit: 'полотно' }),
+}));
+
 export const ZONES: readonly Zone[] = [
   {
     name: 'светлая клетка',
@@ -383,6 +395,7 @@ export const ZONES: readonly Zone[] = [
   { name: 'дюны', draw: dunes },
   { name: 'абзац', draw: paragraph },
   { name: 'дорожка', draw: track },
-] as const;
+  ...referenceZones,
+];
 
 export const ZONE_NAMES: readonly string[] = ZONES.map((z) => z.name);

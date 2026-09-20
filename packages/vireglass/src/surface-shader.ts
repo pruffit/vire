@@ -56,6 +56,10 @@ const float VG_FALLOFF = ${VG_FALLOFF};
 const float VG_BODY_DENSITY = 0.19;
 /* Доля оттенка окружения в тени. Тень обязана остаться тенью, а не цветным пятном. */
 const float VG_SHADOW_TINT = 1.0;
+// Насколько тень слабее у самого контура, чем под серединой зазора, и на какой доле выноса
+// она добирает полную глубину. У эталона минимум тени стоит не у кромки, а ниже неё.
+const float VG_GAP_LIGHT = 0.76;
+const float VG_GAP_REACH = 0.20;
 /* Глубина краски под поверхностью, dp. На столько её уводит нормаль у самой кромки. */
 const float VG_INK_DEPTH = 4.0;
 /* Расфокус краски под пальцем (эталон §6): глиф теряет кромку и тонет в молоке. Задан ДОЛЕЙ
@@ -153,8 +157,10 @@ half4 main(float2 xy) {
                            u_morphOffset, u_morphHalf, u_morphCorner, u_morphK,
                 u_morph2Offset, u_morph2Half, u_morph2Corner);
     float amb = 1.0 - smoothstep(-reach * 0.3, reach, sdDrop);
-    float con = 1.0 - smoothstep(0.0, max(reach * 0.12, 1.0), max(sd, 0.0));
-    shade = (amb * amb * 0.07 + con * con * 0.02) * outside * u_shadow * u_appear;
+    // ЗАЗОР ПОД ПОДНЯТОЙ ДЕТАЛЬЮ ПОДСВЕЧЕН: у самого контура тень СЛАБЕЕ, чем ниже. Иначе
+    // минимум встаёт вплотную к силуэту — обе части тени монотонны по расстоянию.
+    float gap = smoothstep(0.0, max(reach * VG_GAP_REACH, 1.0), max(sd, 0.0));
+    shade = amb * amb * 0.13 * mix(VG_GAP_LIGHT, 1.0, gap) * outside * u_shadow * u_appear;
     halo = 1.0 - smoothstep(0.0, reach * 0.30, max(sd, 0.0));
     halo = halo * halo * lit * 0.10 * outside * u_appear;
   }

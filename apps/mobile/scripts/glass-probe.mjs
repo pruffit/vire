@@ -222,14 +222,17 @@ function readState() {
     // На ошибке в четыре пикселя последняя клетка читалась из предыдущей.
     const cell = w;
     if (cell < 6) continue;
+    // Тот же делитель, что кладёт стенд (STATE_SCALE в material-lab.tsx): индексы приезжают
+    // серым, и делитель обязан покрывать самый длинный из списков — зон уже двадцать одна.
+    const STATE_SCALE = 32;
     const val = (k) => {
       const o = at(Math.round(w + cell * (k + 0.5)), y + Math.round(cell * 0.5));
       return (d[o] - 16) / 220;
     };
     return {
-      zone: Math.round(val(0) * 16),
-      preset: Math.round(val(1) * 16),
-      debug: Math.round(val(2) * 16),
+      zone: Math.round(val(0) * STATE_SCALE),
+      preset: Math.round(val(1) * STATE_SCALE),
+      debug: Math.round(val(2) * STATE_SCALE),
       ink: +val(3).toFixed(2),
       backdrop: +val(4).toFixed(3),
       busy: +val(5).toFixed(3),

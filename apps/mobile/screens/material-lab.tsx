@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Backdrop } from '../components/backdrop';
 import { VireGlassSurface } from '../components/vireglass/glass-surface';
 import { MaterialLabScene, ZONE_NAMES } from './material-lab-scene';
+import { REFERENCE_SCENES } from '../lib/vireglass/material';
 import {
   LabMiniPlayer,
   LabSheet,
@@ -27,7 +28,7 @@ import { morphBetween, type VireGlassMorph } from '../lib/vireglass/adapters';
 import { useFrameThrottle } from '../lib/frame-throttle';
 import { INK_DARK, INK_LIGHT, useGlassAdaptation } from '../lib/vireglass/adaptation';
 import { useEnvironmentLight } from '../lib/vireglass/environment';
-import {
+import { REFERENCE_SHAPES,
   bevelDp,
   capsuleGeometry,
   circleGeometry,
@@ -60,16 +61,21 @@ import {
 // Стенд материала VireGlass. В продовый UI не входит: EXPO_PUBLIC_GLASS_LAB=material (App.tsx).
 // Журнал экспериментов — docs/vireglass/material-lab.md.
 
-const SHAPES = {
-  круг: circleGeometry(120),
-  капсула: capsuleGeometry(240, 72),
-  плашка: roundedRectGeometry(260, 140, 36),
-} satisfies Record<string, VireGlassGeometry>;
+// Фигуры общие с веб-стендом: размер входит в оптику через sizeGain, и на разных фигурах
+// снимки двух стендов несравнимы (packages/vireglass/src/reference-scene.ts).
+const SHAPES = REFERENCE_SHAPES;
 
 type ShapeName = keyof typeof SHAPES;
 const SHAPE_NAMES = Object.keys(SHAPES) as ShapeName[];
 
 // Сцена: абстрактные фигуры или настоящие поверхности продукта на своих местах.
+/**
+ * Делитель метки состояния: индексы уезжают в снимок СЕРЫМ, и делитель обязан покрывать самый
+ * длинный из списков. Стояло 16 при четырнадцати зонах; когда сверочных полотен стало восемь,
+ * зоны с 16-й кодировались одним и тем же серым, и скрипт замера читал их все как шестнадцатую.
+ */
+const STATE_SCALE = 32;
+
 const STAGES = ['фигуры', 'транспорт', 'мини-плеер', 'таб-бар', 'лист', 'всё вместе'] as const;
 type StageName = (typeof STAGES)[number];
 
@@ -250,6 +256,9 @@ export function MaterialLab() {
     [manual, autoInk, adaptation.ink],
   );
   const geometry = SHAPES[shape];
+  // На сверочных полотнах кадр обязан совпадать с кадром веб-стенда целиком: деталь в кадре
+  // одна, без принадлежностей лаборатории.
+  const onReferenceScene = REFERENCE_SCENES.some((s) => s.name === ZONE_NAMES[zone]);
   const focusY =
     stage === 'фигуры' ? FIGURES_TOP + geometry.height / 2 : SCREEN_H - insets.bottom - 110;
 
@@ -382,8 +391,10 @@ export function MaterialLab() {
             />
           ))}
           {/* Надпись ПОВЕРХ стекла: ровно то, ради чего вся адаптация и существует. Её цвет
-              ведёт автоматика — если стекло дошло до предела, полярность переворачивается. */}
-          <Text
+              ведёт автоматика — если стекло дошло до предела, полярность переворачивается.
+              На сверочных полотнах её нет: там кадр обязан совпасть с кадром веб-стенда, а
+              надпись — принадлежность лаборатории, а не материала. */}
+          {onReferenceScene ? null : <Text
             style={[
               styles.overInk,
               {
@@ -393,7 +404,7 @@ export function MaterialLab() {
             ]}
           >
             Читаемость
-          </Text>
+          </Text>}
         </View>
       ) : null}
 
@@ -589,9 +600,9 @@ export function MaterialLab() {
       <View style={styles.stateTag} pointerEvents="none">
         <View style={styles.stateMark} />
         {[
-          zone / 16,
-          PRESET_NAMES.indexOf(preset) / 16,
-          DEBUG_MODES.indexOf(debug) / 16,
+          zone / STATE_SCALE,
+          PRESET_NAMES.indexOf(preset) / STATE_SCALE,
+          DEBUG_MODES.indexOf(debug) / STATE_SCALE,
           optics.ink,
           adaptation.sample?.luma ?? 0,
           Math.min(adaptation.sample?.busy ?? 0, 1),

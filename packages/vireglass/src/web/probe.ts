@@ -229,8 +229,11 @@ export function createProbe(gl: WebGL2RenderingContext, vertexSource: string): P
 
   function pollReady(slot: PboSlot): void {
     if (!slot.pending || !slot.sync) return;
-    const status = gl.clientWaitSync(slot.sync, 0, 0);
-    if (status === gl.TIMEOUT_EXPIRED) return;
+    // Флаг проталкивает очередь команд, иначе забор, поставленный после readPixels, может не
+    // сработать вовсе. Ожидание при этом нулевое. WAIT_FAILED — не готовность: без отдельной
+    // ветки он проваливался дальше и читал из PBO мусор.
+    const status = gl.clientWaitSync(slot.sync, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
+    if (status === gl.TIMEOUT_EXPIRED || status === gl.WAIT_FAILED) return;
     gl.deleteSync(slot.sync);
     slot.sync = null;
     slot.pending = false;

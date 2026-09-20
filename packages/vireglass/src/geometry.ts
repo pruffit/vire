@@ -119,3 +119,28 @@ export function surfacePadDp(
 ): number {
   return quantise(shadowReachDp(g) * 1.2 + dragLimit + morphReachDp(g, morph) + 2);
 }
+
+/**
+ * ПЛОТНОСТЬ ТЕНИ ПО ТОМУ, ЧТО ПОД ДЕТАЛЬЮ. Эталон 219 @11:47 дословно: «increases the opacity
+ * of its shadow when it is over text… lowers the opacity of its shadow when it is over a solid
+ * light background». Речь о контенте ЗА ДЕТАЛЬЮ, поэтому величина одна на деталь, а не поле по
+ * площади тени.
+ *
+ * Закон живёт здесь, а не у стенда: пока он был вписан в веб-рендерер, на Android тени не
+ * адаптировались вовсе. Концы сверены с эталоном по глубине провала под деталью —
+ * docs/vireglass/benchmarks/2026-09-14-shadow-adaptation-vs-reference.md.
+ */
+const SHADOW_FLAT = 0.8;
+const SHADOW_BUSY_GAIN = 6;
+const SHADOW_BUSY_RISE = 1.2;
+const SHADOW_STEP = 0.05;
+
+export function shadowOpacity(busy: number): number {
+  return SHADOW_FLAT + Math.min(Math.max(busy, 0) * SHADOW_BUSY_GAIN, SHADOW_BUSY_RISE);
+}
+
+/** То же для платформ, где замер идёт через состояние: огрублено, как и цвет окружения, иначе
+ *  каждая выборка зонда гоняла бы перерисовку поверхности. */
+export function shadowOpacityFrom(sample: { busy: number }): number {
+  return Math.round(shadowOpacity(sample.busy) / SHADOW_STEP) * SHADOW_STEP;
+}
