@@ -14,6 +14,7 @@ import { deriveCK, decryptMessage, fromB64 } from '../lib/e2ee/sodium-compat';
 import { Screen } from '../components/screen';
 import { ChatLockedNotice, useChatLocked } from '../components/chat-locked-notice';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 import { Icon } from '../lib/icon';
 import { colors, radius } from '../lib/theme';
 import { fonts } from '../lib/design/typography';
@@ -37,6 +38,7 @@ function formatConversationTimestamp(iso: string, now: Date = new Date()): strin
 export default function ConversationsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'Conversations'>>();
   const bottomPadding = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const locked = useChatLocked();
   const [state, setState] = useState<LoadState>('loading');
   const [conversations, setConversations] = useState<ChatConversationDTO[]>([]);
@@ -121,6 +123,7 @@ export default function ConversationsScreen() {
 
       {state === 'ready' && conversations.length > 0 && (
         <FlatList
+          {...scrollEdge}
           data={conversations}
           keyExtractor={(c) => c.id}
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding }]}

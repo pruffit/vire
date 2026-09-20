@@ -19,7 +19,6 @@ import {
   blur as blurFrom,
   dispersion as dispersionFrom,
   edgeDensity as edgeDensityFrom,
-  edgePush as edgePushFrom,
   gatherRadius as gatherRadiusFrom,
   fresnelStrength,
   FRESNEL_EXPONENT,
@@ -33,6 +32,7 @@ import {
   diffraction as diffractionFrom,
   colorPickup as colorPickupFrom,
   specularStrength,
+  iorSpread as iorSpreadFrom,
 } from './optics';
 
 export type VireGlassTint = { r: number; g: number; b: number };
@@ -51,6 +51,12 @@ export type VireGlassMaterial = {
   /** Не физика, а требование читаемости: насколько сильно стекло обязано развести свою
    *  светлоту с надписью поверх себя. 0 — стекло просто прозрачное. */
   legibility: number;
+  /** Затемняющий слой ПОД стеклом, 0..1. Прозрачному варианту (Clear) читаемость даёт именно
+   *  он: адаптации у такого стекла нет, и без затемнения краска тонет на ярком контенте.
+   *
+   *  Не путать с пропом `dim` мобильной поверхности: тот компенсирует платформенный захват
+   *  (BlurView не видит скрим экрана над контентом), а это — свойство самого материала. */
+  dimming: number;
   /** Светлота того, что приложение рисует ПОВЕРХ стекла: 1 — светлые иконки и текст,
    *  0 — тёмные. Причина, а не ручка: её знает вызывающий экран. */
   ink: number;
@@ -74,6 +80,7 @@ export const MATERIAL_RANGES = {
   roughness: [0, 1],
   environment: [0, 1],
   legibility: [0, 1],
+  dimming: [0, 0.5],
   ink: [0, 1],
   presence: [0, 0.6],
   film: [0, 900],
@@ -97,8 +104,6 @@ export type VireGlassOptics = {
   refractionScale: number;
   /** Ширина фаски в dp — абсолютная величина среды. */
   bevelDp: number;
-  /** Смещение выборки у кромки в dp — тоже от среды, не от габарита детали. */
-  edgePushDp: number;
   /** Радиус, в котором кромка собирает свет вокруг детали. */
   gatherRadiusDp: number;
   fresnel: number;
@@ -111,6 +116,8 @@ export type VireGlassOptics = {
   edgeDensity: number;
   environment: number;
   legibility: number;
+  /** Затемнение контента под стеклом — тот самый слой варианта Clear. */
+  dimming: number;
   ink: number;
   /** Минимальная различимость детали на фоне — в единицах светлоты. */
   presence: number;
@@ -125,6 +132,12 @@ export type VireGlassOptics = {
   diffraction: number;
   /** Насколько тело красится цветом окружения. */
   colorPickup: number;
+  /** Показатель преломления: сдвиг луча шейдер считает по закону Снелла. */
+  ior: number;
+  /** Толщина пластины, dp — до поправки на размер детали. */
+  thicknessDp: number;
+  /** Разнос показателя между красным и синим каналом — дисперсия. */
+  iorSpread: number;
 };
 
 // Продовый дефолт — «вода»: ниже показатель преломления, тоньше среда и фаска, почти
@@ -136,6 +149,7 @@ export const VIREGLASS_MATERIAL_V4: VireGlassMaterial = {
   roughness: 0.05,
   environment: 0.27,
   legibility: 0.26,
+  dimming: 0,
   ink: 1,
   presence: 0.05,
   film: 340,
@@ -153,11 +167,12 @@ export const VIREGLASS_MATERIAL_V4: VireGlassMaterial = {
  */
 export const VIREGLASS_MATERIAL_V5: VireGlassMaterial = {
   ior: 1.5,
-  thickness: 16,
-  bevel: 8,
+  thickness: 28,
+  bevel: 6,
   roughness: 0.06,
   environment: 0.27,
   legibility: 0.26,
+  dimming: 0,
   ink: 1,
   presence: 0.05,
   film: 340,
@@ -195,10 +210,18 @@ export const VIREGLASS_LYRICS_MATERIAL: VireGlassMaterial = {
 /**
  * Стекло органов управления — кнопок, плашек, всего, что нажимают.
  *
- * ТОЛСТОЕ И ЧИСТОЕ, а не базовое: вдвое шире фаска, в полтора раза больше толщина, выше
- * показатель преломления и почти нет шероховатости. Базовое стекло — линза над спокойным
- * фоном; орган управления обязан читаться предметом, который можно взять, и это делает не
- * заливка, а объём: широкая фаска даёт кромке за что зацепиться, а толщина — глубину.
+ * ТОЛСТОЕ И ЧИСТОЕ, а не базовое: шире фаска, в полтора раза больше толщина, выше показатель
+ * преломления и почти нет шероховатости. Базовое стекло — линза над спокойным фоном; орган
+ * управления обязан читаться предметом, который можно взять, и это делает не заливка, а объём:
+ * широкая фаска даёт кромке за что зацепиться, а толщина — глубину.
+ *
+ * Толщину задаёт НАКОПЛЕНИЕ У КРОМКИ: у эталонной ручки изображение полосы под деталью
+ * раздувается там в 1.85 раза, у нас при 30 выходило 1.36. Насыщение наступает около 44, и
+ * лишняя толщина берёт только поглощение — поэтому 44, а не больше.
+ *
+ * Она же тянет за собой `tintStrength` (= `absorption(thickness)`), а он на пути БЕЗ нативной
+ * линзы задаёт плотность тела: там деталь плотнее на 2.4 процентных пункта. На вебе тела в
+ * поверхности нет вовсе, эффект только на Android до 13.
  *
  * `presence` поднят по той же причине: кусок фона имеет право исчезнуть над однородным
  * полотном, элемент управления — нет, его надо видеть до того, как в него ткнули.
@@ -211,8 +234,8 @@ export const VIREGLASS_LYRICS_MATERIAL: VireGlassMaterial = {
 export const VIREGLASS_CONTROL_MATERIAL: VireGlassMaterial = {
   ...VIREGLASS_MATERIAL_V5,
   ior: 1.69,
-  thickness: 24,
-  bevel: 16,
+  thickness: 44,
+  bevel: 8,
   roughness: 0.035,
   presence: 0.176,
 };
@@ -228,8 +251,24 @@ export const VIREGLASS_MATERIAL = VIREGLASS_MATERIAL_V5;
  * вебе и на Android разную читаемость.
  */
 export function materialForInk(material: VireGlassMaterial, carriesInk: boolean): VireGlassMaterial {
+  // У прозрачного варианта читаемость держит затемняющий слой, а не тело. Поднять ему
+  // требование значит сделать из него обычное стекло, а варианты не смешивают (219 §Clear).
+  if (material.dimming > 0) return material;
   return { ...material, legibility: carriesInk ? VIREGLASS_LYRICS_MATERIAL.legibility : 0 };
 }
+
+/**
+ * Прозрачный вариант материала (Clear). Адаптации у него нет — стекло постоянно прозрачнее,
+ * контент под ним виден почти как есть, а читаемость краски держит затемняющий слой. Годится
+ * только там, где выполнены три условия эталона: деталь лежит на медиа, контент терпит
+ * затемнение, а краска поверх крупная и яркая.
+ */
+export const VIREGLASS_CLEAR_MATERIAL: VireGlassMaterial = {
+  ...VIREGLASS_MATERIAL,
+  legibility: 0,
+  presence: 0,
+  dimming: 0.22,
+};
 
 /**
  * АКТИВНОЕ СОСТОЯНИЕ как состояние СРЕДЫ, а не как подсветка поверх неё.
@@ -274,7 +313,6 @@ export function resolveOptics(patch: Partial<VireGlassMaterial> = {}): VireGlass
     refraction: refractionStrength(m.ior),
     refractionScale: refractionScaleFrom(m.ior, m.thickness),
     bevelDp: m.bevel,
-    edgePushDp: edgePushFrom(m.ior, m.bevel),
     gatherRadiusDp: gatherRadiusFrom(m.bevel),
     fresnel: fresnelStrength(m.ior),
     fresnelPower: FRESNEL_EXPONENT,
@@ -286,6 +324,7 @@ export function resolveOptics(patch: Partial<VireGlassMaterial> = {}): VireGlass
     edgeDensity: edgeDensityFrom(m.thickness, m.bevel),
     environment: m.environment,
     legibility: m.legibility,
+    dimming: m.dimming,
     ink: m.ink,
     presence: m.presence,
     adaptRadius: ADAPT_RADIUS,
@@ -295,6 +334,9 @@ export function resolveOptics(patch: Partial<VireGlassMaterial> = {}): VireGlass
     iridescence: iridescenceFrom(m.ior, m.film),
     diffraction: diffractionFrom(m.ior),
     colorPickup: colorPickupFrom(m.ior),
+    ior: m.ior,
+    thicknessDp: m.thickness,
+    iorSpread: iorSpreadFrom(m.ior),
   };
 }
 
@@ -309,7 +351,6 @@ export const LEGACY_OPTICS = {
     refraction: 0.49,
     refractionScale: 1.05,
     bevelDp: 12.6,
-    edgePushDp: 32.7,
     gatherRadiusDp: 40,
     fresnel: 0.77,
     fresnelPower: 2.86,
@@ -321,6 +362,7 @@ export const LEGACY_OPTICS = {
     edgeDensity: 1.5,
     environment: 0.27,
     legibility: 0.55,
+    dimming: 0,
     ink: 1,
     presence: 0,
     adaptRadius: ADAPT_RADIUS,
@@ -330,13 +372,15 @@ export const LEGACY_OPTICS = {
     iridescence: 0,
     diffraction: 0,
     colorPickup: 0,
+    ior: 1.5,
+    thicknessDp: 16,
+    iorSpread: 0,
   },
   'v2': {
     blur: 5,
     refraction: 0.95,
     refractionScale: 1.34,
     bevelDp: 14,
-    edgePushDp: 30,
     gatherRadiusDp: 40,
     fresnel: 0.72,
     fresnelPower: 2.4,
@@ -348,6 +392,7 @@ export const LEGACY_OPTICS = {
     edgeDensity: 3.63,
     environment: 0,
     legibility: 0,
+    dimming: 0,
     ink: 1,
     presence: 0,
     adaptRadius: ADAPT_RADIUS,
@@ -357,13 +402,15 @@ export const LEGACY_OPTICS = {
     iridescence: 0,
     diffraction: 0,
     colorPickup: 0,
+    ior: 1.5,
+    thicknessDp: 16,
+    iorSpread: 0,
   },
   'v1': {
     blur: 12,
     refraction: 0.55,
     refractionScale: 1.14,
     bevelDp: 10,
-    edgePushDp: 22,
     gatherRadiusDp: 40,
     fresnel: 0.5,
     fresnelPower: 3.2,
@@ -375,6 +422,7 @@ export const LEGACY_OPTICS = {
     edgeDensity: 3.63,
     environment: 0,
     legibility: 0,
+    dimming: 0,
     ink: 1,
     presence: 0,
     adaptRadius: ADAPT_RADIUS,
@@ -384,6 +432,9 @@ export const LEGACY_OPTICS = {
     iridescence: 0,
     diffraction: 0,
     colorPickup: 0,
+    ior: 1.5,
+    thicknessDp: 16,
+    iorSpread: 0,
   },
 } as const satisfies Record<string, VireGlassOptics>;
 
@@ -443,15 +494,22 @@ export function applyToggles(
   if (!on.refraction) {
     o.refraction = 0;
     o.refractionScale = 1;
-    o.edgePushDp = 0;
+    o.ior = 1;
   }
   if (!on.fresnel) o.fresnel = 0;
   if (!on.bevel) o.bevelDp = 1;
   if (!on.specular) o.specular = 0;
-  if (!on.dispersion) o.dispersion = 0;
+  if (!on.dispersion) {
+    o.dispersion = 0;
+    o.iorSpread = 0;
+  }
   if (!on.tint) o.tintStrength = 0;
   if (!on.environment) o.environment = 0;
-  if (!on.legibility) o.legibility = 0;
+  if (!on.legibility) {
+    o.legibility = 0;
+    // Затемняющий слой — тот же ответ на требование читаемости, только у прозрачного варианта.
+    o.dimming = 0;
+  }
   if (!on.interference) o.iridescence = 0;
   if (!on.diffraction) o.diffraction = 0;
   return o;

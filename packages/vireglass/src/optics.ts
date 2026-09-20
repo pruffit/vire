@@ -35,6 +35,12 @@ const DISPERSION_PER_IOR = 1.1;
 
 export const dispersion = (ior: number) => clamp01((ior - 1) * DISPERSION_PER_IOR);
 
+/** Разнос показателя между красным и синим каналом. Физический (~0.01 при числе Аббе 55)
+ *  на пороге заметности — стилизация той же монотонности, что у Френеля. */
+const IOR_SPREAD_PER_DISPERSION = 0.045;
+
+export const iorSpread = (ior: number) => dispersion(ior) * IOR_SPREAD_PER_DISPERSION;
+
 /** Бугер–Ламберт: сколько поглотит среда на пути длиной `pathDp`. */
 const ABSORB_PER_DP = 0.017;
 
@@ -70,16 +76,6 @@ export const specularPower = (roughness: number) => 160 - clamp01(roughness) * 1
 /** Яркость блика — то же отражение, что и Френель, приглушённое шероховатостью. */
 export const specularStrength = (ior: number, roughness: number) =>
   clamp01(fresnelStrength(ior) * (1 - clamp01(roughness) * 0.6));
-
-/**
- * Смещение выборки у самой кромки. Зависит от среды и ширины фаски — не от габарита
- * детали: у настоящего стекла луч не знает, какого размера кусок отрезали. Отсюда мелкая
- * поверхность преломляет заметнее крупной без всякой «компенсации размера».
- */
-const EDGE_PUSH_PER_BEVEL = 2.6;
-
-export const edgePush = (ior: number, bevelDp: number) =>
-  refractionStrength(ior) * EDGE_PUSH_PER_BEVEL * Math.max(bevelDp, 0);
 
 /**
  * Цвет среды. Руками не задаётся: у прозрачных сред оттенок связан с плотностью. Вода
@@ -126,10 +122,10 @@ export const gatherRadius = (bevelDp: number) =>
   clamp(Math.max(bevelDp, 1) * GATHER_PER_BEVEL, 4, GATHER_MAX);
 
 /**
- * Плотность тела в плоской середине. Раньше жила константой в поверхностном шейдере; теперь
- * тело считает линза, и величина переезжает сюда вместе с остальными следствиями.
+ * Собственная плотность тела от поглощения толщи. Малая: своего цвета у стекла нет, тело
+ * уходит к тинту только под требование читаемости (HIG «Color»), иначе приглушает контент.
  */
-const BODY_DENSITY = 0.19;
+const BODY_DENSITY = 0.05;
 
 export const bodyDensity = (thicknessDp: number) => BODY_DENSITY * absorption(thicknessDp);
 

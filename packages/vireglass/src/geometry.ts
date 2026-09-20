@@ -33,39 +33,33 @@ export const halfMinDp = (g: VireGlassGeometry) => Math.max(Math.min(g.width, g.
 export const MAX_STRETCH = 0.34;
 
 /**
- * Краевые длины приходят из материала уже в dp и от габарита детали НЕ зависят: у стекла
- * фаска и смещение луча заданы средой, а не тем, какого размера кусок отрезали. Отсюда
- * мелкая поверхность преломляет заметнее крупной сама собой — прежняя «компенсация
- * размера» с потолком и опорным полуразмером была подпоркой под модель, где всё мерялось
- * долями габарита.
- *
- * Геометрия здесь только ОГРАНИЧИВАЕТ: фаска шире полуразмера ломает SDF, а смещение
- * больше полуразмера уводит выборку за пределы формы целиком.
+ * Крупнее деталь — толще стекло: сильнее линза, глубже тень (reference.md §1). Фаска и
+ * толщина материала заданы для детали с опорным полуразмером и растут как корень из размера.
  */
-export const MAX_BEVEL_FRACTION = 0.5;
-const MAX_PUSH_FRACTION = 0.85;
+const SIZE_REF_DP = 24;
+export const sizeGain = (g: VireGlassGeometry) =>
+  Math.min(Math.max(Math.sqrt(halfMinDp(g) / SIZE_REF_DP), 0.8), 2.4);
+
+/** Фаска шире этой доли полуразмера ломает SDF: закругления сходятся посередине. */
+export const MAX_BEVEL_FRACTION = 0.65;
 
 export const bevelFraction = (g: VireGlassGeometry, o: VireGlassOptics) =>
-  Math.min(MAX_BEVEL_FRACTION, o.bevelDp / halfMinDp(g));
+  Math.min(MAX_BEVEL_FRACTION, (o.bevelDp * sizeGain(g)) / halfMinDp(g));
 
 export const bevelDp = (g: VireGlassGeometry, o: VireGlassOptics) =>
   Math.max(bevelFraction(g, o) * halfMinDp(g), 1);
 
-export const edgePushDp = (g: VireGlassGeometry, o: VireGlassOptics) =>
-  Math.min(o.edgePushDp, MAX_PUSH_FRACTION * halfMinDp(g));
+export const thicknessDp = (g: VireGlassGeometry, o: VireGlassOptics) =>
+  o.thicknessDp * sizeGain(g);
 
-const SPHERICAL_PER_BEVEL = 0.26;
-const CHROMA_PER_BEVEL = 0.3;
-const SHADOW_REACH_MAX = 26;
+/** Высота стекла у самого силуэта, доля толщины: без неё у края нечему гнуть луч. */
+export const RIM_FRACTION = 0.85;
 
-export const sphericalDp = (g: VireGlassGeometry, o: VireGlassOptics) =>
-  o.refraction * SPHERICAL_PER_BEVEL * bevelDp(g, o);
+export const rimDp = (g: VireGlassGeometry, o: VireGlassOptics) => thicknessDp(g, o) * RIM_FRACTION;
 
-export const chromaDp = (g: VireGlassGeometry, o: VireGlassOptics) =>
-  o.dispersion * CHROMA_PER_BEVEL * bevelDp(g, o);
-
+/** Крупнее деталь — глубже и шире тень (M 7:14). */
 export const shadowReachDp = (g: VireGlassGeometry) =>
-  Math.min(halfMinDp(g) * 0.16, 7);
+  Math.min(Math.max(halfMinDp(g) * 0.65, 6), 36);
 
 /** Насколько вторая форма морфинга вылезает за габарит первой. Без этого запаса слитая
  *  форма обрезается краем канваса и эксперимент показывает не то, что проверяет. */
@@ -105,15 +99,19 @@ export function lensPadDp(
   morph?: Parameters<typeof morphReachDp>[1],
   dragLimit = 0,
 ): number {
-  const sampling = Math.max(
-    edgePushDp(g, o) + sphericalDp(g, o) + chromaDp(g, o) + o.blur,
-    o.gatherRadiusDp,
-  );
+  const sampling = Math.max(o.blur, o.gatherRadiusDp);
   const stretch = halfMinDp(g) * MAX_STRETCH;
   return quantise(sampling + dragLimit + stretch + morphReachDp(g, morph) + 2);
 }
 
-/** Запас канваса поверхности: тень уходит наружу формы, а перетаскивание сдвигает её ещё. */
+/**
+ * Запас канваса поверхности: тень уходит наружу формы, а перетаскивание сдвигает её ещё.
+ *
+ * Множитель меньше, чем полный охват тени: под пальцем у поднимающегося органа шейдер домножает
+ * радиус на 1.55, и самый дальний хвост в запас не попадает. Так и оставлено — на границе запаса
+ * у него 1.2% альфы (до смягчения тени было 2.5%), а поднять множитель значит вырастить площадь
+ * каждой вьюхи поверхности. Если хвост когда-нибудь проступит на устройстве — лечится здесь.
+ */
 export function surfacePadDp(
   g: VireGlassGeometry,
   dragLimit = 0,

@@ -7,9 +7,13 @@ import {
   type VireGlassOptics,
 } from '@vire/vireglass';
 
+/** Четыре стенда: доводка материала, экраны с деталями по месту, сцена морфинга и ползунок. */
+const VIEWS = ['material', 'screens', 'morph', 'slider'] as const;
+const VIEW_NAMES = ['материал', 'экраны', 'морфинг', 'ползунок'] as const;
+
 export type PanelState = {
   /** Что на стенде: доводка материала или телефонные экраны с деталями по месту. */
-  view: 'material' | 'screens';
+  view: (typeof VIEWS)[number];
   zone: number;
   /** -1 — базовый материал продукта, иначе индекс в PRESET_NAMES. */
   preset: number;
@@ -18,7 +22,7 @@ export type PanelState = {
 };
 
 export type PanelHandlers = {
-  onView: (view: 'material' | 'screens') => void;
+  onView: (view: PanelState['view']) => void;
   onZone: (index: number) => void;
   onPreset: (index: number) => void;
   onDebug: (index: number) => void;
@@ -118,7 +122,6 @@ const DERIVED: (keyof VireGlassOptics)[] = [
   'refraction',
   'refractionScale',
   'bevelDp',
-  'edgePushDp',
   'fresnel',
   'specular',
   'dispersion',
@@ -141,7 +144,7 @@ export function createPanel(state: PanelState, handlers: PanelHandlers, zoneName
     panel,
   );
 
-  const views = chipRow(['материал', 'экраны'], (i) => handlers.onView(i === 1 ? 'screens' : 'material'));
+  const views = chipRow([...VIEW_NAMES], (i) => handlers.onView(VIEWS[i]));
   const zones = chipRow(zoneNames, handlers.onZone);
   const presets = chipRow(['база', ...PRESET_NAMES], (i) => handlers.onPreset(i - 1));
 
@@ -212,7 +215,7 @@ export function createPanel(state: PanelState, handlers: PanelHandlers, zoneName
   return {
     /** Панель ничего не помнит: каждый кадр её приводят к живому состоянию стенда. */
     update(next: PanelState, optics: VireGlassOptics): void {
-      views.setActive(next.view === 'screens' ? 1 : 0);
+      views.setActive(VIEWS.indexOf(next.view));
       zones.setActive(next.zone);
       presets.setActive(next.preset + 1);
       debugRow.setActive(next.debug);

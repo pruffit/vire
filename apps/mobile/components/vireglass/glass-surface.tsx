@@ -36,12 +36,13 @@ import {
   surfacePadDp,
   type VireGlassGeometry,
 } from '../../lib/vireglass/geometry';
-import type { BackdropSample } from '../../lib/vireglass/adaptation';
+import { ambientFrom, type BackdropSample } from '../../lib/vireglass/adaptation';
 import type { DeformSample } from '../../lib/vireglass/touch-response';
 import type { VireGlassDebugMode, VireGlassOptics } from '../../lib/vireglass/material';
 import { LENS_SHADER } from '../../lib/vireglass/lens-shader';
 import { SURFACE_SHADER } from '../../lib/vireglass/surface-shader';
-import { useBackdropEnabled } from '../../lib/design/preferences';
+import { applyAccessibility } from '../../lib/vireglass/accessibility';
+import { useAccessibilityModifiers, useBackdropEnabled } from '../../lib/design/preferences';
 import { useGlassSurfaceRegistration } from '../../lib/design/surface-registry';
 
 function compile(src: string) {
@@ -97,6 +98,8 @@ export function VireGlassSurface({
   icon,
   progress,
   touch,
+  appear,
+  lift = 0,
   dim = 0,
   topLayer = false,
   onBackdropSample,
@@ -123,6 +126,12 @@ export function VireGlassSurface({
    *  нули, и деформации не существовало ни при каком жесте. Веб гоняет ровно эти же поля
    *  (`web/renderer.ts`), контракт адаптеров общий и задан в dp. */
   touch?: SharedValue<DeformSample>;
+  /** Доля, в которой деталь СУЩЕСТВУЕТ, 0…1: стекло нарастает, а не проявляется прозрачностью
+   *  (эталон §12). Едет shared value по той же причине, что и `progress`. */
+  appear?: SharedValue<number>;
+  /** 0 — под пальцем деталь вдавливается, 1 — поднимается в стекло и тень отходит (эталон §5).
+   *  Свойство самой детали, а не её движения, поэтому обычный проп. */
+  lift?: number;
   /** Светлота фона ПОД стеклом, раз в ~200 мс. Отсюда экран узнаёт, что стекло дошло до
    *  своего предела и надпись пора перекрасить (lib/vireglass/adaptation.ts). */
   onBackdropSample?: (e: { nativeEvent: BackdropSample }) => void;
@@ -148,7 +157,26 @@ export function VireGlassSurface({
     geometryRef.current = geometryKey;
     padRef.current = 0;
   }
-  padRef.current = Math.max(padRef.current, lensPadDp(geometry, optics, morph, dragLimit));
+  // Цвет окружения затекает в тень (эталон §7), и зонд его уже считает — остаётся не потерять
+  // по пути. Подписываемся только там, где замер и так идёт: включать зонд ради тени незачем.
+  const [sampled, setSampled] = useState<[number, number, number] | undefined>(undefined);
+  const handleSample = useMemo(() => {
+    if (!onBackdropSample) return undefined;
+    return (event: { nativeEvent: BackdropSample }) => {
+      const next = ambientFrom(event.nativeEvent);
+      setSampled((prev) =>
+        prev && prev[0] === next[0] && prev[1] === next[1] && prev[2] === next[2] ? prev : next,
+      );
+      onBackdropSample(event);
+    };
+  }, [onBackdropSample]);
+
+  // Системные настройки меняют СЛОИ материала, а не отменяют его (эталон §9). Применяются
+  // здесь: через эту поверхность проходит всё стекло приложения, и одного места достаточно.
+  const a11y = useAccessibilityModifiers();
+  const tuned = useMemo(() => applyAccessibility(optics, a11y), [optics, a11y]);
+
+  padRef.current = Math.max(padRef.current, lensPadDp(geometry, tuned, morph, dragLimit));
   const lensPad = padRef.current;
 
   // Цель блюра — ref, и на первом рендере она ещё пуста: сама по себе перерисовку она не
@@ -163,12 +191,27 @@ export function VireGlassSurface({
     setBackdropId(node ? findNodeHandle(node) : null);
   }, [blurTarget]);
 
+  // Единственная точка, где решается, живёт ли бэкдроп. Через неё проходит ВСЁ стекло
+  // приложения, поэтому и тумблер настроек, и подавление под открытым листом стоят здесь,
+  // а не размазаны по потребителям. Подавление под листом предписывает сам кит: нижние
+  // слои за скримом преломлять нечего, и оно же удерживает бюджет поверхностей в зелёной
+  // зоне (`lib/design/glass-budget.ts`).
+  const backdropAllowed = useBackdropEnabled(topLayer);
+  const liveBackdrop = backdrop && backdropAllowed;
+  const refracting = isGlassLensSupported && GlassLensNative !== null;
+  const backdropReady = liveBackdrop && hasTarget && blurTarget?.current != null;
+  // Этим же выражением ниже монтируется вьюха с зондом — двум условиям разойтись нечем.
+  // А разойтись им есть на чём: линза уходит и под открытым листом, и при уменьшенной
+  // прозрачности, тогда как тень рисуется всегда, и цвет ушедшего фона в ней бы застыл.
+  const measuring = backdropReady && refracting && AnimatedGlassLens !== null;
+  const ambient = measuring ? sampled : undefined;
+
   // Тело стекла рисует линза, когда она живая: только там виден фон, а без фона точечной
   // адаптации не существует. Поверхности в этом случае остаётся блик, тень и иконка.
   const bodyInLens = isGlassLensSupported && GlassLensNative !== null && hasTarget;
   const statics = useMemo(
-    () => toSurfaceUniforms(optics, geometry, { debug, morph, dragLimit, shadow, bodyInLens }),
-    [optics, geometry, debug, morph, dragLimit, shadow, bodyInLens],
+    () => toSurfaceUniforms(tuned, geometry, { debug, morph, dragLimit, shadow, bodyInLens, ambient, lift }),
+    [tuned, geometry, debug, morph, dragLimit, shadow, bodyInLens, ambient, lift],
   );
   // Исходник шейдера — часть результата, поэтому он в зависимостях. Формально это
   // константа модуля, но при горячей перезагрузке она меняется, а мемо с прежними
@@ -178,8 +221,8 @@ export function VireGlassSurface({
     // и была изобретением андроидного пути: в вебе `groupProbe` нет вовсе, там каждая
     // деталь адаптируется по своему зонду. Из-за перебивки навигация и «Поток»
     // адаптировались к окружению по-разному при одном материале.
-    () => toLensProps(optics, geometry, PixelRatio.get(), { debug, morph }),
-    [optics, geometry, debug, morph, LENS_SHADER],
+    () => toLensProps(tuned, geometry, PixelRatio.get(), { debug, morph }),
+    [tuned, geometry, debug, morph, LENS_SHADER],
   );
   const iconUniforms = useMemo(
     () => ({
@@ -220,6 +263,7 @@ export function VireGlassSurface({
       touchPress: at.u_touchPress ?? -1,
       touchRadius: at.u_touchRadius ?? -1,
       wave: at.u_wave ?? -1,
+      light: at.u_light ?? -1,
     };
   }, [lensProps]);
 
@@ -231,6 +275,11 @@ export function VireGlassSurface({
   const lensAnimatedProps = useAnimatedProps<{ uniformValues: number[] }>(() => {
     const values = lensProps.uniformValues.slice();
     if (slots.progress >= 0 && progress) values[slots.progress] = progress.value;
+    // Кромочный свет считает линза, а наклон устройства приходит ворклетом — сюда же.
+    if (slots.light >= 0) {
+      values[slots.light] = light.value[0];
+      values[slots.light + 1] = light.value[1];
+    }
     // Отклик на палец. Канал линзы в ПИКСЕЛЯХ, а модель — в dp: геометрические поля
     // домножаются на плотность, фаза волны и вдавливание безразмерны. Тот же пересчёт
     // делает веб (`web/renderer.ts`), контракт адаптера трогать нельзя — он общий.
@@ -252,7 +301,7 @@ export function VireGlassSurface({
       }
     }
     return { uniformValues: values };
-  }, [lensProps, slots, density, progress, touch, touchRadius]);
+  }, [lensProps, slots, density, progress, touch, touchRadius, light]);
 
   const uniforms = useDerivedValue(() => {
     return {
@@ -270,21 +319,13 @@ export function VireGlassSurface({
       // активную деталь читалось бы как её выключение. Доля та же, что в вебе (`main.ts`,
       // buttonPieces): касание поднимает активность на треть, а не до полной.
       u_active: touch ? Math.max(touch.value.active * ACTIVE_ON_TOUCH, active.value) : active.value,
-      u_light: [light.value[0], light.value[1]],
       u_progress: progress ? progress.value : statics.u_progress,
+      // Деталь нарастает стеклом, а не прозрачностью: ноль — её нет вовсе.
+      u_appear: appear ? appear.value : statics.u_appear,
     };
-  }, [statics, iconUniforms, progress, touch, touchRadius]);
+  }, [statics, iconUniforms, progress, touch, touchRadius, appear]);
 
-  const refracting = isGlassLensSupported && GlassLensNative !== null;
-  const magnify = lensMagnify(optics);
-
-  // Единственная точка, где решается, живёт ли бэкдроп. Через неё проходит ВСЁ стекло
-  // приложения, поэтому и тумблер настроек, и подавление под открытым листом стоят здесь,
-  // а не размазаны по потребителям. Подавление под листом предписывает сам кит: нижние
-  // слои за скримом преломлять нечего, и оно же удерживает бюджет поверхностей в зелёной
-  // зоне (`lib/design/glass-budget.ts`).
-  const backdropAllowed = useBackdropEnabled(topLayer);
-  const liveBackdrop = backdrop && backdropAllowed;
+  const magnify = lensMagnify(tuned);
 
   // Сторожит ФАКТИЧЕСКОЕ число живых поверхностей; тест стережёт объявленную модель.
   useGlassSurfaceRegistration(liveBackdrop && hasTarget);
@@ -310,15 +351,15 @@ export function VireGlassSurface({
         collapsable={false}
       >
         <View style={[styles.lens, { width, height }]}>
-        {liveBackdrop && hasTarget && blurTarget?.current ? (
-          refracting && AnimatedGlassLens ? (
+        {backdropReady ? (
+          measuring && AnimatedGlassLens ? (
             // Вьюха линзы НАМЕРЕННО больше стекла — у кромки выборка уходит за его пределы,
             // форму вырезает сам шейдер.
             <AnimatedGlassLens
               {...lensStatic}
               animatedProps={lensAnimatedProps}
               backdropId={backdropId}
-              onBackdropSample={onBackdropSample}
+              onBackdropSample={handleSample}
               style={{
                 position: 'absolute',
                 width: width + lensPad * 2,
@@ -341,7 +382,7 @@ export function VireGlassSurface({
               >
                 {/* Фолбэк шейдера не имеет — размывать, кроме BlurView, тут нечем. */}
                 <BlurView
-                  intensity={optics.blur}
+                  intensity={tuned.blur}
                   tint="dark"
                   blurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
                   blurTarget={blurTarget}
