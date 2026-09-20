@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const APP_DIR = fileURLToPath(new URL('../..', import.meta.url));
+const APP_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 // Делитель живёт в двух файлах: стенд кодирует им индексы в кадр, зонд их оттуда читает.
 // Разойдутся — зонд молча прочитает чужую зону (так уже было при 16 против 14 зон).
