@@ -31,7 +31,6 @@ import {
   bevelDp,
   capsuleGeometry,
   circleGeometry,
-  edgePushDp,
   halfMinDp,
   roundedRectGeometry,
   type VireGlassGeometry,
@@ -97,8 +96,7 @@ function compensationTable(o: VireGlassOptics): string {
     const half = halfMinDp(geometry);
     const bevel = bevelDp(geometry, o);
     const share = ((bevel / half) * 100).toFixed(0);
-    const push = edgePushDp(geometry, o).toFixed(1);
-    return `${label.padEnd(11)} полураз ${half.toFixed(0).padStart(3)}  фаска ${bevel.toFixed(1)} (${share}%)  смещ ${push}`;
+    return `${label.padEnd(11)} полураз ${half.toFixed(0).padStart(3)}  фаска ${bevel.toFixed(1)} (${share}%)`;
   }).join('\n');
 }
 

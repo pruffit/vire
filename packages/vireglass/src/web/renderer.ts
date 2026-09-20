@@ -14,7 +14,7 @@
 //
 // ЕДИНИЦЫ. Всё — device-px, одно пространство координат на весь канвас (спека §4 п.2):
 // `toLensProps` уже умножает на `density`, `toSurfaceUniforms` — нет и не должна (её контракт
-// общий с Android), поэтому геометрические поля результата домножаются здесь.
+// общий с Android), поэтому её результат прогоняется через `toDeviceSurfaceUniforms`.
 //
 // ОБЩИЙ ЦЕНТР. На Android линза и поверхность живут в СВОИХ локальных пространствах (разные
 // запасы `lensPadDp`/`surfacePadDp`), концентричность — конвенция компонента. Здесь оба
@@ -26,9 +26,10 @@ import {
   DYNAMIC_UNIFORMS,
   ICON_UNIFORMS,
   OVERLAY_UNIFORMS,
-  REST_LIGHT,
   toLensProps,
+  toDeviceSurfaceUniforms,
   toSurfaceUniforms,
+  type VireGlassAccent,
   type VireGlassMorph,
   type VireGlassTouch,
 } from '../adapters';
@@ -64,6 +65,8 @@ export type VireGlassPiece = {
   centerX: number;
   centerY: number;
   morph?: VireGlassMorph;
+  /** Третья форма того же тела: разрыв детали на части идёт двумя перемычками. */
+  morph2?: VireGlassMorph;
   /** Локальный отклик на палец: точка касания, тяга, нажатие, волна. */
   touch?: VireGlassTouch;
   /** Отклик на нажатие, 0…1 — блик расцветает, тело чуть плотнеет. */
@@ -79,6 +82,14 @@ export type VireGlassPiece = {
   /** Цвет значка в покое и в активном состоянии, RGBA 0…1. */
   inkIdle?: readonly number[];
   inkActive?: readonly number[];
+  /** Направление ключевого света в плоскости экрана; по умолчанию — свет в покое. */
+  light?: readonly [number, number];
+  /** 0…1: появление детали нарастанием линзы (M 2:55). */
+  appear?: number;
+  /** 0 — под пальцем деталь вдавливается, 1 — поднимается в стекло (эталон §5). */
+  lift?: number;
+  /** Тонирование главного действия — цветное стекло, а не заливка. */
+  accent?: VireGlassAccent;
 };
 
 export type VireGlassRenderOptions = {
@@ -378,15 +389,15 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
       // тень, фаска и сбор света выходят за габарит детали.
       // Капля морфа уезжает за габарит детали — её ход входит в запас, иначе ножницы срежут
       // хвост ровно там, где он и интересен.
-      const morphReach = piece.morph
-        ? Math.hypot(piece.morph.offsetX, piece.morph.offsetY) +
-          Math.max(piece.morph.width, piece.morph.height) / 2 +
-          piece.morph.smoothing
-        : 0;
-      // Деформация поля уводит край детали за её габарит — тяга целиком плюс размах волны.
-      // Без этого слагаемого ножницы срезают ровно ту часть, ради которой тянут.
+      const reachOf = (m?: VireGlassMorph) =>
+        m ? Math.hypot(m.offsetX, m.offsetY) + Math.max(m.width, m.height) / 2 + m.smoothing : 0;
+      const morphReach = Math.max(reachOf(piece.morph), reachOf(piece.morph2));
+      // Деформация поля уводит край детали за её габарит — тяга, размах волны и рост при
+      // нажатии. Без этого слагаемого ножницы срезают ровно ту часть, ради которой тянут.
       const touchReach = piece.touch
-        ? Math.hypot(piece.touch.pullX, piece.touch.pullY) + piece.touch.waveAmp * 2
+        ? Math.hypot(piece.touch.pullX, piece.touch.pullY) +
+          piece.touch.waveAmp * 2 +
+          Math.max(piece.geometry.width, piece.geometry.height) * 0.05 * piece.touch.press
         : 0;
       const padPx =
         (lensPadDp(piece.geometry, piece.optics) + surfacePadDp(piece.geometry, 0) + morphReach + touchReach) *
@@ -425,47 +436,45 @@ export function createVireGlassRenderer(canvas: HTMLCanvasElement): VireGlassRen
       const lens = toLensProps(piece.optics, piece.geometry, options.density, {
         debug: options.debug,
         morph: piece.morph,
+        morph2: piece.morph2,
         touch: piece.touch,
         progress: piece.progress,
+        light: piece.light,
+        appear: piece.appear,
+        accent: piece.accent,
       });
       applyChannel(gl, lensLoc, lens.uniformNames, lens.uniformSizes, lens.uniformValues);
       drawFullscreenTriangle(gl);
 
-      // 5. Поверхность — общий центр с линзой (см. комментарий в шапке файла), геометрические
-      // поля адаптера домножены на плотность здесь: контракт `toSurfaceUniforms` — dp, общий
-      // с Android, самому адаптеру трогать нельзя.
+      // 5. Поверхность — общий центр с линзой (см. комментарий в шапке файла). Контракт
+      // `toSurfaceUniforms` — dp, общий с Android; в пиксели его переводит ядро.
       gl.useProgram(surfaceProgram);
       const rawSurface = toSurfaceUniforms(piece.optics, piece.geometry, {
         debug: options.debug,
         morph: piece.morph,
+        morph2: piece.morph2,
         bodyInLens: true,
         touch: piece.touch,
         progress: piece.progress,
+        // Над текстом тень плотнее, над ровным фоном слабее (M 11:47): отрыв детали от
+        // пёстрого контента держит именно она.
+        shadow: stats ? 0.8 + Math.min(stats.busy * 6, 1.2) : 1,
+        // Цвет окружения зонд уже посчитал — тени он достаётся даром. Берётся как есть:
+        // `settleStats` его уже сгладил, а округление вернуло бы ступеньки, ради которых
+        // сглаживание и писалось.
+        ambient: stats ? ([stats.r, stats.g, stats.b] as const) : undefined,
+        appear: piece.appear,
+        lift: piece.lift,
       });
-      const d = options.density;
+      // Перевод dp → пиксели устройства живёт в ядре (`toDeviceSurfaceUniforms`): список длин
+      // один на все поля, и новое поле не забудется здесь по недосмотру.
       applyObject(gl, surfaceLoc, {
-        ...rawSurface,
+        ...toDeviceSurfaceUniforms(rawSurface, options.density),
         u_center: [piece.centerX, piece.centerY],
-        u_halfSize: [rawSurface.u_halfSize[0] * d, rawSurface.u_halfSize[1] * d],
-        u_corner: rawSurface.u_corner * d,
-        u_bevel: rawSurface.u_bevel * d,
-        u_morphOffset: [rawSurface.u_morphOffset[0] * d, rawSurface.u_morphOffset[1] * d],
-        u_morphHalf: [rawSurface.u_morphHalf[0] * d, rawSurface.u_morphHalf[1] * d],
-        u_morphCorner: rawSurface.u_morphCorner * d,
-        u_morphK: rawSurface.u_morphK * d,
-        u_shadowReach: rawSurface.u_shadowReach * d,
-
-        u_touch: [rawSurface.u_touch[0] * d, rawSurface.u_touch[1] * d],
-        u_pull: [rawSurface.u_pull[0] * d, rawSurface.u_pull[1] * d],
-        u_touchRadius: rawSurface.u_touchRadius * d,
-        u_wave: [rawSurface.u_wave[0] * d, rawSurface.u_wave[1]],
       });
-      // Динамика ворклета на Android (жест/нажатие/наклон) — здесь константы: стенд неподвижен,
-      // а акселерометра в браузере нет (спека §5 «Чего в вебе не будет»), поэтому свет — REST_LIGHT.
+      // Динамика ворклета на Android (нажатие, активность, наклон) здесь приходит полями детали.
       setUniform(gl, surfaceLoc(DYNAMIC_UNIFORMS[0]), piece.press ?? 0);
       setUniform(gl, surfaceLoc(DYNAMIC_UNIFORMS[1]), piece.active ?? 0);
-      // Акселерометра в браузере нет (спека §5), свет остаётся в покое.
-      setUniform(gl, surfaceLoc(DYNAMIC_UNIFORMS[2]), REST_LIGHT);
       const hasIcon = Boolean(piece.icon && options.iconMask);
       setUniform(gl, surfaceLoc(ICON_UNIFORMS[0]), hasIcon ? 1 : 0);
       // Масштаб 1: координата уже экранная, нормировку на размер делает сам сэмплер.

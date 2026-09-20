@@ -226,6 +226,146 @@ export function drawPhoneFrames(
   ctx.restore();
 }
 
+// Сцены ниже повторяют эталонные кадры (docs/vireglass/reference.md): на них стенд сравнивают
+// с первоисточником кадр к кадру. Сдвиг полотна двигает сцену целиком.
+
+/** Граница светлого и тёмного под деталью (M 2:32): видно, откуда кромка берёт фон. */
+const horizon: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
+  const y = Math.round(h * 0.37 + oy);
+  const top = ctx.createLinearGradient(0, 0, w, 0);
+  top.addColorStop(0, '#bcc0cb');
+  top.addColorStop(1, '#8b94a2');
+  ctx.fillStyle = top;
+  ctx.fillRect(0, 0, w, y);
+  const bottom = ctx.createLinearGradient(0, y, w, h);
+  bottom.addColorStop(0, '#47474d');
+  bottom.addColorStop(1, '#1b1e24');
+  ctx.fillStyle = bottom;
+  ctx.fillRect(0, y, w, h - y);
+};
+
+/** Тёмное полотно, свет из угла (M 2:38): кромочный свет — две противоположные дуги. */
+const sideLight: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
+  ctx.fillStyle = '#0a0b0f';
+  ctx.fillRect(0, 0, w, h);
+  const r = Math.max(w, h) * 0.9;
+  const g = ctx.createRadialGradient(ox, h * 0.95 + oy, 0, ox, h * 0.95 + oy, r);
+  g.addColorStop(0, '#ccd2ea');
+  g.addColorStop(0.3, '#5d6272');
+  g.addColorStop(1, '#0a0b0f');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+};
+
+/** Оранжевый цветок на небе (M 2:52): насыщенный цвет у кромки и небо вокруг. */
+const poppy: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
+  const sky = ctx.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, '#2b5c9b');
+  sky.addColorStop(1, '#93bee5');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+  const u = Math.min(w, h);
+  const flower = (cx: number, cy: number, s: number) => {
+    ctx.strokeStyle = '#4c7a2c';
+    ctx.lineWidth = u * 0.012 * s;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + u * 0.04 * s);
+    ctx.quadraticCurveTo(cx + u * 0.03 * s, cy + u * 0.4 * s, cx - u * 0.01, h);
+    ctx.stroke();
+    const petals: [number, number, number, number, number, string, string][] = [
+      [-0.07, -0.01, 0.11, 0.07, -0.5, '#ffb24a', '#d4470e'],
+      [0.06, -0.07, 0.1, 0.075, 0.35, '#ffc463', '#e3560b'],
+      [0.0, 0.04, 0.12, 0.06, 0.08, '#ff9c40', '#b92a24'],
+    ];
+    for (const [dx, dy, rx, ry, rot, c0, c1] of petals) {
+      const px = cx + dx * u * s;
+      const py = cy + dy * u * s;
+      const g = ctx.createRadialGradient(px, py - ry * u * s * 0.4, 0, px, py, rx * u * s);
+      g.addColorStop(0, c0);
+      g.addColorStop(1, c1);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(px, py, rx * u * s, ry * u * s, rot, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+  flower(w * 0.43 + ox, h * 0.3 + oy, 1);
+  flower(w * 0.8 + ox, h * 0.22 + oy, 0.45);
+};
+
+/** Дюны (M 2:58): гребни с резкой границей света и тени — линия, которую линза гнёт. */
+const dunes: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
+  ctx.fillStyle = '#e3cda8';
+  ctx.fillRect(0, 0, w, h);
+  const ridges: [number, number, number, string, string][] = [
+    [0.12, 0.05, 1.3, '#ecd9b8', '#7d6446'],
+    [0.3, 0.07, 0.9, '#e2c9a2', '#6a5237'],
+    [0.5, 0.06, 1.6, '#ead3ae', '#76603f'],
+    [0.72, 0.08, 1.1, '#d9bd94', '#5c4630'],
+  ];
+  for (const [yf, amp, freq, light, dark] of ridges) {
+    const ridge = (x: number) =>
+      h * yf + oy + Math.sin(((x - ox) / w) * Math.PI * 2 * freq + yf * 9) * h * amp;
+    const g = ctx.createLinearGradient(0, h * (yf - amp), 0, h * (yf + amp + 0.2));
+    g.addColorStop(0, light);
+    g.addColorStop(0.45, light);
+    g.addColorStop(0.5, dark);
+    g.addColorStop(1, light);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let x = 0; x <= w; x += 8) ctx.lineTo(x, ridge(x));
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fill();
+  }
+};
+
+const PARAGRAPH = [
+  'Стекло гнёт свет у самой кромки и оставляет',
+  'середину спокойной. Под плашкой едет строка,',
+  'и материал обязан сделать её тише надписи,',
+  'которая лежит на нём самом. Размытие здесь',
+  'не украшение, а способ убрать спор двух',
+  'текстов за одно и то же место на экране.',
+];
+
+/** Абзац на светлом (M 11:47): Regular обязан приглушать чужой текст под собой. */
+const paragraph: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
+  ctx.fillStyle = '#f2f2f5';
+  ctx.fillRect(0, 0, w, h);
+  const size = Math.round(h * 0.03);
+  const lead = size * 1.45;
+  ctx.fillStyle = '#1b1b1f';
+  ctx.font = `500 ${size}px system-ui, sans-serif`;
+  ctx.textBaseline = 'alphabetic';
+  const start = ((oy % lead) + lead) % lead;
+  const first = Math.floor(-oy / lead);
+  for (let i = 0; start + i * lead < h + lead; i += 1) {
+    const line = PARAGRAPH[(((first + i) % PARAGRAPH.length) + PARAGRAPH.length) % PARAGRAPH.length];
+    ctx.fillText(line, w * 0.08 + ox, start + i * lead);
+  }
+};
+
+/**
+ * Дорожка под деталью (M 4:30, L 6:10) — мерная сцена: на полосе видно то, чего не показывает
+ * сетка, как у самой кромки содержимое утягивает вдоль силуэта и раздувает.
+ *
+ * Толщина в dp, а не долей окна, как у прочих зон: деталь тоже фиксирована в dp, и замер не
+ * должен зависеть от размера окна. 19 dp — те же 17% высоты капсулы, что у эталонной дорожки.
+ */
+const track: VireGlassSceneDrawer = (ctx, w, h, ox, oy) => {
+  const dpr = window.devicePixelRatio || 1;
+  const y = Math.round(h * 0.34 + oy);
+  const thick = Math.round(19 * dpr);
+  ctx.fillStyle = '#eceef2';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#d2d6de';
+  ctx.fillRect(0, y - thick / 2, w, thick);
+  ctx.fillStyle = '#0a6fd8';
+  ctx.fillRect(0, y - thick / 2, Math.max(0, Math.min(w, w * 0.42 + ox)), thick);
+};
+
 export const ZONES: readonly Zone[] = [
   {
     name: 'светлая клетка',
@@ -237,6 +377,12 @@ export const ZONES: readonly Zone[] = [
     name: 'тёмная клетка',
     draw: grid({ base: '#161a21', line: '#232935', accent: '#333b4a', step: 12, every: 5 }),
   },
+  { name: 'горизонт', draw: horizon },
+  { name: 'свет сбоку', draw: sideLight },
+  { name: 'мак на небе', draw: poppy },
+  { name: 'дюны', draw: dunes },
+  { name: 'абзац', draw: paragraph },
+  { name: 'дорожка', draw: track },
 ] as const;
 
 export const ZONE_NAMES: readonly string[] = ZONES.map((z) => z.name);

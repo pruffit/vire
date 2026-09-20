@@ -23,6 +23,7 @@ import { Screen } from '../components/screen';
 import { ChatLockedNotice, useChatLocked } from '../components/chat-locked-notice';
 import { Glass } from '../components/glass';
 import { useContentBottomPadding } from '../lib/layout';
+import { useScrollEdge } from '../lib/scroll-edge';
 import { colors, radius } from '../lib/theme';
 import { fonts } from '../lib/design/typography';
 
@@ -81,6 +82,7 @@ function isChatReadEvent(event: ChatRealtimeEvent): event is ChatRealtimeEvent &
 export default function ChatThreadScreen({ route }: NativeStackScreenProps<ProfileStackParamList, 'ChatThread'>) {
   const { conversationId, otherUserId, otherUserName } = route.params;
   const composerBottomMargin = useContentBottomPadding();
+  const scrollEdge = useScrollEdge();
   const locked = useChatLocked();
 
   const [state, setState] = useState<LoadState>('loading');
@@ -302,7 +304,13 @@ export default function ChatThreadScreen({ route }: NativeStackScreenProps<Profi
                 statusLabel={item.id === lastOwnMessage?.id ? ownStatusLabel : null}
               />
             )}
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            onScroll={scrollEdge.onScroll}
+            onContentSizeChange={(width, height) => {
+              listRef.current?.scrollToEnd({ animated: false });
+              scrollEdge.onContentSizeChange(width, height);
+            }}
+            onLayout={scrollEdge.onLayout}
+            scrollEventThrottle={scrollEdge.scrollEventThrottle}
           />
 
           <Glass style={[styles.composer, { marginBottom: composerBottomMargin }]} radius={22}>

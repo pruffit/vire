@@ -1,12 +1,11 @@
 import {
   bevelDp,
   bevelFraction,
-  chromaDp,
-  edgePushDp,
   halfMinDp,
+  rimDp,
   shadowReachDp,
-  sphericalDp,
   surfacePadDp,
+  thicknessDp,
   type VireGlassGeometry,
 } from './geometry';
 import { LENS_SHADER } from './lens-shader';
@@ -45,6 +44,13 @@ const NO_MORPH = { offsetX: 0, offsetY: 0, width: 0, height: 0, cornerRadius: 0,
 
 /** Прогресса нет. Отрицательным, а не нулём: ноль — это начало трека, законное значение. */
 const NO_PROGRESS = -1;
+
+/** Цветное стекло главного действия (M 16:08). Цвет — RGB 0…1. */
+export type VireGlassAccent = { color: readonly [number, number, number]; amount?: number };
+
+/** Доля тонирования по умолчанию: цвет читается, но контент под ним ещё виден. */
+export const ACCENT_AMOUNT = 0.8;
+const NO_ACCENT = [0, 0, 0, 0] as const;
 
 
 
@@ -96,13 +102,22 @@ export function toLensProps(
   options: {
     debug?: VireGlassDebugMode;
     morph?: VireGlassMorph;
+    /** Третья форма слитого тела; ноль размера её выключает. */
+    morph2?: VireGlassMorph;
     groupProbe?: number[];
     touch?: VireGlassTouch;
     /** Сыгранная доля, 0…1: слева от границы деталь активна. `undefined` — прогресса нет. */
     progress?: number;
+    /** Направление ключевого света в плоскости экрана; по умолчанию — свет в покое. */
+    light?: readonly [number, number];
+    /** 0…1: линза нарастает при появлении детали — вместо прозрачности. */
+    appear?: number;
+    /** Тонирование главного действия: цвет стекла и доля, в которой он ложится на контент. */
+    accent?: VireGlassAccent;
   } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
+  const morph2 = options.morph2 ?? NO_MORPH;
   const touch = options.touch ?? NO_TOUCH;
   // Оценка фона на всю группу поверхностей. Едет тем же каналом, что и материал, и
   // применяется ПОСЛЕ собственной оценки линзы — то есть просто перебивает её. Отдельным
@@ -131,22 +146,25 @@ export function toLensProps(
       ['u_halfSize', [halfW, halfH]],
       ['u_corner', Math.min(geometry.cornerRadius * d, halfMin)],
       ['u_bevel', Math.max(bevelDp(geometry, optics) * d, 1)],
-      ['u_magnify', lensMagnify(optics)],
-      ['u_edgePush', edgePushDp(geometry, optics) * d],
-      ['u_chroma', chromaDp(geometry, optics) * d],
-      ['u_spherical', sphericalDp(geometry, optics) * d],
+      ['u_thick', thicknessDp(geometry, optics) * d],
+      ['u_rim', rimDp(geometry, optics) * d],
+      ['u_ior', optics.ior],
+      ['u_iorSpread', optics.iorSpread],
+      ['u_light', options.light ?? REST_LIGHT],
+      ['u_appear', options.appear ?? 1],
+      ['u_accent', options.accent ? [...options.accent.color, options.accent.amount ?? ACCENT_AMOUNT] : NO_ACCENT],
       // Мутность от шероховатости поверхности. Живёт в том же дисковом сборе, что и
       // адаптивное рассеяние, и гасится к фаске: там работа другая — гнуть луч и расщеплять.
       ['u_frost', optics.blur * d],
       ['u_ink', optics.ink],
       ['u_legibility', optics.legibility],
+      ['u_dim', optics.dimming],
       ['u_presence', optics.presence],
       ['u_adaptRadius', optics.adaptRadius * d],
-      ['u_bodyTint', [optics.tint.r, optics.tint.g, optics.tint.b]],
       ['u_bodyDensity', optics.bodyDensity],
       ['u_edgeLight', optics.edgeLight],
       ['u_fresnel', optics.fresnel],
-      ['u_fresnelPower', optics.fresnelPower],
+      ['u_specular', optics.specular],
       // Кромка собирает свет в окрестности детали — это радиус вокруг формы, а не её фаска.
       ['u_reflectReach', optics.gatherRadiusDp * d],
       ['u_film', optics.film],
@@ -157,6 +175,9 @@ export function toLensProps(
       ['u_morphHalf', [(morph.width * d) / 2, (morph.height * d) / 2]],
       ['u_morphCorner', morph.cornerRadius * d],
       ['u_morphK', morph.smoothing * d],
+      ['u_morph2Offset', [morph2.offsetX * d, morph2.offsetY * d]],
+      ['u_morph2Half', [(morph2.width * d) / 2, (morph2.height * d) / 2]],
+      ['u_morph2Corner', morph2.cornerRadius * d],
       ['u_touch', [touch.x * d, touch.y * d]],
       ['u_pull', [touch.pullX * d, touch.pullY * d]],
       ['u_touchPress', touch.press],
@@ -177,16 +198,25 @@ export function toSurfaceUniforms(
   options: {
     debug?: VireGlassDebugMode;
     morph?: VireGlassMorph;
+    /** Третья форма слитого тела; ноль размера её выключает. */
+    morph2?: VireGlassMorph;
     dragLimit?: number;
     shadow?: number;
+    /** Средний цвет окружения детали: свет из него затекает в тень (эталон 219 @8:22). */
+    ambient?: readonly [number, number, number];
     /** Тело стекла рисует линза — поверхности остаётся блик, тень и иконка. */
     bodyInLens?: boolean;
     touch?: VireGlassTouch;
     /** Сыгранная доля, 0…1: слева от границы деталь активна. `undefined` — прогресса нет. */
     progress?: number;
+    /** 0…1: деталь появляется — тень и краска нарастают вместе с линзой. */
+    appear?: number;
+    /** 0 — под пальцем деталь вдавливается, 1 — поднимается в стекло (эталон §5). */
+    lift?: number;
   } = {},
 ) {
   const morph = options.morph ?? NO_MORPH;
+  const morph2 = options.morph2 ?? NO_MORPH;
   const touch = options.touch ?? NO_TOUCH;
   const pad = surfacePadDp(geometry, options.dragLimit ?? 0, morph);
   return {
@@ -199,8 +229,9 @@ export function toSurfaceUniforms(
     u_morphHalf: [morph.width / 2, morph.height / 2],
     u_morphCorner: morph.cornerRadius,
     u_morphK: morph.smoothing,
-    u_specular: optics.specular,
-    u_specularPower: optics.specularPower,
+    u_morph2Offset: [morph2.offsetX, morph2.offsetY],
+    u_morph2Half: [morph2.width / 2, morph2.height / 2],
+    u_morph2Corner: morph2.cornerRadius,
     u_edgeDensity: optics.edgeDensity,
     u_dispersion: optics.dispersion,
     u_refraction: optics.refraction,
@@ -214,6 +245,8 @@ export function toSurfaceUniforms(
       options.bodyInLens ? 0 : optics.tintStrength,
     ],
     u_shadow: options.shadow ?? 1,
+    // Нейтраль по умолчанию: без замера окружения тень остаётся такой же, как была.
+    u_ambient: options.ambient ?? [0, 0, 0],
     u_shadowReach: shadowReachDp(geometry),
     u_touch: [touch.x, touch.y],
     u_pull: [touch.pullX, touch.pullY],
@@ -222,9 +255,56 @@ export function toSurfaceUniforms(
     u_wave: [touch.waveAmp, touch.wavePhase],
     u_presence: optics.presence,
     u_progress: options.progress ?? NO_PROGRESS,
+    u_appear: options.appear ?? 1,
+    // Ноль по умолчанию: кнопки вдавливаются, как и вели себя все детали до появления правила.
+    u_lift: options.lift ?? 0,
 
     u_debug: debugIndex(options.debug ?? 'normal'),
   };
+}
+
+/**
+ * Поля поверхности, которые суть ДЛИНЫ: контракт адаптера задан в dp, и на вебе каждое из них
+ * обязано домножиться на плотность экрана. Список здесь, а не в рендерере, где он был полутора
+ * десятками ручных умножений подряд: пропущенное поле там ловил только глаз, а промах виден не
+ * везде — на плотности 1 домножение неотличимо от его отсутствия.
+ */
+export type SurfaceUniforms = ReturnType<typeof toSurfaceUniforms>;
+
+export const SURFACE_LENGTH_UNIFORMS = [
+  'u_halfSize',
+  'u_corner',
+  'u_bevel',
+  'u_morphOffset',
+  'u_morphHalf',
+  'u_morphCorner',
+  'u_morphK',
+  'u_morph2Offset',
+  'u_morph2Half',
+  'u_morph2Corner',
+  'u_shadowReach',
+  'u_touch',
+  'u_pull',
+  'u_touchRadius',
+  // `satisfies`, а не просто `as const`: опечатка в имени иначе компилируется молча и уходит в
+  // рантайм — поле с мусорным именем получает NaN, а настоящее остаётся недомноженным.
+] as const satisfies readonly (keyof SurfaceUniforms)[];
+
+/**
+ * Униформы поверхности в пикселях устройства. Android рисует в dp и зовёт адаптер как есть;
+ * вебу нужен этот перевод. `u_center` сюда не входит: центр детали рендерер знает сам.
+ */
+export function toDeviceSurfaceUniforms(raw: SurfaceUniforms, density: number): SurfaceUniforms {
+  const scaled: Record<string, unknown> = { ...raw };
+  for (const key of SURFACE_LENGTH_UNIFORMS) {
+    const value: unknown = scaled[key];
+    scaled[key] = Array.isArray(value)
+      ? (value as number[]).map((v) => v * density)
+      : (value as number) * density;
+  }
+  // У волны длина только амплитуда; фаза считается в оборотах и плотности не знает.
+  scaled.u_wave = [raw.u_wave[0] * density, raw.u_wave[1]];
+  return scaled as SurfaceUniforms;
 }
 
 /** Направление ключевого света в экранных координатах, когда отклик на ориентацию выключен. */
@@ -233,7 +313,7 @@ export const REST_LIGHT: readonly [number, number] = [-0.577, -0.817];
 /** Униформы, которые компонент домешивает в ворклете (нажатие, активность, направление
  *  света) и слоем иконки. Перечислены здесь, чтобы тест мог проверить полноту контракта
  *  шейдера без импорта самого компонента (он тянет Skia и в node-окружении не поднимается). */
-export const DYNAMIC_UNIFORMS = ['u_press', 'u_active', 'u_light'] as const;
+export const DYNAMIC_UNIFORMS = ['u_press', 'u_active'] as const;
 
 export const ICON_UNIFORMS = ['u_iconOn', 'u_iconScale', 'u_inkIdle', 'u_inkActive'] as const;
 

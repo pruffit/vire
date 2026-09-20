@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createDeform } from '../touch-response';
-import { activeMaterial, materialForInk, VIREGLASS_CONTROL_MATERIAL, VIREGLASS_MATERIAL } from '../material';
+import {
+  activeMaterial,
+  materialForInk,
+  resolveOptics,
+  VIREGLASS_CLEAR_MATERIAL,
+  VIREGLASS_CONTROL_MATERIAL,
+  VIREGLASS_MATERIAL,
+} from '../material';
 
 /** Прогнать отклик на N секунд шагами по кадру 60 Гц. */
 function settle(d: ReturnType<typeof createDeform>, seconds: number): void {
@@ -117,6 +124,15 @@ describe('материал органов управления', () => {
   it('деталь без краски не обязана разводить светлоту, с краской — обязана', () => {
     expect(materialForInk(VIREGLASS_CONTROL_MATERIAL, false).legibility).toBe(0);
     expect(materialForInk(VIREGLASS_CONTROL_MATERIAL, true).legibility).toBeGreaterThan(0.9);
+  });
+
+  // Варианты материала не смешивают: у прозрачного читаемость держит затемняющий слой, и
+  // поднять ему требование значит молча сделать из него обычное стекло.
+  it("прозрачный вариант остаётся прозрачным даже под краской", () => {
+    const clear = materialForInk(VIREGLASS_CLEAR_MATERIAL, true);
+    expect(clear.legibility).toBe(0);
+    expect(clear.dimming).toBeGreaterThan(0);
+    expect(resolveOptics(clear).dimming).toBeGreaterThan(0);
   });
 
   it('активность — это состояние СРЕДЫ: плотнее, толще, шире фаска, чище', () => {
