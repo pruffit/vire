@@ -1,7 +1,11 @@
 // Стенд VireGlass — не React-страница (план, «Среда»/«Следствие для стенда»): статический
 // HTML + этот бандл, esbuild собирает его за миллисекунды из `packages/vireglass`.
 // Состояние целиком в адресе: ссылка воспроизводит кадр, как диплинк на Android-стенде.
-import {
+import { REFERENCE_PIECE_AT,
+  REFERENCE_SCENES,
+  REFERENCE_SCENE_HEIGHT,
+  REFERENCE_SCENE_WIDTH,
+  REFERENCE_SHAPES,
   applyAccessibility,
   DEBUG_MODES,
   INK_DARK,
@@ -14,7 +18,6 @@ import {
   type VireGlassAccessibility,
   roundedRectGeometry,
   circleGeometry,
-  capsuleGeometry,
   VIREGLASS_CLEAR_MATERIAL,
   VIREGLASS_CONTROL_MATERIAL,
   VIREGLASS_MATERIAL,
@@ -56,6 +59,14 @@ import {
   ZONE_NAMES,
 } from './scenes';
 
+/**
+ * Сверочные полотна. На них кадр обязан совпадать с кадром мобильной лаборатории целиком, а не
+ * только полотном: деталь стоит в точке, заданной полотном, и в кадре она ОДНА — ряд образцов
+ * материалов и подписи под ними ложились прямо на полотно, а на телефоне их нет.
+ */
+const REFERENCE_ZONE_NAMES = new Set(REFERENCE_SCENES.map((s) => s.name));
+const onReferenceScene = () => REFERENCE_ZONE_NAMES.has(ZONE_NAMES[state.zone]);
+
 const stage = document.getElementById('stage');
 if (!stage) throw new Error('нет #stage');
 
@@ -85,8 +96,18 @@ function intParam(name: string, fallback: number, min: number, max: number): num
   return Number.isFinite(v) ? Math.min(Math.max(v, min), max) : fallback;
 }
 
+/** Зона в адресе — номером ИЛИ именем: у двух стендов номера разные, а имя полотна одно, и
+ *  ссылка на сверку не должна знать, сколько своих зон у каждого. */
+function zoneParam(): number {
+  const raw = params.get('zone');
+  if (raw === null) return 0;
+  const byName = ZONE_NAMES.indexOf(raw);
+  if (byName >= 0) return byName;
+  return intParam('zone', 0, 0, ZONES.length - 1);
+}
+
 const state = {
-  zone: intParam('zone', 0, 0, ZONES.length - 1),
+  zone: zoneParam(),
   preset: intParam('preset', -1, -1, PRESET_NAMES.length - 1),
   debug: intParam('debug', 0, 0, DEBUG_MODES.length - 1),
   view: params.get('view') === 'screens'
@@ -148,13 +169,28 @@ let optics = optic(material);
 let polarity = manualInk ? 'ручная' : 'светлая';
 
 // Форма контрольного образца — в адресе: капсула и круг повторяют эталонные кадры.
-const SHAPES = {
-  rect: roundedRectGeometry(280, 120, 32),
-  capsule: capsuleGeometry(300, 110),
-  circle: circleGeometry(150),
-} as const;
-const shapeName = (params.get('shape') ?? 'rect') as keyof typeof SHAPES;
-const geometry = SHAPES[shapeName] ?? SHAPES.rect;
+// Фигуры общие с мобильной лабораторией: размер входит в оптику, и на разных фигурах снимки
+// двух стендов несравнимы (packages/vireglass/src/reference-scene.ts). Общий у них и ПОРЯДОК:
+// свои имена и своё «по умолчанию» на каждом стенде значили, что одно и то же `shape` в двух
+// местах выбирает разные фигуры, и сверка снова разъезжалась.
+const SHAPES = REFERENCE_SHAPES;
+const SHAPE_NAMES = Object.keys(SHAPES) as (keyof typeof SHAPES)[];
+// Прежние английские имена остаются рабочими: на них ссылаются снятые сверки в
+// docs/vireglass/benchmarks/**, и молчаливый откат к первой фигуре сделал бы их кадры
+// невоспроизводимыми — с виду успешно.
+const LEGACY_SHAPES: Record<string, keyof typeof SHAPES> = {
+  rect: 'плашка',
+  capsule: 'капсула',
+  circle: 'круг',
+};
+const shapeParam = params.get('shape') ?? '';
+const shapeIndex = Number(shapeParam);
+const shapeName = shapeParam !== '' && Number.isInteger(shapeIndex) && SHAPE_NAMES[shapeIndex]
+  ? SHAPE_NAMES[shapeIndex]
+  : SHAPE_NAMES.includes(shapeParam as keyof typeof SHAPES)
+    ? (shapeParam as keyof typeof SHAPES)
+    : (LEGACY_SHAPES[shapeParam] ?? SHAPE_NAMES[0]);
+const geometry = SHAPES[shapeName];
 const dpr = window.devicePixelRatio || 1;
 const renderer = createVireGlassRenderer(canvas);
 
@@ -280,7 +316,7 @@ function samplePieces(ink: number) {
 /** Подписи живут в DOM, а не в сцене: нарисованные в сцену, они попали бы ПОД стекло. */
 function placeCaptions(): void {
   const { size, gap, left, y } = sampleLayout();
-  const hidden = state.view !== 'material';
+  const hidden = state.view !== 'material' || onReferenceScene();
   captions.forEach((node, i) => {
     node.style.display = hidden ? 'none' : 'block';
     node.style.left = `${left + i * (size + gap)}px`;
@@ -296,7 +332,17 @@ const WAVE_ON_RELEASE = a11y.reduceMotion ? 0 : 2.5;
 
 const deform = createDeform();
 
-const controlCenter = () => ({ x: (viewWidthCss() / 2) * dpr, y: canvas.height * 0.34 });
+// На сверочном полотне деталь стоит В ТОЧКЕ, ЗАДАННОЙ ПОЛОТНОМ, и отсчитывается от панели, а
+// не от видимой области: с открытой панелью управления центр видимой области и центр полотна —
+// разные точки, и деталь оказывалась над другими полосами, чем в мобильной лаборатории.
+const controlCenter = () => {
+  if (!onReferenceScene()) {
+    return { x: (viewWidthCss() / 2) * dpr, y: canvas.height * 0.34 };
+  }
+  const left = (canvas.width - REFERENCE_SCENE_WIDTH * dpr) / 2;
+  const top = (canvas.height - REFERENCE_SCENE_HEIGHT * dpr) / 2;
+  return { x: left + REFERENCE_PIECE_AT.xDp * dpr, y: top + REFERENCE_PIECE_AT.yDp * dpr };
+};
 // Ход тяги умеренный: тянут пальцем, а не растягивают резину. Деформация локальная, поэтому
 // заметна и при небольшой амплитуде — прежние 0.7 полуразмера читались как «слишком много».
 const pullLimit = () => 0.14 * halfMinDp(geometry);
@@ -887,8 +933,8 @@ function renderFrame() {
     density: dpr,
     debug: DEBUG_MODES[state.debug] as VireGlassDebugMode,
     scene: screens
-      ? (ctx, w, h, ox, oy) => {
-          zone(ctx, w, h, ox, oy);
+      ? (ctx, w, h, ox, oy, d) => {
+          zone(ctx, w, h, ox, oy, d);
           for (const i of APP_BACKGROUNDS) drawAppBackground(ctx, dpr, i, ox, oy, accentHue);
           drawCoverScreen(ctx, dpr, COVER_SCREEN, ox, oy, progress, playing);
           drawTypeSpecimen(ctx, dpr, TYPE_SCREEN, ox, oy, scrollOf(TYPE_SCREEN));
@@ -901,8 +947,8 @@ function renderFrame() {
           drawPhoneFrames(ctx, dpr, PHONE_COUNT, ox, oy);
         }
       : slider
-        ? (ctx, w, h, ox, oy) => {
-            zone(ctx, w, h, ox, oy);
+        ? (ctx, w, h, ox, oy, d) => {
+            zone(ctx, w, h, ox, oy, d);
             drawSliderTrack(ctx, dpr);
           }
         : zone,
@@ -916,7 +962,9 @@ function renderFrame() {
         ? [groupPiece()]
         : slider
           ? [sliderPiece()]
-          : [controlPiece(), ...samplePieces(ink)],
+          : onReferenceScene()
+            ? [controlPiece()]
+            : [controlPiece(), ...samplePieces(ink)],
   });
 }
 

@@ -8,6 +8,7 @@ import {
   shouldInkBeLight,
 } from '../adaptation';
 import { LENS_SHADER } from '../lens-shader';
+import { SURFACE_SHADER } from '../surface-shader';
 import { colorPickup, diffraction, dispersion, iridescence } from '../optics';
 import { resolveOptics } from '../material';
 
@@ -45,6 +46,38 @@ describe('тело стекла в шейдере', () => {
   it('подсветка тела не зависит от места на детали', () => {
     expect(LENS_SHADER).toContain('rgb = mix(rgb, vgHue(ambient) * VG_MEDIUM_LUMA, VG_MEDIUM_PULL * u_appear);');
     expect(LENS_SHADER).toContain('rgb += ambient * u_edgeLight * VG_AMBIENT_SPILL * u_appear;');
+  });
+
+  // Рассеяние ЗАМЕНЯЕТ rgb целиком (вес доходит до единицы), поэтому всё, что легло раньше,
+  // теряется. Обратный порядок стирал отражение окружения на всей детали и гейтом не ловился:
+  // пороги перекрывали разницу с запасом (issue #106).
+  // Режим «подложка» — единственная точка, где видно, ЧТО ДОШЛО до шейдера, отдельно от того,
+  // как он это обработал. Слои, не завязанные на линзу (тело, среда, рассеяние), доживали до
+  // него и смешивали два вопроса в один: деталь была видна и при идеальном захвате (issue #112).
+  it('«подложка» отдаёт содержимое без единого слоя поверх', () => {
+    const bypass = LENS_SHADER.indexOf('if (u_debug > 5.5 && u_debug < 6.5) {');
+    const medium = LENS_SHADER.indexOf('rgb = mix(rgb, vgHue(ambient) * VG_MEDIUM_LUMA');
+    const scatter = LENS_SHADER.indexOf('rgb = mix(rgb, blurred, smoothstep(0.5, 2.0, adaptBlur));');
+    expect(bypass).toBeGreaterThan(-1);
+    expect(bypass).toBeLessThan(scatter);
+    expect(bypass).toBeLessThan(medium);
+  });
+
+  it('отражение ложится ПОСЛЕ рассеяния', () => {
+    const scatter = LENS_SHADER.indexOf('rgb = mix(rgb, blurred, smoothstep(0.5, 2.0, adaptBlur));');
+    const reflection = LENS_SHADER.indexOf('rgb = mix(rgb, env * spectral, fres);');
+    expect(scatter).toBeGreaterThan(-1);
+    expect(reflection).toBeGreaterThan(-1);
+    expect(reflection).toBeGreaterThan(scatter);
+  });
+
+  // Тень обязана быть СЛАБЕЕ у самого контура, чем ниже него: у эталона минимум стоит на
+  // 17…25 px ниже кромки. Слагаемые, монотонные по расстоянию от силуэта, такого профиля не
+  // дают, а гейт откат не ловит — при возврате контактного затемнения обе его метрики даже
+  // растут (предмет 7.1 → 9.7, раздув 1.90 → 1.92).
+  it('тень у контура ослаблена зазором', () => {
+    expect(SURFACE_SHADER).toContain('mix(VG_GAP_LIGHT, 1.0, gap)');
+    expect(SURFACE_SHADER).not.toContain('con * con');
   });
 });
 

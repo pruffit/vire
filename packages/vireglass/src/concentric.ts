@@ -5,9 +5,13 @@
 /**
  * Радиус вложенной формы: внешний радиус минус отступ. Ноль — квадратный угол; отрицательным он
  * не бывает, у отступа больше внешнего радиуса угол просто прямой.
+ *
+ * `minimum` — пол радиуса (аналог `concentric(minimum:)` в SwiftUI): далеко от края честная
+ * концентричность выдаёт ноль, и вложенная деталь выпадает из семейства резким углом. Пол
+ * нарушает концентричность намеренно — родство форм тут важнее общего центра кривизны.
  */
-export function concentricRadius(outerRadius: number, inset: number): number {
-  return Math.max(outerRadius - inset, 0);
+export function concentricRadius(outerRadius: number, inset: number, minimum = 0): number {
+  return Math.max(outerRadius - inset, Math.max(minimum, 0));
 }
 
 /**
