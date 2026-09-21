@@ -483,6 +483,18 @@ function crc32(buf) {
   return c ^ 0xffffffff;
 }
 
+/** Периодическое полотно (`measurable: false`) числом зонда мерит растеризацию линии
+ *  платформой, а не материал — см. platform-parity.md. Такой замер пропускается с объяснением. */
+function skipIfPeriodic(label, name) {
+  if (referenceScene(name).measurable !== false) return false;
+  console.log('--- ' + label + ' · ' + name + ' ---');
+  console.log(
+    'measurable: false — полотно периодическое, число зонда мерит растеризацию линии, а не '
+      + 'материал; сверяется глазом (см. docs/vireglass/platform-parity.md).',
+  );
+  return true;
+}
+
 async function fromWeb() {
   const density = Number(arg('density', '2.75'));
   const debug = arg('debug', 'normal');
@@ -496,17 +508,7 @@ async function fromWeb() {
   const stageH = Number.isFinite(stage[1]) && stage[1] > 0 ? stage[1] : 914;
   const base = arg('stand', '');
   const ink = arg('ink', '');
-  // Полотна с периодической структурой (`measurable: false`) число зонда ловит не материал, а
-  // растеризацию линии платформой — см. platform-parity.md. Замер по ним пропускается, а не
-  // печатает правдоподобный, но бессмысленный отход.
-  if (referenceScene(name).measurable === false) {
-    console.log('--- стенд · ' + name + ' ---');
-    console.log(
-      'measurable: false — полотно периодическое, число зонда мерит растеризацию линии, а не '
-        + 'материал; сверяется глазом (см. docs/vireglass/platform-parity.md).',
-    );
-    return;
-  }
+  if (skipIfPeriodic('стенд', name)) return;
   const frame = await shootStand({ density, debug, shape, preset, name, stageW, stageH, base, ink });
   const strip = locateStrip(frame.px, frame.width, frame.height, surroundRgb());
   const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;
@@ -536,6 +538,7 @@ async function fromWebShadow() {
   const stageH = Number.isFinite(stage[1]) && stage[1] > 0 ? stage[1] : 914;
   const base = arg('stand', '');
   const ink = arg('ink', '');
+  if (skipIfPeriodic('тень', name)) return;
   const frame = await shootStand({ density, debug: 'normal', shape, preset, name, stageW, stageH, base, ink });
   const strip = locateStrip(frame.px, frame.width, frame.height, surroundRgb());
   const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;
