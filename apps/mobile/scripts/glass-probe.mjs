@@ -294,7 +294,7 @@ function bench(seconds = 6) {
   ];
   const rows = [];
   for (const [name, params] of scenes) {
-    adb(['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `'vire://lab?${params.join('&')}'`]);
+    adb(['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `'vire://lab?${params.join('&')}'`, PKG]);
     adb(['shell', 'sleep', '2.5']);
     const f = frames(seconds);
     rows.push(
@@ -315,7 +315,7 @@ function set(pairs) {
   const query = pairs.join('&');
   // URL уходит в ШЕЛЛ устройства, а там `&` разделяет команды: без кавычек до стенда
   // доезжает только первый параметр, и это выглядит как «диплинк применился частично».
-  adb(['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `'vire://lab?${query}'`]);
+  adb(['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `'vire://lab?${query}'`, PKG]);
   // Диплинк доезжает не мгновенно: onNewIntent → JS-событие → ре-рендер.
   adb(['shell', 'sleep', '1.6']);
   const state = readState();
@@ -345,7 +345,7 @@ function capture(name, pairs) {
     const [k, v] = pair.split('=');
     if (['zone', 'preset', 'debug'].includes(k)) want[k] = Number(v);
   }
-  adb(['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `'vire://lab?${pairs.join('&')}'`]);
+  adb(['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `'vire://lab?${pairs.join('&')}'`, PKG]);
   let state = null;
   for (let i = 0; i < 20; i++) {
     adb(['shell', 'sleep', '0.7']);

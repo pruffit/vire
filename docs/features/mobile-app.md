@@ -288,8 +288,8 @@ pnpm --filter @vire/mobile build:android
 ### Почему `android/` не в git и как это не разъезжается
 
 Папка генерируется (`expo prebuild`), в ней нет ручного кода: `MainActivity`,
-`MainApplication`, `settings.gradle` — стоковые шаблоны, `modules/glass-lens` подключается
-автолинком. Поэтому всё, что раньше правилось руками, живёт в
+`MainApplication`, `settings.gradle` — стоковые шаблоны, нативный модуль стекла приезжает
+из пакета `vireglass` и подключается автолинком. Поэтому всё, что раньше правилось руками, живёт в
 **`plugins/with-android-release-signing.js`** и переживает регенерацию:
 
 - `signingConfigs.release` читает `VIRE_UPLOAD_*` из свойств Gradle;
@@ -3009,8 +3009,8 @@ cleanup'а уходящего навигацией не гарантирован
 подложки он не видит.
 
 Единственный путь на Android — `RenderEffect.createRuntimeShaderEffect`: он отдаёт AGSL-шейдеру
-УЖЕ отрисованное содержимое вьюхи. Новый локальный Expo-модуль `apps/mobile/modules/glass-lens/`
-вешает такой эффект на контейнер с `BlurView` внутри, то есть шейдер получает живой размытый
+УЖЕ отрисованное содержимое вьюхи. Expo-модуль стекла (приезжает из пакета `vireglass`, подпуть
+`vireglass/native`) вешает такой эффект на контейнер с `BlurView` внутри, то есть шейдер получает живой размытый
 бэкдроп и семплирует его по смещённой координате:
 
 ```
@@ -3029,16 +3029,16 @@ rs(r) = r/magnify + (edgeReach − r/magnify) · t^2.6      // t — полож�
   нарисованная поверх кромка описывают разные стёкла.
 - Гейт `Build.VERSION.SDK_INT >= 33` (`createRuntimeShaderEffect` — Android 13+) отдаётся в JS
   константой `isGlassLensSupported`; ниже остаётся прежний аффинный `LOUPE`.
-- Пакет `vireglass` (с 21.09.2026 в зависимостях ради `vireglass/react`) везёт **свой** Expo-модуль
-  под тем же именем и тем же Kotlin-пакетом `expo.modules.glasslens.GlassLensModule`.
-  Автолинковка подхватывала оба, и сборка Android падала бы на дублирующихся классах —
-  typecheck, тесты и CI этого не видят, Android здесь никто не собирает. Пакет исключён:
-  `expo.autolinking.exclude` в `apps/mobile/package.json` (именно там, не в `app.json` —
-  резолвер читает package.json). Проверяется `npx expo-modules-autolinking resolve -p android`
-  и тестом `lib/__tests__/autolinking.test.ts`.
-- Модуль **локальный** (`modules/`), подхватывается `expoAutolinking.useExpoModules()` — то
-  есть `expo prebuild` не нужен и хук `buildStagingDirectory → C:/rnx` в `android/build.gradle`
-  остаётся цел.
+- Модуль приезжает **из пакета** `vireglass` и подхватывается автолинковкой оттуда;
+  `expo prebuild` по-прежнему не нужен, хук `buildStagingDirectory → C:/rnx` в
+  `android/build.gradle` цел. Своей копии в `modules/` больше нет: пока она была, пакет
+  приходилось исключать (`expo.autolinking.exclude`) — оба объявляли
+  `expo.modules.glasslens.GlassLensModule`, и сборка Android легла бы на дублирующихся классах.
+  Проверяется `npx expo-modules-autolinking resolve -p android` (должен быть ровно один модуль
+  со стеклом) и тестом `lib/__tests__/autolinking.test.ts`.
+- Контракт JS↔Kotlin сверяется по УСТАНОВЛЕННОМУ пакету
+  (`lib/__tests__/vireglass-material.test.ts`): расхождение имён пропов Expo проглатывает молча,
+  и однажды преломление так и простояло выключенным в проде целую фазу.
 
 ### Грабли AGSL
 

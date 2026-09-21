@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PixelRatio } from 'react-native';
@@ -44,7 +45,12 @@ import {
 import { SURFACE_SHADER } from '../vireglass/surface-shader';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const NATIVE = resolve(HERE, '../../modules/glass-lens/android/src/main/java/expo/modules/glasslens');
+// Kotlin приезжает из пакета вместе с JS — сверка контракта идёт по УСТАНОВЛЕННОЙ версии,
+// иначе проверялась бы не та, что поедет в сборку.
+const NATIVE = resolve(
+  dirname(createRequire(import.meta.url).resolve('vireglass/package.json')),
+  'android/src/main/java/expo/modules/glasslens',
+);
 
 const circle = circleGeometry(58);
 const optics = resolveOptics();

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -6,7 +7,11 @@ import { VG_SDF } from '../vireglass/sdf';
 import { SURFACE_SHADER } from '../vireglass/surface-shader';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const SURFACE_VIEW = readFileSync(resolve(HERE, '../../components/vireglass/glass-surface.tsx'), 'utf8');
+// Поверхность приезжает из пакета — сверяется ЕЁ исходник, а не наш реэкспорт.
+const SURFACE_VIEW = readFileSync(
+  resolve(dirname(createRequire(import.meta.url).resolve('vireglass/package.json')), 'src/native/glass-surface.tsx'),
+  'utf8',
+);
 const BUTTON = readFileSync(resolve(HERE, '../../components/liquid-glass.tsx'), 'utf8');
 
 describe('тяга стекла', () => {
