@@ -13,7 +13,7 @@
  * Добавлять полотно только в один стенд нельзя: сверка платформ снова станет впечатлением.
  */
 
-import { capsuleGeometry, circleGeometry, roundedRectGeometry, type VireGlassGeometry } from './geometry';
+import { capsuleGeometry, circleGeometry, roundedRectGeometry, type VireGlassGeometry } from 'vireglass';
 
 /**
  * ФИГУРЫ СТЕНДОВ — тоже общие. Размер детали входит в оптику через sizeGain: круг 120 и круг

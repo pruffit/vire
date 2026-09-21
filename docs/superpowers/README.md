@@ -13,7 +13,7 @@ Requirements → Design → Implementation → Testing → Ship, и на фаз�
 источнику «что есть сейчас» нельзя ничему здесь — для этого `docs/features/**`,
 `docs/foundation/**`, `docs/vireglass/**`.
 
-93 плана, 96 спек, 2 ledger-файла — 191 файл. Сгруппированы по теме, внутри группы —
+105 планов, 113 спек, 2 ledger-файла — 220 файлов. Сгруппированы по теме, внутри группы —
 от свежих к старым. Не каждому плану соответствует спека и наоборот: часть задач шла с
 дизайном без отдельного плана реализации (обычно рефакторинги «вынести в core»), часть —
 с планом без дизайн-фазы (мелкие фиксы и QA-пачки).
@@ -50,6 +50,13 @@ Requirements → Design → Implementation → Testing → Ship, и на фаз�
 
 Материал «жидкое стекло» на Android. Текущее состояние и решения — `docs/vireglass/README.md`, `architecture.md`, `ADR-001-rendering-architecture.md`.
 
+- **21.09** — Монорепо переезжает на пакет `vireglass` — план [`2026-09-21-move-to-vireglass-package.md`](plans/2026-09-21-move-to-vireglass-package.md)
+- **19.09** — VireGlass над живым DOM (`vireglass/dom`) — план [`2026-09-19-vireglass-over-live-dom.md`](plans/2026-09-19-vireglass-over-live-dom.md) · спека [`2026-09-19-vireglass-over-live-dom.md`](specs/2026-09-19-vireglass-over-live-dom.md)
+- **19.09** — Вынос ядра в open source — план [`2026-09-19-vireglass-open-source.md`](plans/2026-09-19-vireglass-open-source.md) · спека [`2026-09-19-vireglass-open-source.md`](specs/2026-09-19-vireglass-open-source.md)
+- **14.09** — Чего не хватает сверке с эталоном — спека [`2026-09-14-vireglass-reference-gaps.md`](specs/2026-09-14-vireglass-reference-gaps.md)
+- **12.09** — Подъём в стекло — план [`2026-09-12-raise-into-glass.md`](plans/2026-09-12-raise-into-glass.md) · спека [`2026-09-12-raise-into-glass.md`](specs/2026-09-12-raise-into-glass.md)
+- **11.09** — Линзование кромки — спека [`2026-09-11-vireglass-lensing.md`](specs/2026-09-11-vireglass-lensing.md)
+- **04.09** — Ядро материала переезжает в общий пакет и получает веб-цель — план [`2026-09-04-vireglass-web-core.md`](plans/2026-09-04-vireglass-web-core.md) · спека [`2026-09-04-vireglass-web-core.md`](specs/2026-09-04-vireglass-web-core.md)
 - **30.08** — Своя подложка вместо чужого захвата (физическая модель v4) — план [`2026-08-30-vireglass-own-backdrop.md`](plans/2026-08-30-vireglass-own-backdrop.md) · спека [`2026-08-30-vireglass-v4-physical-model.md`](specs/2026-08-30-vireglass-v4-physical-model.md)
 - **29.08** — Материал v1 — модель на причинах (ior/толщина/фаска/шероховатость/плёнка) — план [`2026-08-29-vireglass-material-v1.md`](plans/2026-08-29-vireglass-material-v1.md) · спека [`2026-08-29-vireglass-material-v1.md`](specs/2026-08-29-vireglass-material-v1.md)
 

@@ -230,7 +230,7 @@ export function MaterialLab() {
   const targetRef = useRef<View>(null);
   const insets = useSafeAreaInsets();
 
-  const [preset, setPreset] = useState<MaterialPresetName>('Вода');
+  const [preset, setPreset] = useState<MaterialPresetName>('water');
   const [legacy, setLegacy] = useState<LegacyOpticsName | null>(null);
   const [base, setBase] = useState<VireGlassMaterial>(VIREGLASS_MATERIAL);
   const [toggles, setToggles] = useState<VireGlassToggles>(ALL_EFFECTS_ON);
