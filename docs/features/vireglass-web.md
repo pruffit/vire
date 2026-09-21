@@ -182,13 +182,13 @@ Android он работает там, где зонд и так подписан
 
 ## Где код
 
-- **Пакет:** `packages/vireglass/src/` — `material.ts` (причины), `optics.ts` (следствия),
-  `geometry.ts`, `sdf.ts`, `lens-shader.ts`, `surface-shader.ts`, `adaptation.ts`,
-  `accessibility.ts`, `glass-scale.ts` (пользовательская шкала прозрачности), `scroll-edge.ts`,
-  `concentric.ts`, `adapters.ts`.
-- **Цели рендера:** `packages/vireglass/src/targets/{agsl,glsl}.ts`; гейт компиляции —
-  `packages/vireglass/scripts/check-glsl.mjs` (`pnpm turbo run check:glsl`, в CI и в релизе).
-- **Веб-рендерер:** `packages/vireglass/src/web/{renderer,probe,gl}.ts` — подпуть `@vire/vireglass/web`.
+- **Ядро:** пакет npm `vireglass` — причины и следствия, геометрия, шейдеры, адаптация,
+  доступность, шкала прозрачности, кромка прокрутки, концентричность. Исходник и его тесты
+  живут в github.com/pruffit/vireglass; `@vire/vireglass` пропускает его наружу.
+- **Цели рендера:** подпути `vireglass` (AGSL и GLSL из одного текста); гейт компиляции —
+  `packages/vireglass/scripts/check-glsl.mjs` (`pnpm turbo run check:glsl`, в CI и в релизе):
+  проверяет, что УСТАНОВЛЕННАЯ версия компилируется под нашу цель.
+- **Веб-рендерер:** подпуть `vireglass/web`, у нас доступен как `@vire/vireglass/web`.
 - **Стенд:** `apps/web/public/rnd/index.html` + `apps/web/rnd-src/` — `main.ts` (кадр, ввод,
   состояние), `scenes.ts` (фоны, рамки, физика отклика), `panel.ts` (ползунки), `content.ts`
   (список недавнего), `mini-player.ts` (краска и обложка плашки), `icons.ts` (маска значков);
@@ -243,6 +243,6 @@ Android сравнивались без пересчёта. Замер берё�
   завышал стоимость GPU примерно в 20 раз.
 - **Интерференция («Бензин», `film`) на стенде пока не даёт видимых переливов** — величина
   `iridescence` в следствиях появляется, но на кромке детали эффект незаметен. Не разобрано.
-- Тест-паритет целей (`packages/vireglass/src/__tests__/targets.test.ts`) держит имена униформ
+- Тест-паритет целей (живёт в ядре, github.com/pruffit/vireglass) держит имена униформ
   одинаковыми в обеих целях: рассинхрон имён Expo однажды проглотил молча, и преломление
   простояло выключенным в проде целую фазу.

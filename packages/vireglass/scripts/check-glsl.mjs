@@ -8,9 +8,7 @@
  * Запуск: pnpm --filter @vire/vireglass check:glsl (или `tsx scripts/check-glsl.mjs` из пакета).
  */
 import { chromium } from 'playwright';
-import { toGLSL } from '../src/targets/glsl.ts';
-import { LENS_SHADER } from '../src/lens-shader.ts';
-import { SURFACE_SHADER } from '../src/surface-shader.ts';
+import { LENS_SHADER, SURFACE_SHADER, toGLSL } from '../src/index.ts';
 
 const VERTEX_SOURCE = `#version 300 es
 const vec2 VG_CHECK_POS[3] = vec2[3](vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
