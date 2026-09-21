@@ -21,6 +21,16 @@
  *   7. ШКАЛА ПРОЗРАЧНОСТИ ДВИЖЕТ МАТЕРИАЛ. Пользовательская шкала ultra clear → fully tinted
  *      обязана реально менять стекло: к тонированному концу окно закрывается, деталь
  *      становится заметнее. Меряется ХОД по шкале — пороги в одной точке этого не видят.
+ *   8. ГРАНИЦА ПРОХОДИТ СКВОЗЬ СТЕКЛО. Жёсткий стык (не полоса — целая ступень 0.03 → 0.95)
+ *      обязан читаться и под деталью, тем же обещанием ОКНО (§1) на другом полотне: полосы
+ *      мягкие, стык — нет, и растекание рима на стыке не видно на полосах вовсе.
+ *   9. ХОД ПОДЛОЖКИ НЕ ПЕРЕВОРАЧИВАЕТСЯ. На ступенчатом градиенте порядок ступеней внутри
+ *      детали обязан остаться тем же, что снаружи, и не потерять весь подъём разом.
+ *  10. СОСЕДНИЕ ПОЛОСЫ НЕ СЛИВАЮТСЯ. Семь полос разной светлоты — тест на разрастание
+ *      `gatherRadius`: у широкого сбора соседние полосы затекают друг в друга под деталью.
+ *
+ * Обещания 8–10 меряются В ОДНОЙ ТОЧКЕ, не по диапазону, как 1 и 2: свойство — есть перепад
+ * или нет он — от светлоты фона не зависит, а проход отнял бы ещё минуты ради того же ответа.
  *
  * Проверка идёт ПО ВСЕМУ ДИАПАЗОНУ светлоты полотна, а не в паре точек. Дефект, ради которого
  * гейт и написан, был не порогом, а ОСОБЕННОСТЬЮ: требуемый отход делился на расстояние от
@@ -36,7 +46,7 @@
  *
  * Запуск: pnpm --filter @vire/vireglass check:optics
  * Без прохода по диапазону светлоты (секунды вместо минут): ... check:optics -- --ink. Остаётся всё,
- * кроме первых двух обещаний: палец, подъём, пёстрое полотно и кромка.
+ * кроме первых двух обещаний: палец, подъём, пёстрое полотно, кромка, граница, градиент, ступени.
  */
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
@@ -108,6 +118,34 @@ const MIN_CONTENT_ON_BUSY = 28;
  * от возврата к тонкому стеклу, а не сверка с Apple.
  */
 const MIN_EDGE_GAIN = 1.88;
+/**
+ * Во сколько раз обязан сохраниться перепад светлоты на жёстком стыке под деталью против
+ * перепада на том же стыке снаружи. Замер даёт 42%; при деградированном материале
+ * (`roughness: 0.35, legibility: 0.70`, тот же откат, что у `MIN_CONTENT_ON_BUSY`) — 30%.
+ * Порог между ними.
+ */
+const MIN_BORDER_CARRY = 0.36;
+/**
+ * Во сколько раз обязан сохраниться полный подъём 28-ступенчатого градиента внутри детали
+ * против подъёма снаружи. Замер: 25%, деградированный материал (см. `MIN_BORDER_CARRY`) — 14%.
+ * Порог между ними.
+ */
+const MIN_GRADIENT_CARRY = 0.19;
+/**
+ * Сколько инверсий порядка ступеней (соседняя ступень внутри детали ТЕМНЕЕ предыдущей, хотя
+ * градиент светлеет) допустимо. И хороший, и деградированный материал (см. `MIN_BORDER_CARRY`)
+ * дают 0: деградация здесь давит подъём (`MIN_GRADIENT_CARRY`), а не ломает порядок. Порог
+ * поэтому строгий — обратный ход по координате не «чуть хуже», он или есть, или нет.
+ * Запас взят не в пороге, а в том, ЧТО СЧИТАЕТСЯ инверсией: падение меньше трети среднего шага
+ * ступени — шум растеризации, а не разворот, и на software-рендере CI его больше, чем на GPU.
+ */
+const MAX_GRADIENT_INVERSIONS = 0;
+/**
+ * Худшая пара соседних полос на полотне «ступени»: во сколько раз сохраняется их перепад
+ * под деталью против перепада снаружи. Ловит разрастание `gatherRadius`. Замер: 17%,
+ * деградированный материал (см. `MIN_BORDER_CARRY`) — 13%. Порог между ними.
+ */
+const MIN_STEP_CARRY = 0.15;
 
 const ENTRY = `
 import { createVireGlassRenderer, drawReferenceScene } from '${WEB}';
@@ -119,6 +157,7 @@ import {
   INK_DARK,
   INK_LIGHT,
   materialForInk,
+  REFERENCE_SCENE_HEIGHT,
   referenceScene,
   resolveOptics,
   roundedRectGeometry,
@@ -475,6 +514,112 @@ globalThis.vgLiftProbe = async ({ lift }) => {
   }
   return area;
 };
+
+let carryStage = null;
+
+// Обещания 8–10: ГРАНИЦА, ГРАДИЕНТ, СТУПЕНИ. Один зонд на все три полотна: деталь по центру,
+// профиль светлоты вдоль оси, по которой уложена структура полотна — строкой по X для «граница»
+// (стык лежит по горизонтали), столбцом по Y для «градиент» и «ступени» (полосы стоят одна над
+// другой). Разбор профиля в метрики — в main(), зонд только читает пиксели.
+globalThis.vgCarryProbe = async ({ scene: sceneName }) => {
+  if (!carryStage) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 520;
+    canvas.height = 300;
+    document.body.append(canvas);
+    const renderer = createVireGlassRenderer(canvas);
+    renderer.resize(canvas.width, canvas.height);
+    carryStage = { canvas, renderer };
+  }
+  const { canvas, renderer } = carryStage;
+
+  const scene = canvasScene(sceneName);
+  const optics = resolveOptics(VIREGLASS_MATERIAL);
+  const piece = {
+    optics,
+    geometry: roundedRectGeometry(220, 120, 32),
+    centerX: canvas.width / 2,
+    centerY: canvas.height / 2,
+  };
+
+  await settle(() => renderer.render({ density: 1, debug: 'normal', scene, pieces: [piece] }));
+
+  const COLUMN_N = 120;
+  const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+  const lum = (buf, i) => 0.2126 * buf[i * 4] + 0.7152 * buf[i * 4 + 1] + 0.0722 * buf[i * 4 + 2];
+
+  // Внутри — плоская середина детали, halfW 60 из полуширины 110: та же безопасная зона мимо
+  // фаски, что и у «row» в vgProbe. Снаружи — тот же ряд, но заметно выше силуэта: у «границы»
+  // стык не зависит от Y, поэтому «снаружи» — любой ряд за пределами детали.
+  const row = (cy) => {
+    const n = 120;
+    const bandH = 4;
+    const buf = new Uint8Array(n * bandH * 4);
+    gl.readPixels(canvas.width / 2 - n / 2, canvas.height - cy - bandH / 2, n, bandH, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    const v = [];
+    for (let c = 0; c < n; c += 1) {
+      let sum = 0;
+      for (let r = 0; r < bandH; r += 1) sum += lum(buf, r * n + c);
+      v.push(sum / bandH);
+    }
+    return v;
+  };
+
+  // Столбец во всю высоту детали (не только плоскую середину): у «градиента» и «ступеней»
+  // структура полотна лежит по Y, и именно то, что происходит к краю детали, показывает,
+  // переворачивается ли порядок. Снаружи — тот же диапазон Y в стороне от силуэта.
+  const column = (cx) => {
+    const n = COLUMN_N;
+    const bandW = 4;
+    const buf = new Uint8Array(bandW * n * 4);
+    gl.readPixels(cx - bandW / 2, canvas.height / 2 - n / 2, bandW, n, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    const v = [];
+    // GL отдаёт строки снизу вверх — переворачиваем, чтобы индекс 0 был верхом детали.
+    for (let r = n - 1; r >= 0; r -= 1) {
+      let sum = 0;
+      for (let c = 0; c < bandW; c += 1) sum += lum(buf, r * bandW + c);
+      v.push(sum / bandW);
+    }
+    return v;
+  };
+
+  if (sceneName === 'граница') {
+    return { inside: row(canvas.height / 2), outside: row(canvas.height / 2 - 110) };
+  }
+
+  // Центры полос считаются ИЗ САМОЙ СЦЕНЫ, а не списком чисел рядом: полотно задаёт и число
+  // ступеней, и их высоту, и разойтись с ним молча — ровно то, ради чего полотна вообще общие.
+  const pxPerDp = canvas.height / REFERENCE_SCENE_HEIGHT;
+  const top = canvas.height / 2 - COLUMN_N / 2;
+  const bands = referenceScene(sceneName).bands(0);
+  const layer = bands[0].layer;
+  const spans =
+    layer.kind === 'градиент'
+      ? Array.from({ length: layer.steps }, (_, i) => ({
+          atDp: (REFERENCE_SCENE_HEIGHT * i) / layer.steps,
+          heightDp: REFERENCE_SCENE_HEIGHT / layer.steps,
+        }))
+      : bands.map((b, i) => ({
+          atDp: bands.slice(0, i).reduce((a, x) => a + x.heightDp, 0),
+          heightDp: b.heightDp,
+        }));
+  const spacing = spans[0].heightDp * pxPerDp;
+  // Полоса фаски у верхней и нижней кромки детали искажает светлоту не подложкой, а формой —
+  // и центры полос, и окно медианы её обходят.
+  const edge = Math.ceil(optics.bevelDp * pxPerDp);
+  const centers = spans
+    .map((s) => (s.atDp + s.heightDp / 2) * pxPerDp - top)
+    .filter((i) => i >= edge && i <= COLUMN_N - edge)
+    .map((i) => Math.round(i));
+
+  return {
+    inside: column(canvas.width / 2),
+    outside: column(canvas.width / 2 + 160),
+    centers,
+    edge,
+    halfWindow: Math.max(2, Math.floor(spacing / 3)),
+  };
+};
 `;
 
 async function main() {
@@ -639,6 +784,77 @@ async function main() {
     failed.push(`поднятая деталь не оторвалась от подложки (тень дальше всего на ${(spread2 * 100).toFixed(0)}%)`);
   }
 
+  const median = (arr) => {
+    const sorted = [...arr].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+
+  console.log('--- граница ---');
+  const border = await page.evaluate((a) => globalThis.vgCarryProbe(a), { scene: 'граница' });
+  const half = border.inside.length / 2;
+  const insideDrop = median(border.inside.slice(0, half)) - median(border.inside.slice(half));
+  const outsideDrop = median(border.outside.slice(0, half)) - median(border.outside.slice(half));
+  const borderCarry = outsideDrop !== 0 ? insideDrop / outsideDrop : 0;
+  console.log(
+    `${borderCarry >= MIN_BORDER_CARRY ? ' ' : '!'} стык: внутри ${insideDrop.toFixed(0)}, ` +
+      `снаружи ${outsideDrop.toFixed(0)} — ${(borderCarry * 100).toFixed(0)}%`,
+  );
+  if (!(borderCarry >= MIN_BORDER_CARRY)) {
+    failed.push(`граница: перепад под стеклом ${(borderCarry * 100).toFixed(0)}% от перепада снаружи`);
+  }
+
+  console.log('--- градиент ---');
+  const gradient = await page.evaluate((a) => globalThis.vgCarryProbe(a), { scene: 'градиент' });
+  // Пиксель через пиксель ступень читается пилой: линза чуть перехлёстывает на каждом стыке и
+  // чуть отпускает перед следующим (тот же сбор, что копит содержимое у кромки, §6) — это не
+  // инверсия хода, а неизбежная рябь на границе ступени. Поэтому ступень берётся МЕДИАНОЙ окна
+  // вокруг её центра; центры и ширину окна считает зонд из самой сцены.
+  const bandMedian = (probe, arr, i) =>
+    median(
+      arr.slice(
+        Math.max(probe.edge, i - probe.halfWindow),
+        Math.min(arr.length - probe.edge, i + probe.halfWindow + 1),
+      ),
+    );
+  const gradInsideSteps = gradient.centers.map((i) => bandMedian(gradient, gradient.inside, i));
+  const gradOutsideSteps = gradient.centers.map((i) => bandMedian(gradient, gradient.outside, i));
+  const insideRise = Math.max(...gradInsideSteps) - Math.min(...gradInsideSteps);
+  const noiseFloor = insideRise / (gradInsideSteps.length - 1) / 3;
+  let inversions = 0;
+  for (let i = 1; i < gradInsideSteps.length; i += 1) {
+    if (gradInsideSteps[i] < gradInsideSteps[i - 1] - noiseFloor) inversions += 1;
+  }
+  const outsideRise = Math.max(...gradOutsideSteps) - Math.min(...gradOutsideSteps);
+  const gradientCarry = outsideRise > 0 ? insideRise / outsideRise : 0;
+  const gradientOk = inversions <= MAX_GRADIENT_INVERSIONS && gradientCarry >= MIN_GRADIENT_CARRY;
+  console.log(
+    `${gradientOk ? ' ' : '!'} ход: инверсий ${inversions}, подъём ${(gradientCarry * 100).toFixed(0)}%`,
+  );
+  if (!(inversions <= MAX_GRADIENT_INVERSIONS)) {
+    failed.push(`градиент: ${inversions} инверсий в ходе подложки`);
+  }
+  if (!(gradientCarry >= MIN_GRADIENT_CARRY)) {
+    failed.push(`градиент: подъём под стеклом ${(gradientCarry * 100).toFixed(0)}% от подъёма снаружи`);
+  }
+
+  console.log('--- ступени ---');
+  const steps = await page.evaluate((a) => globalThis.vgCarryProbe(a), { scene: 'ступени' });
+  // Под деталь попадают не все семь полос — какие именно, считает зонд из высот полотна.
+  const insideBands = steps.centers.map((i) => bandMedian(steps, steps.inside, i));
+  const outsideBands = steps.centers.map((i) => bandMedian(steps, steps.outside, i));
+  const stepRatios = insideBands.slice(1).map((_, i) => {
+    const outsideDiff = outsideBands[i + 1] - outsideBands[i];
+    return outsideDiff !== 0 ? (insideBands[i + 1] - insideBands[i]) / outsideDiff : 0;
+  });
+  const worstStepCarry = Math.min(...stepRatios);
+  console.log(
+    `${worstStepCarry >= MIN_STEP_CARRY ? ' ' : '!'} пары: ${stepRatios.map((r) => (r * 100).toFixed(0) + '%').join(', ')}` +
+      ` — хуже ${(worstStepCarry * 100).toFixed(0)}%`,
+  );
+  if (!(worstStepCarry >= MIN_STEP_CARRY)) {
+    failed.push(`ступени: соседние полосы держат только ${(worstStepCarry * 100).toFixed(0)}% перепада снаружи`);
+  }
+
   await browser.close();
 
   console.log(
@@ -660,7 +876,8 @@ async function main() {
   console.log(
     'check-optics: стекло остаётся и окном, и предметом на всём диапазоне полотна, ' +
       'краска под пальцем уходит в расфокус, поднятая деталь отрывается от подложки, ' +
-      'над пёстрым полотном живут и краска, и контент, кромка копит содержимое',
+      'над пёстрым полотном живут и краска, и контент, кромка копит содержимое, ' +
+      'граница и ход градиента проходят сквозь стекло, соседние полосы не сливаются',
   );
 }
 
