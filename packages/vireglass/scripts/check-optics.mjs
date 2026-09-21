@@ -131,8 +131,16 @@ import {
 // меряет одно, а глаз на стенде смотрит на другое; расхождение находилось только случайно.
 // Гейту полотно нужно во весь кадр (он снимает пиксели, поле окружения только мешает), стендам
 // — панелью фиксированного размера; слои и их содержимое в dp одни и те же.
-const canvasScene = (name, level, density = 1) => (ctx, w, h) =>
-  drawReferenceScene(ctx, referenceScene(name), w, h, { density, level, fit: 'во весь кадр' });
+const canvasScene = (name, level, density = 1) => {
+  const scene = referenceScene(name);
+  // Гейт меряет число, а полотна с периодической структурой (\`measurable: false\`) числу не
+  // подчиняются — см. platform-parity.md. Полотно молча даёт правдоподобный отход не от
+  // материала, а от растеризации линии платформой.
+  if (scene.measurable === false) {
+    throw new Error('check-optics: полотно «' + name + '» помечено measurable:false — гейту не годится');
+  }
+  return (ctx, w, h) => drawReferenceScene(ctx, scene, w, h, { density, level, fit: 'во весь кадр' });
+};
 
 // ВЫХОД В ЦИКЛ СОБЫТИЙ МЕЖДУ КАДРАМИ ОБЯЗАТЕЛЕН. Зонд читает сетку светлоты через PBO с
 // забором, а забор в непрерывной синхронной петле не срабатывает никогда: сколько кадров ни

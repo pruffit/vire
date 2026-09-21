@@ -45,6 +45,7 @@ import {
   REFERENCE_SCENE_WIDTH,
   REFERENCE_SHAPES,
   REFERENCE_SURROUND,
+  referenceScene,
 } from '../src/reference-scene';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -495,6 +496,17 @@ async function fromWeb() {
   const stageH = Number.isFinite(stage[1]) && stage[1] > 0 ? stage[1] : 914;
   const base = arg('stand', '');
   const ink = arg('ink', '');
+  // Полотна с периодической структурой (`measurable: false`) число зонда ловит не материал, а
+  // растеризацию линии платформой — см. platform-parity.md. Замер по ним пропускается, а не
+  // печатает правдоподобный, но бессмысленный отход.
+  if (referenceScene(name).measurable === false) {
+    console.log('--- стенд · ' + name + ' ---');
+    console.log(
+      'measurable: false — полотно периодическое, число зонда мерит растеризацию линии, а не '
+        + 'материал; сверяется глазом (см. docs/vireglass/platform-parity.md).',
+    );
+    return;
+  }
   const frame = await shootStand({ density, debug, shape, preset, name, stageW, stageH, base, ink });
   const strip = locateStrip(frame.px, frame.width, frame.height, surroundRgb());
   const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;
