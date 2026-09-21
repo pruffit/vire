@@ -3029,6 +3029,13 @@ rs(r) = r/magnify + (edgeReach − r/magnify) · t^2.6      // t — полож�
   нарисованная поверх кромка описывают разные стёкла.
 - Гейт `Build.VERSION.SDK_INT >= 33` (`createRuntimeShaderEffect` — Android 13+) отдаётся в JS
   константой `isGlassLensSupported`; ниже остаётся прежний аффинный `LOUPE`.
+- Пакет `vireglass` (с 21.09.2026 в зависимостях ради `vireglass/react`) везёт **свой** Expo-модуль
+  под тем же именем и тем же Kotlin-пакетом `expo.modules.glasslens.GlassLensModule`.
+  Автолинковка подхватывала оба, и сборка Android падала бы на дублирующихся классах —
+  typecheck, тесты и CI этого не видят, Android здесь никто не собирает. Пакет исключён:
+  `expo.autolinking.exclude` в `apps/mobile/package.json` (именно там, не в `app.json` —
+  резолвер читает package.json). Проверяется `npx expo-modules-autolinking resolve -p android`
+  и тестом `lib/__tests__/autolinking.test.ts`.
 - Модуль **локальный** (`modules/`), подхватывается `expoAutolinking.useExpoModules()` — то
   есть `expo prebuild` не нужен и хук `buildStagingDirectory → C:/rnx` в `android/build.gradle`
   остаётся цел.
