@@ -1,9 +1,6 @@
 // Меню «ещё» растёт из капсулы (M 5:11): одно тело проходит путь капсула → капля → меню.
 // Фаз две, как в эталоне: капсула сперва стягивается в каплю, и только потом капля растёт.
-import {
-  createDeform,
-  roundedRectGeometry,
-} from 'vireglass';
+import { createDeform, roundedRectGeometry } from 'vireglass';
 import { drawIcon, type IconName } from './icons';
 
 const ITEMS: readonly { icon: IconName; label: string }[] = [

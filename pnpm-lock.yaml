@@ -309,9 +309,6 @@ importers:
       sharp:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@22.20.3)
-      vireglass:
-        specifier: ^2.2.0
-        version: 2.2.0(320a1938a0cf4f4a47033f325bb91842)
       zod:
         specifier: ^3.25.0
         version: 3.25.76
@@ -376,6 +373,9 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+      vireglass:
+        specifier: ^2.2.0
+        version: 2.2.0(320a1938a0cf4f4a47033f325bb91842)
       vitest:
         specifier: ^4.1.8
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.20.3)(jsdom@30.1.0)(vite@8.0.16(@types/node@22.20.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.1))

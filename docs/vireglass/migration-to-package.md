@@ -1,28 +1,29 @@
 # Переезд на пакет `vireglass`
 
-Сделано 21.09.2026. Своей копии ядра в монорепо больше нет: `packages/vireglass`
-зависит от npm `vireglass@^2.2.0` и пропускает его наружу, оставляя себе только то,
-что ядру не принадлежит, — сверочные полотна и гейты.
+Сделано 21.09.2026 тремя заходами: материал, RN-компоненты, роспуск обёртки.
+Своей копии ядра в монорепо больше нет.
 
 Ядро вынесено в open source 19.09.2026 (github.com/pruffit/vireglass, Apache-2.0).
 Пока пакета не было в реестре, обе копии жили параллельно и расходились.
 
 ## Как выглядит после
 
+Приложения импортируют ядро напрямую: материал и шейдеры — из `vireglass`, веб-рендерер —
+из `vireglass/web`, React-привязка — из `vireglass/react`, RN-компоненты и нативный
+Android-модуль — из `vireglass/native`.
+
+`packages/vireglass` держит только своё:
+
 ```ts
 // packages/vireglass/src/index.ts
-export * from 'vireglass';
 export * from './reference-scene';
 
 // packages/vireglass/src/web/index.ts
-export * from 'vireglass/web';
 export * from './reference-draw';
 ```
 
-Потребители (`apps/mobile/lib/vireglass/*`, `apps/web/rnd-src/*`) не переписывались:
-вход остался тот же `@vire/vireglass`. Исключение одно — `vireglass/react`: шим его
-НЕ реэкспортирует, иначе веб-стенд, где React нет, начнёт его требовать. Мобилка берёт
-этот подпуть прямой зависимостью, через `apps/mobile/lib/vireglass/adaptation.ts`.
+Первым заходом он был обёрткой над ядром и вход `@vire/vireglass` оставался прежним —
+почему это не удержалось, в разделе «Обёртка распущена».
 
 Удалено вместе с тестами: `material optics geometry sdf touch-response lens-shader
 surface-shader adaptation accessibility glass-scale scroll-edge concentric group-model

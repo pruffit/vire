@@ -2,15 +2,9 @@
 // тонкая прямая линия показывает работу линзы честнее всего: любое искажение, увод или
 // разрыв видно сразу. Ни один фон не доведён до чистого чёрного или белого: на крайних
 // значениях материал выглядит хорошо слишком легко, и решения по ним принимать нельзя.
-import {
-  type VireGlassSceneDrawer,
-} from 'vireglass/web';
-import {
-  drawReferenceScene,
-} from '@vire/vireglass/web';
-import {
-  REFERENCE_SCENES,
-} from '@vire/vireglass';
+import type { VireGlassSceneDrawer } from 'vireglass/web';
+import { drawReferenceScene } from '@vire/vireglass/web';
+import { REFERENCE_SCENES } from '@vire/vireglass';
 
 export type Zone = { name: string; draw: VireGlassSceneDrawer };
 

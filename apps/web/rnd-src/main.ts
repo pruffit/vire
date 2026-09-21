@@ -34,9 +34,7 @@ import {
   REFERENCE_SCENE_WIDTH,
   REFERENCE_SHAPES,
 } from '@vire/vireglass';
-import {
-  createVireGlassRenderer,
-} from 'vireglass/web';
+import { createVireGlassRenderer } from 'vireglass/web';
 import { drawIcon, loadIcons, NAV_ICONS, type IconName } from './icons';
 import { drawCover, drawPlayerInk, hitPlay, PLAYER_ICONS } from './mini-player';
 import { createPanel } from './panel';

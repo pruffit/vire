@@ -5,11 +5,7 @@
 import { FLOW_MARK, MARK_STROKE, MARK_VIEWBOX } from '@vire/design-tokens/marks';
 import { drawIcon, type IconName } from './icons';
 import { DISPLAY_FACE, fontOf } from './typefaces';
-import {
-  concentricRadius,
-  scrollEdgeStrength,
-  scrollEdgeStyle,
-} from 'vireglass';
+import { concentricRadius, scrollEdgeStrength, scrollEdgeStyle } from 'vireglass';
 import { PHONE, phoneOrigin, phonePath, SCREEN_MARGIN } from './scenes';
 import { drawWithScrollEdges, type ScrollEdge } from './scroll-edge';
 

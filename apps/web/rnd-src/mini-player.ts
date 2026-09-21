@@ -6,9 +6,7 @@
 // зелёный канал), поэтому она ложится отдельным слоем ПОВЕРХ стекла — ровно так же, как на
 // Android поверх стеклянной вьюхи рисуются её дети.
 
-import {
-  concentricRadius,
-} from 'vireglass';
+import { concentricRadius } from 'vireglass';
 import { paintCover, RECENT, SCREEN_INNER_RADIUS } from './content';
 import { drawIcon, type IconName } from './icons';
 

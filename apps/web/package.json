@@ -50,7 +50,6 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "sharp": "^0.35.4",
-    "vireglass": "^2.2.0",
     "zod": "^3.25.0",
     "zustand": "^5.0.14"
   },
@@ -74,6 +73,7 @@
     "playwright": "^1.62.1",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vireglass": "^2.2.0",
     "vitest": "^4.1.8"
   }
 }
