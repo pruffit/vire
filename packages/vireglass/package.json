@@ -18,16 +18,12 @@
   },
   "devDependencies": {
     "@types/node": "^22",
-    "@types/react": "^19",
     "@vire/config": "workspace:*",
     "playwright": "^1.62.1",
     "tsx": "^4.23.13",
     "typescript": "^5.8.3",
     "vitest": "^4.1.11",
     "esbuild": "^0.28.2"
-  },
-  "peerDependencies": {
-    "react": "^19"
   },
   "dependencies": {
     "vireglass": "^2.2.0"
