@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Backdrop } from '../components/backdrop';
 import { VireGlassSurface } from '../components/vireglass/glass-surface';
 import { MaterialLabScene, ZONE_NAMES } from './material-lab-scene';
-import { REFERENCE_SCENES } from '../lib/vireglass/material';
+import { REFERENCE_SCENES } from '@vire/vireglass';
 import {
   LabMiniPlayer,
   LabSheet,
@@ -28,7 +28,8 @@ import { morphBetween, type VireGlassMorph } from '../lib/vireglass/adapters';
 import { useFrameThrottle } from '../lib/frame-throttle';
 import { INK_DARK, INK_LIGHT, useGlassAdaptation } from '../lib/vireglass/adaptation';
 import { useEnvironmentLight } from '../lib/vireglass/environment';
-import { REFERENCE_SHAPES,
+import { REFERENCE_SHAPES } from '@vire/vireglass';
+import {
   bevelDp,
   capsuleGeometry,
   circleGeometry,

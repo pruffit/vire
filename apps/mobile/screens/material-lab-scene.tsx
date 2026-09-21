@@ -21,7 +21,7 @@ import {
   refStripePositions,
   type VireGlassRefLayer,
   type VireGlassRefScene,
-} from '../lib/vireglass/material';
+} from '@vire/vireglass';
 
 // Фон намеренно недружелюбный к рендереру: мелкий кегль, 1px-линии, резкие границы и
 // градиенты в одном кадре. Красивый градиент для стенда не годится — он прячет артефакты.

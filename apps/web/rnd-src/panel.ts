@@ -5,7 +5,7 @@ import {
   type VireGlassMaterial,
   type VireGlassNumericKey,
   type VireGlassOptics,
-} from '@vire/vireglass';
+} from 'vireglass';
 
 /** Четыре стенда: доводка материала, экраны с деталями по месту, сцена морфинга и ползунок. */
 const VIEWS = ['material', 'screens', 'morph', 'slider'] as const;

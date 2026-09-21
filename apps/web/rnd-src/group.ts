@@ -1,6 +1,9 @@
 // Разрыв и слияние (M 5:02): один орган управления растягивается, выпучивает будущие части и
 // расходится на них перемычками. Тело при этом ОДНО — три формы в общей сцене, а не три детали.
-import { createDeform, roundedRectGeometry } from '@vire/vireglass';
+import {
+  createDeform,
+  roundedRectGeometry,
+} from 'vireglass';
 
 const H = 62;
 const DOT = H;

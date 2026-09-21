@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SCROLL_EDGE_ENGAGE_DP } from '@vire/vireglass';
+import { SCROLL_EDGE_ENGAGE_DP } from 'vireglass';
 import {
   createEdgeOwner,
   edgeStrength,

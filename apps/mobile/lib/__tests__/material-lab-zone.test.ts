@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { REFERENCE_SCENE_HEIGHT, REFERENCE_SCENE_WIDTH } from '../vireglass/material';
+import { REFERENCE_SCENE_HEIGHT, REFERENCE_SCENE_WIDTH } from '@vire/vireglass';
 
 /** Та же формула, что задаёт высоту зоны стенда (`material-lab-scene.tsx`). Держать её здесь
  *  приходится потому, что модуль стенда тянет за собой React Native целиком. */
