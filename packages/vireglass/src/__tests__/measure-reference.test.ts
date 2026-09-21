@@ -34,4 +34,11 @@ describe('инструмент сверки', () => {
     expect(TOOL.match(/function profile\(/g)).toHaveLength(1);
     expect(TOOL.match(/function locateStrip\(/g)).toHaveLength(1);
   });
+
+  // Путей замера по стенду два — силуэт и тень, — и оба обязаны отказывать на периодическом
+  // полотне. Проверка на одном из них ничего не гарантирует про второй.
+  it('оба пути по стенду отказываются мерить периодическое полотно', () => {
+    expect(TOOL.match(/function skipIfPeriodic\(/g)).toHaveLength(1);
+    expect(TOOL.match(/skipIfPeriodic\('/g)).toHaveLength(2);
+  });
 });

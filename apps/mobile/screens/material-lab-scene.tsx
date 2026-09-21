@@ -17,6 +17,8 @@ import {
   refCheckerCells,
   refGradientSteps,
   refGray,
+  refGridPositions,
+  refStripePositions,
   type VireGlassRefLayer,
   type VireGlassRefScene,
 } from '../lib/vireglass/material';
@@ -217,12 +219,12 @@ function RefLayer({ layer }: { layer: VireGlassRefLayer }) {
     case 'полосы':
       return (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: refGray(layer.level) }]}>
-          {Array.from({ length: Math.ceil(REFERENCE_SCENE_WIDTH / layer.periodDp) }, (_, i) => (
+          {refStripePositions(layer, REFERENCE_SCENE_WIDTH).map((left, i) => (
             <View
               key={i}
               style={{
                 position: 'absolute',
-                left: i * layer.periodDp,
+                left,
                 top: 0,
                 bottom: 0,
                 width: layer.widthDp,
@@ -248,16 +250,16 @@ function RefLayer({ layer }: { layer: VireGlassRefLayer }) {
     case 'сетка':
       return (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: refGray(layer.level) }]}>
-          {Array.from({ length: Math.ceil(REFERENCE_SCENE_WIDTH / layer.stepDp) + 1 }, (_, i) => (
+          {refGridPositions(layer.stepDp, REFERENCE_SCENE_WIDTH).map((left, i) => (
             <View
               key={'v' + i}
-              style={{ position: 'absolute', left: i * layer.stepDp, top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: refGray(layer.lineLevel) }}
+              style={{ position: 'absolute', left, top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: refGray(layer.lineLevel) }}
             />
           ))}
-          {Array.from({ length: Math.ceil(REFERENCE_SCENE_HEIGHT / layer.stepDp) + 1 }, (_, i) => (
+          {refGridPositions(layer.stepDp, REFERENCE_SCENE_HEIGHT).map((top, i) => (
             <View
               key={'h' + i}
-              style={{ position: 'absolute', top: i * layer.stepDp, left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: refGray(layer.lineLevel) }}
+              style={{ position: 'absolute', top, left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: refGray(layer.lineLevel) }}
             />
           ))}
         </View>

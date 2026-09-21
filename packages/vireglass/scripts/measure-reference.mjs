@@ -45,6 +45,7 @@ import {
   REFERENCE_SCENE_WIDTH,
   REFERENCE_SHAPES,
   REFERENCE_SURROUND,
+  referenceScene,
 } from '../src/reference-scene';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -482,6 +483,18 @@ function crc32(buf) {
   return c ^ 0xffffffff;
 }
 
+/** Периодическое полотно (`measurable: false`) числом зонда мерит растеризацию линии
+ *  платформой, а не материал — см. platform-parity.md. Такой замер пропускается с объяснением. */
+function skipIfPeriodic(label, name) {
+  if (referenceScene(name).measurable !== false) return false;
+  console.log('--- ' + label + ' · ' + name + ' ---');
+  console.log(
+    'measurable: false — полотно периодическое, число зонда мерит растеризацию линии, а не '
+      + 'материал; сверяется глазом (см. docs/vireglass/platform-parity.md).',
+  );
+  return true;
+}
+
 async function fromWeb() {
   const density = Number(arg('density', '2.75'));
   const debug = arg('debug', 'normal');
@@ -495,6 +508,7 @@ async function fromWeb() {
   const stageH = Number.isFinite(stage[1]) && stage[1] > 0 ? stage[1] : 914;
   const base = arg('stand', '');
   const ink = arg('ink', '');
+  if (skipIfPeriodic('стенд', name)) return;
   const frame = await shootStand({ density, debug, shape, preset, name, stageW, stageH, base, ink });
   const strip = locateStrip(frame.px, frame.width, frame.height, surroundRgb());
   const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;
@@ -524,6 +538,7 @@ async function fromWebShadow() {
   const stageH = Number.isFinite(stage[1]) && stage[1] > 0 ? stage[1] : 914;
   const base = arg('stand', '');
   const ink = arg('ink', '');
+  if (skipIfPeriodic('тень', name)) return;
   const frame = await shootStand({ density, debug: 'normal', shape, preset, name, stageW, stageH, base, ink });
   const strip = locateStrip(frame.px, frame.width, frame.height, surroundRgb());
   const pxPerDp = (strip.bottom - strip.top) / REFERENCE_SCENE_HEIGHT;

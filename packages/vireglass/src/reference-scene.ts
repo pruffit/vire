@@ -210,3 +210,22 @@ export const refGradientSteps = (
   Array.from({ length: layer.steps }, (_, i) =>
     layer.from + ((layer.to - layer.from) * i) / Math.max(layer.steps - 1, 1),
   );
+
+/** Позиции полос по X в dp — тот же список у канваса и у вьюх, иначе они разойдутся при любой
+ *  правке периода. */
+export const refStripePositions = (
+  layer: Extract<VireGlassRefLayer, { kind: 'полосы' }>,
+  widthDp: number,
+): readonly number[] => {
+  const positions: number[] = [];
+  for (let at = 0; at < widthDp; at += layer.periodDp) positions.push(at);
+  return positions;
+};
+
+/** Позиции линий сетки по одной оси в dp, ВКЛЮЧАЯ дальний край: без него платформа, у которой
+ *  край совпал с шагом, теряет последнюю линию, а другая — нет. */
+export const refGridPositions = (stepDp: number, spanDp: number): readonly number[] => {
+  const positions: number[] = [];
+  for (let at = 0; at <= spanDp; at += stepDp) positions.push(at);
+  return positions;
+};

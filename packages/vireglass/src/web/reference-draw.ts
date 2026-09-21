@@ -14,6 +14,8 @@ import {
   refCheckerCells,
   refGradientSteps,
   refGray,
+  refGridPositions,
+  refStripePositions,
   type VireGlassRefLayer,
   type VireGlassRefScene,
 } from '../reference-scene';
@@ -51,8 +53,8 @@ function drawLayer(
       ctx.fillStyle = refGray(layer.level);
       ctx.fillRect(x, y, w, h);
       ctx.fillStyle = refGray(layer.other);
-      for (let at = 0; at < w; at += layer.periodDp * d) {
-        ctx.fillRect(x + at, y, layer.widthDp * d, h);
+      for (const at of refStripePositions(layer, w / d)) {
+        ctx.fillRect(x + at * d, y, layer.widthDp * d, h);
       }
       return;
     }
@@ -85,10 +87,9 @@ function drawLayer(
       // (`StyleSheet.hairlineWidth`). Половина плотности давала на этом экране два пикселя
       // против одного, и полотна двух стендов расходились на самой тонкой детали сцены.
       const thin = 1;
-      const step = layer.stepDp * d;
       ctx.fillStyle = refGray(layer.lineLevel);
-      for (let at = 0; at <= w; at += step) ctx.fillRect(x + Math.round(at), y, thin, h);
-      for (let at = 0; at <= h; at += step) ctx.fillRect(x, y + Math.round(at), w, thin);
+      for (const at of refGridPositions(layer.stepDp, w / d)) ctx.fillRect(x + Math.round(at * d), y, thin, h);
+      for (const at of refGridPositions(layer.stepDp, h / d)) ctx.fillRect(x, y + Math.round(at * d), w, thin);
       return;
     }
     case 'градиент': {

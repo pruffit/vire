@@ -8,6 +8,8 @@ import {
   refCheckerCells,
   refGradientSteps,
   refGray,
+  refGridPositions,
+  refStripePositions,
   referenceScene,
 } from '../reference-scene';
 
@@ -83,5 +85,51 @@ describe('сверочные полотна', () => {
     expect(refGray(0)).toBe('#000000');
     expect(refGray(1)).toBe('#ffffff');
     expect(refGray(0.5)).toBe('#808080');
+  });
+
+  // Позиции полос — тот же список у канваса и у вьюх (`refStripePositions`); проверяется здесь
+  // одна арифметика на обе платформы.
+  it('полосы стоят с постоянным шагом и не вылезают за полотно', () => {
+    const layer = referenceScene('полосы').bands(0.5)[0].layer;
+    if (layer.kind !== 'полосы') throw new Error('полотно «полосы» обязано быть полосами');
+    const positions = refStripePositions(layer, REFERENCE_SCENE_WIDTH);
+    expect(positions.length).toBe(Math.ceil(REFERENCE_SCENE_WIDTH / layer.periodDp));
+    for (let i = 1; i < positions.length; i += 1) {
+      expect(positions[i] - positions[i - 1]).toBe(layer.periodDp);
+    }
+    expect(positions[0]).toBe(0);
+    expect(positions[positions.length - 1] + layer.widthDp).toBeLessThanOrEqual(REFERENCE_SCENE_WIDTH);
+  });
+
+  it('на узкой ширине полос не бывает вовсе — цикл не спотыкается о пустой диапазон', () => {
+    const layer = referenceScene('полосы').bands(0.5)[0].layer;
+    if (layer.kind !== 'полосы') throw new Error('полотно «полосы» обязано быть полосами');
+    expect(refStripePositions(layer, 0)).toEqual([]);
+  });
+
+  // Позиции линий сетки — тот же список у канваса и у вьюх (`refGridPositions`); дальний край
+  // включён нарочно, иначе платформа, у которой край совпал с шагом, теряет последнюю линию.
+  it('линии сетки идут с постоянным шагом и включают оба края', () => {
+    const layer = referenceScene('сетка').bands(0.5)[0].layer;
+    if (layer.kind !== 'сетка') throw new Error('полотно «сетка» обязано быть сеткой');
+    const vertical = refGridPositions(layer.stepDp, REFERENCE_SCENE_WIDTH);
+    const horizontal = refGridPositions(layer.stepDp, REFERENCE_SCENE_HEIGHT);
+    expect(vertical[0]).toBe(0);
+    expect(vertical[vertical.length - 1]).toBe(REFERENCE_SCENE_WIDTH);
+    expect(horizontal[0]).toBe(0);
+    expect(horizontal[horizontal.length - 1]).toBe(REFERENCE_SCENE_HEIGHT);
+    for (let i = 1; i < vertical.length; i += 1) {
+      expect(vertical[i] - vertical[i - 1]).toBe(layer.stepDp);
+    }
+  });
+
+  // «Сетка» — периодическая структура: пометка сама по себе тестируется явно, чтобы кто-нибудь
+  // не снял её с полотна незаметно и не вернул полотно в числовые гейты.
+  it('полотно «сетка» помечено как неметрическое, остальные — нет', () => {
+    expect(referenceScene('сетка').measurable).toBe(false);
+    for (const scene of REFERENCE_SCENES) {
+      if (scene.name === 'сетка') continue;
+      expect(scene.measurable).not.toBe(false);
+    }
   });
 });
