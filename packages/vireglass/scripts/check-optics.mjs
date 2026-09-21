@@ -46,7 +46,7 @@
  *
  * Запуск: pnpm --filter @vire/vireglass check:optics
  * Без прохода по диапазону светлоты (секунды вместо минут): ... check:optics -- --ink. Остаётся всё,
- * кроме первых двух обещаний: палец, подъём, пёстрое полотно и кромка.
+ * кроме первых двух обещаний: палец, подъём, пёстрое полотно, кромка, граница, градиент, ступени.
  */
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
@@ -134,8 +134,10 @@ const MIN_GRADIENT_CARRY = 0.19;
 /**
  * Сколько инверсий порядка ступеней (соседняя ступень внутри детали ТЕМНЕЕ предыдущей, хотя
  * градиент светлеет) допустимо. И хороший, и деградированный материал (см. `MIN_BORDER_CARRY`)
- * дают 0 — деградация здесь давит подъём (`MIN_GRADIENT_CARRY`), а не ломает порядок. Порог
- * держится строгим: реальная инверсия — не деградация яркости, а обратный ход по координате.
+ * дают 0: деградация здесь давит подъём (`MIN_GRADIENT_CARRY`), а не ломает порядок. Порог
+ * поэтому строгий — обратный ход по координате не «чуть хуже», он или есть, или нет.
+ * Запас взят не в пороге, а в том, ЧТО СЧИТАЕТСЯ инверсией: падение меньше трети среднего шага
+ * ступени — шум растеризации, а не разворот, и на software-рендере CI его больше, чем на GPU.
  */
 const MAX_GRADIENT_INVERSIONS = 0;
 /**
@@ -816,11 +818,12 @@ async function main() {
     );
   const gradInsideSteps = gradient.centers.map((i) => bandMedian(gradient, gradient.inside, i));
   const gradOutsideSteps = gradient.centers.map((i) => bandMedian(gradient, gradient.outside, i));
+  const insideRise = Math.max(...gradInsideSteps) - Math.min(...gradInsideSteps);
+  const noiseFloor = insideRise / (gradInsideSteps.length - 1) / 3;
   let inversions = 0;
   for (let i = 1; i < gradInsideSteps.length; i += 1) {
-    if (gradInsideSteps[i] < gradInsideSteps[i - 1]) inversions += 1;
+    if (gradInsideSteps[i] < gradInsideSteps[i - 1] - noiseFloor) inversions += 1;
   }
-  const insideRise = Math.max(...gradInsideSteps) - Math.min(...gradInsideSteps);
   const outsideRise = Math.max(...gradOutsideSteps) - Math.min(...gradOutsideSteps);
   const gradientCarry = outsideRise > 0 ? insideRise / outsideRise : 0;
   const gradientOk = inversions <= MAX_GRADIENT_INVERSIONS && gradientCarry >= MIN_GRADIENT_CARRY;
