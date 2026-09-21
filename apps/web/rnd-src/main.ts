@@ -1,11 +1,7 @@
 // Стенд VireGlass — не React-страница (план, «Среда»/«Следствие для стенда»): статический
 // HTML + этот бандл, esbuild собирает его за миллисекунды из `packages/vireglass`.
 // Состояние целиком в адресе: ссылка воспроизводит кадр, как диплинк на Android-стенде.
-import { REFERENCE_PIECE_AT,
-  REFERENCE_SCENES,
-  REFERENCE_SCENE_HEIGHT,
-  REFERENCE_SCENE_WIDTH,
-  REFERENCE_SHAPES,
+import {
   applyAccessibility,
   DEBUG_MODES,
   INK_DARK,
@@ -30,8 +26,15 @@ import { REFERENCE_PIECE_AT,
   type VireGlassNumericKey,
   halfMinDp,
   shouldInkBeLight,
+} from 'vireglass';
+import {
+  REFERENCE_PIECE_AT,
+  REFERENCE_SCENES,
+  REFERENCE_SCENE_HEIGHT,
+  REFERENCE_SCENE_WIDTH,
+  REFERENCE_SHAPES,
 } from '@vire/vireglass';
-import { createVireGlassRenderer } from '@vire/vireglass/web';
+import { createVireGlassRenderer } from 'vireglass/web';
 import { drawIcon, loadIcons, NAV_ICONS, type IconName } from './icons';
 import { drawCover, drawPlayerInk, hitPlay, PLAYER_ICONS } from './mini-player';
 import { createPanel } from './panel';

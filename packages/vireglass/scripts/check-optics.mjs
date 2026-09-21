@@ -148,7 +148,8 @@ const MAX_GRADIENT_INVERSIONS = 0;
 const MIN_STEP_CARRY = 0.15;
 
 const ENTRY = `
-import { createVireGlassRenderer, drawReferenceScene } from '${WEB}';
+import { createVireGlassRenderer } from 'vireglass/web';
+import { drawReferenceScene } from '${WEB}';
 import {
   capsuleGeometry,
   applyGlassScale,
@@ -157,14 +158,13 @@ import {
   INK_DARK,
   INK_LIGHT,
   materialForInk,
-  REFERENCE_SCENE_HEIGHT,
-  referenceScene,
   resolveOptics,
   roundedRectGeometry,
   shouldInkBeLight,
   VIREGLASS_CONTROL_MATERIAL,
   VIREGLASS_MATERIAL,
-} from '${CORE}';
+} from 'vireglass';
+import { REFERENCE_SCENE_HEIGHT, referenceScene } from '${CORE}';
 
 // ПОЛОТНА ОБЩИЕ СО СТЕНДАМИ. Раньше каждое из них жило прямо здесь, и получалось, что гейт
 // меряет одно, а глаз на стенде смотрит на другое; расхождение находилось только случайно.

@@ -37,7 +37,7 @@ import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 
-import { DEBUG_MODES, PRESET_NAMES } from '../src/index.ts';
+import { DEBUG_MODES, PRESET_NAMES } from 'vireglass';
 
 import {
   REFERENCE_PIECE_AT,
