@@ -214,7 +214,7 @@ ior · thickness · bevel · roughness · film · environment · legibility · i
 |---|---|---|
 | Модель материала + пресеты + тумблеры | **Реализовано** | `lib/vireglass/material.ts` |
 | Общий SDF на оба шейдера (AGSL собирается в JS) | **Реализовано** | `lib/vireglass/sdf.ts`, `lens-shader.ts` |
-| Преломление, обе аберрации, отражение окружения | **Реализовано**, Android 13+ | `modules/glass-lens` |
+| Преломление, обе аберрации, отражение окружения | **Реализовано**, Android 13+ | подпуть `vireglass/native` |
 | Дифракция и интерференция | **Реализовано** | `lens-shader.ts`, `optics.ts` |
 | Зонд светлоты фона + автоадаптация тела | **Реализовано** | `GlassBackdropView`, `lens-shader.ts` |
 | Автоматическая полярность контента | **Реализовано** | `lib/vireglass/adaptation.ts`, `glass-ink.tsx` |

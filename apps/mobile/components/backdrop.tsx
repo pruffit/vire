@@ -6,7 +6,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
-import { GlassBackdrop } from '../modules/glass-lens';
+import { GlassBackdrop } from 'vireglass/native';
 
 /**
  * Область, чей кадр стекло кладёт под преломление, — одна точка вместо `BlurTargetView`

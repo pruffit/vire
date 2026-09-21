@@ -21,10 +21,10 @@
 | `components/vireglass/glass-surface.tsx` | JS | композиция слоёв: бэкдроп, линза, канвас |
 | `components/liquid-glass.tsx` | JS | продовая кнопка: жесты, маска иконки, поверх `GlassSurface` |
 | `components/glass.tsx` | JS | плоское стекло панелей (BlurView + градиенты), к модели не подключено |
-| `modules/glass-lens/index.ts` | JS-мост | типы пропов, гейт SDK, фолбэк |
-| `modules/glass-lens/android/.../GlassLensView.kt` | нативный | компиляция присланного AGSL + `RenderEffect` |
-| `modules/glass-lens/android/.../GlassBackdropView.kt` | нативный | захват кадра в RenderNode + зонд светлоты фона |
-| `modules/glass-lens/android/.../GlassLensModule.kt` | нативный | регистрация вьюх, канал униформ, событие замера |
+| `vireglass/native` (`lens.ts`) | JS-мост | типы пропов, гейт SDK, фолбэк |
+| пакет, `android/.../GlassLensView.kt` | нативный | компиляция присланного AGSL + `RenderEffect` |
+| пакет, `android/.../GlassBackdropView.kt` | нативный | захват кадра в RenderNode + зонд светлоты фона |
+| пакет, `android/.../GlassLensModule.kt` | нативный | регистрация вьюх, канал униформ, событие замера |
 | `apps/mobile/scripts/glass-probe.mjs` | инструмент | измеритель кадра: снимок, шум, полосы, упор, кадры |
 | `lib/blur-target.tsx` | JS | контекст цели блюра, защита от рекурсии |
 

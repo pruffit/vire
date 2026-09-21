@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { GlassProbe } from '../modules/glass-lens';
+import { GlassProbe } from 'vireglass/native';
 
 // Стенд VireGlass. В продовый UI не входит: включается переменной окружения
 // EXPO_PUBLIC_GLASS_LAB=1 (см. App.tsx). Документация — docs/vireglass/.
