@@ -374,7 +374,10 @@ pnpm audit --audit-level=high          # из корня; гейт CI, лока�
 > (reading 'useContext' / 'useSyncExternalStore')` в двух десятках несвязанных тестов, будто
 > «мажор сломал полпродукта». **Лок при этом остаётся корректным** — в CI на чистой установке
 > не воспроизводится, только локально. Лечится `pnpm install` без `--filter` (03.09.2026).
-
+> С 23.09.2026 `packages/ui` держит `react`/`tailwindcss` ещё и в `devDependencies`: запись,
+> которая только peer, `pnpm update -r` тоже переразрешает в обход overrides (так Dependabot
+> неделями падал на tailwindcss, #138). Новый peer в пакет — сразу парой с devDependency.
+>
 > CI (`gates`) гоняет typecheck единым `pnpm turbo run typecheck` — таск в `turbo.json`
 > без scope-фильтра, подхватывает любой пакет со своим script `typecheck` (сейчас
 > `@vire/web`, `@vire/core`, `@vire/db` и остальные). Добавлять отдельный CI-шаг под

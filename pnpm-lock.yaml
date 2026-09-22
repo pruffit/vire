@@ -657,15 +657,9 @@ importers:
       motion:
         specifier: ^13.4.0
         version: 13.4.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      react:
-        specifier: 19.2.4
-        version: 19.2.4
       tailwind-merge:
         specifier: ^3.7.0
         version: 3.7.0
-      tailwindcss:
-        specifier: ^4
-        version: 4.3.0
     devDependencies:
       '@types/react':
         specifier: ^19
@@ -673,6 +667,12 @@ importers:
       '@vire/config':
         specifier: workspace:*
         version: link:../config
+      react:
+        specifier: 19.2.4
+        version: 19.2.4
+      tailwindcss:
+        specifier: ^4
+        version: 4.3.0
       typescript:
         specifier: ^5
         version: 5.9.3
