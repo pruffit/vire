@@ -11,7 +11,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.scripts.json",
     "check:glsl": "tsx scripts/check-glsl.mjs",
     "check:optics": "tsx scripts/check-optics.mjs",
     "measure:reference": "tsx scripts/measure-reference.mjs"

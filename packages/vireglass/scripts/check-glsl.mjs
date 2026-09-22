@@ -22,8 +22,9 @@ function compileCheck({ vertexSource, fragmentSource }) {
   const gl = canvas.getContext('webgl2');
   if (!gl) return { contextOk: false };
 
-  function compile(type, source) {
+  const compile = (type, source) => {
     const shader = gl.createShader(type);
+    if (!shader) throw new Error('createShader вернул null: контекст WebGL2 потерян');
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     return {
@@ -31,7 +32,7 @@ function compileCheck({ vertexSource, fragmentSource }) {
       ok: gl.getShaderParameter(shader, gl.COMPILE_STATUS),
       log: gl.getShaderInfoLog(shader) ?? '',
     };
-  }
+  };
 
   const vertex = compile(gl.VERTEX_SHADER, vertexSource);
   const fragment = compile(gl.FRAGMENT_SHADER, fragmentSource);

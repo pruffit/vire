@@ -280,7 +280,7 @@ function locateStrip(px, width, height, surround) {
   // высоты полосы даёт разницу в пиксель, и замер перепрыгивал на соседнее полотно, где детали
   // нет вовсе: отход выходил ровно нулевым и выглядел как исправный байпас.
   const longest = Math.max(...runs.map((r) => r.bottom - r.top));
-  return runs.find((r) => r.bottom - r.top >= longest - 2);
+  return runs.filter((r) => r.bottom - r.top >= longest - 2)[0];
 }
 
 /**
@@ -571,7 +571,7 @@ function serveStand() {
   const root = resolve(HERE, '../../../apps/web/public');
   const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.map': 'application/json' };
   const srv = createServer(async (req, res) => {
-    let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    let path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
     if (path.endsWith('/')) path += 'index.html';
     const file = normalize(join(root, path));
     if (!file.startsWith(normalize(root))) { res.writeHead(403).end(); return; }
