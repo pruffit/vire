@@ -374,9 +374,10 @@ pnpm audit --audit-level=high          # из корня; гейт CI, лока�
 > (reading 'useContext' / 'useSyncExternalStore')` в двух десятках несвязанных тестов, будто
 > «мажор сломал полпродукта». **Лок при этом остаётся корректным** — в CI на чистой установке
 > не воспроизводится, только локально. Лечится `pnpm install` без `--filter` (03.09.2026).
-> С 23.09.2026 `packages/ui` держит `react`/`tailwindcss` ещё и в `devDependencies`: запись,
-> которая только peer, `pnpm update -r` тоже переразрешает в обход overrides (так Dependabot
-> неделями падал на tailwindcss, #138). Новый peer в пакет — сразу парой с devDependency.
+> С 23.09.2026 `packages/ui` держит `react`/`tailwindcss` ещё и в `devDependencies`. Запись,
+> которая только peer, ломается двумя способами: `pnpm update <пакет>` её не поднимает, и
+> Dependabot падает с `NoChangeError` (#138, tailwindcss), а `pnpm update -r` переразрешает её
+> в обход overrides (react уезжал на 19.2.8). Новый peer в пакет — сразу парой с devDependency.
 >
 > ⚠️ В `pnpm-workspace.yaml` стоит `minimumReleaseAge: 4320`: релиз моложе трёх суток pnpm не
 > поставит. Срочный security-патч или свой только что опубликованный пакет — через
