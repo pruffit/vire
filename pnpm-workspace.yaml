@@ -1,3 +1,9 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Как у Dependabot: с возрастным порогом pnpm берёт полные метаданные реестра, и поле libc
+# в локе перестаёт исчезать при локальной установке (#139).
+minimumReleaseAge: 4320
+minimumReleaseAgeExclude:
+  - vireglass

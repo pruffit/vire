@@ -378,6 +378,10 @@ pnpm audit --audit-level=high          # из корня; гейт CI, лока�
 > которая только peer, `pnpm update -r` тоже переразрешает в обход overrides (так Dependabot
 > неделями падал на tailwindcss, #138). Новый peer в пакет — сразу парой с devDependency.
 >
+> ⚠️ В `pnpm-workspace.yaml` стоит `minimumReleaseAge: 4320`: релиз моложе трёх суток pnpm не
+> поставит. Срочный security-патч или свой только что опубликованный пакет — через
+> `minimumReleaseAgeExclude` (там уже `vireglass`), а не снятием порога.
+
 > CI (`gates`) гоняет typecheck единым `pnpm turbo run typecheck` — таск в `turbo.json`
 > без scope-фильтра, подхватывает любой пакет со своим script `typecheck` (сейчас
 > `@vire/web`, `@vire/core`, `@vire/db` и остальные). Добавлять отдельный CI-шаг под
