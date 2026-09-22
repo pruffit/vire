@@ -19,6 +19,8 @@
   "devDependencies": {
     "@types/react": "^19",
     "@vire/config": "workspace:*",
+    "react": "19.2.4",
+    "tailwindcss": "^4",
     "typescript": "^5"
   },
   "peerDependencies": {
