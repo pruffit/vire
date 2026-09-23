@@ -379,11 +379,8 @@ const referenceZones: readonly Zone[] = REFERENCE_SCENES.map((scene) => ({
     drawReferenceScene(ctx, scene, w, h, { density, fit: 'полотно' }),
 }));
 
-/**
- * Среда — второй путь подложки (`main.ts`, `medium`): GPU-проход пишет прямо в contentTexture,
- * этот 2D-канвас для неё не используется вовсе. Полотно есть в списке зон только затем, чтобы
- * зону можно было выбрать так же, как остальные (`?zone=`), — рисовать здесь нечего.
- */
+/** Второй путь подложки (`main.ts`) — GPU-проход пишет прямо в contentTexture, этот 2D-канвас
+ *  не используется; в списке зон только затем, чтобы `?zone=` мог её выбрать. */
 const mediumNoop: VireGlassSceneDrawer = () => {};
 
 export const ZONES: readonly Zone[] = [
