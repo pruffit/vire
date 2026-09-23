@@ -37,7 +37,7 @@ import { chromium } from 'playwright';
 const BASE = process.env.RND_BASE ?? 'http://127.0.0.1:3000/rnd';
 const VIEWPORT = { width: 360, height: 800 };
 const SCALE = 3;
-const ZONE = 16;
+const ZONE_NAME = 'среда';
 const WARMUP_MS = 25000;
 const SAMPLE_INTERVAL_MS = 5000;
 const TOTAL_SAMPLES = 19; // t=0..90с включительно после прогрева, шаг 5с
@@ -55,10 +55,20 @@ async function main() {
   const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: SCALE });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${BASE}?zone=${ZONE}&glass=0&playback=playing&bpm=128&amp=0.6&bench=1&ui=0`, {
+  await page.goto(`${BASE}?zone=${encodeURIComponent(ZONE_NAME)}&glass=0&playback=playing&bpm=128&amp=0.6&bench=1&ui=0`, {
     waitUntil: 'load',
   });
   await page.waitForSelector('[data-testid="rnd-state"]', { timeout: 15000 });
+  if (errors.length) {
+    await browser.close();
+    throw new Error(`стенд упал: ${errors[0]}`);
+  }
+  const meta = await page.evaluate(() => document.querySelector('[data-testid="rnd-state"]').textContent);
+  const gotZone = /zone=\d+\(([^)]+)\)/.exec(meta)?.[1];
+  if (gotZone !== ZONE_NAME) {
+    await browser.close();
+    throw new Error(`стенд открыл не ту зону: ждали "${ZONE_NAME}", получили "${gotZone ?? '?'}"`);
+  }
   await page.waitForTimeout(WARMUP_MS);
   if (errors.length) {
     await browser.close();

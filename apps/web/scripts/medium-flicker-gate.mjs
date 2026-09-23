@@ -17,7 +17,7 @@ import { chromium } from 'playwright';
 const BASE = process.env.RND_BASE ?? 'http://127.0.0.1:3000/rnd';
 const VIEWPORT = { width: 360, height: 800 };
 const SCALE = 3;
-const ZONE = 16; // «среда» — тот же индекс, что в medium-bench.mjs
+const ZONE_NAME = 'среда';
 const WARMUP_MS = 900;
 // Порог: у исправной среды флипов знака — единицы из полусотни, у сломанной — почти все.
 // Половина запаса между «редкий шум» и «системный паттерн 30 Гц».
@@ -36,10 +36,20 @@ async function main() {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   // Состояние и амплитуда зафиксированы явно — воспроизводимый прогон, без случайности харнесса.
-  await page.goto(`${BASE}?zone=${ZONE}&glass=0&playback=playing&bpm=128&amp=0.6&bench=1&ui=0`, {
+  await page.goto(`${BASE}?zone=${encodeURIComponent(ZONE_NAME)}&glass=0&playback=playing&bpm=128&amp=0.6&bench=1&ui=0`, {
     waitUntil: 'load',
   });
   await page.waitForSelector('[data-testid="rnd-state"]', { timeout: 15000 });
+  if (errors.length) {
+    await browser.close();
+    throw new Error(`стенд упал: ${errors[0]}`);
+  }
+  const meta = await page.evaluate(() => document.querySelector('[data-testid="rnd-state"]').textContent);
+  const gotZone = /zone=\d+\(([^)]+)\)/.exec(meta)?.[1];
+  if (gotZone !== ZONE_NAME) {
+    await browser.close();
+    throw new Error(`стенд открыл не ту зону: ждали "${ZONE_NAME}", получили "${gotZone ?? '?'}"`);
+  }
   await page.waitForTimeout(WARMUP_MS);
   if (errors.length) {
     await browser.close();

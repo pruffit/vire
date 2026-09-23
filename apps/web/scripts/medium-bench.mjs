@@ -18,11 +18,9 @@ const BASE = process.env.RND_BASE ?? 'http://127.0.0.1:3000/rnd';
 const VIEWPORT = { width: 360, height: 800 };
 const SCALE = 3;
 const GLASS_COUNTS = [0, 1, 3, 6];
-// Индексы в ZONES (apps/web/rnd-src/scenes.ts): 1 — статичная тёмная клетка (8 фикс. зон + 8
-// сверочных полотен предшествуют «среде», добавленной последней).
 const SUBJECTS = [
-  { label: 'статика (тёмная клетка)', zone: 1 },
-  { label: 'среда (curl-noise)', zone: 16 },
+  { label: 'статика (тёмная клетка)', zone: 'тёмная клетка' },
+  { label: 'среда (curl-noise)', zone: 'среда' },
 ];
 const WARMUP_MS = 900;
 const SAMPLE_FRAMES = 90;
@@ -31,7 +29,7 @@ async function measureOne(browser, zone, glass) {
   const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: SCALE });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${BASE}?zone=${zone}&glass=${glass}&bench=1&ui=0`, { waitUntil: 'load' });
+  await page.goto(`${BASE}?zone=${encodeURIComponent(zone)}&glass=${glass}&bench=1&ui=0`, { waitUntil: 'load' });
   await page.waitForSelector('[data-testid="rnd-state"]', { timeout: 15000 });
   await page.waitForTimeout(WARMUP_MS);
   if (errors.length) {
@@ -39,6 +37,11 @@ async function measureOne(browser, zone, glass) {
     throw new Error(`стенд упал (zone=${zone} glass=${glass}): ${errors[0]}`);
   }
   const meta = await page.evaluate(() => document.querySelector('[data-testid="rnd-state"]').textContent);
+  const gotZone = /zone=\d+\(([^)]+)\)/.exec(meta)?.[1];
+  if (gotZone !== zone) {
+    await page.close();
+    throw new Error(`стенд открыл не ту зону (glass=${glass}): ждали "${zone}", получили "${gotZone ?? '?'}"`);
+  }
   const result = await page.evaluate(() => window.__vgBenchSample());
   await page.close();
   if (errors.length) throw new Error(`стенд упал (zone=${zone} glass=${glass}): ${errors[0]}`);

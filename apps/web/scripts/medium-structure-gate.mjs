@@ -44,7 +44,7 @@ const BASE = process.env.RND_BASE ?? 'http://127.0.0.1:3000/rnd';
 const PLAYBACK_STATES = ['idle', 'playing', 'paused', 'stopped'];
 const VIEWPORT = { width: 360, height: 800 };
 const SCALE = 3;
-const ZONE = 16;
+const ZONE_NAME = 'среда';
 // Короткий прогрев (не 25с гейта равновесия): equilibrium ждёт выхода конденсации на баланс,
 // а тут измеряется сама деградация во времени — старт должен быть БЛИЖЕ к раздаче сева, чтобы
 // окно 0-90с застало и раннюю, ещё контрастную, и позднюю картину целиком.
@@ -84,10 +84,21 @@ async function main() {
   const playbackArg = process.argv.find((a) => a.startsWith('--playback='))?.split('=')[1];
   const playback = PLAYBACK_STATES.includes(playbackArg ?? '') ? playbackArg : 'playing';
   const speedQuery = advectSpeed ? `&advectSpeed=${advectSpeed}` : '';
-  await page.goto(`${BASE}?zone=${ZONE}&glass=0&playback=${playback}&bpm=128&amp=0.6&bench=1&ui=0${speedQuery}`, {
-    waitUntil: 'load',
-  });
+  await page.goto(
+    `${BASE}?zone=${encodeURIComponent(ZONE_NAME)}&glass=0&playback=${playback}&bpm=128&amp=0.6&bench=1&ui=0${speedQuery}`,
+    { waitUntil: 'load' },
+  );
   await page.waitForSelector('[data-testid="rnd-state"]', { timeout: 15000 });
+  if (errors.length) {
+    await browser.close();
+    throw new Error(`стенд упал: ${errors[0]}`);
+  }
+  const meta = await page.evaluate(() => document.querySelector('[data-testid="rnd-state"]').textContent);
+  const gotZone = /zone=\d+\(([^)]+)\)/.exec(meta)?.[1];
+  if (gotZone !== ZONE_NAME) {
+    await browser.close();
+    throw new Error(`стенд открыл не ту зону: ждали "${ZONE_NAME}", получили "${gotZone ?? '?'}"`);
+  }
   await page.waitForTimeout(WARMUP_MS);
   if (errors.length) {
     await browser.close();
