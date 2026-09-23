@@ -74,7 +74,7 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vireglass": "^2.3.1",
-    "vireuikit": "^0.1.0",
+    "vireuikit": "^0.2.0",
     "vitest": "^4.1.8"
   }
 }
