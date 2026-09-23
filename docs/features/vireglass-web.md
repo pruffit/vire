@@ -216,6 +216,11 @@ Android он работает там, где зонд и так подписан
   сверочных полотнах — `packages/vireglass/scripts/measure-reference.mjs` (ключ `--shadow`).
 - **Android:** `apps/mobile/lib/vireglass/*` — тонкие ре-экспорты из пакета; натив и
   компоненты остались в мобилке.
+- **Живой фон (зона «среда»):** пакет npm `vireuikit` (github.com/pruffit/vireuikit) —
+  `createMediumBackdrop()` отдаёт GPU-проход, стенд передаёт его как `backdrop` рендерера
+  вместо `scene` (оба сразу рендерер отвергает). Лабораторные гейты среды против стенда —
+  `apps/web/scripts/medium-{equilibrium,structure,flicker}-gate.mjs` и замер цены
+  `medium-bench.mjs`; поведенческие гейты самого пакета — его `check:medium`.
 
 ## Env
 
@@ -231,6 +236,9 @@ pnpm --filter @vire/web dev          # и открыть http://localhost:3000/r
 node apps/web/scripts/glass-probe.mjs capture "zone=1&preset=2"   # тёмная клетка, «Стекло»
 node apps/web/scripts/glass-probe.mjs stats   "zone=0" 480 1080 120 80
 node apps/web/scripts/glass-probe.mjs band    "zone=1" 480 1045 120 120
+
+# гейты живого фона: стенд должен быть доступен по RND_BASE (по умолчанию localhost:3000/rnd)
+RND_BASE=http://127.0.0.1:3000/rnd/ node apps/web/scripts/medium-equilibrium-gate.mjs
 ```
 
 Кадр стенда — 360×800 при dpr 3, то есть 1080×2400: ровно кадр телефона, чтобы снимки веба и

@@ -28,6 +28,13 @@ import {
   shouldInkBeLight,
 } from 'vireglass';
 import {
+  MEDIUM_DEFAULT_CELL_PX,
+  createMediumDynamics,
+  type VireUIKitMediumPlaybackState,
+  MEDIUM_SPECIES_LIGHTNESS,
+  speciesFamily,
+} from 'vireuikit';
+import {
   REFERENCE_PIECE_AT,
   REFERENCE_SCENES,
   REFERENCE_SCENE_HEIGHT,
@@ -35,6 +42,7 @@ import {
   REFERENCE_SHAPES,
 } from '@vire/vireglass';
 import { createVireGlassRenderer } from 'vireglass/web';
+import { createMediumBackdrop } from 'vireuikit/web';
 import { drawIcon, loadIcons, NAV_ICONS, type IconName } from './icons';
 import { drawCover, drawPlayerInk, hitPlay, PLAYER_ICONS } from './mini-player';
 import { createPanel } from './panel';
@@ -69,6 +77,10 @@ import {
  */
 const REFERENCE_ZONE_NAMES = new Set(REFERENCE_SCENES.map((s) => s.name));
 const onReferenceScene = () => REFERENCE_ZONE_NAMES.has(ZONE_NAMES[state.zone]);
+
+/** Зона среды (`medium`, второй путь подложки, см. `scenes.ts`) — свой GPU-проход вместо
+ *  2D-канваса, поэтому и сцена, и цикл кадра ведут её отдельной веткой. */
+const onMediumZone = () => ZONE_NAMES[state.zone] === 'среда';
 
 const stage = document.getElementById('stage');
 if (!stage) throw new Error('нет #stage');
@@ -108,6 +120,67 @@ function zoneParam(): number {
   if (byName >= 0) return byName;
   return intParam('zone', 0, 0, ZONES.length - 1);
 }
+
+/**
+ * Число стеклянных поверхностей поверх подложки — переключатель для замера стоимости среды
+ * (спека фона, «Бюджет»: цена умножается на число стёкол). Заданный явно, ОН ЗАМЕНЯЕТ обычные
+ * детали вида на N одинаковых квадратов независимо от зоны — так один и тот же харнесс мерит
+ * и живую среду, и любую статичную подложку при 0/1/3/6 стёклах.
+ */
+const glassCountParam = params.get('glass');
+const glassCount =
+  glassCountParam === null ? null : Math.max(0, Math.min(6, Math.round(Number(glassCountParam)) || 0));
+
+/** Бенчмарк: рендерер обязан рисовать каждый rAF, а не останавливаться, когда кадр «устаканился»
+ *  (обычный режим экономит кадры — иначе мерить время кадра было бы нечем: рендер просто не
+ *  вызывался бы). */
+const benchMode = params.get('bench') === '1';
+
+/** device-px на ячейку сетки симуляции — свой параметр замера (спека фона: разрешение сетки
+ *  считается и меряется отдельно от разрешения кадра). */
+const gridCellPx = intParam('gridCell', MEDIUM_DEFAULT_CELL_PX, 4, 128);
+
+/** Переключатель состояния «Покоя» (спека фона) — в стенде адресом, ссылки на диплинк как на
+ *  Android достаточно, отдельный UI не нужен. */
+const MEDIUM_STATES: readonly VireUIKitMediumPlaybackState[] = ['idle', 'playing', 'paused', 'stopped'];
+function mediumStateParam(): VireUIKitMediumPlaybackState {
+  const raw = params.get('playback');
+  // По умолчанию стенд показывает НАЧАЛЬНОЕ состояние (спека): обложки нет, источника нет.
+  return (MEDIUM_STATES as readonly string[]).includes(raw ?? '')
+    ? (raw as VireUIKitMediumPlaybackState)
+    : 'idle';
+}
+const mediumPlaybackState = mediumStateParam();
+const mediumBpm = intParam('bpm', 128, 40, 220);
+/** Фиксированная точка «обложки» (спека: «в стенде — фиксированная точка обложки»); палитра
+ *  обложки — следующий срез, здесь важно только откуда идёт эмиссия. */
+const MEDIUM_SOURCE_POINT: readonly [number, number] = [0.5, 0.5];
+/** `?amp=` фиксирует амплитуду для воспроизводимого замера (бенчмарк, гейт мигания); без
+ *  параметра — синтетическая плавная огибающая (спека: «подай синтетическую огибающую»). */
+const mediumAmpOverride = params.has('amp') ? Number(params.get('amp')) : null;
+function syntheticAmplitude(t: number): number {
+  if (mediumAmpOverride !== null && Number.isFinite(mediumAmpOverride)) {
+    return Math.max(0, Math.min(1, mediumAmpOverride));
+  }
+  return 0.5 + 0.5 * Math.sin(t * 0.5);
+}
+/** `?advectSpeed=` — контрольный прогон гейта структуры на другой скорости течения (замер:
+ *  накопленная численная диффузия зависит от пройденного пути, не только от схемы). Без
+ *  параметра — дефолт `MEDIUM_DEFAULTS.advectSpeed`. */
+const mediumAdvectSpeedOverride = params.has('advectSpeed') ? Number(params.get('advectSpeed')) : null;
+/** `?cover=<тон>[,<цветность>]` — характер обложки вместо начальной нейтрали: стенду нужно
+ *  чем-то показать цветную семью, пока палитру не считает сервер (спека «Палитра обложки»). */
+const mediumCover = (() => {
+  const raw = params.get('cover');
+  if (raw === null) return null;
+  const [hue, chroma = 0.09] = raw.split(',').map(Number);
+  if (!Number.isFinite(hue) || !Number.isFinite(chroma)) return null;
+  return speciesFamily({ hue, chroma, lightness: MEDIUM_SPECIES_LIGHTNESS });
+})();
+const mediumDynamics = createMediumDynamics();
+/** Позиция трека — своя, растёт только пока `playback=playing` (детерминированно от неё же
+ *  считается такт эмиссии, а не от часов стенда). */
+let mediumPosition = 0;
 
 const state = {
   zone: zoneParam(),
@@ -196,6 +269,7 @@ const shapeName = shapeParam !== '' && Number.isInteger(shapeIndex) && SHAPE_NAM
 const geometry = SHAPES[shapeName];
 const dpr = window.devicePixelRatio || 1;
 const renderer = createVireGlassRenderer(canvas);
+const medium = createMediumBackdrop();
 
 function resize(): void {
   canvas.width = Math.round(canvas.clientWidth * dpr);
@@ -205,6 +279,106 @@ function resize(): void {
   renderer.resize(canvas.width, canvas.height);
 }
 resize();
+
+/** Часы среды — свои, монотонные, не завязанные на «устаканился ли кадр» (ниже). */
+let mediumTime = 0;
+let lastDt = 0;
+/** Последняя турбулентность и число впечатанных следов — только для метки на стенде. */
+let mediumTurbulence = 0;
+let mediumEmitCount = 0;
+
+/** Сетка симуляции грубее кадра НАРОЧНО (спека фона: зонд материала не видит фактуру мельче
+ *  своего пола) — ячейка в device-px, тот же порядок величины, что толщина линий сетки-зоны. */
+function mediumGrid(): { width: number; height: number } {
+  return {
+    width: Math.max(2, Math.round(canvas.width / gridCellPx)),
+    height: Math.max(2, Math.round(canvas.height / gridCellPx)),
+  };
+}
+
+if (benchMode) {
+  // Замер стоимости среды (спека фона, «Бюджет»): время между кадрами САМОГО цикла rAF —
+  // ровно то, что стоит один render() при текущем числе стёкол, — и, если браузер даёт
+  // GPU-таймер-запросы, время GPU оттуда же (`renderer.getLastGpuMs()`).
+  (window as unknown as { __vgBenchSample: () => Promise<{ frames: number[]; gpu: (number | null)[] }> }).__vgBenchSample =
+    () =>
+      new Promise((resolve) => {
+        const SAMPLES = 90;
+        const frames: number[] = [];
+        const gpu: (number | null)[] = [];
+        let last = performance.now();
+        function tick(t: number): void {
+          frames.push(t - last);
+          last = t;
+          gpu.push(renderer.getLastGpuMs());
+          if (frames.length < SAMPLES) requestAnimationFrame(tick);
+          // Первый интервал меряет время ДО старта сэмплера, а не кадра — отбрасывается.
+          else resolve({ frames: frames.slice(1), gpu: gpu.slice(1) });
+        }
+        requestAnimationFrame(tick);
+      });
+
+  // Гейт на мигание (`scripts/medium-flicker-gate.mjs`): покадровая светлота небольшого окна
+  // канваса, 60 кадров. Средний по кадрам снимок баг «переворот буфера каждый шаг» не ловит —
+  // ловит только знак приращения между соседними кадрами, отсюда и покадровое чтение здесь.
+  (window as unknown as { __vgLumaSample: () => Promise<number[]> }).__vgLumaSample = () =>
+    new Promise((resolve) => {
+      const lumaGl = canvas.getContext('webgl2') as WebGL2RenderingContext;
+      const SAMPLES = 60;
+      const size = Math.min(256, canvas.width, canvas.height);
+      const x = Math.max(0, Math.floor((canvas.width - size) / 2));
+      const y = Math.max(0, Math.floor((canvas.height - size) / 2));
+      const buf = new Uint8Array(size * size * 4);
+      const lumas: number[] = [];
+      function sample(): number {
+        lumaGl.readPixels(x, y, size, size, lumaGl.RGBA, lumaGl.UNSIGNED_BYTE, buf);
+        let sum = 0;
+        for (let i = 0; i < buf.length; i += 4) {
+          sum += 0.2126 * buf[i] + 0.7152 * buf[i + 1] + 0.0722 * buf[i + 2];
+        }
+        return sum / (buf.length / 4) / 255;
+      }
+      function tick(): void {
+        lumas.push(sample());
+        if (lumas.length < SAMPLES) requestAnimationFrame(tick);
+        else resolve(lumas);
+      }
+      requestAnimationFrame(tick);
+    });
+
+  // Гейт равновесия плотности (`scripts/medium-equilibrium-gate.mjs`): светлота ВСЕГО кадра
+  // одним снимком — вызывающий сам расставляет вызовы во времени, здесь нет своего таймера.
+  (window as unknown as { __vgFrameLuma: () => number }).__vgFrameLuma = () => {
+    const lumaGl = canvas.getContext('webgl2') as WebGL2RenderingContext;
+    const buf = new Uint8Array(canvas.width * canvas.height * 4);
+    lumaGl.readPixels(0, 0, canvas.width, canvas.height, lumaGl.RGBA, lumaGl.UNSIGNED_BYTE, buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i += 4) {
+      sum += 0.2126 * buf[i] + 0.7152 * buf[i + 1] + 0.0722 * buf[i + 2];
+    }
+    return sum / (buf.length / 4) / 255;
+  };
+
+  // Гейт равновесия плотности: сырая сумма пар+конденсат+следы в обход композита (спека фона,
+  // «Конденсация: воды две») — вода (пар и конденсат вместе) сохраняется, у следов есть свой
+  // распад, требование только к воде. `null`, пока `render()` с включённой средой ни разу не
+  // вызывался.
+  (
+    window as unknown as {
+      __vgWaterTotals: () => { vapor: number; condensate: number; track: number } | null;
+    }
+  ).__vgWaterTotals = () => medium.readTotals();
+
+  // Сырая сетка ПАРА напрямую из рендерера (тройки r/g/b — три вида — на ячейку, не сумма):
+  // гейт структуры (`scripts/medium-structure-gate.mjs`) читает контраст между видами. Гейт на
+  // едущий узор её не использует — сверяет формулу шума напрямую, без рендера (снос
+  // сохраняющейся массы иначе забивает сигнал самой функции шума).
+  (
+    window as unknown as {
+      __vgVaporGrid: () => { cols: number; rows: number; data: number[] } | null;
+    }
+  ).__vgVaporGrid = () => medium.readVaporGrid();
+}
 
 const label = document.createElement('div');
 label.dataset.testid = 'rnd-state';
@@ -279,6 +453,9 @@ function syncUrl(): void {
   if (params.has('shape')) next.set('shape', shapeName);
   if (params.has('appear')) next.set('appear', String(appearTarget));
   if (params.has('accent')) next.set('accent', '1');
+  if (params.has('playback')) next.set('playback', mediumPlaybackState);
+  if (params.has('bpm')) next.set('bpm', String(mediumBpm));
+  if (mediumAmpOverride !== null) next.set('amp', String(mediumAmpOverride));
   if (a11yForced) next.set('a11y', a11yForced);
   if (clearMode) next.set('clear', '1');
   history.replaceState(null, '', `${location.pathname}?${next}`);
@@ -313,6 +490,28 @@ function samplePieces(ink: number) {
     centerX: (left + i * (size + gap)) * dpr,
     centerY: y,
     light: lightFor((left + i * (size + gap)) * dpr, y),
+  }));
+}
+
+/**
+ * N одинаковых стеклянных квадратов в ряд — харнесс замера (`?glass=0|1|3|6`), общий для
+ * ЛЮБОЙ зоны: заменяет обычные детали вида, чтобы один и тот же набор поверхностей можно было
+ * положить и на среду, и на статичную подложку и сравнить цену (спека фона, «Бюджет»).
+ */
+function glassPieces(count: number) {
+  if (count <= 0) return [];
+  const size = 132;
+  const gap = 20;
+  const total = size * count + gap * (count - 1);
+  const left = (viewWidthCss() - total) / 2 + size / 2;
+  const y = canvas.height * 0.5;
+  return Array.from({ length: count }, (_, i) => ({
+    optics: optic(currentMaterial()),
+    geometry: roundedRectGeometry(size, size, size * 0.28),
+    centerX: (left + i * (size + gap)) * dpr,
+    centerY: y,
+    light: lightFor((left + i * (size + gap)) * dpr, y),
+    appear: 1,
   }));
 }
 
@@ -932,10 +1131,26 @@ function renderFrame() {
   const screens = state.view === 'screens';
   const morph = state.view === 'morph';
   const slider = state.view === 'slider';
+  // Динамика считается ТОЛЬКО пока видна зона среды: иначе такт натурального фона в покое
+  // копится за кулисами и при возврате на зону выдаёт залп «пропущенных» следов разом.
+  const mediumFrame = onMediumZone()
+    ? mediumDynamics.step({
+        state: mediumPlaybackState,
+        bpm: mediumBpm,
+        amplitude: syntheticAmplitude(mediumTime),
+        positionSeconds: mediumPosition,
+        sourcePoint: MEDIUM_SOURCE_POINT,
+        dt: lastDt,
+      })
+    : { turbulence: 0, emissions: [] };
+  mediumTurbulence = mediumFrame.turbulence;
+  mediumEmitCount += mediumFrame.emissions.length;
   return renderer.render({
     density: dpr,
     debug: DEBUG_MODES[state.debug] as VireGlassDebugMode,
-    scene: screens
+    scene: onMediumZone()
+      ? undefined
+      : screens
       ? (ctx, w, h, ox, oy, d) => {
           zone(ctx, w, h, ox, oy, d);
           for (const i of APP_BACKGROUNDS) drawAppBackground(ctx, dpr, i, ox, oy, accentHue);
@@ -959,15 +1174,33 @@ function renderFrame() {
     offsetY: offset.y * dpr,
     iconMask: screens ? updateIconMask() : morph ? updateGroupMask() : null,
     colorLayer: screens ? updateColorLayer() : null,
-    pieces: screens
-      ? [...buttonPieces(), popoverPiece()]
-      : morph
-        ? [groupPiece()]
-        : slider
-          ? [sliderPiece()]
-          : onReferenceScene()
-            ? [controlPiece()]
-            : [controlPiece(), ...samplePieces(ink)],
+    pieces:
+      glassCount !== null
+        ? glassPieces(glassCount)
+        : screens
+          ? [...buttonPieces(), popoverPiece()]
+          : morph
+            ? [groupPiece()]
+            : slider
+              ? [sliderPiece()]
+              : onReferenceScene()
+                ? [controlPiece()]
+                : [controlPiece(), ...samplePieces(ink)],
+    backdrop: onMediumZone()
+      ? medium.pass({
+          gridWidth: mediumGrid().width,
+          gridHeight: mediumGrid().height,
+          dt: lastDt,
+          params: {
+            turbulence: mediumFrame.turbulence,
+            ...(mediumAdvectSpeedOverride !== null && Number.isFinite(mediumAdvectSpeedOverride)
+              ? { advectSpeed: mediumAdvectSpeedOverride }
+              : {}),
+            ...(mediumCover ? { channelColors: mediumCover } : {}),
+          },
+          emissions: mediumFrame.emissions,
+        })
+      : undefined,
   });
 }
 
@@ -984,9 +1217,15 @@ function applyPolarity(sample: { luma: number; hi: number }): void {
 
 function describe(probe: { luma: number; busy: number; lo: number; hi: number } | null): string {
   const presetName = state.preset >= 0 ? PRESET_NAMES[state.preset] : 'база';
+  const mediumInfo = onMediumZone()
+    ? ` · сетка среды ${mediumGrid().width}×${mediumGrid().height} · playback=${mediumPlaybackState} ` +
+      `bpm=${mediumBpm} turb=${mediumTurbulence.toFixed(2)} emit=${mediumEmitCount}`
+    : '';
+  const glassInfo = glassCount !== null ? ` · стёкол=${glassCount}` : '';
   return (
     `${canvas.width}×${canvas.height} · zone=${state.zone}(${ZONE_NAMES[state.zone]}) · ` +
-    `preset=${presetName} · debug=${state.debug}(${DEBUG_MODES[state.debug]}) · надпись ${polarity}\n` +
+    `preset=${presetName} · debug=${state.debug}(${DEBUG_MODES[state.debug]}) · надпись ${polarity}` +
+    `${mediumInfo}${glassInfo}\n` +
     (probe
       ? `probe luma=${probe.luma.toFixed(3)} busy=${probe.busy.toFixed(3)} lo=${probe.lo.toFixed(3)} hi=${probe.hi.toFixed(3)}`
       : 'probe: контрольный образец вне кадра — прокрути полотно к нему') +
@@ -1006,6 +1245,9 @@ function tick(now: number): void {
   // Шаг ограничен: после переключения вкладки rAF приносит секунды, и пружина взорвалась бы.
   const dt = (now - lastFrame) / 1000;
   lastFrame = now;
+  lastDt = dt;
+  mediumTime += dt;
+  if (mediumPlaybackState === 'playing') mediumPosition += dt;
   // Шагают ВСЕ деформации: кнопок четыре, и каждая живёт своей пружиной.
   deform.step(dt);
   sliderDeform.step(dt);
@@ -1021,6 +1263,8 @@ function tick(now: number): void {
     popoverMoving ||
     groupMoving ||
     progressing ||
+    onMediumZone() ||
+    benchMode ||
     !deform.idle() ||
     !sliderDeform.idle() ||
     buttonDeforms.some((d) => !d.idle())
