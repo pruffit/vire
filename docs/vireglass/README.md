@@ -12,8 +12,9 @@ Android (AGSL, нативная линза) и веб (GLSL ES 3.0, WebGL2). П�
 > Состав выноса, форма пакета и таблица переименований кириллического API —
 > `docs/superpowers/specs/2026-09-19-vireglass-open-source.md`.
 >
-> `kit/` и `medium/` в вынос не вошли: по плану от 14.09 они в полёте и уезжают
-> в отдельный продукт VireKit.
+> `kit/` и `medium/` в вынос не вошли: это отдельный open-source продукт VireUIKit —
+> [pruffit/vireuikit](https://github.com/pruffit/vireuikit), npm `vireuikit`
+> (`docs/superpowers/specs/2026-09-23-vireuikit-package.md`).
 
 Веб-часть, стенд `/rnd` и измеритель кадра описаны отдельно — `docs/features/vireglass-web.md`.
 

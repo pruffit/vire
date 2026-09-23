@@ -26,6 +26,6 @@
     "esbuild": "^0.28.2"
   },
   "dependencies": {
-    "vireglass": "^2.3.0"
+    "vireglass": "^2.3.1"
   }
 }

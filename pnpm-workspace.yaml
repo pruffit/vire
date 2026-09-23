@@ -7,3 +7,4 @@ packages:
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - vireglass
+  - vireuikit
