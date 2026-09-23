@@ -442,7 +442,7 @@ function syncUrl(): void {
   if (params.has('accent')) next.set('accent', '1');
   if (params.has('playback')) next.set('playback', mediumPlaybackState);
   if (params.has('bpm')) next.set('bpm', String(mediumBpm));
-  if (mediumAmpOverride !== null) next.set('amp', String(mediumAmpOverride));
+  if (mediumAmpOverride !== null && Number.isFinite(mediumAmpOverride)) next.set('amp', String(mediumAmpOverride));
   if (a11yForced) next.set('a11y', a11yForced);
   if (clearMode) next.set('clear', '1');
   history.replaceState(null, '', `${location.pathname}?${next}`);
