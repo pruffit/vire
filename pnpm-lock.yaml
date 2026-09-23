@@ -189,8 +189,8 @@ importers:
         specifier: ^1.0.3
         version: 1.0.3
       vireglass:
-        specifier: ^2.3.0
-        version: 2.3.0(320a1938a0cf4f4a47033f325bb91842)
+        specifier: ^2.3.1
+        version: 2.3.1(320a1938a0cf4f4a47033f325bb91842)
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -374,8 +374,11 @@ importers:
         specifier: ^5
         version: 5.9.3
       vireglass:
-        specifier: ^2.3.0
-        version: 2.3.0(320a1938a0cf4f4a47033f325bb91842)
+        specifier: ^2.3.1
+        version: 2.3.1(320a1938a0cf4f4a47033f325bb91842)
+      vireuikit:
+        specifier: ^0.1.0
+        version: 0.1.0(vireglass@2.3.1(320a1938a0cf4f4a47033f325bb91842))
       vitest:
         specifier: ^4.1.8
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.20.3)(jsdom@30.1.0)(vite@8.0.16(@types/node@22.20.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.1))
@@ -680,8 +683,8 @@ importers:
   packages/vireglass:
     dependencies:
       vireglass:
-        specifier: ^2.3.0
-        version: 2.3.0(320a1938a0cf4f4a47033f325bb91842)
+        specifier: ^2.3.1
+        version: 2.3.1(320a1938a0cf4f4a47033f325bb91842)
     devDependencies:
       '@types/node':
         specifier: ^22
@@ -6650,8 +6653,8 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
-  vireglass@2.3.0:
-    resolution: {integrity: sha512-7DMqru7vB5rzSxJPBSc2cFK4UnqAY3+96fbs6RVBpFzoJEgNav2rhoXm166GMxzDcR+Rui1G+A2Gqa+JFPFfnw==}
+  vireglass@2.3.1:
+    resolution: {integrity: sha512-h5uMS/xVhlp4XLU/PdRCBZ2pR/2vAyd/CMZKoVN2pn1q4NUGN4BiX7xHanslnu0LooaioIK/rA0UQSoTT7hHGg==}
     engines: {node: '>=20'}
     peerDependencies:
       '@shopify/react-native-skia': '>=2.0.0'
@@ -6676,6 +6679,12 @@ packages:
         optional: true
       react-native-reanimated:
         optional: true
+
+  vireuikit@0.1.0:
+    resolution: {integrity: sha512-S+ohOK5SgnSMlgxAH2Vkd5bqtuSomoVHC6UEAXMFmjMGRfyv2ZBbZmmeigzgcoYEaeBSOQPuaaXYfBfvhRXN4g==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      vireglass: ^2.3.1
 
   vite@8.0.16:
     resolution: {integrity: sha512-h9bXPmJichP5fLmVQo3PyaGSDE2n3aPuomeAlVRm0JLmt4rY6zmPKd59HYI4LNW8oTK7tlTsuC7l/m7awx9Jcw==}
@@ -13603,7 +13612,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vireglass@2.3.0(320a1938a0cf4f4a47033f325bb91842):
+  vireglass@2.3.1(320a1938a0cf4f4a47033f325bb91842):
     optionalDependencies:
       '@shopify/react-native-skia': 2.6.2(react-native-reanimated@4.5.1(react-native-worklets@0.10.4(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(react-native@0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.4))(react@19.2.4))(react-native@0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.4))(react@19.2.4))(react-native@0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.4))(react@19.2.4)
       expo: 57.0.23(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(@expo/metro-runtime@57.0.15)(react-dom@19.2.4(react@19.2.4))(react-native-web@0.21.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-native-worklets@0.10.4(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(react-native@0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.4))(react@19.2.4))(react-native@0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
@@ -13612,6 +13621,10 @@ snapshots:
       react: 19.2.4
       react-native: 0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.4)
       react-native-reanimated: 4.5.1(react-native-worklets@0.10.4(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(react-native@0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.4))(react@19.2.4))(react-native@0.86.2(@babel/core@7.29.7)(@react-native/metro-config@0.87.0(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.4))(react@19.2.4)
+
+  vireuikit@0.1.0(vireglass@2.3.1(320a1938a0cf4f4a47033f325bb91842)):
+    dependencies:
+      vireglass: 2.3.1(320a1938a0cf4f4a47033f325bb91842)
 
   vite@8.0.16(@types/node@22.20.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.1):
     dependencies:
