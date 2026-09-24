@@ -29,6 +29,7 @@ import {
 } from 'vireglass';
 import {
   MEDIUM_DEFAULT_CELL_PX,
+  MEDIUM_DEFAULTS,
   createMediumDynamics,
   type VireUIKitMediumPlaybackState,
   MEDIUM_SPECIES_LIGHTNESS,
@@ -162,6 +163,18 @@ function syntheticAmplitude(t: number): number {
 /** `?advectSpeed=` — контрольный прогон гейта структуры на другой скорости течения: калибровка
  *  порога в `docs/vireglass/benchmarks/2026-09-14-medium-cost.md`. */
 const mediumAdvectSpeedOverride = params.has('advectSpeed') ? Number(params.get('advectSpeed')) : null;
+/** `?m.<параметр>=<число>` — любой числовой параметр среды поверх дефолтов, чтобы разбирать вид
+ *  по механизмам, не пересобирая пакет. */
+const mediumParamOverrides: Record<string, number> = Object.fromEntries(
+  [...params]
+    .filter(([key]) => key.startsWith('m.'))
+    .filter(([key, value]) => {
+      const known = typeof (MEDIUM_DEFAULTS as Record<string, unknown>)[key.slice(2)] === 'number';
+      if (!known || !Number.isFinite(Number(value))) console.warn(`стенд: параметр среды ${key}=${value} пропущен`);
+      return known && Number.isFinite(Number(value));
+    })
+    .map(([key, value]) => [key.slice(2), Number(value)]),
+);
 /** `?cover=<тон>[,<цветность>]` — характер обложки вместо начальной нейтрали: стенду нужно
  *  чем-то показать цветную семью, пока палитру не считает сервер (спека «Палитра обложки»). */
 const mediumCover = (() => {
@@ -443,6 +456,11 @@ function syncUrl(): void {
   if (params.has('playback')) next.set('playback', mediumPlaybackState);
   if (params.has('bpm')) next.set('bpm', String(mediumBpm));
   if (mediumAmpOverride !== null && Number.isFinite(mediumAmpOverride)) next.set('amp', String(mediumAmpOverride));
+  for (const key of ['advectSpeed', 'cover', 'gridCell', 'glass', 'bench']) {
+    const value = params.get(key);
+    if (value !== null) next.set(key, value);
+  }
+  for (const [key, value] of Object.entries(mediumParamOverrides)) next.set(`m.${key}`, String(value));
   if (a11yForced) next.set('a11y', a11yForced);
   if (clearMode) next.set('clear', '1');
   history.replaceState(null, '', `${location.pathname}?${next}`);
@@ -1181,6 +1199,7 @@ function renderFrame() {
               ? { advectSpeed: mediumAdvectSpeedOverride }
               : {}),
             ...(mediumCover ? { channelColors: mediumCover } : {}),
+            ...mediumParamOverrides,
           },
           emissions: mediumFrame.emissions,
         })
