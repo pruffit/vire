@@ -29,6 +29,7 @@ import {
 } from 'vireglass';
 import {
   MEDIUM_DEFAULT_CELL_PX,
+  MEDIUM_DEFAULTS,
   createMediumDynamics,
   type VireUIKitMediumPlaybackState,
   MEDIUM_SPECIES_LIGHTNESS,
@@ -166,7 +167,12 @@ const mediumAdvectSpeedOverride = params.has('advectSpeed') ? Number(params.get(
  *  по механизмам, не пересобирая пакет. */
 const mediumParamOverrides: Record<string, number> = Object.fromEntries(
   [...params]
-    .filter(([key, value]) => key.startsWith('m.') && Number.isFinite(Number(value)))
+    .filter(([key]) => key.startsWith('m.'))
+    .filter(([key, value]) => {
+      const known = typeof (MEDIUM_DEFAULTS as Record<string, unknown>)[key.slice(2)] === 'number';
+      if (!known || !Number.isFinite(Number(value))) console.warn(`стенд: параметр среды ${key}=${value} пропущен`);
+      return known && Number.isFinite(Number(value));
+    })
     .map(([key, value]) => [key.slice(2), Number(value)]),
 );
 /** `?cover=<тон>[,<цветность>]` — характер обложки вместо начальной нейтрали: стенду нужно
@@ -450,6 +456,11 @@ function syncUrl(): void {
   if (params.has('playback')) next.set('playback', mediumPlaybackState);
   if (params.has('bpm')) next.set('bpm', String(mediumBpm));
   if (mediumAmpOverride !== null && Number.isFinite(mediumAmpOverride)) next.set('amp', String(mediumAmpOverride));
+  for (const key of ['advectSpeed', 'cover', 'gridCell', 'glass', 'bench']) {
+    const value = params.get(key);
+    if (value !== null) next.set(key, value);
+  }
+  for (const [key, value] of Object.entries(mediumParamOverrides)) next.set(`m.${key}`, String(value));
   if (a11yForced) next.set('a11y', a11yForced);
   if (clearMode) next.set('clear', '1');
   history.replaceState(null, '', `${location.pathname}?${next}`);
