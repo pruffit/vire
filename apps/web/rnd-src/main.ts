@@ -162,6 +162,13 @@ function syntheticAmplitude(t: number): number {
 /** `?advectSpeed=` — контрольный прогон гейта структуры на другой скорости течения: калибровка
  *  порога в `docs/vireglass/benchmarks/2026-09-14-medium-cost.md`. */
 const mediumAdvectSpeedOverride = params.has('advectSpeed') ? Number(params.get('advectSpeed')) : null;
+/** `?m.<параметр>=<число>` — любой числовой параметр среды поверх дефолтов, чтобы разбирать вид
+ *  по механизмам, не пересобирая пакет. */
+const mediumParamOverrides: Record<string, number> = Object.fromEntries(
+  [...params]
+    .filter(([key, value]) => key.startsWith('m.') && Number.isFinite(Number(value)))
+    .map(([key, value]) => [key.slice(2), Number(value)]),
+);
 /** `?cover=<тон>[,<цветность>]` — характер обложки вместо начальной нейтрали: стенду нужно
  *  чем-то показать цветную семью, пока палитру не считает сервер (спека «Палитра обложки»). */
 const mediumCover = (() => {
@@ -1181,6 +1188,7 @@ function renderFrame() {
               ? { advectSpeed: mediumAdvectSpeedOverride }
               : {}),
             ...(mediumCover ? { channelColors: mediumCover } : {}),
+            ...mediumParamOverrides,
           },
           emissions: mediumFrame.emissions,
         })
