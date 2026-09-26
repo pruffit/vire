@@ -30,10 +30,10 @@ import {
 import {
   MEDIUM_DEFAULT_CELL_PX,
   MEDIUM_DEFAULTS,
-  createMediumDynamics,
-  type VireUIKitMediumPlaybackState,
   MEDIUM_SPECIES_LIGHTNESS,
-  speciesFamily,
+  createMediumDynamics,
+  lightRigForCharacter,
+  type VireUIKitMediumPlaybackState,
 } from 'vireuikit';
 import {
   REFERENCE_PIECE_AT,
@@ -176,13 +176,15 @@ const mediumParamOverrides: Record<string, number> = Object.fromEntries(
     .map(([key, value]) => [key.slice(2), Number(value)]),
 );
 /** `?cover=<тон>[,<цветность>]` — характер обложки вместо начальной нейтрали: стенду нужно
- *  чем-то показать цветную семью, пока палитру не считает сервер (спека «Палитра обложки»). */
-const mediumCover = (() => {
+ *  чем-то показать цветную семью, пока палитру не считает сервер (спека «Палитра обложки»). Цвет
+ *  идёт на СВЕТ (`lightRigForCharacter`), не на `channelColors` — газ в камере невидим сам по
+ *  себе, светится только то, что светильники освещают (см. `light-rig.ts`). */
+const mediumCoverLights = (() => {
   const raw = params.get('cover');
   if (raw === null) return null;
   const [hue, chroma = 0.09] = raw.split(',').map(Number);
   if (!Number.isFinite(hue) || !Number.isFinite(chroma)) return null;
-  return speciesFamily({ hue, chroma, lightness: MEDIUM_SPECIES_LIGHTNESS });
+  return lightRigForCharacter({ hue, chroma, lightness: MEDIUM_SPECIES_LIGHTNESS });
 })();
 const mediumDynamics = createMediumDynamics();
 /** Позиция трека — своя, растёт только пока `playback=playing` (детерминированно от неё же
@@ -1198,7 +1200,7 @@ function renderFrame() {
             ...(mediumAdvectSpeedOverride !== null && Number.isFinite(mediumAdvectSpeedOverride)
               ? { advectSpeed: mediumAdvectSpeedOverride }
               : {}),
-            ...(mediumCover ? { channelColors: mediumCover } : {}),
+            ...(mediumCoverLights ? { lights: mediumCoverLights } : {}),
             ...mediumParamOverrides,
           },
           emissions: mediumFrame.emissions,
