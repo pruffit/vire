@@ -175,10 +175,8 @@ const mediumParamOverrides: Record<string, number> = Object.fromEntries(
     })
     .map(([key, value]) => [key.slice(2), Number(value)]),
 );
-/** `?cover=<тон>[,<цветность>]` — характер обложки вместо начальной нейтрали: стенду нужно
- *  чем-то показать цветную семью, пока палитру не считает сервер (спека «Палитра обложки»). Цвет
- *  идёт на СВЕТ (`lightRigForCharacter`), не на `channelColors` — газ в камере невидим сам по
- *  себе, светится только то, что светильники освещают (см. `light-rig.ts`). */
+/** `?cover=<тон>[,<цветность>]` — цвет обложки, пока палитру не считает сервер. Красит
+ *  прожекторы, а не газ: газ в камере невидим, светится только освещённое. */
 const mediumCoverLights = (() => {
   const raw = params.get('cover');
   if (raw === null) return null;
