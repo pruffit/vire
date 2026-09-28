@@ -20,7 +20,7 @@
     "@types/node": "^22",
     "@vire/config": "workspace:*",
     "playwright": "^1.62.1",
-    "tsx": "^4.23.13",
+    "tsx": "^4.23.15",
     "typescript": "^5.8.3",
     "vitest": "^4.1.11",
     "esbuild": "^0.28.2"

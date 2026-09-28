@@ -21,15 +21,15 @@
   },
   "dependencies": {
     "@vire/core": "workspace:*",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@types/node": "^22",
     "@vire/config": "workspace:*",
     "dotenv": "^17.4.2",
-    "drizzle-kit": "^0.31.10",
-    "tsx": "^4.23.13",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
     "typescript": "^5.8.3",
     "vitest": "^4.1.11"
   }
