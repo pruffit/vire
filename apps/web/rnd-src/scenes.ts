@@ -379,10 +379,6 @@ const referenceZones: readonly Zone[] = REFERENCE_SCENES.map((scene) => ({
     drawReferenceScene(ctx, scene, w, h, { density, fit: 'полотно' }),
 }));
 
-/** Второй путь подложки (`main.ts`) — GPU-проход пишет прямо в contentTexture, этот 2D-канвас
- *  не используется; в списке зон только затем, чтобы `?zone=` мог её выбрать. */
-const mediumNoop: VireGlassSceneDrawer = () => {};
-
 export const ZONES: readonly Zone[] = [
   {
     name: 'светлая клетка',
@@ -401,7 +397,6 @@ export const ZONES: readonly Zone[] = [
   { name: 'абзац', draw: paragraph },
   { name: 'дорожка', draw: track },
   ...referenceZones,
-  { name: 'среда', draw: mediumNoop },
 ];
 
 export const ZONE_NAMES: readonly string[] = ZONES.map((z) => z.name);

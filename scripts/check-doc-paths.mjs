@@ -20,8 +20,9 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SCAN = ['docs', 'README.md', 'CLAUDE.md'];
 const SKIP_DIRS = new Set(['node_modules']);
-/** Журнал процесса: пути внутри записей историчны, индекс — нет. */
-const JOURNAL = /^docs[/\\]superpowers[/\\](plans|specs)[/\\]/;
+/** Журнал процесса: пути внутри записей историчны, индекс — нет. Замер среды — такая же запись:
+ *  скрипты, которыми он снят, удалены вместе со средой. */
+const JOURNAL = /^docs[/\\](superpowers[/\\](plans|specs)[/\\]|vireglass[/\\]benchmarks[/\\]2026-09-14-medium-cost\.md$)/;
 
 /** Пути к коду в бэктиках: apps/…, packages/…, scripts/…, ops/… */
 const PATH_RE = /`((?:apps|packages|scripts|ops)\/[^`\s]+)`/g;
