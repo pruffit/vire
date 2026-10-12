@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
-import { WORKER_LOCK_MS } from './worker-options.js';
+import { KEEP_COMPLETED, KEEP_FAILED, WORKER_LOCK_MS, baseWorkerOptions } from './worker-options.js';
 
 const dir = new URL('../workers/', import.meta.url);
 const files = readdirSync(dir).filter((f) => f.endsWith('.worker.ts'));
@@ -15,6 +15,15 @@ describe('опции воркеров', () => {
 
   it('WORKER_LOCK_MS заметно выше дефолтных 30с bullmq', () => {
     expect(WORKER_LOCK_MS).toBeGreaterThanOrEqual(60_000);
+  });
+
+  it('история задач ограничена: кроны без своих removeOn* не копят записи вечно', () => {
+    expect(baseWorkerOptions.removeOnComplete).toBe(KEEP_COMPLETED);
+    expect(baseWorkerOptions.removeOnFail).toBe(KEEP_FAILED);
+    expect(KEEP_COMPLETED.count).toBeGreaterThan(0);
+    expect(KEEP_COMPLETED.count).toBeLessThanOrEqual(1000);
+    expect(KEEP_FAILED.count).toBeGreaterThan(0);
+    expect(KEEP_FAILED.count).toBeLessThanOrEqual(1000);
   });
 
   it.each(files)('%s строит Worker из baseWorkerOptions', (file) => {
