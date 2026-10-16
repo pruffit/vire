@@ -3,7 +3,6 @@ import { getCaller, clearDeviceStateCache } from '@/lib/caller';
 import { deviceAuthService } from '@/lib/device-auth';
 import { errorJson } from '@/lib/error-response';
 import { isUuid } from '@/lib/upload';
-import { deleteExpoPushTokensByDeviceId } from '@vire/db';
 import type { OkResponse } from '@vire/api-contracts';
 
 /** Отзыв устройства: access перестаёт приниматься в пределах TTL кэша состояния (30 с). */
@@ -16,10 +15,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ devi
 
   const result = await deviceAuthService().revoke({ userId: caller.id, deviceId });
   if (!result.ok) return errorJson(result.error, 404);
-
-  // Иначе отозванный телефон продолжает получать чужие пуши — devices-строка не удаляется
-  // при отзыве (остаётся ради истории входов), так что FK на expo_push_tokens не срабатывает.
-  try { await deleteExpoPushTokensByDeviceId(deviceId); } catch { /* отзыв устройства важнее */ }
 
   clearDeviceStateCache();
   return NextResponse.json({ ok: true } satisfies OkResponse);
