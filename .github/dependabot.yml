@@ -29,6 +29,10 @@ updates:
       - dependency-name: "react"
       - dependency-name: "react-dom"
       - dependency-name: "@types/react"
+      # typescript держим на 5.x (патчи приходят): typescript-eslint и плагину Next нужен программный API,
+      # которого у 7 нет; гейт typecheck гоняет семёрку под алиасом typescript-7 (см. CLAUDE.md).
+      - dependency-name: "typescript"
+        versions: [">=6"]
       # У версий 0.x semver считает minor тем, чем он не является: 0.7 → 0.8 у libsodium
       # сменил сигнатуру `crypto_generichash`. Это крипто под E2EE-чатом, и формат обязан
       # остаться совместимым (`apps/web/lib/e2ee`) — обновлять

@@ -12,7 +12,6 @@ export * from './platform/util/uuid';
 export * from './platform/util/ttl-cache';
 export * from './platform/util/throttle-gate';
 export * from './platform/util/format';
-export * from './platform/util/sentry-envelope';
 export * from './platform/util/scoring';
 export * from './platform/config/env';
 export * from './platform/config/feature-flags';
@@ -25,10 +24,6 @@ export * from './music/catalog/services/storage-keys';
 // По той же причине notifications/unsubscribe (зависит от util/signing) — тоже
 // только подпуть '@vire/core/notifications/unsubscribe'.
 // platform/access тоже только подпуть '@vire/core/access' — исполняется в middleware (Edge).
-// music/playback/services/queue и ports/audio-engine остаются в барреле, но для нативных
-// клиентов есть ещё подпути '@vire/core/playback/{queue,audio-engine}' — баррель тянет
-// email-templates → @vire/i18n, чей messages.ts грузит локали динамическим import() от
-// рантайм-строки, и Metro это не резолвит, валя весь бандл.
 export * from './music/catalog/types/artist';
 export * from './music/catalog/types/artist-post';
 export * from './music/catalog/types/artist-page';

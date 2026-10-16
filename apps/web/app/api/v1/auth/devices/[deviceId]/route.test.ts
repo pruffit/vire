@@ -4,12 +4,10 @@ const h = vi.hoisted(() => ({
   getCaller: vi.fn(),
   revoke: vi.fn(),
   clearDeviceStateCache: vi.fn(),
-  deleteExpoPushTokensByDeviceId: vi.fn(),
 }));
 
 vi.mock('@/lib/caller', () => ({ getCaller: h.getCaller, clearDeviceStateCache: h.clearDeviceStateCache }));
 vi.mock('@/lib/device-auth', () => ({ deviceAuthService: () => ({ revoke: h.revoke }) }));
-vi.mock('@vire/db', () => ({ deleteExpoPushTokensByDeviceId: h.deleteExpoPushTokensByDeviceId }));
 
 import { DELETE } from './route';
 
@@ -24,7 +22,6 @@ function call(deviceId: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   h.revoke.mockResolvedValue({ ok: true, value: undefined });
-  h.deleteExpoPushTokensByDeviceId.mockResolvedValue(undefined);
 });
 
 describe('DELETE /api/v1/auth/devices/[deviceId]', () => {
@@ -40,31 +37,20 @@ describe('DELETE /api/v1/auth/devices/[deviceId]', () => {
     expect(h.revoke).not.toHaveBeenCalled();
   });
 
-  it('404, если устройство чужое/не найдено — пуш-токены не трогаем', async () => {
+  it('404, если устройство чужое/не найдено', async () => {
     h.getCaller.mockResolvedValue(SESSION_CALLER);
     h.revoke.mockResolvedValue({ ok: false, error: new Error('not found') });
 
     expect((await call(DEVICE_ID)).status).toBe(404);
-    expect(h.deleteExpoPushTokensByDeviceId).not.toHaveBeenCalled();
   });
 
-  it('успешный отзыв каскадом чистит Expo push-токены этого устройства', async () => {
+  it('успешный отзыв сбрасывает кэш состояния устройств', async () => {
     h.getCaller.mockResolvedValue(SESSION_CALLER);
 
     const res = await call(DEVICE_ID);
 
     expect(res.status).toBe(200);
     expect(h.revoke).toHaveBeenCalledWith({ userId: USER_ID, deviceId: DEVICE_ID });
-    expect(h.deleteExpoPushTokensByDeviceId).toHaveBeenCalledWith(DEVICE_ID);
     expect(h.clearDeviceStateCache).toHaveBeenCalled();
-  });
-
-  it('сбой прунинга push-токенов не должен ронять сам отзыв устройства', async () => {
-    h.getCaller.mockResolvedValue(SESSION_CALLER);
-    h.deleteExpoPushTokensByDeviceId.mockRejectedValue(new Error('db down'));
-
-    const res = await call(DEVICE_ID);
-
-    expect(res.status).toBe(200);
   });
 });
