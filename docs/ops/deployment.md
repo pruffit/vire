@@ -106,6 +106,18 @@ crontab -e
 > Имя сети в `backup.sh` (`vire_default`) = `<имя_папки>_default`. Папка `/opt/vire`
 > → проект `vire` → сеть `vire_default`. Проверь: `docker network ls`.
 
+**Сводка здоровья** — раз в день в Telegram через тот же `ALERT_WEBHOOK_URL`, что и алерты:
+версия, память, диск, давление ввода-вывода, Redis (ключи, снапшот), упавшие задачи,
+перезапуски контейнеров, размер базы, новые пользователи и прослушивания за сутки. При
+выходе за порог первая строка становится 🟡 с причиной. Алерты ловят ошибки, а сводка —
+медленный рост, на котором прод встал 12.10. Скрипт на сервер копируется руками, как и
+`backup.sh`; `DRY=1` печатает сводку без отправки.
+```bash
+scp scripts/health-digest.sh vire@<сервер>:/opt/vire/scripts/ && ssh vire@<сервер> chmod +x /opt/vire/scripts/health-digest.sh
+# crontab -e
+# 0 6 * * *  cd /opt/vire && ./scripts/health-digest.sh >> /opt/vire/health-digest.log 2>&1
+```
+
 ## 6. Обновление (выкатка новой версии)
 Поднять версию в `package.json` + `SITE_VERSION` (`lib/site.ts`), затем тег:
 ```bash
