@@ -392,16 +392,36 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            docker-compose.prod.yml
+            Caddyfile
+          sparse-checkout-cone-mode: false
+      # Конфиг прода — из репозитория (#160). Едет в env, а не scp: файл пишется поверх,
+      # inode сохраняется, и bind-mount Caddyfile в контейнере видит новое содержимое.
+      - name: Pack prod config
+        run: |
+          echo "COMPOSE_B64=$(base64 -w0 docker-compose.prod.yml)" >> "$GITHUB_ENV"
+          echo "CADDY_B64=$(base64 -w0 Caddyfile)" >> "$GITHUB_ENV"
       - name: SSH deploy
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          envs: GHCR_USER,GHCR_TOKEN
+          envs: GHCR_USER,GHCR_TOKEN,COMPOSE_B64,CADDY_B64
           script: |
             set -e
             cd /opt/vire
+            cp docker-compose.prod.yml docker-compose.prod.yml.prev
+            cp Caddyfile Caddyfile.prev
+            echo "$CADDY_B64" | base64 -d > Caddyfile.next
+            # Невалидный Caddyfile не доходит до прода: проверка тем же образом и тем же .env.
+            docker run --rm --env-file .env -v "$PWD/Caddyfile.next:/etc/caddy/Caddyfile:ro" caddy:2-alpine \
+              caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+            cat Caddyfile.next > Caddyfile && rm Caddyfile.next
+            echo "$COMPOSE_B64" | base64 -d > docker-compose.prod.yml
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             # Пуллим только свои образы из GHCR: полный pull ходит на Docker Hub
             # за неизменными postgres/redis/minio/mc/caddy и ловит анонимный
@@ -414,6 +434,8 @@ jobs:
             docker compose -f docker-compose.prod.yml --env-file .env run --rm worker \
               pnpm --filter @vire/db exec tsx src/migrate.ts
             docker compose -f docker-compose.prod.yml --env-file .env up -d
+            docker compose -f docker-compose.prod.yml --env-file .env exec -T caddy \
+              caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
             docker image prune -f
         env:
           GHCR_USER: ${{ github.actor }}

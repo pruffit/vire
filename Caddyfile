@@ -1,7 +1,11 @@
 # Домены берутся из .env (DOMAIN, CDN_DOMAIN, ACME_EMAIL).
-# Caddy сам выпускает и продлевает TLS Let's Encrypt.
+# Caddy сам выпускает и продлевает TLS Let's Encrypt. Перед Caddy стоит Cloudflare.
 {
 	email {$ACME_EMAIL}
+	# Выставлено на сервере 22.06.2026 в той же отладке зависшего стриминга, что и выключенный encode ниже.
+	servers {
+		protocols h1
+	}
 }
 
 # www → без www
@@ -11,7 +15,7 @@ www.{$DOMAIN} {
 
 # Основной сайт → Next.js
 {$DOMAIN} {
-	encode zstd gzip
+	# encode выключен: виснет на стриминге Next 16, сжатие делает Cloudflare.
 	reverse_proxy web:3000
 }
 
