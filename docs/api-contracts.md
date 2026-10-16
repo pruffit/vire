@@ -1,7 +1,6 @@
 # API-контракты — конвенции и первая группа
 
-**Статус:** реализовано (Phase 4, волна 3, 12.08.2026) · **Основание:** `architecture-audit.md` §Б5,
-`migration-plan.md` §волна 3
+**Статус:** реализовано (Phase 4, волна 3, 12.08.2026) · **Основание:** `architecture-audit.md` §Б5
 
 ---
 
@@ -28,7 +27,7 @@ zod-схема (packages/api-contracts)
    └── JSON Schema      → генерируется для не-TS клиентов, если появятся
 ```
 
-OpenAPI **не вводится сейчас**: при TS-клиенте (`multiplatform.md` §3) он даёт
+OpenAPI **не вводится сейчас**: при TS-клиенте он даёт
 генератор, который надо поддерживать, без новой возможности. Генерация JSON Schema
 из zod — одна команда, вводится в момент появления не-TS клиента.
 
@@ -95,7 +94,7 @@ OpenAPI **не вводится сейчас**: при TS-клиенте (`multi
 ## 4. Структура пакета
 
 Плоская, не `common/platform/music`: 17 файлов сегодня, порог для раскладки по
-подпапкам — 30 (`migration-plan.md` §волна 3, решение 2). Реэкспорт — `src/index.ts`.
+подпапкам — 30. Реэкспорт — `src/index.ts`.
 
 ```
 packages/api-contracts/src/
@@ -138,7 +137,7 @@ packages/api-contracts/src/
 | 8 | **Interactions** | like, follow, presave | Есть, уже в контрактах |
 | 9 | **Home blocks** (доп. к Playlist из #4) | `GET /v1/home/{fresh-releases,upcoming,hot-tracks,playlists,personal,friends-activity}` | ✅ `HomeBlocksService` через core (шаг 2.7), контракты `freshReleasesResponseSchema`/`upcomingResponseSchema`/`hotTracksResponseSchema`/`homePlaylistsResponseSchema`/`personalBlockResponseSchema`/`friendsActivityResponseSchema`. `personal`/`friends-activity` — 401 без сессии, `userId` только из сессии, не из query (тот же контракт, что и Feed) |
 
-Порядок совпадает с волной 2 `migration-plan.md` — контракт пишется **вместе** с переводом
+Контракт пишется **вместе** с переводом
 ресурса на read-сервис, не отдельной кампанией. Это то, что не даёт работе превратиться
 в «большую миграцию контрактов», которая никогда не заканчивается.
 

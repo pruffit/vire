@@ -10,13 +10,10 @@
 Платформа здесь — не заявление о намерениях: ядро уже разделено на переиспользуемое
 (`packages/core/src/platform/**` — идентичность, биллинг, уведомления, поиск, соцсвязи,
 сообщения) и музыкальное (`music/**`), а барьер `check:layers` не даёт первому узнать
-о втором. Что из этого выносится в публичные SDK и по какому графу зависимостей —
-[`docs/virespace.md`](docs/virespace.md).
+о втором. Раскладка — [`docs/platform-core.md`](docs/platform-core.md).
 
-> **VireMusic:** этап 1 (Friends & Family) запущен; этап 2 (прямые продажи) — частично,
-> бэкенд покупок готов, UI скрыт с витрины до боевой настройки YooKassa.
-> **Платформа:** волны 0–8 разделения выполнены, открыты 9–11 (организации,
-> полиморфные взаимодействия, CI под несколько продуктов).
+Текущее состояние проектов, планы и задачи живут вне этого репозитория (приватный HQ и
+доска задач); здесь — код и документы о том, как он устроен.
 
 ---
 
@@ -29,7 +26,6 @@
 3. [`docs/foundation/data-schema.md`](docs/foundation/data-schema.md) — модель данных: сущности, связи, решения «на вырост».
 4. [`docs/ops/deployment.md`](docs/ops/deployment.md) — деплой на VPS: Docker Compose, Caddy, CI/CD, бэкапы.
 
-Фактическое состояние кодовой базы (а не целевое) — [`docs/architecture/current-state.md`](docs/architecture/current-state.md).
 Инженерный аудит с решениями и дорожной картой — [`docs/architecture/audit-2026-08.md`](docs/architecture/audit-2026-08.md).
 Карта всех документов — [`docs/README.md`](docs/README.md). Каждая фича описана файлом в [`docs/features/`](docs/features/).
 
@@ -57,7 +53,6 @@
 apps/
   web/        — Next.js: фронт + API (Route Handlers /api/v1/*)
   worker/     — BullMQ: транскодинг, анализ аудио, рассылки, крон-задачи
-  mobile/     — React Native + Expo (Android)
   desktop/    — Tauri v2 (Windows / Linux), UI через системный WebView
 packages/
   core/           — бизнес-логика и use-cases (чистый TS, не знает ни Next, ни БД)

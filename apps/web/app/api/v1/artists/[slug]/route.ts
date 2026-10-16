@@ -34,7 +34,7 @@ export async function GET(
   const artist = result.value;
 
   // Пустой артист скрыт с витрины (каталог/поиск/sitemap) — этот ресурсный роут должен
-  // отвечать так же, тем же 404, что и отсутствующий артист (см. TODO.md, тот же гейт,
+  // отвечать так же, тем же 404, что и отсутствующий артист (см. docs/features/seo.md «Soft-404», тот же гейт,
   // что apps/web/app/[locale]/(listener)/artists/[slug]/artist-guard.ts::assertArtistVisible).
   if (!(await artistHasPublishedTrack(artist.id))) {
     const caller = await getCaller();

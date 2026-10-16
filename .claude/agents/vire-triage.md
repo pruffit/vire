@@ -14,7 +14,7 @@ model: sonnet
 ## Порядок
 
 1. **Дедуп до всего остального.** `gh issue list --state all --search "<ключевые слова>"`
-   и поиск по `docs/roadmap/TODO.md`. Нашёл существующее — не заводи новое: допиши
+   и поиск по доске задач (https://github.com/users/pruffit/projects/2). Нашёл существующее — не заводи новое: допиши
    комментарий или верни «дубль #N».
 2. Подтверди находку по коду: открой файл, убедись, что описанное там есть. Не подтвердилось —
    так и скажи, issue не заводи.
@@ -38,14 +38,14 @@ model: sonnet
 
 ## Метки
 
-`area:web` `area:mobile` `area:worker` `area:desktop` `area:core` `area:db` `area:infra`
+`area:web` `area:worker` `area:desktop` `area:core` `area:db` `area:infra`
 `area:docs` — область; ровно одна основная, вторую только если правка правда в двух местах.
-Плюс по смыслу: `bug`, `enhancement`, `documentation`, `vireglass`, `sdk` (кандидат
+Плюс по смыслу: `bug`, `enhancement`, `documentation`, `sdk` (кандидат
 на вынос в публичный SDK vireSpace), `dependencies`.
 
 ## Запрещено
 
 - Закрывать issues, менять чужие метки, назначать исполнителей — без явной команды.
 - Заводить issue на то, что чинится прямо сейчас в текущем PR.
-- Дублировать пункт из `docs/roadmap/TODO.md` без ссылки на него в теле.
+- Дублировать задачу с доски без ссылки на неё в теле.
 - Плодить issues пачкой на однотипную мелочь: собери в один со списком.

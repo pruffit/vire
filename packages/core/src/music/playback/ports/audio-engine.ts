@@ -20,10 +20,10 @@ export interface AudioEngineSource {
 
 /**
  * Платформенный аудио-драйвер за одним портом: веб реализует через hls.js + <audio>,
- * мобильный — через react-native-track-player. Всё выше порта (очередь, порядок,
+ * нативные клиенты — своим драйвером. Всё выше порта (очередь, порядок,
  * shuffle/repeat, что играть дальше) — платформо-нейтральная логика в этом пакете
  * (services/queue.ts, services/engine-policy.ts), driver знает только про воспроизведение
- * одного трека. См. docs/multiplatform.md §5.
+ * одного трека.
  */
 export interface IAudioEngine {
   load(src: AudioEngineSource): Promise<void>;

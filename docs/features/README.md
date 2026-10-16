@@ -82,12 +82,8 @@
 - [x] [Дизайн-система: роли и границы китов](design-system.md) — `label-mono`/`readout`, `packages/ui` vs `ui-kit`/`content-kit`, статический гейт
 - [x] [Адаптив веба (мобайл-фёрст база)](web-responsive.md) — паттерны минимального вьюпорта `apps/web`: bottom-sheet, `AdaptiveMenu`/`AdaptivePopover`, тач-таргеты
 - [x] [Локализация (ru/en)](i18n.md) — словари `packages/i18n`, `/en`-префикс, `users.locale`, письма/пуш по локали получателя, гейт `check:i18n`
-- [x] [Дизайн-токены](design-tokens.md) — `packages/design-tokens`: `tokens.json` источник правды, генераторы CSS (веб) и TS-объекта (будущий RN-клиент)
+- [x] [Дизайн-токены](design-tokens.md) — `packages/design-tokens`: `tokens.json` источник правды, генераторы CSS (веб) и TS-объекта (будущие нативные клиенты)
 - [x] [Десктоп-клиент (срез 0)](desktop-app.md) — Tauri v2 оболочка вокруг веб-фронта, без нового UI и нативных фич
-- [x] [Мобильное приложение](mobile-app.md) — RN+Expo, инкременты 1–28: вход, воспроизведение, соцслой, офлайн, пуши, VireGlass
-- [x] [Дизайн-система мобильного клиента](mobile-design-system.md) — фундамент экранов мобилки (фаза P1), направление задают дизайн-канвасы
-- [x] [Плеер мобильного приложения](mobile-player.md) — мини-плеер и фуллскрин вокруг стеклянной шторки (фаза P2)
-- [x] [VireGlass в вебе](vireglass-web.md) — общий пакет материала, транспайлер AGSL→GLSL, стенд `/rnd` и измеритель кадра
 - [ ] Этап 2 — продажи (YooKassa)
 
 См. также: [`docs/security/owasp-top-10.md`](../security/owasp-top-10.md).
