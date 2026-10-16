@@ -392,28 +392,59 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            docker-compose.prod.yml
+            Caddyfile
+          sparse-checkout-cone-mode: false
+      # Конфиг прода — из репозитория. Едет в env, а не scp: файл пишется поверх,
+      # inode сохраняется, и bind-mount Caddyfile в контейнере видит новое содержимое.
+      - name: Pack prod config
+        run: |
+          echo "COMPOSE_B64=$(base64 -w0 docker-compose.prod.yml)" >> "$GITHUB_ENV"
+          echo "CADDY_B64=$(base64 -w0 Caddyfile)" >> "$GITHUB_ENV"
       - name: SSH deploy
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          envs: GHCR_USER,GHCR_TOKEN
+          envs: GHCR_USER,GHCR_TOKEN,COMPOSE_B64,CADDY_B64
           script: |
             set -e
             cd /opt/vire
+            C="docker compose -f docker-compose.prod.yml --env-file .env"
+            echo "$CADDY_B64" | base64 -d > Caddyfile.next
+            echo "$COMPOSE_B64" | base64 -d > docker-compose.prod.yml.next
+            # Проверка через compose, а не docker run: тот же разбор .env, что у работающего Caddy.
+            $C run --rm --no-deps -v "$PWD/Caddyfile.next:/etc/caddy/Caddyfile.next:ro" caddy \
+              caddy validate --config /etc/caddy/Caddyfile.next --adapter caddyfile
+            docker compose -f docker-compose.prod.yml.next --env-file .env config -q
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             # Пуллим только свои образы из GHCR: полный pull ходит на Docker Hub
             # за неизменными postgres/redis/minio/mc/caddy и ловит анонимный
             # рейт-лимит 429 (уронил деплой v1.17.2). Инфра-образы уже на VPS.
-            docker compose -f docker-compose.prod.yml --env-file .env pull web worker
+            $C pull web worker
             # Миграции ДО up -d: аддитивные изменения схемы (новые enum-значения,
             # nullable-колонки) должны существовать к моменту старта нового кода,
             # иначе он падает на отсутствующем значении. Старый код переживает
             # аддитивную схему. Запускается на свежепулленном образе worker.
-            docker compose -f docker-compose.prod.yml --env-file .env run --rm worker \
-              pnpm --filter @vire/db exec tsx src/migrate.ts
-            docker compose -f docker-compose.prod.yml --env-file .env up -d
+            $C run --rm worker pnpm --filter @vire/db exec tsx src/migrate.ts
+            # Конфиг пишется только перед up -d: упавший pull или миграция оставляют прод на старом.
+            for f in docker-compose.prod.yml Caddyfile; do
+              if [ -f "$f" ]; then cp "$f" "$f.prev"; fi
+            done
+            cat docker-compose.prod.yml.next > docker-compose.prod.yml
+            cat Caddyfile.next > Caddyfile
+            rm docker-compose.prod.yml.next Caddyfile.next
+            $C up -d
+            # Только что пересозданный Caddy может ещё не принимать admin-запросы.
+            for attempt in 1 2 3; do
+              if $C exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; then break; fi
+              if [ "$attempt" = 3 ]; then exit 1; fi
+              sleep 5
+            done
             docker image prune -f
         env:
           GHCR_USER: ${{ github.actor }}

@@ -48,6 +48,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Деплой кладёт этот Caddyfile на прод — ошибка в нём должна всплыть на PR, а не посреди выката.
+      - name: Caddyfile is valid
+        run: |
+          docker run --rm -e DOMAIN=example.com -e CDN_DOMAIN=cdn.example.com -e ACME_EMAIL=ops@example.com \
+            -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
       - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v7
