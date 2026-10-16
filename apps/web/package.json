@@ -67,7 +67,7 @@
     "impeccable": "3.6.1",
     "jsdom": "^30.1.2",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "^7",
     "vitest": "^4.1.8"
   }
 }

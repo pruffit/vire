@@ -20,7 +20,7 @@
     "@types/node": "^22",
     "@vire/config": "workspace:*",
     "@vire/core": "workspace:*",
-    "typescript": "^5.8.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   }
 }
