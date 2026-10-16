@@ -66,9 +66,9 @@ mkdir -p /opt/vire && cd /opt/vire
 ### Пайплайны
 
 - **`.github/workflows/ci.yml`** — пуш в `dev` и PR в `main`/`dev`: typecheck · lint · test · design audit · build. Красный CI не мёржится.
-- **`.github/workflows/deploy.yml`** — по тегу `vX.Y.Z` (или вручную: Actions → Deploy → Run workflow). Три последовательных job: **gates** → **build-and-push** (собирает образы в раннере, пушит в GHCR) → **deploy** (SSH на сервер: кладёт `docker-compose.prod.yml` и `Caddyfile` из репозитория — Caddyfile после `caddy validate`, — затем `compose pull`, миграции, `up -d` и `caddy reload`). Deploy не запускается если gates упали.
+- **`.github/workflows/deploy.yml`** — по тегу `vX.Y.Z` (или вручную: Actions → Deploy → Run workflow). Три последовательных job: **gates** → **build-and-push** (собирает образы в раннере, пушит в GHCR) → **deploy** (SSH на сервер: проверяет `Caddyfile` и compose из репозитория, делает `compose pull` и миграции, затем кладёт оба файла, `up -d` и `caddy reload`). Deploy не запускается если gates упали.
 
-  > Конфиг прода — только через репозиторий: правка `/opt/vire/docker-compose.prod.yml` или `Caddyfile` руками перетрётся следующим деплоем. До 16.10.2026 деплой файлы не трогал, и прод жил на compose от 20.06 без лимитов памяти (#160). Ручной фолбэк `scripts/ship.ps1` конфиг не переносит.
+  > Конфиг прода — только через репозиторий: правка `/opt/vire/docker-compose.prod.yml` или `Caddyfile` руками перетрётся следующим деплоем. Файлы пишутся только после `pull` и миграций, прошлые версии остаются рядом как `*.prev`. Ручной фолбэк `scripts/ship.ps1` конфиг не переносит.
 
 **Первый деплой** (инфраструктура поднимется тем же `up -d`):
 ```bash
