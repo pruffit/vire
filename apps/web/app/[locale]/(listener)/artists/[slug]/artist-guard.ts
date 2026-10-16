@@ -20,7 +20,7 @@ export const assertArtistVisible = cache(async (artistProfileId: string): Promis
 });
 
 // Гейт живёт в layout.tsx — он рендерится ДО Suspense-границы вложенных сегментов, а notFound()
-// из уже застриминного поддерева HTTP-статус ответа поменять не может (см. TODO.md — soft-404).
+// из уже застриминного поддерева HTTP-статус ответа поменять не может (см. docs/features/seo.md, «Soft-404»).
 export const assertArtistExists = cache(async (slug: string): Promise<ArtistProfile> => {
   const artist = await getArtist(slug);
   if (!artist) notFound();

@@ -51,8 +51,7 @@ Turborepo + pnpm workspaces. На этапе 1 реально работает �
 ├── apps/
 │   ├── web/                  # Next.js — фронт + API (этап 1+)
 │   ├── worker/               # фоновые воркеры: транскодинг, рассылки (этап 1+)
-│   ├── desktop/              # Tauri-обёртка (этап 3-4)
-│   └── mobile/               # React Native / Expo (этап 4)
+│   └── desktop/              # Tauri-обёртка
 │
 ├── packages/
 │   ├── core/                 # бизнес-логика: сервисы, use-cases — НЕ зависит от Next

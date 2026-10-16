@@ -8,7 +8,7 @@ const APP_DIR = fileURLToPath(new URL('..', import.meta.url));
 
 // dashboard/** — авторизованная зона артиста, не индексируется поисковиками
 // (нет в sitemap/публичных ссылках); soft-404 там не несёт SEO-риска, поэтому
-// оставлен как принятый долг (см. docs/roadmap/TODO.md).
+// оставлен как принятый долг (см. docs/features/seo.md, «Soft-404»).
 const EXEMPT = [path.join(APP_DIR, '[locale]', 'dashboard')];
 
 function collectPageAndLayoutFiles(dir: string): string[] {
@@ -43,7 +43,7 @@ function hasLoadingAncestor(file: string): string | null {
 
 describe('soft-404: notFound() должен реально отдавать HTTP 404', () => {
   // Next стримит содержимое под loading.tsx (Suspense): к моменту, когда вложенный
-  // notFound() срабатывает, шелл с 200 уже отправлен и статус необратим (см. TODO.md).
+  // notFound() срабатывает, шелл с 200 уже отправлен и статус необратим (см. docs/features/seo.md).
   // Инвариант — ни у одной публичной страницы, вызывающей notFound(), не должно быть
   // loading.tsx среди предков (включая собственный сегмент).
   it('ни один публичный page.tsx/layout.tsx с notFound() не стоит под loading.tsx', () => {

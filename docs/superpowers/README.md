@@ -11,7 +11,7 @@ Requirements → Design → Implementation → Testing → Ship, и на фаз�
 или решение пересмотрено. Часть планов описывает то, что позже отменили или переделали
 иначе; часть спек содержит открытые вопросы, закрытые уже другим документом. Доверять как
 источнику «что есть сейчас» нельзя ничему здесь — для этого `docs/features/**`,
-`docs/foundation/**`, `docs/vireglass/**`.
+`docs/foundation/**`.
 
 105 планов, 113 спек, 2 ledger-файла — 220 файлов. Сгруппированы по теме, внутри группы —
 от свежих к старым. Не каждому плану соответствует спека и наоборот: часть задач шла с
@@ -20,7 +20,7 @@ Requirements → Design → Implementation → Testing → Ship, и на фаз�
 
 ## Мобилка (React Native + Expo)
 
-Инкременты нативного Android-клиента — от входа до P0/P1/P2 реконструкции по `docs/product/`. Текущее состояние — `docs/features/mobile-app.md` и `docs/features/mobile-player.md`.
+Историческая запись об удалённом Android-клиенте (16.10.2026; снимок — в pruffit/vire-archive). Не описывает текущий код.
 
 - **30.08** — P3 — редизайн фуллскрин-плеера вокруг стеклянной шторки — спека [`2026-08-30-mobile-player-redesign-p3.md`](specs/2026-08-30-mobile-player-redesign-p3.md)
 - **29.08** — P2 — плеер после реконструкции — план [`2026-08-29-mobile-p2-player.md`](plans/2026-08-29-mobile-p2-player.md)
