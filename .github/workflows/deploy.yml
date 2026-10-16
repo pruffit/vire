@@ -44,10 +44,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # dist/ у @vire/design-tokens не в git (build-артефакт) — @vire/mobile импортирует
-      # dist/tokens.native.ts, @vire/ui импортирует dist/tokens.css. Оба нужны раньше самого
-      # первого шага, который их читает (Typecheck), иначе чистый чекаут падает на "Cannot
-      # find module '@vire/design-tokens/native'" (turbo-граф typecheck не тянет ^build).
+      # dist/ у @vire/design-tokens не в git: @vire/ui импортирует dist/tokens.css. Нужен до
+      # Typecheck, иначе чистый чекаут падает (turbo-граф typecheck не тянет ^build).
       - name: Build design tokens
         run: pnpm --filter @vire/design-tokens build
 
@@ -65,19 +63,6 @@ jobs:
       # Барьер: границы @vire/core — platform/** не знает о music/**, core чист от db/next/react.
       - name: Layer check
         run: pnpm turbo run check:layers
-      # Барьер: транспайлер AGSL → GLSL. Оба шейдера компилируются и линкуются в настоящем
-      # WebGL2 — рассинхрон имён униформ Expo однажды проглотил молча, и преломление
-      # простояло выключенным в проде целую фазу. Браузер ставится явно: pnpm не пускает
-      # postinstall playwright (onlyBuiltDependencies), поэтому сам он не приедет.
-      - name: GLSL check
-        run: |
-          pnpm --filter @vire/vireglass exec playwright install --with-deps chromium-headless-shell
-          pnpm turbo run check:glsl
-      # Компиляции мало: шейдер собирается и при сломанной оптике. Этот гейт рендерит деталь
-      # над полотном и проверяет два обещания материала — что она осталась окном и осталась
-      # предметом. Оба уже нарушались молча.
-      - name: Optics check
-        run: pnpm turbo run check:optics
       - name: Doc paths
         run: pnpm check:doc-paths
       # Барьер: параллелизм turbo не складывается с параллелизмом vitest (иначе флейк по таймауту).
@@ -97,9 +82,8 @@ jobs:
           DATABASE_URL: postgresql://vire:vire@localhost:5432/vire_test
       - name: Test
         run: pnpm test
-      # --ignore-unfixable: не валить gate на advisory без патча в апстриме (напр. image-size
-      # через apps/mobile>expo>@expo/metro — DoS-only в dev-время бандлере, чинить нечем, пока
-      # апстрим не выпустит фикс). Advisory с доступным патчем по-прежнему валят сборку.
+      # --ignore-unfixable: не валить gate на advisory без патча в апстриме.
+      # Advisory с доступным патчем по-прежнему валят сборку.
       - name: Security audit
         # Сервис аудита npm периодически недоступен и роняет релиз, не имея отношения к коду
         # (04.09.2026 — два прогона подряд по ERR_SOCKET_TIMEOUT). Найденные уязвимости валят
