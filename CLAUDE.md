@@ -1,9 +1,17 @@
 # vireSpace — инструкция для Claude Code
 
+> **Единственный источник правды о текущем состоянии всех проектов — HQ:**
+> `C:\Users\KOTLAEV\hq` (github.com/pruffit/hq). Перед любой работой прочитай его `README.md`.
+> Задачи живут только на доске https://github.com/users/pruffit/projects/2. Этот файл —
+> только правила работы с кодом: статуса, планов и бэклога здесь нет и быть не должно.
+>
+> **Android-клиента нет.** Старый `apps/mobile` и RnD-стенды удалены 16.10.2026 (снимок —
+> в `pruffit/vire-archive`) и не возрождаются. Кит строится в репозитории `vireuikit`.
+
 Платформа для продуктов, где автор владеет тем, что создал. **VireMusic** — первый
 продукт на ней: независимая музыкальная площадка для артистов и слушателей СНГ.
 Разделение уже в коде: `packages/core/src/platform/**` не знает о `music/**`
-(барьер `check:layers`); что выносится в публичные SDK — `docs/virespace.md`.
+(барьер `check:layers`).
 
 Полная документация: `docs/vision/concept.md`, `docs/foundation/architecture.md`, `docs/foundation/data-schema.md` (карта всех доков — `docs/README.md`).
 
@@ -63,7 +71,7 @@ Haiku — поиск/маппинг/тривиал.
 - **Хранилище:** S3-совместимое — MinIO (и на проде за Caddy на `cdn.viremusic.ru`, и локально)
 - **Транскодинг:** ffmpeg-воркер (`apps/worker`), HLS-нарезка
 - **Аутентификация:** Auth.js (NextAuth) + Bearer-токены устройств для нативных клиентов
-- **Клиенты:** веб, Android (React Native + Expo), десктоп (Tauri v2)
+- **Клиенты:** веб (в т.ч. PWA), десктоп (Tauri v2)
 - **Деплой:** Timeweb Cloud VPS + Docker (Caddy → web/worker из GHCR); CI/CD по тегу `vX.Y.Z`
 
 **Прод — один VPS: 2 ядра × 3.3 ГГц / 2 ГБ RAM / 40 ГБ + 4 ГБ swap, шесть контейнеров.**
@@ -78,7 +86,6 @@ Haiku — поиск/маппинг/тривиал.
 apps/
   web/        — Next.js: фронт + API (Route Handlers /api/v1/*)
   worker/     — BullMQ воркеры: транскодинг, анализ аудио, рассылки, крон
-  mobile/     — React Native + Expo (Android)
   desktop/    — Tauri v2 (Windows/Linux), UI через системный WebView
 packages/
   core/       — бизнес-логика, use-cases (чистый TS, НЕ зависит от Next)
@@ -124,7 +131,7 @@ Route Handler     ─┴─► packages/db/src/queries/*.ts ──► PostgreSQL
 - Репозиторий не знает про бизнес-правила
 - `packages/core` не импортирует ничего из Next.js
 
-**Про чтение — важное.** `packages/db/src/queries` (50 файлов, ~7 200 строк, ~150 функций) —
+**Про чтение — важное.** `packages/db/src/queries` —
 это **основной и принятый в проекте способ читать данные**: ранжирование, агрегации,
 фильтры видимости, джойны популярности живут там. Не заводи для нового чтения сервис
 в `core` и репозиторий — пиши query-функцию рядом с существующими и вызывай её напрямую.
@@ -146,7 +153,7 @@ billing, notifications, search, social, messaging, storage, util) и `music/**` 
 catalog, curation, discovery, engagement, playback, jam, marketing, external, audio).
 `music/**` может опираться на `platform/**`, обратное запрещено; общее ядро (`errors.ts`,
 `jobs.ts`) лежит в корне `src`. Барьер — `pnpm turbo run check:layers`, он же в CI `gates`.
-Раскладка и целевые контракты — `docs/platform-core.md`, порядок работ — `docs/migration-plan.md`.
+Раскладка и целевые контракты — `docs/platform-core.md`.
 
 ### FSD на фронтенде
 
@@ -193,7 +200,7 @@ body (h-full, overflow-clip, flex flex-col)
   Chromium не демотирует слой, соседи каскадом промоутятся overlap'ом). Бесконечные
   transform/opacity-анимации (`animate-ping`) на постоянно видимых элементах запрещены —
   пульс через `animate-live-pulse` (box-shadow). После UI-прохода проверять слои CDP
-  `LayerTree` (Playwright): в скролл-области должно быть 0 слоёв.
+  `LayerTree` (Playwright по месту, `npx playwright`): в скролл-области должно быть 0 слоёв.
 - Инварианты защищены тестом `app/__tests__/layout-shell.test.ts` (вкл. запрет fill
   both/forwards на конечных анимациях в globals.css).
 
@@ -332,10 +339,6 @@ pnpm --filter @vire/web check:i18n     # кириллица вне словар�
 pnpm --filter @vire/web check:contracts  # роут /api/v1 без схемы @vire/api-contracts вне allowlist
 pnpm --filter @vire/web check:caller   # роут app/api берёт актора через getCaller(), не через auth()
 pnpm turbo run check:layers            # границы @vire/core: platform/** не знает о music/**
-pnpm turbo run check:glsl              # шейдеры VireGlass компилируются в GLSL ES 3.0 (нужен
-                                       # playwright install chromium-headless-shell)
-pnpm turbo run check:optics            # деталь VireGlass осталась и окном, и предметом:
-                                       # рендер над полотном, а не только компиляция шейдера
 pnpm check:doc-paths                   # из корня; пути к коду в docs/**.md ведут в существующие файлы
 pnpm --filter @vire/web test           # vitest
 pnpm --filter @vire/web audit:design   # Impeccable — детектор дизайн-анти-паттернов
@@ -350,8 +353,7 @@ pnpm audit --audit-level=high          # из корня; гейт CI, лока�
 > с `os`/`cpu` (каждая система ставит только свой). Скрипты зовут её **явным путём**
 > `node ../../node_modules/typescript-7/bin/tsc`, а не через `.bin`: алиас молча
 > перехватывает корневой `tsc` (в корне `pnpm exec tsc` покажет 7.0.2), внутри пакетов
-> остаётся 5.9.3. Полный гейт: 37–64с → 23с. `apps/mobile` намеренно на 5.9 (тулчейн
-> диктует Expo). Если компиляторы разойдутся — страховка есть: `next build` проверяет
+> остаётся 5.9.3. Если компиляторы разойдутся — страховка есть: `next build` проверяет
 > типы своей 5.9.
 
 > ⚠️ `pnpm audit` живёт только в CI и валит job `gates` **до** сборки образов — свежая
@@ -381,7 +383,7 @@ pnpm audit --audit-level=high          # из корня; гейт CI, лока�
 >
 > ⚠️ В `pnpm-workspace.yaml` стоит `minimumReleaseAge: 4320`: релиз моложе трёх суток pnpm не
 > поставит. Срочный security-патч или свой только что опубликованный пакет — через
-> `minimumReleaseAgeExclude` (там уже `vireglass`), а не снятием порога.
+> `minimumReleaseAgeExclude` (ключ в `pnpm-workspace.yaml`), а не снятием порога.
 
 > CI (`gates`) гоняет typecheck единым `pnpm turbo run typecheck` — таск в `turbo.json`
 > без scope-фильтра, подхватывает любой пакет со своим script `typecheck` (сейчас
@@ -416,34 +418,7 @@ devDependency `impeccable` (пакет = github.com/pbakaus/impeccable). Ски�
 `/impeccable …` (audit/critique/polish/delight) — ставятся отдельно: `npx impeccable skills install`.
 Принципы Impeccable применяем по умолчанию во всей дизайн-работе.
 
-## Текущий статус
-
-**Этап 1 (Friends & Family) — завершён. Этап 2 (прямые продажи) — частично:**
-бэкенд покупок написан и покрыт тестами, но весь purchase-UI отвязан от публичных
-страниц до старта этапа. Открыто одно — боевая настройка YooKassa (SHOP_ID/SECRET_KEY
-+ вебхук в кабинете), делается по команде.
-
-Что именно построено по областям — `docs/status.md`. Фактический срез архитектуры
-по коду (масштаб, слои, прогнанные тесты) — `docs/architecture/current-state.md`.
-Индекс фичедоков — `docs/features/README.md`. Раньше этот список жил прямо здесь
-и занимал треть файла, который грузится в каждую сессию.
-
-Опорные цифры на 02.09.2026: ~127 000 строк, 128 route handlers `/api/v1/*`,
-59 миграций (0000–0058), 44 query-модуля, четыре клиента (веб, Android, десктоп, PWA).
-
-## Что делать дальше (следующий шаг)
-
-По вебу открытого бэклога практически нет: `docs/roadmap/stage-2.md` закрыт целиком,
-в `docs/roadmap/TODO.md` осталось «Запрос "vire"» (внешние ссылки и возраст домена,
-не код), мажорные апгрейды зависимостей и два осознанно отложенных пункта —
-Observability (sentry.io отдаёт 403 из России, self-hosted GlitchTip не влезает
-и в 2 ГБ) и CSP `unsafe-inline` (nonce ломает статику и ISR).
-
-Содержательный трек — мобилка: `docs/features/mobile-app.md`, читать хвост файла за
-актуальным инкрементом. P0 «Доставка» закрыт (подпись, прод-URL, крашрепортинг, сборка
-одной командой). Вне скоупа осознанно: мультидевайс E2EE (SAS-привязка), биометрия,
-iOS (нет Mac).
-
+## Грабли
 
 > ⚠️ Не интерполируй JS-`Date` в raw-`sql`-шаблон Drizzle — postgres.js получает её как
 > нетипизированный bind-параметр и падает с `ERR_INVALID_ARG_TYPE: Received an instance of Date`.
