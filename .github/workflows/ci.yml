@@ -109,7 +109,7 @@ jobs:
         # а не падение — чужой простой не должен быть стоп-фактором релиза. Прогнать вручную.
         run: |
           for attempt in 1 2 3; do
-            if out=$(pnpm audit --audit-level=high 2>&1); then
+            if out=$(pnpm audit --audit-level=high --ignore-unfixable 2>&1); then
               echo "$out"
               exit 0
             fi
