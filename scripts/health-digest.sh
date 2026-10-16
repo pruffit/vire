@@ -2,8 +2,7 @@
 # Ежедневная сводка здоровья прода в Telegram (через ALERT_WEBHOOK_URL). Cron на сервере:
 #   0 6 * * *  cd /opt/vire && ./scripts/health-digest.sh >> /opt/vire/health-digest.log 2>&1
 #
-# Ловит то, что алерты на ошибки не видят: медленный рост. Авария 12.10.2026 росла
-# линейно 113 суток (Redis → минутный снапшот → диск) — сводка показала бы её за месяцы.
+# Алерты ловят ошибки, сводка — медленный рост (так копилась авария 12.10.2026).
 # DRY=1 — напечатать сводку и ничего не отправлять.
 set -uo pipefail
 
@@ -17,6 +16,7 @@ PGDB=$(envval POSTGRES_DB)
 
 warn=()
 flag() { warn+=("$1"); }
+num() { [[ "$1" =~ ^[0-9]+([.][0-9]+)?$ ]]; }
 
 health=$(curl -s -m 20 "https://${DOMAIN}/api/health" || true)
 version=$(echo "$health" | jq -r '.version // "?"' 2>/dev/null || echo '?')
@@ -27,10 +27,10 @@ load=$(cut -d' ' -f1-3 /proc/loadavg)
 mem_avail=$(free -m | awk '/^Mem:/{print $7}')
 swap_used=$(free -m | awk '/^Swap:/{print $3}')
 disk_pct=$(df -P / | awk 'NR==2{gsub("%","",$5); print $5}')
-io_avg=$(awk -F'avg300=' '/^some/{split($2,a," "); print a[1]}' /proc/pressure/io)
-[ "$mem_avail" -lt 250 ] && flag "память: свободно ${mem_avail} МБ"
-[ "$disk_pct" -gt 80 ] && flag "диск: ${disk_pct}%"
-awk "BEGIN{exit !($io_avg > 10)}" && flag "давление ввода-вывода ${io_avg}% (5 мин)"
+io_avg=$(awk -F'avg300=' '/^some/{split($2,a," "); print a[1]}' /proc/pressure/io 2>/dev/null)
+num "$mem_avail" && [ "$mem_avail" -lt 250 ] && flag "память: свободно ${mem_avail} МБ"
+num "$disk_pct" && [ "$disk_pct" -gt 80 ] && flag "диск: ${disk_pct}%"
+num "$io_avg" && awk "BEGIN{exit !($io_avg > 10)}" && flag "давление ввода-вывода ${io_avg}% (5 мин)"
 
 R="docker exec vire-redis-1 redis-cli"
 redis_keys=$($R dbsize 2>/dev/null || echo '?')
@@ -44,12 +44,20 @@ done
 [[ "$redis_keys" =~ ^[0-9]+$ ]] && [ "$redis_keys" -gt 20000 ] && flag "Redis: ${redis_keys} ключей"
 [[ "$dump_mb" =~ ^[0-9]+$ ]] && [ "$dump_mb" -gt 20 ] && flag "снапшот Redis ${dump_mb} МБ"
 
+# RestartCount живёт до пересоздания контейнера, поэтому флаг — по приросту с прошлого прогона.
+STATE=.health-digest.state
+touch "$STATE"
 restarts=$(docker ps -a --filter name=vire- --format '{{.Names}}' | while read -r c; do
-  n=$(docker inspect -f '{{.RestartCount}}' "$c"); s=$(docker inspect -f '{{.State.Status}}' "$c")
   [ "$c" = "vire-minio-init-1" ] && continue
+  id=$(docker inspect -f '{{.Id}}' "$c"); n=$(docker inspect -f '{{.RestartCount}}' "$c")
+  s=$(docker inspect -f '{{.State.Status}}' "$c")
+  prev=$(awk -v id="$id" '$1==id{print $2}' "$STATE"); prev=${prev:-0}
   [ "$s" != "running" ] && echo "${c#vire-}:${s}"
-  [ "$n" -gt 0 ] && echo "${c#vire-}:${n}×"
+  [ "$n" -gt "$prev" ] && echo "${c#vire-}:+$((n - prev)) перезапуск"
 done | paste -sd' ' -)
+docker ps -aq --no-trunc --filter name=vire- | while read -r id; do
+  echo "$id $(docker inspect -f '{{.RestartCount}}' "$id")"
+done > "$STATE"
 [ -n "$restarts" ] && flag "контейнеры: ${restarts}"
 
 sql() { docker exec vire-postgres-1 psql -U "$PGUSER" -d "$PGDB" -At -c "$1" 2>/dev/null || echo '?'; }
@@ -68,9 +76,20 @@ Redis ${redis_keys} ключей, ${redis_mem}, снапшот ${dump_mb} МБ �
 Postgres ${db_size}
 За сутки: новых пользователей ${users_new} (всего ${users_all}), прослушиваний ${plays}"
 
-if [ "${DRY:-0}" = "1" ] || [ -z "$WEBHOOK" ]; then
+if [ "${DRY:-0}" = "1" ]; then
   echo "$text"
   exit 0
 fi
-curl -s -m 15 -o /dev/null -w '%{http_code}\n' -X POST -H 'content-type: application/json' \
-  --data "$(jq -n --arg t "$text" '{text: $t}')" "$WEBHOOK"
+if [ -z "$WEBHOOK" ]; then
+  echo "health-digest: в .env нет ALERT_WEBHOOK_URL, сводка не отправлена" >&2
+  echo "$text"
+  exit 1
+fi
+body=$(jq -n --arg t "$text" '{text: $t}')
+for attempt in 1 2 3; do
+  code=$(curl -s -m 15 -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' --data "$body" "$WEBHOOK")
+  [ "$code" = "200" ] && { echo "$(date -u +%FT%TZ) sent"; exit 0; }
+  sleep $((attempt * 20))
+done
+echo "$(date -u +%FT%TZ) health-digest: relay ответил ${code} после трёх попыток" >&2
+exit 1

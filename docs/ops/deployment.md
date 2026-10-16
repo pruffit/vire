@@ -113,7 +113,7 @@ crontab -e
 медленный рост, на котором прод встал 12.10. Скрипт на сервер копируется руками, как и
 `backup.sh`; `DRY=1` печатает сводку без отправки.
 ```bash
-scp scripts/health-digest.sh vire@<сервер>:/opt/vire/scripts/
+scp scripts/health-digest.sh vire@<сервер>:/opt/vire/scripts/ && ssh vire@<сервер> chmod +x /opt/vire/scripts/health-digest.sh
 # crontab -e
 # 0 6 * * *  cd /opt/vire && ./scripts/health-digest.sh >> /opt/vire/health-digest.log 2>&1
 ```
