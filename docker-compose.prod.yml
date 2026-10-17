@@ -90,10 +90,12 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     mem_limit: 128m
-    # noeviction (дефолт) обязателен для BullMQ; лёгкий снапшот раз в минуту.
+    # Финальный снапшот при остановке должен успеть до SIGKILL (дефолт — 10 с).
+    stop_grace_period: 60s
+    # noeviction (дефолт) обязателен для BullMQ. Снапшот редкий: запись целиком грузит диск.
     # maxmemory НЕ задаём: при noeviction упор в него = ошибки записи в очередь.
     # Границу держит mem_limit контейнера.
-    command: redis-server --save 60 1 --appendonly no
+    command: redis-server --save 900 1 300 100 --appendonly no
     volumes:
       - vire-redis-data:/data
 
