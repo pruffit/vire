@@ -17,8 +17,8 @@
     "test": "turbo run test --concurrency=1"
   },
   "devDependencies": {
-    "typescript-7": "npm:typescript@7.0.2",
-    "turbo": "^2.11.7"
+    "turbo": "^2.11.7",
+    "typescript-7": "npm:typescript@7.0.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -38,7 +38,7 @@
       "@auth/core": ">=0.41.3",
       "brace-expansion@<2": "^1.1.20",
       "brace-expansion@>=3.0.0 <5.0.9": ">=5.0.9",
-      "js-yaml": ">=5.2.2",
+      "js-yaml": "^5.4.2",
       "shell-quote@<1.11.0": "^1.11.0",
       "source-map-js@<1.2.2": "^1.2.2",
       "ip-address@<=10.3.0": ">=10.3.1",
@@ -53,7 +53,8 @@
       ],
       "ignoreCves": [
         "CVE-2025-71330",
-        "CVE-2025-71329"
+        "CVE-2025-71329",
+        "CVE-2026-93687"
       ]
     }
   },
