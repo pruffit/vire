@@ -17,8 +17,8 @@
     "test": "turbo run test --concurrency=1"
   },
   "devDependencies": {
-    "turbo": "^2.11.7",
-    "typescript-7": "npm:typescript@7.0.2"
+    "typescript-7": "npm:typescript@7.0.2",
+    "turbo": "^2.11.7"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -53,8 +53,7 @@
       ],
       "ignoreCves": [
         "CVE-2025-71330",
-        "CVE-2025-71329",
-        "CVE-2026-93687"
+        "CVE-2025-71329"
       ]
     }
   },
