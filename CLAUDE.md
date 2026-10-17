@@ -1,4 +1,4 @@
-# vireSpace — инструкция для Claude Code
+# VireMusic (монорепо vire) — инструкция для Claude Code
 
 > **Единственный источник правды о текущем состоянии всех проектов — HQ:**
 > `C:\Users\KOTLAEV\hq` (github.com/pruffit/hq). Перед любой работой прочитай его `README.md`.
@@ -8,10 +8,10 @@
 > **Android-клиента нет.** Старый `apps/mobile` и RnD-стенды удалены 16.10.2026 (снимок —
 > в `pruffit/vire-archive`) и не возрождаются. Кит строится в репозитории `vireuikit`.
 
-Платформа для продуктов, где автор владеет тем, что создал. **VireMusic** — первый
-продукт на ней: независимая музыкальная площадка для артистов и слушателей СНГ.
-Разделение уже в коде: `packages/core/src/platform/**` не знает о `music/**`
-(барьер `check:layers`).
+**VireMusic** — продукт компании VireSpace: независимая музыкальная площадка для артистов
+и слушателей СНГ, где автор владеет тем, что создал. Иерархия (компания → продукты VireMusic
+и VireBook → технологии в npm-пакетах: vireglass, vireuikit, …) — в HQ. Общий слой отделён
+в коде: `packages/core/src/platform/**` не знает о `music/**` (барьер `check:layers`).
 
 Полная документация: `docs/vision/concept.md`, `docs/foundation/architecture.md`, `docs/foundation/data-schema.md` (карта всех доков — `docs/README.md`).
 
