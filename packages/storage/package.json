@@ -12,8 +12,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1150.0",
-    "@aws-sdk/s3-request-presigner": "^3.1150.0",
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
     "@smithy/node-http-handler": "^4.12.1"
   },
   "devDependencies": {
@@ -21,6 +21,6 @@
     "@vire/config": "workspace:*",
     "@vire/core": "workspace:*",
     "typescript": "^5.8.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   }
 }
