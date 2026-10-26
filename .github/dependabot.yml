@@ -33,6 +33,10 @@ updates:
       # которого у 7 нет; гейт typecheck гоняет семёрку под алиасом typescript-7 (см. CLAUDE.md).
       - dependency-name: "typescript"
         versions: [">=6"]
+      # eslint-config-next держит typescript-eslint точной версией; наша обязана совпадать, иначе в lock
+      # две копии плагина и ESLint падает «Cannot redefine plugin» (#183). Поднимать вместе с Next.
+      - dependency-name: "typescript-eslint"
+      - dependency-name: "@typescript-eslint/*"
       # У версий 0.x semver считает minor тем, чем он не является: 0.7 → 0.8 у libsodium
       # сменил сигнатуру `crypto_generichash`. Это крипто под E2EE-чатом, и формат обязан
       # остаться совместимым (`apps/web/lib/e2ee`) — обновлять
