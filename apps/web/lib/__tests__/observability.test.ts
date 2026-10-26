@@ -14,6 +14,14 @@ describe('isKnownNoise', () => {
     ).toBe(true);
   });
 
+  it('глушит поддельные запросы Server Action от сканеров', () => {
+    expect(isKnownNoise('Failed to parse body as FormData.')).toBe(true);
+    expect(isKnownNoise('Invalid Server Actions request.')).toBe(true);
+    expect(
+      isKnownNoise('The Server Reference ID did not match the expected format. Received "x"'),
+    ).toBe(true);
+  });
+
   it('не глушит обычные ошибки', () => {
     expect(isKnownNoise('ECONNREFUSED 127.0.0.1:5432')).toBe(false);
     expect(isKnownNoise('relation "tracks" does not exist')).toBe(false);

@@ -17,10 +17,14 @@ const STACK_LIMIT = 2000;
 
 // Известный шум — логируем, но не алертим: transformAlgorithm — баг Node webstreams
 // при обрыве SSR-стрима, юзеров не задевает; Failed to find Server Action — старый
-// деплой шлёт action-id из прошлого билда, штатно после каждого релиза.
+// деплой шлёт action-id из прошлого билда, штатно после каждого релиза. Остальные три —
+// сканеры с поддельным Server Action (битое тело, чужой Next-Action): ошибка клиента, не сервера (#179).
 const KNOWN_NOISE = [
   /transformAlgorithm is not a function/,
   /Failed to find Server Action/,
+  /Failed to parse body as FormData/,
+  /Invalid Server Actions request/,
+  /Server Reference ID did not match the expected format/,
 ];
 
 export function isKnownNoise(message: string): boolean {
