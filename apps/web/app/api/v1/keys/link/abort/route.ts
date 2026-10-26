@@ -6,7 +6,7 @@ import { abortLink } from '@/lib/link-session';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const schema = z.object({ linkId: z.string().uuid() });
+const schema = z.object({ linkId: z.guid() });
 
 export async function POST(req: Request) {
   const caller = await getCaller();

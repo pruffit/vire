@@ -4,7 +4,7 @@ import { requireAccess } from '@/lib/require-access';
 import { reportService } from '@/lib/reports';
 import { NotFoundError } from '@vire/core';
 
-const paramsSchema = z.object({ id: z.string().uuid() });
+const paramsSchema = z.object({ id: z.guid() });
 const bodySchema = z.object({ status: z.enum(['REVIEWED', 'DISMISSED']) });
 type Ctx = { params: Promise<{ id: string }> };
 

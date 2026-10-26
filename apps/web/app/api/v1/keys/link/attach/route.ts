@@ -6,7 +6,7 @@ import { attachLink } from '@/lib/link-session';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const schema = z.object({ linkId: z.string().uuid(), eaPub: z.string().regex(/^[A-Za-z0-9+/]{43}=$/) });
+const schema = z.object({ linkId: z.guid(), eaPub: z.string().regex(/^[A-Za-z0-9+/]{43}=$/) });
 
 export async function POST(req: Request) {
   const caller = await getCaller();

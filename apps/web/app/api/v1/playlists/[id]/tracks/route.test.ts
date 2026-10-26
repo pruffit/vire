@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { playlistTracksResponseSchema, okResponseSchema } from '@vire/api-contracts';
+import { playlistTracksResponseSchema, okResponseSchema, reorderPlaylistTracksSchema } from '@vire/api-contracts';
 
 const { reorder, getWithTracks, addTrack, trackExists, isCollaborator, getCollabState } =
   vi.hoisted(() => ({
@@ -113,6 +113,11 @@ describe('PUT /api/v1/playlists/[id]/tracks (reorder)', () => {
   it('400 on non-uuid track ids', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
     expect((await PUT(makeReq('PUT', { trackIds: ['a', 'b'] }), ctx)).status).toBe(400);
+  });
+  it('принимает до 5000 треков и отвергает 5001 (потолок входного массива)', async () => {
+    expect(reorderPlaylistTracksSchema.safeParse({ trackIds: Array(5000).fill(A) }).success).toBe(true);
+    mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);
+    expect((await PUT(makeReq('PUT', { trackIds: Array(5001).fill(A) }), ctx)).status).toBe(400);
   });
   it('403 when not owner', async () => {
     mockedAuth.mockResolvedValue({ user: { id: 'u1' } } as never);

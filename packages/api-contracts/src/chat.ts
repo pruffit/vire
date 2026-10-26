@@ -37,9 +37,9 @@ export const chatHistoryCursorSchema = z
   .transform((v, ctx) => {
     if (!v.before && !v.beforeId) return null;
     const date = v.before ? new Date(v.before) : null;
-    const id = v.beforeId ? z.string().uuid().safeParse(v.beforeId) : null;
+    const id = v.beforeId ? z.guid().safeParse(v.beforeId) : null;
     if (!date || Number.isNaN(date.getTime()) || !id?.success) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid before' });
+      ctx.addIssue({ code: 'custom', message: 'Invalid before' });
       return z.NEVER;
     }
     return { createdAt: date, id: id.data };

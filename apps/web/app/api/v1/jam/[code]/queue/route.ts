@@ -7,11 +7,11 @@ import { ForbiddenError, ConflictError, ValidationError } from '@vire/core';
 import { errorJson } from '@/lib/error-response';
 
 const schema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('add'), trackId: z.string().uuid(), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
-  z.object({ kind: z.literal('remove'), itemId: z.string().uuid(), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
+  z.object({ kind: z.literal('add'), trackId: z.guid(), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
+  z.object({ kind: z.literal('remove'), itemId: z.guid(), sessionId: z.string().max(SESSION_ID_MAX_LEN).optional() }),
   z.object({
     kind: z.literal('move'),
-    itemId: z.string().uuid(),
+    itemId: z.guid(),
     toPosition: z.number().int().min(0),
     sessionId: z.string().max(SESSION_ID_MAX_LEN).optional(),
   }),

@@ -5,11 +5,11 @@ export const playSourceSchema = z.enum(PLAY_SOURCES);
 export type PlaySource = z.infer<typeof playSourceSchema>;
 
 export const waveTrackSchema = z.object({
-  id: z.string().uuid(),
+  id: z.guid(),
   title: z.string(),
   artistName: z.string(),
   artistSlug: z.string(),
-  releaseId: z.string().uuid(),
+  releaseId: z.guid(),
   coverUrl: z.string().nullable(),
   accentColor: z.string().nullable(),
   isExplicit: z.boolean(),
@@ -20,7 +20,7 @@ export type WaveTrackDTO = z.infer<typeof waveTrackSchema>;
 
 export const waveQuerySchema = z.object({
   sessionId: z.string().min(8).max(64).optional(),
-  trackId: z.string().uuid().optional(),
+  trackId: z.guid().optional(),
   mood: z.string().optional(),      // валидируется по ALL_MOODS на роуте
   genre: z.string().optional(),     // валидируется по ALL_TRACK_GENRES на роуте
   played: z.string().optional(),    // csv uuid, ≤100 после парсинга

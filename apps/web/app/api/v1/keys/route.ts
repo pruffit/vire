@@ -5,7 +5,7 @@ import { upsertIdentityKey, getIdentityKey } from '@vire/db';
 import type { GetKeyResponse } from '@vire/api-contracts';
 
 const postSchema = z.object({ ikPub: z.string().regex(/^[A-Za-z0-9+/]{43}=$/) });
-const getSchema = z.object({ userId: z.string().uuid() });
+const getSchema = z.object({ userId: z.guid() });
 
 export async function POST(req: Request) {
   const caller = await getCaller();

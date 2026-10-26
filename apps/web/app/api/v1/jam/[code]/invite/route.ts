@@ -7,7 +7,7 @@ import { notificationService } from '@/lib/notifications';
 import { ValidationError } from '@vire/core';
 import { errorJson } from '@/lib/error-response';
 
-const schema = z.object({ userId: z.string().uuid() });
+const schema = z.object({ userId: z.guid() });
 
 type Ctx = { params: Promise<{ code: string }> };
 
