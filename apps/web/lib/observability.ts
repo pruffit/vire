@@ -15,12 +15,14 @@ const alertGate = createThrottleGate({ ttlMs: 60_000, maxSize: 500 });
 
 const STACK_LIMIT = 2000;
 
-// Известный шум — логируем, но не алертим: transformAlgorithm — баг Node webstreams
-// при обрыве SSR-стрима, юзеров не задевает; Failed to find Server Action — старый
-// деплой шлёт action-id из прошлого билда, штатно после каждого релиза.
+// Известный шум: не ошибка сервера — обрыв SSR-стрима (баг Node webstreams), action-id прошлого
+// билда после релиза, поддельные Server Action от сканеров (#179). Логируем без алерта.
 const KNOWN_NOISE = [
   /transformAlgorithm is not a function/,
   /Failed to find Server Action/,
+  /Failed to parse body as FormData/,
+  /Invalid Server Actions request/,
+  /Server Reference ID did not match the expected format/,
 ];
 
 export function isKnownNoise(message: string): boolean {
