@@ -8,7 +8,7 @@ import { ForbiddenError, ConflictError, ValidationError } from '@vire/core';
 import { errorJson } from '@/lib/error-response';
 
 const schema = z.object({
-  itemId: z.string().uuid(),
+  itemId: z.guid(),
   sessionId: z.string().max(SESSION_ID_MAX_LEN).optional(),
 });
 

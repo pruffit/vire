@@ -103,7 +103,7 @@ export const HOME_BLOCK_RENDERERS: Record<BlockType, RendererEntry> = {
   'catalog-empty-notice': { render: () => <CatalogEmptyNotice /> },
 };
 
-export function renderHomeBlock(block: Block, ctx: HomeRenderContext): ReactNode {
+export function renderHomeBlock(block: Pick<Block, 'id' | 'type'>, ctx: HomeRenderContext): ReactNode {
   // Незнакомый тип молча пропускается — страховка на рассинхронизацию версий.
   const entry = HOME_BLOCK_RENDERERS[block.type];
   if (!entry) return null;

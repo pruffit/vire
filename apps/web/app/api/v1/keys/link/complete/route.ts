@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  linkId: z.string().uuid(),
+  linkId: z.guid(),
   wrapped: z.string().min(1).max(200),
   nonce: z.string().min(1).max(64),
 });

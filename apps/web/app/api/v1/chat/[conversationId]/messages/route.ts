@@ -6,7 +6,7 @@ import { NotFoundError, type ChatMessage } from '@vire/core';
 import { chatHistoryCursorSchema, type ChatMessagesResponse } from '@vire/api-contracts';
 import { errorJson } from '@/lib/error-response';
 
-const paramsSchema = z.object({ conversationId: z.string().uuid() });
+const paramsSchema = z.object({ conversationId: z.guid() });
 const HISTORY_LIMIT = 50;
 
 type Ctx = { params: Promise<{ conversationId: string }> };

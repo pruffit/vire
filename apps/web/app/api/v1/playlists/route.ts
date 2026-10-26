@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   // ?trackId=<uuid>: какие из плейлистов уже содержат этот трек (для галочек)
   let trackId: string | undefined;
   if (trackIdParam !== null) {
-    const parsed = z.string().uuid().safeParse(trackIdParam);
+    const parsed = z.guid().safeParse(trackIdParam);
     if (!parsed.success) return NextResponse.json({ error: 'Invalid trackId' }, { status: 400 });
     trackId = parsed.data;
   }

@@ -6,7 +6,7 @@ import { NotFoundError } from '@vire/core';
 import type { OkResponse } from '@vire/api-contracts';
 import { errorJson } from '@/lib/error-response';
 
-const paramsSchema = z.object({ conversationId: z.string().uuid() });
+const paramsSchema = z.object({ conversationId: z.guid() });
 
 type Ctx = { params: Promise<{ conversationId: string }> };
 

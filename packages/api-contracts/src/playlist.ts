@@ -35,10 +35,10 @@ export type UpdatePlaylistInput = z.infer<typeof updatePlaylistSchema>;
 export const playlistDetailResponseSchema = z.object({ playlist: playlistWithTracksSchema });
 export type PlaylistDetailResponse = z.infer<typeof playlistDetailResponseSchema>;
 
-export const addPlaylistTrackSchema = z.object({ trackId: z.string().uuid() });
+export const addPlaylistTrackSchema = z.object({ trackId: z.guid() });
 export type AddPlaylistTrackInput = z.infer<typeof addPlaylistTrackSchema>;
 
-export const reorderPlaylistTracksSchema = z.object({ trackIds: z.array(z.string().uuid()).min(1) });
+export const reorderPlaylistTracksSchema = z.object({ trackIds: z.array(z.guid()).min(1).max(5000) });
 export type ReorderPlaylistTracksInput = z.infer<typeof reorderPlaylistTracksSchema>;
 
 export const playlistTracksResponseSchema = z.object({
